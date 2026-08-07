@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">ValuePilot</string>
+    <string name="accessibility_description">Reads product/menu labels shown in the active app so ValuePilot can compare unit value and display an optional floating ranking panel. It can scroll a list only when you explicitly choose Scan all.</string>
+</resources>
