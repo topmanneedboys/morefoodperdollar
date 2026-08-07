@@ -4,12 +4,12 @@ plugins {
 
 android {
     namespace = "com.valuepilot.app"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.valuepilot.app"
         minSdk = 23
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 10000
         versionName = "100.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
