@@ -71,7 +71,7 @@ data class RankedItem(val item: ValueItem, val rank: Int, val mode: RankMode, va
 enum class RankMode { SMART, MASS, VOLUME, CALORIE, PIZZA, UNIT, PORTION, MEAT }
 
 object ValueEngine {
-    private const val PRICE_NUMBER_SOURCE = "(?:\\d{1,3}(?:[ ,]\\d{3})+|\\d{1,6})(?:[.,]\\d{1,2})?"
+    private const val PRICE_NUMBER_SOURCE = "(?:\\d{1,3}(?:[ ,.]\\d{3})+|\\d{1,6})(?:[.,]\\d{1,2})?"
     private val priceRegex = Regex(
         "(?:\\b(?:CA\\$|C\\$|US\\$|A\\$)|[$€£₹৳])\\s*$PRICE_NUMBER_SOURCE|\\b$PRICE_NUMBER_SOURCE\\s*(?:CAD|USD|EUR|GBP|INR|BDT|AUD)\\b",
         RegexOption.IGNORE_CASE
@@ -116,6 +116,7 @@ object ValueEngine {
             comma >= 0 && dot >= 0 -> raw.replace(",", "")
             comma >= 0 && Regex("^\\d{1,3}(?:,\\d{3})+$").matches(raw) -> raw.replace(",", "")
             comma >= 0 -> raw.replace(',', '.')
+            dot >= 0 && Regex("^\\d{1,3}(?:\\.\\d{3})+$").matches(raw) -> raw.replace(".", "")
             else -> raw
         }
         return normalized.toDoubleOrNull()

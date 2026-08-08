@@ -27,7 +27,7 @@
     lastUrl: location.href,
   };
 
-  const PRICE_TEXT_RE = /(?:\b(?:CA\$|C\$|US\$|A\$)|[$€£₹৳])\s*(?:\d{1,3}(?:[ ,]\d{3})+|\d{1,6})(?:[.,]\d{1,2})?|\b(?:\d{1,3}(?:[ ,]\d{3})+|\d{1,6})(?:[.,]\d{1,2})?\s*(?:CAD|USD|EUR|GBP|INR|BDT|AUD)\b/i;
+  const PRICE_TEXT_RE = /(?:\b(?:CA\$|C\$|US\$|A\$)|[$€£₹৳])\s*(?:\d{1,3}(?:[ ,.]\d{3})+|\d{1,6})(?:[.,]\d{1,2})?|\b(?:\d{1,3}(?:[ ,.]\d{3})+|\d{1,6})(?:[.,]\d{1,2})?\s*(?:CAD|USD|EUR|GBP|INR|BDT|AUD)\b/i;
   const SETTINGS_KEY = 'valuePilotSettingsV101';
 
   function safeText(el) {

@@ -67,7 +67,7 @@
     '$': 'USD/CAD',
   };
 
-  const PRICE_NUMBER_SOURCE = String.raw`(?:\d{1,3}(?:[ ,]\d{3})+|\d{1,6})(?:[.,]\d{1,2})?`;
+  const PRICE_NUMBER_SOURCE = String.raw`(?:\d{1,3}(?:[ ,.]\d{3})+|\d{1,6})(?:[.,]\d{1,2})?`;
   const PRICE_RE = new RegExp(String.raw`(?:\b(?:CA\$|C\$|US\$|A\$)|[$€£₹৳])\s*${PRICE_NUMBER_SOURCE}|\b${PRICE_NUMBER_SOURCE}\s*(?:CAD|USD|EUR|GBP|INR|BDT|AUD)\b`, 'gi');
   const PRICE_NUMBER_RE = new RegExp(PRICE_NUMBER_SOURCE);
   const CAL_RE = /\b(\d{2,5}(?:[.,]\d+)?)\s*(?:k?cal(?:ories?)?)\b/i;
@@ -89,6 +89,8 @@
         : raw.replace(/,/g, '');
     } else if (lastComma >= 0) {
       normalized = /^\d{1,3}(?:,\d{3})+$/.test(raw) ? raw.replace(/,/g, '') : raw.replace(',', '.');
+    } else if (lastDot >= 0 && /^\d{1,3}(?:\.\d{3})+$/.test(raw)) {
+      normalized = raw.replace(/\./g, '');
     }
     const n = Number.parseFloat(normalized);
     return Number.isFinite(n) ? n : null;

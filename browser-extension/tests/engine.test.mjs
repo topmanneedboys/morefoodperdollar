@@ -106,6 +106,7 @@ test('international and thousands-formatted prices parse safely', () => {
   assert.equal(E.parseNumber('1,299.50'), 1299.5);
   assert.equal(E.parseNumber('1.299,50'), 1299.5);
   assert.equal(E.analyzeItem('Catering feast $1,299.50').price, 1299.5);
+  assert.equal(E.analyzeItem('Catering feast €1.234,56').price, 1234.56);
 });
 
 test('expanded volume units and dozens normalize', () => {
