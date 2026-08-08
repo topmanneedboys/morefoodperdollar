@@ -14,6 +14,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        LocalFoodModel.initialize(this)
         setContentView(R.layout.activity_main)
         status = findViewById(R.id.serviceStatus)
         findViewById<Button>(R.id.enableButton).setOnClickListener { showAccessibilityDisclosure() }
@@ -33,6 +34,7 @@ class MainActivity : AppCompatActivity() {
             .setMessage(
                 "ValuePilot uses Android Accessibility access to read product/menu text in the app currently on screen and to display its floating comparison panel. " +
                     "It scrolls a list only after you tap Scan all. If you tap OCR, it captures the visible app window for on-device text recognition. " +
+                    "Its compact food classifier and OCR both run locally. Exact measurements always override AI estimates. " +
                     "This build has no INTERNET permission and does not upload screen contents, account credentials, or shopping data."
             )
             .setNegativeButton("Cancel", null)

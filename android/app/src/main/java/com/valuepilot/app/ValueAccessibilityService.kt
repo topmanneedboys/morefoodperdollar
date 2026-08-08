@@ -23,28 +23,53 @@ class ValueAccessibilityService : AccessibilityService() {
     private var previousCount = 0
     private var sourcePackage: String? = null
     private var lastExternalPackage: String? = null
+    private var maxPrice: Double? = null
+    private var foodOnly = true
+    private var excludePork = false
     private val screenshotExecutor = Executors.newSingleThreadExecutor()
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        LocalFoodModel.initialize(this)
+        val preferences = getSharedPreferences("valuepilot_settings_v101", MODE_PRIVATE)
+        maxPrice = preferences.getString("maxPrice", null)?.toDoubleOrNull()?.takeIf { it > 0 }
+        foodOnly = preferences.getBoolean("foodOnly", true)
+        excludePork = preferences.getBoolean("excludePork", false)
         overlay = OverlayController(
             this,
             onScanLoaded = { scanLoaded(true) },
             onScanAll = { startScanAll() },
             onOcr = { scanOcr() },
             onClear = { allItems.clear(); publish(); overlay?.setStatus("Cleared") },
-            onStop = { finishScanAll() },
-            onMode = { mode = it; publish() }
+            onStop = { finishScanAll(userStopped = true) },
+            onMode = { mode = it; publish() },
+            initialMaxPrice = maxPrice,
+            initialFoodOnly = foodOnly,
+            initialExcludePork = excludePork,
+            onFilters = { budget, onlyFood, noPork ->
+                maxPrice = budget
+                foodOnly = onlyFood
+                excludePork = noPork
+                preferences.edit()
+                    .putString("maxPrice", budget?.toString())
+                    .putBoolean("foodOnly", onlyFood)
+                    .putBoolean("excludePork", noPork)
+                    .apply()
+                publish()
+                overlay?.setStatus(filterStatus())
+            }
         ).also { it.show() }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        sourcePackage = event?.packageName?.toString() ?: rootInActiveWindow?.packageName?.toString()
-        val pkg = sourcePackage
+        val pkg = event?.packageName?.toString() ?: rootInActiveWindow?.packageName?.toString()
+        if (pkg == packageName) return
+        if (overlay?.isPanelOpen() == true && pkg != lastExternalPackage) return
         if (!pkg.isNullOrBlank() && pkg != packageName && pkg != lastExternalPackage) {
             if (lastExternalPackage != null) allItems.clear()
             lastExternalPackage = pkg
         }
+        sourcePackage = lastExternalPackage ?: pkg
         if (scanningAll) return
         refreshRunnable?.let(handler::removeCallbacks)
         refreshRunnable = Runnable { scanLoaded(false) }.also { handler.postDelayed(it, 500) }
@@ -54,17 +79,23 @@ class ValueAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         scanningAll = false
+        refreshRunnable?.let(handler::removeCallbacks)
         overlay?.hide(); overlay = null
         screenshotExecutor.shutdownNow()
         super.onDestroy()
     }
 
     private fun scanLoaded(userInitiated: Boolean) {
-        val root = rootInActiveWindow
-        val result = NodeScanner.scan(root, sourcePackage ?: root?.packageName?.toString())
+        val root = externalRoot()
+        val rootPackage = root?.packageName?.toString()
+        if (root == null || rootPackage == packageName) {
+            if (userInitiated) overlay?.setStatus("Return to the store or menu app, then scan again")
+            return
+        }
+        val result = NodeScanner.scan(root, sourcePackage ?: rootPackage)
         ingest(result.items)
         publish()
-        if (userInitiated) overlay?.setStatus("Loaded scan · ${result.items.size} visible candidates · ${allItems.size} collected")
+        if (userInitiated) overlay?.setStatus("Loaded scan · ${result.items.size} visible candidates · ${visibleItems().size}/${allItems.size} shown")
     }
 
     private fun ingest(items: Collection<ValueItem>) {
@@ -82,7 +113,32 @@ class ValueAccessibilityService : AccessibilityService() {
     }
 
     private fun publish() {
-        overlay?.setResults(ValueEngine.rank(allItems.values, mode))
+        overlay?.setResults(ValueEngine.rank(visibleItems(), mode))
+    }
+
+    private fun visibleItems(): List<ValueItem> = ValueEngine.filterItems(
+        allItems.values,
+        maxPrice = maxPrice,
+        foodOnly = foodOnly,
+        excludePork = excludePork
+    )
+
+    private fun filterStatus(): String {
+        val visible = visibleItems().size
+        val filtered = allItems.size - visible
+        return "$visible shown${if (filtered > 0) " · $filtered filtered" else ""}"
+    }
+
+    private fun externalRoot(): AccessibilityNodeInfo? {
+        val active = rootInActiveWindow
+        val activePackage = active?.packageName?.toString()
+        if (active != null && activePackage != packageName && (lastExternalPackage == null || activePackage == lastExternalPackage)) return active
+        return windows.asSequence()
+            .mapNotNull { it.root }
+            .firstOrNull { root ->
+                val candidate = root.packageName?.toString()
+                candidate != packageName && (lastExternalPackage == null || candidate == lastExternalPackage)
+            }
     }
 
     private fun startScanAll() {
@@ -95,7 +151,7 @@ class ValueAccessibilityService : AccessibilityService() {
 
     private fun scanAllStep() {
         if (!scanningAll) return
-        val root = rootInActiveWindow
+        val root = externalRoot()
         if (root == null) { stopScanAll("No active app window"); return }
         val scrollable = NodeScanner.findBestScrollable(root)
         if (scrollable == null) { finishScanAll(); return }
@@ -112,29 +168,28 @@ class ValueAccessibilityService : AccessibilityService() {
         }, 260)
     }
 
-    private fun finishScanAll() {
+    private fun finishScanAll(userStopped: Boolean = false) {
         if (!scanningAll) return
-        overlay?.setStatus("Scan complete · ${allItems.size} items · returning toward start…")
-        restorePosition(scrollSteps)
+        overlay?.setStatus("${if (userStopped) "Scan stopped" else "Scan complete"} · ${allItems.size} items · returning toward start…")
+        restorePosition(scrollSteps, userStopped)
     }
 
-    private fun restorePosition(remaining: Int) {
+    private fun restorePosition(remaining: Int, userStopped: Boolean = false) {
         if (remaining <= 0 || !scanningAll) {
-            stopScanAll("Scan complete · ${allItems.size} items")
+            stopScanAll("${if (userStopped) "Scan stopped" else "Scan complete"} · ${visibleItems().size}/${allItems.size} shown")
             return
         }
-        val root = rootInActiveWindow
+        val root = externalRoot()
         val scrollable = NodeScanner.findBestScrollable(root)
         if (scrollable == null || !scrollable.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD)) {
-            stopScanAll("Scan complete · ${allItems.size} items")
+            stopScanAll("${if (userStopped) "Scan stopped" else "Scan complete"} · ${visibleItems().size}/${allItems.size} shown")
             return
         }
-        handler.postDelayed({ restorePosition(remaining - 1) }, 90)
+        handler.postDelayed({ restorePosition(remaining - 1, userStopped) }, 90)
     }
 
     private fun stopScanAll(message: String) {
         scanningAll = false
-        handler.removeCallbacksAndMessages(null)
         overlay?.setScanning(false); overlay?.setStatus(message); publish()
     }
 
@@ -154,12 +209,12 @@ class ValueAccessibilityService : AccessibilityService() {
                         handler.post { overlay?.setOverlayVisible(true); overlay?.setStatus("Could not decode screenshot") }
                         return
                     }
-                    OcrScanner.scan(bitmap, sourcePackage) { items, error ->
+                    OcrScanner.scan(bitmap, lastExternalPackage ?: sourcePackage) { items, error ->
                         bitmap.recycle()
                         handler.post {
                             overlay?.setOverlayVisible(true)
                             if (error != null) overlay?.setStatus("OCR failed: ${error.message ?: "unknown error"}")
-                            else { ingest(items); publish(); overlay?.setStatus("OCR scan · ${items.size} candidates · ${allItems.size} collected") }
+                            else { ingest(items); publish(); overlay?.setStatus("OCR scan · ${items.size} candidates · ${visibleItems().size}/${allItems.size} shown") }
                         }
                     }
                 }
@@ -168,7 +223,7 @@ class ValueAccessibilityService : AccessibilityService() {
                 }
             }
             if (Build.VERSION.SDK_INT >= 34) {
-                val windowId = rootInActiveWindow?.windowId
+                val windowId = externalRoot()?.windowId
                 if (windowId != null) takeScreenshotOfWindow(windowId, screenshotExecutor, callback)
                 else takeScreenshot(Display.DEFAULT_DISPLAY, screenshotExecutor, callback)
             } else {

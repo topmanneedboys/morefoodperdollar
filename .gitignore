@@ -1,0 +1,7 @@
+browser-extension/node_modules/
+browser-extension/dist/
+android/.gradle/
+android/app/build/
+*.apk
+*.zip
+release/

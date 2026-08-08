@@ -19,7 +19,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Universal grocery + restaurant value ranking"
+            android:text="Private local-AI + exact grocery and restaurant value ranking · v101"
             android:textSize="16sp"
             android:textColor="#4B5563" />
         <TextView
@@ -47,7 +47,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="1. Enable the accessibility scanner once.\n\n2. Open Uber Eats, a grocery app, restaurant app, or shopping website in your browser.\n\n3. Tap the floating VP bubble.\n\n4. Use Loaded for the current screen, Scan all for lazy/off-screen lists, or OCR when an app does not expose useful accessibility text.\n\n5. Rank by Smart, $/kg, $/L, calories/$, pizza area/$, or $/unit."
+            android:text="1. Enable the accessibility scanner once.\n\n2. Open a grocery, restaurant, delivery, or shopping app.\n\n3. Tap the floating VP bubble.\n\n4. Use Loaded for the current screen, Scan all for lazy/off-screen lists, or OCR when an app does not expose useful accessibility text.\n\n5. Rank by exact unit modes or visibly labeled AI food/meat estimates. Optionally set a budget, Food only, or No pork filter."
             android:textColor="#374151"
             android:lineSpacingExtra="2dp" />
         <TextView
@@ -62,7 +62,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="This build performs parsing, ranking and OCR on-device. It has no network permission and does not send screen contents, account credentials or shopping data to a server."
+            android:text="The compact classifier, parsing, ranking, settings and OCR all stay on-device. Exact measurements override AI estimates. This build has no internet permission and does not send screen contents, account credentials or shopping data to a server."
             android:textColor="#374151" />
         <Button
             android:id="@+id/settingsButton"
