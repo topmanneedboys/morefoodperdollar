@@ -1,6 +1,7 @@
 browser-extension/node_modules/
 browser-extension/dist/
 android/.gradle/
+android/.kotlin/
 android/app/build/
 *.apk
 *.zip

@@ -1,4 +1,12 @@
 <resources>
     <string name="app_name">ValuePilot</string>
-    <string name="accessibility_description">Reads product/menu labels shown in the active app so ValuePilot can compare exact unit value and local-AI estimates in an optional floating ranking panel. It scrolls only when you explicitly choose Scan all; this build has no internet permission.</string>
+    <string name="app_tagline">Fast, search-aware value ranking · v101.1</string>
+    <string name="checking_status">Checking scanner status…</string>
+    <string name="enable_scanner">Enable ValuePilot scanner</string>
+    <string name="how_to_use">How to use</string>
+    <string name="how_to_body">1. Enable the accessibility scanner once.\n\n2. Open a grocery, restaurant, delivery, or shopping app and search normally. ValuePilot automatically reads newly visible products.\n\n3. Tap the floating VP bubble to compare matches. Tap any result to safely reopen that exact product.\n\n4. Use Rescan if the page needs a refresh. Budget, dietary, member-price, off-screen collection, and on-device OCR controls are available under Filters.</string>
+    <string name="privacy">Privacy</string>
+    <string name="privacy_body">The compact classifier, parsing, ranking, settings and OCR all stay on-device. Exact measurements override AI estimates. This build has no internet permission and does not send screen contents, account credentials or shopping data to a server.</string>
+    <string name="open_accessibility_settings">Open accessibility settings</string>
+    <string name="accessibility_description">Automatically reads newly visible product and menu labels in the active app so ValuePilot can compare exact unit value and clearly labeled local estimates. It scrolls only when you explicitly choose off-screen collection; this build has no internet permission.</string>
 </resources>

@@ -74,15 +74,18 @@ jobs:
       - name: Verify Android privacy boundary
         run: |
           test -s android/app/build/outputs/apk/debug/app-debug.apk
-          if "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions android/app/build/outputs/apk/debug/app-debug.apk | grep -q 'android.permission.INTERNET'; then
-            echo 'Unexpected INTERNET permission in APK' >&2
-            exit 1
-          fi
+          permissions="$($ANDROID_HOME/build-tools/36.0.0/aapt dump permissions android/app/build/outputs/apk/debug/app-debug.apk)"
+          for forbidden in android.permission.INTERNET android.permission.ACCESS_NETWORK_STATE; do
+            if grep -q "$forbidden" <<<"$permissions"; then
+              echo "Unexpected $forbidden permission in APK" >&2
+              exit 1
+            fi
+          done
 
       - name: Assemble release files and checksums
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk release/ValuePilot-v101-android.apk
-          (cd release && sha256sum ValuePilot-v101-chromium.zip ValuePilot-v101-firefox.zip ValuePilot-v101-android.apk > SHA256SUMS.txt)
+          cp android/app/build/outputs/apk/debug/app-debug.apk release/ValuePilot-v101.1-android.apk
+          (cd release && sha256sum ValuePilot-v101-chromium.zip ValuePilot-v101-firefox.zip ValuePilot-v101.1-android.apk > SHA256SUMS.txt)
 
       - name: Upload verified release bundle
         uses: actions/upload-artifact@v6

@@ -32,6 +32,16 @@ data class Promotion(
     val effectivePrice: Double? = null
 )
 
+data class PriceOffer(
+    val currentPrice: Double,
+    val currency: String,
+    val regularPrice: Double? = null,
+    val previousPrice: Double? = null,
+    val salePrice: Double? = null,
+    val memberPrice: Double? = null,
+    val membershipRequired: Boolean = false
+)
+
 data class ValueItem(
     val name: String,
     val rawText: String,
@@ -43,8 +53,19 @@ data class ValueItem(
     val promotion: Promotion,
     val confidence: Double,
     val ai: LocalAiPrediction = LocalAiPrediction(),
-    val sourcePackage: String? = null
+    val sourcePackage: String? = null,
+    val offer: PriceOffer = PriceOffer(price, currency),
+    val availability: String? = null,
+    val searchSessionId: String? = null,
+    val cardFingerprint: String? = null,
+    val locator: ItemLocator? = null
 ) {
+    val stableId: Long
+        get() = StableIds.long(IncrementalProductStore.itemIdentity(this))
+
+    fun applicablePrice(useMemberPrice: Boolean): Double =
+        if (useMemberPrice) offer.memberPrice ?: offer.currentPrice else offer.currentPrice
+
     val pricePerKg: Double?
         get() = quantity?.takeIf { it.kind == Quantity.Kind.MASS_G && it.amountBase > 0 && price > 0 }
             ?.let { price / ((it.amountBase * promotion.receivedMultiplier) / 1000.0) }
@@ -66,7 +87,15 @@ data class ValueItem(
             ?.let { it.points * ai.meatRatio * promotion.receivedMultiplier / price }
 }
 
-data class RankedItem(val item: ValueItem, val rank: Int, val mode: RankMode, val metricLabel: String)
+data class RankedItem(
+    val item: ValueItem,
+    val rank: Int,
+    val mode: RankMode,
+    val metricLabel: String,
+    val exactnessLabel: String = "Calculated"
+) {
+    val stableId: Long get() = item.stableId
+}
 
 enum class RankMode { SMART, MASS, VOLUME, CALORIE, PIZZA, UNIT, PORTION, MEAT }
 
@@ -147,23 +176,79 @@ object ValueEngine {
         Price(number, currency, raw, match.range.first)
     }.toList()
 
+    private data class PriceLabels(
+        val member: Boolean,
+        val previous: Boolean,
+        val regular: Boolean,
+        val sale: Boolean,
+        val savings: Boolean,
+        val unitRate: Boolean
+    )
+
+    private fun labelsFor(text: String, price: Price): PriceLabels {
+        val start = price.index.coerceAtLeast(0)
+        val prefix = text.substring(maxOf(0, start - 48), start).lowercase(Locale.ROOT)
+        val suffixStart = (start + price.raw.length).coerceAtMost(text.length)
+        val suffix = text.substring(suffixStart, minOf(text.length, suffixStart + 32)).lowercase(Locale.ROOT)
+        val around = "$prefix ${price.raw.lowercase(Locale.ROOT)} $suffix"
+        val memberPrefix = Regex(
+            "(?:member(?:s)?(?:hip)?(?:\\s+price)?|loyalty(?:\\s+price)?|club\\s+price)\\s*[:\\-]?$",
+            RegexOption.IGNORE_CASE
+        ).containsMatchIn(prefix.takeLast(40))
+        val memberSuffix = Regex("^\\s*(?:for\\s+members?|members?\\s+only)\\b", RegexOption.IGNORE_CASE)
+            .containsMatchIn(suffix.take(28))
+        return PriceLabels(
+            member = memberPrefix || memberSuffix,
+            previous = Regex("(?:previous\\s+price(?:\\s+was)?|formerly|was)\\s*[:\\-]?$", RegexOption.IGNORE_CASE)
+                .containsMatchIn(prefix.takeLast(34)),
+            regular = Regex("(?:regular(?:\\s+price)?|reg\\.?)\\s*[:\\-]?$", RegexOption.IGNORE_CASE)
+                .containsMatchIn(prefix.takeLast(30)),
+            sale = Regex("(?:now|sale(?:\\s+price)?|current(?:\\s+price)?|deal(?:\\s+price)?)\\s*[:\\-]?$", RegexOption.IGNORE_CASE)
+                .containsMatchIn(prefix.takeLast(32)),
+            savings = Regex("(?:save|saving|discount|off)\\s*$", RegexOption.IGNORE_CASE)
+                .containsMatchIn(prefix.takeLast(20)) || Regex("\\boff\\b", RegexOption.IGNORE_CASE).containsMatchIn(around.takeLast(24)),
+            unitRate = Regex("(?:unit\\s+price|price\\s+per)\\s*[:\\-]?$", RegexOption.IGNORE_CASE)
+                .containsMatchIn(prefix.takeLast(28)) ||
+                Regex(
+                    "^\\s*(?:/|per\\s+)(?:item|each|ea|unit|count|ct|kg|g|lb|oz|l|ml)\\b",
+                    RegexOption.IGNORE_CASE
+                ).containsMatchIn(suffix.take(24))
+        )
+    }
+
     private fun choosePrice(text: String, all: List<Price>): Price? {
         if (all.isEmpty()) return null
         val currencyAmount = "(?:CA\\$|C\\$|US\\$|A\\$|[$€£₹৳])\\s*$PRICE_NUMBER_SOURCE"
         Regex("\\b(\\d{1,2})\\s*(?:for|/|at)\\s*($currencyAmount)", RegexOption.IGNORE_CASE).find(text)?.let { match ->
             prices(match.groupValues[2]).firstOrNull()?.let { return it.copy(source = "bundle") }
         }
-        if (all.size > 1) {
-            Regex("\\b(?:now|sale(?:\\s+price)?|member(?:\\s+price)?|deal(?:\\s+price)?)\\s*[:-]?\\s*($currencyAmount)", RegexOption.IGNORE_CASE)
-                .find(text)?.let { match -> prices(match.groupValues[1]).firstOrNull()?.let { return it.copy(source = "explicit-current") } }
-            val usable = all.filter { price ->
-                val prefix = text.substring(maxOf(0, price.index - 14), price.index.coerceAtLeast(0))
-                !Regex("\\b(?:save|saving|discount|off)\\s*$", RegexOption.IGNORE_CASE).containsMatchIn(prefix)
-            }
-            val hasSaleHints = Regex("\\b(sale|now|deal|member|promo|offer|discount|save|regular|reg\\.?|was)\\b", RegexOption.IGNORE_CASE).containsMatchIn(text)
-            if (hasSaleHints && usable.isNotEmpty()) return usable.minByOrNull { it.amount }?.copy(source = "sale-min")
-        }
+        val eligible = all.map { it to labelsFor(text, it) }.filterNot { it.second.unitRate }
+        if (eligible.isEmpty()) return null
+        val labeled = eligible.filterNot { it.second.savings }.ifEmpty { eligible }
+        labeled.firstOrNull { (_, labels) -> labels.sale && !labels.member }?.let { return it.first.copy(source = "explicit-current") }
+        labeled.firstOrNull { (_, labels) -> !labels.member && !labels.previous && !labels.regular }?.let { return it.first.copy(source = "current") }
+        labeled.firstOrNull { (_, labels) -> labels.regular }?.let { return it.first.copy(source = "regular") }
+        labeled.firstOrNull { (_, labels) -> labels.previous }?.let { return it.first.copy(source = "previous-fallback") }
+        labeled.firstOrNull { (_, labels) -> labels.member }?.let { return it.first.copy(source = "member-only") }
         return all.first().copy(source = "first")
+    }
+
+    private fun offer(text: String, all: List<Price>, selected: Price): PriceOffer {
+        val eligible = all.map { it to labelsFor(text, it) }.filterNot { it.second.unitRate }
+        val labeled = eligible.filterNot { it.second.savings }.ifEmpty { eligible }
+        val member = labeled.firstOrNull { (_, labels) -> labels.member && !labels.previous }?.first?.amount
+        val previous = labeled.firstOrNull { (_, labels) -> labels.previous }?.first?.amount
+        val regular = labeled.firstOrNull { (_, labels) -> labels.regular }?.first?.amount
+        val sale = labeled.firstOrNull { (_, labels) -> labels.sale && !labels.member }?.first?.amount
+        return PriceOffer(
+            currentPrice = selected.amount,
+            currency = selected.currency,
+            regularPrice = regular,
+            previousPrice = previous,
+            salePrice = sale,
+            memberPrice = member,
+            membershipRequired = member != null
+        )
     }
 
     fun promotion(text: String, price: Double): Promotion {
@@ -239,7 +324,12 @@ object ValueEngine {
             }
         }
 
-        Regex("\\b(\\d+(?:[.,]\\d+)?)\\s*[-–]\\s*(\\d+(?:[.,]\\d+)?)\\s*($QUANTITY_UNITS)\\b", RegexOption.IGNORE_CASE).findAll(value).forEach { match ->
+        val rangeQuantityRegex = Regex(
+            "\\b(\\d+(?:[.,]\\d+)?)\\s*[-–]\\s*(\\d+(?:[.,]\\d+)?)\\s*($QUANTITY_UNITS)\\b",
+            RegexOption.IGNORE_CASE
+        )
+        val rangeMatches = rangeQuantityRegex.findAll(value).toList()
+        rangeMatches.forEach { match ->
             val a = parseNumber(match.groupValues[1]) ?: return@forEach
             val b = parseNumber(match.groupValues[2]) ?: return@forEach
             val midpoint = (a + b) / 2.0
@@ -251,6 +341,7 @@ object ValueEngine {
         Regex("\\b(\\d+(?:[.,]\\d+)?)\\s*($QUANTITY_UNITS)\\b", RegexOption.IGNORE_CASE).findAll(value).forEach { match ->
             val prefix = value.substring(maxOf(0, match.range.first - 8), match.range.first)
             if (Regex("\\d+\\s*[x×]\\s*$").containsMatchIn(prefix)) return@forEach
+            if (rangeMatches.any { range -> match.range.first >= range.range.first && match.range.last <= range.range.last }) return@forEach
             val amount = parseNumber(match.groupValues[1]) ?: return@forEach
             val unit = normalizeUnit(match.groupValues[2])
             mass[unit]?.let { candidates += Quantity(Quantity.Kind.MASS_G, amount * it, "${match.groupValues[1]} ${match.groupValues[2]}", .98) }
@@ -295,12 +386,28 @@ object ValueEngine {
 
     fun calories(text: String): Double? = calorieRegex.find(normalize(text))?.groupValues?.get(1)?.let(::parseNumber)?.takeIf { it > 0 }
 
+    internal fun sanitizeNameLine(value: String): String {
+        var clean = priceRegex.replace(normalize(value), " ")
+        val leadingNoise = Regex(
+            "^\\s*(?:(?:previous\\s+price(?:\\s+was)?|regular(?:\\s+price)?|reg\\.?|member(?:s|ship)?(?:\\s+price)?|loyalty(?:\\s+price)?|sale(?:\\s+price)?|current\\s+price|now|was)\\s*[:\\-]?|for\\s+members?\\b)\\s*",
+            RegexOption.IGNORE_CASE
+        )
+        repeat(4) { clean = leadingNoise.replace(clean, "") }
+        clean = clean
+            .replace(Regex("\\b(?:previous\\s+price(?:\\s+was)?|regular\\s+price|member(?:s|ship)?\\s+price)\\b", RegexOption.IGNORE_CASE), " ")
+            .replace(Regex("\\bfor\\s+members?\\s*$", RegexOption.IGNORE_CASE), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim(' ', ':', '-', '·', '|')
+        return clean
+    }
+
     fun name(text: String): String {
         val lines = text.split(Regex("\\n+")).map(::normalize).filter { it.isNotBlank() }.take(40)
-        val bad = Regex("^(?:add|customize|choose|select|popular|sponsored|deal|sale|save|free delivery|buy one|get one|from\\s+[$€£₹৳]|[$€£₹৳]\\s*\\d|view cart|checkout|order now)\\b", RegexOption.IGNORE_CASE)
+        val bad = Regex("^(?:add|customize|choose|select|popular|sponsored|deal|sale|save|free delivery|buy one|get one|from\\s+[$€£₹৳]|[$€£₹৳]\\s*\\d|view cart|checkout|order now|in stock|out of stock|members? only)\\b", RegexOption.IGNORE_CASE)
         val ratingOrTime = Regex("^(?:\\d(?:[.,]\\d)?\\s*(?:stars?|★)|\\d+\\s*(?:min|mins|minutes?|hours?|reviews?|ratings?))\\b", RegexOption.IGNORE_CASE)
+        val quantityOnly = Regex("^\\d+(?:[.,]\\d+)?\\s*(?:$QUANTITY_UNITS|cal|kcal|calories?|ct|count|pieces?|pcs|pack|pk|units?|ea)$", RegexOption.IGNORE_CASE)
         val scored = lines.mapIndexedNotNull { index, line ->
-            val clean = priceRegex.replace(line, " ").replace(Regex("\\s+"), " ").trim()
+            val clean = sanitizeNameLine(line)
             if (clean.length !in 2..160) return@mapIndexedNotNull null
             var score = 0.0
             if (Regex("\\p{L}").containsMatchIn(clean)) score += 4
@@ -308,14 +415,13 @@ object ValueEngine {
             if (!priceRegex.containsMatchIn(line)) score += 1
             if (bad.containsMatchIn(clean)) score -= 9
             if (ratingOrTime.containsMatchIn(clean)) score -= 8
+            if (quantityOnly.matches(clean)) score -= 10
             if (Regex("\\b(?:subtotal|total|delivery fee|service fee|tax|tip|add to cart)\\b", RegexOption.IGNORE_CASE).containsMatchIn(clean)) score -= 7
-            val ai = LocalFoodModel.predict(clean)
-            if (ai.foodConfidence >= .35) score += 2 + ai.foodConfidence
             clean to (score - index * .05)
         }
         val best = scored.maxByOrNull { it.second }
         if (best != null && best.second > -1) return best.first.take(120)
-        return priceRegex.replace(normalize(text), " ").replace(Regex("\\s+"), " ").trim().take(120).ifBlank { "Unnamed item" }
+        return sanitizeNameLine(normalize(text)).take(120).ifBlank { "Unnamed item" }
     }
 
     fun estimatePortion(text: String, ai: LocalAiPrediction = LocalAiPrediction()): PortionEstimate? {
@@ -370,7 +476,9 @@ object ValueEngine {
 
     fun analyze(text: String, sourcePackage: String? = null): ValueItem? {
         val normalized = normalize(text)
-        val selected = choosePrice(normalized, prices(normalized)) ?: return null
+        val allPrices = prices(normalized)
+        val selected = choosePrice(normalized, allPrices) ?: return null
+        val offer = offer(normalized, allPrices, selected)
         val promo = promotion(normalized, selected.amount)
         val quantity = quantity(normalized)
         val calories = calories(normalized)
@@ -382,10 +490,16 @@ object ValueEngine {
         if (calories != null) confidence += .08
         if (promo.type != "none") confidence += .03
         if (ai.foodConfidence >= .5) confidence += minOf(.04, ai.confidence * .04)
+        val availability = when {
+            Regex("\\bout of stock|sold out|unavailable\\b", RegexOption.IGNORE_CASE).containsMatchIn(normalized) -> "Out of stock"
+            Regex("\\bin stock|available\\b", RegexOption.IGNORE_CASE).containsMatchIn(normalized) -> "In stock"
+            else -> null
+        }
         return ValueItem(
             name = name(normalized), rawText = normalized, price = selected.amount, currency = selected.currency,
             quantity = quantity, calories = calories, portion = portion, promotion = promo,
-            confidence = confidence.coerceAtMost(.99), ai = ai, sourcePackage = sourcePackage
+            confidence = confidence.coerceAtMost(.99), ai = ai, sourcePackage = sourcePackage,
+            offer = offer, availability = availability
         )
     }
 
@@ -394,6 +508,7 @@ object ValueEngine {
         return priceRegex.replace(normalized, " ")
             .replace(Regex("\\b\\d+(?:[.,]\\d+)?\\s*(?:mg|g|grams?|kg|kilograms?|oz|ounces?|lb|lbs|pounds?|ml|milliliters?|l|litres?|liters?|fl\\s*oz|cal|kcal|calories?|ct|count|pieces?|pcs|pack|pk|units?|ea)\\b", RegexOption.IGNORE_CASE), " ")
             .replace(Regex("\\b(?:buy\\s+one\\s+get\\s+one(?:\\s+free)?|bogo|sale|deal|save\\s+\\d+%|\\d+%\\s*off|add to cart|customize)\\b", RegexOption.IGNORE_CASE), " ")
+            .replace(Regex("\\b(?:previous\\s+price(?:\\s+was)?|regular\\s+price|member(?:s|ship)?\\s+price|for\\s+members?)\\b", RegexOption.IGNORE_CASE), " ")
             .replace(Regex("[^\\p{L}\\p{N}]+"), " ")
             .replace(Regex("\\s+"), " ").trim()
             .ifBlank { normalize(name).lowercase(Locale.ROOT).take(80) }
@@ -410,33 +525,66 @@ object ValueEngine {
         return map.values.toList()
     }
 
-    fun minimumSpend(item: ValueItem): Double = item.promotion.minimumSpend ?: item.price
+    fun minimumSpend(item: ValueItem, useMemberPrice: Boolean = false): Double {
+        val applicable = item.applicablePrice(useMemberPrice)
+        val ratio = (item.promotion.minimumSpend ?: item.price) / item.price.coerceAtLeast(.000001)
+        return applicable * ratio
+    }
 
     fun filterItems(
         items: Collection<ValueItem>,
         maxPrice: Double? = null,
         foodOnly: Boolean = true,
-        excludePork: Boolean = false
+        excludePork: Boolean = false,
+        query: String? = null,
+        useMemberPrice: Boolean = false
     ): List<ValueItem> = items.filter { item ->
-        if (maxPrice != null && maxPrice > 0 && minimumSpend(item) > maxPrice) return@filter false
+        if (maxPrice != null && maxPrice > 0 && minimumSpend(item, useMemberPrice) > maxPrice) return@filter false
         if (excludePork && (item.ai.category == "pork" || item.ai.porkConfidence >= .36)) return@filter false
         if (foodOnly && item.ai.available && item.ai.category == "nonfood" && item.ai.foodConfidence < .22) return@filter false
+        if (!SearchRelevance.matches(query, item)) return@filter false
         true
     }
 
-    fun rank(items: Collection<ValueItem>, requested: RankMode): List<RankedItem> {
+    fun rank(items: Collection<ValueItem>, requested: RankMode, useMemberPrice: Boolean = false): List<RankedItem> {
         val clean = dedupe(items)
         val mode = if (requested == RankMode.SMART) smartMode(clean) else requested
-        data class Metric(val item: ValueItem, val value: Double?, val lower: Boolean, val label: String, val index: Int)
+        data class Metric(
+            val item: ValueItem,
+            val value: Double?,
+            val lower: Boolean,
+            val label: String,
+            val exactness: String,
+            val index: Int
+        )
         val rows = clean.mapIndexed { index, item ->
+            val price = item.applicablePrice(useMemberPrice)
+            val received = item.promotion.receivedMultiplier
+            val massValue = item.quantity?.takeIf { it.kind == Quantity.Kind.MASS_G && it.amountBase > 0 && price > 0 }
+                ?.let { price / ((it.amountBase * received) / 1000.0) }
+            val volumeValue = item.quantity?.takeIf { it.kind == Quantity.Kind.VOLUME_ML && it.amountBase > 0 && price > 0 }
+                ?.let { price / ((it.amountBase * received) / 1000.0) }
+            val unitValue = item.quantity?.takeIf { it.kind == Quantity.Kind.COUNT && it.amountBase > 0 && price > 0 }
+                ?.let { price / (it.amountBase * received) }
+            val calorieValue = item.calories?.takeIf { it > 0 && price > 0 }?.let { it * received / price }
+            val pizzaValue = item.quantity?.takeIf { it.kind == Quantity.Kind.PIZZA_AREA_SQIN && it.amountBase > 0 && price > 0 }
+                ?.let { it.amountBase * received / price }
+            val portionValue = item.portion?.takeIf { it.points > 0 && price > 0 }?.let { it.points * received / price }
+            val meatValue = item.portion?.takeIf { it.points > 0 && price > 0 && item.ai.meatRatio > .08 && item.ai.confidence >= .30 }
+                ?.let { it.points * item.ai.meatRatio * received / price }
+            fun measuredExactness(value: Double?): String = when {
+                value == null -> "Shown price"
+                (item.quantity?.confidence ?: 1.0) < .9 -> "Estimate"
+                else -> "Calculated"
+            }
             when (mode) {
-                RankMode.MASS -> Metric(item, item.pricePerKg, true, item.pricePerKg?.let { "${money(it, item.currency)}/kg" } ?: "price only", index)
-                RankMode.VOLUME -> Metric(item, item.pricePerL, true, item.pricePerL?.let { "${money(it, item.currency)}/L" } ?: "price only", index)
-                RankMode.CALORIE -> Metric(item, item.caloriesPerDollar, false, item.caloriesPerDollar?.let { "${fmt(it, 1)} cal/$" } ?: "price only", index)
-                RankMode.PIZZA -> Metric(item, item.pizzaAreaPerDollar, false, item.pizzaAreaPerDollar?.let { "${fmt(it, 1)} in²/$" } ?: "price only", index)
-                RankMode.UNIT -> Metric(item, item.pricePerUnit, true, item.pricePerUnit?.let { "${money(it, item.currency)}/unit" } ?: "price only", index)
-                RankMode.PORTION -> Metric(item, item.portionPointsPerDollar, false, item.portionPointsPerDollar?.let { "${fmt(it, 2)} ${if (item.portion?.source == "local-ai") "AI est." else "est."} food/$" } ?: "price only", index)
-                RankMode.MEAT -> Metric(item, item.meatPointsPerDollar, false, item.meatPointsPerDollar?.let { "${fmt(it, 2)} AI est. meat/$" } ?: "price only", index)
+                RankMode.MASS -> Metric(item, massValue, true, massValue?.let { "${money(it, item.currency)}/kg" } ?: "Price only", measuredExactness(massValue), index)
+                RankMode.VOLUME -> Metric(item, volumeValue, true, volumeValue?.let { "${money(it, item.currency)}/L" } ?: "Price only", measuredExactness(volumeValue), index)
+                RankMode.CALORIE -> Metric(item, calorieValue, false, calorieValue?.let { "${fmt(it, 1)} cal/$" } ?: "Price only", if (calorieValue == null) "Shown price" else "Calculated", index)
+                RankMode.PIZZA -> Metric(item, pizzaValue, false, pizzaValue?.let { "${fmt(it, 1)} in²/$" } ?: "Price only", measuredExactness(pizzaValue), index)
+                RankMode.UNIT -> Metric(item, unitValue, true, unitValue?.let { "${money(it, item.currency)}/item" } ?: "Price only", measuredExactness(unitValue), index)
+                RankMode.PORTION -> Metric(item, portionValue, false, portionValue?.let { "${fmt(it, 2)} food amount/$" } ?: "Price only", "Estimate", index)
+                RankMode.MEAT -> Metric(item, meatValue, false, meatValue?.let { "${fmt(it, 2)} meat value/$" } ?: "Price only", "Estimate", index)
                 RankMode.SMART -> error("resolved above")
             }
         }.sortedWith(Comparator { a, b ->
@@ -453,7 +601,7 @@ object ValueEngine {
                 }
             }
         })
-        return rows.mapIndexed { index, metric -> RankedItem(metric.item, index + 1, mode, metric.label) }
+        return rows.mapIndexed { index, metric -> RankedItem(metric.item, index + 1, mode, metric.label, metric.exactness) }
     }
 
     fun smartMode(items: Collection<ValueItem>): RankMode {

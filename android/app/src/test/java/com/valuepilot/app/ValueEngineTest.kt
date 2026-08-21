@@ -1,6 +1,5 @@
 package com.valuepilot.app
 
-import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -12,12 +11,7 @@ class ValueEngineTest {
         @JvmStatic
         @BeforeClass
         fun loadLocalModel() {
-            val model = listOf(
-                File("app/src/main/assets/local_ai_model.json"),
-                File("src/main/assets/local_ai_model.json"),
-                File("android/app/src/main/assets/local_ai_model.json")
-            ).firstOrNull(File::isFile) ?: error("local AI model asset not found")
-            LocalFoodModel.initializeFromJson(model.readText())
+            TestModelLoader.load()
         }
     }
 

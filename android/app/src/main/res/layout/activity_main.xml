@@ -11,7 +11,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="ValuePilot"
+            android:text="@string/app_name"
             android:textSize="30sp"
             android:textStyle="bold"
             android:textColor="#111827" />
@@ -19,7 +19,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="Private local-AI + exact grocery and restaurant value ranking · v101"
+            android:text="@string/app_tagline"
             android:textSize="16sp"
             android:textColor="#4B5563" />
         <TextView
@@ -27,19 +27,19 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="Checking scanner status…"
+            android:text="@string/checking_status"
             android:textStyle="bold" />
         <Button
             android:id="@+id/enableButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="Enable ValuePilot scanner" />
+            android:text="@string/enable_scanner" />
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="How to use"
+            android:text="@string/how_to_use"
             android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="#111827" />
@@ -47,14 +47,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="1. Enable the accessibility scanner once.\n\n2. Open a grocery, restaurant, delivery, or shopping app.\n\n3. Tap the floating VP bubble.\n\n4. Use Loaded for the current screen, Scan all for lazy/off-screen lists, or OCR when an app does not expose useful accessibility text.\n\n5. Rank by exact unit modes or visibly labeled AI food/meat estimates. Optionally set a budget, Food only, or No pork filter."
+            android:text="@string/how_to_body"
             android:textColor="#374151"
             android:lineSpacingExtra="2dp" />
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="Privacy"
+            android:text="@string/privacy"
             android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="#111827" />
@@ -62,13 +62,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="The compact classifier, parsing, ranking, settings and OCR all stay on-device. Exact measurements override AI estimates. This build has no internet permission and does not send screen contents, account credentials or shopping data to a server."
+            android:text="@string/privacy_body"
             android:textColor="#374151" />
         <Button
             android:id="@+id/settingsButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="Open accessibility settings" />
+            android:text="@string/open_accessibility_settings" />
     </LinearLayout>
 </ScrollView>
