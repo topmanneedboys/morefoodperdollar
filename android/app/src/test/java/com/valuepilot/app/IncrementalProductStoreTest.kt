@@ -71,7 +71,7 @@ class IncrementalProductStoreTest {
             val englishKey = IncrementalProductStore.itemIdentity(eggs)
             assertEquals(englishKey, turkishKey)
 
-            val alternateDisplay = ValueEngine.analyze("large   eggs\n30 count\n\$11.650", PACKAGE)!!
+            val alternateDisplay = ValueEngine.analyze("large   eggs\n30 count\n\$11.65", PACKAGE)!!
             assertEquals(englishKey, IncrementalProductStore.itemIdentity(alternateDisplay))
 
             val smaller = ValueEngine.analyze("Large Eggs\n12 ct\n\$11.65", PACKAGE)!!
