@@ -69,7 +69,7 @@ jobs:
 
       - name: Test, lint, and build Android APK
         working-directory: android
-        run: gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+        run: gradle --no-daemon :shared-core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 
       - name: Verify Android privacy boundary
         run: |
