@@ -30,7 +30,7 @@ class CoreBoundaryTest {
         assertTrue(source.contains("data class ValuePilotUiState"))
         assertTrue(source.contains("sealed interface ValuePilotIntent"))
         assertTrue(source.contains("fun interface ValuePilotUiRenderer"))
-        assertTrue(source.contains("value class ProductResultId"))
+        assertTrue(source.contains("import com.valuepilot.core.ProductResultId"))
     }
 
     private fun source(name: String): File {

@@ -1,9 +1,7 @@
 package com.valuepilot.app
 
+import com.valuepilot.core.ProductResultId
 import java.util.Locale
-
-@JvmInline
-value class ProductResultId(val value: Long)
 
 data class ValuePilotFilterSettings(
     val maxPrice: Double? = null,

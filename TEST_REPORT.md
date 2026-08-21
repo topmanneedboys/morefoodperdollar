@@ -2,6 +2,15 @@
 
 Updated: 2026-08-20
 
+## Session 2 — 2026-08-21
+
+- Targeted browser deterministic/local-model/shared-golden suite: **28 passed, 0 failed**.
+- Full browser suite: 28 runnable tests passed; integration loading failed because locked `jsdom` is absent.
+- Firefox packaging completed; validation did not start because locked `web-ext` is absent.
+- Shared-core/Android JVM tests, lint, and APK assembly did not start because pinned Gradle 9.5 was absent and retrieval failed with `Network is unreachable`.
+- Static forbidden-dependency scan of `android/shared-core/src` returned no matches.
+- No Session 2 Android build or APK is claimed as verified.
+
 ## Baseline
 
 Starting commit `ceed4d4dbd83f3636c5e9af858d8c4a42e98b2e5` passed:

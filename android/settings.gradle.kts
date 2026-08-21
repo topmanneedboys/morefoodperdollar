@@ -14,3 +14,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "ValuePilot"
 include(":app")
+include(":shared-core")

@@ -2,11 +2,25 @@
 
 ## Permanent product boundary
 
-ValuePilot core is independent of capture and presentation:
+```text
+DATA / CAPTURE PROVIDERS
+  Android Accessibility (experimental) · OCR · browser DOM · future authorized APIs
+                              ↓
+                    ProductObservation
+                              ↓
+SHARED VALUEPILOT CORE (`android/shared-core`)
+  exact money · explicit quantity · offer/promotion · canonical product · value math
+                              ↓
+APPLICATION / ORCHESTRATION
+  parser · repository/session · matching/ranking · immutable application state
+                              ↓
+PRESENTATIONS
+  Android native · experimental live overlay · browser · future iOS/tablet/desktop
+```
 
-`provider adapters → immutable observations → canonical product/offer intelligence → repository/session → matching/ranking → stable application state/API → replaceable presentations`
+Dependencies point downward only. Shared core has no Android, UI, capture, OCR, retailer, filesystem, network, or lifecycle dependency. `CoreContracts.kt` and `ValuePilotUiState.kt` are transitional platform-neutral application sources still in the app module because they refer to legacy app models. Accessibility/OCR/navigation and the overlay are optional adapters/test harnesses. Their removal must not affect shared-core tests.
 
-`CoreContracts.kt` contains platform-neutral provider, parser, repository, ranking, and matching ports. `ValuePilotUiState.kt` contains immutable presentation state and typed intents. Android Accessibility/OCR/navigation live outside that boundary; `AndroidLiveConnector` is explicitly experimental and removable. The existing overlay remains a compatibility presentation while it is migrated to consume only application state. See `V2_ARCHITECTURE_DECISION.md` for classification and the incremental KMP decision.
+Cross-client rules live in `shared-fixtures/valuepilot-golden-v1.json`. The browser remains TypeScript and checks the same fixture rather than being forcibly rewritten in Kotlin. See `PLATFORM_DEPENDENCY_MAP.md`.
 
 ## Evidence hierarchy
 

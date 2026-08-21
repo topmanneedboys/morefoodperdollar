@@ -8,6 +8,14 @@ The product foundation is now provider- and presentation-independent by policy. 
 
 The earlier passing verification below predates these Session 1 edits. Session 1 rerun was blocked before compilation because this fresh workspace lacks a writable cached Gradle 9.5 distribution, Android SDK/JDK compiler toolchain, and permitted network access to retrieve them. Browser deterministic tests passed 26 cases, but the integration test could not load absent `jsdom`; dependency installation was also network-blocked. Therefore this checkpoint is **not build-verified** and no new APK is claimed.
 
+## Session 2 shared-core extraction
+
+- Added `android/shared-core`, a pure Kotlin/JVM module consumed by the app.
+- The module owns exact `Money`, explicit normalized quantities/units, offer/promotion terms, canonical products/observations, opaque IDs, and deterministic unit-rate math.
+- Observation timestamps are explicit input. The module performs no hidden clock, locale, JSON, filesystem, network, Android, capture, or UI work.
+- Added one versioned golden fixture shared by Android and browser tests.
+- Full Android/shared-core compilation remains unverified in this environment: the pinned Gradle distribution and compiler/SDK dependencies cannot be downloaded. Static source checks and browser tests are recorded separately below.
+
 ## Baseline inspected
 
 - Repository: `topmanneedboys/morefoodperdollar`
@@ -39,6 +47,13 @@ The Android project, build configuration, ValueEngine, NodeScanner, Accessibilit
 - A Gradle 9.5 wrapper is present under `android/`.
 
 ## Verification status
+
+Session 2 locally verified:
+
+- targeted deterministic browser + shared golden tests: 28/28 passed;
+- full browser integration and Firefox lint remain blocked by absent locked npm dependencies;
+- Android/shared-core tests, lint, and APK assembly remain blocked before compilation by unavailable Gradle/JDK/SDK artifacts;
+- no Session 2 APK is claimed.
 
 The most recent complete automated run passed:
 

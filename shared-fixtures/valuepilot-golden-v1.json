@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "parsing": [
+    {"id":"eggs-30","rawText":"Large Eggs\n30 ct\n$11.65","name":"Large Eggs","quantityKind":"COUNT","quantityBase":30.0,"currentPrice":11.65,"pricePerUnit":0.3883333333},
+    {"id":"milk-1.9l","rawText":"Whole Milk\n1.9 L\n$5.49","name":"Whole Milk","quantityKind":"VOLUME_ML","quantityBase":1900.0,"currentPrice":5.49,"pricePerL":2.8894736842},
+    {"id":"mass-3lb","rawText":"Beef Roast\n3 lb\n$18.00","name":"Beef Roast","quantityKind":"MASS_G","quantityBase":1360.77711,"currentPrice":18.0},
+    {"id":"multipack","rawText":"Yogurt\n6 x 500 g\n$14.99","name":"Yogurt","quantityKind":"MASS_G","quantityBase":3000.0,"currentPrice":14.99},
+    {"id":"member","rawText":"Large Eggs\n30 ct\n$11.65\n$9.81 for members","name":"Large Eggs","currentPrice":11.65,"memberPrice":9.81},
+    {"id":"previous","rawText":"Large Eggs\n30 ct\n$11.65\nPrevious price was $12.49\nfor members","name":"Large Eggs","currentPrice":11.65,"previousPrice":12.49},
+    {"id":"bogo","rawText":"Pasta\n500 g\n$4.00\nBuy one get one free","name":"Pasta","currentPrice":4.0,"promotionReceivedMultiplier":2.0}
+  ],
+  "session": {"firstQuery":"bananas","nextQuery":"eggs","staleName":"Organic Bananas"},
+  "ranking": [
+    {"rawText":"Eggs A\n12 ct\n$6.00","expectedRank":2},
+    {"rawText":"Eggs B\n30 ct\n$12.00","expectedRank":1}
+  ],
+  "matching": {"target":"Large Eggs 30 ct","unrelated":"Organic Bananas 1 kg","expected":"REJECT"}
+}

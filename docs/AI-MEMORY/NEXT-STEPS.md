@@ -10,3 +10,6 @@ Updated: 2026-08-20
 6. If and only if every Android stop condition is device-verified, propose—but do not silently begin—the Universal Cart + Basket Optimizer domain-model milestone. Cross-store infrastructure follows that model.
 
 Files to inspect first: `CURRENT_STATE.md`, `KNOWN_ISSUES.md`, `PERFORMANCE_BUDGETS.md`, `ValueAccessibilityService.kt`, `NodeScanner.kt`, `SearchContext.kt`, `IncrementalProductStore.kt`, `ItemLocator.kt`, and the Android tests.
+# Session 2 checkpoint
+
+Restore the pinned Gradle 9.5/JDK 17/API 36/npm toolchain and verify commit source before extraction continues. Run `:shared-core:test`, Android JVM tests, lint, APK assembly, the complete browser suite, and Firefox lint. Then replace hidden session clocks/locale normalization with explicit platform services and migrate only proven-pure session identity/normalization into shared core. Do not start cart, backend, iOS, or overlay redesign work.

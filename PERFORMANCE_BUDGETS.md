@@ -1,5 +1,11 @@
 # Performance Budgets
 
+## Shared-core boundary
+
+- Calls remain ordinary in-process functions; do not serialize internal observations/products between layers.
+- Exact money/quantity values are compact `Long`-backed data classes. Avoid reflection, IPC, platform callbacks, and defensive copying of whole product collections.
+- Providers supply explicit timestamps and immutable observations. Shared core performs no I/O, network, logging, model loading, or hidden background work.
+
 Updated: 2026-08-20
 
 These budgets protect the Android consumer experience. JVM measurements are regression signals, not substitutes for frame timing on a physical device.
