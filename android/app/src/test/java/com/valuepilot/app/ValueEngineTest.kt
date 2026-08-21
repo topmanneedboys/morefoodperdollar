@@ -96,7 +96,7 @@ class ValueEngineTest {
 
     @Test
     fun localAiAddsBoundedMeatFallback() {
-        val chicken = ValueEngine.analyze("Large grilled chicken platter $14.99")!!
+        val chicken = ValueEngine.analyze("Large grilled chicken platter $14.99", semanticEnricher = LocalModelSemanticEnricher)!!
         assertTrue(chicken.portion?.source == "local-ai")
         assertTrue(chicken.meatPointsPerDollar != null)
         assertTrue(chicken.ai.meatRatio in 0.0..1.0)
@@ -104,9 +104,9 @@ class ValueEngineTest {
 
     @Test
     fun budgetAndDietFiltersUseMinimumSpend() {
-        val chicken = ValueEngine.analyze("Chicken bowl $10.00")!!
-        val pork = ValueEngine.analyze("BBQ pork plate $9.00")!!
-        val deal = ValueEngine.analyze("Beef burger $8.00 second item 50% off")!!
+        val chicken = ValueEngine.analyze("Chicken bowl $10.00", semanticEnricher = LocalModelSemanticEnricher)!!
+        val pork = ValueEngine.analyze("BBQ pork plate $9.00", semanticEnricher = LocalModelSemanticEnricher)!!
+        val deal = ValueEngine.analyze("Beef burger $8.00 second item 50% off", semanticEnricher = LocalModelSemanticEnricher)!!
         val filtered = ValueEngine.filterItems(listOf(chicken, pork, deal), maxPrice = 11.0, foodOnly = true, excludePork = true)
         assertEquals(listOf(chicken), filtered)
         assertFalse(filtered.contains(pork))
@@ -116,5 +116,14 @@ class ValueEngineTest {
     @Test
     fun unicodeNamesKeepStableKeys() {
         assertTrue(ValueEngine.canonicalName("Crème brûlée $8.00").contains("crème"))
+    }
+
+    @Test
+    fun deterministicParserWorksWithSemanticEnrichmentDisabled() {
+        val item = ValueEngine.analyze("Large Eggs\n30 ct\n$11.65")!!
+        assertEquals("Large Eggs", item.name)
+        assertEquals(30.0, item.quantity!!.amountBase, 0.0)
+        assertEquals(11.65, item.offer.currentPrice, 0.0)
+        assertFalse(item.ai.available)
     }
 }

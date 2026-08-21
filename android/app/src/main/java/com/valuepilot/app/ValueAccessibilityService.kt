@@ -40,6 +40,7 @@ class ValueAccessibilityService : AccessibilityService() {
     private val handler = Handler(Looper.getMainLooper())
     private val productStore = IncrementalProductStore(maxItems = 1_000)
     private val sessions = SearchSessionManager()
+    private val productParser: ProductParser = EnrichingProductParser(LocalModelSemanticEnricher)
     private val workExecutor: ExecutorService = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "ValuePilot-parser").apply { priority = Thread.NORM_PRIORITY - 1 }
     }
@@ -155,7 +156,7 @@ class ValueAccessibilityService : AccessibilityService() {
             )
             if (isSearchInput) {
                 val query = SearchContextDetector.queryFromEvent(event.text, event.contentDescription)
-                val transition = sessions.observeExplicitQuery(packageName, query)
+                val transition = sessions.observeExplicitQuery(packageName, query, System.currentTimeMillis())
                 if (transition.changed) {
                     contextGeneration++
                     productStore.beginContext(transition.context)
@@ -308,7 +309,7 @@ class ValueAccessibilityService : AccessibilityService() {
             val parsed = try {
                 changedCards.mapNotNull { card ->
                     runCatching {
-                        val base = ValueEngine.analyze(card.rawText, batch.packageName)
+                        val base = productParser.parse(card.rawText, batch.packageName)
                         val item = base?.let { parsedItem ->
                             parsedItem.copy(
                                 searchSessionId = context.sessionId,
@@ -566,7 +567,7 @@ class ValueAccessibilityService : AccessibilityService() {
         }
 
         val candidates = batch.cards.mapNotNull { card ->
-            val parsed = ValueEngine.analyze(card.rawText, rootPackage) ?: return@mapNotNull null
+            val parsed = productParser.parse(card.rawText, rootPackage) ?: return@mapNotNull null
             ItemMatchCandidate(
                 name = parsed.name,
                 currentPrice = parsed.offer.currentPrice,
@@ -656,7 +657,7 @@ class ValueAccessibilityService : AccessibilityService() {
                         }
                         return
                     }
-                    OcrScanner.scan(bitmap, lastExternalPackage) { items, error ->
+                    OcrScanner.scan(bitmap) { observations, error ->
                         bitmap.recycle()
                         handler.post {
                             overlay?.setOverlayVisible(true)
@@ -664,6 +665,7 @@ class ValueAccessibilityService : AccessibilityService() {
                             if (error != null) {
                                 overlay?.setStatus("OCR failed: ${error.message ?: "unknown error"}")
                             } else {
+                                val items = ValueEngine.dedupe(observations.mapNotNull { productParser.parse(it, lastExternalPackage) })
                                 ingestOcr(items)
                             }
                         }
@@ -696,7 +698,8 @@ class ValueAccessibilityService : AccessibilityService() {
                     platform = SearchContextDetector.platformFor(packageName),
                     query = null,
                     storeIdentity = null,
-                    pageHint = "ocr"
+                    pageHint = "ocr",
+                    observedAtMillis = System.currentTimeMillis()
                 )
             ).context.also(productStore::beginContext)
         } ?: return

@@ -1,5 +1,7 @@
 package com.valuepilot.app
 
+import com.valuepilot.core.SemanticEnricher
+
 /**
  * Permanent application contracts. This file deliberately has no Android imports so capture,
  * parsing, storage, ranking, and matching implementations can be replaced independently.
@@ -43,6 +45,11 @@ fun interface ProductMatchEngine {
 
 object DeterministicProductParser : ProductParser {
     override fun parse(rawText: String, sourceId: String?): ValueItem? = ValueEngine.analyze(rawText, sourceId)
+}
+
+class EnrichingProductParser(private val semanticEnricher: SemanticEnricher) : ProductParser {
+    override fun parse(rawText: String, sourceId: String?): ValueItem? =
+        ValueEngine.analyze(rawText, sourceId, semanticEnricher)
 }
 
 object DeterministicRankingEngine : RankingEngine {

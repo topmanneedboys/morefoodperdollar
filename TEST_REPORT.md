@@ -2,6 +2,14 @@
 
 Updated: 2026-08-20
 
+## Session 3 — 2026-08-21
+
+- Pinned Android/shared-core command attempted first; Gradle 9.5 download failed with `Network is unreachable`, so compilation/tests/lint/APK did not start.
+- Static shared-core forbidden-dependency scan: no forbidden production dependency found.
+- Browser deterministic/local-model/golden suite: 29 passed, 0 failed.
+- Full browser integration and Firefox validation remain blocked by absent locked `jsdom`/`web-ext` dependencies.
+- Kotlin changes are not called compiled or build-verified.
+
 ## Session 2 — 2026-08-21
 
 - Targeted browser deterministic/local-model/shared-golden suite: **28 passed, 0 failed**.

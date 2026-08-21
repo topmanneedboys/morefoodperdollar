@@ -1,7 +1,5 @@
 package com.valuepilot.app
 
-import java.text.Normalizer
-import java.util.Locale
 
 data class RelevanceDecision(
     val include: Boolean,
@@ -97,11 +95,5 @@ object SearchRelevance {
         else -> value
     }
 
-    private fun normalize(value: String?): String = Normalizer.normalize(value.orEmpty(), Normalizer.Form.NFKD)
-        .replace(Regex("[\\u0300-\\u036f]"), "")
-        .lowercase(Locale.ROOT)
-        .replace('&', ' ')
-        .replace(Regex("[^a-z0-9]+"), " ")
-        .replace(Regex("\\s+"), " ")
-        .trim()
+    private fun normalize(value: String?): String = JvmTextCanonicalizer.search(value)
 }

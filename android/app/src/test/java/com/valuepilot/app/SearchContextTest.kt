@@ -12,10 +12,9 @@ class SearchContextTest {
 
     @Test
     fun bananasSessionSwitchingToEggsCreatesANewSession() {
-        var now = 1_000L
-        val sessions = SearchSessionManager { ++now }
-        val bananas = sessions.observeExplicitQuery(packageName, "bananas")
-        val eggs = sessions.observeExplicitQuery(packageName, "eggs")
+        val sessions = SearchSessionManager()
+        val bananas = sessions.observeExplicitQuery(packageName, "bananas", 1_001L)
+        val eggs = sessions.observeExplicitQuery(packageName, "eggs", 1_002L)
 
         assertTrue(bananas.changed)
         assertTrue(eggs.changed)
@@ -26,7 +25,7 @@ class SearchContextTest {
 
     @Test
     fun missingPageSignalDoesNotResetAnExistingSearch() {
-        val sessions = SearchSessionManager { 2_000L }
+        val sessions = SearchSessionManager()
         val first = sessions.observe(observation(query = "eggs", page = "search"))
         val second = sessions.observe(observation(query = "eggs", page = null))
 
@@ -37,8 +36,7 @@ class SearchContextTest {
 
     @Test
     fun changingStoreInvalidatesTheSession() {
-        var now = 3_000L
-        val sessions = SearchSessionManager { ++now }
+        val sessions = SearchSessionManager()
         val first = sessions.observe(observation(query = "eggs", store = "Market A", page = "search"))
         val second = sessions.observe(observation(query = "eggs", store = "Market B", page = "search"))
 
@@ -49,9 +47,9 @@ class SearchContextTest {
 
     @Test
     fun clearingSearchInvalidatesTheQuerySession() {
-        val sessions = SearchSessionManager { 4_000L }
-        sessions.observeExplicitQuery(packageName, "eggs")
-        val cleared = sessions.observeExplicitQuery(packageName, null)
+        val sessions = SearchSessionManager()
+        sessions.observeExplicitQuery(packageName, "eggs", 4_000L)
+        val cleared = sessions.observeExplicitQuery(packageName, null, 4_001L)
 
         assertTrue(cleared.changed)
         assertEquals("query changed", cleared.reason)
@@ -85,6 +83,14 @@ class SearchContextTest {
     fun newestTextChangeWinsAndVisibleResultCountIsNotPartOfQuery() {
         assertEquals("eggs", SearchContextDetector.queryFromEvent(listOf("bananas", "eggs"), "Search for items"))
         assertEquals("eggs", SearchContextDetector.normalizeQuery("Search results for eggs · 62 results"))
+    }
+
+    @Test
+    fun sessionIdentityUsesExplicitObservationTimeWithoutHiddenClock() {
+        val first = SearchSessionManager().observeExplicitQuery(packageName, "eggs", 9_999L).context
+        val second = SearchSessionManager().observeExplicitQuery(packageName, "eggs", 9_999L).context
+        assertEquals(9_999L, first.startedAtMillis)
+        assertEquals(first.sessionId, second.sessionId)
     }
 
     private fun observation(

@@ -8,6 +8,12 @@ require('../local-ai.js');
 const engine = require('../engine.js');
 const fixture = JSON.parse(readFileSync(new URL('../../shared-fixtures/valuepilot-golden-v1.json', import.meta.url), 'utf8'));
 
+test('golden schema and exact money arithmetic are explicit', () => {
+  assert.equal(fixture.schema, 'valuepilot.golden.contract');
+  assert.equal(fixture.schemaVersion, 2);
+  assert.equal(fixture.moneyArithmetic.minorOperands.reduce((sum, value) => sum + value, 0), fixture.moneyArithmetic.expectedMinor);
+});
+
 test('canonical parsing fixture matches browser engine', () => {
   for (const expected of fixture.parsing) {
     const item = engine.analyzeItem(expected.rawText);

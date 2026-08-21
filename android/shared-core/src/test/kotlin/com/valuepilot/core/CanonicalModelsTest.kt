@@ -40,4 +40,30 @@ class CanonicalModelsTest {
         assertFailsWith<IllegalArgumentException> { Offer(Money.parse("1.00", "CAD"), member = Money.parse("1.00", "USD")) }
         assertFailsWith<IllegalArgumentException> { Money.parse("1.001", "CAD") }
     }
+
+    @Test fun legacyMoneyBoundaryBecomesExactAndAddsWithoutArtifacts() {
+        val first = Money.fromMajorUnits(10.10, "CAD")
+        val second = Money.fromMajorUnits(2.20, "CAD")
+        assertEquals(1_010L, first.minorUnits)
+        assertEquals(1_230L, (first + second).minorUnits)
+    }
+
+    @Test fun productIdentityDistinguishesQuantityAndOfferWithoutDisplayFormatting() {
+        val base = ProductIdentityKey("large eggs", 1_165, 981, "COUNT", 30_000_000, "none")
+        assertEquals(base, base.copy())
+        assertEquals(base.stableText(), base.copy().stableText())
+        kotlin.test.assertNotEquals(base, base.copy(quantityMicros = 12_000_000))
+        kotlin.test.assertNotEquals(base, base.copy(currentPriceMinor = 1_200))
+    }
+
+    @Test fun productMatchingIsSeparateAndRejectsUnrelatedProducts() {
+        val eggs = ProductMatchEvidence("large eggs", 1_165, 981, "COUNT", 30_000_000)
+        val unrelated = ProductMatchEvidence("organic bananas", 1_165, 981, "COUNT", 30_000_000)
+        assertEquals(false, ProductMatching.compare(eggs, unrelated).matches)
+        assertEquals(true, ProductMatching.compare(eggs, eggs).matches)
+    }
+
+    @Test fun noOpSemanticEnrichmentNeverBlocksExactWork() {
+        assertEquals(SemanticSignals(), NoSemanticEnricher.enrich("Large Eggs 30 ct $11.65"))
+    }
 }

@@ -1,6 +1,5 @@
 package com.valuepilot.app
 
-import java.text.Normalizer
 import java.util.Locale
 
 data class ContextSignal(
@@ -20,7 +19,7 @@ data class ContextObservation(
     val query: String?,
     val storeIdentity: String?,
     val pageHint: String?,
-    val observedAtMillis: Long = System.currentTimeMillis()
+    val observedAtMillis: Long
 )
 
 data class SearchContext(
@@ -34,7 +33,7 @@ data class SearchContext(
     val startedAtMillis: Long
 ) {
     val displayQuery: String
-        get() = query?.trim()?.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+        get() = query?.trim()?.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
             ?: storeIdentity
             ?: platform
 }
@@ -45,9 +44,7 @@ data class ContextTransition(
     val reason: String
 )
 
-class SearchSessionManager(
-    private val clock: () -> Long = System::currentTimeMillis
-) {
+class SearchSessionManager {
     private var current: SearchContext? = null
     private var sequence = 0L
 
@@ -87,7 +84,7 @@ class SearchSessionManager(
 
         if (changed) {
             sequence++
-            val started = clock()
+            val started = observation.observedAtMillis
             current = SearchContext(
                 platform = observation.platform,
                 packageName = observation.packageName,
@@ -110,7 +107,12 @@ class SearchSessionManager(
         return ContextTransition(requireNotNull(current), changed, reason)
     }
 
-    fun observeExplicitQuery(packageName: String, query: String?, platform: String = SearchContextDetector.platformFor(packageName)): ContextTransition {
+    fun observeExplicitQuery(
+        packageName: String,
+        query: String?,
+        observedAtMillis: Long,
+        platform: String = SearchContextDetector.platformFor(packageName)
+    ): ContextTransition {
         val previous = current
         return observe(
             ContextObservation(
@@ -118,7 +120,8 @@ class SearchSessionManager(
                 platform = platform,
                 query = query,
                 storeIdentity = previous?.takeIf { it.packageName == packageName }?.storeIdentity,
-                pageHint = "search"
+                pageHint = "search",
+                observedAtMillis = observedAtMillis
             )
         )
     }
@@ -139,7 +142,7 @@ object SearchContextDetector {
         "(?:search\\s+results?(?:\\s+for)?|results?\\s+for|showing\\s+results?\\s+for)\\s*[\"'“”:]?\\s*([^\\n\"'“”]{1,80})",
         RegexOption.IGNORE_CASE
     )
-    fun detect(packageName: String, signals: Collection<ContextSignal>, observedAtMillis: Long = System.currentTimeMillis()): ContextObservation {
+    fun detect(packageName: String, signals: Collection<ContextSignal>, observedAtMillis: Long): ContextObservation {
         data class Candidate(val value: String, val score: Int)
 
         val queryCandidates = mutableListOf<Candidate>()
@@ -246,15 +249,11 @@ object SearchContextDetector {
         packageName.contains("instacart", true) -> "Instacart"
         packageName.contains("skipthedishes", true) || packageName.contains("justeat", true) -> "Skip"
         packageName.contains("walmart", true) -> "Walmart"
-        else -> packageName.substringAfterLast('.').replaceFirstChar { it.titlecase(Locale.getDefault()) }
+        else -> packageName.substringAfterLast('.').replaceFirstChar { it.titlecase() }
     }
 
     fun fingerprint(value: String?): String {
-        val normalized = Normalizer.normalize(value.orEmpty(), Normalizer.Form.NFKC)
-            .lowercase(Locale.ROOT)
-            .replace(Regex("[^\\p{L}\\p{N}]+"), " ")
-            .replace(Regex("\\s+"), " ")
-            .trim()
+        val normalized = JvmTextCanonicalizer.identity(value)
         return if (normalized.isBlank()) "none" else StableIds.text(normalized)
     }
 

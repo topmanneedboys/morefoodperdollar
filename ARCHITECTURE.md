@@ -22,6 +22,17 @@ Dependencies point downward only. Shared core has no Android, UI, capture, OCR, 
 
 Cross-client rules live in `shared-fixtures/valuepilot-golden-v1.json`. The browser remains TypeScript and checks the same fixture rather than being forcibly rewritten in Kotlin. See `PLATFORM_DEPENDENCY_MAP.md`.
 
+## Exact parsing and optional semantics
+
+```text
+raw observation → deterministic parser → exact parsed product
+                                      ↘ optional SemanticEnricher → enriched product
+```
+
+The deterministic parser defaults to `NoSemanticEnricher` and never reaches a model singleton. It remains usable if enrichment is absent, cancelled, slow, or broken. Android asset/JSON loading stays in `LocalFoodModel`; `LocalModelSemanticEnricher` is the explicit adapter. Confidence, category, portion, and meat signals are estimates and cannot override explicit price, quantity, promotion, dimension, or calorie evidence.
+
+Internal identity uses invariant JVM Unicode canonicalization isolated in `JvmTextCanonicalizer`, exact scaled price/quantity fields, and `ProductIdentityKey`. User-facing locale formatting belongs to presentation. `ProductMatching` compares canonical product evidence; `ItemMatcher` separately applies Android navigation constraints such as node path and card fingerprint.
+
 ## Evidence hierarchy
 
 ValuePilot is a deterministic measurement engine with a bounded semantic fallback:

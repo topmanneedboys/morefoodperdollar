@@ -13,3 +13,7 @@ Files to inspect first: `CURRENT_STATE.md`, `KNOWN_ISSUES.md`, `PERFORMANCE_BUDG
 # Session 2 checkpoint
 
 Restore the pinned Gradle 9.5/JDK 17/API 36/npm toolchain and verify commit source before extraction continues. Run `:shared-core:test`, Android JVM tests, lint, APK assembly, the complete browser suite, and Firefox lint. Then replace hidden session clocks/locale normalization with explicit platform services and migrate only proven-pure session identity/normalization into shared core. Do not start cart, backend, iOS, or overlay redesign work.
+
+# Session 3 checkpoint
+
+Compile and repair the shared-core/Android boundary before moving more code. Confirm `SemanticEnricher` default/no-op behavior, explicit session time, stable identity, and core product matching tests. Next migrate exact promotion/budget money one narrow path at a time; do not change measurement/confidence `Double` merely for consistency.

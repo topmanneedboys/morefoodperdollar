@@ -9,7 +9,8 @@ Updated: 2026-08-21
 - Android Live Accessibility/overlay/OCR behavior is experimental and is no longer the permanent product foundation.
 - Session 1 source changes are not yet build-verified. Gradle distribution retrieval failed with `Network is unreachable`; browser integration/Firefox validation require missing npm dependencies. Restore the documented JDK 17/API 36/Gradle/npm toolchain, then rerun every checkpoint command before device installation.
 - The Session 2 `shared-core` Gradle wiring and Kotlin tests are likewise uncompiled locally. Its source is statically platform-neutral, but only a successful pinned-toolchain build may promote it to build-verified.
-- Legacy `ValueEngine`, sessions, relevance, repository, and application-state code remain in the app module because they still depend on JVM normalization/locale, hidden clocks, `Double` prices, or Android-backed model loading. See `PLATFORM_DEPENDENCY_MAP.md`; do not copy them wholesale into shared core.
+- Legacy `ValueEngine`, session detection, relevance, repository, and application-state code remain in the app module because they still depend on app-local parsed models, JVM canonicalization/display formatting, `Double` calculations, or Android-backed model loading. See `PLATFORM_DEPENDENCY_MAP.md`; do not copy them wholesale into shared core.
+- Session 3 removed hidden session clocks, global model calls from `ValueEngine`, and locale-formatted identity keys, but these Kotlin changes remain uncompiled locally. Legacy promotion/budget/ranking money still uses `Double`; convert only behind golden compatibility tests.
 
 ## Milestone blockers
 

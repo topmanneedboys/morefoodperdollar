@@ -1,5 +1,6 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "schema": "valuepilot.golden.contract",
   "parsing": [
     {"id":"eggs-30","rawText":"Large Eggs\n30 ct\n$11.65","name":"Large Eggs","quantityKind":"COUNT","quantityBase":30.0,"currentPrice":11.65,"pricePerUnit":0.3883333333},
     {"id":"milk-1.9l","rawText":"Whole Milk\n1.9 L\n$5.49","name":"Whole Milk","quantityKind":"VOLUME_ML","quantityBase":1900.0,"currentPrice":5.49,"pricePerL":2.8894736842},
@@ -14,5 +15,12 @@
     {"rawText":"Eggs A\n12 ct\n$6.00","expectedRank":2},
     {"rawText":"Eggs B\n30 ct\n$12.00","expectedRank":1}
   ],
-  "matching": {"target":"Large Eggs 30 ct","unrelated":"Organic Bananas 1 kg","expected":"REJECT"}
+  "matching": {"target":"Large Eggs 30 ct","unrelated":"Organic Bananas 1 kg","expected":"REJECT"},
+  "moneyArithmetic": {"currencyCode":"CAD","fractionDigits":2,"minorOperands":[1010,220],"expectedMinor":1230},
+  "identity": {
+    "sameProductFormatting":["Large Eggs 30 ct","large   eggs 30 count"],
+    "differentQuantities":[12,30],
+    "differentOffersMinor":[1165,1200],
+    "localeInvariantExamples":["en-US","tr-TR"]
+  }
 }

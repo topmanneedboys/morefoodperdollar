@@ -1,5 +1,15 @@
 package com.valuepilot.core
 
+import kotlin.math.roundToLong
+
+object ExactScale {
+    fun fromDouble(value: Double, fractionDigits: Int): Long {
+        require(value.isFinite())
+        require(fractionDigits in 0..6)
+        return (value * Money.powerOfTen(fractionDigits)).roundToLong()
+    }
+}
+
 /** Exact monetary amount. Currency and fraction digits are explicit; no binary floating point. */
 data class Money(
     val minorUnits: Long,
@@ -9,6 +19,11 @@ data class Money(
     init {
         require(currencyCode.matches(Regex("[A-Z]{3}"))) { "Use an ISO-style uppercase currency code" }
         require(fractionDigits in 0..6)
+    }
+
+    operator fun plus(other: Money): Money {
+        require(currencyCode == other.currencyCode && fractionDigits == other.fractionDigits)
+        return copy(minorUnits = Math.addExact(minorUnits, other.minorUnits))
     }
 
     companion object {
@@ -31,6 +46,12 @@ data class Money(
             var value = 1L
             repeat(exponent) { value = Math.multiplyExact(value, 10L) }
             return value
+        }
+
+        /** Compatibility boundary for legacy Double prices; exact thereafter. */
+        fun fromMajorUnits(value: Double, currencyCode: String, fractionDigits: Int = 2): Money {
+            require(value.isFinite())
+            return Money(ExactScale.fromDouble(value, fractionDigits), currencyCode, fractionDigits)
         }
     }
 }
@@ -77,6 +98,87 @@ data class Offer(
 @JvmInline value class ProductObservationId(val value: String)
 @JvmInline value class SearchSessionId(val value: String)
 @JvmInline value class ProductResultId(val value: Long)
+
+data class SemanticSignals(
+    val available: Boolean = false,
+    val modelVersion: String = "unavailable",
+    val category: String = "unknown",
+    val label: String = "unknown",
+    val confidence: Double = 0.0,
+    val foodConfidence: Double = 0.0,
+    val porkConfidence: Double = 0.0,
+    val meatRatio: Double = 0.0,
+    val portionEligible: Boolean = false,
+    val basePortionPoints: Double? = null,
+    val evidence: List<String> = emptyList()
+)
+
+fun interface SemanticEnricher {
+    fun enrich(rawText: String): SemanticSignals
+}
+
+object NoSemanticEnricher : SemanticEnricher {
+    override fun enrich(rawText: String): SemanticSignals = SemanticSignals()
+}
+
+/** Platform adapter boundary for invariant internal text; never presentation localization. */
+interface TextCanonicalizer {
+    fun identity(value: String?): String
+    fun search(value: String?): String
+}
+
+data class ProductIdentityKey(
+    val canonicalName: String,
+    val currentPriceMinor: Long,
+    val memberPriceMinor: Long?,
+    val quantityUnit: String?,
+    val quantityMicros: Long?,
+    val promotionCode: String,
+    val sourceId: String? = null,
+    val sessionId: String? = null
+) {
+    init { require(canonicalName.isNotBlank()) }
+
+    fun stableText(): String = listOf(
+        canonicalName, currentPriceMinor.toString(), memberPriceMinor?.toString().orEmpty(),
+        quantityUnit.orEmpty(), quantityMicros?.toString().orEmpty(), promotionCode,
+        sourceId.orEmpty(), sessionId.orEmpty()
+    ).joinToString("|")
+}
+
+data class ProductMatchEvidence(
+    val canonicalName: String,
+    val currentPriceMinor: Long,
+    val memberPriceMinor: Long?,
+    val quantityUnit: String?,
+    val quantityMicros: Long?
+)
+
+data class ProductEquivalence(val matches: Boolean, val score: Double, val reason: String)
+
+object ProductMatching {
+    fun compare(target: ProductMatchEvidence, candidate: ProductMatchEvidence): ProductEquivalence {
+        if (target.currentPriceMinor != candidate.currentPriceMinor) return ProductEquivalence(false, 0.0, "current price differs")
+        if (target.memberPriceMinor != null && target.memberPriceMinor != candidate.memberPriceMinor) {
+            return ProductEquivalence(false, 0.0, "member price differs")
+        }
+        if (target.quantityUnit != null && (target.quantityUnit != candidate.quantityUnit || target.quantityMicros != candidate.quantityMicros)) {
+            return ProductEquivalence(false, 0.0, "quantity differs")
+        }
+        val nameScore = tokenSimilarity(target.canonicalName, candidate.canonicalName)
+        if (nameScore < .72) return ProductEquivalence(false, nameScore, "name differs")
+        val evidence = 2 + (if (target.quantityUnit != null) 1 else 0) + (if (target.memberPriceMinor != null) 1 else 0)
+        return ProductEquivalence(true, (nameScore * .6 + evidence * .1).coerceAtMost(1.0), "canonical evidence matches")
+    }
+
+    private fun tokenSimilarity(left: String, right: String): Double {
+        if (left == right && left.isNotBlank()) return 1.0
+        val a = left.split(' ').filter(String::isNotBlank).toSet()
+        val b = right.split(' ').filter(String::isNotBlank).toSet()
+        if (a.isEmpty() || b.isEmpty()) return 0.0
+        return 2.0 * a.intersect(b).size / (a.size + b.size).toDouble()
+    }
+}
 
 data class ProductObservation(
     val id: ProductObservationId,

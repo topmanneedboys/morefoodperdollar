@@ -3,6 +3,8 @@ package com.valuepilot.app
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.BeforeClass
 import org.junit.Test
 import java.io.File
@@ -40,6 +42,29 @@ class GoldenContractTest {
             val name = ValueEngine.analyze(expected.getString("rawText"))!!.name
             assertEquals(expected.getInt("expectedRank"), ranked.single { it.item.name == name }.rank)
         }
+    }
+
+    @Test fun sessionAndUnrelatedMatchingFixtureFailClosed() {
+        val fixture = fixture()
+        val session = fixture.getJSONObject("session")
+        val manager = SearchSessionManager()
+        val first = manager.observeExplicitQuery("fixture.provider", session.getString("firstQuery"), 1_000L).context
+        val next = manager.observeExplicitQuery("fixture.provider", session.getString("nextQuery"), 2_000L).context
+        assertNotEquals(first.sessionId, next.sessionId)
+
+        val matching = fixture.getJSONObject("matching")
+        val target = ValueEngine.analyze("${matching.getString("target")}\n\$11.65")!!
+        val unrelated = ValueEngine.analyze("${matching.getString("unrelated")}\n\$11.65")!!
+        assertFalse(SearchRelevance.evaluate(target.name, unrelated.name).include)
+        assertEquals("REJECT", matching.getString("expected"))
+    }
+
+    @Test fun exactMoneyFixtureUsesMinorUnits() {
+        val money = fixture().getJSONObject("moneyArithmetic")
+        val operands = money.getJSONArray("minorOperands")
+        val total = (0 until operands.length()).sumOf { operands.getLong(it) }
+        assertEquals(money.getLong("expectedMinor"), total)
+        assertTrue(money.getString("currencyCode").length == 3)
     }
 
     private fun fixture(): JSONObject {

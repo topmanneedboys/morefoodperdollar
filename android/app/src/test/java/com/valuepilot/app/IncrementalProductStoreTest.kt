@@ -4,20 +4,20 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Locale
 
 class IncrementalProductStoreTest {
     @Test
     fun bananasAreRemovedWhenEggsSessionBegins() {
-        var now = 10_000L
-        val sessions = SearchSessionManager { ++now }
+        val sessions = SearchSessionManager()
         val store = IncrementalProductStore()
 
-        val bananasContext = sessions.observeExplicitQuery(PACKAGE, "bananas").context
+        val bananasContext = sessions.observeExplicitQuery(PACKAGE, "bananas", 1_000L).context
         store.beginContext(bananasContext)
         apply(store, bananasContext, card("banana", "Organic Bananas\n1 kg\n\$3.99"))
         assertTrue(store.snapshot().any { it.name.contains("Banana") })
 
-        val eggsContext = sessions.observeExplicitQuery(PACKAGE, "eggs").context
+        val eggsContext = sessions.observeExplicitQuery(PACKAGE, "eggs", 2_000L).context
         assertTrue(store.beginContext(eggsContext))
         apply(store, eggsContext, card("eggs", "Large Eggs\n30 ct\n\$11.65"))
 
@@ -58,6 +58,29 @@ class IncrementalProductStoreTest {
         assertTrue(result.changed)
         assertEquals(1, store.size())
         assertEquals(10.99, store.snapshot().single().offer.currentPrice, .001)
+    }
+
+    @Test
+    fun identityIsLocaleIndependentAndDistinguishesQuantityAndOffer() {
+        val originalLocale = Locale.getDefault()
+        try {
+            val eggs = ValueEngine.analyze("Large Eggs\n30 ct\n\$11.65", PACKAGE)!!
+            Locale.setDefault(Locale.forLanguageTag("tr-TR"))
+            val turkishKey = IncrementalProductStore.itemIdentity(eggs)
+            Locale.setDefault(Locale.US)
+            val englishKey = IncrementalProductStore.itemIdentity(eggs)
+            assertEquals(englishKey, turkishKey)
+
+            val alternateDisplay = ValueEngine.analyze("large   eggs\n30 count\n\$11.650", PACKAGE)!!
+            assertEquals(englishKey, IncrementalProductStore.itemIdentity(alternateDisplay))
+
+            val smaller = ValueEngine.analyze("Large Eggs\n12 ct\n\$11.65", PACKAGE)!!
+            val differentOffer = ValueEngine.analyze("Large Eggs\n30 ct\n\$12.00", PACKAGE)!!
+            assertFalse(englishKey == IncrementalProductStore.itemIdentity(smaller))
+            assertFalse(englishKey == IncrementalProductStore.itemIdentity(differentOffer))
+        } finally {
+            Locale.setDefault(originalLocale)
+        }
     }
 
     private fun apply(store: IncrementalProductStore, context: SearchContext, card: ProductCardSnapshot): StoreApplyResult {

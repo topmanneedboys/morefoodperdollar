@@ -1,6 +1,7 @@
 package com.valuepilot.app
 
-import java.text.Normalizer
+import com.valuepilot.core.NoSemanticEnricher
+import com.valuepilot.core.SemanticEnricher
 import java.util.Locale
 import kotlin.math.PI
 import kotlin.math.pow
@@ -474,7 +475,11 @@ object ValueEngine {
         return points?.let { PortionEstimate(it, confidence, basis, source) }
     }
 
-    fun analyze(text: String, sourcePackage: String? = null): ValueItem? {
+    fun analyze(
+        text: String,
+        sourcePackage: String? = null,
+        semanticEnricher: SemanticEnricher = NoSemanticEnricher
+    ): ValueItem? {
         val normalized = normalize(text)
         val allPrices = prices(normalized)
         val selected = choosePrice(normalized, allPrices) ?: return null
@@ -482,7 +487,7 @@ object ValueEngine {
         val promo = promotion(normalized, selected.amount)
         val quantity = quantity(normalized)
         val calories = calories(normalized)
-        val ai = LocalFoodModel.predict(normalized)
+        val ai = semanticEnricher.enrich(normalized)
         val portion = estimatePortion(normalized, ai)
         var confidence = .55
         confidence += if (selected.source == "first" || selected.source == "bundle") .12 else .16
@@ -504,7 +509,7 @@ object ValueEngine {
     }
 
     fun canonicalName(name: String): String {
-        val normalized = Normalizer.normalize(normalize(name), Normalizer.Form.NFKC).lowercase(Locale.ROOT)
+        val normalized = JvmTextCanonicalizer.identity(normalize(name))
         return priceRegex.replace(normalized, " ")
             .replace(Regex("\\b\\d+(?:[.,]\\d+)?\\s*(?:mg|g|grams?|kg|kilograms?|oz|ounces?|lb|lbs|pounds?|ml|milliliters?|l|litres?|liters?|fl\\s*oz|cal|kcal|calories?|ct|count|pieces?|pcs|pack|pk|units?|ea)\\b", RegexOption.IGNORE_CASE), " ")
             .replace(Regex("\\b(?:buy\\s+one\\s+get\\s+one(?:\\s+free)?|bogo|sale|deal|save\\s+\\d+%|\\d+%\\s*off|add to cart|customize)\\b", RegexOption.IGNORE_CASE), " ")
@@ -517,8 +522,7 @@ object ValueEngine {
     fun dedupe(items: Collection<ValueItem>): List<ValueItem> {
         val map = linkedMapOf<String, ValueItem>()
         for (item in items) {
-            val quantity = item.quantity
-            val key = "${canonicalName(item.name)}|${"%.2f".format(Locale.US, item.price)}|${quantity?.kind}|${quantity?.amountBase?.toInt() ?: 0}|${item.promotion.type}"
+            val key = DomainIdentity.productKey(item, includeSessionScope = false).stableText()
             val old = map[key]
             if (old == null || item.confidence > old.confidence || item.rawText.length > old.rawText.length) map[key] = item
         }

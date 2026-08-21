@@ -1,6 +1,5 @@
 package com.valuepilot.app
 
-import java.util.Locale
 
 data class ProductStoreStats(
     val itemCount: Int,
@@ -126,18 +125,7 @@ class IncrementalProductStore(private val maxItems: Int = 1_000) : ProductReposi
 
     companion object {
         fun itemIdentity(item: ValueItem): String {
-            val quantity = item.quantity
-            val amount = quantity?.amountBase?.let { String.format(Locale.US, "%.3f", it) } ?: "none"
-            return listOf(
-                ValueEngine.canonicalName(item.name),
-                String.format(Locale.US, "%.2f", item.offer.currentPrice),
-                item.offer.memberPrice?.let { String.format(Locale.US, "%.2f", it) } ?: "none",
-                quantity?.kind?.name ?: "none",
-                amount,
-                item.promotion.type,
-                item.sourcePackage.orEmpty(),
-                item.searchSessionId.orEmpty()
-            ).joinToString("|")
+            return DomainIdentity.productKey(item, includeSessionScope = true).stableText()
         }
     }
 }

@@ -33,6 +33,14 @@ class CoreBoundaryTest {
         assertTrue(source.contains("import com.valuepilot.core.ProductResultId"))
     }
 
+    @Test
+    fun deterministicEngineDoesNotReachGlobalModel() {
+        val source = source("ValueEngine.kt").readText()
+        assertFalse(source.contains("LocalFoodModel"))
+        assertTrue(source.contains("SemanticEnricher"))
+        assertTrue(source.contains("NoSemanticEnricher"))
+    }
+
     private fun source(name: String): File {
         val root = File(System.getProperty("user.dir"))
         return File(root, "src/main/java/com/valuepilot/app/$name").also {

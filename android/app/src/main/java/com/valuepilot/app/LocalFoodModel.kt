@@ -1,6 +1,8 @@
 package com.valuepilot.app
 
 import android.content.Context
+import com.valuepilot.core.SemanticEnricher
+import com.valuepilot.core.SemanticSignals
 import org.json.JSONObject
 import java.text.Normalizer
 import java.util.Locale
@@ -12,19 +14,11 @@ import kotlin.math.roundToInt
  * It classifies food categories and supplies bounded relative signals only; exact
  * weight, volume, count, calorie, and promotion math always remains authoritative.
  */
-data class LocalAiPrediction(
-    val available: Boolean = false,
-    val modelVersion: String = "unavailable",
-    val category: String = "unknown",
-    val label: String = "unknown",
-    val confidence: Double = 0.0,
-    val foodConfidence: Double = 0.0,
-    val porkConfidence: Double = 0.0,
-    val meatRatio: Double = 0.0,
-    val portionEligible: Boolean = false,
-    val basePortionPoints: Double? = null,
-    val evidence: List<String> = emptyList()
-)
+typealias LocalAiPrediction = SemanticSignals
+
+object LocalModelSemanticEnricher : SemanticEnricher {
+    override fun enrich(rawText: String): SemanticSignals = LocalFoodModel.predict(rawText)
+}
 
 object LocalFoodModel {
     private data class ClassConfig(
