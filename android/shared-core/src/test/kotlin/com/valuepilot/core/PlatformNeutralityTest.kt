@@ -16,7 +16,7 @@ class PlatformNeutralityTest {
         )
         root.walkTopDown().filter(File::isFile).forEach { source ->
             val text = source.readText()
-            forbidden.forEach { token -> assertFalse("${source.name} contains $token", text.contains(token)) }
+            forbidden.forEach { token -> assertFalse(text.contains(token), "${source.name} contains $token") }
         }
     }
 }

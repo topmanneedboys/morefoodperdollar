@@ -71,6 +71,30 @@ jobs:
         working-directory: android
         run: gradle --no-daemon :shared-core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 
+      - name: Summarize JVM test results
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs')
+
+          for (const [label, directory] of [
+            ['shared-core', 'android/shared-core/build/test-results/test'],
+            ['android-app', 'android/app/build/test-results/testDebugUnitTest'],
+          ]) {
+            const reports = fs.readdirSync(directory).filter(name => /^TEST-.*\.xml$/.test(name))
+            if (reports.length === 0) throw new Error(`No JUnit reports found for ${label}`)
+            const totals = { tests: 0, failures: 0, errors: 0, skipped: 0 }
+            for (const report of reports) {
+              const xml = fs.readFileSync(`${directory}/${report}`, 'utf8')
+              const suite = xml.match(/<testsuite\b[^>]*>/)?.[0]
+              if (!suite) throw new Error(`No testsuite found in ${report}`)
+              for (const key of Object.keys(totals)) {
+                totals[key] += Number(suite.match(new RegExp(`\\b${key}="(\\d+)"`))?.[1] ?? 0)
+              }
+            }
+            console.log(`${label}: ${totals.tests} tests, ${totals.failures} failures, ${totals.errors} errors, ${totals.skipped} skipped`)
+          }
+          NODE
+
       - name: Verify Android privacy boundary
         run: |
           test -s android/app/build/outputs/apk/debug/app-debug.apk
