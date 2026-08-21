@@ -6,3 +6,4 @@ android/app/build/
 *.apk
 *.zip
 release/
+android/shared-core/build/
