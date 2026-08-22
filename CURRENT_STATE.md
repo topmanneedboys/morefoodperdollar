@@ -1,52 +1,141 @@
-# Current state
+﻿# Current state
 
-Updated: 2026-08-21
+Updated: 2026-08-22
 
-Branch: `work/valuepilot-android-milestone`
+Branch: work/valuepilot-android-milestone
 
-Android version: `101.1.0` (`10101`)
+Android version: 101.1.0 (10101)
 
-## PERMANENT CORE
+## Completed
 
-- `android/shared-core` contains exact `Money`, normalized quantities/units, offers/promotions, observations, opaque IDs, stable identity evidence, product equivalence, semantic-enrichment contracts, and deterministic value math.
-- Shared core has no Android, UI, capture, OCR, retailer, lifecycle, filesystem, network, JSON, model-loading, or hidden-clock dependency.
-- `ValueEngine` exact parsing works with `NoSemanticEnricher`; Android injects `LocalModelSemanticEnricher` explicitly when optional estimates are wanted.
-- Search-session creation uses supplied observation time; repository/dedupe identity uses scaled numeric fields and invariant canonical text rather than display-locale formatting.
-- Product equivalence is core evidence; Android node paths/bounds/view IDs/card fingerprints remain navigation evidence.
-- Cross-client expectations live in `shared-fixtures/valuepilot-golden-v1.json` schema v2.
+### Permanent Android foundation
 
-## EXPERIMENTAL
+Completed milestones:
 
-Accessibility live capture, overlay/bubble, OCR, screenshot capture, and Android card reacquisition remain optional legacy adapters/test harnesses. They are not the product foundation and are not device-verified on the reported Motorola Edge 2025.
+- 5B1 standalone comparison application layer
+- 5B2 standalone comparison screen
+- 5B2A real-device comparison hardening
+- 5C1 immutable Android application shell state
+- Parser regression fix preserving names beginning with "reg"
+- 5C2 permanent Android app shell
 
-## VERIFICATION (GREEN)
+Current primary navigation:
 
-- Build ValuePilot v101 release: SUCCESS
-- Browser: 30 tests passed, Firefox packaging/lint passed
-- Android shared-core: 10 tests, 0 failures
-- Android app JVM tests: 47 tests, 0 failures
-- Android: lintDebug passed, assembleDebug passed, APK produced
-- Privacy boundary: Verified no INTERNET or ACCESS_NETWORK_STATE
-- Release: Chromium, Firefox, and Android packages produced
+Home
+Search
+Basket
+Saved
 
-## NEXT MILESTONE
+Compare remains a workflow, not a primary navigation tab.
 
-FIRST PERMANENT STANDALONE ANDROID VALUEPILOT APPLICATION
+## Current architecture
 
-This app must operate independently of:
-- Accessibility
-- overlay/bubble
-- OCR
-- Uber
-- any particular retailer
+Permanent product direction:
 
-Initial standalone direction:
-normal Android application
-    ↓
-manual / fixture-backed product input
-    ↓
-existing deterministic parsing/normalization
-    ↓
-comparison / ranking
-    ↓
-clear best-value results
+Capture adapters
+(OCR / Accessibility / future providers)
+
+↓
+
+ProductObservation
+
+↓
+
+Shared deterministic ValuePilot core
+
+↓
+
+Application state and ranking
+
+↓
+
+Presentation clients
+
+
+The product does not depend on Accessibility, overlays, OCR, any retailer, or any single capture method.
+
+## Deterministic value engine
+
+The core remains responsible for:
+
+- exact money handling
+- quantity normalization
+- promotions
+- product identity
+- comparison ranking
+- value calculations
+
+AI or semantic enrichment cannot override explicit price or quantity evidence.
+
+## Android shell status
+
+Verified on physical device:
+
+- Home tab
+- Search tab
+- Basket tab
+- Saved tab
+- portrait layout
+- landscape layout
+- comparison workflow
+- comparison persistence
+- parser regression fix
+
+## Privacy boundary
+
+Current Android build has:
+
+- no INTERNET permission
+- no ACCESS_NETWORK_STATE permission
+- no account requirement
+- no telemetry
+- no remote AI dependency
+- no ValuePilot server dependency
+
+## Next milestone
+
+5C3 — Universal Search application foundation
+
+Goal:
+
+Turn Search from a placeholder destination into a real application workflow.
+
+Architecture:
+
+Search UI
+
+↓
+
+immutable search state
+
+↓
+
+search controller/reducer
+
+↓
+
+replaceable ProductSearchProvider
+
+↓
+
+normalized product evidence
+
+↓
+
+existing deterministic ranking
+
+↓
+
+search results presentation
+
+
+5C3 will not begin:
+
+- retailer scraping
+- checkout integration
+- universal cart
+- subscriptions
+- affiliate systems
+- remote AI backend
+
+Those require later milestones.
