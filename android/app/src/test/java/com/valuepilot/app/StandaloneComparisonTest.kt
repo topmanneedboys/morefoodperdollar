@@ -315,6 +315,77 @@ class StandaloneComparisonTest {
     }
 
     @Test
+    fun explicitBlocksPreserveInternalBlankLines() {
+        val blocks = listOf(
+            "Honeycrisp apples\n\n3 lb\n\n${'$'}5.99",
+            "Gala apples\n\n1.5 kg\n\n${'$'}4.49"
+        )
+
+        val result = ManualProductObservationAdapter.captureBlocks(
+            rawBlocks = blocks,
+            observedAtEpochMillis = 100L
+        )
+
+        assertTrue(result is ManualCaptureResult.Success)
+
+        val observations =
+            (result as ManualCaptureResult.Success).observations
+
+        assertEquals(2, observations.size)
+
+        assertEquals(
+            "Honeycrisp apples\n\n3 lb\n\n${'$'}5.99",
+            observations[0].rawText
+        )
+
+        assertEquals(
+            "Gala apples\n\n1.5 kg\n\n${'$'}4.49",
+            observations[1].rawText
+        )
+    }
+
+    @Test
+    fun explicitBlockComparisonHandlesInternalBlankLines() {
+        val controller = StandaloneComparisonController()
+
+        val state = controller.reduce(
+            controller.initialState(),
+            StandaloneComparisonIntent.CompareBlocks(
+                productBlocks = listOf(
+                    "Honeycrisp apples\n\n3 lb\n\n${'$'}5.99",
+                    "Gala apples\n\n1.5 kg\n\n${'$'}4.49"
+                ),
+                observedAtEpochMillis = 101L
+            )
+        )
+
+        assertTrue(state.comparisonSucceeded)
+        assertEquals(
+            StandaloneComparisonStatus.READY,
+            state.status
+        )
+        assertEquals(2, state.parsedCount)
+        assertEquals(2, state.results.size)
+
+        assertEquals(
+            "Gala apples",
+            state.results[0].name
+        )
+        assertEquals(
+            "1.5 kg",
+            state.results[0].quantity
+        )
+
+        assertEquals(
+            "Honeycrisp apples",
+            state.results[1].name
+        )
+        assertEquals(
+            "3 lb",
+            state.results[1].quantity
+        )
+    }
+    @Test
     fun rankingEngineIsInjectedAndCalledOnce() {
         var calls = 0
 

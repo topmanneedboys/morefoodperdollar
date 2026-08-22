@@ -36,12 +36,35 @@ object ManualProductObservationAdapter {
             )
         }
 
-        val normalized = rawInput
-            .replace("\r\n", "\n")
-            .replace('\r', '\n')
+        val normalized = normalizeLineEndings(rawInput)
 
         val blocks = normalized
             .split(blankLineRegex)
+
+        return captureBlocks(
+            rawBlocks = blocks,
+            observedAtEpochMillis = observedAtEpochMillis
+        )
+    }
+
+    fun captureBlocks(
+        rawBlocks: List<String>,
+        observedAtEpochMillis: Long
+    ): ManualCaptureResult {
+        var totalChars = 0L
+
+        for (rawBlock in rawBlocks) {
+            totalChars += rawBlock.length.toLong()
+
+            if (totalChars > MAX_INPUT_CHARS) {
+                return ManualCaptureResult.Failure(
+                    ManualCaptureFailure.INPUT_TOO_LONG
+                )
+            }
+        }
+
+        val blocks = rawBlocks
+            .map(::normalizeLineEndings)
             .map { it.trim() }
             .filter { it.isNotEmpty() }
 
@@ -68,6 +91,11 @@ object ManualProductObservationAdapter {
 
         return ManualCaptureResult.Success(observations)
     }
+
+    private fun normalizeLineEndings(value: String): String =
+        value
+            .replace("\r\n", "\n")
+            .replace('\r', '\n')
 }
 
 enum class StandaloneComparisonStatus {
@@ -106,6 +134,11 @@ sealed interface StandaloneComparisonIntent {
         val observedAtEpochMillis: Long
     ) : StandaloneComparisonIntent
 
+    data class CompareBlocks(
+        val productBlocks: List<String>,
+        val observedAtEpochMillis: Long
+    ) : StandaloneComparisonIntent
+
     data object Clear : StandaloneComparisonIntent
 }
 
@@ -128,26 +161,38 @@ class StandaloneComparisonController(
     fun reduce(
         previous: StandaloneComparisonState,
         intent: StandaloneComparisonIntent
-    ): StandaloneComparisonState {
-        return when (intent) {
-            StandaloneComparisonIntent.Clear -> initialState()
-            is StandaloneComparisonIntent.Compare -> compare(intent)
-        }
-    }
+    ): StandaloneComparisonState =
+        when (intent) {
+            StandaloneComparisonIntent.Clear ->
+                initialState()
 
-    private fun compare(
-        intent: StandaloneComparisonIntent.Compare
-    ): StandaloneComparisonState {
-        return when (
-            val capture = ManualProductObservationAdapter.capture(
-                rawInput = intent.rawInput,
-                observedAtEpochMillis = intent.observedAtEpochMillis
-            )
-        ) {
-            is ManualCaptureResult.Failure -> captureFailureState(capture.reason)
-            is ManualCaptureResult.Success -> compareCaptured(capture.observations)
+            is StandaloneComparisonIntent.Compare ->
+                compareCapture(
+                    ManualProductObservationAdapter.capture(
+                        rawInput = intent.rawInput,
+                        observedAtEpochMillis = intent.observedAtEpochMillis
+                    )
+                )
+
+            is StandaloneComparisonIntent.CompareBlocks ->
+                compareCapture(
+                    ManualProductObservationAdapter.captureBlocks(
+                        rawBlocks = intent.productBlocks,
+                        observedAtEpochMillis = intent.observedAtEpochMillis
+                    )
+                )
         }
-    }
+
+    private fun compareCapture(
+        capture: ManualCaptureResult
+    ): StandaloneComparisonState =
+        when (capture) {
+            is ManualCaptureResult.Failure ->
+                captureFailureState(capture.reason)
+
+            is ManualCaptureResult.Success ->
+                compareCaptured(capture.observations)
+        }
 
     private fun captureFailureState(
         reason: ManualCaptureFailure

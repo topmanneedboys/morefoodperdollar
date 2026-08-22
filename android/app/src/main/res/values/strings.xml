@@ -3,14 +3,17 @@
 
     <string name="app_tagline">Compare the real cost. Build the smarter basket.</string>
 
-    <string name="standalone_intro">Compare products directly in ValuePilot. Enter two or more products with their package size and price, and ValuePilot will rank the strongest value using its deterministic on-device engine.</string>
+    <string name="standalone_intro">Enter each product in its own box. ValuePilot compares package size and price to find the strongest value on-device.</string>
 
     <string name="products_to_compare">Products to compare</string>
 
-    <string name="product_input_instructions">Separate each product with a blank line. Keep the product name, package size and price together.</string>
+    <string name="product_input_instructions">Put the product name, package size and price in the same box. Blank lines inside a product are fine.</string>
 
-    <string name="product_input_hint">Honeycrisp apples&#10;3 lb&#10;$5.99&#10;&#10;Gala apples&#10;1.5 kg&#10;$4.49</string>
+    <string name="product_number">Product %1$d</string>
 
+    <string name="product_input_hint">Honeycrisp apples&#10;3 lb&#10;$5.99</string>
+
+    <string name="add_another_product">Add another product</string>
     <string name="compare_value">Compare value</string>
     <string name="clear_comparison">Clear</string>
     <string name="enter_two_products">Enter at least two products to compare</string>
@@ -39,10 +42,8 @@
 
     <string name="privacy_body">Standalone comparison, deterministic parsing and ranking run on-device. This build has no INTERNET permission and does not send your product text, screen contents, credentials or shopping data to a server.</string>
 
-    <!-- Retained for compatibility with existing optional Accessibility service metadata. -->
     <string name="accessibility_description">Automatically reads newly visible product and menu labels in the active app so ValuePilot can compare exact unit value and clearly labeled local estimates. It scrolls only when you explicitly choose off-screen collection; this build has no internet permission.</string>
 
-    <!-- Retained legacy strings while optional adapters remain in the project. -->
     <string name="how_to_use">How to use</string>
     <string name="how_to_body">Use ValuePilot standalone comparison for normal product comparison. Accessibility capture, off-screen collection and OCR remain optional experimental tools.</string>
 </resources>
