@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en-CA">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="How ValuePilot evaluates shopping evidence, quantities, unit value, offers, freshness, and recommendation trust.">
+  <meta name="theme-color" content="#0b172a">
+  <title>ValuePilot Methodology — How comparisons are evaluated</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="shell nav-wrap">
+      <a class="brand" href="index.html" aria-label="ValuePilot home">
+        <span class="brand-mark" aria-hidden="true">V</span>
+        <span>ValuePilot</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="index.html#how">How it works</a>
+        <a href="methodology.html" aria-current="page">Methodology</a>
+        <a href="index.html#status">Status</a>
+        <a href="privacy.html">Privacy</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="section">
+      <div class="shell legal-copy">
+        <p class="eyebrow">Methodology</p>
+        <h1>How ValuePilot turns shopping evidence into a comparison.</h1>
+        <p class="body-copy">ValuePilot is designed to compare measurable shopping evidence rather than simply sort products by price, popularity, advertiser payout, or a marketing label such as “deal.” The platform is still pre-launch, so this page describes the comparison principles being implemented and validated rather than claiming live retailer coverage today.</p>
+
+        <h2>1. Product identity and offers are different things</h2>
+        <p>A product is the underlying item: for example, a specific 1 kg bag of coffee with a particular brand, variant, and product identifier. An offer is a way that product is available from a merchant or channel at a particular price, place, time, and fulfillment context.</p>
+        <p>The same product may legitimately have several offers at once. ValuePilot therefore avoids collapsing every observation into one supposed “true price.” Store, retailer-web, marketplace, pickup, delivery, and other channels can differ.</p>
+
+        <h2>2. Unit value is calculated only when the quantity evidence supports it</h2>
+        <p>Sticker price alone can be misleading when package sizes differ. When the package quantity is explicit and comparable, ValuePilot can normalize offers to a common basis such as dollars per 100 g, dollars per litre, or price per count.</p>
+        <p>For example, a 1 kg package at $4.49 has an explicit price of about $0.45 per 100 g. A 700 g package at $3.79 is about $0.54 per 100 g. In that narrow comparison, the larger package has the lower unit price even though its total price is higher.</p>
+        <p>If quantity, units, multipack structure, or variant meaning are ambiguous, ValuePilot should not invent a unit-price result. Incomplete evidence can be shown as context without silently winning a Best Value decision.</p>
+
+        <h2>3. Price fields are not trusted by name alone</h2>
+        <p>Shopping feeds can contain fields labelled price, regular price, sale price, recommended price, or similar terms. A field name by itself is not enough to establish meaning. ValuePilot’s provider-validation work checks whether the values are internally coherent, geographically appropriate, current, and consistent across rows before they are accepted for ranking.</p>
+        <p>This is especially important when a provider feed contains malformed identifiers, unexpected currencies, reused product codes, or reference-price fields whose values contradict their labels.</p>
+
+        <h2>4. Freshness and availability affect trust</h2>
+        <p>A low price is not useful if the offer is expired or unavailable. ValuePilot keeps freshness, availability, promotion dates, and provenance attached to shopping evidence. Evidence that is stale, future-dated, unavailable, or otherwise uncertain should not silently outrank stronger current evidence.</p>
+
+        <h2>5. Product identifiers are validated, not merely copied</h2>
+        <p>Identifiers such as GTIN, UPC, EAN, SKU, and manufacturer part number can help determine whether two offers refer to the same product. ValuePilot treats them as evidence that still needs validation. Syntax, check digits, cross-row reuse, advertiser-specific conventions, and variant relationships all matter.</p>
+        <p>A malformed or semantically corrupted identifier should not be promoted into a canonical product identity simply because it appeared in a feed column labelled GTIN.</p>
+
+        <h2>6. Recommendation ranking is independent of affiliate payout</h2>
+        <p>Affiliate commission rates, performance bonuses, sponsorship, cost-per-click economics, or advertiser preference are not inputs to ValuePilot’s value ranking. If one merchant pays a higher commission but another offer provides stronger consumer value under the selected comparison rules, the stronger-value offer should rank higher.</p>
+        <p>Affiliate relationships can support the business model, but they are kept separate from the calculation that determines which offer is recommended.</p>
+
+        <h2>7. Unknown costs remain unknown</h2>
+        <p>Item price is not always the same as total acquisition cost. Delivery fees, service fees, basket minimums, membership benefits, tips, and other charges may change what a shopper ultimately pays. ValuePilot should include such components only when they are explicitly known for the relevant offer and context.</p>
+        <p>The platform must not fabricate a delivered total from missing fee information.</p>
+
+        <h2>8. Evidence strength controls whether an offer can rank</h2>
+        <p>ValuePilot distinguishes evidence that is strong enough to rank from evidence that is useful only for display or should be rejected. The exact rules continue to evolve through deterministic tests, but the principle is stable: uncertain evidence should not silently become a recommendation merely because it is numerically attractive.</p>
+
+        <h2>9. Authorized data access comes before production use</h2>
+        <p>ValuePilot is evaluating authorized provider feeds, APIs, and merchant relationships for Canadian shopping coverage. Network membership, advertiser approval, product-feed availability, software permission, and permission to cache or display product data are separate questions. A provider is not treated as production-ready until the relevant rights and actual data quality are validated.</p>
+
+        <h2>10. Current public examples are illustrative</h2>
+        <p>ValuePilot is currently in a pre-launch provider-validation stage. Any example prices shown on the public site are clearly labelled as sample or illustrative data and are not represented as live retailer pricing, inventory, or promotions.</p>
+
+        <p><a class="text-link" href="index.html">Return to ValuePilot</a></p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell footer-wrap">
+      <div><strong>ValuePilot</strong><p>Shopping intelligence for clearer value decisions.</p></div>
+      <div class="footer-links"><a href="methodology.html">Methodology</a><a href="privacy.html">Privacy</a><a href="https://github.com/topmanneedboys/morefoodperdollar">GitHub</a></div>
+    </div>
+  </footer>
+</body>
+</html>
