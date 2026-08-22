@@ -1,424 +1,490 @@
 package com.valuepilot.app
 
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.text.Editable
+import android.text.TextWatcher
+import android.util.TypedValue
+import android.view.Gravity
 import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
+import com.google.android.material.chip.Chip
+import com.google.android.material.textfield.TextInputEditText
+import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
 
-    private var shellState =
-        AppShellState.initial()
+    private var shellState = AppShellState.initial()
+
+    private val searchController = UniversalSearchController()
+    private var searchState = searchController.initialState()
+    private val searchProvider: ProductSearchProvider = LocalSampleProductSearchProvider
+    private val searchExecutor = Executors.newSingleThreadExecutor()
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     private lateinit var shellRoot: View
     private lateinit var bottomNavArea: View
+    private lateinit var bottomNavigation: BottomNavigationView
+    private lateinit var screenEyebrow: TextView
+    private lateinit var screenTitle: TextView
+    private lateinit var screenBody: TextView
+    private lateinit var screenFootnote: TextView
+    private lateinit var primaryAction: Button
+    private lateinit var searchExperience: View
+    private lateinit var searchInput: TextInputEditText
+    private lateinit var searchButton: MaterialButton
+    private lateinit var searchStatus: TextView
+    private lateinit var searchProgress: ProgressBar
+    private lateinit var searchResultsHeading: TextView
+    private lateinit var searchResultsContainer: LinearLayout
 
-    private lateinit var bottomNavigation:
-        BottomNavigationView
+    private var comparisonActivityOpen = false
+    private var suppressSearchInputCallback = false
+    private var restoreSearchOnNextOpen = false
 
-    private lateinit var screenEyebrow:
-        TextView
-
-    private lateinit var screenTitle:
-        TextView
-
-    private lateinit var screenBody:
-        TextView
-
-    private lateinit var screenFootnote:
-        TextView
-
-    private lateinit var primaryAction:
-        Button
-
-    private var comparisonActivityOpen =
-        false
-
-    override fun onCreate(
-        savedInstanceState: Bundle?
-    ) {
+    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_shell)
 
-        setContentView(
-            R.layout.activity_shell
-        )
-
-        shellRoot =
-            findViewById(
-                R.id.shellRoot
-            )
-
-        bottomNavArea =
-            findViewById(
-                R.id.bottomNavArea
-            )
-
-        bottomNavigation =
-            findViewById(
-                R.id.bottomNavigation
-            )
-
-        screenEyebrow =
-            findViewById(
-                R.id.screenEyebrow
-            )
-
-        screenTitle =
-            findViewById(
-                R.id.screenTitle
-            )
-
-        screenBody =
-            findViewById(
-                R.id.screenBody
-            )
-
-        screenFootnote =
-            findViewById(
-                R.id.screenFootnote
-            )
-
-        primaryAction =
-            findViewById(
-                R.id.primaryAction
-            )
+        shellRoot = findViewById(R.id.shellRoot)
+        bottomNavArea = findViewById(R.id.bottomNavArea)
+        bottomNavigation = findViewById(R.id.bottomNavigation)
+        screenEyebrow = findViewById(R.id.screenEyebrow)
+        screenTitle = findViewById(R.id.screenTitle)
+        screenBody = findViewById(R.id.screenBody)
+        screenFootnote = findViewById(R.id.screenFootnote)
+        primaryAction = findViewById(R.id.primaryAction)
+        searchExperience = findViewById(R.id.searchExperience)
+        searchInput = findViewById(R.id.searchInput)
+        searchButton = findViewById(R.id.searchButton)
+        searchStatus = findViewById(R.id.searchStatus)
+        searchProgress = findViewById(R.id.searchProgress)
+        searchResultsHeading = findViewById(R.id.searchResultsHeading)
+        searchResultsContainer = findViewById(R.id.searchResultsContainer)
 
         installSystemBarInsets()
+        shellState = restoreShellState(savedInstanceState)
+        searchState = restoreSearchState(savedInstanceState)
+        configureSearchUi()
 
-        shellState =
-            restoreShellState(
-                savedInstanceState
-            )
+        bottomNavigation.setOnItemSelectedListener { item ->
+            val tab = when (item.itemId) {
+                R.id.navHome -> AppPrimaryTab.HOME
+                R.id.navSearch -> AppPrimaryTab.SEARCH
+                R.id.navBasket -> AppPrimaryTab.BASKET
+                R.id.navSaved -> AppPrimaryTab.SAVED
+                else -> null
+            } ?: return@setOnItemSelectedListener false
 
-        bottomNavigation
-            .setOnItemSelectedListener { item ->
-                val tab =
-                    when (item.itemId) {
-                        R.id.navHome ->
-                            AppPrimaryTab.HOME
-
-                        R.id.navSearch ->
-                            AppPrimaryTab.SEARCH
-
-                        R.id.navBasket ->
-                            AppPrimaryTab.BASKET
-
-                        R.id.navSaved ->
-                            AppPrimaryTab.SAVED
-
-                        else ->
-                            null
-                    }
-                        ?: return@setOnItemSelectedListener false
-
-                dispatch(
-                    AppShellIntent.SelectPrimary(
-                        tab
-                    )
-                )
-
-                true
-            }
-
-        primaryAction.setOnClickListener {
-            openComparison()
+            dispatch(AppShellIntent.SelectPrimary(tab))
+            true
         }
 
-        bottomNavigation.selectedItemId =
-            menuIdFor(
-                shellState.selectedPrimaryTab
-            )
+        primaryAction.setOnClickListener { openComparison() }
 
-        renderShell(
-            shellState
-        )
+        bottomNavigation.selectedItemId = menuIdFor(shellState.selectedPrimaryTab)
+        renderShell(shellState)
     }
 
     override fun onResume() {
         super.onResume()
 
-        if (
-            comparisonActivityOpen &&
-            shellState.route ==
-                AppRoute.COMPARE
-        ) {
+        if (comparisonActivityOpen && shellState.route == AppRoute.COMPARE) {
             comparisonActivityOpen = false
-
-            dispatch(
-                AppShellIntent.NavigateBack
-            )
+            dispatch(AppShellIntent.NavigateBack)
         }
     }
 
-    override fun onSaveInstanceState(
-        outState: Bundle
-    ) {
-        outState.putString(
-            STATE_PRIMARY_TAB,
-            shellState
-                .selectedPrimaryTab
-                .name
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putString(STATE_PRIMARY_TAB, shellState.selectedPrimaryTab.name)
+        outState.putString(STATE_SEARCH_QUERY, searchState.query)
+        outState.putBoolean(
+            STATE_SEARCH_WAS_SUBMITTED,
+            searchState.query.isNotBlank() &&
+                searchState.status !in setOf(
+                    UniversalSearchStatus.IDLE,
+                    UniversalSearchStatus.READY,
+                    UniversalSearchStatus.QUERY_TOO_LONG
+                )
         )
+        super.onSaveInstanceState(outState)
+    }
 
-        super.onSaveInstanceState(
-            outState
-        )
+    override fun onDestroy() {
+        searchExecutor.shutdownNow()
+        mainHandler.removeCallbacksAndMessages(null)
+        super.onDestroy()
     }
 
     private fun installSystemBarInsets() {
-        ViewCompat.setOnApplyWindowInsetsListener(
-            shellRoot
-        ) { view, insets ->
-
-            val bars =
-                insets.getInsets(
-                    WindowInsetsCompat.Type.systemBars()
-                )
-
-            view.setPadding(
-                bars.left,
-                bars.top,
-                bars.right,
-                0
-            )
-
-            bottomNavArea.setPadding(
-                0,
-                0,
-                0,
-                bars.bottom
-            )
-
+        ViewCompat.setOnApplyWindowInsetsListener(shellRoot) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(bars.left, bars.top, bars.right, 0)
+            bottomNavArea.setPadding(0, 0, 0, bars.bottom)
             insets
         }
-
-        ViewCompat.requestApplyInsets(
-            shellRoot
-        )
+        ViewCompat.requestApplyInsets(shellRoot)
     }
 
-    private fun restoreShellState(
-        savedInstanceState: Bundle?
-    ): AppShellState {
-        val savedName =
-            savedInstanceState
-                ?.getString(
-                    STATE_PRIMARY_TAB
-                )
-
-        val savedTab =
-            savedName
-                ?.let {
-                    runCatching {
-                        AppPrimaryTab.valueOf(it)
-                    }.getOrNull()
-                }
-                ?: AppPrimaryTab.HOME
+    private fun restoreShellState(savedInstanceState: Bundle?): AppShellState {
+        val savedTab = savedInstanceState
+            ?.getString(STATE_PRIMARY_TAB)
+            ?.let { runCatching { AppPrimaryTab.valueOf(it) }.getOrNull() }
+            ?: AppPrimaryTab.HOME
 
         return AppShellReducer.reduce(
             AppShellState.initial(),
-            AppShellIntent.SelectPrimary(
-                savedTab
-            )
+            AppShellIntent.SelectPrimary(savedTab)
         )
+    }
+
+    private fun restoreSearchState(savedInstanceState: Bundle?): UniversalSearchState {
+        var restored = searchController.initialState()
+        val savedQuery = savedInstanceState?.getString(STATE_SEARCH_QUERY).orEmpty()
+
+        if (savedQuery.isNotBlank()) {
+            restored = searchController.reduce(
+                restored,
+                UniversalSearchIntent.QueryChanged(savedQuery)
+            ).state
+        }
+
+        restoreSearchOnNextOpen = savedInstanceState
+            ?.getBoolean(STATE_SEARCH_WAS_SUBMITTED, false)
+            ?: false
+
+        return restored
+    }
+
+    private fun configureSearchUi() {
+        suppressSearchInputCallback = true
+        searchInput.setText(searchState.query)
+        searchInput.setSelection(searchInput.text?.length ?: 0)
+        suppressSearchInputCallback = false
+
+        searchInput.addTextChangedListener(
+            object : TextWatcher {
+                override fun beforeTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    count: Int,
+                    after: Int
+                ) = Unit
+
+                override fun onTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    before: Int,
+                    count: Int
+                ) = Unit
+
+                override fun afterTextChanged(s: Editable?) {
+                    if (suppressSearchInputCallback) return
+
+                    searchState = searchController.reduce(
+                        searchState,
+                        UniversalSearchIntent.QueryChanged(s?.toString().orEmpty())
+                    ).state
+                    renderSearch(searchState)
+                }
+            }
+        )
+
+        searchInput.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                submitSearch()
+                true
+            } else {
+                false
+            }
+        }
+
+        searchButton.setOnClickListener { submitSearch() }
+
+        configureQuickSearch(R.id.quickEggs, getString(R.string.search_quick_eggs))
+        configureQuickSearch(R.id.quickMilk, getString(R.string.search_quick_milk))
+        configureQuickSearch(R.id.quickChicken, getString(R.string.search_quick_chicken))
+        configureQuickSearch(R.id.quickRice, getString(R.string.search_quick_rice))
+        configureQuickSearch(R.id.quickPizza, getString(R.string.search_quick_pizza))
+    }
+
+    private fun configureQuickSearch(chipId: Int, query: String) {
+        findViewById<Chip>(chipId).setOnClickListener {
+            setSearchQuery(query)
+            submitSearch()
+        }
+    }
+
+    private fun setSearchQuery(query: String) {
+        suppressSearchInputCallback = true
+        searchInput.setText(query)
+        searchInput.setSelection(query.length)
+        suppressSearchInputCallback = false
+
+        searchState = searchController.reduce(
+            searchState,
+            UniversalSearchIntent.QueryChanged(query)
+        ).state
+        renderSearch(searchState)
+    }
+
+    private fun submitSearch() {
+        val rawQuery = searchInput.text?.toString().orEmpty()
+
+        searchState = searchController.reduce(
+            searchState,
+            UniversalSearchIntent.QueryChanged(rawQuery)
+        ).state
+
+        val transition = searchController.reduce(
+            searchState,
+            UniversalSearchIntent.Submit
+        )
+
+        searchState = transition.state
+        renderSearch(searchState)
+        hideKeyboard()
+        transition.request?.let(::executeSearch)
+    }
+
+    private fun executeSearch(request: ProductSearchRequest) {
+        searchExecutor.execute {
+            val intent = try {
+                UniversalSearchIntent.ResultsReceived(searchProvider.search(request))
+            } catch (ignored: Exception) {
+                UniversalSearchIntent.ProviderFailed(request.requestId)
+            }
+
+            mainHandler.post {
+                if (isFinishing || isDestroyed) return@post
+
+                searchState = searchController.reduce(searchState, intent).state
+                renderSearch(searchState)
+            }
+        }
+    }
+
+    private fun hideKeyboard() {
+        val manager = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+        manager?.hideSoftInputFromWindow(searchInput.windowToken, 0)
+        searchInput.clearFocus()
     }
 
     private fun openComparison() {
-        shellState =
-            AppShellReducer.reduce(
-                shellState,
-                AppShellIntent
-                    .OpenStandaloneCompare
-            )
-
+        shellState = AppShellReducer.reduce(
+            shellState,
+            AppShellIntent.OpenStandaloneCompare
+        )
         comparisonActivityOpen = true
-
-        startActivity(
-            Intent(
-                this,
-                ComparisonActivity::class.java
-            )
-        )
+        startActivity(Intent(this, ComparisonActivity::class.java))
     }
 
-    private fun dispatch(
-        intent: AppShellIntent
-    ) {
-        val next =
-            AppShellReducer.reduce(
-                shellState,
-                intent
-            )
-
-        if (next == shellState) {
-            return
-        }
-
+    private fun dispatch(intent: AppShellIntent) {
+        val next = AppShellReducer.reduce(shellState, intent)
+        if (next == shellState) return
         shellState = next
-
-        renderShell(
-            next
-        )
+        renderShell(next)
     }
 
-    private fun renderShell(
-        state: AppShellState
-    ) {
-        if (
-            state.route ==
-                AppRoute.COMPARE
-        ) {
-            return
-        }
+    private fun renderShell(state: AppShellState) {
+        if (state.route == AppRoute.COMPARE) return
 
-        val copy =
-            copyFor(
-                state.selectedPrimaryTab
-            )
+        val copy = copyFor(state.selectedPrimaryTab)
+        screenEyebrow.text = copy.eyebrow
+        screenTitle.text = copy.title
+        screenBody.text = copy.body
+        screenFootnote.text = copy.footnote
+        primaryAction.visibility = if (copy.showCompareAction) View.VISIBLE else View.GONE
 
-        screenEyebrow.text =
-            copy.eyebrow
+        val searchVisible = state.selectedPrimaryTab == AppPrimaryTab.SEARCH
+        searchExperience.visibility = if (searchVisible) View.VISIBLE else View.GONE
 
-        screenTitle.text =
-            copy.title
+        if (searchVisible) {
+            renderSearch(searchState)
 
-        screenBody.text =
-            copy.body
-
-        screenFootnote.text =
-            copy.footnote
-
-        primaryAction.visibility =
-            if (copy.showCompareAction) {
-                View.VISIBLE
-            } else {
-                View.GONE
+            if (restoreSearchOnNextOpen && searchState.query.isNotBlank()) {
+                restoreSearchOnNextOpen = false
+                searchInput.post { submitSearch() }
             }
+        }
 
-        val expectedMenuItem =
-            menuIdFor(
-                state.selectedPrimaryTab
-            )
-
-        if (
-            bottomNavigation.selectedItemId !=
-            expectedMenuItem
-        ) {
-            bottomNavigation.selectedItemId =
-                expectedMenuItem
+        val expectedMenuItem = menuIdFor(state.selectedPrimaryTab)
+        if (bottomNavigation.selectedItemId != expectedMenuItem) {
+            bottomNavigation.selectedItemId = expectedMenuItem
         }
     }
 
-    private fun copyFor(
-        tab: AppPrimaryTab
-    ): ScreenCopy =
-        when (tab) {
-            AppPrimaryTab.HOME ->
-                ScreenCopy(
-                    eyebrow =
-                        getString(
-                            R.string.home_eyebrow
-                        ),
-                    title =
-                        getString(
-                            R.string.home_title
-                        ),
-                    body =
-                        getString(
-                            R.string.home_body
-                        ),
-                    footnote =
-                        getString(
-                            R.string.home_footnote
-                        ),
-                    showCompareAction = true
-                )
+    private fun renderSearch(state: UniversalSearchState) {
+        searchStatus.text = state.statusText
+        searchStatus.setTextColor(
+            when (state.status) {
+                UniversalSearchStatus.RESULTS -> Color.parseColor("#047857")
+                UniversalSearchStatus.QUERY_TOO_LONG,
+                UniversalSearchStatus.MIXED_CURRENCIES,
+                UniversalSearchStatus.PROVIDER_ERROR -> Color.parseColor("#B42318")
+                else -> Color.parseColor("#6B7280")
+            }
+        )
 
-            AppPrimaryTab.SEARCH ->
-                ScreenCopy(
-                    eyebrow =
-                        getString(
-                            R.string.search_eyebrow
-                        ),
-                    title =
-                        getString(
-                            R.string.search_title
-                        ),
-                    body =
-                        getString(
-                            R.string.search_body
-                        ),
-                    footnote =
-                        getString(
-                            R.string.search_footnote
-                        ),
-                    showCompareAction = false
-                )
+        searchProgress.visibility =
+            if (state.status == UniversalSearchStatus.LOADING) View.VISIBLE else View.GONE
 
-            AppPrimaryTab.BASKET ->
-                ScreenCopy(
-                    eyebrow =
-                        getString(
-                            R.string.basket_eyebrow
-                        ),
-                    title =
-                        getString(
-                            R.string.basket_title
-                        ),
-                    body =
-                        getString(
-                            R.string.basket_body
-                        ),
-                    footnote =
-                        getString(
-                            R.string.basket_footnote
-                        ),
-                    showCompareAction = false
-                )
+        searchButton.isEnabled =
+            state.query.isNotBlank() &&
+                state.status != UniversalSearchStatus.LOADING &&
+                state.status != UniversalSearchStatus.QUERY_TOO_LONG
 
-            AppPrimaryTab.SAVED ->
-                ScreenCopy(
-                    eyebrow =
-                        getString(
-                            R.string.saved_eyebrow
-                        ),
-                    title =
-                        getString(
-                            R.string.saved_title
-                        ),
-                    body =
-                        getString(
-                            R.string.saved_body
-                        ),
-                    footnote =
-                        getString(
-                            R.string.saved_footnote
-                        ),
-                    showCompareAction = false
-                )
+        searchResultsContainer.removeAllViews()
+        searchResultsHeading.visibility =
+            if (state.results.isEmpty()) View.GONE else View.VISIBLE
+
+        state.results.forEach { row ->
+            searchResultsContainer.addView(createSearchResultView(row))
+        }
+    }
+
+    private fun createSearchResultView(row: UniversalSearchRow): View {
+        val card = MaterialCardView(this).apply {
+            radius = dp(18).toFloat()
+            cardElevation = 0f
+            setCardBackgroundColor(
+                Color.parseColor(if (row.best) "#ECFDF5" else "#FFFFFF")
+            )
+            strokeColor = Color.parseColor(if (row.best) "#A7F3D0" else "#E5E7EB")
+            strokeWidth = dp(1)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(12) }
         }
 
-    private fun menuIdFor(
-        tab: AppPrimaryTab
-    ): Int =
-        when (tab) {
-            AppPrimaryTab.HOME ->
-                R.id.navHome
-
-            AppPrimaryTab.SEARCH ->
-                R.id.navSearch
-
-            AppPrimaryTab.BASKET ->
-                R.id.navBasket
-
-            AppPrimaryTab.SAVED ->
-                R.id.navSaved
+        val body = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(15), dp(16), dp(15))
         }
+
+        val rank = TextView(this).apply {
+            text = if (row.best) {
+                getString(R.string.best_value_rank, row.rank)
+            } else {
+                getString(R.string.rank_number, row.rank)
+            }
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextColor(Color.parseColor(if (row.best) "#047857" else "#6B7280"))
+            setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+        }
+
+        val name = TextView(this).apply {
+            text = row.name
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+            setTextColor(Color.parseColor("#111827"))
+            setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+            setPadding(0, dp(5), 0, 0)
+        }
+
+        val price = TextView(this).apply {
+            text = listOfNotNull(
+                row.priceSummary,
+                row.quantity?.takeIf { it.isNotBlank() }
+            ).joinToString("  •  ")
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+            setTextColor(Color.parseColor("#374151"))
+            setPadding(0, dp(7), 0, 0)
+        }
+
+        val metric = TextView(this).apply {
+            text = row.metricLabel
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            setTextColor(Color.parseColor("#111827"))
+            setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+            setPadding(0, dp(7), 0, 0)
+        }
+
+        val exactness = TextView(this).apply {
+            text = row.exactnessLabel
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextColor(Color.parseColor("#6B7280"))
+            setPadding(0, dp(3), 0, 0)
+        }
+
+        val source = TextView(this).apply {
+            text = getString(
+                R.string.search_sample_source,
+                row.sourceId ?: getString(R.string.search_sample_default_source)
+            )
+            gravity = Gravity.START
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextColor(Color.parseColor("#6B7280"))
+            setPadding(0, dp(9), 0, 0)
+        }
+
+        body.addView(rank)
+        body.addView(name)
+        body.addView(price)
+        body.addView(metric)
+        body.addView(exactness)
+        body.addView(source)
+        card.addView(body)
+        return card
+    }
+
+    private fun copyFor(tab: AppPrimaryTab): ScreenCopy =
+        when (tab) {
+            AppPrimaryTab.HOME -> ScreenCopy(
+                getString(R.string.home_eyebrow),
+                getString(R.string.home_title),
+                getString(R.string.home_body),
+                getString(R.string.home_footnote),
+                true
+            )
+            AppPrimaryTab.SEARCH -> ScreenCopy(
+                getString(R.string.search_eyebrow),
+                getString(R.string.search_title),
+                getString(R.string.search_body),
+                getString(R.string.search_footnote),
+                false
+            )
+            AppPrimaryTab.BASKET -> ScreenCopy(
+                getString(R.string.basket_eyebrow),
+                getString(R.string.basket_title),
+                getString(R.string.basket_body),
+                getString(R.string.basket_footnote),
+                false
+            )
+            AppPrimaryTab.SAVED -> ScreenCopy(
+                getString(R.string.saved_eyebrow),
+                getString(R.string.saved_title),
+                getString(R.string.saved_body),
+                getString(R.string.saved_footnote),
+                false
+            )
+        }
+
+    private fun menuIdFor(tab: AppPrimaryTab): Int =
+        when (tab) {
+            AppPrimaryTab.HOME -> R.id.navHome
+            AppPrimaryTab.SEARCH -> R.id.navSearch
+            AppPrimaryTab.BASKET -> R.id.navBasket
+            AppPrimaryTab.SAVED -> R.id.navSaved
+        }
+
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density).toInt()
 
     private data class ScreenCopy(
         val eyebrow: String,
@@ -429,7 +495,8 @@ class MainActivity : AppCompatActivity() {
     )
 
     companion object {
-        private const val STATE_PRIMARY_TAB =
-            "app_shell.primary_tab"
+        private const val STATE_PRIMARY_TAB = "app_shell.primary_tab"
+        private const val STATE_SEARCH_QUERY = "app_shell.search_query"
+        private const val STATE_SEARCH_WAS_SUBMITTED = "app_shell.search_was_submitted"
     }
 }

@@ -57,12 +57,26 @@
     <string name="home_eyebrow">READY NOW</string>
     <string name="home_title">Make the better buy.</string>
     <string name="home_body">Compare products by real value, not just the number on the price tag.</string>
-    <string name="home_footnote">Comparison works on-device. Search, Basket and Saved will connect to the same ValuePilot intelligence as those capabilities are added.</string>
+    <string name="home_footnote">Search now demonstrates the same deterministic value intelligence with clearly labeled built-in sample products. Basket and Saved are still future capabilities.</string>
 
-    <string name="search_eyebrow">SEARCH</string>
-    <string name="search_title">Find the best option.</string>
-    <string name="search_body">This will become one place to search products, stores and restaurants and understand which choice is actually better.</string>
-    <string name="search_footnote">Universal search is not available in this build yet.</string>
+    <string name="search_eyebrow">SMART SEARCH • SAMPLE DATA</string>
+    <string name="search_title">What are you shopping for?</string>
+    <string name="search_body">Type a product or tap a quick search. ValuePilot cuts through package sizes and prices so the strongest value rises first.</string>
+    <string name="search_footnote">This search prototype uses built-in fictional sample products. It does not claim live retailer prices, stock, promotions or availability.</string>
+
+    <string name="search_hint">Try eggs, milk, chicken, rice or pizza</string>
+    <string name="search_action">Find best value</string>
+    <string name="search_quick_title">Try a sample search</string>
+    <string name="search_quick_eggs">eggs</string>
+    <string name="search_quick_milk">milk</string>
+    <string name="search_quick_chicken">chicken</string>
+    <string name="search_quick_rice">rice</string>
+    <string name="search_quick_pizza">pizza</string>
+    <string name="search_sample_badge">BUILT-IN SAMPLE CATALOG</string>
+    <string name="search_sample_notice">Use this to test how ValuePilot makes a buying decision. Every price and source shown here is fictional sample data, not a live store offer.</string>
+    <string name="search_results_title">Best matches</string>
+    <string name="search_sample_source">Sample source: %1$s</string>
+    <string name="search_sample_default_source">Built-in sample</string>
 
     <string name="basket_eyebrow">BASKET</string>
     <string name="basket_title">Optimize the whole shop.</string>
