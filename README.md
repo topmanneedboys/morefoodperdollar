@@ -86,3 +86,7 @@ The GitHub workflow runs JVM tests, Android lint, builds the APK, inspects its f
 - Accessibility collection is automatic for newly visible cards. Off-screen list traversal and OCR remain explicit advanced actions.
 
 Third-party apps can still hide accessibility text, block screenshots with secure windows, render text only in canvas/WebGL, or change their markup. ValuePilot reports missing evidence instead of fabricating precise-looking values.
+
+## Temporary impact.com site verification
+
+Impact-Site-Verification: a297ead8-88b7-4ea9-aece-8cf7c1b4d964
