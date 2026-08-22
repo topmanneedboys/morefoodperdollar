@@ -619,7 +619,7 @@ object ValueEngine {
         )
         val order = listOf(RankMode.MASS, RankMode.VOLUME, RankMode.CALORIE, RankMode.PIZZA, RankMode.UNIT, RankMode.PORTION)
         return order.filter { (counts[it] ?: 0) >= 2 }
-            .maxWithOrNull(compareBy<RankMode> { counts[it] ?: 0 }.thenByDescending { -order.indexOf(it) })
+            .maxWithOrNull(compareBy<RankMode> { counts[it] ?: 0 }.thenBy { -order.indexOf(it) })
             ?: order.maxByOrNull { counts[it] ?: 0 }
             ?: RankMode.CALORIE
     }

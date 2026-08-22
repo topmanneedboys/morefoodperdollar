@@ -196,4 +196,46 @@ class ValueEngineTest {
         assertEquals(11.65, item.offer.currentPrice, 0.0)
         assertFalse(item.ai.available)
     }
+    @Test
+    fun smartRankingPrefersExplicitUnitEvidenceOverPortionFallback() {
+        val small = ValueEngine.analyze(
+            "Large Eggs\n12 ct\n$5.49"
+        )!!
+
+        val valuePack = ValueEngine.analyze(
+            "Large Eggs Value Pack\n18 ct\n$7.49"
+        )!!
+
+        val family = ValueEngine.analyze(
+            "Family Pack Eggs\n30 ct\n$11.99"
+        )!!
+
+        val products =
+            listOf(
+                small,
+                valuePack,
+                family
+            )
+
+        assertEquals(
+            RankMode.UNIT,
+            ValueEngine.smartMode(products)
+        )
+
+        val ranked =
+            ValueEngine.rank(
+                products,
+                RankMode.SMART
+            )
+
+        assertEquals(
+            RankMode.UNIT,
+            ranked.first().mode
+        )
+
+        assertEquals(
+            "Family Pack Eggs",
+            ranked.first().item.name
+        )
+    }
 }
