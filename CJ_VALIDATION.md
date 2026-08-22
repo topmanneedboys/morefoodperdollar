@@ -150,6 +150,22 @@ It is unclear from the visible text whether this requirement applies only to aut
 
 Do not silently interpret this clause in ValuePilot's favor. If the relationship is approved, obtain clarification before any production use that exposes AOSOM product information dynamically to users.
 
+### Application status
+
+Application submitted through the live CJ account on 2026-08-22.
+
+CJ confirmation states:
+
+- `Application submitted for review`
+- AOSOM Canada approves publishers manually
+- application status is `Pending Application`
+- advertiser will contact the publisher if approved
+
+Current relationship state:
+**PENDING MANUAL ADVERTISER REVIEW**
+
+Do not submit a duplicate AOSOM application while this review is pending.
+
 ### 5D decision
 
 AOSOM is currently the strongest CJ advertiser inspected for **empirical feed validation** because:
@@ -170,9 +186,9 @@ However AOSOM is still not production-authorized. The visible evidence does not 
 - quantity/unit evidence quality
 - whether the content-review clause applies to dynamic ValuePilot presentation
 
-Current recommendation:
+Current recommendation while pending:
 
-**Apply to the AOSOM Canada program for controlled 5D validation, provided the application truthfully describes ValuePilot as a pre-launch product-comparison/shopping-intelligence service and does not claim existing mobile-store distribution. Use the application/relationship to seek product-feed access and clarification of mobile-app and dynamic product-display rights. Do not integrate or publicly expose AOSOM data until those rights and the actual feed quality are validated.**
+**Wait for the AOSOM advertiser decision and do not submit a duplicate application. Continue 5D validation with other high-value Canadian CJ advertisers only if doing so adds materially different evidence; do not accumulate low-value affiliate relationships. If AOSOM is approved, inspect the actual authorized product feed and clarify mobile-app/dynamic product-display rights before any production use.**
 
 Suggested application description if CJ requests one:
 
