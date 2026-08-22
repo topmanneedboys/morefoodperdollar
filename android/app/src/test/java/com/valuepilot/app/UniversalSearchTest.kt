@@ -9,6 +9,7 @@ import com.valuepilot.core.EvidenceProvider
 import com.valuepilot.core.EvidenceProviderId
 import com.valuepilot.core.ProductObservation
 import com.valuepilot.core.ProductObservationId
+import com.valuepilot.core.PromotionEvidence
 import com.valuepilot.core.ShoppingEvidence
 import com.valuepilot.core.ShoppingSource
 import com.valuepilot.core.ShoppingSourceId
@@ -983,6 +984,222 @@ class UniversalSearchTest {
             finished.results.size
         )
     }
+
+    @Test
+    fun parsedPromotionWithoutProvenanceCannotWinBestValue() {
+        val controller =
+            UniversalSearchController()
+
+        val started =
+            start(
+                controller,
+                "eggs"
+            )
+
+        val finished =
+            controller.reduce(
+                started.state,
+                UniversalSearchIntent.ResultsReceived(
+                    batch =
+                        ProductSearchBatch(
+                            requestId =
+                                started.request!!.requestId,
+                            evidence =
+                                listOf(
+                                    evidence(
+                                        index = 1,
+                                        rawText =
+                                            "Fresh Eggs\n12 ct\n$6.00",
+                                        sourceId =
+                                            "fresh-store",
+                                        environment =
+                                            EvidenceEnvironment
+                                                .REAL_WORLD,
+                                        channel =
+                                            EvidenceChannel
+                                                .AUTHORIZED_API,
+                                        observedAtEpochMillis =
+                                            TEST_NOW -
+                                                5L *
+                                                MINUTE,
+                                        availability =
+                                            inStock()
+                                    ),
+                                    evidence(
+                                        index = 2,
+                                        rawText =
+                                            "Promo Eggs\n12 ct\n$6.00\nBuy one get one free",
+                                        sourceId =
+                                            "promo-store",
+                                        environment =
+                                            EvidenceEnvironment
+                                                .REAL_WORLD,
+                                        channel =
+                                            EvidenceChannel
+                                                .AUTHORIZED_API,
+                                        observedAtEpochMillis =
+                                            TEST_NOW -
+                                                5L *
+                                                MINUTE,
+                                        availability =
+                                            inStock()
+                                    )
+                                )
+                        ),
+                    evaluatedAtEpochMillis =
+                        TEST_NOW
+                )
+            ).state
+
+        assertEquals(
+            UniversalSearchStatus.RESULTS,
+            finished.status
+        )
+
+        val best =
+            finished.results.first()
+
+        assertEquals(
+            "Fresh Eggs",
+            best.name
+        )
+
+        assertTrue(best.best)
+        assertTrue(best.rankingEligible)
+
+        val unverifiedPromotion =
+            finished.results.first {
+                it.name ==
+                    "Promo Eggs"
+            }
+
+        assertFalse(
+            unverifiedPromotion.best
+        )
+
+        assertFalse(
+            unverifiedPromotion
+                .rankingEligible
+        )
+
+        assertNull(
+            unverifiedPromotion.rank
+        )
+
+        assertTrue(
+            unverifiedPromotion
+                .evidenceNotice
+                ?.contains(
+                    "Promotion not verified for ranking"
+                ) == true
+        )
+    }
+
+    @Test
+    fun explicitTrustedPromotionEvidenceCanInfluenceBestValue() {
+        val controller =
+            UniversalSearchController()
+
+        val started =
+            start(
+                controller,
+                "eggs"
+            )
+
+        val finished =
+            controller.reduce(
+                started.state,
+                UniversalSearchIntent.ResultsReceived(
+                    batch =
+                        ProductSearchBatch(
+                            requestId =
+                                started.request!!.requestId,
+                            evidence =
+                                listOf(
+                                    evidence(
+                                        index = 1,
+                                        rawText =
+                                            "Regular Eggs\n12 ct\n$6.00",
+                                        sourceId =
+                                            "regular-store",
+                                        environment =
+                                            EvidenceEnvironment
+                                                .REAL_WORLD,
+                                        channel =
+                                            EvidenceChannel
+                                                .AUTHORIZED_API,
+                                        observedAtEpochMillis =
+                                            TEST_NOW -
+                                                5L *
+                                                MINUTE,
+                                        availability =
+                                            inStock()
+                                    ),
+                                    evidence(
+                                        index = 2,
+                                        rawText =
+                                            "Verified Promo Eggs\n12 ct\n$6.00\nBuy one get one free",
+                                        sourceId =
+                                            "promo-store",
+                                        environment =
+                                            EvidenceEnvironment
+                                                .REAL_WORLD,
+                                        channel =
+                                            EvidenceChannel
+                                                .AUTHORIZED_API,
+                                        observedAtEpochMillis =
+                                            TEST_NOW -
+                                                5L *
+                                                MINUTE,
+                                        availability =
+                                            inStock(),
+                                        promotion =
+                                            PromotionEvidence(
+                                                label =
+                                                    "Buy one get one free",
+                                                claimKind =
+                                                    EvidenceClaimKind
+                                                        .SOURCE_ASSERTED,
+                                                validUntilEpochMillis =
+                                                    TEST_NOW +
+                                                        HOUR
+                                            )
+                                    )
+                                )
+                        ),
+                    evaluatedAtEpochMillis =
+                        TEST_NOW
+                )
+            ).state
+
+        assertEquals(
+            UniversalSearchStatus.RESULTS,
+            finished.status
+        )
+
+        val best =
+            finished.results.first()
+
+        assertEquals(
+            "Verified Promo Eggs",
+            best.name
+        )
+
+        assertTrue(best.best)
+        assertTrue(best.rankingEligible)
+
+        assertEquals(
+            1,
+            best.rank
+        )
+
+        assertFalse(
+            best.evidenceNotice
+                ?.contains(
+                    "Promotion not verified for ranking"
+                ) == true
+        )
+    }
     @Test
     fun staleFailureCannotEraseCurrentResultsOrLoadingState() {
         val controller =
@@ -1068,7 +1285,9 @@ class UniversalSearchTest {
         observedAtEpochMillis: Long =
             index.toLong(),
         availability: AvailabilityEvidence =
-            AvailabilityEvidence()
+            AvailabilityEvidence(),
+        promotion: PromotionEvidence? =
+            null
     ): ShoppingEvidence =
         ShoppingEvidence(
             observation =
@@ -1110,7 +1329,9 @@ class UniversalSearchTest {
                 EvidenceClaimKind
                     .SOURCE_ASSERTED,
             availability =
-                availability
+                availability,
+            promotion =
+                promotion
         )
 
     private fun inStock():

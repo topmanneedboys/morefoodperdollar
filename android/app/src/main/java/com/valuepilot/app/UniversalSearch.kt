@@ -332,8 +332,14 @@ class UniversalSearchController(
     private data class EvaluatedSearchItem(
         val item: ValueItem,
         val evidence: ShoppingEvidence,
-        val decision: EvidenceAcceptanceDecision
-    )
+        val decision: EvidenceAcceptanceDecision,
+        val promotionProvenanceMissing: Boolean
+    ) {
+        val rankingEligible: Boolean
+            get() =
+                decision.rankable &&
+                    !promotionProvenanceMissing
+    }
 
     private fun receive(
         previous: UniversalSearchState,
@@ -398,11 +404,36 @@ class UniversalSearchController(
                 continue
             }
 
+            /*
+             * Parsing may detect BOGO/bundle promotion arithmetic from raw
+             * text. That arithmetic must never improve Best Value unless the
+             * provider also supplied explicit PromotionEvidence.
+             *
+             * We preserve the parsed product for reference display, but block
+             * it from ranking until promotion provenance exists.
+             */
+            /*
+             * A no-promotion parse still carries minimumSpend/effectivePrice
+             * equal to the ordinary item price, so object inequality is not
+             * a valid promotion detector.
+             *
+             * Only parsed promotion arithmetic that can improve ValuePilot's
+             * value metric requires explicit PromotionEvidence here.
+             */
+            val promotionChangesValue =
+                item.promotion.receivedMultiplier > 1.0
+
+            val promotionProvenanceMissing =
+                promotionChangesValue &&
+                    evidence.promotion == null
+
             parsed +=
                 EvaluatedSearchItem(
                     item = item,
                     evidence = evidence,
-                    decision = decision
+                    decision = decision,
+                    promotionProvenanceMissing =
+                        promotionProvenanceMissing
                 )
         }
 
@@ -446,12 +477,12 @@ class UniversalSearchController(
 
         val rankable =
             matched.filter {
-                it.decision.rankable
+                it.rankingEligible
             }
 
         val referenceOnly =
             matched.filter {
-                !it.decision.rankable
+                !it.rankingEligible
             }
 
         val currencies =
@@ -549,10 +580,9 @@ class UniversalSearchController(
                         rankingEligible =
                             true,
                         evidenceNotice =
-                            entry?.decision
-                                ?.let(
-                                    ::evidenceNotice
-                                )
+                            entry?.let(
+                                ::evidenceNotice
+                            )
                     )
                 }
 
@@ -598,7 +628,7 @@ class UniversalSearchController(
                             false,
                         evidenceNotice =
                             evidenceNotice(
-                                entry.decision
+                                entry
                             )
                     )
                 }
@@ -701,11 +731,11 @@ class UniversalSearchController(
     }
 
     private fun evidenceNotice(
-        decision: EvidenceAcceptanceDecision
+        entry: EvaluatedSearchItem
     ): String? {
 
         val labels =
-            decision.warnings
+            entry.decision.warnings
                 .mapNotNull { warning ->
                     when (warning) {
                         EvidenceWarning.SAMPLE_DATA ->
@@ -747,8 +777,17 @@ class UniversalSearchController(
                     }
                 }
                 .distinct()
+                .toMutableList()
+
+        if (
+            entry.promotionProvenanceMissing
+        ) {
+            labels +=
+                "Promotion not verified for ranking"
+        }
 
         return labels
+            .distinct()
             .takeIf { it.isNotEmpty() }
             ?.joinToString(" • ")
     }
