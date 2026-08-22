@@ -87,6 +87,39 @@ Current recommendation:
 
 **Do not apply merely to accumulate affiliate relationships. Continue inspecting alternative Canadian CJ advertisers for stronger compatibility with product-comparison/services/mobile-app use. Return to 123Ink.ca only if it remains strategically valuable and the software/data-use restrictions can be clarified.**
 
+## AOSOM Canada preliminary validation
+
+Observed through the live CJ publisher account on 2026-08-22.
+
+Visible default commission terms:
+
+- `Aosom.ca Purchase`
+- 8% default commission
+- 14-day referral period
+- unlimited occurrences
+- standard locking
+- 10% commission for the listed Cat Tree item list
+- one-time CAD 25 performance incentive at 11 actions
+- one-time CAD 50 performance incentive at 21 actions
+
+The supplied terms excerpt contains only economic/action terms. It does **not** show advertiser policy language governing software/mobile apps, downloadable applications, product-comparison use, product feeds, caching/indexing, redistribution, trademarks, deep linking, paid search, disclosures, or promotional-property restrictions.
+
+Absence of those restrictions from this excerpt is not evidence that those uses are permitted.
+
+### Current AOSOM decision
+
+AOSOM remains a promising physical-goods validation candidate, but there is not yet enough policy/data-rights evidence to apply confidently.
+
+Next evidence to capture before applying:
+
+1. advertiser `More Info` metadata, especially serviceable area, supported currencies, catalog/feed statements and any product-count or datafeed information
+2. any additional policy/terms sections not included in the visible default commission excerpt
+3. whether CJ exposes product catalog/datafeed access before or after joining
+4. explicit or reasonably clear compatibility with ValuePilot's `Services and Tools` promotional property and future mobile-app presentation surface
+5. any advertiser-specific disclosure, trademark, paid-search, deep-linking or software restrictions
+
+Do not infer mobile-app or product-data permission from the 8% commission terms alone.
+
 ## Permanent CJ rule reinforced by this validation
 
 **CJ advertiser discovery != advertiser acceptance != datafeed availability != software/mobile permission != permission to cache/index/display product data.**
