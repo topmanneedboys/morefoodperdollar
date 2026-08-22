@@ -194,6 +194,86 @@ Suggested application description if CJ requests one:
 
 `ValuePilot is a pre-launch Canadian shopping-intelligence and product-comparison service. We help consumers discover and compare physical products using price, quantity, unit value, availability, promotions and other measurable shopping information. Our public marketing site is https://topmanneedboys.github.io/morefoodperdollar/. We are interested in AOSOM's product feed for authorized product-discovery/comparison use. Ranking is independent of affiliate commission rates. We do not use paid-search trademark bidding. A mobile app is planned for future distribution; before any mobile-app affiliate use we will confirm that channel and any product-content review requirements with AOSOM.`
 
+## Brulerie Virgin Hill Coffee Roasters validation
+
+Observed through the live CJ publisher account on 2026-08-22.
+
+### Advertiser/catalog evidence
+
+- advertiser country: Canada
+- serviceable area: Canada
+- supported consumer currency shown as CAD
+- category: Gourmet
+- specialty coffee catalog includes whole-bean and ground coffee, single origins, blends, espresso, organic and decaf products, plus brewing equipment/accessories
+- target audience is Canadian specialty-coffee consumers
+- new roasts and seasonal offerings are added regularly
+
+This merchant is especially useful to ValuePilot as a quantity/unit-value validation candidate because packaged coffee should expose measurable weights or sizes if the underlying catalog/feed preserves them correctly.
+
+The separate advertiser-account metadata also displayed `Currency: USD`. Do not infer offer currency from that account-level field; validate actual offer/feed currency row by row.
+
+### Program terms observed
+
+- `Website Purchase`
+- 10% commission
+- 30-day referral period
+- unlimited occurrences
+- standard locking
+- protected branded SEM bidding prohibited
+- negative matching required
+- SEM direct linking prohibited
+- supplied CJ logos/images only
+- incentivized traffic allowed
+- email allowed
+- **software allowed**
+- sub-affiliates allowed
+- social media allowed subject to no branded impersonation accounts
+- only affiliate-program coupons/promotional codes may be used
+- false, misleading, expired or inaccurate promotional claims prohibited
+- publisher may not claim to be the official site or an authorized wholesaler
+
+Affiliate economics are recorded only for completeness. ValuePilot ranking must remain independent of commission rates or advertiser payout.
+
+### Software compatibility signal
+
+The explicit `Software: Allowed` policy is materially stronger for ValuePilot than the 123Ink.ca terms, which prohibit promotional/transactional activity through downloadable software.
+
+However `Software: Allowed` is still not equivalent to unrestricted permission to:
+
+- cache/index product-feed data
+- normalize or derive product attributes
+- redistribute catalog data
+- use merchant data in every mobile-app context
+- persist prices beyond allowed freshness windows
+
+Those rights remain unverified until advertiser/CJ evidence establishes them.
+
+### Application status
+
+Application submitted through the live CJ account on 2026-08-22.
+
+Current relationship state:
+**APPLICATION SUBMITTED / ADVERTISER DECISION PENDING UNLESS CJ LATER SHOWS OTHERWISE**
+
+Do not submit a duplicate Virgin Hill application while a decision is pending.
+
+### 5D decision
+
+Virgin Hill is currently the strongest CJ candidate for **software-channel compatibility testing** and a high-value candidate for **quantity/unit-price feed validation**.
+
+If approved, inspect whether CJ exposes a product feed or product-search/API records for Virgin Hill and validate:
+
+1. package weight/size preservation
+2. CAD offer pricing and geography
+3. current vs regular/sale price semantics
+4. product/variant identifiers and GTIN/UPC/EAN quality
+5. availability and freshness
+6. image/deep-link fields
+7. caching/indexing/display rights
+8. any restrictions on dynamic software/mobile presentation
+
+Do not integrate or publicly expose Virgin Hill data until those questions are resolved.
+
 ## Permanent CJ rule reinforced by this validation
 
 **CJ advertiser discovery != advertiser acceptance != datafeed availability != software/mobile permission != permission to cache/index/display product data.**
