@@ -19,19 +19,27 @@ This file is an operational checkpoint only. It does not authorize production ne
 | impact.com partner account | ACCOUNT CREATED | No duplicate account |
 | impact.com Marketplace application | IN REVIEW | Wait for approval/request; do not resubmit |
 | CJ Affiliate publisher account | ACTIVE | Wait on the deliberately selected advertiser applications; no random additional applications |
-| Rakuten Advertising publisher account | ACTIVE / DASHBOARD ACCESS CONFIRMED | Inspect advertiser discovery for Canada-relevant, product-feed-capable, software-compatible merchants; do not integrate yet |
+| Rakuten Advertising publisher account | ACTIVE / DASHBOARD ACCESS CONFIRMED | Wait on Giant Tiger advertiser review; no random additional applications |
+| Giant Tiger on Rakuten (MID 52823) | PENDING / APPLIED | If approved, inspect the actual authorized Product Catalog/feed and feed-specific rights before implementation |
 | Flipp | PARTNERSHIP TARGET, NOT YET VALIDATED | Commercial partnership inquiry later |
 | GS1 Canada ECCnet | DATA/IDENTITY TARGET, NOT YET VALIDATED | Commercial/data-recipient rights validation later |
 
 ## Rakuten Advertising checkpoint
 
-Observed during the real Rakuten publisher onboarding flow on 2026-08-22:
+Observed during the real Rakuten publisher onboarding and advertiser-validation flow on 2026-08-22:
 
 - publisher registration completed successfully
 - Rakuten Publisher Dashboard access is active
 - ValuePilot is shown as the publisher profile/site in the dashboard
 - the public ValuePilot website is the declared primary web property
-- the account dashboard currently indicates that additional publisher-profile/payment-related setup remains incomplete; this does not itself authorize any advertiser, product feed, API, caching, indexing, display, or mobile-app use
+- advertiser discovery exposes Product Catalog, Deep Links and Canadian shipping/service filters and can export results as CSV
+- Walmart Canada was inspected but is currently ineligible for partnership and has conflicting advertiser-specific download/software guidance, so no Walmart application was submitted
+- Giant Tiger was inspected in detail before application
+- Giant Tiger exposes Product Catalog, an explicit `Product feed available` statement, Deep Links, broad Canadian everyday-shopping categories and `Allows downloadable software applications`
+- Giant Tiger's full advertiser-supplied Terms & Conditions were reviewed before application and did not introduce a blanket mobile/software prohibition, although feed persistence/caching/indexing/display rights remain unproven
+- a deliberate Giant Tiger partnership application was submitted and Rakuten currently shows `Pending (applied)`
+- do not submit a duplicate Giant Tiger application
+- the account dashboard still indicates additional publisher-profile/payment-related setup remains incomplete; this does not itself authorize any advertiser, product feed, API, caching, indexing, display, or mobile-app use
 - no Rakuten account identifier, payment information, tax information, password, or other sensitive account data is stored in repository documentation
 
 Rakuten policy conclusions relevant to ValuePilot:
@@ -40,7 +48,7 @@ Rakuten policy conclusions relevant to ValuePilot:
 2. Rakuten classifies AI-powered shopping assistants, recommendation tools, browser extensions, and mobile applications as downloadable software applications (DSAs).
 3. Before a ValuePilot app contains Rakuten network links, Rakuten DSA approval/compliance testing is required and individual advertisers may impose additional DSA requirements.
 4. ValuePilot must never force clicks, cookie-stuff, automatically redirect users through affiliate links, overwrite another publisher's attribution, or drop tracking merely because an offer was displayed.
-5. Product/feed rights remain advertiser- and feature-specific. Rakuten publisher access does not establish permission to persist, normalize, cache, index, redistribute, or display a merchant catalog in ValuePilot.
+5. Product/feed rights remain advertiser- and feature-specific. Rakuten publisher access or advertiser approval does not establish permission to persist, normalize, cache, index, redistribute, or display a merchant catalog in ValuePilot.
 6. Rakuten can automatically assign Offers to a publisher account and may deem an assigned Offer accepted after the stated review period. Rakuten notices therefore require deliberate review rather than unattended acceptance.
 7. Production tracking/privacy disclosures must reflect actual behavior before Rakuten tracking is enabled; do not add speculative tracking code or disclosures prematurely.
 
@@ -143,16 +151,14 @@ Detailed Awin feed-quality evidence is recorded in `PROVIDER_VALIDATION.md`.
 
 ## Next action
 
-Rakuten account activation removes the signup gate. Continue Rakuten validation in this order:
+The highest-value pending gates are now advertiser/provider decisions rather than more signup activity.
 
-1. open advertiser discovery and inspect available filters/search before applying to anything
-2. prioritize Canada-relevant merchants with broad physical-product catalogs and evidence of product-feed/catalog availability
-3. explicitly check software/DSA compatibility, shipping/service geography, deep-link capability, product-feed/catalog access, and advertiser-specific terms
-4. distinguish `advertiser visible` from `advertiser joined` from `feed/API authorized` from `DSA approved`
-5. apply only to a small, high-information set of advertisers likely to expose useful Canadian product data; avoid duplicate or low-value applications
-6. for any accepted advertiser, inspect real feed/API access and authorization requirements before downloading or integrating anything
-7. validate actual feed fields for price, sale price, country, currency, availability, product identity, weight/dimensions, quantity/unit evidence, timestamps, and geography
-8. record caching, indexing, display, attribution, mobile-app/tool, deep-linking, API/rate-limit, cost, termination and assigned-offer constraints
-9. stop before production integration; implementation remains unauthorized until 5D selects a provider deliberately
+1. Do not submit duplicate Giant Tiger, Skip, CJ, or impact.com applications.
+2. Do not add random Rakuten advertisers while Giant Tiger is pending.
+3. If Giant Tiger is approved, inspect the actual authorized Product Catalog/feed plus any feed-specific terms before downloading, caching or integrating anything.
+4. If Giant Tiger is declined, record the reason if supplied and inspect Well.ca next rather than trying to force approval.
+5. If Skip is approved, inspect the actual authorized Skip feed before implementation.
+6. If impact.com Marketplace is approved, inspect advertiser/catalog permissions rather than treating marketplace approval as catalog authorization.
+7. Stop before production integration; implementation remains unauthorized until 5D selects a provider deliberately.
 
-Do not implement a Rakuten production adapter during 5D.
+Do not implement a Rakuten, CJ, Awin or impact.com production adapter during 5D.
