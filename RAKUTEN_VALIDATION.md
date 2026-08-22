@@ -55,20 +55,57 @@ Observed discovery metadata:
 
 The 0% affiliate payout for some categories is commercially irrelevant to ValuePilot ranking. It does not establish whether those categories are absent from Product Catalog, nor does it establish permission to ingest/display them.
 
+#### Authenticated advertiser-profile evidence
+
+The Walmart Canada profile was inspected before any partnership request.
+
+Rakuten currently exposes these Walmart Canada features/policies:
+
+- Product Catalog
+- Cross-Device Tracking
+- Deep Links
+- ITP v2
+- DSA: `Allows downloadable software applications`
+- real-time tracking
+- coupons available through the publisher channel
+
+However, the authenticated profile simultaneously displays:
+
+`This Advertiser requires that you meet a set of terms they have supplied. Currently you do not meet these terms and therefore cannot partner with this Advertiser.`
+
+Therefore ValuePilot currently cannot submit a Walmart Canada partnership request through this Rakuten account.
+
+#### Walmart-specific terms evidence
+
+The Walmart.ca Operating Agreement and approval guidance were reviewed from the advertiser's supplied terms.
+
+Important restrictions/evidence:
+
+- the current website must be live, Canadian-focused and have a clear online privacy policy
+- Walmart prohibits scraping/spidering Walmart.ca
+- Walmart prohibits cookie stuffing and interception/redirect technology
+- Walmart prohibits redistributing, displaying or syndicating Walmart Licensed Materials and/or the Walmart.ca data feed to third-party partners, networks or agencies
+- price information may be included only when supplied by Walmart; any displayed Walmart price must carry a statement that Walmart.ca's price governs if there is a difference
+- product information, including price and availability, must be updated within 24 hours of changes at Walmart.ca or in LinkShare/Rakuten feed content
+- the agreement expressly contemplates data-feed content provided through the LinkShare/Rakuten network, which is useful evidence that an authorized affiliate feed can exist
+- the terms do not grant a broad right to scrape, independently reconstruct or redistribute Walmart data
+- Walmart's approval guidance says sites with downloads (example: toolbars) are to be permanently rejected
+- the agreement separately prohibits software download/technology that attempts to intercept or redirect traffic or referral fees
+- the Walmart terms also contain confidentiality, audit/record-retention, trademark, social-network, electronic-communication and other operational restrictions
+
+There is therefore an unresolved policy conflict:
+
+- Rakuten profile metadata says Walmart Canada `Allows downloadable software applications`
+- Walmart's supplied approval guidance says sites with downloads (e.g. toolbars) should be permanently rejected
+- the agreement prohibits intercept/redirect download technology but does not clearly resolve a user-initiated, non-intercepting product-comparison mobile app
+
+Do not treat Rakuten's DSA feature flag as sufficient Walmart mobile-app authorization. Explicit advertiser clarification or approval would be required before any Walmart affiliate use in the ValuePilot mobile app.
+
 Decision:
-HIGHEST-VALUE RAKUTEN PROFILE TO INSPECT FIRST because it can test broad Canadian retail plus grocery/household relevance.
 
-Before applying, inspect advertiser profile and offer/program terms for:
+**DO NOT APPLY / CANNOT APPLY CURRENTLY.** Walmart Canada remains strategically valuable as a future authorized catalog target, but it is not the first production-path candidate because the account is presently ineligible and the advertiser's DSA/download terms are internally ambiguous. Do not contact support merely to force eligibility while stronger candidates remain available.
 
-- Product Catalog availability and scope
-- whether grocery/consumables appear in the feed despite 0% payout
-- DSA/mobile-app permission or approval requirements
-- comparison-shopping compatibility
-- deep-linking restrictions
-- geographic/currency semantics
-- caching/indexing/display rights
-- trademark/search restrictions
-- feed freshness and availability fields
+If Walmart becomes eligible later, validate the actual authorized Product Catalog before any implementation, including whether grocery/consumables rows exist despite 0% commission, actual currency/geography, quantity/unit fields, identifiers, availability/freshness and exact permitted display/caching behavior.
 
 ### Giant Tiger
 
@@ -112,7 +149,7 @@ Observed discovery metadata:
 - categories include Consumer and Electronic
 
 Decision:
-Useful secondary candidate for electronics/product-identity/variant validation, but less important than Walmart Canada, Giant Tiger and Well.ca for ValuePilot's everyday-shopping value proposition.
+Useful secondary candidate for electronics/product-identity/variant validation, but less important than broad everyday-shopping candidates for ValuePilot's initial value proposition.
 
 ### Other useful secondary candidates
 
@@ -126,16 +163,18 @@ Do not apply to these merely to accumulate advertiser relationships. They are fa
 2. `Product Catalog` visibility is not proof of actual feed access after partnership.
 3. `Product Catalog` visibility is not proof of field quality.
 4. `Deeplinks = Y` is not DSA/mobile permission.
-5. `Auto Approve = Y` would only describe relationship workflow; it would not authorize product-data caching/indexing/display or DSA use.
-6. A 0% commission category can still be strategically valuable product evidence if the advertiser permits catalog use. Commission must not affect ValuePilot ranking or provider-quality scoring.
-7. Rakuten publisher account access != advertiser relationship != feed/API authorization != DSA approval != permission to cache/index/display product data.
+5. `DSA allowed` in Rakuten profile metadata is not sufficient when advertiser-specific terms conflict or impose additional restrictions.
+6. `Auto Approve = Y` would only describe relationship workflow; it would not authorize product-data caching/indexing/display or DSA use.
+7. A 0% commission category can still be strategically valuable product evidence if the advertiser permits catalog use. Commission must not affect ValuePilot ranking or provider-quality scoring.
+8. Advertiser feed availability is not permission to scrape the advertiser website.
+9. Rakuten publisher account access != advertiser relationship != feed/API authorization != DSA approval != permission to cache/index/display product data.
 
 ## Next action
 
-Inspect Walmart Canada's Advertiser Profile first, not `View offer` blindly and not a random application.
+Walmart Canada is currently blocked and has conflicting DSA/download evidence, so do not try to force a partnership.
 
-Capture the profile and program/offer terms before applying. Specifically resolve software/DSA rules, comparison-shopping fit, Product Catalog scope, grocery/consumables availability, data-use rights and any advertiser-specific restrictions.
+Inspect Giant Tiger next. Capture its Advertiser Profile, Features & Services, offer terms and advertiser-supplied program terms before applying. Resolve Product Catalog scope, DSA/mobile rules, comparison-shopping compatibility, data-use/display restrictions and whether grocery rows can exist in the catalog despite 0% commission.
 
-If Walmart Canada is unsuitable, inspect Giant Tiger next, then Well.ca.
+If Giant Tiger is unsuitable or similarly blocked, inspect Well.ca next.
 
 Do not implement a Rakuten production adapter during 5D.
