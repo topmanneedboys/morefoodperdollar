@@ -87,11 +87,11 @@ Current recommendation:
 
 **Do not apply merely to accumulate affiliate relationships. Continue inspecting alternative Canadian CJ advertisers for stronger compatibility with product-comparison/services/mobile-app use. Return to 123Ink.ca only if it remains strategically valuable and the software/data-use restrictions can be clarified.**
 
-## AOSOM Canada preliminary validation
+## AOSOM Canada validation
 
 Observed through the live CJ publisher account on 2026-08-22.
 
-Visible default commission terms:
+### Program economics
 
 - `Aosom.ca Purchase`
 - 8% default commission
@@ -102,23 +102,81 @@ Visible default commission terms:
 - one-time CAD 25 performance incentive at 11 actions
 - one-time CAD 50 performance incentive at 21 actions
 
-The supplied terms excerpt contains only economic/action terms. It does **not** show advertiser policy language governing software/mobile apps, downloadable applications, product-comparison use, product feeds, caching/indexing, redistribution, trademarks, deep linking, paid search, disclosures, or promotional-property restrictions.
+Affiliate economics are recorded only for completeness. ValuePilot ranking must remain independent of commission rates, incentives or advertiser payout.
 
-Absence of those restrictions from this excerpt is not evidence that those uses are permitted.
+### Advertiser/catalog evidence
 
-### Current AOSOM decision
+AOSOM describes itself as a global marketplace founded in 2009 with operations/warehouses in multiple countries including Canada.
 
-AOSOM remains a promising physical-goods validation candidate, but there is not yet enough policy/data-rights evidence to apply confidently.
+The advertiser description identifies a broad private-brand physical-goods catalog including:
 
-Next evidence to capture before applying:
+- home and garden furniture
+- baby products
+- pet supplies
+- fitness equipment
+- outdoor supplies
+- office supplies
+- DIY tools
 
-1. advertiser `More Info` metadata, especially serviceable area, supported currencies, catalog/feed statements and any product-count or datafeed information
-2. any additional policy/terms sections not included in the visible default commission excerpt
-3. whether CJ exposes product catalog/datafeed access before or after joining
-4. explicit or reasonably clear compatibility with ValuePilot's `Services and Tools` promotional property and future mobile-app presentation surface
-5. any advertiser-specific disclosure, trademark, paid-search, deep-linking or software restrictions
+Named private brands include Homcom, Outsunny, Pawhut and others.
 
-Do not infer mobile-app or product-data permission from the 8% commission terms alone.
+The description explicitly states:
+
+- regular promotion information is available, including discounts and price drops
+- `Product feed availability`
+- free delivery
+- affiliate account-management/cooperation opportunities
+
+These are materially stronger 5D signals than commission terms alone because AOSOM exposes both broad physical-goods coverage and an explicit product-feed path.
+
+### Publisher/promotion policy evidence
+
+The visible AOSOM policy text states:
+
+- newsletters and content sent to customers that contain AOSOM Canada information must be checked manually by the AOSOM team before being sent
+- trademark bidding is prohibited for AOSOM and its named private brands
+- certain trademark-plus paid-search combinations are also prohibited
+- product/category combinations such as brand + product/category examples are shown as allowed in the PPC guidance
+
+The supplied AOSOM terms do **not** show the same blanket downloadable-software/tool restriction observed in the 123Ink.ca / ShopperPlus terms.
+
+That absence is useful but is not equivalent to explicit mobile-app permission.
+
+### Content-review ambiguity
+
+The requirement that newsletters and `contents send out to customers` containing AOSOM Canada information be manually checked creates an interpretation risk for ValuePilot.
+
+It is unclear from the visible text whether this requirement applies only to authored outbound marketing/newsletters, or whether AOSOM intends it to cover dynamically generated product-comparison content shown inside a service or future app.
+
+Do not silently interpret this clause in ValuePilot's favor. If the relationship is approved, obtain clarification before any production use that exposes AOSOM product information dynamically to users.
+
+### 5D decision
+
+AOSOM is currently the strongest CJ advertiser inspected for **empirical feed validation** because:
+
+1. it has a broad Canadian-relevant physical-goods catalog
+2. product-feed availability is stated explicitly
+3. promotions/price-drop information are stated explicitly
+4. the visible terms do not contain the explicit downloadable-software prohibition that makes 123Ink.ca higher risk for ValuePilot
+
+However AOSOM is still not production-authorized. The visible evidence does not establish:
+
+- mobile-app/software promotional permission
+- permission to cache/index/normalize/redistribute feed data
+- actual feed schema and field quality
+- row-level Canadian currency/geography semantics
+- freshness granularity
+- identifier/GTIN quality
+- quantity/unit evidence quality
+- whether the content-review clause applies to dynamic ValuePilot presentation
+
+Current recommendation:
+
+**Apply to the AOSOM Canada program for controlled 5D validation, provided the application truthfully describes ValuePilot as a pre-launch product-comparison/shopping-intelligence service and does not claim existing mobile-store distribution. Use the application/relationship to seek product-feed access and clarification of mobile-app and dynamic product-display rights. Do not integrate or publicly expose AOSOM data until those rights and the actual feed quality are validated.**
+
+Suggested application description if CJ requests one:
+
+`ValuePilot is a pre-launch Canadian shopping-intelligence and product-comparison service. We help consumers discover and compare physical products using price, quantity, unit value, availability, promotions and other measurable shopping information. Our public marketing site is https://topmanneedboys.github.io/morefoodperdollar/. We are interested in AOSOM's product feed for authorized product-discovery/comparison use. Ranking is independent of affiliate commission rates. We do not use paid-search trademark bidding. A mobile app is planned for future distribution; before any mobile-app affiliate use we will confirm that channel and any product-content review requirements with AOSOM.`
 
 ## Permanent CJ rule reinforced by this validation
 
