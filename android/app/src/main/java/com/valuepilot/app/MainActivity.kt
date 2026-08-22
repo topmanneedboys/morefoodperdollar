@@ -423,10 +423,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val source = TextView(this).apply {
-            text = getString(
-                R.string.search_sample_source,
-                row.sourceId ?: getString(R.string.search_sample_default_source)
-            )
+            text = row.sourceSummary
             gravity = Gravity.START
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setTextColor(Color.parseColor("#6B7280"))

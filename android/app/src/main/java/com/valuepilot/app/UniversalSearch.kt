@@ -1,6 +1,7 @@
 package com.valuepilot.app
 
-import com.valuepilot.core.ProductObservation
+import com.valuepilot.core.EvidenceEnvironment
+import com.valuepilot.core.ShoppingEvidence
 
 enum class UniversalSearchStatus {
     IDLE,
@@ -35,13 +36,15 @@ data class ProductSearchRequest(
 }
 
 /**
- * A provider returns observations, never pre-ranked ValuePilot results.
+ * A provider returns typed shopping evidence, never pre-ranked ValuePilot
+ * results.
  *
  * requestId must be copied from the corresponding ProductSearchRequest.
+ * Providers describe provenance; they never decide ValuePilot rank.
  */
 data class ProductSearchBatch(
     val requestId: Long,
-    val observations: List<ProductObservation>
+    val evidence: List<ShoppingEvidence>
 )
 
 /**
@@ -70,7 +73,8 @@ data class UniversalSearchRow(
     val metricLabel: String,
     val exactnessLabel: String,
     val best: Boolean,
-    val sourceId: String?
+    val sourceSummary: String,
+    val sampleEvidence: Boolean
 )
 
 data class UniversalSearchState(
@@ -315,34 +319,46 @@ class UniversalSearchController(
             )
         }
 
-        val acceptedObservations =
-            batch.observations.take(
+        val acceptedEvidence =
+            batch.evidence.take(
                 MAX_PROVIDER_OBSERVATIONS
             )
 
         val parsedProducts =
             ArrayList<ValueItem>(
-                acceptedObservations.size
+                acceptedEvidence.size
+            )
+
+        val evidenceByStableId =
+            LinkedHashMap<Long, ShoppingEvidence>(
+                acceptedEvidence.size
             )
 
         var rejected = 0
 
         for (
-            observation in
-            acceptedObservations
+            evidence in
+            acceptedEvidence
         ) {
+            val observation =
+                evidence.observation
+
             val parsed =
                 parser.parse(
                     rawText =
                         observation.rawText,
                     sourceId =
-                        observation.sourceId
+                        evidence.source.id.value
                 )
 
             if (parsed == null) {
                 rejected++
             } else {
                 parsedProducts += parsed
+
+                evidenceByStableId[
+                    parsed.stableId
+                ] = evidence
             }
         }
 
@@ -364,7 +380,7 @@ class UniversalSearchController(
                         "No matching products found",
                     activeRequestId = null,
                     receivedObservationCount =
-                        batch.observations.size,
+                        batch.evidence.size,
                     parsedProductCount =
                         parsedProducts.size,
                     matchedProductCount = 0,
@@ -390,7 +406,7 @@ class UniversalSearchController(
                         "Results use different currencies and cannot be value-ranked together",
                     activeRequestId = null,
                     receivedObservationCount =
-                        batch.observations.size,
+                        batch.evidence.size,
                     parsedProductCount =
                         parsedProducts.size,
                     matchedProductCount =
@@ -443,8 +459,16 @@ class UniversalSearchController(
                             rankedItem.exactnessLabel,
                         best =
                             rankedItem.rank == 1,
-                        sourceId =
-                            item.sourcePackage
+                        sourceSummary =
+                            sourceSummary(
+                                evidenceByStableId[
+                                    rankedItem.stableId
+                                ]
+                            ),
+                        sampleEvidence =
+                            evidenceByStableId[
+                                rankedItem.stableId
+                            ]?.isSample == true
                     )
                 }
 
@@ -465,7 +489,7 @@ class UniversalSearchController(
                 statusText = statusText,
                 activeRequestId = null,
                 receivedObservationCount =
-                    batch.observations.size,
+                    batch.evidence.size,
                 parsedProductCount =
                     parsedProducts.size,
                 matchedProductCount =
@@ -508,6 +532,23 @@ class UniversalSearchController(
             )
         )
     }
+
+    private fun sourceSummary(
+        evidence: ShoppingEvidence?
+    ): String =
+        when (evidence?.environment) {
+            EvidenceEnvironment.SAMPLE ->
+                "Sample source: ${evidence.source.displayName}"
+
+            EvidenceEnvironment.REAL_WORLD ->
+                "Source: ${evidence.source.displayName} • via ${evidence.provider.displayName}"
+
+            EvidenceEnvironment.UNKNOWN ->
+                "Unverified source: ${evidence.source.displayName}"
+
+            null ->
+                "Unverified source"
+        }
 
     private fun normalizeQuery(
         rawQuery: String

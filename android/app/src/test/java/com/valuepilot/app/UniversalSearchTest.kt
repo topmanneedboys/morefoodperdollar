@@ -1,7 +1,15 @@
 package com.valuepilot.app
 
+import com.valuepilot.core.EvidenceChannel
+import com.valuepilot.core.EvidenceClaimKind
+import com.valuepilot.core.EvidenceEnvironment
+import com.valuepilot.core.EvidenceProvider
+import com.valuepilot.core.EvidenceProviderId
 import com.valuepilot.core.ProductObservation
 import com.valuepilot.core.ProductObservationId
+import com.valuepilot.core.ShoppingEvidence
+import com.valuepilot.core.ShoppingSource
+import com.valuepilot.core.ShoppingSourceId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -168,9 +176,9 @@ class UniversalSearchTest {
                     ProductSearchBatch(
                         requestId =
                             eggsStarted.request!!.requestId,
-                        observations =
+                        evidence =
                             listOf(
-                                observation(
+                                evidence(
                                     1,
                                     "Large Eggs\n12 ct\n$6.00"
                                 )
@@ -214,7 +222,7 @@ class UniversalSearchTest {
 
         val observations =
             (1..250).map { index ->
-                observation(
+                evidence(
                     index,
                     "Eggs $index\n12 ct\n$6.00"
                 )
@@ -227,7 +235,7 @@ class UniversalSearchTest {
                     ProductSearchBatch(
                         requestId =
                             started.request!!.requestId,
-                        observations =
+                        evidence =
                             observations
                     )
                 )
@@ -280,13 +288,13 @@ class UniversalSearchTest {
                     ProductSearchBatch(
                         requestId =
                             started.request!!.requestId,
-                        observations =
+                        evidence =
                             listOf(
-                                observation(
+                                evidence(
                                     1,
                                     "Eggs A\n12 ct\n$6.00"
                                 ),
-                                observation(
+                                evidence(
                                     2,
                                     "Eggs B\n30 ct\n$12.00"
                                 )
@@ -333,9 +341,9 @@ class UniversalSearchTest {
                     ProductSearchBatch(
                         requestId =
                             started.request!!.requestId,
-                        observations =
+                        evidence =
                             listOf(
-                                observation(
+                                evidence(
                                     1,
                                     "Whole Milk\n2 L\n$5.00"
                                 )
@@ -382,13 +390,13 @@ class UniversalSearchTest {
                     ProductSearchBatch(
                         requestId =
                             started.request!!.requestId,
-                        observations =
+                        evidence =
                             listOf(
-                                observation(
+                                evidence(
                                     1,
                                     "Rice\n5 kg\nC$12.49"
                                 ),
-                                observation(
+                                evidence(
                                     2,
                                     "Rice\n5 kg\nA$13.49"
                                 )
@@ -408,7 +416,7 @@ class UniversalSearchTest {
     }
 
     @Test
-    fun replaceableProviderContractFeedsObservationsNotRanks() {
+    fun replaceableProviderContractFeedsEvidenceNotRanks() {
         val controller =
             UniversalSearchController()
 
@@ -428,9 +436,9 @@ class UniversalSearchTest {
                 ProductSearchBatch(
                     requestId =
                         request.requestId,
-                    observations =
+                    evidence =
                         listOf(
-                            observation(
+                            evidence(
                                 1,
                                 "Whole Milk\n2 L\n$5.49",
                                 sourceId =
@@ -464,11 +472,85 @@ class UniversalSearchTest {
         )
 
         assertEquals(
-            "fixture-market",
-            finished.results.single().sourceId
+            "Sample source: fixture-market",
+            finished.results.single()
+                .sourceSummary
+        )
+
+        assertTrue(
+            finished.results.single()
+                .sampleEvidence
         )
     }
 
+
+    @Test
+    fun typedEvidenceProvenanceIsAuthoritativeForPresentation() {
+        val controller =
+            UniversalSearchController()
+
+        val started =
+            start(
+                controller,
+                "milk"
+            )
+
+        val finished =
+            controller.reduce(
+                started.state,
+                UniversalSearchIntent.ResultsReceived(
+                    ProductSearchBatch(
+                        requestId =
+                            started.request!!.requestId,
+                        evidence =
+                            listOf(
+                                evidence(
+                                    index = 1,
+                                    rawText =
+                                        "Whole Milk\n2 L\n$5.49",
+                                    sourceId =
+                                        "trusted-store",
+                                    sourceDisplayName =
+                                        "Trusted Store",
+                                    observationSourceId =
+                                        "legacy-wrong-source",
+                                    environment =
+                                        EvidenceEnvironment
+                                            .REAL_WORLD,
+                                    channel =
+                                        EvidenceChannel
+                                            .AUTHORIZED_API,
+                                    providerDisplayName =
+                                        "Authorized Provider"
+                                )
+                            )
+                    )
+                )
+            ).state
+
+        assertEquals(
+            UniversalSearchStatus.RESULTS,
+            finished.status
+        )
+
+        val row =
+            finished.results.single()
+
+        assertEquals(
+            "Source: Trusted Store • via Authorized Provider",
+            row.sourceSummary
+        )
+
+        assertFalse(
+            row.sampleEvidence
+        )
+
+        assertFalse(
+            row.sourceSummary.contains(
+                "legacy-wrong-source"
+            )
+        )
+    }
     @Test
     fun staleFailureCannotEraseCurrentResultsOrLoadingState() {
         val controller =
@@ -537,19 +619,59 @@ class UniversalSearchTest {
         )
     }
 
-    private fun observation(
+    private fun evidence(
         index: Int,
         rawText: String,
-        sourceId: String = "fixture"
-    ): ProductObservation =
-        ProductObservation(
-            id =
-                ProductObservationId(
-                    "search-$index"
+        sourceId: String = "fixture",
+        sourceDisplayName: String =
+            sourceId,
+        observationSourceId: String =
+            sourceId,
+        environment: EvidenceEnvironment =
+            EvidenceEnvironment.SAMPLE,
+        channel: EvidenceChannel =
+            EvidenceChannel.FIXTURE,
+        providerDisplayName: String =
+            "Fixture Provider"
+    ): ShoppingEvidence =
+        ShoppingEvidence(
+            observation =
+                ProductObservation(
+                    id =
+                        ProductObservationId(
+                            "search-$index"
+                        ),
+                    sourceId =
+                        observationSourceId,
+                    rawText =
+                        rawText,
+                    observedAtEpochMillis =
+                        index.toLong()
                 ),
-            sourceId = sourceId,
-            rawText = rawText,
-            observedAtEpochMillis =
-                index.toLong()
+            provider =
+                EvidenceProvider(
+                    id =
+                        EvidenceProviderId(
+                            "test-provider"
+                        ),
+                    displayName =
+                        providerDisplayName
+                ),
+            source =
+                ShoppingSource(
+                    id =
+                        ShoppingSourceId(
+                            sourceId
+                        ),
+                    displayName =
+                        sourceDisplayName
+                ),
+            environment =
+                environment,
+            channel =
+                channel,
+            observationClaimKind =
+                EvidenceClaimKind
+                    .SOURCE_ASSERTED
         )
 }
