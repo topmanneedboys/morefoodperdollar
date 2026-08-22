@@ -21,6 +21,11 @@ Completed milestones:
 - 5C3A Universal Search application foundation
 - 5C3B first consumer Universal Search experience
 - SMART ranking fix preferring explicit measurable evidence over heuristic portion fallback
+- 5C4A permanent shopping evidence provenance contract
+- 5C4B Universal Search migration to typed shopping evidence
+- 5C4C deterministic evidence acceptance and freshness policy
+- 5C4D Universal Search evidence-trust enforcement
+- 5C4E promotion-provenance ranking hardening
 
 Current primary navigation:
 
@@ -57,11 +62,19 @@ replaceable ProductSearchProvider
 
 ↓
 
-ProductObservation
+ShoppingEvidence
+
+↓
+
+deterministic evidence acceptance
 
 ↓
 
 deterministic parsing and relevance
+
+↓
+
+rankable versus reference-only separation
 
 ↓
 
@@ -72,7 +85,7 @@ deterministic ranking
 bounded presentation results
 
 
-Current guarantees include:
+Current Search guarantees include:
 
 - normalized and bounded human queries
 - monotonically increasing request identities
@@ -84,11 +97,98 @@ Current guarantees include:
 - mixed-currency ranking protection
 - truthful no-results state
 - no fabricated provider evidence
+- typed provider and source provenance
+- explicit sample versus real-world evidence
+- explicit observation timestamps
+- explicit availability evidence
+- explicit promotion evidence
+- explicit unknown and unverified states
+- caller-supplied freshness evaluation time
+- no hidden clock in deterministic core
+- stale evidence cannot silently win Best Value
+- future-dated invalid evidence can be rejected
+- display-only evidence cannot influence Best Value
+- unavailable evidence cannot influence Best Value
+- weak inferred evidence cannot silently become trusted evidence
+- parsed value-changing promotions require explicit promotion provenance before ranking
+- unverified value-changing promotions remain reference-only
 
 The first Android Search experience is physically verified on-device.
 
 Current built-in Search data is explicitly fictional sample evidence.
+
 It is not presented as live retailer pricing, inventory, promotions or availability.
+
+Sample fixtures remain useful for deterministic offline development and regression testing.
+
+## Real Shopping Evidence Contract
+
+Milestone 5C4 is complete.
+
+The permanent provider-neutral evidence envelope is ShoppingEvidence.
+
+Shopping evidence can describe:
+
+- provider identity
+- source/store identity
+- source product identity
+- observation time
+- sample, real-world or unknown environment
+- acquisition channel
+- observation claim type
+- availability
+- promotions
+- freshness
+
+Providers supply evidence.
+
+Providers do not decide ValuePilot rank.
+
+Evidence freshness is evaluated using caller-supplied time and explicit policy.
+
+The shared core does not read a system clock.
+
+Evidence acceptance produces one of three deterministic dispositions:
+
+- RANKABLE
+- DISPLAY_ONLY
+- REJECTED
+
+This allows ValuePilot to show useful but uncertain information without allowing it to silently influence a Best Value decision.
+
+Current trust behavior includes:
+
+- fresh trusted real-world evidence may rank
+- aging evidence may rank according to explicit policy
+- stale evidence is reference-only by default
+- unknown-freshness real-world evidence is reference-only by default
+- implausibly future-dated evidence is rejected
+- unknown environment or channel cannot silently rank
+- inferred or unknown observation claims cannot silently rank
+- out-of-stock or unavailable evidence cannot rank
+- low-stock evidence may rank with a warning
+- unknown availability remains explicitly unknown
+- expired promotions cannot influence Best Value
+- inferred or unknown promotion claims cannot influence Best Value
+- parsed BOGO or other value-changing promotion arithmetic cannot improve rank without explicit PromotionEvidence
+
+The evidence hierarchy remains monotonic:
+
+explicit source evidence
+
+↓
+
+deterministic parsed or derived evidence
+
+↓
+
+bounded heuristic evidence
+
+↓
+
+optional semantic or AI assistance
+
+Later or weaker evidence must not overwrite stronger explicit money, quantity or provenance evidence.
 
 ## Deterministic value engine
 
@@ -117,7 +217,11 @@ Capture/data providers
 
 ↓
 
-normalized product evidence
+typed shopping evidence
+
+↓
+
+deterministic evidence trust boundary
 
 ↓
 
@@ -136,6 +240,8 @@ ValuePilot does not depend on Accessibility, overlays, OCR,
 a specific retailer, or any single capture method.
 
 Accessibility and OCR remain optional adapters.
+
+The product must continue functioning if any one capture or presentation adapter is removed.
 
 ## Physical Android verification
 
@@ -156,6 +262,8 @@ Verified on physical device:
 - truthful no-results behavior
 - bottom navigation and system-bar spacing
 
+5C4C through 5C4E are deterministic trust-layer changes and do not require a new physical-device acceptance checkpoint before a real-world provider exists.
+
 ## Privacy boundary
 
 Current Android build still has:
@@ -167,48 +275,69 @@ Current Android build still has:
 - no remote AI dependency
 - no ValuePilot server dependency
 
+A network permission must not be added merely because the architecture can support a remote provider.
+
 ## Next milestone
 
-5C4 — Real Shopping Evidence Contract
+5D — Authorized Real Shopping Data Provider Selection
 
 Goal:
 
-Prepare Universal Search to consume trustworthy real-world shopping data
-without tying ValuePilot to any retailer or capture method.
+Select the first legally and commercially suitable source of real shopping evidence before adding a production network boundary.
 
-The next layer must make the origin and quality of shopping evidence explicit.
+This milestone is provider research and architectural selection first, not blind API implementation.
 
-Required concepts include:
+Evaluate candidate providers on:
 
-- provider identity
-- source/store identity
-- observation time
-- live versus sample evidence
-- freshness
-- availability evidence
-- promotion evidence
-- stable product identity
-- clear unknown/unverified states
+- explicit authorization and permitted use
+- Canadian coverage
+- retailer and store coverage
+- grocery and general-product breadth
+- current-price quality
+- package size and quantity quality
+- promotion support
+- availability or inventory support
+- stable product identifiers
+- store/source identifiers
+- observation timestamps and freshness
+- geographic precision
+- search capability
+- rate limits
+- latency and reliability
+- caching rules
+- display and redistribution rights
+- commercial-use rights
+- attribution requirements
+- pricing and expected operating cost
+- scalability
+- vendor lock-in risk
+- long-term availability
 
-Provider data remains evidence.
+The provider-selection milestone should produce:
 
-Providers do not rank products.
+1. a researched candidate comparison
+2. a selected first provider or an explicit decision that no candidate is yet suitable
+3. the exact evidence fields that provider can supply
+4. the authorization and commercial constraints
+5. a bounded integration design
+6. expected network permissions and privacy impact
+7. expected cost and scale limits
+8. failure and fallback behavior
 
-The deterministic ValuePilot engine remains responsible for comparison
-and value decisions.
+Only after a provider is deliberately selected should ValuePilot implement the first authorized real-data adapter and add any required network permission.
 
-5C4 will remain provider-independent and will not yet add:
+5D does not authorize:
 
 - unauthorized retailer scraping
+- brittle private-endpoint reverse engineering
 - checkout
 - payment processing
 - universal cart
 - subscriptions
-- affiliate ranking influence
+- affiliate influence on ranking
 - remote AI
 - telemetry
 
-Internet permission will not be added merely to prepare the architecture.
+ValuePilot ranking remains independent of provider business incentives.
 
-A network boundary should be introduced only when an authorized,
-useful real-data provider is deliberately selected.
+The deterministic ValuePilot engine remains responsible for comparison and value decisions.
