@@ -6,7 +6,7 @@ Milestone:
 5D — Authorized Real Shopping Data Provider Selection
 
 Status:
-Publisher account active. Advertiser-discovery evidence collected. No advertiser relationship, product-feed/API authorization, DSA approval, caching/indexing/display right, or production adapter is established yet.
+Publisher account active. Advertiser-discovery evidence collected. Giant Tiger partnership application submitted and pending. No accepted advertiser relationship, product-feed/API authorization, DSA approval, caching/indexing/display right, or production adapter is established yet.
 
 ## Empirical discovery evidence
 
@@ -121,9 +121,9 @@ Observed discovery metadata:
 
 #### Authenticated advertiser-profile evidence
 
-The Giant Tiger profile was inspected before any partnership request.
+The Giant Tiger profile was inspected before the partnership request.
 
-Rakuten currently exposes these Giant Tiger features/policies:
+Rakuten exposes these Giant Tiger features/policies:
 
 - Product Catalog
 - explicit offer-language statement: `Product feed available`
@@ -133,7 +133,7 @@ Rakuten currently exposes these Giant Tiger features/policies:
 - DSA: `Allows downloadable software applications`
 - real-time tracking
 - coupons available through the publisher channel
-- an active `Apply` control is visible; unlike Walmart Canada, no current eligibility-block message is shown
+- an active `Apply` control was visible; unlike Walmart Canada, no partnership-eligibility block was shown
 
 The profile categories include Clothing & Accessories, Food & Drink, Games & Toys, Health & Beauty and Home & Living, making Giant Tiger materially relevant to everyday Canadian shopping rather than a narrow specialty catalog.
 
@@ -143,24 +143,50 @@ The advertiser's visible approval guidance is comparatively simple: interested s
 
 Paid-search/trademark restrictions are present, including prohibited Giant Tiger brand terms. These do not affect ValuePilot's deterministic product ranking because paid-search bidding is not part of the product model.
 
-#### Current interpretation
+#### Full advertiser-terms review
 
-Giant Tiger is currently the strongest Rakuten candidate inspected so far because it combines:
+The downloaded Giant Tiger Terms & Conditions were reviewed before application.
 
-- Canadian serviceability
-- broad everyday-shopping categories including Food & Drink
-- explicit Product Catalog plus `Product feed available`
-- explicit DSA allowance in Rakuten profile metadata
-- Deep Links
-- no visible current partnership-eligibility block
+Important conclusions:
 
-However, the advertiser page still offers a separate downloadable Terms & Conditions document. The visible approval text and feature flags are not a substitute for reviewing those advertiser-supplied terms. Do not submit the partnership request until that document has been reviewed for data-feed use, caching/indexing/display, software/mobile, comparison-shopping, trademark, redistribution, privacy and termination restrictions.
+- the agreement does not introduce a blanket mobile-app/software prohibition that conflicts with Rakuten's `Allows downloadable software applications` profile flag
+- links must be genuine, user-initiated affiliate links; automated click-through generation, hidden frames, popups/robots, automatic redirects, forced clicks and similar attribution manipulation are prohibited
+- Giant Tiger controls product prices and sales; ValuePilot must not represent itself as Giant Tiger or make unauthorized claims about Giant Tiger products/policies
+- Giant Tiger trademark bidding and related paid-search use are restricted; direct linking in paid search is prohibited
+- the license is revocable and limited; the general agreement does not by itself grant blanket indefinite caching, indexing, republication or redistribution rights for the entire product feed
+- engagement/offer terms can control over inconsistent general terms
+- either party can terminate; terms can be modified with notice
+- Canadian affiliate-disclosure requirements are called out for sponsored/promotional content
+- a Rakuten-required non-circumvention clause restricts direct web advertising/collaboration arrangements between the parties outside Rakuten during the agreement and for 24 months afterward
+
+The terms therefore support submitting a controlled validation application, but approval must still be followed by actual feed-access and feed-rights validation before any production integration.
+
+#### Application status
+
+On 2026-08-22, after the full terms review, ValuePilot submitted a Giant Tiger partnership application through Rakuten.
+
+Current authenticated status reported by Rakuten:
+
+**PENDING (APPLIED)**
+
+Do not submit a duplicate Giant Tiger application.
 
 Decision:
 
-**PROMISING / HOLD APPLICATION UNTIL FULL ADVERTISER TERMS ARE REVIEWED.** If the downloaded Giant Tiger terms do not introduce a conflicting software/data-use restriction, Giant Tiger should become the first Rakuten advertiser application for controlled 5D validation.
+**APPLICATION PENDING.** Giant Tiger remains the leading Rakuten validation candidate because it combines Canadian serviceability, broad everyday-shopping categories, explicit Product Catalog/product-feed availability, DSA allowance, Deep Links and no pre-application eligibility conflict.
 
-If approved later, inspect the real authorized Product Catalog/feed before implementation, especially grocery presence despite 0% commission, CAD/geography, product identifiers, quantity/size fields, price/sale semantics, availability/freshness, and exact permitted persistence/display behavior.
+If approved, inspect the real authorized Product Catalog/feed before implementation, especially:
+
+- whether grocery rows exist despite 0% commission
+- CAD and Canadian geography semantics
+- product identifiers and cross-row identity quality
+- quantity/size/weight fields needed for unit-value comparison
+- price/sale/reference-price semantics
+- availability and freshness fields
+- image/deep-link behavior
+- feed/API access mechanism and limits
+- exact permitted caching, persistence, indexing and display behavior
+- whether mobile-app use requires any additional advertiser-specific DSA step beyond Rakuten's network-level DSA approval/testing
 
 ### Well.ca
 
@@ -176,6 +202,8 @@ Observed discovery metadata:
 
 Decision:
 HIGH-VALUE structured-catalog candidate for health, baby, beauty, household and packaged-goods comparison. It is likely to provide useful package-size/unit-value test cases if the actual catalog preserves quantities and identifiers.
+
+Do not apply while Giant Tiger is pending unless newer evidence gives a specific reason to add a second Rakuten validation candidate.
 
 ### Newegg Canada
 
@@ -207,16 +235,15 @@ Do not apply to these merely to accumulate advertiser relationships. They are fa
 6. `Auto Approve = Y` would only describe relationship workflow; it would not authorize product-data caching/indexing/display or DSA use.
 7. A 0% commission category can still be strategically valuable product evidence if the advertiser permits catalog use. Commission must not affect ValuePilot ranking or provider-quality scoring.
 8. Advertiser feed availability is not permission to scrape the advertiser website.
-9. Rakuten publisher account access != advertiser relationship != feed/API authorization != DSA approval != permission to cache/index/display product data.
+9. Advertiser approval is not proof of feed/API authorization or feed-field quality.
+10. Rakuten publisher account access != advertiser relationship != feed/API authorization != DSA approval != permission to cache/index/display product data.
 
 ## Next action
 
-Giant Tiger is the leading Rakuten candidate but its full advertiser-supplied Terms & Conditions document must be reviewed before application.
+Giant Tiger application is pending. Do not submit a duplicate application and do not add random Rakuten advertiser relationships while this high-information application is under review.
 
-Open/download Giant Tiger's `Download and view terms of service` document and capture the complete terms. Resolve feed/data-use rights, caching/indexing/display restrictions, software/mobile/DSA compatibility, comparison-shopping use, privacy/tracking, trademark/search rules, redistribution, termination and any approval conditions.
+If Giant Tiger is approved, immediately inspect the authorized Product Catalog/feed and any feed-specific terms before implementation. If declined, record the reason if supplied and inspect Well.ca next rather than trying to force approval.
 
-If the full terms remain compatible, submit one deliberate Giant Tiger partnership application and then stop until its advertiser decision or authorized feed access changes state.
-
-If Giant Tiger's full terms introduce a material conflict, inspect Well.ca next.
+Walmart Canada remains blocked/ambiguous and should not be pursued while better candidates are available.
 
 Do not implement a Rakuten production adapter during 5D.
