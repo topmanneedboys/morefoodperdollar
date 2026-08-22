@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/navHome"
+        android:checked="true"
+        android:icon="@drawable/ic_vp_home"
+        android:title="@string/nav_home" />
+
+    <item
+        android:id="@+id/navSearch"
+        android:icon="@drawable/ic_vp_search"
+        android:title="@string/nav_search" />
+
+    <item
+        android:id="@+id/navBasket"
+        android:icon="@drawable/ic_vp_basket"
+        android:title="@string/nav_basket" />
+
+    <item
+        android:id="@+id/navSaved"
+        android:icon="@drawable/ic_vp_saved"
+        android:title="@string/nav_saved" />
+
+</menu>

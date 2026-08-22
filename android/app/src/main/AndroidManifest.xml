@@ -18,6 +18,9 @@
         android:theme="@style/Theme.ValuePilot"
         android:usesCleartextTraffic="false"
         android:supportsRtl="true">
+        <activity
+            android:name=".ComparisonActivity"
+            android:exported="false" />
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -46,4 +46,31 @@
 
     <string name="how_to_use">How to use</string>
     <string name="how_to_body">Use ValuePilot standalone comparison for normal product comparison. Accessibility capture, off-screen collection and OCR remain optional experimental tools.</string>
+
+    <string name="nav_home">Home</string>
+    <string name="nav_search">Search</string>
+    <string name="nav_basket">Basket</string>
+    <string name="nav_saved">Saved</string>
+
+    <string name="compare_products">Compare products</string>
+
+    <string name="home_eyebrow">READY NOW</string>
+    <string name="home_title">Make the better buy.</string>
+    <string name="home_body">Compare products by real value, not just the number on the price tag.</string>
+    <string name="home_footnote">Comparison works on-device. Search, Basket and Saved will connect to the same ValuePilot intelligence as those capabilities are added.</string>
+
+    <string name="search_eyebrow">SEARCH</string>
+    <string name="search_title">Find the best option.</string>
+    <string name="search_body">This will become one place to search products, stores and restaurants and understand which choice is actually better.</string>
+    <string name="search_footnote">Universal search is not available in this build yet.</string>
+
+    <string name="basket_eyebrow">BASKET</string>
+    <string name="basket_title">Optimize the whole shop.</string>
+    <string name="basket_body">Basket will evaluate what you actually need together instead of optimizing every product in isolation.</string>
+    <string name="basket_footnote">Whole-basket optimization is not available in this build yet.</string>
+
+    <string name="saved_eyebrow">SAVED</string>
+    <string name="saved_title">Keep the decisions that matter.</string>
+    <string name="saved_body">Saved will hold products, shopping lists and watched decisions so useful shopping intelligence does not disappear after one session.</string>
+    <string name="saved_footnote">Saved products and watchlists are not available in this build yet.</string>
 </resources>
