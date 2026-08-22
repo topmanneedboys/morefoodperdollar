@@ -114,6 +114,76 @@ class ValueEngineTest {
     }
 
     @Test
+    fun nameSanitizerPreservesLegitimateRegPrefixes() {
+        val pizza = ValueEngine.analyze(
+            "reginos pizza\n18 in\n${'$'}24"
+        )!!
+
+        assertEquals(
+            "reginos pizza",
+            pizza.name
+        )
+
+        assertEquals(
+            Quantity.Kind.PIZZA_AREA_SQIN,
+            pizza.quantity!!.kind
+        )
+
+        assertEquals(
+            18.0,
+            pizza.quantity!!.diameterIn!!,
+            0.001
+        )
+
+        assertEquals(
+            24.0,
+            pizza.offer.currentPrice,
+            0.001
+        )
+
+        val regal = ValueEngine.analyze(
+            "Regal apples\n3 lb\n${'$'}5.99"
+        )!!
+
+        assertEquals(
+            "Regal apples",
+            regal.name
+        )
+
+        val regional = ValueEngine.analyze(
+            "Regional chicken\n1 kg\n${'$'}12.00"
+        )!!
+
+        assertEquals(
+            "Regional chicken",
+            regional.name
+        )
+    }
+
+    @Test
+    fun regularPriceAbbreviationStillWorksAfterRegPrefixFix() {
+        val item = ValueEngine.analyze(
+            "Reginos pizza\n18 in\nNow ${'$'}24.00\nReg. ${'$'}29.99"
+        )!!
+
+        assertEquals(
+            "Reginos pizza",
+            item.name
+        )
+
+        assertEquals(
+            24.0,
+            item.offer.currentPrice,
+            0.001
+        )
+
+        assertEquals(
+            29.99,
+            item.offer.regularPrice!!,
+            0.001
+        )
+    }
+    @Test
     fun unicodeNamesKeepStableKeys() {
         assertTrue(ValueEngine.canonicalName("Crème brûlée $8.00").contains("crème"))
     }

@@ -390,7 +390,7 @@ object ValueEngine {
     internal fun sanitizeNameLine(value: String): String {
         var clean = priceRegex.replace(normalize(value), " ")
         val leadingNoise = Regex(
-            "^\\s*(?:(?:previous\\s+price(?:\\s+was)?|regular(?:\\s+price)?|reg\\.?|member(?:s|ship)?(?:\\s+price)?|loyalty(?:\\s+price)?|sale(?:\\s+price)?|current\\s+price|now|was)\\s*[:\\-]?|for\\s+members?\\b)\\s*",
+            "^\\s*(?:(?:previous\\s+price(?:\\s+was)?|regular(?:\\s+price)?|reg\\.?(?=\\s|:|-|\\z)|member(?:s|ship)?(?:\\s+price)?|loyalty(?:\\s+price)?|sale(?:\\s+price)?|current\\s+price|now|was)\\s*[:\\-]?|for\\s+members?\\b)\\s*",
             RegexOption.IGNORE_CASE
         )
         repeat(4) { clean = leadingNoise.replace(clean, "") }
