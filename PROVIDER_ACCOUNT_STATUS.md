@@ -18,10 +18,40 @@ This file is an operational checkpoint only. It does not authorize production ne
 | Skip CA on Awin (advertiser 107752) | PENDING advertiser approval | If approved, inspect the actual authorized Skip product feed before implementation |
 | impact.com partner account | ACCOUNT CREATED | No duplicate account |
 | impact.com Marketplace application | IN REVIEW | Wait for approval/request; do not resubmit |
-| CJ Affiliate | NOT STARTED | Begin publisher/account validation while Awin Skip and impact.com are pending |
+| CJ Affiliate | ACCOUNT / ONBOARDING IN PROGRESS | Complete truthful promotional-property setup, then validate advertiser/catalog/feed rights |
 | Rakuten Advertising | NOT STARTED | Validate after CJ unless newer evidence changes priority |
 | Flipp | PARTNERSHIP TARGET, NOT YET VALIDATED | Commercial partnership inquiry later |
 | GS1 Canada ECCnet | DATA/IDENTITY TARGET, NOT YET VALIDATED | Commercial/data-recipient rights validation later |
+
+## CJ Affiliate checkpoint
+
+Observed during the real CJ publisher onboarding flow on 2026-08-22:
+
+- CJ publisher signup has progressed beyond the earlier `NOT STARTED` checkpoint
+- the account is far enough through onboarding to configure Promotional Properties
+- CJ requires a truthful promotional property describing where advertiser promotion will occur
+- `Services and Tools` is the current truthful property type for the pre-launch ValuePilot technology because the browser extension and mobile app do not yet have legitimate public store listings
+- primary promotional model: `Product Comparison, Reviews, or Discovery`
+- ValuePilot now has a dedicated public marketing site for this property at `https://topmanneedboys.github.io/morefoodperdollar/`
+- the marketing site is reported live by the product owner and clearly identifies ValuePilot as pre-launch
+- the marketing site does not claim live retailer pricing, inventory, promotions, merchant relationships, user counts, or public store distribution that has not been established
+- the site states that ValuePilot ranking is independent of affiliate commission rates, advertiser payouts, and sponsorship
+- a public privacy notice is present on the marketing site
+
+Do not:
+
+- invent a browser-extension store URL
+- invent an App Store or Google Play listing
+- classify ValuePilot as a coupon, cashback, influencer, or paid-search property unless the product actually adopts that model
+- claim advertiser partnerships before advertiser-level acceptance exists
+- assume CJ account creation or promotional-property approval grants product-feed/API rights
+- implement a CJ production adapter during 5D
+
+Permanent distinction for CJ:
+
+**CJ publisher account access != promotional-property acceptance != advertiser relationship != catalog/feed/API access != permission to cache/index/display catalog data in ValuePilot**
+
+Each stage requires separate evidence.
 
 ## impact.com account/application checkpoint
 
@@ -84,17 +114,15 @@ Detailed Awin feed-quality evidence is recorded in `PROVIDER_VALIDATION.md`.
 
 ## Next action
 
-While Skip and impact.com are both pending, continue the deliberate validation order with CJ Affiliate.
+Complete the CJ Promotional Property using the live ValuePilot marketing site, then continue CJ validation in this order:
 
-The purpose of CJ validation is to establish:
-
-- publisher account feasibility
-- Canadian advertiser/catalog availability
-- advertiser-level authorization requirements
-- real product-feed/API access
-- actual field quality for price, sale price, country, currency, availability, product identity, weight/dimensions and unit-pricing evidence
-- mobile-app/comparison-publisher compatibility
-- caching/indexing/display restrictions
-- cost, rate and operational constraints
+1. finish the truthful `Services and Tools` promotional property with `Product Comparison, Reviews, or Discovery` as the primary model
+2. inspect any CJ publisher-network terms, software/tool policy, privacy/data requirements, and onboarding gates presented before accepting or submitting them
+3. determine whether the property/account is accepted, pending review, or blocked by an additional verification step
+4. search for Canadian advertisers relevant to ValuePilot and distinguish advertiser discovery from actual advertiser acceptance
+5. inspect real catalog/product-feed/API access and authorization requirements
+6. validate actual feed fields for price, sale price, country, currency, availability, product identity, weight/dimensions, quantity/unit evidence, timestamps, and geography
+7. record caching, indexing, display, attribution, mobile-app/tool, deep-linking, API/rate-limit, cost, and termination constraints
+8. stop before production integration; implementation remains unauthorized until 5D selects a provider deliberately
 
 Do not implement a CJ production adapter during 5D.
