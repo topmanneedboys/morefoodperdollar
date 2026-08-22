@@ -1,5 +1,7 @@
 package com.valuepilot.app
 
+import com.valuepilot.core.AvailabilityEvidence
+import com.valuepilot.core.AvailabilityState
 import com.valuepilot.core.EvidenceChannel
 import com.valuepilot.core.EvidenceClaimKind
 import com.valuepilot.core.EvidenceEnvironment
@@ -551,6 +553,436 @@ class UniversalSearchTest {
             )
         )
     }
+
+    @Test
+    fun freshRealWorldEvidenceCanWinBestValueWhenTimeIsExplicit() {
+        val controller =
+            UniversalSearchController()
+
+        val started =
+            start(
+                controller,
+                "eggs"
+            )
+
+        val finished =
+            controller.reduce(
+                started.state,
+                UniversalSearchIntent.ResultsReceived(
+                    batch =
+                        ProductSearchBatch(
+                            requestId =
+                                started.request!!.requestId,
+                            evidence =
+                                listOf(
+                                    evidence(
+                                        index = 1,
+                                        rawText =
+                                            "Eggs A\n12 ct\n$6.00",
+                                        sourceId =
+                                            "store-a",
+                                        environment =
+                                            EvidenceEnvironment
+                                                .REAL_WORLD,
+                                        channel =
+                                            EvidenceChannel
+                                                .AUTHORIZED_API,
+                                        observedAtEpochMillis =
+                                            TEST_NOW -
+                                                5L *
+                                                MINUTE,
+                                        availability =
+                                            inStock()
+                                    ),
+                                    evidence(
+                                        index = 2,
+                                        rawText =
+                                            "Eggs B\n30 ct\n$12.00",
+                                        sourceId =
+                                            "store-b",
+                                        environment =
+                                            EvidenceEnvironment
+                                                .REAL_WORLD,
+                                        channel =
+                                            EvidenceChannel
+                                                .AUTHORIZED_API,
+                                        observedAtEpochMillis =
+                                            TEST_NOW -
+                                                5L *
+                                                MINUTE,
+                                        availability =
+                                            inStock()
+                                    )
+                                )
+                        ),
+                    evaluatedAtEpochMillis =
+                        TEST_NOW
+                )
+            ).state
+
+        assertEquals(
+            UniversalSearchStatus.RESULTS,
+            finished.status
+        )
+
+        assertEquals(
+            "Eggs B",
+            finished.results.first().name
+        )
+
+        assertTrue(
+            finished.results.first().best
+        )
+
+        assertTrue(
+            finished.results.first()
+                .rankingEligible
+        )
+
+        assertEquals(
+            1,
+            finished.results.first().rank
+        )
+    }
+
+    @Test
+    fun staleCheaperEvidenceCannotBeatFreshRankableEvidence() {
+        val controller =
+            UniversalSearchController()
+
+        val started =
+            start(
+                controller,
+                "eggs"
+            )
+
+        val finished =
+            controller.reduce(
+                started.state,
+                UniversalSearchIntent.ResultsReceived(
+                    batch =
+                        ProductSearchBatch(
+                            requestId =
+                                started.request!!.requestId,
+                            evidence =
+                                listOf(
+                                    evidence(
+                                        index = 1,
+                                        rawText =
+                                            "Fresh Eggs\n12 ct\n$6.00",
+                                        sourceId =
+                                            "fresh-store",
+                                        environment =
+                                            EvidenceEnvironment
+                                                .REAL_WORLD,
+                                        channel =
+                                            EvidenceChannel
+                                                .AUTHORIZED_API,
+                                        observedAtEpochMillis =
+                                            TEST_NOW -
+                                                5L *
+                                                MINUTE,
+                                        availability =
+                                            inStock()
+                                    ),
+                                    evidence(
+                                        index = 2,
+                                        rawText =
+                                            "Old Cheap Eggs\n30 ct\n$1.00",
+                                        sourceId =
+                                            "stale-store",
+                                        environment =
+                                            EvidenceEnvironment
+                                                .REAL_WORLD,
+                                        channel =
+                                            EvidenceChannel
+                                                .AUTHORIZED_API,
+                                        observedAtEpochMillis =
+                                            TEST_NOW -
+                                                4L *
+                                                HOUR,
+                                        availability =
+                                            inStock()
+                                    )
+                                )
+                        ),
+                    evaluatedAtEpochMillis =
+                        TEST_NOW
+                )
+            ).state
+
+        assertEquals(
+            UniversalSearchStatus.RESULTS,
+            finished.status
+        )
+
+        val best =
+            finished.results.first()
+
+        assertEquals(
+            "Fresh Eggs",
+            best.name
+        )
+
+        assertTrue(best.best)
+
+        val stale =
+            finished.results.first {
+                it.name ==
+                    "Old Cheap Eggs"
+            }
+
+        assertFalse(stale.best)
+
+        assertFalse(
+            stale.rankingEligible
+        )
+
+        assertNull(stale.rank)
+
+        assertTrue(
+            stale.evidenceNotice
+                ?.contains(
+                    "Stale",
+                    ignoreCase = true
+                ) == true
+        )
+    }
+
+    @Test
+    fun futureDatedEvidenceIsRejectedBeforeParsingAndRanking() {
+        var parseCount = 0
+
+        val parser =
+            ProductParser {
+                    rawText,
+                    sourceId ->
+
+                parseCount++
+
+                DeterministicProductParser
+                    .parse(
+                        rawText,
+                        sourceId
+                    )
+            }
+
+        val controller =
+            UniversalSearchController(
+                parser = parser
+            )
+
+        val started =
+            start(
+                controller,
+                "eggs"
+            )
+
+        val finished =
+            controller.reduce(
+                started.state,
+                UniversalSearchIntent.ResultsReceived(
+                    batch =
+                        ProductSearchBatch(
+                            requestId =
+                                started.request!!.requestId,
+                            evidence =
+                                listOf(
+                                    evidence(
+                                        index = 1,
+                                        rawText =
+                                            "Future Eggs\n30 ct\n$1.00",
+                                        sourceId =
+                                            "future-store",
+                                        environment =
+                                            EvidenceEnvironment
+                                                .REAL_WORLD,
+                                        channel =
+                                            EvidenceChannel
+                                                .AUTHORIZED_API,
+                                        observedAtEpochMillis =
+                                            TEST_NOW +
+                                                10L *
+                                                MINUTE,
+                                        availability =
+                                            inStock()
+                                    )
+                                )
+                        ),
+                    evaluatedAtEpochMillis =
+                        TEST_NOW
+                )
+            ).state
+
+        assertEquals(
+            0,
+            parseCount
+        )
+
+        assertEquals(
+            1,
+            finished.rejectedObservationCount
+        )
+
+        assertEquals(
+            UniversalSearchStatus.NO_RESULTS,
+            finished.status
+        )
+
+        assertTrue(
+            finished.results.isEmpty()
+        )
+    }
+
+    @Test
+    fun missingEvaluationTimeFailsClosedForRealWorldEvidence() {
+        val controller =
+            UniversalSearchController()
+
+        val started =
+            start(
+                controller,
+                "milk"
+            )
+
+        val finished =
+            controller.reduce(
+                started.state,
+                UniversalSearchIntent.ResultsReceived(
+                    ProductSearchBatch(
+                        requestId =
+                            started.request!!.requestId,
+                        evidence =
+                            listOf(
+                                evidence(
+                                    index = 1,
+                                    rawText =
+                                        "Whole Milk\n2 L\n$5.49",
+                                    sourceId =
+                                        "real-store",
+                                    environment =
+                                        EvidenceEnvironment
+                                            .REAL_WORLD,
+                                    channel =
+                                        EvidenceChannel
+                                            .AUTHORIZED_API,
+                                    observedAtEpochMillis =
+                                        TEST_NOW -
+                                            5L *
+                                            MINUTE,
+                                    availability =
+                                        inStock()
+                                )
+                            )
+                    )
+                )
+            ).state
+
+        assertEquals(
+            UniversalSearchStatus.RESULTS,
+            finished.status
+        )
+
+        val row =
+            finished.results.single()
+
+        assertFalse(row.best)
+        assertFalse(row.rankingEligible)
+        assertNull(row.rank)
+
+        assertTrue(
+            row.evidenceNotice
+                ?.contains(
+                    "Freshness unknown"
+                ) == true
+        )
+    }
+
+    @Test
+    fun displayOnlyDifferentCurrencyDoesNotBlockSafeRanking() {
+        val controller =
+            UniversalSearchController()
+
+        val started =
+            start(
+                controller,
+                "rice"
+            )
+
+        val finished =
+            controller.reduce(
+                started.state,
+                UniversalSearchIntent.ResultsReceived(
+                    batch =
+                        ProductSearchBatch(
+                            requestId =
+                                started.request!!.requestId,
+                            evidence =
+                                listOf(
+                                    evidence(
+                                        index = 1,
+                                        rawText =
+                                            "Fresh Rice\n5 kg\nC$12.49",
+                                        sourceId =
+                                            "cad-store",
+                                        environment =
+                                            EvidenceEnvironment
+                                                .REAL_WORLD,
+                                        channel =
+                                            EvidenceChannel
+                                                .AUTHORIZED_API,
+                                        observedAtEpochMillis =
+                                            TEST_NOW -
+                                                5L *
+                                                MINUTE,
+                                        availability =
+                                            inStock()
+                                    ),
+                                    evidence(
+                                        index = 2,
+                                        rawText =
+                                            "Stale Rice\n5 kg\nA$1.00",
+                                        sourceId =
+                                            "aud-store",
+                                        environment =
+                                            EvidenceEnvironment
+                                                .REAL_WORLD,
+                                        channel =
+                                            EvidenceChannel
+                                                .AUTHORIZED_API,
+                                        observedAtEpochMillis =
+                                            TEST_NOW -
+                                                4L *
+                                                HOUR,
+                                        availability =
+                                            inStock()
+                                    )
+                                )
+                        ),
+                    evaluatedAtEpochMillis =
+                        TEST_NOW
+                )
+            ).state
+
+        assertEquals(
+            UniversalSearchStatus.RESULTS,
+            finished.status
+        )
+
+        assertEquals(
+            "Fresh Rice",
+            finished.results.first().name
+        )
+
+        assertTrue(
+            finished.results.first().best
+        )
+
+        assertEquals(
+            2,
+            finished.results.size
+        )
+    }
     @Test
     fun staleFailureCannotEraseCurrentResultsOrLoadingState() {
         val controller =
@@ -632,7 +1064,11 @@ class UniversalSearchTest {
         channel: EvidenceChannel =
             EvidenceChannel.FIXTURE,
         providerDisplayName: String =
-            "Fixture Provider"
+            "Fixture Provider",
+        observedAtEpochMillis: Long =
+            index.toLong(),
+        availability: AvailabilityEvidence =
+            AvailabilityEvidence()
     ): ShoppingEvidence =
         ShoppingEvidence(
             observation =
@@ -646,7 +1082,7 @@ class UniversalSearchTest {
                     rawText =
                         rawText,
                     observedAtEpochMillis =
-                        index.toLong()
+                        observedAtEpochMillis
                 ),
             provider =
                 EvidenceProvider(
@@ -672,6 +1108,33 @@ class UniversalSearchTest {
                 channel,
             observationClaimKind =
                 EvidenceClaimKind
-                    .SOURCE_ASSERTED
+                    .SOURCE_ASSERTED,
+            availability =
+                availability
         )
+
+    private fun inStock():
+        AvailabilityEvidence =
+        AvailabilityEvidence(
+            state =
+                AvailabilityState.IN_STOCK,
+            claimKind =
+                EvidenceClaimKind
+                    .SOURCE_ASSERTED,
+            observedAtEpochMillis =
+                TEST_NOW -
+                    5L *
+                    MINUTE
+        )
+
+    companion object {
+        private const val MINUTE =
+            60L * 1000L
+
+        private const val HOUR =
+            60L * MINUTE
+
+        private const val TEST_NOW =
+            1_800_000_000_000L
+    }
 }

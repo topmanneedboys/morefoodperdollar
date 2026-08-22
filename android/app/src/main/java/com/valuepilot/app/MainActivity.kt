@@ -265,7 +265,14 @@ class MainActivity : AppCompatActivity() {
     private fun executeSearch(request: ProductSearchRequest) {
         searchExecutor.execute {
             val intent = try {
-                UniversalSearchIntent.ResultsReceived(searchProvider.search(request))
+                UniversalSearchIntent.ResultsReceived(
+                    batch =
+                        searchProvider.search(
+                            request
+                        ),
+                    evaluatedAtEpochMillis =
+                        System.currentTimeMillis()
+                )
             } catch (ignored: Exception) {
                 UniversalSearchIntent.ProviderFailed(request.requestId)
             }
@@ -379,11 +386,23 @@ class MainActivity : AppCompatActivity() {
         }
 
         val rank = TextView(this).apply {
-            text = if (row.best) {
-                getString(R.string.best_value_rank, row.rank)
-            } else {
-                getString(R.string.rank_number, row.rank)
-            }
+            text =
+                when {
+                    row.best ->
+                        getString(
+                            R.string.best_value_rank,
+                            row.rank
+                        )
+
+                    row.rank != null ->
+                        getString(
+                            R.string.rank_number,
+                            row.rank
+                        )
+
+                    else ->
+                        "REFERENCE ONLY"
+                }
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setTextColor(Color.parseColor(if (row.best) "#047857" else "#6B7280"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
@@ -422,6 +441,30 @@ class MainActivity : AppCompatActivity() {
             setPadding(0, dp(3), 0, 0)
         }
 
+        val notice =
+            row.evidenceNotice
+                ?.takeIf {
+                    it.isNotBlank()
+                }
+                ?.let { noticeText ->
+                    TextView(this).apply {
+                        text = noticeText
+                        setTextSize(
+                            TypedValue.COMPLEX_UNIT_SP,
+                            12f
+                        )
+                        setTextColor(
+                            Color.parseColor("#92400E")
+                        )
+                        setPadding(
+                            0,
+                            dp(5),
+                            0,
+                            0
+                        )
+                    }
+                }
+
         val source = TextView(this).apply {
             text = row.sourceSummary
             gravity = Gravity.START
@@ -435,6 +478,7 @@ class MainActivity : AppCompatActivity() {
         body.addView(price)
         body.addView(metric)
         body.addView(exactness)
+        notice?.let(body::addView)
         body.addView(source)
         card.addView(body)
         return card

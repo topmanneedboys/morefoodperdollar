@@ -1,6 +1,12 @@
 package com.valuepilot.app
 
+import com.valuepilot.core.EvidenceAcceptanceDecision
+import com.valuepilot.core.EvidenceAcceptanceEvaluator
+import com.valuepilot.core.EvidenceAcceptancePolicy
+import com.valuepilot.core.EvidenceDisposition
 import com.valuepilot.core.EvidenceEnvironment
+import com.valuepilot.core.EvidenceFreshnessPolicy
+import com.valuepilot.core.EvidenceWarning
 import com.valuepilot.core.ShoppingEvidence
 
 enum class UniversalSearchStatus {
@@ -66,7 +72,7 @@ fun interface ProductSearchProvider {
  */
 data class UniversalSearchRow(
     val stableId: Long,
-    val rank: Int,
+    val rank: Int?,
     val name: String,
     val quantity: String?,
     val priceSummary: String,
@@ -74,7 +80,9 @@ data class UniversalSearchRow(
     val exactnessLabel: String,
     val best: Boolean,
     val sourceSummary: String,
-    val sampleEvidence: Boolean
+    val sampleEvidence: Boolean,
+    val rankingEligible: Boolean,
+    val evidenceNotice: String?
 )
 
 data class UniversalSearchState(
@@ -100,8 +108,20 @@ sealed interface UniversalSearchIntent {
         UniversalSearchIntent
 
     data class ResultsReceived(
-        val batch: ProductSearchBatch
-    ) : UniversalSearchIntent
+        val batch: ProductSearchBatch,
+        /**
+         * Explicit application-supplied evaluation time.
+         *
+         * Zero means unknown and therefore fails closed for real-world
+         * freshness. Sample fixtures remain rankable by their explicit
+         * SAMPLE + FIXTURE contract.
+         */
+        val evaluatedAtEpochMillis: Long = 0L
+    ) : UniversalSearchIntent {
+        init {
+            require(evaluatedAtEpochMillis >= 0L)
+        }
+    }
 
     data class ProviderFailed(
         val requestId: Long
@@ -141,7 +161,10 @@ class UniversalSearchController(
     private val parser: ProductParser =
         DeterministicProductParser,
     private val rankingEngine: RankingEngine =
-        DeterministicRankingEngine
+        DeterministicRankingEngine,
+    private val evidenceAcceptancePolicy:
+        EvidenceAcceptancePolicy =
+        DEFAULT_EVIDENCE_ACCEPTANCE_POLICY
 ) {
 
     fun initialState(
@@ -182,7 +205,9 @@ class UniversalSearchController(
             is UniversalSearchIntent.ResultsReceived ->
                 receive(
                     previous = previous,
-                    batch = intent.batch
+                    batch = intent.batch,
+                    evaluatedAtEpochMillis =
+                        intent.evaluatedAtEpochMillis
                 )
 
             is UniversalSearchIntent.ProviderFailed ->
@@ -304,9 +329,16 @@ class UniversalSearchController(
         )
     }
 
+    private data class EvaluatedSearchItem(
+        val item: ValueItem,
+        val evidence: ShoppingEvidence,
+        val decision: EvidenceAcceptanceDecision
+    )
+
     private fun receive(
         previous: UniversalSearchState,
-        batch: ProductSearchBatch
+        batch: ProductSearchBatch,
+        evaluatedAtEpochMillis: Long
     ): UniversalSearchTransition {
 
         if (
@@ -319,31 +351,41 @@ class UniversalSearchController(
             )
         }
 
-        val acceptedEvidence =
+        val boundedEvidence =
             batch.evidence.take(
                 MAX_PROVIDER_OBSERVATIONS
             )
 
-        val parsedProducts =
-            ArrayList<ValueItem>(
-                acceptedEvidence.size
-            )
-
-        val evidenceByStableId =
-            LinkedHashMap<Long, ShoppingEvidence>(
-                acceptedEvidence.size
+        val parsed =
+            ArrayList<EvaluatedSearchItem>(
+                boundedEvidence.size
             )
 
         var rejected = 0
 
         for (
             evidence in
-            acceptedEvidence
+            boundedEvidence
         ) {
+            val decision =
+                EvidenceAcceptanceEvaluator
+                    .evaluate(
+                        evidence = evidence,
+                        evaluatedAtEpochMillis =
+                            evaluatedAtEpochMillis,
+                        policy =
+                            evidenceAcceptancePolicy
+                    )
+
+            if (!decision.displayable) {
+                rejected++
+                continue
+            }
+
             val observation =
                 evidence.observation
 
-            val parsed =
+            val item =
                 parser.parse(
                     rawText =
                         observation.rawText,
@@ -351,38 +393,49 @@ class UniversalSearchController(
                         evidence.source.id.value
                 )
 
-            if (parsed == null) {
+            if (item == null) {
                 rejected++
-            } else {
-                parsedProducts += parsed
-
-                evidenceByStableId[
-                    parsed.stableId
-                ] = evidence
+                continue
             }
+
+            parsed +=
+                EvaluatedSearchItem(
+                    item = item,
+                    evidence = evidence,
+                    decision = decision
+                )
         }
 
         val matched =
-            parsedProducts.filter { item ->
+            parsed.filter { entry ->
                 SearchRelevance.matches(
                     query = previous.query,
-                    item = item
+                    item = entry.item
                 )
             }
 
         if (matched.isEmpty()) {
+            val message =
+                if (
+                    rejected > 0 &&
+                    boundedEvidence.isNotEmpty()
+                ) {
+                    "No trustworthy matching products found"
+                } else {
+                    "No matching products found"
+                }
+
             return UniversalSearchTransition(
                 previous.copy(
                     status =
                         UniversalSearchStatus
                             .NO_RESULTS,
-                    statusText =
-                        "No matching products found",
+                    statusText = message,
                     activeRequestId = null,
                     receivedObservationCount =
                         batch.evidence.size,
                     parsedProductCount =
-                        parsedProducts.size,
+                        parsed.size,
                     matchedProductCount = 0,
                     rejectedObservationCount =
                         rejected,
@@ -391,9 +444,19 @@ class UniversalSearchController(
             )
         }
 
+        val rankable =
+            matched.filter {
+                it.decision.rankable
+            }
+
+        val referenceOnly =
+            matched.filter {
+                !it.decision.rankable
+            }
+
         val currencies =
-            matched
-                .map { it.currency }
+            rankable
+                .map { it.item.currency }
                 .toSet()
 
         if (currencies.size > 1) {
@@ -403,12 +466,12 @@ class UniversalSearchController(
                         UniversalSearchStatus
                             .MIXED_CURRENCIES,
                     statusText =
-                        "Results use different currencies and cannot be value-ranked together",
+                        "Rankable results use different currencies and cannot be value-ranked together",
                     activeRequestId = null,
                     receivedObservationCount =
                         batch.evidence.size,
                     parsedProductCount =
-                        parsedProducts.size,
+                        parsed.size,
                     matchedProductCount =
                         matched.size,
                     rejectedObservationCount =
@@ -419,25 +482,42 @@ class UniversalSearchController(
         }
 
         val ranked =
-            rankingEngine.rank(
-                RankingRequest(
-                    context = null,
-                    products = matched,
-                    mode = RankMode.SMART,
-                    maxPrice = null,
-                    foodOnly = false,
-                    excludePork = false,
-                    useMemberPrices = false
+            if (rankable.isEmpty()) {
+                emptyList()
+            } else {
+                rankingEngine.rank(
+                    RankingRequest(
+                        context = null,
+                        products =
+                            rankable.map {
+                                it.item
+                            },
+                        mode = RankMode.SMART,
+                        maxPrice = null,
+                        foodOnly = false,
+                        excludePork = false,
+                        useMemberPrices = false
+                    )
                 )
-            )
+            }
 
-        val rows =
+        val rankableByStableId =
+            rankable.associateBy {
+                it.item.stableId
+            }
+
+        val rankedRows =
             ranked
                 .take(MAX_VISIBLE_RESULTS)
                 .map { rankedItem ->
 
                     val item =
                         rankedItem.item
+
+                    val entry =
+                        rankableByStableId[
+                            rankedItem.stableId
+                        ]
 
                     UniversalSearchRow(
                         stableId =
@@ -461,42 +541,129 @@ class UniversalSearchController(
                             rankedItem.rank == 1,
                         sourceSummary =
                             sourceSummary(
-                                evidenceByStableId[
-                                    rankedItem.stableId
-                                ]
+                                entry?.evidence
                             ),
                         sampleEvidence =
-                            evidenceByStableId[
-                                rankedItem.stableId
-                            ]?.isSample == true
+                            entry?.evidence
+                                ?.isSample == true,
+                        rankingEligible =
+                            true,
+                        evidenceNotice =
+                            entry?.decision
+                                ?.let(
+                                    ::evidenceNotice
+                                )
                     )
                 }
 
+        val remainingSlots =
+            (
+                MAX_VISIBLE_RESULTS -
+                    rankedRows.size
+            ).coerceAtLeast(0)
+
+        val referenceRows =
+            referenceOnly
+                .take(remainingSlots)
+                .map { entry ->
+
+                    val item =
+                        entry.item
+
+                    UniversalSearchRow(
+                        stableId =
+                            item.stableId,
+                        rank = null,
+                        name =
+                            item.name,
+                        quantity =
+                            item.quantity?.display,
+                        priceSummary =
+                            ValueEngine.money(
+                                item.offer.currentPrice,
+                                item.offer.currency
+                            ),
+                        metricLabel =
+                            "Reference only",
+                        exactnessLabel =
+                            "Not used for Best Value",
+                        best = false,
+                        sourceSummary =
+                            sourceSummary(
+                                entry.evidence
+                            ),
+                        sampleEvidence =
+                            entry.evidence.isSample,
+                        rankingEligible =
+                            false,
+                        evidenceNotice =
+                            evidenceNotice(
+                                entry.decision
+                            )
+                    )
+                }
+
+        val rows =
+            rankedRows +
+                referenceRows
+
+        if (rows.isEmpty()) {
+            return UniversalSearchTransition(
+                previous.copy(
+                    status =
+                        UniversalSearchStatus
+                            .NO_RESULTS,
+                    statusText =
+                        "No trustworthy matching products found",
+                    activeRequestId = null,
+                    receivedObservationCount =
+                        batch.evidence.size,
+                    parsedProductCount =
+                        parsed.size,
+                    matchedProductCount =
+                        matched.size,
+                    rejectedObservationCount =
+                        rejected,
+                    results = emptyList()
+                )
+            )
+        }
+
         val statusText =
-            if (
-                ranked.size >
-                MAX_VISIBLE_RESULTS
-            ) {
-                "Showing the best ${rows.size} of ${ranked.size} matches"
-            } else {
-                "${rows.size} matching products"
+            when {
+                rankedRows.isNotEmpty() &&
+                    referenceRows.isNotEmpty() ->
+                    "${rankedRows.size} ranked • ${referenceRows.size} reference only"
+
+                rankedRows.isNotEmpty() &&
+                    ranked.size >
+                    MAX_VISIBLE_RESULTS ->
+                    "Showing the best ${rankedRows.size} of ${ranked.size} rankable matches"
+
+                rankedRows.isNotEmpty() ->
+                    "${rankedRows.size} ranked products"
+
+                else ->
+                    "${referenceRows.size} matching products • reference only"
             }
 
         return UniversalSearchTransition(
             previous.copy(
                 status =
                     UniversalSearchStatus.RESULTS,
-                statusText = statusText,
+                statusText =
+                    statusText,
                 activeRequestId = null,
                 receivedObservationCount =
                     batch.evidence.size,
                 parsedProductCount =
-                    parsedProducts.size,
+                    parsed.size,
                 matchedProductCount =
                     matched.size,
                 rejectedObservationCount =
                     rejected,
-                results = rows
+                results =
+                    rows
             )
         )
     }
@@ -533,6 +700,59 @@ class UniversalSearchController(
         )
     }
 
+    private fun evidenceNotice(
+        decision: EvidenceAcceptanceDecision
+    ): String? {
+
+        val labels =
+            decision.warnings
+                .mapNotNull { warning ->
+                    when (warning) {
+                        EvidenceWarning.SAMPLE_DATA ->
+                            null
+
+                        EvidenceWarning.AGING ->
+                            "Price may be aging"
+
+                        EvidenceWarning.STALE ->
+                            "Stale evidence"
+
+                        EvidenceWarning.UNKNOWN_FRESHNESS ->
+                            "Freshness unknown"
+
+                        EvidenceWarning.FUTURE_DATED ->
+                            "Invalid future timestamp"
+
+                        EvidenceWarning.UNKNOWN_ENVIRONMENT,
+                        EvidenceWarning.UNKNOWN_CHANNEL ->
+                            "Source not fully verified"
+
+                        EvidenceWarning.WEAK_OBSERVATION_CLAIM ->
+                            "Product evidence is inferred"
+
+                        EvidenceWarning.AVAILABILITY_UNKNOWN ->
+                            "Availability unknown"
+
+                        EvidenceWarning.LOW_STOCK ->
+                            "Low stock"
+
+                        EvidenceWarning.NOT_CURRENTLY_AVAILABLE ->
+                            "Not currently available"
+
+                        EvidenceWarning.WEAK_PROMOTION_CLAIM ->
+                            "Promotion unverified"
+
+                        EvidenceWarning.EXPIRED_PROMOTION ->
+                            "Promotion expired"
+                    }
+                }
+                .distinct()
+
+        return labels
+            .takeIf { it.isNotEmpty() }
+            ?.joinToString(" • ")
+    }
+
     private fun sourceSummary(
         evidence: ShoppingEvidence?
     ): String =
@@ -565,5 +785,27 @@ class UniversalSearchController(
         const val MAX_QUERY_CHARS = 160
         const val MAX_PROVIDER_OBSERVATIONS = 200
         const val MAX_VISIBLE_RESULTS = 24
+
+        private const val MINUTE_MILLIS =
+            60L * 1000L
+
+        private const val HOUR_MILLIS =
+            60L * MINUTE_MILLIS
+
+        val DEFAULT_EVIDENCE_ACCEPTANCE_POLICY =
+            EvidenceAcceptancePolicy(
+                freshnessPolicy =
+                    EvidenceFreshnessPolicy(
+                        freshForMillis =
+                            15L *
+                                MINUTE_MILLIS,
+                        staleAfterMillis =
+                            2L *
+                                HOUR_MILLIS,
+                        futureToleranceMillis =
+                            5L *
+                                MINUTE_MILLIS
+                    )
+            )
     }
 }
