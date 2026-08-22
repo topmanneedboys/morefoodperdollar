@@ -19,13 +19,34 @@ Android version: `101.1.0` (`10101`)
 
 Accessibility live capture, overlay/bubble, OCR, screenshot capture, and Android card reacquisition remain optional legacy adapters/test harnesses. They are not the product foundation and are not device-verified on the reported Motorola Edge 2025.
 
-## NEXT BLOCKER
+## VERIFICATION (GREEN)
 
-The pinned Gradle 9.5 distribution, JDK compiler, Android API 36 SDK, `jsdom`, and `web-ext` are absent from this workspace and network retrieval is blocked. Restore those exact dependencies and compile/test this checkpoint before any further core migration.
+- Build ValuePilot v101 release: SUCCESS
+- Browser: 30 tests passed, Firefox packaging/lint passed
+- Android shared-core: 10 tests, 0 failures
+- Android app JVM tests: 47 tests, 0 failures
+- Android: lintDebug passed, assembleDebug passed, APK produced
+- Privacy boundary: Verified no INTERNET or ACCESS_NETWORK_STATE
+- Release: Chromium, Firefox, and Android packages produced
 
-## VERIFICATION
+## NEXT MILESTONE
 
-- Targeted browser deterministic/golden suite: 29/29 passed locally.
-- Shared-core forbidden-dependency scan and `git diff --check`: run at each checkpoint.
-- Shared-core compilation/tests, Android JVM tests/lint/APK, browser integration, and Firefox validation: not run successfully in this workspace because required tooling is unavailable.
-- Last fully built pre-extraction Android APK evidence belongs to the earlier v101.1 baseline; no newer APK is claimed.
+FIRST PERMANENT STANDALONE ANDROID VALUEPILOT APPLICATION
+
+This app must operate independently of:
+- Accessibility
+- overlay/bubble
+- OCR
+- Uber
+- any particular retailer
+
+Initial standalone direction:
+normal Android application
+    ↓
+manual / fixture-backed product input
+    ↓
+existing deterministic parsing/normalization
+    ↓
+comparison / ranking
+    ↓
+clear best-value results
