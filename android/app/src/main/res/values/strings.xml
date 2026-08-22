@@ -1,12 +1,48 @@
 <resources>
     <string name="app_name">ValuePilot</string>
-    <string name="app_tagline">Fast, search-aware value ranking · v101.1</string>
-    <string name="checking_status">Checking scanner status…</string>
-    <string name="enable_scanner">Enable ValuePilot scanner</string>
-    <string name="how_to_use">How to use</string>
-    <string name="how_to_body">1. Enable the accessibility scanner once.\n\n2. Open a grocery, restaurant, delivery, or shopping app and search normally. ValuePilot automatically reads newly visible products.\n\n3. Tap the floating VP bubble to compare matches. Tap any result to safely reopen that exact product.\n\n4. Use Rescan if the page needs a refresh. Budget, dietary, member-price, off-screen collection, and on-device OCR controls are available under Filters.</string>
-    <string name="privacy">Privacy</string>
-    <string name="privacy_body">The compact classifier, parsing, ranking, settings and OCR all stay on-device. Exact measurements override AI estimates. This build has no internet permission and does not send screen contents, account credentials or shopping data to a server.</string>
+
+    <string name="app_tagline">Compare the real cost. Build the smarter basket.</string>
+
+    <string name="standalone_intro">Compare products directly in ValuePilot. Enter two or more products with their package size and price, and ValuePilot will rank the strongest value using its deterministic on-device engine.</string>
+
+    <string name="products_to_compare">Products to compare</string>
+
+    <string name="product_input_instructions">Separate each product with a blank line. Keep the product name, package size and price together.</string>
+
+    <string name="product_input_hint">Honeycrisp apples&#10;3 lb&#10;$5.99&#10;&#10;Gala apples&#10;1.5 kg&#10;$4.49</string>
+
+    <string name="compare_value">Compare value</string>
+    <string name="clear_comparison">Clear</string>
+    <string name="enter_two_products">Enter at least two products to compare</string>
+    <string name="results">Results</string>
+    <string name="best_value_rank">#%1$d  Best value</string>
+    <string name="rank_number">#%1$d</string>
+
+    <string name="optional_live_scanner">Optional live scanner</string>
+
+    <string name="optional_live_scanner_body">The standalone comparison above does not require Accessibility access. If you want experimental live capture from another shopping app, you can enable the optional scanner here.</string>
+
+    <string name="checking_status">Checking optional scanner status…</string>
+    <string name="scanner_on">Optional live scanner: ON</string>
+    <string name="scanner_off">Optional live scanner: OFF</string>
+    <string name="enable_scanner">Enable optional live scanner</string>
     <string name="open_accessibility_settings">Open accessibility settings</string>
+
+    <string name="accessibility_disclosure_title">Before enabling the optional scanner</string>
+
+    <string name="accessibility_disclosure_body">ValuePilot uses Android Accessibility access only for its optional live-capture feature. It can read product or menu text in the app currently on screen and show the floating comparison panel. Off-screen collection and OCR remain user initiated. Parsing, ranking, the compact classifier and OCR run locally. This build has no INTERNET permission and does not upload screen contents, account credentials or shopping data.</string>
+
+    <string name="cancel">Cancel</string>
+    <string name="continue_label">Continue</string>
+
+    <string name="privacy">Privacy</string>
+
+    <string name="privacy_body">Standalone comparison, deterministic parsing and ranking run on-device. This build has no INTERNET permission and does not send your product text, screen contents, credentials or shopping data to a server.</string>
+
+    <!-- Retained for compatibility with existing optional Accessibility service metadata. -->
     <string name="accessibility_description">Automatically reads newly visible product and menu labels in the active app so ValuePilot can compare exact unit value and clearly labeled local estimates. It scrolls only when you explicitly choose off-screen collection; this build has no internet permission.</string>
+
+    <!-- Retained legacy strings while optional adapters remain in the project. -->
+    <string name="how_to_use">How to use</string>
+    <string name="how_to_body">Use ValuePilot standalone comparison for normal product comparison. Accessibility capture, off-screen collection and OCR remain optional experimental tools.</string>
 </resources>
