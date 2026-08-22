@@ -18,10 +18,37 @@ This file is an operational checkpoint only. It does not authorize production ne
 | Skip CA on Awin (advertiser 107752) | PENDING advertiser approval | If approved, inspect the actual authorized Skip product feed before implementation |
 | impact.com partner account | ACCOUNT CREATED | No duplicate account |
 | impact.com Marketplace application | IN REVIEW | Wait for approval/request; do not resubmit |
-| CJ Affiliate publisher account | ACTIVE | Begin advertiser/catalog/feed-rights validation; no production adapter yet |
-| Rakuten Advertising | NOT STARTED | Validate after CJ unless newer evidence changes priority |
+| CJ Affiliate publisher account | ACTIVE | Wait on the deliberately selected advertiser applications; no random additional applications |
+| Rakuten Advertising publisher account | ACTIVE / DASHBOARD ACCESS CONFIRMED | Inspect advertiser discovery for Canada-relevant, product-feed-capable, software-compatible merchants; do not integrate yet |
 | Flipp | PARTNERSHIP TARGET, NOT YET VALIDATED | Commercial partnership inquiry later |
 | GS1 Canada ECCnet | DATA/IDENTITY TARGET, NOT YET VALIDATED | Commercial/data-recipient rights validation later |
+
+## Rakuten Advertising checkpoint
+
+Observed during the real Rakuten publisher onboarding flow on 2026-08-22:
+
+- publisher registration completed successfully
+- Rakuten Publisher Dashboard access is active
+- ValuePilot is shown as the publisher profile/site in the dashboard
+- the public ValuePilot website is the declared primary web property
+- the account dashboard currently indicates that additional publisher-profile/payment-related setup remains incomplete; this does not itself authorize any advertiser, product feed, API, caching, indexing, display, or mobile-app use
+- no Rakuten account identifier, payment information, tax information, password, or other sensitive account data is stored in repository documentation
+
+Rakuten policy conclusions relevant to ValuePilot:
+
+1. Rakuten permits publisher promotion through websites and mobile applications subject to its agreement, network policies, and advertiser-specific terms.
+2. Rakuten classifies AI-powered shopping assistants, recommendation tools, browser extensions, and mobile applications as downloadable software applications (DSAs).
+3. Before a ValuePilot app contains Rakuten network links, Rakuten DSA approval/compliance testing is required and individual advertisers may impose additional DSA requirements.
+4. ValuePilot must never force clicks, cookie-stuff, automatically redirect users through affiliate links, overwrite another publisher's attribution, or drop tracking merely because an offer was displayed.
+5. Product/feed rights remain advertiser- and feature-specific. Rakuten publisher access does not establish permission to persist, normalize, cache, index, redistribute, or display a merchant catalog in ValuePilot.
+6. Rakuten can automatically assign Offers to a publisher account and may deem an assigned Offer accepted after the stated review period. Rakuten notices therefore require deliberate review rather than unattended acceptance.
+7. Production tracking/privacy disclosures must reflect actual behavior before Rakuten tracking is enabled; do not add speculative tracking code or disclosures prematurely.
+
+Permanent distinction for Rakuten:
+
+**Rakuten publisher account access != advertiser relationship != product-feed/API access != DSA approval != permission to cache/index/display product data in ValuePilot**
+
+Each stage requires separate evidence.
 
 ## CJ Affiliate checkpoint
 
@@ -116,16 +143,16 @@ Detailed Awin feed-quality evidence is recorded in `PROVIDER_VALIDATION.md`.
 
 ## Next action
 
-CJ account activation removes the onboarding gate. Continue CJ validation in this order:
+Rakuten account activation removes the signup gate. Continue Rakuten validation in this order:
 
-1. open CJ advertiser discovery and search specifically for Canada-relevant merchants with broad consumer-retail/product catalogs rather than applying randomly
-2. prioritize advertisers whose program profile explicitly permits product-comparison, shopping-discovery, services/tools, mobile-app, or similar publisher models
-3. before applying, inspect each candidate's program terms for product-feed/API access, deep linking, geographic scope, allowed promotional methods, trademark/search rules, data-use restrictions, and any software-specific approval requirement
-4. distinguish `advertiser visible` from `advertiser joined` from `catalog/feed/API authorized`
-5. apply only to a small, high-information set of candidates likely to expose useful Canadian product data; avoid duplicate or low-value applications
-6. for any accepted advertiser, inspect real catalog/product-feed/API access and authorization requirements before downloading or integrating anything
+1. open advertiser discovery and inspect available filters/search before applying to anything
+2. prioritize Canada-relevant merchants with broad physical-product catalogs and evidence of product-feed/catalog availability
+3. explicitly check software/DSA compatibility, shipping/service geography, deep-link capability, product-feed/catalog access, and advertiser-specific terms
+4. distinguish `advertiser visible` from `advertiser joined` from `feed/API authorized` from `DSA approved`
+5. apply only to a small, high-information set of advertisers likely to expose useful Canadian product data; avoid duplicate or low-value applications
+6. for any accepted advertiser, inspect real feed/API access and authorization requirements before downloading or integrating anything
 7. validate actual feed fields for price, sale price, country, currency, availability, product identity, weight/dimensions, quantity/unit evidence, timestamps, and geography
-8. record caching, indexing, display, attribution, mobile-app/tool, deep-linking, API/rate-limit, cost, and termination constraints
+8. record caching, indexing, display, attribution, mobile-app/tool, deep-linking, API/rate-limit, cost, termination and assigned-offer constraints
 9. stop before production integration; implementation remains unauthorized until 5D selects a provider deliberately
 
-Do not implement a CJ production adapter during 5D.
+Do not implement a Rakuten production adapter during 5D.
