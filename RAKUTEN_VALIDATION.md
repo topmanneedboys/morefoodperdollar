@@ -6,7 +6,7 @@ Milestone:
 5D — Authorized Real Shopping Data Provider Selection
 
 Status:
-Rakuten publisher account active. Giant Tiger application was denied on 2026-08-24. No accepted Rakuten advertiser relationship, authorized Product Catalog/feed/API, network DSA approval, caching/indexing/display right, or production Rakuten adapter is established yet.
+Rakuten publisher account active. Giant Tiger application was denied on 2026-08-24. Well.ca is now under pre-application terms/profile review. No accepted Rakuten advertiser relationship, authorized Product Catalog/feed/API, network DSA approval, caching/indexing/display right, or production Rakuten adapter is established yet.
 
 ## Empirical discovery evidence
 
@@ -108,38 +108,74 @@ The denial does not invalidate the pre-application technical conclusions. It onl
 
 MID 53166.
 
-Discovery evidence already observed:
+### Authenticated profile evidence
 
-- Shipping and Availability: CA
-- Deeplinks: Y
-- Auto Approve: N
-- advertiser description says it carries more than 40,000 products from 2,800 brands
-- categories include Baby, Bath/Body, Children, Gifts and Home
+Observed on 2026-08-24:
 
-Why it is valuable:
+- Canadian delivery/serviceability
+- Product Catalog
+- Cross-Device Tracking
+- Deep Links
+- ITP v2.3
+- DSA policy flag: `Allows downloadable software applications`
+- real-time tracking
+- coupon support through the publisher channel
+- multi-touch commissioning is allowed
+- advertiser description states more than 40,000 products across roughly 2,800 brands in health, baby, beauty, green/natural and related packaged-goods categories
+- an active `Apply` control is visible
 
-- broad packaged-goods catalog relevant to health, baby, beauty and household comparison
-- likely useful for package-size/unit-value validation
-- potentially useful later for ingredient/nutrition/quality evidence if the authorized catalog actually supplies those fields or stable identities that can be joined to authorized sources
+This makes Well.ca a strong structured-catalog candidate for package-size/unit-value validation and a strategically useful future ingredient/nutrition/quality source if its authorized catalog preserves the required identity and evidence fields.
+
+Paid-search permissions are visible in the profile but are irrelevant to ValuePilot ranking and provider selection.
+
+### Advertiser-terms evidence captured so far
+
+A substantial portion of the Well.ca Advertiser-Publisher Agreement was reviewed from the authenticated dashboard.
+
+Durable conclusions from the supplied portion:
+
+- specific Engagement terms override inconsistent general Agreement terms
+- Well.ca can automatically assign future Offers; publisher has seven days to review before deemed acceptance, while early use of the associated Qualifying Link constitutes immediate acceptance
+- publisher is responsible for monitoring notices and maintaining current contact information
+- the Agreement expressly recognizes digital properties that provide a user-requested benefit, which is compatible with ValuePilot's comparison/search model
+- privacy obligations are substantial: a current accessible privacy policy, required cookie/tracking disclosures, legally required consent, opt-out support and Global Privacy Control handling where applicable
+- Rakuten/advertiser tracking technologies must not be circumvented or interfered with
+- AI-generated promotional content is expressly contemplated, but must be accurate, reviewed before publication, legally/platform compliant and disclosed where required; the publisher remains responsible for it
+- false, misleading or unsubstantiated product claims are prohibited
+- the general intellectual-property license is revocable and narrow: Rakuten-platform materials designated in an Engagement may be used on the publisher's digital property for referral purposes; the captured general terms do **not** establish blanket rights to persist, cache, index, republish or redistribute the full Product Catalog
+- either party may terminate; qualifying links/materials for terminated engagements must be removed and relevant licenses end
+- personal-data handling/deletion obligations apply on termination where required
+- audit rights can cover Agreement compliance, commission calculations and data-protection practices
+- broad legal/compliance obligations include advertising, privacy, anti-spam, accessibility and IP compliance
+
+Important interpretation:
+
+**Well.ca's `Product Catalog` feature plus DSA allowance is promising, but it is not yet proof of feed access or product-data persistence/display rights.** Those remain separate post-approval/feed-specific validation gates.
+
+### Incomplete-document gate
+
+The Terms & Conditions text supplied for review currently ends mid-way through the General section (around Section 9.2). The remainder has not yet been captured. Therefore the advertiser-specific terms review is not complete.
 
 Current decision:
 
-**NEXT RAKUTEN CANDIDATE TO INSPECT — DO NOT APPLY YET.**
+**PROMISING / HOLD APPLICATION UNTIL THE REMAINDER OF THE TERMS IS REVIEWED.**
 
-Before any Well.ca application, capture and review:
+Do not click Apply yet. Capture the remaining Well.ca Terms & Conditions starting from the point after Section 9.2, plus the current Offers tab/baseline offer if available. Specifically verify any remaining confidentiality, data-use, trademark/search, linking, DSA/software, modification, termination, non-circumvention, attribution, redistribution or special approval provisions.
 
-- Product Catalog/feed availability
-- DSA/software/mobile compatibility
-- Deep Links
-- advertiser-specific terms
-- comparison-shopping compatibility
-- data-use/display/caching/indexing restrictions
-- redistribution restrictions
-- privacy/tracking requirements
-- trademark/search restrictions
-- termination/approval conditions
+If the remainder contains no material conflict, Well.ca should become the next deliberate Rakuten application for controlled 5D validation.
 
-If compatible, submit one deliberate Well.ca application and then stop again for the advertiser decision or authorized-feed gate.
+If approved later, inspect the real authorized Product Catalog/feed before implementation, including:
+
+- CAD and Canadian geography semantics
+- SKU/GTIN/product identity quality
+- package size/count/weight/volume fields
+- ingredients/nutrition fields if any
+- price/sale/reference-price semantics
+- availability/freshness timestamps
+- image/deep-link behavior
+- feed/API access mechanism and limits
+- exact permitted caching, persistence, indexing and display behavior
+- any extra advertiser-specific DSA requirement beyond Rakuten network DSA approval/testing
 
 ## Newegg Canada
 
@@ -165,14 +201,17 @@ Do not apply merely to accumulate advertiser relationships.
 8. Advertiser feed availability is not permission to scrape the advertiser website.
 9. Advertiser approval is not proof of feed/API authorization, feed-field quality, or persistence/display rights.
 10. A denial email's generic examples are not evidence of the actual denial reason.
-11. Rakuten publisher account access != advertiser relationship != feed/API authorization != DSA approval != permission to cache/index/display product data.
+11. Automatic Offer Assignment requires active monitoring because silence can become acceptance after the stated review window.
+12. Rakuten publisher account access != advertiser relationship != feed/API authorization != DSA approval != permission to cache/index/display product data.
 
 ## Next action
 
-Giant Tiger is closed for the current validation pass.
+Well.ca is now the leading Rakuten candidate, but its supplied Terms & Conditions capture is incomplete.
 
-The next Rakuten action is to inspect **Well.ca** before applying. Do not submit the application until its authenticated profile and full advertiser-specific terms have been reviewed.
+Capture the remainder of the Well.ca terms after Section 9.2 and the current Offers tab/baseline offer if available. Do not submit the application until the remaining terms have been reviewed.
 
-Walmart remains blocked/ambiguous and should not be pursued while better candidates are available.
+If the complete terms remain compatible, submit one deliberate Well.ca application and stop again for advertiser decision or authorized-feed evidence.
+
+Walmart remains blocked/ambiguous. Giant Tiger remains denied for the current pass.
 
 Do not implement a Rakuten production adapter during 5D.
