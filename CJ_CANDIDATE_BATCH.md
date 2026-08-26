@@ -115,11 +115,35 @@ Decision: **HOLD / DO NOT APPLY YET FOR THE CURRENT DATA-PROVIDER PASS.**
 
 Reconsider if CJ exposes a Product Catalog/datafeed indicator for Zwilling or the advertiser confirms structured feed availability and intended software/mobile use.
 
+### EcoFlow CA (CID 6175965) — PRE-SCREEN FAILED / DO NOT APPLY NOW
+
+Authenticated CJ details reviewed on 2026-08-26:
+
+- advertiser country: Canada
+- serviceable area: Canada
+- account currency and supported currency: CAD
+- prior-month conversion geography: 81.25% Canada and 18.75% United States
+- broad physical consumer-electronics catalog focused on portable power, solar, home backup and related energy products
+- incentivized traffic: allowed
+- email: allowed
+- sub-affiliates: allowed
+- social media: allowed
+- `Software: Not allowed`
+- visible terms contain substantial branded SEM/direct-link/domain/display-network restrictions
+- no explicit Product Catalog, product feed or datafeed availability was present in the supplied description or terms
+
+Material conflict:
+
+The explicit `Software: Not allowed` policy conflicts with ValuePilot's intended Android/mobile software client. This is a direct current-channel incompatibility regardless of the advertiser's otherwise strong Canada/CAD product fit. The supplied evidence also does not establish a structured Product Catalog/datafeed path.
+
+Decision: **DO NOT APPLY TO ECOFLOW CA FOR THE CURRENT SOFTWARE/MOBILE VALIDATION PASS.**
+
+Reconsider only if EcoFlow provides explicit written permission for ValuePilot's intended software/mobile use or if ValuePilot deliberately creates a separately authorized web-only channel consistent with the advertiser's terms. Any feed/catalog rights would still require separate validation.
+
 ## Next backup screens if needed
 
-1. EcoFlow CA (CID 6175965)
-2. Dell Canada - Home & Small Business (CID 4380018)
-3. Aeptom (CID 7672100)
+1. Dell Canada - Home & Small Business (CID 4380018)
+2. Aeptom (CID 7672100)
 
 ## Permanent pre-application gate
 
@@ -140,6 +164,6 @@ Unknown catalog-use rights do not automatically block a controlled advertiser ap
 1. Apply to TSC if not already submitted and record resulting status.
 2. Apply to Brother Canada if not already submitted and record resulting status.
 3. Apply to DAVIDsTEA for controlled validation; if approved, treat Canada/CAD row semantics as a hard gate.
-4. Do not apply to PC Express or West Coast Kids while `Software: Not allowed` remains in force.
+4. Do not apply to PC Express, West Coast Kids or EcoFlow CA while `Software: Not allowed` remains in force.
 5. Keep Natura Market and Zwilling Canada on hold pending stronger feed/software evidence.
-6. Screen EcoFlow CA next.
+6. Screen Dell Canada - Home & Small Business next.
