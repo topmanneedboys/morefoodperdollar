@@ -64,7 +64,7 @@ Decision:
 
 After application, record the exact resulting partnership status. If approved later, inspect the actual Product Catalog/feed access mechanism and any feed-specific terms before downloading, caching, indexing, displaying or integrating anything.
 
-### 2. Jamieson Vitamins — strong packaged-product/ingredient evidence candidate
+### 2. Jamieson Vitamins — PRE-SCREEN PASSED / APPLY
 
 Why:
 
@@ -72,23 +72,57 @@ Why:
 - useful later for the grocery-quality/ingredient evidence layer
 - creates strong tests for exact variant identity because similar products differ by strength, dosage form, count and demographic target
 
+Authenticated Rakuten evidence reviewed on 2026-08-26:
+
+- active public baseline Offer with generic approval guidance and no ValuePilot-specific eligibility block observed
+- Product Catalog
+- Cross-Device Tracking
+- Deep Links
+- ITP v2.2
+- DSA policy flag: `Allows downloadable software applications`
+- real-time tracking
+- coupon support through the publisher channel
+- advertiser agreement contains no blanket anti-comparison or mobile/software prohibition that conflicts with the profile DSA flag
+- advertiser agreement recognizes digital properties providing a user-requested benefit
+- AI/automated promotional content is contemplated if accurate, reviewed and compliant
+- automatic Offer assignment exists, with a seven-day review period before deemed acceptance
+- privacy/cookie/tracking obligations are substantial
+- general content/IP license remains narrow and referral-oriented and does not establish blanket catalog persistence/indexing/display/redistribution rights
+
 Special guardrail:
 
-ValuePilot must not convert supplement marketing into medical efficacy claims. If this advertiser is ever used, ranking should remain price/quantity/evidence based unless a clearly sourced, non-medical user preference dimension is explicitly selected. Health claims are not inferred.
+The authenticated policy explicitly prohibits wording that suggests health claims. ValuePilot must not turn supplement catalog evidence into medical efficacy, safety, treatment or disease-prevention claims. Initial use, if later authorized, should be limited to sourced label/product facts such as price, count, dosage form, printed strength, ingredients/label attributes, package quantity and deterministic unit-value comparisons. Any health or efficacy interpretation remains out of scope unless a future deliberately designed evidence/policy layer supports it.
 
-Pre-application checks are the same as Tru Earth.
+Important unresolved point:
 
-### 3. Newegg Canada — cross-category identity/variant stress-test candidate
+`Product Catalog` is visible, but actual datafeed access, field quality, feed-specific rights and mobile-app catalog-use rights remain unproven until advertiser approval and authorized catalog inspection.
 
-Why:
+Decision:
 
-- provides a non-grocery contrast to prevent ValuePilot's provider model from overfitting consumables
-- useful for SKU/model/variant/product-vs-offer identity, sale-price semantics and large-catalog retrieval
-- Canadian serviceability was already observed in the Rakuten discovery pass
+**APPLY TO JAMIESON VITAMINS FOR CONTROLLED 5D VALIDATION.**
 
-This is not as strategically important as consumables for first consumer value differentiation, but it is high-information for the permanent general-shopping architecture.
+### 3. Newegg Canada — PRE-SCREEN FAILED / DO NOT APPLY NOW
 
-### 4. Bath Depot / Bain Dépôt — Canadian durable-goods backup candidate
+Why it was attractive:
+
+- useful non-grocery stress test for SKU/model/variant/product-vs-offer identity
+- large electronics catalog could test sale-price semantics and general-shopping architecture
+- authenticated profile shows Product Catalog, Deep Links and a DSA flag allowing downloadable software applications
+
+Material conflict found in advertiser-specific Special Terms reviewed on 2026-08-26:
+
+- the Special Terms restrict promotion, absent prior written approval, to displaying a link to Newegg on the publisher's website
+- that restriction is materially narrower than the dashboard DSA flag and creates unresolved ambiguity for ValuePilot's intended mobile-app/catalog presentation model
+- the Special Terms also impose legacy state-tax-nexus representations/administrative obligations that add unnecessary operational complexity for an early validation candidate
+- the terms are advertiser-specific and therefore cannot be overridden merely by relying on generic dashboard feature metadata
+
+Decision:
+
+**DO NOT APPLY TO NEWEGG CANADA NOW.**
+
+Do not accept the Special Terms merely to obtain relationship status. Reconsider only if Newegg provides explicit written approval for ValuePilot's intended application/presentation model or newer advertiser terms remove the website-only restriction. The Product Catalog and DSA profile flags do not cure this conflict by themselves.
+
+### 4. Bath Depot / Bain Dépôt — NEXT SCREEN
 
 Why:
 
@@ -98,7 +132,7 @@ Why:
 
 Pre-screen before any application. Do not assume Product Catalog or DSA rights from discovery presence alone.
 
-### 5. Greenworks Tools Canada — optional fifth screen if one of the above fails pre-screen
+### 5. Greenworks Tools Canada — optional next screen
 
 Why:
 
@@ -106,7 +140,7 @@ Why:
 - Canadian-relevant advertiser discovered in the filtered catalog pass
 - provides another focused e-commerce catalog rather than another giant marketplace
 
-Use as the fifth candidate only after its actual Rakuten profile/Offer/terms are checked.
+Use after Bath Depot, or sooner if Bath Depot fails pre-screen.
 
 ## Candidates intentionally deprioritized
 
@@ -116,6 +150,7 @@ Use as the fifth candidate only after its actual Rakuten profile/Offer/terms are
 - FortNine: valid future niche candidate, but powersports is less representative of ValuePilot's initial everyday-shopping thesis.
 - Walmart Canada: currently blocked/ineligible and has unresolved advertiser-specific download/software ambiguity.
 - Giant Tiger: denied for the current pass; do not reapply now.
+- Newegg Canada: current advertiser-specific Special Terms create a website-only promotion conflict absent prior written approval; do not apply now.
 
 ## Fastest safe operating procedure
 
@@ -143,15 +178,17 @@ Unknown feed caching/indexing/display rights do not automatically fail the appli
 
 Well.ca is already applied and pending.
 
-Tru Earth has now passed pre-screen and should be applied to next.
+Pre-screen outcomes:
 
-Remaining screening order:
+- Tru Earth: PASS / APPLY
+- Jamieson Vitamins: PASS / APPLY
+- Newegg Canada: FAIL FOR CURRENT PASS / DO NOT APPLY
 
-1. Jamieson Vitamins
-2. Newegg Canada
-3. Bath Depot / Bain Dépôt
-4. Greenworks Tools Canada if a slot remains
+Next screening order:
 
-If the remaining candidates pass pre-screen, it is acceptable to apply to them without waiting serially for Well.ca or Tru Earth, creating a controlled portfolio of up to five concurrent Rakuten advertiser validations.
+1. Bath Depot / Bain Dépôt
+2. Greenworks Tools Canada
 
-This batch size is deliberately bounded. Do not expand to ten random applications merely to increase nominal approval probability.
+If both pass, it is acceptable to apply to them without waiting serially for Well.ca, Tru Earth or Jamieson, while keeping the controlled concurrent portfolio bounded.
+
+Do not expand to ten random applications merely to increase nominal approval probability.
