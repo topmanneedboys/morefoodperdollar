@@ -6,7 +6,7 @@ Milestone:
 5D — Authorized Real Shopping Data Provider Selection
 
 Status:
-Jamieson Vitamins has completed the current pre-application profile, Offer, DSA/software and advertiser-terms review. It is suitable for one controlled Rakuten advertiser application. No advertiser acceptance, authorized Product Catalog/feed/API access, feed-specific caching/indexing/display right, network DSA approval, or production integration is established.
+Jamieson Vitamins has accepted ValuePilot's Rakuten advertiser partnership. Rakuten has also completed the publisher-side technical Product Catalog setup, and ValuePilot has submitted the separate Jamieson Product Catalog access request from `Links -> Product Feeds`. The Product Feeds row now shows `Remove`, which establishes that the request/enrollment is active, but it must not be treated as proof of advertiser-level feed approval until Rakuten exposes an approved status or the Jamieson feed appears in the SFTP account. No feed-specific caching/indexing/display right, network DSA approval, or production integration is established.
 
 ## Why Jamieson is high-information for ValuePilot
 
@@ -56,17 +56,23 @@ ValuePilot therefore must not infer or generate statements such as one supplemen
 
 If Jamieson data is ever authorized for production use, acceptable first-stage comparison dimensions should remain objective and source-grounded, such as price, count, package quantity, strength as printed on the product, ingredient/label facts as supplied, and transparent unit-value calculations. Any future health-oriented interpretation would require a separate deliberate product/safety/legal design review.
 
-## Unresolved datafeed point
+## Product Catalog technical setup and request
 
-The authenticated Features page shows `Product Catalog`, but the supplied Offer evidence does not independently establish actual feed/datafeed access or feed-specific usage rights.
+On 2026-08-26 Rakuten Customer Support created ValuePilot's Product Catalog file-transfer account and confirmed that publisher-side technical setup was complete. Credentials are operational secrets and must never be committed to this repository, embedded in the Android application, logged, or copied into documentation.
 
-Product Catalog visibility is sufficient to justify a controlled application because actual catalog/feed access and feed-specific terms can only be validated after advertiser acceptance. It is not evidence that ValuePilot currently has permission to download, cache, index, display or use the catalog inside the mobile app.
+Rakuten instructed ValuePilot to request Product Catalog access separately for partnered advertisers through `Links -> Product Feeds`. The dashboard was subsequently unlocked. Feed settings showed automatic enrollment enabled and `.txt` selected as the preferred feed format.
 
-## Decision
+ValuePilot then clicked `Apply` for Jamieson Vitamins. The Jamieson Product Feeds row changed from `Apply` to `Remove`. Rakuten's Product Catalog documentation distinguishes technical approval from advertiser Product Catalog approval and states that the Product Feeds interface is used to apply, remove access, and view application status.
 
-**APPLY TO JAMIESON VITAMINS FOR CONTROLLED 5D VALIDATION.**
+Decision:
 
-If the application is accepted later, first inspect the real authorized Product Catalog/datafeed and any feed-specific terms before implementation, including:
+**JAMIESON PRODUCT CATALOG REQUEST = SUBMITTED / ACTIVE; ADVERTISER-LEVEL FEED APPROVAL NOT YET PROVEN.**
+
+The strongest confirmation of feed approval will be either an explicit approved status in Rakuten or appearance of Jamieson's catalog file/folder in the authorized SFTP account. Do not infer approval solely from the `Remove` control.
+
+## Next validation gate
+
+Once advertiser-level Product Catalog approval is confirmed and the authorized feed becomes available, inspect the real feed before implementation, including:
 
 - Canadian/CAD semantics
 - SKU/GTIN/product identity quality
@@ -79,4 +85,6 @@ If the application is accepted later, first inspect the real authorized Product 
 - whether catalog/datafeed use is allowed in the ValuePilot mobile app or only on approved digital properties
 - any additional advertiser-specific DSA requirement beyond Rakuten network approval/testing
 
-Do not implement a production Rakuten adapter merely because the advertiser approves the partnership.
+Start with the pipe-delimited `.txt` feed for empirical inspection because it is easier to validate deterministically before building a permanent provider adapter.
+
+Do not implement a production Rakuten adapter merely because the advertiser partnership is active or the Product Catalog request has been submitted.
