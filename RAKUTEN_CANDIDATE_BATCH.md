@@ -1,6 +1,6 @@
 # ValuePilot Rakuten Controlled Backup Candidate Batch
 
-Updated: 2026-08-25
+Updated: 2026-08-26
 
 Milestone:
 5D — Authorized Real Shopping Data Provider Selection
@@ -25,31 +25,50 @@ Target:
 
 ## Selected next candidates
 
-### 1. Tru Earth — highest-priority next screen
+### 1. Tru Earth — PRE-SCREEN PASSED / APPLY
 
 Why:
 
 - Canadian household consumables directly fit ValuePilot's unit-value problem
 - products naturally expose count/load/package comparisons
-- public Canadian catalog currently shows multiple pack sizes and explicit per-load economics, making it an unusually strong deterministic value-normalization test case
-- household cleaning products can later exercise ingredient/formulation evidence without the restaurant-style portion uncertainty
+- household cleaning products can later exercise ingredient/formulation evidence without restaurant-style portion uncertainty
 - smaller focused catalog may be operationally easier to validate than a giant marketplace
 
-What must be checked before application:
+Authenticated Rakuten evidence reviewed on 2026-08-26:
 
-- Rakuten Product Catalog/datafeed availability
-- Canadian serviceability/currency
-- DSA/downloadable-software policy
+- MID 54255
+- active baseline Offer with generic approval guidance and no ValuePilot-specific eligibility block observed
+- Product Catalog
+- Cross-Device Tracking
 - Deep Links
-- current Offer and approval guidance
-- advertiser-specific terms, especially data/content license, caching/indexing/display, app use, confidentiality, termination, and tracking
+- ITP v2.2
+- DSA policy flag: `Allows downloadable software applications`
+- real-time tracking
+- coupon support through the publisher channel
+- Offer permits product/search/storefront-style link formats subject to advertiser authorization requirements
+- advertiser terms contain no blanket anti-comparison or mobile/software prohibition that conflicts with the profile DSA flag
+- advertiser agreement expressly recognizes digital properties providing a user-requested benefit
+- AI/automated promotional content is contemplated if accurate, reviewed and compliant
+- automatic Offer assignment exists, with a seven-day review period before deemed acceptance; notices therefore require monitoring
+- privacy/cookie/tracking obligations are substantial and must be implemented before any production tracking use
+- the general IP/content license is narrow and referral-oriented; it does not establish blanket rights to cache, index, republish or redistribute a full product catalog
+- confidentiality, audit, security and breach-notification obligations apply
+
+Important unresolved point:
+
+The authenticated Features page shows `Product Catalog`, but the supplied baseline Offer evidence did not independently state `Datafeed Availability`. Product Catalog visibility is sufficient to justify a controlled application because actual catalog/feed access and feed-specific rights can only be validated after advertiser acceptance. It is **not** evidence that ValuePilot currently has feed access or mobile-app catalog-use rights.
+
+Decision:
+
+**APPLY TO TRU EARTH FOR CONTROLLED 5D VALIDATION.**
+
+After application, record the exact resulting partnership status. If approved later, inspect the actual Product Catalog/feed access mechanism and any feed-specific terms before downloading, caching, indexing, displaying or integrating anything.
 
 ### 2. Jamieson Vitamins — strong packaged-product/ingredient evidence candidate
 
 Why:
 
 - Canadian packaged goods with many count/strength/format variants
-- public catalog exposes product count, format, prices, dietary attributes and ingredient/wellness-oriented metadata
 - useful later for the grocery-quality/ingredient evidence layer
 - creates strong tests for exact variant identity because similar products differ by strength, dosage form, count and demographic target
 
@@ -104,7 +123,7 @@ For each selected candidate, open the authenticated Rakuten advertiser profile a
 
 1. About/profile page showing partnership state and Canadian availability
 2. Features & Services showing Product Catalog, Deep Links and DSA/software policy
-3. Offers page showing datafeed availability and approval guidance
+3. Offers page showing datafeed availability if stated and approval guidance
 4. full advertiser Terms & Conditions (copy/paste is fine)
 
 These can be collected for several candidates in parallel and reviewed as one batch. Do not click Apply until the candidate passes this screen.
@@ -124,14 +143,15 @@ Unknown feed caching/indexing/display rights do not automatically fail the appli
 
 Well.ca is already applied and pending.
 
-Next screening order:
+Tru Earth has now passed pre-screen and should be applied to next.
 
-1. Tru Earth
-2. Jamieson Vitamins
-3. Newegg Canada
-4. Bath Depot / Bain Dépôt
-5. Greenworks Tools Canada if a slot remains
+Remaining screening order:
 
-If the first four pass pre-screen, it is acceptable to apply to them without waiting serially for Well.ca, creating a controlled portfolio of up to five concurrent Rakuten advertiser validations.
+1. Jamieson Vitamins
+2. Newegg Canada
+3. Bath Depot / Bain Dépôt
+4. Greenworks Tools Canada if a slot remains
+
+If the remaining candidates pass pre-screen, it is acceptable to apply to them without waiting serially for Well.ca or Tru Earth, creating a controlled portfolio of up to five concurrent Rakuten advertiser validations.
 
 This batch size is deliberately bounded. Do not expand to ten random applications merely to increase nominal approval probability.
