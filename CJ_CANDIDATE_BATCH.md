@@ -6,141 +6,118 @@ Milestone:
 5D — Authorized Real Shopping Data Provider Selection
 
 Purpose:
-Select the next high-information CJ advertisers from the authenticated Canada-filtered advertiser directory without mass-applying blindly.
+Select high-information CJ advertisers from the authenticated Canada-filtered directory without mass-applying blindly. Advertiser acceptance, Product Catalog access, software/mobile permission, and catalog caching/indexing/display rights remain separate gates.
 
-Source evidence reviewed on 2026-08-26:
+## Current screened candidates
 
-- 90 CJ advertisers were returned with Advertiser Country = Canada
-- AOSOM Canada is already pending and is not duplicated in this batch
-- Brulerie Virgin Hill Coffee Roasters was rejected and is not reapplied to
-- 123Ink.ca remains deprioritized because its terms contain a downloadable-software/application compatibility risk
-- Abracadabra NYC remains unaccepted because its authenticated serviceable area is United States and supported currency is USD only, despite a daily feed and worldwide-shipping statement
+### PC Express (CID 7356175) — PRE-SCREEN FAILED / DO NOT APPLY NOW
 
-## Selected next five CJ screens
+Canada/CAD and exceptionally relevant to grocery comparison, but authenticated terms state `Software: Not allowed`. The supplied details also did not establish a Product Catalog/datafeed path.
 
-### 1. PC Express (CID 7356175) — PRE-SCREEN FAILED / DO NOT APPLY NOW
+Decision: **DO NOT APPLY for the current software/mobile validation pass.**
 
-PC Express is strategically attractive because it is Canada/CAD, grocery-focused and extremely relevant to ValuePilot, but authenticated terms state `Software: Not allowed`. The supplied advertiser details also did not establish a product-feed/datafeed/catalog path.
+### Natura Market (CID 5370099) — HOLD / DO NOT APPLY YET
 
-Decision:
+Canada/CAD and highly relevant packaged-food catalog, but supplied details did not establish Product Catalog/datafeed availability or explicit software/mobile permission.
 
-**DO NOT APPLY TO PC EXPRESS FOR THE CURRENT 5D SOFTWARE/MOBILE VALIDATION PASS.**
+Decision: **HOLD pending stronger feed/software evidence.**
 
-Reconsider only with explicit written permission for the intended ValuePilot software/mobile model or a deliberately separate authorized web-only channel.
+### Today's Shopping Choice / TSC (CID 457947) — PRE-SCREEN PASSED / APPLY
 
-### 2. Natura Market (CID 5370099) — HOLD / DO NOT APPLY YET
-
-Natura Market is Canada/CAD and strongly relevant to packaged-food unit-value and ingredient/package evidence. However, the supplied details did not establish a product feed/datafeed/Product Catalog path and did not explicitly establish software/mobile permission.
-
-Decision:
-
-**HOLD / DO NOT APPLY YET FOR THE CURRENT 5D DATA-PROVIDER PASS.**
-
-Reconsider if CJ exposes a Product Catalog/datafeed indicator or the advertiser confirms feed availability plus intended software/mobile use.
-
-### 3. Today's Shopping Choice / TSC (CID 457947) — PRE-SCREEN PASSED / APPLY
-
-Why it is strategically strong:
-
+Strong signals:
 - Canada-focused and CAD-oriented
-- prior-month conversions overwhelmingly Canadian
 - more than 15,000 products across multiple categories
-- advertiser explicitly states `our full Product Catalog is available in CJ!`
-- supplied terms show no explicit software prohibition, anti-comparison restriction or dynamic-presentation prohibition
+- advertiser explicitly states its full Product Catalog is available in CJ
+- supplied terms show no explicit software prohibition or anti-comparison restriction
 
-The visible terms still do not establish caching/indexing/display/redistribution rights or explicit mobile-app catalog rights, so production use remains unproven.
+Decision: **APPLY for controlled 5D validation.**
 
-Decision:
+If approved, inspect actual feed and exact mobile/software and catalog-use rights before production.
 
-**APPLY TO TODAY'S SHOPPING CHOICE / TSC FOR CONTROLLED 5D VALIDATION.**
+### West Coast Kids - Canada (CID 5753672) — PRE-SCREEN FAILED / DO NOT APPLY NOW
 
-If approved, inspect the actual CJ Product Catalog/feed and exact data-use rights before implementation.
+Strong Canada/CAD/full-data-feed signals, but authenticated policy explicitly states `Software: Not allowed`.
 
-### 4. West Coast Kids - Canada (CID 5753672) — PRE-SCREEN FAILED / DO NOT APPLY NOW
+Decision: **DO NOT APPLY for the current software/mobile validation pass.**
 
-Why it was attractive:
+### Brother Canada (CID 5267676) — PRE-SCREEN PASSED / APPLY
 
-- advertiser country and serviceable area: Canada
-- supported currency: CAD
-- previous-month conversions: 100% Canada
-- broad baby/parenting physical-goods catalog
-- advertiser explicitly states `full data feed available`
+Strong signals:
+- Canada service area and CAD
+- 100% Canadian recent conversion geography
+- explicit `Product Catalog available`
+- supplied terms show no explicit software prohibition or anti-comparison restriction
 
-Authenticated terms reviewed on 2026-08-26 include:
+Decision: **APPLY for controlled 5D validation.**
 
-- `Software: Not allowed`
-- sub-affiliates not allowed
-- incentivized traffic not allowed
-- email/social copy requires approval
-- toolbar/browser-extension restrictions appear in sub-affiliate guidance
+If approved, inspect actual catalog/feed and exact data-use/mobile rights before production.
 
-Material conflict:
+### DAVIDsTEA (CID 5226617) — PRE-SCREEN PASSED WITH CURRENCY RISK / APPLY
 
-The explicit `Software: Not allowed` policy conflicts with ValuePilot's intended Android/mobile client even though a full data feed is available.
-
-Decision:
-
-**DO NOT APPLY TO WEST COAST KIDS FOR THE CURRENT SOFTWARE/MOBILE VALIDATION PASS.**
-
-Reconsider only with explicit written permission for ValuePilot's intended software/mobile comparison use or a deliberately separate authorized web-only channel.
-
-### 5. Brother Canada (CID 5267676) — PRE-SCREEN PASSED / APPLY
-
-Why it is strategically strong:
+Authenticated CJ details reviewed on 2026-08-26:
 
 - advertiser country: Canada
-- serviceable area: Canada
-- supported currency: CAD
-- previous-month conversion geography shown as 100% Canada
-- physical-product catalog spans printers, labellers, sewing machines and related business/consumer products
+- serviceable area: Canada and United States
+- account currency and supported currency shown as USD only
+- prior-month conversions: 66.75% Canada, 31.68% United States
+- physical packaged-consumable catalog with more than 100 loose-leaf teas
 - advertiser explicitly states `Product Catalog available`
-- useful cross-category test for model/SKU identity, accessories, consumables, bundles and Product-vs-Offer normalization
-
-Authenticated program terms reviewed on 2026-08-26:
-
-- no explicit `Software: Not allowed` restriction appears in the supplied terms
-- no explicit `Software: Allowed` grant appears either
-- visible policies are primarily branded SEM, direct-link, domain-name, contextual-advertising and coupon restrictions
-- no visible anti-comparison restriction was supplied
-- no visible prohibition on dynamic product-comparison presentation was supplied
+- supplied terms show no explicit `Software: Not allowed` policy
+- supplied terms show no explicit `Software: Allowed` grant either
+- visible restrictions are primarily branded SEM/direct-link/domain/coupon rules
+- advertiser requires affiliate disclosures when affiliate links are posted
 - no visible caching/indexing/display/redistribution license was supplied
 
-Interpretation:
+Why this is still worth one controlled application:
 
-Brother Canada provides the two most important pre-application signals for the current CJ pass: an explicit Product Catalog path plus no affirmative software prohibition in the supplied terms. That is sufficient for a controlled application whose purpose is to inspect authorized catalog access and then clarify exact mobile/software and data-use rights before production integration.
+DAVIDsTEA provides an explicit structured Product Catalog path and no affirmative software prohibition in the supplied terms. Packaged tea is highly useful for testing weight/quantity/unit-value, variant identity, price semantics and consumable-product normalization.
 
-Decision:
+Material risk:
 
-**APPLY TO BROTHER CANADA FOR CONTROLLED 5D VALIDATION.**
+The account-level and supported-currency fields show USD only. This is a major launch-quality uncertainty for a Canada-first ValuePilot. The Canadian conversion share does not prove that the Product Catalog rows contain Canadian CAD offers. Do not convert USD values into synthetic CAD offers and treat them as retailer prices.
 
-If approved, inspect the actual Product Catalog/feed for Canadian/CAD semantics, SKU/model identifiers, consumable/accessory relationships, pricing, availability/freshness, image/deep-link fields, feed-update behavior and exact caching/indexing/display/mobile-software permissions.
+Decision: **APPLY FOR CONTROLLED 5D VALIDATION, BUT TREAT ACTUAL CANADIAN/CAD FEED SEMANTICS AS A HARD POST-APPROVAL GATE.**
 
-## Backups if another candidate is needed
+If approved, inspect the actual Product Catalog before any implementation. Required checks include:
 
-1. DAVIDsTEA (CID 5226617) — packaged consumable/unit-value candidate
-2. Zwilling Canada (CID 5470201) — kitchen/durable-goods variant candidate with CAD earnings metadata
-3. EcoFlow CA (CID 6175965) — electronics/durable-goods candidate with CAD earnings metadata
-4. Dell Canada - Home & Small Business (CID 4380018) — large electronics/model-identity candidate, but potentially higher approval/terms complexity
-5. Aeptom (CID 7672100) — Bed & Bath candidate with CAD earnings metadata
+1. whether Canadian offer rows actually exist
+2. whether price currency is CAD, USD, mixed, or market-specific
+3. package weight/count/variant fields
+4. SKU/GTIN/product identity quality
+5. current/reference/sale price semantics
+6. availability and freshness
+7. image/deep-link behavior
+8. exact permission for caching/indexing/display and ValuePilot mobile/software use
+9. advertiser-required affiliate disclosure behavior
+
+If the authorized feed exposes only USD offers without trustworthy Canadian pricing, DAVIDsTEA should not be selected as a Canada production data rail even if the advertiser relationship is approved.
+
+## Next backup screens if needed
+
+1. Zwilling Canada (CID 5470201)
+2. EcoFlow CA (CID 6175965)
+3. Dell Canada - Home & Small Business (CID 4380018)
+4. Aeptom (CID 7672100)
 
 ## Permanent pre-application gate
 
 For each advertiser, inspect and record:
 
 1. More Info / program description
-2. explicit product feed/datafeed/catalog availability if stated
+2. explicit Product Catalog/datafeed availability
 3. serviceable area and supported currency
-4. Software / downloadable application / toolbar policy
-5. comparison-shopping, content, review or dynamic-presentation restrictions
-6. advertiser-specific disclosure, coupon, paid-search or attribution rules
-7. caching, indexing, display, redistribution or feed-content rights if visible
+4. Software/downloadable-application policy
+5. comparison-shopping/dynamic-presentation restrictions
+6. disclosure/coupon/paid-search/attribution rules
+7. caching/indexing/display/redistribution rights if visible
 
-Unknown caching/indexing/display rights do not automatically block a controlled application, but they remain unproven and require clarification before integration.
+Unknown catalog-use rights do not automatically block a controlled advertiser application, but they remain unproven and must be resolved before production integration.
 
 ## Current action
 
-1. Apply to Today's Shopping Choice / TSC if not already submitted and record the resulting relationship state.
-2. Apply to Brother Canada and record the resulting relationship state.
-3. Do not apply to PC Express or West Coast Kids while their `Software: Not allowed` policies remain in force.
-4. Keep Natura Market on hold pending stronger feed/software evidence.
-5. Continue with the backup list only as needed; do not mass-apply blindly.
+1. Apply to TSC if not already submitted and record resulting status.
+2. Apply to Brother Canada if not already submitted and record resulting status.
+3. Apply to DAVIDsTEA for controlled validation; if approved, treat Canada/CAD row semantics as a hard gate.
+4. Do not apply to PC Express or West Coast Kids while `Software: Not allowed` remains in force.
+5. Keep Natura Market on hold.
+6. Continue screening backups only as needed; do not mass-apply blindly.
