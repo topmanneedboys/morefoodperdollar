@@ -18,18 +18,39 @@ Source evidence reviewed on 2026-08-26:
 
 ## Selected next five CJ screens
 
-### 1. PC Express (CID 7356175) — HIGHEST PRIORITY SCREEN
+### 1. PC Express (CID 7356175) — PRE-SCREEN FAILED / DO NOT APPLY NOW
 
-Why:
+Why it was strategically attractive:
 
-- category shown as Groceries
-- CAD earnings metadata in the Canada-filtered directory
-- closest direct fit to ValuePilot's initial grocery/value-intelligence thesis
-- potentially high information value for price, pack-size, promotion, availability and grocery identity validation
+- category: Groceries
+- advertiser: Loblaw Companies Ltd.
+- serviceable area: Canada
+- supported currency: CAD
+- previous-month conversion geography shown as 100% Canada
+- description states more than 40,000 grocery products across multiple Loblaw-family grocery banners
+- description states in-store prices/deals with no markup, making it potentially extremely valuable Canadian grocery evidence
 
-Do not apply yet. First inspect More Info / Program Terms for actual datafeed or product-catalog availability, Canada/CAD serviceability, software/mobile policy, comparison-shopping compatibility and any data-display restrictions.
+Authenticated CJ terms reviewed on 2026-08-26:
 
-### 2. Natura Market (CID 5370099) — HIGH PRIORITY SCREEN
+- `Software: Not allowed`
+- affiliate activity is framed around web, email and social channels
+- incentivized traffic is not allowed
+- branded SEM restrictions and negative matching requirements apply
+- only CJ-provided logos/images may be used
+- regulated/non-commissionable categories include alcohol, tobacco, prescriptions, gift cards, lottery and other regulated products
+- the supplied advertiser details did not establish a product feed/datafeed/catalog path
+
+Material conflict:
+
+ValuePilot's permanent product includes an Android/mobile software client as a presentation surface. The explicit CJ policy `Software: Not allowed` is therefore a direct current-channel incompatibility. Do not apply while intending software/mobile affiliate use, and do not misrepresent ValuePilot as web-only merely to gain advertiser acceptance.
+
+The advertiser is potentially worth reconsidering later because its Canadian grocery coverage is exceptionally relevant. Reconsider only if PC Express/Loblaw gives explicit written permission for the intended ValuePilot software/mobile model or if ValuePilot deliberately creates a separately authorized web-only channel whose use is consistent with all applicable terms. Any product-feed/data-use rights would still need separate validation.
+
+Decision:
+
+**DO NOT APPLY TO PC EXPRESS FOR THE CURRENT 5D SOFTWARE/MOBILE VALIDATION PASS.**
+
+### 2. Natura Market (CID 5370099) — NEXT / HIGHEST PRIORITY SCREEN
 
 Why:
 
@@ -103,4 +124,10 @@ Unknown caching/indexing/display rights do not automatically block a controlled 
 
 ## Current action
 
-Open the top five advertisers in this order and capture their More Info + Program Terms. Do not mass-apply before this screen. If a candidate passes, it can be submitted immediately without waiting for the other four, keeping the overall advertiser-validation portfolio bounded and high-information.
+PC Express failed the current pre-screen because `Software: Not allowed` conflicts with ValuePilot's intended software/mobile channel and no explicit product-feed path was established in the supplied details.
+
+Next screen:
+
+**Natura Market (CID 5370099).**
+
+Capture its More Info + Program Terms. If Natura Market passes, it can be submitted immediately without waiting for the remaining candidates.
