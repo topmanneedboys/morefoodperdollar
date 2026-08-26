@@ -114,9 +114,28 @@ Decision: **DO NOT APPLY TO DELL CANADA - HOME & SMALL BUSINESS FOR THE CURRENT 
 
 Only reconsider Dell if Dell/CJ provides current written terms or direct written authorization that expressly permits ValuePilot's intended comparison use, including display of current Dell prices in the approved property/channel and any required catalog caching/indexing/normalization. Do not infer such permission from Product Catalog availability alone.
 
-## Next backup screen
+### Aeptom (CID 7672100) — SOFTWARE-COMPATIBLE BUT NO FEED EVIDENCE / HOLD
 
-1. Aeptom (CID 7672100)
+Authenticated CJ details reviewed on 2026-08-26:
+
+- advertiser country and serviceable area: Canada
+- account and supported currency: CAD
+- physical bedding/home-goods catalog
+- `Software: Allowed`
+- incentivized traffic, email, sub-affiliates and social media are allowed subject to advertiser-specific rules
+- only CJ-provided logos/images may be used
+- branded SEM/direct linking/domain restrictions apply
+- no Product Catalog, product feed or datafeed availability is stated in the supplied advertiser description or terms
+- no visible caching/indexing/display/redistribution license is supplied
+- no recent conversion geography data is available
+
+Interpretation:
+
+Aeptom is one of the strongest CJ candidates screened so far for **software-channel compatibility** because the policy explicitly states `Software: Allowed`. However, the current 5D milestone is specifically trying to validate a structured authorized shopping-data rail. The supplied evidence does not establish a Product Catalog/datafeed path, so applying now would not materially advance that gate.
+
+Decision: **HOLD / DO NOT APPLY YET FOR THE CURRENT 5D DATA-PROVIDER PASS.**
+
+Reconsider immediately if CJ exposes a Product Catalog/datafeed indicator for Aeptom or the advertiser confirms a structured feed is available for the approved software property. If such a feed exists, Aeptom would become a high-priority candidate because Canada/CAD and explicit software permission are already established.
 
 ## Permanent pre-application gate
 
@@ -140,5 +159,5 @@ Unknown catalog-use rights do not automatically block a controlled advertiser ap
 3. Apply to DAVIDsTEA for controlled validation; if approved, treat Canada/CAD row semantics as a hard gate.
 4. Do not apply to PC Express, West Coast Kids or EcoFlow CA while `Software: Not allowed` remains in force.
 5. Do not apply to Dell Canada - Home & Small Business under the reviewed agreement because Section 5.2 conflicts with ValuePilot price display/comparison.
-6. Keep Natura Market, Zwilling Canada and Dell Financial Services Canada on hold pending stronger feed/software evidence.
-7. Screen Aeptom next only if another CJ candidate is useful; do not mass-apply blindly.
+6. Keep Natura Market, Zwilling Canada, Dell Financial Services Canada and Aeptom on hold pending stronger structured-feed evidence and/or rights clarification.
+7. Do not mass-apply blindly; the next higher-value step is to confirm submission/resulting status for the candidates already passed and then inspect actual catalog/feed access when any advertiser approves.
