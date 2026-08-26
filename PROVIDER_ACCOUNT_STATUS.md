@@ -20,6 +20,8 @@ This file is an operational checkpoint only. It does not authorize production ne
 | impact.com Marketplace application | DECLINED on 2026-08-25 | Preserve the denial as evidence; do not infer a specific cause from the generic email |
 | CJ Affiliate publisher account | ACTIVE | Continue deliberately screened advertiser-level validation; AOSOM remains pending unless newer evidence arrives |
 | Brulerie Virgin Hill Coffee Roasters on CJ | REJECTED / NOT APPROVED on 2026-08-24 | Do not reapply now; no advertiser-specific reason was provided |
+| Abracadabra NYC on CJ | UNSOLICITED PENDING OFFER received 2026-08-24 | Do not accept yet; inspect program terms, product-feed availability, Canada/CAD serviceability and software/mobile compatibility first |
+| GearUP on CJ | UNSOLICITED PENDING OFFER received 2026-08-23 | Do not accept for ValuePilot; digital gaming-connection subscription is not a useful physical-shopping/catalog validation target |
 | Rakuten Advertising publisher account | ACTIVE / DASHBOARD ACCESS CONFIRMED | Product Feed technical enablement/SFTP request submitted to Customer Support |
 | Jamieson Vitamins on Rakuten | ACCEPTED / ADVERTISER PARTNERSHIP ACTIVE on 2026-08-26 | Wait for Product Feed technical enablement, then request/verify Jamieson Product Catalog access and inspect the real authorized feed before implementation |
 | Well.ca on Rakuten (MID 53166) | PENDING APPROVAL / APPLIED on 2026-08-25 | Wait for advertiser decision; if approved, inspect actual Product Catalog/datafeed and feed-specific rights before implementation |
@@ -92,6 +94,32 @@ Decision:
 
 Do not infer that software compatibility, catalog quality, site quality, traffic, or any other specific factor caused the rejection without direct advertiser evidence.
 
+CJ also sent two unsolicited pending offers:
+
+### Abracadabra NYC
+
+Received 2026-08-24. The advertiser describes a physical-goods catalog of more than 30,000 items across fandom collectibles, Halloween, gifts, makeup, apparel, wigs, magic, cosplay, props and related products.
+
+This is potentially useful as a broad catalog/variant stress-test, and the advertiser-initiated offer may reduce relationship-approval friction. However, the invitation itself provides no evidence of Canadian serviceability/CAD pricing, Product Feed availability, feed-field quality, software/mobile permission, caching/indexing/display rights or comparison-shopping compatibility.
+
+Decision:
+
+**DO NOT ACCEPT YET. SCREEN TERMS FIRST.**
+
+Only consider acceptance if the live advertiser details establish a useful product-feed/catalog path and no material conflict with ValuePilot's comparison/mobile model. Canada/CAD serviceability is strongly preferred for the current launch-validation milestone.
+
+### GearUP
+
+Received 2026-08-23. GearUP is a digital subscription service intended to improve gaming-network performance. Its invitation emphasizes high CPS commission and promo-code opportunities.
+
+That economics-driven proposition does not provide useful evidence for ValuePilot's current physical-product shopping/catalog milestone. It would not validate product identity, quantity/unit normalization, Canadian physical-goods pricing or multi-offer comparison.
+
+Decision:
+
+**DO NOT ACCEPT FOR VALUEPILOT.**
+
+Commission level must not be used as a provider-selection reason.
+
 Additional CJ applications are acceptable when each candidate is deliberately pre-screened for a useful Canadian product feed/catalog path, software/mobile compatibility and terms compatible with comparison-shopping use. Do not submit duplicates or random low-information applications merely to accumulate relationships.
 
 Permanent distinction:
@@ -133,7 +161,8 @@ Detailed Awin feed-quality evidence remains in `PROVIDER_VALIDATION.md`.
 1. Wait for Rakuten Customer Support to enable Product Feeds/SFTP; this is the highest-value immediate gate because Jamieson is already advertiser-approved.
 2. When enabled, validate the actual Jamieson authorized Product Catalog/feed and feed-specific rights before production integration.
 3. Continue waiting on Well.ca, Tru Earth, Bath Depot and AOSOM unless newer evidence arrives.
-4. Preserve Skip and Virgin Hill as rejected; do not reapply under the same current configuration without materially new evidence.
-5. Preserve impact.com as declined; do not blindly reapply.
-6. Additional advertiser applications may be run in a bounded, deliberately pre-screened multi-network batch to reduce calendar risk, but not as random mass applications.
-7. Do not implement a Rakuten, CJ, Awin or impact.com production adapter until 5D has validated and deliberately selected a provider and actual data-use rights.
+4. For CJ, do not accept GearUP for ValuePilot. Open Abracadabra NYC advertiser details and inspect current program terms/product-feed/software/geography evidence before deciding whether to accept its pending offer.
+5. Preserve Skip and Virgin Hill as rejected; do not reapply under the same current configuration without materially new evidence.
+6. Preserve impact.com as declined; do not blindly reapply.
+7. Additional advertiser applications may be run in a bounded, deliberately pre-screened multi-network batch to reduce calendar risk, but not as random mass applications.
+8. Do not implement a Rakuten, CJ, Awin or impact.com production adapter until 5D has validated and deliberately selected a provider and actual data-use rights.
