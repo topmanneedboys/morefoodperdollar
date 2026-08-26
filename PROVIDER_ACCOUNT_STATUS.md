@@ -19,7 +19,8 @@ This file is an operational checkpoint only. It does not authorize production ne
 | impact.com partner account | ACCOUNT EXISTS / MARKETPLACE APPLICATION DECLINED | Do not create a duplicate account or resubmit blindly; inspect any dashboard-specific reason before deciding whether support/reapplication is worthwhile |
 | impact.com Marketplace application | DECLINED on 2026-08-25 | Preserve the denial as evidence; do not infer a specific cause from the generic email |
 | CJ Affiliate publisher account | ACTIVE | Wait on the deliberately selected advertiser applications; no random additional applications |
-| Rakuten Advertising publisher account | ACTIVE / DASHBOARD ACCESS CONFIRMED | Giant Tiger declined; Well.ca terms/profile under review before any additional Rakuten application |
+| Rakuten Advertising publisher account | ACTIVE / DASHBOARD ACCESS CONFIRMED | Well.ca application is pending advertiser approval |
+| Well.ca on Rakuten (MID 53166) | PENDING APPROVAL / APPLIED on 2026-08-25 | Wait for advertiser decision; if approved, inspect actual Product Catalog/datafeed and feed-specific rights before implementation |
 | Giant Tiger on Rakuten (MID 52823) | DENIED / APPLICATION NOT ACCEPTED | Do not reapply now; reason was not specifically provided; preserve as future reconsideration candidate |
 | Flipp | PARTNERSHIP TARGET, NOT YET VALIDATED | Commercial partnership inquiry later |
 | GS1 Canada ECCnet | DATA/IDENTITY TARGET, NOT YET VALIDATED | Commercial/data-recipient rights validation later |
@@ -30,19 +31,23 @@ Rakuten publisher registration and dashboard access are active. The public Value
 
 Giant Tiger was deliberately selected for a first Rakuten validation attempt because its authenticated profile showed Product Catalog, `Product feed available`, Deep Links, broad Canadian everyday-shopping categories and `Allows downloadable software applications`. Its full advertiser-supplied Terms & Conditions were reviewed before application and did not introduce a blanket mobile/software prohibition, although feed persistence/caching/indexing/display rights remained unproven.
 
-A Giant Tiger partnership application was submitted on 2026-08-22.
-
-On 2026-08-24 Rakuten sent an `Application Denied` notice stating that Giant Tiger chose not to accept ValuePilot into its affiliate program at this time.
-
-The notice did **not** provide a Giant-Tiger-specific reason. It listed generic examples such as inability to access the declared website, website not yet live, low traffic, or content mismatch. Do not record any one of those examples as the actual denial reason.
+A Giant Tiger partnership application was submitted on 2026-08-22. On 2026-08-24 Rakuten sent an `Application Denied` notice stating that Giant Tiger chose not to accept ValuePilot into its affiliate program at this time. The notice did not provide a Giant-Tiger-specific reason, so generic examples in the notice must not be treated as the actual cause.
 
 Decision:
 
 **GIANT TIGER = DENIED / DO NOT REAPPLY NOW.**
 
-Do not contact or pressure Giant Tiger merely to reverse the decision while other high-information candidates remain available. Reconsider later only after ValuePilot has materially stronger public proof, traffic, product maturity, or provider relationships, or if Giant Tiger supplies a concrete reason that can be addressed.
+Well.ca was then selected as the next controlled Rakuten candidate. Its authenticated profile, full advertiser agreement, and current baseline Offer were reviewed before application. Relevant evidence included Canadian delivery/serviceability, Product Catalog, Deep Links, real-time tracking, `Allows downloadable software applications`, and an Offer statement that a datafeed is available. The general agreement remains a narrow referral/marketing license and does not by itself establish blanket catalog caching/indexing/display/redistribution rights.
 
-Next Rakuten candidate: **Well.ca (MID 53166)**. Its authenticated profile now shows Product Catalog, Deep Links, Canadian delivery/serviceability, real-time tracking and a DSA policy allowing downloadable software applications. The advertiser-specific agreement also expressly addresses AI/automated promotional content, but the general license remains a narrow referral/marketing license and does not by itself establish blanket catalog caching/indexing/display/redistribution rights. Continue reviewing the complete advertiser terms before applying.
+On 2026-08-25 ValuePilot submitted the Well.ca partnership application. The authenticated Rakuten dashboard now shows:
+
+**`Partnership pending approval`**
+
+Decision:
+
+**WELL.CA = APPLIED / PENDING ADVERTISER APPROVAL.**
+
+Do not submit a duplicate Well.ca application. If approved, first inspect the actual authorized Product Catalog/datafeed, feed-specific terms, Canadian/CAD semantics, product identity, package-size fields, ingredients/nutrition fields if any, price semantics, freshness/availability, image/deep-link behavior, and exact permitted caching/indexing/display/mobile-app use before any implementation.
 
 Rakuten permanent distinctions remain:
 
@@ -53,7 +58,7 @@ Rakuten permanent distinctions remain:
 5. Advertiser approval != permission to cache/index/display/redistribute catalog data.
 6. Feed availability != permission to scrape the advertiser website.
 7. Commission/payout must never influence provider-quality scoring or ValuePilot ranking.
-8. ValuePilot must never force clicks, cookie-stuff, auto-redirect, overwrite attribution, or drop tracking merely because an offer is displayed.
+8. ValuePilot must never force clicks, cookie-stuff, auto-redirect, overwrite attribution, or drop tracking merely because an offer was displayed.
 
 ## CJ Affiliate checkpoint
 
@@ -69,17 +74,13 @@ Permanent distinction:
 
 The impact.com partner account was created and the Marketplace/media-partner application was submitted on 2026-08-22.
 
-On 2026-08-25 impact.com sent an `Application Update` email stating that the application to join Impact as a media partner **has been declined**.
-
-The email says the application was declined for one or more reasons, but the message content available in the notification does not identify a concrete reason. Do not invent or infer a cause such as pre-launch status, traffic, website quality, media-property setup, identity, or policy mismatch without direct dashboard/support evidence.
+On 2026-08-25 impact.com sent an `Application Update` email stating that the application to join Impact as a media partner **has been declined**. The available notification did not identify a concrete reason, so do not infer a cause without direct dashboard/support evidence.
 
 Decision:
 
 **IMPACT.COM MARKETPLACE APPLICATION = DECLINED.**
 
-Do not create a duplicate impact.com account or submit a blind duplicate application. First inspect the authenticated impact.com dashboard for any specific rejection reason or remediation path. If no concrete reason is available there, a targeted support inquiry may be justified later, but only after preserving the exact account state and avoiding speculative explanations.
-
-The denial closes impact.com as an immediate provider path but does not change the provider-neutral architecture or invalidate the earlier agreement analysis.
+Do not create a duplicate impact.com account or submit a blind duplicate application. First inspect the authenticated impact.com dashboard for any specific rejection reason or remediation path. If no concrete reason is available there, a targeted support inquiry may be justified later.
 
 Permanent distinction:
 
@@ -97,11 +98,10 @@ Detailed Awin feed-quality evidence remains in `PROVIDER_VALIDATION.md`.
 
 ## Current next action
 
-The impact.com decision removes one pending provider gate and should not trigger a blind reapplication cycle.
-
-1. Preserve impact.com as declined and inspect its dashboard only for a specific reason/remediation path before deciding whether support is worthwhile.
-2. Continue the controlled Well.ca Rakuten review; do not apply until the complete advertiser-specific terms are reviewed.
-3. Continue waiting for material updates from Awin/Skip and the selected CJ advertisers.
+1. Well.ca is now applied and pending advertiser approval; do not submit a duplicate.
+2. Continue waiting for material updates from Awin/Skip and the selected CJ advertisers.
+3. Preserve impact.com as declined; do not blindly reapply.
 4. Do not reapply to Giant Tiger now.
-5. Do not infer denial reasons from generic network emails.
-6. Do not implement a Rakuten, CJ, Awin or impact.com production adapter until 5D has validated and deliberately selected a provider.
+5. If Well.ca approves, validate the real authorized datafeed and rights before production integration.
+6. Additional Rakuten applications should be deliberately pre-screened for high information value rather than submitted randomly.
+7. Do not implement a Rakuten, CJ, Awin or impact.com production adapter until 5D has validated and deliberately selected a provider.
