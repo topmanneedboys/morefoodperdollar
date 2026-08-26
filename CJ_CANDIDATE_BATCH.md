@@ -50,18 +50,34 @@ Decision:
 
 **DO NOT APPLY TO PC EXPRESS FOR THE CURRENT 5D SOFTWARE/MOBILE VALIDATION PASS.**
 
-### 2. Natura Market (CID 5370099) — NEXT / HIGHEST PRIORITY SCREEN
+### 2. Natura Market (CID 5370099) — HOLD / DO NOT APPLY YET
 
-Why:
+Why it is strategically attractive:
 
-- category shown as Green
-- CAD earnings metadata
-- packaged consumables are useful for deterministic unit-value, quantity, ingredients/label evidence and exact product-variant tests
-- materially closer to ValuePilot's grocery-quality vision than generic fashion or software advertisers
+- advertiser country: Canada
+- serviceable area: Canada
+- supported currency: CAD
+- prior-month conversion activity shown overwhelmingly in Canada
+- physical packaged-food catalog is highly relevant to ValuePilot's unit-value, package-size, ingredient/label and grocery-quality evidence model
 
-Do not apply until the same feed/software/rights screen passes.
+Authenticated CJ details reviewed on 2026-08-26:
 
-### 3. Today's Shopping Choice (CID 457947) — HIGH PRIORITY GENERAL-CATALOG SCREEN
+- Canadian site purchase action
+- 7-day referral period
+- standard affiliate web/search/coupon restrictions
+- description mentions banners and text links
+- no explicit product feed, datafeed or Product Catalog availability was present in the supplied advertiser description or terms
+- no explicit `Software: Allowed` policy was present in the supplied terms
+- no explicit `Software: Not allowed` policy was present either
+- no visible language established mobile-app use or catalog caching/indexing/display/redistribution rights
+
+Decision:
+
+**HOLD / DO NOT APPLY YET FOR THE CURRENT 5D DATA-PROVIDER PASS.**
+
+Natura Market is an excellent Canadian product/category fit, but the current evidence does not establish the two things ValuePilot is specifically trying to validate: an authorized structured product-feed/catalog path and software/mobile compatibility. Absence of a `Software: Not allowed` line is not equivalent to permission. Reconsider immediately if CJ exposes a separate Product Catalog/datafeed indicator for Natura Market or the advertiser confirms feed availability plus intended software/mobile use.
+
+### 3. Today's Shopping Choice (CID 457947) — NEXT / HIGHEST PRIORITY SCREEN
 
 Why:
 
@@ -124,10 +140,12 @@ Unknown caching/indexing/display rights do not automatically block a controlled 
 
 ## Current action
 
-PC Express failed the current pre-screen because `Software: Not allowed` conflicts with ValuePilot's intended software/mobile channel and no explicit product-feed path was established in the supplied details.
+PC Express failed the current pre-screen because `Software: Not allowed` conflicts with ValuePilot's intended software/mobile channel and no explicit product-feed path was established.
+
+Natura Market remains a strong Canadian grocery candidate but is on hold because the supplied evidence does not establish a structured product-feed/catalog path or explicit software/mobile compatibility.
 
 Next screen:
 
-**Natura Market (CID 5370099).**
+**Today's Shopping Choice (CID 457947).**
 
-Capture its More Info + Program Terms. If Natura Market passes, it can be submitted immediately without waiting for the remaining candidates.
+Capture its More Info + Program Terms. If it passes, it can be submitted immediately without waiting for the remaining candidates.
