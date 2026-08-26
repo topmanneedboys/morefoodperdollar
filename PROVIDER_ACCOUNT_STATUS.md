@@ -18,7 +18,8 @@ This file is an operational checkpoint only. It does not authorize production ne
 | Skip CA on Awin (advertiser 107752) | REJECTED on 2026-08-26 | Do not reapply now; advertiser stated it does not work with this publisher type |
 | impact.com partner account | ACCOUNT EXISTS / MARKETPLACE APPLICATION DECLINED | Do not create a duplicate account or resubmit blindly; inspect any dashboard-specific reason before deciding whether support/reapplication is worthwhile |
 | impact.com Marketplace application | DECLINED on 2026-08-25 | Preserve the denial as evidence; do not infer a specific cause from the generic email |
-| CJ Affiliate publisher account | ACTIVE | Continue deliberately screened advertiser-level validation; selected applications may still be pending |
+| CJ Affiliate publisher account | ACTIVE | Continue deliberately screened advertiser-level validation; AOSOM remains pending unless newer evidence arrives |
+| Brulerie Virgin Hill Coffee Roasters on CJ | REJECTED / NOT APPROVED on 2026-08-24 | Do not reapply now; no advertiser-specific reason was provided |
 | Rakuten Advertising publisher account | ACTIVE / DASHBOARD ACCESS CONFIRMED | Product Feed technical enablement/SFTP request submitted to Customer Support |
 | Jamieson Vitamins on Rakuten | ACCEPTED / ADVERTISER PARTNERSHIP ACTIVE on 2026-08-26 | Wait for Product Feed technical enablement, then request/verify Jamieson Product Catalog access and inspect the real authorized feed before implementation |
 | Well.ca on Rakuten (MID 53166) | PENDING APPROVAL / APPLIED on 2026-08-25 | Wait for advertiser decision; if approved, inspect actual Product Catalog/datafeed and feed-specific rights before implementation |
@@ -81,7 +82,17 @@ Rakuten permanent distinctions remain:
 
 CJ publisher account is active. The truthful Promotional Property setup is complete as `Services and Tools` with `Product Comparison, Reviews, or Discovery`. The public ValuePilot marketing site states that the product is pre-launch and that ranking is independent of affiliate commissions, advertiser payouts and sponsorship.
 
-The deliberately selected CJ advertiser applications remain pending unless newer evidence arrives. Do not submit duplicates. Additional CJ applications are acceptable when each candidate is deliberately pre-screened for a useful Canadian product feed/catalog path, software/mobile compatibility and terms compatible with comparison-shopping use.
+AOSOM Canada remains pending unless newer evidence arrives.
+
+Brulerie Virgin Hill Coffee Roasters was applied to on 2026-08-22. A CJ message dated 2026-08-24 states that the application was not approved. The message does not provide a concrete advertiser-specific reason; it only explains generally that each advertiser decides how many and what types of publishers it accepts.
+
+Decision:
+
+**BRULERIE VIRGIN HILL COFFEE ROASTERS = REJECTED / DO NOT REAPPLY NOW.**
+
+Do not infer that software compatibility, catalog quality, site quality, traffic, or any other specific factor caused the rejection without direct advertiser evidence.
+
+Additional CJ applications are acceptable when each candidate is deliberately pre-screened for a useful Canadian product feed/catalog path, software/mobile compatibility and terms compatible with comparison-shopping use. Do not submit duplicates or random low-information applications merely to accumulate relationships.
 
 Permanent distinction:
 
@@ -121,8 +132,8 @@ Detailed Awin feed-quality evidence remains in `PROVIDER_VALIDATION.md`.
 
 1. Wait for Rakuten Customer Support to enable Product Feeds/SFTP; this is the highest-value immediate gate because Jamieson is already advertiser-approved.
 2. When enabled, validate the actual Jamieson authorized Product Catalog/feed and feed-specific rights before production integration.
-3. Continue waiting on Well.ca, Tru Earth, Bath Depot and deliberately selected CJ advertiser decisions unless newer evidence arrives.
-4. Preserve Skip as rejected for publisher-type incompatibility; do not reapply under the same configuration.
+3. Continue waiting on Well.ca, Tru Earth, Bath Depot and AOSOM unless newer evidence arrives.
+4. Preserve Skip and Virgin Hill as rejected; do not reapply under the same current configuration without materially new evidence.
 5. Preserve impact.com as declined; do not blindly reapply.
 6. Additional advertiser applications may be run in a bounded, deliberately pre-screened multi-network batch to reduce calendar risk, but not as random mass applications.
 7. Do not implement a Rakuten, CJ, Awin or impact.com production adapter until 5D has validated and deliberately selected a provider and actual data-use rights.
