@@ -92,12 +92,34 @@ If approved, inspect the actual Product Catalog before any implementation. Requi
 
 If the authorized feed exposes only USD offers without trustworthy Canadian pricing, DAVIDsTEA should not be selected as a Canada production data rail even if the advertiser relationship is approved.
 
+### Zwilling Canada (CID 5470201) — HOLD / DO NOT APPLY YET
+
+Authenticated CJ details reviewed on 2026-08-26:
+
+- advertiser country: Canada
+- serviceable area: Canada
+- account currency and supported currency: CAD
+- prior-month conversions: 100% Canada
+- broad physical-goods catalog across cookware, cutlery, kitchen electrics, ceramics, glassware and related brands
+- supplied terms contain no explicit `Software: Not allowed` policy
+- supplied terms contain no explicit `Software: Allowed` grant either
+- visible policies are primarily SEM/trademark/domain/content/logo/coupon restrictions
+- no explicit Product Catalog, product feed or datafeed availability was present in the supplied description or terms
+- no visible caching/indexing/display/redistribution license was supplied
+
+Interpretation:
+
+Zwilling is a strong Canada/CAD physical-goods candidate and would be useful for SKU/model identity, variants, bundles and durable-goods comparison. However, the current 5D objective is to validate an authorized structured shopping-data rail. The supplied evidence does not establish a Product Catalog/datafeed path, so applying now would provide lower information value than candidates that explicitly expose a feed/catalog.
+
+Decision: **HOLD / DO NOT APPLY YET FOR THE CURRENT DATA-PROVIDER PASS.**
+
+Reconsider if CJ exposes a Product Catalog/datafeed indicator for Zwilling or the advertiser confirms structured feed availability and intended software/mobile use.
+
 ## Next backup screens if needed
 
-1. Zwilling Canada (CID 5470201)
-2. EcoFlow CA (CID 6175965)
-3. Dell Canada - Home & Small Business (CID 4380018)
-4. Aeptom (CID 7672100)
+1. EcoFlow CA (CID 6175965)
+2. Dell Canada - Home & Small Business (CID 4380018)
+3. Aeptom (CID 7672100)
 
 ## Permanent pre-application gate
 
@@ -119,5 +141,5 @@ Unknown catalog-use rights do not automatically block a controlled advertiser ap
 2. Apply to Brother Canada if not already submitted and record resulting status.
 3. Apply to DAVIDsTEA for controlled validation; if approved, treat Canada/CAD row semantics as a hard gate.
 4. Do not apply to PC Express or West Coast Kids while `Software: Not allowed` remains in force.
-5. Keep Natura Market on hold.
-6. Continue screening backups only as needed; do not mass-apply blindly.
+5. Keep Natura Market and Zwilling Canada on hold pending stronger feed/software evidence.
+6. Screen EcoFlow CA next.
