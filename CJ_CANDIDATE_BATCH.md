@@ -22,7 +22,7 @@ Canada/CAD and highly relevant packaged-food catalog, but supplied details did n
 
 Decision: **HOLD pending stronger feed/software evidence.**
 
-### Today's Shopping Choice / TSC (CID 457947) — PRE-SCREEN PASSED / APPLY
+### Today's Shopping Choice / TSC (CID 457947) — APPLICATION SUBMITTED / PENDING
 
 Strong signals:
 - Canada-focused and CAD-oriented
@@ -30,7 +30,9 @@ Strong signals:
 - advertiser explicitly states its full Product Catalog is available in CJ
 - supplied terms show no explicit software prohibition or anti-comparison restriction
 
-Decision: **APPLY for controlled 5D validation.**
+ValuePilot submitted the controlled advertiser application on 2026-08-26. The authenticated CJ relationship status is now pending.
+
+Decision: **WAIT FOR ADVERTISER DECISION. DO NOT DUPLICATE THE APPLICATION.**
 
 If approved, inspect actual feed and exact mobile/software and catalog-use rights before production.
 
@@ -40,7 +42,7 @@ Strong Canada/CAD/full-data-feed signals, but authenticated policy explicitly st
 
 Decision: **DO NOT APPLY for the current software/mobile validation pass.**
 
-### Brother Canada (CID 5267676) — PRE-SCREEN PASSED / APPLY
+### Brother Canada (CID 5267676) — APPLICATION SUBMITTED / PENDING
 
 Strong signals:
 - Canada service area and CAD
@@ -48,11 +50,13 @@ Strong signals:
 - explicit `Product Catalog available`
 - supplied terms show no explicit software prohibition or anti-comparison restriction
 
-Decision: **APPLY for controlled 5D validation.**
+ValuePilot submitted the controlled advertiser application on 2026-08-26. The authenticated CJ relationship status is now pending.
+
+Decision: **WAIT FOR ADVERTISER DECISION. DO NOT DUPLICATE THE APPLICATION.**
 
 If approved, inspect actual catalog/feed and exact data-use/mobile rights before production.
 
-### DAVIDsTEA (CID 5226617) — PRE-SCREEN PASSED WITH CURRENCY RISK / APPLY
+### DAVIDsTEA (CID 5226617) — APPLICATION SUBMITTED / PENDING WITH CURRENCY RISK
 
 Authenticated CJ details reviewed on 2026-08-26:
 
@@ -68,7 +72,9 @@ Authenticated CJ details reviewed on 2026-08-26:
 - advertiser requires affiliate disclosures when affiliate links are posted
 - no visible caching/indexing/display/redistribution license was supplied
 
-Decision: **APPLY FOR CONTROLLED 5D VALIDATION, BUT TREAT ACTUAL CANADIAN/CAD FEED SEMANTICS AS A HARD POST-APPROVAL GATE.**
+ValuePilot submitted the controlled advertiser application on 2026-08-26. The authenticated CJ relationship status is now pending.
+
+Decision: **WAIT FOR ADVERTISER DECISION. DO NOT DUPLICATE THE APPLICATION. IF APPROVED, TREAT ACTUAL CANADIAN/CAD FEED SEMANTICS AS A HARD GATE.**
 
 If the authorized feed exposes only USD offers without trustworthy Canadian pricing, DAVIDsTEA should not be selected as a Canada production data rail even if the advertiser relationship is approved.
 
@@ -154,10 +160,10 @@ Unknown catalog-use rights do not automatically block a controlled advertiser ap
 
 ## Current action
 
-1. Apply to TSC if not already submitted and record resulting status.
-2. Apply to Brother Canada if not already submitted and record resulting status.
-3. Apply to DAVIDsTEA for controlled validation; if approved, treat Canada/CAD row semantics as a hard gate.
+1. TSC, Brother Canada and DAVIDsTEA applications are submitted and pending; do not submit duplicates or additional low-information CJ applications merely to increase count.
+2. Wait for the pending CJ advertiser decisions. If any approves, immediately inspect actual Product Catalog access and exact software/mobile/catalog-use rights before implementation.
+3. For DAVIDsTEA, Canadian/CAD offer semantics remain a hard post-approval gate because the advertiser profile shows USD-only supported currency.
 4. Do not apply to PC Express, West Coast Kids or EcoFlow CA while `Software: Not allowed` remains in force.
 5. Do not apply to Dell Canada - Home & Small Business under the reviewed agreement because Section 5.2 conflicts with ValuePilot price display/comparison.
 6. Keep Natura Market, Zwilling Canada, Dell Financial Services Canada and Aeptom on hold pending stronger structured-feed evidence and/or rights clarification.
-7. Do not mass-apply blindly; the next higher-value step is to confirm submission/resulting status for the candidates already passed and then inspect actual catalog/feed access when any advertiser approves.
+7. Prioritize the already-open Rakuten Jamieson Product Catalog approval/access gate in parallel with these CJ pending decisions.
