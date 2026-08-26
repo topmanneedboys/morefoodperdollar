@@ -1,6 +1,6 @@
 # ValuePilot Provider Account Status
 
-Updated: 2026-08-25
+Updated: 2026-08-26
 
 Milestone:
 5D — Authorized Real Shopping Data Provider Selection
@@ -14,13 +14,16 @@ This file is an operational checkpoint only. It does not authorize production ne
 
 | Provider / program | Current status | Next meaningful action |
 | --- | --- | --- |
-| Awin publisher account | ACTIVE / APPROVED | Wait on selected advertiser-level validation; no duplicate applications |
-| Skip CA on Awin (advertiser 107752) | PENDING advertiser approval unless newer evidence arrives | If approved, inspect the actual authorized Skip product feed before implementation |
+| Awin publisher account | ACTIVE / APPROVED | Pre-screen any additional advertisers for publisher-type compatibility before applying |
+| Skip CA on Awin (advertiser 107752) | REJECTED on 2026-08-26 | Do not reapply now; advertiser stated it does not work with this publisher type |
 | impact.com partner account | ACCOUNT EXISTS / MARKETPLACE APPLICATION DECLINED | Do not create a duplicate account or resubmit blindly; inspect any dashboard-specific reason before deciding whether support/reapplication is worthwhile |
 | impact.com Marketplace application | DECLINED on 2026-08-25 | Preserve the denial as evidence; do not infer a specific cause from the generic email |
-| CJ Affiliate publisher account | ACTIVE | Wait on the deliberately selected advertiser applications; no random additional applications |
-| Rakuten Advertising publisher account | ACTIVE / DASHBOARD ACCESS CONFIRMED | Well.ca application is pending advertiser approval |
+| CJ Affiliate publisher account | ACTIVE | Continue deliberately screened advertiser-level validation; selected applications may still be pending |
+| Rakuten Advertising publisher account | ACTIVE / DASHBOARD ACCESS CONFIRMED | Product Feed technical enablement/SFTP request submitted to Customer Support |
+| Jamieson Vitamins on Rakuten | ACCEPTED / ADVERTISER PARTNERSHIP ACTIVE on 2026-08-26 | Wait for Product Feed technical enablement, then request/verify Jamieson Product Catalog access and inspect the real authorized feed before implementation |
 | Well.ca on Rakuten (MID 53166) | PENDING APPROVAL / APPLIED on 2026-08-25 | Wait for advertiser decision; if approved, inspect actual Product Catalog/datafeed and feed-specific rights before implementation |
+| Tru Earth on Rakuten (MID 54255) | APPLIED / decision pending unless newer evidence arrives | If approved, inspect actual Product Catalog/feed and rights before implementation |
+| Bath Depot / Bain Depot on Rakuten | APPLIED / decision pending unless newer evidence arrives | If approved, inspect actual product feed and rights before implementation |
 | Giant Tiger on Rakuten (MID 52823) | DENIED / APPLICATION NOT ACCEPTED | Do not reapply now; reason was not specifically provided; preserve as future reconsideration candidate |
 | Flipp | PARTNERSHIP TARGET, NOT YET VALIDATED | Commercial partnership inquiry later |
 | GS1 Canada ECCnet | DATA/IDENTITY TARGET, NOT YET VALIDATED | Commercial/data-recipient rights validation later |
@@ -39,15 +42,29 @@ Decision:
 
 Well.ca was then selected as the next controlled Rakuten candidate. Its authenticated profile, full advertiser agreement, and current baseline Offer were reviewed before application. Relevant evidence included Canadian delivery/serviceability, Product Catalog, Deep Links, real-time tracking, `Allows downloadable software applications`, and an Offer statement that a datafeed is available. The general agreement remains a narrow referral/marketing license and does not by itself establish blanket catalog caching/indexing/display/redistribution rights.
 
-On 2026-08-25 ValuePilot submitted the Well.ca partnership application. The authenticated Rakuten dashboard now shows:
-
-**`Partnership pending approval`**
+On 2026-08-25 ValuePilot submitted the Well.ca partnership application. The authenticated Rakuten dashboard showed `Partnership pending approval`.
 
 Decision:
 
 **WELL.CA = APPLIED / PENDING ADVERTISER APPROVAL.**
 
-Do not submit a duplicate Well.ca application. If approved, first inspect the actual authorized Product Catalog/datafeed, feed-specific terms, Canadian/CAD semantics, product identity, package-size fields, ingredients/nutrition fields if any, price semantics, freshness/availability, image/deep-link behavior, and exact permitted caching/indexing/display/mobile-app use before any implementation.
+On 2026-08-26 Jamieson Vitamins accepted ValuePilot's Rakuten advertiser partnership application.
+
+Decision:
+
+**JAMIESON VITAMINS = ADVERTISER PARTNERSHIP ACCEPTED.**
+
+This acceptance does not itself authorize a production integration. Jamieson's authenticated profile had shown Product Catalog, Deep Links and downloadable-software allowance, but actual Product Catalog/feed access, schema quality, caching/indexing/display rights and mobile-app catalog-use rights remain separate gates.
+
+After acceptance, ValuePilot opened Rakuten `Links -> Product Feeds`. The account displayed `Unlock product feeds` and instructed the publisher to contact Customer Support with account email, SID and channel name to enable Product Feeds and an FTP/SFTP account. A support request for Product Feeds / Product Catalog technical enablement and the associated SFTP account was submitted on 2026-08-26 and the help center confirmed that the request was sent and updates will arrive by email.
+
+Next Jamieson gate:
+
+1. wait for Rakuten technical Product Feed/SFTP enablement
+2. request or verify Jamieson advertiser-level Product Catalog access if a separate approval control is presented
+3. inspect the actual authorized feed and any feed-specific terms
+4. validate CAD/Canada semantics, IDs, package/count/strength fields, prices, freshness, availability and exact caching/indexing/display/mobile-app rights
+5. do not integrate until those gates pass
 
 Rakuten permanent distinctions remain:
 
@@ -64,7 +81,7 @@ Rakuten permanent distinctions remain:
 
 CJ publisher account is active. The truthful Promotional Property setup is complete as `Services and Tools` with `Product Comparison, Reviews, or Discovery`. The public ValuePilot marketing site states that the product is pre-launch and that ranking is independent of affiliate commissions, advertiser payouts and sponsorship.
 
-The deliberately selected CJ advertiser applications remain pending unless newer evidence arrives. Do not submit duplicates or add random CJ advertisers merely to accumulate relationships.
+The deliberately selected CJ advertiser applications remain pending unless newer evidence arrives. Do not submit duplicates. Additional CJ applications are acceptable when each candidate is deliberately pre-screened for a useful Canadian product feed/catalog path, software/mobile compatibility and terms compatible with comparison-shopping use.
 
 Permanent distinction:
 
@@ -74,7 +91,7 @@ Permanent distinction:
 
 The impact.com partner account was created and the Marketplace/media-partner application was submitted on 2026-08-22.
 
-On 2026-08-25 impact.com sent an `Application Update` email stating that the application to join Impact as a media partner **has been declined**. The available notification did not identify a concrete reason, so do not infer a cause without direct dashboard/support evidence.
+On 2026-08-25 impact.com sent an `Application Update` email stating that the application to join Impact as a media partner has been declined. The available notification did not identify a concrete reason, so do not infer a cause without direct dashboard/support evidence.
 
 Decision:
 
@@ -88,20 +105,24 @@ Permanent distinction:
 
 ## Awin / Skip checkpoint
 
-Awin publisher access is active. The deliberate Skip CA advertiser application remains pending unless newer evidence arrives.
+Awin publisher access is active.
 
-Do not submit a duplicate Skip application.
+ValuePilot's Skip CA advertiser application was rejected on 2026-08-26. The advertiser-provided reason shown in the Awin notification was:
 
-If approved, inspect the actual authorized Skip product feed before implementation, including merchant/store/channel/geography semantics, product identity, quantity and unit fields, price semantics, availability/freshness and data-use rights.
+**`Advertiser doesn't work with this publisher type`**
+
+This is materially stronger evidence than the earlier generic pending state. Do not reapply to Skip under the same publisher configuration and do not misrepresent ValuePilot's publisher type merely to gain acceptance.
+
+The rejection does not imply all Awin advertisers are incompatible. It does mean additional Awin applications should be pre-screened for explicit compatibility with ValuePilot's truthful publisher type (Comparison Engine / shopping-intelligence service), product-feed availability and intended software/mobile presentation model before submission.
 
 Detailed Awin feed-quality evidence remains in `PROVIDER_VALIDATION.md`.
 
 ## Current next action
 
-1. Well.ca is now applied and pending advertiser approval; do not submit a duplicate.
-2. Continue waiting for material updates from Awin/Skip and the selected CJ advertisers.
-3. Preserve impact.com as declined; do not blindly reapply.
-4. Do not reapply to Giant Tiger now.
-5. If Well.ca approves, validate the real authorized datafeed and rights before production integration.
-6. Additional Rakuten applications should be deliberately pre-screened for high information value rather than submitted randomly.
-7. Do not implement a Rakuten, CJ, Awin or impact.com production adapter until 5D has validated and deliberately selected a provider.
+1. Wait for Rakuten Customer Support to enable Product Feeds/SFTP; this is the highest-value immediate gate because Jamieson is already advertiser-approved.
+2. When enabled, validate the actual Jamieson authorized Product Catalog/feed and feed-specific rights before production integration.
+3. Continue waiting on Well.ca, Tru Earth, Bath Depot and deliberately selected CJ advertiser decisions unless newer evidence arrives.
+4. Preserve Skip as rejected for publisher-type incompatibility; do not reapply under the same configuration.
+5. Preserve impact.com as declined; do not blindly reapply.
+6. Additional advertiser applications may be run in a bounded, deliberately pre-screened multi-network batch to reduce calendar risk, but not as random mass applications.
+7. Do not implement a Rakuten, CJ, Awin or impact.com production adapter until 5D has validated and deliberately selected a provider and actual data-use rights.
