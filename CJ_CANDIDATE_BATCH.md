@@ -90,48 +90,29 @@ Authenticated details show a separate refurbished-computer program with an exten
 
 Decision: **DO NOT APPLY YET.**
 
-### Dell Canada - Home & Small Business (CID 4380018) — PRE-SCREEN PASSED / APPLY
+### Dell Canada - Home & Small Business (CID 4380018) — PRE-SCREEN FAILED AFTER FULL AGREEMENT REVIEW / DO NOT APPLY NOW
 
-Authenticated CJ details reviewed on 2026-08-26:
+Initial More Info evidence was attractive:
 
-- advertiser country: Canada
-- serviceable area: Canada
+- advertiser country/service area: Canada
 - account currency: CAD
-- previous-month conversions: 98.51% Canada
-- broad physical electronics/computer catalog covering desktops, laptops, monitors, printers, TVs, phones, accessories and business systems
-- advertiser explicitly states it offers a `robust Product Catalog` with direct linking to available products for Dell.ca Home and Dell.ca Small Business
-- Home and Small Business purchase actions are specifically tied to Canadian Dell sites and shipped-sale events
-- supplied policies primarily govern paid search, trademark/domain use, coupons and incentivized promotions
-- direct paid-search linking is not allowed and paid-search entries require Dell approval
-- publisher site must identify itself as affiliate-owned/operated
-- affiliates may not create a browser or border environment around Dell content
-- supplied terms do not show an explicit `Software: Not allowed` policy
-- supplied terms also do not provide an explicit `Software: Allowed` grant
-- no visible anti-comparison prohibition was supplied
-- no visible blanket caching/indexing/display/redistribution license was supplied
-- advertiser language limits promotional offers to those communicated through the affiliate program / Dell Home & Home Office site / CJ Marketplace; this must be respected separately from Product Catalog access
+- recent conversions overwhelmingly Canadian
+- broad computer/electronics catalog
+- advertiser explicitly states it offers a robust Product Catalog with direct linking to available Dell.ca Home and Small Business products
 
-Interpretation:
+However, the full Dell Canada Affiliates Program Agreement introduces material conflicts with ValuePilot's core comparison model:
 
-Dell Canada Home & Small Business has the two high-value signals needed to justify a controlled application: a clearly stated robust Product Catalog and a strongly Canadian physical-product program, without an affirmative software prohibition in the supplied terms. The framing/browser-border restriction does not itself prohibit an independent comparison interface; ValuePilot must not embed or frame Dell pages as its own content.
+- `Site` is defined as a World Wide Web Site identified in the CJ registration; the agreement does not affirmatively authorize a mobile-software presentation channel
+- Dell may reject sites with fewer than 50 unique visitors per day
+- scraping/spidering Dell sites is expressly prohibited
+- the content/mark license is limited, revocable, non-exclusive and oriented to creating links from the affiliate Site to Dell; it does not provide blanket rights to copy, distribute, modify, cache, index or republish Dell catalog content
+- most importantly, Section 5.2 states that product prices and availability may vary and explicitly says the affiliate **may not include price information in Product descriptions**
 
-The older `Special Terms and Conditions (September 2014)` label and narrow offer/link language mean approval must not be treated as blanket permission to persist, cache, normalize, republish or display the full catalog in a mobile client. Those rights remain separate post-approval gates.
+That price-display restriction is directly incompatible with ValuePilot's core job: presenting retailer prices, normalizing them, calculating value, and comparing offers. A Product Catalog is not useful as a production shopping-data rail if ValuePilot cannot lawfully surface the associated product price in its product presentation.
 
-Decision: **APPLY TO DELL CANADA - HOME & SMALL BUSINESS FOR CONTROLLED 5D VALIDATION.**
+Decision: **DO NOT APPLY TO DELL CANADA - HOME & SMALL BUSINESS FOR THE CURRENT VALUEPILOT 5D PASS.**
 
-If approved, inspect the actual CJ Product Catalog before any implementation, including:
-
-1. CAD/Canadian price semantics
-2. model/SKU/MPN/GTIN identity quality
-3. Home vs Small Business offer separation
-4. current/reference/sale-price semantics
-5. configuration/variant handling
-6. availability and feed freshness
-7. image/deep-link fields
-8. catalog update behavior
-9. exact permission for caching, indexing, normalization and consumer display
-10. exact compatibility with ValuePilot mobile/software presentation
-11. no framing/browser-border behavior around Dell pages
+Only reconsider Dell if Dell/CJ provides current written terms or direct written authorization that expressly permits ValuePilot's intended comparison use, including display of current Dell prices in the approved property/channel and any required catalog caching/indexing/normalization. Do not infer such permission from Product Catalog availability alone.
 
 ## Next backup screen
 
@@ -148,15 +129,16 @@ For each advertiser, inspect and record:
 5. comparison-shopping/dynamic-presentation restrictions
 6. disclosure/coupon/paid-search/attribution rules
 7. caching/indexing/display/redistribution rights if visible
+8. explicit restrictions on displaying price, availability or other core comparison fields
 
-Unknown catalog-use rights do not automatically block a controlled advertiser application, but they remain unproven and must be resolved before production integration.
+Unknown catalog-use rights do not automatically block a controlled advertiser application, but explicit restrictions on core ValuePilot comparison fields do.
 
 ## Current action
 
 1. Apply to TSC if not already submitted and record resulting status.
 2. Apply to Brother Canada if not already submitted and record resulting status.
 3. Apply to DAVIDsTEA for controlled validation; if approved, treat Canada/CAD row semantics as a hard gate.
-4. Apply to Dell Canada - Home & Small Business for controlled validation.
-5. Do not apply to PC Express, West Coast Kids or EcoFlow CA while `Software: Not allowed` remains in force.
+4. Do not apply to PC Express, West Coast Kids or EcoFlow CA while `Software: Not allowed` remains in force.
+5. Do not apply to Dell Canada - Home & Small Business under the reviewed agreement because Section 5.2 conflicts with ValuePilot price display/comparison.
 6. Keep Natura Market, Zwilling Canada and Dell Financial Services Canada on hold pending stronger feed/software evidence.
 7. Screen Aeptom next only if another CJ candidate is useful; do not mass-apply blindly.
