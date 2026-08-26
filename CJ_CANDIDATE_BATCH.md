@@ -68,79 +68,40 @@ Authenticated CJ details reviewed on 2026-08-26:
 - advertiser requires affiliate disclosures when affiliate links are posted
 - no visible caching/indexing/display/redistribution license was supplied
 
-Why this is still worth one controlled application:
-
-DAVIDsTEA provides an explicit structured Product Catalog path and no affirmative software prohibition in the supplied terms. Packaged tea is highly useful for testing weight/quantity/unit-value, variant identity, price semantics and consumable-product normalization.
-
-Material risk:
-
-The account-level and supported-currency fields show USD only. This is a major launch-quality uncertainty for a Canada-first ValuePilot. The Canadian conversion share does not prove that the Product Catalog rows contain Canadian CAD offers. Do not convert USD values into synthetic CAD offers and treat them as retailer prices.
-
 Decision: **APPLY FOR CONTROLLED 5D VALIDATION, BUT TREAT ACTUAL CANADIAN/CAD FEED SEMANTICS AS A HARD POST-APPROVAL GATE.**
-
-If approved, inspect the actual Product Catalog before any implementation. Required checks include:
-
-1. whether Canadian offer rows actually exist
-2. whether price currency is CAD, USD, mixed, or market-specific
-3. package weight/count/variant fields
-4. SKU/GTIN/product identity quality
-5. current/reference/sale price semantics
-6. availability and freshness
-7. image/deep-link behavior
-8. exact permission for caching/indexing/display and ValuePilot mobile/software use
-9. advertiser-required affiliate disclosure behavior
 
 If the authorized feed exposes only USD offers without trustworthy Canadian pricing, DAVIDsTEA should not be selected as a Canada production data rail even if the advertiser relationship is approved.
 
 ### Zwilling Canada (CID 5470201) — HOLD / DO NOT APPLY YET
 
-Authenticated CJ details reviewed on 2026-08-26:
+Canada/CAD, 100% Canadian recent conversions and useful physical-goods coverage, but the supplied description and terms do not establish a Product Catalog/product-feed/datafeed path.
 
-- advertiser country: Canada
-- serviceable area: Canada
-- account currency and supported currency: CAD
-- prior-month conversions: 100% Canada
-- broad physical-goods catalog across cookware, cutlery, kitchen electrics, ceramics, glassware and related brands
-- supplied terms contain no explicit `Software: Not allowed` policy
-- supplied terms contain no explicit `Software: Allowed` grant either
-- visible policies are primarily SEM/trademark/domain/content/logo/coupon restrictions
-- no explicit Product Catalog, product feed or datafeed availability was present in the supplied description or terms
-- no visible caching/indexing/display/redistribution license was supplied
-
-Interpretation:
-
-Zwilling is a strong Canada/CAD physical-goods candidate and would be useful for SKU/model identity, variants, bundles and durable-goods comparison. However, the current 5D objective is to validate an authorized structured shopping-data rail. The supplied evidence does not establish a Product Catalog/datafeed path, so applying now would provide lower information value than candidates that explicitly expose a feed/catalog.
-
-Decision: **HOLD / DO NOT APPLY YET FOR THE CURRENT DATA-PROVIDER PASS.**
-
-Reconsider if CJ exposes a Product Catalog/datafeed indicator for Zwilling or the advertiser confirms structured feed availability and intended software/mobile use.
+Decision: **HOLD pending stronger structured-feed evidence.**
 
 ### EcoFlow CA (CID 6175965) — PRE-SCREEN FAILED / DO NOT APPLY NOW
 
-Authenticated CJ details reviewed on 2026-08-26:
+Canada/CAD and useful physical consumer-electronics coverage, but authenticated policy explicitly states `Software: Not allowed`. The supplied evidence also does not establish a Product Catalog/datafeed path.
 
-- advertiser country: Canada
-- serviceable area: Canada
-- account currency and supported currency: CAD
-- prior-month conversion geography: 81.25% Canada and 18.75% United States
-- broad physical consumer-electronics catalog focused on portable power, solar, home backup and related energy products
-- incentivized traffic: allowed
-- email: allowed
-- sub-affiliates: allowed
-- social media: allowed
-- `Software: Not allowed`
-- visible terms contain substantial branded SEM/direct-link/domain/display-network restrictions
-- no explicit Product Catalog, product feed or datafeed availability was present in the supplied description or terms
+Decision: **DO NOT APPLY for the current software/mobile validation pass.**
 
-Material conflict:
+### Dell Financial Services Canada (CID 3671271) — NOT THE TARGET DELL PROGRAM / HOLD
 
-The explicit `Software: Not allowed` policy conflicts with ValuePilot's intended Android/mobile software client. This is a direct current-channel incompatibility regardless of the advertiser's otherwise strong Canada/CAD product fit. The supplied evidence also does not establish a structured Product Catalog/datafeed path.
+Authenticated details supplied on 2026-08-26 show:
 
-Decision: **DO NOT APPLY TO ECOFLOW CA FOR THE CURRENT SOFTWARE/MOBILE VALIDATION PASS.**
+- advertiser country and serviceable area: Canada
+- account currency: CAD
+- previous-month conversions: 100% Canada
+- refurbished/off-lease Dell computers sold through the separate Dell Financial Services / refurbished program
+- advertiser explicitly states publishers have access to an extensive DFS Product Catalog
+- supplied terms are only a partial policy excerpt focused on SEM/search authorization
+- no supplied `Software` policy, mobile-app permission, comparison-shopping restriction, or caching/indexing/display/redistribution language
+- supported-currency field was not populated in the supplied details
 
-Reconsider only if EcoFlow provides explicit written permission for ValuePilot's intended software/mobile use or if ValuePilot deliberately creates a separately authorized web-only channel consistent with the advertiser's terms. Any feed/catalog rights would still require separate validation.
+This is a separate CJ advertiser from `Dell Canada - Home & Small Business (CID 4380018)`, which is the candidate selected for the current batch. The DFS program should not be substituted for that target merely because it has a Product Catalog.
 
-## Next backup screens if needed
+Decision: **DO NOT APPLY YET.** First finish screening the intended Dell Canada - Home & Small Business program. DFS can be reconsidered later if its full Program Terms establish software/mobile compatibility and the catalog is strategically useful.
+
+## Next backup screen
 
 1. Dell Canada - Home & Small Business (CID 4380018)
 2. Aeptom (CID 7672100)
@@ -166,4 +127,5 @@ Unknown catalog-use rights do not automatically block a controlled advertiser ap
 3. Apply to DAVIDsTEA for controlled validation; if approved, treat Canada/CAD row semantics as a hard gate.
 4. Do not apply to PC Express, West Coast Kids or EcoFlow CA while `Software: Not allowed` remains in force.
 5. Keep Natura Market and Zwilling Canada on hold pending stronger feed/software evidence.
-6. Screen Dell Canada - Home & Small Business next.
+6. Do not substitute Dell Financial Services Canada for the intended Dell Canada - Home & Small Business screen.
+7. Screen **Dell Canada - Home & Small Business (CID 4380018)** next, using its full More Info + Program Terms.
