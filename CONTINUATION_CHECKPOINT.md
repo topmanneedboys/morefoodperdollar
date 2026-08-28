@@ -4,165 +4,163 @@ Updated: 2026-08-28
 
 Branch: `work/valuepilot-android-milestone`
 
-Purpose: provide a compact, durable recovery point for a future ChatGPT/engineer when conversational context is truncated or unavailable. This file is a navigation/checkpoint document, not a replacement for repository evidence.
+Purpose: compact durable recovery point for a future ChatGPT/engineer if conversational context is truncated. This is a navigation/checkpoint document; newer repository evidence overrides it.
 
-## Startup order for a new engineer
+## Startup order
 
-Read these before changing architecture or provider logic:
+Read before changing architecture or provider logic:
 
 1. `AGENTS.md`
-2. `CURRENT_STATE.md`
-3. `PROVIDER_ACCOUNT_STATUS.md`
-4. `RAKUTEN_JAMIESON_VALIDATION.md`
-5. `RAKUTEN_JAMIESON_FEED_AUDIT_2026-08-28.md`
-6. `ARCHITECTURE.md`
-7. `FUTURE_PRODUCT_VISION.md`
-8. provider-specific validation files relevant to the current task
-
-Repository evidence newer than this checkpoint overrides this checkpoint.
+2. `CONTINUATION_CHECKPOINT.md`
+3. `CURRENT_STATE.md`
+4. `PROVIDER_ACCOUNT_STATUS.md`
+5. `RAKUTEN_JAMIESON_VALIDATION.md`
+6. `RAKUTEN_JAMIESON_FEED_AUDIT_2026-08-28.md`
+7. `OPEN_DATA_INTEGRATION_STATUS.md`
+8. `ARCHITECTURE.md`
+9. `FUTURE_PRODUCT_VISION.md`
+10. provider-specific validation files relevant to the task
 
 ## Permanent product direction
 
-ValuePilot is a provider-neutral shopping-intelligence platform. It is **not** founded on Android Accessibility, persistent overlays, OCR, scraping, one affiliate network, or one presentation method.
+ValuePilot is a provider-neutral shopping-intelligence platform. It is not founded on Android Accessibility, persistent overlays, OCR, scraping, one affiliate network, one data vendor, or one presentation method.
 
-Permanent conceptual flow:
+Permanent flow:
 
-authorized evidence sources -> provider adapters -> provenance-preserving evidence -> deterministic validation/normalization -> Product identity + Offers -> bounded retrieval -> deterministic ranking -> immutable presentation -> replaceable UI
+authorized/open/user evidence -> provider adapters -> provenance-preserving claims/import records -> deterministic validation and normalization -> Product identity + Offers -> bounded retrieval -> deterministic ranking -> immutable presentation -> replaceable UI
 
 Permanent rules:
 
-- Product != Offer
-- source claims stay provenance-separated
-- stronger evidence may defeat weaker conflicting evidence; unresolved equal-strength conflicts block Best Value
-- deterministic money/quantity/currency logic
-- AI may classify/explain but must not invent authoritative price, quantity, ingredients, nutrition, availability or delivered totals
-- ranking is independent of commission, EPC, payout, sponsorship or provider preference
-- no unauthorized scraping or reverse engineering
-- no production network adapter merely because technical access exists
+- Product != Offer.
+- Sources contribute claims; they do not overwrite one shared product row.
+- Stronger same-scope evidence may defeat weaker evidence; unresolved equal-strength conflicts block Best Value.
+- Money, quantity and currency logic is exact and deterministic.
+- AI may classify/explain but must not invent authoritative price, quantity, ingredients, nutrition, availability or delivered totals.
+- Commission, EPC, payout, sponsorship and provider preference never influence ranking.
+- No unauthorized scraping or reverse engineering.
+- Technical/feed access never equals production authorization.
+- Do not add Android `INTERNET` or `ACCESS_NETWORK_STATE` merely for provider experimentation.
 
 ## Current milestone
 
-Milestone 5D — Authorized Real Shopping Data Provider Selection / validation.
+5D — Authorized Real Shopping Data Provider Selection / validation.
 
-The Android/shared-core foundation already has deterministic ShoppingEvidence, freshness/trust disposition, source isolation, GTIN validation, conflict resolution and evidence-backed unit-value gating. Built-in Android search evidence remains fictional/sample until deliberately replaced by production-authorized evidence.
+The shared deterministic foundation already includes ShoppingEvidence, evidence freshness/trust disposition, source-isolated namespaces, checksum-aware GTIN validation, conflict resolution, evidence-backed unit-value gating and a provider-neutral staged offer-import contract.
 
-Do not add Android `INTERNET` or `ACCESS_NETWORK_STATE` merely to accelerate provider experimentation.
+Built-in Android Search data remains explicitly fictional/sample evidence until a deliberately production-authorized provider path exists.
 
-## Latest major external milestone: Jamieson / Rakuten
+## Rakuten / Jamieson milestone
 
-Rakuten Product Catalog technical access is enabled.
+Rakuten Product Catalog technical access is enabled and Jamieson Vitamins is an active advertiser partner.
 
-Jamieson Vitamins advertiser partnership is active.
+On 2026-08-28 Rakuten Customer Support explicitly confirmed that ValuePilot is approved for the Jamieson Product Feed and that the feed is present in the authorized Product Catalog SFTP account.
 
-On 2026-08-28 Rakuten Customer Support explicitly confirmed:
+The complete compressed TXT feed was downloaded and audited offline. The proprietary catalog file is not committed.
 
-- ValuePilot is approved for the Jamieson advertiser Product Feed.
-- The Jamieson feed is already present in the authorized Product Catalog SFTP account.
+Sanitized empirical checkpoint:
 
-The complete compressed TXT catalog was downloaded and inspected offline. The proprietary catalog file is **not** committed to the repository.
-
-Empirical complete-feed checkpoint:
-
-- 273 product records; trailer count matches
+- 273 product rows and matching trailer count
 - all 273 rows have the documented 38-field shape
 - 273/273 CAD
 - 273/273 in-stock
-- 273 unique SKUs
-- 273 unique source Product IDs
+- 273 unique SKUs and 273 unique source Product IDs
 - UPC/GTIN present on 271/273; all 271 supplied values checksum-valid
-- product URL valid on 273/273
-- image URL valid on 273/273
-- manufacturer present as Jamieson on all 273
+- product and image URL syntax valid on 273/273
+- manufacturer present as Jamieson on 273/273
 - description present on 272/273
-- Class ID blank on all 273 rows
-- Sale Price < Retail Price on 48 rows
-- Sale Price = Retail Price on 223 rows
-- Sale Price > Retail Price on 2 rows
+- Class ID blank on all 273
+- Sale Price < Retail Price: 48
+- Sale Price = Retail Price: 223
+- Sale Price > Retail Price: 2
 
-Important interpretation:
+Interpretation:
 
-- advertiser feed approval and actual file availability are now proven
-- production caching/indexing/display/mobile rights are **not** yet proven
-- the two inverted Sale Price relationships prove price-field semantics need deterministic guards
-- package quantity is not established by the generic feed schema and all Jamieson Class IDs are blank
-- therefore: **273 structural offer candidates, 0 authoritative unit-value candidates until quantity/count is established by a validated source**
-- do not guess package size/count from title, description, image filename, SKU, price or neighboring variants
-- do not use supplement marketing claims as ValuePilot medical/efficacy/safety ranking evidence
+- advertiser feed approval and actual file availability are proven;
+- caching/persistence/indexing/display/mobile production rights are not yet proven;
+- Sale Price cannot be blindly treated as a discount/current price;
+- package quantity/count is not established by the Rakuten feed;
+- current structural offer candidates = 273;
+- current authoritative unit-value candidates = 0 until quantity is established by validated separately attributed evidence;
+- never guess count/size from title, description, image filename, SKU, price or nearby variants;
+- supplement marketing claims are not medical/efficacy/safety ranking evidence.
 
-See `RAKUTEN_JAMIESON_VALIDATION.md` and `RAKUTEN_JAMIESON_FEED_AUDIT_2026-08-28.md` for the durable provider/audit record.
+See `RAKUTEN_JAMIESON_VALIDATION.md` and `RAKUTEN_JAMIESON_FEED_AUDIT_2026-08-28.md`.
 
-## Current provider/account state
+## Rakuten qualifier status
 
-Use `PROVIDER_ACCOUNT_STATUS.md` as the fast-changing authority.
+`tools/qualify_rakuten_product_catalog.py` is an offline research/validation tool, not a production adapter.
 
-As of this checkpoint:
+After the real Jamieson audit it was hardened to preserve Retail Price and Sale Price separately, report below/equal/above relationships, avoid inferring discounts, report identity/description/manufacturer/Class-ID coverage, keep file-generation time separate from product freshness, and retain `production_authorized = false`.
 
-- Rakuten/Jamieson: advertiser Product Feed approved and actual complete catalog available
+Synthetic regression tests cover the discovered price relationships. The `Test merchant feed qualification` GitHub Actions workflow passed after those changes.
+
+## Provider-neutral staged offer import — completed and verified
+
+`android/shared-core/src/main/kotlin/com/valuepilot/core/ProviderOfferImport.kt` now defines the provider-neutral boundary between parsed provider rows and canonical production offers.
+
+It deliberately does **not** create an `Offer` or choose a current price.
+
+Key invariants:
+
+- provider item ID, SKU and supplied GTIN remain source-scoped;
+- malformed GTIN is preserved for audit but is never promoted as validated cross-source identity;
+- checksum-valid GTIN may be promoted into the existing `SourceProductIdentity` contract;
+- source price fields remain distinct raw fields with optional parsed `Money`;
+- price semantics remain `UNRESOLVED_SOURCE_FIELDS` until an explicit provider semantic resolver exists;
+- malformed source price text may remain auditable without becoming money;
+- dataset/file generation time remains separate from per-offer observation time;
+- platform-neutral boundary: no Android, UI, filesystem, network, retailer-specific logic or hidden clock.
+
+`ProviderOfferImportTest.kt` covers price-field preservation, inverted-price non-selection, valid/invalid GTIN promotion, malformed-price auditability, duplicate source-field rejection and freshness separation.
+
+GitHub Actions build run for commit `4b423af63a64abd403ef01baf3821e65e112bd8b` completed successfully. Browser checks, shared-core/app tests, Android lint/assemble and the APK privacy-boundary check all passed; no Android network permission was introduced.
+
+## Open Food Facts / quantity path
+
+`OpenFoodFactsImportedMetadata.kt` already implements a strict network-free metadata mapping keyed by checksum-valid GTIN. Today it accepts structured whole-product quantity only when Open Food Facts supplies a positive normalized `product_quantity` with unit `g` or `ml`; simple raw mass/volume strings are only cross-checked and disagreements fail closed.
+
+It emits PACKAGE_QUANTITY with `SOURCE_ASSERTED_METADATA` authority and cannot emit retailer price, stock, promotion or merchant identity.
+
+Previous real Open Prices × Open Food Facts measurement found a useful GTIN quantity join for mass/volume products, but this does not prove count coverage for Jamieson tablets/capsules/gummies. Do not broaden to title/description guessing.
+
+## Provider/account checkpoint
+
+Use `PROVIDER_ACCOUNT_STATUS.md` as the fast-changing authority. At this checkpoint:
+
+- Rakuten/Jamieson: advertiser feed approved and actual complete catalog available
 - Well.ca: pending unless newer evidence
 - Bath Depot: pending unless newer evidence
 - Tru Earth: rejected; do not reapply now
 - Giant Tiger: rejected; do not reapply now
 - CJ: TSC, Brother Canada and DAVIDsTEA pending; AOSOM older pending unless newer evidence
-- Awin: active; Skip CA rejected due publisher type; do not misrepresent publisher type
+- Awin active; Skip CA rejected due publisher type; do not misrepresent publisher type
 - impact.com Marketplace application declined; no duplicate/blind reapply
-- Lowvyn: rights/technical inquiry sent; wait for written response before integration
+- Lowvyn rights/technical inquiry sent; wait for written response before integration
 
-For Lowvyn, if the initial request is approved, continue in the same email thread and ask about partner-level/full-catalog access, efficient sync/bulk mechanisms, production rate limits, caching/storage, consumer display, attribution and affiliate/commercial routing. Do not make Lowvyn the only provider dependency.
-
-## Rakuten qualifier hardening completed and verified
-
-The first real Jamieson feed exposed a concrete issue: positive `Sale Price` values are not always below `Retail Price`.
-
-`tools/qualify_rakuten_product_catalog.py` has now been hardened so that it:
-
-- preserves Sale Price and Retail Price as separate source fields/semantics
-- reports `sale < retail`, `sale == retail`, and `sale > retail` separately
-- does not infer a discount from the field names alone
-- uses Retail Price first only for structural numeric qualification coverage, with Sale Price only as a fallback if Retail Price is not positive
-- reports short/long-description coverage
-- reports manufacturer-name coverage
-- reports missing UPCs explicitly
-- reports blank/present Class IDs explicitly
-- emits a dedicated `price_semantics_gate`
-- still reports `production_authorized = false`
-
-Synthetic regression coverage was added in `tools/tests/test_qualify_rakuten_product_catalog.py` for below/equal/above price relationships and the non-production price-semantics gate.
-
-The repository's `Test merchant feed qualification` GitHub Actions workflow ran automatically after the source/test commits and completed successfully on the commit containing both the qualifier hardening and the new tests. That workflow compiles the qualification harnesses and runs the `test_qualify_*.py` unit-test suite on Python 3.12.
-
-Do not commit the proprietary Jamieson feed as a fixture. Use synthetic test rows.
-
-## Sanitized real-feed report
-
-`RAKUTEN_JAMIESON_FEED_AUDIT_2026-08-28.md` preserves the empirical counts and interpretation without proprietary catalog rows, URLs, credentials or private account identifiers.
-
-This is the durable report future agents should use for the first Jamieson feed unless a newer actual feed is audited.
+If Lowvyn approves the initial request, reply in the same thread about partner/full-catalog access, efficient synchronization/bulk mechanisms, production rate limits, caching/storage, consumer display, attribution and affiliate/commercial routing. Do not make Lowvyn the only provider dependency.
 
 ## Next engineering sequence
 
-Highest-value sequence now:
+1. Measure whether a bounded public metadata source can supply authoritative package **count** for the Jamieson GTINs without committing the proprietary feed or GTIN list.
+2. Inspect/extend quantity modeling only if the source has a documented, deterministic count field; use synthetic tests and fail closed on ambiguity.
+3. Keep quantity provenance separate from Jamieson merchant-price provenance and join only through strong stable identity, preferably checksum-valid GTIN.
+4. Do not create canonical production Offers while Retail/Sale semantics and data-use rights remain unresolved.
+5. Do not automate SFTP credentials or add Android networking yet.
+6. Continue waiting on screened provider decisions and Lowvyn written response; do not mass-apply elsewhere.
 
-1. Define a provider-neutral offline import mapping that preserves both supplied price fields, source Product ID, SKU, GTIN, availability, product/image URLs and provenance without deciding retail-vs-sale semantics prematurely.
-2. Establish package quantity/count from a validated source joined by strong identity, preferably checksum-valid GTIN where possible; preserve that source's separate provenance.
-3. Only after rights are clear, decide whether/how Jamieson evidence may enter production search/display/ranking.
-4. Do not automate SFTP credentials or add Android networking before those gates are deliberately cleared.
-5. Continue waiting on the deliberately screened provider decisions and Lowvyn written response; do not mass-apply elsewhere.
+## Security
 
-## Security checkpoint
+Operational provider credentials have appeared in conversational material. Never repeat, commit, log, screenshot, embed, or ask for them again. Repository documentation intentionally contains no file-transfer credentials or private account identifiers.
 
-Operational provider credentials have previously appeared in conversational material. Never repeat, commit, log, screenshot, embed or ask for them again. Repository documentation intentionally contains no file-transfer username/password or private account identifiers.
+Future production automation must keep secrets outside source control and use an appropriate local/secret-management boundary.
 
-For future automation, secrets must live outside source control in an appropriate local/secret-management mechanism and should be rotated before production automation if needed.
+## Verification discipline
 
-## Tests / normal engineering discipline
-
-For Android/shared-core changes, preserve the repo's standard validation sequence:
+For Android/shared-core changes:
 
 ```bash
 cd android
 ./gradlew --no-daemon :shared-core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 ```
 
-For Python feed-qualification changes, run the focused `tools/tests` suite relevant to the changed qualifier before claiming success.
-
-Do not weaken tests to make a change pass.
+For Python feed-qualification changes, run the focused `tools/tests` suite relevant to the changed qualifier. Never weaken tests to make a change pass.
