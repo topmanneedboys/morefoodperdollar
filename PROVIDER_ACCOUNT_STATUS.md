@@ -14,7 +14,7 @@ This file is an operational checkpoint only. It does not authorize production ne
 | --- | --- | --- |
 | Rakuten Advertising publisher account | ACTIVE | Keep technical Product Catalog access isolated from production authorization |
 | Rakuten Product Catalog technical account | ENABLED | Credentials remain outside repo/app; no automatic production downloader yet |
-| Jamieson Vitamins | PARTNERED + ADVERTISER PRODUCT FEED APPROVED + ACTUAL COMPLETE FEED AVAILABLE | Price schema semantics resolved; next gates are Android/feed-use rights, DSA approval, freshness, Canadian offer scope and broader package quantity |
+| Jamieson Vitamins | PARTNERED + ADVERTISER PRODUCT FEED APPROVED + ACTUAL COMPLETE FEED AVAILABLE + RIGHTS/DSA CLARIFICATION SENT 2026-08-28 | Await written Rakuten response; keep freshness, Canadian scope, broader package quantity and production authorization separate |
 | GS1 Canada ECCnet | DATA RECIPIENT ELIGIBILITY / RIGHTS INQUIRY SENT 2026-08-28 | Await written eligibility, GTIN net-content scope, mobile/search/cache/display rights and commercial/API terms |
 | Well.ca | APPLIED / PENDING unless newer evidence arrives | Wait for advertiser decision |
 | Tru Earth | REJECTED on 2026-08-26 | Do not reapply now; no advertiser-specific reason established |
@@ -127,6 +127,8 @@ However, Rakuten's Network Policies expressly cover installed/mobile application
 The existing Jamieson Product Feed approval is **not** treated as Android/DSA approval.
 
 Product Catalog documentation also still describes advertiser feed approval for website/blog use, and the Jamieson partnership approval message refers to use on the approved website/marketing channel. Therefore Android feed-display/cache/index rights require written clarification before production integration.
+
+On 2026-08-28, ValuePilot sent that clarification in the existing Rakuten support case, asking specifically about Android display/search, cache/index rights, retention/deletion obligations, DSA review before affiliate links, and separate Jamieson approval for the mobile/DSA distribution method. Await the written response; do not resend the same request unless the response is incomplete or creates a new unresolved issue.
 
 Detailed decision: `RAKUTEN_PRICE_AND_ANDROID_RIGHTS_GATE.md`.
 
@@ -247,12 +249,12 @@ These sources remain provenance-separated. A weaker source must not overwrite a 
 
 1. Do not spend more time proving generic Rakuten Retail/Sale field meanings; that schema question is resolved.
 2. Keep the 2 Jamieson Sale > Retail rows as semantic-invalid price evidence and fail closed rather than auto-correcting them.
-3. Obtain written Rakuten clarification of Product Catalog cache/index/display/mobile/retention rights and whether feed use inside the installed Android app needs separate advertiser permission.
+3. Rakuten Android/feed-use/retention/DSA clarification was sent on 2026-08-28; await the written response and do not send a duplicate request.
 4. Before enabling Rakuten network links in Android, complete Rakuten DSA/Network Quality approval and advertiser approval for the mobile distribution method.
 5. Define a bounded dataset/current-price freshness policy using retrieval/delta evidence without inventing per-product freshness.
 6. Await GS1 Canada ECCnet response for broader GTIN-level package-content/count coverage and rights.
 7. Wait for TSC, Brother Canada, DAVIDsTEA, Well.ca, Bath Depot and AOSOM decisions rather than submitting more advertiser applications now.
 8. Wait for Lowvyn's written rights/technical response; if approved, discuss partner/full-catalog access before deeper integration.
-9. Continue bounded, network-free open-data engineering only behind provenance/conflict/rankability gates.
+9. Continue bounded, network-free engineering only behind provenance/conflict/rankability gates.
 10. Do not add Android `INTERNET` or `ACCESS_NETWORK_STATE` permissions yet.
 11. Never use commission, EPC, payout, sponsorship or provider preference as a ValuePilot ranking input.
