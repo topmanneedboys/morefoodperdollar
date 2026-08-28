@@ -46,6 +46,21 @@ Rakuten's primary record has a currency field but no universal row-level country
 
 Repeated product names exist across distinct source rows. Name-only deduplication is unsafe; source Product ID, SKU and strong GTIN evidence must be preserved.
 
+### GTIN representation distribution
+
+A later aggregate-only identity inspection found:
+
+- 12-digit source GTINs: **248 / 271**
+- 13-digit source GTINs: **1 / 271**
+- 14-digit source GTINs: **22 / 271**
+- source representations changed by Open Food Facts' documented leading-zero canonicalization: **267 / 271**
+- canonical unique identities after that representation normalization: **271**
+- canonical identity collisions: **0**
+
+This is not a product-count change and does not alter provider provenance. It means that exact textual equality of checksum-valid GTIN strings is insufficient for cross-source joins when one source uses UPC-A/GTIN-12 and another returns the equivalent zero-prefixed GTIN-13 representation.
+
+ValuePilot must preserve the exact source GTIN for audit while using a deterministic canonical GTIN for cross-source identity matching. Invalid GTINs must never be repaired by normalization.
+
 ## Description / class coverage
 
 - short-description coverage: **272 / 273**
@@ -56,21 +71,17 @@ All Class IDs being blank matters because the documented class-specific Size mec
 
 ### Untyped attribute-section observation
 
-The complete feed contains another important schema-quality signal:
-
 - Product field 29 / Attribute 1 populated: **273 / 273**
 - Product fields 30–38 / Attributes 2–10 populated: **0 / 273**
 - Class ID populated: **0 / 273**
 
 Rakuten documents fields 29–38 as class-dependent attribute fields. Without a Class ID, ValuePilot has no documented semantic mapping for the populated Attribute 1 values.
 
-Therefore Attribute 1 must remain **opaque, untyped source data**. Its presence does not establish package quantity, a product identifier, a category, or any other factual domain. ValuePilot must not reverse-engineer its meaning from value shape, neighboring products, or correlations with other fields.
-
-This is another reason not to infer quantity from undocumented feed behavior even when a field is populated consistently.
+Therefore Attribute 1 remains **opaque, untyped source data**. Its presence does not establish package quantity, a product identifier, a category, or any other factual domain. ValuePilot must not reverse-engineer its meaning from value shape, neighboring products, or correlations with other fields.
 
 ## Price relationship findings
 
-Relationship between the supplied Sale Price and Retail Price fields:
+Relationship between supplied Sale Price and Retail Price:
 
 - Sale Price < Retail Price: **48**
 - Sale Price = Retail Price: **223**
@@ -78,37 +89,43 @@ Relationship between the supplied Sale Price and Retail Price fields:
 
 Interpretation:
 
-- a positive Sale Price is not sufficient evidence of a discount
-- equal values must not produce a savings claim
-- inverted values must not produce a savings claim
-- ValuePilot must preserve both supplied price fields and validate their semantics rather than silently choosing one based only on the label
-
-The offline Rakuten qualifier has been hardened to report these relationships separately and to keep production authorization false.
+- a positive Sale Price is not sufficient evidence of a discount;
+- equal values must not produce a savings claim;
+- inverted values must not produce a savings claim;
+- both fields must remain preserved until their exact advertiser/feed semantics are established.
 
 ## Quantity / unit-value result
 
-The primary Rakuten Product Catalog schema does not provide a universal structured package quantity. In this Jamieson feed, all Class IDs are blank, so no validated class-specific Size field is available through that mechanism.
+The primary Rakuten Product Catalog schema does not provide a universal structured package quantity. All Jamieson Class IDs are blank, so no validated class-specific Size field is available through that mechanism.
 
-The populated but untyped Attribute 1 column does not change that conclusion because no documented Class ID exists to give it semantics.
+The populated but untyped Attribute 1 column does not change that conclusion.
 
 Therefore:
 
 - structural CAD offer candidates: **273**
 - authoritative unit-value candidates from this feed alone: **0**
 
-Do **not** guess package count or size from product title, description, image filename, SKU, price, untyped attributes, or neighboring variants.
+Do **not** guess package count/size from title, description, image filename, SKU, price, untyped attributes, or neighboring variants.
 
-A future package-quantity claim may come from a separate authorized/appropriately licensed source joined by strong identity such as checksum-valid GTIN. Provenance must remain separate so the quantity source is not misrepresented as the merchant-price source.
+A future package-quantity claim may come from a separate authorized/appropriately licensed source joined by canonical checksum-valid GTIN identity. Provenance must remain separate so the quantity source is never misrepresented as the merchant-price source.
+
+## Open Food Facts coverage-run correction
+
+The first local quantity-coverage run reported 0 Open Food Facts matches for the 271 valid source GTINs. That result is **not valid coverage evidence** because the first tool compared normalized API response codes to raw provider GTIN strings.
+
+Given the representation distribution above, legitimate matches could be discarded. The corrected coverage tool canonicalizes only documented leading-zero equivalent representations before matching and preserves exact source identity separately.
+
+A corrected normalized rerun is required before any Jamieson Open Food Facts coverage percentage is claimed.
 
 ## Freshness limitation
 
-The feed HDR timestamp is file-generation/deposit evidence only. It must not be promoted to per-product price freshness unless the provider's semantics explicitly establish that meaning.
+The feed HDR timestamp is file-generation/deposit evidence only. It must not be promoted to per-product price freshness unless provider semantics explicitly establish that meaning.
 
 ## Supplement/health guardrail
 
 Descriptions contain advertiser health/marketing language. ValuePilot must not transform those statements into its own claims that a supplement is healthier, more effective, safer, clinically better, or medically preferable.
 
-Initial ranking/comparison evidence should remain objective and source-grounded: price, validated package quantity/count, printed strength, sourced label/ingredient facts where permitted, and deterministic value calculations.
+Initial ranking/comparison evidence remains objective and source-grounded: price, validated package quantity/count, printed strength, sourced label/ingredient facts where permitted, and deterministic value calculations.
 
 ## Engineering decision
 
@@ -118,10 +135,11 @@ Current decision:
 
 Next gates:
 
-1. keep the hardened offline qualifier regression-tested, including untyped attribute detection
-2. preserve both price fields and all source/provenance identifiers in the provider-neutral staged import boundary
-3. establish package quantity/count through validated identity-matched evidence
-4. establish exact caching/indexing/display/mobile rights
-5. only then consider a production Rakuten/Jamieson adapter or consumer ranking path
+1. rerun the barcode-normalized Open Food Facts quantity-coverage measurement;
+2. preserve raw provider GTIN and canonical cross-source GTIN separately;
+3. preserve both price fields and source/provenance identifiers in staging;
+4. establish package quantity/count through validated identity-matched evidence;
+5. establish exact caching/indexing/display/mobile rights;
+6. only then consider a production Rakuten/Jamieson adapter or consumer ranking path.
 
 The proprietary feed itself must not be committed as a repository fixture. Use synthetic rows for tests.
