@@ -23,223 +23,184 @@ Read before changing architecture/provider logic:
 
 ## Permanent architecture
 
-ValuePilot is a provider-neutral shopping-intelligence platform, not an Accessibility/overlay/OCR product.
+ValuePilot is provider-neutral shopping intelligence, not an Accessibility/OCR/overlay product.
 
 Permanent flow:
 
-authorized/open/user evidence -> provider adapters -> provenance-preserving claims/import records -> deterministic validation/normalization -> Product identity + Offers -> bounded retrieval -> deterministic ranking -> immutable presentation -> replaceable UI
+`authorized/open/user evidence -> provider adapters -> provenance-preserving claims/import records -> deterministic validation/normalization -> Product identity + Offers -> bounded retrieval -> deterministic ranking -> immutable presentation -> replaceable UI`
 
 Permanent rules:
 
 - Product != Offer.
-- Sources contribute claims; they never overwrite one shared product row.
-- Stronger same-scope evidence may defeat weaker evidence; unresolved equal-strength conflicts block Best Value.
-- Money, quantity, currency and promotion arithmetic are exact/deterministic.
-- AI may classify/explain but must not invent authoritative facts.
-- Commission, EPC, payout, sponsorship and provider preference never affect ranking.
+- Sources contribute claims; they do not overwrite one shared row.
+- Exact money/quantity/currency/promotion math only.
+- AI may classify/explain but never invent authoritative facts.
+- Affiliate/provider economics never affect ranking.
 - No unauthorized scraping/private-endpoint reverse engineering.
 - Technical/feed access != production authorization.
-- No Android `INTERNET` / `ACCESS_NETWORK_STATE` merely for provider experiments.
+- Dataset recency != per-offer freshness.
+- Currency/context != geography.
+- Shared core owns no hidden clock.
+- No Android networking merely for provider experiments.
 
 ## Current milestone
 
 5D — Authorized Real Shopping Data Provider Selection / validation.
 
-Built-in Android Search remains explicitly fictional/sample evidence until a production provider path passes every machine-enforced activation/evidence gate.
+Built-in Android Search remains fictional/sample evidence until a real provider path passes authorization, geography, price, freshness, lifecycle and downstream evidence gates.
 
-## Verified provider-neutral hardening
+## Verified production-hardening chain
 
-### Price-pair semantics
+- `5bb647a8485f257ec51b3eb0fe39b9c7caccb0a0` — provider-neutral discounted/reference price relationship validation.
+- `a8e98b8ce333a612538841566972d6cab58dde88` — dataset recency separate from per-offer freshness.
+- `6aed414bd5f89cf7ac6dfb739464c6f57f5abe78` — fail-closed production authorization profiles/gates.
+- `7606ea941f80e3dc6b2ea362bc688c7434215195` — fail-closed provider offer-country validation; CAD is not Canadian scope proof.
+- `f58b400533bdf9a0705fb8e88680e4b56ce9d94e` — staged production offer candidate; still not canonical `Offer` and no rankability.
+- `e546822a448e150674a2769d9899a856124b50fb` — authoritative corrected revocable production dataset lifecycle.
 
-Commit `5bb647a8485f257ec51b3eb0fe39b9c7caccb0a0` adds structural discounted/reference price-pair assessment.
+The exact lifecycle commit passed browser checks, shared-core/app tests, lint, APK build, JVM summary, Android privacy-boundary verification, release packaging/checksums and artifact upload.
 
-It never selects current price or grants rankability. Missing/malformed/non-positive/incomparable values fail closed; discounted > reference becomes an explicit semantic conflict.
+## Revocable production dataset lifecycle
 
-### Dataset recency
+`ProductionDatasetLifecycle.kt` provides:
 
-Commit `a8e98b8ce333a612538841566972d6cab58dde88` adds dataset/file recency classification separate from per-offer freshness.
+- exact `ProductionDatasetSnapshotRef` = provider + dataset namespace + opaque adapter-supplied snapshot id;
+- snapshot binding for staged candidates;
+- profile-scoped lifecycle states `ACTIVE`, `SUSPENDED`, `REVOKED`, `RETIRED`;
+- monotonic caller-supplied lifecycle revisions;
+- effective/expiry windows;
+- terminal same-snapshot/profile revocation/retirement;
+- point-in-time activation that rechecks current authorization and current offer freshness.
 
-Permanent rule: **a recent dataset is not a fresh offer.**
+Critical invariants:
 
-### Production authorization gate
+- dataset namespace != dataset snapshot;
+- staged candidate != active candidate;
+- no lifecycle record = inactive;
+- suspended/revoked/retired/not-yet-effective/expired = inactive;
+- current authorization is re-evaluated on every activation check;
+- authorization from another provider/dataset cannot be reused;
+- old staged `FRESH` evidence becomes inactive when its original price observation becomes stale under the current caller-supplied freshness policy;
+- weaker custom profile with the same profile ID cannot bypass the base consumer-mobile-catalog requirements;
+- revoking one dataset does not disable another;
+- activation creates no canonical `Offer` and grants no durable rankability/display permission.
 
-Commit `6aed414bd5f89cf7ac6dfb739464c6f57f5abe78` adds the fail-closed provider production activation boundary.
+## Withdrawal/deletion distinction
 
-For the consumer mobile offer-catalog profile, every required gate must be explicitly `SATISFIED`:
+`SourceIsolatedEvidenceIndex.removeNamespace(namespaceId)` already removes one evidence namespace without mutating others.
 
-- data access
-- consumer display
-- caching
-- indexing
-- mobile app
-- retention/deletion policy
-- offer geography
-- price semantics
-- dataset recency policy
-- offer freshness policy
+Do not automatically delete a namespace when one activation profile becomes revoked/retired. Profile lifecycle and dataset-level retention/deletion are distinct.
 
-Missing, pending, denied, unknown, or incorrectly-not-required required gates block activation.
+Permanent rule:
 
-When affiliate/network links are enabled, the stronger profile also requires affiliate-link permission, installed-software/network approval, advertiser distribution approval and tracking/privacy readiness.
+**revocation blocks use immediately; physical deletion requires a separate explicit dataset-level withdrawal/retention decision.**
 
-A feed-access approval alone can never authorize production.
+This avoids deleting data when one use profile is revoked but another permitted use or retention obligation remains.
 
-Full ValuePilot Android workflow passed for the exact commit, including privacy-boundary verification.
+## Canonical Offer / unit value
 
-### Offer-country gate
+`EvidenceBackedUnitValuePolicy` already requires rankable price evidence, correct price/quantity domains, exact same stable product key, exact money/quantity fingerprints and strong quantity authority.
 
-Commit `7606ea941f80e3dc6b2ea362bc688c7434215195` adds fail-closed provider dataset offer-country validation.
+Do not duplicate it.
 
-Strong bases:
-
-- explicit offer country
-- explicit dataset country
-- documented dataset market
-
-Weak/unresolved bases:
-
-- currency only
-- advertiser context only
-- inferred
-- unknown
-
-Permanent rule: **CAD != Canadian offer scope.**
-
-A strong Canada match can satisfy `OFFER_GEOGRAPHY_VALIDATED`; a strong different-country declaration denies it; weak/contextual evidence stays unknown and blocks activation.
-
-Full ValuePilot Android workflow passed for the exact commit, including privacy-boundary verification.
-
-### Staged production offer candidate
-
-Commit `f58b400533bdf9a0705fb8e88680e4b56ce9d94e` adds the provider-neutral staged-production candidate boundary.
-
-A row cannot become `StagedProductionOfferCandidate` unless:
-
-- the activation profile contains at least the complete consumer-mobile-catalog requirements;
-- authorization belongs to the same provider + dataset namespace;
-- geography belongs to the same provider + dataset and is independently re-evaluated;
-- the effective authorization decision is fully authorized;
-- evidence is real-world, from a known non-fixture channel, and not inferred/unknown;
-- a safe validated source identity exists;
-- the adapter explicitly declares the current-price field and optional reference field;
-- price values are positive exact compatible money;
-- any declared current<=reference rule passes;
-- a real `priceObservedAtEpochMillis` is present;
-- caller-supplied per-offer freshness is `FRESH` or `AGING`.
-
-It fails closed on missing authorization, scope mismatch, weak geography, explicit geography mismatch, missing/malformed/incompatible/inverted price, missing per-offer timestamp, unknown/future/stale freshness, weak claim, or invalid-only identity.
-
-Permanent rules:
-
-- dataset timestamp cannot substitute for offer freshness;
-- currency/context cannot substitute for country;
-- authorization cannot be reused across a different provider/feed;
-- a weak custom activation profile cannot bypass the base profile;
-- staged candidate != canonical `Offer`;
-- staged candidate has no rankability permission;
-- quantity/unit value/Best Value remain separately gated.
-
-Full ValuePilot Android workflow passed for exact commit `f58b400533bdf9a0705fb8e88680e4b56ce9d94e`, including privacy-boundary verification and release artifact upload.
-
-### Source withdrawal already exists
-
-`SourceIsolatedEvidenceIndex.removeNamespace(namespaceId)` already removes exactly one dataset namespace and its claims without touching other providers. Do not duplicate this mechanism. Future activation/revocation should connect to this existing source-isolation boundary.
+Do not yet materialize production canonical `Offer` objects from active candidates. `Offer` itself has no lifecycle/provenance handle, so lifecycle-to-Offer coupling must be designed before production Offer creation/ranking can be enabled.
 
 ## Jamieson / Rakuten
 
-Rakuten technical Product Catalog access is enabled. Jamieson partnership + separate Product Feed approval + actual complete file availability are proven.
+Jamieson partnership + separate Product Feed approval + actual complete Rakuten catalog-file availability are proven.
 
-Sanitized feed facts:
+Sanitized feed checkpoint:
 
-- 273 product rows
-- 273/273 38-field shape
-- 273/273 CAD
-- 273/273 in-stock
-- 273 unique SKUs and Product IDs
-- GTIN present 271/273; all supplied GTINs checksum-valid
-- Sale < Retail: 48
-- Sale = Retail: 223
-- Sale > Retail: 2
-- Class ID blank all rows; opaque Attribute 1 must not be reverse-engineered
+- 273 rows;
+- 273/273 documented 38-field shape;
+- 273/273 CAD and in-stock;
+- 273 unique SKUs/Product IDs;
+- GTIN present 271/273; all supplied GTINs checksum-valid;
+- Sale < Retail: 48;
+- Sale = Retail: 223;
+- Sale > Retail: 2;
+- Class ID blank all rows; Attribute 1 remains opaque/untyped.
 
-Rakuten generic schema semantics are resolved:
+Rakuten generic field semantics are resolved:
 
-- Sale Price = discounted price field
-- Retail Price = non-discounted/reference field
+- Sale Price = discounted field;
+- Retail Price = non-discounted/reference field.
 
-Therefore the 2 Sale > Retail rows are semantic-invalid price evidence and must fail closed; never swap or auto-correct them.
+The two Sale > Retail rows are semantic-invalid and must fail closed; never swap/repair them.
 
-Still blocked for production:
+Jamieson is **NOT production-authorized**. Still unresolved:
 
-- cache/index/search/display/mobile rights
-- retention/deletion obligations
-- Android installed-software/DSA approvals where applicable
-- per-offer/current-price freshness
-- Canadian offer geography beyond CAD/context
-- broad package quantity
+- cache/index/search/display/mobile rights;
+- retention/deletion obligations;
+- installed-software/DSA approvals where applicable;
+- trustworthy per-offer price observation freshness;
+- Canadian offer geography beyond CAD/context;
+- broad package quantity.
 
-The Rakuten Android/feed-use/retention/DSA clarification request was already sent on 2026-08-28. Do not send a duplicate unless their response creates a new gap.
+Current Jamieson rows cannot pass the staged/lifecycle production path because strong Canadian offer scope and trustworthy per-offer price observation time are absent.
 
-Under the machine gates, Jamieson is **NOT production-authorized today**. `OFFER_GEOGRAPHY_VALIDATED` remains unknown because CAD/context does not prove Canada scope, and the feed does not provide a trustworthy per-offer price observation timestamp for the staged candidate boundary.
+Rakuten clarification was already sent on 2026-08-28. Do not resend unless the response creates a new gap.
 
 ## Jamieson × Open Food Facts
 
-Historical 0/271 raw-code result is invalid coverage evidence.
+Historical raw-code 0/271 result is invalid coverage evidence.
 
-Correct normalized authoritative result:
+Correct normalized result:
 
-- 273 product records
-- 271 valid GTINs
-- 102 normalized OFF matches
-- 169 unmatched
-- 12 exact supplement-count candidates
-- 2 structured mass/volume-only
-- 0 quantity conflicts
-- 88 matched but no usable quantity
-- 1 search-fallback batch / 20 direct reads
+- 273 product records;
+- 271 valid GTINs;
+- 102 normalized OFF matches;
+- 169 unmatched;
+- 12 exact supplement-count candidates;
+- 2 structured mass/volume-only;
+- 0 quantity conflicts;
+- 88 matched but no usable quantity;
+- 1 search-fallback batch / 20 direct reads.
 
-Open Food Facts is supplemental only; 12/271 valid-GTIN identities are exact-count-ready under strict rules. Never relax the parser or infer counts from Rakuten text.
+OFF is supplemental only. Only 12/271 valid-GTIN identities are exact-count-ready under strict rules. Never infer count from Rakuten text or loosen the parser to inflate coverage.
 
-## Package-content source
+## Package-content provider path
 
-Health Canada LNHPD does not supply GTIN-level package net count.
+Health Canada LNHPD does not provide GTIN-level package net count.
 
-GS1 Canada ECCnet is the strategic next package-content candidate. The Data Recipient eligibility/rights inquiry was already sent on 2026-08-28.
+GS1 Canada ECCnet remains the strategic GTIN/package-content candidate. The Data Recipient eligibility/rights inquiry was already sent on 2026-08-28.
 
 Do not implement ECCnet until GS1 confirms eligibility, GTIN/net-content scope, consumer/mobile/search/cache rights, restrictions and commercial/API terms.
 
 ## Provider/account checkpoint
 
-Use `PROVIDER_ACCOUNT_STATUS.md` for fast-changing external status.
+Use `PROVIDER_ACCOUNT_STATUS.md` for fast-changing account state.
 
-Key state:
+Current high-level status:
 
-- Rakuten/Jamieson: feed approved + actual catalog available; production gates still blocked
-- GS1 Canada ECCnet: inquiry sent; await response
-- Well.ca / Bath Depot: pending unless newer evidence
-- Tru Earth / Giant Tiger: rejected; no reapply now
-- CJ: TSC, Brother Canada, DAVIDsTEA pending; AOSOM older pending unless newer evidence
-- Awin active; Skip CA rejected due publisher type; do not misrepresent publisher type
-- impact.com Marketplace declined; no blind duplicate
-- Lowvyn inquiry sent; await response
+- Rakuten/Jamieson: feed approved + actual catalog available; production gates blocked;
+- GS1 Canada ECCnet: inquiry sent; await response;
+- Well.ca / Bath Depot: pending unless newer evidence;
+- Tru Earth / Giant Tiger: rejected; do not reapply now;
+- CJ: TSC, Brother Canada, DAVIDsTEA pending; AOSOM older pending unless newer evidence;
+- Awin active; Skip CA rejected due publisher type; never misrepresent publisher type;
+- impact.com Marketplace declined; no blind duplicate;
+- Lowvyn inquiry sent; await response.
 
-## Immediate next work
+## Immediate next safe work
 
 Do not resend Rakuten or GS1 inquiries.
 
-Continue only bounded provider-neutral/offline engineering while responses are pending.
+Next provider-neutral/offline engineering target:
 
-Next safe target:
+**Define a dataset-level withdrawal/quarantine decision separate from profile-level activation lifecycle.**
 
-**Add an activation/revocation lifecycle around accepted staged candidates so a provider dataset can become enabled only from a currently authorized snapshot and can be disabled/withdrawn by dataset namespace using the existing source-isolation mechanism.**
+It must allow explicit namespace removal only when the dataset-level retention/withdrawal state requires it, while proving that revoking one profile does not automatically delete data needed or permitted by another profile.
 
-Do not create canonical Offers or enable ranking merely because a staged candidate exists. Keep package quantity separately attributed and unit-value gated by exact compatible quantity evidence.
+After that, design lifecycle-coupled canonical Offer materialization so active data cannot be detached from current revocation/freshness state before ranking/display.
 
-Do not add Android networking, production provider credentials, affiliate tracking, checkout/payment, universal cart, subscriptions, remote AI or telemetry yet.
+Keep package quantity separately attributed and unit value gated by exact compatible quantity evidence.
+
+Do not add Android networking, production credentials, affiliate tracking, checkout/payment, universal cart, subscriptions, remote AI or telemetry yet.
 
 ## Security
 
-Operational provider credentials must never be repeated, committed, logged, screenshotted, embedded or requested. Production secrets stay outside source control.
+Never repeat, commit, log, screenshot, embed or request operational provider credentials. Production secrets remain outside source control.
 
 ## Verification discipline
 
