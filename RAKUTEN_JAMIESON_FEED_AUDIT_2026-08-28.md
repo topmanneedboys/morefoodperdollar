@@ -48,7 +48,7 @@ Repeated product names exist across distinct source rows. Name-only deduplicatio
 
 ### GTIN representation distribution
 
-A later aggregate-only identity inspection found:
+Aggregate-only identity inspection found:
 
 - 12-digit source GTINs: **248 / 271**
 - 13-digit source GTINs: **1 / 271**
@@ -57,9 +57,9 @@ A later aggregate-only identity inspection found:
 - canonical unique identities after that representation normalization: **271**
 - canonical identity collisions: **0**
 
-This is not a product-count change and does not alter provider provenance. It means that exact textual equality of checksum-valid GTIN strings is insufficient for cross-source joins when one source uses UPC-A/GTIN-12 and another returns the equivalent zero-prefixed GTIN-13 representation.
+Exact textual equality of checksum-valid GTIN strings is insufficient for cross-source joins when one source uses UPC-A/GTIN-12 and another returns an equivalent zero-prefixed representation.
 
-ValuePilot must preserve the exact source GTIN for audit while using a deterministic canonical GTIN for cross-source identity matching. Invalid GTINs must never be repaired by normalization.
+ValuePilot preserves the exact source GTIN for audit while using deterministic canonical GTIN for cross-source identity matching. Invalid GTINs are never repaired by normalization.
 
 ## Description / class coverage
 
@@ -94,7 +94,7 @@ Interpretation:
 - inverted values must not produce a savings claim;
 - both fields must remain preserved until their exact advertiser/feed semantics are established.
 
-## Quantity / unit-value result
+## Quantity / unit-value result from Rakuten alone
 
 The primary Rakuten Product Catalog schema does not provide a universal structured package quantity. All Jamieson Class IDs are blank, so no validated class-specific Size field is available through that mechanism.
 
@@ -103,19 +103,45 @@ The populated but untyped Attribute 1 column does not change that conclusion.
 Therefore:
 
 - structural CAD offer candidates: **273**
-- authoritative unit-value candidates from this feed alone: **0**
+- authoritative unit-value candidates from Rakuten alone: **0**
 
 Do **not** guess package count/size from title, description, image filename, SKU, price, untyped attributes, or neighboring variants.
 
-A future package-quantity claim may come from a separate authorized/appropriately licensed source joined by canonical checksum-valid GTIN identity. Provenance must remain separate so the quantity source is never misrepresented as the merchant-price source.
+A package-quantity claim may come from a separate appropriately licensed source joined by canonical checksum-valid GTIN identity. Provenance must remain separate so the quantity source is never misrepresented as the merchant-price source.
 
-## Open Food Facts coverage-run correction
+## Open Food Facts coverage — corrected authoritative result
 
-The first local quantity-coverage run reported 0 Open Food Facts matches for the 271 valid source GTINs. That result is **not valid coverage evidence** because the first tool compared normalized API response codes to raw provider GTIN strings.
+The historical first local quantity-coverage run reported 0 Open Food Facts matches for 271 valid source GTINs. That result is invalid because the first tool compared normalized API response codes against raw provider GTIN strings.
 
-Given the representation distribution above, legitimate matches could be discarded. The corrected coverage tool canonicalizes only documented leading-zero equivalent representations before matching and preserves exact source identity separately.
+The corrected normalized path canonicalizes only documented leading-zero equivalent representations before matching and preserves exact source identity separately.
 
-A corrected normalized rerun is required before any Jamieson Open Food Facts coverage percentage is claimed.
+The valid normalized rerun completed successfully on 2026-08-28:
+
+- valid GTINs: **271**
+- normalized Open Food Facts matches: **102**
+- unmatched GTINs: **169**
+- exact supplement-count candidates: **12**
+- structured mass/volume-only candidates: **2**
+- quantity conflicts: **0**
+- matched but no usable quantity: **88**
+- matches containing expected Jamieson brand text: **90**
+- matches with source modification timestamp: **102**
+- canonical identity collisions: **0**
+- response codes ignored after canonical validation: **0**
+
+Transport resilience was exercised during the valid run: 13 batch-search requests succeeded, one batch used the direct product-read fallback after repeated search 5xx responses, and 20 direct product reads were performed.
+
+Decision:
+
+**Open Food Facts is useful supplemental metadata but not sufficient as the Jamieson package-count foundation.** Only 12 valid-GTIN identities are exact-count-ready under the current strict semantics; 259 remain not exact-count-ready.
+
+Do not relax quantity semantics to increase coverage.
+
+## Next package-content source
+
+Health Canada's Licensed Natural Health Products Database can strengthen regulatory identity/dosage-form/ingredient evidence but its public schema does not provide GTIN-level package net content/count, so it cannot solve the exact-count gap by itself.
+
+GS1 Canada ECCnet is the next strategic product-content/identity target because its GTIN-centric content model includes standardized net-content concepts, including count-style net content. Data Recipient access and permitted use rights must be validated before integration.
 
 ## Freshness limitation
 
@@ -131,15 +157,15 @@ Initial ranking/comparison evidence remains objective and source-grounded: price
 
 Current decision:
 
-**DATA QUALITY = PROMISING / STRUCTURALLY VALID. PRODUCTION USE = NOT YET AUTHORIZED. UNIT-VALUE RANKING = BLOCKED UNTIL VALIDATED QUANTITY EXISTS.**
+**DATA QUALITY = PROMISING / STRUCTURALLY VALID. PRODUCTION USE = NOT YET AUTHORIZED. UNIT-VALUE COVERAGE = STILL INSUFFICIENT FOR BROAD JAMIESON RANKING.**
 
 Next gates:
 
-1. rerun the barcode-normalized Open Food Facts quantity-coverage measurement;
+1. validate GS1 Canada ECCnet Data Recipient feasibility, package-content coverage and rights;
 2. preserve raw provider GTIN and canonical cross-source GTIN separately;
-3. preserve both price fields and source/provenance identifiers in staging;
-4. establish package quantity/count through validated identity-matched evidence;
-5. establish exact caching/indexing/display/mobile rights;
+3. preserve both Rakuten price fields and source/provenance identifiers in staging;
+4. establish exact Retail/Sale semantics;
+5. establish caching/indexing/display/mobile rights;
 6. only then consider a production Rakuten/Jamieson adapter or consumer ranking path.
 
 The proprietary feed itself must not be committed as a repository fixture. Use synthetic rows for tests.
