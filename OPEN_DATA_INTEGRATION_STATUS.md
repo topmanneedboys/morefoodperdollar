@@ -55,6 +55,48 @@ It cannot emit:
 
 Simple displayed quantities such as `1 kg` and `6 x 250 ml` are deterministically cross-checked against structured Open Food Facts quantity fields. If the simple displayed value and structured value disagree, the import fails closed instead of guessing.
 
+## Real Open Prices × Open Food Facts measurement
+
+The first real-data join measurement completed successfully in GitHub Actions using the current public Open Prices Parquet export and the official Open Food Facts v2 bulk-search endpoint with a narrow field projection.
+
+The analysis remained research-only and aggregate-only. It did not add Android networking, scrape retailers, merge source records, persist proof-image paths, or publish product/contributor identifiers.
+
+Measured strict Open Prices input:
+
+- **478** Canadian CAD proof-backed physical-store price rows
+- **358** checksum-valid GTINs
+- observation date range: **2020-02-01 through 2026-08-11**
+- recent strict rows: **0 / 9 / 11** in the last **7 / 30 / 90 days**
+
+Open Food Facts lookup results:
+
+- **323 / 358** GTINs found
+- **266** GTINs had valid structured `g`/`ml` whole-product quantity
+- **0** parseable raw-vs-structured quantity disagreements in this measured set
+- **0** conflicting duplicate structured quantities in this measured set
+- **266 / 358 = 74.3%** usable quantity joins after fail-closed checks
+
+Price-row coverage after the quantity join:
+
+- **371 / 478 = 77.6%** of strict Open Prices rows had a usable OFF package quantity
+- joined rows in the last **7 / 30 / 90 days**: **0 / 4 / 4**
+
+The lookup required **5** documented bulk-search calls while staying below the Open Food Facts search-rate limit.
+
+### Measurement decision
+
+**The identity/quantity join is technically useful; the price freshness remains the limiting factor.**
+
+A roughly three-quarter GTIN quantity-join rate is strong enough to justify keeping Open Food Facts as a supplemental package-metadata rail. It does **not** make Open Prices a primary current-price provider because the joined corpus still has no observations in the last seven days and only four joined rows in the last ninety days.
+
+Therefore:
+
+- keep Open Food Facts for source-attributed product/package metadata;
+- keep Open Prices for proof-backed observed/historical prices;
+- do not call an old joined observation a current retailer offer;
+- do not let quantity enrichment upgrade stale/display-only price evidence into Best Value;
+- continue merchant-authoritative provider work and the Lowvyn rights inquiry in parallel.
+
 ## Cross-source conflict safety
 
 Shared core now has claim-domain and authority-aware conflict handling.
@@ -102,14 +144,21 @@ The current design specifically prevents these failure modes:
 
 ## Next gate
 
-Do not connect these adapters to consumer search/ranking UI yet.
+Do not connect these adapters directly to consumer search/ranking UI yet.
 
-Next engineering step after CI is green:
+The measured quantity-join rate is good enough for the next bounded engineering step: a **source-isolated, network-free imported evidence index/repository prototype** that can hold independently attributed Open Prices and Open Food Facts records and expose resolved evidence only through the existing conflict and unit-value gates.
 
-- exercise the actual Open Prices + Open Food Facts path with real rows from their public exports;
-- measure join success by validated GTIN and usable package quantity;
-- inspect disagreement/corruption rates;
-- keep failed/conflicting rows out of Best Value;
-- only then decide whether a bounded import/index deserves a user-visible path.
+That prototype must:
+
+- preserve ODbL source separation from proprietary merchant-feed storage;
+- index/join only on validated stable identity such as GTIN;
+- retain older observations as history rather than overwriting them;
+- never infer stock;
+- never synthesize freshness;
+- never make a display-only/stale price rankable because richer metadata exists;
+- make unresolved factual conflicts explicit and non-rankable;
+- remain network-free and platform-neutral at the core boundary.
+
+Only after that bounded index is tested should any user-visible open-data search path be considered.
 
 Merchant-authoritative feeds, when approved, will be run through the same conflict and unit-value boundaries rather than bypassing them.
