@@ -41,10 +41,7 @@ def main() -> None:
         raise SystemExit(f"Missing or empty Parquet input: {args.input}")
 
     con = duckdb.connect(database=":memory:")
-    con.execute(
-        "CREATE VIEW prices AS SELECT * FROM read_parquet(?)",
-        [str(args.input)],
-    )
+    con.read_parquet(str(args.input)).create_view("prices")
 
     columns = {
         row[0]
