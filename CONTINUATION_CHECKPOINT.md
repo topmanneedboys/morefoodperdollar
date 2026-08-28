@@ -33,7 +33,7 @@ Permanent rules:
 
 - Product != Offer.
 - Sources contribute claims; they do not overwrite one shared row.
-- Exact money/quantity/currency/promotion math only.
+- Exact deterministic money/quantity/currency/promotion math only.
 - AI may classify/explain but never invent authoritative facts.
 - Affiliate/provider economics never affect ranking.
 - No unauthorized scraping/private-endpoint reverse engineering.
@@ -41,8 +41,10 @@ Permanent rules:
 - Dataset recency != per-offer freshness.
 - Currency/context != geography.
 - Dataset namespace != snapshot.
-- Snapshot/profile lifecycle != namespace-wide retention/deletion.
-- Production price view != rankable evidence.
+- Snapshot lifecycle != namespace-wide disposition/deletion.
+- Production view != current-price claim != acceptance-policy rankability != final Best Value eligibility.
+- Conflict resolution and acceptance remain separate; never hide a contradictory claim merely because acceptance marks it display-only.
+- Discounted/sale price does not automatically create promotion evidence.
 - Shared core owns no hidden clock.
 - No Android networking merely for provider experiments.
 
@@ -50,110 +52,104 @@ Permanent rules:
 
 5D — Authorized Real Shopping Data Provider Selection / validation.
 
-Built-in Android Search remains fictional/sample evidence until a real provider path passes authorization, geography, price, freshness, lifecycle, namespace-disposition and downstream evidence gates.
+Built-in Android Search remains fictional/sample evidence until a real provider path passes authorization, geography, price, freshness, lifecycle, namespace-disposition, acceptance, conflict and downstream unit-value/ranking gates.
 
 ## Verified production-hardening chain
 
-- `5bb647a8485f257ec51b3eb0fe39b9c7caccb0a0` — provider-neutral discounted/reference price relationship validation.
+- `5bb647a8485f257ec51b3eb0fe39b9c7caccb0a0` — provider-neutral price relationship validation.
 - `a8e98b8ce333a612538841566972d6cab58dde88` — dataset recency separate from per-offer freshness.
-- `6aed414bd5f89cf7ac6dfb739464c6f57f5abe78` — fail-closed production authorization profiles/gates.
-- `7606ea941f80e3dc6b2ea362bc688c7434215195` — fail-closed provider offer-country validation; CAD is not Canadian scope proof.
-- `f58b400533bdf9a0705fb8e88680e4b56ce9d94e` — staged production offer candidate; still not canonical `Offer` and no rankability.
+- `6aed414bd5f89cf7ac6dfb739464c6f57f5abe78` — fail-closed production authorization.
+- `7606ea941f80e3dc6b2ea362bc688c7434215195` — fail-closed offer geography; CAD is not Canadian scope proof.
+- `f58b400533bdf9a0705fb8e88680e4b56ce9d94e` — staged production offer candidate; no rankability.
 - `e546822a448e150674a2769d9899a856124b50fb` — authoritative corrected revocable snapshot lifecycle.
-- `230b8ae4b6f674979d349320b8e5bd83713db810` — authoritative registry-backed namespace disposition/withdrawal boundary.
-- `ebb28a4a506232550b62d08370a9c8935d677603` — lifecycle/disposition-coupled point-in-time production price view from raw provider evidence.
-- `5d317810bd6ccf0933ff6432e6e68f88fb865493` — canonical-GTIN/provider-scoped product evidence identity keys.
+- `230b8ae4b6f674979d349320b8e5bd83713db810` — authoritative registry-backed namespace disposition/withdrawal.
+- `ebb28a4a506232550b62d08370a9c8935d677603` — point-in-time production price view from raw evidence.
+- `5d317810bd6ccf0933ff6432e6e68f88fb865493` — canonical-GTIN/provider-scoped product evidence keys.
+- `267cd5aa81c4c3a03110c210ea9b4bfcb203f2ab` — product-key/unit-value integration checkpoint.
+- `9a9b5f91948fe505a0ad6b598097bf9b8e50c680` — lifecycle-bound CURRENT_PRICE evidence claims.
+- `97bfa3c353e48f15e26e9576cf06f4fa5e1687d1` — unified evidence acceptance policy, preserving legacy non-positive timestamp -> UNKNOWN behavior.
+- `a1b15cc13df4912fb94893c8952f382f7404db1d` — lifecycle-bound production current-price acceptance.
 
-The lifecycle, withdrawal and production-view commits each passed the full ValuePilot workflow: browser checks, shared-core/app tests, lint, APK build, JVM summary, Android privacy-boundary verification, release packaging/checksums and artifact upload. The product-key code commit also passed the full workflow; current-branch integration tests additionally exercise it through the existing unit-value identity gate.
+The exact corrected acceptance refactor and current-price acceptance commits passed the full ValuePilot workflow including shared-core/app tests, lint, APK build, privacy verification, packaging and artifact upload.
 
-## Snapshot lifecycle
+## Lifecycle / disposition / view
 
-`ProductionDatasetLifecycle.kt` provides exact `ProductionDatasetSnapshotRef`, staged-candidate snapshot binding, profile-scoped `ACTIVE` / `SUSPENDED` / `REVOKED` / `RETIRED` state, monotonic revisions, effective/expiry windows and point-in-time activation.
+Snapshot lifecycle is exact provider + dataset + snapshot + activation-profile state. No lifecycle record means inactive. Suspended/revoked/retired/pre-effective/expired snapshots cannot activate. Revoked/retired are terminal for the same snapshot/profile. Current authorization and original per-offer freshness are re-evaluated on every activation check.
 
-Critical invariants:
+Namespace disposition is separately `RETAINED`, `QUARANTINED`, `WITHDRAWAL_REQUIRED`, or `DELETED`. Profile/snapshot revocation never automatically means deletion. Only the registry's current withdrawal-required state may invoke exact namespace removal.
 
-- staged candidate != active candidate;
-- no lifecycle record = inactive;
-- suspended/revoked/retired/not-yet-effective/expired = inactive;
-- `REVOKED` and `RETIRED` are terminal for the same snapshot/profile key;
-- current authorization is re-evaluated on every activation check;
-- original offer timestamp is re-evaluated under current freshness policy;
-- weaker custom profile with the same id cannot bypass base mobile-catalog requirements;
-- activation creates no canonical `Offer` and grants no durable rankability/display permission.
+`ProductionOfferViewEvaluator` starts from raw import evidence and re-runs staged-candidate validation, snapshot binding, lifecycle registry evaluation and namespace disposition. A resulting view is point-in-time, records lifecycle/disposition revisions, exposes no rankability and must be re-evaluated later.
 
-## Namespace disposition / withdrawal
+Provider reference/non-discounted price remains separate from historical `Offer.previous`. No member price, promotion, quantity or unit value is invented.
 
-`ProductionDatasetDisposition.kt` is intentionally separate from snapshot lifecycle.
+## Product identity
 
-States:
+Production evidence key priority:
 
-- `RETAINED` — namespace policy alone does not block use;
-- `QUARANTINED` — retain but globally block production use;
-- `WITHDRAWAL_REQUIRED` — globally block use and require explicit removal;
-- `DELETED` — complete physical removal confirmed separately by caller.
-
-Critical invariants:
-
-- profile/snapshot revocation does not imply deletion;
-- `RETAINED <-> QUARANTINED` is reversible;
-- withdrawal-required is one-way toward deleted;
-- deleted is terminal for the same namespace id;
-- use and withdrawal decisions read the registry, not free-standing disposition objects;
-- only current `WITHDRAWAL_REQUIRED` can invoke exact namespace removal;
-- namespace metadata must match before removal;
-- in-memory removal is not proof every persisted copy is gone and does not automatically mark `DELETED`.
-
-## Point-in-time production price view
-
-`ProductionOfferView.kt` does not trust staged or bound intermediate objects as authority.
-
-Every evaluation starts from the raw `ProviderOfferImportRecord` and re-runs:
-
-1. staged candidate validation (price roles, source identity, authorization, geography, freshness);
-2. exact snapshot binding;
-3. lifecycle-registry lookup;
-4. current lifecycle/authorization/freshness evaluation;
-5. namespace-disposition-registry evaluation.
-
-Only then can `LifecycleBoundProductionOfferView` exist.
-
-Critical invariants:
-
-- wrong/missing snapshot/lifecycle/disposition, quarantine, revocation, expiry, stale price or current authorization denial all block the view;
-- view records evaluation instant plus lifecycle/disposition revisions;
-- view is point-in-time and must be re-evaluated for later production decisions;
-- no rankability flag is exposed;
-- shared-core arithmetic `Offer` contains current price only;
-- provider reference/non-discounted price is not mislabeled as historical `Offer.previous`;
-- no member price, promotion, quantity or unit value is invented.
-
-## Product evidence identity keys
-
-`ProductionProductEvidenceKey.kt` establishes one production identity representation:
-
-1. valid canonical GTIN -> `gtin:<canonical>` shared representation;
-2. otherwise provider item id -> provider-scoped key;
-3. otherwise SKU -> provider-scoped key;
+1. valid canonical GTIN -> shared `gtin:<canonical>`;
+2. provider item ID -> provider-scoped key;
+3. SKU -> provider-scoped key;
 4. invalid-only GTIN -> no key.
 
-Critical invariants:
+Never repair invalid GTINs or use name/description/image/price as identity. Equivalent leading-zero GTIN representations join. Provider ID/SKU never cross providers. A product key grants no rights/freshness/quantity/rankability.
 
-- invalid GTIN is never repaired;
-- names/descriptions/images/prices never become identity inputs;
-- leading-zero equivalent GTIN representations resolve together;
-- provider item IDs and SKUs never silently join different providers;
-- delimiter-safe length-prefixed provider components prevent key collisions;
-- the key itself does not grant rights, freshness, quantity authority, rankability or proof that a GTIN is allocated/current.
+Integration tests prove canonical GTIN identity can join through `EvidenceBackedUnitValuePolicy`, while identical SKU text from different providers fails product identity matching.
 
-Current-branch integration tests prove equivalent GTIN representations can satisfy `EvidenceBackedUnitValuePolicy`'s exact product-key check, while identical SKU text from different providers fails with `PRODUCT_IDENTITY_MISMATCH`.
+## Current-price evidence claims
 
-## Canonical Offer / unit value
+`ProductionCurrentPriceClaimEvaluator` starts from the raw provider import and re-runs the entire production-view path. Claim descriptors require explicit merchant/channel scope plus explicit evidence authority and auditable authority basis.
 
-`EvidenceBackedUnitValuePolicy` remains the authoritative unit-value gate. It requires rankable price evidence, correct price/quantity domains, exact same stable product key, exact money/quantity fingerprints and strong quantity authority.
+Supported current-price authorities are `MERCHANT_AUTHORITATIVE`, `PROOF_BACKED_DIRECT_OBSERVATION`, and `SOURCE_ASSERTED_METADATA`. Authority must agree with source claim kind; a source-asserted feed row cannot masquerade as proof-backed direct observation.
 
-Do not duplicate this logic.
+The lifecycle-bound wrapper preserves provider/source/dataset/snapshot/source-identity/channel/claim-kind/source-field/country/evaluation/lifecycle/disposition provenance. Generic `EvidenceClaim` is conflict-engine input only. Claim creation grants no rankability.
 
-The production price view is deliberately not rankable. The next bridge must preserve explicit merchant/channel scope and price-evidence authority before feeding current price into the existing acceptance/conflict/unit-value engine.
+## Unified acceptance policy
+
+`EvidenceAcceptanceEvaluator` now delegates both legacy `ShoppingEvidence` and shared-core production policy inputs through the same internal `EvidenceAcceptanceFacts` logic.
+
+Important invariants:
+
+- public `ShoppingEvidence` behavior is preserved;
+- sample/fresh/aging/stale/unknown/future-dated, environment/channel, weak claim, availability and promotion behavior stay unified;
+- legacy non-positive timestamps, including negative values, remain UNKNOWN freshness;
+- common acceptance facts are internal to shared core and cannot be a public Android/UI authorization shortcut.
+
+## Production current-price acceptance
+
+`ProductionCurrentPriceAcceptanceEvaluator` re-runs `ProductionCurrentPriceClaimEvaluator` from raw provider inputs before applying the unified acceptance policy.
+
+If claim creation is blocked, acceptance does not run. If claim creation passes, acceptance uses the real environment, acquisition channel, source claim kind, price observation timestamp and availability.
+
+`acceptanceRankable` means only that the current-price evidence passes the shared acceptance policy at that instant. It does **not** mean final Best Value eligibility.
+
+Verified cases:
+
+- fresh/in-stock -> acceptance may be `RANKABLE`;
+- out-of-stock -> claim remains factual evidence but acceptance is `DISPLAY_ONLY`;
+- aging obeys caller policy;
+- acceptance freshness may be stricter than production-view freshness;
+- revoked lifecycle blocks the claim before acceptance runs.
+
+Promotion is deliberately null in this bridge: a discounted/sale price field does not prove a promotion claim.
+
+## Conflict + unit-value ordering
+
+`EvidenceConflictPolicy` / `EvidenceFactResolver` remain the factual conflict system. `EvidenceBackedUnitValuePolicy` remains the unit-value system. Do not duplicate either.
+
+Do not filter all display-only evidence before conflict resolution. A stronger contradictory factual claim may still be necessary to block or defeat a weaker accepted claim.
+
+Future final current-price eligibility must require, at minimum:
+
+1. current lifecycle/authorization/disposition passes;
+2. current-price claim exists with exact scope/fingerprint;
+3. unified acceptance decision is evaluated;
+4. relevant CURRENT_PRICE facts are conflict-resolved at exact product/merchant/location/channel/currency scope;
+5. unresolved same-scope conflict blocks Best Value;
+6. the resolved value must match the lifecycle-bound candidate's exact current-price fingerprint;
+7. the candidate must be acceptance-policy rankable;
+8. unit value additionally requires exact identity, exact money/quantity fingerprints, compatible domains and strong package-quantity authority.
+
+Never average, vote or guess through a factual conflict.
 
 ## Jamieson / Rakuten
 
@@ -169,26 +165,26 @@ Sanitized feed checkpoint:
 - Sale < Retail: 48;
 - Sale = Retail: 223;
 - Sale > Retail: 2;
-- Class ID blank all rows; Attribute 1 remains opaque/untyped.
+- Class ID blank all; Attribute 1 remains opaque/untyped.
 
-Rakuten generic field semantics are resolved: Sale Price = discounted field; Retail Price = non-discounted/reference field. The two Sale > Retail rows are semantic conflicts and must fail closed; never swap/repair them.
+Rakuten generic field semantics: Sale Price = discounted; Retail Price = non-discounted/reference. The two Sale > Retail rows are semantic conflicts and must fail closed.
 
 Jamieson is **NOT production-authorized**. Still unresolved:
 
 - cache/index/search/display/mobile rights;
 - retention/deletion obligations;
-- installed-software/DSA approvals where applicable;
+- installed-software/DSA approval where applicable;
 - trustworthy per-offer price observation freshness;
 - Canadian offer geography beyond CAD/context;
 - broad package quantity.
 
-Current Jamieson rows cannot pass the production-view path because strong Canadian offer scope and trustworthy per-offer price observation time are absent.
+Current Jamieson rows cannot pass the production path because strong Canadian offer scope and trustworthy per-offer price observation time are absent.
 
-Rakuten clarification was sent on 2026-08-28. No substantive reply after that clarification has been found; do not resend unless a response creates a new gap.
+Rakuten clarification was sent on 2026-08-28. No substantive reply after that clarification has been found. Do not resend unless a response creates a new gap.
 
 ## Jamieson × Open Food Facts
 
-Historical raw-code 0/271 result is invalid coverage evidence.
+Historical raw-code 0/271 is invalid coverage evidence.
 
 Correct normalized result:
 
@@ -202,13 +198,13 @@ Correct normalized result:
 - 88 matched but no usable quantity;
 - 1 search-fallback batch / 20 direct reads.
 
-OFF is supplemental only. Only 12/271 valid-GTIN identities are exact-count-ready under strict rules. Never infer count from Rakuten text or loosen the parser to inflate coverage.
+OFF remains supplemental only. Only 12/271 valid-GTIN identities are exact-count-ready. Never infer count from Rakuten text or loosen the parser.
 
 ## Package-content provider path
 
-Health Canada LNHPD does not provide GTIN-level package net count.
+Health Canada LNHPD does not provide the needed GTIN-level package net count.
 
-GS1 Canada ECCnet remains the strategic GTIN/package-content candidate. The Data Recipient eligibility/rights inquiry was sent on 2026-08-28. An acknowledgement was received, but no substantive eligibility/rights terms yet.
+GS1 Canada ECCnet remains the strategic package-content candidate. The Data Recipient inquiry was sent 2026-08-28 and acknowledged, but no substantive eligibility/rights response has arrived.
 
 Do not implement ECCnet until GS1 confirms eligibility, GTIN/net-content scope, consumer/mobile/search/cache rights, restrictions and commercial/API terms.
 
@@ -216,13 +212,13 @@ Do not implement ECCnet until GS1 confirms eligibility, GTIN/net-content scope, 
 
 Use `PROVIDER_ACCOUNT_STATUS.md` for fast-changing state.
 
-Current high-level status remains:
+Current high-level status:
 
 - Rakuten/Jamieson: feed approved + actual catalog available; production gates blocked;
 - GS1 Canada ECCnet: inquiry acknowledged; substantive response pending;
-- Well.ca / Bath Depot: pending unless newer evidence;
-- Tru Earth / Giant Tiger: rejected; do not reapply now;
-- CJ: TSC, Brother Canada, DAVIDsTEA pending; AOSOM older pending unless newer evidence;
+- Well.ca / Bath Depot pending unless newer evidence;
+- Tru Earth / Giant Tiger rejected; do not reapply now;
+- CJ advertiser applications pending as previously recorded;
 - Awin active; Skip CA rejected due publisher type; never misrepresent publisher type;
 - impact.com Marketplace declined; no blind duplicate;
 - Lowvyn inquiry sent; await response.
@@ -231,21 +227,15 @@ Current high-level status remains:
 
 Do not resend Rakuten or GS1 inquiries.
 
-Next provider-neutral/offline engineering target:
+Next provider-neutral/offline target:
 
-**Define a lifecycle-bound current-price evidence-claim bridge into the existing evidence/conflict engine.**
+**Design the final current-price conflict/acceptance eligibility boundary.**
 
-Requirements:
+Keep acceptance and conflict resolution distinct. Re-evaluate lifecycle/authorization/disposition at the decision instant. Do not pre-filter contradictory display-only claims. Require the resolved CURRENT_PRICE fact to match the lifecycle-bound candidate's exact fingerprint/scope. Unresolved same-scope conflict blocks Best Value.
 
-- start from/re-evaluate the production-view path rather than trusting a detached `Offer`;
-- require explicit merchant and commerce-channel scope;
-- require explicit evidence authority/claim provenance rather than inventing authority from provider context;
-- use the canonical/provider-scoped product evidence key contract;
-- allow cross-source package quantity only when exact product identity matches;
-- keep unit value behind `EvidenceBackedUnitValuePolicy` and conflict resolution;
-- do not add Android networking or real provider credentials.
+Keep package quantity separately attributed and unit value behind `EvidenceBackedUnitValuePolicy`.
 
-Do not treat the production view itself as rankable. Do not add affiliate tracking, checkout/payment, universal cart, subscriptions, remote AI or telemetry yet.
+Do not add Android networking, production credentials, affiliate tracking, checkout/payment, universal cart, subscriptions, remote AI or telemetry yet.
 
 ## Security
 
