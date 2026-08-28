@@ -42,6 +42,10 @@ class OpenFoodFactsImportedMetadataTest {
         assertEquals("Example Brand", metadata.brands)
         assertEquals(BaseUnit.GRAM, metadata.normalizedQuantity.unit)
         assertEquals(1_000_000_000L, metadata.normalizedQuantity.amountMicros)
+        assertEquals(
+            OpenFoodFactsQuantityBasis.STRUCTURED_MASS_OR_VOLUME,
+            metadata.quantityBasis
+        )
         assertEquals(MODIFIED_SECONDS * 1_000L, metadata.sourceLastModifiedAtEpochMillis)
 
         assertEquals(EvidenceClaimDomain.PACKAGE_QUANTITY, claim.domain)
@@ -67,6 +71,99 @@ class OpenFoodFactsImportedMetadataTest {
         val quantity = requireNotNull(result.metadata).normalizedQuantity
         assertEquals(BaseUnit.MILLILITRE, quantity.unit)
         assertEquals(1_500_000_000L, quantity.amountMicros)
+    }
+
+    @Test
+    fun acceptsExactDisplayedSupplementCountWithoutInventingMass() {
+        val result = OpenFoodFactsImportedMetadataMapper.map(
+            validProduct(
+                rawQuantity = "100 tablets",
+                productQuantity = null,
+                productQuantityUnit = null
+            )
+        )
+
+        assertTrue(result.accepted)
+        val metadata = requireNotNull(result.metadata)
+        val claim = requireNotNull(result.quantityClaim)
+
+        assertEquals(BaseUnit.COUNT, metadata.normalizedQuantity.unit)
+        assertEquals(100_000_000L, metadata.normalizedQuantity.amountMicros)
+        assertEquals(
+            OpenFoodFactsQuantityBasis.DISPLAYED_SUPPLEMENT_COUNT,
+            metadata.quantityBasis
+        )
+        assertEquals("100 tablets", metadata.rawQuantity)
+        assertEquals("quantity:COUNT:100000000", claim.valueFingerprint)
+        assertEquals(EvidenceClaimDomain.PACKAGE_QUANTITY, claim.domain)
+    }
+
+    @Test
+    fun acceptsNarrowFrenchSupplementCountVocabulary() {
+        val result = OpenFoodFactsImportedMetadataMapper.map(
+            validProduct(
+                rawQuantity = "60 gélules",
+                productQuantity = null,
+                productQuantityUnit = null
+            )
+        )
+
+        assertTrue(result.accepted)
+        val metadata = requireNotNull(result.metadata)
+        assertEquals(BaseUnit.COUNT, metadata.normalizedQuantity.unit)
+        assertEquals(60_000_000L, metadata.normalizedQuantity.amountMicros)
+        assertEquals(
+            OpenFoodFactsQuantityBasis.DISPLAYED_SUPPLEMENT_COUNT,
+            metadata.quantityBasis
+        )
+    }
+
+    @Test
+    fun complexSupplementDisplayIsNotGuessedAsPackageCount() {
+        val result = OpenFoodFactsImportedMetadataMapper.map(
+            validProduct(
+                rawQuantity = "60 capsules x 500 mg",
+                productQuantity = null,
+                productQuantityUnit = null
+            )
+        )
+
+        assertFalse(result.accepted)
+        assertTrue(OpenFoodFactsImportFailure.MISSING_STRUCTURED_QUANTITY in result.failures)
+    }
+
+    @Test
+    fun strengthOnlyDisplayIsNotMisreadAsCount() {
+        val result = OpenFoodFactsImportedMetadataMapper.map(
+            validProduct(
+                rawQuantity = "500 mg",
+                productQuantity = null,
+                productQuantityUnit = null
+            )
+        )
+
+        assertFalse(result.accepted)
+        assertTrue(OpenFoodFactsImportFailure.MISSING_STRUCTURED_QUANTITY in result.failures)
+    }
+
+    @Test
+    fun acceptsCountEvenWhenUnusedMassFieldsAreAlsoPresent() {
+        val result = OpenFoodFactsImportedMetadataMapper.map(
+            validProduct(
+                rawQuantity = "90 capsules",
+                productQuantity = "45",
+                productQuantityUnit = "g"
+            )
+        )
+
+        assertTrue(result.accepted)
+        val metadata = requireNotNull(result.metadata)
+        assertEquals(BaseUnit.COUNT, metadata.normalizedQuantity.unit)
+        assertEquals(90_000_000L, metadata.normalizedQuantity.amountMicros)
+        assertEquals(
+            OpenFoodFactsQuantityBasis.DISPLAYED_SUPPLEMENT_COUNT,
+            metadata.quantityBasis
+        )
     }
 
     @Test
@@ -134,6 +231,10 @@ class OpenFoodFactsImportedMetadataTest {
         assertEquals(
             360_000_000L,
             requireNotNull(result.metadata).normalizedQuantity.amountMicros
+        )
+        assertEquals(
+            OpenFoodFactsQuantityBasis.STRUCTURED_MASS_OR_VOLUME,
+            requireNotNull(result.metadata).quantityBasis
         )
     }
 
