@@ -181,7 +181,7 @@ The corrected path validates GTIN first, canonicalizes only documented represent
 
 Normalized Python regression CI passed on commit `3a949e14be5cdcd10f523aa3a8d20fe463b91d4f`.
 
-Shared-core canonical GTIN handling plus provider-import promotion tests are included in commit `be96095e6634b28f93e9add932bf67ac98bb66a3`. In its Android workflow, browser checks, Android/shared-core tests, lint/assemble, APK privacy-boundary verification, release assembly and artifact upload all completed successfully; workflow post-job cleanup was still finishing at the last observed checkpoint.
+Shared-core canonical GTIN handling plus provider-import promotion tests are included in commit `be96095e6634b28f93e9add932bf67ac98bb66a3`. Its full GitHub Actions workflow completed successfully: browser checks, Android/shared-core tests, lint/assemble, APK privacy-boundary verification, release assembly and artifact upload all passed.
 
 ## Privacy boundary
 
