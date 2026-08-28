@@ -6,12 +6,14 @@ Milestone: 5D — authorized real shopping data validation
 
 ## Purpose
 
-This document separates two issues that must not be conflated:
+This document separates four questions that must not be conflated:
 
-1. what Rakuten Product Catalog `Sale Price` and `Retail Price` mean; and
-2. whether ValuePilot is authorized to use Rakuten/Jamieson feed content and affiliate links inside the installed Android application.
+1. what Rakuten Product Catalog `Sale Price` and `Retail Price` mean;
+2. whether ValuePilot may use Jamieson Product Catalog content in a catalog-only installed Android app;
+3. what retention/removal obligations apply when rights end; and
+4. what extra approvals apply if the Android app exposes Rakuten advertiser/network links.
 
-A feed may be technically accessible and semantically understandable while still not being cleared for a particular production distribution channel.
+Technical access, advertiser feed approval, semantic understanding and production distribution rights are separate gates.
 
 ## Account-specific evidence
 
@@ -19,149 +21,187 @@ ValuePilot is an approved Jamieson Vitamins Rakuten Advertising publisher partne
 
 Rakuten Publisher Customer Support separately confirmed on 2026-08-28 that ValuePilot is approved for the Jamieson advertiser Product Feed and that the Jamieson feed is present in the Product Catalog account.
 
-This proves advertiser Product Catalog/feed approval and technical feed access. It does not by itself prove every downstream mobile, caching, indexing, retention, redistribution, or downloadable-software use right.
+This proves advertiser Product Catalog/feed approval and technical feed access. It does **not** by itself prove catalog-only Android display/cache/index rights, advertiser-feed-revocation retention behavior, or DSA/network-link approval.
 
 Operational provider credentials are deliberately excluded from this repository and must remain outside source control.
 
-## Documented Rakuten price semantics
+## Documented price semantics
 
-Rakuten Advertising's current Product Catalog Appendix A defines:
+Rakuten Advertising's Product Catalog Appendix A defines:
 
 - Product Field 13 — `Sale Price`: optional numeric field; the price reflects discounts.
 - Product Field 14 — `Retail Price`: required numeric field; the price does not reflect discounts.
 
 Source:
 
-- Rakuten Advertising Publisher Help Center — Product Catalog Appendix A - File Field Definitions
+- Product Catalog Appendix A - File Field Definitions
 - https://pubhelp.rakutenadvertising.com/hc/en-us/articles/8191594256013-Product-Catalog-Appendix-A-File-Field-Definitions
 
-Therefore the field-name semantic gate is no longer unresolved at the generic Rakuten schema level.
+Therefore the generic field-name semantic gate is resolved.
 
-### Deterministic relationship rule
+For positive Retail and Sale values:
 
-For a positive Retail Price and positive Sale Price:
+- Sale < Retail -> structurally consistent with a discount;
+- Sale = Retail -> structurally consistent with no effective discount;
+- Sale > Retail -> conflicts with Rakuten's documented semantics and must fail closed.
 
-- `Sale Price < Retail Price` is structurally consistent with a discount.
-- `Sale Price = Retail Price` is structurally consistent with no effective discount.
-- `Sale Price > Retail Price` conflicts with Rakuten's documented field meanings and must be treated as semantic-invalid/inconsistent evidence.
-
-ValuePilot must not reinterpret an inverted row as a markup, reverse the fields, silently swap values, or invent a discount explanation.
+ValuePilot must never swap inverted fields, reinterpret them as markup, or invent a promotion explanation.
 
 ## Jamieson empirical price relationship
 
 The complete authorized Jamieson feed contains 273 product rows:
 
-- Sale Price < Retail Price: 48
-- Sale Price = Retail Price: 223
-- Sale Price > Retail Price: 2
+- Sale < Retail: 48
+- Sale = Retail: 223
+- Sale > Retail: 2
 
-The two inverted rows are therefore a concrete provider-data semantic-integrity failure class.
+The two inverted rows are concrete semantic-integrity failures. They remain structural product records, but their price evidence cannot support a production current-price/discount claim unless corrected or independently resolved through authorized evidence.
 
-They remain structural product records, but their price evidence must fail closed for any production current-price / discount claim until corrected by the source or independently corroborated through an authorized source.
+## Product Catalog intended use
 
-## What is now resolved
-
-Resolved:
-
-- the generic meaning of Rakuten `Sale Price`;
-- the generic meaning of Rakuten `Retail Price`;
-- that an inverted Sale > Retail relationship is inconsistent with those documented semantics;
-- that Product Catalog is designed for advertiser-approved publisher use and can be retrieved automatically through SFTP;
-- that Rakuten describes product feeds as supporting search, comparison, product-link and e-commerce aggregation use cases.
+Rakuten's current Product Catalog documentation describes the program as supporting large product databases, product search, comparison and related product information that is updated frequently/daily. Product files are dynamically generated when retrieved, but the timeliness of product information depends on how often the advertiser updates its Product Catalog database.
 
 Sources:
 
-- Product Catalog Data Feed Implementation Guidelines
-- Product Catalog Appendix A - File Field Definitions
+- Product Catalog Overview
+- https://pubhelp.rakutenadvertising.com/hc/en-us/related/click?data=BAh7CjobZGVzdGluYXRpb25fYXJ0aWNsZV9pZGwrCA1rNk4DBDoYcmVmZXJyZXJfYXJ0aWNsZV9pZGwrCA%2FugNRTADoLbG9jYWxlSSIKZW4tdXMGOgZFVDoIdXJsSSI%2BL2hjL2VuLXVzL2FydGljbGVzLzQ0MTIyNDM2MDIxODktUHJvZHVjdC1DYXRhbG9nLU92ZXJ2BjsIVDoJcmFua2kJ--8bbbd832501e70fdc25628e0e1c89156dc7afbeb
 - Data Feeds
+- https://pubhelp.rakutenadvertising.com/hc/en-us/articles/7145964532877-Data-Feeds
 - Download Product Catalog Data Feed Files
+- https://pubhelp.rakutenadvertising.com/hc/en-us/articles/4412243880333-Download-Product-Catalog-Data-Feed-Files
+- Product Feed in a Specific Language
+- https://pubhelp.rakutenadvertising.com/hc/en-us/articles/4415256259981-Product-Feed-in-a-Specific-Language
 
-## What is still unresolved for production price evidence
+This supports the database/search/comparison nature of Product Catalog. It does **not** prove per-product freshness or every desired downstream distribution/storage right.
 
-Still unresolved:
+## Catalog-only Android rights ambiguity
 
-- whether Jamieson's feed timestamp/update cadence is sufficient for ValuePilot's chosen current-price freshness policy;
-- whether each product price can be represented as currently available rather than merely latest feed-provided value;
-- exact Canadian geographic offer scope beyond CAD plus Jamieson's Canadian context;
-- how stale rows should be downgraded when advertiser updates are delayed;
-- whether ValuePilot may persist/cache/index/display the feed fields for the desired duration and production architecture;
-- whether consumer Android display of Product Catalog data is covered by the existing advertiser approval or needs additional written permission.
+Rakuten's Publisher Membership Agreement, last updated July 13, 2026, defines a `Site` as a website, application, social media account, content platform or other consumer-accessible digital property. Section 2.5 also states that publisher promotion channels may include mobile applications, subject to advertiser engagement terms and Network Policies.
 
-The Rakuten Product Catalog download documentation says files are generated dynamically when retrieved and the timeliness of product information depends on how often the advertiser updates the Product Catalog database. That is useful source-level freshness evidence but is not a per-product last-modified timestamp.
+Source:
 
-Therefore the existing HDR/file timestamp must continue to be treated as file-generation/deposit evidence, not proof that every individual offer is fresh.
+- Publisher Membership Agreement
+- https://rakutenadvertising.com/legal-notices/publisher-membership-agreement/
 
-## Android / mobile channel distinction
+However, the Product Catalog Data Feed Implementation Guidelines still state that participating advertiser partners approve a publisher to use the Product Catalog feed on the publisher's website or blog.
 
-Rakuten's current Publisher Membership Agreement states that publisher promotion channels may include mobile applications, subject to the applicable advertiser engagement terms and Network Policies. It also defines a `Site` broadly enough to include an application.
+Source:
 
-However, the Product Catalog implementation documentation still describes advertiser approval to use a Product Catalog feed on a website or blog, and the Jamieson partnership approval email states that supplied links are to be used on the website listed in the marketing channel indicated above.
+- Product Catalog Data Feed Implementation Guidelines
+- https://pubhelp.rakutenadvertising.com/hc/en-us/articles/11258487715981-Product-Catalog-Data-Feed-Implementation-Guidelines
 
-This creates a channel-specific ambiguity that must be resolved before production Android use.
+Therefore:
 
-## Downloadable Software Application (DSA) gate
+- Rakuten's general publisher agreement recognizes applications/mobile promotion;
+- Product Catalog is clearly intended for searchable/comparison databases;
+- but current Product Catalog advertiser-approval wording is still website/blog-specific;
+- Jamieson's existing feed approval must **not** be silently extended to catalog-only Android display/cache/indexing without account-specific clarification.
 
-Rakuten's current Network Policies expressly include installed/mobile applications in Downloadable Software Application controls.
+The `MOBILE_APP_AUTHORIZED`, `CONSUMER_DISPLAY_AUTHORIZED`, `CACHE_AUTHORIZED` and `INDEX_AUTHORIZED` gates remain fail-closed for Jamieson until Rakuten answers the existing support clarification or equivalent written account-specific evidence is obtained.
 
-Rakuten requires:
+## Retention / deletion baseline
 
-1. Rakuten / Network Quality approval and compliance testing before a DSA is launched with Rakuten network links; and
-2. advertiser approval for the new DSA distribution method after Rakuten approval.
+The July 13, 2026 Publisher Membership Agreement provides a real full-account termination baseline. On termination of the agreement/network participation, the publisher must immediately cease using and remove Qualifying Links and other content/materials provided in connection with network participation, and the relevant granted licenses end immediately. Confidential/proprietary information may also need to be returned or destroyed as directed.
 
-Relevant sources:
+This resolves **only the full Publisher Agreement/network termination case**.
 
-- Rakuten Advertising Affiliate Network Policies and Guidelines
+It does not yet establish the exact removal/retention requirement when:
+
+- Jamieson removes only Product Feed approval;
+- the Jamieson advertiser partnership ends while the Rakuten publisher account remains active; or
+- a particular feed/snapshot becomes unavailable while other Rakuten engagements continue.
+
+Therefore `RETENTION_DELETION_POLICY_DEFINED` remains unresolved for the Jamieson production dataset until the narrower account-specific behavior is clarified.
+
+## DSA / network-link gate — stronger current evidence
+
+Rakuten's Affiliate Network Policies and Guidelines, last updated July 13, 2026, expressly state that Downloadable Software Applications can include installable mobile applications and other installable technologies. The policies require publisher software to receive Rakuten approval and compliance testing **before launching a DSA with Rakuten network links**. They also state that participating advertisers may have their own DSA policies and that individual advertiser approval is required/recommended after Rakuten approval.
+
+Sources:
+
+- Affiliate Network Policies and Guidelines
 - https://rakutenadvertising.com/legal-notices/affiliate-network-policies/
 - Downloadable Software Applications (DSAs)
 - https://pubhelp.rakutenadvertising.com/hc/en-us/articles/360061252752-Downloadable-Software-Applications-DSAs
-- After DSA Approval
-- https://pubhelp.rakutenadvertising.com/hc/en-us/articles/4412103334285-After-DSA-Approval
+- Features and Services Tab
+- https://pubhelp.rakutenadvertising.com/hc/en-us/articles/360048672791-Features-and-Services-Tab
 
-### Permanent Android rule
+This makes the **link-enabled Android path** materially clearer than the catalog-only path.
 
-Until the DSA/channel gate is cleared:
+### Permanent link-enabled Android rule
 
-- do not ship Rakuten affiliate/network links inside the installed Android app;
-- do not add Android production networking merely because Product Catalog access exists;
-- do not assume advertiser Product Feed approval equals advertiser DSA/mobile-app approval;
-- do not represent Rakuten/Jamieson feed content as production-cleared mobile data solely because the feed can be downloaded;
-- keep research validation outside Android.
+Before ValuePilot exposes any Rakuten/Jamieson advertiser/network link inside the installed Android app, all of the following remain required:
+
+- `AFFILIATE_LINK_USE_AUTHORIZED`;
+- `INSTALLED_SOFTWARE_NETWORK_APPROVED` — Rakuten/Network Quality approval and compliance testing;
+- `ADVERTISER_DISTRIBUTION_APPROVED` — Jamieson approval for the DSA/mobile distribution method;
+- `TRACKING_PRIVACY_READY` — applicable privacy/disclosure/consent requirements ready.
+
+Do not add or expose Rakuten network links before those gates pass.
+
+Catalog-only presentation and link-enabled affiliate distribution remain separate activation profiles. A catalog-only build must not gain link/network behavior merely because raw Product Catalog rows contain product URLs.
+
+## Freshness boundary
+
+Rakuten's Product Catalog download documentation says files are dynamically generated when retrieved and their timeliness depends on advertiser updates. This is useful **dataset/source recency** evidence.
+
+It is not a trustworthy per-product price observation timestamp.
+
+Therefore:
+
+- feed retrieval/HDR time != per-offer price freshness;
+- latest feed row != automatically current merchant price;
+- Jamieson price rows remain non-rankable until a production offer-freshness policy can be supported by authoritative evidence.
+
+## Geography boundary
+
+CAD currency and Canadian brand/context do not prove the exact intended offer geography. Geography remains a separate production gate. Use explicit provider/advertiser delivery or offer-country evidence rather than currency inference.
 
 ## Price candidate rule for future provider import
 
-When rights and freshness are later cleared, the provider adapter should still fail closed:
+When rights, geography and freshness are eventually cleared:
 
-- positive Sale < Retail -> discounted-price candidate may be Sale Price; Retail Price remains undiscounted comparison/reference price;
-- positive Sale = Retail -> current-price candidate may equal that shared value, with no discount claim;
-- Sale missing with valid Retail -> Retail may be a non-discounted price candidate;
-- Sale > Retail -> price-semantic conflict; reject price promotion from that row unless corrected/independently resolved;
-- invalid/non-positive currency or amount -> reject;
-- no inferred discount percentage unless exact arithmetic is based on accepted price evidence and the UI labels it as computed rather than source-supplied.
+- positive Sale < Retail -> Sale may be the discounted/current candidate; Retail remains reference/non-discounted price;
+- positive Sale = Retail -> the shared value may be a current-price candidate, with no discount claim;
+- Sale missing + valid Retail -> Retail may be a non-discounted price candidate subject to the same production gates;
+- Sale > Retail -> semantic conflict; reject price promotion/current-price use from that relationship unless corrected/resolved;
+- invalid/non-positive amount/currency -> reject;
+- any computed discount percentage must be exact deterministic arithmetic and labeled as computed, not source-supplied.
 
-This rule still does not make the price rankable. Freshness, geography, rights and evidence-disposition gates remain separate.
+This rule never bypasses production authorization, geography, freshness, conflict, lifecycle or quantity/unit-value gates.
 
-## External clarification sent — awaiting response
+## Existing support clarification — awaiting response
 
-On 2026-08-28, ValuePilot sent a written clarification request to the existing Rakuten Publisher Customer Support case covering:
+On 2026-08-28 ValuePilot sent a clarification in the existing Rakuten support case asking about:
 
-- whether advertiser-approved Product Catalog fields may be displayed and searched inside the installed Android app;
-- whether Product Catalog fields may be cached/indexed locally or server-side and what retention/refresh requirements apply;
-- what deletion/removal obligations apply if feed approval or the advertiser partnership ends;
-- whether the native Android app must complete Rakuten DSA / Network Quality review before any Rakuten/Jamieson affiliate links are used;
-- whether Jamieson must separately approve the mobile/DSA distribution method after Rakuten approval.
+- Android display/search of Product Catalog fields;
+- local/server caching/indexing and retention/refresh rules;
+- deletion/removal requirements if feed approval or partnership ends;
+- DSA/Network Quality review before affiliate links;
+- separate Jamieson approval for the mobile/DSA distribution method.
 
-No further Rakuten rights email should be sent unless the support response is incomplete or introduces a new unresolved point. Await the written response and preserve it as account-specific evidence before changing the production authorization state.
+Current public Rakuten policies now strongly establish the generic DSA/network-link requirements, but the account-specific support response is still useful for Jamieson and remains necessary for catalog-only Product Catalog rights and advertiser-feed-revocation retention behavior.
+
+Do not resend the same inquiry unless the support response is incomplete or introduces a new unresolved point.
 
 ## Current decision
 
-**Price-field semantics: PARTIALLY CLEARED.**
+**Generic Sale/Retail semantics: CLEARED.**
 
-Rakuten's schema meaning is clear and the two inverted Jamieson rows are semantic-invalid for price promotion.
+**Jamieson technical Product Feed access: CLEARED.**
 
-**Production price evidence: NOT CLEARED.**
+**Catalog-only installed Android Product Catalog use: NOT CLEARED.**
 
-Freshness, geography and downstream use rights remain unresolved.
+Outstanding: account-specific mobile display/search, cache/index and advertiser-feed-revocation retention/deletion rights.
 
-**Installed Android affiliate-link distribution: NOT CLEARED.**
+**Per-offer current-price freshness: NOT CLEARED.**
 
-DSA/compliance approval and advertiser mobile-distribution approval must be treated as separate required gates.
+Dataset recency does not prove product-level freshness.
+
+**Canadian offer geography: NOT CLEARED.**
+
+CAD/context is insufficient.
+
+**Installed Android Rakuten-link distribution: NOT CLEARED, and the required approval path is now explicit.**
+
+Rakuten/Network Quality DSA approval + participating advertiser approval + tracking/privacy readiness must pass before network links are exposed.
