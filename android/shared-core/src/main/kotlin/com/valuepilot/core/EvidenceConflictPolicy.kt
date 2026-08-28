@@ -102,8 +102,10 @@ data class EvidenceConflictDecision(
  * - current offers never overwrite historical/direct observations and vice versa;
  * - market benchmarks and regulatory/reference facts never become retailer offers;
  * - prices from different merchants, stores, channels, or currencies coexist;
- * - for the exact same scoped current fact, a later observation can supersede
- *   an older one while the older record remains provenance/history;
+ * - weaker authority never wins merely because its timestamp is newer;
+ * - among equal-authority claims for the exact same scoped time-sensitive fact,
+ *   a later observation can supersede an older one while the older record
+ *   remains provenance/history;
  * - unresolved equal-scope conflicts block Best Value instead of guessing;
  * - commission, EPC, payout, affiliate status, or provider preference are never inputs.
  */
@@ -150,25 +152,6 @@ object EvidenceConflictPolicy {
             )
         }
 
-        val newer = newerClaim(left, right)
-        if (newer != null && isTimeSensitive(left.domain)) {
-            return if (newer.claimId == left.claimId) {
-                decision(
-                    EvidenceConflictRelationship.PREFER_LEFT,
-                    left.claimId,
-                    false,
-                    "newer observation for the same scoped fact"
-                )
-            } else {
-                decision(
-                    EvidenceConflictRelationship.PREFER_RIGHT,
-                    right.claimId,
-                    false,
-                    "newer observation for the same scoped fact"
-                )
-            }
-        }
-
         val leftAuthority = authorityScore(left.domain, left.authority)
         val rightAuthority = authorityScore(right.domain, right.authority)
 
@@ -190,6 +173,25 @@ object EvidenceConflictPolicy {
             )
         }
 
+        val newer = newerClaim(left, right)
+        if (newer != null && isTimeSensitive(left.domain)) {
+            return if (newer.claimId == left.claimId) {
+                decision(
+                    EvidenceConflictRelationship.PREFER_LEFT,
+                    left.claimId,
+                    false,
+                    "newer equal-authority observation for the same scoped fact"
+                )
+            } else {
+                decision(
+                    EvidenceConflictRelationship.PREFER_RIGHT,
+                    right.claimId,
+                    false,
+                    "newer equal-authority observation for the same scoped fact"
+                )
+            }
+        }
+
         return decision(
             EvidenceConflictRelationship.UNRESOLVED_CONFLICT,
             null,
@@ -202,17 +204,16 @@ object EvidenceConflictPolicy {
         left: EvidenceClaim,
         right: EvidenceClaim
     ): String {
-        val newer = newerClaim(left, right)
-        if (newer != null) return newer.claimId
-
         val leftAuthority = authorityScore(left.domain, left.authority)
         val rightAuthority = authorityScore(right.domain, right.authority)
 
-        return when {
-            leftAuthority > rightAuthority -> left.claimId
-            rightAuthority > leftAuthority -> right.claimId
-            else -> minOf(left.claimId, right.claimId)
-        }
+        if (leftAuthority > rightAuthority) return left.claimId
+        if (rightAuthority > leftAuthority) return right.claimId
+
+        val newer = newerClaim(left, right)
+        if (newer != null) return newer.claimId
+
+        return minOf(left.claimId, right.claimId)
     }
 
     private fun newerClaim(
