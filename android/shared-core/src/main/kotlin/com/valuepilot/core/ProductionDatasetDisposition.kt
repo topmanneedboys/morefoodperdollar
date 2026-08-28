@@ -144,7 +144,8 @@ enum class ProductionDatasetUseBlocker {
 
 data class ProductionDatasetUseDecision(
     val usableFromNamespacePolicy: Boolean,
-    val blockers: Set<ProductionDatasetUseBlocker>
+    val blockers: Set<ProductionDatasetUseBlocker>,
+    val disposition: ProductionDatasetDispositionRecord?
 ) {
     init {
         require(usableFromNamespacePolicy == blockers.isEmpty())
@@ -154,6 +155,10 @@ data class ProductionDatasetUseDecision(
 /**
  * Namespace-wide use guard.
  *
+ * The evaluator reads the registry rather than accepting a free-standing record,
+ * so callers cannot bypass registry transition rules by handing it an arbitrary
+ * RETAINED value.
+ *
  * RETAINED means only that namespace disposition does not block use. It does
  * NOT prove current production authorization, active snapshot lifecycle,
  * freshness, geography, rankability, or any other downstream gate.
@@ -162,9 +167,10 @@ object ProductionDatasetUseDispositionEvaluator {
 
     fun evaluate(
         expectedNamespace: EvidenceDatasetNamespace,
-        disposition: ProductionDatasetDispositionRecord?
+        registry: ProductionDatasetDispositionRegistry
     ): ProductionDatasetUseDecision {
         val blockers = linkedSetOf<ProductionDatasetUseBlocker>()
+        val disposition = registry.currentRecord(expectedNamespace.id)
 
         if (disposition == null) {
             blockers += ProductionDatasetUseBlocker.DISPOSITION_MISSING
@@ -186,13 +192,15 @@ object ProductionDatasetUseDispositionEvaluator {
 
         return ProductionDatasetUseDecision(
             usableFromNamespacePolicy = blockers.isEmpty(),
-            blockers = blockers
+            blockers = blockers,
+            disposition = disposition
         )
     }
 }
 
 enum class ProductionDatasetWithdrawalExecutionStatus {
     REMOVED,
+    BLOCKED_DISPOSITION_MISSING,
     BLOCKED_NOT_WITHDRAWAL_REQUIRED,
     BLOCKED_NAMESPACE_METADATA_MISMATCH,
     NAMESPACE_NOT_PRESENT
@@ -200,10 +208,12 @@ enum class ProductionDatasetWithdrawalExecutionStatus {
 
 data class ProductionDatasetWithdrawalExecutionResult(
     val status: ProductionDatasetWithdrawalExecutionStatus,
-    val removedClaimCount: Int
+    val removedClaimCount: Int,
+    val dispositionRevision: Long?
 ) {
     init {
         require(removedClaimCount >= 0)
+        require(dispositionRevision == null || dispositionRevision > 0L)
     }
 
     val namespaceRemoved: Boolean
@@ -213,12 +223,14 @@ data class ProductionDatasetWithdrawalExecutionResult(
 /**
  * Explicit physical-removal boundary for the in-memory source-isolated index.
  *
- * This executor never derives withdrawal from snapshot/profile lifecycle. The
- * caller must supply a namespace-wide WITHDRAWAL_REQUIRED disposition. It also
- * verifies exact namespace metadata before removing anything.
+ * This executor never derives withdrawal from snapshot/profile lifecycle and it
+ * never accepts a caller-supplied disposition record as deletion authority. It
+ * reads the registry's current namespace-wide disposition and proceeds only when
+ * that current state is WITHDRAWAL_REQUIRED.
  *
- * A successful removal may report zero removed claims when an empty registered
- * namespace itself was removed.
+ * Exact namespace metadata is verified before removal. A successful removal may
+ * report zero removed claims when an empty registered namespace itself was
+ * removed.
  *
  * A successful removal does NOT mutate the disposition to DELETED. The caller
  * records DELETED only after its full storage/persistence layer confirms the
@@ -228,8 +240,28 @@ object ProductionDatasetWithdrawalExecutor {
 
     fun execute(
         index: SourceIsolatedEvidenceIndex,
-        disposition: ProductionDatasetDispositionRecord
+        registry: ProductionDatasetDispositionRegistry,
+        namespace: EvidenceDatasetNamespace
     ): ProductionDatasetWithdrawalExecutionResult {
+        val disposition = registry.currentRecord(namespace.id)
+            ?: return ProductionDatasetWithdrawalExecutionResult(
+                status =
+                    ProductionDatasetWithdrawalExecutionStatus
+                        .BLOCKED_DISPOSITION_MISSING,
+                removedClaimCount = 0,
+                dispositionRevision = null
+            )
+
+        if (disposition.namespace != namespace) {
+            return ProductionDatasetWithdrawalExecutionResult(
+                status =
+                    ProductionDatasetWithdrawalExecutionStatus
+                        .BLOCKED_NAMESPACE_METADATA_MISMATCH,
+                removedClaimCount = 0,
+                dispositionRevision = disposition.revision
+            )
+        }
+
         if (
             disposition.state !=
             ProductionDatasetDispositionState.WITHDRAWAL_REQUIRED
@@ -238,32 +270,36 @@ object ProductionDatasetWithdrawalExecutor {
                 status =
                     ProductionDatasetWithdrawalExecutionStatus
                         .BLOCKED_NOT_WITHDRAWAL_REQUIRED,
-                removedClaimCount = 0
+                removedClaimCount = 0,
+                dispositionRevision = disposition.revision
             )
         }
 
         val registered =
             index.registeredNamespaces()
-                .firstOrNull { it.id == disposition.namespace.id }
+                .firstOrNull { it.id == namespace.id }
                 ?: return ProductionDatasetWithdrawalExecutionResult(
                     status = ProductionDatasetWithdrawalExecutionStatus.NAMESPACE_NOT_PRESENT,
-                    removedClaimCount = 0
+                    removedClaimCount = 0,
+                    dispositionRevision = disposition.revision
                 )
 
-        if (registered != disposition.namespace) {
+        if (registered != namespace) {
             return ProductionDatasetWithdrawalExecutionResult(
                 status =
                     ProductionDatasetWithdrawalExecutionStatus
                         .BLOCKED_NAMESPACE_METADATA_MISMATCH,
-                removedClaimCount = 0
+                removedClaimCount = 0,
+                dispositionRevision = disposition.revision
             )
         }
 
-        val removed = index.removeNamespace(disposition.namespace.id)
+        val removed = index.removeNamespace(namespace.id)
 
         return ProductionDatasetWithdrawalExecutionResult(
             status = ProductionDatasetWithdrawalExecutionStatus.REMOVED,
-            removedClaimCount = removed
+            removedClaimCount = removed,
+            dispositionRevision = disposition.revision
         )
     }
 }

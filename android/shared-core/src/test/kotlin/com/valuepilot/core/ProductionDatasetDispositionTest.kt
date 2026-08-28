@@ -2,7 +2,6 @@ package com.valuepilot.core
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -34,6 +33,16 @@ class ProductionDatasetDispositionTest {
             basisId = basisId
         )
 
+    private fun registryWith(
+        record: ProductionDatasetDispositionRecord
+    ): ProductionDatasetDispositionRegistry =
+        ProductionDatasetDispositionRegistry().also { registry ->
+            assertEquals(
+                ProductionDatasetDispositionWriteResult.ADDED,
+                registry.write(record)
+            )
+        }
+
     private fun claim(id: String, productKey: String) =
         EvidenceClaim(
             claimId = id,
@@ -48,10 +57,11 @@ class ProductionDatasetDispositionTest {
         val decision =
             ProductionDatasetUseDispositionEvaluator.evaluate(
                 expectedNamespace = namespace("dataset-a"),
-                disposition = null
+                registry = ProductionDatasetDispositionRegistry()
             )
 
         assertFalse(decision.usableFromNamespacePolicy)
+        assertNull(decision.disposition)
         assertTrue(
             ProductionDatasetUseBlocker.DISPOSITION_MISSING in decision.blockers
         )
@@ -61,13 +71,15 @@ class ProductionDatasetDispositionTest {
     fun `retained is only namespace-policy permission while blocked states fail closed`() {
         val namespace = namespace("dataset-a")
 
+        val retainedRecord = record(namespace)
         val retained =
             ProductionDatasetUseDispositionEvaluator.evaluate(
                 expectedNamespace = namespace,
-                disposition = record(namespace)
+                registry = registryWith(retainedRecord)
             )
         assertTrue(retained.usableFromNamespacePolicy)
         assertTrue(retained.blockers.isEmpty())
+        assertEquals(retainedRecord, retained.disposition)
 
         val expected =
             listOf(
@@ -80,10 +92,47 @@ class ProductionDatasetDispositionTest {
             )
 
         expected.forEach { (state, blocker) ->
+            val registry = ProductionDatasetDispositionRegistry()
+            val initial = record(namespace)
+            assertEquals(
+                ProductionDatasetDispositionWriteResult.ADDED,
+                registry.write(initial)
+            )
+
+            val stateRecord =
+                if (state == ProductionDatasetDispositionState.DELETED) {
+                    val withdrawal =
+                        initial.copy(
+                            revision = 2L,
+                            state = ProductionDatasetDispositionState.WITHDRAWAL_REQUIRED,
+                            basisId = "withdrawal"
+                        )
+                    assertEquals(
+                        ProductionDatasetDispositionWriteResult.UPDATED,
+                        registry.write(withdrawal)
+                    )
+                    withdrawal.copy(
+                        revision = 3L,
+                        state = ProductionDatasetDispositionState.DELETED,
+                        basisId = "deleted"
+                    )
+                } else {
+                    initial.copy(
+                        revision = 2L,
+                        state = state,
+                        basisId = "state-${state.name.lowercase()}"
+                    )
+                }
+
+            assertEquals(
+                ProductionDatasetDispositionWriteResult.UPDATED,
+                registry.write(stateRecord)
+            )
+
             val decision =
                 ProductionDatasetUseDispositionEvaluator.evaluate(
                     expectedNamespace = namespace,
-                    disposition = record(namespace, state = state)
+                    registry = registry
                 )
 
             assertFalse(decision.usableFromNamespacePolicy)
@@ -95,11 +144,12 @@ class ProductionDatasetDispositionTest {
     fun `namespace metadata mismatch blocks use even when ids match`() {
         val expected = namespace("dataset-a", licenseId = "license-a")
         val differentMetadata = namespace("dataset-a", licenseId = "license-b")
+        val registry = registryWith(record(differentMetadata))
 
         val decision =
             ProductionDatasetUseDispositionEvaluator.evaluate(
                 expectedNamespace = expected,
-                disposition = record(differentMetadata)
+                registry = registry
             )
 
         assertFalse(decision.usableFromNamespacePolicy)
@@ -266,20 +316,77 @@ class ProductionDatasetDispositionTest {
     }
 
     @Test
-    fun `retained and quarantined records can never physically remove namespace`() {
+    fun `missing retained quarantined and deleted registry states cannot physically remove namespace`() {
         val target = namespace("dataset-a")
-        val index = SourceIsolatedEvidenceIndex()
-        index.insert(target, claim("claim-a", "product-a"))
+
+        fun freshIndex() = SourceIsolatedEvidenceIndex().also {
+            it.insert(target, claim("claim-a", "product-a"))
+        }
+
+        val missingResult =
+            ProductionDatasetWithdrawalExecutor.execute(
+                index = freshIndex(),
+                registry = ProductionDatasetDispositionRegistry(),
+                namespace = target
+            )
+        assertEquals(
+            ProductionDatasetWithdrawalExecutionStatus.BLOCKED_DISPOSITION_MISSING,
+            missingResult.status
+        )
+        assertNull(missingResult.dispositionRevision)
 
         listOf(
             ProductionDatasetDispositionState.RETAINED,
             ProductionDatasetDispositionState.QUARANTINED,
             ProductionDatasetDispositionState.DELETED
         ).forEach { state ->
+            val registry = ProductionDatasetDispositionRegistry()
+            val initial = record(target)
+            assertEquals(
+                ProductionDatasetDispositionWriteResult.ADDED,
+                registry.write(initial)
+            )
+
+            if (state == ProductionDatasetDispositionState.QUARANTINED) {
+                assertEquals(
+                    ProductionDatasetDispositionWriteResult.UPDATED,
+                    registry.write(
+                        initial.copy(
+                            revision = 2L,
+                            state = state,
+                            basisId = "quarantined"
+                        )
+                    )
+                )
+            } else if (state == ProductionDatasetDispositionState.DELETED) {
+                val withdrawal =
+                    initial.copy(
+                        revision = 2L,
+                        state = ProductionDatasetDispositionState.WITHDRAWAL_REQUIRED,
+                        basisId = "withdrawal"
+                    )
+                assertEquals(
+                    ProductionDatasetDispositionWriteResult.UPDATED,
+                    registry.write(withdrawal)
+                )
+                assertEquals(
+                    ProductionDatasetDispositionWriteResult.UPDATED,
+                    registry.write(
+                        withdrawal.copy(
+                            revision = 3L,
+                            state = ProductionDatasetDispositionState.DELETED,
+                            basisId = "deleted"
+                        )
+                    )
+                )
+            }
+
+            val index = freshIndex()
             val result =
                 ProductionDatasetWithdrawalExecutor.execute(
                     index = index,
-                    disposition = record(target, state = state)
+                    registry = registry,
+                    namespace = target
                 )
 
             assertEquals(
@@ -299,22 +406,27 @@ class ProductionDatasetDispositionTest {
         val index = SourceIsolatedEvidenceIndex()
         index.insert(target, claim("claim-a", "product-a"))
         index.insert(other, claim("claim-b", "product-b"))
+        val withdrawal =
+            record(
+                namespace = target,
+                state = ProductionDatasetDispositionState.WITHDRAWAL_REQUIRED
+            )
+        val registry = registryWith(withdrawal)
 
         val result =
             ProductionDatasetWithdrawalExecutor.execute(
                 index = index,
-                disposition =
-                    record(
-                        namespace = target,
-                        state = ProductionDatasetDispositionState.WITHDRAWAL_REQUIRED
-                    )
+                registry = registry,
+                namespace = target
             )
 
         assertEquals(
             ProductionDatasetWithdrawalExecutionStatus.REMOVED,
             result.status
         )
+        assertTrue(result.namespaceRemoved)
         assertEquals(1, result.removedClaimCount)
+        assertEquals(withdrawal.revision, result.dispositionRevision)
         assertTrue(index.claimsInNamespace(target.id).isEmpty())
         assertEquals(1, index.claimsInNamespace(other.id).size)
         assertEquals(
@@ -329,15 +441,19 @@ class ProductionDatasetDispositionTest {
         val wrongMetadata = namespace("dataset-a", licenseId = "license-b")
         val index = SourceIsolatedEvidenceIndex()
         index.insert(registered, claim("claim-a", "product-a"))
+        val registry =
+            registryWith(
+                record(
+                    namespace = wrongMetadata,
+                    state = ProductionDatasetDispositionState.WITHDRAWAL_REQUIRED
+                )
+            )
 
         val result =
             ProductionDatasetWithdrawalExecutor.execute(
                 index = index,
-                disposition =
-                    record(
-                        namespace = wrongMetadata,
-                        state = ProductionDatasetDispositionState.WITHDRAWAL_REQUIRED
-                    )
+                registry = registry,
+                namespace = registered
             )
 
         assertEquals(
@@ -354,21 +470,26 @@ class ProductionDatasetDispositionTest {
         val target = namespace("dataset-empty")
         val index = SourceIsolatedEvidenceIndex()
         index.register(target)
+        val registry =
+            registryWith(
+                record(
+                    namespace = target,
+                    state = ProductionDatasetDispositionState.WITHDRAWAL_REQUIRED
+                )
+            )
 
         val result =
             ProductionDatasetWithdrawalExecutor.execute(
                 index = index,
-                disposition =
-                    record(
-                        namespace = target,
-                        state = ProductionDatasetDispositionState.WITHDRAWAL_REQUIRED
-                    )
+                registry = registry,
+                namespace = target
             )
 
         assertEquals(
             ProductionDatasetWithdrawalExecutionStatus.REMOVED,
             result.status
         )
+        assertTrue(result.namespaceRemoved)
         assertEquals(0, result.removedClaimCount)
         assertTrue(index.registeredNamespaces().isEmpty())
     }
@@ -393,7 +514,8 @@ class ProductionDatasetDispositionTest {
         val execution =
             ProductionDatasetWithdrawalExecutor.execute(
                 index = index,
-                disposition = withdrawal
+                registry = registry,
+                namespace = target
             )
 
         assertEquals(
@@ -421,21 +543,26 @@ class ProductionDatasetDispositionTest {
     fun `namespace absent is not treated as confirmed deletion by this index`() {
         val target = namespace("dataset-a")
         val index = SourceIsolatedEvidenceIndex()
+        val withdrawal =
+            record(
+                namespace = target,
+                state = ProductionDatasetDispositionState.WITHDRAWAL_REQUIRED
+            )
+        val registry = registryWith(withdrawal)
 
         val result =
             ProductionDatasetWithdrawalExecutor.execute(
                 index = index,
-                disposition =
-                    record(
-                        namespace = target,
-                        state = ProductionDatasetDispositionState.WITHDRAWAL_REQUIRED
-                    )
+                registry = registry,
+                namespace = target
             )
 
         assertEquals(
             ProductionDatasetWithdrawalExecutionStatus.NAMESPACE_NOT_PRESENT,
             result.status
         )
+        assertFalse(result.namespaceRemoved)
         assertEquals(0, result.removedClaimCount)
+        assertEquals(withdrawal.revision, result.dispositionRevision)
     }
 }
