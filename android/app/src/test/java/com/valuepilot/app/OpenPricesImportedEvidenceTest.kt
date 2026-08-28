@@ -68,7 +68,7 @@ class OpenPricesImportedEvidenceTest {
             evidence.sourceProductIdentity?.providerItemId
         )
         assertEquals(
-            "Rolled Oats\n1 kg\n4.99 CAD",
+            "Rolled Oats\n4.99 CAD",
             evidence.observation.rawText
         )
         assertEquals(
@@ -112,7 +112,7 @@ class OpenPricesImportedEvidenceTest {
     }
 
     @Test
-    fun mapperRejectsInvalidIdentityPriceQuantityAndObservationTime() {
+    fun mapperRejectsInvalidIdentityPriceAndObservationTime() {
         assertFailure(
             validRow().copy(productCode = "036000291453"),
             OpenPricesImportFailure.INVALID_GTIN
@@ -124,10 +124,6 @@ class OpenPricesImportedEvidenceTest {
         assertFailure(
             validRow().copy(priceText = "0"),
             OpenPricesImportFailure.INVALID_PRICE
-        )
-        assertFailure(
-            validRow().copy(quantityText = "400-600 g"),
-            OpenPricesImportFailure.INVALID_QUANTITY
         )
         assertFailure(
             validRow().copy(observedAtEpochMillis = 0L),
@@ -201,7 +197,7 @@ class OpenPricesImportedEvidenceTest {
     }
 
     @Test
-    fun acceptedRawTextParsesAsCadWithExplicitQuantity() {
+    fun priceObservationParsesWithoutInventingPackageQuantity() {
         val evidence =
             requireNotNull(
                 OpenPricesImportedEvidenceMapper
@@ -219,7 +215,7 @@ class OpenPricesImportedEvidenceTest {
         assertEquals("Rolled Oats", item?.name)
         assertEquals("CAD", item?.currency)
         assertEquals(4.99, item?.price ?: 0.0, 0.000001)
-        assertEquals(1000.0, item?.quantity?.amountBase ?: 0.0, 0.000001)
+        assertNull(item?.quantity)
     }
 
     private fun assertFailure(
@@ -242,7 +238,6 @@ class OpenPricesImportedEvidenceTest {
             priceId = "987",
             productCode = "036000291452",
             productName = "Rolled Oats",
-            quantityText = "1 kg",
             priceText = "4.99",
             currencyCode = "CAD",
             countryCode = "CA",
