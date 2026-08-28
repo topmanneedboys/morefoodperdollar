@@ -7,3 +7,8 @@ android/app/build/
 *.zip
 release/
 android/shared-core/build/
+
+# Authorized/provider feed files and generated validation output stay local.
+# Do not commit merchant catalog data, credentials, or provider-restricted exports.
+local-provider-data/
+local-feed-reports/
