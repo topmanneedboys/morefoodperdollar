@@ -8,17 +8,20 @@ import com.valuepilot.core.EvidenceClaimScope
 import com.valuepilot.core.EvidenceFingerprints
 import com.valuepilot.core.GtinValidation
 import com.valuepilot.core.NormalizedQuantity
+import com.valuepilot.core.QuantityNormalization
 import java.math.BigDecimal
 import java.util.Locale
 
 /**
  * Network-free representation of the small Open Food Facts field subset that
- * ValuePilot needs for the first metadata-only validation step.
+ * ValuePilot needs for metadata-only validation.
  *
  * productQuantity/productQuantityUnit correspond to Open Food Facts'
- * normalized whole-product quantity fields. The documented normalized unit is
- * g or ml. rawQuantity is retained only for provenance/cross-checking and is
- * never interpreted as a retailer price or availability claim.
+ * normalized whole-product mass/volume fields. rawQuantity is the source's
+ * displayed package-quantity field. It is retained for provenance and may be
+ * promoted to COUNT only for a deliberately narrow, exact supplement-dose-form
+ * syntax such as "100 tablets". Titles/descriptions are never parsed as
+ * authoritative quantity.
  */
 data class OpenFoodFactsImportedProduct(
     val code: String,
@@ -41,6 +44,11 @@ enum class OpenFoodFactsImportFailure {
     INVALID_MODIFICATION_TIME
 }
 
+enum class OpenFoodFactsQuantityBasis {
+    STRUCTURED_MASS_OR_VOLUME,
+    DISPLAYED_SUPPLEMENT_COUNT
+}
+
 data class OpenFoodFactsProductMetadata(
     val providerId: String,
     val gtin: String,
@@ -48,6 +56,7 @@ data class OpenFoodFactsProductMetadata(
     val brands: String?,
     val rawQuantity: String?,
     val normalizedQuantity: NormalizedQuantity,
+    val quantityBasis: OpenFoodFactsQuantityBasis,
     val sourceLastModifiedAtEpochMillis: Long?
 )
 
@@ -73,9 +82,14 @@ data class OpenFoodFactsImportResult(
  * claims. That separation prevents community product metadata from becoming a
  * retailer offer by accident.
  *
- * The normalized structured quantity is authoritative only as
- * SOURCE_ASSERTED_METADATA. When raw `quantity` is simple enough to parse
- * deterministically, it is cross-checked and disagreement fails closed.
+ * Preferred source semantics:
+ * - exact displayed supplement counts may become COUNT evidence only when the
+ *   entire raw quantity is an integer plus an allow-listed dose-form noun;
+ * - otherwise normalized structured quantity must be a positive g/ml value;
+ * - simple raw mass/volume syntax is cross-checked against structured g/ml and
+ *   disagreement fails closed.
+ *
+ * Unsupported or complex displayed count syntax is never guessed.
  */
 object OpenFoodFactsImportedMetadataMapper {
 
@@ -99,48 +113,55 @@ object OpenFoodFactsImportedMetadataMapper {
             failures += OpenFoodFactsImportFailure.INVALID_BRANDS
         }
 
-        val quantityValue = row.productQuantity?.trim()
-        val quantityUnit = row.productQuantityUnit?.trim()?.lowercase(Locale.ROOT)
-
-        if (quantityValue.isNullOrBlank() || quantityUnit.isNullOrBlank()) {
-            failures += OpenFoodFactsImportFailure.MISSING_STRUCTURED_QUANTITY
-        }
-
-        if (
-            !quantityUnit.isNullOrBlank() &&
-            quantityUnit != "g" &&
-            quantityUnit != "ml"
-        ) {
-            failures += OpenFoodFactsImportFailure.UNSUPPORTED_STRUCTURED_UNIT
-        }
-
-        val normalizedQuantity =
-            if (
-                !quantityValue.isNullOrBlank() &&
-                (quantityUnit == "g" || quantityUnit == "ml")
-            ) {
-                normalizedQuantity(quantityValue, quantityUnit)
-            } else {
-                null
-            }
-
-        if (
-            !quantityValue.isNullOrBlank() &&
-            (quantityUnit == "g" || quantityUnit == "ml") &&
-            normalizedQuantity == null
-        ) {
-            failures += OpenFoodFactsImportFailure.INVALID_STRUCTURED_QUANTITY
-        }
-
         val rawQuantity = sanitizeOptional(row.rawQuantity, 120)
         if (!row.rawQuantity.isNullOrBlank() && rawQuantity == null) {
             failures += OpenFoodFactsImportFailure.INCONSISTENT_RAW_QUANTITY
         }
 
-        if (normalizedQuantity != null && rawQuantity != null) {
-            val parsedRaw = parseSimpleDisplayedQuantity(rawQuantity)
-            if (parsedRaw != null && parsedRaw != normalizedQuantity) {
-                failures += OpenFoodFactsImportFailure.INCONSISTENT_RAW_QUANTITY
+        val displayedSupplementCount =
+            rawQuantity?.let(::parseDisplayedSupplementCount)
+
+        val quantityValue = row.productQuantity?.trim()
+        val quantityUnit = row.productQuantityUnit?.trim()?.lowercase(Locale.ROOT)
+
+        var structuredQuantity: NormalizedQuantity? = null
+
+        if (displayedSupplementCount == null) {
+            if (quantityValue.isNullOrBlank() || quantityUnit.isNullOrBlank()) {
+                failures += OpenFoodFactsImportFailure.MISSING_STRUCTURED_QUANTITY
+            }
+
+            if (
+                !quantityUnit.isNullOrBlank() &&
+                quantityUnit != "g" &&
+                quantityUnit != "ml"
+            ) {
+                failures += OpenFoodFactsImportFailure.UNSUPPORTED_STRUCTURED_UNIT
+            }
+
+            structuredQuantity =
+                if (
+                    !quantityValue.isNullOrBlank() &&
+                    (quantityUnit == "g" || quantityUnit == "ml")
+                ) {
+                    normalizedQuantity(quantityValue, quantityUnit)
+                } else {
+                    null
+                }
+
+            if (
+                !quantityValue.isNullOrBlank() &&
+                (quantityUnit == "g" || quantityUnit == "ml") &&
+                structuredQuantity == null
+            ) {
+                failures += OpenFoodFactsImportFailure.INVALID_STRUCTURED_QUANTITY
+            }
+
+            if (structuredQuantity != null && rawQuantity != null) {
+                val parsedRaw = parseSimpleDisplayedQuantity(rawQuantity)
+                if (parsedRaw != null && parsedRaw != structuredQuantity) {
+                    failures += OpenFoodFactsImportFailure.INCONSISTENT_RAW_QUANTITY
+                }
             }
         }
 
@@ -162,7 +183,15 @@ object OpenFoodFactsImportedMetadataMapper {
             )
         }
 
-        val safeQuantity = requireNotNull(normalizedQuantity)
+        val safeQuantity =
+            displayedSupplementCount ?: requireNotNull(structuredQuantity)
+        val quantityBasis =
+            if (displayedSupplementCount != null) {
+                OpenFoodFactsQuantityBasis.DISPLAYED_SUPPLEMENT_COUNT
+            } else {
+                OpenFoodFactsQuantityBasis.STRUCTURED_MASS_OR_VOLUME
+            }
+
         val productKey = "gtin:$gtin"
         val valueFingerprint = EvidenceFingerprints.quantity(safeQuantity)
 
@@ -174,6 +203,7 @@ object OpenFoodFactsImportedMetadataMapper {
                 brands = brands,
                 rawQuantity = rawQuantity,
                 normalizedQuantity = safeQuantity,
+                quantityBasis = quantityBasis,
                 sourceLastModifiedAtEpochMillis = modifiedMillis
             )
 
@@ -221,6 +251,29 @@ object OpenFoodFactsImportedMetadataMapper {
             amountMicros = amountMicros,
             unit = baseUnit
         )
+    }
+
+    /**
+     * Promote only an exact source-displayed supplement package count.
+     *
+     * The entire value must be an integer plus a deliberately small dose-form
+     * vocabulary. Strengths, servings, free text, ranges, multipliers, and
+     * combined forms such as "60 capsules x 500 mg" therefore remain unknown.
+     */
+    private fun parseDisplayedSupplementCount(
+        value: String
+    ): NormalizedQuantity? {
+        val normalized = value
+            .replace('\u00A0', ' ')
+            .replace("℮", "")
+            .trim()
+            .lowercase(Locale.ROOT)
+            .replace(Regex("\\s+"), " ")
+
+        val match = SUPPLEMENT_COUNT.matchEntire(normalized) ?: return null
+        val count = match.groupValues[1].toLongOrNull() ?: return null
+        if (count !in 1L..10_000L) return null
+        return runCatching { QuantityNormalization.count(count) }.getOrNull()
     }
 
     /**
@@ -321,6 +374,12 @@ object OpenFoodFactsImportedMetadataMapper {
         Regex("(\\d{1,12}(?:[.,]\\d{1,6})?)\\s*(g|kg|ml|cl|l)")
     private val MULTIPACK =
         Regex("(\\d{1,4})\\s*[x×]\\s*(\\d{1,12}(?:[.,]\\d{1,6})?)\\s*(g|kg|ml|cl|l)")
+    private val SUPPLEMENT_COUNT = Regex(
+        "(\\d{1,5})\\s+" +
+            "(tablet|tablets|capsule|capsules|caplet|caplets|softgel|softgels|soft gel|soft gels|" +
+            "gummy|gummies|lozenge|lozenges|sachet|sachets|packet|packets|" +
+            "comprimé|comprimés|gélule|gélules|pastille|pastilles|gomme|gommes)"
+    )
 
     /** Deliberately broad corruption guard: one consumer package <= 1 tonne / 1000 L. */
     private val MAX_BASE_QUANTITY = BigDecimal("1000000")
