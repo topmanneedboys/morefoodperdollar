@@ -3,7 +3,9 @@ package com.valuepilot.app
 import com.valuepilot.core.AvailabilityState
 import com.valuepilot.core.EvidenceAcceptanceEvaluator
 import com.valuepilot.core.EvidenceAcceptancePolicy
+import com.valuepilot.core.EvidenceAuthorityClass
 import com.valuepilot.core.EvidenceChannel
+import com.valuepilot.core.EvidenceClaimDomain
 import com.valuepilot.core.EvidenceClaimKind
 import com.valuepilot.core.EvidenceDisposition
 import com.valuepilot.core.EvidenceEnvironment
@@ -28,8 +30,10 @@ class OpenPricesImportedEvidenceTest {
         assertTrue(result.accepted)
         assertTrue(result.failures.isEmpty())
         assertNotNull(result.evidence)
+        assertNotNull(result.priceClaim)
 
         val evidence = requireNotNull(result.evidence)
+        val priceClaim = requireNotNull(result.priceClaim)
 
         assertEquals(
             "open-prices",
@@ -81,6 +85,19 @@ class OpenPricesImportedEvidenceTest {
         )
         assertFalse(evidence.isSample)
         assertTrue(evidence.isRealWorld)
+
+        assertEquals(EvidenceClaimDomain.OBSERVED_PRICE, priceClaim.domain)
+        assertEquals(
+            EvidenceAuthorityClass.PROOF_BACKED_DIRECT_OBSERVATION,
+            priceClaim.authority
+        )
+        assertEquals("gtin:036000291452", priceClaim.scope.productKey)
+        assertNull(priceClaim.scope.merchantKey)
+        assertEquals("open-prices-location-321", priceClaim.scope.locationKey)
+        assertEquals("PHYSICAL_STORE", priceClaim.scope.commerceChannelKey)
+        assertEquals("CAD", priceClaim.scope.currencyCode)
+        assertEquals("money:CAD:2:499", priceClaim.valueFingerprint)
+        assertEquals(OBSERVED_AT, priceClaim.observedAtEpochMillis)
     }
 
     @Test
@@ -227,6 +244,7 @@ class OpenPricesImportedEvidenceTest {
 
         assertFalse(result.accepted)
         assertNull(result.evidence)
+        assertNull(result.priceClaim)
         assertTrue(
             "Expected $expected in ${result.failures}",
             expected in result.failures
