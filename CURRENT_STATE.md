@@ -65,6 +65,7 @@ The shared deterministic layer includes:
 - evidence-backed unit-value gating
 - provider-neutral staged offer import preserving unresolved source fields
 - provider-neutral structural discounted/reference price-pair assessment that never selects a current price or grants rankability
+- provider-neutral dataset/file recency classification that is deliberately separate from per-offer freshness
 
 Permanent invariant: historical observed price, merchant price, package quantity, benchmark and regulatory fact remain separate factual domains/scopes and are never flattened into one truth value.
 
@@ -84,6 +85,38 @@ The assessment is exact/fail-closed:
 - the same source field cannot occupy both roles.
 
 This assessment does **not** create an `Offer`, choose a current price, calculate a savings claim, establish freshness/geography/rights, or make evidence rankable.
+
+The full ValuePilot Android workflow for commit `5bb647a8485f257ec51b3eb0fe39b9c7caccb0a0` completed successfully: browser checks, shared-core/app tests, lint/APK build, JVM test summary, Android privacy-boundary verification, release packaging/checksums and artifact upload all passed.
+
+### Dataset recency is not offer freshness
+
+Commit `a8e98b8ce333a612538841566972d6cab58dde88` adds `ProviderDatasetRecency.kt` and focused tests.
+
+The new boundary provides a caller-supplied `ImportedDatasetRecencyPolicy` and deterministic classifications:
+
+- `UNKNOWN`
+- `FUTURE_DATED`
+- `RECENT`
+- `AGING`
+- `STALE`
+
+This classification applies only to provider dataset/file provenance time such as a feed-generation or deposit timestamp.
+
+Permanent rule:
+
+**A RECENT DATASET DOES NOT MEAN A FRESH OFFER.**
+
+Dataset recency:
+
+- never populates or substitutes for `priceObservedAtEpochMillis`;
+- never becomes `ShoppingEvidence` observation freshness;
+- never makes an offer rankable;
+- never proves that a merchant-site price or availability value is live at display time;
+- never bypasses rights, geography, semantic-conflict or evidence-acceptance gates.
+
+Focused tests prove that a dataset can classify as `RECENT` while `priceObservedAtEpochMillis` remains `null`, and that a true per-offer observation timestamp remains a distinct field even when dataset provenance is stale.
+
+The full ValuePilot Android workflow for commit `a8e98b8ce333a612538841566972d6cab58dde88` also completed successfully, including browser checks, shared-core/app tests, lint/APK build, JVM result summary, Android privacy-boundary verification, release packaging/checksums and artifact upload.
 
 ## GTIN identity representation
 
@@ -252,7 +285,7 @@ Research provider networking remains outside Android.
 
 5D — Authorized Real Shopping Data Provider Selection / validation.
 
-The milestone is beyond first-feed acquisition, beyond the first valid cross-source quantity-coverage measurement, and now has documented Rakuten Retail/Sale schema semantics plus provider-neutral structural price-pair hardening.
+The milestone is beyond first-feed acquisition, beyond the first valid cross-source quantity-coverage measurement, and now has documented Rakuten Retail/Sale schema semantics plus provider-neutral structural price-pair and dataset-recency hardening.
 
 Remaining gates stay separate:
 
