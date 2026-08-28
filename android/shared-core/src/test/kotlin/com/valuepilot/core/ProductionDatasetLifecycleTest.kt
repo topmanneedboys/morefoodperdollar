@@ -233,6 +233,34 @@ class ProductionDatasetLifecycleTest {
     }
 
     @Test
+    fun `weaker custom profile with same id cannot bypass lifecycle gates`() {
+        val candidate = candidate()
+        val bound = bound(candidate)
+        val weakProfile =
+            ProductionActivationProfile(
+                id = profile.id,
+                requiredGates =
+                    setOf(ProductionAuthorizationGate.DATA_ACCESS_AUTHORIZED)
+            )
+
+        val result =
+            ProductionDatasetActivationEvaluator.evaluate(
+                boundCandidate = bound,
+                lifecycleRecord = lifecycle(bound),
+                currentAuthorizationAssessment = authorization(candidate),
+                activationProfile = weakProfile,
+                evaluatedAtEpochMillis = 2_000L,
+                offerFreshnessPolicy = freshnessPolicy
+            )
+
+        assertFalse(result.active)
+        assertTrue(
+            ProductionDatasetActivationBlocker.INSUFFICIENT_ACTIVATION_PROFILE in
+                result.blockers
+        )
+    }
+
+    @Test
     fun `suspended revoked and retired snapshots all fail closed`() {
         val candidate = candidate()
         val bound = bound(candidate)

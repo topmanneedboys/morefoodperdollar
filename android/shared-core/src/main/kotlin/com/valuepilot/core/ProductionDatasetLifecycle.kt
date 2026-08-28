@@ -222,6 +222,7 @@ class ProductionDatasetLifecycleRegistry {
 }
 
 enum class ProductionDatasetActivationBlocker {
+    INSUFFICIENT_ACTIVATION_PROFILE,
     LIFECYCLE_RECORD_MISSING,
     LIFECYCLE_SCOPE_MISMATCH,
     ACTIVATION_PROFILE_MISMATCH,
@@ -264,6 +265,7 @@ data class ProductionDatasetActivationResult(
  * Fail-closed activation/revocation evaluator for one exact dataset snapshot.
  *
  * Every evaluation re-checks:
+ * - at least the full base mobile-catalog activation profile;
  * - exact lifecycle snapshot/profile scope;
  * - current provider production authorization;
  * - lifecycle state/effective window; and
@@ -287,6 +289,11 @@ object ProductionDatasetActivationEvaluator {
         val blockers = linkedSetOf<ProductionDatasetActivationBlocker>()
         val candidate = boundCandidate.candidate
         val snapshot = boundCandidate.snapshot
+
+        val baseProfile = ProductionActivationProfiles.CONSUMER_MOBILE_CATALOG
+        if (!activationProfile.requiredGates.containsAll(baseProfile.requiredGates)) {
+            blockers += ProductionDatasetActivationBlocker.INSUFFICIENT_ACTIVATION_PROFILE
+        }
 
         if (lifecycleRecord == null) {
             blockers += ProductionDatasetActivationBlocker.LIFECYCLE_RECORD_MISSING
