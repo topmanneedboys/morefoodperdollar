@@ -6,180 +6,145 @@ Milestone: 5D — provider validation and provenance-safe real-data preparation
 
 ## External provider status
 
-- Lowvyn rights/technical inquiry: **sent**. Await written clarification before any API adapter, caching, indexing, redistribution, or production use.
-- Rakuten/Jamieson merchant-feed validation is now the highest-value real-provider path.
+- Lowvyn rights/technical inquiry: sent; await written clarification before integration.
+- Rakuten/Jamieson is the first actual authorized merchant-feed validation case.
 - CJ/Rakuten/Awin provider screening continues independently.
 - No Android runtime network permission or production provider networking is authorized by this status.
 
 ## Open Prices
 
-Measured Canadian coverage remains supplemental, not primary-current-price quality.
+Open Prices remains supplemental proof-backed observed/historical Canadian price evidence, not a primary live merchant-price provider.
 
-Implementation treats an Open Prices row as **price evidence only**:
+The existing mapper admits only conservative proof-backed Canadian/CAD physical-store observations with checksum-valid GTIN, exact positive price, location and source observation time. It deliberately carries no package quantity and never invents stock.
 
-- validated GTIN
-- Canada + CAD
-- proof-backed physical observation
-- exact positive price
-- source location
-- source observation time
-- availability remains unknown
+Previous real Open Prices × Open Food Facts measurement found:
 
-Package quantity is deliberately absent from the Open Prices price observation. The public price export does not establish package size, and injecting a quantity from another provider into the same observation would erase provenance.
+- 478 strict Canadian/CAD proof-backed price rows
+- 358 checksum-valid GTINs
+- 323 / 358 Open Food Facts matches
+- 266 / 358 usable structured `g`/`ml` quantity joins
+- 371 / 478 price rows with usable joined quantity
+- very weak recent-price freshness, so the price rail remains historical/reference quality rather than primary live-offer quality.
 
-The adapter emits both:
+A cross-source quantity join never upgrades stale/display-only price evidence into current/rankable evidence.
 
-1. typed `ShoppingEvidence`; and
-2. a typed `OBSERVED_PRICE` `EvidenceClaim` with proof-backed-direct-observation authority.
+## Open Food Facts quantity semantics
 
-## Open Food Facts
+`OpenFoodFactsImportedMetadata.kt` remains a strict network-free metadata mapper.
 
-A strict network-free metadata mapper exists in `OpenFoodFactsImportedMetadata.kt`.
+It may emit `PACKAGE_QUANTITY` as `SOURCE_ASSERTED_METADATA` only from:
 
-Supported source fields remain narrow:
+1. positive structured whole-product `g` / `ml`; or
+2. an exact source-displayed supplement count when the entire `quantity` field is integer + a deliberately narrow allow-listed dose-form noun.
 
-- checksum-valid GTIN
-- optional product name
-- optional brand text
-- displayed source quantity retained for provenance/cross-checking
-- normalized structured whole-product `product_quantity`
-- normalized structured unit restricted to documented `g` or `ml`
-- source last-modified timestamp when supplied
+It never parses product titles/descriptions as authoritative quantity. Strengths, ranges, multipliers and mixed expressions remain unknown. It cannot emit retailer price, availability, promotion, merchant identity or a market benchmark.
 
-The mapper now supports **two explicit quantity bases**:
+## Source-isolated evidence architecture
 
-1. `STRUCTURED_MASS_OR_VOLUME` for positive normalized `g` / `ml`; and
-2. `DISPLAYED_SUPPLEMENT_COUNT` for an exact source quantity such as `100 tablets`, `60 capsules`, `90 gummies`, or another deliberately allow-listed dose-form noun.
+`SourceIsolatedEvidenceIndex.kt`, the conflict resolver and evidence-backed unit-value gate preserve independent source attribution.
 
-Count promotion is intentionally strict:
+Permanent invariants:
 
-- the complete source `quantity` value must match the count syntax;
-- titles and descriptions are never parsed as authoritative count;
-- ranges, strengths, multipliers and mixed expressions remain unknown;
-- ambiguous text such as `60 capsules x 500 mg` is not converted into count evidence.
+- current merchant price != historical observed price
+- package quantity != price
+- market benchmark != retailer offer
+- regulatory fact != retailer offer
+- different merchants/locations/channels/currencies coexist
+- stronger same-scope authority may defeat weaker evidence
+- unresolved equal-strength conflict blocks Best Value
+- exact money/quantity fingerprints prevent formatting differences from masquerading as facts
 
-It emits **PACKAGE_QUANTITY only** with `SOURCE_ASSERTED_METADATA` authority.
+## Critical GTIN representation correction
 
-It cannot emit:
+Cross-source identity must not compare checksum-valid barcode strings only by raw textual representation.
 
-- retailer price
-- stock/availability
-- promotion
-- merchant identity
-- market benchmark
+Open Food Facts documents normalization of equivalent leading-zero barcode forms. UPC-A / GTIN-12 can be represented by its equivalent zero-prefixed GTIN-13, and leading-zero representations can otherwise collapse to the same stored `code`.
 
-Simple displayed mass/volume values such as `1 kg` and `6 x 250 ml` are still deterministically cross-checked against structured Open Food Facts quantity fields. If a parseable displayed value and structured value disagree, the import fails closed instead of guessing.
+The first real Jamieson × Open Food Facts coverage tool had a bug: after querying raw provider GTINs, it required returned normalized Open Food Facts `code` strings to exactly equal one of the raw provider strings. That could discard valid matches.
 
-Open Food Facts metadata never becomes merchant-authoritative merely because it shares a GTIN with a merchant feed.
+The first Jamieson run reported 0 / 271 matches, but **that result is invalid as coverage evidence**.
 
-## Real Open Prices × Open Food Facts measurement
+Sanitized feed-level identity distribution explains the problem:
 
-The first real-data join measurement completed successfully in GitHub Actions using the then-current public Open Prices Parquet export and the official Open Food Facts structured-search API with a narrow field projection.
+- valid GTINs: 271
+- 12-digit: 248
+- 13-digit: 1
+- 14-digit: 22
+- source representations changed by documented leading-zero canonicalization: 267 / 271
+- canonical unique identities: 271
+- canonical identity collisions: 0
 
-The analysis remained research-only and aggregate-only. It did not add Android networking, scrape retailers, merge source records, persist proof-image paths, or publish product/contributor identifiers.
+## Corrected normalized lookup
 
-Measured strict Open Prices input:
+The stable launcher `tools/run_rakuten_off_quantity_coverage.py` now delegates to `tools/measure_rakuten_off_quantity_coverage_v2.py` and `tools/open_facts_barcode.py`.
 
-- **478** Canadian CAD proof-backed physical-store price rows
-- **358** checksum-valid GTINs
-- observation date range: **2020-02-01 through 2026-08-11**
-- recent strict rows: **0 / 9 / 11** in the last **7 / 30 / 90 days**
+The corrected research path:
 
-Open Food Facts lookup results:
+- validates GTIN before normalization
+- canonicalizes only documented leading-zero representation equivalence
+- never repairs an invalid GTIN
+- queries canonical Open Food Facts identities
+- canonicalizes API response codes before matching
+- maps matches back to exact provider identities in memory
+- exposes canonical collisions instead of silently merging them
+- emits aggregate output only
+- never emits provider GTINs, rows, URLs, credentials or account identifiers.
 
-- **323 / 358** GTINs found
-- **266** GTINs had valid structured `g`/`ml` whole-product quantity
-- **0** parseable raw-vs-structured quantity disagreements in this measured set
-- **0** conflicting duplicate structured quantities in this measured set
-- **266 / 358 = 74.3%** usable quantity joins after fail-closed checks
+Normalized lookup regression CI passed on commit `3a949e14be5cdcd10f523aa3a8d20fe463b91d4f`.
 
-Price-row coverage after the quantity join:
+## Shared-core cross-source identity
 
-- **371 / 478 = 77.6%** of strict Open Prices rows had a usable OFF package quantity
-- joined rows in the last **7 / 30 / 90 days**: **0 / 4 / 4**
+The same representation issue is now handled in platform-neutral shared core.
 
-The lookup required **5** structured-search calls while staying below the documented Open Food Facts search-rate limit.
+`GtinValidation.canonicalOrNull()` provides deterministic canonical identity for checksum-valid equivalent leading-zero representations.
 
-### Measurement decision
+`ImportedSourceIdentity` now separates:
 
-**The identity/quantity join is technically useful; Open Prices freshness remains the limiting factor.**
+- `suppliedGtin`: exact source value
+- `validatedGtin`: exact checksum-valid source value
+- `canonicalGtin`: cross-source identity
 
-Keep Open Food Facts as a supplemental product/package metadata rail and Open Prices as proof-backed observed/historical price evidence. Do not call an old joined observation a current retailer offer, and do not let richer metadata upgrade stale/display-only price evidence into Best Value.
+The staged provider import promotes canonical GTIN into `SourceProductIdentity` while retaining the exact source GTIN for provenance/audit.
 
-## Source-isolated evidence index
+Tests cover equivalent UPC-A/GTIN-12, GTIN-13 and leading-zero GTIN-14 representations, while preserving EAN-8 and non-zero-indicator GTIN-14 distinctions and refusing invalid-GTIN repair.
 
-The bounded platform-neutral in-memory prototype now exists in `android/shared-core/src/main/kotlin/com/valuepilot/core/SourceIsolatedEvidenceIndex.kt`.
+The Android workflow for commit `be96095e6634b28f93e9add932bf67ac98bb66a3` has completed browser checks, shared-core/app tests, Android lint/assemble, APK network-permission privacy verification, release assembly and artifact upload successfully. Post-job cleanup was still running at the last observed checkpoint.
 
-It preserves dataset namespace and storage-boundary metadata instead of flattening all claims into one shared row. It supports bounded lookup by stable product key, delegates factual resolution to the existing resolver, rejects claim-ID collisions, and can remove one dataset namespace without touching another provider.
+## Jamieson count-coverage status
 
-This is an engineering/source-isolation boundary, not a legal conclusion about any dataset licence.
+The authorized Jamieson feed has now been run once through the old research path, but the old 0-match result is invalid due the normalization bug.
 
-## Cross-source conflict safety
+Therefore:
 
-Important invariants:
+- no valid corrected Open Food Facts match percentage exists yet;
+- no valid Jamieson exact-count coverage percentage exists yet;
+- no cross-source Jamieson unit-value candidates should be claimed yet.
 
-- current merchant price != historical/proof-backed observed price;
-- package quantity != price;
-- market benchmark != retailer offer;
-- regulatory fact != retailer offer;
-- different merchants/locations/channels/currencies coexist instead of overwriting each other;
-- stronger authority wins a same-scope factual conflict before recency is considered;
-- equal-scope unresolved conflicts block Best Value instead of guessing.
+The next bounded empirical action is a corrected normalized rerun. Only that result should be used to decide whether Open Food Facts supplies useful quantity/count coverage for Jamieson.
 
-Canonical exact fingerprints are used for money and normalized quantity so formatting differences cannot masquerade as factual differences.
+## Unit-value gate remains unchanged
 
-## Cross-source unit-value gate
+A price and quantity from different providers may produce deterministic unit value only when:
 
-A price from one provider and package quantity from another may produce a deterministic unit rate only when all of the following are true:
+1. the price evidence is independently rankable;
+2. both claims join through the same canonical stable product identity;
+3. the price domain is an accepted price domain;
+4. quantity is `PACKAGE_QUANTITY`;
+5. exact fingerprints agree with selected values;
+6. quantity authority is strong enough;
+7. no blocking factual conflict remains.
 
-1. the price evidence is independently `RANKABLE`;
-2. price and quantity claims use the same stable product key, normally validated GTIN;
-3. the price claim is `CURRENT_PRICE` or `OBSERVED_PRICE`;
-4. the quantity claim is `PACKAGE_QUANTITY`;
-5. the exact Money fingerprint matches the selected price;
-6. the exact NormalizedQuantity fingerprint matches the selected quantity;
-7. quantity authority is strong enough for deterministic ranking.
-
-A stale/display-only Open Prices observation therefore cannot become rankable merely because fresh Open Food Facts metadata exists.
-
-A Jamieson merchant price likewise cannot receive per-tablet/capsule arithmetic merely because a title appears to contain a count. Count must be separately established and pass the same identity/conflict/unit-value gates.
-
-## Rakuten × Open Food Facts supplement-count coverage research
-
-The privacy-safe research tool `tools/measure_rakuten_off_quantity_coverage.py` now exists for the next empirical Jamieson step.
-
-It reads the local authorized Rakuten feed, keeps valid GTINs in memory, performs bounded Open Food Facts metadata lookups, fails closed on conflicting quantity candidates, and emits only aggregate JSON/Markdown. It does not emit GTINs, source product rows, URLs, credentials or provider account identifiers.
-
-Synthetic regression coverage is included in the merchant-feed qualification test suite. The workflow compiled the tool and passed the suite on commit `3c4dfa8cfe2f8fd6de4c3a503983de52c26bed7a`.
-
-The **real Jamieson feed has not yet been run through this new count-coverage tool**, so no real exact-count coverage percentage is established yet.
-
-See `RAKUTEN_OFF_QUANTITY_COVERAGE.md`.
-
-## What the current design prevents
-
-The current design specifically prevents:
-
-- an old receipt price silently becoming the current retailer price;
-- Open Food Facts community metadata overwriting an authoritative merchant package size;
-- a package size from GTIN A being joined to the price of GTIN B;
-- a market average becoming a retailer-specific offer;
-- a newer but weaker source automatically defeating a stronger authoritative source;
-- conflicting equal-authority values being averaged or chosen arbitrarily;
-- source-import time being substituted for source observation time;
-- a second source accidentally upgrading stale price evidence to Best Value;
-- supplement count being guessed from a title, description or dosage strength.
+Canonical barcode normalization fixes identity representation only. It does not upgrade authority, freshness, rights, or factual quality.
 
 ## Next gate
 
-Do not connect these research adapters directly to consumer search/ranking UI yet.
+Do not connect open-data research paths directly to consumer search/ranking UI yet.
 
-The next bounded empirical step is:
+Immediate next step:
 
-1. run the privacy-safe Rakuten × Open Food Facts coverage tool against the existing authorized complete Jamieson feed locally;
-2. retain only aggregate output;
-3. determine exact supplement-count coverage, mass/volume-only coverage, unmatched products, conflicts and unresolved quantity rows;
-4. only if coverage is useful, assemble separately attributed quantity claims through the existing source-isolated index, conflict resolver and evidence-backed unit-value gate;
-5. keep production rights, price semantics and Android networking as separate unresolved gates.
-
-Merchant-authoritative feeds and open metadata must continue through the same provenance/conflict boundaries rather than bypassing them.
+1. rerun the normalized Jamieson × Open Food Facts tool locally;
+2. retain aggregate output only;
+3. measure matched, exact-count, mass/volume-only, unmatched, conflict and no-usable-quantity counts;
+4. if normalized coverage is useful, assemble separately attributed claims through the source-isolated conflict/unit-value gates;
+5. if coverage remains poor, then investigate another appropriately licensed/public metadata domain/provider rather than guessing quantity;
+6. keep production rights, Retail/Sale semantics, freshness and Android networking as separate unresolved gates.
