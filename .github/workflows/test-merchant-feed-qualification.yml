@@ -6,15 +6,13 @@ on:
     paths:
       - 'tools/qualify_merchant_feed.py'
       - 'tools/qualify_rakuten_product_catalog.py'
-      - 'tools/tests/test_qualify_merchant_feed.py'
-      - 'tools/tests/test_qualify_rakuten_product_catalog.py'
+      - 'tools/tests/test_qualify_*.py'
       - '.github/workflows/test-merchant-feed-qualification.yml'
   pull_request:
     paths:
       - 'tools/qualify_merchant_feed.py'
       - 'tools/qualify_rakuten_product_catalog.py'
-      - 'tools/tests/test_qualify_merchant_feed.py'
-      - 'tools/tests/test_qualify_rakuten_product_catalog.py'
+      - 'tools/tests/test_qualify_*.py'
       - '.github/workflows/test-merchant-feed-qualification.yml'
 
 permissions:
