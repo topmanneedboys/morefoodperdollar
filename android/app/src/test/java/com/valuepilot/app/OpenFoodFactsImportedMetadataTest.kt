@@ -30,9 +30,11 @@ class OpenFoodFactsImportedMetadataTest {
 
         assertTrue(result.accepted)
         assertTrue(result.failures.isEmpty())
+        assertNotNull(result.metadata)
+        assertNotNull(result.quantityClaim)
 
-        val metadata = assertNotNull(result.metadata)
-        val claim = assertNotNull(result.quantityClaim)
+        val metadata = requireNotNull(result.metadata)
+        val claim = requireNotNull(result.quantityClaim)
 
         assertEquals(OpenFoodFactsImportedMetadataMapper.PROVIDER_ID, metadata.providerId)
         assertEquals("036000291452", metadata.gtin)
@@ -61,7 +63,8 @@ class OpenFoodFactsImportedMetadataTest {
         )
 
         assertTrue(result.accepted)
-        val quantity = assertNotNull(result.metadata).normalizedQuantity
+        assertNotNull(result.metadata)
+        val quantity = requireNotNull(result.metadata).normalizedQuantity
         assertEquals(BaseUnit.MILLILITRE, quantity.unit)
         assertEquals(1_500_000_000L, quantity.amountMicros)
     }
@@ -127,9 +130,10 @@ class OpenFoodFactsImportedMetadataTest {
         )
 
         assertTrue(result.accepted)
+        assertNotNull(result.metadata)
         assertEquals(
             360_000_000L,
-            assertNotNull(result.metadata).normalizedQuantity.amountMicros
+            requireNotNull(result.metadata).normalizedQuantity.amountMicros
         )
     }
 
@@ -143,15 +147,15 @@ class OpenFoodFactsImportedMetadataTest {
 
     @Test
     fun actualOpenFoodFactsQuantityCannotOverrideMerchantAuthoritativeQuantity() {
-        val community = assertNotNull(
-            OpenFoodFactsImportedMetadataMapper.map(
-                validProduct(
-                    rawQuantity = "900 g",
-                    productQuantity = "900",
-                    productQuantityUnit = "g"
-                )
-            ).quantityClaim
+        val mapped = OpenFoodFactsImportedMetadataMapper.map(
+            validProduct(
+                rawQuantity = "900 g",
+                productQuantity = "900",
+                productQuantityUnit = "g"
+            )
         )
+        assertNotNull(mapped.quantityClaim)
+        val community = requireNotNull(mapped.quantityClaim)
 
         val merchant = EvidenceClaim(
             claimId = "merchant:quantity",
