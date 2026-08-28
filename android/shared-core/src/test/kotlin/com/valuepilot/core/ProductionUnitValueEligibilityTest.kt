@@ -369,7 +369,7 @@ class ProductionUnitValueEligibilityTest {
         merchantKey: String = "merchant-a",
         priceMinor: Long = 800L,
         claimId: String = "price-a",
-        suppliedGtin: String = "036000291452"
+        suppliedGtin: String = SOURCE_GTIN
     ): PriceFixture {
         val provider =
             EvidenceProvider(
@@ -546,6 +546,14 @@ class ProductionUnitValueEligibilityTest {
     )
 
     companion object {
-        private const val PRODUCT_KEY = "gtin:036000291452"
+        private const val SOURCE_GTIN = "036000291452"
+
+        private val PRODUCT_KEY =
+            requireNotNull(
+                ProductionProductEvidenceKeyResolver.resolve(
+                    providerId = EvidenceProviderId("quantity-test-provider"),
+                    identity = SourceProductIdentity(gtin = SOURCE_GTIN)
+                )
+            ).value
     }
 }
