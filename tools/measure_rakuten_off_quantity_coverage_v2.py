@@ -34,6 +34,16 @@ from tools.measure_rakuten_off_quantity_coverage import (
 from tools.open_facts_barcode import canonical_open_facts_gtin
 
 OFF_SEARCH_URL = "https://world.openfoodfacts.org/api/v2/search"
+OFF_PRODUCT_URL = "https://world.openfoodfacts.org/api/v2/product/{code}.json"
+MIN_PRODUCT_READ_DELAY_SECONDS = 4.1
+
+
+class OpenFactsRequestError(RuntimeError):
+    """Safe request failure that never exposes a URL or barcode."""
+
+    def __init__(self, kind: str):
+        self.kind = kind
+        super().__init__(f"Open Food Facts request failed after retries ({kind})")
 
 
 def _request_json(params: dict[str, Any]) -> dict[str, Any]:
@@ -70,7 +80,49 @@ def _request_json(params: dict[str, Any]) -> dict[str, Any]:
         if attempt < 4:
             time.sleep(min(30.0, 2.0 ** attempt))
 
-    raise RuntimeError(f"Open Food Facts request failed after retries ({last_kind})")
+    raise OpenFactsRequestError(last_kind)
+
+
+def _request_product_json(code: str) -> dict[str, Any]:
+    """Read one canonical barcode without exposing it in errors or reports."""
+
+    safe_code = parse.quote(code, safe="")
+    query = parse.urlencode({"fields": OFF_FIELDS})
+    req = request.Request(
+        f"{OFF_PRODUCT_URL.format(code=safe_code)}?{query}",
+        headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
+        method="GET",
+    )
+
+    last_kind = "unknown"
+    for attempt in range(5):
+        try:
+            with request.urlopen(req, timeout=45) as response:
+                payload = json.load(response)
+                if not isinstance(payload, dict):
+                    raise RuntimeError("Open Food Facts returned a non-object JSON payload")
+                return payload
+        except error.HTTPError as exc:
+            if exc.code == 404:
+                return {"status": 0}
+            last_kind = f"HTTP {exc.code}"
+            if exc.code == 429:
+                retry_after = exc.headers.get("Retry-After")
+                try:
+                    delay = max(10.0, float(retry_after)) if retry_after else 10.0
+                except ValueError:
+                    delay = 10.0
+                time.sleep(delay * (attempt + 1))
+                continue
+        except (error.URLError, TimeoutError, json.JSONDecodeError, RuntimeError) as exc:
+            # The request URL contains the in-memory canonical GTIN. Never
+            # stringify the exception or URL into logs/reports.
+            last_kind = type(exc).__name__
+
+        if attempt < 4:
+            time.sleep(min(30.0, 2.0 ** attempt))
+
+    raise OpenFactsRequestError(last_kind)
 
 
 def build_lookup_normalization(codes: Iterable[str]) -> tuple[
@@ -118,11 +170,40 @@ def build_lookup_normalization(codes: Iterable[str]) -> tuple[
     )
 
 
+def _store_direct_product(
+    canonical_code: str,
+    payload: dict[str, Any],
+    *,
+    canonical_to_raw: dict[str, tuple[str, ...]],
+    by_raw_code: dict[str, list[dict[str, Any]]],
+) -> bool:
+    """Store one direct product response; return True if its code was rejected."""
+
+    if payload.get("status") == 0:
+        return False
+
+    product = payload.get("product")
+    if not isinstance(product, dict):
+        return False
+
+    returned_raw = str(
+        product.get("code") or payload.get("code") or canonical_code
+    ).strip()
+    returned = canonical_open_facts_gtin(returned_raw)
+    if returned is None or returned != canonical_code:
+        return True
+
+    for source_code in canonical_to_raw[canonical_code]:
+        by_raw_code[source_code].append(product)
+    return False
+
+
 def fetch_off_products_normalized(
     codes: Iterable[str],
     *,
     batch_size: int = DEFAULT_BATCH_SIZE,
     delay_seconds: float = MIN_SEARCH_DELAY_SECONDS,
+    product_delay_seconds: float = MIN_PRODUCT_READ_DELAY_SECONDS,
 ) -> tuple[dict[str, list[dict[str, Any]]], int, dict[str, Any]]:
     if batch_size < 1 or batch_size > DEFAULT_BATCH_SIZE:
         raise ValueError(f"batch_size must be between 1 and {DEFAULT_BATCH_SIZE}")
@@ -131,27 +212,62 @@ def fetch_off_products_normalized(
             f"delay_seconds must be at least {MIN_SEARCH_DELAY_SECONDS} "
             "to stay below the documented search rate limit"
         )
+    if product_delay_seconds < MIN_PRODUCT_READ_DELAY_SECONDS:
+        raise ValueError(
+            f"product_delay_seconds must be at least "
+            f"{MIN_PRODUCT_READ_DELAY_SECONDS} to stay below the documented "
+            "product-read rate limit"
+        )
 
     canonical_to_raw, stats = build_lookup_normalization(codes)
     canonical_codes = sorted(canonical_to_raw)
     by_raw_code: dict[str, list[dict[str, Any]]] = defaultdict(list)
     api_calls = 0
+    search_requests_succeeded = 0
+    direct_product_requests = 0
+    search_fallback_batches = 0
     response_codes_ignored = 0
+    previous_search_attempted = False
 
     for start in range(0, len(canonical_codes), batch_size):
         batch = canonical_codes[start : start + batch_size]
-        if api_calls:
+        if previous_search_attempted:
             time.sleep(delay_seconds)
+        previous_search_attempted = True
 
-        payload = _request_json(
-            {
-                "code": ",".join(batch),
-                "fields": OFF_FIELDS,
-                "page": 1,
-                "page_size": len(batch),
-                "sort_by": "nothing",
-            }
-        )
+        try:
+            payload = _request_json(
+                {
+                    "code": ",".join(batch),
+                    "fields": OFF_FIELDS,
+                    "page": 1,
+                    "page_size": len(batch),
+                    "sort_by": "nothing",
+                }
+            )
+        except OpenFactsRequestError as exc:
+            # Search is an optimization only. Repeated server-side 5xx failures
+            # fall back to the documented product-by-barcode read endpoint.
+            if not exc.kind.startswith("HTTP 5"):
+                raise
+
+            search_fallback_batches += 1
+            for index, canonical_code in enumerate(batch):
+                if index:
+                    time.sleep(product_delay_seconds)
+                product_payload = _request_product_json(canonical_code)
+                direct_product_requests += 1
+                api_calls += 1
+                if _store_direct_product(
+                    canonical_code,
+                    product_payload,
+                    canonical_to_raw=canonical_to_raw,
+                    by_raw_code=by_raw_code,
+                ):
+                    response_codes_ignored += 1
+            continue
+
+        search_requests_succeeded += 1
         api_calls += 1
 
         products = payload.get("products", [])
@@ -172,7 +288,15 @@ def fetch_off_products_normalized(
                 by_raw_code[source_code].append(product)
 
     stats["api_calls"] = api_calls
+    stats["search_requests_succeeded"] = search_requests_succeeded
+    stats["search_fallback_batches"] = search_fallback_batches
+    stats["direct_product_requests"] = direct_product_requests
     stats["response_codes_ignored"] = response_codes_ignored
+    stats["transport_note"] = (
+        "Batch search remains an optimization. If the search endpoint repeatedly "
+        "returns HTTP 5xx, the measurement falls back to rate-limited direct "
+        "product-by-barcode reads without changing GTIN identity or quantity rules."
+    )
     return dict(by_raw_code), api_calls, stats
 
 
@@ -230,11 +354,25 @@ def render_markdown_v2(report: dict[str, Any]) -> str:
             f"{normalization['canonical_identity_collisions']}"
         ),
         (
+            "- Successful batch-search requests: "
+            f"{normalization['search_requests_succeeded']}"
+        ),
+        (
+            "- Search batches using direct-read fallback: "
+            f"{normalization['search_fallback_batches']}"
+        ),
+        (
+            "- Direct product-read requests: "
+            f"{normalization['direct_product_requests']}"
+        ),
+        (
             "- Response codes ignored after canonical validation: "
             f"{normalization['response_codes_ignored']}"
         ),
         "",
         normalization["note"],
+        "",
+        normalization["transport_note"],
         "",
         "The earlier raw-code result must not be interpreted as proof of zero "
         "Open Food Facts coverage. Open Food Facts documents leading-zero barcode "
@@ -258,6 +396,11 @@ def main() -> None:
         type=float,
         default=MIN_SEARCH_DELAY_SECONDS,
     )
+    parser.add_argument(
+        "--product-delay-seconds",
+        type=float,
+        default=MIN_PRODUCT_READ_DELAY_SECONDS,
+    )
     args = parser.parse_args()
 
     feed = extract_feed_gtins(args.input, encoding=args.encoding)
@@ -265,6 +408,7 @@ def main() -> None:
         feed.gtins,
         batch_size=args.batch_size,
         delay_seconds=args.delay_seconds,
+        product_delay_seconds=args.product_delay_seconds,
     )
     report = build_report_v2(
         feed,
@@ -290,7 +434,9 @@ def main() -> None:
         f"normalized_changed={normalization['canonicalization_changed_gtins']} "
         f"off_matches={report['open_food_facts']['matched_gtins']} "
         f"exact_counts={report['open_food_facts']['usable_exact_supplement_count']} "
-        f"conflicts={report['open_food_facts']['quantity_conflicts']}"
+        f"conflicts={report['open_food_facts']['quantity_conflicts']} "
+        f"fallback_batches={normalization['search_fallback_batches']} "
+        f"direct_reads={normalization['direct_product_requests']}"
     )
 
 
