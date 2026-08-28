@@ -95,7 +95,7 @@ Therefore the existing HDR/file timestamp must continue to be treated as file-ge
 
 Rakuten's current Publisher Membership Agreement states that publisher promotion channels may include mobile applications, subject to the applicable advertiser engagement terms and Network Policies. It also defines a `Site` broadly enough to include an application.
 
-However, the Product Catalog implementation documentation still describes advertiser approval to use a Product Catalog feed on a website or blog, and the Jamieson partnership approval email states that supplied links are to be used on the website listed in the approved marketing channel.
+However, the Product Catalog implementation documentation still describes advertiser approval to use a Product Catalog feed on a website or blog, and the Jamieson partnership approval email states that supplied links are to be used on the website listed in the marketing channel indicated above.
 
 This creates a channel-specific ambiguity that must be resolved before production Android use.
 
@@ -140,15 +140,17 @@ When rights and freshness are later cleared, the provider adapter should still f
 
 This rule still does not make the price rankable. Freshness, geography, rights and evidence-disposition gates remain separate.
 
-## Next external clarification
+## External clarification sent — awaiting response
 
-Before Android production integration, obtain written Rakuten clarification covering:
+On 2026-08-28, ValuePilot sent a written clarification request to the existing Rakuten Publisher Customer Support case covering:
 
-- whether ValuePilot may display/index/cache advertiser-approved Product Catalog fields inside its installed Android app;
-- whether Product Catalog feed approval needs separate advertiser permission for mobile-app display even before affiliate links are enabled;
-- whether the native Android ValuePilot application must complete DSA approval before any Rakuten/Jamieson affiliate links are used;
-- what retention/deletion obligations apply to locally/server-cached Product Catalog content after advertiser approval is removed or the partnership terminates;
-- whether any additional disclosure/attribution is required for product-feed content beyond normal affiliate-material-connection disclosure when links are enabled.
+- whether advertiser-approved Product Catalog fields may be displayed and searched inside the installed Android app;
+- whether Product Catalog fields may be cached/indexed locally or server-side and what retention/refresh requirements apply;
+- what deletion/removal obligations apply if feed approval or the advertiser partnership ends;
+- whether the native Android app must complete Rakuten DSA / Network Quality review before any Rakuten/Jamieson affiliate links are used;
+- whether Jamieson must separately approve the mobile/DSA distribution method after Rakuten approval.
+
+No further Rakuten rights email should be sent unless the support response is incomplete or introduces a new unresolved point. Await the written response and preserve it as account-specific evidence before changing the production authorization state.
 
 ## Current decision
 
