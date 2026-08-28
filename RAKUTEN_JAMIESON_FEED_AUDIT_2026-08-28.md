@@ -54,6 +54,20 @@ Repeated product names exist across distinct source rows. Name-only deduplicatio
 
 All Class IDs being blank matters because the documented class-specific Size mechanism cannot currently be relied on for this advertiser feed.
 
+### Untyped attribute-section observation
+
+The complete feed contains another important schema-quality signal:
+
+- Product field 29 / Attribute 1 populated: **273 / 273**
+- Product fields 30–38 / Attributes 2–10 populated: **0 / 273**
+- Class ID populated: **0 / 273**
+
+Rakuten documents fields 29–38 as class-dependent attribute fields. Without a Class ID, ValuePilot has no documented semantic mapping for the populated Attribute 1 values.
+
+Therefore Attribute 1 must remain **opaque, untyped source data**. Its presence does not establish package quantity, a product identifier, a category, or any other factual domain. ValuePilot must not reverse-engineer its meaning from value shape, neighboring products, or correlations with other fields.
+
+This is another reason not to infer quantity from undocumented feed behavior even when a field is populated consistently.
+
 ## Price relationship findings
 
 Relationship between the supplied Sale Price and Retail Price fields:
@@ -75,12 +89,14 @@ The offline Rakuten qualifier has been hardened to report these relationships se
 
 The primary Rakuten Product Catalog schema does not provide a universal structured package quantity. In this Jamieson feed, all Class IDs are blank, so no validated class-specific Size field is available through that mechanism.
 
+The populated but untyped Attribute 1 column does not change that conclusion because no documented Class ID exists to give it semantics.
+
 Therefore:
 
 - structural CAD offer candidates: **273**
 - authoritative unit-value candidates from this feed alone: **0**
 
-Do **not** guess package count or size from product title, description, image filename, SKU, price, or neighboring variants.
+Do **not** guess package count or size from product title, description, image filename, SKU, price, untyped attributes, or neighboring variants.
 
 A future package-quantity claim may come from a separate authorized/appropriately licensed source joined by strong identity such as checksum-valid GTIN. Provenance must remain separate so the quantity source is not misrepresented as the merchant-price source.
 
@@ -102,8 +118,8 @@ Current decision:
 
 Next gates:
 
-1. keep the hardened offline qualifier regression-tested
-2. define provider-neutral offline import mapping preserving both price fields and all source/provenance identifiers
+1. keep the hardened offline qualifier regression-tested, including untyped attribute detection
+2. preserve both price fields and all source/provenance identifiers in the provider-neutral staged import boundary
 3. establish package quantity/count through validated identity-matched evidence
 4. establish exact caching/indexing/display/mobile rights
 5. only then consider a production Rakuten/Jamieson adapter or consumer ranking path
