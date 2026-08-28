@@ -78,6 +78,12 @@
     <string name="search_sample_source">Sample source: %1$s</string>
     <string name="search_sample_default_source">Built-in sample</string>
 
+    <string name="production_search_results_title">Shopping comparison results</string>
+    <plurals name="production_search_reference_only_count">
+        <item quantity="one">%1$d reference-only result is excluded from Best Value.</item>
+        <item quantity="other">%1$d reference-only results are excluded from Best Value.</item>
+    </plurals>
+
     <string name="basket_eyebrow">BASKET</string>
     <string name="basket_title">Optimize the whole shop.</string>
     <string name="basket_body">Basket will evaluate what you actually need together instead of optimizing every product in isolation.</string>
