@@ -27,8 +27,9 @@ class OpenPricesImportedEvidenceTest {
 
         assertTrue(result.accepted)
         assertTrue(result.failures.isEmpty())
+        assertNotNull(result.evidence)
 
-        val evidence = assertNotNull(result.evidence)
+        val evidence = requireNotNull(result.evidence)
 
         assertEquals(
             "open-prices",
