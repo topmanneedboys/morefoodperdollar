@@ -1,16 +1,27 @@
 package com.valuepilot.app
 
-import com.valuepilot.core.ProductionBestValueBlockedPresentationItem
+import com.valuepilot.core.EvidenceAcceptancePolicy
+import com.valuepilot.core.EvidenceFreshnessPolicy
 import com.valuepilot.core.ProductionBestValuePresentationSnapshot
-import com.valuepilot.core.ProductionCurrentPriceEligibilityBlocker
-import com.valuepilot.core.ProductionUnitValueEligibilityBlocker
+import com.valuepilot.core.ProductionDatasetDispositionRegistry
+import com.valuepilot.core.ProductionDatasetLifecycleRegistry
+import java.lang.reflect.Modifier
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ProductionSearchSurfaceHostTest {
+
+    private val acceptancePolicy =
+        EvidenceAcceptancePolicy(
+            EvidenceFreshnessPolicy(
+                freshForMillis = 2_000L,
+                staleAfterMillis = 5_000L,
+                futureToleranceMillis = 100L
+            )
+        )
 
     @Test
     fun `renderer contract exposes only ui ready state`() {
@@ -23,70 +34,78 @@ class ProductionSearchSurfaceHostTest {
     }
 
     @Test
-    fun `applied snapshot renders ui state while stale duplicate and conflicts do not rerender`() {
+    fun `host exposes no public detached presentation snapshot apply path`() {
+        val publicMethods =
+            ProductionSearchSurfaceHost::class.java.declaredMethods
+                .filter { method -> Modifier.isPublic(method.modifiers) }
+
+        assertFalse(
+            publicMethods.any { method ->
+                method.parameterTypes.any { type ->
+                    type == ProductionBestValuePresentationSnapshot::class.java
+                }
+            }
+        )
+        assertTrue(publicMethods.any { method -> method.name == "evaluateAndApply" })
+    }
+
+    @Test
+    fun `raw evaluation is re-run through shared core and obeys generation ordering`() {
         val rendered = mutableListOf<ProductionSearchUiState?>()
         val host = ProductionSearchSurfaceHost { state -> rendered += state }
+        val lifecycleRegistry = ProductionDatasetLifecycleRegistry()
+        val dispositionRegistry = ProductionDatasetDispositionRegistry()
 
         assertEquals(
             ProductionSearchRefreshDisposition.APPLIED,
-            host.applySnapshot(4L, snapshot("first", 1_000L))
+            host.evaluateAndApply(
+                generation = 4L,
+                request = request(1_000L, lifecycleRegistry, dispositionRegistry)
+            )
         )
         assertEquals(1, rendered.size)
-        assertEquals("first", rendered.single()?.blocked?.single()?.candidateId)
+        assertEquals(1_000L, rendered.single()?.evaluatedAtEpochMillis)
+        assertTrue(rendered.single()?.groups?.isEmpty() == true)
+        assertTrue(rendered.single()?.blocked?.isEmpty() == true)
 
         assertEquals(
             ProductionSearchRefreshDisposition.STALE,
-            host.applySnapshot(3L, snapshot("stale", 900L))
+            host.evaluateAndApply(
+                generation = 3L,
+                request = request(2_000L, lifecycleRegistry, dispositionRegistry)
+            )
         )
         assertEquals(1, rendered.size)
 
         assertEquals(
             ProductionSearchRefreshDisposition.DUPLICATE,
-            host.applySnapshot(4L, snapshot("first", 1_000L))
+            host.evaluateAndApply(
+                generation = 4L,
+                request = request(1_000L, lifecycleRegistry, dispositionRegistry)
+            )
         )
         assertEquals(1, rendered.size)
 
         assertEquals(
-            ProductionSearchRefreshDisposition.GENERATION_CONFLICT,
-            host.applySnapshot(4L, snapshot("conflict", 1_000L))
+            ProductionSearchRefreshDisposition.APPLIED,
+            host.evaluateAndApply(
+                generation = 5L,
+                request = request(2_000L, lifecycleRegistry, dispositionRegistry)
+            )
         )
-        assertEquals(1, rendered.size)
+        assertEquals(2, rendered.size)
+        assertEquals(2_000L, rendered.last()?.evaluatedAtEpochMillis)
 
         assertEquals(
             ProductionSearchRefreshDisposition.APPLIED,
-            host.applySnapshot(5L, snapshot("newer", 2_000L))
+            host.clear(6L)
         )
-        assertEquals(2, rendered.size)
-        assertEquals("newer", rendered.last()?.blocked?.single()?.candidateId)
-    }
-
-    @Test
-    fun `newer clear renders null and stale result cannot repopulate`() {
-        val rendered = mutableListOf<ProductionSearchUiState?>()
-        val host = ProductionSearchSurfaceHost { state -> rendered += state }
-
-        assertEquals(
-            ProductionSearchRefreshDisposition.APPLIED,
-            host.applySnapshot(10L, snapshot("visible"))
-        )
-        assertEquals(
-            ProductionSearchRefreshDisposition.APPLIED,
-            host.clear(11L)
-        )
-
-        assertEquals(2, rendered.size)
-        assertNull(rendered.last())
-
-        assertEquals(
-            ProductionSearchRefreshDisposition.STALE,
-            host.applySnapshot(10L, snapshot("late"))
-        )
-        assertEquals(2, rendered.size)
+        assertEquals(3, rendered.size)
         assertNull(rendered.last())
     }
 
     @Test
-    fun `renderer failure does not consume the incoming generation`() {
+    fun `renderer failure does not consume raw evaluation generation`() {
         var shouldFail = true
         var renderedState: ProductionSearchUiState? = null
         val host =
@@ -94,11 +113,13 @@ class ProductionSearchSurfaceHostTest {
                 if (shouldFail) error("synthetic renderer failure")
                 renderedState = state
             }
+        val lifecycleRegistry = ProductionDatasetLifecycleRegistry()
+        val dispositionRegistry = ProductionDatasetDispositionRegistry()
+        val request = request(1_000L, lifecycleRegistry, dispositionRegistry)
 
-        val source = snapshot("retryable")
         var thrown: IllegalStateException? = null
         try {
-            host.applySnapshot(7L, source)
+            host.evaluateAndApply(7L, request)
         } catch (error: IllegalStateException) {
             thrown = error
         }
@@ -107,30 +128,23 @@ class ProductionSearchSurfaceHostTest {
         shouldFail = false
         assertEquals(
             ProductionSearchRefreshDisposition.APPLIED,
-            host.applySnapshot(7L, source)
+            host.evaluateAndApply(7L, request)
         )
-        assertEquals("retryable", renderedState?.blocked?.single()?.candidateId)
+        assertEquals(1_000L, renderedState?.evaluatedAtEpochMillis)
     }
 
-    private fun snapshot(
-        candidateId: String,
-        evaluatedAt: Long = 1_000L
-    ): ProductionBestValuePresentationSnapshot =
-        ProductionBestValuePresentationSnapshot(
-            evaluatedAtEpochMillis = evaluatedAt,
-            groups = emptyList(),
-            blockedItems =
-                listOf(
-                    ProductionBestValueBlockedPresentationItem(
-                        candidateId = candidateId,
-                        unitValueBlockers =
-                            setOf(ProductionUnitValueEligibilityBlocker.PRICE_STAGE_BLOCKED),
-                        priceBlockers =
-                            setOf(
-                                ProductionCurrentPriceEligibilityBlocker.CANDIDATE_NOT_ACCEPTANCE_RANKABLE
-                            ),
-                        unitValuePolicyBlockReasons = emptySet()
-                    )
-                )
+    private fun request(
+        evaluatedAtEpochMillis: Long,
+        lifecycleRegistry: ProductionDatasetLifecycleRegistry,
+        dispositionRegistry: ProductionDatasetDispositionRegistry
+    ): ProductionSearchSurfaceEvaluationRequest =
+        ProductionSearchSurfaceEvaluationRequest(
+            priceRequests = emptyList(),
+            candidates = emptyList(),
+            lifecycleRegistry = lifecycleRegistry,
+            dispositionRegistry = dispositionRegistry,
+            evaluatedAtEpochMillis = evaluatedAtEpochMillis,
+            acceptancePolicy = acceptancePolicy,
+            quantityCandidates = emptyList()
         )
 }

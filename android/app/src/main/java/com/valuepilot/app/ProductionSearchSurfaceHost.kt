@@ -1,18 +1,48 @@
 package com.valuepilot.app
 
-import com.valuepilot.core.ProductionBestValuePresentationSnapshot
+import com.valuepilot.core.EvidenceAcceptancePolicy
+import com.valuepilot.core.ProductPackageQuantityEvidenceCandidate
+import com.valuepilot.core.ProductionBestValueCandidate
+import com.valuepilot.core.ProductionBestValuePresentationEvaluator
+import com.valuepilot.core.ProductionCurrentPriceEligibilityRequest
+import com.valuepilot.core.ProductionDatasetDispositionRegistry
+import com.valuepilot.core.ProductionDatasetLifecycleRegistry
+
+/**
+ * Raw, bounded inputs required to re-evaluate production Search at display time.
+ *
+ * This is not an authorization token. The host passes these inputs back through
+ * the verified shared-core presentation evaluator on every accepted generation.
+ * Lifecycle/disposition registries are deliberately retained by reference so the
+ * evaluator observes their current state when the submission is processed.
+ */
+data class ProductionSearchSurfaceEvaluationRequest(
+    val priceRequests: List<ProductionCurrentPriceEligibilityRequest>,
+    val candidates: List<ProductionBestValueCandidate>,
+    val lifecycleRegistry: ProductionDatasetLifecycleRegistry,
+    val dispositionRegistry: ProductionDatasetDispositionRegistry,
+    val evaluatedAtEpochMillis: Long,
+    val acceptancePolicy: EvidenceAcceptancePolicy,
+    val quantityCandidates: List<ProductPackageQuantityEvidenceCandidate>
+) {
+    init {
+        require(evaluatedAtEpochMillis > 0L)
+    }
+}
 
 /**
  * Narrow display boundary for future production Search surfaces.
  *
- * The host owns the exact projection and generation ordering internally. Its
- * renderer can receive only [ProductionSearchUiState], never the exact lookup
+ * The renderer can receive only [ProductionSearchUiState], never exact lookup
  * maps, provider URLs, internal scope identifiers, blocker diagnostics, or raw
  * production evidence retained by [ProductionSearchUiProjection].
  *
- * This class performs no I/O and does not activate any provider. A future
- * coordinator may submit already-evaluated presentation snapshots only after the
- * corresponding production authorization/evidence gates have been satisfied.
+ * Public callers cannot submit a detached ProductionBestValuePresentationSnapshot
+ * as display authority. Each accepted generation starts from raw production inputs
+ * and re-runs [ProductionBestValuePresentationEvaluator] against the current
+ * lifecycle/disposition registries at the caller-supplied decision instant.
+ *
+ * This class performs no I/O, owns no clock, and does not activate any provider.
  */
 fun interface ProductionSearchSurfaceRenderer {
     fun render(state: ProductionSearchUiState?)
@@ -23,15 +53,33 @@ class ProductionSearchSurfaceHost(
 ) {
     private var refreshState = ProductionSearchRefreshState()
 
-    fun applySnapshot(
+    fun evaluateAndApply(
         generation: Long,
-        snapshot: ProductionBestValuePresentationSnapshot
+        request: ProductionSearchSurfaceEvaluationRequest
     ): ProductionSearchRefreshDisposition {
+        require(generation >= 0L)
+
+        val currentGeneration = refreshState.latestGeneration
+        if (currentGeneration != null && generation < currentGeneration) {
+            return ProductionSearchRefreshDisposition.STALE
+        }
+
+        val presentation =
+            ProductionBestValuePresentationEvaluator.evaluate(
+                priceRequests = request.priceRequests,
+                candidates = request.candidates,
+                lifecycleRegistry = request.lifecycleRegistry,
+                dispositionRegistry = request.dispositionRegistry,
+                evaluatedAtEpochMillis = request.evaluatedAtEpochMillis,
+                acceptancePolicy = request.acceptancePolicy,
+                quantityCandidates = request.quantityCandidates
+            )
+
         val decision =
             ProductionSearchRefreshGate.applySnapshot(
                 current = refreshState,
                 incomingGeneration = generation,
-                snapshot = snapshot
+                snapshot = presentation.snapshot
             )
 
         applyDecision(decision)
