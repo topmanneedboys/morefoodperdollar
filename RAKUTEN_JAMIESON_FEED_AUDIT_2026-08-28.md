@@ -87,12 +87,22 @@ Relationship between supplied Sale Price and Retail Price:
 - Sale Price = Retail Price: **223**
 - Sale Price > Retail Price: **2**
 
-Interpretation:
+Rakuten's current Product Catalog Appendix A resolves the generic schema meanings:
 
-- a positive Sale Price is not sufficient evidence of a discount;
-- equal values must not produce a savings claim;
-- inverted values must not produce a savings claim;
-- both fields must remain preserved until their exact advertiser/feed semantics are established.
+- `Sale Price` is optional and reflects discounts.
+- `Retail Price` is required and does not reflect discounts.
+
+Therefore:
+
+- Sale < Retail is structurally consistent with a discounted price;
+- Sale = Retail is structurally consistent with no effective discount and must not produce a savings claim;
+- Sale > Retail conflicts with the documented field semantics and must fail closed for production price promotion;
+- the 2 inverted rows must not be swapped, reinterpreted as markup, or silently corrected;
+- deterministic savings arithmetic may be computed only from accepted price evidence and must be labelled as ValuePilot-computed rather than source-supplied unless the source explicitly supplies that savings fact.
+
+Generic field semantics are now resolved, but production price eligibility still depends on freshness, geography and downstream use rights.
+
+Detailed gate: `RAKUTEN_PRICE_AND_ANDROID_RIGHTS_GATE.md`.
 
 ## Quantity / unit-value result from Rakuten alone
 
@@ -143,9 +153,40 @@ Health Canada's Licensed Natural Health Products Database can strengthen regulat
 
 GS1 Canada ECCnet is the next strategic product-content/identity target because its GTIN-centric content model includes standardized net-content concepts, including count-style net content. Data Recipient access and permitted use rights must be validated before integration.
 
-## Freshness limitation
+The ValuePilot ECCnet Data Recipient eligibility/rights inquiry was sent to GS1 Canada on 2026-08-28.
 
-The feed HDR timestamp is file-generation/deposit evidence only. It must not be promoted to per-product price freshness unless provider semantics explicitly establish that meaning.
+## Freshness boundary
+
+Rakuten's current Product Catalog implementation guidance establishes more precise source-level behavior:
+
+- the file header timestamp is the time the file was deposited into the publisher SFTP account;
+- full Product Catalog files are generated dynamically when retrieved;
+- Rakuten says this gives publishers the most up-to-date product information currently present in the advertiser's Product Catalog database;
+- the actual timeliness still depends on how often the advertiser updates that database;
+- advertisers can process feeds multiple times per day;
+- delta files contain new, changed and deleted records from the advertiser's last processed feed;
+- Rakuten recommends checking timestamps for updates and periodically pulling a full file.
+
+Therefore the feed can support a provider-dataset retrieval/update timestamp, but it still does **not** provide a per-product advertiser last-modified timestamp or a guarantee that a merchant-site price is live at the instant of display.
+
+ValuePilot must not promote the HDR timestamp into per-product freshness.
+
+A future production freshness policy should explicitly distinguish:
+
+- dataset retrieved/deposited at time T;
+- advertiser database state represented by that dataset;
+- unknown age of an individual product fact inside the advertiser database;
+- consumer display/ranking freshness policy chosen by ValuePilot.
+
+## Android / DSA boundary
+
+Rakuten's general Publisher Membership Agreement permits promotion through mobile applications subject to advertiser terms and Network Policies.
+
+However, installed/mobile applications are also covered by Rakuten's Downloadable Software Application controls. Before ValuePilot ships Rakuten network links inside the installed Android app, Rakuten Network Quality approval/compliance testing and advertiser approval for the DSA distribution method must be treated as separate required gates.
+
+Product Catalog feed approval must not be treated as equivalent to Android/DSA approval.
+
+No Android production networking or Rakuten affiliate links should be added yet.
 
 ## Supplement/health guardrail
 
@@ -157,15 +198,17 @@ Initial ranking/comparison evidence remains objective and source-grounded: price
 
 Current decision:
 
-**DATA QUALITY = PROMISING / STRUCTURALLY VALID. PRODUCTION USE = NOT YET AUTHORIZED. UNIT-VALUE COVERAGE = STILL INSUFFICIENT FOR BROAD JAMIESON RANKING.**
+**DATA QUALITY = PROMISING / STRUCTURALLY VALID. RAKUTEN PRICE FIELD SEMANTICS = RESOLVED AT SCHEMA LEVEL. PRODUCTION USE = NOT YET CLEARED. UNIT-VALUE COVERAGE = STILL INSUFFICIENT FOR BROAD JAMIESON RANKING.**
 
 Next gates:
 
-1. validate GS1 Canada ECCnet Data Recipient feasibility, package-content coverage and rights;
+1. await GS1 Canada ECCnet Data Recipient feasibility, package-content coverage and rights response;
 2. preserve raw provider GTIN and canonical cross-source GTIN separately;
 3. preserve both Rakuten price fields and source/provenance identifiers in staging;
-4. establish exact Retail/Sale semantics;
-5. establish caching/indexing/display/mobile rights;
-6. only then consider a production Rakuten/Jamieson adapter or consumer ranking path.
+4. fail closed on Sale > Retail semantic conflicts;
+5. establish a bounded source/dataset freshness policy without inventing per-product freshness;
+6. establish caching/indexing/display/mobile/retention rights;
+7. complete Rakuten DSA/channel approval before enabling network links in the installed Android app;
+8. only then consider a production Rakuten/Jamieson adapter or consumer ranking path.
 
 The proprietary feed itself must not be committed as a repository fixture. Use synthetic rows for tests.
