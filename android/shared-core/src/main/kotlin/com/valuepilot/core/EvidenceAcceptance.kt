@@ -1,30 +1,13 @@
 package com.valuepilot.core
 
-/**
- * Whether shopping evidence may participate in ValuePilot value ranking.
- *
- * RANKABLE:
- * Evidence may participate in deterministic ranking.
- *
- * DISPLAY_ONLY:
- * Evidence may be shown with appropriate caveats but must not influence
- * a "best value" decision.
- *
- * REJECTED:
- * Evidence is unsafe or invalid enough that it should not be consumed.
- */
+/** Whether shopping evidence may participate in ValuePilot value ranking. */
 enum class EvidenceDisposition {
     RANKABLE,
     DISPLAY_ONLY,
     REJECTED
 }
 
-/**
- * Non-exclusive warnings attached to an evidence decision.
- *
- * Warnings are data, not presentation strings. Presentation clients choose
- * localized human-readable copy later.
- */
+/** Non-exclusive warnings attached to an evidence decision. */
 enum class EvidenceWarning {
     SAMPLE_DATA,
     AGING,
@@ -41,12 +24,7 @@ enum class EvidenceWarning {
     EXPIRED_PROMOTION
 }
 
-/**
- * Explicit deterministic policy supplied by the application.
- *
- * Shared core owns no clock. evaluatedAtEpochMillis must always be supplied
- * by the caller.
- */
+/** Explicit deterministic policy supplied by the application. */
 data class EvidenceAcceptancePolicy(
     val freshnessPolicy: EvidenceFreshnessPolicy,
     val rankAgingRealWorld: Boolean = true,
@@ -67,16 +45,15 @@ data class EvidenceAcceptanceDecision(
 }
 
 /**
- * Minimal provider-neutral factual inputs consumed by the acceptance policy.
+ * Minimal provider-neutral facts consumed by the acceptance policy.
  *
  * This is deliberately internal to shared-core. It is policy input, not an
- * authorization token, and Android/UI modules must not be able to fabricate
- * one as a shortcut around provider lifecycle/rights evaluation.
+ * authorization token, so Android/UI code cannot fabricate it as a shortcut
+ * around production lifecycle/rights evaluation.
  *
- * [ShoppingEvidence] remains the existing public provenance model and delegates
- * to these facts. Production paths may reuse the same evaluator only after they
- * have independently re-established their current lifecycle/authorization
- * boundary at the same decision point.
+ * observedAtEpochMillis intentionally preserves legacy ShoppingEvidence
+ * semantics: any non-positive timestamp classifies as UNKNOWN freshness rather
+ * than becoming a constructor error.
  */
 internal data class EvidenceAcceptanceFacts(
     val environment: EvidenceEnvironment,
@@ -87,7 +64,6 @@ internal data class EvidenceAcceptanceFacts(
     val promotion: PromotionEvidence? = null
 ) {
     init {
-        require(observedAtEpochMillis >= 0L)
         if (environment == EvidenceEnvironment.SAMPLE) {
             require(channel == EvidenceChannel.FIXTURE) {
                 "Sample acceptance facts must use the fixture channel"
@@ -114,9 +90,7 @@ internal data class EvidenceAcceptanceFacts(
         )
 
     companion object {
-        fun fromShoppingEvidence(
-            evidence: ShoppingEvidence
-        ): EvidenceAcceptanceFacts =
+        fun fromShoppingEvidence(evidence: ShoppingEvidence): EvidenceAcceptanceFacts =
             EvidenceAcceptanceFacts(
                 environment = evidence.environment,
                 channel = evidence.channel,
@@ -131,16 +105,12 @@ internal data class EvidenceAcceptanceFacts(
 /**
  * Permanent deterministic trust boundary between evidence and consumer ranking.
  *
- * This evaluator:
- * - never performs I/O;
- * - never reads a clock;
- * - never parses or changes price/quantity;
- * - never ranks products;
- * - never upgrades unknown evidence into trusted evidence.
+ * This evaluator performs no I/O, owns no clock, never parses or changes price
+ * or quantity, never ranks products, and never upgrades unknown evidence.
  */
 object EvidenceAcceptanceEvaluator {
 
-    /** Existing public entry point. Its policy behavior is preserved. */
+    /** Existing public entry point. Policy behavior remains unchanged. */
     fun evaluate(
         evidence: ShoppingEvidence,
         evaluatedAtEpochMillis: Long,
@@ -155,9 +125,9 @@ object EvidenceAcceptanceEvaluator {
     /**
      * Shared-core-only policy entry point for already-established facts.
      *
-     * Calling this does not prove production authorization, current lifecycle,
-     * namespace disposition, factual conflict resolution, quantity authority or
-     * Best Value eligibility. Those remain separate gates.
+     * This does not prove production authorization, lifecycle, namespace
+     * disposition, factual conflict resolution, quantity authority, or final
+     * Best Value eligibility.
      */
     internal fun evaluate(
         facts: EvidenceAcceptanceFacts,
@@ -191,11 +161,8 @@ object EvidenceAcceptanceEvaluator {
                 disposition = EvidenceDisposition.DISPLAY_ONLY,
                 freshness = freshness,
                 warnings =
-                    buildWarnings(
-                        facts = facts,
-                        freshness = freshness,
-                        evaluatedAtEpochMillis = evaluatedAtEpochMillis
-                    ) + EvidenceWarning.UNKNOWN_ENVIRONMENT
+                    buildWarnings(facts, freshness, evaluatedAtEpochMillis) +
+                        EvidenceWarning.UNKNOWN_ENVIRONMENT
             )
         }
 
@@ -204,11 +171,8 @@ object EvidenceAcceptanceEvaluator {
                 disposition = EvidenceDisposition.DISPLAY_ONLY,
                 freshness = freshness,
                 warnings =
-                    buildWarnings(
-                        facts = facts,
-                        freshness = freshness,
-                        evaluatedAtEpochMillis = evaluatedAtEpochMillis
-                    ) + EvidenceWarning.UNKNOWN_CHANNEL
+                    buildWarnings(facts, freshness, evaluatedAtEpochMillis) +
+                        EvidenceWarning.UNKNOWN_CHANNEL
             )
         }
 
@@ -220,11 +184,8 @@ object EvidenceAcceptanceEvaluator {
                 disposition = EvidenceDisposition.DISPLAY_ONLY,
                 freshness = freshness,
                 warnings =
-                    buildWarnings(
-                        facts = facts,
-                        freshness = freshness,
-                        evaluatedAtEpochMillis = evaluatedAtEpochMillis
-                    ) + EvidenceWarning.WEAK_OBSERVATION_CLAIM
+                    buildWarnings(facts, freshness, evaluatedAtEpochMillis) +
+                        EvidenceWarning.WEAK_OBSERVATION_CLAIM
             )
         }
 
@@ -241,11 +202,8 @@ object EvidenceAcceptanceEvaluator {
                 disposition = EvidenceDisposition.DISPLAY_ONLY,
                 freshness = freshness,
                 warnings =
-                    buildWarnings(
-                        facts = facts,
-                        freshness = freshness,
-                        evaluatedAtEpochMillis = evaluatedAtEpochMillis
-                    ) + EvidenceWarning.WEAK_PROMOTION_CLAIM
+                    buildWarnings(facts, freshness, evaluatedAtEpochMillis) +
+                        EvidenceWarning.WEAK_PROMOTION_CLAIM
             )
         }
 
@@ -259,11 +217,8 @@ object EvidenceAcceptanceEvaluator {
                 disposition = EvidenceDisposition.DISPLAY_ONLY,
                 freshness = freshness,
                 warnings =
-                    buildWarnings(
-                        facts = facts,
-                        freshness = freshness,
-                        evaluatedAtEpochMillis = evaluatedAtEpochMillis
-                    ) + EvidenceWarning.EXPIRED_PROMOTION
+                    buildWarnings(facts, freshness, evaluatedAtEpochMillis) +
+                        EvidenceWarning.EXPIRED_PROMOTION
             )
         }
 
@@ -275,49 +230,35 @@ object EvidenceAcceptanceEvaluator {
                 disposition = EvidenceDisposition.DISPLAY_ONLY,
                 freshness = freshness,
                 warnings =
-                    buildWarnings(
-                        facts = facts,
-                        freshness = freshness,
-                        evaluatedAtEpochMillis = evaluatedAtEpochMillis
-                    ) + EvidenceWarning.NOT_CURRENTLY_AVAILABLE
+                    buildWarnings(facts, freshness, evaluatedAtEpochMillis) +
+                        EvidenceWarning.NOT_CURRENTLY_AVAILABLE
             )
         }
 
-        val warnings =
-            buildWarnings(
-                facts = facts,
-                freshness = freshness,
-                evaluatedAtEpochMillis = evaluatedAtEpochMillis
-            )
+        val warnings = buildWarnings(facts, freshness, evaluatedAtEpochMillis)
 
         val disposition =
             when (freshness) {
-                EvidenceFreshness.FRESH ->
-                    EvidenceDisposition.RANKABLE
-
+                EvidenceFreshness.FRESH -> EvidenceDisposition.RANKABLE
                 EvidenceFreshness.AGING ->
                     if (policy.rankAgingRealWorld) {
                         EvidenceDisposition.RANKABLE
                     } else {
                         EvidenceDisposition.DISPLAY_ONLY
                     }
-
                 EvidenceFreshness.STALE ->
                     if (policy.showStaleRealWorld) {
                         EvidenceDisposition.DISPLAY_ONLY
                     } else {
                         EvidenceDisposition.REJECTED
                     }
-
                 EvidenceFreshness.UNKNOWN ->
                     if (policy.showUnknownFreshnessRealWorld) {
                         EvidenceDisposition.DISPLAY_ONLY
                     } else {
                         EvidenceDisposition.REJECTED
                     }
-
-                EvidenceFreshness.FUTURE_DATED ->
-                    EvidenceDisposition.REJECTED
+                EvidenceFreshness.FUTURE_DATED -> EvidenceDisposition.REJECTED
             }
 
         return EvidenceAcceptanceDecision(
@@ -351,7 +292,6 @@ object EvidenceAcceptanceEvaluator {
         }
 
         val promotion = facts.promotion
-
         if (
             promotion != null &&
             (

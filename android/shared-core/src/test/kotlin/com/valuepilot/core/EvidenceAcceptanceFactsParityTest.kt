@@ -24,6 +24,7 @@ class EvidenceAcceptanceFactsParityTest {
                 realEvidence(observedAt = 7_000L, availability = AvailabilityState.LOW_STOCK),
                 realEvidence(observedAt = 1_000L, availability = AvailabilityState.IN_STOCK),
                 realEvidence(observedAt = 0L, availability = AvailabilityState.UNKNOWN),
+                realEvidence(observedAt = -1L, availability = AvailabilityState.UNKNOWN),
                 realEvidence(observedAt = 10_500L, availability = AvailabilityState.IN_STOCK),
                 realEvidence(
                     observedAt = 9_500L,
