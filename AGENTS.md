@@ -1,6 +1,6 @@
 # ValuePilot agent rules
 
-1. Read `CURRENT_STATE.md`, `ARCHITECTURE.md`, and relevant tests first. Repository evidence overrides chat summaries.
+1. Read `CURRENT_STATE.md`, `CONTINUATION_CHECKPOINT.md`, `ARCHITECTURE.md`, and the relevant provider/status files and tests first. Repository evidence overrides chat summaries, and newer repository evidence overrides an older checkpoint.
 2. Never restart blindly. Make one focused, reversible change at a time.
 3. `android/shared-core` stays platform-neutral: no Android, UI, capture, OCR, retailer, filesystem, network, or hidden clock dependencies.
 4. UI renders immutable state and emits typed actions; it owns no parsing, ranking, matching, session, promotion, or navigation rules.
