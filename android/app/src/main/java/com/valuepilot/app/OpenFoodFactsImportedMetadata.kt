@@ -5,6 +5,7 @@ import com.valuepilot.core.EvidenceAuthorityClass
 import com.valuepilot.core.EvidenceClaim
 import com.valuepilot.core.EvidenceClaimDomain
 import com.valuepilot.core.EvidenceClaimScope
+import com.valuepilot.core.EvidenceFingerprints
 import com.valuepilot.core.GtinValidation
 import com.valuepilot.core.NormalizedQuantity
 import java.math.BigDecimal
@@ -163,8 +164,7 @@ object OpenFoodFactsImportedMetadataMapper {
 
         val safeQuantity = requireNotNull(normalizedQuantity)
         val productKey = "gtin:$gtin"
-        val valueFingerprint =
-            "${safeQuantity.unit.name}:${safeQuantity.amountMicros}"
+        val valueFingerprint = EvidenceFingerprints.quantity(safeQuantity)
 
         val metadata =
             OpenFoodFactsProductMetadata(
