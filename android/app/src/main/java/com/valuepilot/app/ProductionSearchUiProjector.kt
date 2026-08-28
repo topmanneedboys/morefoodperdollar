@@ -21,11 +21,10 @@ import java.math.BigDecimal
  * performs formatting only. It never parses evidence, changes eligibility,
  * compares values, resolves conflicts, or re-ranks products.
  *
- * Internal merchant/location/channel scope identifiers and raw provider URLs are
- * deliberately absent from this catalog-only UI-ready type. They remain
- * available only through the exact
- * [ProductionSearchUiProjection.rankedByCandidateId] lookup until an explicitly
- * authorized consumer display/action capability exists.
+ * Internal merchant/location/channel scope identifiers, raw provider URLs, and
+ * internal blocker enum details are deliberately absent from UI-ready state.
+ * Exact source facts and diagnostics remain available only through the opaque
+ * lookup maps in [ProductionSearchUiProjection].
  */
 data class ProductionSearchRowUiState(
     val candidateId: String,
@@ -70,14 +69,11 @@ data class ProductionSearchComparisonGroupUiState(
 
 data class ProductionSearchBlockedUiState(
     val candidateId: String,
-    val notice: String,
-    val reasonCodes: List<String>
+    val notice: String
 ) {
     init {
         require(candidateId.isNotBlank())
         require(notice.isNotBlank())
-        require(reasonCodes.isNotEmpty())
-        require(reasonCodes == reasonCodes.distinct().sorted())
     }
 }
 
@@ -94,9 +90,9 @@ data class ProductionSearchUiState(
 /**
  * UI state plus opaque exact-row lookup for future product/provenance/actions.
  *
- * Presentations should render [state]. Actions that need source evidence, scope,
- * raw product URLs or image URLs resolve by candidateId through these maps
- * instead of trying to reconstruct facts or capabilities from formatted text.
+ * Presentations should render [state]. Actions or diagnostics that need source
+ * evidence, factual scope, raw URLs, or exact blocker enums resolve by candidate
+ * ID through these maps instead of reconstructing facts/capabilities from UI text.
  */
 data class ProductionSearchUiProjection(
     val state: ProductionSearchUiState,
@@ -141,19 +137,9 @@ object ProductionSearchUiProjector {
 
         val blocked =
             snapshot.blockedItems.map { item ->
-                val reasonCodes =
-                    buildList {
-                        item.unitValueBlockers.forEach { add("unit:${it.name}") }
-                        item.priceBlockers.forEach { add("price:${it.name}") }
-                        item.unitValuePolicyBlockReasons.forEach { add("policy:${it.name}") }
-                    }
-                        .distinct()
-                        .sorted()
-
                 ProductionSearchBlockedUiState(
                     candidateId = item.candidateId,
-                    notice = "Reference only — not eligible for Best Value",
-                    reasonCodes = reasonCodes
+                    notice = "Reference only — not eligible for Best Value"
                 )
             }
 

@@ -166,8 +166,6 @@ class ProductionSearchPipelineIntegrationTest {
         val blockedRow = projected.state.blocked.single()
         assertEquals("blocked", blockedRow.candidateId)
         assertEquals("Reference only — not eligible for Best Value", blockedRow.notice)
-        assertTrue("unit:PRICE_STAGE_BLOCKED" in blockedRow.reasonCodes)
-        assertTrue("price:CANDIDATE_NOT_ACCEPTANCE_RANKABLE" in blockedRow.reasonCodes)
 
         val lowerPresentation =
             presentation.snapshot.groups

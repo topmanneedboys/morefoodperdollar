@@ -26,7 +26,7 @@ import org.junit.Test
 class ProductionSearchUiProjectorTest {
 
     @Test
-    fun `projector preserves comparison groups exact ranks and evidence lookup without leaking scope or urls`() {
+    fun `projector preserves exact presentation without leaking scope urls or diagnostics`() {
         val best = item("best", rank = 1, order = 1, rateMicros = 80_000L, bestValue = true)
         val second = item("second", rank = 2, order = 2, rateMicros = 90_000L)
         val mass =
@@ -148,7 +148,7 @@ class ProductionSearchUiProjectorTest {
     }
 
     @Test
-    fun `blocked candidate remains reference explanation state with exact lookup`() {
+    fun `blocked candidate exposes neutral notice while exact diagnostics remain in lookup`() {
         val blocked =
             ProductionBestValueBlockedPresentationItem(
                 candidateId = "blocked",
@@ -167,16 +167,25 @@ class ProductionSearchUiProjectorTest {
 
         assertTrue(projected.state.groups.isEmpty())
         val row = projected.state.blocked.single()
+        assertEquals("blocked", row.candidateId)
         assertEquals("Reference only — not eligible for Best Value", row.notice)
-        assertEquals(
-            listOf(
-                "policy:WEAK_QUANTITY_AUTHORITY",
-                "price:CANDIDATE_NOT_ACCEPTANCE_RANKABLE",
-                "unit:PRICE_STAGE_BLOCKED"
-            ),
-            row.reasonCodes
+        val blockedUiFieldNames = ProductionSearchBlockedUiState::class.java.declaredFields.map { it.name }.toSet()
+        assertFalse("reasonCodes" in blockedUiFieldNames)
+        assertFalse(row.notice.contains("PRICE_STAGE_BLOCKED"))
+        assertFalse(row.notice.contains("CANDIDATE_NOT_ACCEPTANCE_RANKABLE"))
+        assertFalse(row.notice.contains("WEAK_QUANTITY_AUTHORITY"))
+
+        val exactBlocked = projected.blockedByCandidateId.getValue("blocked")
+        assertSame(blocked, exactBlocked)
+        assertTrue(ProductionUnitValueEligibilityBlocker.PRICE_STAGE_BLOCKED in exactBlocked.unitValueBlockers)
+        assertTrue(
+            ProductionCurrentPriceEligibilityBlocker.CANDIDATE_NOT_ACCEPTANCE_RANKABLE in
+                exactBlocked.priceBlockers
         )
-        assertSame(blocked, projected.blockedByCandidateId.getValue("blocked"))
+        assertTrue(
+            EvidenceBackedUnitValueBlockReason.WEAK_QUANTITY_AUTHORITY in
+                exactBlocked.unitValuePolicyBlockReasons
+        )
         assertTrue(projected.rankedByCandidateId.isEmpty())
     }
 
