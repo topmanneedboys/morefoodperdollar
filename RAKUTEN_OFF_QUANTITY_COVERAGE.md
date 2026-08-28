@@ -12,9 +12,17 @@ This document records the bounded research bridge for measuring that gap without
 
 ## Implemented research tool
 
+Implementation:
+
 `tools/measure_rakuten_off_quantity_coverage.py`
 
-The tool:
+Stable command-line entry point:
+
+`tools/run_rakuten_off_quantity_coverage.py`
+
+The launcher exists so the research command works reliably when invoked directly from Windows/Linux outside Python's repository-package import context. It only establishes the repository module path and delegates to the implementation; it does not read or log provider data itself.
+
+The measurement tool:
 
 - accepts a local authorized Rakuten Product Catalog `.txt` or `.txt.gz` feed;
 - validates the complete Rakuten trailer and exact parsed product-row count;
@@ -64,11 +72,15 @@ Open Food Facts quantity remains `SOURCE_ASSERTED_METADATA`; it does not become 
 
 ## CI coverage
 
-Synthetic tests live in:
+Synthetic quantity/aggregation tests live in:
 
 `tools/tests/test_qualify_rakuten_off_quantity_coverage.py`
 
-They cover:
+Direct-launch regression coverage lives in:
+
+`tools/tests/test_qualify_rakuten_off_quantity_cli.py`
+
+Coverage includes:
 
 - accepted exact tablet/capsule/gummy/soft-gel/French count forms;
 - rejection of ambiguous count expressions;
@@ -78,19 +90,20 @@ They cover:
 - fail-closed duplicate quantity conflicts;
 - complete Rakuten trailer/product-count validation;
 - checksum-valid GTIN filtering;
-- aggregate-report privacy, including explicit proof that tested GTINs and source product text are absent from serialized output.
+- aggregate-report privacy, including explicit proof that tested GTINs and source product text are absent from serialized output;
+- launching the stable CLI from outside the repository root so the documented local command does not depend on accidental Python import-path behavior.
 
-The `Test merchant feed qualification` workflow now compiles the measurement tool and runs its synthetic regression coverage. The workflow completed successfully on commit `3c4dfa8cfe2f8fd6de4c3a503983de52c26bed7a`.
+The `Test merchant feed qualification` workflow compiles both the implementation and stable launcher and runs the full `test_qualify_*.py` suite. The launcher-inclusive workflow completed successfully on commit `c84213eb326212b60c961938c9d5695f579478f6`.
 
 ## Current empirical status
 
-The real Jamieson feed has **not yet been run through this new quantity-coverage measurement in the repository workflow**, because the proprietary authorized feed is intentionally not stored in GitHub.
+The real Jamieson feed has **not yet been run through this Open Food Facts quantity-coverage measurement**, because the proprietary authorized feed is intentionally not stored in GitHub and the measurement requires outbound Open Food Facts metadata requests.
 
 Therefore do not claim any real Jamieson Open Food Facts count-coverage percentage yet.
 
 The next empirical step is local/research-only:
 
-1. run the tool against the existing authorized complete Jamieson `.txt.gz` file;
+1. run the stable launcher against the existing authorized complete Jamieson `.txt.gz` file;
 2. allow only the bounded Open Food Facts metadata calls;
 3. keep raw GTINs and returned product metadata local/in memory;
 4. retain only the generated aggregate report;
