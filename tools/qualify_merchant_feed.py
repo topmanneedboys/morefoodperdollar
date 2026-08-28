@@ -124,12 +124,35 @@ def is_valid_gtin(value: str | None) -> bool:
     return supplied == (10 - total % 10) % 10
 
 
-def parse_positive_decimal(value: str | None) -> Decimal | None:
-    text = _clean(value).replace(",", "")
-    if not text:
+def parse_positive_decimal(
+    value: str | None,
+    decimal_separator: str = ".",
+) -> Decimal | None:
+    """Parse a positive decimal without guessing decimal/grouping semantics.
+
+    The caller must choose `.` or `,` as the decimal separator. When `.` is
+    selected, comma is accepted only as a valid thousands-group separator.
+    When `,` is selected, dot is accepted only as a valid thousands-group
+    separator. This prevents a value such as `9,99` from silently becoming
+    `999` under dot-decimal semantics.
+    """
+    text = _clean(value)
+    if not text or decimal_separator not in {".", ","}:
         return None
+
+    if decimal_separator == ".":
+        pattern = r"(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?"
+        if not re.fullmatch(pattern, text):
+            return None
+        normalized = text.replace(",", "")
+    else:
+        pattern = r"(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d+)?"
+        if not re.fullmatch(pattern, text):
+            return None
+        normalized = text.replace(".", "").replace(",", ".")
+
     try:
-        parsed = Decimal(text)
+        parsed = Decimal(normalized)
     except InvalidOperation:
         return None
     if not parsed.is_finite() or parsed <= 0:
@@ -170,9 +193,8 @@ def valid_http_url(value: str | None) -> bool:
 
 
 def conservative_mapping(headers: Iterable[str]) -> tuple[dict[str, str], dict[str, list[str]]]:
-    header_list = list(headers)
     normalized_to_headers: dict[str, list[str]] = defaultdict(list)
-    for header in header_list:
+    for header in headers:
         normalized_to_headers[_normalize_name(header)].append(header)
 
     mapping: dict[str, str] = {}
