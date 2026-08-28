@@ -143,12 +143,33 @@ Sanitized feed checkpoint:
 Conclusions:
 
 - actual advertiser feed/file access is proven;
+- Rakuten's generic Retail/Sale field semantics are now documented and resolved at the schema level;
+- `Sale Price` reflects discounts and `Retail Price` does not reflect discounts;
+- the 2 Sale > Retail rows conflict with those documented semantics and must fail closed for production price promotion;
 - production caching/persistence/indexing/display/mobile rights remain unresolved;
-- Retail/Sale price semantics remain unresolved;
+- per-product/current-price freshness remains unresolved;
 - Rakuten alone does not establish package count;
 - 273 structural offer candidates exist;
 - authoritative unit-value candidates from Rakuten alone remain 0;
 - do not infer quantity from title/description/SKU/image/price/untyped attributes/neighboring variants.
+
+Detailed gate: `RAKUTEN_PRICE_AND_ANDROID_RIGHTS_GATE.md`.
+
+## Rakuten Android / installed-software rights gate
+
+Rakuten's current Publisher Membership Agreement allows promotion through mobile applications in general, subject to advertiser terms and Network Policies.
+
+However, installed/mobile software is separately governed by Rakuten's Downloadable Software Application controls. Rakuten requires Network Quality approval/compliance testing before a DSA is launched with network links, followed by advertiser approval for the new DSA distribution method.
+
+The Product Catalog implementation documentation also still describes advertiser Product Catalog approval for website/blog use, and the Jamieson partnership approval message refers to links being used on the approved website/marketing channel.
+
+Therefore:
+
+- advertiser Product Feed approval != Android/DSA approval;
+- do not ship Rakuten affiliate/network links in the installed Android app yet;
+- do not assume Product Catalog feed-display/cache/index rights for Android solely from technical feed access;
+- keep provider networking and feed research outside Android until written channel/rights clarification is obtained;
+- no Android `INTERNET` or `ACCESS_NETWORK_STATE` permission is added by this milestone.
 
 ## Jamieson × Open Food Facts — valid normalized measurement
 
@@ -211,24 +232,25 @@ Research provider networking remains outside Android.
 
 5D — Authorized Real Shopping Data Provider Selection / validation.
 
-The milestone is beyond first-feed acquisition and beyond the first valid cross-source quantity-coverage measurement.
+The milestone is beyond first-feed acquisition, beyond the first valid cross-source quantity-coverage measurement, and now has documented Rakuten Retail/Sale schema semantics.
 
 Remaining gates stay separate:
 
-- broader exact package-count/content coverage
-- exact Rakuten Retail/Sale price semantics
-- caching/persistence/indexing/display/mobile rights
-- source freshness/update model
-- production networking/privacy boundary
-- multiple-provider resilience
+- broader exact package-count/content coverage;
+- Rakuten/Jamieson current-price freshness policy and the 2 semantic-conflict rows;
+- caching/persistence/indexing/display/mobile rights;
+- Rakuten Android/DSA approval before network links are enabled in the installed app;
+- Canadian offer-geography confidence beyond currency alone;
+- production networking/privacy boundary;
+- multiple-provider resilience.
 
 ## Immediate next gate
 
-**Wait for GS1 Canada ECCnet eligibility/rights response while progressing the separate Rakuten Retail/Sale price-semantics and production-use-rights gate.**
+**Wait for GS1 Canada ECCnet eligibility/rights response while obtaining written Rakuten clarification for Product Catalog Android use, caching/indexing/display rights, retention/deletion obligations, and DSA/mobile-app distribution.**
 
 For ECCnet, do not implement integration until GS1 confirms ValuePilot's Data Recipient eligibility, available GTIN-level net-content scope, permitted consumer/mobile/search/cache uses, restrictions and commercial/API terms.
 
-In parallel, validate Rakuten price semantics and production-use rights without conflating them with package quantity. The two inverted Jamieson rows remain a permanent warning that field labels alone do not justify discount inference.
+For Rakuten, the generic price-field meanings no longer need further research. The next work is rights/freshness/channel validation. The two inverted Jamieson rows are source-semantic conflicts and must not be auto-corrected or used to derive a discount/current price.
 
 Only after source semantics **and** rights gates pass should ValuePilot implement a production real-data adapter or add network permissions.
 
