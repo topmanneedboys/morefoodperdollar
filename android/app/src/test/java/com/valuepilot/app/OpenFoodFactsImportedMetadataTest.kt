@@ -1,0 +1,202 @@
+package com.valuepilot.app
+
+import com.valuepilot.core.BaseUnit
+import com.valuepilot.core.EvidenceAuthorityClass
+import com.valuepilot.core.EvidenceClaim
+import com.valuepilot.core.EvidenceClaimDomain
+import com.valuepilot.core.EvidenceClaimScope
+import com.valuepilot.core.EvidenceConflictPolicy
+import com.valuepilot.core.EvidenceConflictRelationship
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class OpenFoodFactsImportedMetadataTest {
+
+    @Test
+    fun acceptsStructuredWholeProductMassAndCreatesOnlyQuantityClaim() {
+        val result = OpenFoodFactsImportedMetadataMapper.map(
+            validProduct(
+                rawQuantity = "1 kg",
+                productQuantity = "1000",
+                productQuantityUnit = "g"
+            )
+        )
+
+        assertTrue(result.accepted)
+        assertTrue(result.failures.isEmpty())
+
+        val metadata = assertNotNull(result.metadata)
+        val claim = assertNotNull(result.quantityClaim)
+
+        assertEquals(OpenFoodFactsImportedMetadataMapper.PROVIDER_ID, metadata.providerId)
+        assertEquals("036000291452", metadata.gtin)
+        assertEquals("Rolled Oats", metadata.productName)
+        assertEquals("Example Brand", metadata.brands)
+        assertEquals(BaseUnit.GRAM, metadata.normalizedQuantity.unit)
+        assertEquals(1_000_000_000L, metadata.normalizedQuantity.amountMicros)
+        assertEquals(MODIFIED_SECONDS * 1_000L, metadata.sourceLastModifiedAtEpochMillis)
+
+        assertEquals(EvidenceClaimDomain.PACKAGE_QUANTITY, claim.domain)
+        assertEquals(EvidenceAuthorityClass.SOURCE_ASSERTED_METADATA, claim.authority)
+        assertEquals("gtin:036000291452", claim.scope.productKey)
+        assertEquals("GRAM:1000000000", claim.valueFingerprint)
+        assertNull(claim.scope.merchantKey)
+        assertNull(claim.scope.currencyCode)
+    }
+
+    @Test
+    fun acceptsMultipackWhenRawDisplayAndStructuredQuantityAgree() {
+        val result = OpenFoodFactsImportedMetadataMapper.map(
+            validProduct(
+                rawQuantity = "6 x 250 ml",
+                productQuantity = "1500",
+                productQuantityUnit = "ml"
+            )
+        )
+
+        assertTrue(result.accepted)
+        val quantity = assertNotNull(result.metadata).normalizedQuantity
+        assertEquals(BaseUnit.MILLILITRE, quantity.unit)
+        assertEquals(1_500_000_000L, quantity.amountMicros)
+    }
+
+    @Test
+    fun rejectsBadGtinMissingQuantityAndUnsupportedStructuredUnit() {
+        assertFailure(
+            validProduct(code = "036000291453"),
+            OpenFoodFactsImportFailure.INVALID_GTIN
+        )
+        assertFailure(
+            validProduct(productQuantity = null),
+            OpenFoodFactsImportFailure.MISSING_STRUCTURED_QUANTITY
+        )
+        assertFailure(
+            validProduct(productQuantityUnit = "kg"),
+            OpenFoodFactsImportFailure.UNSUPPORTED_STRUCTURED_UNIT
+        )
+    }
+
+    @Test
+    fun rejectsCorruptOrNonPositiveStructuredQuantity() {
+        assertFailure(
+            validProduct(productQuantity = "0"),
+            OpenFoodFactsImportFailure.INVALID_STRUCTURED_QUANTITY
+        )
+        assertFailure(
+            validProduct(productQuantity = "1.1234567"),
+            OpenFoodFactsImportFailure.INVALID_STRUCTURED_QUANTITY
+        )
+        assertFailure(
+            validProduct(productQuantity = "999999999999"),
+            OpenFoodFactsImportFailure.INVALID_STRUCTURED_QUANTITY
+        )
+    }
+
+    @Test
+    fun parseableRawQuantityDisagreementFailsClosed() {
+        val result = OpenFoodFactsImportedMetadataMapper.map(
+            validProduct(
+                rawQuantity = "900 g",
+                productQuantity = "1000",
+                productQuantityUnit = "g"
+            )
+        )
+
+        assertFalse(result.accepted)
+        assertNull(result.metadata)
+        assertNull(result.quantityClaim)
+        assertTrue(
+            OpenFoodFactsImportFailure.INCONSISTENT_RAW_QUANTITY in result.failures
+        )
+    }
+
+    @Test
+    fun unsupportedRawDisplaySyntaxDoesNotInventAParsingFailure() {
+        val result = OpenFoodFactsImportedMetadataMapper.map(
+            validProduct(
+                rawQuantity = "6 eggs",
+                productQuantity = "360",
+                productQuantityUnit = "g"
+            )
+        )
+
+        assertTrue(result.accepted)
+        assertEquals(
+            360_000_000L,
+            assertNotNull(result.metadata).normalizedQuantity.amountMicros
+        )
+    }
+
+    @Test
+    fun invalidSourceModificationTimeIsRejectedRatherThanReplacedWithImportTime() {
+        assertFailure(
+            validProduct(lastModifiedEpochSeconds = -1L),
+            OpenFoodFactsImportFailure.INVALID_MODIFICATION_TIME
+        )
+    }
+
+    @Test
+    fun actualOpenFoodFactsQuantityCannotOverrideMerchantAuthoritativeQuantity() {
+        val community = assertNotNull(
+            OpenFoodFactsImportedMetadataMapper.map(
+                validProduct(
+                    rawQuantity = "900 g",
+                    productQuantity = "900",
+                    productQuantityUnit = "g"
+                )
+            ).quantityClaim
+        )
+
+        val merchant = EvidenceClaim(
+            claimId = "merchant:quantity",
+            domain = EvidenceClaimDomain.PACKAGE_QUANTITY,
+            valueFingerprint = "GRAM:1000000000",
+            authority = EvidenceAuthorityClass.MERCHANT_AUTHORITATIVE,
+            scope = EvidenceClaimScope(productKey = community.scope.productKey),
+            observedAtEpochMillis = community.observedAtEpochMillis - 1_000L
+        )
+
+        val decision = EvidenceConflictPolicy.resolve(community, merchant)
+
+        assertEquals(EvidenceConflictRelationship.PREFER_RIGHT, decision.relationship)
+        assertEquals("merchant:quantity", decision.selectedClaimId)
+        assertFalse(decision.blocksRanking)
+    }
+
+    private fun assertFailure(
+        row: OpenFoodFactsImportedProduct,
+        expected: OpenFoodFactsImportFailure
+    ) {
+        val result = OpenFoodFactsImportedMetadataMapper.map(row)
+        assertFalse(result.accepted)
+        assertNull(result.metadata)
+        assertNull(result.quantityClaim)
+        assertTrue("Expected $expected in ${result.failures}", expected in result.failures)
+    }
+
+    private fun validProduct(
+        code: String = "036000291452",
+        productName: String? = "Rolled Oats",
+        brands: String? = "Example Brand",
+        rawQuantity: String? = "1 kg",
+        productQuantity: String? = "1000",
+        productQuantityUnit: String? = "g",
+        lastModifiedEpochSeconds: Long? = MODIFIED_SECONDS
+    ) = OpenFoodFactsImportedProduct(
+        code = code,
+        productName = productName,
+        brands = brands,
+        rawQuantity = rawQuantity,
+        productQuantity = productQuantity,
+        productQuantityUnit = productQuantityUnit,
+        lastModifiedEpochSeconds = lastModifiedEpochSeconds
+    )
+
+    companion object {
+        private const val MODIFIED_SECONDS = 1_790_000_000L
+    }
+}
