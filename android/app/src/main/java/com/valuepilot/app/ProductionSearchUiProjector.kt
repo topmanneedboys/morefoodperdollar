@@ -20,6 +20,11 @@ import java.math.BigDecimal
  * The application receives a shared-core point-in-time presentation snapshot and
  * performs formatting only. It never parses evidence, changes eligibility,
  * compares values, resolves conflicts, or re-ranks products.
+ *
+ * Internal merchant/location/channel scope identifiers are deliberately absent
+ * from this UI-ready type. They remain available only through the exact
+ * [ProductionSearchUiProjection.rankedByCandidateId] lookup until explicit
+ * consumer display metadata exists.
  */
 data class ProductionSearchRowUiState(
     val candidateId: String,
@@ -30,7 +35,7 @@ data class ProductionSearchRowUiState(
     val quantityText: String,
     val unitRateText: String,
     val bestValue: Boolean,
-    val merchantSummary: String,
+    val offerScopeText: String,
     val sourceSummary: String,
     val availabilityText: String,
     val freshnessText: String,
@@ -44,6 +49,7 @@ data class ProductionSearchRowUiState(
         require(priceText.isNotBlank())
         require(quantityText.isNotBlank())
         require(unitRateText.isNotBlank())
+        require(offerScopeText.isNotBlank())
     }
 }
 
@@ -91,7 +97,8 @@ data class ProductionSearchUiState(
  *
  * Presentations should render [state]. Actions that need source evidence resolve
  * by candidateId through these maps instead of trying to reconstruct facts from
- * formatted text.
+ * formatted text. Exact merchant/location/channel scope lives in those original
+ * production presentation objects, not in consumer-facing strings.
  */
 data class ProductionSearchUiProjection(
     val state: ProductionSearchUiState,
@@ -174,12 +181,7 @@ object ProductionSearchUiProjector {
             quantityText = formatQuantity(item.quantity),
             unitRateText = formatRate(item.unitRate),
             bestValue = item.bestValue,
-            merchantSummary =
-                buildString {
-                    append(item.merchantKey)
-                    item.locationKey?.let { append(" · ").append(it) }
-                    append(" · ").append(item.commerceChannelKey)
-                },
+            offerScopeText = "Offer country: ${item.offerCountryCode}",
             sourceSummary = "${item.providerDisplayName} · ${item.sourceDisplayName}",
             availabilityText = availabilityText(item.availabilityState),
             freshnessText = freshnessText(item.currentFreshness),

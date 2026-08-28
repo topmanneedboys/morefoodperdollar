@@ -26,7 +26,7 @@ import org.junit.Test
 class ProductionSearchUiProjectorTest {
 
     @Test
-    fun `projector preserves comparison groups exact ranks and evidence lookup`() {
+    fun `projector preserves comparison groups exact ranks and evidence lookup without leaking scope keys`() {
         val best = item("best", rank = 1, order = 1, rateMicros = 80_000L, bestValue = true)
         val second = item("second", rank = 2, order = 2, rateMicros = 90_000L)
         val mass =
@@ -73,10 +73,34 @@ class ProductionSearchUiProjectorTest {
         assertEquals("Reference 10.00 CAD", itemGroup.rows.first().referencePriceText)
         assertEquals("100 items", itemGroup.rows.first().quantityText)
         assertEquals("0.08 CAD/item", itemGroup.rows.first().unitRateText)
-        assertEquals("merchant-best · ONLINE", itemGroup.rows.first().merchantSummary)
+        assertEquals("Offer country: CA", itemGroup.rows.first().offerScopeText)
         assertEquals("Provider best · Source best", itemGroup.rows.first().sourceSummary)
         assertEquals("In stock", itemGroup.rows.first().availabilityText)
         assertEquals("Fresh price evidence", itemGroup.rows.first().freshnessText)
+
+        val uiReadyText =
+            itemGroup.rows.first().let { row ->
+                listOfNotNull(
+                    row.name,
+                    row.priceText,
+                    row.referencePriceText,
+                    row.quantityText,
+                    row.unitRateText,
+                    row.offerScopeText,
+                    row.sourceSummary,
+                    row.availabilityText,
+                    row.freshnessText
+                ).joinToString("|")
+            }
+        assertFalse(uiReadyText.contains("merchant-best"))
+        assertFalse(uiReadyText.contains("location-best"))
+        assertFalse(uiReadyText.contains("ONLINE"))
+
+        val exactBest = projected.rankedByCandidateId.getValue("best")
+        assertSame(best, exactBest)
+        assertEquals("merchant-best", exactBest.merchantKey)
+        assertEquals("location-best", exactBest.locationKey)
+        assertEquals("ONLINE", exactBest.commerceChannelKey)
 
         val massGroup = projected.state.groups[1]
         assertEquals("CAD · Price per kilogram", massGroup.title)
@@ -85,7 +109,6 @@ class ProductionSearchUiProjectorTest {
         assertEquals("500 g", massGroup.rows.single().quantityText)
         assertEquals("10 CAD/kg", massGroup.rows.single().unitRateText)
 
-        assertSame(best, projected.rankedByCandidateId.getValue("best"))
         assertSame(mass, projected.rankedByCandidateId.getValue("mass"))
         assertTrue(projected.blockedByCandidateId.isEmpty())
     }
@@ -237,7 +260,7 @@ class ProductionSearchUiProjectorTest {
             providerDisplayName = "Provider $candidateId",
             sourceDisplayName = "Source $candidateId",
             merchantKey = "merchant-$candidateId",
-            locationKey = null,
+            locationKey = "location-$candidateId",
             commerceChannelKey = "ONLINE",
             offerCountryCode = "CA",
             currentPrice = Money(800L, "CAD"),
