@@ -16,10 +16,11 @@ Read before changing architecture or provider logic:
 4. `PROVIDER_ACCOUNT_STATUS.md`
 5. `RAKUTEN_JAMIESON_VALIDATION.md`
 6. `RAKUTEN_JAMIESON_FEED_AUDIT_2026-08-28.md`
-7. `OPEN_DATA_INTEGRATION_STATUS.md`
-8. `ARCHITECTURE.md`
-9. `FUTURE_PRODUCT_VISION.md`
-10. provider-specific validation files relevant to the task
+7. `RAKUTEN_OFF_QUANTITY_COVERAGE.md`
+8. `OPEN_DATA_INTEGRATION_STATUS.md`
+9. `ARCHITECTURE.md`
+10. `FUTURE_PRODUCT_VISION.md`
+11. provider-specific validation files relevant to the task
 
 ## Permanent product direction
 
@@ -96,7 +97,7 @@ Synthetic regression tests cover the discovered price relationships. The `Test m
 
 ## Provider-neutral staged offer import — completed and verified
 
-`android/shared-core/src/main/kotlin/com/valuepilot/core/ProviderOfferImport.kt` now defines the provider-neutral boundary between parsed provider rows and canonical production offers.
+`android/shared-core/src/main/kotlin/com/valuepilot/core/ProviderOfferImport.kt` defines the provider-neutral boundary between parsed provider rows and canonical production offers.
 
 It deliberately does **not** create an `Offer` or choose a current price.
 
@@ -115,13 +116,49 @@ Key invariants:
 
 GitHub Actions build run for commit `4b423af63a64abd403ef01baf3821e65e112bd8b` completed successfully. Browser checks, shared-core/app tests, Android lint/assemble and the APK privacy-boundary check all passed; no Android network permission was introduced.
 
-## Open Food Facts / quantity path
+## Open Food Facts / supplement-count path — implemented and verified
 
-`OpenFoodFactsImportedMetadata.kt` already implements a strict network-free metadata mapping keyed by checksum-valid GTIN. Today it accepts structured whole-product quantity only when Open Food Facts supplies a positive normalized `product_quantity` with unit `g` or `ml`; simple raw mass/volume strings are only cross-checked and disagreements fail closed.
+`OpenFoodFactsImportedMetadata.kt` remains a strict network-free metadata mapper keyed by checksum-valid GTIN.
 
-It emits PACKAGE_QUANTITY with `SOURCE_ASSERTED_METADATA` authority and cannot emit retailer price, stock, promotion or merchant identity.
+It now supports two deliberately separated quantity bases:
 
-Previous real Open Prices × Open Food Facts measurement found a useful GTIN quantity join for mass/volume products, but this does not prove count coverage for Jamieson tablets/capsules/gummies. Do not broaden to title/description guessing.
+1. structured positive whole-product `g` / `ml` metadata; and
+2. exact displayed supplement package counts such as `100 tablets`, `60 capsules`, `90 gummies`, `120 soft gels`, plus a narrow equivalent French vocabulary.
+
+Exact count promotion is deliberately strict:
+
+- the complete source `quantity` value must be an integer plus an allow-listed dose-form noun;
+- product names and descriptions are never parsed as authoritative quantity;
+- strengths, ranges, multipliers and mixed expressions such as `60 capsules x 500 mg` remain unknown;
+- Open Food Facts quantity remains `SOURCE_ASSERTED_METADATA`, not merchant-authoritative Jamieson metadata;
+- a stronger merchant-authoritative quantity can still defeat conflicting Open Food Facts metadata through the existing conflict policy.
+
+The full Android build for commit `450d615c7143dee12e3f5e62b2db03b5effba9db` passed, including app/shared-core tests, lint/assemble and privacy-boundary checks.
+
+## Privacy-safe Rakuten × Open Food Facts coverage tool — implemented and verified
+
+`tools/measure_rakuten_off_quantity_coverage.py` is the bounded research bridge for the real Jamieson quantity question.
+
+It:
+
+- reads the local authorized complete Rakuten `.txt` / `.txt.gz` feed;
+- validates the trailer and parsed product count;
+- holds checksum-valid GTINs in memory only;
+- queries only a narrow Open Food Facts metadata projection in controlled structured-search batches;
+- enforces a search delay consistent with the current documented 10 requests/minute/IP limit;
+- uses exact displayed supplement-count syntax first, otherwise structured `g`/`ml` metadata;
+- detects conflicting duplicate quantity candidates and fails them closed;
+- produces aggregate JSON/Markdown only;
+- does not emit GTINs, catalog rows, product URLs, credentials or private provider identifiers;
+- leaves `production_authorized = false`.
+
+Synthetic regression coverage is in `tools/tests/test_qualify_rakuten_off_quantity_coverage.py` and explicitly verifies the aggregate report does not serialize tested GTINs or source product text.
+
+The `Test merchant feed qualification` workflow compiled the tool and ran the full `test_qualify_*.py` suite successfully on commit `3c4dfa8cfe2f8fd6de4c3a503983de52c26bed7a`.
+
+See `RAKUTEN_OFF_QUANTITY_COVERAGE.md`.
+
+Important empirical boundary: the proprietary Jamieson feed has **not yet been run through this new Open Food Facts count-coverage measurement**. Therefore no real Jamieson exact-count coverage percentage is proven yet.
 
 ## Provider/account checkpoint
 
@@ -141,12 +178,13 @@ If Lowvyn approves the initial request, reply in the same thread about partner/f
 
 ## Next engineering sequence
 
-1. Measure whether a bounded public metadata source can supply authoritative package **count** for the Jamieson GTINs without committing the proprietary feed or GTIN list.
-2. Inspect/extend quantity modeling only if the source has a documented, deterministic count field; use synthetic tests and fail closed on ambiguity.
-3. Keep quantity provenance separate from Jamieson merchant-price provenance and join only through strong stable identity, preferably checksum-valid GTIN.
-4. Do not create canonical production Offers while Retail/Sale semantics and data-use rights remain unresolved.
-5. Do not automate SFTP credentials or add Android networking yet.
-6. Continue waiting on screened provider decisions and Lowvyn written response; do not mass-apply elsewhere.
+1. Run `tools/measure_rakuten_off_quantity_coverage.py` locally against the existing authorized complete Jamieson `.txt.gz` file.
+2. Keep the proprietary feed, GTINs and raw Open Food Facts responses local; retain only the aggregate report.
+3. Measure exact-count-ready, mass/volume-only, unmatched, no-usable-quantity and conflict counts.
+4. If exact-count coverage is useful, feed those separately attributed quantity claims through the existing conflict and evidence-backed unit-value gates; do not merge them into Jamieson source rows.
+5. Do not create canonical production Offers while Retail/Sale semantics and data-use rights remain unresolved.
+6. Do not automate SFTP credentials or add Android networking yet.
+7. Continue waiting on screened provider decisions and Lowvyn written response; do not mass-apply elsewhere.
 
 ## Security
 
@@ -163,4 +201,4 @@ cd android
 ./gradlew --no-daemon :shared-core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 ```
 
-For Python feed-qualification changes, run the focused `tools/tests` suite relevant to the changed qualifier. Never weaken tests to make a change pass.
+For Python feed-qualification/research changes, run the focused `tools/tests` suite relevant to the changed tool. Never weaken tests to make a change pass.
