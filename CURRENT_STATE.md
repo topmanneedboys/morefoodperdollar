@@ -51,7 +51,7 @@ Permanent rules:
 
 ## Real Shopping Evidence / cross-source hardening
 
-The shared deterministic layer now includes:
+The shared deterministic layer includes:
 
 - typed `ShoppingEvidence`
 - explicit sample/real-world/unknown environment
@@ -65,15 +65,15 @@ The shared deterministic layer now includes:
 - evidence-backed unit-value gating
 - provider-neutral staged offer import preserving unresolved source fields
 
-Permanent invariant: a historical observed price, merchant price, package quantity, benchmark and regulatory fact remain separate factual domains/scopes and are never flattened into one truth value.
+Permanent invariant: historical observed price, merchant price, package quantity, benchmark and regulatory fact remain separate factual domains/scopes and are never flattened into one truth value.
 
 ## GTIN identity representation
 
-`GtinValidation.kt` now distinguishes checksum validation from deterministic cross-source representation.
+`GtinValidation.kt` distinguishes checksum validation from deterministic cross-source representation.
 
 `canonicalOrNull()` handles documented leading-zero equivalent GTIN representations while refusing invalid-GTIN repair.
 
-Provider staging deliberately preserves:
+Provider staging preserves:
 
 - `suppliedGtin`: exact provider source string
 - `validatedGtin`: exact checksum-valid source representation
@@ -111,7 +111,9 @@ Offline/research tooling includes:
 - `tools/measure_rakuten_off_quantity_coverage.py` (first implementation retained for regression/history)
 - `tools/measure_rakuten_off_quantity_coverage_v2.py` (barcode-normalized corrected implementation)
 - `tools/open_facts_barcode.py`
-- `tools/run_rakuten_off_quantity_coverage.py` (stable launcher; now routes to v2)
+- `tools/run_rakuten_off_quantity_coverage.py` (stable launcher; routes to v2)
+
+The v2 OFF path now treats batch search as an optimization and falls back to rate-limited direct product-by-barcode reads on repeated search HTTP 5xx failures. Commit `5ffa11d6492129cabc33dd0d73816ae86454469b` passed the merchant-feed qualification workflow.
 
 Raw authorized provider data/reports remain ignored under `local-provider-data/` and `local-feed-reports/` and must not be committed.
 
@@ -148,21 +150,11 @@ Conclusions:
 - authoritative unit-value candidates from Rakuten alone remain 0;
 - do not infer quantity from title/description/SKU/image/price/untyped attributes/neighboring variants.
 
-## Critical correction — first Jamieson × Open Food Facts run
+## Jamieson × Open Food Facts — valid normalized measurement
 
-The first real local quantity-coverage run did occur on 2026-08-28 and produced:
+The historical first run reported `0 / 271` Open Food Facts matches, but that result is invalid because it compared normalized OFF response codes against raw provider GTIN representations.
 
-- product records: 273
-- valid GTINs: 271
-- search API calls: 4
-- Open Food Facts matches: 0
-- exact supplement counts: 0
-
-**That 0-match result is invalid as a coverage conclusion.**
-
-The first implementation compared normalized Open Food Facts response `code` strings against raw provider GTIN strings. Open Food Facts documents leading-zero barcode normalization, so legitimate responses could be discarded.
-
-Sanitized actual Jamieson GTIN representation distribution:
+Sanitized Jamieson GTIN representation distribution remains:
 
 - 12-digit: 248 / 271
 - 13-digit: 1 / 271
@@ -171,17 +163,34 @@ Sanitized actual Jamieson GTIN representation distribution:
 - canonical unique lookup identities: 271
 - canonical identity collisions: 0
 
-The first `0 / 271` result must never be recovered or reported as proof of zero Open Food Facts coverage.
+The corrected normalized run completed successfully on 2026-08-28 and is now authoritative:
 
-## Corrected normalized quantity-coverage path
+- product records: 273
+- valid GTINs: 271
+- normalized Open Food Facts matches: 102
+- unmatched GTINs: 169
+- exact supplement-count candidates: 12
+- structured mass/volume-only candidates: 2
+- quantity conflicts: 0
+- matched but no usable quantity: 88
+- matches containing expected Jamieson brand text: 90
+- matches with source modification timestamp: 102
+- successful batch-search requests: 13
+- search batches using direct-read fallback: 1
+- direct product-read requests: 20
+- response codes ignored after canonical validation: 0
 
-The stable launcher now uses the v2 measurement implementation.
+Open Food Facts is therefore useful supplemental metadata but **not sufficient as the package-count foundation** for the Jamieson feed. Only 12 valid-GTIN identities are exact-count-ready through the current strict OFF rules; 259 remain not exact-count-ready.
 
-The corrected path validates GTIN first, canonicalizes only documented representation equivalence, queries/matches canonical identities, maps results back to provider identity in memory, reports collisions explicitly and remains aggregate-only/privacy-safe.
+Do not relax the parser or infer package count from Rakuten text to increase coverage.
 
-Normalized Python regression CI passed on commit `3a949e14be5cdcd10f523aa3a8d20fe463b91d4f`.
+## Next package-content source decision
 
-Shared-core canonical GTIN handling plus provider-import promotion tests are included in commit `be96095e6634b28f93e9add932bf67ac98bb66a3`. Its full GitHub Actions workflow completed successfully: browser checks, Android/shared-core tests, lint/assemble, APK privacy-boundary verification, release assembly and artifact upload all passed.
+Health Canada's Licensed Natural Health Products Database is useful for regulatory identity, licence, dosage form, ingredients and recommended-dose facts, but its public schema does not provide GTIN-level package net content/count. It cannot close the current Jamieson package-count gap by itself.
+
+GS1 Canada ECCnet remains the strongest strategic next product-content target because it is GTIN-centric and carries standardized net-content/product-content data, including count-style net content. Access is controlled for Data Recipients and requires separate authorization/subscription validation.
+
+No ECCnet production adapter is authorized yet.
 
 ## Privacy boundary
 
@@ -200,12 +209,12 @@ Research provider networking remains outside Android.
 
 5D — Authorized Real Shopping Data Provider Selection / validation.
 
-The milestone is beyond first-feed acquisition: Jamieson/Rakuten is now the empirical validation case.
+The milestone is beyond first-feed acquisition and beyond the first valid cross-source quantity-coverage measurement.
 
 Remaining gates stay separate:
 
-- corrected quantity/count coverage
-- exact provider price semantics
+- broader exact package-count/content coverage
+- exact Rakuten Retail/Sale price semantics
 - caching/persistence/indexing/display/mobile rights
 - source freshness/update model
 - production networking/privacy boundary
@@ -213,21 +222,18 @@ Remaining gates stay separate:
 
 ## Immediate next gate
 
-**Rerun the stable barcode-normalized Jamieson × Open Food Facts quantity-coverage command locally and retain only aggregate output.**
+**Validate GS1 Canada ECCnet Data Recipient feasibility for ValuePilot as the next package-content/identity rail.**
 
-The corrected run must establish:
+Required questions before integration:
 
-- normalized matched GTINs
-- exact supplement-count candidates
-- mass/volume-only metadata
-- unmatched GTINs
-- quantity conflicts
-- matched-but-no-usable-quantity
-- normalization/collision sanity counts
+- can ValuePilot qualify as a Data Recipient for the relevant grocery/pharmacy/product categories;
+- is GTIN-level net content/count available for the required Jamieson/product scope;
+- what fields can be cached, indexed, searched and displayed in a consumer comparison application;
+- what attribution, redistribution, retention and mobile/software restrictions apply;
+- what subscription/commercial terms apply;
+- what API or extract access is available at production scale.
 
-Only after useful count coverage is proven should separate Open Food Facts quantity claims be assembled through the existing source-isolated conflict/unit-value gates.
-
-If corrected normalized coverage remains poor, then investigate another appropriate metadata domain/provider rather than guessing quantity from Rakuten.
+In parallel, Rakuten price semantics and production-use rights remain unresolved and must be validated separately.
 
 Only after source semantics **and** rights gates pass should ValuePilot implement a production real-data adapter or add network permissions.
 
