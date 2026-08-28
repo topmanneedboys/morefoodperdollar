@@ -1,6 +1,6 @@
 # Current state
 
-Updated: 2026-08-27
+Updated: 2026-08-28
 
 Branch: work/valuepilot-android-milestone
 
@@ -84,7 +84,6 @@ deterministic ranking
 
 bounded presentation results
 
-
 Current Search guarantees include:
 
 - normalized and bounded human queries
@@ -115,11 +114,7 @@ Current Search guarantees include:
 
 The first Android Search experience is physically verified on-device.
 
-Current built-in Search data is explicitly fictional sample evidence.
-
-It is not presented as live retailer pricing, inventory, promotions or availability.
-
-Sample fixtures remain useful for deterministic offline development and regression testing.
+Current built-in Search data is explicitly fictional sample evidence. It is not presented as live retailer pricing, inventory, promotions or availability. Sample fixtures remain useful for deterministic offline development and regression testing.
 
 ## Real Shopping Evidence Contract
 
@@ -140,13 +135,9 @@ Shopping evidence can describe:
 - promotions
 - freshness
 
-Providers supply evidence.
+Providers supply evidence. Providers do not decide ValuePilot rank.
 
-Providers do not decide ValuePilot rank.
-
-Evidence freshness is evaluated using caller-supplied time and explicit policy.
-
-The shared core does not read a system clock.
+Evidence freshness is evaluated using caller-supplied time and explicit policy. The shared core does not read a system clock.
 
 Evidence acceptance produces one of three deterministic dispositions:
 
@@ -192,7 +183,7 @@ Later or weaker evidence must not overwrite stronger explicit money, quantity or
 
 ## Multi-source evidence hardening
 
-5D research now has a deterministic cross-source safety layer before any production provider integration.
+5D research now has deterministic cross-source and provider-import safety layers before any production provider integration.
 
 Shared core includes:
 
@@ -202,6 +193,7 @@ Shared core includes:
 - deterministic evidence conflict policy
 - deterministic N-source fact resolution
 - evidence-backed unit-value gating
+- a provider-neutral staged offer-import contract that preserves raw provider price fields without prematurely selecting a canonical current price
 
 Permanent rule:
 
@@ -211,7 +203,7 @@ Claims only compete when they describe the same factual domain and exact scope. 
 
 When a stronger claim deterministically defeats weaker conflicting claims, the stronger value may resolve. When equally credible claims disagree and no deterministic rule resolves them, the fact remains an unresolved conflict and blocks ranking rather than being averaged, voted, or guessed.
 
-This is the permanent protection against later provider conflicts such as:
+This protects against conflicts such as:
 
 - current merchant price versus historical observed price
 - online versus physical-store price
@@ -219,19 +211,47 @@ This is the permanent protection against later provider conflicts such as:
 - proprietary merchant data versus open metadata
 - stale observations versus current authoritative offers
 
+## Source-isolated evidence index
+
+`SourceIsolatedEvidenceIndex.kt` now provides the bounded platform-neutral in-memory repository prototype.
+
+It:
+
+- preserves dataset namespaces and storage-boundary metadata;
+- stores source claims without flattening provenance;
+- supports bounded lookup by stable product key;
+- delegates fact resolution to `EvidenceFactResolver`;
+- rejects same-namespace claim-ID collisions;
+- can remove one dataset namespace without mutating another provider.
+
+This is an engineering/source-isolation mechanism, not a legal conclusion about any dataset licence.
+
 ## Open-data bootstrap status
 
 Open Food Facts / Open Prices / open-government data remain useful evidence rails, but they are not treated as universal live Canadian merchant-price feeds.
 
-Current architecture preserves source/licence isolation so open/share-alike datasets are not blindly flattened together with proprietary merchant feeds.
-
-Open Prices remains suitable for proof-backed observed/historical prices and testing identity/freshness behavior. Open Food Facts remains suitable for product identity and metadata enrichment when supported by strong identifiers. Government datasets remain reference/regulatory/benchmark evidence rather than retailer-specific current prices.
+Open Prices remains suitable for proof-backed observed/historical prices and testing identity/freshness behavior. Open Food Facts remains suitable for product identity/package metadata enrichment when supported by stable identifiers. Government datasets remain reference/regulatory/benchmark evidence rather than retailer-specific current prices.
 
 A cross-source join cannot make stale price evidence current, cannot invent geography, and cannot upgrade weak metadata into authoritative merchant price evidence.
 
+### Open Food Facts quantity support
+
+The network-free mapper now supports two explicit quantity bases:
+
+- structured positive whole-product `g` / `ml` metadata; and
+- exact displayed supplement package counts such as `100 tablets`, `60 capsules`, `90 gummies` and a narrow equivalent French vocabulary.
+
+Supplement count is accepted only when the **entire source quantity field** matches a strict integer + allow-listed dose-form syntax.
+
+It deliberately does not parse product names/descriptions, dosage strength, ranges, multipliers or mixed strings such as `60 capsules x 500 mg` into authoritative count.
+
+Open Food Facts quantity remains separately attributed `SOURCE_ASSERTED_METADATA` and cannot overwrite stronger merchant-authoritative quantity.
+
+The Android build containing this count support passed on commit `450d615c7143dee12e3f5e62b2db03b5effba9db`.
+
 ## Merchant feed qualification infrastructure
 
-5D now includes offline feed-quality tooling before the first production provider adapter exists.
+5D includes offline feed-quality tooling before the first production provider adapter exists.
 
 Generic qualifier:
 
@@ -259,7 +279,7 @@ Capabilities include:
 - `HDR` record validation
 - documented primary-field shape checks
 - required-field coverage
-- Retail Price / Sale Price qualification coverage
+- separate Retail Price / Sale Price qualification and relationship measurement
 - CAD and mixed-currency measurement
 - availability-value measurement
 - UPC/GTIN checksum validation
@@ -269,16 +289,16 @@ Capabilities include:
 - `TRL` record and declared-product-count validation
 - bounded/truncated-run behavior that does not pretend a trailer was checked
 
-Important Rakuten trust rules are now encoded/documented:
+Important Rakuten trust rules are encoded/documented:
 
 - the file header timestamp is not promoted to per-product freshness
-- Sale Price is only a qualification price candidate until real advertiser semantics are validated
+- Retail Price and Sale Price remain separate source semantics until explicitly resolved
 - CAD does not alone prove Canadian geography
-- the generic Rakuten primary schema does not provide a universal structured package quantity
+- the generic Rakuten primary schema does not provide universal structured package quantity
 - class-specific Size text is not automatically promoted to grams/millilitres/count
 - feed access never equals caching/indexing/display/mobile rights
 
-The qualification CI workflow compiles and tests the generic and Rakuten qualifiers independently of the Android/browser build.
+The qualification CI workflow compiles and tests the generic/Rakuten qualification harnesses independently of the Android/browser build.
 
 Raw authorized provider feeds and generated reports are intentionally ignored under:
 
@@ -287,7 +307,82 @@ Raw authorized provider feeds and generated reports are intentionally ignored un
 
 They must not be committed to the public repository.
 
-See `MERCHANT_FEED_QUALIFICATION.md` for the operational gate when the first real feed arrives.
+## First authorized real merchant feed: Jamieson Vitamins / Rakuten
+
+Rakuten technical Product Catalog access is enabled and Jamieson advertiser Product Feed approval/file availability are proven.
+
+The complete authorized Jamieson compressed TXT feed was downloaded and audited offline. The proprietary catalog file is not committed.
+
+Sanitized empirical checkpoint:
+
+- 273 product rows; trailer count matches
+- all 273 rows have the documented 38-field shape
+- 273/273 CAD
+- 273/273 in-stock
+- 273 unique SKUs
+- 273 unique source Product IDs
+- UPC/GTIN present on 271/273; all 271 supplied values checksum-valid
+- product URL valid on 273/273
+- image URL valid on 273/273
+- manufacturer present as Jamieson on all 273
+- description present on 272/273
+- Class ID blank on all 273 rows
+- Sale Price < Retail Price on 48 rows
+- Sale Price = Retail Price on 223 rows
+- Sale Price > Retail Price on 2 rows
+
+Conclusions:
+
+- actual advertiser feed authorization/file availability are proven;
+- two inverted Sale-vs-Retail relationships prove price-field names cannot be treated as discount semantics blindly;
+- package count is not established by the generic Rakuten feed;
+- there are 273 structural offer candidates but still 0 authoritative unit-value candidates until quantity/count is separately established;
+- production caching/indexing/display/mobile rights remain unresolved;
+- supplement marketing claims are not efficacy/safety/treatment ranking evidence.
+
+See `RAKUTEN_JAMIESON_FEED_AUDIT_2026-08-28.md`.
+
+## Provider-neutral staged offer import
+
+`ProviderOfferImport.kt` preserves the fields needed from provider rows without committing ValuePilot to Rakuten or prematurely constructing a canonical Offer.
+
+It preserves:
+
+- provider item ID
+- SKU
+- supplied GTIN plus validated stable identity when checksum-valid
+- source URL/image URL fields
+- availability text
+- separate Retail Price and Sale Price raw values and optional parsed Money
+- dataset/file-generation metadata separate from per-offer observation time
+
+Its price semantics remain explicitly unresolved until an advertiser/feed-specific semantic resolver is justified.
+
+The full Android/browser build for commit `4b423af63a64abd403ef01baf3821e65e112bd8b` passed, including privacy-boundary checks.
+
+## Rakuten × Open Food Facts quantity-coverage research tool
+
+`tools/measure_rakuten_off_quantity_coverage.py` now provides a privacy-safe bounded way to measure whether the 271 valid Jamieson GTINs have useful independent package metadata.
+
+It:
+
+- reads the local authorized Rakuten feed;
+- validates the complete trailer/product count;
+- holds GTINs in memory only;
+- queries a narrow Open Food Facts structured-search field projection in controlled batches;
+- uses exact displayed supplement counts first, otherwise structured `g`/`ml` metadata;
+- fails closed on conflicting duplicate quantity candidates;
+- emits aggregate JSON/Markdown only;
+- never emits GTINs, catalog rows, product URLs, provider credentials or account identifiers;
+- keeps `production_authorized = false`.
+
+Synthetic regression tests explicitly verify that the serialized aggregate report contains neither tested GTINs nor source product text.
+
+The `Test merchant feed qualification` workflow compiled the tool and passed the test suite on commit `3c4dfa8cfe2f8fd6de4c3a503983de52c26bed7a`.
+
+The real Jamieson feed **has not yet been run through this new quantity-coverage tool**, so no real exact-count coverage percentage is proven yet.
+
+See `RAKUTEN_OFF_QUANTITY_COVERAGE.md`.
 
 ## Deterministic value engine
 
@@ -302,9 +397,7 @@ The core remains responsible for:
 
 Explicit measurable evidence has priority over weaker heuristic evidence.
 
-For example, when count evidence is available for comparable egg products,
-SMART ranking uses unit value rather than interpreting words such as
-"large" or "family" as stronger portion evidence.
+For example, when count evidence is available for comparable egg products, SMART ranking uses unit value rather than interpreting words such as "large" or "family" as stronger portion evidence.
 
 AI or semantic enrichment cannot override explicit price or quantity evidence.
 
@@ -316,7 +409,7 @@ Authorized/open/user evidence providers
 
 ↓
 
-source-isolated typed evidence claims
+source-isolated typed evidence claims/import records
 
 ↓
 
@@ -334,13 +427,9 @@ application state and ranking
 
 presentation clients
 
+ValuePilot does not depend on Accessibility, overlays, OCR, a specific retailer, affiliate network, open dataset, or any single capture method.
 
-ValuePilot does not depend on Accessibility, overlays, OCR,
-a specific retailer, affiliate network, open dataset, or any single capture method.
-
-Accessibility and OCR remain optional adapters.
-
-The product must continue functioning if any one capture, data-provider, or presentation adapter is removed.
+Accessibility and OCR remain optional adapters. The product must continue functioning if any one capture, data-provider, or presentation adapter is removed.
 
 ## Physical Android verification
 
@@ -361,7 +450,7 @@ Verified on physical device:
 - truthful no-results behavior
 - bottom navigation and system-bar spacing
 
-5C4C onward trust-layer changes do not require a new physical-device acceptance checkpoint before a deliberately selected real-world provider exists.
+5C4C onward trust/provider-core changes do not require a new physical-device acceptance checkpoint before a deliberately selected production real-world provider exists.
 
 ## Privacy boundary
 
@@ -374,7 +463,7 @@ Current Android build still has:
 - no remote AI dependency
 - no ValuePilot server dependency
 
-The new provider/open-data qualification work is offline tooling and shared deterministic logic. It does not add production networking to Android.
+Provider/open-data qualification work remains offline/research tooling plus shared deterministic logic. It does not add production networking to Android.
 
 A network permission must not be added merely because the architecture can support a remote provider.
 
@@ -382,57 +471,34 @@ A network permission must not be added merely because the architecture can suppo
 
 5D — Authorized Real Shopping Data Provider Selection
 
-Goal:
+The milestone has now progressed beyond merely obtaining a first feed: Jamieson/Rakuten is the first actual authorized merchant-feed validation case.
 
-Select the first legally and commercially suitable source of real shopping evidence before adding a production network boundary.
+The remaining gates are still intentionally separate:
 
-This milestone is provider research, empirical feed qualification, and architectural selection first, not blind API implementation.
-
-Evaluate candidate providers on:
-
-- explicit authorization and permitted use
-- Canadian coverage
-- retailer and store coverage
-- grocery and general-product breadth
-- current-price quality
-- package size and quantity quality
-- promotion support
-- availability or inventory support
-- stable product identifiers
-- store/source identifiers
-- observation timestamps and freshness
-- geographic precision
-- search capability
-- rate limits
-- latency and reliability
-- caching rules
-- display and redistribution rights
-- commercial-use rights
-- attribution requirements
-- pricing and expected operating cost
-- scalability
-- vendor lock-in risk
-- long-term availability
-
-The provider-selection milestone should produce:
-
-1. a researched candidate comparison
-2. a selected first provider or an explicit decision that no candidate is yet suitable
-3. the exact evidence fields that provider can supply
-4. the authorization and commercial constraints
-5. an empirical qualification report from the actual authorized feed/API where possible
-6. a bounded integration design
-7. expected network permissions and privacy impact
-8. expected cost and scale limits
-9. failure and fallback behavior
+- exact provider field semantics
+- package quantity/count quality
+- cross-source identity/conflict behavior
+- caching/persistence/indexing rights
+- consumer display/mobile rights
+- freshness/update model
+- production networking/privacy impact
+- provider resilience beyond one advertiser/network
 
 Current highest-value next gate:
 
-**obtain the first actual authorized merchant feed/API response and run it through the offline qualification layer.**
+**run the privacy-safe Rakuten × Open Food Facts quantity-coverage tool locally against the existing authorized complete Jamieson `.txt.gz` feed and retain only the aggregate report.**
 
-For a Rakuten Product Catalog text feed, use the complete `.txt.gz` file first. Do not begin with delta files as the first semantic/schema validation sample.
+That measurement should establish:
 
-Only after a provider is deliberately selected and the real data/rights gates pass should ValuePilot implement the first production real-data adapter and add any required network permission.
+- how many valid Jamieson GTINs match Open Food Facts;
+- how many have an exact accepted tablet/capsule/gummy/etc. count;
+- how many only have mass/volume metadata;
+- how many have conflicting quantity metadata;
+- how many remain unresolved.
+
+Only after useful count coverage is proven should those separate quantity claims be assembled through the existing source-isolated index, conflict resolver and evidence-backed unit-value gate.
+
+Only after provider semantics **and** rights gates pass should ValuePilot implement a first production real-data adapter or add required network permissions.
 
 5D does not authorize:
 
@@ -446,6 +512,4 @@ Only after a provider is deliberately selected and the real data/rights gates pa
 - remote AI
 - telemetry
 
-ValuePilot ranking remains independent of provider business incentives.
-
-The deterministic ValuePilot engine remains responsible for comparison and value decisions.
+ValuePilot ranking remains independent of provider business incentives. The deterministic ValuePilot engine remains responsible for comparison and value decisions.
