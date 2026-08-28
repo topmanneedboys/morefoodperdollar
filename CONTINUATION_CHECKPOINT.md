@@ -14,7 +14,7 @@ Read before changing architecture/provider logic:
 2. `CURRENT_STATE.md`
 3. `CONTINUATION_CHECKPOINT.md`
 4. `PROVIDER_ACCOUNT_STATUS.md`
-5. `RAKUTEN_JAMIESON_VALIDATION.md`
+5. `RAKUTEN_PRICE_AND_ANDROID_RIGHTS_GATE.md`
 6. `RAKUTEN_JAMIESON_FEED_AUDIT_2026-08-28.md`
 7. `RAKUTEN_OFF_QUANTITY_COVERAGE.md`
 8. `OPEN_DATA_INTEGRATION_STATUS.md`
@@ -32,12 +32,12 @@ authorized/open/user evidence -> provider adapters -> provenance-preserving clai
 Permanent rules:
 
 - Product != Offer.
-- Sources contribute claims; they do not overwrite one shared product row.
+- Sources contribute claims; they never overwrite one shared product row.
 - Stronger same-scope evidence may defeat weaker evidence; unresolved equal-strength conflicts block Best Value.
-- Money, quantity and currency are exact/deterministic.
+- Money, quantity, currency and promotion arithmetic are exact/deterministic.
 - AI may classify/explain but must not invent authoritative facts.
 - Commission, EPC, payout, sponsorship and provider preference never affect ranking.
-- No unauthorized scraping/reverse engineering.
+- No unauthorized scraping/private-endpoint reverse engineering.
 - Technical/feed access != production authorization.
 - No Android `INTERNET` / `ACCESS_NETWORK_STATE` merely for provider experiments.
 
@@ -45,158 +45,165 @@ Permanent rules:
 
 5D — Authorized Real Shopping Data Provider Selection / validation.
 
-The shared deterministic foundation includes ShoppingEvidence, source-isolated namespaces, evidence conflict resolution, evidence-backed unit-value gating, checksum-valid/canonical GTIN handling, and provider-neutral staged offer import.
+Built-in Android Search remains explicitly fictional/sample evidence until a production provider path passes the machine-enforced activation profile.
 
-Built-in Android Search remains explicitly fictional/sample evidence until a production-authorized provider path exists.
+## Verified provider-neutral hardening
 
-## Jamieson / Rakuten — first actual authorized merchant feed
+### Price-pair semantics
 
-Rakuten technical Product Catalog access is enabled. Rakuten Customer Support explicitly confirmed Jamieson Product Feed approval and actual file presence on 2026-08-28.
+Commit `5bb647a8485f257ec51b3eb0fe39b9c7caccb0a0` adds structural discounted/reference price-pair assessment.
 
-The complete proprietary TXT.gz feed was downloaded and audited offline; it is never committed.
+It never selects current price or grants rankability. Missing/malformed/non-positive/incomparable values fail closed; discounted > reference becomes an explicit semantic conflict.
+
+### Dataset recency
+
+Commit `a8e98b8ce333a612538841566972d6cab58dde88` adds dataset/file recency classification separate from per-offer freshness.
+
+Permanent rule: **a recent dataset is not a fresh offer.**
+
+### Production authorization gate
+
+Commit `6aed414bd5f89cf7ac6dfb739464c6f57f5abe78` adds the fail-closed provider production activation boundary.
+
+For the consumer mobile offer-catalog profile, every required gate must be explicitly `SATISFIED`:
+
+- data access
+- consumer display
+- caching
+- indexing
+- mobile app
+- retention/deletion policy
+- offer geography
+- price semantics
+- dataset recency policy
+- offer freshness policy
+
+Missing, pending, denied, unknown, or incorrectly-not-required required gates block activation.
+
+When affiliate/network links are enabled, the stronger profile also requires affiliate-link permission, installed-software/network approval, advertiser distribution approval and tracking/privacy readiness.
+
+A feed-access approval alone can never authorize production.
+
+Full ValuePilot Android workflow passed for the exact commit, including privacy-boundary verification.
+
+### Offer-country gate
+
+Commit `7606ea941f80e3dc6b2ea362bc688c7434215195` adds fail-closed provider dataset offer-country validation.
+
+Strong bases:
+
+- explicit offer country
+- explicit dataset country
+- documented dataset market
+
+Weak/unresolved bases:
+
+- currency only
+- advertiser context only
+- inferred
+- unknown
+
+Permanent rule: **CAD != Canadian offer scope.**
+
+A strong Canada match can satisfy `OFFER_GEOGRAPHY_VALIDATED`; a strong different-country declaration denies it; weak/contextual evidence stays unknown and blocks activation.
+
+Full ValuePilot Android workflow passed for the exact commit, including privacy-boundary verification.
+
+## Jamieson / Rakuten
+
+Rakuten technical Product Catalog access is enabled. Jamieson partnership + separate Product Feed approval + actual complete file availability are proven.
 
 Sanitized feed facts:
 
-- 273 product rows; trailer count matches
-- 273/273 documented 38-field shape
+- 273 product rows
+- 273/273 38-field shape
 - 273/273 CAD
 - 273/273 in-stock
-- 273 unique SKUs and 273 unique source Product IDs
-- GTIN present 271/273; all 271 supplied GTINs checksum-valid
-- product/image URL syntax valid 273/273
-- manufacturer Jamieson 273/273
-- descriptions 272/273
-- Class ID blank 273/273
+- 273 unique SKUs and Product IDs
+- GTIN present 271/273; all supplied GTINs checksum-valid
 - Sale < Retail: 48
 - Sale = Retail: 223
 - Sale > Retail: 2
-- Attribute 1 populated 273/273 while Attributes 2–10 are blank; without Class ID it remains opaque/untyped.
+- Class ID blank all rows; opaque Attribute 1 must not be reverse-engineered
 
-Conclusions:
+Rakuten generic schema semantics are resolved:
 
-- advertiser feed/file access proven;
-- production caching/persistence/indexing/display/mobile rights unresolved;
-- Retail/Sale semantics unresolved;
-- Rakuten feed alone does not establish package count;
-- structural offer candidates = 273;
-- authoritative unit-value candidates from Rakuten alone = 0;
-- never infer quantity from title/description/SKU/image/price/untyped attribute/neighboring row.
+- Sale Price = discounted price field
+- Retail Price = non-discounted/reference field
 
-## Open Food Facts identity correction
+Therefore the 2 Sale > Retail rows are semantic-invalid price evidence and must fail closed; never swap or auto-correct them.
 
-The historical first Jamieson × Open Food Facts run reported 0 / 271 matches. That result is invalid as coverage evidence because the old tool compared normalized Open Food Facts response codes against raw provider GTIN representations.
+Still blocked for production:
 
-Sanitized Jamieson identity distribution:
+- cache/index/search/display/mobile rights
+- retention/deletion obligations
+- Android installed-software/DSA approvals where applicable
+- per-offer/current-price freshness
+- Canadian offer geography beyond CAD/context
+- broad package quantity
 
-- 12-digit GTINs: 248
-- 13-digit GTINs: 1
-- 14-digit GTINs: 22
-- documented leading-zero canonicalization changes 267 / 271 source representations
-- canonical unique identities remain 271
-- canonical collisions: 0
+The Rakuten Android/feed-use/retention/DSA clarification request was already sent on 2026-08-28. Do not send a duplicate unless their response creates a new gap.
 
-Never recover the project by concluding “Jamieson has 0 Open Food Facts matches” from that first run.
+Under the new machine gate, Jamieson is **NOT production-authorized today**. In particular, `OFFER_GEOGRAPHY_VALIDATED` remains unknown because CAD/context does not prove Canada scope.
 
-## Valid normalized Jamieson × OFF result
+## Jamieson × Open Food Facts
 
-The corrected normalized run completed successfully on 2026-08-28.
+Historical 0/271 raw-code result is invalid coverage evidence.
 
-Authoritative aggregate result:
+Correct normalized authoritative result:
 
-- product records: 273
-- valid GTINs: 271
-- normalized OFF matches: 102
-- unmatched GTINs: 169
-- exact supplement-count candidates: 12
-- structured mass/volume-only candidates: 2
-- quantity conflicts: 0
-- matched but no usable quantity: 88
-- matches containing expected Jamieson brand text: 90
-- matches with source modification timestamp: 102
-- successful batch-search requests: 13
-- fallback batches after repeated search 5xx: 1
-- direct product reads: 20
-- response codes ignored after canonical validation: 0
+- 273 product records
+- 271 valid GTINs
+- 102 normalized OFF matches
+- 169 unmatched
+- 12 exact supplement-count candidates
+- 2 structured mass/volume-only
+- 0 quantity conflicts
+- 88 matched but no usable quantity
+- 1 search-fallback batch / 20 direct reads
 
-This result supersedes the historical invalid 0-match run.
+Open Food Facts is supplemental only; 12/271 valid-GTIN identities are exact-count-ready under strict rules. Never relax the parser or infer counts from Rakuten text.
 
-Open Food Facts is useful supplemental metadata but insufficient as the package-count foundation: only 12 valid-GTIN Jamieson identities are exact-count-ready under the strict current rules; 259 are not.
+## Package-content source
 
-Do not relax the quantity parser or infer count from Rakuten text to increase coverage.
+Health Canada LNHPD does not supply GTIN-level package net count.
 
-## OFF transport hardening
+GS1 Canada ECCnet is the strategic next package-content candidate. The Data Recipient eligibility/rights inquiry was already sent on 2026-08-28.
 
-`tools/run_rakuten_off_quantity_coverage.py` delegates to the normalized v2 implementation.
-
-Commit `5ffa11d6492129cabc33dd0d73816ae86454469b` makes batch search an optimization only: repeated Open Food Facts search HTTP 5xx failures fall back to rate-limited direct product-by-barcode reads while preserving canonical identity, aggregate-only reporting and privacy boundaries.
-
-The merchant-feed qualification workflow passed for that commit.
-
-## Shared-core GTIN identity
-
-`GtinValidation.kt` has deterministic `canonicalOrNull()` handling for equivalent leading-zero GTIN representations.
-
-`ProviderOfferImport.kt` separates:
-
-- `suppliedGtin`: exact provider representation
-- `validatedGtin`: exact checksum-valid provider representation
-- `canonicalGtin`: cross-source identity
-
-Canonical GTIN is promoted for matching while the raw provider value remains preserved for provenance/audit.
-
-## Strict supplement-count semantics
-
-`OpenFoodFactsImportedMetadata.kt` can emit `PACKAGE_QUANTITY` only from:
-
-- structured positive whole-product `g` / `ml`; or
-- exact source-displayed supplement count when the complete `quantity` field is integer + narrow allow-listed dose-form noun.
-
-Titles/descriptions are never parsed as authoritative quantity. Strength/range/multiplier/mixed expressions remain unknown. Open Food Facts quantity remains `SOURCE_ASSERTED_METADATA`.
-
-## Next package-content source decision
-
-Health Canada's Licensed Natural Health Products Database can contribute regulatory identity, licence, dosage form, ingredients and recommended-dose facts, but its public schema does not carry GTIN-level package net content/count. It cannot close the current Jamieson exact-count gap by itself.
-
-GS1 Canada ECCnet is now the strategic next package-content/identity validation target because it is GTIN-centric and carries standardized net-content/product-content data, including count-style net content.
-
-ECCnet access is controlled for Data Recipients. No production ECCnet integration is authorized yet.
-
-The next external gate is to establish:
-
-- whether ValuePilot can qualify as a GS1 Canada ECCnet Data Recipient;
-- whether the relevant Jamieson/product scope contains GTIN-level net content/count;
-- consumer comparison display rights;
-- caching/indexing/search/retention rights;
-- mobile/software/API use rights;
-- attribution/redistribution restrictions;
-- subscription/commercial terms;
-- available API/extract synchronization options.
+Do not implement ECCnet until GS1 confirms eligibility, GTIN/net-content scope, consumer/mobile/search/cache rights, restrictions and commercial/API terms.
 
 ## Provider/account checkpoint
 
-Use `PROVIDER_ACCOUNT_STATUS.md` as the fast-changing authority. Current checkpoint:
+Use `PROVIDER_ACCOUNT_STATUS.md` for fast-changing external status.
 
-- Rakuten/Jamieson: feed approved + actual catalog available
-- Well.ca: pending unless newer evidence
-- Bath Depot: pending unless newer evidence
-- Tru Earth: rejected; do not reapply now
-- Giant Tiger: rejected; do not reapply now
+Key state:
+
+- Rakuten/Jamieson: feed approved + actual catalog available; production gates still blocked
+- GS1 Canada ECCnet: inquiry sent; await response
+- Well.ca / Bath Depot: pending unless newer evidence
+- Tru Earth / Giant Tiger: rejected; no reapply now
 - CJ: TSC, Brother Canada, DAVIDsTEA pending; AOSOM older pending unless newer evidence
 - Awin active; Skip CA rejected due publisher type; do not misrepresent publisher type
-- impact.com Marketplace declined; no blind duplicate application
-- Lowvyn inquiry sent; await written rights/technical response
+- impact.com Marketplace declined; no blind duplicate
+- Lowvyn inquiry sent; await response
 
-## Immediate next action
+## Immediate next work
 
-**Validate GS1 Canada ECCnet Data Recipient feasibility and rights for ValuePilot.**
+Do not resend Rakuten or GS1 inquiries.
 
-Do not create canonical production Offers while Rakuten Retail/Sale semantics and production data-use rights remain unresolved. Do not automate provider credentials or add Android networking yet.
+Continue only bounded provider-neutral/offline engineering while responses are pending.
 
-Health Canada LNHPD may later be added as a separately attributed regulatory metadata rail, but not as a substitute for package count.
+Next safe target:
+
+**Bridge validated price semantics + explicit per-offer freshness + satisfied production authorization into a staged production offer candidate without ranking it yet.**
+
+The bridge must still fail closed on semantic conflict, unknown geography, unknown freshness, missing authorization, incompatible currency, and unavailable exact price evidence.
+
+Do not add Android networking, production provider credentials, affiliate tracking, checkout/payment, universal cart, subscriptions, remote AI or telemetry yet.
 
 ## Security
 
-Operational provider credentials have appeared in conversational material. Never repeat, commit, log, screenshot, embed, or request them again. Future production automation must keep secrets outside source control.
+Operational provider credentials must never be repeated, committed, logged, screenshotted, embedded or requested. Production secrets stay outside source control.
 
 ## Verification discipline
 
@@ -207,4 +214,4 @@ cd android
 ./gradlew --no-daemon :shared-core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 ```
 
-For Python provider-research changes, run the focused `tools/tests` suite. Never weaken tests to make changes pass.
+Never weaken tests to make a change pass.

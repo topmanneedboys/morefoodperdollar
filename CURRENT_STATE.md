@@ -6,7 +6,7 @@ Branch: `work/valuepilot-android-milestone`
 
 Android version: 101.1.0 (10101)
 
-## Completed Android/product foundation
+## Completed Android / product foundation
 
 Completed milestones:
 
@@ -43,130 +43,124 @@ Permanent rules:
 - Sources contribute claims; they do not overwrite one shared row.
 - Stronger same-scope evidence may defeat weaker evidence; unresolved equal-strength conflict blocks Best Value.
 - Money, quantity, currency and promotion arithmetic are exact/deterministic.
-- AI may assist classification/explanation but may not invent authoritative facts.
+- AI may classify/explain but may not invent authoritative facts.
 - Commission, EPC, sponsorship, payout and provider preference never influence rank.
-- No unauthorized scraping/reverse engineering.
-- Feed access != production authorization.
+- No unauthorized scraping or private-endpoint reverse engineering.
+- Feed/account access != production authorization.
 - Shared core owns no hidden clock.
+- Provider credentials never belong in source control, Android, fixtures, logs or screenshots.
 
-## Real Shopping Evidence / cross-source hardening
+## Real Shopping Evidence / shared-core hardening
 
-The shared deterministic layer includes:
+The deterministic shared layer now includes:
 
 - typed `ShoppingEvidence`
-- explicit sample/real-world/unknown environment
+- explicit sample / real-world / unknown environment
 - explicit acquisition channel and claim kind
-- caller-supplied freshness evaluation
-- rankable/display-only/rejected evidence dispositions
-- checksum-aware GTIN validation
-- canonical cross-source GTIN representation handling
-- source-isolated evidence namespaces/storage boundaries
+- caller-supplied evidence freshness evaluation
+- rankable / display-only / rejected dispositions
+- checksum-aware GTIN validation and canonical cross-source GTIN representation
+- source-isolated evidence namespaces and storage boundaries
 - deterministic conflict policy and N-source fact resolution
 - evidence-backed unit-value gating
 - provider-neutral staged offer import preserving unresolved source fields
-- provider-neutral structural discounted/reference price-pair assessment that never selects a current price or grants rankability
-- provider-neutral dataset/file recency classification that is deliberately separate from per-offer freshness
+- provider-neutral discounted/reference price-pair structural validation
+- provider dataset-recency classification separate from offer freshness
+- fail-closed provider production-authorization profiles/gates
+- fail-closed provider dataset offer-country validation
 
-Permanent invariant: historical observed price, merchant price, package quantity, benchmark and regulatory fact remain separate factual domains/scopes and are never flattened into one truth value.
+Permanent invariant: historical observed price, merchant price, package quantity, benchmark, regulatory fact, dataset recency, geography and authorization remain distinct evidence domains. None is silently promoted into another.
 
-### Provider-neutral staged price relationship hardening
+### Provider price relationship boundary
 
-Commit `5bb647a8485f257ec51b3eb0fe39b9c7caccb0a0` extends `ProviderOfferImportRecord` with an adapter-declared discounted/reference relationship assessment.
+Commit `5bb647a8485f257ec51b3eb0fe39b9c7caccb0a0` added adapter-declared discounted/reference price-pair assessment.
 
-The shared core remains provider-neutral: it does not contain Rakuten field names and does not infer field roles from names. A future provider adapter must supply the two documented role-bearing source-field names.
+The shared core contains no Rakuten-specific field names and never chooses a current price from this assessment.
 
-The assessment is exact/fail-closed:
+Deterministic outcomes:
 
-- discounted amount below reference -> structurally consistent discounted/reference pair;
-- equal -> no structural savings claim;
-- discounted amount above reference -> explicit semantic-conflict state;
-- missing, malformed or non-positive values -> unavailable;
-- currency or exact-money scale mismatch -> incomparable;
-- the same source field cannot occupy both roles.
+- discounted < reference -> structurally consistent discount pair
+- discounted = reference -> no savings claim
+- discounted > reference -> semantic-conflict state
+- missing/malformed/non-positive values -> unavailable
+- currency or exact-money-scale mismatch -> incomparable
 
-This assessment does **not** create an `Offer`, choose a current price, calculate a savings claim, establish freshness/geography/rights, or make evidence rankable.
+This layer does not create an `Offer`, establish rights/freshness/geography, or grant rankability. Its full Android workflow passed.
 
-The full ValuePilot Android workflow for commit `5bb647a8485f257ec51b3eb0fe39b9c7caccb0a0` completed successfully: browser checks, shared-core/app tests, lint/APK build, JVM test summary, Android privacy-boundary verification, release packaging/checksums and artifact upload all passed.
+### Dataset recency != offer freshness
 
-### Dataset recency is not offer freshness
+Commit `a8e98b8ce333a612538841566972d6cab58dde88` added `ProviderDatasetRecency.kt`.
 
-Commit `a8e98b8ce333a612538841566972d6cab58dde88` adds `ProviderDatasetRecency.kt` and focused tests.
+Dataset/file timestamps can classify as `UNKNOWN`, `FUTURE_DATED`, `RECENT`, `AGING`, or `STALE`, but they never populate `priceObservedAtEpochMillis`, never become per-offer freshness and never make evidence rankable.
 
-The new boundary provides a caller-supplied `ImportedDatasetRecencyPolicy` and deterministic classifications:
+The full Android workflow passed for that exact commit.
 
-- `UNKNOWN`
-- `FUTURE_DATED`
-- `RECENT`
-- `AGING`
-- `STALE`
+### Fail-closed production authorization
 
-This classification applies only to provider dataset/file provenance time such as a feed-generation or deposit timestamp.
+Commit `6aed414bd5f89cf7ac6dfb739464c6f57f5abe78` added `ProviderProductionAuthorization.kt` and focused tests.
+
+Production activation is now machine-gated per provider + isolated dataset namespace. Every gate required by the selected activation profile must be explicitly `SATISFIED`; missing, `PENDING`, `DENIED`, `UNKNOWN`, or incorrectly `NOT_REQUIRED` required gates block activation.
+
+The consumer mobile offer-catalog profile requires explicit evidence for:
+
+- data access authorization
+- consumer display authorization
+- caching authorization
+- indexing authorization
+- mobile-app authorization
+- retention/deletion policy
+- offer geography validation
+- price semantics validation
+- dataset-recency policy
+- offer-freshness policy
+
+When network/affiliate links are enabled, the stronger profile additionally requires:
+
+- affiliate-link use authorization
+- installed-software/network approval
+- advertiser distribution approval
+- tracking/privacy readiness
+
+A feed-access approval alone therefore cannot authorize mobile production. Network/DSA gates are conditional on actually enabling that capability, not global blockers for a catalog-only profile.
+
+The exact commit passed browser checks, shared-core/app tests, lint, APK build, JVM summary, Android privacy-boundary verification, release packaging/checksums and artifact upload.
+
+### Offer-country / Canadian market boundary
+
+Commit `7606ea941f80e3dc6b2ea362bc688c7434215195` added `ProviderOfferGeography.kt` and focused tests.
+
+Country scope is evidence with provenance. Strong bases are limited to:
+
+- explicit offer country
+- explicit dataset country
+- documented dataset market
+
+Weak bases remain unresolved even when they suggest `CA`:
+
+- currency-only evidence such as CAD
+- advertiser context alone
+- inferred country
+- unknown basis
+
+A strong explicit/documented match to Canada can satisfy the production `OFFER_GEOGRAPHY_VALIDATED` gate. A strong explicit different country denies that gate. Currency/context/inference maps to `UNKNOWN` and therefore blocks production activation.
 
 Permanent rule:
 
-**A RECENT DATASET DOES NOT MEAN A FRESH OFFER.**
+**CAD != proof that an offer is Canadian.**
 
-Dataset recency:
-
-- never populates or substitutes for `priceObservedAtEpochMillis`;
-- never becomes `ShoppingEvidence` observation freshness;
-- never makes an offer rankable;
-- never proves that a merchant-site price or availability value is live at display time;
-- never bypasses rights, geography, semantic-conflict or evidence-acceptance gates.
-
-Focused tests prove that a dataset can classify as `RECENT` while `priceObservedAtEpochMillis` remains `null`, and that a true per-offer observation timestamp remains a distinct field even when dataset provenance is stale.
-
-The full ValuePilot Android workflow for commit `a8e98b8ce333a612538841566972d6cab58dde88` also completed successfully, including browser checks, shared-core/app tests, lint/APK build, JVM result summary, Android privacy-boundary verification, release packaging/checksums and artifact upload.
+The exact geography commit also passed browser checks, shared-core/app tests, lint, APK build, JVM summary, Android privacy-boundary verification, release packaging/checksums and artifact upload.
 
 ## GTIN identity representation
 
-`GtinValidation.kt` distinguishes checksum validation from deterministic cross-source representation.
-
-`canonicalOrNull()` handles documented leading-zero equivalent GTIN representations while refusing invalid-GTIN repair.
+`GtinValidation.kt` distinguishes checksum validation from canonical cross-source representation.
 
 Provider staging preserves:
 
 - `suppliedGtin`: exact provider source string
 - `validatedGtin`: exact checksum-valid source representation
-- `canonicalGtin`: cross-source identity representation
+- `canonicalGtin`: deterministic cross-source identity
 
-The canonical form is promoted into `SourceProductIdentity`; the raw provider form remains available for provenance/audit.
-
-Tests cover UPC-A/GTIN-12, equivalent GTIN-13, leading-zero equivalent GTIN-14, EAN-8, non-zero-indicator GTIN-14 and invalid inputs.
-
-## Source-isolated evidence index
-
-`SourceIsolatedEvidenceIndex.kt` is the bounded platform-neutral in-memory repository prototype.
-
-It preserves dataset namespaces/storage-boundary metadata, supports product-key lookup, delegates factual resolution to the conflict resolver, rejects claim-ID collisions and permits one dataset namespace to be removed without mutating another provider.
-
-## Open-data evidence rails
-
-Open Prices remains proof-backed observed/historical price evidence, not a primary live Canadian merchant-price provider.
-
-Open Food Facts remains separately attributed product/package metadata. Its strict network-free mapper can emit `PACKAGE_QUANTITY` only from:
-
-- structured positive whole-product `g` / `ml`; or
-- an exact full-field supplement count expression using a narrow allow-listed dose-form vocabulary.
-
-Titles/descriptions, dosage strengths, ranges, multipliers and mixed expressions are not authoritative quantity.
-
-Previous Open Prices × Open Food Facts measurement showed useful identity/quantity joins but weak current-price freshness. Open-data joins never upgrade stale price evidence into current/rankable evidence.
-
-## Merchant feed qualification infrastructure
-
-Offline/research tooling includes:
-
-- `tools/qualify_merchant_feed.py`
-- `tools/qualify_rakuten_product_catalog.py`
-- `tools/measure_rakuten_off_quantity_coverage.py` (first implementation retained for regression/history)
-- `tools/measure_rakuten_off_quantity_coverage_v2.py` (barcode-normalized corrected implementation)
-- `tools/open_facts_barcode.py`
-- `tools/run_rakuten_off_quantity_coverage.py` (stable launcher; routes to v2)
-
-The v2 OFF path now treats batch search as an optimization and falls back to rate-limited direct product-by-barcode reads on repeated search HTTP 5xx failures. Commit `5ffa11d6492129cabc33dd0d73816ae86454469b` passed the merchant-feed qualification workflow.
-
-Raw authorized provider data/reports remain ignored under `local-provider-data/` and `local-feed-reports/` and must not be committed.
+Canonical representation handles documented leading-zero equivalents while refusing invalid-GTIN repair.
 
 ## First authorized real merchant feed — Jamieson / Rakuten
 
@@ -174,7 +168,7 @@ Rakuten technical Product Catalog access is enabled. Rakuten Customer Support ex
 
 The complete authorized Jamieson TXT.gz feed was downloaded and audited offline. The proprietary file is never committed.
 
-Sanitized feed checkpoint:
+Sanitized checkpoint:
 
 - 273 product rows; trailer count matches
 - 273/273 documented 38-field shape
@@ -191,82 +185,83 @@ Sanitized feed checkpoint:
 - Sale Price = Retail Price: 223
 - Sale Price > Retail Price: 2
 
-Conclusions:
+Rakuten's documented generic schema resolves the field meanings:
 
-- actual advertiser feed/file access is proven;
-- Rakuten's generic Retail/Sale field semantics are now documented and resolved at the schema level;
-- `Sale Price` reflects discounts and `Retail Price` does not reflect discounts;
-- the 2 Sale > Retail rows conflict with those documented semantics and must fail closed for production price promotion;
-- production caching/persistence/indexing/display/mobile rights remain unresolved;
-- per-product/current-price freshness remains unresolved;
-- Rakuten alone does not establish package count;
-- 273 structural offer candidates exist;
-- authoritative unit-value candidates from Rakuten alone remain 0;
-- do not infer quantity from title/description/SKU/image/price/untyped attributes/neighboring variants.
-
-Detailed gate: `RAKUTEN_PRICE_AND_ANDROID_RIGHTS_GATE.md`.
-
-## Rakuten Android / installed-software rights gate
-
-Rakuten's current Publisher Membership Agreement allows promotion through mobile applications in general, subject to advertiser terms and Network Policies.
-
-However, installed/mobile software is separately governed by Rakuten's Downloadable Software Application controls. Rakuten requires Network Quality approval/compliance testing before a DSA is launched with network links, followed by advertiser approval for the new DSA distribution method.
-
-The Product Catalog implementation documentation also still describes advertiser Product Catalog approval for website/blog use, and the Jamieson partnership approval message refers to links being used on the approved website/marketing channel.
+- `Sale Price` reflects discounts
+- `Retail Price` does not reflect discounts
 
 Therefore:
 
-- advertiser Product Feed approval != Android/DSA approval;
-- do not ship Rakuten affiliate/network links in the installed Android app yet;
-- do not assume Product Catalog feed-display/cache/index rights for Android solely from technical feed access;
-- keep provider networking and feed research outside Android until written channel/rights clarification is obtained;
-- no Android `INTERNET` or `ACCESS_NETWORK_STATE` permission is added by this milestone.
+- Sale < Retail is structurally consistent
+- Sale = Retail creates no savings claim
+- Sale > Retail is a semantic conflict and fails closed
+- the 2 inverted rows must never be swapped, repaired or interpreted as markup
 
-The Rakuten Android/feed-use/retention/DSA clarification request was sent in the existing support case on 2026-08-28. Await the written response; do not send a duplicate request unless the response is incomplete or creates a new unresolved issue.
+Still unresolved for production:
+
+- Product Catalog cache/persistence/index/search/display/mobile rights
+- retention/deletion obligations
+- Android/installed-software distribution approval
+- DSA/network-link approvals if affiliate links are enabled
+- per-offer/current-price freshness
+- Canadian offer geography beyond CAD/context
+- broad package-count coverage
+
+The Rakuten Android/feed-use/retention/DSA clarification request was sent in the existing support case on 2026-08-28. Do not send a duplicate unless their response leaves a new gap.
+
+The new production authorization evaluator therefore keeps Jamieson blocked from production activation today. In particular, the new geography gate remains `UNKNOWN`: 273/273 CAD is useful currency evidence but is not Canadian offer-scope proof.
 
 ## Jamieson × Open Food Facts — valid normalized measurement
 
-The historical first run reported `0 / 271` Open Food Facts matches, but that result is invalid because it compared normalized OFF response codes against raw provider GTIN representations.
+The historical raw-code result of 0/271 matches is invalid coverage evidence because it compared normalized OFF response codes against raw provider GTIN representations.
 
-Sanitized Jamieson GTIN representation distribution remains:
-
-- 12-digit: 248 / 271
-- 13-digit: 1 / 271
-- 14-digit: 22 / 271
-- source representations changed by documented leading-zero canonicalization: 267 / 271
-- canonical unique lookup identities: 271
-- canonical identity collisions: 0
-
-The corrected normalized run completed successfully on 2026-08-28 and is now authoritative:
+The corrected normalized run completed successfully on 2026-08-28:
 
 - product records: 273
 - valid GTINs: 271
-- normalized Open Food Facts matches: 102
-- unmatched GTINs: 169
+- normalized OFF matches: 102
+- unmatched: 169
 - exact supplement-count candidates: 12
 - structured mass/volume-only candidates: 2
 - quantity conflicts: 0
 - matched but no usable quantity: 88
-- matches containing expected Jamieson brand text: 90
-- matches with source modification timestamp: 102
+- expected Jamieson brand text: 90
+- source modification timestamp: 102
 - successful batch-search requests: 13
-- search batches using direct-read fallback: 1
-- direct product-read requests: 20
+- search fallback batches: 1
+- direct product reads: 20
 - response codes ignored after canonical validation: 0
 
-Open Food Facts is therefore useful supplemental metadata but **not sufficient as the package-count foundation** for the Jamieson feed. Only 12 valid-GTIN identities are exact-count-ready through the current strict OFF rules; 259 remain not exact-count-ready.
+Open Food Facts is useful supplemental metadata but not the package-count foundation. Only 12 of the 271 valid-GTIN identities are exact-count-ready under the strict rules; 259 remain not exact-count-ready.
 
-Do not relax the parser or infer package count from Rakuten text to increase coverage.
+Do not relax the parser or infer count from Rakuten titles/descriptions/attributes to increase coverage.
 
-## Next package-content source decision
+## Package-content source decision
 
-Health Canada's Licensed Natural Health Products Database is useful for regulatory identity, licence, dosage form, ingredients and recommended-dose facts, but its public schema does not provide GTIN-level package net content/count. It cannot close the current Jamieson package-count gap by itself.
+Health Canada's LNHPD is useful for regulatory identity, licence, dosage form, ingredients and recommended-dose facts, but its public schema does not provide GTIN-level package net content/count.
 
-GS1 Canada ECCnet remains the strongest strategic next product-content target because it is GTIN-centric and carries standardized net-content/product-content data, including count-style net content. Access is controlled for Data Recipients and requires separate authorization/subscription validation.
+GS1 Canada ECCnet remains the strategic next package-content/identity candidate because it is GTIN-centric and supports standardized net-content/product-content data including count-style content.
 
-The ValuePilot ECCnet Data Recipient eligibility/rights inquiry was sent to GS1 Canada on 2026-08-28. Await GS1 Canada's written response before implementing or assuming ECCnet production rights.
+The ValuePilot ECCnet Data Recipient eligibility/rights inquiry was sent to GS1 Canada on 2026-08-28. Await the written response. Do not implement or assume ECCnet production rights before eligibility, scope, usage rights and commercial/API terms are established.
 
-No ECCnet production adapter is authorized yet.
+## Provider/account checkpoint
+
+Use `PROVIDER_ACCOUNT_STATUS.md` for fast-changing external status.
+
+Current high-level state:
+
+- Rakuten/Jamieson: partnership + Product Feed approved + actual catalog available; production rights/channel/geography/freshness/count gates still open
+- GS1 Canada ECCnet: eligibility/rights inquiry sent; awaiting response
+- Well.ca: pending unless newer evidence
+- Bath Depot: pending unless newer evidence
+- Tru Earth: rejected; do not reapply now
+- Giant Tiger: rejected; do not reapply now
+- CJ: TSC, Brother Canada, DAVIDsTEA pending; AOSOM older pending unless newer evidence
+- Awin active; Skip CA rejected for publisher type; do not misrepresent publisher type
+- impact.com Marketplace declined; no blind duplicate application
+- Lowvyn inquiry sent; await written rights/technical response
+- Open Prices: supplemental historical/proof-backed price rail
+- Open Food Facts: supplemental product/package metadata rail
 
 ## Privacy boundary
 
@@ -279,32 +274,25 @@ Current Android build still has:
 - no remote AI dependency
 - no ValuePilot server dependency
 
-Research provider networking remains outside Android.
+Provider research/networking remains outside Android.
 
 ## Current milestone
 
 5D — Authorized Real Shopping Data Provider Selection / validation.
 
-The milestone is beyond first-feed acquisition, beyond the first valid cross-source quantity-coverage measurement, and now has documented Rakuten Retail/Sale schema semantics plus provider-neutral structural price-pair and dataset-recency hardening.
+The milestone is now beyond first-feed acquisition and includes machine-enforced fail-closed authorization and offer-country gates.
 
-Remaining gates stay separate:
+## Immediate next work
 
-- broader exact package-count/content coverage;
-- Rakuten/Jamieson current-price freshness policy and the 2 semantic-conflict rows;
-- caching/persistence/indexing/display/mobile rights;
-- Rakuten Android/DSA approval before network links are enabled in the installed app;
-- Canadian offer-geography confidence beyond currency alone;
-- production networking/privacy boundary;
-- multiple-provider resilience.
+External responses are already requested. Do not resend them.
 
-## Immediate next gate
+While awaiting Rakuten and GS1 Canada written responses, continue only provider-neutral/offline work that cannot accidentally authorize or expose real provider data.
 
-**Await the already-sent GS1 Canada ECCnet and Rakuten written responses while continuing only bounded provider-neutral/offline engineering that cannot accidentally authorize production data use.**
+Next safe engineering targets, in order:
 
-For ECCnet, do not implement integration until GS1 confirms ValuePilot's Data Recipient eligibility, available GTIN-level net-content scope, permitted consumer/mobile/search/cache uses, restrictions and commercial/API terms.
+1. define a provider-neutral bridge from validated price semantics + explicit per-offer freshness + authorization decision into a staged-but-not-yet-ranked offer candidate;
+2. keep package quantity as separately attributed evidence and do not make unit value available unless exact compatible quantity evidence exists;
+3. preserve source withdrawal/deletion so a revoked dataset can be removed independently;
+4. do not add Android networking until a production provider path passes the required activation profile.
 
-For Rakuten, do not resend the rights request. The generic price-field meanings no longer need further research. The remaining work is rights/freshness/channel validation, and the two inverted Jamieson rows remain source-semantic conflicts that cannot be auto-corrected or used to derive a discount/current price.
-
-Only after source semantics **and** rights gates pass should ValuePilot implement a production real-data adapter or add network permissions.
-
-5D still does not authorize unauthorized scraping, private-endpoint reverse engineering, checkout/payment, universal cart, subscriptions, affiliate-influenced ranking, remote AI or telemetry.
+5D still does not authorize production Rakuten integration, affiliate-link tracking, checkout/payment, universal cart, subscriptions, remote AI, telemetry, unauthorized scraping or private-endpoint reverse engineering.
