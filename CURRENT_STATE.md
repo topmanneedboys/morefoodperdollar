@@ -64,8 +64,26 @@ The shared deterministic layer includes:
 - deterministic conflict policy and N-source fact resolution
 - evidence-backed unit-value gating
 - provider-neutral staged offer import preserving unresolved source fields
+- provider-neutral structural discounted/reference price-pair assessment that never selects a current price or grants rankability
 
 Permanent invariant: historical observed price, merchant price, package quantity, benchmark and regulatory fact remain separate factual domains/scopes and are never flattened into one truth value.
+
+### Provider-neutral staged price relationship hardening
+
+Commit `5bb647a8485f257ec51b3eb0fe39b9c7caccb0a0` extends `ProviderOfferImportRecord` with an adapter-declared discounted/reference relationship assessment.
+
+The shared core remains provider-neutral: it does not contain Rakuten field names and does not infer field roles from names. A future provider adapter must supply the two documented role-bearing source-field names.
+
+The assessment is exact/fail-closed:
+
+- discounted amount below reference -> structurally consistent discounted/reference pair;
+- equal -> no structural savings claim;
+- discounted amount above reference -> explicit semantic-conflict state;
+- missing, malformed or non-positive values -> unavailable;
+- currency or exact-money scale mismatch -> incomparable;
+- the same source field cannot occupy both roles.
+
+This assessment does **not** create an `Offer`, choose a current price, calculate a savings claim, establish freshness/geography/rights, or make evidence rankable.
 
 ## GTIN identity representation
 
@@ -171,6 +189,8 @@ Therefore:
 - keep provider networking and feed research outside Android until written channel/rights clarification is obtained;
 - no Android `INTERNET` or `ACCESS_NETWORK_STATE` permission is added by this milestone.
 
+The Rakuten Android/feed-use/retention/DSA clarification request was sent in the existing support case on 2026-08-28. Await the written response; do not send a duplicate request unless the response is incomplete or creates a new unresolved issue.
+
 ## Jamieson × Open Food Facts — valid normalized measurement
 
 The historical first run reported `0 / 271` Open Food Facts matches, but that result is invalid because it compared normalized OFF response codes against raw provider GTIN representations.
@@ -232,7 +252,7 @@ Research provider networking remains outside Android.
 
 5D — Authorized Real Shopping Data Provider Selection / validation.
 
-The milestone is beyond first-feed acquisition, beyond the first valid cross-source quantity-coverage measurement, and now has documented Rakuten Retail/Sale schema semantics.
+The milestone is beyond first-feed acquisition, beyond the first valid cross-source quantity-coverage measurement, and now has documented Rakuten Retail/Sale schema semantics plus provider-neutral structural price-pair hardening.
 
 Remaining gates stay separate:
 
@@ -246,11 +266,11 @@ Remaining gates stay separate:
 
 ## Immediate next gate
 
-**Wait for GS1 Canada ECCnet eligibility/rights response while obtaining written Rakuten clarification for Product Catalog Android use, caching/indexing/display rights, retention/deletion obligations, and DSA/mobile-app distribution.**
+**Await the already-sent GS1 Canada ECCnet and Rakuten written responses while continuing only bounded provider-neutral/offline engineering that cannot accidentally authorize production data use.**
 
 For ECCnet, do not implement integration until GS1 confirms ValuePilot's Data Recipient eligibility, available GTIN-level net-content scope, permitted consumer/mobile/search/cache uses, restrictions and commercial/API terms.
 
-For Rakuten, the generic price-field meanings no longer need further research. The next work is rights/freshness/channel validation. The two inverted Jamieson rows are source-semantic conflicts and must not be auto-corrected or used to derive a discount/current price.
+For Rakuten, do not resend the rights request. The generic price-field meanings no longer need further research. The remaining work is rights/freshness/channel validation, and the two inverted Jamieson rows remain source-semantic conflicts that cannot be auto-corrected or used to derive a discount/current price.
 
 Only after source semantics **and** rights gates pass should ValuePilot implement a production real-data adapter or add network permissions.
 
