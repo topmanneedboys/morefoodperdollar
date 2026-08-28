@@ -322,12 +322,12 @@ class ProductionCurrentPriceEligibilityTest {
                 sourcePriceFields =
                     listOf(
                         ImportedPriceField(
-                            fieldName = "sale_price",
+                            sourceFieldName = "sale_price",
                             rawValue = "price-$priceMinor",
                             parsedAmount = Money(priceMinor, "CAD")
                         ),
                         ImportedPriceField(
-                            fieldName = "retail_price",
+                            sourceFieldName = "retail_price",
                             rawValue = "reference",
                             parsedAmount = Money(1_000L, "CAD")
                         )
