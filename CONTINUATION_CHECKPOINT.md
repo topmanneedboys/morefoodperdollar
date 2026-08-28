@@ -14,9 +14,10 @@ Read these before changing architecture or provider logic:
 2. `CURRENT_STATE.md`
 3. `PROVIDER_ACCOUNT_STATUS.md`
 4. `RAKUTEN_JAMIESON_VALIDATION.md`
-5. `ARCHITECTURE.md`
-6. `FUTURE_PRODUCT_VISION.md`
-7. provider-specific validation files relevant to the current task
+5. `RAKUTEN_JAMIESON_FEED_AUDIT_2026-08-28.md`
+6. `ARCHITECTURE.md`
+7. `FUTURE_PRODUCT_VISION.md`
+8. provider-specific validation files relevant to the current task
 
 Repository evidence newer than this checkpoint overrides this checkpoint.
 
@@ -88,7 +89,7 @@ Important interpretation:
 - do not guess package size/count from title, description, image filename, SKU, price or neighboring variants
 - do not use supplement marketing claims as ValuePilot medical/efficacy/safety ranking evidence
 
-See `RAKUTEN_JAMIESON_VALIDATION.md` for the full provider-specific record.
+See `RAKUTEN_JAMIESON_VALIDATION.md` and `RAKUTEN_JAMIESON_FEED_AUDIT_2026-08-28.md` for the durable provider/audit record.
 
 ## Current provider/account state
 
@@ -108,7 +109,7 @@ As of this checkpoint:
 
 For Lowvyn, if the initial request is approved, continue in the same email thread and ask about partner-level/full-catalog access, efficient sync/bulk mechanisms, production rate limits, caching/storage, consumer display, attribution and affiliate/commercial routing. Do not make Lowvyn the only provider dependency.
 
-## Rakuten qualifier hardening completed in this session
+## Rakuten qualifier hardening completed and verified
 
 The first real Jamieson feed exposed a concrete issue: positive `Sale Price` values are not always below `Retail Price`.
 
@@ -125,22 +126,27 @@ The first real Jamieson feed exposed a concrete issue: positive `Sale Price` val
 - emits a dedicated `price_semantics_gate`
 - still reports `production_authorized = false`
 
-Synthetic regression coverage was also added in `tools/tests/test_qualify_rakuten_product_catalog.py` for below/equal/above price relationships and the non-production price-semantics gate.
+Synthetic regression coverage was added in `tools/tests/test_qualify_rakuten_product_catalog.py` for below/equal/above price relationships and the non-production price-semantics gate.
 
-**Important verification note:** these source/test changes were committed through the connected GitHub repository, but the focused Python test suite was not executed in this chat environment because the repository runtime was not mounted. A future engineer must run the focused `tools/tests` suite before calling this code change fully verified.
+The repository's `Test merchant feed qualification` GitHub Actions workflow ran automatically after the source/test commits and completed successfully on the commit containing both the qualifier hardening and the new tests. That workflow compiles the qualification harnesses and runs the `test_qualify_*.py` unit-test suite on Python 3.12.
 
 Do not commit the proprietary Jamieson feed as a fixture. Use synthetic test rows.
+
+## Sanitized real-feed report
+
+`RAKUTEN_JAMIESON_FEED_AUDIT_2026-08-28.md` preserves the empirical counts and interpretation without proprietary catalog rows, URLs, credentials or private account identifiers.
+
+This is the durable report future agents should use for the first Jamieson feed unless a newer actual feed is audited.
 
 ## Next engineering sequence
 
 Highest-value sequence now:
 
-1. Run the focused Rakuten qualifier Python tests and fix any regression before claiming verification.
-2. Run the hardened qualifier against the local authorized Jamieson `.txt.gz` feed and preserve only a sanitized qualification report, not the proprietary feed itself.
-3. Define a provider-neutral offline import mapping that preserves both supplied price fields, source Product ID, SKU, GTIN, availability, product/image URLs and provenance without deciding retail-vs-sale semantics prematurely.
-4. Establish package quantity/count from a validated source joined by strong identity, preferably checksum-valid GTIN where possible; preserve that source's separate provenance.
-5. Only after rights are clear, decide whether/how Jamieson evidence may enter production search/display/ranking.
-6. Do not automate SFTP credentials or add Android networking before those gates are deliberately cleared.
+1. Define a provider-neutral offline import mapping that preserves both supplied price fields, source Product ID, SKU, GTIN, availability, product/image URLs and provenance without deciding retail-vs-sale semantics prematurely.
+2. Establish package quantity/count from a validated source joined by strong identity, preferably checksum-valid GTIN where possible; preserve that source's separate provenance.
+3. Only after rights are clear, decide whether/how Jamieson evidence may enter production search/display/ranking.
+4. Do not automate SFTP credentials or add Android networking before those gates are deliberately cleared.
+5. Continue waiting on the deliberately screened provider decisions and Lowvyn written response; do not mass-apply elsewhere.
 
 ## Security checkpoint
 
