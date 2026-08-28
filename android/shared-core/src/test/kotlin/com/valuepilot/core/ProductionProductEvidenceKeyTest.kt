@@ -119,4 +119,116 @@ class ProductionProductEvidenceKeyTest {
 
         assertTrue(first != second)
     }
+
+    @Test
+    fun `canonical gtin key joins exact cross source unit value evidence`() {
+        val priceKey =
+            requireNotNull(
+                ProductionProductEvidenceKeyResolver.resolve(
+                    providerId = EvidenceProviderId("merchant-feed-provider"),
+                    identity = SourceProductIdentity(gtin = "036000291452")
+                )
+            )
+        val quantityKey =
+            requireNotNull(
+                ProductionProductEvidenceKeyResolver.resolve(
+                    providerId = EvidenceProviderId("metadata-provider"),
+                    identity = SourceProductIdentity(gtin = "0036000291452")
+                )
+            )
+        assertEquals(priceKey, quantityKey)
+
+        val offer = Offer(current = Money.parse("4.99", "CAD"))
+        val quantity = QuantityNormalization.grams(1000)
+
+        val result =
+            EvidenceBackedUnitValuePolicy.evaluate(
+                EvidenceBackedUnitValueInput(
+                    priceClaim =
+                        EvidenceClaim(
+                            claimId = "merchant-feed:current-price",
+                            domain = EvidenceClaimDomain.CURRENT_PRICE,
+                            valueFingerprint = EvidenceFingerprints.money(offer.current),
+                            authority = EvidenceAuthorityClass.SOURCE_ASSERTED_METADATA,
+                            scope =
+                                EvidenceClaimScope(
+                                    productKey = priceKey.value,
+                                    merchantKey = "merchant-a",
+                                    currencyCode = "CAD"
+                                ),
+                            observedAtEpochMillis = 2_000L
+                        ),
+                    quantityClaim =
+                        EvidenceClaim(
+                            claimId = "metadata:package-quantity",
+                            domain = EvidenceClaimDomain.PACKAGE_QUANTITY,
+                            valueFingerprint = EvidenceFingerprints.quantity(quantity),
+                            authority = EvidenceAuthorityClass.SOURCE_ASSERTED_METADATA,
+                            scope = EvidenceClaimScope(productKey = quantityKey.value),
+                            observedAtEpochMillis = 1_900L
+                        ),
+                    offer = offer,
+                    quantity = quantity,
+                    priceDisposition = EvidenceDisposition.RANKABLE
+                )
+            )
+
+        assertTrue(result.rankable)
+        assertTrue(result.blockReasons.isEmpty())
+    }
+
+    @Test
+    fun `same sku text from different providers cannot join unit value evidence`() {
+        val priceKey =
+            requireNotNull(
+                ProductionProductEvidenceKeyResolver.resolve(
+                    providerId = EvidenceProviderId("provider-a"),
+                    identity = SourceProductIdentity(sku = "shared-sku")
+                )
+            )
+        val quantityKey =
+            requireNotNull(
+                ProductionProductEvidenceKeyResolver.resolve(
+                    providerId = EvidenceProviderId("provider-b"),
+                    identity = SourceProductIdentity(sku = "shared-sku")
+                )
+            )
+        assertTrue(priceKey != quantityKey)
+
+        val offer = Offer(current = Money.parse("4.99", "CAD"))
+        val quantity = QuantityNormalization.grams(1000)
+
+        val result =
+            EvidenceBackedUnitValuePolicy.evaluate(
+                EvidenceBackedUnitValueInput(
+                    priceClaim =
+                        EvidenceClaim(
+                            claimId = "provider-a:price",
+                            domain = EvidenceClaimDomain.CURRENT_PRICE,
+                            valueFingerprint = EvidenceFingerprints.money(offer.current),
+                            authority = EvidenceAuthorityClass.SOURCE_ASSERTED_METADATA,
+                            scope = EvidenceClaimScope(productKey = priceKey.value),
+                            observedAtEpochMillis = 2_000L
+                        ),
+                    quantityClaim =
+                        EvidenceClaim(
+                            claimId = "provider-b:quantity",
+                            domain = EvidenceClaimDomain.PACKAGE_QUANTITY,
+                            valueFingerprint = EvidenceFingerprints.quantity(quantity),
+                            authority = EvidenceAuthorityClass.SOURCE_ASSERTED_METADATA,
+                            scope = EvidenceClaimScope(productKey = quantityKey.value),
+                            observedAtEpochMillis = 1_900L
+                        ),
+                    offer = offer,
+                    quantity = quantity,
+                    priceDisposition = EvidenceDisposition.RANKABLE
+                )
+            )
+
+        assertFalse(result.rankable)
+        assertTrue(
+            EvidenceBackedUnitValueBlockReason.PRODUCT_IDENTITY_MISMATCH in
+                result.blockReasons
+        )
+    }
 }
