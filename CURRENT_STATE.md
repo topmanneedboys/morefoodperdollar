@@ -10,7 +10,7 @@ Android version: 101.1.0 (10101)
 
 5D — Authorized Real Shopping Data Provider Selection / validation.
 
-ValuePilot remains a provider-neutral shopping-intelligence platform. Accessibility, OCR, overlays, browser capture and retailer-specific extraction are optional adapters, not the product foundation.
+ValuePilot is a provider-neutral shopping-intelligence platform. Accessibility, OCR, overlays, browser capture and retailer-specific extraction are optional adapters, not the product foundation.
 
 Permanent flow:
 
@@ -19,154 +19,112 @@ Permanent flow:
 Permanent rules:
 
 - Product != Offer.
-- Sources contribute claims; they never overwrite one shared truth row.
+- Sources contribute separate claims; they never overwrite one shared truth row.
 - Stronger same-scope evidence may defeat weaker evidence; unresolved equal-strength conflict blocks Best Value.
-- Acceptance policy and factual conflict resolution are separate decisions.
-- A display-only but currently valid factual claim may still contradict or defeat another claim.
+- Acceptance policy and factual conflict resolution are separate decisions. A currently valid display-only fact may still contradict or defeat another fact.
 - Money, quantity, currency and promotion arithmetic are exact/deterministic.
 - AI may classify/explain but may not invent authoritative facts.
 - Commission, EPC, payout, sponsorship, affiliate economics and provider preference never affect ranking.
 - No unauthorized scraping, private-endpoint reverse engineering or anti-bot circumvention.
-- Technical/feed access != production authorization.
+- Technical/feed access != publisher authorization != offer geography != production-use rights.
 - Dataset recency != per-offer price freshness.
 - Currency/context != offer geography.
-- Dataset namespace != dataset snapshot.
-- Snapshot lifecycle != namespace-wide retention/deletion disposition.
-- Production price view != price claim != acceptance rankability != conflict-resolved current-price eligibility != unit-value eligibility != final Best Value eligibility.
-- A discounted/current price field does not automatically prove a promotion.
+- Dataset namespace != snapshot; snapshot lifecycle != namespace disposition/deletion.
+- Production view != price claim != acceptance rankability != conflict-resolved price eligibility != unit-value eligibility != Best Value ranking != presentation authorization.
+- A sale/discounted price does not automatically prove a promotion.
 - Shared core owns no hidden clock.
 - Provider credentials never belong in source control, Android, fixtures, logs or screenshots.
 
 Primary Android navigation remains Home / Search / Basket / Saved. Compare remains a workflow rather than a primary tab. Built-in Android Search remains explicitly fictional/sample evidence and is never represented as live merchant pricing, inventory, promotion or availability.
 
-## Verified shared-core production-hardening chain
+## Verified shared-core production chain
 
-- `5bb647a8485f257ec51b3eb0fe39b9c7caccb0a0` — provider-neutral discounted/reference price relationship validation.
-- `a8e98b8ce333a612538841566972d6cab58dde88` — dataset/file recency separate from per-offer freshness.
+- `5bb647a8485f257ec51b3eb0fe39b9c7caccb0a0` — provider-neutral current/reference price relationship validation.
+- `a8e98b8ce333a612538841566972d6cab58dde88` — dataset recency separated from per-offer freshness.
 - `6aed414bd5f89cf7ac6dfb739464c6f57f5abe78` — fail-closed production authorization profiles/gates.
-- `7606ea941f80e3dc6b2ea362bc688c7434215195` — fail-closed offer-country validation; CAD is not Canadian scope proof.
+- `7606ea941f80e3dc6b2ea362bc688c7434215195` — fail-closed offer-country validation; CAD is not Canadian geography proof.
 - `f58b400533bdf9a0705fb8e88680e4b56ce9d94e` — staged production offer candidate; no rankability.
-- `e546822a448e150674a2769d9899a856124b50fb` — authoritative corrected revocable snapshot lifecycle.
-- `230b8ae4b6f674979d349320b8e5bd83713db810` — authoritative registry-backed namespace disposition/withdrawal boundary.
+- `e546822a448e150674a2769d9899a856124b50fb` — corrected revocable exact-snapshot lifecycle.
+- `230b8ae4b6f674979d349320b8e5bd83713db810` — registry-backed namespace disposition/withdrawal boundary.
 - `ebb28a4a506232550b62d08370a9c8935d677603` — lifecycle/disposition-coupled point-in-time production price view from raw evidence.
-- `5d317810bd6ccf0933ff6432e6e68f88fb865493` — canonical-GTIN/provider-scoped product evidence identity keys.
-- `267cd5aa81c4c3a03110c210ea9b4bfcb203f2ab` — canonical-GTIN unit-value identity integration and same-SKU cross-provider isolation.
+- `5d317810bd6ccf0933ff6432e6e68f88fb865493` — canonical-GTIN/provider-scoped product evidence keys.
+- `267cd5aa81c4c3a03110c210ea9b4bfcb203f2ab` — canonical identity integrated with exact unit-value evidence.
 - `9a9b5f91948fe505a0ad6b598097bf9b8e50c680` — lifecycle-bound CURRENT_PRICE evidence-claim bridge.
-- `97bfa3c353e48f15e26e9576cf06f4fa5e1687d1` — unified evidence acceptance policy with legacy non-positive timestamp -> UNKNOWN behavior preserved.
-- `a1b15cc13df4912fb94893c8952f382f7404db1d` — lifecycle-bound production current-price acceptance using the unified policy.
-- `c3dcfab539a2d2ef40fe9ce283533141ea9cd246` — verified bounded current-price acceptance + factual-conflict eligibility boundary. This supersedes the failed test-compilation attempt `e5b56e3078c07ff226ba80b4d069da9b3abbcf22`.
-- `204c8ae5e0089473f28b7cf6086b73e7a3516ec6` — verified production current-price + conflict-resolved PACKAGE_QUANTITY -> existing exact unit-value policy bridge. This supersedes the unverified fixture-mismatch attempt `96883bea69a78789d3edeed8465667aa2acab21b`.
+- `97bfa3c353e48f15e26e9576cf06f4fa5e1687d1` — unified evidence acceptance/freshness policy.
+- `a1b15cc13df4912fb94893c8952f382f7404db1d` — lifecycle-bound production current-price acceptance.
+- `c3dcfab539a2d2ef40fe9ce283533141ea9cd246` — verified bounded current-price acceptance + factual-conflict eligibility. Supersedes failed test-compilation attempt `e5b56e3078c07ff226ba80b4d069da9b3abbcf22`.
+- `204c8ae5e0089473f28b7cf6086b73e7a3516ec6` — verified current-price + conflict-resolved PACKAGE_QUANTITY -> existing exact unit-value policy bridge. Supersedes unverified fixture-mismatch attempt `96883bea69a78789d3edeed8465667aa2acab21b`.
+- `ad5f91d4eef54e257a6660d291f14558653a1761` — verified bounded production Best Value ranking over exact unit-value candidates.
+- `6517fad0ef21daa541d31d0d01d72a5f1980f5d5` — verified immutable point-in-time production Best Value presentation snapshot with auditable price/quantity evidence linkage.
 
-The exact `204c8ae5e0089473f28b7cf6086b73e7a3516ec6` workflow passed browser checks, shared-core/app tests, lint, APK build, JVM result summary, Android privacy-boundary verification, release packaging/checksums and artifact upload.
+The exact workflows for `204c8ae...`, `ad5f91d4...` and `6517fad0...` all passed browser checks, shared-core/app tests, lint, APK build, JVM result summary, Android privacy verification, release packaging/checksums and artifact upload.
 
-## Price, authorization, geography and freshness
+## Current-price and unit-value boundaries
 
-Provider adapters declare documented current/reference roles; shared core never derives roles from provider field names. Missing, malformed, non-positive or incompatible money fails closed. A declared current/discounted value above its reference value is a semantic conflict when the adapter declares `CURRENT_MUST_NOT_EXCEED_REFERENCE`.
+`ProductionCurrentPriceEligibilityEvaluator` evaluates at most 128 raw current-price requests at one caller-supplied instant. Every request re-runs lifecycle-bound production claim creation plus shared evidence acceptance. Currently valid CURRENT_PRICE claims enter factual conflict resolution even if their acceptance disposition is display-only, preventing acceptance filtering from hiding stronger contradictory evidence.
 
-Production authorization is scoped to exact provider + isolated dataset namespace. The base consumer-mobile-catalog profile requires explicit satisfied gates for access, consumer display, caching, indexing, mobile-app use, retention/deletion, offer geography, price semantics, dataset-recency policy and offer-freshness policy. Network/affiliate use requires additional link/software/advertiser/tracking approvals.
+A candidate progresses from the current-price stage only when its request and current production claim exist, its own acceptance is rankable, no same-namespace claim-ID mutation exists, exact-scope CURRENT_PRICE resolution is not conflicted, and the resolved fingerprint is the candidate's exact current-price fingerprint.
 
-Strong country bases are explicit offer country, explicit dataset country or documented dataset market. Currency-only evidence, advertiser context or inference remains unresolved. Permanent rule: **CAD != Canadian offer scope.**
+`ProductionUnitValueEligibilityEvaluator` re-runs that raw current-price path, then filters PACKAGE_QUANTITY candidates to the exact selected stable product key. It catches same-namespace quantity claim-ID mutation, resolves package quantity through `EvidenceFactResolver`, and delegates materialized supporters to the existing `EvidenceBackedUnitValuePolicy` rather than copying authority or arithmetic rules.
 
-A recent file does not establish a fresh offer. Dataset timestamps never substitute for `priceObservedAtEpochMillis`. Current per-offer freshness is re-evaluated with caller-supplied policy at every production decision boundary.
+`EvidenceBackedUnitValuePolicy` requires rankable price disposition, valid price/quantity domains, exact product-key equality, exact price and quantity fingerprints and sufficiently strong quantity authority. Arithmetic remains `Money` + `NormalizedQuantity` + `UnitRate` + `DeterministicValueMath`; no production `Double` value math is permitted.
 
-## Lifecycle / namespace disposition / production view
+The earlier unit-value fixture failure was caused only by hardcoding raw UPC-A identity. `036000291452` correctly canonicalizes to `0036000291452`; tests now derive the key through `ProductionProductEvidenceKeyResolver` so they follow production identity behavior.
 
-`ProductionDatasetLifecycle.kt` binds exact provider + dataset + snapshot + activation profile. Missing, suspended, revoked, retired, pre-effective or expired lifecycle state blocks use. `REVOKED` and `RETIRED` are terminal for the same snapshot/profile. Current authorization and original price freshness are re-evaluated.
+## Verified production Best Value ranking
 
-Namespace disposition remains separate: `RETAINED`, `QUARANTINED`, `WITHDRAWAL_REQUIRED`, `DELETED`. Snapshot revocation never automatically deletes a namespace. Only the registry's current withdrawal-required state may invoke exact namespace removal, and in-memory removal is not proof every persisted copy is gone.
+`ProductionBestValueRanking.kt`, verified at `ad5f91d4eef54e257a6660d291f14558653a1761`, is the authoritative final unit-value comparison boundary currently implemented.
 
-`ProductionOfferViewEvaluator` starts from raw `ProviderOfferImportRecord` and re-runs staged candidate validation, snapshot binding, lifecycle evaluation and namespace disposition. Its point-in-time view is not rankability. Reference/non-discounted price is not silently mapped to historical `Offer.previous`; no member price, promotion, quantity or unit value is invented.
+Rules:
 
-## Product evidence identity
+- inputs are bounded: price requests <=128, quantity candidates <=128, ranking candidates <=128;
+- candidate IDs and referenced price-request IDs must be unique;
+- every candidate re-runs `ProductionUnitValueEligibilityEvaluator` from raw evidence and current lifecycle/disposition state; detached `UnitRate` is never trusted as production proof;
+- blocked unit-value candidates remain explainable but receive no rank;
+- rankable candidates are grouped only by exact `(currencyCode, RateUnit)`;
+- different currencies or rate units are never silently cross-ranked;
+- lower exact `currencyMicrosPerUnit` wins within one comparable group;
+- exact ties share the same dense value rank;
+- stable non-economic candidate ID is used only for deterministic display ordering of exact ties;
+- singleton groups are rankable/displayable but cannot claim Best Value because no meaningful comparison exists;
+- groups with >=2 candidates mark every exact rank-1 tie as co-Best Value;
+- provider economics/affiliate preference are absent from the API and algorithm.
 
-Production product-key priority:
+Verified regressions cover lower exact rate, exact ties, unit/currency separation, singleton behavior, blocked candidates, input-order independence, duplicate IDs/references and bounds.
 
-1. valid canonical GTIN -> shared `gtin:<canonical>`;
-2. otherwise provider item ID -> provider-scoped key;
-3. otherwise SKU -> provider-scoped key;
-4. invalid-only GTIN -> no key.
+## Verified immutable production presentation
 
-Invalid GTINs are never repaired. Names, descriptions, images and prices never become identity inputs. Equivalent leading-zero GTIN representations join. Provider-scoped IDs never silently join different providers. A product key grants no rights, freshness, quantity authority or rankability.
+`ProductionBestValuePresentation.kt`, verified at `6517fad0ef21daa541d31d0d01d72a5f1980f5d5`, is the shared-core immutable production presentation boundary.
 
-## Lifecycle-bound current-price claim and acceptance
+It does **not** accept a detached ranking result as authority. Each call re-runs `ProductionBestValueRankingEvaluator` from raw evidence at the caller-supplied decision instant, so lifecycle, namespace disposition, authorization and freshness are re-established immediately before projection.
 
-`ProductionCurrentPriceClaimEvaluator` re-runs the raw production-view path. Descriptors require explicit merchant/channel scope, optional location, evidence authority and auditable authority basis. Supported current-price authorities are `MERCHANT_AUTHORITATIVE`, `PROOF_BACKED_DIRECT_OBSERVATION`, and `SOURCE_ASSERTED_METADATA`, and the authority must agree with source claim kind.
+Presentation rows carry exact domain values, not formatted strings or floating-point approximations:
 
-`ProductionCurrentPriceAcceptanceEvaluator` re-runs that claim path before applying the shared acceptance policy. If claim creation is blocked, acceptance does not run. If it passes, acceptance uses actual environment/channel/claim-kind/timestamp/availability facts.
+- stable production candidate ID and product evidence key;
+- product/provider/source display data;
+- merchant/location/commerce-channel scope and offer country;
+- exact current/reference `Money`;
+- exact `NormalizedQuantity` and `UnitRate`;
+- availability, current freshness and price-observation timestamp;
+- exact value rank, deterministic display order and Best Value flag;
+- optional product/image URLs;
+- audit linkage to price provider/source/dataset/snapshot/claim, quantity dataset/claim/evidence ID, and lifecycle/disposition revisions.
 
-`acceptanceRankable` is only the acceptance result for one evidence item. It is not final Best Value eligibility. No promotion evidence is manufactured merely because a provider field is called or documented as sale/discounted price.
+Blocked candidates are projected separately with unit-value, current-price and underlying unit-value-policy blockers; they never become ranked rows.
 
-## Verified current-price conflict eligibility
+The snapshot is explicitly point-in-time and non-durable. A later display decision must re-evaluate it rather than treating an older snapshot as authorization. A regression test mutates an active lifecycle record to a newer REVOKED revision before presentation and verifies that the candidate is blocked.
 
-`ProductionCurrentPriceEligibility.kt`, verified at `c3dcfab539a2d2ef40fe9ce283533141ea9cd246`, is the current price-stage boundary.
+Shared-core presentation performs no locale formatting, Android work, I/O, AI inference, promotion inference, networking or hidden-clock reads.
 
-It evaluates a bounded set of raw provider requests at one caller-supplied decision instant and, for every request, re-runs lifecycle-bound production claim creation plus unified acceptance. Only claims whose current production claim path still passes enter factual conflict resolution.
+## Android / Universal Search boundary decision
 
-Crucially, a claim does **not** need acceptance-policy rankability to participate in factual conflict resolution. A currently valid display-only claim can still contradict or defeat another price claim. This prevents acceptance filtering from hiding stronger factual evidence.
+The existing Android `ValueEngine.rank()`, `RankingModePolicy`, `DeterministicProductParser`, `DeterministicRankingEngine` and current `UniversalSearchController.receive()` are the legacy/sample/capture search path, not the production-evidence path.
 
-A candidate progresses from the current-price stage only when:
+That path intentionally supports raw-text parsing and sample/capture behavior, but it uses `ValueItem`, `Double`, heuristic/parsed quantities, optional local-AI signals and parsed promotion arithmetic. Current Universal Search also formats through `ValueEngine.money` and constructs `UniversalSearchRow` from `RankedItem`.
 
-1. its request exists;
-2. its current production claim exists;
-3. its own acceptance decision is rankable;
-4. relevant CURRENT_PRICE claims are resolved through the existing `EvidenceFactResolver` at exact product/merchant/location/channel/currency scope;
-5. no relevant same-namespace claim-ID mutation/collision exists;
-6. the fact is resolved rather than an unresolved conflict;
-7. the resolved exact value fingerprint equals the candidate's lifecycle-bound current-price fingerprint.
+Therefore production evidence must **not** be converted back into `ValueItem` or sent through `DeterministicProductParser`, `RankingModePolicy`, `ValueEngine.rank()` or legacy promotion parsing. The next Android work must be an additive pure application projector from the verified exact shared-core production presentation snapshot into immutable search UI state. It must not own authorization, parsing, ranking, matching or provider logic.
 
-Verified cases include:
-
-- one fresh/in-stock candidate progresses;
-- out-of-stock candidate remains factual evidence but cannot progress;
-- equal-authority same-scope disagreement remains unresolved and blocks;
-- a stronger merchant-authoritative but display-only/out-of-stock contradictory price still participates and defeats the weaker candidate;
-- a currently revoked competitor creates no production claim and therefore cannot block;
-- different merchant scopes coexist rather than conflict;
-- same namespace + same claim ID with mutated content fails closed;
-- missing candidate request fails closed;
-- request count is explicitly bounded at 128.
-
-This boundary still creates no canonical production offer for ranking, no package quantity, no unit value and no final Best Value result.
-
-## Verified production unit-value eligibility
-
-`ProductionUnitValueEligibility.kt`, verified at `204c8ae5e0089473f28b7cf6086b73e7a3516ec6`, is the current exact unit-value boundary.
-
-It always re-runs `ProductionCurrentPriceEligibilityEvaluator` from the raw bounded price request set. Detached price evidence is not trusted. Only after the selected current-price candidate survives the full lifecycle, disposition, authorization, geography, freshness, acceptance and factual-conflict path does package quantity participate.
-
-Package quantity remains separately attributed and product-scoped. The evaluator:
-
-1. filters PACKAGE_QUANTITY candidates to the exact selected stable product key;
-2. detects same-namespace claim-ID mutation/collision before resolution;
-3. resolves quantity through the existing `EvidenceFactResolver` rather than copying conflict precedence;
-4. finds materialized supporters of the resolved exact quantity fingerprint;
-5. delegates each supporter to the existing `EvidenceBackedUnitValuePolicy` rather than copying authority or arithmetic rules;
-6. accepts only a supporter the existing policy itself marks rankable.
-
-`EvidenceBackedUnitValuePolicy` remains authoritative. It requires a rankable price disposition, CURRENT_PRICE/OBSERVED_PRICE price domain, PACKAGE_QUANTITY quantity domain, exact identical product key, exact price and quantity fingerprints and sufficiently strong quantity authority. Exact rate arithmetic remains in `DeterministicValueMath` using `Money`, `NormalizedQuantity` and `UnitRate`; no `Double` ranking math is introduced into the production path.
-
-Verified cases include:
-
-- conflict-resolved production price + strong exact package quantity produces a deterministic unit rate;
-- a blocked price stage prevents unit-value evaluation;
-- equal-authority quantity disagreement remains unresolved and blocks;
-- stronger quantity authority defeats weaker contradictory metadata through the existing resolver;
-- a weak supporter cannot hide a strong supporter of the same resolved quantity;
-- quantity for another product cannot join the selected price;
-- weak quantity authority remains blocked by the existing unit-value policy;
-- materialized quantity must match the resolved claim fingerprint;
-- same-namespace quantity claim-ID mutation fails closed;
-- quantity input is explicitly bounded at 128.
-
-The earlier `96883bea69a78789d3edeed8465667aa2acab21b` attempt was unverified because its test fixture hardcoded raw UPC-A identity while the production key correctly used the canonical GTIN representation. The correction derives the fixture product key through `ProductionProductEvidenceKeyResolver`, so test identity follows the production contract.
-
-This boundary still does not choose between products/offers and is not final Best Value ranking.
-
-## Ranking boundary decision
-
-The existing Android `ValueEngine.rank()` / `RankingModePolicy` path is not the production-evidence ranking boundary. It is an app/capture-era path over `ValueItem` that uses floating-point values, parsed or heuristic quantities, optional inferred promotion multipliers, local-AI signals and query-driven ranking modes.
-
-Production ranking must stay in shared core and consume only exact verified production evidence. It must not convert verified `Money`/`NormalizedQuantity`/`UnitRate` back into the legacy Android `ValueItem`/`Double` path.
+No real provider data should be wired into Android until the external production-rights/geography/freshness/package-content gates pass.
 
 ## Jamieson / Rakuten
 
@@ -184,11 +142,11 @@ Sanitized audit:
 - Sale > Retail: 2;
 - Class ID blank all rows; Attribute 1 remains opaque/untyped.
 
-Rakuten generic documented roles are resolved: Sale Price is discounted; Retail Price is non-discounted/reference. Sale > Retail is a semantic conflict and must never be swapped/repaired.
+Rakuten generic documented roles are resolved: Sale Price is discounted/current and Retail Price is non-discounted/reference. Sale > Retail is a semantic conflict and must never be swapped/repaired.
 
-Jamieson remains **NOT production-authorized**. Unresolved gates include cache/index/search/display/mobile rights, retention/deletion obligations, installed-software/DSA approval where applicable, trustworthy per-offer price-observation freshness, Canadian offer geography beyond CAD/context and broad package quantity. Current Jamieson rows cannot pass the production path because strong Canadian offer scope and trustworthy per-offer price observation timestamps are absent.
+Jamieson remains **NOT production-authorized**. Unresolved gates include cache/index/search/display/mobile rights, retention/deletion obligations, installed-software/DSA approval where applicable, trustworthy per-offer price-observation freshness, Canadian offer geography beyond CAD/context and broad package quantity. Current Jamieson rows cannot pass the production path because strong Canadian geography and trustworthy per-offer observation timestamps remain absent.
 
-Rakuten clarification was sent 2026-08-28. No substantive reply after that clarification has been found; do not resend unless a response creates a new gap.
+Rakuten clarification was sent 2026-08-28. No substantive reply after that clarification has been found. Do not resend unless a response creates a new gap.
 
 ## Package content / open data
 
@@ -198,11 +156,11 @@ Correct normalized OFF result: 273 rows, 271 valid GTINs, 102 matches, 169 unmat
 
 Health Canada LNHPD does not provide the needed GTIN-level package net count.
 
-GS1 Canada ECCnet remains the strategic package-content candidate. The Data Recipient inquiry was sent 2026-08-28 and acknowledged, but no substantive eligibility/rights response has arrived. Do not implement ECCnet until GS1 confirms eligibility, GTIN/net-content scope, consumer/mobile/search/cache rights, restrictions and commercial/API terms.
+GS1 Canada ECCnet remains the strategic package-content candidate. The Data Recipient inquiry was sent and acknowledged 2026-08-28, but no substantive eligibility/rights response has arrived. Do not implement ECCnet until GS1 confirms eligibility, GTIN/net-content scope, consumer/mobile/search/cache rights, restrictions and commercial/API terms.
 
 ## Provider/account checkpoint
 
-Use `PROVIDER_ACCOUNT_STATUS.md` for fast-changing state. Rakuten/Jamieson production gates remain blocked; GS1 substantive response pending; Well.ca/Bath Depot pending unless newer evidence; Tru Earth/Giant Tiger rejected; CJ applications remain as recorded; Awin active with Skip CA rejected for publisher type; impact.com Marketplace declined; Lowvyn inquiry sent.
+Use `PROVIDER_ACCOUNT_STATUS.md` for fast-changing account state. Rakuten/Jamieson production gates remain blocked; GS1 substantive response pending; Well.ca/Bath Depot pending unless newer evidence; Tru Earth/Giant Tiger rejected; CJ applications remain as recorded; Awin active with Skip CA rejected for publisher type; impact.com Marketplace declined; Lowvyn inquiry sent.
 
 ## Android privacy boundary
 
@@ -212,21 +170,21 @@ Current Android still has no `INTERNET`, no `ACCESS_NETWORK_STATE`, no account r
 
 External Rakuten and GS1 requests are outstanding. Do not resend them.
 
-Next bounded provider-neutral/offline target:
+Next bounded offline target:
 
-**Add a shared-core production Best Value ranking boundary that consumes only verified exact unit-value candidates and never routes production evidence through Android `ValueEngine` or heuristic ranking.**
+**Add an Android/application-layer production-search projector that consumes only `ProductionBestValuePresentationSnapshot` and creates immutable UI-ready rows without re-parsing, re-ranking or converting the production math to `Double`.**
 
 Requirements:
 
-- start from/re-evaluate `ProductionUnitValueEligibilityEvaluator` for each candidate rather than trusting detached `UnitRate` objects as proof of production eligibility;
-- keep input bounded and candidate IDs unique/deterministic;
-- only rank candidates whose unit-value result is currently rankable;
-- compare only like-for-like `UnitRate` dimensions: exact same currency code and exact same `RateUnit`; incompatible currency/unit groups must never be silently compared;
-- lower `currencyMicrosPerUnit` wins within one comparable group;
-- deterministic tie-breaking may use stable non-economic identifiers only; commission, EPC, payout, sponsorship, affiliate/provider preference and provider economics must never enter ranking;
-- preserve enough evidence linkage in each ranked result to audit the source candidate and unit-value eligibility result;
-- blocked/non-comparable candidates may remain available for display/explanation but must not receive a false cross-unit/cross-currency Best Value order;
-- do not duplicate acceptance, conflict, identity, quantity-authority or deterministic unit-value math;
-- add no Android networking and use no real provider credentials.
+- additive path; do not destabilize existing sample/capture Universal Search;
+- input is the verified shared-core production presentation snapshot only;
+- no provider network access and no real Rakuten/GS1 data yet;
+- formatting may convert exact integers to locale-neutral strings, but must not use `Double` for value calculations;
+- preserve comparison-group semantics so multiple currencies/rate units cannot look like one global ranking;
+- exact ties remain co-Best Value; singleton groups receive no Best Value badge;
+- blocked candidates remain reference/explanation rows, not ranked rows;
+- keep a stable candidate/evidence lookup so product-open or provenance UI can resolve the exact production row later without relying only on formatted text;
+- no parsing, acceptance, conflict resolution, quantity authority, unit-value math or ranking logic in the projector;
+- add no Android INTERNET/ACCESS_NETWORK_STATE permission, credentials, telemetry or remote AI.
 
-Do not add production Rakuten integration, affiliate tracking, checkout/payment, universal cart, subscriptions, remote AI, telemetry, unauthorized scraping or private-endpoint reverse engineering yet.
+Do not implement production Rakuten/ECCnet adapters, affiliate tracking, checkout/payment, universal cart or subscriptions yet.
