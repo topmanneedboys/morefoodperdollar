@@ -14,7 +14,8 @@ This file is an operational checkpoint only. It does not authorize production ne
 | --- | --- | --- |
 | Rakuten Advertising publisher account | ACTIVE | Keep technical Product Catalog access isolated from production authorization |
 | Rakuten Product Catalog technical account | ENABLED | Credentials remain outside repo/app; no automatic production downloader yet |
-| Jamieson Vitamins | PARTNERED + ADVERTISER PRODUCT FEED APPROVED + ACTUAL COMPLETE FEED AVAILABLE | Use empirical feed findings to harden offline qualifier; validate data-use/mobile rights and trustworthy package quantity before production ranking |
+| Jamieson Vitamins | PARTNERED + ADVERTISER PRODUCT FEED APPROVED + ACTUAL COMPLETE FEED AVAILABLE | Price schema semantics resolved; next gates are Android/feed-use rights, DSA approval, freshness, Canadian offer scope and broader package quantity |
+| GS1 Canada ECCnet | DATA RECIPIENT ELIGIBILITY / RIGHTS INQUIRY SENT 2026-08-28 | Await written eligibility, GTIN net-content scope, mobile/search/cache/display rights and commercial/API terms |
 | Well.ca | APPLIED / PENDING unless newer evidence arrives | Wait for advertiser decision |
 | Tru Earth | REJECTED on 2026-08-26 | Do not reapply now; no advertiser-specific reason established |
 | Bath Depot / Bain Depot | APPLIED / PENDING unless newer evidence arrives | Wait for advertiser decision |
@@ -32,7 +33,7 @@ This file is an operational checkpoint only. It does not authorize production ne
 | impact.com partner account | ACCOUNT EXISTS / MARKETPLACE APPLICATION DECLINED | Do not create duplicate account or blindly reapply |
 | Lowvyn | RIGHTS / TECHNICAL INQUIRY SENT | Await written commercial-use, display, caching/indexing, field and downstream-rights clarification; if approved, discuss partner/full-catalog access in the same thread |
 | Open Prices | VALIDATED SUPPLEMENTAL OPEN PRICE RAIL | Historical/proof-backed observation use only; current Canada coverage is too sparse for primary pricing |
-| Open Food Facts | VALIDATED SUPPLEMENTAL PRODUCT-METADATA RAIL | Metadata/package quantity only; preserve ODbL/source provenance and never treat it as retailer current-price evidence |
+| Open Food Facts | VALIDATED SUPPLEMENTAL PRODUCT-METADATA RAIL | Jamieson normalized coverage 102/271 matches but only 12 exact supplement counts; supplemental only |
 
 ## Rakuten checkpoint
 
@@ -42,7 +43,7 @@ Rakuten Customer Support created the Product Catalog file-transfer account and c
 
 Permanent distinction:
 
-**publisher account -> advertiser partnership -> advertiser Product Catalog approval -> actual file availability -> schema/quality validation -> data-use-rights validation -> production authorization**
+**publisher account -> advertiser partnership -> advertiser Product Catalog approval -> actual file availability -> schema/quality validation -> data-use-rights validation -> channel/DSA approval -> production authorization**
 
 Each remains a separate gate.
 
@@ -71,26 +72,86 @@ Empirical first-feed checkpoint:
 
 Decision:
 
-**JAMIESON = FIRST VALUEPILOT PROVIDER WITH ADVERTISER PRODUCT FEED APPROVAL + ACTUAL COMPLETE FILE AVAILABILITY. DATA QUALITY IS PROMISING, BUT PRODUCTION RIGHTS/SEMANTICS AND PACKAGE QUANTITY REMAIN OPEN GATES.**
+**JAMIESON = FIRST VALUEPILOT PROVIDER WITH ADVERTISER PRODUCT FEED APPROVAL + ACTUAL COMPLETE FILE AVAILABILITY. DATA QUALITY IS PROMISING. RAKUTEN PRICE FIELD SEMANTICS ARE NOW RESOLVED AT THE GENERIC SCHEMA LEVEL, BUT PRODUCTION RIGHTS/FRESHNESS/CHANNEL APPROVAL AND BROAD PACKAGE QUANTITY REMAIN OPEN GATES.**
 
-The 2 inverted price relationships prove that ValuePilot must not blindly treat a positive Sale Price as a valid discount/current-price preference. Never manufacture a savings claim from these fields.
+Rakuten's current Product Catalog Appendix A defines Sale Price as a price reflecting discounts and Retail Price as a price not reflecting discounts.
 
-The feed also does not establish a universal structured package quantity. With all Jamieson Class IDs blank, there is currently no validated class-specific Size field. Therefore the feed has **273 structural offer candidates but 0 authoritative unit-value candidates** until package quantity/count is established through a validated source.
+Therefore:
 
-A future quantity join may use a separate appropriately licensed source matched by strong identity such as checksum-valid GTIN. Preserve provenance: the quantity source must not be represented as the merchant price source.
+- Sale < Retail is structurally consistent with a discount;
+- Sale = Retail must not produce a savings claim;
+- Sale > Retail conflicts with the documented field semantics and must fail closed;
+- the 2 inverted rows must not be swapped, silently corrected, or interpreted as markup.
+
+The feed also does not establish a universal structured package quantity. With all Jamieson Class IDs blank, there is currently no validated class-specific Size field. Therefore the feed has **273 structural offer candidates but 0 authoritative unit-value candidates from Rakuten alone** until package quantity/count is established through a validated source.
+
+The corrected Jamieson × Open Food Facts run established:
+
+- **102 / 271** normalized GTIN matches;
+- **12** exact supplement-count candidates;
+- **2** structured mass/volume-only candidates;
+- **0** quantity conflicts;
+- **88** matched products with no usable quantity;
+- **169** unmatched GTINs.
+
+Open Food Facts is therefore useful supplemental metadata, not the package-count foundation.
+
+A future quantity join may use a separate appropriately licensed source matched by strong identity such as canonical checksum-valid GTIN. Preserve provenance: the quantity source must not be represented as the merchant price source.
 
 Jamieson/supplement guardrail remains factual evidence only: price, count, quantity, dosage form, printed strength, sourced ingredients/label attributes and deterministic unit value. Do not fabricate medical efficacy, treatment or safety claims.
 
+### Rakuten freshness boundary
+
+Rakuten's current Product Catalog guidance says:
+
+- files are generated dynamically when retrieved;
+- the file contains the most up-to-date product information currently present in the advertiser's Product Catalog database;
+- timeliness depends on how often the advertiser updates that database;
+- advertisers may process updates multiple times per day;
+- delta files contain new, changed and deleted product records from the advertiser's last processed feed;
+- the header timestamp is the time the file was deposited into the publisher SFTP account.
+
+Therefore the dataset has useful retrieval/deposit/update-process evidence, but no universal per-product last-modified timestamp and no guarantee that an individual merchant-site price is live at display time.
+
+Do not promote the HDR timestamp into per-product freshness.
+
+### Rakuten Android / DSA boundary
+
+Rakuten's current Publisher Membership Agreement allows promotion through mobile applications in general, subject to advertiser terms and Network Policies.
+
+However, Rakuten's Network Policies expressly cover installed/mobile applications under Downloadable Software Application controls. Before ValuePilot launches Rakuten network links inside the installed Android app:
+
+1. Rakuten / Network Quality approval and compliance testing must be completed; and
+2. the advertiser must approve the new DSA distribution method.
+
+The existing Jamieson Product Feed approval is **not** treated as Android/DSA approval.
+
+Product Catalog documentation also still describes advertiser feed approval for website/blog use, and the Jamieson partnership approval message refers to use on the approved website/marketing channel. Therefore Android feed-display/cache/index rights require written clarification before production integration.
+
+Detailed decision: `RAKUTEN_PRICE_AND_ANDROID_RIGHTS_GATE.md`.
+
 Remaining gates before production:
 
-- exact Sale Price / Retail Price semantics
 - intended Canadian offer geography beyond observed CAD and advertiser context
-- package/count/strength/dosage evidence
-- per-product freshness semantics
+- broader package/count/strength/dosage evidence
+- bounded dataset/current-price freshness policy
 - caching/persistence/indexing/search/display rights
 - mobile/software/catalog-use rights
-- any required Rakuten network DSA submission/testing before Android affiliate-link use
+- Rakuten Network Quality DSA submission/testing before Android affiliate-link use
+- advertiser approval for the DSA/mobile distribution method
 - privacy/consent/disclosure obligations before production tracking
+
+### GS1 Canada ECCnet
+
+ECCnet is the next strategic package-content/identity candidate because it is GTIN-centric and supports standardized product net-content data including count-style net content.
+
+The ValuePilot Data Recipient eligibility/rights inquiry was sent to GS1 Canada on 2026-08-28.
+
+Decision:
+
+**ECCNET = HOLD UNTIL WRITTEN ELIGIBILITY / RIGHTS / TECHNICAL RESPONSE.**
+
+Do not implement an ECCnet adapter or assume Jamieson coverage until GS1 confirms ValuePilot's eligibility, usable GTIN-level product-content scope, mobile/search/cache/display permissions, restrictions, attribution/retention requirements, API/extract options and commercial terms.
 
 ### Tru Earth
 
@@ -184,12 +245,14 @@ These sources remain provenance-separated. A weaker source must not overwrite a 
 
 ## Current next actions
 
-1. Harden the existing offline Rakuten Product Catalog qualifier around the real Jamieson findings, especially explicit `sale < retail`, `sale == retail`, and `sale > retail` relationships.
-2. Design a provider-neutral offline import mapping that preserves source Product ID, SKU, GTIN, price fields, availability, links and provenance without inventing quantity or freshness.
-3. Establish trustworthy Jamieson package quantity/count through a validated source before enabling unit-value ranking.
-4. Obtain explicit enough caching/indexing/display/mobile rights before any production Rakuten/Jamieson adapter or consumer display.
-5. Wait for TSC, Brother Canada, DAVIDsTEA, Well.ca, Bath Depot and AOSOM decisions rather than submitting more advertiser applications now.
-6. Wait for Lowvyn's written rights/technical response; if approved, discuss partner/full-catalog access before deeper integration.
-7. Continue bounded, network-free open-data engineering only behind provenance/conflict/rankability gates.
-8. Do not add Android `INTERNET` or `ACCESS_NETWORK_STATE` permissions yet.
-9. Never use commission, EPC, payout, sponsorship or provider preference as a ValuePilot ranking input.
+1. Do not spend more time proving generic Rakuten Retail/Sale field meanings; that schema question is resolved.
+2. Keep the 2 Jamieson Sale > Retail rows as semantic-invalid price evidence and fail closed rather than auto-correcting them.
+3. Obtain written Rakuten clarification of Product Catalog cache/index/display/mobile/retention rights and whether feed use inside the installed Android app needs separate advertiser permission.
+4. Before enabling Rakuten network links in Android, complete Rakuten DSA/Network Quality approval and advertiser approval for the mobile distribution method.
+5. Define a bounded dataset/current-price freshness policy using retrieval/delta evidence without inventing per-product freshness.
+6. Await GS1 Canada ECCnet response for broader GTIN-level package-content/count coverage and rights.
+7. Wait for TSC, Brother Canada, DAVIDsTEA, Well.ca, Bath Depot and AOSOM decisions rather than submitting more advertiser applications now.
+8. Wait for Lowvyn's written rights/technical response; if approved, discuss partner/full-catalog access before deeper integration.
+9. Continue bounded, network-free open-data engineering only behind provenance/conflict/rankability gates.
+10. Do not add Android `INTERNET` or `ACCESS_NETWORK_STATE` permissions yet.
+11. Never use commission, EPC, payout, sponsorship or provider preference as a ValuePilot ranking input.
