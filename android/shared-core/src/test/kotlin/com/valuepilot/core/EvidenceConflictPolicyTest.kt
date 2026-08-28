@@ -96,6 +96,30 @@ class EvidenceConflictPolicyTest {
     }
 
     @Test
+    fun weakerNewerSourceCannotOverwriteMerchantAuthoritativePrice() {
+        val merchant = currentPrice(
+            id = "merchant",
+            value = "CAD:499",
+            merchant = "merchant-a",
+            observedAt = 1_000L,
+            authority = EvidenceAuthorityClass.MERCHANT_AUTHORITATIVE
+        )
+        val weak = currentPrice(
+            id = "weak-newer",
+            value = "CAD:399",
+            merchant = "merchant-a",
+            observedAt = 9_000L,
+            authority = EvidenceAuthorityClass.USER_ASSERTED
+        )
+
+        val decision = EvidenceConflictPolicy.resolve(merchant, weak)
+
+        assertEquals(EvidenceConflictRelationship.PREFER_LEFT, decision.relationship)
+        assertEquals("merchant", decision.selectedClaimId)
+        assertFalse(decision.blocksRanking)
+    }
+
+    @Test
     fun equalScopeEqualTimeConflictingPricesFailClosed() {
         val left = currentPrice(
             id = "source-a",
@@ -208,13 +232,14 @@ class EvidenceConflictPolicyTest {
         value: String,
         merchant: String,
         channel: String = "RETAILER_WEB",
-        observedAt: Long = 0L
+        observedAt: Long = 0L,
+        authority: EvidenceAuthorityClass = EvidenceAuthorityClass.MERCHANT_AUTHORITATIVE
     ) =
         EvidenceClaim(
             claimId = id,
             domain = EvidenceClaimDomain.CURRENT_PRICE,
             valueFingerprint = value,
-            authority = EvidenceAuthorityClass.MERCHANT_AUTHORITATIVE,
+            authority = authority,
             scope = EvidenceClaimScope(
                 productKey = "gtin:036000291452",
                 merchantKey = merchant,
