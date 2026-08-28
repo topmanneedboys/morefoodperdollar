@@ -42,10 +42,10 @@ enum class EvidenceIndexInsertResult {
 /**
  * Deterministic in-memory index that preserves source-dataset isolation.
  *
- * The index does not resolve factual conflicts and does not rank products. It
- * only stores claims under their original dataset namespace and allows bounded
- * lookup by stable product key. Callers must run retrieved claims through
- * EvidenceConflictPolicy and the relevant acceptance/ranking gates.
+ * The index never ranks products. It stores claims under their original
+ * dataset namespace, allows bounded lookup by stable product key, and delegates
+ * factual conflict resolution to EvidenceFactResolver without flattening the
+ * underlying provenance.
  */
 class SourceIsolatedEvidenceIndex {
     private val namespaces =
@@ -105,6 +105,23 @@ class SourceIsolatedEvidenceIndex {
                     .toList()
             }
     }
+
+    /**
+     * Resolve all exact facts for one product while retaining every selected
+     * value's supporting source claims. Different retailer/location/channel
+     * scopes remain separate resolutions; unresolved same-scope disagreements
+     * remain explicitly blocking.
+     */
+    fun resolveFactsForProduct(
+        productKey: String,
+        domain: EvidenceClaimDomain? = null
+    ): List<EvidenceFactResolution> =
+        EvidenceFactResolver.resolve(
+            claimsForProduct(
+                productKey = productKey,
+                domain = domain
+            )
+        )
 
     fun claimsInNamespace(
         namespaceId: String
