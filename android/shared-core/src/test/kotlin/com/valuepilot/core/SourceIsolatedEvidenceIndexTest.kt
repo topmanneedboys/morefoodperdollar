@@ -82,6 +82,28 @@ class SourceIsolatedEvidenceIndexTest {
     }
 
     @Test
+    fun indexCanResolveProductFactsWithoutFlatteningProviderNamespaces() {
+        val index = SourceIsolatedEvidenceIndex()
+        index.insert(openPricesNamespace(), observedPrice("price-1"))
+        index.insert(openFoodFactsNamespace(), packageQuantity("quantity-1"))
+
+        val resolutions = index.resolveFactsForProduct(PRODUCT_KEY)
+
+        assertEquals(2, resolutions.size)
+        assertTrue(resolutions.all { it.status == EvidenceFactResolutionStatus.RESOLVED })
+        assertEquals(
+            setOf(EvidenceClaimDomain.OBSERVED_PRICE, EvidenceClaimDomain.PACKAGE_QUANTITY),
+            resolutions.map { it.key.domain }.toSet()
+        )
+        assertEquals(
+            setOf("open-prices", "open-food-facts"),
+            resolutions.flatMap { result ->
+                result.supportingClaims.map { it.namespace.id }
+            }.toSet()
+        )
+    }
+
+    @Test
     fun removingOneDatasetDoesNotTouchAnotherDataset() {
         val index = SourceIsolatedEvidenceIndex()
         index.insert(openPricesNamespace(), observedPrice("price-1"))
