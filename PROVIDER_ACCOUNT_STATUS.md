@@ -1,6 +1,6 @@
 # ValuePilot Provider Account Status
 
-Updated: 2026-08-27
+Updated: 2026-08-28
 
 Milestone: 5D — Authorized Real Shopping Data Provider Selection
 
@@ -12,9 +12,9 @@ This file is an operational checkpoint only. It does not authorize production ne
 
 | Provider / program | Current status | Next meaningful action |
 | --- | --- | --- |
-| Rakuten Advertising publisher account | ACTIVE | Keep technical Product Catalog access isolated from advertiser/feed authorization |
-| Rakuten Product Catalog technical account | ENABLED | Use only after advertiser-level feed approval; never store credentials in repo/app |
-| Jamieson Vitamins | PARTNERED; advertiser-level Product Catalog request submitted | Wait for actual feed access/file; then inspect schema, Canada/CAD semantics, quality and exact data-use rights |
+| Rakuten Advertising publisher account | ACTIVE | Keep technical Product Catalog access isolated from production authorization |
+| Rakuten Product Catalog technical account | ENABLED | Credentials remain outside repo/app; no automatic production downloader yet |
+| Jamieson Vitamins | PARTNERED + ADVERTISER PRODUCT FEED APPROVED + ACTUAL COMPLETE FEED AVAILABLE | Use empirical feed findings to harden offline qualifier; validate data-use/mobile rights and trustworthy package quantity before production ranking |
 | Well.ca | APPLIED / PENDING unless newer evidence arrives | Wait for advertiser decision |
 | Tru Earth | REJECTED on 2026-08-26 | Do not reapply now; no advertiser-specific reason established |
 | Bath Depot / Bain Depot | APPLIED / PENDING unless newer evidence arrives | Wait for advertiser decision |
@@ -30,7 +30,7 @@ This file is an operational checkpoint only. It does not authorize production ne
 | Awin publisher account | ACTIVE | Do not submit more applications without advertiser-level publisher-type/feed compatibility screening |
 | Skip CA on Awin | REJECTED on 2026-08-26 | Do not reapply under the same truthful publisher type |
 | impact.com partner account | ACCOUNT EXISTS / MARKETPLACE APPLICATION DECLINED | Do not create duplicate account or blindly reapply |
-| Lowvyn | RIGHTS / TECHNICAL INQUIRY SENT | Await written commercial-use, display, caching/indexing, field and downstream-rights clarification before integration |
+| Lowvyn | RIGHTS / TECHNICAL INQUIRY SENT | Await written commercial-use, display, caching/indexing, field and downstream-rights clarification; if approved, discuss partner/full-catalog access in the same thread |
 | Open Prices | VALIDATED SUPPLEMENTAL OPEN PRICE RAIL | Historical/proof-backed observation use only; current Canada coverage is too sparse for primary pricing |
 | Open Food Facts | VALIDATED SUPPLEMENTAL PRODUCT-METADATA RAIL | Metadata/package quantity only; preserve ODbL/source provenance and never treat it as retailer current-price evidence |
 
@@ -38,44 +38,59 @@ This file is an operational checkpoint only. It does not authorize production ne
 
 ### Technical Product Catalog account
 
-Rakuten Customer Support created the Product Catalog file-transfer account and confirmed the technical account can access advertiser feeds after advertiser-level approval.
-
-Technical Product Catalog enablement is **not** equivalent to advertiser feed authorization.
+Rakuten Customer Support created the Product Catalog file-transfer account and confirmed technical access. No file-transfer username, password, token or other credential belongs in this repository, the Android app, logs, screenshots, fixtures or documentation.
 
 Permanent distinction:
 
 **publisher account -> advertiser partnership -> advertiser Product Catalog approval -> actual file availability -> schema/quality validation -> data-use-rights validation -> production authorization**
 
-Each is a separate gate.
+Each remains a separate gate.
 
-No file-transfer username, password, token or other credential belongs in this repository.
-
-### Jamieson Vitamins
+### Jamieson Vitamins — first actual authorized feed
 
 Jamieson approved ValuePilot's advertiser partnership on 2026-08-26.
 
-After technical Product Catalog enablement, ValuePilot submitted the Jamieson advertiser-level Product Feed request under Rakuten `Links -> Product Feeds`. The UI changed from `Apply` to `Remove`, which is evidence that the request was submitted, not proof that the feed is approved or available.
+After ValuePilot submitted the separate Product Feed request, Rakuten Customer Support explicitly confirmed on 2026-08-28 that ValuePilot is approved for Jamieson's advertiser Product Feed and that the Jamieson feed is present in the Product Catalog SFTP account.
 
-Follow-up messages were sent to both the Jamieson affiliate contact and the existing Rakuten Product Catalog support case asking whether the request is pending advertiser approval and whether any additional action is required.
+The complete compressed TXT catalog was then downloaded and inspected offline. The proprietary catalog itself is not committed to the repository.
+
+Empirical first-feed checkpoint:
+
+- valid HDR/TRL structure
+- trailer count matches **273** product records
+- **273 / 273** records have the documented 38-field shape
+- **273 / 273 CAD**
+- **273 / 273 in-stock**
+- **273** unique SKUs and **273** unique Product IDs
+- **271 / 273** supplied UPC/GTIN values, all **271 / 271** checksum-valid
+- **273 / 273** syntactically valid product URLs and image URLs
+- manufacturer present as Jamieson on all 273 rows
+- descriptions present on 272 / 273 rows
+- all 273 Class ID values blank
+- Sale Price is below Retail Price on 48 rows, equal on 223 rows, and **above** Retail Price on 2 rows
 
 Decision:
 
-**JAMIESON = PARTNERED + PRODUCT CATALOG REQUEST SUBMITTED; WAIT FOR ACTUAL FEED ACCESS.**
+**JAMIESON = FIRST VALUEPILOT PROVIDER WITH ADVERTISER PRODUCT FEED APPROVAL + ACTUAL COMPLETE FILE AVAILABILITY. DATA QUALITY IS PROMISING, BUT PRODUCTION RIGHTS/SEMANTICS AND PACKAGE QUANTITY REMAIN OPEN GATES.**
 
-When the feed appears, first inspect the complete TXT feed rather than assuming the data is production-ready. Validate:
+The 2 inverted price relationships prove that ValuePilot must not blindly treat a positive Sale Price as a valid discount/current-price preference. Never manufacture a savings claim from these fields.
 
-- Canada/CAD semantics
-- row count and coverage
-- GTIN/SKU/provider IDs
-- package/count/strength/dosage fields
-- current/reference/sale-price semantics
-- freshness
-- availability
-- image/deep links
-- variant identity
-- caching/persistence/indexing/display/mobile rights
+The feed also does not establish a universal structured package quantity. With all Jamieson Class IDs blank, there is currently no validated class-specific Size field. Therefore the feed has **273 structural offer candidates but 0 authoritative unit-value candidates** until package quantity/count is established through a validated source.
+
+A future quantity join may use a separate appropriately licensed source matched by strong identity such as checksum-valid GTIN. Preserve provenance: the quantity source must not be represented as the merchant price source.
 
 Jamieson/supplement guardrail remains factual evidence only: price, count, quantity, dosage form, printed strength, sourced ingredients/label attributes and deterministic unit value. Do not fabricate medical efficacy, treatment or safety claims.
+
+Remaining gates before production:
+
+- exact Sale Price / Retail Price semantics
+- intended Canadian offer geography beyond observed CAD and advertiser context
+- package/count/strength/dosage evidence
+- per-product freshness semantics
+- caching/persistence/indexing/search/display rights
+- mobile/software/catalog-use rights
+- any required Rakuten network DSA submission/testing before Android affiliate-link use
+- privacy/consent/disclosure obligations before production tracking
 
 ### Tru Earth
 
@@ -152,7 +167,7 @@ Decision:
 
 **LOWVYN = HOLD UNTIL WRITTEN RIGHTS/TECHNICAL RESPONSE.**
 
-Do not add a production adapter merely because a public API exists.
+If Lowvyn approves the initial integration request, the next communication should remain in the same thread and ask about partner-level/full-catalog access, efficient synchronization or bulk access, higher production limits, caching/storage, display rights, attribution and affiliate/commercial routing. Do not ask for ownership of Lowvyn's database and do not make Lowvyn the sole provider dependency.
 
 ## Open-data checkpoint
 
@@ -169,10 +184,12 @@ These sources remain provenance-separated. A weaker source must not overwrite a 
 
 ## Current next actions
 
-1. Wait for actual Jamieson Product Catalog approval/file availability and inspect the real feed when it appears.
-2. Wait for TSC, Brother Canada, DAVIDsTEA, Well.ca, Bath Depot and AOSOM decisions rather than submitting more advertiser applications now.
-3. Wait for Lowvyn's written rights/technical response before any integration.
-4. Continue bounded, network-free open-data engineering only behind provenance/conflict/rankability gates.
-5. Do not add Android `INTERNET` or `ACCESS_NETWORK_STATE` permissions yet.
-6. Do not implement a production Rakuten/CJ/Awin/impact/Lowvyn adapter until actual data-use rights and field quality have been validated.
-7. Never use commission, EPC, payout, sponsorship or provider preference as a ValuePilot ranking input.
+1. Harden the existing offline Rakuten Product Catalog qualifier around the real Jamieson findings, especially explicit `sale < retail`, `sale == retail`, and `sale > retail` relationships.
+2. Design a provider-neutral offline import mapping that preserves source Product ID, SKU, GTIN, price fields, availability, links and provenance without inventing quantity or freshness.
+3. Establish trustworthy Jamieson package quantity/count through a validated source before enabling unit-value ranking.
+4. Obtain explicit enough caching/indexing/display/mobile rights before any production Rakuten/Jamieson adapter or consumer display.
+5. Wait for TSC, Brother Canada, DAVIDsTEA, Well.ca, Bath Depot and AOSOM decisions rather than submitting more advertiser applications now.
+6. Wait for Lowvyn's written rights/technical response; if approved, discuss partner/full-catalog access before deeper integration.
+7. Continue bounded, network-free open-data engineering only behind provenance/conflict/rankability gates.
+8. Do not add Android `INTERNET` or `ACCESS_NETWORK_STATE` permissions yet.
+9. Never use commission, EPC, payout, sponsorship or provider preference as a ValuePilot ranking input.
