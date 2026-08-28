@@ -54,17 +54,15 @@ Permanent invariants:
 - unresolved equal-strength conflict blocks Best Value
 - exact money/quantity fingerprints prevent formatting differences from masquerading as facts
 
-## Critical GTIN representation correction
+## GTIN representation correction
 
 Cross-source identity must not compare checksum-valid barcode strings only by raw textual representation.
 
-Open Food Facts documents normalization of equivalent leading-zero barcode forms. UPC-A / GTIN-12 can be represented by its equivalent zero-prefixed GTIN-13, and leading-zero representations can otherwise collapse to the same stored `code`.
+Open Food Facts normalizes documented equivalent leading-zero barcode forms. The historical first Jamieson × Open Food Facts run incorrectly required returned normalized `code` strings to exactly equal raw provider strings and reported 0 / 271 matches.
 
-The first real Jamieson × Open Food Facts coverage tool had a bug: after querying raw provider GTINs, it required returned normalized Open Food Facts `code` strings to exactly equal one of the raw provider strings. That could discard valid matches.
+That historical result is invalid as coverage evidence.
 
-The first Jamieson run reported 0 / 271 matches, but **that result is invalid as coverage evidence**.
-
-Sanitized feed-level identity distribution explains the problem:
+Sanitized feed-level identity distribution:
 
 - valid GTINs: 271
 - 12-digit: 248
@@ -74,9 +72,9 @@ Sanitized feed-level identity distribution explains the problem:
 - canonical unique identities: 271
 - canonical identity collisions: 0
 
-## Corrected normalized lookup
+## Corrected normalized lookup and transport resilience
 
-The stable launcher `tools/run_rakuten_off_quantity_coverage.py` now delegates to `tools/measure_rakuten_off_quantity_coverage_v2.py` and `tools/open_facts_barcode.py`.
+The stable launcher `tools/run_rakuten_off_quantity_coverage.py` delegates to `tools/measure_rakuten_off_quantity_coverage_v2.py` and `tools/open_facts_barcode.py`.
 
 The corrected research path:
 
@@ -90,15 +88,13 @@ The corrected research path:
 - emits aggregate output only
 - never emits provider GTINs, rows, URLs, credentials or account identifiers.
 
-Normalized lookup regression CI passed on commit `3a949e14be5cdcd10f523aa3a8d20fe463b91d4f`.
+Commit `5ffa11d6492129cabc33dd0d73816ae86454469b` additionally makes batch search an optimization only. Repeated search HTTP 5xx failures fall back to rate-limited direct product-by-barcode reads without changing identity or quantity rules. The focused merchant-feed qualification workflow passed for that commit.
 
 ## Shared-core cross-source identity
 
-The same representation issue is now handled in platform-neutral shared core.
-
 `GtinValidation.canonicalOrNull()` provides deterministic canonical identity for checksum-valid equivalent leading-zero representations.
 
-`ImportedSourceIdentity` now separates:
+`ImportedSourceIdentity` separates:
 
 - `suppliedGtin`: exact source value
 - `validatedGtin`: exact checksum-valid source value
@@ -108,19 +104,44 @@ The staged provider import promotes canonical GTIN into `SourceProductIdentity` 
 
 Tests cover equivalent UPC-A/GTIN-12, GTIN-13 and leading-zero GTIN-14 representations, while preserving EAN-8 and non-zero-indicator GTIN-14 distinctions and refusing invalid-GTIN repair.
 
-The Android workflow for commit `be96095e6634b28f93e9add932bf67ac98bb66a3` has completed browser checks, shared-core/app tests, Android lint/assemble, APK network-permission privacy verification, release assembly and artifact upload successfully. Post-job cleanup was still running at the last observed checkpoint.
+## Jamieson count-coverage status — valid result
 
-## Jamieson count-coverage status
+The corrected normalized Jamieson × Open Food Facts measurement completed successfully on 2026-08-28.
 
-The authorized Jamieson feed has now been run once through the old research path, but the old 0-match result is invalid due the normalization bug.
+Authoritative aggregate result:
 
-Therefore:
+- product records: 273
+- valid GTINs: 271
+- normalized Open Food Facts matches: 102
+- unmatched GTINs: 169
+- exact supplement-count candidates: 12
+- structured mass/volume-only candidates: 2
+- quantity conflicts: 0
+- matched but no usable quantity: 88
+- matches containing expected Jamieson brand text: 90
+- matches with source modification timestamp: 102
+- successful batch-search requests: 13
+- search batches using direct-read fallback: 1
+- direct product-read requests: 20
+- response codes ignored after canonical validation: 0
 
-- no valid corrected Open Food Facts match percentage exists yet;
-- no valid Jamieson exact-count coverage percentage exists yet;
-- no cross-source Jamieson unit-value candidates should be claimed yet.
+This result supersedes the historical invalid 0-match run.
 
-The next bounded empirical action is a corrected normalized rerun. Only that result should be used to decide whether Open Food Facts supplies useful quantity/count coverage for Jamieson.
+Decision:
+
+Open Food Facts is useful supplemental product metadata but **not sufficient as the Jamieson package-count foundation**. Only 12 valid-GTIN identities are exact-count-ready under the current strict semantics; 259 remain not exact-count-ready.
+
+Do not relax the parser, infer package count from Rakuten text, or treat mass/volume metadata as tablet/capsule/gummy count merely to increase coverage.
+
+## Next metadata-domain assessment
+
+Health Canada's Licensed Natural Health Products Database is authoritative/useful for regulatory licence identity, product/brand names, dosage form, medicinal/non-medicinal ingredients, recommended use and recommended dose.
+
+Its published public schema does not expose GTIN-level package net content/count. Recommended dose is a usage instruction, not package content. LNHPD therefore cannot solve the current Jamieson exact-count gap by itself and must never be misused as package-count evidence.
+
+GS1 Canada ECCnet is the strongest strategic next product-content target because it is GTIN-centric and provides standardized product listing/content data with net-content concepts that can represent weight, volume or count. ECCnet access is controlled for Data Recipients and requires separate authorization/subscription validation.
+
+No ECCnet integration is authorized yet.
 
 ## Unit-value gate remains unchanged
 
@@ -134,7 +155,7 @@ A price and quantity from different providers may produce deterministic unit val
 6. quantity authority is strong enough;
 7. no blocking factual conflict remains.
 
-Canonical barcode normalization fixes identity representation only. It does not upgrade authority, freshness, rights, or factual quality.
+Canonical barcode normalization fixes identity representation only. It does not upgrade authority, freshness, rights or factual quality.
 
 ## Next gate
 
@@ -142,9 +163,8 @@ Do not connect open-data research paths directly to consumer search/ranking UI y
 
 Immediate next step:
 
-1. rerun the normalized Jamieson × Open Food Facts tool locally;
-2. retain aggregate output only;
-3. measure matched, exact-count, mass/volume-only, unmatched, conflict and no-usable-quantity counts;
-4. if normalized coverage is useful, assemble separately attributed claims through the source-isolated conflict/unit-value gates;
-5. if coverage remains poor, then investigate another appropriately licensed/public metadata domain/provider rather than guessing quantity;
-6. keep production rights, Retail/Sale semantics, freshness and Android networking as separate unresolved gates.
+1. validate whether ValuePilot can qualify for GS1 Canada ECCnet Data Recipient access;
+2. verify GTIN-level net-content/count coverage for the relevant product categories and Jamieson scope;
+3. establish caching/indexing/search/display/mobile/retention/attribution rights and commercial terms;
+4. keep Health Canada LNHPD as a possible separately attributed regulatory metadata rail, not package-count evidence;
+5. keep Rakuten Retail/Sale semantics, production rights, freshness and Android networking as separate unresolved gates.
