@@ -42,7 +42,7 @@ Permanent rules:
 - Currency/context != geography.
 - Dataset namespace != snapshot.
 - Snapshot lifecycle != namespace-wide disposition/deletion.
-- Production view != current-price claim != acceptance rankability != conflict-resolved current-price eligibility != final Best Value.
+- Production view != current-price claim != acceptance rankability != conflict-resolved current-price eligibility != unit-value eligibility != final Best Value.
 - Acceptance and factual conflict resolution are separate; display-only but currently valid evidence may still contradict another claim.
 - Discounted/sale price does not automatically create promotion evidence.
 - Shared core owns no hidden clock.
@@ -70,8 +70,9 @@ Built-in Android Search remains fictional/sample evidence until a real provider 
 - `97bfa3c353e48f15e26e9576cf06f4fa5e1687d1` — unified evidence acceptance policy preserving legacy unknown-freshness behavior.
 - `a1b15cc13df4912fb94893c8952f382f7404db1d` — lifecycle-bound production current-price acceptance.
 - `c3dcfab539a2d2ef40fe9ce283533141ea9cd246` — verified bounded current-price acceptance + factual-conflict eligibility. Supersedes failed test-compilation attempt `e5b56e3078c07ff226ba80b4d069da9b3abbcf22`.
+- `204c8ae5e0089473f28b7cf6086b73e7a3516ec6` — verified bounded production current-price + conflict-resolved package quantity -> existing exact unit-value policy bridge. Supersedes unverified fixture-mismatch attempt `96883bea69a78789d3edeed8465667aa2acab21b`.
 
-Exact `c3dcfab539a2d2ef40fe9ce283533141ea9cd246` passed the full ValuePilot workflow: browser checks, shared-core/app tests, lint, APK build, JVM summary, Android privacy verification, release packaging/checksums and artifact upload.
+Exact `204c8ae5e0089473f28b7cf6086b73e7a3516ec6` passed the full ValuePilot workflow: browser checks, shared-core/app tests, lint, APK build, JVM summary, Android privacy verification, release packaging/checksums and artifact upload.
 
 ## Lifecycle / disposition / view
 
@@ -132,11 +133,13 @@ Verified regression cases:
 
 This is current-price-stage eligibility only. It creates no final Best Value, package quantity or unit value.
 
-## Unit value
+## Verified production unit value
 
-`EvidenceBackedUnitValuePolicy` is authoritative; do not duplicate it.
+`ProductionUnitValueEligibility.kt` is verified at `204c8ae5e0089473f28b7cf6086b73e7a3516ec6`.
 
-It requires:
+It re-runs the verified raw current-price eligibility path, then keeps package quantity as separate product-scoped evidence. Quantity is selected only after same-namespace claim-ID collision checking and exact `EvidenceFactResolver` resolution. Materialized supporters of the resolved quantity value are delegated to `EvidenceBackedUnitValuePolicy`; the bridge does not copy quantity-authority precedence or unit-value arithmetic.
+
+`EvidenceBackedUnitValuePolicy` remains authoritative and requires:
 
 - `RANKABLE` price disposition;
 - CURRENT_PRICE or OBSERVED_PRICE price domain;
@@ -146,7 +149,32 @@ It requires:
 - exact quantity fingerprint matching supplied normalized quantity;
 - strong quantity authority.
 
-The policy does not choose conflicting quantity claims. Quantity conflict resolution must happen before the selected quantity reaches it.
+Exact arithmetic remains in shared-core `Money`, `NormalizedQuantity`, `UnitRate` and `DeterministicValueMath`. No production ranking should convert this back to Android `Double` value math.
+
+Verified regression cases:
+
+- conflict-resolved production price + strong package quantity produces an exact unit rate;
+- blocked price stage prevents unit-value evaluation;
+- equal-authority quantity disagreement remains unresolved;
+- stronger quantity authority defeats weaker contradictory metadata via the existing resolver;
+- weak supporter cannot hide a strong supporter for the same resolved value;
+- wrong-product quantity cannot join selected price;
+- weak quantity authority stays blocked by existing policy;
+- materialized quantity must match claim fingerprint;
+- same namespace/claim ID mutation fails closed;
+- quantity candidate input is bounded at 128.
+
+The failed `96883bea69a78789d3edeed8465667aa2acab21b` verification was caused by a test fixture hardcoding raw UPC-A product-key text instead of the canonical GTIN key used by production. The fix derives the test key through `ProductionProductEvidenceKeyResolver`; production logic and assertions were not weakened.
+
+This boundary is still not final Best Value ranking.
+
+## Production ranking architecture decision
+
+Do not route verified production evidence through Android `ValueEngine.rank()` or `RankingModePolicy`.
+
+That app/capture-era path operates on `ValueItem`, `Double` prices/metrics, parsed or heuristic quantities, optional inferred promotion multipliers, local-AI signals and query-driven ranking modes. It remains useful for its legacy/sample/capture responsibilities but is not authoritative for the production evidence chain.
+
+Permanent production Best Value ranking belongs in shared core and must consume exact verified production evidence only.
 
 ## Jamieson / Rakuten
 
@@ -176,18 +204,20 @@ Do not resend Rakuten or GS1 inquiries.
 
 Next provider-neutral/offline target:
 
-**Bridge the verified conflict-resolved current-price candidate into existing `EvidenceBackedUnitValuePolicy` with separately attributed, conflict-resolved PACKAGE_QUANTITY evidence.**
+**Implement a bounded shared-core production Best Value ranking boundary over verified production unit-value candidates.**
 
 Requirements:
 
-- re-run `ProductionCurrentPriceEligibilityEvaluator` from raw price requests rather than trusting detached price evidence;
-- keep quantity as a separate attributed claim/value;
-- select quantity only after exact PACKAGE_QUANTITY factual conflict resolution;
-- require exact stable product-key match before cross-source price + quantity combination;
-- pass selected price claim, selected quantity claim, exact `Offer`, exact `NormalizedQuantity`, and rankable price disposition into `EvidenceBackedUnitValuePolicy`;
-- do not duplicate acceptance, conflict, identity, fingerprint, authority or deterministic unit-value math;
-- fail closed on unresolved quantity conflict, product mismatch, value mismatch, weak authority or non-rankable price;
-- keep request/input paths bounded;
+- re-run `ProductionUnitValueEligibilityEvaluator` for each candidate from raw bounded evidence rather than trusting detached `UnitRate` as production proof;
+- candidate identifiers must be unique, stable and non-economic;
+- only currently rankable unit-value outcomes can receive a Best Value rank;
+- only compare exact same currency code + exact same `RateUnit`; incompatible dimensions/currencies must not receive a fabricated common order;
+- lower `currencyMicrosPerUnit` wins within a comparable group;
+- ties use deterministic stable non-economic identifiers only;
+- preserve auditable linkage from ranked output to the originating candidate/unit-value result;
+- blocked or incompatible candidates may remain explainable/displayable but must not receive false cross-group ranking;
+- do not duplicate acceptance, conflict, identity, authority or unit-value math;
+- keep all candidate and evidence inputs bounded;
 - add no Android networking or credentials.
 
 Do not add production Rakuten integration, affiliate tracking, checkout/payment, universal cart, subscriptions, remote AI or telemetry yet.
