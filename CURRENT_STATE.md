@@ -1,6 +1,6 @@
 # Current state
 
-Updated: 2026-08-22
+Updated: 2026-08-27
 
 Branch: work/valuepilot-android-milestone
 
@@ -190,6 +190,105 @@ optional semantic or AI assistance
 
 Later or weaker evidence must not overwrite stronger explicit money, quantity or provenance evidence.
 
+## Multi-source evidence hardening
+
+5D research now has a deterministic cross-source safety layer before any production provider integration.
+
+Shared core includes:
+
+- checksum-aware GTIN validation
+- source-isolated evidence namespaces
+- explicit storage-boundary metadata for open/share-alike, open-government, proprietary/restricted, user-controlled, and unknown datasets
+- deterministic evidence conflict policy
+- deterministic N-source fact resolution
+- evidence-backed unit-value gating
+
+Permanent rule:
+
+**sources contribute claims; they do not overwrite one shared product row.**
+
+Claims only compete when they describe the same factual domain and exact scope. A merchant web offer, a physical-store observation, a historical observed price, product metadata, and a market benchmark can coexist without being flattened into one value.
+
+When a stronger claim deterministically defeats weaker conflicting claims, the stronger value may resolve. When equally credible claims disagree and no deterministic rule resolves them, the fact remains an unresolved conflict and blocks ranking rather than being averaged, voted, or guessed.
+
+This is the permanent protection against later provider conflicts such as:
+
+- current merchant price versus historical observed price
+- online versus physical-store price
+- same GTIN with conflicting package quantity
+- proprietary merchant data versus open metadata
+- stale observations versus current authoritative offers
+
+## Open-data bootstrap status
+
+Open Food Facts / Open Prices / open-government data remain useful evidence rails, but they are not treated as universal live Canadian merchant-price feeds.
+
+Current architecture preserves source/licence isolation so open/share-alike datasets are not blindly flattened together with proprietary merchant feeds.
+
+Open Prices remains suitable for proof-backed observed/historical prices and testing identity/freshness behavior. Open Food Facts remains suitable for product identity and metadata enrichment when supported by strong identifiers. Government datasets remain reference/regulatory/benchmark evidence rather than retailer-specific current prices.
+
+A cross-source join cannot make stale price evidence current, cannot invent geography, and cannot upgrade weak metadata into authoritative merchant price evidence.
+
+## Merchant feed qualification infrastructure
+
+5D now includes offline feed-quality tooling before the first production provider adapter exists.
+
+Generic qualifier:
+
+`tools/qualify_merchant_feed.py`
+
+Capabilities include:
+
+- local CSV/TSV/delimited text/XML/gzip input
+- conservative field mapping
+- explicit failure on ambiguous auto-mapping
+- explicit XML record tag requirement
+- bounded row processing
+- currency/price/identity/GTIN/quantity/availability/URL/timestamp coverage
+- duplicate and conflicting identity-scope measurements
+- structural current-offer and unit-value candidate counts
+- explicit rights gate that the tool cannot approve
+
+Rakuten-specific qualifier:
+
+`tools/qualify_rakuten_product_catalog.py`
+
+Capabilities include:
+
+- pipe-delimited `.txt` / `.txt.gz` Product Catalog validation
+- `HDR` record validation
+- documented primary-field shape checks
+- required-field coverage
+- Retail Price / Sale Price qualification coverage
+- CAD and mixed-currency measurement
+- availability-value measurement
+- UPC/GTIN checksum validation
+- URL validation
+- SKU/Product ID conflict measurements
+- Class ID distribution
+- `TRL` record and declared-product-count validation
+- bounded/truncated-run behavior that does not pretend a trailer was checked
+
+Important Rakuten trust rules are now encoded/documented:
+
+- the file header timestamp is not promoted to per-product freshness
+- Sale Price is only a qualification price candidate until real advertiser semantics are validated
+- CAD does not alone prove Canadian geography
+- the generic Rakuten primary schema does not provide a universal structured package quantity
+- class-specific Size text is not automatically promoted to grams/millilitres/count
+- feed access never equals caching/indexing/display/mobile rights
+
+The qualification CI workflow compiles and tests the generic and Rakuten qualifiers independently of the Android/browser build.
+
+Raw authorized provider feeds and generated reports are intentionally ignored under:
+
+- `local-provider-data/`
+- `local-feed-reports/`
+
+They must not be committed to the public repository.
+
+See `MERCHANT_FEED_QUALIFICATION.md` for the operational gate when the first real feed arrives.
+
 ## Deterministic value engine
 
 The core remains responsible for:
@@ -213,15 +312,15 @@ AI or semantic enrichment cannot override explicit price or quantity evidence.
 
 Permanent product direction:
 
-Capture/data providers
+Authorized/open/user evidence providers
 
 ↓
 
-typed shopping evidence
+source-isolated typed evidence claims
 
 ↓
 
-deterministic evidence trust boundary
+deterministic conflict resolution and evidence trust boundary
 
 ↓
 
@@ -237,11 +336,11 @@ presentation clients
 
 
 ValuePilot does not depend on Accessibility, overlays, OCR,
-a specific retailer, or any single capture method.
+a specific retailer, affiliate network, open dataset, or any single capture method.
 
 Accessibility and OCR remain optional adapters.
 
-The product must continue functioning if any one capture or presentation adapter is removed.
+The product must continue functioning if any one capture, data-provider, or presentation adapter is removed.
 
 ## Physical Android verification
 
@@ -262,7 +361,7 @@ Verified on physical device:
 - truthful no-results behavior
 - bottom navigation and system-bar spacing
 
-5C4C through 5C4E are deterministic trust-layer changes and do not require a new physical-device acceptance checkpoint before a real-world provider exists.
+5C4C onward trust-layer changes do not require a new physical-device acceptance checkpoint before a deliberately selected real-world provider exists.
 
 ## Privacy boundary
 
@@ -275,9 +374,11 @@ Current Android build still has:
 - no remote AI dependency
 - no ValuePilot server dependency
 
+The new provider/open-data qualification work is offline tooling and shared deterministic logic. It does not add production networking to Android.
+
 A network permission must not be added merely because the architecture can support a remote provider.
 
-## Next milestone
+## Current milestone
 
 5D — Authorized Real Shopping Data Provider Selection
 
@@ -285,7 +386,7 @@ Goal:
 
 Select the first legally and commercially suitable source of real shopping evidence before adding a production network boundary.
 
-This milestone is provider research and architectural selection first, not blind API implementation.
+This milestone is provider research, empirical feed qualification, and architectural selection first, not blind API implementation.
 
 Evaluate candidate providers on:
 
@@ -319,12 +420,19 @@ The provider-selection milestone should produce:
 2. a selected first provider or an explicit decision that no candidate is yet suitable
 3. the exact evidence fields that provider can supply
 4. the authorization and commercial constraints
-5. a bounded integration design
-6. expected network permissions and privacy impact
-7. expected cost and scale limits
-8. failure and fallback behavior
+5. an empirical qualification report from the actual authorized feed/API where possible
+6. a bounded integration design
+7. expected network permissions and privacy impact
+8. expected cost and scale limits
+9. failure and fallback behavior
 
-Only after a provider is deliberately selected should ValuePilot implement the first authorized real-data adapter and add any required network permission.
+Current highest-value next gate:
+
+**obtain the first actual authorized merchant feed/API response and run it through the offline qualification layer.**
+
+For a Rakuten Product Catalog text feed, use the complete `.txt.gz` file first. Do not begin with delta files as the first semantic/schema validation sample.
+
+Only after a provider is deliberately selected and the real data/rights gates pass should ValuePilot implement the first production real-data adapter and add any required network permission.
 
 5D does not authorize:
 
