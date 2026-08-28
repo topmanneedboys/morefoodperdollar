@@ -6,6 +6,7 @@ import com.valuepilot.core.EvidenceClaimKind
 import com.valuepilot.core.EvidenceEnvironment
 import com.valuepilot.core.EvidenceProvider
 import com.valuepilot.core.EvidenceProviderId
+import com.valuepilot.core.GtinValidation
 import com.valuepilot.core.ProductObservation
 import com.valuepilot.core.ProductObservationId
 import com.valuepilot.core.ShoppingEvidence
@@ -22,12 +23,16 @@ import java.util.Locale
  * This is deliberately not an API client and performs no I/O. A future import
  * boundary may decode Parquet/JSONL into this type, but it must preserve the
  * source observation time rather than substituting download/import time.
+ *
+ * Package quantity is intentionally absent. The public price export does not
+ * provide trustworthy package-size metadata, and adding quantity from another
+ * source here would destroy provenance. Quantity enrichment must remain a
+ * separate claim keyed by GTIN.
  */
 data class OpenPricesImportedRow(
     val priceId: String,
     val productCode: String,
     val productName: String,
-    val quantityText: String,
     val priceText: String,
     val currencyCode: String,
     val countryCode: String,
@@ -55,7 +60,6 @@ enum class OpenPricesImportFailure {
     INVALID_PRICE_ID,
     INVALID_GTIN,
     INVALID_PRODUCT_NAME,
-    INVALID_QUANTITY,
     INVALID_PRICE,
     NON_CAD_CURRENCY,
     NON_CANADIAN_LOCATION,
@@ -82,8 +86,8 @@ data class OpenPricesImportResult(
  * Conservative first-pass mapper for the Open Prices 5D validation rail.
  *
  * Only Canadian, CAD, physical-store, proof-backed rows with a checksum-valid
- * GTIN and explicit deterministic quantity are admitted. This intentionally
- * rejects useful-but-weaker rows until their semantics are designed.
+ * GTIN and exact positive price are admitted as observed-price evidence.
+ * Package quantity is deliberately not required or attached here.
  *
  * Admitted evidence still passes through the permanent EvidenceAcceptance
  * boundary. In particular, an old shelf/receipt observation remains old: this
@@ -106,24 +110,13 @@ object OpenPricesImportedEvidenceMapper {
         }
 
         val gtin = row.productCode.trim()
-        if (!isValidGtin(gtin)) {
+        if (!GtinValidation.isValid(gtin)) {
             failures += OpenPricesImportFailure.INVALID_GTIN
         }
 
         val productName = singleLine(row.productName, 160)
         if (productName == null || productName.length < 2) {
             failures += OpenPricesImportFailure.INVALID_PRODUCT_NAME
-        }
-
-        val quantityText = singleLine(row.quantityText, 80)
-        val parsedQuantity =
-            quantityText?.let(ValueEngine::quantity)
-        if (
-            quantityText == null ||
-            parsedQuantity == null ||
-            parsedQuantity.confidence < MIN_EXPLICIT_QUANTITY_CONFIDENCE
-        ) {
-            failures += OpenPricesImportFailure.INVALID_QUANTITY
         }
 
         val canonicalPrice = canonicalCadPrice(row.priceText)
@@ -177,7 +170,6 @@ object OpenPricesImportedEvidenceMapper {
         }
 
         val safeName = requireNotNull(productName)
-        val safeQuantity = requireNotNull(quantityText)
         val safePrice = requireNotNull(canonicalPrice)
 
         val sourceId = "open-prices-location-$locationId"
@@ -190,7 +182,7 @@ object OpenPricesImportedEvidenceMapper {
                         id = ProductObservationId(providerItemId),
                         sourceId = sourceId,
                         rawText =
-                            "$safeName\n$safeQuantity\n$safePrice CAD",
+                            "$safeName\n$safePrice CAD",
                         observedAtEpochMillis =
                             row.observedAtEpochMillis
                     ),
@@ -218,28 +210,9 @@ object OpenPricesImportedEvidenceMapper {
         )
     }
 
-    /** GS1 modulo-10 check digit validation for GTIN-8/12/13/14. */
-    internal fun isValidGtin(value: String): Boolean {
-        if (
-            value.length !in setOf(8, 12, 13, 14) ||
-            !value.all(Char::isDigit)
-        ) {
-            return false
-        }
-
-        val body = value.dropLast(1)
-        val suppliedCheckDigit = value.last().digitToInt()
-        var sum = 0
-        var weight = 3
-
-        for (index in body.indices.reversed()) {
-            sum += body[index].digitToInt() * weight
-            weight = if (weight == 3) 1 else 3
-        }
-
-        val expectedCheckDigit = (10 - (sum % 10)) % 10
-        return suppliedCheckDigit == expectedCheckDigit
-    }
+    /** Compatibility helper while callers migrate to the shared validator. */
+    internal fun isValidGtin(value: String): Boolean =
+        GtinValidation.isValid(value)
 
     private fun singleLine(value: String, maxLength: Int): String? {
         val trimmed = value.trim()
@@ -283,6 +256,4 @@ object OpenPricesImportedEvidenceMapper {
     private val PRICE_ID = Regex("\\d{1,32}")
     private val LOCATION_ID = Regex("[A-Za-z0-9._:-]{1,96}")
     private val PRICE = Regex("\\d{1,6}(?:\\.\\d{1,6})?")
-
-    private const val MIN_EXPLICIT_QUANTITY_CONFIDENCE = 0.90
 }
