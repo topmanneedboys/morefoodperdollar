@@ -110,8 +110,16 @@ data class ProductionSearchUiProjection(
 
 object ProductionSearchUiProjector {
 
+    private const val MAX_UI_CANDIDATES = 128
+
     fun project(snapshot: ProductionBestValuePresentationSnapshot): ProductionSearchUiProjection {
         val allRanked = snapshot.groups.flatMap { it.items }
+        val totalCandidateCount = allRanked.size + snapshot.blockedItems.size
+
+        require(totalCandidateCount <= MAX_UI_CANDIDATES) {
+            "Production UI projection exceeds the bounded candidate limit"
+        }
+
         val rankedIds = allRanked.map { it.candidateId }
         val blockedIds = snapshot.blockedItems.map { it.candidateId }
 
