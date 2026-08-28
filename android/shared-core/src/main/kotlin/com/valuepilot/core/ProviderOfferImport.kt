@@ -96,6 +96,46 @@ enum class ImportedPriceSemantics {
 }
 
 /**
+ * Structural relationship between two price fields whose roles were declared by
+ * a provider adapter from documented source semantics.
+ *
+ * This never selects a current price and never makes evidence rankable.
+ */
+enum class ImportedDiscountRelationship {
+    UNAVAILABLE,
+    DISCOUNTED_BELOW_REFERENCE,
+    EQUAL,
+    DISCOUNTED_ABOVE_REFERENCE_CONFLICT,
+    INCOMPARABLE_MONEY
+}
+
+/**
+ * Provider-neutral result for a declared discounted/reference price pair.
+ *
+ * Field names remain source vocabulary. The shared core only checks exact money
+ * structure and relative ordering; it does not infer provider-specific meanings.
+ */
+data class ImportedDiscountAssessment(
+    val discountedFieldName: String,
+    val referenceFieldName: String,
+    val relationship: ImportedDiscountRelationship
+) {
+    init {
+        require(discountedFieldName.isNotBlank())
+        require(referenceFieldName.isNotBlank())
+        require(!discountedFieldName.equals(referenceFieldName, ignoreCase = true)) {
+            "Discounted and reference price fields must be distinct"
+        }
+    }
+
+    val structurallySupportsDiscountClaim: Boolean
+        get() = relationship == ImportedDiscountRelationship.DISCOUNTED_BELOW_REFERENCE
+
+    val hasSemanticConflict: Boolean
+        get() = relationship == ImportedDiscountRelationship.DISCOUNTED_ABOVE_REFERENCE_CONFLICT
+}
+
+/**
  * Provider-neutral staging record for an offer-like product row.
  *
  * This is intentionally not an Offer and exposes no selected current price.
@@ -163,4 +203,47 @@ data class ProviderOfferImportRecord(
         sourcePriceFields.firstOrNull {
             it.sourceFieldName.equals(sourceFieldName, ignoreCase = true)
         }
+
+    /**
+     * Assess a provider-declared discounted/reference pair without promoting any
+     * price into an Offer or changing freshness, rights, geography or rankability.
+     *
+     * The adapter must supply the two role-bearing field names from documented
+     * provider semantics. Missing, malformed or non-positive money fails closed.
+     */
+    fun assessDiscountRelationship(
+        discountedFieldName: String,
+        referenceFieldName: String
+    ): ImportedDiscountAssessment {
+        require(discountedFieldName.isNotBlank())
+        require(referenceFieldName.isNotBlank())
+        require(!discountedFieldName.equals(referenceFieldName, ignoreCase = true)) {
+            "Discounted and reference price fields must be distinct"
+        }
+
+        val discounted = priceField(discountedFieldName)?.parsedAmount
+        val reference = priceField(referenceFieldName)?.parsedAmount
+
+        val relationship = when {
+            discounted == null || reference == null ->
+                ImportedDiscountRelationship.UNAVAILABLE
+            discounted.minorUnits <= 0L || reference.minorUnits <= 0L ->
+                ImportedDiscountRelationship.UNAVAILABLE
+            discounted.currencyCode != reference.currencyCode ||
+                discounted.fractionDigits != reference.fractionDigits ->
+                ImportedDiscountRelationship.INCOMPARABLE_MONEY
+            discounted.minorUnits < reference.minorUnits ->
+                ImportedDiscountRelationship.DISCOUNTED_BELOW_REFERENCE
+            discounted.minorUnits == reference.minorUnits ->
+                ImportedDiscountRelationship.EQUAL
+            else ->
+                ImportedDiscountRelationship.DISCOUNTED_ABOVE_REFERENCE_CONFLICT
+        }
+
+        return ImportedDiscountAssessment(
+            discountedFieldName = discountedFieldName,
+            referenceFieldName = referenceFieldName,
+            relationship = relationship
+        )
+    }
 }

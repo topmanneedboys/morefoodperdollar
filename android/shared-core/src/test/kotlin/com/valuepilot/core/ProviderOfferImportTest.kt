@@ -1,6 +1,7 @@
 package com.valuepilot.core
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -71,6 +72,134 @@ class ProviderOfferImportTest {
         assertEquals(1299L, imported.priceField("SALE_PRICE")?.parsedAmount?.minorUnits)
         assertEquals("9.99", imported.priceField("retail_price")?.rawValue)
         assertEquals("12.99", imported.priceField("sale_price")?.rawValue)
+    }
+
+    @Test
+    fun discountedBelowReferenceIsStructurallyConsistentWithoutSelectingCurrentPrice() {
+        val imported = record(
+            prices = listOf(
+                ImportedPriceField("reference", "12.99", Money(1299, "CAD")),
+                ImportedPriceField("discounted", "9.99", Money(999, "CAD"))
+            )
+        )
+
+        val assessment = imported.assessDiscountRelationship(
+            discountedFieldName = "DISCOUNTED",
+            referenceFieldName = "reference"
+        )
+
+        assertEquals(
+            ImportedDiscountRelationship.DISCOUNTED_BELOW_REFERENCE,
+            assessment.relationship
+        )
+        assertTrue(assessment.structurallySupportsDiscountClaim)
+        assertFalse(assessment.hasSemanticConflict)
+        assertEquals(ImportedPriceSemantics.UNRESOLVED_SOURCE_FIELDS, imported.priceSemantics)
+    }
+
+    @Test
+    fun equalDiscountedAndReferencePriceDoesNotSupportSavingsClaim() {
+        val imported = record(
+            prices = listOf(
+                ImportedPriceField("reference", "12.99", Money(1299, "CAD")),
+                ImportedPriceField("discounted", "12.99", Money(1299, "CAD"))
+            )
+        )
+
+        val assessment = imported.assessDiscountRelationship("discounted", "reference")
+
+        assertEquals(ImportedDiscountRelationship.EQUAL, assessment.relationship)
+        assertFalse(assessment.structurallySupportsDiscountClaim)
+        assertFalse(assessment.hasSemanticConflict)
+    }
+
+    @Test
+    fun discountedAboveReferenceFailsClosedAsSemanticConflict() {
+        val imported = record(
+            prices = listOf(
+                ImportedPriceField("reference", "9.99", Money(999, "CAD")),
+                ImportedPriceField("discounted", "12.99", Money(1299, "CAD"))
+            )
+        )
+
+        val assessment = imported.assessDiscountRelationship("discounted", "reference")
+
+        assertEquals(
+            ImportedDiscountRelationship.DISCOUNTED_ABOVE_REFERENCE_CONFLICT,
+            assessment.relationship
+        )
+        assertFalse(assessment.structurallySupportsDiscountClaim)
+        assertTrue(assessment.hasSemanticConflict)
+    }
+
+    @Test
+    fun missingMalformedOrNonPositivePriceFailsClosedAsUnavailable() {
+        val missing = record(
+            prices = listOf(
+                ImportedPriceField("reference", "9.99", Money(999, "CAD"))
+            )
+        )
+        assertEquals(
+            ImportedDiscountRelationship.UNAVAILABLE,
+            missing.assessDiscountRelationship("discounted", "reference").relationship
+        )
+
+        val malformed = record(
+            prices = listOf(
+                ImportedPriceField("reference", "9.99", Money(999, "CAD")),
+                ImportedPriceField("discounted", "bad", null)
+            )
+        )
+        assertEquals(
+            ImportedDiscountRelationship.UNAVAILABLE,
+            malformed.assessDiscountRelationship("discounted", "reference").relationship
+        )
+
+        val nonPositive = record(
+            prices = listOf(
+                ImportedPriceField("reference", "9.99", Money(999, "CAD")),
+                ImportedPriceField("discounted", "0.00", Money(0, "CAD"))
+            )
+        )
+        assertEquals(
+            ImportedDiscountRelationship.UNAVAILABLE,
+            nonPositive.assessDiscountRelationship("discounted", "reference").relationship
+        )
+    }
+
+    @Test
+    fun differentCurrencyOrScaleIsNotCompared() {
+        val differentCurrency = record(
+            prices = listOf(
+                ImportedPriceField("reference", "12.99", Money(1299, "CAD")),
+                ImportedPriceField("discounted", "9.99", Money(999, "USD"))
+            )
+        )
+        assertEquals(
+            ImportedDiscountRelationship.INCOMPARABLE_MONEY,
+            differentCurrency.assessDiscountRelationship("discounted", "reference").relationship
+        )
+
+        val differentScale = record(
+            prices = listOf(
+                ImportedPriceField("reference", "12.990", Money(12990, "CAD", 3)),
+                ImportedPriceField("discounted", "9.99", Money(999, "CAD", 2))
+            )
+        )
+        assertEquals(
+            ImportedDiscountRelationship.INCOMPARABLE_MONEY,
+            differentScale.assessDiscountRelationship("discounted", "reference").relationship
+        )
+    }
+
+    @Test
+    fun sameFieldCannotBeBothDiscountedAndReference() {
+        try {
+            record().assessDiscountRelationship("retail_price", "RETAIL_PRICE")
+            fail("Expected distinct role field validation")
+        } catch (expected: IllegalArgumentException) {
+            assertTrue(expected.message.orEmpty().contains("distinct"))
+        }
     }
 
     @Test
