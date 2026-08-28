@@ -41,23 +41,33 @@ data class ImportedSourceIdentity(
             else -> ImportedGtinStatus.INVALID
         }
 
+    /** Exact checksum-valid source representation, retained for audit. */
     val validatedGtin: String?
         get() = suppliedGtin?.takeIf(GtinValidation::isValid)
 
     /**
+     * Canonical checksum-valid identity used only for cross-source matching.
+     * The exact provider representation remains available as [suppliedGtin].
+     */
+    val canonicalGtin: String?
+        get() = suppliedGtin?.let(GtinValidation::canonicalOrNull)
+
+    /**
      * Promote only identifiers safe for the existing ShoppingEvidence contract.
      * An invalid supplied GTIN is retained on this import record but excluded
-     * from the promoted identity.
+     * from the promoted identity. A valid GTIN is promoted in canonical form so
+     * UPC-A / equivalent leading-zero representations can join deterministically
+     * across providers without losing the exact source value above.
      */
     fun validatedSourceProductIdentity(): SourceProductIdentity? {
-        val validGtin = validatedGtin
-        if (providerItemId == null && sku == null && validGtin == null) {
+        val safeGtin = canonicalGtin
+        if (providerItemId == null && sku == null && safeGtin == null) {
             return null
         }
         return SourceProductIdentity(
             providerItemId = providerItemId,
             sku = sku,
-            gtin = validGtin
+            gtin = safeGtin
         )
     }
 }
