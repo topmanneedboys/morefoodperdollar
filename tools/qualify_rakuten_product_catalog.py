@@ -9,9 +9,9 @@ any licensing/production-authorization decision.
 Important trust boundaries:
 - the feed header timestamp is file-generation/deposit evidence, not a per-product
   advertiser update timestamp and is never promoted to product freshness;
-- a positive Sale Price is only a qualification price candidate; the real feed and
-  advertiser terms still need semantic validation before it can become a current
-  offer in ValuePilot;
+- Sale Price and Retail Price relationships are measured explicitly; neither field
+  is promoted to a production current price until real feed semantics and rights
+  are validated;
 - Currency=CAD does not by itself prove Canadian geography;
 - Product Catalog access does not by itself grant caching/indexing/display rights.
 """
@@ -120,10 +120,17 @@ def canonical_product_row(fields: list[str]) -> dict[str, str] | None:
 
 
 def qualification_price_candidate(row: dict[str, str]) -> tuple[str, Decimal | None]:
-    sale = parse_positive_decimal(row["sale_price"])
-    if sale is not None:
-        return "sale_price", sale
-    return "retail_price", parse_positive_decimal(row["retail_price"])
+    """Return a positive price only to measure structural coverage.
+
+    Retail Price is preferred for qualification because it is a required primary
+    field. Sale Price is only a fallback when Retail Price is not a positive number.
+    This function deliberately does not decide the production current price.
+    """
+
+    retail = parse_positive_decimal(row["retail_price"])
+    if retail is not None:
+        return "retail_price", retail
+    return "sale_price_fallback", parse_positive_decimal(row["sale_price"])
 
 
 def iter_records(
@@ -234,6 +241,19 @@ def qualify(
             if not row[required]:
                 counts[f"required_missing_{required}"] += 1
 
+        if row["short_description"]:
+            counts["short_description_present"] += 1
+        else:
+            counts["short_description_missing"] += 1
+        if row["long_description"]:
+            counts["long_description_present"] += 1
+        else:
+            counts["long_description_missing"] += 1
+        if row["manufacturer_name"]:
+            counts["manufacturer_name_present"] += 1
+        else:
+            counts["manufacturer_name_missing"] += 1
+
         retail = parse_positive_decimal(row["retail_price"])
         sale = parse_positive_decimal(row["sale_price"])
         price_source, price_candidate = qualification_price_candidate(row)
@@ -244,10 +264,17 @@ def qualify(
         if row["sale_price"]:
             if sale is not None:
                 counts["sale_price_positive"] += 1
-                if retail is not None and sale >= retail:
-                    counts["sale_price_not_below_retail"] += 1
+                if retail is not None:
+                    if sale < retail:
+                        counts["sale_price_below_retail"] += 1
+                    elif sale == retail:
+                        counts["sale_price_equal_retail"] += 1
+                    else:
+                        counts["sale_price_above_retail"] += 1
             else:
                 counts["sale_price_invalid"] += 1
+        else:
+            counts["sale_price_missing"] += 1
         if price_candidate is not None:
             counts["qualification_price_candidate_positive"] += 1
             counts[f"qualification_price_source_{price_source}"] += 1
@@ -279,6 +306,8 @@ def qualify(
                 counts["upc_checksum_valid_gtin"] += 1
             else:
                 counts["upc_not_checksum_valid_gtin"] += 1
+        else:
+            counts["upc_missing"] += 1
 
         if row["product_url"]:
             if valid_http_url(row["product_url"]):
@@ -293,6 +322,10 @@ def qualify(
 
         class_id = row["class_id"] or "<blank>"
         class_ids[class_id] += 1
+        if row["class_id"]:
+            counts["class_id_present"] += 1
+        else:
+            counts["class_id_blank"] += 1
         # Rakuten's documented Food & Drink Class ID 110 uses product field 32
         # (attribute 4, zero-based index 31) as Size. We measure presence only;
         # we do not parse or promote it to authoritative quantity automatically.
@@ -393,6 +426,16 @@ def qualify(
         "availability": dict(sorted(availabilities.items())),
         "class_ids": dict(sorted(class_ids.items())),
         "file_age": header_age,
+        "price_semantics_gate": {
+            "sale_below_retail_rows": counts["sale_price_below_retail"],
+            "sale_equal_retail_rows": counts["sale_price_equal_retail"],
+            "sale_above_retail_rows": counts["sale_price_above_retail"],
+            "safe_to_infer_discount_from_field_names_alone": False,
+            "note": (
+                "Sale Price and Retail Price are preserved and their relationship is measured. Equal or inverted values "
+                "must never create a savings claim, and this qualifier does not decide which field is the production current price."
+            ),
+        },
         "quantity_gate": {
             "generic_structured_quantity_available": False,
             "note": (
@@ -409,9 +452,9 @@ def qualify(
             "unit_value_candidates": 0,
             "note": (
                 "A structural offer candidate only means required fields, a positive qualification price candidate, and "
-                f"{expected_currency} are present. Sale Price is preferred over Retail Price only for qualification coverage. "
-                "This does not establish current-offer semantics, product freshness, Canadian geography, package quantity, "
-                "caching/indexing/display rights, or production rankability."
+                f"{expected_currency} are present. Retail Price is preferred only to prove numeric qualification coverage, "
+                "with Sale Price used only as a fallback if Retail Price is not positive. This does not establish current-offer "
+                "semantics, product freshness, Canadian geography, package quantity, caching/indexing/display rights, or production rankability."
             ),
         },
     }
@@ -423,8 +466,9 @@ def markdown(report: dict[str, object]) -> str:
     metadata = report["feed_metadata"]
     quality = report["quality"]
     decision = report["decision"]
+    price_gate = report["price_semantics_gate"]
     assert isinstance(inp, dict) and isinstance(metadata, dict)
-    assert isinstance(quality, dict) and isinstance(decision, dict)
+    assert isinstance(quality, dict) and isinstance(decision, dict) and isinstance(price_gate, dict)
 
     lines = [
         "# ValuePilot Rakuten Product Catalog Qualification",
@@ -435,6 +479,9 @@ def markdown(report: dict[str, object]) -> str:
         f"- Expected-currency rows: **{quality.get('expected_currency_rows', 0):,}**",
         f"- Valid GTIN/UPC rows: **{quality.get('upc_checksum_valid_gtin', 0):,}**",
         f"- Full-shape (38+ field) rows: **{quality.get('records_with_documented_full_shape_or_more', 0):,}**",
+        f"- Sale below retail rows: **{price_gate.get('sale_below_retail_rows', 0):,}**",
+        f"- Sale equal retail rows: **{price_gate.get('sale_equal_retail_rows', 0):,}**",
+        f"- Sale above retail rows: **{price_gate.get('sale_above_retail_rows', 0):,}**",
         f"- Malformed short rows: **{quality.get('malformed_too_few_primary_fields', 0):,}**",
         f"- Trailer valid: **{metadata.get('trailer_valid')}**",
         f"- Trailer count matches scanned rows: **{metadata.get('trailer_count_matches_records_scanned')}**",
@@ -442,6 +489,8 @@ def markdown(report: dict[str, object]) -> str:
         "## Non-negotiable interpretation",
         "",
         "This is an offline data-quality report only. It does **not** authorize production use, and the HDR timestamp is not treated as per-product freshness.",
+        "",
+        "Sale Price and Retail Price are preserved as separate source fields. Equal or inverted values do not create a discount, and this qualifier does not decide the production current price.",
         "",
         "Rakuten's primary schema does not give ValuePilot a universal structured package quantity, so this qualifier reports **0 unit-value candidates** until quantity is established by validated advertiser/class-specific evidence or another source joined by strong product identity.",
     ]
