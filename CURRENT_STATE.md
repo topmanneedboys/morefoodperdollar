@@ -190,6 +190,8 @@ Health Canada's Licensed Natural Health Products Database is useful for regulato
 
 GS1 Canada ECCnet remains the strongest strategic next product-content target because it is GTIN-centric and carries standardized net-content/product-content data, including count-style net content. Access is controlled for Data Recipients and requires separate authorization/subscription validation.
 
+The ValuePilot ECCnet Data Recipient eligibility/rights inquiry was sent to GS1 Canada on 2026-08-28. Await GS1 Canada's written response before implementing or assuming ECCnet production rights.
+
 No ECCnet production adapter is authorized yet.
 
 ## Privacy boundary
@@ -222,18 +224,11 @@ Remaining gates stay separate:
 
 ## Immediate next gate
 
-**Validate GS1 Canada ECCnet Data Recipient feasibility for ValuePilot as the next package-content/identity rail.**
+**Wait for GS1 Canada ECCnet eligibility/rights response while progressing the separate Rakuten Retail/Sale price-semantics and production-use-rights gate.**
 
-Required questions before integration:
+For ECCnet, do not implement integration until GS1 confirms ValuePilot's Data Recipient eligibility, available GTIN-level net-content scope, permitted consumer/mobile/search/cache uses, restrictions and commercial/API terms.
 
-- can ValuePilot qualify as a Data Recipient for the relevant grocery/pharmacy/product categories;
-- is GTIN-level net content/count available for the required Jamieson/product scope;
-- what fields can be cached, indexed, searched and displayed in a consumer comparison application;
-- what attribution, redistribution, retention and mobile/software restrictions apply;
-- what subscription/commercial terms apply;
-- what API or extract access is available at production scale.
-
-In parallel, Rakuten price semantics and production-use rights remain unresolved and must be validated separately.
+In parallel, validate Rakuten price semantics and production-use rights without conflating them with package quantity. The two inverted Jamieson rows remain a permanent warning that field labels alone do not justify discount inference.
 
 Only after source semantics **and** rights gates pass should ValuePilot implement a production real-data adapter or add network permissions.
 
