@@ -7,6 +7,8 @@ on:
       - 'tools/qualify_merchant_feed.py'
       - 'tools/qualify_rakuten_product_catalog.py'
       - 'tools/measure_rakuten_off_quantity_coverage.py'
+      - 'tools/measure_rakuten_off_quantity_coverage_v2.py'
+      - 'tools/open_facts_barcode.py'
       - 'tools/run_rakuten_off_quantity_coverage.py'
       - 'tools/tests/test_qualify_*.py'
       - '.github/workflows/test-merchant-feed-qualification.yml'
@@ -15,6 +17,8 @@ on:
       - 'tools/qualify_merchant_feed.py'
       - 'tools/qualify_rakuten_product_catalog.py'
       - 'tools/measure_rakuten_off_quantity_coverage.py'
+      - 'tools/measure_rakuten_off_quantity_coverage_v2.py'
+      - 'tools/open_facts_barcode.py'
       - 'tools/run_rakuten_off_quantity_coverage.py'
       - 'tools/tests/test_qualify_*.py'
       - '.github/workflows/test-merchant-feed-qualification.yml'
@@ -42,6 +46,8 @@ jobs:
           tools/qualify_merchant_feed.py
           tools/qualify_rakuten_product_catalog.py
           tools/measure_rakuten_off_quantity_coverage.py
+          tools/measure_rakuten_off_quantity_coverage_v2.py
+          tools/open_facts_barcode.py
           tools/run_rakuten_off_quantity_coverage.py
 
       - name: Run qualification harness tests
