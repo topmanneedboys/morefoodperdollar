@@ -68,6 +68,7 @@ The deterministic shared layer now includes:
 - provider dataset-recency classification separate from offer freshness
 - fail-closed provider production-authorization profiles/gates
 - fail-closed provider dataset offer-country validation
+- staged production offer candidate boundary that still creates no canonical `Offer` and grants no rankability
 
 Permanent invariant: historical observed price, merchant price, package quantity, benchmark, regulatory fact, dataset recency, geography and authorization remain distinct evidence domains. None is silently promoted into another.
 
@@ -99,7 +100,7 @@ The full Android workflow passed for that exact commit.
 
 Commit `6aed414bd5f89cf7ac6dfb739464c6f57f5abe78` added `ProviderProductionAuthorization.kt` and focused tests.
 
-Production activation is now machine-gated per provider + isolated dataset namespace. Every gate required by the selected activation profile must be explicitly `SATISFIED`; missing, `PENDING`, `DENIED`, `UNKNOWN`, or incorrectly `NOT_REQUIRED` required gates block activation.
+Production activation is machine-gated per provider + isolated dataset namespace. Every gate required by the selected activation profile must be explicitly `SATISFIED`; missing, `PENDING`, `DENIED`, `UNKNOWN`, or incorrectly `NOT_REQUIRED` required gates block activation.
 
 The consumer mobile offer-catalog profile requires explicit evidence for:
 
@@ -150,6 +151,35 @@ Permanent rule:
 
 The exact geography commit also passed browser checks, shared-core/app tests, lint, APK build, JVM summary, Android privacy-boundary verification, release packaging/checksums and artifact upload.
 
+### Staged production offer candidate boundary
+
+Commit `f58b400533bdf9a0705fb8e88680e4b56ce9d94e` added `ProductionOfferCandidate.kt` and focused tests.
+
+A provider row can become a `StagedProductionOfferCandidate` only after all of the following survive the same deterministic evaluation:
+
+- the selected activation profile contains at least the full consumer-mobile-catalog gate set;
+- authorization is scoped to the same provider + dataset namespace as the row;
+- geography evidence is scoped to the same provider + dataset and independently re-evaluated rather than trusting a stale geography gate;
+- the effective production authorization decision is fully authorized;
+- the row is real-world evidence from a known non-fixture channel with a non-inferred claim;
+- at least one validated source identity remains after invalid-GTIN filtering;
+- the adapter explicitly declares the current-price field and optional reference-price field;
+- the current price is exact/positive and any reference price is exact/positive/compatible;
+- an optional current-must-not-exceed-reference rule fails closed on inverted price semantics;
+- `priceObservedAtEpochMillis` is actually present;
+- caller-supplied per-offer freshness classifies the price as `FRESH` or `AGING`, not unknown/future/stale.
+
+Permanent rules:
+
+- a dataset timestamp cannot substitute for per-offer price observation time;
+- CAD/context cannot substitute for Canadian offer scope;
+- an authorization decision cannot be reused across a different provider/dataset;
+- a deliberately weaker custom activation profile cannot bypass the base mobile-catalog requirements;
+- the candidate is still **not** a canonical `Offer` and contains no rankable flag;
+- quantity, unit value, promotion arithmetic and Best Value participation remain downstream evidence-gated decisions.
+
+The exact staged-candidate commit passed browser checks, shared-core/app tests, lint, APK build, JVM summary, Android privacy-boundary verification, release packaging/checksums and artifact upload.
+
 ## GTIN identity representation
 
 `GtinValidation.kt` distinguishes checksum validation from canonical cross-source representation.
@@ -161,6 +191,10 @@ Provider staging preserves:
 - `canonicalGtin`: deterministic cross-source identity
 
 Canonical representation handles documented leading-zero equivalents while refusing invalid-GTIN repair.
+
+## Source-isolated evidence index
+
+`SourceIsolatedEvidenceIndex` already supports coarse-grained source withdrawal through `removeNamespace(namespaceId)`, removing exactly one dataset namespace and its claims without mutating other provider datasets. Do not duplicate this mechanism; future production activation/revocation should use the existing source-isolation boundary.
 
 ## First authorized real merchant feed — Jamieson / Rakuten
 
@@ -209,7 +243,7 @@ Still unresolved for production:
 
 The Rakuten Android/feed-use/retention/DSA clarification request was sent in the existing support case on 2026-08-28. Do not send a duplicate unless their response leaves a new gap.
 
-The new production authorization evaluator therefore keeps Jamieson blocked from production activation today. In particular, the new geography gate remains `UNKNOWN`: 273/273 CAD is useful currency evidence but is not Canadian offer-scope proof.
+The production authorization evaluator therefore keeps Jamieson blocked from production activation today. In particular, the geography gate remains `UNKNOWN`: 273/273 CAD is useful currency evidence but is not Canadian offer-scope proof. Because the feed also lacks a trustworthy per-offer price observation timestamp, current Jamieson rows cannot pass the staged production candidate boundary either.
 
 ## Jamieson × Open Food Facts — valid normalized measurement
 
@@ -280,7 +314,7 @@ Provider research/networking remains outside Android.
 
 5D — Authorized Real Shopping Data Provider Selection / validation.
 
-The milestone is now beyond first-feed acquisition and includes machine-enforced fail-closed authorization and offer-country gates.
+The milestone is now beyond first-feed acquisition and includes machine-enforced authorization, offer-country and staged-production-candidate gates.
 
 ## Immediate next work
 
@@ -290,9 +324,9 @@ While awaiting Rakuten and GS1 Canada written responses, continue only provider-
 
 Next safe engineering targets, in order:
 
-1. define a provider-neutral bridge from validated price semantics + explicit per-offer freshness + authorization decision into a staged-but-not-yet-ranked offer candidate;
+1. add an activation/revocation lifecycle around accepted staged candidates so a dataset can become enabled only from an authorized snapshot and can be disabled/withdrawn by namespace using the existing source-isolation boundary;
 2. keep package quantity as separately attributed evidence and do not make unit value available unless exact compatible quantity evidence exists;
-3. preserve source withdrawal/deletion so a revoked dataset can be removed independently;
-4. do not add Android networking until a production provider path passes the required activation profile.
+3. keep canonical `Offer` creation and ranking downstream of both activation and evidence acceptance;
+4. do not add Android networking until a real provider path actually passes the required activation profile.
 
 5D still does not authorize production Rakuten integration, affiliate-link tracking, checkout/payment, universal cart, subscriptions, remote AI, telemetry, unauthorized scraping or private-endpoint reverse engineering.

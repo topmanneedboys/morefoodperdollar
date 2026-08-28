@@ -45,7 +45,7 @@ Permanent rules:
 
 5D — Authorized Real Shopping Data Provider Selection / validation.
 
-Built-in Android Search remains explicitly fictional/sample evidence until a production provider path passes the machine-enforced activation profile.
+Built-in Android Search remains explicitly fictional/sample evidence until a production provider path passes every machine-enforced activation/evidence gate.
 
 ## Verified provider-neutral hardening
 
@@ -109,6 +109,42 @@ A strong Canada match can satisfy `OFFER_GEOGRAPHY_VALIDATED`; a strong differen
 
 Full ValuePilot Android workflow passed for the exact commit, including privacy-boundary verification.
 
+### Staged production offer candidate
+
+Commit `f58b400533bdf9a0705fb8e88680e4b56ce9d94e` adds the provider-neutral staged-production candidate boundary.
+
+A row cannot become `StagedProductionOfferCandidate` unless:
+
+- the activation profile contains at least the complete consumer-mobile-catalog requirements;
+- authorization belongs to the same provider + dataset namespace;
+- geography belongs to the same provider + dataset and is independently re-evaluated;
+- the effective authorization decision is fully authorized;
+- evidence is real-world, from a known non-fixture channel, and not inferred/unknown;
+- a safe validated source identity exists;
+- the adapter explicitly declares the current-price field and optional reference field;
+- price values are positive exact compatible money;
+- any declared current<=reference rule passes;
+- a real `priceObservedAtEpochMillis` is present;
+- caller-supplied per-offer freshness is `FRESH` or `AGING`.
+
+It fails closed on missing authorization, scope mismatch, weak geography, explicit geography mismatch, missing/malformed/incompatible/inverted price, missing per-offer timestamp, unknown/future/stale freshness, weak claim, or invalid-only identity.
+
+Permanent rules:
+
+- dataset timestamp cannot substitute for offer freshness;
+- currency/context cannot substitute for country;
+- authorization cannot be reused across a different provider/feed;
+- a weak custom activation profile cannot bypass the base profile;
+- staged candidate != canonical `Offer`;
+- staged candidate has no rankability permission;
+- quantity/unit value/Best Value remain separately gated.
+
+Full ValuePilot Android workflow passed for exact commit `f58b400533bdf9a0705fb8e88680e4b56ce9d94e`, including privacy-boundary verification and release artifact upload.
+
+### Source withdrawal already exists
+
+`SourceIsolatedEvidenceIndex.removeNamespace(namespaceId)` already removes exactly one dataset namespace and its claims without touching other providers. Do not duplicate this mechanism. Future activation/revocation should connect to this existing source-isolation boundary.
+
 ## Jamieson / Rakuten
 
 Rakuten technical Product Catalog access is enabled. Jamieson partnership + separate Product Feed approval + actual complete file availability are proven.
@@ -144,7 +180,7 @@ Still blocked for production:
 
 The Rakuten Android/feed-use/retention/DSA clarification request was already sent on 2026-08-28. Do not send a duplicate unless their response creates a new gap.
 
-Under the new machine gate, Jamieson is **NOT production-authorized today**. In particular, `OFFER_GEOGRAPHY_VALIDATED` remains unknown because CAD/context does not prove Canada scope.
+Under the machine gates, Jamieson is **NOT production-authorized today**. `OFFER_GEOGRAPHY_VALIDATED` remains unknown because CAD/context does not prove Canada scope, and the feed does not provide a trustworthy per-offer price observation timestamp for the staged candidate boundary.
 
 ## Jamieson × Open Food Facts
 
@@ -195,9 +231,9 @@ Continue only bounded provider-neutral/offline engineering while responses are p
 
 Next safe target:
 
-**Bridge validated price semantics + explicit per-offer freshness + satisfied production authorization into a staged production offer candidate without ranking it yet.**
+**Add an activation/revocation lifecycle around accepted staged candidates so a provider dataset can become enabled only from a currently authorized snapshot and can be disabled/withdrawn by dataset namespace using the existing source-isolation mechanism.**
 
-The bridge must still fail closed on semantic conflict, unknown geography, unknown freshness, missing authorization, incompatible currency, and unavailable exact price evidence.
+Do not create canonical Offers or enable ranking merely because a staged candidate exists. Keep package quantity separately attributed and unit-value gated by exact compatible quantity evidence.
 
 Do not add Android networking, production provider credentials, affiliate tracking, checkout/payment, universal cart, subscriptions, remote AI or telemetry yet.
 
