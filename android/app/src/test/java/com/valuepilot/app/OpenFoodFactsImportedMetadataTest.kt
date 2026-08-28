@@ -7,6 +7,8 @@ import com.valuepilot.core.EvidenceClaimDomain
 import com.valuepilot.core.EvidenceClaimScope
 import com.valuepilot.core.EvidenceConflictPolicy
 import com.valuepilot.core.EvidenceConflictRelationship
+import com.valuepilot.core.EvidenceFingerprints
+import com.valuepilot.core.QuantityNormalization
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -43,7 +45,7 @@ class OpenFoodFactsImportedMetadataTest {
         assertEquals(EvidenceClaimDomain.PACKAGE_QUANTITY, claim.domain)
         assertEquals(EvidenceAuthorityClass.SOURCE_ASSERTED_METADATA, claim.authority)
         assertEquals("gtin:036000291452", claim.scope.productKey)
-        assertEquals("GRAM:1000000000", claim.valueFingerprint)
+        assertEquals("quantity:GRAM:1000000000", claim.valueFingerprint)
         assertNull(claim.scope.merchantKey)
         assertNull(claim.scope.currencyCode)
     }
@@ -154,7 +156,9 @@ class OpenFoodFactsImportedMetadataTest {
         val merchant = EvidenceClaim(
             claimId = "merchant:quantity",
             domain = EvidenceClaimDomain.PACKAGE_QUANTITY,
-            valueFingerprint = "GRAM:1000000000",
+            valueFingerprint = EvidenceFingerprints.quantity(
+                QuantityNormalization.grams(1000)
+            ),
             authority = EvidenceAuthorityClass.MERCHANT_AUTHORITATIVE,
             scope = EvidenceClaimScope(productKey = community.scope.productKey),
             observedAtEpochMillis = community.observedAtEpochMillis - 1_000L
