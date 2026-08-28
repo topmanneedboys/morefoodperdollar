@@ -32,7 +32,7 @@ Permanent rules:
 - Currency/context != offer geography.
 - Dataset namespace != dataset snapshot.
 - Snapshot lifecycle != namespace-wide retention/deletion disposition.
-- Production price view != price claim != acceptance rankability != conflict-resolved current-price eligibility != final Best Value eligibility.
+- Production price view != price claim != acceptance rankability != conflict-resolved current-price eligibility != unit-value eligibility != final Best Value eligibility.
 - A discounted/current price field does not automatically prove a promotion.
 - Shared core owns no hidden clock.
 - Provider credentials never belong in source control, Android, fixtures, logs or screenshots.
@@ -55,8 +55,9 @@ Primary Android navigation remains Home / Search / Basket / Saved. Compare remai
 - `97bfa3c353e48f15e26e9576cf06f4fa5e1687d1` — unified evidence acceptance policy with legacy non-positive timestamp -> UNKNOWN behavior preserved.
 - `a1b15cc13df4912fb94893c8952f382f7404db1d` — lifecycle-bound production current-price acceptance using the unified policy.
 - `c3dcfab539a2d2ef40fe9ce283533141ea9cd246` — verified bounded current-price acceptance + factual-conflict eligibility boundary. This supersedes the failed test-compilation attempt `e5b56e3078c07ff226ba80b4d069da9b3abbcf22`.
+- `204c8ae5e0089473f28b7cf6086b73e7a3516ec6` — verified production current-price + conflict-resolved PACKAGE_QUANTITY -> existing exact unit-value policy bridge. This supersedes the unverified fixture-mismatch attempt `96883bea69a78789d3edeed8465667aa2acab21b`.
 
-The exact `c3dcfab539a2d2ef40fe9ce283533141ea9cd246` workflow passed browser checks, shared-core/app tests, lint, APK build, JVM result summary, Android privacy-boundary verification, release packaging/checksums and artifact upload.
+The exact `204c8ae5e0089473f28b7cf6086b73e7a3516ec6` workflow passed browser checks, shared-core/app tests, lint, APK build, JVM result summary, Android privacy-boundary verification, release packaging/checksums and artifact upload.
 
 ## Price, authorization, geography and freshness
 
@@ -127,19 +128,45 @@ Verified cases include:
 
 This boundary still creates no canonical production offer for ranking, no package quantity, no unit value and no final Best Value result.
 
-## Unit-value boundary
+## Verified production unit-value eligibility
 
-`EvidenceBackedUnitValuePolicy` remains authoritative and must not be duplicated. It already requires:
+`ProductionUnitValueEligibility.kt`, verified at `204c8ae5e0089473f28b7cf6086b73e7a3516ec6`, is the current exact unit-value boundary.
 
-- price disposition `RANKABLE`;
-- price domain CURRENT_PRICE or OBSERVED_PRICE;
-- quantity domain PACKAGE_QUANTITY;
-- exact identical stable product key;
-- exact money fingerprint matching the supplied price/Offer;
-- exact quantity fingerprint matching the supplied normalized quantity;
-- strong quantity authority.
+It always re-runs `ProductionCurrentPriceEligibilityEvaluator` from the raw bounded price request set. Detached price evidence is not trusted. Only after the selected current-price candidate survives the full lifecycle, disposition, authorization, geography, freshness, acceptance and factual-conflict path does package quantity participate.
 
-It never chooses among conflicting claims. Conflict resolution must happen before a selected quantity claim reaches it.
+Package quantity remains separately attributed and product-scoped. The evaluator:
+
+1. filters PACKAGE_QUANTITY candidates to the exact selected stable product key;
+2. detects same-namespace claim-ID mutation/collision before resolution;
+3. resolves quantity through the existing `EvidenceFactResolver` rather than copying conflict precedence;
+4. finds materialized supporters of the resolved exact quantity fingerprint;
+5. delegates each supporter to the existing `EvidenceBackedUnitValuePolicy` rather than copying authority or arithmetic rules;
+6. accepts only a supporter the existing policy itself marks rankable.
+
+`EvidenceBackedUnitValuePolicy` remains authoritative. It requires a rankable price disposition, CURRENT_PRICE/OBSERVED_PRICE price domain, PACKAGE_QUANTITY quantity domain, exact identical product key, exact price and quantity fingerprints and sufficiently strong quantity authority. Exact rate arithmetic remains in `DeterministicValueMath` using `Money`, `NormalizedQuantity` and `UnitRate`; no `Double` ranking math is introduced into the production path.
+
+Verified cases include:
+
+- conflict-resolved production price + strong exact package quantity produces a deterministic unit rate;
+- a blocked price stage prevents unit-value evaluation;
+- equal-authority quantity disagreement remains unresolved and blocks;
+- stronger quantity authority defeats weaker contradictory metadata through the existing resolver;
+- a weak supporter cannot hide a strong supporter of the same resolved quantity;
+- quantity for another product cannot join the selected price;
+- weak quantity authority remains blocked by the existing unit-value policy;
+- materialized quantity must match the resolved claim fingerprint;
+- same-namespace quantity claim-ID mutation fails closed;
+- quantity input is explicitly bounded at 128.
+
+The earlier `96883bea69a78789d3edeed8465667aa2acab21b` attempt was unverified because its test fixture hardcoded raw UPC-A identity while the production key correctly used the canonical GTIN representation. The correction derives the fixture product key through `ProductionProductEvidenceKeyResolver`, so test identity follows the production contract.
+
+This boundary still does not choose between products/offers and is not final Best Value ranking.
+
+## Ranking boundary decision
+
+The existing Android `ValueEngine.rank()` / `RankingModePolicy` path is not the production-evidence ranking boundary. It is an app/capture-era path over `ValueItem` that uses floating-point values, parsed or heuristic quantities, optional inferred promotion multipliers, local-AI signals and query-driven ranking modes.
+
+Production ranking must stay in shared core and consume only exact verified production evidence. It must not convert verified `Money`/`NormalizedQuantity`/`UnitRate` back into the legacy Android `ValueItem`/`Double` path.
 
 ## Jamieson / Rakuten
 
@@ -187,16 +214,19 @@ External Rakuten and GS1 requests are outstanding. Do not resend them.
 
 Next bounded provider-neutral/offline target:
 
-**Bridge a conflict-resolved, acceptance-rankable production current-price candidate into the existing `EvidenceBackedUnitValuePolicy` using separately attributed, conflict-resolved package-quantity evidence.**
+**Add a shared-core production Best Value ranking boundary that consumes only verified exact unit-value candidates and never routes production evidence through Android `ValueEngine` or heuristic ranking.**
 
 Requirements:
 
-- start from/re-evaluate the verified `ProductionCurrentPriceEligibilityEvaluator`; do not trust detached price evidence;
-- do not duplicate price conflict, acceptance, product-key, fingerprint or unit-value policy logic;
-- package quantity must remain a separate attributed claim and must itself be selected only after appropriate exact factual conflict handling;
-- require exact same stable product key before cross-source price/quantity combination;
-- feed the selected price claim, exact price `Offer`, selected quantity claim, normalized quantity and rankable disposition into `EvidenceBackedUnitValuePolicy`;
-- fail closed on unresolved quantity conflict, weak quantity authority, product mismatch, value mismatch or non-rankable price;
-- create no Android networking and use no real provider credentials.
+- start from/re-evaluate `ProductionUnitValueEligibilityEvaluator` for each candidate rather than trusting detached `UnitRate` objects as proof of production eligibility;
+- keep input bounded and candidate IDs unique/deterministic;
+- only rank candidates whose unit-value result is currently rankable;
+- compare only like-for-like `UnitRate` dimensions: exact same currency code and exact same `RateUnit`; incompatible currency/unit groups must never be silently compared;
+- lower `currencyMicrosPerUnit` wins within one comparable group;
+- deterministic tie-breaking may use stable non-economic identifiers only; commission, EPC, payout, sponsorship, affiliate/provider preference and provider economics must never enter ranking;
+- preserve enough evidence linkage in each ranked result to audit the source candidate and unit-value eligibility result;
+- blocked/non-comparable candidates may remain available for display/explanation but must not receive a false cross-unit/cross-currency Best Value order;
+- do not duplicate acceptance, conflict, identity, quantity-authority or deterministic unit-value math;
+- add no Android networking and use no real provider credentials.
 
 Do not add production Rakuten integration, affiliate tracking, checkout/payment, universal cart, subscriptions, remote AI, telemetry, unauthorized scraping or private-endpoint reverse engineering yet.
