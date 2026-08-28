@@ -84,6 +84,7 @@ class ProviderOfferImportTest {
         assertEquals(ImportedGtinStatus.INVALID, identity.gtinStatus)
         assertEquals("036000291453", identity.suppliedGtin)
         assertNull(identity.validatedGtin)
+        assertNull(identity.canonicalGtin)
 
         val promoted = identity.validatedSourceProductIdentity()
         assertNotNull(promoted)
@@ -93,7 +94,7 @@ class ProviderOfferImportTest {
     }
 
     @Test
-    fun checksumValidGtinCanBePromotedForStrongIdentity() {
+    fun checksumValidGtinPreservesRawButPromotesCanonicalIdentity() {
         val identity = ImportedSourceIdentity(
             providerItemId = "product-1",
             sku = "sku-1",
@@ -102,9 +103,24 @@ class ProviderOfferImportTest {
 
         assertEquals(ImportedGtinStatus.VALID, identity.gtinStatus)
         assertEquals("036000291452", identity.validatedGtin)
+        assertEquals("0036000291452", identity.canonicalGtin)
         assertEquals(
-            "036000291452",
+            "0036000291452",
             identity.validatedSourceProductIdentity()?.gtin
+        )
+    }
+
+    @Test
+    fun equivalentLeadingZeroRepresentationsPromoteSameCrossSourceIdentity() {
+        val upc12 = ImportedSourceIdentity(suppliedGtin = "036000291452")
+        val gtin13 = ImportedSourceIdentity(suppliedGtin = "0036000291452")
+        val gtin14 = ImportedSourceIdentity(suppliedGtin = "00036000291452")
+
+        assertEquals(upc12.canonicalGtin, gtin13.canonicalGtin)
+        assertEquals(gtin13.canonicalGtin, gtin14.canonicalGtin)
+        assertEquals(
+            upc12.validatedSourceProductIdentity()?.gtin,
+            gtin14.validatedSourceProductIdentity()?.gtin
         )
     }
 
