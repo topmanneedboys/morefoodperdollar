@@ -1,12 +1,18 @@
 package com.valuepilot.app
 
 import com.valuepilot.core.AvailabilityEvidence
+import com.valuepilot.core.EvidenceAuthorityClass
 import com.valuepilot.core.EvidenceChannel
+import com.valuepilot.core.EvidenceClaim
+import com.valuepilot.core.EvidenceClaimDomain
 import com.valuepilot.core.EvidenceClaimKind
+import com.valuepilot.core.EvidenceClaimScope
 import com.valuepilot.core.EvidenceEnvironment
+import com.valuepilot.core.EvidenceFingerprints
 import com.valuepilot.core.EvidenceProvider
 import com.valuepilot.core.EvidenceProviderId
 import com.valuepilot.core.GtinValidation
+import com.valuepilot.core.Money
 import com.valuepilot.core.ProductObservation
 import com.valuepilot.core.ProductObservationId
 import com.valuepilot.core.ShoppingEvidence
@@ -72,9 +78,11 @@ enum class OpenPricesImportFailure {
 
 data class OpenPricesImportResult(
     val evidence: ShoppingEvidence?,
+    val priceClaim: EvidenceClaim?,
     val failures: Set<OpenPricesImportFailure>
 ) {
     init {
+        require((evidence != null) == (priceClaim != null))
         require((evidence != null) == failures.isEmpty())
     }
 
@@ -165,15 +173,18 @@ object OpenPricesImportedEvidenceMapper {
         if (failures.isNotEmpty()) {
             return OpenPricesImportResult(
                 evidence = null,
+                priceClaim = null,
                 failures = failures
             )
         }
 
         val safeName = requireNotNull(productName)
         val safePrice = requireNotNull(canonicalPrice)
+        val exactPrice = Money.parse(safePrice, "CAD")
 
         val sourceId = "open-prices-location-$locationId"
         val providerItemId = "open-prices-price-$priceId"
+        val productKey = "gtin:$gtin"
 
         val evidence =
             ShoppingEvidence(
@@ -204,8 +215,25 @@ object OpenPricesImportedEvidenceMapper {
                 availability = AvailabilityEvidence()
             )
 
+        val priceClaim =
+            EvidenceClaim(
+                claimId = "open-prices:$priceId:observed-price",
+                domain = EvidenceClaimDomain.OBSERVED_PRICE,
+                valueFingerprint = EvidenceFingerprints.money(exactPrice),
+                authority = EvidenceAuthorityClass.PROOF_BACKED_DIRECT_OBSERVATION,
+                scope =
+                    EvidenceClaimScope(
+                        productKey = productKey,
+                        locationKey = sourceId,
+                        commerceChannelKey = "PHYSICAL_STORE",
+                        currencyCode = "CAD"
+                    ),
+                observedAtEpochMillis = row.observedAtEpochMillis
+            )
+
         return OpenPricesImportResult(
             evidence = evidence,
+            priceClaim = priceClaim,
             failures = emptySet()
         )
     }
