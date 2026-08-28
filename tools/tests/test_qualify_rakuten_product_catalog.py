@@ -24,6 +24,7 @@ class RakutenProductCatalogQualifierTest(unittest.TestCase):
         fields[12] = "9.99"
         fields[13] = "12.99"
         fields[16] = "Example Brand"
+        fields[20] = "Example Manufacturer"
         fields[22] = "in-stock"
         fields[23] = "0036000291452"
         fields[25] = "CAD"
@@ -56,10 +57,39 @@ class RakutenProductCatalogQualifierTest(unittest.TestCase):
             self.assertEqual(1, report["decision"]["structural_offer_candidates"])
             self.assertEqual(0, report["decision"]["unit_value_candidates"])
             self.assertEqual(1, report["quality"]["upc_checksum_valid_gtin"])
-            self.assertEqual(1, report["quality"]["qualification_price_source_sale_price"])
+            self.assertEqual(1, report["quality"]["qualification_price_source_retail_price"])
+            self.assertEqual(1, report["quality"]["sale_price_below_retail"])
             self.assertTrue(report["feed_metadata"]["trailer_valid"])
             self.assertTrue(report["feed_metadata"]["trailer_count_matches_records_scanned"])
             self.assertIsNotNone(report["file_age"]["file_header_age_seconds"])
+
+    def test_sale_price_relationships_are_separated_without_inventing_discount(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            below = self.product_fields()
+
+            equal = self.product_fields()
+            equal[0] = "102"
+            equal[2] = "SKU-102"
+            equal[12] = "12.99"
+
+            above = self.product_fields()
+            above[0] = "103"
+            above[2] = "SKU-103"
+            above[12] = "15.99"
+
+            feed = self.write(root, "feed.txt", self.render_feed([below, equal, above], 3))
+            report = qualify(feed)
+
+            self.assertEqual(1, report["quality"]["sale_price_below_retail"])
+            self.assertEqual(1, report["quality"]["sale_price_equal_retail"])
+            self.assertEqual(1, report["quality"]["sale_price_above_retail"])
+            self.assertEqual(1, report["price_semantics_gate"]["sale_below_retail_rows"])
+            self.assertEqual(1, report["price_semantics_gate"]["sale_equal_retail_rows"])
+            self.assertEqual(1, report["price_semantics_gate"]["sale_above_retail_rows"])
+            self.assertFalse(report["price_semantics_gate"]["safe_to_infer_discount_from_field_names_alone"])
+            self.assertFalse(report["decision"]["production_authorized"])
+            self.assertEqual(3, report["quality"]["qualification_price_source_retail_price"])
 
     def test_header_timestamp_is_not_promoted_to_product_freshness(self):
         with tempfile.TemporaryDirectory() as tmp:
