@@ -21,10 +21,11 @@ import java.math.BigDecimal
  * performs formatting only. It never parses evidence, changes eligibility,
  * compares values, resolves conflicts, or re-ranks products.
  *
- * Internal merchant/location/channel scope identifiers are deliberately absent
- * from this UI-ready type. They remain available only through the exact
- * [ProductionSearchUiProjection.rankedByCandidateId] lookup until explicit
- * consumer display metadata exists.
+ * Internal merchant/location/channel scope identifiers and raw provider URLs are
+ * deliberately absent from this catalog-only UI-ready type. They remain
+ * available only through the exact
+ * [ProductionSearchUiProjection.rankedByCandidateId] lookup until an explicitly
+ * authorized consumer display/action capability exists.
  */
 data class ProductionSearchRowUiState(
     val candidateId: String,
@@ -38,9 +39,7 @@ data class ProductionSearchRowUiState(
     val offerScopeText: String,
     val sourceSummary: String,
     val availabilityText: String,
-    val freshnessText: String,
-    val productUrl: String?,
-    val imageUrl: String?
+    val freshnessText: String
 ) {
     init {
         require(candidateId.isNotBlank())
@@ -93,12 +92,11 @@ data class ProductionSearchUiState(
 }
 
 /**
- * UI state plus opaque exact-row lookup for future product/provenance actions.
+ * UI state plus opaque exact-row lookup for future product/provenance/actions.
  *
- * Presentations should render [state]. Actions that need source evidence resolve
- * by candidateId through these maps instead of trying to reconstruct facts from
- * formatted text. Exact merchant/location/channel scope lives in those original
- * production presentation objects, not in consumer-facing strings.
+ * Presentations should render [state]. Actions that need source evidence, scope,
+ * raw product URLs or image URLs resolve by candidateId through these maps
+ * instead of trying to reconstruct facts or capabilities from formatted text.
  */
 data class ProductionSearchUiProjection(
     val state: ProductionSearchUiState,
@@ -184,9 +182,7 @@ object ProductionSearchUiProjector {
             offerScopeText = "Offer country: ${item.offerCountryCode}",
             sourceSummary = "${item.providerDisplayName} · ${item.sourceDisplayName}",
             availabilityText = availabilityText(item.availabilityState),
-            freshnessText = freshnessText(item.currentFreshness),
-            productUrl = item.productUrl,
-            imageUrl = item.imageUrl
+            freshnessText = freshnessText(item.currentFreshness)
         )
 
     /** Exact decimal formatting only; no Double conversion or value calculation. */

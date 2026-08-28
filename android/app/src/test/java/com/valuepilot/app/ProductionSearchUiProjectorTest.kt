@@ -26,7 +26,7 @@ import org.junit.Test
 class ProductionSearchUiProjectorTest {
 
     @Test
-    fun `projector preserves comparison groups exact ranks and evidence lookup without leaking scope keys`() {
+    fun `projector preserves comparison groups exact ranks and evidence lookup without leaking scope or urls`() {
         val best = item("best", rank = 1, order = 1, rateMicros = 80_000L, bestValue = true)
         val second = item("second", rank = 2, order = 2, rateMicros = 90_000L)
         val mass =
@@ -95,12 +95,22 @@ class ProductionSearchUiProjectorTest {
         assertFalse(uiReadyText.contains("merchant-best"))
         assertFalse(uiReadyText.contains("location-best"))
         assertFalse(uiReadyText.contains("ONLINE"))
+        assertFalse(uiReadyText.contains("example.test"))
+
+        val uiFieldNames = ProductionSearchRowUiState::class.java.declaredFields.map { it.name }.toSet()
+        assertFalse("productUrl" in uiFieldNames)
+        assertFalse("imageUrl" in uiFieldNames)
+        assertFalse("merchantKey" in uiFieldNames)
+        assertFalse("locationKey" in uiFieldNames)
+        assertFalse("commerceChannelKey" in uiFieldNames)
 
         val exactBest = projected.rankedByCandidateId.getValue("best")
         assertSame(best, exactBest)
         assertEquals("merchant-best", exactBest.merchantKey)
         assertEquals("location-best", exactBest.locationKey)
         assertEquals("ONLINE", exactBest.commerceChannelKey)
+        assertEquals("https://example.test/product/best", exactBest.productUrl)
+        assertEquals("https://example.test/image/best.jpg", exactBest.imageUrl)
 
         val massGroup = projected.state.groups[1]
         assertEquals("CAD · Price per kilogram", massGroup.title)
