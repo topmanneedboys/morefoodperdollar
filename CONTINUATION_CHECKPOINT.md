@@ -108,36 +108,36 @@ As of this checkpoint:
 
 For Lowvyn, if the initial request is approved, continue in the same email thread and ask about partner-level/full-catalog access, efficient sync/bulk mechanisms, production rate limits, caching/storage, consumer display, attribution and affiliate/commercial routing. Do not make Lowvyn the only provider dependency.
 
-## Existing engineering tool for the Rakuten feed
+## Rakuten qualifier hardening completed in this session
 
-`tools/qualify_rakuten_product_catalog.py` is intentionally an **offline qualification tool**, not a production adapter.
+The first real Jamieson feed exposed a concrete issue: positive `Sale Price` values are not always below `Retail Price`.
 
-It already validates:
+`tools/qualify_rakuten_product_catalog.py` has now been hardened so that it:
 
-- gzip/TXT input
-- HDR/TRL integrity
-- documented field shape
-- required fields
-- positive prices
-- CAD coverage
-- availability vocabulary
-- GTIN checksums
-- product/image URL syntax
-- source Product ID and SKU consistency
-- structural offer coverage
-- explicit quantity/rights caveats
+- preserves Sale Price and Retail Price as separate source fields/semantics
+- reports `sale < retail`, `sale == retail`, and `sale > retail` separately
+- does not infer a discount from the field names alone
+- uses Retail Price first only for structural numeric qualification coverage, with Sale Price only as a fallback if Retail Price is not positive
+- reports short/long-description coverage
+- reports manufacturer-name coverage
+- reports missing UPCs explicitly
+- reports blank/present Class IDs explicitly
+- emits a dedicated `price_semantics_gate`
+- still reports `production_authorized = false`
 
-The first real Jamieson feed exposed a concrete hardening need: report and gate price relationships separately as `sale < retail`, `sale == retail`, and `sale > retail`, rather than allowing a generic positive Sale Price to look preferred without semantic validation.
+Synthetic regression coverage was also added in `tools/tests/test_qualify_rakuten_product_catalog.py` for below/equal/above price relationships and the non-production price-semantics gate.
+
+**Important verification note:** these source/test changes were committed through the connected GitHub repository, but the focused Python test suite was not executed in this chat environment because the repository runtime was not mounted. A future engineer must run the focused `tools/tests` suite before calling this code change fully verified.
 
 Do not commit the proprietary Jamieson feed as a fixture. Use synthetic test rows.
 
 ## Next engineering sequence
 
-Highest-value sequence:
+Highest-value sequence now:
 
-1. Harden the Rakuten offline qualifier around the real price anomalies.
-2. Add synthetic regression tests for equal and inverted Sale Price relationships.
-3. Define/provider-neutral import mapping that preserves both supplied price fields, source Product ID, SKU, GTIN, availability, product/image URLs and provenance without deciding retail-vs-sale semantics prematurely.
+1. Run the focused Rakuten qualifier Python tests and fix any regression before claiming verification.
+2. Run the hardened qualifier against the local authorized Jamieson `.txt.gz` feed and preserve only a sanitized qualification report, not the proprietary feed itself.
+3. Define a provider-neutral offline import mapping that preserves both supplied price fields, source Product ID, SKU, GTIN, availability, product/image URLs and provenance without deciding retail-vs-sale semantics prematurely.
 4. Establish package quantity/count from a validated source joined by strong identity, preferably checksum-valid GTIN where possible; preserve that source's separate provenance.
 5. Only after rights are clear, decide whether/how Jamieson evidence may enter production search/display/ranking.
 6. Do not automate SFTP credentials or add Android networking before those gates are deliberately cleared.
