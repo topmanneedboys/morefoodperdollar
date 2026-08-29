@@ -147,7 +147,8 @@ class LocalSamplePracticalShoppingDemoTest {
 
         assertEquals(LocalSamplePracticalShoppingDemo.Status.NEEDS_REFINEMENT, state.status)
         assertEquals(listOf("Eggs"), state.items.map { it.name })
-        assertEquals(32, state.unknownItems.size)
+        assertEquals(31, state.unknownItems.size)
+        assertEquals(32, state.items.size + state.unknownItems.size)
         assertNull(state.result)
         assertEquals(
             "Keep this sample list to 32 distinct items or fewer.",
