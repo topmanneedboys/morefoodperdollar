@@ -8,13 +8,15 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`c26bc2de9f99e4f8b3bcbf248e4ad2f602259938` — `Test practical one-store-first shopping policy`
+`87819246c02677198062bbf664213953c5ecfc30` — `Fix practical shopping projector test imports`
 
-Parent code commit:
+The app-level projector implementation was introduced at:
 
-`dec7a4b6e1fab384e0ed62affbe77063c5e60d00` — `Add one-store-first practical shopping policy`
+`0ae65ce2881a9812f91b0f92827339fea556f61c` — `Add immutable practical shopping UI projection`
 
-GitHub Actions workflow run **109** (`33258451478`) completed successfully for `c26bc2de...`.
+Projector tests were introduced at `6d703f9eb57088fc3d2532cbe1f3562521d6fe04`. That first run failed only because the app test source set uses JUnit 4 while the new test imported `kotlin.test`. No production logic failed compilation. Commit `87819246...` changed only the test harness imports/assertion form to the existing JUnit 4 convention; it did not weaken or change the intended assertions.
+
+GitHub Actions workflow run **112** (`33259058670`) completed successfully for `87819246...`.
 
 Verified gates all passed:
 
@@ -31,17 +33,23 @@ Verified gates all passed:
 
 No Android networking/provider integration was added. The existing privacy boundary remains intact.
 
-## What the new shared-core policy establishes
+The prior verified shared-core planning boundary remains:
 
-New source:
+- `dec7a4b6e1fab384e0ed62affbe77063c5e60d00` — `Add one-store-first practical shopping policy`
+- `c26bc2de9f99e4f8b3bcbf248e4ad2f602259938` — `Test practical one-store-first shopping policy`
+- workflow run **109** (`33258451478`) — complete success
+
+## What the shared-core policy establishes
+
+Source:
 
 `android/shared-core/src/main/kotlin/com/valuepilot/core/PracticalShoppingPlan.kt`
 
-New tests:
+Tests:
 
 `android/shared-core/src/test/kotlin/com/valuepilot/core/PracticalShoppingPlanTest.kt`
 
-The new planning boundary is deliberately small, deterministic and platform-neutral.
+The planning boundary is deliberately small, deterministic and platform-neutral.
 
 It introduces bounded types for:
 
@@ -69,6 +77,31 @@ Permanent decision rules now tested:
 9. Candidate items outside the shopping request fail closed.
 10. Requests/candidate collections are bounded: 128 shopping items, 64 one-store candidates, 128 two-store candidates.
 11. Fresh/stale/unknown evidence counts must exactly match covered-item count. The planner itself owns no clock and does not secretly decide freshness.
+
+## What the verified UI projection establishes
+
+Source:
+
+`android/app/src/main/java/com/valuepilot/app/PracticalShoppingUiProjector.kt`
+
+Tests:
+
+`android/app/src/test/java/com/valuepilot/app/PracticalShoppingUiProjectorTest.kt`
+
+The projector receives an already-decided `PracticalShoppingDecision` and formats immutable UI-ready state only. It does **not** rank stores, recalculate savings, infer missing prices or invent a convenience score.
+
+Verified presentation rules:
+
+- complete one-store decisions render as a basket total;
+- incomplete decisions render only as a **known subtotal**, with an explicit notice that it is not a complete basket total;
+- a second-stop card is emitted only when shared-core already decided `RECOMMENDED`;
+- a rejected second stop becomes one short `not worth it` message rather than another competing recommendation card;
+- no-coverage state does not fabricate a basket;
+- internal store keys remain outside normal consumer state strings;
+- missing consumer display names fail closed rather than leaking internal identifiers;
+- money formatting stays exact using decimal arithmetic and is regression-tested beyond the IEEE-754 exact-integer range;
+- travel formatting is deterministic;
+- stale and unknown evidence remain visibly stale/unknown rather than being upgraded by presentation.
 
 ## Current consumer product model
 
@@ -240,18 +273,20 @@ Company-by-company approvals are supplementary and should not block launch.
 
 Do **not** jump directly to real retailer data or networking.
 
-The next focused implementation should be the application/presentation boundary for a tiny **fictional Practical Shopping demo** that consumes `PracticalShoppingDecision` safely.
+The next focused implementation is a tiny, clearly labeled **fictional Practical Shopping application fixture/controller** that produces bounded planner inputs and then consumes the verified shared-core planner + verified app projector.
 
-Requirements for that slice:
+Requirements:
 
-1. Keep shared-core planning policy as the sole owner of one-store/second-stop decision rules.
-2. Create immutable app/UI-ready state with presentation strings/fields only; UI must not re-rank candidates.
-3. Use a tiny clearly labeled fictional multi-store fixture. No real merchant claims.
-4. Home should move toward one input / one primary recommendation, but do not destroy the verified Search separation.
-5. Explicitly represent complete vs incomplete coverage and `second stop not worth it` without fabricating missing prices.
-6. Keep advanced settings out of the default path.
-7. Preserve Android's current no-network/no-account/no-telemetry boundary.
-8. Add bounded tests before exposing the flow broadly.
-9. Verify browser checks, shared-core/app tests, lint, APK, JVM summary, privacy gate, packaging and artifacts before calling the slice complete.
+1. Fixture data must be unmistakably SAMPLE/FICTIONAL and must never look like a real merchant claim.
+2. The fixture/controller may resolve only its own small known sample vocabulary; it must not be mistaken for a production product resolver.
+3. Ambiguous intents such as bare `chicken` must not silently become an authoritative specific product. Either request one tiny refinement or keep the ambiguity explicit.
+4. The controller must call `PracticalShoppingPlanner`; it must not duplicate one-store/second-stop ranking rules.
+5. The controller must call `PracticalShoppingUiProjector`; the future renderer receives immutable UI-ready state only.
+6. Unknown/unrecognized shopping intents must remain explicit rather than being dropped silently.
+7. Preserve bounded input sizes and deterministic behavior.
+8. Keep Home layout changes separate until the controller is verified.
+9. Preserve Search separation and Android's no-network/no-account/no-telemetry boundary.
+10. Add tests for natural list input, ambiguous chicken, duplicate words, unknown items, complete/incomplete fixture coverage, and the second-stop threshold before wiring Home.
+11. Run the full existing CI gate before calling the fixture/controller boundary complete.
 
 No device/user action is required for this checkpoint.
