@@ -6,12 +6,58 @@ import android.os.Looper
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-/** Thin scheduler adapter around one owned Saved persistence executor. */
-internal class PracticalShoppingSavedExecutorScheduler(
+/**
+ * Process-scoped Saved runtime.
+ *
+ * Activity/session recreation must not create independent workers that can overlap app-internal
+ * AtomicFile transactions. One process therefore shares the exact store, display store, and
+ * serial worker. Work submitted by a newly created UI session is queued behind any Saved work
+ * that was already running for the previous session.
+ *
+ * Only application context is retained. The executor is process-owned rather than Activity-
+ * owned and is intentionally not shut down by a surface/session close.
+ */
+internal class PracticalShoppingSavedProcessRuntime private constructor(
+    val exactStore: PracticalShoppingSavedExactPreferenceLocalStore,
+    val displayStore: PracticalShoppingSavedDisplayMetadataLocalStore,
     private val executor: ExecutorService
 ) : PracticalShoppingSavedWorkScheduler {
+
     override fun schedule(block: () -> Unit) {
         executor.execute(block)
+    }
+
+    companion object {
+        @Volatile
+        private var instance: PracticalShoppingSavedProcessRuntime? = null
+
+        fun get(context: Context): PracticalShoppingSavedProcessRuntime {
+            val existing = instance
+            if (existing != null) return existing
+
+            return synchronized(this) {
+                instance
+                    ?: create(context.applicationContext ?: context)
+                        .also { created -> instance = created }
+            }
+        }
+
+        private fun create(
+            appContext: Context
+        ): PracticalShoppingSavedProcessRuntime {
+            val executor =
+                Executors.newSingleThreadExecutor { runnable ->
+                    Thread(runnable, "valuepilot-saved-persistence").apply {
+                        isDaemon = false
+                    }
+                }
+
+            return PracticalShoppingSavedProcessRuntime(
+                exactStore = PracticalShoppingSavedExactPreferenceLocalStore(appContext),
+                displayStore = PracticalShoppingSavedDisplayMetadataLocalStore(appContext),
+                executor = executor
+            )
+        }
     }
 }
 
@@ -27,22 +73,21 @@ internal class PracticalShoppingSavedMainLooperDispatcher(
 /**
  * Android owner for one Saved lifecycle host.
  *
- * This class is intentionally not a View and does not render Saved content itself. It only
- * wires the verified app-internal stores/gateway/host to one background executor and the
- * Android main Looper. UI owners provide the immutable-state renderer callback.
+ * This class is intentionally not a View and does not render Saved content itself. It wires
+ * a per-surface host to the process-scoped Saved runtime and Android main Looper. UI owners
+ * provide the immutable-state renderer callback.
  *
- * Public lifecycle methods are expected to be called from the Android main thread. Saved
- * file work always runs on the owned single-thread executor; typed completions are posted
- * back to the main Looper before the host reducer/renderer is touched.
+ * Public lifecycle methods are expected to be called from the Android main thread. All Saved
+ * persistence/coordinator work for every session in this process is serialized through
+ * [PracticalShoppingSavedProcessRuntime]; typed completions return to the main Looper before
+ * the host reducer/renderer is touched.
  *
- * [close] closes the host before shutting down the executor. `shutdown()` is deliberate:
- * already queued/running AtomicFile work is allowed to finish rather than being interrupted,
- * while the closed host ignores its eventual completion. No Handler-wide callback removal is
- * performed, so this owner cannot accidentally remove callbacks belonging to another feature.
+ * [close] closes only this host. Process-owned queued/running persistence work is allowed to
+ * finish; the closed host ignores its eventual completion. A subsequent Activity/session uses
+ * the same serial runtime, so its load cannot race ahead of an older queued Saved mutation.
  */
 class PracticalShoppingSavedAndroidSession private constructor(
-    private val host: PracticalShoppingSavedLifecycleHost,
-    private val executor: ExecutorService
+    private val host: PracticalShoppingSavedLifecycleHost
 ) : AutoCloseable {
 
     fun refresh() {
@@ -60,7 +105,6 @@ class PracticalShoppingSavedAndroidSession private constructor(
     override fun close() {
         requireMainThread()
         host.close()
-        executor.shutdown()
     }
 
     fun isClosed(): Boolean = host.isClosed()
@@ -73,31 +117,22 @@ class PracticalShoppingSavedAndroidSession private constructor(
             requireMainThread()
 
             val appContext = context.applicationContext ?: context
-            val executor = Executors.newSingleThreadExecutor { runnable ->
-                Thread(runnable, "valuepilot-saved-persistence").apply {
-                    isDaemon = false
-                }
-            }
+            val runtime = PracticalShoppingSavedProcessRuntime.get(appContext)
             val handler = Handler(Looper.getMainLooper())
-            val exactStore = PracticalShoppingSavedExactPreferenceLocalStore(appContext)
-            val displayStore = PracticalShoppingSavedDisplayMetadataLocalStore(appContext)
             val gateway =
                 PracticalShoppingSavedLocalExperienceGateway(
-                    exactStore = exactStore,
-                    displayStore = displayStore
+                    exactStore = runtime.exactStore,
+                    displayStore = runtime.displayStore
                 )
             val host =
                 PracticalShoppingSavedLifecycleHost(
                     gateway = gateway,
-                    worker = PracticalShoppingSavedExecutorScheduler(executor),
+                    worker = runtime,
                     completionDispatcher = PracticalShoppingSavedMainLooperDispatcher(handler),
                     renderer = renderer
                 )
 
-            return PracticalShoppingSavedAndroidSession(
-                host = host,
-                executor = executor
-            )
+            return PracticalShoppingSavedAndroidSession(host = host)
         }
 
         private fun requireMainThread() {
