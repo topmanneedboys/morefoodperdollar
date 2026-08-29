@@ -4,12 +4,16 @@ import com.valuepilot.core.PracticalShoppingProductIdentityCandidate
 import com.valuepilot.core.PracticalShoppingProductIntentRelationship
 import com.valuepilot.core.PracticalShoppingStoreIdentityCandidate
 import com.valuepilot.core.PracticalShoppingStoreIdentityRelationship
+import com.valuepilot.core.PracticalShoppingStoreIdentityScope
+import com.valuepilot.core.ProductionProductEvidenceKey
 import com.valuepilot.core.ProductionProductEvidenceKeyResolver
 import com.valuepilot.core.ShoppingItemKey
 import com.valuepilot.core.ShoppingStoreKey
 
 private const val MAX_SAVED_PRESENTATION_DISPLAY_NAME_LENGTH = 160
 private const val MAX_OSM_DISPLAY_RECORD_NAME_INPUT_LENGTH = 500
+private const val MAX_SAVED_PRODUCT_DISPLAY_ENTRIES = 128
+private const val MAX_SAVED_STORE_DISPLAY_ENTRIES = 64
 
 /** Presentation-only provenance for a human-facing saved-choice label. */
 enum class PracticalShoppingSavedDisplayMetadataBasis {
@@ -18,8 +22,14 @@ enum class PracticalShoppingSavedDisplayMetadataBasis {
     OPENSTREETMAP_PLACE_NAME
 }
 
+/**
+ * Human-facing product label bound to the exact production product identity it described.
+ * The binding is not product authority; it prevents a stale label from following a stable
+ * ShoppingItemKey after that key is re-confirmed to a different exact product.
+ */
 data class PracticalShoppingSavedProductDisplayMetadataEntry(
     val itemKey: ShoppingItemKey,
+    val productKey: ProductionProductEvidenceKey,
     val displayName: String,
     val basis: PracticalShoppingSavedDisplayMetadataBasis
 ) {
@@ -29,8 +39,13 @@ data class PracticalShoppingSavedProductDisplayMetadataEntry(
     }
 }
 
+/**
+ * Human-facing store label bound to the exact merchant/location/channel scope it described.
+ * The binding is presentation safety only and grants no price, route or offer authority.
+ */
 data class PracticalShoppingSavedStoreDisplayMetadataEntry(
     val storeKey: ShoppingStoreKey,
+    val scope: PracticalShoppingStoreIdentityScope,
     val displayName: String,
     val basis: PracticalShoppingSavedDisplayMetadataBasis
 ) {
@@ -38,6 +53,40 @@ data class PracticalShoppingSavedStoreDisplayMetadataEntry(
         require(displayName.isNotBlank())
         require(displayName.length <= MAX_SAVED_PRESENTATION_DISPLAY_NAME_LENGTH)
     }
+}
+
+/**
+ * Bounded storage-neutral display metadata set. One entry per stable saved key.
+ * A future local codec may persist this object without changing the exact-preference schema.
+ */
+data class PracticalShoppingSavedExactPreferenceDisplayMetadataSnapshot(
+    val productEntries: List<PracticalShoppingSavedProductDisplayMetadataEntry> = emptyList(),
+    val storeEntries: List<PracticalShoppingSavedStoreDisplayMetadataEntry> = emptyList()
+) {
+    init {
+        require(productEntries.size <= MAX_SAVED_PRODUCT_DISPLAY_ENTRIES)
+        require(storeEntries.size <= MAX_SAVED_STORE_DISPLAY_ENTRIES)
+        require(productEntries.map { it.itemKey }.distinct().size == productEntries.size) {
+            "Saved product display metadata keys must be unique"
+        }
+        require(storeEntries.map { it.storeKey }.distinct().size == storeEntries.size) {
+            "Saved store display metadata keys must be unique"
+        }
+    }
+}
+
+data class PracticalShoppingSavedExactPreferenceDisplayMetadataBindingResult(
+    val metadata: PracticalShoppingSavedExactPreferenceDisplayMetadata,
+    val staleProductKeys: List<ShoppingItemKey>,
+    val staleStoreKeys: List<ShoppingStoreKey>
+) {
+    init {
+        require(staleProductKeys.distinct().size == staleProductKeys.size)
+        require(staleStoreKeys.distinct().size == staleStoreKeys.size)
+    }
+
+    val hasStaleEntries: Boolean
+        get() = staleProductKeys.isNotEmpty() || staleStoreKeys.isNotEmpty()
 }
 
 enum class PracticalShoppingSavedDisplayMetadataFailure {
@@ -90,6 +139,66 @@ data class OpenStreetMapPracticalShoppingStoreDisplayRecord(
 }
 
 /**
+ * Binds detached display metadata back to the current validated saved preference state.
+ *
+ * Entries whose logical key no longer exists or whose exact product/store binding changed
+ * are omitted from the projector metadata and reported as stale. Thus a stale display name
+ * can never relabel a newly confirmed exact choice merely because the stable logical key is
+ * reused. Extra metadata still cannot manufacture a saved row.
+ */
+object PracticalShoppingSavedExactPreferenceDisplayMetadataBinder {
+
+    fun bind(
+        savedState: PracticalShoppingSavedExactPreferenceState,
+        snapshot: PracticalShoppingSavedExactPreferenceDisplayMetadataSnapshot
+    ): PracticalShoppingSavedExactPreferenceDisplayMetadataBindingResult {
+        val staleProducts = mutableListOf<ShoppingItemKey>()
+        val staleStores = mutableListOf<ShoppingStoreKey>()
+        val productNames = linkedMapOf<ShoppingItemKey, String>()
+        val storeNames = linkedMapOf<ShoppingStoreKey, String>()
+
+        snapshot.productEntries
+            .sortedBy { it.itemKey.value }
+            .forEach { entry ->
+                val current = savedState.productFor(entry.itemKey)
+                val currentKey =
+                    current?.let { preference ->
+                        ProductionProductEvidenceKeyResolver.resolve(
+                            providerId = preference.providerId,
+                            identity = preference.sourceIdentity
+                        )
+                    }
+                if (currentKey == entry.productKey) {
+                    productNames[entry.itemKey] = entry.displayName
+                } else {
+                    staleProducts += entry.itemKey
+                }
+            }
+
+        snapshot.storeEntries
+            .sortedBy { it.storeKey.value }
+            .forEach { entry ->
+                val current = savedState.storeFor(entry.storeKey)
+                if (current?.scope == entry.scope) {
+                    storeNames[entry.storeKey] = entry.displayName
+                } else {
+                    staleStores += entry.storeKey
+                }
+            }
+
+        return PracticalShoppingSavedExactPreferenceDisplayMetadataBindingResult(
+            metadata =
+                PracticalShoppingSavedExactPreferenceDisplayMetadata(
+                    productDisplayNames = productNames,
+                    storeDisplayNames = storeNames
+                ),
+            staleProductKeys = staleProducts,
+            staleStoreKeys = staleStores
+        )
+    }
+}
+
+/**
  * Confirmation-bound human-label adapter for Saved presentation.
  *
  * This boundary never creates or changes exact product/store identity. It only emits a
@@ -97,9 +206,9 @@ data class OpenStreetMapPracticalShoppingStoreDisplayRecord(
  * names additionally re-run the verified source identity adapter and must resolve back to
  * the same confirmed product key or complete store scope/provenance.
  *
- * The downstream Saved UI projector still applies its independent leakage policy before
- * consumer rendering. A technically shaped label therefore remains unable to bypass the
- * presentation safety boundary even if supplied by the user/source.
+ * Every emitted entry retains its exact product/store binding so detached or persisted
+ * metadata can later be revalidated through [PracticalShoppingSavedExactPreferenceDisplayMetadataBinder].
+ * The downstream Saved UI projector still independently applies leakage policy.
  */
 object PracticalShoppingSavedExactPreferenceDisplayMetadataAdapter {
 
@@ -118,6 +227,14 @@ object PracticalShoppingSavedExactPreferenceDisplayMetadataAdapter {
             )
         }
 
+        val productKey =
+            ProductionProductEvidenceKeyResolver.resolve(
+                providerId = confirmedCandidate.providerId,
+                identity = confirmedCandidate.sourceIdentity
+            )
+            ?: return productFailure(
+                PracticalShoppingSavedDisplayMetadataFailure.PRODUCT_IDENTITY_MISMATCH
+            )
         val safeName = sanitizeDisplayName(displayName)
             ?: return productFailure(
                 PracticalShoppingSavedDisplayMetadataFailure.DISPLAY_NAME_UNAVAILABLE
@@ -127,6 +244,7 @@ object PracticalShoppingSavedExactPreferenceDisplayMetadataAdapter {
             entry =
                 PracticalShoppingSavedProductDisplayMetadataEntry(
                     itemKey = confirmedCandidate.itemKey,
+                    productKey = productKey,
                     displayName = safeName,
                     basis = PracticalShoppingSavedDisplayMetadataBasis.USER_PROVIDED
                 ),
@@ -156,6 +274,7 @@ object PracticalShoppingSavedExactPreferenceDisplayMetadataAdapter {
             entry =
                 PracticalShoppingSavedStoreDisplayMetadataEntry(
                     storeKey = confirmedCandidate.storeKey,
+                    scope = confirmedCandidate.scope,
                     displayName = safeName,
                     basis = PracticalShoppingSavedDisplayMetadataBasis.USER_PROVIDED
                 ),
@@ -224,6 +343,7 @@ object PracticalShoppingSavedExactPreferenceDisplayMetadataAdapter {
             entry =
                 PracticalShoppingSavedProductDisplayMetadataEntry(
                     itemKey = confirmedCandidate.itemKey,
+                    productKey = confirmedProductKey,
                     displayName = safeName,
                     basis = PracticalShoppingSavedDisplayMetadataBasis.OPEN_FOOD_FACTS_PRODUCT_NAME
                 ),
@@ -278,6 +398,7 @@ object PracticalShoppingSavedExactPreferenceDisplayMetadataAdapter {
             entry =
                 PracticalShoppingSavedStoreDisplayMetadataEntry(
                     storeKey = confirmedCandidate.storeKey,
+                    scope = confirmedCandidate.scope,
                     displayName = safeName,
                     basis = PracticalShoppingSavedDisplayMetadataBasis.OPENSTREETMAP_PLACE_NAME
                 ),
