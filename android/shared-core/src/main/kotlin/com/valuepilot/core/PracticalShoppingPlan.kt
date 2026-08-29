@@ -52,21 +52,28 @@ data class ShoppingTravel(
  * Point-in-time evidence summary supplied by upstream evidence policy.
  *
  * This type deliberately does not own a clock or decide what counts as fresh.
+ * AGING remains distinct because accepted real-world evidence may be rankable
+ * while aging; presentation must not silently upgrade or downgrade that fact.
  */
 data class ShoppingPlanEvidenceSummary(
     val freshItemCount: Int,
     val staleItemCount: Int,
-    val unknownFreshnessItemCount: Int
+    val unknownFreshnessItemCount: Int,
+    val agingItemCount: Int = 0
 ) {
     init {
         require(freshItemCount >= 0)
         require(staleItemCount >= 0)
         require(unknownFreshnessItemCount >= 0)
+        require(agingItemCount >= 0)
     }
 
     val totalItemCount: Int
         get() = Math.addExact(
-            Math.addExact(freshItemCount, staleItemCount),
+            Math.addExact(
+                Math.addExact(freshItemCount, agingItemCount),
+                staleItemCount
+            ),
             unknownFreshnessItemCount
         )
 }

@@ -253,7 +253,14 @@ object PracticalShoppingUiProjector {
     }
 
     internal fun formatEvidence(evidence: ShoppingPlanEvidenceSummary): String =
-        "${evidence.freshItemCount} fresh · " +
-            "${evidence.staleItemCount} stale · " +
-            "${evidence.unknownFreshnessItemCount} unknown"
+        if (evidence.agingItemCount == 0) {
+            "${evidence.freshItemCount} fresh · " +
+                "${evidence.staleItemCount} stale · " +
+                "${evidence.unknownFreshnessItemCount} unknown"
+        } else {
+            "${evidence.freshItemCount} fresh · " +
+                "${evidence.agingItemCount} aging · " +
+                "${evidence.staleItemCount} stale · " +
+                "${evidence.unknownFreshnessItemCount} unknown"
+        }
 }
