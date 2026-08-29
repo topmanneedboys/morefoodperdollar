@@ -4,8 +4,8 @@ package com.valuepilot.core
  * Raw inputs needed to re-evaluate one provider current-price path at a shared
  * final-eligibility decision instant.
  *
- * This is input only, never proof. The evaluator re-runs production claim and
- * acceptance boundaries for every request instead of trusting detached results.
+ * This is input only, never proof. Production eligibility always begins from
+ * these raw inputs plus current lifecycle/disposition registries.
  */
 data class ProductionCurrentPriceEligibilityRequest(
     val requestId: String,
@@ -80,9 +80,13 @@ data class ProductionCurrentPriceEligibilityResult(
  * This avoids the dangerous shortcut of pre-filtering display-only evidence and
  * thereby hiding a stronger contradictory factual claim.
  *
+ * [evaluate] preserves the original one-candidate API. [evaluateAll] is an
+ * internal same-instant batching path: it re-runs every raw request exactly once
+ * for that call, then derives candidate-specific conflict results from the same
+ * immutable evaluation set. The batch result is not persisted and is not an
+ * authorization token.
+ *
  * The evaluator performs no I/O, owns no clock and mutates no evidence index.
- * Requests are explicitly bounded so provider expansion cannot create an
- * unbounded conflict-evaluation path.
  */
 object ProductionCurrentPriceEligibilityEvaluator {
 
@@ -96,9 +100,64 @@ object ProductionCurrentPriceEligibilityEvaluator {
         evaluatedAtEpochMillis: Long,
         acceptancePolicy: EvidenceAcceptancePolicy
     ): ProductionCurrentPriceEligibilityResult {
+        require(candidateRequestId.isNotBlank())
+
+        val evaluations =
+            evaluateRequests(
+                requests = requests,
+                lifecycleRegistry = lifecycleRegistry,
+                dispositionRegistry = dispositionRegistry,
+                evaluatedAtEpochMillis = evaluatedAtEpochMillis,
+                acceptancePolicy = acceptancePolicy
+            )
+
+        return evaluateFromEvaluations(
+            evaluations = evaluations,
+            candidateRequestId = candidateRequestId
+        )
+    }
+
+    /**
+     * Shared-core-only batching for one decision instant.
+     *
+     * Raw provider requests are re-evaluated once for this invocation. Every
+     * request id then receives the exact same candidate-specific eligibility
+     * semantics as [evaluate], including display-only conflict participants.
+     */
+    internal fun evaluateAll(
+        requests: List<ProductionCurrentPriceEligibilityRequest>,
+        lifecycleRegistry: ProductionDatasetLifecycleRegistry,
+        dispositionRegistry: ProductionDatasetDispositionRegistry,
+        evaluatedAtEpochMillis: Long,
+        acceptancePolicy: EvidenceAcceptancePolicy
+    ): Map<String, ProductionCurrentPriceEligibilityResult> {
+        val evaluations =
+            evaluateRequests(
+                requests = requests,
+                lifecycleRegistry = lifecycleRegistry,
+                dispositionRegistry = dispositionRegistry,
+                evaluatedAtEpochMillis = evaluatedAtEpochMillis,
+                acceptancePolicy = acceptancePolicy
+            )
+
+        return evaluations.associate { evaluation ->
+            evaluation.requestId to
+                evaluateFromEvaluations(
+                    evaluations = evaluations,
+                    candidateRequestId = evaluation.requestId
+                )
+        }
+    }
+
+    private fun evaluateRequests(
+        requests: List<ProductionCurrentPriceEligibilityRequest>,
+        lifecycleRegistry: ProductionDatasetLifecycleRegistry,
+        dispositionRegistry: ProductionDatasetDispositionRegistry,
+        evaluatedAtEpochMillis: Long,
+        acceptancePolicy: EvidenceAcceptancePolicy
+    ): List<ProductionCurrentPriceEligibilityEvaluation> {
         require(requests.isNotEmpty())
         require(requests.size <= MAX_REQUESTS)
-        require(candidateRequestId.isNotBlank())
         require(evaluatedAtEpochMillis > 0L)
 
         val requestIds = requests.map { it.requestId }
@@ -106,30 +165,34 @@ object ProductionCurrentPriceEligibilityEvaluator {
             "Current-price eligibility request ids must be unique"
         }
 
-        val evaluations =
-            requests.map { request ->
-                ProductionCurrentPriceEligibilityEvaluation(
-                    requestId = request.requestId,
-                    acceptanceResult =
-                        ProductionCurrentPriceAcceptanceEvaluator.evaluate(
-                            record = request.record,
-                            priceRoles = request.priceRoles,
-                            currentAuthorizationAssessment =
-                                request.currentAuthorizationAssessment,
-                            activationProfile = request.activationProfile,
-                            geography = request.geography,
-                            targetCountryCode = request.targetCountryCode,
-                            snapshot = request.snapshot,
-                            lifecycleRegistry = lifecycleRegistry,
-                            dispositionRegistry = dispositionRegistry,
-                            descriptor = request.descriptor,
-                            evaluatedAtEpochMillis = evaluatedAtEpochMillis,
-                            offerFreshnessPolicy = request.offerFreshnessPolicy,
-                            acceptancePolicy = acceptancePolicy
-                        )
-                )
-            }
+        return requests.map { request ->
+            ProductionCurrentPriceEligibilityEvaluation(
+                requestId = request.requestId,
+                acceptanceResult =
+                    ProductionCurrentPriceAcceptanceEvaluator.evaluate(
+                        record = request.record,
+                        priceRoles = request.priceRoles,
+                        currentAuthorizationAssessment =
+                            request.currentAuthorizationAssessment,
+                        activationProfile = request.activationProfile,
+                        geography = request.geography,
+                        targetCountryCode = request.targetCountryCode,
+                        snapshot = request.snapshot,
+                        lifecycleRegistry = lifecycleRegistry,
+                        dispositionRegistry = dispositionRegistry,
+                        descriptor = request.descriptor,
+                        evaluatedAtEpochMillis = evaluatedAtEpochMillis,
+                        offerFreshnessPolicy = request.offerFreshnessPolicy,
+                        acceptancePolicy = acceptancePolicy
+                    )
+            )
+        }
+    }
 
+    private fun evaluateFromEvaluations(
+        evaluations: List<ProductionCurrentPriceEligibilityEvaluation>,
+        candidateRequestId: String
+    ): ProductionCurrentPriceEligibilityResult {
         val blockers = linkedSetOf<ProductionCurrentPriceEligibilityBlocker>()
         val candidateEvaluation =
             evaluations.firstOrNull { it.requestId == candidateRequestId }

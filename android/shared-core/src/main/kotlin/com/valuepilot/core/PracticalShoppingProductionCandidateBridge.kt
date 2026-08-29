@@ -101,16 +101,20 @@ data class PracticalShoppingProductionCandidateBridgeResult(
 /**
  * Deterministic production-evidence -> one-store-candidate bridge.
  *
- * This is deliberately NOT another ranking engine. For every explicitly bound
- * item/store price it re-runs the existing ProductionCurrentPriceEligibilityEvaluator,
- * then verifies that the resulting exact product + merchant + location + channel
- * scope is the scope the caller declared. Blocked/missing prices remain missing.
+ * This is deliberately NOT another ranking engine. Every raw current-price
+ * request is re-established once for this bridge invocation at the supplied
+ * decision instant. Each explicitly bound item/store price then consumes the
+ * candidate-specific result derived from that same immutable in-call evaluation
+ * set and verifies exact product + merchant + location + channel scope.
+ *
+ * The batch is only an execution optimization. It is never persisted and never
+ * weakens lifecycle, disposition, authorization, freshness or conflict checks.
+ * Blocked/missing prices remain missing.
  *
  * The bridge only constructs exact [SingleStorePlanCandidate] inputs. It does not
- * choose a store, does not build split-store plans, does not infer substitutions,
- * owns no clock/network/location service, and does not invent an unknown price.
- * One-store ranking and any future second-stop decision remain exclusively in
- * [PracticalShoppingPlanner].
+ * choose a store, build split-store plans, infer substitutions, own a
+ * clock/network/location service, or invent an unknown price. One-store ranking
+ * and second-stop decisions remain exclusively in [PracticalShoppingPlanner].
  */
 object PracticalShoppingProductionCandidateBridge {
 
@@ -157,6 +161,18 @@ object PracticalShoppingProductionCandidateBridge {
         val storesByKey = stores.associateBy { it.storeKey }
         val requestsById = priceRequests.associateBy { it.requestId }
         val requestedItems = request.itemKeySet
+        val eligibilityByRequestId =
+            if (priceRequests.isEmpty()) {
+                emptyMap()
+            } else {
+                ProductionCurrentPriceEligibilityEvaluator.evaluateAll(
+                    requests = priceRequests,
+                    lifecycleRegistry = lifecycleRegistry,
+                    dispositionRegistry = dispositionRegistry,
+                    evaluatedAtEpochMillis = evaluatedAtEpochMillis,
+                    acceptancePolicy = acceptancePolicy
+                )
+            }
 
         val priceEvaluations =
             priceBindings
@@ -173,11 +189,7 @@ object PracticalShoppingProductionCandidateBridge {
                         requestedItems = requestedItems,
                         storesByKey = storesByKey,
                         requestsById = requestsById,
-                        allPriceRequests = priceRequests,
-                        lifecycleRegistry = lifecycleRegistry,
-                        dispositionRegistry = dispositionRegistry,
-                        evaluatedAtEpochMillis = evaluatedAtEpochMillis,
-                        acceptancePolicy = acceptancePolicy
+                        eligibilityByRequestId = eligibilityByRequestId
                     )
                 }
 
@@ -202,11 +214,7 @@ object PracticalShoppingProductionCandidateBridge {
         requestedItems: Set<ShoppingItemKey>,
         storesByKey: Map<ShoppingStoreKey, PracticalShoppingProductionStoreScope>,
         requestsById: Map<String, ProductionCurrentPriceEligibilityRequest>,
-        allPriceRequests: List<ProductionCurrentPriceEligibilityRequest>,
-        lifecycleRegistry: ProductionDatasetLifecycleRegistry,
-        dispositionRegistry: ProductionDatasetDispositionRegistry,
-        evaluatedAtEpochMillis: Long,
-        acceptancePolicy: EvidenceAcceptancePolicy
+        eligibilityByRequestId: Map<String, ProductionCurrentPriceEligibilityResult>
     ): PracticalShoppingProductionPriceEvaluation {
         val blockers = linkedSetOf<PracticalShoppingProductionPriceBlocker>()
 
@@ -229,14 +237,9 @@ object PracticalShoppingProductionCandidateBridge {
         }
 
         val eligibility =
-            ProductionCurrentPriceEligibilityEvaluator.evaluate(
-                requests = allPriceRequests,
-                candidateRequestId = requireNotNull(priceRequest).requestId,
-                lifecycleRegistry = lifecycleRegistry,
-                dispositionRegistry = dispositionRegistry,
-                evaluatedAtEpochMillis = evaluatedAtEpochMillis,
-                acceptancePolicy = acceptancePolicy
-            )
+            requireNotNull(eligibilityByRequestId[requireNotNull(priceRequest).requestId]) {
+                "Current-price batch is missing an evaluated request"
+            }
 
         if (!eligibility.eligibleForCurrentPriceStage) {
             blockers += PracticalShoppingProductionPriceBlocker.CURRENT_PRICE_NOT_ELIGIBLE
