@@ -480,7 +480,9 @@ object LocalSamplePracticalShoppingDemo {
         while (index < tokens.size) {
             val aliasMatch = findAlias(tokens, index)
             if (aliasMatch != null) {
-                resolved.putIfAbsent(aliasMatch.first.key, aliasMatch.first)
+                if (aliasMatch.first.key !in resolved) {
+                    resolved[aliasMatch.first.key] = aliasMatch.first
+                }
                 index += aliasMatch.second
                 continue
             }
@@ -490,8 +492,8 @@ object LocalSamplePracticalShoppingDemo {
                 val selected = chickenChoice?.let(chickenByChoice::get)
                 if (selected == null) {
                     needsChicken = true
-                } else {
-                    resolved.putIfAbsent(selected.key, selected)
+                } else if (selected.key !in resolved) {
+                    resolved[selected.key] = selected
                 }
             } else {
                 unknown.add(token)
