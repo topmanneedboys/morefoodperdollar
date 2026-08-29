@@ -61,7 +61,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     }
 
     private val itemsHeading = heading(context.getString(R.string.home_items_title))
-    private val itemsContainer = column()
+    private val itemsContainer = bareColumn()
 
     private val refinementBody = column()
     private val refinementCard = card("#FFFBEB", "#FDE68A", 16, refinementBody)
@@ -69,7 +69,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val unknownBody = column()
     private val unknownCard = card("#FFF7ED", "#FED7AA", 12, unknownBody)
 
-    private val resultContainer = column()
+    private val resultContainer = bareColumn()
     private val sampleNotice = line("", 13f, "#374151")
 
     init {
@@ -309,8 +309,11 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         body?.let(::addView)
     }
 
-    private fun column(): LinearLayout = LinearLayout(context).apply {
+    private fun bareColumn(): LinearLayout = LinearLayout(context).apply {
         orientation = VERTICAL
+    }
+
+    private fun column(): LinearLayout = bareColumn().apply {
         setPadding(dp(16), dp(15), dp(16), dp(15))
     }
 
