@@ -10,12 +10,12 @@ import com.valuepilot.core.ShoppingStoreKey
 import com.valuepilot.core.ShoppingTravel
 import com.valuepilot.core.SingleStorePlanCandidate
 import com.valuepilot.core.TwoStorePlanCandidate
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
+import org.junit.Test
 
 class PracticalShoppingUiProjectorTest {
 
@@ -232,7 +232,7 @@ class PracticalShoppingUiProjectorTest {
             policy
         )
 
-        assertFailsWith<IllegalArgumentException> {
+        assertThrows(IllegalArgumentException::class.java) {
             PracticalShoppingUiProjector.project(
                 request,
                 decision,
