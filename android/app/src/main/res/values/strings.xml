@@ -98,7 +98,7 @@
     <string name="basket_footnote">Whole-basket optimization is not available in this build yet.</string>
 
     <string name="saved_eyebrow">SAVED</string>
-    <string name="saved_title">Keep the decisions that matter.</string>
-    <string name="saved_body">Saved will hold products, shopping lists and watched decisions so useful shopping intelligence does not disappear after one session.</string>
-    <string name="saved_footnote">Saved products and watchlists are not available in this build yet.</string>
+    <string name="saved_title">Your confirmed choices.</string>
+    <string name="saved_body">Review exact products and stores you chose to remember. Refresh them, remove individual choices, or clear them here.</string>
+    <string name="saved_footnote">Saved choices are local preferences only. They do not confirm current price, stock, promotions, availability or travel.</string>
 </resources>

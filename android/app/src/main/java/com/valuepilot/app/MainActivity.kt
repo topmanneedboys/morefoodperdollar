@@ -54,6 +54,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var searchProgress: ProgressBar
     private lateinit var searchResultsHeading: TextView
     private lateinit var searchResultsContainer: LinearLayout
+    private lateinit var savedExperience: PracticalShoppingSavedSurfaceView
+    private lateinit var savedRouteCoordinator: PracticalShoppingSavedRouteCoordinator
 
     private var comparisonActivityOpen = false
     private var suppressSearchInputCallback = false
@@ -79,6 +81,7 @@ class MainActivity : AppCompatActivity() {
         searchProgress = findViewById(R.id.searchProgress)
         searchResultsHeading = findViewById(R.id.searchResultsHeading)
         searchResultsContainer = findViewById(R.id.searchResultsContainer)
+        savedExperience = findViewById(R.id.savedExperience)
 
         installSystemBarInsets()
         shellState = restoreShellState(savedInstanceState)
@@ -86,6 +89,7 @@ class MainActivity : AppCompatActivity() {
         searchState = restoreSearchState(savedInstanceState)
         configureHomeUi()
         configureSearchUi()
+        configureSavedUi()
 
         bottomNavigation.setOnItemSelectedListener { item ->
             val tab = when (item.itemId) {
@@ -137,6 +141,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        if (::savedRouteCoordinator.isInitialized) {
+            savedExperience.onAction = null
+            savedRouteCoordinator.close()
+        }
         searchExecutor.shutdownNow()
         mainHandler.removeCallbacksAndMessages(null)
         super.onDestroy()
@@ -280,6 +288,20 @@ class MainActivity : AppCompatActivity() {
         configureQuickSearch(R.id.quickPizza, getString(R.string.search_quick_pizza))
     }
 
+    private fun configureSavedUi() {
+        val presenter = PracticalShoppingSavedSurfacePresenter(savedExperience)
+        savedRouteCoordinator =
+            PracticalShoppingSavedRouteCoordinator(
+                sessionFactory = {
+                    PracticalShoppingSavedAndroidSession.create(
+                        context = this,
+                        renderer = presenter
+                    )
+                }
+            )
+        savedExperience.onAction = savedRouteCoordinator::onSurfaceAction
+    }
+
     private fun configureQuickSearch(chipId: Int, query: String) {
         findViewById<Chip>(chipId).setOnClickListener {
             setSearchQuery(query)
@@ -390,6 +412,10 @@ class MainActivity : AppCompatActivity() {
                 searchInput.post { submitSearch() }
             }
         }
+
+        val savedVisible = state.selectedPrimaryTab == AppPrimaryTab.SAVED
+        savedExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
+        savedRouteCoordinator.onRouteVisibilityChanged(savedVisible)
 
         val expectedMenuItem = menuIdFor(state.selectedPrimaryTab)
         if (bottomNavigation.selectedItemId != expectedMenuItem) {

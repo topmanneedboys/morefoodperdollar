@@ -88,14 +88,14 @@ internal class PracticalShoppingSavedMainLooperDispatcher(
  */
 class PracticalShoppingSavedAndroidSession private constructor(
     private val host: PracticalShoppingSavedLifecycleHost
-) : AutoCloseable {
+) : PracticalShoppingSavedRouteSession {
 
-    fun refresh() {
+    override fun refresh() {
         requireMainThread()
         host.refresh()
     }
 
-    fun selectAction(action: PracticalShoppingSavedExactPreferenceUiAction) {
+    override fun selectAction(action: PracticalShoppingSavedExactPreferenceUiAction) {
         requireMainThread()
         host.selectAction(action)
     }
