@@ -24,6 +24,7 @@ data class PracticalShoppingPrimaryUiState(
     val coverageText: String,
     val travelText: String,
     val evidenceText: String,
+    val whyText: String,
     val notice: String?
 ) {
     init {
@@ -33,6 +34,7 @@ data class PracticalShoppingPrimaryUiState(
         require(coverageText.isNotBlank())
         require(travelText.isNotBlank())
         require(evidenceText.isNotBlank())
+        require(whyText.isNotBlank())
         require(notice == null || notice.isNotBlank())
     }
 }
@@ -116,6 +118,7 @@ object PracticalShoppingUiProjector {
                 coverageText = coverageText(coveredCount, totalCount),
                 travelText = formatTravel(candidate.travel),
                 evidenceText = formatEvidence(candidate.evidence),
+                whyText = primaryWhyText(decision.primaryKind),
                 notice =
                     if (complete) {
                         null
@@ -170,6 +173,22 @@ object PracticalShoppingUiProjector {
 
             PrimaryShoppingPlanKind.INCOMPLETE_BEST_COVERAGE ->
                 "Best option with the prices we know"
+        }
+
+    /**
+     * Explains only the shared-core decision kind. It does not inspect or compare
+     * candidates, recompute money, or create a second presentation-layer score.
+     */
+    internal fun primaryWhyText(kind: PrimaryShoppingPlanKind): String =
+        when (kind) {
+            PrimaryShoppingPlanKind.NO_COVERAGE ->
+                "No one-store option has usable price coverage yet."
+
+            PrimaryShoppingPlanKind.COMPLETE_PRICE_COMPARISON ->
+                "Lowest known complete basket among the one-store options compared."
+
+            PrimaryShoppingPlanKind.INCOMPLETE_BEST_COVERAGE ->
+                "No complete basket is priced yet; this option covers the most requested items."
         }
 
     private fun secondaryMessage(decision: PracticalShoppingDecision): String? =

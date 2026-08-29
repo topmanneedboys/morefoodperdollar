@@ -68,6 +68,10 @@ class PracticalShoppingUiProjectorTest {
         assertEquals("3 of 3 items priced", card.coverageText)
         assertEquals("7 min · 2.4 km", card.travelText)
         assertEquals("3 fresh · 0 stale · 0 unknown", card.evidenceText)
+        assertEquals(
+            "Lowest known complete basket among the one-store options compared.",
+            card.whyText
+        )
         assertNull(card.notice)
         assertFalse(projection.state.toString().contains(primaryKey.value))
         assertEquals(primaryKey, projection.primaryStoreKey)
@@ -99,6 +103,10 @@ class PracticalShoppingUiProjectorTest {
         assertEquals("BEST COVERAGE FOUND", card.badge)
         assertEquals("Known subtotal 32.10 CAD", card.basketCostText)
         assertEquals("2 of 3 items priced", card.coverageText)
+        assertEquals(
+            "No complete basket is priced yet; this option covers the most requested items.",
+            card.whyText
+        )
         assertEquals(
             "1 item still has an unknown price. This is not a complete basket total.",
             card.notice
