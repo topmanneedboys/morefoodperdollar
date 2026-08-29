@@ -1,39 +1,88 @@
 # Current state
 
-Updated: 2026-08-28
+Updated: 2026-08-29
 
 Branch: `work/valuepilot-android-milestone`
 
 Android version: 101.1.0 (10101)
 
-## Current milestone
+## Product direction now
 
-5D — Authorized Real Shopping Data Provider Selection / validation.
+ValuePilot remains provider-neutral shopping intelligence, but the startup launch strategy changed on 2026-08-29 after provider/rights/cost research.
 
-ValuePilot is provider-neutral shopping intelligence. Accessibility, OCR, overlays, browser capture and retailer-specific extraction are optional adapters, not the product foundation.
+Provider-by-provider approval is **no longer the primary launch dependency**. Rakuten/Jamieson/GS1/Walmart and future commercial feeds remain supplementary high-authority rails when they become available, but ValuePilot must provide compelling consumer utility without waiting for hundreds of companies.
+
+The product is NOT primarily "5 million live-priced products." Millions of open/free product identities may support recognition, but the consumer promise is:
+
+> **Given what I actually need, where I am, and how much inconvenience I will tolerate, what is the cheapest sensible way to shop?**
+
+The default is **ONE STORE FIRST**.
+
+A second store is optional and should only be recommended when its incremental savings clearly justify parking, getting out of the car, walking, finding products, checkout/loading and route detour. Initial product design may use a visible/user-controlled minimum extra-stop savings threshold around $15, to be validated empirically. Do not hide a made-up human-friction value inside an opaque score.
+
+A third store is not a normal recommendation and should only be considered in an explicitly aggressive savings mode.
+
+Unknown prices remain UNKNOWN. Never fabricate a complete basket by estimating missing prices as facts.
+
+## UX / performance requirement
+
+The app must be extremely polished, fast, simple, obvious and non-confusing. Treat this as an architectural/product requirement, not final cosmetic work.
+
+Primary consumer experiences:
+
+1. **Plan My Shop** — Home/hero flow. One simple shopping-list request; default result is one best-store recommendation card. Advanced controls stay behind progressive disclosure.
+2. **Compare Here** — user is already in a store; barcode/camera/OCR compares visible products/package sizes/promotions with exact unit-value math and immediate benefit even when cross-store coverage is incomplete.
+3. **Watch My Staples** — notify only when switching stores is practically worthwhile for recurring items/baskets; no penny-saving spam.
+4. **Receipt/import** — optional user-benefit feature for list reconstruction/spending/history/comparison. Receipt crowdsourcing is NOT the core data model.
+
+For every UI change: one obvious primary action; strong defaults; minimal fields/cards/buttons; explicit loading/empty/error/unknown states; no UI jumping; bounded work; smooth realistic item counts; no claim stronger than evidence.
+
+## Permanent architecture
+
+ValuePilot is provider-neutral shopping intelligence. Accessibility, OCR, overlays, browser capture, camera capture and retailer-specific extraction are optional adapters, not the product foundation.
 
 Permanent flow:
 
-`authorized/open/user evidence -> provider adapters -> provenance-preserving claims/import records -> deterministic validation/normalization -> Product identity + multiple Offers -> bounded retrieval -> deterministic ranking -> immutable presentation -> replaceable UI`
+`authorized/open/user evidence -> provider adapters -> provenance-preserving claims/import records -> deterministic validation/normalization -> Product identity + multiple Offers -> bounded retrieval -> deterministic decision/ranking -> immutable presentation -> replaceable UI`
 
 Permanent rules:
 
 - Product != Offer.
 - Sources contribute separate claims; they never overwrite one shared truth row.
 - Acceptance != factual conflict resolution.
-- Stronger same-scope evidence may defeat weaker evidence; unresolved equal-strength conflict blocks Best Value.
+- Stronger same-scope evidence may defeat weaker evidence; unresolved equal-strength conflict blocks authoritative comparison.
 - Money, quantity, currency and promotion arithmetic are exact/deterministic.
-- AI may classify/explain but may not invent authoritative facts.
-- Commission, EPC, payout, sponsorship, affiliate economics and provider preference never affect ranking.
+- AI may classify/explain/suggest candidates but may not invent authoritative facts.
+- Commission, EPC, payout, sponsorship, affiliate economics and provider preference never affect organic ranking.
 - Feed/technical access != publisher authorization != offer geography != production-use rights.
 - Dataset recency != per-offer freshness; currency != geography.
 - Dataset namespace != snapshot; snapshot lifecycle != namespace disposition/deletion.
-- Shared core owns no hidden clock.
-- Provider credentials never belong in source control, Android, fixtures, logs or screenshots.
+- Shared core owns no hidden clock/network/UI/provider credentials.
+- Android/UI renders immutable state and owns no provider/ranking business logic.
+- Bound/coalesce/cancel/measure expensive work; no unbounded scans, queues, caches, requests or rendered rows.
 
 Primary Android navigation remains Home / Search / Basket / Saved. Compare remains a workflow, not a primary tab. Built-in Search remains fictional/sample evidence and must never be represented as live merchant price, inventory, promotion or availability.
 
-## Verified production chain
+## Free/open data direction
+
+There is no known legitimate free complete dataset of fresh store-specific prices across all Canadian grocery retailers. Do not pretend otherwise and do not build the commercial foundation on unauthorized scraping/private endpoints/anti-bot circumvention.
+
+Potential source-isolated rails where licences/terms permit:
+
+- Open Food Facts — broad packaged-product recognition/metadata; prefer bulk import for scale.
+- USDA FoodData Central — public-domain/CC0 branded-food enrichment; never treat US market-country data as proof of Canadian availability.
+- validated produce/PLU source — loose-produce identity/category where licensing permits.
+- Open Prices — supplemental proof-backed observed/historical prices, not nationwide current-price coverage.
+- OpenStreetMap — store/location/routing foundation where appropriate.
+- user evidence adapters — barcode, shelf label, camera, product-page share, digital receipt/order evidence; immediate user utility first, contribution second.
+- merchant self-service later — stores submit CSV/feed/API because inclusion can send customers.
+- authorized commercial/provider/affiliate feeds — higher-authority accelerators only when rights/geography/freshness pass gates.
+
+Keep ODbL/share-alike sources in source-isolated namespaces and do not casually merge them into an incompatible proprietary master database. Resolve evidence through the existing provenance architecture.
+
+Launch depth before breadth: one dense metro area and roughly 1,500–5,000 high-frequency grocery/household concepts for excellent practical coverage, while millions of open identities remain backend recognition rather than a vanity KPI.
+
+## Verified production chain — keep it
 
 Core provider/evidence boundaries:
 
@@ -50,62 +99,49 @@ Core provider/evidence boundaries:
 - `97bfa3c353e48f15e26e9576cf06f4fa5e1687d1` — unified evidence acceptance/freshness.
 - `a1b15cc13df4912fb94893c8952f382f7404db1d` — lifecycle-bound current-price acceptance.
 - `c3dcfab539a2d2ef40fe9ce283533141ea9cd246` — current-price factual-conflict eligibility.
-- `204c8ae5e0089473f28b7cf6086b73e7a3516ec6` — production price + conflict-resolved PACKAGE_QUANTITY -> exact unit-value policy.
+- `204c8ae5e0089473f28b7cf6086b73e7a3516ec6` — production price + conflict-resolved package quantity -> exact unit value.
 - `ad5f91d4eef54e257a6660d291f14558653a1761` — bounded exact production Best Value ranking.
-- `6517fad0ef21daa541d31d0d01d72a5f1980f5d5` — immutable point-in-time production Best Value presentation.
+- `6517fad0ef21daa541d31d0d01d72a5f1980f5d5` — immutable point-in-time production presentation.
 
-Android/application presentation boundaries:
+Android/application boundaries:
 
-- `617dc128c9df31bbbd2b1835ac243be93e511d97` — exact Android/application production-search projector.
-- `38942d556958b8abdf3b942bcbdc7bce77f1a0da` — synthetic end-to-end raw production evidence -> presentation -> Android projection regression.
-- `6e0d3fc0f6c7c6a61926a8c0e85d2b2e12629022` — internal merchant/location/channel keys removed from UI-ready text.
-- `1a53d34bfbb2fdf65b7383c489f75b428defe06e` — raw product/image URLs removed from catalog-only UI-ready state.
-- `81620dfaeb15aeab48c2e438bd225004190c0a09` — internal blocker enums removed from consumer blocked UI state.
-- `7046b725291cc061f1e153e05c4a25539838a28e` — generation-based stale/out-of-order production-refresh protection.
-- `3cba4d96eb91e961772dee3c60d86371e61b1137` — independent 128-candidate UI projection ceiling, including manually constructed snapshots.
-- `8520af97695fb346710649a80c6d95d422da3ee8` — narrow production Search surface host / renderer-state separation.
-- `e2767b31512d8d5b6b9cd7555d452ae3ec0017e2` — inactive-by-default Android production Search renderer.
-- `c4661993f9c476e3a44c7d1dc504948e50767d48` — physically separate hidden production Search view attached to `activity_shell.xml`.
-- `932838f8d5eedda5d17c7a9dadf76ae38f8bcc9f` — production surface host no longer accepts a public detached presentation snapshot; each display submission re-runs `ProductionBestValuePresentationEvaluator` from raw bounded inputs against current lifecycle/disposition registries.
+- `617dc128c9df31bbbd2b1835ac243be93e511d97` — exact production Search projector.
+- `38942d556958b8abdf3b942bcbdc7bce77f1a0da` — synthetic raw evidence -> presentation -> Android projection regression.
+- `6e0d3fc0f6c7c6a61926a8c0e85d2b2e12629022` — internal scope keys removed from UI-ready text.
+- `1a53d34bfbb2fdf65b7383c489f75b428defe06e` — raw provider URLs removed from catalog-only UI-ready state.
+- `81620dfaeb15aeab48c2e438bd225004190c0a09` — blocker enum codes removed from consumer blocked UI state.
+- `7046b725291cc061f1e153e05c4a25539838a28e` — generation-based stale/out-of-order refresh protection.
+- `3cba4d96eb91e961772dee3c60d86371e61b1137` — independent 128-candidate UI projection ceiling.
+- `8520af97695fb346710649a80c6d95d422da3ee8` — production Search host/renderer separation.
+- `e2767b31512d8d5b6b9cd7555d452ae3ec0017e2` — inactive-by-default production renderer.
+- `c4661993f9c476e3a44c7d1dc504948e50767d48` — hidden physical production Search view in `activity_shell.xml`.
+- `932838f8d5eedda5d17c7a9dadf76ae38f8bcc9f` — display submission re-runs production evaluation from raw inputs/current lifecycle instead of trusting a detached snapshot.
 
-The exact workflows for the recent boundaries above passed browser checks, shared-core/app tests, lint, APK build, JVM summary, Android privacy verification, release packaging/checksums and artifact upload.
+Minimum known durable checkpoint before the 2026-08-29 strategy documentation commits: `deaa478c9b679f8820b47a80d7f43c5b18787677`, whose parent is verified code commit `932838f8d5eedda5d17c7a9dadf76ae38f8bcc9f`. Always inspect the current branch tip before new work.
 
-A temporary empty `__noop__` connector artifact was created during the hidden-layout ref update and immediately removed. Net tree comparison from verified renderer `e2767b31...` to hidden-layout `c4661993...` contains only the intended seven-line `ProductionSearchSurfaceView` layout insertion; no stray file remains.
+Recent exact workflows passed browser checks, shared-core/app tests, lint, APK build, JVM summary, Android privacy verification, packaging/checksums and artifact upload.
 
-## Production ranking / presentation / Search surface
+A temporary empty `__noop__` connector artifact created during the hidden-layout update was removed immediately; do not resurrect it.
+
+## Production Search boundary now
 
 Production arithmetic remains `Money`, `NormalizedQuantity`, `UnitRate`, `DeterministicValueMath`. Never convert verified production evidence back into legacy `Double` ranking.
 
-`ProductionBestValueRankingEvaluator` is bounded to 128 price requests, 128 quantity candidates and 128 ranking candidates. Only exact same `(currencyCode, RateUnit)` values compare; exact ties co-rank; singleton groups never claim Best Value; provider/affiliate economics are absent.
+`ProductionBestValueRankingEvaluator` is bounded to 128 price requests, 128 quantity candidates and 128 ranking candidates. Exact same `(currencyCode, RateUnit)` only; exact ties co-rank; singleton groups do not claim Best Value; provider/affiliate economics absent.
 
-`ProductionBestValuePresentationEvaluator` re-runs ranking from raw evidence at the supplied instant. A presentation snapshot is point-in-time and explicitly **not** a durable authorization token.
+`ProductionBestValuePresentationEvaluator` re-runs ranking from raw evidence at the supplied instant. Presentation snapshots are point-in-time and not durable authorization tokens.
 
-`ProductionSearchUiProjector` formats only exact UI-ready values. UI state excludes internal merchant/location/channel keys, raw provider URLs and blocker enum codes. Exact facts remain only in opaque lookup maps for future authorized actions/diagnostics/provenance. The projector independently rejects more than 128 total ranked+blocked candidates.
+`ProductionSearchUiProjector` formats exact UI-ready values and independently caps rendered ranked+blocked candidates at 128. Consumer UI excludes internal merchant/location/channel keys, raw provider URLs and blocker enum codes.
 
-`ProductionSearchRefreshGate` owns no clock/I/O. Caller-supplied generations prevent stale/out-of-order state replacement; newer clears prevent late older results from repopulating the surface.
+`ProductionSearchRefreshGate` uses caller-supplied generations and owns no clock/I/O.
 
-`ProductionSearchSurfaceHost` now exposes `evaluateAndApply(...)` from raw production inputs rather than a public detached-snapshot apply method. It re-runs the shared-core presentation evaluator at the caller-supplied decision instant using the current lifecycle/disposition registries, then applies generation ordering before rendering.
+`ProductionSearchSurfaceHost.evaluateAndApply(...)` re-runs production presentation from raw bounded inputs/current registries before rendering.
 
-`ProductionSearchSurfaceView` is physically present in the Search layout but starts `GONE`, has state saving disabled, has no link/click/provider behavior and renders only `ProductionSearchUiState`. Blocked results are summarized only as a neutral reference-only count.
+`ProductionSearchSurfaceView` is physically present but starts `GONE`, saves no state, has no link/click/provider behavior and renders sanitized state only.
 
-**MainActivity still does not wire or drive this production surface.** Current visible Search remains the fictional sample path. Do not add a provider or make the hidden surface visible until provider rights/geography/freshness/package-content gates are actually satisfied.
+**MainActivity still does not wire or drive this production surface.** Current visible Search remains fictional/sample. Do not route verified production evidence through `UniversalSearchController.receive()`, `DeterministicProductParser`, `ValueEngine.analyze()`, `RankingModePolicy`, `DeterministicRankingEngine` or `ValueEngine.rank()`.
 
-## Android / legacy Search separation
-
-Current visible Search still uses `UniversalSearchController` + `LocalSampleProductSearchProvider` and legacy `UniversalSearchRow`/`ValueItem` logic.
-
-Never route verified production evidence through:
-
-- `UniversalSearchController.receive()`;
-- `DeterministicProductParser`;
-- `ValueEngine.analyze()`;
-- `RankingModePolicy`;
-- `DeterministicRankingEngine`;
-- `ValueEngine.rank()`.
-
-The production surface is physically and state-wise separate from legacy `searchResultsContainer`.
-
-## Rakuten / Jamieson
+## Rakuten / Jamieson — updated 2026-08-29
 
 Rakuten Product Catalog technical access is enabled. Jamieson partnership, separate advertiser Product Feed approval and actual complete catalog-file access are proven. Proprietary feed data stays outside source control.
 
@@ -113,37 +149,56 @@ Sanitized feed checkpoint: 273 rows; 273 unique SKUs/Product IDs; GTIN present 2
 
 Generic Rakuten semantics remain resolved: Sale Price reflects discounts and Retail Price does not. Sale>Retail is a semantic conflict; never swap/repair/infer promotion from those rows.
 
-Latest Rakuten support message only reconfirmed Jamieson Product Feed approval/access. ValuePilot's later questions about Android display/search, cache/index, retention/deletion and applicable Mobile App/DSA approval remain unanswered. Do not resend unless the response is incomplete/new evidence creates another question.
+On 2026-08-29 Rakuten Publisher Support answered the production-use clarification materially:
 
-Current public Rakuten agreement/policies (last updated July 13, 2026) establish that mobile applications may be publisher Sites subject to advertiser terms/policies; installable mobile apps are within DSA controls for Rakuten network links; DSA/network-link use requires Rakuten approval/compliance testing and then participating-advertiser approval. Full network termination requires cessation/removal of network-provided links/content/materials. These public rules still do not settle ValuePilot's account-specific catalog-only Android display/cache/index rights or narrower advertiser-feed-revocation retention obligations.
+- Product Catalog files may be downloaded with any FTP client.
+- Once downloaded, product data/links may be used in the publisher's system for comparison, but application use requires confirmation from the relevant advertiser.
+- Comparison use likewise requires advertiser confirmation.
+- If partnership ends, product links become inaccessible while downloaded feed files remain saved in the publisher's system. Physical retention does not itself prove continuing display/use rights.
+- Android affiliate-link use requires advertiser permission/terms.
 
-Product Catalog file/update timestamps remain dataset/source recency, not trustworthy per-product price observation timestamps.
+Therefore Rakuten-side storage/comparison ambiguity is substantially reduced. Advertiser-specific Android/application display/comparison permission is the primary rights gate; post-partnership file retention must remain distinct from continued display/use authorization.
 
-Jamieson remains **NOT production-authorized**. Outstanding catalog gates: written Android/mobile Product Catalog display rights, cache/index scope, advertiser-feed removal/retention obligations, strong Canadian offer geography, trustworthy per-offer price freshness and broad package quantity. Link-enabled Android additionally requires DSA/Network Quality, advertiser distribution approval and tracking/privacy readiness.
+A Jamieson permission email has already been sent asking for Android display, search/comparison, cache/index/storage, affiliate-link use, retention/deletion requirements and confirmation that the approved feed represents Canadian consumer products/offers. **Do not resend while waiting unless the reply is incomplete or creates a new question.**
+
+Rakuten Product Catalog file/update timestamps remain dataset/source recency, not trustworthy per-product current-price observation timestamps.
+
+Jamieson is useful supplemental evidence but is no longer a launch dependency under the practical-shopping strategy.
+
+## Walmart Canada
+
+Rakuten Walmart Canada MID 36751 currently shows an advertiser-supplied eligibility pre-filter that prevents application. Do not falsify ValuePilot/account/channel details to bypass it. If Walmart is pursued later, ask Rakuten which exact eligibility condition fails. Walmart is not a core launch blocker.
 
 ## Package quantity / GS1 / open data
 
-Historical Jamieson x Open Food Facts raw-code 0/271 is invalid coverage evidence.
+Valid normalized Jamieson × Open Food Facts result remains: 273 products; 271 valid GTINs; 102 matches; 169 unmatched; 12 exact supplement-count candidates; 2 structured mass/volume-only; 0 quantity conflicts; 88 matched without usable quantity. OFF is supplemental; never infer package count from Rakuten title/description/opaque attributes/images.
 
-Valid normalized OFF result remains: 273 products; 271 valid GTINs; 102 matches; 169 unmatched; 12 exact supplement-count candidates; 2 structured mass/volume-only; 0 quantity conflicts; 88 matched without usable quantity. OFF is supplemental only; never infer package count from Rakuten title/description/opaque attributes/images.
+Health Canada LNHPD does not solve GTIN-level package count.
 
-Health Canada LNHPD does not solve GTIN-level package net count.
-
-GS1 Canada ECCnet remains the strategic package-content candidate. Inquiry sent and acknowledged 2026-08-28; no substantive eligibility/rights response has arrived. Do not implement ECCnet until eligibility, GTIN/net-content scope, consumer/mobile/search/cache rights, restrictions and commercial/API terms are confirmed.
+GS1 Canada ECCnet inquiry was sent and acknowledged 2026-08-28; no substantive eligibility/rights response yet unless newer evidence exists. GS1 is a potential high-quality package-content accelerator, not a launch dependency.
 
 ## Android privacy boundary
 
-Current Android still has no `INTERNET`, no `ACCESS_NETWORK_STATE`, no account requirement, no telemetry, no remote AI dependency and no ValuePilot server dependency. Provider research/networking remains outside Android.
+At the latest verified engineering checkpoint Android still has no `INTERNET`, no `ACCESS_NETWORK_STATE`, no account requirement, no telemetry, no remote AI dependency and no ValuePilot server dependency. Provider research/networking remains outside Android.
+
+Do not silently change this boundary. Future networking/server additions require an explicit milestone with privacy/security/offline/failure-mode design.
 
 ## Immediate next work
 
-The bounded offline production-search architecture is sufficiently hardened for the current provider-validation milestone. **Do not keep adding speculative Android production plumbing merely to stay busy.**
+Do not keep adding speculative Android production/provider plumbing.
 
-External provider evidence now determines the next major implementation:
+Next phase is the **Practical Shopping MVP**:
 
-1. Await Rakuten's written account-specific reply. Map every answer independently to display/cache/index/mobile/retention/DSA/link/tracking gates. Feed approval alone still cannot activate production.
-2. Await GS1 Canada's substantive ECCnet response. Validate Data Recipient eligibility, GTIN/net-content fields, Jamieson publication scope, consumer comparison/mobile/cache/search rights, retention/attribution restrictions, API/extract options and commercial terms.
-3. If either response arrives, update repository status/gate documents first, then implement only the provider-specific adapter/work unlocked by that evidence.
-4. Until then, keep the production Search surface hidden and unwired. No real Rakuten/GS1 data, Android networking, permission additions, affiliate links, checkout/payment, telemetry or remote AI.
+1. Inspect current Home/Search/Basket/Saved shell and immutable UI-state boundaries before changing them.
+2. Define the smallest deterministic domain model for shopping request/list, candidate store plan, matched/missing coverage, exact known basket cost, travel metadata, confidence/freshness, and optional second-stop incremental-savings decision.
+3. Reuse existing exact money/quantity/value components. Do not duplicate arithmetic.
+4. Encode one-store-first as the default invariant. Use an explicit second-stop minimum savings/route constraint rather than a hidden hassle score.
+5. Use a tiny fictional/sample multi-store fixture solely to prove the decision flow/UX; never imply live merchant data.
+6. Build Home around one primary action and one primary recommendation card. Advanced settings are progressive disclosure.
+7. Add performance budgets/tests early: bounded candidates/list size, no heavy main-thread work, stable immutable rendering, smooth scrolling/interactions and no random jump-to-top behavior.
+8. After the decision flow is excellent, integrate source-isolated open product/location data.
+9. Build `Compare Here` as the second major vertical slice.
+10. Build `Watch My Staples` as the third retention slice.
+11. Continue Jamieson/GS1/provider replies in parallel; incorporate them only when they unlock real high-authority evidence/commerce value.
 
-No user/device action is currently required for this engineering checkpoint.
+No user/device action is required for this documentation checkpoint.
