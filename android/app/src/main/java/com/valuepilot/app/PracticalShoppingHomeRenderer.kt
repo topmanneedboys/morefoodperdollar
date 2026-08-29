@@ -1,0 +1,112 @@
+package com.valuepilot.app
+
+/**
+ * Android-facing immutable presentation for the Practical Shopping Home proof.
+ *
+ * This layer may decide only presentation mechanics such as whether the submit
+ * control is enabled or which message emphasis to use. Shopping resolution,
+ * store ranking, basket arithmetic and second-stop decisions stay upstream in
+ * the verified controller/shared-core/projector boundary.
+ */
+enum class PracticalShoppingHomeMessageTone {
+    NEUTRAL,
+    ACTION_REQUIRED,
+    ERROR
+}
+
+data class PracticalShoppingHomeItemRenderState(
+    val name: String,
+    val detail: String
+) {
+    init {
+        require(name.isNotBlank())
+        require(detail.isNotBlank())
+    }
+}
+
+data class PracticalShoppingHomeChickenChoiceRenderState(
+    val choice: LocalSamplePracticalShoppingDemo.ChickenChoice,
+    val label: String
+) {
+    init {
+        require(label.isNotBlank())
+    }
+}
+
+data class PracticalShoppingHomeRefinementRenderState(
+    val prompt: String,
+    val choices: List<PracticalShoppingHomeChickenChoiceRenderState>
+) {
+    init {
+        require(prompt.isNotBlank())
+        require(choices.isNotEmpty())
+    }
+}
+
+data class PracticalShoppingHomeRenderState(
+    val query: String,
+    val submitEnabled: Boolean,
+    val message: String?,
+    val messageTone: PracticalShoppingHomeMessageTone,
+    val items: List<PracticalShoppingHomeItemRenderState>,
+    val refinement: PracticalShoppingHomeRefinementRenderState?,
+    val unknownItems: List<String>,
+    val result: PracticalShoppingUiState?,
+    val sampleNotice: String
+) {
+    init {
+        require(message == null || message.isNotBlank())
+        require(unknownItems.none(String::isBlank))
+        require(sampleNotice.isNotBlank())
+    }
+}
+
+object PracticalShoppingHomeRenderer {
+
+    fun render(source: LocalSamplePracticalShoppingDemo.UiState): PracticalShoppingHomeRenderState =
+        PracticalShoppingHomeRenderState(
+            query = source.query,
+            submitEnabled =
+                source.query.isNotBlank() &&
+                    source.status != LocalSamplePracticalShoppingDemo.Status.QUERY_TOO_LONG,
+            message = source.message,
+            messageTone =
+                when (source.status) {
+                    LocalSamplePracticalShoppingDemo.Status.IDLE ->
+                        PracticalShoppingHomeMessageTone.NEUTRAL
+
+                    LocalSamplePracticalShoppingDemo.Status.QUERY_TOO_LONG ->
+                        PracticalShoppingHomeMessageTone.ERROR
+
+                    LocalSamplePracticalShoppingDemo.Status.NEEDS_REFINEMENT ->
+                        PracticalShoppingHomeMessageTone.ACTION_REQUIRED
+
+                    LocalSamplePracticalShoppingDemo.Status.RESULT ->
+                        PracticalShoppingHomeMessageTone.NEUTRAL
+                },
+            items =
+                source.items.map { item ->
+                    PracticalShoppingHomeItemRenderState(
+                        name = item.name,
+                        detail = item.detail
+                    )
+                },
+            refinement =
+                source.chickenClarification?.let { refinement ->
+                    PracticalShoppingHomeRefinementRenderState(
+                        prompt = refinement.prompt,
+                        choices =
+                            refinement.choices.map { choice ->
+                                PracticalShoppingHomeChickenChoiceRenderState(
+                                    choice = choice,
+                                    label = choice.label
+                                )
+                            }
+                    )
+                },
+            unknownItems = source.unknownItems.toList(),
+            // Already-projected shopping decision is passed through unchanged.
+            result = source.result,
+            sampleNotice = source.sampleNotice
+        )
+}
