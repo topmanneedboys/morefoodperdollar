@@ -96,8 +96,7 @@ object LocalSamplePracticalShoppingDemo {
     ) {
         init {
             require(query.length <= MAX_DEMO_QUERY_LENGTH || status == Status.QUERY_TOO_LONG)
-            require(items.size <= MAX_DEMO_INTENTS)
-            require(unknownItems.size <= MAX_DEMO_INTENTS)
+            require(items.size + unknownItems.size <= MAX_DEMO_INTENTS)
             require(message == null || message.isNotBlank())
             require(sampleNotice.isNotBlank())
         }
@@ -363,14 +362,16 @@ object LocalSamplePracticalShoppingDemo {
         }
 
         if (resolution.items.size + resolution.unknownItems.size > MAX_DEMO_INTENTS) {
+            val boundedRows = rows.take(MAX_DEMO_INTENTS)
+            val remainingUnknownSlots = MAX_DEMO_INTENTS - boundedRows.size
             return Model(
                 ui =
                     UiState(
                         query = rawQuery,
                         status = Status.NEEDS_REFINEMENT,
-                        items = rows.take(MAX_DEMO_INTENTS),
+                        items = boundedRows,
                         chickenClarification = null,
-                        unknownItems = resolution.unknownItems.take(MAX_DEMO_INTENTS),
+                        unknownItems = resolution.unknownItems.take(remainingUnknownSlots),
                         result = null,
                         message = "Keep this sample list to $MAX_DEMO_INTENTS distinct items or fewer.",
                         sampleNotice = sampleNotice
