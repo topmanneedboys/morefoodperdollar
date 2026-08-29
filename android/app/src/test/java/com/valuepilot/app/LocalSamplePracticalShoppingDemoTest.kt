@@ -142,7 +142,7 @@ class LocalSamplePracticalShoppingDemoTest {
 
     @Test
     fun distinctIntentLimitRemainsBoundedAndNeverProducesAPartialPlan() {
-        val unknowns = (1..33).joinToString(" ") { "unknown$it" }
+        val unknowns = (1..33).joinToString(" ") { "u$it" }
         val state = submit("eggs $unknowns").ui
 
         assertEquals(LocalSamplePracticalShoppingDemo.Status.NEEDS_REFINEMENT, state.status)
