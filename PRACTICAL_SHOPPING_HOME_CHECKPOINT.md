@@ -4,13 +4,13 @@ Updated: 2026-08-29
 
 Branch: `work/valuepilot-android-milestone`
 
-This checkpoint records the verified Practical Shopping Home slice plus the first provider-neutral production evidence-to-decision path. Newer repository evidence overrides this file.
+This checkpoint records the verified Practical Shopping Home slice plus the provider-neutral production evidence-to-decision path after the first execution-complexity hardening. Newer repository evidence overrides this file.
 
 ## Latest verified engineering head
 
-`95e66daf01c5e492b776fb573c705de42ccddd1f` — `Evaluate production Practical Shopping decisions`
+`2e6a71180738bb1d19be64c1eb850d6730bb139e` — `Batch production price eligibility for Practical Shopping`
 
-GitHub Actions workflow run **130** (`33263558876`) completed successfully.
+GitHub Actions workflow run **131** (`33263933735`) completed successfully.
 
 Verified gates all passed:
 
@@ -54,7 +54,7 @@ These are code/CI invariants, not a claim of measured physical-device frame timi
 
 ## Verified production evidence-to-decision architecture
 
-The new provider-neutral path is:
+The provider-neutral path is:
 
 `raw provider offer inputs`
 
@@ -72,9 +72,9 @@ The production path is not connected to Home yet.
 
 ### Current-price and store binding
 
-For each explicitly supplied shopping-item/store binding, the bridge re-runs the existing production current-price eligibility path at the supplied evaluation instant. It does not trust a detached `Money`, staged offer, old eligibility result or prior shopping candidate as continuing authority.
+For each explicitly supplied shopping-item/store binding, the bridge establishes current production price eligibility at the supplied evaluation instant. It does not trust a detached `Money`, staged offer, old eligibility result or prior shopping candidate as continuing authority.
 
-A usable price must match all of the following after that re-evaluation:
+A usable price must match all of the following after that point-in-time evaluation:
 
 - the requested shopping item is actually in the shopping request;
 - the declared store exists;
@@ -90,9 +90,28 @@ Blocked, revoked, out-of-stock, conflicting, mismatched or otherwise non-rankabl
 
 One current-price request cannot be reused for multiple shopping bindings, and one exact product cannot be counted twice in the same store basket.
 
+### Same-instant current-price batching
+
+The first verified bridge version re-ran the full raw request set separately for every item/store binding. With the hard bounds of 128 bindings and 128 raw requests, that allowed up to `128 × 128 = 16,384` raw production request evaluations inside one decision invocation.
+
+`2e6a71180738bb1d19be64c1eb850d6730bb139e` removes that repeated raw-evaluation path without caching authority across decisions.
+
+`ProductionCurrentPriceEligibilityEvaluator.evaluateAll` now:
+
+1. re-runs each raw current-price request exactly once for the current invocation, against the current lifecycle/disposition registries and supplied evaluation instant;
+2. keeps the resulting evaluation set internal to that invocation;
+3. derives each candidate-specific current-price eligibility/conflict result from that same immutable set;
+4. discards the batch after the call rather than treating it as a durable authorization token.
+
+Worst-case raw production request evaluations therefore drop from 16,384 to at most 128 per production decision invocation.
+
+A semantic-equivalence regression compares batched results with the original one-candidate evaluator for a same-scope conflicting price set and requires identical blockers, factual resolution, acceptance decision, selected evidence claim and final eligibility.
+
+This optimization changes execution shape only. It does not weaken authorization, lifecycle, namespace disposition, freshness, scope or factual conflict rules.
+
 ### Evidence freshness semantics
 
-`ShoppingPlanEvidenceSummary` now preserves `AGING` separately from `FRESH`, `STALE` and `UNKNOWN`.
+`ShoppingPlanEvidenceSummary` preserves `AGING` separately from `FRESH`, `STALE` and `UNKNOWN`.
 
 Existing zero-aging fictional output remains unchanged. Production candidate construction counts the exact freshness of only the prices actually selected for that candidate. No aging evidence is relabeled merely to fit an older three-bucket presentation model.
 
@@ -122,7 +141,7 @@ A pair candidate is emitted only when:
 6. equal or incomparable added-store prices remain assigned to the base;
 7. the added store actually contributes at least one selected item.
 
-This means the pair bridge cannot manufacture a complete basket by borrowing missing items from a second store. It constructs the cheapest exact basket only inside one caller-declared pair; it does not choose which pair or store is best.
+The pair bridge cannot manufacture a complete basket by borrowing missing items from a second store. It constructs the cheapest exact basket only inside one caller-declared pair; it does not choose which pair or store is best.
 
 ### Final production decision boundary
 
@@ -134,7 +153,7 @@ Different currency or fraction precision is excluded and retained for audit. The
 
 The final one-store-first ranking, incomplete-coverage behavior, savings threshold, travel cap and second-stop decision remain entirely in `PracticalShoppingPlanner`.
 
-## Boundedness
+## Boundedness and threading
 
 Current explicit production bridge bounds:
 
@@ -142,9 +161,12 @@ Current explicit production bridge bounds:
 - current-price bindings: at most 128;
 - raw current-price requests: at most 128;
 - ordered store pairs: at most 128;
-- shared-core shopping request: at most 128 items.
+- shared-core shopping request: at most 128 items;
+- raw current-price acceptance/claim evaluations after batching: at most 128 per decision invocation.
 
 No production bridge class owns a network client, hidden clock, geocoder, router, account, telemetry channel or provider-economic ranking signal.
+
+The production path is synchronous shared-core code. When eventually wired into Android, the production evidence-to-decision evaluation must run off the main/UI thread and publish only a completed immutable state back to the view. No claim is made yet that production planning has been benchmarked on the Motorola device.
 
 ## Verification trail
 
@@ -164,18 +186,30 @@ No production bridge class owns a network client, hidden clock, geocoder, router
 - `08c9c5cb83dfc7f8d89c0403ddd43443e51cfc58` — bridge trusted current prices into one-store Practical Shopping candidates; workflow **128** (`33262970657`) passed
 - `7585203a37d215ad64a3d1a078108a46f5351f8a` — construct bounded ordered two-store candidates without duplicating planner policy; workflow **129** (`33263320859`) passed
 - `95e66daf01c5e492b776fb573c705de42ccddd1f` — point-in-time production candidate partition + existing planner decision; workflow **130** (`33263558876`) passed
+- `2e6a71180738bb1d19be64c1eb850d6730bb139e` — batch same-instant production current-price evaluation while preserving candidate conflict semantics; workflow **131** (`33263933735`) passed
 
 ## Next engineering slice
 
 Do not connect this path to real retailer networking or route provider data through the fictional Home controller yet.
 
-Before production Home wiring, review the new bridge's execution complexity and threading assumptions. In particular, current-price eligibility is deliberately re-established from raw inputs for each explicit binding; keep the trust boundary but verify that worst-case bounded work is suitable for mobile and does not recreate a main-thread lag path.
+The identified raw-evaluation complexity issue is now hardened. The next adapter-facing step is an explicit provider-neutral **Practical Shopping orchestration input contract** that can assemble a production evaluation request without manufacturing evidence.
 
-After that performance/complexity gate, the next adapter-facing work should be an explicit orchestration contract that supplies:
+That contract should carry only already-established facts and raw evidence inputs:
 
-- resolved shopping intent -> exact production product identity bindings;
+- resolved shopping intent -> exact `ProductionProductEvidenceKey` binding;
 - explicit merchant/location/channel store scopes;
-- current lifecycle-bound raw price requests;
-- explicit user/store and base/additional travel facts.
+- raw current-price eligibility requests and current lifecycle/disposition registries at execution;
+- explicit user-to-store and base-to-added-store travel facts;
+- explicit planning policy and evaluation instant.
 
-Do not invent product identity from titles, infer route facts, enable Android networking, or treat currently unresolved provider/open-data research rights as production authorization merely to make that orchestration work.
+It must validate cross-reference completeness and bounds before invoking `PracticalShoppingProductionDecisionEvaluator`, but it must not:
+
+- resolve products from names/descriptions/images;
+- infer merchant/location/channel identity;
+- calculate or fetch route facts;
+- enable Android networking;
+- create provider authorization;
+- upgrade open-data/reference evidence into current retailer offers;
+- persist a production decision or eligibility result as continuing authority.
+
+After that contract is regression-tested, Android can later gain an off-main-thread coordinator that consumes such an assembled request. Provider networking/rights and actual Home production activation remain separate future gates.
