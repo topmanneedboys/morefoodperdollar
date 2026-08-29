@@ -12,6 +12,7 @@ import com.valuepilot.core.SingleStorePlanCandidate
 import com.valuepilot.core.TwoStorePlanCandidate
 
 private const val MAX_DEMO_QUERY_LENGTH = 240
+private const val MAX_STORED_DEMO_QUERY_LENGTH = MAX_DEMO_QUERY_LENGTH + 1
 private const val MAX_DEMO_INTENTS = 32
 
 /**
@@ -95,7 +96,7 @@ object LocalSamplePracticalShoppingDemo {
         val sampleNotice: String
     ) {
         init {
-            require(query.length <= MAX_DEMO_QUERY_LENGTH || status == Status.QUERY_TOO_LONG)
+            require(query.length <= MAX_STORED_DEMO_QUERY_LENGTH)
             require(items.size + unknownItems.size <= MAX_DEMO_INTENTS)
             require(message == null || message.isNotBlank())
             require(sampleNotice.isNotBlank())
@@ -311,17 +312,18 @@ object LocalSamplePracticalShoppingDemo {
         }
 
     private fun onQueryChanged(query: String): Model {
+        val boundedQuery = query.take(MAX_STORED_DEMO_QUERY_LENGTH)
         if (query.length > MAX_DEMO_QUERY_LENGTH) {
             return Model(
                 ui =
                     UiState(
-                        query = query,
+                        query = boundedQuery,
                         status = Status.QUERY_TOO_LONG,
                         items = emptyList(),
                         chickenClarification = null,
                         unknownItems = emptyList(),
                         result = null,
-                        message = "Keep the sample shopping list under $MAX_DEMO_QUERY_LENGTH characters.",
+                        message = "Keep the sample shopping list to $MAX_DEMO_QUERY_LENGTH characters or fewer.",
                         sampleNotice = sampleNotice
                     ),
                 selectedChicken = null
@@ -331,14 +333,14 @@ object LocalSamplePracticalShoppingDemo {
         return Model(
             ui =
                 UiState(
-                    query = query,
+                    query = boundedQuery,
                     status = Status.IDLE,
                     items = emptyList(),
                     chickenClarification = null,
                     unknownItems = emptyList(),
                     result = null,
                     message =
-                        if (query.isBlank()) {
+                        if (boundedQuery.isBlank()) {
                             "Type a few groceries to preview the shopping planner."
                         } else {
                             "Ready to plan this sample list."

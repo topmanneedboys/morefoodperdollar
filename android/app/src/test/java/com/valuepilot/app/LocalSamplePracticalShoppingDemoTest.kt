@@ -135,6 +135,26 @@ class LocalSamplePracticalShoppingDemoTest {
         )
 
         assertEquals(LocalSamplePracticalShoppingDemo.Status.QUERY_TOO_LONG, model.ui.status)
+        assertEquals(241, model.ui.query.length)
+        assertNull(model.ui.result)
+        assertTrue(model.ui.items.isEmpty())
+        assertTrue(model.ui.unknownItems.isEmpty())
+    }
+
+    @Test
+    fun veryLargeQueryIsBoundedBeforeItCanEnterLifecycleState() {
+        val model =
+            PracticalShoppingHomeSession.restore(
+                PracticalShoppingHomeSession.Snapshot(
+                    query = "x".repeat(100_000),
+                    wasSubmitted = true,
+                    chickenChoice = null
+                )
+            )
+
+        assertEquals(LocalSamplePracticalShoppingDemo.Status.QUERY_TOO_LONG, model.ui.status)
+        assertEquals(241, model.ui.query.length)
+        assertEquals(241, PracticalShoppingHomeSession.snapshot(model).query.length)
         assertNull(model.ui.result)
         assertTrue(model.ui.items.isEmpty())
         assertTrue(model.ui.unknownItems.isEmpty())
