@@ -163,7 +163,7 @@ class PracticalShoppingSavedLifecycleController {
         return issueLoad(
             previous = previous,
             preserveProjection = previous.projection,
-            preserveCleanupDegradation = false
+            displayCleanupDegraded = false
         )
     }
 
@@ -263,21 +263,16 @@ class PracticalShoppingSavedLifecycleController {
         }
 
         return issueLoad(
-            previous = previous.copy(
-                activeRequestId = null,
-                pendingAction = null,
-                failure = null,
-                displayCleanupDegraded = result.displayCleanupDegraded
-            ),
+            previous = previous,
             preserveProjection = null,
-            preserveCleanupDegradation = true
+            displayCleanupDegraded = result.displayCleanupDegraded
         )
     }
 
     private fun issueLoad(
         previous: PracticalShoppingSavedLifecycleState,
         preserveProjection: PracticalShoppingSavedExactPreferenceUiProjection?,
-        preserveCleanupDegradation: Boolean
+        displayCleanupDegraded: Boolean
     ): PracticalShoppingSavedLifecycleTransition {
         val requestId = previous.nextRequestId
         val next =
@@ -289,8 +284,7 @@ class PracticalShoppingSavedLifecycleController {
                 pendingAction = null,
                 failure = null,
                 displayMetadataDegraded = false,
-                displayCleanupDegraded =
-                    if (preserveCleanupDegradation) previous.displayCleanupDegraded else false
+                displayCleanupDegraded = displayCleanupDegraded
             )
         return PracticalShoppingSavedLifecycleTransition(
             state = next,
