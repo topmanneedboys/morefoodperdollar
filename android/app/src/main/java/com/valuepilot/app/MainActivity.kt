@@ -30,6 +30,7 @@ import java.util.concurrent.Executors
 class MainActivity : AppCompatActivity() {
 
     private var shellState = AppShellState.initial()
+    private var homeModel = LocalSamplePracticalShoppingDemo.initialModel()
 
     private val searchController = UniversalSearchController()
     private var searchState = searchController.initialState()
@@ -45,6 +46,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var screenBody: TextView
     private lateinit var screenFootnote: TextView
     private lateinit var primaryAction: Button
+    private lateinit var homeExperience: PracticalShoppingHomeSurfaceView
     private lateinit var searchExperience: View
     private lateinit var searchInput: TextInputEditText
     private lateinit var searchButton: MaterialButton
@@ -69,6 +71,7 @@ class MainActivity : AppCompatActivity() {
         screenBody = findViewById(R.id.screenBody)
         screenFootnote = findViewById(R.id.screenFootnote)
         primaryAction = findViewById(R.id.primaryAction)
+        homeExperience = findViewById(R.id.homeExperience)
         searchExperience = findViewById(R.id.searchExperience)
         searchInput = findViewById(R.id.searchInput)
         searchButton = findViewById(R.id.searchButton)
@@ -79,7 +82,9 @@ class MainActivity : AppCompatActivity() {
 
         installSystemBarInsets()
         shellState = restoreShellState(savedInstanceState)
+        homeModel = restoreHomeState(savedInstanceState)
         searchState = restoreSearchState(savedInstanceState)
+        configureHomeUi()
         configureSearchUi()
 
         bottomNavigation.setOnItemSelectedListener { item ->
@@ -112,6 +117,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putString(STATE_PRIMARY_TAB, shellState.selectedPrimaryTab.name)
+
+        val homeSnapshot = PracticalShoppingHomeSession.snapshot(homeModel)
+        outState.putString(STATE_HOME_QUERY, homeSnapshot.query)
+        outState.putBoolean(STATE_HOME_WAS_SUBMITTED, homeSnapshot.wasSubmitted)
+        outState.putString(STATE_HOME_CHICKEN_CHOICE, homeSnapshot.chickenChoice?.name)
+
         outState.putString(STATE_SEARCH_QUERY, searchState.query)
         outState.putBoolean(
             STATE_SEARCH_WAS_SUBMITTED,
@@ -150,6 +161,52 @@ class MainActivity : AppCompatActivity() {
         return AppShellReducer.reduce(
             AppShellState.initial(),
             AppShellIntent.SelectPrimary(savedTab)
+        )
+    }
+
+    private fun restoreHomeState(savedInstanceState: Bundle?): LocalSamplePracticalShoppingDemo.Model {
+        val choice =
+            savedInstanceState
+                ?.getString(STATE_HOME_CHICKEN_CHOICE)
+                ?.let { saved ->
+                    runCatching {
+                        LocalSamplePracticalShoppingDemo.ChickenChoice.valueOf(saved)
+                    }.getOrNull()
+                }
+
+        return PracticalShoppingHomeSession.restore(
+            PracticalShoppingHomeSession.Snapshot(
+                query = savedInstanceState?.getString(STATE_HOME_QUERY).orEmpty(),
+                wasSubmitted = savedInstanceState?.getBoolean(STATE_HOME_WAS_SUBMITTED, false) ?: false,
+                chickenChoice = choice
+            )
+        )
+    }
+
+    private fun configureHomeUi() {
+        homeExperience.onQueryChanged = { rawQuery ->
+            homeModel =
+                LocalSamplePracticalShoppingDemo.reduce(
+                    homeModel,
+                    LocalSamplePracticalShoppingDemo.Intent.QueryChanged(rawQuery)
+                )
+            renderHome()
+        }
+        homeExperience.onSubmit = { rawQuery ->
+            homeModel = PracticalShoppingHomeSession.submit(homeModel, rawQuery)
+            renderHome()
+        }
+        homeExperience.onChickenChoice = { choice ->
+            homeModel = PracticalShoppingHomeSession.chooseChicken(homeModel, choice)
+            renderHome()
+        }
+        homeExperience.onCompare = { openComparison() }
+        renderHome()
+    }
+
+    private fun renderHome() {
+        homeExperience.render(
+            PracticalShoppingHomeRenderer.render(homeModel.ui)
         )
     }
 
@@ -317,6 +374,10 @@ class MainActivity : AppCompatActivity() {
         screenBody.text = copy.body
         screenFootnote.text = copy.footnote
         primaryAction.visibility = if (copy.showCompareAction) View.VISIBLE else View.GONE
+
+        val homeVisible = state.selectedPrimaryTab == AppPrimaryTab.HOME
+        homeExperience.visibility = if (homeVisible) View.VISIBLE else View.GONE
+        if (homeVisible) renderHome()
 
         val searchVisible = state.selectedPrimaryTab == AppPrimaryTab.SEARCH
         searchExperience.visibility = if (searchVisible) View.VISIBLE else View.GONE
@@ -491,7 +552,7 @@ class MainActivity : AppCompatActivity() {
                 getString(R.string.home_title),
                 getString(R.string.home_body),
                 getString(R.string.home_footnote),
-                true
+                false
             )
             AppPrimaryTab.SEARCH -> ScreenCopy(
                 getString(R.string.search_eyebrow),
@@ -537,6 +598,9 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val STATE_PRIMARY_TAB = "app_shell.primary_tab"
+        private const val STATE_HOME_QUERY = "app_shell.home_query"
+        private const val STATE_HOME_WAS_SUBMITTED = "app_shell.home_was_submitted"
+        private const val STATE_HOME_CHICKEN_CHOICE = "app_shell.home_chicken_choice"
         private const val STATE_SEARCH_QUERY = "app_shell.search_query"
         private const val STATE_SEARCH_WAS_SUBMITTED = "app_shell.search_was_submitted"
     }

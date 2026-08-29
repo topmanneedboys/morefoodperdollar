@@ -54,10 +54,18 @@
 
     <string name="compare_products">Compare products</string>
 
-    <string name="home_eyebrow">READY NOW</string>
-    <string name="home_title">Make the better buy.</string>
-    <string name="home_body">Compare products by real value, not just the number on the price tag.</string>
-    <string name="home_footnote">Search now demonstrates the same deterministic value intelligence with clearly labeled built-in sample products. Basket and Saved are still future capabilities.</string>
+    <string name="home_eyebrow">PRACTICAL SHOPPING • SAMPLE DATA</string>
+    <string name="home_title">What do you need?</string>
+    <string name="home_body">Type your grocery list in plain language. ValuePilot asks only when something genuinely needs clarification.</string>
+    <string name="home_footnote">Search stays separate for item-by-item value. Direct product comparison remains available as a secondary tool.</string>
+    <string name="home_list_hint">Try: chicken eggs milk</string>
+    <string name="home_plan_action">Plan my shop</string>
+    <string name="home_items_title">On your list</string>
+    <string name="home_refinement_title">ONE QUICK QUESTION</string>
+    <string name="home_refinement_question">Which %1$s?</string>
+    <string name="home_unknown_title">Needs clarification</string>
+    <string name="home_sample_badge">OFFLINE FICTIONAL DEMO</string>
+    <string name="home_compare_secondary">Compare two products instead</string>
 
     <string name="search_eyebrow">SMART SEARCH • SAMPLE DATA</string>
     <string name="search_title">What are you shopping for?</string>
