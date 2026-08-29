@@ -6,7 +6,7 @@
 - Exact money/quantity values are compact `Long`-backed data classes. Avoid reflection, IPC, platform callbacks, and defensive copying of whole product collections.
 - Providers supply explicit timestamps and immutable observations. Shared core performs no I/O, network, logging, model loading, or hidden background work.
 
-Updated: 2026-08-20
+Updated: 2026-08-29
 
 These budgets protect the Android consumer experience. JVM measurements are regression signals, not substitutes for frame timing on a physical device.
 
@@ -24,7 +24,32 @@ These budgets protect the Android consumer experience. JVM measurements are regr
 | Rank/filter 500 items | Less than 50 ms on the JVM fixture; hard test ceiling 1,500 ms | Unit performance test |
 | Full one-time parse of 500 synthetic cards | Less than 2,000 ms on the JVM fixture; hard test ceiling 8,000 ms | Unit performance test |
 | Normal UI update | No row mass redraw; only visible RecyclerView holders bind | Code invariant + lint/build |
+| Practical Shopping raw production price re-evaluation | At most one raw acceptance/claim evaluation per supplied current-price request per decision invocation; max 128 | `ProductionCurrentPriceEligibilityEvaluator.evaluateAll`, semantic-equivalence regression |
+| Practical Shopping raw production requests | At most 128 per decision invocation | Shared-core hard bound |
+| Practical Shopping price bindings | At most 128 per decision invocation | Shared-core hard bound |
+| Practical Shopping stores | At most 64 per decision invocation | Shared-core hard bound |
+| Practical Shopping ordered store pairs | At most 128 per decision invocation | Shared-core hard bound |
+| Practical Shopping Android threading | Production evidence-to-decision evaluation must not execute on the Android main/UI thread | Required future Android orchestration invariant; not wired to Home yet |
 | Physical-device frame health | No sustained shopping-app lag; target less than 5% slow/frozen frames while collecting 100–500 products | Pending Motorola/physical-device benchmark |
+
+## Practical Shopping production work boundary
+
+The first production Practical Shopping bridge originally re-ran the complete current-price eligibility set for every explicit item/store binding. With the hard bounds of 128 bindings and 128 raw requests, that permitted up to **16,384 raw production request evaluations** inside one shopping decision call.
+
+Commit `2e6a71180738bb1d19be64c1eb850d6730bb139e` changes only the execution shape. `ProductionCurrentPriceEligibilityEvaluator.evaluateAll` now re-runs each raw request once at the supplied decision instant, using the current lifecycle and namespace-disposition registries, then derives every candidate-specific conflict/eligibility result from that same immutable in-call evaluation set.
+
+Therefore:
+
+- before batching: up to `bindings × requests` raw production evaluations = `128 × 128 = 16,384`;
+- after batching: at most `requests` raw production evaluations = `128`;
+- candidate-specific conflict resolution still occurs independently for each candidate and retains the same authority/freshness/scope semantics;
+- the batch result is internal to one invocation and is never a durable authorization token;
+- a later decision invocation re-runs raw requests again against the then-current lifecycle/disposition state and supplied evaluation time;
+- there is no cross-call cache, stale eligibility reuse, hidden background refresh, network work or clock ownership in shared-core.
+
+`ProductionCurrentPriceEligibilityBatchTest` compares batched candidate results with the original one-candidate evaluator on the same raw same-scope conflicting price set. Blockers, factual resolution, acceptance decision, selected evidence claim and final current-price eligibility must remain equal.
+
+This removes the identified quadratic raw-evaluation path without weakening the trust boundary. It does **not** prove the whole production planning path is cheap enough for Android's UI thread. The eventual Android coordinator must invoke production planning off the main thread and publish an immutable completed render state back to the UI.
 
 ## Before/after scanner work evidence
 
