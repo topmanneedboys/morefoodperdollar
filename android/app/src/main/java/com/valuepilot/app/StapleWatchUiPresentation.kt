@@ -1,6 +1,10 @@
 package com.valuepilot.app
 
+import com.valuepilot.core.Money
+import com.valuepilot.core.ShoppingPlanEvidenceSummary
 import com.valuepilot.core.ShoppingStoreKey
+import com.valuepilot.core.ShoppingTravel
+import com.valuepilot.core.StapleWatchBasketEconomicDecision
 import com.valuepilot.core.StapleWatchEconomicDecision
 import com.valuepilot.core.StapleWatchEconomicStatus
 
@@ -75,7 +79,7 @@ data class StapleWatchUiState(
 }
 
 /**
- * Immutable consumer state plus the opaque exact store key retained outside renderer strings.
+ * Immutable legacy consumer state plus the opaque exact store key retained outside renderer strings.
  *
  * A physical renderer should receive [state] only. The projected state never reconstructs a
  * store identity from text and never converts economic eligibility into notification authority.
@@ -91,11 +95,29 @@ class StapleWatchUiProjection internal constructor(
 }
 
 /**
- * Pure presentation projector for the deterministic staple-watch economic decision.
+ * Immutable Watch-native consumer state that retains the exact basket decision outside renderer text.
  *
- * It formats already-decided exact savings, explicit additional travel, and evidence only. It
- * never re-evaluates candidates, recalculates savings, interprets freshness, chooses alert timing,
- * schedules background work, or authorizes a notification.
+ * This projection exists so the Watch-native path never needs to reconstruct the legacy
+ * SingleStorePlanCandidate shape or invent its unrelated absolute-travel fact. A physical renderer
+ * should receive [state] only; a worthwhile economic result is still not notification permission.
+ */
+class StapleWatchBasketUiProjection internal constructor(
+    val state: StapleWatchUiState,
+    internal val recommendedStoreKey: ShoppingStoreKey?,
+    internal val exactDecision: StapleWatchBasketEconomicDecision
+) {
+    init {
+        require((state.switchCandidate == null) == (recommendedStoreKey == null))
+    }
+}
+
+/**
+ * Pure presentation projector for deterministic staple-watch economic decisions.
+ *
+ * Both supported entry points format already-decided exact savings, explicit additional travel,
+ * and evidence only. They never re-evaluate candidates, recalculate savings, interpret freshness,
+ * choose alert timing, schedule background work, or authorize a notification. The Watch-native
+ * overload consumes its basket decision directly and never converts it back to the legacy shape.
  */
 object StapleWatchUiProjector {
 
@@ -103,9 +125,63 @@ object StapleWatchUiProjector {
         decision: StapleWatchEconomicDecision,
         metadata: StapleWatchStoreDisplayMetadata
     ): StapleWatchUiProjection {
-        val rawLabels = metadata.entries.associate { it.storeKey to it.displayName }
         val recommendation = decision.recommendedAlternative
-        val recommendedStoreKey = recommendation?.storePlan?.storeKey
+        val projected =
+            projectConsumerState(
+                status = decision.status,
+                baselineEvidence = decision.baseline.evidence,
+                recommendedStoreKey = recommendation?.storePlan?.storeKey,
+                savings = decision.switchSavings,
+                additionalTravel = recommendation?.additionalTravel,
+                alternativeEvidence = recommendation?.storePlan?.evidence,
+                metadata = metadata,
+                worthwhileGuidance =
+                    "This is an exact economic comparison only; price freshness and timing still need separate verification."
+            )
+
+        return StapleWatchUiProjection(
+            state = projected.state,
+            recommendedStoreKey = projected.recommendedStoreKey,
+            exactDecision = decision
+        )
+    }
+
+    fun project(
+        decision: StapleWatchBasketEconomicDecision,
+        metadata: StapleWatchStoreDisplayMetadata
+    ): StapleWatchBasketUiProjection {
+        val recommendation = decision.recommendedAlternative
+        val projected =
+            projectConsumerState(
+                status = decision.status,
+                baselineEvidence = decision.baseline.evidence,
+                recommendedStoreKey = recommendation?.basket?.storeKey,
+                savings = decision.switchSavings,
+                additionalTravel = recommendation?.additionalTravel,
+                alternativeEvidence = recommendation?.basket?.evidence,
+                metadata = metadata,
+                worthwhileGuidance =
+                    "This is an exact economic comparison only; notification timing and delivery permission remain separate."
+            )
+
+        return StapleWatchBasketUiProjection(
+            state = projected.state,
+            recommendedStoreKey = projected.recommendedStoreKey,
+            exactDecision = decision
+        )
+    }
+
+    private fun projectConsumerState(
+        status: StapleWatchEconomicStatus,
+        baselineEvidence: ShoppingPlanEvidenceSummary,
+        recommendedStoreKey: ShoppingStoreKey?,
+        savings: Money?,
+        additionalTravel: ShoppingTravel?,
+        alternativeEvidence: ShoppingPlanEvidenceSummary?,
+        metadata: StapleWatchStoreDisplayMetadata,
+        worthwhileGuidance: String
+    ): StapleWatchProjectedConsumerState {
+        val rawLabels = metadata.entries.associate { it.storeKey to it.displayName }
         val safeRecommendedStoreName =
             recommendedStoreKey?.let { key ->
                 safeStapleWatchStoreLabel(
@@ -114,40 +190,37 @@ object StapleWatchUiProjector {
                 )
             }
 
-        val status =
+        val uiStatus =
             when {
-                decision.status == StapleWatchEconomicStatus.SWITCH_WORTHWHILE &&
+                status == StapleWatchEconomicStatus.SWITCH_WORTHWHILE &&
                     safeRecommendedStoreName == null ->
                     StapleWatchUiStatus.DISPLAY_METADATA_INCOMPLETE
 
-                decision.status == StapleWatchEconomicStatus.NOT_EVALUATED_NOT_ENOUGH_STAPLES ->
+                status == StapleWatchEconomicStatus.NOT_EVALUATED_NOT_ENOUGH_STAPLES ->
                     StapleWatchUiStatus.NOT_ENOUGH_STAPLES
 
-                decision.status == StapleWatchEconomicStatus.NOT_EVALUATED_BASELINE_INCOMPLETE ->
+                status == StapleWatchEconomicStatus.NOT_EVALUATED_BASELINE_INCOMPLETE ->
                     StapleWatchUiStatus.BASELINE_INCOMPLETE
 
-                decision.status == StapleWatchEconomicStatus.NOT_WORTH_SWITCHING ->
+                status == StapleWatchEconomicStatus.NOT_WORTH_SWITCHING ->
                     StapleWatchUiStatus.NOT_WORTH_SWITCHING
 
                 else -> StapleWatchUiStatus.WORTH_CHECKING
             }
 
         val switchCandidate =
-            if (status == StapleWatchUiStatus.WORTH_CHECKING) {
-                val exactRecommendation = requireNotNull(recommendation)
-                val exactSavings = requireNotNull(decision.switchSavings)
-
+            if (uiStatus == StapleWatchUiStatus.WORTH_CHECKING) {
                 StapleWatchSwitchUiState(
                     badge = "ECONOMIC SWITCH CANDIDATE",
                     storeName = requireNotNull(safeRecommendedStoreName),
                     savingsText =
-                        "Could save ${PracticalShoppingUiProjector.formatMoney(exactSavings)}",
+                        "Could save ${PracticalShoppingUiProjector.formatMoney(requireNotNull(savings))}",
                     additionalTravelText =
-                        "Adds ${PracticalShoppingUiProjector.formatTravel(exactRecommendation.additionalTravel)}",
+                        "Adds ${PracticalShoppingUiProjector.formatTravel(requireNotNull(additionalTravel))}",
                     alternativeEvidenceText =
                         "Alternative evidence: " +
                             PracticalShoppingUiProjector.formatEvidence(
-                                exactRecommendation.storePlan.evidence
+                                requireNotNull(alternativeEvidence)
                             ),
                     actionText = "Worth checking before your next shop"
                 )
@@ -158,21 +231,20 @@ object StapleWatchUiProjector {
         val state =
             StapleWatchUiState(
                 headline = "Watch my staples",
-                status = status,
-                statusTitle = statusTitle(status),
-                guidance = guidance(status),
+                status = uiStatus,
+                statusTitle = statusTitle(uiStatus),
+                guidance = guidance(uiStatus, worthwhileGuidance),
                 baselineEvidenceText =
                     "Usual store evidence: " +
-                        PracticalShoppingUiProjector.formatEvidence(decision.baseline.evidence),
+                        PracticalShoppingUiProjector.formatEvidence(baselineEvidence),
                 switchCandidate = switchCandidate,
-                notice = notice(status)
+                notice = notice(uiStatus)
             )
 
-        return StapleWatchUiProjection(
+        return StapleWatchProjectedConsumerState(
             state = state,
             recommendedStoreKey =
-                if (status == StapleWatchUiStatus.WORTH_CHECKING) recommendedStoreKey else null,
-            exactDecision = decision
+                if (uiStatus == StapleWatchUiStatus.WORTH_CHECKING) recommendedStoreKey else null
         )
     }
 
@@ -185,7 +257,10 @@ object StapleWatchUiProjector {
             StapleWatchUiStatus.DISPLAY_METADATA_INCOMPLETE -> "Store name needed"
         }
 
-    private fun guidance(status: StapleWatchUiStatus): String =
+    private fun guidance(
+        status: StapleWatchUiStatus,
+        worthwhileGuidance: String
+    ): String =
         when (status) {
             StapleWatchUiStatus.NOT_ENOUGH_STAPLES ->
                 "Watch at least two recurring items before judging a store switch."
@@ -196,8 +271,7 @@ object StapleWatchUiProjector {
             StapleWatchUiStatus.NOT_WORTH_SWITCHING ->
                 "No complete alternative basket clears your current savings and extra-travel limits."
 
-            StapleWatchUiStatus.WORTH_CHECKING ->
-                "This is an exact economic comparison only; price freshness and timing still need separate verification."
+            StapleWatchUiStatus.WORTH_CHECKING -> worthwhileGuidance
 
             StapleWatchUiStatus.DISPLAY_METADATA_INCOMPLETE ->
                 "The alternative store cannot be shown safely, so no switch suggestion is displayed."
@@ -214,6 +288,11 @@ object StapleWatchUiProjector {
             else -> null
         }
 }
+
+private class StapleWatchProjectedConsumerState(
+    val state: StapleWatchUiState,
+    val recommendedStoreKey: ShoppingStoreKey?
+)
 
 private fun safeStapleWatchStoreLabel(
     raw: String?,
