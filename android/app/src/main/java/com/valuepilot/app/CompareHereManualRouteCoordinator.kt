@@ -3,9 +3,6 @@ package com.valuepilot.app
 import com.valuepilot.core.CompareHereComparisonIntentKey
 import com.valuepilot.core.CompareHerePriceSelection
 
-private val USER_CONFIRMED_MANUAL_COMPARISON_INTENT =
-    CompareHereComparisonIntentKey("manual:confirmed-comparison-v1")
-
 enum class CompareHereManualRouteStatus {
     NEEDS_PRODUCTS,
     NEEDS_LIKE_FOR_LIKE_CONFIRMATION,
@@ -44,9 +41,9 @@ data class CompareHereManualRouteState(
  *
  * User confirmation is the semantic boundary. Until the user explicitly confirms that all
  * submitted products are like-for-like alternatives, this coordinator does not create/pass a
- * comparison-intent key and does not invoke parsing or comparison. The opaque key is fixed for
- * this invocation-scoped manual assertion; it is never derived from names, prices, barcodes,
- * package units or other product text.
+ * comparison-intent key and does not invoke parsing or comparison. The opaque key is created only
+ * after that confirmation; it is never derived from names, prices, barcodes, package units or
+ * other product text.
  *
  * This coordinator owns no Android View, clock, persistence, network or ranking engine.
  */
@@ -92,10 +89,11 @@ object CompareHereManualRouteCoordinator {
             )
         }
 
+        val confirmedIntent = CompareHereComparisonIntentKey("manual:confirmed-comparison-v1")
         return when (
             val comparison =
                 CompareHereManualComparisonService.compare(
-                    comparisonIntentKey = USER_CONFIRMED_MANUAL_COMPARISON_INTENT,
+                    comparisonIntentKey = confirmedIntent,
                     priceSelection = priceSelection,
                     observations = observations,
                     parser = parser
