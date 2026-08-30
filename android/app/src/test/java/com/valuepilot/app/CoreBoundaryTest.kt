@@ -41,6 +41,30 @@ class CoreBoundaryTest {
         assertTrue(source.contains("NoSemanticEnricher"))
     }
 
+    @Test
+    fun comparisonActivityUsesExactReplaceableCompareHereBoundary() {
+        val source = source("ComparisonActivity.kt").readText()
+
+        assertTrue(source.contains("CompareHereManualRouteCoordinator.compareBlocks"))
+        assertTrue(source.contains("CompareHereManualScreenPresenter"))
+        assertTrue(source.contains("CompareHereManualActivitySessionReducer"))
+
+        assertFalse(source.contains("StandaloneComparisonController"))
+        assertFalse(source.contains("StandaloneComparisonIntent"))
+        assertFalse(source.contains("StandaloneComparisonState"))
+        assertFalse(source.contains("ValueEngine"))
+    }
+
+    @Test
+    fun comparisonActivityDoesNotBypassManualRouteCoordinator() {
+        val source = source("ComparisonActivity.kt").readText()
+
+        assertFalse(source.contains("CompareHereComparisonIntentKey("))
+        assertFalse(source.contains("CompareHereManualInputAdapter.capture"))
+        assertFalse(source.contains("CompareHereManualComparisonService"))
+        assertFalse(source.contains("ManualProductObservationAdapter"))
+    }
+
     private fun source(name: String): File {
         val root = File(System.getProperty("user.dir"))
         return File(root, "src/main/java/com/valuepilot/app/$name").also {
