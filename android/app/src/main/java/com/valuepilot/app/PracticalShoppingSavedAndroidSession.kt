@@ -75,12 +75,14 @@ internal class PracticalShoppingSavedMainLooperDispatcher(
  *
  * This class is intentionally not a View and does not render Saved content itself. It wires
  * a per-surface host to the process-scoped Saved runtime and Android main Looper. UI owners
- * provide the immutable-state renderer callback.
+ * provide the immutable-state renderer callback. A generic validated-snapshot observer may
+ * separately receive the host's current accepted identity-bound Saved snapshot for composition;
+ * it is not part of physical Saved rendering state.
  *
  * Public lifecycle methods are expected to be called from the Android main thread. All Saved
  * persistence/coordinator work for every session in this process is serialized through
  * [PracticalShoppingSavedProcessRuntime]; typed completions return to the main Looper before
- * the host reducer/renderer is touched.
+ * the host reducer/renderer or validated-snapshot observer is touched.
  *
  * [close] closes only this host. Process-owned queued/running persistence work is allowed to
  * finish; the closed host ignores its eventual completion. A subsequent Activity/session uses
@@ -112,7 +114,9 @@ class PracticalShoppingSavedAndroidSession private constructor(
     companion object {
         fun create(
             context: Context,
-            renderer: PracticalShoppingSavedLifecycleRenderer
+            renderer: PracticalShoppingSavedLifecycleRenderer,
+            snapshotObserver: PracticalShoppingSavedValidatedSnapshotObserver =
+                PracticalShoppingSavedValidatedSnapshotObserver { }
         ): PracticalShoppingSavedAndroidSession {
             requireMainThread()
 
@@ -129,7 +133,8 @@ class PracticalShoppingSavedAndroidSession private constructor(
                     gateway = gateway,
                     worker = runtime,
                     completionDispatcher = PracticalShoppingSavedMainLooperDispatcher(handler),
-                    renderer = renderer
+                    renderer = renderer,
+                    snapshotObserver = snapshotObserver
                 )
 
             return PracticalShoppingSavedAndroidSession(host = host)
