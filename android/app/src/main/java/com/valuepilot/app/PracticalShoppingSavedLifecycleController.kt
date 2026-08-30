@@ -106,17 +106,37 @@ sealed interface PracticalShoppingSavedLifecycleWork {
     }
 }
 
+/**
+ * One pure lifecycle transition.
+ *
+ * [validatedSnapshot] is a transient composition output, deliberately not part of
+ * [PracticalShoppingSavedLifecycleState]. It is emitted only when the reducer accepts the
+ * currently active successful load completion. Physical Saved renderers therefore continue to
+ * receive presentation lifecycle state without exact Saved identity, while a later composition
+ * owner can observe an already stale-filtered exact/display snapshot through a separate boundary.
+ */
 data class PracticalShoppingSavedLifecycleTransition(
     val state: PracticalShoppingSavedLifecycleState,
-    val work: PracticalShoppingSavedLifecycleWork? = null
-)
+    val work: PracticalShoppingSavedLifecycleWork? = null,
+    val validatedSnapshot: PracticalShoppingSavedValidatedSnapshot? = null
+) {
+    init {
+        require(validatedSnapshot == null || work == null)
+        require(
+            validatedSnapshot == null ||
+                state.status == PracticalShoppingSavedLifecycleStatus.READY ||
+                state.status == PracticalShoppingSavedLifecycleStatus.DEGRADED
+        )
+    }
+}
 
 /**
  * Pure Saved lifecycle reducer.
  *
  * File I/O stays outside this controller. A platform adapter executes emitted [work] away
  * from the main thread and returns the corresponding typed completion intent. Request ids
- * prevent an older completion from replacing a newer Saved state.
+ * prevent an older completion from replacing a newer Saved state or emitting a validated
+ * composition snapshot.
  *
  * Successful mutations are never patched into the projection locally. Instead they always
  * trigger a fresh authoritative load through [PracticalShoppingSavedExperienceCoordinator],
@@ -219,20 +239,22 @@ class PracticalShoppingSavedLifecycleController {
         val metadataDegraded = result.displayMetadataDegraded
         val cleanupDegraded = previous.displayCleanupDegraded
         return PracticalShoppingSavedLifecycleTransition(
-            previous.copy(
-                status =
-                    if (metadataDegraded || cleanupDegraded) {
-                        PracticalShoppingSavedLifecycleStatus.DEGRADED
-                    } else {
-                        PracticalShoppingSavedLifecycleStatus.READY
-                    },
-                projection = requireNotNull(result.projection),
-                activeRequestId = null,
-                pendingAction = null,
-                failure = null,
-                displayMetadataDegraded = metadataDegraded,
-                displayCleanupDegraded = cleanupDegraded
-            )
+            state =
+                previous.copy(
+                    status =
+                        if (metadataDegraded || cleanupDegraded) {
+                            PracticalShoppingSavedLifecycleStatus.DEGRADED
+                        } else {
+                            PracticalShoppingSavedLifecycleStatus.READY
+                        },
+                    projection = requireNotNull(result.projection),
+                    activeRequestId = null,
+                    pendingAction = null,
+                    failure = null,
+                    displayMetadataDegraded = metadataDegraded,
+                    displayCleanupDegraded = cleanupDegraded
+                ),
+            validatedSnapshot = result.validatedSnapshot
         )
     }
 

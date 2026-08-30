@@ -7,6 +7,31 @@ enum class PracticalShoppingSavedExperienceLoadIssue {
     EXACT_PREFERENCE_STORAGE_FAILURE
 }
 
+/**
+ * Exact Saved identity plus display metadata already rebound to that exact identity.
+ *
+ * This is a composition snapshot, not physical UI state and not price/currentness authority.
+ * The display metadata has passed the exact-identity binder, but downstream consumer projectors
+ * must still apply their own label-safety rules before any text reaches a physical renderer.
+ */
+data class PracticalShoppingSavedValidatedSnapshot(
+    val exactState: PracticalShoppingSavedExactPreferenceState,
+    val displayMetadata: PracticalShoppingSavedExactPreferenceDisplayMetadata
+) {
+    init {
+        require(
+            displayMetadata.productDisplayNames.keys.all { itemKey ->
+                exactState.productFor(itemKey) != null
+            }
+        ) { "Validated Saved product metadata must belong to the exact Saved state" }
+        require(
+            displayMetadata.storeDisplayNames.keys.all { storeKey ->
+                exactState.storeFor(storeKey) != null
+            }
+        ) { "Validated Saved store metadata must belong to the exact Saved state" }
+    }
+}
+
 data class PracticalShoppingSavedExperienceLoadResult(
     val projection: PracticalShoppingSavedExactPreferenceUiProjection?,
     val exactState: PracticalShoppingSavedExactPreferenceState?,
@@ -17,11 +42,14 @@ data class PracticalShoppingSavedExperienceLoadResult(
     val displayStorageIssue: PracticalShoppingSavedDisplayMetadataStorageIssue? = null,
     val displayCodecIssue: PracticalShoppingSavedExactPreferenceDisplayMetadataCodecIssue? = null,
     val staleDisplayProductKeys: List<ShoppingItemKey> = emptyList(),
-    val staleDisplayStoreKeys: List<ShoppingStoreKey> = emptyList()
+    val staleDisplayStoreKeys: List<ShoppingStoreKey> = emptyList(),
+    val validatedSnapshot: PracticalShoppingSavedValidatedSnapshot? = null
 ) {
     init {
         require((projection != null) == (exactState != null))
         require((projection != null) == (issue == null))
+        require(validatedSnapshot == null || projection != null)
+        require(validatedSnapshot == null || validatedSnapshot.exactState == exactState)
         require(
             issue == PracticalShoppingSavedExperienceLoadIssue.EXACT_PREFERENCE_STORAGE_FAILURE ||
                 exactStorageIssue == null
@@ -82,8 +110,9 @@ data class PracticalShoppingSavedExperienceActionResult(
  * secondary: load failure degrades to an empty metadata snapshot, and cleanup failure after a
  * successful exact deletion is reported but never rolls back or resurrects the exact choice.
  *
- * The binder is always run before projection, so stale/orphan display metadata remains unable
- * to relabel a changed exact product/store or manufacture a Saved row.
+ * The binder is always run before projection and before [PracticalShoppingSavedValidatedSnapshot]
+ * creation, so stale/orphan display metadata remains unable to relabel a changed exact
+ * product/store, manufacture a Saved row, or enter a downstream Saved composition boundary.
  */
 object PracticalShoppingSavedExperienceCoordinator {
 
@@ -122,6 +151,11 @@ object PracticalShoppingSavedExperienceCoordinator {
                 savedState = exactState,
                 metadata = binding.metadata
             )
+        val validatedSnapshot =
+            PracticalShoppingSavedValidatedSnapshot(
+                exactState = exactState,
+                displayMetadata = binding.metadata
+            )
 
         return PracticalShoppingSavedExperienceLoadResult(
             projection = projection,
@@ -129,7 +163,8 @@ object PracticalShoppingSavedExperienceCoordinator {
             displayStorageIssue = display.issue,
             displayCodecIssue = display.codecIssue,
             staleDisplayProductKeys = binding.staleProductKeys,
-            staleDisplayStoreKeys = binding.staleStoreKeys
+            staleDisplayStoreKeys = binding.staleStoreKeys,
+            validatedSnapshot = validatedSnapshot
         )
     }
 
