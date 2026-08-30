@@ -75,7 +75,7 @@ object CompareHereManualComparisonService {
                         projection =
                             CompareHereUiProjector.project(
                                 result = exactResult,
-                                displayMetadata = adaptation.displayMetadata
+                                metadata = adaptation.displayMetadata
                             ),
                         adaptationIssues = adaptation.issues
                     )
