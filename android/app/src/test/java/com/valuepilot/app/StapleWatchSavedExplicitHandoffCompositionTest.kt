@@ -64,6 +64,31 @@ class StapleWatchSavedExplicitHandoffCompositionTest {
     }
 
     @Test
+    fun continuationUiActionUsesExistingExplicitRequestPathAndVisibilityGate() {
+        val attempts = mutableListOf<StapleWatchSavedIdentityHandoffAttempt>()
+        val coordinator = coordinator(attempts)
+        coordinator.onSnapshot(snapshot())
+
+        coordinator.onContinueAction(StapleWatchSavedIdentityHandoffUiAction.Request)
+        assertTrue(attempts.isEmpty())
+
+        coordinator.onRouteVisibilityChanged(true)
+        coordinator.onSurfaceAction(watch(milk))
+        coordinator.onSurfaceAction(watch(eggs))
+        coordinator.onSurfaceAction(StapleWatchSavedIdentitySelectionAction.SelectUsualStore(north))
+        coordinator.onContinueAction(StapleWatchSavedIdentityHandoffUiAction.Request)
+
+        val accepted = attempts.single()
+        assertTrue(accepted.accepted)
+        assertEquals(listOf(eggs, milk), requireNotNull(accepted.handoff).request.itemKeys)
+        assertEquals(north, requireNotNull(accepted.handoff).usualStoreKey)
+
+        coordinator.onRouteVisibilityChanged(false)
+        coordinator.onContinueAction(StapleWatchSavedIdentityHandoffUiAction.Request)
+        assertEquals(1, attempts.size)
+    }
+
+    @Test
     fun explicitRequestUsesLatestSnapshotAndFailsClosedForSelectedDisplayBlocker() {
         val attempts = mutableListOf<StapleWatchSavedIdentityHandoffAttempt>()
         val coordinator = coordinator(attempts)
@@ -138,6 +163,12 @@ class StapleWatchSavedExplicitHandoffCompositionTest {
         assertFalse(routeSource.contains("ShoppingRequest"))
         assertFalse(routeSource.contains("StapleWatchSavedSelectionUiStatus"))
 
+        assertTrue(coordinatorSource.contains("fun onContinueAction(action: StapleWatchSavedIdentityHandoffUiAction)"))
+        assertTrue(
+            coordinatorSource.contains(
+                "StapleWatchSavedIdentityHandoffUiAction.Request -> requestIdentityHandoff()"
+            )
+        )
         assertTrue(coordinatorSource.contains("fun requestIdentityHandoff()"))
         assertTrue(coordinatorSource.contains("StapleWatchSavedIdentityHandoffGate.request"))
         assertTrue(coordinatorSource.contains("currentSelectionOrNull()"))

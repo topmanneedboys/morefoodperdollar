@@ -18,11 +18,13 @@ internal fun interface StapleWatchFactCheckIntentObserver {
  * persistence, infer identity, resolve shopping facts, evaluate savings, schedule background work,
  * or authorize notifications.
  *
- * An identity-only handoff may be requested only through [requestIdentityHandoff]. That explicit
- * call reads the current visible route selection and delegates all eligibility/display-safety
- * decisions to the verified [StapleWatchSavedIdentityHandoffGate]. A successful gate result is then
- * adapted into the verified unresolved [StapleWatchFactCheckIntent]; rejected attempts emit no fact
- * intent. Merely selecting enough items or receiving a newer Saved snapshot never emits either.
+ * An identity-only handoff may be requested only through [requestIdentityHandoff]. The typed
+ * [onContinueAction] entry point maps only the already-projected explicit continuation marker to
+ * that same request path; it grants no additional authority. That explicit request reads the
+ * current visible route selection and delegates all eligibility/display-safety decisions to the
+ * verified [StapleWatchSavedIdentityHandoffGate]. A successful gate result is then adapted into the
+ * verified unresolved [StapleWatchFactCheckIntent]; rejected attempts emit no fact intent. Merely
+ * selecting enough items or receiving a newer Saved snapshot never emits either.
  *
  * Route visibility may arrive before the first accepted Saved load. In that case setup remains
  * fail-closed: no route session exists and surface actions or handoff requests are ignored until a
@@ -73,6 +75,12 @@ internal class StapleWatchSavedSetupCompositionCoordinator(
         if (closed || !routeVisible) return
 
         session?.onSurfaceAction(action)
+    }
+
+    fun onContinueAction(action: StapleWatchSavedIdentityHandoffUiAction) {
+        when (action) {
+            StapleWatchSavedIdentityHandoffUiAction.Request -> requestIdentityHandoff()
+        }
     }
 
     fun requestIdentityHandoff() {
