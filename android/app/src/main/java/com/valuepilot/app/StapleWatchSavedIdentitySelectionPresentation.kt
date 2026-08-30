@@ -10,6 +10,17 @@ enum class StapleWatchSavedSelectionUiStatus {
     DISPLAY_METADATA_INCOMPLETE
 }
 
+/**
+ * Consumer continuation marker for an explicit identity-only handoff request.
+ *
+ * This action carries no item/store identity and grants no fact, economic, persistence, background,
+ * or notification authority. A later composition owner may map the explicit request through the
+ * separately verified handoff gate.
+ */
+sealed interface StapleWatchSavedIdentityHandoffUiAction {
+    data object Request : StapleWatchSavedIdentityHandoffUiAction
+}
+
 data class StapleWatchSavedProductSelectionUiRow(
     val title: String,
     val watched: Boolean,
@@ -45,9 +56,10 @@ data class StapleWatchSavedStoreSelectionUiRow(
 /**
  * Immutable consumer-ready setup state.
  *
- * Stable item/store identities exist only inside typed actions. All normal strings come from
- * already-sanitized Saved display metadata or fixed product copy. A renderer must never parse a
- * label to recover identity or infer whether an economic switch or notification is authorized.
+ * Stable item/store identities exist only inside typed selection actions. The continuation marker
+ * carries no identity. All normal strings come from already-sanitized Saved display metadata or
+ * fixed product copy. A renderer must never parse a label to recover identity or infer whether an
+ * economic switch or notification is authorized.
  */
 data class StapleWatchSavedSelectionUiState(
     val status: StapleWatchSavedSelectionUiStatus,
@@ -63,7 +75,9 @@ data class StapleWatchSavedSelectionUiState(
     val selectedDisplayNameBlockerCount: Int,
     val notice: String?,
     val clearSelectionAction: StapleWatchSavedIdentitySelectionAction.ClearSelection?,
-    val clearSelectionActionLabel: String?
+    val clearSelectionActionLabel: String?,
+    val continueAction: StapleWatchSavedIdentityHandoffUiAction?,
+    val continueActionLabel: String?
 ) {
     init {
         require(headline.isNotBlank())
@@ -80,6 +94,16 @@ data class StapleWatchSavedSelectionUiState(
         require(notice == null || notice.isNotBlank())
         require((clearSelectionAction != null) == (clearSelectionActionLabel != null))
         require(clearSelectionActionLabel == null || clearSelectionActionLabel.isNotBlank())
+        require((continueAction != null) == (continueActionLabel != null))
+        require(continueActionLabel == null || continueActionLabel.isNotBlank())
+        require(
+            (status == StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK) ==
+                (continueAction != null)
+        )
+        require(
+            continueAction == null ||
+                continueAction == StapleWatchSavedIdentityHandoffUiAction.Request
+        )
         require(
             (status == StapleWatchSavedSelectionUiStatus.DISPLAY_METADATA_INCOMPLETE) ==
                 (selectedDisplayNameBlockerCount > 0)
@@ -97,6 +121,9 @@ data class StapleWatchSavedSelectionUiState(
  * A missing display name for an unselected Saved choice merely hides that optional row. A missing
  * display name for an already selected watched product or usual store fails closed: setup is shown
  * as DISPLAY_METADATA_INCOMPLETE even if the identity reducer could otherwise form a handoff.
+ *
+ * The identity-only continuation marker is exposed only when the already-existing setup status is
+ * READY_FOR_FACT_CHECK. It does not itself create a handoff or start any work.
  *
  * This boundary owns no fact retrieval, price calculation, route calculation, evidence-freshness
  * policy, scheduling, storage, Android lifecycle, or delivery authority.
@@ -171,6 +198,7 @@ object StapleWatchSavedIdentitySelectionUiProjector {
             }
 
         val hasSelection = current.watchedItemKeys.isNotEmpty() || current.usualStoreKey != null
+        val canContinue = status == StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK
 
         return StapleWatchSavedSelectionUiState(
             status = status,
@@ -187,7 +215,10 @@ object StapleWatchSavedIdentitySelectionUiProjector {
             notice = notice(selectedBlockers, savedProjection.state.unresolvedDisplayNameCount),
             clearSelectionAction =
                 if (hasSelection) StapleWatchSavedIdentitySelectionAction.ClearSelection else null,
-            clearSelectionActionLabel = if (hasSelection) "Clear staple setup" else null
+            clearSelectionActionLabel = if (hasSelection) "Clear staple setup" else null,
+            continueAction =
+                if (canContinue) StapleWatchSavedIdentityHandoffUiAction.Request else null,
+            continueActionLabel = if (canContinue) "Continue" else null
         )
     }
 
