@@ -182,13 +182,13 @@ class CompareHereUiProjectorTest {
         val core =
             current(
                 candidate("exact", "4.00", QuantityNormalization.grams(500)),
-                candidate("unknown", "2.00", null)
+                candidate("opaque-blocked-333333", "2.00", null)
             )
 
         val state =
             CompareHereUiProjector.project(
                 core,
-                metadata("exact" to "Known Milk", "unknown" to "Unknown Milk")
+                metadata("exact" to "Known Milk", "opaque-blocked-333333" to "Unknown Milk")
             ).state
 
         assertEquals(CompareHereUiStatus.NOT_ENOUGH_DATA, state.status)
