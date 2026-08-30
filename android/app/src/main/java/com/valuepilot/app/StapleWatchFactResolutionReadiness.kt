@@ -7,7 +7,7 @@ package com.valuepilot.app
  * resolved fact values and grants no authority to evaluate economics, persist state, schedule
  * work, or deliver a notification. A later fact-value handoff must remain a separate boundary.
  */
-data class StapleWatchFactResolutionReadiness private constructor(
+data class StapleWatchFactResolutionReadiness(
     val intent: StapleWatchFactCheckIntent,
     val unresolvedRequirements: List<StapleWatchFactResolutionRequirement>
 ) {
