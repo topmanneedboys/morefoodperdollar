@@ -10,7 +10,6 @@ import com.valuepilot.core.Offer
 import com.valuepilot.core.ProductObservation
 import com.valuepilot.core.PromotionTerms
 
-private const val MAX_COMPARE_HERE_MANUAL_OBSERVATIONS = 32
 private val ISO_CURRENCY = Regex("[A-Z]{3}")
 
 enum class CompareHereManualInputFailure {
@@ -40,7 +39,7 @@ data class CompareHereManualInputAdaptation(
     val issues: List<CompareHereManualObservationIssueEntry>
 ) {
     init {
-        require(candidates.size <= MAX_COMPARE_HERE_MANUAL_OBSERVATIONS)
+        require(candidates.size <= CompareHereManualInputAdapter.MAX_OBSERVATIONS)
         require(candidates.map { it.candidateId }.distinct().size == candidates.size)
         require(
             displayMetadata.entries.all { metadata ->
@@ -78,13 +77,14 @@ sealed interface CompareHereManualInputResult {
  * forms remain outside this bridge until their source facts can be carried exactly.
  */
 object CompareHereManualInputAdapter {
+    const val MAX_OBSERVATIONS = 32
 
     fun adapt(
         comparisonIntentKey: CompareHereComparisonIntentKey,
         observations: List<ProductObservation>,
         parser: ProductParser = DeterministicProductParser
     ): CompareHereManualInputResult {
-        if (observations.size > MAX_COMPARE_HERE_MANUAL_OBSERVATIONS) {
+        if (observations.size > MAX_OBSERVATIONS) {
             return CompareHereManualInputResult.Failure(
                 CompareHereManualInputFailure.TOO_MANY_OBSERVATIONS
             )
