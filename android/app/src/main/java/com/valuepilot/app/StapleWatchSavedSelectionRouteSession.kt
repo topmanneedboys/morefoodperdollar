@@ -1,12 +1,15 @@
 package com.valuepilot.app
 
 /**
- * Pure route-local owner for configuring Watch My Staples from already-validated Saved data.
+ * Pure route-local owner for configuring Watch My Staples from an already-validated Saved
+ * snapshot.
  *
- * This session owns only temporary explicit selection, route visibility, reconciliation against
- * newer Saved snapshots, and re-presentation through the verified setup presenter. It never loads
- * Saved data, persists staple selection, resolves shopping facts, creates an identity handoff,
- * evaluates economics, schedules work, or interprets presentation readiness as authorization.
+ * The validated snapshot is the trust boundary for Saved identity plus identity-bound display
+ * metadata. This session owns only temporary explicit selection, route visibility, reconciliation
+ * against newer validated snapshots, and re-presentation through the verified setup presenter. It
+ * never loads Saved data, persists staple selection, resolves shopping facts, creates an identity
+ * handoff, evaluates economics, schedules work, or interprets presentation readiness as
+ * authorization.
  *
  * Selection survives hide/show transitions within this session, but remains memory-only. Closing
  * the session discards it. Actions are accepted only while the setup route is visible; stale
@@ -14,13 +17,12 @@ package com.valuepilot.app
  * identities before the current safe state is rendered again.
  */
 internal class StapleWatchSavedSelectionRouteSession(
-    initialSavedState: PracticalShoppingSavedExactPreferenceState,
-    initialMetadata: PracticalShoppingSavedExactPreferenceDisplayMetadata,
+    initialSnapshot: PracticalShoppingSavedValidatedSnapshot,
     private val presenter: StapleWatchSavedSelectionSurfacePresenter
 ) : AutoCloseable {
 
-    private var savedState = initialSavedState
-    private var metadata = initialMetadata
+    private var savedState = initialSnapshot.exactState
+    private var metadata = initialSnapshot.displayMetadata
     private var selection = StapleWatchSavedIdentitySelectionReducer.initial()
     private var routeVisible = false
     private var closed = false
@@ -39,14 +41,11 @@ internal class StapleWatchSavedSelectionRouteSession(
         }
     }
 
-    fun onSavedSnapshotChanged(
-        savedState: PracticalShoppingSavedExactPreferenceState,
-        metadata: PracticalShoppingSavedExactPreferenceDisplayMetadata
-    ) {
+    fun onSavedSnapshotChanged(snapshot: PracticalShoppingSavedValidatedSnapshot) {
         if (closed) return
 
-        this.savedState = savedState
-        this.metadata = metadata
+        savedState = snapshot.exactState
+        metadata = snapshot.displayMetadata
         selection =
             StapleWatchSavedIdentitySelectionReducer.reconcile(
                 previous = selection,

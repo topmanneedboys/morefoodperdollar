@@ -87,8 +87,10 @@ class StapleWatchSavedSelectionRouteSessionTest {
         assertEquals(StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK, rendered.last().status)
 
         session.onSavedSnapshotChanged(
-            savedState = savedState(products = listOf(eggs, bread), stores = listOf(west)),
-            metadata = metadata(products = listOf(eggs, bread), stores = listOf(west))
+            snapshot(
+                savedState = savedState(products = listOf(eggs, bread), stores = listOf(west)),
+                metadata = metadata(products = listOf(eggs, bread), stores = listOf(west))
+            )
         )
 
         val state = rendered.last()
@@ -110,8 +112,10 @@ class StapleWatchSavedSelectionRouteSessionTest {
         val renderCountBeforeSnapshot = rendered.size
 
         session.onSavedSnapshotChanged(
-            savedState = savedState(products = listOf(eggs, bread), stores = listOf(north)),
-            metadata = metadata(products = listOf(eggs, bread), stores = listOf(north))
+            snapshot(
+                savedState = savedState(products = listOf(eggs, bread), stores = listOf(north)),
+                metadata = metadata(products = listOf(eggs, bread), stores = listOf(north))
+            )
         )
 
         assertEquals(renderCountBeforeSnapshot, rendered.size)
@@ -133,8 +137,10 @@ class StapleWatchSavedSelectionRouteSessionTest {
             rendered.last().productRows.first { it.action.itemKey == milk }.action
 
         session.onSavedSnapshotChanged(
-            savedState = savedState(products = listOf(eggs, bread), stores = listOf(north)),
-            metadata = metadata(products = listOf(eggs, bread), stores = listOf(north))
+            snapshot(
+                savedState = savedState(products = listOf(eggs, bread), stores = listOf(north)),
+                metadata = metadata(products = listOf(eggs, bread), stores = listOf(north))
+            )
         )
         val beforeStaleAction = rendered.size
 
@@ -159,12 +165,14 @@ class StapleWatchSavedSelectionRouteSessionTest {
         assertEquals(StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK, rendered.last().status)
 
         session.onSavedSnapshotChanged(
-            savedState = saved,
-            metadata =
-                PracticalShoppingSavedExactPreferenceDisplayMetadata(
-                    productDisplayNames = mapOf(eggs to "Large Eggs"),
-                    storeDisplayNames = mapOf(north to "North Market")
-                )
+            snapshot(
+                savedState = saved,
+                metadata =
+                    PracticalShoppingSavedExactPreferenceDisplayMetadata(
+                        productDisplayNames = mapOf(eggs to "Large Eggs"),
+                        storeDisplayNames = mapOf(north to "North Market")
+                    )
+            )
         )
 
         assertEquals(
@@ -174,7 +182,7 @@ class StapleWatchSavedSelectionRouteSessionTest {
         assertEquals(2, rendered.last().watchedItemCount)
         assertTrue(rendered.last().usualStoreSelected)
 
-        session.onSavedSnapshotChanged(savedState = saved, metadata = metadata())
+        session.onSavedSnapshotChanged(snapshot(savedState = saved, metadata = metadata()))
 
         assertEquals(StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK, rendered.last().status)
         assertEquals(2, rendered.last().watchedItemCount)
@@ -192,12 +200,30 @@ class StapleWatchSavedSelectionRouteSessionTest {
         session.close()
         session.onSurfaceAction(watch(eggs))
         session.onSavedSnapshotChanged(
-            savedState = savedState(products = listOf(eggs, bread), stores = listOf(west)),
-            metadata = metadata(products = listOf(eggs, bread), stores = listOf(west))
+            snapshot(
+                savedState = savedState(products = listOf(eggs, bread), stores = listOf(west)),
+                metadata = metadata(products = listOf(eggs, bread), stores = listOf(west))
+            )
         )
         session.onRouteVisibilityChanged(true)
 
         assertEquals(beforeClose, rendered.size)
+    }
+
+    @Test
+    fun routeSessionRequiresValidatedSnapshotAtCompositionBoundary() {
+        val source = source("StapleWatchSavedSelectionRouteSession.kt").readText()
+
+        assertTrue(source.contains("initialSnapshot: PracticalShoppingSavedValidatedSnapshot"))
+        assertTrue(
+            source.contains(
+                "fun onSavedSnapshotChanged(snapshot: PracticalShoppingSavedValidatedSnapshot)"
+            )
+        )
+        assertFalse(source.contains("initialSavedState:"))
+        assertFalse(source.contains("initialMetadata:"))
+        assertFalse(source.contains("onSavedSnapshotChanged(\n        savedState:"))
+        assertFalse(source.contains("onSavedSnapshotChanged(\n        metadata:"))
     }
 
     @Test
@@ -206,6 +232,7 @@ class StapleWatchSavedSelectionRouteSessionTest {
 
         assertTrue(source.contains("StapleWatchSavedIdentitySelectionReducer"))
         assertTrue(source.contains("StapleWatchSavedSelectionSurfacePresenter"))
+        assertTrue(source.contains("PracticalShoppingSavedValidatedSnapshot"))
         assertFalse(source.contains("identityHandoffOrNull"))
         assertFalse(source.contains("ShoppingRequest"))
         assertFalse(source.contains("StapleWatchSavedSelectionUiStatus"))
@@ -234,12 +261,24 @@ class StapleWatchSavedSelectionRouteSessionTest {
         rendered: MutableList<StapleWatchSavedSelectionUiState>
     ): StapleWatchSavedSelectionRouteSession =
         StapleWatchSavedSelectionRouteSession(
-            initialSavedState = initialSavedState,
-            initialMetadata = initialMetadata,
+            initialSnapshot =
+                snapshot(
+                    savedState = initialSavedState,
+                    metadata = initialMetadata
+                ),
             presenter =
                 StapleWatchSavedSelectionSurfacePresenter { state ->
                     rendered += state
                 }
+        )
+
+    private fun snapshot(
+        savedState: PracticalShoppingSavedExactPreferenceState,
+        metadata: PracticalShoppingSavedExactPreferenceDisplayMetadata
+    ): PracticalShoppingSavedValidatedSnapshot =
+        PracticalShoppingSavedValidatedSnapshot(
+            exactState = savedState,
+            displayMetadata = metadata
         )
 
     private fun watch(itemKey: ShoppingItemKey) =
