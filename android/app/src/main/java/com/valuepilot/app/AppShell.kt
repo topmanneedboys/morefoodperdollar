@@ -16,14 +16,16 @@ enum class AppPrimaryTab {
 /**
  * Routes that can be rendered by a presentation.
  *
- * COMPARE is a workflow layered above the four permanent primary tabs. It is
- * intentionally not a fifth primary tab.
+ * COMPARE is a standalone workflow layered above the four permanent primary tabs.
+ * STAPLE_WATCH_SETUP is a Saved-owned subroute layered above the Saved primary tab.
+ * Neither workflow is a fifth primary tab.
  */
 enum class AppRoute {
     HOME,
     SEARCH,
     BASKET,
     SAVED,
+    STAPLE_WATCH_SETUP,
     COMPARE
 }
 
@@ -58,6 +60,8 @@ sealed interface AppShellIntent {
         val tab: AppPrimaryTab
     ) : AppShellIntent
 
+    data object OpenStapleWatchSetup : AppShellIntent
+
     data object OpenStandaloneCompare : AppShellIntent
 
     data object NavigateBack : AppShellIntent
@@ -79,6 +83,9 @@ object AppShellReducer {
             is AppShellIntent.SelectPrimary ->
                 selectPrimary(intent.tab)
 
+            AppShellIntent.OpenStapleWatchSetup ->
+                openStapleWatchSetup(previous)
+
             AppShellIntent.OpenStandaloneCompare ->
                 openCompare(previous)
 
@@ -96,6 +103,26 @@ object AppShellReducer {
             canNavigateBack = false
         )
 
+    private fun openStapleWatchSetup(
+        previous: AppShellState
+    ): AppShellState {
+        if (previous.route == AppRoute.STAPLE_WATCH_SETUP) {
+            return previous
+        }
+        if (
+            previous.selectedPrimaryTab != AppPrimaryTab.SAVED ||
+            previous.route != AppRoute.SAVED
+        ) {
+            return previous
+        }
+
+        return previous.copy(
+            route = AppRoute.STAPLE_WATCH_SETUP,
+            compareReturnTab = null,
+            canNavigateBack = true
+        )
+    }
+
     private fun openCompare(
         previous: AppShellState
     ): AppShellState {
@@ -112,22 +139,27 @@ object AppShellReducer {
 
     private fun navigateBack(
         previous: AppShellState
-    ): AppShellState {
-        if (previous.route != AppRoute.COMPARE) {
-            return previous
+    ): AppShellState =
+        when (previous.route) {
+            AppRoute.COMPARE -> {
+                val returnTab =
+                    previous.compareReturnTab
+                        ?: previous.selectedPrimaryTab
+
+                AppShellState(
+                    selectedPrimaryTab = returnTab,
+                    route = routeFor(returnTab),
+                    compareReturnTab = null,
+                    canNavigateBack = false
+                )
+            }
+
+            AppRoute.STAPLE_WATCH_SETUP ->
+                selectPrimary(AppPrimaryTab.SAVED)
+
+            else ->
+                previous
         }
-
-        val returnTab =
-            previous.compareReturnTab
-                ?: previous.selectedPrimaryTab
-
-        return AppShellState(
-            selectedPrimaryTab = returnTab,
-            route = routeFor(returnTab),
-            compareReturnTab = null,
-            canNavigateBack = false
-        )
-    }
 
     fun routeFor(
         tab: AppPrimaryTab

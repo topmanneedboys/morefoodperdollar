@@ -41,6 +41,8 @@ class AppShellTest {
             AppPrimaryTab.SAVED to AppRoute.SAVED
         )
 
+        assertEquals(4, AppPrimaryTab.entries.size)
+
         for ((tab, route) in expected) {
             val state = AppShellReducer.reduce(
                 AppShellState.initial(),
@@ -66,6 +68,118 @@ class AppShellTest {
                 state.canNavigateBack
             )
         }
+    }
+
+    @Test
+    fun stapleWatchSetupOpensOnlyFromSavedPrimaryRoute() {
+        val saved = AppShellReducer.reduce(
+            AppShellState.initial(),
+            AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED)
+        )
+
+        val setup = AppShellReducer.reduce(
+            saved,
+            AppShellIntent.OpenStapleWatchSetup
+        )
+
+        assertEquals(AppPrimaryTab.SAVED, setup.selectedPrimaryTab)
+        assertEquals(AppRoute.STAPLE_WATCH_SETUP, setup.route)
+        assertEquals(null, setup.compareReturnTab)
+        assertTrue(setup.canNavigateBack)
+
+        val home = AppShellState.initial()
+        val fromHome = AppShellReducer.reduce(
+            home,
+            AppShellIntent.OpenStapleWatchSetup
+        )
+        assertSame(home, fromHome)
+    }
+
+    @Test
+    fun stapleWatchSetupCannotOpenOverCompareEvenWhenSavedOwnsThePrimaryTab() {
+        val saved = AppShellReducer.reduce(
+            AppShellState.initial(),
+            AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED)
+        )
+        val compare = AppShellReducer.reduce(
+            saved,
+            AppShellIntent.OpenStandaloneCompare
+        )
+
+        val attemptedSetup = AppShellReducer.reduce(
+            compare,
+            AppShellIntent.OpenStapleWatchSetup
+        )
+
+        assertSame(compare, attemptedSetup)
+    }
+
+    @Test
+    fun openingStapleWatchSetupTwiceIsIdempotent() {
+        val saved = AppShellReducer.reduce(
+            AppShellState.initial(),
+            AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED)
+        )
+        val first = AppShellReducer.reduce(saved, AppShellIntent.OpenStapleWatchSetup)
+        val second = AppShellReducer.reduce(first, AppShellIntent.OpenStapleWatchSetup)
+
+        assertSame(first, second)
+    }
+
+    @Test
+    fun backFromStapleWatchSetupReturnsToSavedPrimaryRoute() {
+        val saved = AppShellReducer.reduce(
+            AppShellState.initial(),
+            AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED)
+        )
+        val setup = AppShellReducer.reduce(saved, AppShellIntent.OpenStapleWatchSetup)
+
+        val returned = AppShellReducer.reduce(setup, AppShellIntent.NavigateBack)
+
+        assertEquals(AppPrimaryTab.SAVED, returned.selectedPrimaryTab)
+        assertEquals(AppRoute.SAVED, returned.route)
+        assertEquals(null, returned.compareReturnTab)
+        assertFalse(returned.canNavigateBack)
+    }
+
+    @Test
+    fun selectingPrimaryTabWhileStapleWatchSetupIsOpenExitsSubroute() {
+        val saved = AppShellReducer.reduce(
+            AppShellState.initial(),
+            AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED)
+        )
+        val setup = AppShellReducer.reduce(saved, AppShellIntent.OpenStapleWatchSetup)
+
+        val search = AppShellReducer.reduce(
+            setup,
+            AppShellIntent.SelectPrimary(AppPrimaryTab.SEARCH)
+        )
+
+        assertEquals(AppPrimaryTab.SEARCH, search.selectedPrimaryTab)
+        assertEquals(AppRoute.SEARCH, search.route)
+        assertEquals(null, search.compareReturnTab)
+        assertFalse(search.canNavigateBack)
+    }
+
+    @Test
+    fun compareOpenedFromStapleWatchSetupReturnsToSavedNotBackIntoSetup() {
+        val saved = AppShellReducer.reduce(
+            AppShellState.initial(),
+            AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED)
+        )
+        val setup = AppShellReducer.reduce(saved, AppShellIntent.OpenStapleWatchSetup)
+
+        val compare = AppShellReducer.reduce(setup, AppShellIntent.OpenStandaloneCompare)
+
+        assertEquals(AppPrimaryTab.SAVED, compare.selectedPrimaryTab)
+        assertEquals(AppRoute.COMPARE, compare.route)
+        assertEquals(AppPrimaryTab.SAVED, compare.compareReturnTab)
+        assertTrue(compare.canNavigateBack)
+
+        val returned = AppShellReducer.reduce(compare, AppShellIntent.NavigateBack)
+        assertEquals(AppPrimaryTab.SAVED, returned.selectedPrimaryTab)
+        assertEquals(AppRoute.SAVED, returned.route)
+        assertFalse(returned.canNavigateBack)
     }
 
     @Test
