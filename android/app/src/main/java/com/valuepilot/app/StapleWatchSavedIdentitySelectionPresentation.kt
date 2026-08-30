@@ -1,0 +1,216 @@
+package com.valuepilot.app
+
+private const val MAX_STAPLE_WATCH_SAVED_PRODUCT_ROWS = 128
+private const val MAX_STAPLE_WATCH_SAVED_STORE_ROWS = 64
+
+/** UI-only readiness for configuring Watch My Staples from explicit Saved choices. */
+enum class StapleWatchSavedSelectionUiStatus {
+    NEEDS_SELECTION,
+    READY_FOR_FACT_CHECK,
+    DISPLAY_METADATA_INCOMPLETE
+}
+
+data class StapleWatchSavedProductSelectionUiRow(
+    val title: String,
+    val watched: Boolean,
+    val action: StapleWatchSavedIdentitySelectionAction.SetProductWatched,
+    val actionLabel: String
+) {
+    init {
+        require(title.isNotBlank())
+        require(actionLabel.isNotBlank())
+        require(action.watched != watched)
+    }
+}
+
+data class StapleWatchSavedStoreSelectionUiRow(
+    val title: String,
+    val usualStore: Boolean,
+    val action: StapleWatchSavedIdentitySelectionAction,
+    val actionLabel: String
+) {
+    init {
+        require(title.isNotBlank())
+        require(actionLabel.isNotBlank())
+        require(
+            if (usualStore) {
+                action == StapleWatchSavedIdentitySelectionAction.ClearUsualStore
+            } else {
+                action is StapleWatchSavedIdentitySelectionAction.SelectUsualStore
+            }
+        )
+    }
+}
+
+/**
+ * Immutable consumer-ready setup state.
+ *
+ * Stable item/store identities exist only inside typed actions. All normal strings come from
+ * already-sanitized Saved display metadata or fixed product copy. A renderer must never parse a
+ * label to recover identity or infer whether an economic switch or notification is authorized.
+ */
+data class StapleWatchSavedSelectionUiState(
+    val status: StapleWatchSavedSelectionUiStatus,
+    val headline: String,
+    val guidance: String,
+    val productSectionTitle: String?,
+    val productRows: List<StapleWatchSavedProductSelectionUiRow>,
+    val storeSectionTitle: String?,
+    val storeRows: List<StapleWatchSavedStoreSelectionUiRow>,
+    val watchedItemCount: Int,
+    val usualStoreSelected: Boolean,
+    val unresolvedDisplayNameCount: Int,
+    val selectedDisplayNameBlockerCount: Int,
+    val notice: String?,
+    val clearSelectionAction: StapleWatchSavedIdentitySelectionAction.ClearSelection?,
+    val clearSelectionActionLabel: String?
+) {
+    init {
+        require(headline.isNotBlank())
+        require(guidance.isNotBlank())
+        require(productRows.size <= MAX_STAPLE_WATCH_SAVED_PRODUCT_ROWS)
+        require(storeRows.size <= MAX_STAPLE_WATCH_SAVED_STORE_ROWS)
+        require((productRows.isNotEmpty()) == (productSectionTitle != null))
+        require((storeRows.isNotEmpty()) == (storeSectionTitle != null))
+        require(productSectionTitle == null || productSectionTitle.isNotBlank())
+        require(storeSectionTitle == null || storeSectionTitle.isNotBlank())
+        require(watchedItemCount in 0..MAX_STAPLE_WATCH_SAVED_PRODUCT_ROWS)
+        require(unresolvedDisplayNameCount >= 0)
+        require(selectedDisplayNameBlockerCount in 0..unresolvedDisplayNameCount)
+        require(notice == null || notice.isNotBlank())
+        require((clearSelectionAction != null) == (clearSelectionActionLabel != null))
+        require(clearSelectionActionLabel == null || clearSelectionActionLabel.isNotBlank())
+        require(
+            (status == StapleWatchSavedSelectionUiStatus.DISPLAY_METADATA_INCOMPLETE) ==
+                (selectedDisplayNameBlockerCount > 0)
+        )
+    }
+}
+
+/**
+ * Pure consumer projection for explicit Saved-backed staple selection.
+ *
+ * The verified Saved projector remains the only authority for turning detached display metadata
+ * into consumer labels. This projector never falls back to stable keys, source ids, provider
+ * provenance, merchant/location scope, or other technical identity text.
+ *
+ * A missing display name for an unselected Saved choice merely hides that optional row. A missing
+ * display name for an already selected watched product or usual store fails closed: setup is shown
+ * as DISPLAY_METADATA_INCOMPLETE even if the identity reducer could otherwise form a handoff.
+ *
+ * This boundary owns no fact retrieval, price calculation, route calculation, evidence-freshness
+ * policy, scheduling, storage, Android lifecycle, or delivery authority.
+ */
+object StapleWatchSavedIdentitySelectionUiProjector {
+
+    fun project(
+        savedState: PracticalShoppingSavedExactPreferenceState,
+        selection: StapleWatchSavedIdentitySelection,
+        metadata: PracticalShoppingSavedExactPreferenceDisplayMetadata
+    ): StapleWatchSavedSelectionUiState {
+        val current = StapleWatchSavedIdentitySelectionReducer.reconcile(selection, savedState)
+        val savedProjection =
+            PracticalShoppingSavedExactPreferenceUiProjector.project(
+                savedState = savedState,
+                metadata = metadata
+            )
+        val watched = current.watchedItemKeys.toSet()
+
+        val productRows =
+            savedProjection.state.productRows.map { savedRow ->
+                val itemKey = savedRow.action.itemKey
+                val isWatched = itemKey in watched
+                StapleWatchSavedProductSelectionUiRow(
+                    title = savedRow.title,
+                    watched = isWatched,
+                    action =
+                        StapleWatchSavedIdentitySelectionAction.SetProductWatched(
+                            itemKey = itemKey,
+                            watched = !isWatched
+                        ),
+                    actionLabel = if (isWatched) "Stop watching" else "Watch"
+                )
+            }
+
+        val storeRows =
+            savedProjection.state.storeRows.map { savedRow ->
+                val storeKey = savedRow.action.storeKey
+                val isUsualStore = current.usualStoreKey == storeKey
+                StapleWatchSavedStoreSelectionUiRow(
+                    title = savedRow.title,
+                    usualStore = isUsualStore,
+                    action =
+                        if (isUsualStore) {
+                            StapleWatchSavedIdentitySelectionAction.ClearUsualStore
+                        } else {
+                            StapleWatchSavedIdentitySelectionAction.SelectUsualStore(storeKey)
+                        },
+                    actionLabel = if (isUsualStore) "Clear usual store" else "Use as usual store"
+                )
+            }
+
+        val unresolvedProducts = savedProjection.unresolvedProductKeys.toSet()
+        val unresolvedStores = savedProjection.unresolvedStoreKeys.toSet()
+        val selectedProductBlockers =
+            current.watchedItemKeys.count { itemKey -> itemKey in unresolvedProducts }
+        val selectedStoreBlockers =
+            if (current.usualStoreKey?.let(unresolvedStores::contains) == true) 1 else 0
+        val selectedBlockers = selectedProductBlockers + selectedStoreBlockers
+        val identityReady =
+            StapleWatchSavedIdentitySelectionReducer.identityHandoffOrNull(
+                selection = current,
+                savedState = savedState
+            ) != null
+
+        val status =
+            when {
+                selectedBlockers > 0 ->
+                    StapleWatchSavedSelectionUiStatus.DISPLAY_METADATA_INCOMPLETE
+                identityReady -> StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK
+                else -> StapleWatchSavedSelectionUiStatus.NEEDS_SELECTION
+            }
+
+        val hasSelection = current.watchedItemKeys.isNotEmpty() || current.usualStoreKey != null
+
+        return StapleWatchSavedSelectionUiState(
+            status = status,
+            headline = "Watch My Staples",
+            guidance = guidance(status),
+            productSectionTitle = if (productRows.isEmpty()) null else "Saved products",
+            productRows = productRows,
+            storeSectionTitle = if (storeRows.isEmpty()) null else "Usual store",
+            storeRows = storeRows,
+            watchedItemCount = current.watchedItemKeys.size,
+            usualStoreSelected = current.usualStoreKey != null,
+            unresolvedDisplayNameCount = savedProjection.state.unresolvedDisplayNameCount,
+            selectedDisplayNameBlockerCount = selectedBlockers,
+            notice = notice(selectedBlockers, savedProjection.state.unresolvedDisplayNameCount),
+            clearSelectionAction =
+                if (hasSelection) StapleWatchSavedIdentitySelectionAction.ClearSelection else null,
+            clearSelectionActionLabel = if (hasSelection) "Clear staple setup" else null
+        )
+    }
+
+    private fun guidance(status: StapleWatchSavedSelectionUiStatus): String =
+        when (status) {
+            StapleWatchSavedSelectionUiStatus.NEEDS_SELECTION ->
+                "Choose at least two saved staples and your usual store."
+            StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK ->
+                "Staple identities are ready for current price, route, and evidence checks."
+            StapleWatchSavedSelectionUiStatus.DISPLAY_METADATA_INCOMPLETE ->
+                "Refresh the selected saved choice names before continuing."
+        }
+
+    private fun notice(selectedBlockers: Int, unresolvedTotal: Int): String? =
+        when {
+            selectedBlockers == 1 ->
+                "1 selected saved choice needs a current display name before setup can continue."
+            selectedBlockers > 1 ->
+                "$selectedBlockers selected saved choices need current display names before setup can continue."
+            unresolvedTotal == 1 ->
+                "1 other saved choice is hidden until its display name is available."
+            unresolvedTotal > 1 ->
+                "$unresolvedTotal other saved choices are hidden until their display names are available."
+            else -> null
+        }
+}
