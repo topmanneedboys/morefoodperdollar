@@ -14,7 +14,9 @@ package com.valuepilot.app
  * Selection survives hide/show transitions within this session, but remains memory-only. Closing
  * the session discards it. Actions are accepted only while the setup route is visible; stale
  * actions are still reduced so the existing fail-closed reducer can reconcile removed Saved
- * identities before the current safe state is rendered again.
+ * identities before the current safe state is rendered again. A composition owner may read a
+ * detached immutable selection snapshot only while this route is visible; that read does not
+ * create or authorize any downstream handoff by itself.
  */
 internal class StapleWatchSavedSelectionRouteSession(
     initialSnapshot: PracticalShoppingSavedValidatedSnapshot,
@@ -68,6 +70,14 @@ internal class StapleWatchSavedSelectionRouteSession(
             )
         selection = transition.state
         renderCurrent()
+    }
+
+    fun currentSelectionOrNull(): StapleWatchSavedIdentitySelection? {
+        if (closed || !routeVisible) return null
+
+        return selection.copy(
+            watchedItemKeys = selection.watchedItemKeys.toList()
+        )
     }
 
     override fun close() {

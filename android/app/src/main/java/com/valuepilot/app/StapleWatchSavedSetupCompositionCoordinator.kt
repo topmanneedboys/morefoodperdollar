@@ -1,19 +1,32 @@
 package com.valuepilot.app
 
+/** Receives only an explicit identity-handoff gate result; it owns no downstream work itself. */
+internal fun interface StapleWatchSavedIdentityHandoffAttemptObserver {
+    fun onAttempt(attempt: StapleWatchSavedIdentityHandoffAttempt)
+}
+
 /**
  * Pure composition boundary between validated Saved snapshots and Watch My Staples setup.
  *
  * This coordinator keeps only the latest already-validated Saved snapshot in memory and uses it
  * to create or update the verified [StapleWatchSavedSelectionRouteSession]. It does not read Saved
- * persistence, infer identity, resolve shopping facts, create a fact/economic handoff, evaluate
- * savings, schedule background work, or authorize notifications.
+ * persistence, infer identity, resolve shopping facts, evaluate savings, schedule background work,
+ * or authorize notifications.
+ *
+ * An identity-only handoff may be requested only through [requestIdentityHandoff]. That explicit
+ * call reads the current visible route selection and delegates all eligibility/display-safety
+ * decisions to the verified [StapleWatchSavedIdentityHandoffGate]. Merely selecting enough items
+ * or receiving a newer Saved snapshot never emits a handoff attempt.
  *
  * Route visibility may arrive before the first accepted Saved load. In that case setup remains
- * fail-closed: no route session exists and surface actions are ignored until a validated snapshot
- * is observed. Once created, the same memory-only setup session is reused across hide/show within
- * this coordinator and reconciled whenever a newer validated snapshot arrives.
+ * fail-closed: no route session exists and surface actions or handoff requests are ignored until a
+ * validated snapshot is observed. Once created, the same memory-only setup session is reused
+ * across hide/show within this coordinator and reconciled whenever a newer validated snapshot
+ * arrives.
  */
 internal class StapleWatchSavedSetupCompositionCoordinator(
+    private val handoffAttemptObserver: StapleWatchSavedIdentityHandoffAttemptObserver =
+        StapleWatchSavedIdentityHandoffAttemptObserver { },
     private val sessionFactory:
         (PracticalShoppingSavedValidatedSnapshot) -> StapleWatchSavedSelectionRouteSession
 ) : PracticalShoppingSavedValidatedSnapshotObserver, AutoCloseable {
@@ -52,6 +65,19 @@ internal class StapleWatchSavedSetupCompositionCoordinator(
         if (closed || !routeVisible) return
 
         session?.onSurfaceAction(action)
+    }
+
+    fun requestIdentityHandoff() {
+        if (closed || !routeVisible) return
+
+        val snapshot = latestSnapshot ?: return
+        val currentSelection = session?.currentSelectionOrNull() ?: return
+        handoffAttemptObserver.onAttempt(
+            StapleWatchSavedIdentityHandoffGate.request(
+                selection = currentSelection,
+                snapshot = snapshot
+            )
+        )
     }
 
     override fun close() {
