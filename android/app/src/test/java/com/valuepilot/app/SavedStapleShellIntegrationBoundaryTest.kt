@@ -17,6 +17,12 @@ class SavedStapleShellIntegrationBoundaryTest {
         assertTrue(source.contains("StapleWatchSavedSelectionRouteSession("))
         assertTrue(source.contains("PracticalShoppingSavedLifecycleRenderer { state ->"))
         assertTrue(source.contains("snapshotObserver = stapleWatchSetupCoordinator"))
+        assertTrue(
+            source.contains(
+                "stapleWatchSetupExperience.onContinueAction = stapleWatchSetupCoordinator::onContinueAction"
+            )
+        )
+        assertFalse(source.contains("StapleWatchSavedIdentityHandoffUiAction.Request"))
 
         assertFalse(source.contains("StapleWatchEconomicEvaluator"))
         assertFalse(source.contains("StapleWatchEconomicDecision"))
@@ -60,6 +66,7 @@ class SavedStapleShellIntegrationBoundaryTest {
         assertTrue(source.contains("savedExperience.onAction = null"))
         assertTrue(source.contains("savedStapleLaunchExperience.onAction = null"))
         assertTrue(source.contains("stapleWatchSetupExperience.onAction = null"))
+        assertTrue(source.contains("stapleWatchSetupExperience.onContinueAction = null"))
         assertTrue(source.contains("stapleWatchSetupCoordinator.close()"))
         assertTrue(source.contains("savedRouteCoordinator.close()"))
     }

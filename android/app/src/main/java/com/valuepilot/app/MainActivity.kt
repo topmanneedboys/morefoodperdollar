@@ -166,6 +166,7 @@ class MainActivity : AppCompatActivity() {
             savedExperience.onAction = null
             savedStapleLaunchExperience.onAction = null
             stapleWatchSetupExperience.onAction = null
+            stapleWatchSetupExperience.onContinueAction = null
             stapleWatchSetupCoordinator.close()
             savedRouteCoordinator.close()
         }
@@ -352,6 +353,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         stapleWatchSetupExperience.onAction = stapleWatchSetupCoordinator::onSurfaceAction
+        stapleWatchSetupExperience.onContinueAction = stapleWatchSetupCoordinator::onContinueAction
     }
 
     private fun configureQuickSearch(chipId: Int, query: String) {
