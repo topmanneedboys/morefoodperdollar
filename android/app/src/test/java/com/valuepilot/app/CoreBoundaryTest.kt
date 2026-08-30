@@ -42,6 +42,21 @@ class CoreBoundaryTest {
     }
 
     @Test
+    fun manualCaptureAdapterIsRankingFreeAndSeparateFromLegacySmartComparison() {
+        val capture = source("ManualProductObservationAdapter.kt").readText()
+        assertTrue(capture.contains("object ManualProductObservationAdapter"))
+        assertTrue(capture.contains("ProductObservation"))
+        assertFalse(capture.contains("RankingEngine"))
+        assertFalse(capture.contains("RankMode"))
+        assertFalse(capture.contains("ValueEngine"))
+        assertFalse(capture.contains("StandaloneComparisonController"))
+
+        val legacy = source("StandaloneComparison.kt").readText()
+        assertFalse(legacy.contains("object ManualProductObservationAdapter"))
+        assertTrue(legacy.contains("RankMode.SMART"))
+    }
+
+    @Test
     fun comparisonActivityUsesExactReplaceableCompareHereBoundary() {
         val source = source("ComparisonActivity.kt").readText()
 
