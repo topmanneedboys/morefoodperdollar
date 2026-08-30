@@ -16,6 +16,16 @@ fun interface PracticalShoppingSavedLifecycleRenderer {
 }
 
 /**
+ * Receives only a validated Saved snapshot emitted by a current accepted lifecycle load.
+ *
+ * This is a composition boundary, not a physical Saved-renderer contract. The snapshot may
+ * contain exact Saved identity, so it must not be forwarded into consumer rendering state.
+ */
+fun interface PracticalShoppingSavedValidatedSnapshotObserver {
+    fun onSnapshot(snapshot: PracticalShoppingSavedValidatedSnapshot)
+}
+
+/**
  * Testable gateway around the verified Saved persistence coordinator.
  *
  * Implementations must return the coordinator's typed results rather than inventing
@@ -55,15 +65,18 @@ class PracticalShoppingSavedLocalExperienceGateway(
  * The host owns sequencing only. It contains no Android View, filesystem, clock, network,
  * provider, product/store matching, or ranking logic. [worker] must execute its blocks away
  * from the Android main thread; [completionDispatcher] must return them to the lifecycle
- * owner thread before reducer state or the renderer is touched.
+ * owner thread before reducer state, rendering, or validated-snapshot observation is touched.
  *
  * Work is always derived from [PracticalShoppingSavedLifecycleController]. The host never
  * manufactures a persistence action and never patches a successful mutation into UI state;
  * the controller's follow-up authoritative load is scheduled like any other emitted work.
  *
+ * [snapshotObserver] receives only the reducer's transient validated snapshot output. It does
+ * not receive lifecycle state and is intentionally separate from the physical Saved renderer.
+ *
  * [close] does not attempt to cancel an already-running atomic persistence operation. It
- * prevents subsequent events, renders, and late completions from being applied. A later
- * Android owner may additionally shut down its executor when its lifecycle ends.
+ * prevents subsequent events, renders, snapshot observations, and late completions from being
+ * applied. A later Android owner may additionally shut down its executor when its lifecycle ends.
  */
 class PracticalShoppingSavedLifecycleHost(
     private val gateway: PracticalShoppingSavedExperienceGateway,
@@ -71,7 +84,9 @@ class PracticalShoppingSavedLifecycleHost(
     private val completionDispatcher: PracticalShoppingSavedCompletionDispatcher,
     private val renderer: PracticalShoppingSavedLifecycleRenderer,
     private val controller: PracticalShoppingSavedLifecycleController =
-        PracticalShoppingSavedLifecycleController()
+        PracticalShoppingSavedLifecycleController(),
+    private val snapshotObserver: PracticalShoppingSavedValidatedSnapshotObserver =
+        PracticalShoppingSavedValidatedSnapshotObserver { }
 ) {
     private var lifecycleState = controller.initialState()
     private var closed = false
@@ -108,6 +123,7 @@ class PracticalShoppingSavedLifecycleHost(
             renderer.render(transition.state)
         }
 
+        transition.validatedSnapshot?.let(snapshotObserver::onSnapshot)
         transition.work?.let(::schedule)
     }
 
