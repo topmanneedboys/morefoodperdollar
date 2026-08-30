@@ -33,8 +33,7 @@ class ComparisonActivity : AppCompatActivity() {
 
     private val productInputs = mutableListOf<EditText>()
 
-    private var comparisonWasRun = false
-    private var lastComparedAtEpochMillis = 0L
+    private var activityState = CompareHereManualActivitySessionState.initial()
     private var restoringDraft = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,25 +50,31 @@ class ComparisonActivity : AppCompatActivity() {
         scannerStatus = findViewById(R.id.scannerStatus)
 
         val draft = restoreDraft(savedInstanceState)
-
-        comparisonWasRun = draft.compared
-        lastComparedAtEpochMillis = draft.observedAtEpochMillis
+        activityState =
+            CompareHereManualActivitySessionState.restore(
+                comparisonWasRun = draft.compared,
+                observedAtEpochMillis = draft.observedAtEpochMillis,
+                likeForLikeConfirmed = draft.likeForLikeConfirmed
+            )
 
         renderProductInputs(draft.blocks)
-        restoringDraft = true
-        likeForLikeConfirmation.isChecked = draft.likeForLikeConfirmed
-        restoringDraft = false
+        syncLikeForLikeConfirmation()
 
-        likeForLikeConfirmation.setOnCheckedChangeListener { _, _ ->
+        likeForLikeConfirmation.setOnCheckedChangeListener { _, isChecked ->
             if (!restoringDraft) {
-                invalidateComparison(resetConfirmation = false)
+                activityState =
+                    CompareHereManualActivitySessionReducer.confirmationChanged(
+                        state = activityState,
+                        confirmed = isChecked
+                    )
+                renderIdleScreen()
             }
         }
 
         addProductButton.setOnClickListener {
             if (productInputs.size < CompareHereManualInputAdapter.MAX_OBSERVATIONS) {
                 addProductInput("")
-                invalidateComparison(resetConfirmation = true)
+                onProductsChanged()
                 updateAddProductButton()
             }
         }
@@ -95,9 +100,9 @@ class ComparisonActivity : AppCompatActivity() {
             openAccessibilitySettings()
         }
 
-        if (comparisonWasRun) {
+        if (activityState.comparisonWasRun) {
             val restoreTime =
-                lastComparedAtEpochMillis.takeIf { it > 0L }
+                activityState.observedAtEpochMillis.takeIf { it > 0L }
                     ?: System.currentTimeMillis()
 
             runComparison(
@@ -127,15 +132,15 @@ class ComparisonActivity : AppCompatActivity() {
         )
         outState.putBoolean(
             STATE_COMPARED,
-            comparisonWasRun
+            activityState.comparisonWasRun
         )
         outState.putLong(
             STATE_OBSERVED_AT,
-            lastComparedAtEpochMillis
+            activityState.observedAtEpochMillis
         )
         outState.putBoolean(
             STATE_LIKE_FOR_LIKE_CONFIRMED,
-            likeForLikeConfirmation.isChecked
+            activityState.likeForLikeConfirmed
         )
 
         super.onSaveInstanceState(outState)
@@ -257,7 +262,7 @@ class ComparisonActivity : AppCompatActivity() {
                         return
                     }
 
-                    invalidateComparison(resetConfirmation = true)
+                    onProductsChanged()
                 }
             }
         )
@@ -285,11 +290,14 @@ class ComparisonActivity : AppCompatActivity() {
             CompareHereManualRouteCoordinator.compareBlocks(
                 rawBlocks = blocks,
                 observedAtEpochMillis = observedAtEpochMillis,
-                userConfirmedLikeForLike = likeForLikeConfirmation.isChecked
+                userConfirmedLikeForLike = activityState.likeForLikeConfirmed
             )
 
-        comparisonWasRun = true
-        lastComparedAtEpochMillis = observedAtEpochMillis
+        activityState =
+            CompareHereManualActivitySessionReducer.comparisonAttempted(
+                state = activityState,
+                observedAtEpochMillis = observedAtEpochMillis
+            )
 
         comparisonPresenter.render(routeState)
 
@@ -298,17 +306,21 @@ class ComparisonActivity : AppCompatActivity() {
         }
     }
 
-    private fun invalidateComparison(resetConfirmation: Boolean) {
-        comparisonWasRun = false
-        lastComparedAtEpochMillis = 0L
+    private fun onProductsChanged() {
+        activityState =
+            CompareHereManualActivitySessionReducer.productsChanged(activityState)
+        syncLikeForLikeConfirmation()
+        renderIdleScreen()
+    }
 
-        if (resetConfirmation && likeForLikeConfirmation.isChecked) {
-            restoringDraft = true
-            likeForLikeConfirmation.isChecked = false
-            restoringDraft = false
+    private fun syncLikeForLikeConfirmation() {
+        if (likeForLikeConfirmation.isChecked == activityState.likeForLikeConfirmed) {
+            return
         }
 
-        renderIdleScreen()
+        restoringDraft = true
+        likeForLikeConfirmation.isChecked = activityState.likeForLikeConfirmed
+        restoringDraft = false
     }
 
     private fun renderIdleScreen() {
@@ -321,7 +333,7 @@ class ComparisonActivity : AppCompatActivity() {
                         guidance = getString(R.string.compare_add_products_body)
                     )
 
-                !likeForLikeConfirmation.isChecked ->
+                !activityState.likeForLikeConfirmed ->
                     CompareHereManualScreenContent.Message(
                         title = getString(R.string.compare_confirmation_needed_title),
                         guidance = getString(R.string.compare_confirmation_needed_body)
@@ -338,12 +350,8 @@ class ComparisonActivity : AppCompatActivity() {
     }
 
     private fun clearComparison() {
-        comparisonWasRun = false
-        lastComparedAtEpochMillis = 0L
-
-        restoringDraft = true
-        likeForLikeConfirmation.isChecked = false
-        restoringDraft = false
+        activityState = CompareHereManualActivitySessionReducer.clear()
+        syncLikeForLikeConfirmation()
 
         getSharedPreferences(
             PREFS_NAME,
@@ -377,7 +385,7 @@ class ComparisonActivity : AppCompatActivity() {
 
         if (
             blocks.all { it.isBlank() } &&
-            !comparisonWasRun
+            !activityState.comparisonWasRun
         ) {
             prefs.edit()
                 .clear()
@@ -394,15 +402,15 @@ class ComparisonActivity : AppCompatActivity() {
                 )
                 .putBoolean(
                     PREF_COMPARED,
-                    comparisonWasRun
+                    activityState.comparisonWasRun
                 )
                 .putLong(
                     PREF_OBSERVED_AT,
-                    lastComparedAtEpochMillis
+                    activityState.observedAtEpochMillis
                 )
                 .putBoolean(
                     PREF_LIKE_FOR_LIKE_CONFIRMED,
-                    likeForLikeConfirmation.isChecked
+                    activityState.likeForLikeConfirmed
                 )
 
         blocks.forEachIndexed { index, value ->
