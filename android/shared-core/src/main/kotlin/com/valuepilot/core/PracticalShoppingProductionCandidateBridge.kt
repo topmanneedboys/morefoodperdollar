@@ -25,6 +25,20 @@ data class PracticalShoppingProductionStoreScope(
     }
 }
 
+/** Exact store/offer scope for price validation without route data. */
+data class PracticalShoppingProductionPriceStoreScope(
+    val storeKey: ShoppingStoreKey,
+    val merchantKey: String,
+    val locationKey: String?,
+    val commerceChannelKey: String
+) {
+    init {
+        require(merchantKey.isNotBlank() && merchantKey.length <= 240)
+        require(locationKey == null || (locationKey.isNotBlank() && locationKey.length <= 240))
+        require(commerceChannelKey.isNotBlank() && commerceChannelKey.length <= 160)
+    }
+}
+
 /**
  * Explicit binding from one requested shopping intent to one exact production
  * product identity and one exact current-price request at one declared store.
@@ -158,40 +172,25 @@ object PracticalShoppingProductionCandidateBridge {
             "One exact product cannot be counted twice in the same store basket"
         }
 
-        val storesByKey = stores.associateBy { it.storeKey }
-        val requestsById = priceRequests.associateBy { it.requestId }
-        val requestedItems = request.itemKeySet
-        val eligibilityByRequestId =
-            if (priceRequests.isEmpty()) {
-                emptyMap()
-            } else {
-                ProductionCurrentPriceEligibilityEvaluator.evaluateAll(
-                    requests = priceRequests,
-                    lifecycleRegistry = lifecycleRegistry,
-                    dispositionRegistry = dispositionRegistry,
-                    evaluatedAtEpochMillis = evaluatedAtEpochMillis,
-                    acceptancePolicy = acceptancePolicy
-                )
-            }
-
         val priceEvaluations =
-            priceBindings
-                .sortedWith(
-                    compareBy<PracticalShoppingProductionPriceBinding>(
-                        { it.storeKey.value },
-                        { it.itemKey.value },
-                        { it.currentPriceRequestId }
-                    )
-                )
-                .map { binding ->
-                    evaluatePriceBinding(
-                        binding = binding,
-                        requestedItems = requestedItems,
-                        storesByKey = storesByKey,
-                        requestsById = requestsById,
-                        eligibilityByRequestId = eligibilityByRequestId
-                    )
-                }
+            evaluatePrices(
+                request = request,
+                stores =
+                    stores.map { store ->
+                        PracticalShoppingProductionPriceStoreScope(
+                            storeKey = store.storeKey,
+                            merchantKey = store.merchantKey,
+                            locationKey = store.locationKey,
+                            commerceChannelKey = store.commerceChannelKey
+                        )
+                    },
+                priceBindings = priceBindings,
+                priceRequests = priceRequests,
+                lifecycleRegistry = lifecycleRegistry,
+                dispositionRegistry = dispositionRegistry,
+                evaluatedAtEpochMillis = evaluatedAtEpochMillis,
+                acceptancePolicy = acceptancePolicy
+            )
 
         val storeEvaluations =
             stores
@@ -209,10 +208,85 @@ object PracticalShoppingProductionCandidateBridge {
         )
     }
 
+    fun evaluatePrices(
+        request: ShoppingRequest,
+        stores: List<PracticalShoppingProductionPriceStoreScope>,
+        priceBindings: List<PracticalShoppingProductionPriceBinding>,
+        priceRequests: List<ProductionCurrentPriceEligibilityRequest>,
+        lifecycleRegistry: ProductionDatasetLifecycleRegistry,
+        dispositionRegistry: ProductionDatasetDispositionRegistry,
+        evaluatedAtEpochMillis: Long,
+        acceptancePolicy: EvidenceAcceptancePolicy
+    ): List<PracticalShoppingProductionPriceEvaluation> {
+        require(stores.size <= MAX_PRACTICAL_SHOPPING_PRODUCTION_STORES)
+        require(priceBindings.size <= MAX_PRACTICAL_SHOPPING_PRODUCTION_PRICE_BINDINGS)
+        require(priceRequests.size <= MAX_PRACTICAL_SHOPPING_PRODUCTION_PRICE_REQUESTS)
+        require(evaluatedAtEpochMillis > 0L)
+
+        val storeKeys = stores.map { it.storeKey }
+        require(storeKeys.size == storeKeys.toSet().size) {
+            "Practical Shopping production store keys must be unique"
+        }
+
+        val requestIds = priceRequests.map { it.requestId }
+        require(requestIds.size == requestIds.toSet().size) {
+            "Practical Shopping production current-price request ids must be unique"
+        }
+
+        val itemStoreKeys = priceBindings.map { it.itemKey to it.storeKey }
+        require(itemStoreKeys.size == itemStoreKeys.toSet().size) {
+            "Each shopping item may have at most one bound price per store"
+        }
+
+        val boundRequestIds = priceBindings.map { it.currentPriceRequestId }
+        require(boundRequestIds.size == boundRequestIds.toSet().size) {
+            "One current-price request cannot be reused for multiple shopping bindings"
+        }
+
+        val storeProductKeys = priceBindings.map { it.storeKey to it.productKey }
+        require(storeProductKeys.size == storeProductKeys.toSet().size) {
+            "One exact product cannot be counted twice in the same store basket"
+        }
+
+        val storesByKey = stores.associateBy { it.storeKey }
+        val requestsById = priceRequests.associateBy { it.requestId }
+        val requestedItems = request.itemKeySet
+        val eligibilityByRequestId =
+            if (priceRequests.isEmpty()) {
+                emptyMap()
+            } else {
+                ProductionCurrentPriceEligibilityEvaluator.evaluateAll(
+                    requests = priceRequests,
+                    lifecycleRegistry = lifecycleRegistry,
+                    dispositionRegistry = dispositionRegistry,
+                    evaluatedAtEpochMillis = evaluatedAtEpochMillis,
+                    acceptancePolicy = acceptancePolicy
+                )
+            }
+
+        return priceBindings
+            .sortedWith(
+                compareBy<PracticalShoppingProductionPriceBinding>(
+                    { it.storeKey.value },
+                    { it.itemKey.value },
+                    { it.currentPriceRequestId }
+                )
+            )
+            .map { binding ->
+                evaluatePriceBinding(
+                    binding = binding,
+                    requestedItems = requestedItems,
+                    storesByKey = storesByKey,
+                    requestsById = requestsById,
+                    eligibilityByRequestId = eligibilityByRequestId
+                )
+            }
+    }
+
     private fun evaluatePriceBinding(
         binding: PracticalShoppingProductionPriceBinding,
         requestedItems: Set<ShoppingItemKey>,
-        storesByKey: Map<ShoppingStoreKey, PracticalShoppingProductionStoreScope>,
+        storesByKey: Map<ShoppingStoreKey, PracticalShoppingProductionPriceStoreScope>,
         requestsById: Map<String, ProductionCurrentPriceEligibilityRequest>,
         eligibilityByRequestId: Map<String, ProductionCurrentPriceEligibilityResult>
     ): PracticalShoppingProductionPriceEvaluation {
