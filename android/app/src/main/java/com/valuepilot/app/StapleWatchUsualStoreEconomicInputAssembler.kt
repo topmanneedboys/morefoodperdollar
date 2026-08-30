@@ -33,7 +33,7 @@ class StapleWatchUsualStoreEconomicInputAssembly private constructor(
             require(assembled.storeKey == preconditions.intent.usualStoreKey) {
                 "Staple-watch usual-store candidate must match the exact fact-check intent"
             }
-            require(assembled.coveredItemKeys == preconditions.intent.request.itemKeySet) {
+            require(assembled.coveredItemKeys == preconditions.intent.request.itemKeys.toSet()) {
                 "Staple-watch usual-store candidate must cover the exact watched basket"
             }
         }
@@ -139,7 +139,7 @@ object StapleWatchUsualStoreEconomicInputAssembler {
         val candidate =
             StapleWatchBasketCandidate(
                 storeKey = preconditions.intent.usualStoreKey,
-                coveredItemKeys = preconditions.intent.request.itemKeySet,
+                coveredItemKeys = preconditions.intent.request.itemKeys.toSet(),
                 knownBasketCost = basketTotal,
                 evidence = evidence
             )

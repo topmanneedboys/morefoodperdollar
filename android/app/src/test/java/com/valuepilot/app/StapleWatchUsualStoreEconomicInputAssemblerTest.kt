@@ -55,7 +55,7 @@ class StapleWatchUsualStoreEconomicInputAssemblerTest {
         assertNull(result.blocker)
         assertSame(preconditions, result.preconditions)
         assertEquals(usual, candidate.storeKey)
-        assertEquals(intent.request.itemKeySet, candidate.coveredItemKeys)
+        assertEquals(intent.request.itemKeys.toSet(), candidate.coveredItemKeys)
         assertEquals(Money(1_200L, "CAD"), candidate.knownBasketCost)
         assertEquals(1, candidate.evidence.freshItemCount)
         assertEquals(1, candidate.evidence.agingItemCount)
