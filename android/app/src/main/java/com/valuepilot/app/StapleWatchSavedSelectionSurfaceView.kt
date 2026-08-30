@@ -20,8 +20,12 @@ import com.google.android.material.card.MaterialCardView
  * authority to load Saved data, begin fact checks, evaluate store economics, persist setup, or
  * schedule delivery.
  *
+ * Continuation stays owner-controlled: the already-projected continuation marker is rendered only
+ * when an external owner has installed [onContinueAction]. The view never inspects setup status or
+ * creates a continuation request by itself.
+ *
  * Route visibility is deliberately external to [render]. This view starts GONE and render never
- * makes it visible; a future route owner must decide when this setup surface is on screen.
+ * makes it visible; a route owner must decide when this setup surface is on screen.
  */
 class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
     context: Context,
@@ -30,6 +34,7 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
 ) : LinearLayout(context, attrs, defStyleAttr), StapleWatchSavedSelectionSurfaceRenderer {
 
     var onAction: ((StapleWatchSavedIdentitySelectionAction) -> Unit)? = null
+    var onContinueAction: ((StapleWatchSavedIdentityHandoffUiAction) -> Unit)? = null
 
     init {
         orientation = VERTICAL
@@ -64,6 +69,17 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
                 )
             )
         }
+
+        state.continueAction
+            ?.takeIf { onContinueAction != null }
+            ?.let { action ->
+                addView(
+                    continuationButton(
+                        label = requireNotNull(state.continueActionLabel),
+                        action = action
+                    )
+                )
+            }
     }
 
     private fun productCard(row: StapleWatchSavedProductSelectionUiRow): View =
@@ -186,6 +202,23 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
                     topMargin = dp(if (compact) 8 else 14)
                     if (compact) gravity = Gravity.END
                 }
+        }
+
+    private fun continuationButton(
+        label: String,
+        action: StapleWatchSavedIdentityHandoffUiAction
+    ): Button =
+        Button(context).apply {
+            text = label
+            setAllCaps(false)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            isEnabled = onContinueAction != null
+            setOnClickListener { onContinueAction?.invoke(action) }
+            layoutParams =
+                LayoutParams(
+                    LayoutParams.MATCH_PARENT,
+                    LayoutParams.WRAP_CONTENT
+                ).apply { topMargin = dp(14) }
         }
 
     private fun textLine(

@@ -8,7 +8,7 @@ import java.io.File
 class StapleWatchSavedSelectionSurfaceViewBoundaryTest {
 
     @Test
-    fun physicalSetupViewConsumesConsumerStateAndEmitsTypedSelectionActionsOnly() {
+    fun physicalSetupViewConsumesConsumerStateAndEmitsTypedActionsOnly() {
         val source = source("StapleWatchSavedSelectionSurfaceView.kt").readText()
 
         assertTrue(source.contains("StapleWatchSavedSelectionSurfaceRenderer"))
@@ -18,7 +18,13 @@ class StapleWatchSavedSelectionSurfaceViewBoundaryTest {
                 "var onAction: ((StapleWatchSavedIdentitySelectionAction) -> Unit)? = null"
             )
         )
+        assertTrue(
+            source.contains(
+                "var onContinueAction: ((StapleWatchSavedIdentityHandoffUiAction) -> Unit)? = null"
+            )
+        )
         assertTrue(source.contains("setOnClickListener { onAction?.invoke(action) }"))
+        assertTrue(source.contains("setOnClickListener { onContinueAction?.invoke(action) }"))
         assertTrue(source.contains("visibility = View.GONE"))
         assertFalse(source.contains("visibility = View.VISIBLE"))
 
@@ -27,10 +33,12 @@ class StapleWatchSavedSelectionSurfaceViewBoundaryTest {
             "PracticalShoppingSavedExactPreferenceDisplayMetadata",
             "StapleWatchSavedIdentitySelectionUiProjector",
             "StapleWatchSavedIdentitySelectionReducer",
+            "StapleWatchSavedIdentityHandoffGate",
             "StapleWatchEconomicEvaluator",
             "StapleWatchEconomicDecision",
             "ShoppingItemKey",
             "ShoppingStoreKey",
+            "ShoppingRequest",
             "Money",
             "SharedPreferences",
             "WorkManager",
@@ -42,16 +50,28 @@ class StapleWatchSavedSelectionSurfaceViewBoundaryTest {
     }
 
     @Test
-    fun physicalSetupViewDoesNotTurnReadyPresentationIntoFactOrNavigationAuthority() {
+    fun physicalContinuationIsOwnerControlledAndDoesNotInterpretReadiness() {
+        val source = source("StapleWatchSavedSelectionSurfaceView.kt").readText()
+
+        assertTrue(source.contains("state.continueAction"))
+        assertTrue(source.contains("?.takeIf { onContinueAction != null }"))
+        assertTrue(source.contains("label = requireNotNull(state.continueActionLabel)"))
+        assertTrue(source.contains("action: StapleWatchSavedIdentityHandoffUiAction"))
+        assertFalse(source.contains("state.status"))
+        assertFalse(source.contains("READY_FOR_FACT_CHECK"))
+        assertFalse(source.contains("DISPLAY_METADATA_INCOMPLETE"))
+        assertFalse(source.contains("StapleWatchSavedIdentityHandoffUiAction.Request"))
+    }
+
+    @Test
+    fun physicalSetupViewDoesNotTurnContinuationIntoFactOrNavigationAuthority() {
         val source = source("StapleWatchSavedSelectionSurfaceView.kt").readText()
 
         assertTrue(source.contains("action = row.action"))
         assertTrue(source.contains("actionLabel = row.actionLabel"))
-        assertFalse(source.contains("state.status"))
-        assertFalse(source.contains("READY_FOR_FACT_CHECK"))
-        assertFalse(source.contains("DISPLAY_METADATA_INCOMPLETE"))
         assertFalse(source.contains("startActivity"))
         assertFalse(source.contains("Intent("))
+        assertFalse(source.contains("requestIdentityHandoff"))
         assertFalse(source.contains("Check prices"))
         assertFalse(source.contains("Start watching"))
     }
