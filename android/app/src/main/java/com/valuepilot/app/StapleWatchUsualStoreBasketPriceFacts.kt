@@ -49,17 +49,42 @@ data class StapleWatchBasketItemPriceFact(
  * detached price-evaluation DTO into watch facts.
  *
  * There is exactly one item fact for every requested staple, in original request order. Missing
- * bindings and production-blocked prices remain explicit coverage gaps. This contract owns no
- * route, alternative-store, currentness-metadata, economic, persistence, scheduling or notification
- * authority.
+ * bindings and production-blocked prices remain explicit coverage gaps. Exact production scope,
+ * bindings, and raw requests are retained only as internal provenance so a later currentness
+ * resolver can re-evaluate the same evidence rather than attach metadata from a different price.
+ * This contract still exposes no currentness, route, alternative-store, economic, persistence,
+ * scheduling or notification authority.
  */
 class StapleWatchUsualStoreBasketPriceFacts private constructor(
     val intent: StapleWatchFactCheckIntent,
-    val itemPrices: List<StapleWatchBasketItemPriceFact>
+    val itemPrices: List<StapleWatchBasketItemPriceFact>,
+    internal val productionStoreScope: PracticalShoppingProductionPriceStoreScope,
+    internal val productionPriceBindings: List<PracticalShoppingProductionPriceBinding>,
+    internal val productionPriceRequests: List<ProductionCurrentPriceEligibilityRequest>
 ) {
     init {
         require(itemPrices.map { it.itemKey } == intent.request.itemKeys) {
             "Staple-watch usual-store prices must exactly cover requested items in request order"
+        }
+        require(productionStoreScope.storeKey == intent.usualStoreKey) {
+            "Staple-watch usual-store provenance scope must match the intent usual store"
+        }
+
+        val boundItemKeys =
+            itemPrices
+                .filter { fact -> fact.state != StapleWatchBasketItemPriceState.NO_BOUND_PRODUCTION_PRICE }
+                .map { fact -> fact.itemKey }
+        require(productionPriceBindings.map { binding -> binding.itemKey } == boundItemKeys) {
+            "Staple-watch usual-store provenance bindings must match bound item facts in request order"
+        }
+        require(productionPriceBindings.all { binding -> binding.storeKey == intent.usualStoreKey }) {
+            "Staple-watch usual-store provenance bindings must remain at the usual store"
+        }
+        require(
+            productionPriceRequests.map { request -> request.requestId } ==
+                productionPriceBindings.map { binding -> binding.currentPriceRequestId }
+        ) {
+            "Staple-watch usual-store provenance requests must align with canonical bindings"
         }
     }
 
@@ -133,9 +158,23 @@ class StapleWatchUsualStoreBasketPriceFacts private constructor(
                     }
                 }
 
+            val bindingByItem = priceBindings.associateBy { binding -> binding.itemKey }
+            val requestById = priceRequests.associateBy { request -> request.requestId }
+            val canonicalBindings =
+                intent.request.itemKeys.mapNotNull { itemKey -> bindingByItem[itemKey] }
+            val canonicalRequests =
+                canonicalBindings.map { binding ->
+                    requireNotNull(requestById[binding.currentPriceRequestId]) {
+                        "Canonical usual-store binding is missing its raw production request"
+                    }
+                }
+
             return StapleWatchUsualStoreBasketPriceFacts(
                 intent = intent,
-                itemPrices = itemPrices
+                itemPrices = itemPrices,
+                productionStoreScope = store,
+                productionPriceBindings = canonicalBindings,
+                productionPriceRequests = canonicalRequests
             )
         }
     }

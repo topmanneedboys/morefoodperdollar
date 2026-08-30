@@ -44,22 +44,52 @@ data class StapleWatchAlternativeStoreBasketPriceFact(
  * There is exactly one item outcome per requested staple for every alternative store, preserving
  * stable store order and original request order. Missing and blocked prices remain explicit gaps.
  *
- * This contract carries no route, evidence-currentness result, economics, persistence, scheduling,
- * or notification authority. Empty [alternatives] is a valid explicit result when identity
- * resolution found no alternative stores.
+ * Exact production scopes, bindings, and raw requests are retained only as internal provenance so a
+ * later currentness resolver can re-evaluate the same evidence rather than attach metadata from a
+ * different price. This contract still exposes no route, evidence-currentness result, economics,
+ * persistence, scheduling, or notification authority. Empty [alternatives] is a valid explicit
+ * result when identity resolution found no alternative stores.
  */
 class StapleWatchAlternativeStoreBasketPriceFacts private constructor(
     val identityFacts: StapleWatchAlternativeStoreIdentityFacts,
-    val alternatives: List<StapleWatchAlternativeStoreBasketPriceFact>
+    val alternatives: List<StapleWatchAlternativeStoreBasketPriceFact>,
+    internal val productionStoreScopes: List<PracticalShoppingProductionPriceStoreScope>,
+    internal val productionPriceBindings: List<PracticalShoppingProductionPriceBinding>,
+    internal val productionPriceRequests: List<ProductionCurrentPriceEligibilityRequest>
 ) {
     init {
-        require(alternatives.map { fact -> fact.storeKey } == identityFacts.alternativeStoreKeys) {
+        val expectedStoreKeys = identityFacts.alternativeStoreKeys
+        require(alternatives.map { fact -> fact.storeKey } == expectedStoreKeys) {
             "Staple-watch alternative price facts must exactly cover resolved stores in stable order"
         }
         alternatives.forEach { storeFact ->
             require(storeFact.itemPrices.map { fact -> fact.itemKey } == intent.request.itemKeys) {
                 "Staple-watch alternative store prices must exactly cover requested items in request order"
             }
+        }
+        require(productionStoreScopes.map { store -> store.storeKey } == expectedStoreKeys) {
+            "Staple-watch alternative provenance scopes must match resolved stores in stable order"
+        }
+
+        val boundStoreItems =
+            alternatives.flatMap { storeFact ->
+                storeFact.itemPrices
+                    .filter { fact ->
+                        fact.state != StapleWatchBasketItemPriceState.NO_BOUND_PRODUCTION_PRICE
+                    }
+                    .map { fact -> storeFact.storeKey to fact.itemKey }
+            }
+        require(
+            productionPriceBindings.map { binding -> binding.storeKey to binding.itemKey } ==
+                boundStoreItems
+        ) {
+            "Staple-watch alternative provenance bindings must match bound facts in stable order"
+        }
+        require(
+            productionPriceRequests.map { request -> request.requestId } ==
+                productionPriceBindings.map { binding -> binding.currentPriceRequestId }
+        ) {
+            "Staple-watch alternative provenance requests must align with canonical bindings"
         }
     }
 
@@ -157,9 +187,28 @@ class StapleWatchAlternativeStoreBasketPriceFacts private constructor(
                     )
                 }
 
+            val bindingByStoreItem =
+                priceBindings.associateBy { binding -> binding.storeKey to binding.itemKey }
+            val requestById = priceRequests.associateBy { request -> request.requestId }
+            val canonicalBindings =
+                expectedStoreKeys.flatMap { storeKey ->
+                    identityFacts.intent.request.itemKeys.mapNotNull { itemKey ->
+                        bindingByStoreItem[storeKey to itemKey]
+                    }
+                }
+            val canonicalRequests =
+                canonicalBindings.map { binding ->
+                    requireNotNull(requestById[binding.currentPriceRequestId]) {
+                        "Canonical alternative-store binding is missing its raw production request"
+                    }
+                }
+
             return StapleWatchAlternativeStoreBasketPriceFacts(
                 identityFacts = identityFacts,
-                alternatives = alternatives
+                alternatives = alternatives,
+                productionStoreScopes = orderedStores,
+                productionPriceBindings = canonicalBindings,
+                productionPriceRequests = canonicalRequests
             )
         }
     }
