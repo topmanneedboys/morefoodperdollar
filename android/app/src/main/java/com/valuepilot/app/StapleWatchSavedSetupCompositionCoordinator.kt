@@ -5,6 +5,11 @@ internal fun interface StapleWatchSavedIdentityHandoffAttemptObserver {
     fun onAttempt(attempt: StapleWatchSavedIdentityHandoffAttempt)
 }
 
+/** Receives only an accepted unresolved fact-check intent; it performs no fact resolution itself. */
+internal fun interface StapleWatchFactCheckIntentObserver {
+    fun onIntent(intent: StapleWatchFactCheckIntent)
+}
+
 /**
  * Pure composition boundary between validated Saved snapshots and Watch My Staples setup.
  *
@@ -15,8 +20,9 @@ internal fun interface StapleWatchSavedIdentityHandoffAttemptObserver {
  *
  * An identity-only handoff may be requested only through [requestIdentityHandoff]. That explicit
  * call reads the current visible route selection and delegates all eligibility/display-safety
- * decisions to the verified [StapleWatchSavedIdentityHandoffGate]. Merely selecting enough items
- * or receiving a newer Saved snapshot never emits a handoff attempt.
+ * decisions to the verified [StapleWatchSavedIdentityHandoffGate]. A successful gate result is then
+ * adapted into the verified unresolved [StapleWatchFactCheckIntent]; rejected attempts emit no fact
+ * intent. Merely selecting enough items or receiving a newer Saved snapshot never emits either.
  *
  * Route visibility may arrive before the first accepted Saved load. In that case setup remains
  * fail-closed: no route session exists and surface actions or handoff requests are ignored until a
@@ -27,6 +33,8 @@ internal fun interface StapleWatchSavedIdentityHandoffAttemptObserver {
 internal class StapleWatchSavedSetupCompositionCoordinator(
     private val handoffAttemptObserver: StapleWatchSavedIdentityHandoffAttemptObserver =
         StapleWatchSavedIdentityHandoffAttemptObserver { },
+    private val factCheckIntentObserver: StapleWatchFactCheckIntentObserver =
+        StapleWatchFactCheckIntentObserver { },
     private val sessionFactory:
         (PracticalShoppingSavedValidatedSnapshot) -> StapleWatchSavedSelectionRouteSession
 ) : PracticalShoppingSavedValidatedSnapshotObserver, AutoCloseable {
@@ -72,12 +80,13 @@ internal class StapleWatchSavedSetupCompositionCoordinator(
 
         val snapshot = latestSnapshot ?: return
         val currentSelection = session?.currentSelectionOrNull() ?: return
-        handoffAttemptObserver.onAttempt(
+        val attempt =
             StapleWatchSavedIdentityHandoffGate.request(
                 selection = currentSelection,
                 snapshot = snapshot
             )
-        )
+        handoffAttemptObserver.onAttempt(attempt)
+        StapleWatchSavedFactCheckIntentAdapter.from(attempt)?.let(factCheckIntentObserver::onIntent)
     }
 
     override fun close() {
