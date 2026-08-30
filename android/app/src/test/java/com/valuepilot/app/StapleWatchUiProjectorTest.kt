@@ -23,6 +23,7 @@ class StapleWatchUiProjectorTest {
     private val eggs = ShoppingItemKey("staple-eggs")
     private val bread = ShoppingItemKey("staple-bread")
     private val request = ShoppingRequest(listOf(milk, eggs, bread))
+    private val requested = request.itemKeys.toSet()
 
     private val usualKey = ShoppingStoreKey("opaque-usual-store-111111")
     private val alternativeKey = ShoppingStoreKey("opaque-alt-store-222222")
@@ -47,13 +48,13 @@ class StapleWatchUiProjectorTest {
         val decision =
             StapleWatchEconomicEvaluator.evaluate(
                 request = request,
-                baseline = single(usualKey, "50.00", request.itemKeySet, fresh = 3),
+                baseline = single(usualKey, "50.00", requested, fresh = 3),
                 alternatives =
                     listOf(
                         alternative(
                             alternativeKey,
                             "31.00",
-                            request.itemKeySet,
+                            requested,
                             additionalSeconds = 300L,
                             additionalMetres = 2_000L,
                             fresh = 2,
@@ -99,8 +100,8 @@ class StapleWatchUiProjectorTest {
         val decision =
             StapleWatchEconomicEvaluator.evaluate(
                 request,
-                single(usualKey, "50.00", request.itemKeySet),
-                listOf(alternative(alternativeKey, "40.00", request.itemKeySet, 120L, 1_000L)),
+                single(usualKey, "50.00", requested),
+                listOf(alternative(alternativeKey, "40.00", requested, 120L, 1_000L)),
                 policy
             )
 
@@ -140,7 +141,7 @@ class StapleWatchUiProjectorTest {
             StapleWatchEconomicEvaluator.evaluate(
                 request,
                 single(usualKey, "20.00", setOf(milk, eggs)),
-                listOf(alternative(alternativeKey, "1.00", request.itemKeySet, 0L, 0L)),
+                listOf(alternative(alternativeKey, "1.00", requested, 0L, 0L)),
                 policy
             )
 
@@ -251,13 +252,13 @@ class StapleWatchUiProjectorTest {
     private fun worthwhileDecision() =
         StapleWatchEconomicEvaluator.evaluate(
             request = request,
-            baseline = single(usualKey, "50.00", request.itemKeySet, fresh = 3),
+            baseline = single(usualKey, "50.00", requested, fresh = 3),
             alternatives =
                 listOf(
                     alternative(
                         alternativeKey,
                         "31.00",
-                        request.itemKeySet,
+                        requested,
                         additionalSeconds = 300L,
                         additionalMetres = 2_000L,
                         fresh = 3
