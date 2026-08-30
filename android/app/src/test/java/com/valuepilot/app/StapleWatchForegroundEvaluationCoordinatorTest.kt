@@ -23,8 +23,8 @@ class StapleWatchForegroundEvaluationCoordinatorTest {
     private val fixture = StapleWatchProductionPriceTestFixture()
     private val milk = ShoppingItemKey("milk")
     private val eggs = ShoppingItemKey("eggs")
-    private val usual = ShoppingStoreKey("usual")
-    private val alternative = ShoppingStoreKey("alternative")
+    private val usual = ShoppingStoreKey("opaque-usual-store-111111")
+    private val alternative = ShoppingStoreKey("opaque-alt-store-222222")
     private val intent =
         StapleWatchFactCheckIntent(
             request = ShoppingRequest(listOf(milk, eggs)),
