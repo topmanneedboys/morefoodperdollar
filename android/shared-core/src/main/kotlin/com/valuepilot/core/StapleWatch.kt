@@ -2,6 +2,7 @@ package com.valuepilot.core
 
 private const val MAX_STAPLE_WATCH_ALTERNATIVES = 64
 private const val MIN_STAPLE_WATCH_ITEMS = 2
+private const val MAX_STAPLE_WATCH_ITEMS = 128
 
 /**
  * One alternative store for an already-resolved recurring staple basket.
@@ -10,9 +11,39 @@ private const val MIN_STAPLE_WATCH_ITEMS = 2
  * [additionalTravel] is supplied explicitly by an upstream route boundary and represents
  * the extra trip cost versus the user's normal-store baseline. Shared core never derives a
  * hidden hassle/value-of-time score from it.
+ *
+ * This legacy-compatible shape remains supported. New Watch-native assembly should prefer
+ * [StapleWatchBasketAlternativeCandidate], which does not require unrelated absolute travel.
  */
 data class StapleWatchAlternativeCandidate(
     val storePlan: SingleStorePlanCandidate,
+    val additionalTravel: ShoppingTravel
+)
+
+/**
+ * Exact basket facts needed by Watch economics for one store.
+ *
+ * Unlike [SingleStorePlanCandidate], this Watch-native shape deliberately has no absolute-travel
+ * field. Watch switching economics uses only explicitly supplied *additional* travel versus the
+ * user's normal-store baseline, so requiring an unused absolute route would encourage callers to
+ * invent a zero/placeholder fact. Evidence currentness is preserved here but interpreted upstream.
+ */
+data class StapleWatchBasketCandidate(
+    val storeKey: ShoppingStoreKey,
+    val coveredItemKeys: Set<ShoppingItemKey>,
+    val knownBasketCost: Money,
+    val evidence: ShoppingPlanEvidenceSummary
+) {
+    init {
+        require(coveredItemKeys.size <= MAX_STAPLE_WATCH_ITEMS)
+        require(knownBasketCost.minorUnits >= 0L)
+        require(evidence.totalItemCount == coveredItemKeys.size)
+    }
+}
+
+/** One Watch-native alternative with only the route delta actually used by switching policy. */
+data class StapleWatchBasketAlternativeCandidate(
+    val basket: StapleWatchBasketCandidate,
     val additionalTravel: ShoppingTravel
 )
 
@@ -32,7 +63,7 @@ data class StapleWatchPolicy(
         require(minimumSwitchSavings.minorUnits >= 0L)
         require(maxAdditionalTravelSeconds >= 0L)
         require(maxAdditionalDistanceMetres == null || maxAdditionalDistanceMetres >= 0L)
-        require(minimumStapleItemCount in MIN_STAPLE_WATCH_ITEMS..128)
+        require(minimumStapleItemCount in MIN_STAPLE_WATCH_ITEMS..MAX_STAPLE_WATCH_ITEMS)
     }
 }
 
@@ -44,7 +75,26 @@ enum class StapleWatchEconomicStatus {
 }
 
 /**
- * Exact economic decision only. A worthwhile result is intentionally not permission to notify.
+ * Exact Watch-native economic decision only. A worthwhile result is intentionally not permission
+ * to notify.
+ */
+data class StapleWatchBasketEconomicDecision(
+    val baseline: StapleWatchBasketCandidate,
+    val status: StapleWatchEconomicStatus,
+    val recommendedAlternative: StapleWatchBasketAlternativeCandidate? = null,
+    val switchSavings: Money? = null
+) {
+    init {
+        val hasRecommendation = status == StapleWatchEconomicStatus.SWITCH_WORTHWHILE
+        require((recommendedAlternative != null) == hasRecommendation)
+        require((switchSavings != null) == hasRecommendation)
+        require(switchSavings == null || switchSavings.minorUnits > 0L)
+    }
+}
+
+/**
+ * Exact economic decision for the legacy Practical-Shopping-shaped Watch entry point.
+ * A worthwhile result is intentionally not permission to notify.
  */
 data class StapleWatchEconomicDecision(
     val baseline: SingleStorePlanCandidate,
@@ -70,9 +120,13 @@ data class StapleWatchEconomicDecision(
  * - Only exact same-currency/same-precision basket costs are compared.
  * - Additional travel is explicit input and must satisfy explicit route caps.
  * - Savings must be positive and meet the explicit threshold.
- * - Evidence freshness is preserved on the selected SingleStorePlanCandidate but is not interpreted
- *   here; a future alert-authority boundary must decide whether evidence is current enough.
+ * - Evidence freshness is preserved on the selected basket candidate but is not interpreted here;
+ *   an upstream currentness boundary decides whether evidence is eligible before assembly.
  * - Provider/affiliate economics, UI, clocks, networking and scheduling are absent.
+ *
+ * The Watch-native overload owns the arithmetic. The legacy [SingleStorePlanCandidate] overload
+ * removes only its unused absolute-travel field and delegates, then maps a recommendation back to
+ * the exact original legacy object so existing callers retain object identity and behavior.
  */
 object StapleWatchEconomicEvaluator {
 
@@ -82,33 +136,68 @@ object StapleWatchEconomicEvaluator {
         alternatives: List<StapleWatchAlternativeCandidate>,
         policy: StapleWatchPolicy
     ): StapleWatchEconomicDecision {
+        val nativeAlternatives =
+            alternatives.map { alternative ->
+                StapleWatchBasketAlternativeCandidate(
+                    basket = alternative.storePlan.toStapleWatchBasketCandidate(),
+                    additionalTravel = alternative.additionalTravel
+                )
+            }
+        val nativeDecision =
+            evaluate(
+                request = request,
+                baseline = baseline.toStapleWatchBasketCandidate(),
+                alternatives = nativeAlternatives,
+                policy = policy
+            )
+        val legacyRecommendation =
+            nativeDecision.recommendedAlternative?.let { recommendation ->
+                alternatives.single { alternative ->
+                    alternative.storePlan.storeKey == recommendation.basket.storeKey
+                }
+            }
+
+        return StapleWatchEconomicDecision(
+            baseline = baseline,
+            status = nativeDecision.status,
+            recommendedAlternative = legacyRecommendation,
+            switchSavings = nativeDecision.switchSavings
+        )
+    }
+
+    fun evaluate(
+        request: ShoppingRequest,
+        baseline: StapleWatchBasketCandidate,
+        alternatives: List<StapleWatchBasketAlternativeCandidate>,
+        policy: StapleWatchPolicy
+    ): StapleWatchBasketEconomicDecision {
         require(alternatives.size <= MAX_STAPLE_WATCH_ALTERNATIVES)
 
         val requestedItems = request.itemKeySet
         validateCandidateItems(requestedItems, baseline.coveredItemKeys)
         requireSameMoneySpec(baseline.knownBasketCost, policy.minimumSwitchSavings)
 
-        require(alternatives.map { it.storePlan.storeKey }.distinct().size == alternatives.size) {
+        require(alternatives.map { it.basket.storeKey }.distinct().size == alternatives.size) {
             "Staple-watch alternatives require unique store keys"
         }
 
         alternatives.forEach { alternative ->
-            require(alternative.storePlan.storeKey != baseline.storeKey) {
+            require(alternative.basket.storeKey != baseline.storeKey) {
                 "Staple-watch alternative must differ from the normal store"
             }
-            validateCandidateItems(requestedItems, alternative.storePlan.coveredItemKeys)
-            requireSameMoneySpec(alternative.storePlan.knownBasketCost, policy.minimumSwitchSavings)
+            validateCandidateItems(requestedItems, alternative.basket.coveredItemKeys)
+            requireSameMoneySpec(alternative.basket.knownBasketCost, policy.minimumSwitchSavings)
         }
 
         if (request.itemKeys.size < policy.minimumStapleItemCount) {
-            return StapleWatchEconomicDecision(
+            return StapleWatchBasketEconomicDecision(
                 baseline = baseline,
                 status = StapleWatchEconomicStatus.NOT_EVALUATED_NOT_ENOUGH_STAPLES
             )
         }
 
         if (baseline.coveredItemKeys != requestedItems) {
-            return StapleWatchEconomicDecision(
+            return StapleWatchBasketEconomicDecision(
                 baseline = baseline,
                 status = StapleWatchEconomicStatus.NOT_EVALUATED_BASELINE_INCOMPLETE
             )
@@ -116,8 +205,8 @@ object StapleWatchEconomicEvaluator {
 
         val eligible =
             alternatives.mapNotNull { alternative ->
-                val plan = alternative.storePlan
-                if (plan.coveredItemKeys != requestedItems) return@mapNotNull null
+                val basket = alternative.basket
+                if (basket.coveredItemKeys != requestedItems) return@mapNotNull null
                 if (alternative.additionalTravel.travelTimeSeconds > policy.maxAdditionalTravelSeconds) {
                     return@mapNotNull null
                 }
@@ -131,12 +220,12 @@ object StapleWatchEconomicEvaluator {
 
                 val savingsMinor = Math.subtractExact(
                     baseline.knownBasketCost.minorUnits,
-                    plan.knownBasketCost.minorUnits
+                    basket.knownBasketCost.minorUnits
                 )
                 if (savingsMinor <= 0L) return@mapNotNull null
                 if (savingsMinor < policy.minimumSwitchSavings.minorUnits) return@mapNotNull null
 
-                StapleWatchEvaluation(
+                StapleWatchNativeEvaluation(
                     alternative = alternative,
                     savings = policy.minimumSwitchSavings.copy(minorUnits = savingsMinor)
                 )
@@ -144,19 +233,19 @@ object StapleWatchEconomicEvaluator {
 
         val best =
             eligible.minWithOrNull(
-                compareByDescending<StapleWatchEvaluation> { it.savings.minorUnits }
+                compareByDescending<StapleWatchNativeEvaluation> { it.savings.minorUnits }
                     .thenBy { it.alternative.additionalTravel.travelTimeSeconds }
                     .thenBy { it.alternative.additionalTravel.distanceMetres }
-                    .thenBy { it.alternative.storePlan.storeKey.value }
+                    .thenBy { it.alternative.basket.storeKey.value }
             )
 
         return if (best == null) {
-            StapleWatchEconomicDecision(
+            StapleWatchBasketEconomicDecision(
                 baseline = baseline,
                 status = StapleWatchEconomicStatus.NOT_WORTH_SWITCHING
             )
         } else {
-            StapleWatchEconomicDecision(
+            StapleWatchBasketEconomicDecision(
                 baseline = baseline,
                 status = StapleWatchEconomicStatus.SWITCH_WORTHWHILE,
                 recommendedAlternative = best.alternative,
@@ -164,6 +253,14 @@ object StapleWatchEconomicEvaluator {
             )
         }
     }
+
+    private fun SingleStorePlanCandidate.toStapleWatchBasketCandidate(): StapleWatchBasketCandidate =
+        StapleWatchBasketCandidate(
+            storeKey = storeKey,
+            coveredItemKeys = coveredItemKeys,
+            knownBasketCost = knownBasketCost,
+            evidence = evidence
+        )
 
     private fun validateCandidateItems(
         requestedItems: Set<ShoppingItemKey>,
@@ -183,8 +280,8 @@ object StapleWatchEconomicEvaluator {
         }
     }
 
-    private data class StapleWatchEvaluation(
-        val alternative: StapleWatchAlternativeCandidate,
+    private data class StapleWatchNativeEvaluation(
+        val alternative: StapleWatchBasketAlternativeCandidate,
         val savings: Money
     )
 }
