@@ -1,20 +1,32 @@
 package com.valuepilot.app
 
+/** Receives completed exact Watch evidence preconditions only; owns no evaluation or delivery. */
+internal fun interface StapleWatchEconomicEvidencePreconditionsObserver {
+    fun onPreconditions(preconditions: StapleWatchEconomicEvidencePreconditions)
+}
+
 /**
  * Foreground in-memory owner for one active Watch fact-resolution session.
  *
- * The host implements the existing unresolved fact-check intent observer so it can later be wired
- * behind the explicit Saved setup continuation without changing that setup boundary. A newly
- * accepted intent replaces any prior in-memory session with a fresh verified readiness snapshot.
+ * The host implements the existing unresolved fact-check intent observer so it can be wired behind
+ * the explicit Saved setup continuation without changing that setup boundary. A newly accepted
+ * intent replaces any prior in-memory session with a fresh verified readiness snapshot.
  * Already-authoritative fact objects may then be handed in explicitly and are delegated unchanged
  * to [StapleWatchFactResolutionSession].
  *
+ * When one successful fact transition completes all five authoritative categories, the host emits
+ * only the exact evidence-precondition object minted by that session. Reapplying an already-retained
+ * exact fact object is idempotent and cannot emit a duplicate. Policy choice, economics, display
+ * metadata, projection, rendering and delivery remain separate downstream boundaries.
+ *
  * This host owns sequencing only. It performs no fact acquisition, provider access, clock reads,
  * persistence, economic evaluation, UI projection, rendering, background scheduling, delivery, or
- * notification work. Consumers that need completed economic preconditions must read the current
- * immutable session and use its verified handoff separately.
+ * notification work.
  */
-internal class StapleWatchFactResolutionHost : StapleWatchFactCheckIntentObserver, AutoCloseable {
+internal class StapleWatchFactResolutionHost(
+    private val preconditionsObserver: StapleWatchEconomicEvidencePreconditionsObserver =
+        StapleWatchEconomicEvidencePreconditionsObserver { }
+) : StapleWatchFactCheckIntentObserver, AutoCloseable {
 
     private var session: StapleWatchFactResolutionSession? = null
     private var closed = false
@@ -68,6 +80,10 @@ internal class StapleWatchFactResolutionHost : StapleWatchFactCheckIntentObserve
     ) {
         if (closed) return
         val current = session ?: return
-        session = transform(current)
+        val next = transform(current)
+        if (next === current) return
+
+        session = next
+        next.economicPreconditionsOrNull()?.let(preconditionsObserver::onPreconditions)
     }
 }

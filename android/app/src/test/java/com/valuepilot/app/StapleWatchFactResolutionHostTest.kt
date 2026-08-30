@@ -1,5 +1,6 @@
 package com.valuepilot.app
 
+import com.valuepilot.core.PracticalShoppingProductionPriceStoreScope
 import com.valuepilot.core.ShoppingItemKey
 import com.valuepilot.core.ShoppingRequest
 import com.valuepilot.core.ShoppingStoreKey
@@ -13,6 +14,7 @@ import java.io.File
 
 class StapleWatchFactResolutionHostTest {
 
+    private val productionFixture = StapleWatchProductionPriceTestFixture()
     private val milk = ShoppingItemKey("milk")
     private val eggs = ShoppingItemKey("eggs")
     private val usual = ShoppingStoreKey("opaque-host-usual-111111")
@@ -57,6 +59,74 @@ class StapleWatchFactResolutionHostTest {
             after.readiness.unresolvedRequirements
         )
         assertNull(after.economicPreconditionsOrNull())
+    }
+
+    @Test
+    fun completedPreconditionsEmitOnlyAfterFifthExactFactAndExactReapplyDoesNotDuplicate() {
+        val emitted = mutableListOf<StapleWatchEconomicEvidencePreconditions>()
+        val host =
+            StapleWatchFactResolutionHost(
+                preconditionsObserver =
+                    StapleWatchEconomicEvidencePreconditionsObserver { preconditions ->
+                        emitted += preconditions
+                    }
+            )
+        val facts = blockedFacts(intent)
+        host.onIntent(intent)
+
+        host.accept(facts.currentness)
+        host.accept(facts.travel)
+        host.accept(facts.alternativePrices)
+        host.accept(facts.usualPrices)
+        assertTrue(emitted.isEmpty())
+
+        host.accept(facts.identities)
+        assertEquals(1, emitted.size)
+        val preconditions = emitted.single()
+        assertSame(facts.identities, preconditions.identityFacts)
+        assertSame(facts.usualPrices, preconditions.usualStorePriceFacts)
+        assertSame(facts.alternativePrices, preconditions.alternativeStorePriceFacts)
+        assertSame(facts.travel, preconditions.additionalTravelFacts)
+        assertSame(facts.currentness, preconditions.currentnessFacts)
+        assertEquals(
+            StapleWatchEconomicEvidencePreconditionIssue.USUAL_STORE_PRICE_COVERAGE_INCOMPLETE,
+            preconditions.issue
+        )
+        assertFalse(preconditions.satisfied)
+
+        host.accept(facts.identities)
+        host.accept(facts.currentness)
+        assertEquals(1, emitted.size)
+    }
+
+    @Test
+    fun newIntentStartsFreshCompletionOpportunity() {
+        val emitted = mutableListOf<StapleWatchEconomicEvidencePreconditions>()
+        val host =
+            StapleWatchFactResolutionHost(
+                preconditionsObserver =
+                    StapleWatchEconomicEvidencePreconditionsObserver { preconditions ->
+                        emitted += preconditions
+                    }
+            )
+        val firstFacts = blockedFacts(intent)
+        host.onIntent(intent)
+        acceptAll(host, firstFacts)
+        assertEquals(1, emitted.size)
+
+        val nextIntent =
+            StapleWatchFactCheckIntent(
+                request = ShoppingRequest(listOf(milk, eggs)),
+                usualStoreKey = ShoppingStoreKey("opaque-next-completion-usual-333333")
+            )
+        val nextFacts = blockedFacts(nextIntent)
+        host.onIntent(nextIntent)
+        assertEquals(1, emitted.size)
+
+        acceptAll(host, nextFacts)
+        assertEquals(2, emitted.size)
+        assertSame(intent, emitted[0].intent)
+        assertSame(nextIntent, emitted[1].intent)
     }
 
     @Test
@@ -122,13 +192,15 @@ class StapleWatchFactResolutionHostTest {
     }
 
     @Test
-    fun hostOwnsOnlyForegroundSessionSequencing() {
+    fun hostOwnsOnlyForegroundSessionSequencingAndCompletedPreconditionRouting() {
         val source = source("StapleWatchFactResolutionHost.kt").readText()
 
         assertTrue(source.contains(": StapleWatchFactCheckIntentObserver"))
         assertTrue(source.contains("StapleWatchFactResolutionSession.start(intent)"))
         assertTrue(source.contains("current.accept(facts)"))
         assertTrue(source.contains("currentSessionOrNull"))
+        assertTrue(source.contains("StapleWatchEconomicEvidencePreconditionsObserver"))
+        assertTrue(source.contains("economicPreconditionsOrNull()"))
 
         listOf(
             "PracticalShoppingProduction",
@@ -145,6 +217,8 @@ class StapleWatchFactResolutionHostTest {
             "StapleWatchEconomicEvaluator",
             "StapleWatchEconomicDecisionCoordinator",
             "StapleWatchForegroundEvaluationCoordinator",
+            "StapleWatchPolicy",
+            "StapleWatchStoreDisplayMetadata",
             "StapleWatchUiProjector",
             "StapleWatchSurfacePresenter",
             "renderer.render",
@@ -160,6 +234,78 @@ class StapleWatchFactResolutionHostTest {
         StapleWatchAlternativeStoreIdentityFacts.fromUnordered(
             intent = factIntent,
             alternativeStoreKeys = listOf(alternative)
+        )
+
+    private fun blockedFacts(factIntent: StapleWatchFactCheckIntent): FactBundle {
+        val identities =
+            StapleWatchAlternativeStoreIdentityFacts.fromUnordered(
+                intent = factIntent,
+                alternativeStoreKeys = emptyList()
+            )
+        val registries = productionFixture.registries(emptyList())
+        val usualPrices =
+            StapleWatchUsualStoreBasketPriceFacts.resolve(
+                intent = factIntent,
+                store = storeScope(factIntent.usualStoreKey),
+                priceBindings = emptyList(),
+                priceRequests = emptyList(),
+                lifecycleRegistry = registries.lifecycle,
+                dispositionRegistry = registries.disposition,
+                evaluatedAtEpochMillis = productionFixture.evaluatedAtEpochMillis,
+                acceptancePolicy = productionFixture.acceptancePolicy
+            )
+        val alternativePrices =
+            StapleWatchAlternativeStoreBasketPriceFacts.resolve(
+                identityFacts = identities,
+                stores = emptyList(),
+                priceBindings = emptyList(),
+                priceRequests = emptyList(),
+                lifecycleRegistry = registries.lifecycle,
+                dispositionRegistry = registries.disposition,
+                evaluatedAtEpochMillis = productionFixture.evaluatedAtEpochMillis,
+                acceptancePolicy = productionFixture.acceptancePolicy
+            )
+        val travel =
+            StapleWatchAlternativeAdditionalTravelFacts.fromUnordered(
+                identityFacts = identities,
+                additionalTravelByStore = emptyMap()
+            )
+        val currentness =
+            StapleWatchEvidenceCurrentnessFacts.resolve(
+                usualStorePriceFacts = usualPrices,
+                alternativeStorePriceFacts = alternativePrices,
+                lifecycleRegistry = registries.lifecycle,
+                dispositionRegistry = registries.disposition,
+                evaluatedAtEpochMillis = productionFixture.evaluatedAtEpochMillis,
+                acceptancePolicy = productionFixture.acceptancePolicy
+            )
+
+        return FactBundle(
+            identities = identities,
+            usualPrices = usualPrices,
+            alternativePrices = alternativePrices,
+            travel = travel,
+            currentness = currentness
+        )
+    }
+
+    private fun acceptAll(
+        host: StapleWatchFactResolutionHost,
+        facts: FactBundle
+    ) {
+        host.accept(facts.identities)
+        host.accept(facts.usualPrices)
+        host.accept(facts.alternativePrices)
+        host.accept(facts.travel)
+        host.accept(facts.currentness)
+    }
+
+    private fun storeScope(storeKey: ShoppingStoreKey): PracticalShoppingProductionPriceStoreScope =
+        PracticalShoppingProductionPriceStoreScope(
+            storeKey = storeKey,
+            merchantKey = "merchant-${storeKey.value}",
+            locationKey = "location-${storeKey.value}",
+            commerceChannelKey = "IN_STORE"
         )
 
     private fun expectIllegalArgument(block: () -> Unit) {
@@ -180,4 +326,12 @@ class StapleWatchFactResolutionHostTest {
         }
         error("Could not locate $fileName")
     }
+
+    private data class FactBundle(
+        val identities: StapleWatchAlternativeStoreIdentityFacts,
+        val usualPrices: StapleWatchUsualStoreBasketPriceFacts,
+        val alternativePrices: StapleWatchAlternativeStoreBasketPriceFacts,
+        val travel: StapleWatchAlternativeAdditionalTravelFacts,
+        val currentness: StapleWatchEvidenceCurrentnessFacts
+    )
 }
