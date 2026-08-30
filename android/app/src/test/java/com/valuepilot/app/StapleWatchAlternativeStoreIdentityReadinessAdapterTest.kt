@@ -28,7 +28,7 @@ class StapleWatchAlternativeStoreIdentityReadinessAdapterTest {
     @Test
     fun matchingFactsResolveOnlyAlternativeStoreIdentityRequirement() {
         val readiness = StapleWatchFactResolutionReadiness.initial(intent)
-        val facts = facts(ShoppingStoreKey("east"), ShoppingStoreKey("west"))
+        val facts = facts(listOf(ShoppingStoreKey("east"), ShoppingStoreKey("west")))
 
         val updated =
             StapleWatchAlternativeStoreIdentityReadinessAdapter.apply(
@@ -83,7 +83,7 @@ class StapleWatchAlternativeStoreIdentityReadinessAdapterTest {
                         StapleWatchFactResolutionRequirement.EVIDENCE_CURRENTNESS_METADATA
                     )
             )
-        val facts = facts(ShoppingStoreKey("east"))
+        val facts = facts(listOf(ShoppingStoreKey("east")))
 
         val updated =
             StapleWatchAlternativeStoreIdentityReadinessAdapter.apply(readiness, facts)
@@ -172,11 +172,11 @@ class StapleWatchAlternativeStoreIdentityReadinessAdapterTest {
     }
 
     private fun facts(
-        vararg stores: ShoppingStoreKey
+        stores: List<ShoppingStoreKey> = emptyList()
     ): StapleWatchAlternativeStoreIdentityFacts =
         StapleWatchAlternativeStoreIdentityFacts.fromUnordered(
             intent = intent,
-            alternativeStoreKeys = stores.toList()
+            alternativeStoreKeys = stores
         )
 
     private fun source(fileName: String): File {
