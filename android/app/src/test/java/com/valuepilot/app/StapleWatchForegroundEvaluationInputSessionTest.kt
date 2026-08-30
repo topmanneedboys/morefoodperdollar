@@ -57,23 +57,23 @@ class StapleWatchForegroundEvaluationInputSessionTest {
         assertSame(policy, completedPolicyFirst.policy)
         assertSame(metadata, completedPolicyFirst.displayMetadata)
         val policyFirstEvaluation = requireNotNull(completedPolicyFirst.evaluation)
+        val policyFirstProjection = requireNotNull(policyFirstEvaluation.projection)
         assertSame(preconditions, policyFirstEvaluation.preconditions)
         assertSame(policy, policyFirstEvaluation.decisionCoordination.policy)
-        assertEquals(StapleWatchUiStatus.WORTH_CHECKING, requireNotNull(policyFirstEvaluation.projection).state.status)
-        assertEquals("Fresh Mart", policyFirstEvaluation.projection?.state?.switchCandidate?.storeName)
+        assertEquals(StapleWatchUiStatus.WORTH_CHECKING, policyFirstProjection.state.status)
+        assertEquals("Fresh Mart", policyFirstProjection.state.switchCandidate?.storeName)
 
         val metadataFirst =
             StapleWatchForegroundEvaluationInputSession.start(preconditions).withDisplayMetadata(metadata)
         assertNull(metadataFirst.evaluation)
         val completedMetadataFirst = metadataFirst.withPolicy(policy)
+        val metadataFirstEvaluation = requireNotNull(completedMetadataFirst.evaluation)
+        val metadataFirstProjection = requireNotNull(metadataFirstEvaluation.projection)
 
         assertTrue(completedMetadataFirst.readyForEvaluation)
-        assertSame(preconditions, requireNotNull(completedMetadataFirst.evaluation).preconditions)
-        assertSame(policy, completedMetadataFirst.evaluation?.decisionCoordination?.policy)
-        assertEquals(
-            requireNotNull(policyFirstEvaluation.projection).state,
-            requireNotNull(completedMetadataFirst.evaluation?.projection).state
-        )
+        assertSame(preconditions, metadataFirstEvaluation.preconditions)
+        assertSame(policy, metadataFirstEvaluation.decisionCoordination.policy)
+        assertEquals(policyFirstProjection.state, metadataFirstProjection.state)
     }
 
     @Test
@@ -86,17 +86,21 @@ class StapleWatchForegroundEvaluationInputSessionTest {
             StapleWatchForegroundEvaluationInputSession.start(preconditions)
                 .withPolicy(policy)
                 .withDisplayMetadata(originalMetadata)
+        val originalEvaluation = requireNotNull(original.evaluation)
+        val originalProjection = requireNotNull(originalEvaluation.projection)
 
         val replacement = original.withDisplayMetadata(replacementMetadata)
+        val replacementEvaluation = requireNotNull(replacement.evaluation)
+        val replacementProjection = requireNotNull(replacementEvaluation.projection)
 
         assertFalse(replacement === original)
         assertSame(preconditions, replacement.preconditions)
         assertSame(policy, replacement.policy)
         assertSame(replacementMetadata, replacement.displayMetadata)
-        assertSame(preconditions, requireNotNull(replacement.evaluation).preconditions)
-        assertSame(policy, replacement.evaluation?.decisionCoordination?.policy)
-        assertEquals("Original Market", original.evaluation?.projection?.state?.switchCandidate?.storeName)
-        assertEquals("Updated Market", replacement.evaluation?.projection?.state?.switchCandidate?.storeName)
+        assertSame(preconditions, replacementEvaluation.preconditions)
+        assertSame(policy, replacementEvaluation.decisionCoordination.policy)
+        assertEquals("Original Market", originalProjection.state.switchCandidate?.storeName)
+        assertEquals("Updated Market", replacementProjection.state.switchCandidate?.storeName)
     }
 
     @Test
@@ -109,17 +113,21 @@ class StapleWatchForegroundEvaluationInputSessionTest {
             StapleWatchForegroundEvaluationInputSession.start(preconditions)
                 .withDisplayMetadata(metadata)
                 .withPolicy(permissive)
-        assertEquals(StapleWatchUiStatus.WORTH_CHECKING, original.evaluation?.projection?.state?.status)
+        val originalEvaluation = requireNotNull(original.evaluation)
+        val originalProjection = requireNotNull(originalEvaluation.projection)
+        assertEquals(StapleWatchUiStatus.WORTH_CHECKING, originalProjection.state.status)
 
         val replacement = original.withPolicy(strict)
+        val replacementEvaluation = requireNotNull(replacement.evaluation)
+        val replacementProjection = requireNotNull(replacementEvaluation.projection)
 
         assertFalse(replacement === original)
         assertSame(preconditions, replacement.preconditions)
         assertSame(metadata, replacement.displayMetadata)
         assertSame(strict, replacement.policy)
-        assertSame(strict, replacement.evaluation?.decisionCoordination?.policy)
-        assertEquals(StapleWatchUiStatus.NOT_WORTH_SWITCHING, replacement.evaluation?.projection?.state?.status)
-        assertNull(replacement.evaluation?.projection?.state?.switchCandidate)
+        assertSame(strict, replacementEvaluation.decisionCoordination.policy)
+        assertEquals(StapleWatchUiStatus.NOT_WORTH_SWITCHING, replacementProjection.state.status)
+        assertNull(replacementProjection.state.switchCandidate)
     }
 
     @Test
