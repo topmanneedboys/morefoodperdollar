@@ -59,6 +59,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var savedStapleLaunchExperience: PracticalShoppingSavedStapleLaunchView
     private lateinit var stapleWatchSetupExperience: StapleWatchSavedSelectionSurfaceView
     private lateinit var savedRouteCoordinator: PracticalShoppingSavedRouteCoordinator
+    private lateinit var stapleWatchFactResolutionHost: StapleWatchFactResolutionHost
     private lateinit var stapleWatchSetupCoordinator: StapleWatchSavedSetupCompositionCoordinator
 
     private var comparisonActivityOpen = false
@@ -168,6 +169,7 @@ class MainActivity : AppCompatActivity() {
             stapleWatchSetupExperience.onAction = null
             stapleWatchSetupExperience.onContinueAction = null
             stapleWatchSetupCoordinator.close()
+            stapleWatchFactResolutionHost.close()
             savedRouteCoordinator.close()
         }
         searchExecutor.shutdownNow()
@@ -320,13 +322,17 @@ class MainActivity : AppCompatActivity() {
         val stapleSetupPresenter =
             StapleWatchSavedSelectionSurfacePresenter(stapleWatchSetupExperience)
 
+        stapleWatchFactResolutionHost = StapleWatchFactResolutionHost()
         stapleWatchSetupCoordinator =
-            StapleWatchSavedSetupCompositionCoordinator { snapshot ->
-                StapleWatchSavedSelectionRouteSession(
-                    initialSnapshot = snapshot,
-                    presenter = stapleSetupPresenter
-                )
-            }
+            StapleWatchSavedSetupCompositionCoordinator(
+                factCheckIntentObserver = stapleWatchFactResolutionHost,
+                sessionFactory = { snapshot ->
+                    StapleWatchSavedSelectionRouteSession(
+                        initialSnapshot = snapshot,
+                        presenter = stapleSetupPresenter
+                    )
+                }
+            )
 
         val savedRenderer =
             PracticalShoppingSavedLifecycleRenderer { state ->

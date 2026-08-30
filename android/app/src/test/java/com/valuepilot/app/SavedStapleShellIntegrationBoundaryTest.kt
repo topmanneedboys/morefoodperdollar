@@ -32,6 +32,25 @@ class SavedStapleShellIntegrationBoundaryTest {
     }
 
     @Test
+    fun `explicit staple continuation is wired only into foreground fact resolution host`() {
+        val source = activitySource().readText()
+
+        assertTrue(
+            source.contains(
+                "private lateinit var stapleWatchFactResolutionHost: StapleWatchFactResolutionHost"
+            )
+        )
+        assertTrue(source.contains("stapleWatchFactResolutionHost = StapleWatchFactResolutionHost()"))
+        assertTrue(source.contains("factCheckIntentObserver = stapleWatchFactResolutionHost"))
+
+        assertFalse(source.contains("stapleWatchFactResolutionHost.accept("))
+        assertFalse(source.contains("StapleWatchEconomicEvidencePreconditions"))
+        assertFalse(source.contains("StapleWatchForegroundEvaluationCoordinator"))
+        assertFalse(source.contains("PracticalShoppingProduction"))
+        assertFalse(source.contains("ProductionCurrentPrice"))
+    }
+
+    @Test
     fun `saved and staple setup physical visibility is owned by exact shell routes`() {
         val source = activitySource().readText()
 
@@ -68,6 +87,7 @@ class SavedStapleShellIntegrationBoundaryTest {
         assertTrue(source.contains("stapleWatchSetupExperience.onAction = null"))
         assertTrue(source.contains("stapleWatchSetupExperience.onContinueAction = null"))
         assertTrue(source.contains("stapleWatchSetupCoordinator.close()"))
+        assertTrue(source.contains("stapleWatchFactResolutionHost.close()"))
         assertTrue(source.contains("savedRouteCoordinator.close()"))
     }
 
