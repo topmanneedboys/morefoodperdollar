@@ -7,6 +7,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 import java.io.File
 
@@ -77,6 +78,52 @@ class StapleWatchFactResolutionReadinessTest {
         assertTrue(readiness.unresolvedRequirements.isEmpty())
         assertEquals(intent.requirements, readiness.resolvedRequirements)
         assertTrue(readiness.allRequirementsReportedResolved)
+    }
+
+    @Test
+    fun publicConstructorStillRejectsDuplicateAndNonCanonicalRequirementLists() {
+        val usualPrice =
+            StapleWatchFactResolutionRequirement.USUAL_STORE_BASKET_PRICE_EVIDENCE
+        val currentness =
+            StapleWatchFactResolutionRequirement.EVIDENCE_CURRENTNESS_METADATA
+
+        try {
+            StapleWatchFactResolutionReadiness(
+                intent = intent,
+                unresolvedRequirements = listOf(usualPrice, usualPrice)
+            )
+            fail("Duplicate fact-resolution requirements must be rejected")
+        } catch (_: IllegalArgumentException) {
+            // Expected: the public constructor cannot bypass readiness invariants.
+        }
+
+        try {
+            StapleWatchFactResolutionReadiness(
+                intent = intent,
+                unresolvedRequirements = listOf(currentness, usualPrice)
+            )
+            fail("Non-canonical fact-resolution requirement order must be rejected")
+        } catch (_: IllegalArgumentException) {
+            // Expected: direct construction must preserve the intent requirement order.
+        }
+    }
+
+    @Test
+    fun generatedCopyStillRunsReadinessInvariants() {
+        val readiness = StapleWatchFactResolutionReadiness.initial(intent)
+
+        try {
+            readiness.copy(
+                unresolvedRequirements =
+                    listOf(
+                        StapleWatchFactResolutionRequirement.EVIDENCE_CURRENTNESS_METADATA,
+                        StapleWatchFactResolutionRequirement.USUAL_STORE_BASKET_PRICE_EVIDENCE
+                    )
+            )
+            fail("Generated copy must not bypass canonical requirement ordering")
+        } catch (_: IllegalArgumentException) {
+            // Expected: copy invokes the public constructor and therefore the same init checks.
+        }
     }
 
     @Test
