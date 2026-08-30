@@ -71,6 +71,24 @@
             android:text="@string/add_another_product"
             android:textAllCaps="false" />
 
+        <CheckBox
+            android:id="@+id/likeForLikeConfirmation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="@string/like_for_like_confirmation"
+            android:textColor="#111827"
+            android:textSize="15sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_marginTop="2dp"
+            android:text="@string/like_for_like_confirmation_body"
+            android:textColor="#6B7280"
+            android:textSize="12sp" />
+
         <Button
             android:id="@+id/compareButton"
             android:layout_width="match_parent"
@@ -87,32 +105,11 @@
             android:text="@string/clear_comparison"
             android:textAllCaps="false" />
 
-        <TextView
-            android:id="@+id/comparisonStatus"
+        <com.valuepilot.app.CompareHereManualScreenView
+            android:id="@+id/compareHereScreen"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:text="@string/enter_two_products"
-            android:textColor="#6B7280"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/resultsHeading"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="@string/results"
-            android:textColor="#111827"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:visibility="gone" />
-
-        <LinearLayout
-            android:id="@+id/resultsContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" />
+            android:layout_marginTop="18dp" />
 
         <View
             android:layout_width="match_parent"

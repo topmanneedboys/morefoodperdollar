@@ -14,6 +14,7 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -23,14 +24,11 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 
 class ComparisonActivity : AppCompatActivity() {
-    private val comparisonController = StandaloneComparisonController()
-    private var comparisonState = comparisonController.initialState()
-
     private lateinit var productInputsContainer: LinearLayout
     private lateinit var addProductButton: Button
-    private lateinit var comparisonStatus: TextView
-    private lateinit var resultsHeading: TextView
-    private lateinit var resultsContainer: LinearLayout
+    private lateinit var likeForLikeConfirmation: CheckBox
+    private lateinit var comparisonScreen: CompareHereManualScreenView
+    private lateinit var comparisonPresenter: CompareHereManualScreenPresenter
     private lateinit var scannerStatus: TextView
 
     private val productInputs = mutableListOf<EditText>()
@@ -47,9 +45,9 @@ class ComparisonActivity : AppCompatActivity() {
 
         productInputsContainer = findViewById(R.id.productInputsContainer)
         addProductButton = findViewById(R.id.addProductButton)
-        comparisonStatus = findViewById(R.id.comparisonStatus)
-        resultsHeading = findViewById(R.id.resultsHeading)
-        resultsContainer = findViewById(R.id.resultsContainer)
+        likeForLikeConfirmation = findViewById(R.id.likeForLikeConfirmation)
+        comparisonScreen = findViewById(R.id.compareHereScreen)
+        comparisonPresenter = CompareHereManualScreenPresenter(comparisonScreen)
         scannerStatus = findViewById(R.id.scannerStatus)
 
         val draft = restoreDraft(savedInstanceState)
@@ -58,13 +56,20 @@ class ComparisonActivity : AppCompatActivity() {
         lastComparedAtEpochMillis = draft.observedAtEpochMillis
 
         renderProductInputs(draft.blocks)
+        restoringDraft = true
+        likeForLikeConfirmation.isChecked = draft.likeForLikeConfirmed
+        restoringDraft = false
+
+        likeForLikeConfirmation.setOnCheckedChangeListener { _, _ ->
+            if (!restoringDraft) {
+                invalidateComparison(resetConfirmation = false)
+            }
+        }
 
         addProductButton.setOnClickListener {
-            if (productInputs.size < ManualProductObservationAdapter.MAX_PRODUCT_BLOCKS) {
+            if (productInputs.size < CompareHereManualInputAdapter.MAX_OBSERVATIONS) {
                 addProductInput("")
-                comparisonWasRun = false
-                comparisonState = comparisonController.initialState()
-                renderComparison(comparisonState)
+                invalidateComparison(resetConfirmation = true)
                 updateAddProductButton()
             }
         }
@@ -101,7 +106,7 @@ class ComparisonActivity : AppCompatActivity() {
                 persist = false
             )
         } else {
-            renderComparison(comparisonState)
+            renderIdleScreen()
         }
     }
 
@@ -128,6 +133,10 @@ class ComparisonActivity : AppCompatActivity() {
             STATE_OBSERVED_AT,
             lastComparedAtEpochMillis
         )
+        outState.putBoolean(
+            STATE_LIKE_FOR_LIKE_CONFIRMED,
+            likeForLikeConfirmation.isChecked
+        )
 
         super.onSaveInstanceState(outState)
     }
@@ -138,9 +147,10 @@ class ComparisonActivity : AppCompatActivity() {
         productInputs.clear()
         productInputsContainer.removeAllViews()
 
-        val initialBlocks = blocks
-            .take(ManualProductObservationAdapter.MAX_PRODUCT_BLOCKS)
-            .toMutableList()
+        val initialBlocks =
+            blocks
+                .take(CompareHereManualInputAdapter.MAX_OBSERVATIONS)
+                .toMutableList()
 
         while (initialBlocks.size < 2) {
             initialBlocks += ""
@@ -164,12 +174,13 @@ class ComparisonActivity : AppCompatActivity() {
                 dp(14)
             )
 
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = dp(12)
-            }
+            layoutParams =
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = dp(12)
+                }
 
             background = GradientDrawable().apply {
                 cornerRadius = dp(14).toFloat()
@@ -246,12 +257,7 @@ class ComparisonActivity : AppCompatActivity() {
                         return
                     }
 
-                    comparisonWasRun = false
-                    lastComparedAtEpochMillis = 0L
-                    comparisonState =
-                        comparisonController.initialState()
-
-                    renderComparison(comparisonState)
+                    invalidateComparison(resetConfirmation = true)
                 }
             }
         )
@@ -275,30 +281,69 @@ class ComparisonActivity : AppCompatActivity() {
         observedAtEpochMillis: Long,
         persist: Boolean
     ) {
-        comparisonState = comparisonController.reduce(
-            comparisonState,
-            StandaloneComparisonIntent.CompareBlocks(
-                productBlocks = blocks,
-                observedAtEpochMillis = observedAtEpochMillis
+        val routeState =
+            CompareHereManualRouteCoordinator.compareBlocks(
+                rawBlocks = blocks,
+                observedAtEpochMillis = observedAtEpochMillis,
+                userConfirmedLikeForLike = likeForLikeConfirmation.isChecked
             )
-        )
 
         comparisonWasRun = true
-        lastComparedAtEpochMillis =
-            observedAtEpochMillis
+        lastComparedAtEpochMillis = observedAtEpochMillis
 
-        renderComparison(comparisonState)
+        comparisonPresenter.render(routeState)
 
         if (persist) {
             saveDraftToPreferences()
         }
     }
 
+    private fun invalidateComparison(resetConfirmation: Boolean) {
+        comparisonWasRun = false
+        lastComparedAtEpochMillis = 0L
+
+        if (resetConfirmation && likeForLikeConfirmation.isChecked) {
+            restoringDraft = true
+            likeForLikeConfirmation.isChecked = false
+            restoringDraft = false
+        }
+
+        renderIdleScreen()
+    }
+
+    private fun renderIdleScreen() {
+        val nonBlankProducts = currentProductBlocks().count { it.isNotBlank() }
+        val content =
+            when {
+                nonBlankProducts < 2 ->
+                    CompareHereManualScreenContent.Message(
+                        title = getString(R.string.compare_add_products_title),
+                        guidance = getString(R.string.compare_add_products_body)
+                    )
+
+                !likeForLikeConfirmation.isChecked ->
+                    CompareHereManualScreenContent.Message(
+                        title = getString(R.string.compare_confirmation_needed_title),
+                        guidance = getString(R.string.compare_confirmation_needed_body)
+                    )
+
+                else ->
+                    CompareHereManualScreenContent.Message(
+                        title = getString(R.string.compare_ready_title),
+                        guidance = getString(R.string.compare_ready_body)
+                    )
+            }
+
+        comparisonScreen.render(content)
+    }
+
     private fun clearComparison() {
         comparisonWasRun = false
         lastComparedAtEpochMillis = 0L
-        comparisonState =
-            comparisonController.initialState()
+
+        restoringDraft = true
+        likeForLikeConfirmation.isChecked = false
+        restoringDraft = false
 
         getSharedPreferences(
             PREFS_NAME,
@@ -312,203 +357,14 @@ class ComparisonActivity : AppCompatActivity() {
             listOf("", "")
         )
 
-        renderComparison(comparisonState)
+        renderIdleScreen()
     }
 
     private fun updateAddProductButton() {
         if (::addProductButton.isInitialized) {
             addProductButton.isEnabled =
-                productInputs.size <
-                    ManualProductObservationAdapter.MAX_PRODUCT_BLOCKS
+                productInputs.size < CompareHereManualInputAdapter.MAX_OBSERVATIONS
         }
-    }
-
-    private fun renderComparison(
-        state: StandaloneComparisonState
-    ) {
-        comparisonStatus.text = state.statusText
-
-        comparisonStatus.setTextColor(
-            when (state.status) {
-                StandaloneComparisonStatus.READY ->
-                    Color.parseColor("#047857")
-
-                StandaloneComparisonStatus.EMPTY ->
-                    Color.parseColor("#6B7280")
-
-                else ->
-                    Color.parseColor("#B42318")
-            }
-        )
-
-        resultsContainer.removeAllViews()
-
-        if (state.results.isEmpty()) {
-            resultsHeading.visibility = View.GONE
-            return
-        }
-
-        resultsHeading.visibility = View.VISIBLE
-
-        state.results.forEach { row ->
-            resultsContainer.addView(
-                createResultView(row)
-            )
-        }
-    }
-
-    private fun createResultView(
-        row: StandaloneComparisonRow
-    ): View {
-        val card = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(
-                dp(16),
-                dp(14),
-                dp(16),
-                dp(14)
-            )
-
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = dp(10)
-            }
-
-            background = GradientDrawable().apply {
-                cornerRadius = dp(14).toFloat()
-
-                if (row.best) {
-                    setColor(Color.parseColor("#ECFDF5"))
-                    setStroke(
-                        dp(1),
-                        Color.parseColor("#A7F3D0")
-                    )
-                } else {
-                    setColor(Color.parseColor("#F9FAFB"))
-                    setStroke(
-                        dp(1),
-                        Color.parseColor("#E5E7EB")
-                    )
-                }
-            }
-        }
-
-        val rank = TextView(this).apply {
-            text =
-                if (row.best) {
-                    getString(
-                        R.string.best_value_rank,
-                        row.rank
-                    )
-                } else {
-                    getString(
-                        R.string.rank_number,
-                        row.rank
-                    )
-                }
-
-            setTextSize(
-                TypedValue.COMPLEX_UNIT_SP,
-                13f
-            )
-
-            setTextColor(
-                if (row.best) {
-                    Color.parseColor("#047857")
-                } else {
-                    Color.parseColor("#6B7280")
-                }
-            )
-
-            setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-            )
-        }
-
-        val name = TextView(this).apply {
-            text = row.name
-            setTextSize(
-                TypedValue.COMPLEX_UNIT_SP,
-                18f
-            )
-            setTextColor(Color.parseColor("#111827"))
-            setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-            )
-            setPadding(
-                0,
-                dp(4),
-                0,
-                0
-            )
-        }
-
-        val details = TextView(this).apply {
-            text = listOfNotNull(
-                row.quantity?.takeIf {
-                    it.isNotBlank()
-                },
-                row.priceSummary
-            ).joinToString("  •  ")
-
-            setTextSize(
-                TypedValue.COMPLEX_UNIT_SP,
-                15f
-            )
-            setTextColor(Color.parseColor("#374151"))
-            setPadding(
-                0,
-                dp(6),
-                0,
-                0
-            )
-        }
-
-        val metric = TextView(this).apply {
-            text = row.metricLabel
-            setTextSize(
-                TypedValue.COMPLEX_UNIT_SP,
-                16f
-            )
-            setTextColor(Color.parseColor("#111827"))
-            setTypeface(
-                Typeface.DEFAULT,
-                Typeface.BOLD
-            )
-            setPadding(
-                0,
-                dp(7),
-                0,
-                0
-            )
-        }
-
-        val exactness = TextView(this).apply {
-            text = row.exactnessLabel
-            setTextSize(
-                TypedValue.COMPLEX_UNIT_SP,
-                12f
-            )
-            setTextColor(Color.parseColor("#6B7280"))
-            setPadding(
-                0,
-                dp(3),
-                0,
-                0
-            )
-        }
-
-        card.addView(rank)
-        card.addView(name)
-        card.addView(details)
-        card.addView(metric)
-        card.addView(exactness)
-
-        return card
     }
 
     private fun saveDraftToPreferences() {
@@ -529,20 +385,25 @@ class ComparisonActivity : AppCompatActivity() {
             return
         }
 
-        val editor = prefs.edit()
-            .clear()
-            .putInt(
-                PREF_COUNT,
-                blocks.size
-            )
-            .putBoolean(
-                PREF_COMPARED,
-                comparisonWasRun
-            )
-            .putLong(
-                PREF_OBSERVED_AT,
-                lastComparedAtEpochMillis
-            )
+        val editor =
+            prefs.edit()
+                .clear()
+                .putInt(
+                    PREF_COUNT,
+                    blocks.size
+                )
+                .putBoolean(
+                    PREF_COMPARED,
+                    comparisonWasRun
+                )
+                .putLong(
+                    PREF_OBSERVED_AT,
+                    lastComparedAtEpochMillis
+                )
+                .putBoolean(
+                    PREF_LIKE_FOR_LIKE_CONFIRMED,
+                    likeForLikeConfirmation.isChecked
+                )
 
         blocks.forEachIndexed { index, value ->
             editor.putString(
@@ -576,6 +437,11 @@ class ComparisonActivity : AppCompatActivity() {
                     savedInstanceState.getLong(
                         STATE_OBSERVED_AT,
                         0L
+                    ),
+                likeForLikeConfirmed =
+                    savedInstanceState.getBoolean(
+                        STATE_LIKE_FOR_LIKE_CONFIRMED,
+                        false
                     )
             )
         }
@@ -585,27 +451,30 @@ class ComparisonActivity : AppCompatActivity() {
             MODE_PRIVATE
         )
 
-        val count = prefs
-            .getInt(PREF_COUNT, 0)
-            .coerceIn(
-                0,
-                ManualProductObservationAdapter.MAX_PRODUCT_BLOCKS
-            )
+        val count =
+            prefs
+                .getInt(PREF_COUNT, 0)
+                .coerceIn(
+                    0,
+                    CompareHereManualInputAdapter.MAX_OBSERVATIONS
+                )
 
         if (count == 0) {
             return Draft(
                 blocks = listOf("", ""),
                 compared = false,
-                observedAtEpochMillis = 0L
+                observedAtEpochMillis = 0L,
+                likeForLikeConfirmed = false
             )
         }
 
-        val blocks = (0 until count).map { index ->
-            prefs.getString(
-                "$PREF_BLOCK_PREFIX$index",
-                ""
-            ).orEmpty()
-        }
+        val blocks =
+            (0 until count).map { index ->
+                prefs.getString(
+                    "$PREF_BLOCK_PREFIX$index",
+                    ""
+                ).orEmpty()
+            }
 
         return Draft(
             blocks = blocks,
@@ -617,6 +486,11 @@ class ComparisonActivity : AppCompatActivity() {
                 prefs.getLong(
                     PREF_OBSERVED_AT,
                     0L
+                ),
+            likeForLikeConfirmed =
+                prefs.getBoolean(
+                    PREF_LIKE_FOR_LIKE_CONFIRMED,
+                    false
                 )
         )
     }
@@ -696,7 +570,6 @@ class ComparisonActivity : AppCompatActivity() {
         ViewCompat.setOnApplyWindowInsetsListener(
             root
         ) { view, insets ->
-
             val bars =
                 insets.getInsets(
                     WindowInsetsCompat.Type.systemBars()
@@ -716,6 +589,7 @@ class ComparisonActivity : AppCompatActivity() {
             root
         )
     }
+
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density)
             .toInt()
@@ -723,7 +597,8 @@ class ComparisonActivity : AppCompatActivity() {
     private data class Draft(
         val blocks: List<String>,
         val compared: Boolean,
-        val observedAtEpochMillis: Long
+        val observedAtEpochMillis: Long,
+        val likeForLikeConfirmed: Boolean
     )
 
     companion object {
@@ -739,6 +614,9 @@ class ComparisonActivity : AppCompatActivity() {
         private const val PREF_OBSERVED_AT =
             "observed_at"
 
+        private const val PREF_LIKE_FOR_LIKE_CONFIRMED =
+            "like_for_like_confirmed"
+
         private const val PREF_BLOCK_PREFIX =
             "product_"
 
@@ -750,5 +628,8 @@ class ComparisonActivity : AppCompatActivity() {
 
         private const val STATE_OBSERVED_AT =
             "standalone.observed_at"
+
+        private const val STATE_LIKE_FOR_LIKE_CONFIRMED =
+            "standalone.like_for_like_confirmed"
     }
 }

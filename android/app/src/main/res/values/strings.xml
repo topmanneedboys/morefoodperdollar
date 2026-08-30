@@ -3,19 +3,27 @@
 
     <string name="app_tagline">Compare the real cost. Build the smarter basket.</string>
 
-    <string name="standalone_intro">Enter each product in its own box. ValuePilot compares package size and price to find the strongest value on-device.</string>
+    <string name="standalone_intro">Enter each product in its own box, then confirm they are like-for-like alternatives. ValuePilot compares exact package size and price facts on-device and refuses to rank when those facts are not safe enough.</string>
 
     <string name="products_to_compare">Products to compare</string>
 
-    <string name="product_input_instructions">Put the product name, package size and price in the same box. Blank lines inside a product are fine.</string>
+    <string name="product_input_instructions">Put the product name, package size and price in the same box. Use a concrete currency such as CA$ or US$ instead of a bare $. Blank lines inside a product are fine.</string>
 
     <string name="product_number">Product %1$d</string>
 
-    <string name="product_input_hint">Honeycrisp apples&#10;3 lb&#10;$5.99</string>
+    <string name="product_input_hint">Honeycrisp apples&#10;3 lb&#10;CA$5.99</string>
 
     <string name="add_another_product">Add another product</string>
-    <string name="compare_value">Compare value</string>
+    <string name="like_for_like_confirmation">These products are like-for-like alternatives</string>
+    <string name="like_for_like_confirmation_body">Confirm only when every product is a substitute you would reasonably choose between. Editing or adding a product clears this confirmation.</string>
+    <string name="compare_value">Compare exact value</string>
     <string name="clear_comparison">Clear</string>
+    <string name="compare_add_products_title">Add at least two products</string>
+    <string name="compare_add_products_body">Enter two or more products before comparing exact value.</string>
+    <string name="compare_confirmation_needed_title">Confirm comparable products</string>
+    <string name="compare_confirmation_needed_body">Confirm that every product is a like-for-like alternative before comparing exact value.</string>
+    <string name="compare_ready_title">Ready to compare exact value</string>
+    <string name="compare_ready_body">Tap Compare exact value to evaluate the confirmed products.</string>
     <string name="enter_two_products">Enter at least two products to compare</string>
     <string name="results">Results</string>
     <string name="best_value_rank">#%1$d  Best value</string>
@@ -40,7 +48,7 @@
 
     <string name="privacy">Privacy</string>
 
-    <string name="privacy_body">Standalone comparison, deterministic parsing and ranking run on-device. This build has no INTERNET permission and does not send your product text, screen contents, credentials or shopping data to a server.</string>
+    <string name="privacy_body">Standalone comparison, deterministic parsing and exact value evaluation run on-device. This build has no INTERNET permission and does not send your product text, screen contents, credentials or shopping data to a server.</string>
 
     <string name="accessibility_description">Automatically reads newly visible product and menu labels in the active app so ValuePilot can compare exact unit value and clearly labeled local estimates. It scrolls only when you explicitly choose off-screen collection; this build has no internet permission.</string>
 
