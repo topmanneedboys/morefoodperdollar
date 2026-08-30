@@ -17,6 +17,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -55,7 +56,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var searchResultsHeading: TextView
     private lateinit var searchResultsContainer: LinearLayout
     private lateinit var savedExperience: PracticalShoppingSavedSurfaceView
+    private lateinit var savedStapleLaunchExperience: PracticalShoppingSavedStapleLaunchView
+    private lateinit var stapleWatchSetupExperience: StapleWatchSavedSelectionSurfaceView
     private lateinit var savedRouteCoordinator: PracticalShoppingSavedRouteCoordinator
+    private lateinit var stapleWatchSetupCoordinator: StapleWatchSavedSetupCompositionCoordinator
 
     private var comparisonActivityOpen = false
     private var suppressSearchInputCallback = false
@@ -82,6 +86,8 @@ class MainActivity : AppCompatActivity() {
         searchResultsHeading = findViewById(R.id.searchResultsHeading)
         searchResultsContainer = findViewById(R.id.searchResultsContainer)
         savedExperience = findViewById(R.id.savedExperience)
+        savedStapleLaunchExperience = findViewById(R.id.savedStapleLaunchExperience)
+        stapleWatchSetupExperience = findViewById(R.id.stapleWatchSetupExperience)
 
         installSystemBarInsets()
         shellState = restoreShellState(savedInstanceState)
@@ -103,6 +109,21 @@ class MainActivity : AppCompatActivity() {
             dispatch(AppShellIntent.SelectPrimary(tab))
             true
         }
+
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    if (shellState.route == AppRoute.STAPLE_WATCH_SETUP) {
+                        dispatch(AppShellIntent.NavigateBack)
+                    } else {
+                        isEnabled = false
+                        onBackPressedDispatcher.onBackPressed()
+                        isEnabled = true
+                    }
+                }
+            }
+        )
 
         primaryAction.setOnClickListener { openComparison() }
 
@@ -143,6 +164,9 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         if (::savedRouteCoordinator.isInitialized) {
             savedExperience.onAction = null
+            savedStapleLaunchExperience.onAction = null
+            stapleWatchSetupExperience.onAction = null
+            stapleWatchSetupCoordinator.close()
             savedRouteCoordinator.close()
         }
         searchExecutor.shutdownNow()
@@ -289,17 +313,45 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun configureSavedUi() {
-        val presenter = PracticalShoppingSavedSurfacePresenter(savedExperience)
+        val savedPresenter = PracticalShoppingSavedSurfacePresenter(savedExperience)
+        val stapleLaunchPresenter =
+            PracticalShoppingSavedStapleLaunchPresenter(savedStapleLaunchExperience)
+        val stapleSetupPresenter =
+            StapleWatchSavedSelectionSurfacePresenter(stapleWatchSetupExperience)
+
+        stapleWatchSetupCoordinator =
+            StapleWatchSavedSetupCompositionCoordinator { snapshot ->
+                StapleWatchSavedSelectionRouteSession(
+                    initialSnapshot = snapshot,
+                    presenter = stapleSetupPresenter
+                )
+            }
+
+        val savedRenderer =
+            PracticalShoppingSavedLifecycleRenderer { state ->
+                savedPresenter.render(state)
+                stapleLaunchPresenter.render(state)
+            }
+
         savedRouteCoordinator =
             PracticalShoppingSavedRouteCoordinator(
                 sessionFactory = {
                     PracticalShoppingSavedAndroidSession.create(
                         context = this,
-                        renderer = presenter
+                        renderer = savedRenderer,
+                        snapshotObserver = stapleWatchSetupCoordinator
                     )
                 }
             )
+
         savedExperience.onAction = savedRouteCoordinator::onSurfaceAction
+        savedStapleLaunchExperience.onAction = { action ->
+            when (action) {
+                PracticalShoppingSavedStapleLaunchAction.OpenStapleWatchSetup ->
+                    dispatch(AppShellIntent.OpenStapleWatchSetup)
+            }
+        }
+        stapleWatchSetupExperience.onAction = stapleWatchSetupCoordinator::onSurfaceAction
     }
 
     private fun configureQuickSearch(chipId: Int, query: String) {
@@ -413,9 +465,14 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        val savedVisible = state.selectedPrimaryTab == AppPrimaryTab.SAVED
+        val savedVisible = state.route == AppRoute.SAVED
+        val stapleSetupVisible = state.route == AppRoute.STAPLE_WATCH_SETUP
         savedExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
+        savedStapleLaunchExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
+        stapleWatchSetupExperience.visibility =
+            if (stapleSetupVisible) View.VISIBLE else View.GONE
         savedRouteCoordinator.onRouteVisibilityChanged(savedVisible)
+        stapleWatchSetupCoordinator.onRouteVisibilityChanged(stapleSetupVisible)
 
         val expectedMenuItem = menuIdFor(state.selectedPrimaryTab)
         if (bottomNavigation.selectedItemId != expectedMenuItem) {
