@@ -44,6 +44,31 @@ class StapleWatchForegroundEvaluationInputHostTest {
     }
 
     @Test
+    fun displayMetadataObserverTargetsOnlyCurrentOpenEvidenceSession() {
+        val host = StapleWatchForegroundEvaluationInputHost()
+        val observer: StapleWatchStoreDisplayMetadataObserver = host
+        val metadata = metadata("Observed Market")
+
+        observer.onDisplayMetadata(metadata)
+        assertNull(host.currentSessionOrNull())
+
+        val preconditions = preconditions("observer")
+        host.onPreconditions(preconditions)
+        observer.onDisplayMetadata(metadata)
+
+        val session = requireNotNull(host.currentSessionOrNull())
+        assertSame(preconditions, session.preconditions)
+        assertSame(metadata, session.displayMetadata)
+        assertNull(session.policy)
+        assertNull(session.evaluation)
+        assertFalse(session.readyForEvaluation)
+
+        host.close()
+        observer.onDisplayMetadata(metadata("After Close"))
+        assertNull(host.currentSessionOrNull())
+    }
+
+    @Test
     fun explicitInputsStayScopedToCurrentEvidenceSession() {
         val firstPreconditions = preconditions("first")
         val policy = policy()
@@ -103,9 +128,20 @@ class StapleWatchForegroundEvaluationInputHostTest {
 
         assertTrue(
             source.contains(
+                "StapleWatchEconomicEvidencePreconditionsObserver,\n    StapleWatchStoreDisplayMetadataObserver,"
+            )
+        )
+        assertTrue(
+            source.contains(
                 "currentSession = StapleWatchForegroundEvaluationInputSession.start(preconditions)"
             )
         )
+        assertTrue(
+            source.contains(
+                "override fun onDisplayMetadata(metadata: StapleWatchStoreDisplayMetadata)"
+            )
+        )
+        assertTrue(source.contains("accept(metadata)"))
         assertTrue(source.contains("session.withPolicy(policy)"))
         assertTrue(source.contains("session.withDisplayMetadata(displayMetadata)"))
 
