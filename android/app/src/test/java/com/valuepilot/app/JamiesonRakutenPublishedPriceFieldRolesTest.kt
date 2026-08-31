@@ -111,10 +111,8 @@ class JamiesonRakutenPublishedPriceFieldRolesTest {
             ),
             result.authorizationDecision?.unknownGates
         )
-        assertTrue(
-            ProductionAuthorizationGate.PRICE_SEMANTICS_VALIDATED in
-                result.authorizationDecision.orEmptySatisfiedGates()
-        )
+        val satisfiedGates = result.authorizationDecision?.satisfiedGates ?: emptySet()
+        assertTrue(ProductionAuthorizationGate.PRICE_SEMANTICS_VALIDATED in satisfiedGates)
     }
 
     @Test
@@ -182,9 +180,6 @@ class JamiesonRakutenPublishedPriceFieldRolesTest {
                     fields[JamiesonRakutenPublishedCatalogField.CURRENCY.index] = "CAD"
                 }
         )
-
-    private fun Set<ProductionAuthorizationGate>?.orEmptySatisfiedGates(): Set<ProductionAuthorizationGate> =
-        this ?: emptySet()
 
     private fun source(fileName: String): File =
         sequenceOf(
