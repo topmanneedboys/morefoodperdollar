@@ -16,9 +16,12 @@ enum class StapleWatchForegroundFactCheckCapability {
  * Consumer-safe presentation gate between identity readiness and configured fact acquisition.
  *
  * The Saved identity projector remains authoritative for whether the user's explicit selection is
- * ready to hand off. This adapter can only remove continuation when the current composition has no
- * configured foreground fact source. It never upgrades a non-ready identity state, creates a fact,
- * interprets market coverage, selects a provider, or starts work.
+ * ready to hand off. This adapter records the exact composition capability on every state. When an
+ * otherwise-ready selection has no configured foreground fact source, it removes continuation and
+ * explains that build capability without changing identity readiness.
+ *
+ * It never upgrades a non-ready identity state, creates a fact, interprets market coverage, selects
+ * a provider, or starts work.
  */
 object StapleWatchSavedFactCheckCapabilityUiAdapter {
 
@@ -26,11 +29,16 @@ object StapleWatchSavedFactCheckCapabilityUiAdapter {
         state: StapleWatchSavedSelectionUiState,
         capability: StapleWatchForegroundFactCheckCapability
     ): StapleWatchSavedSelectionUiState {
-        if (
-            capability == StapleWatchForegroundFactCheckCapability.CONFIGURED ||
-            state.status != StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK
-        ) {
-            return state
+        if (capability == StapleWatchForegroundFactCheckCapability.CONFIGURED) {
+            return if (state.factCheckCapability == capability) {
+                state
+            } else {
+                state.copy(factCheckCapability = capability)
+            }
+        }
+
+        if (state.status != StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK) {
+            return state.copy(factCheckCapability = capability)
         }
 
         val capabilityNotice =
@@ -43,11 +51,11 @@ object StapleWatchSavedFactCheckCapabilityUiAdapter {
             }
 
         return state.copy(
-            status = StapleWatchSavedSelectionUiStatus.FACT_CHECK_UNAVAILABLE,
             guidance = "Your saved staple choices are ready.",
             notice = notice,
             continueAction = null,
-            continueActionLabel = null
+            continueActionLabel = null,
+            factCheckCapability = capability
         )
     }
 }
