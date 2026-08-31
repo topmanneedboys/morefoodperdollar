@@ -48,7 +48,7 @@ class JamiesonProductCatalogProductionContractTest {
     }
 
     @Test
-    fun `partner rights clear rights gates but factual current-price gates remain unknown`() {
+    fun `reviewed price semantics clear only price gate while recency and freshness stay unknown`() {
         val assessment =
             JamiesonProductCatalogProductionContract.partnerAuthorizationAssessment()
         val decision =
@@ -64,7 +64,6 @@ class JamiesonProductCatalogProductionContractTest {
         assertTrue(decision.deniedGates.isEmpty())
         assertEquals(
             setOf(
-                ProductionAuthorizationGate.PRICE_SEMANTICS_VALIDATED,
                 ProductionAuthorizationGate.DATASET_RECENCY_POLICY_DEFINED,
                 ProductionAuthorizationGate.OFFER_FRESHNESS_POLICY_DEFINED
             ),
@@ -78,14 +77,23 @@ class JamiesonProductCatalogProductionContractTest {
             ProductionAuthorizationGate.INDEX_AUTHORIZED,
             ProductionAuthorizationGate.MOBILE_APP_AUTHORIZED,
             ProductionAuthorizationGate.RETENTION_DELETION_POLICY_DEFINED,
-            ProductionAuthorizationGate.OFFER_GEOGRAPHY_VALIDATED
+            ProductionAuthorizationGate.OFFER_GEOGRAPHY_VALIDATED,
+            ProductionAuthorizationGate.PRICE_SEMANTICS_VALIDATED
         ).forEach { gate ->
             assertTrue("Expected satisfied gate $gate", gate in decision.satisfiedGates)
         }
+
+        val priceGate =
+            assessment.assessmentFor(ProductionAuthorizationGate.PRICE_SEMANTICS_VALIDATED)
+        assertEquals(ProductionAuthorizationState.SATISFIED, priceGate?.state)
+        assertEquals(
+            "rakuten-product-catalog-appendix-a-price-semantics-reviewed-2026-08-31",
+            priceGate?.basisId
+        )
     }
 
     @Test
-    fun `network link profile keeps link rights but blocks unresolved installed-network and privacy gates`() {
+    fun `network link profile keeps link rights but blocks unresolved installed-network privacy recency and freshness`() {
         val assessment =
             JamiesonProductCatalogProductionContract.partnerAuthorizationAssessment()
         val decision =
@@ -105,6 +113,10 @@ class JamiesonProductCatalogProductionContractTest {
             ProductionAuthorizationGate.ADVERTISER_DISTRIBUTION_APPROVED in
                 decision.satisfiedGates
         )
+        assertTrue(
+            ProductionAuthorizationGate.PRICE_SEMANTICS_VALIDATED in
+                decision.satisfiedGates
+        )
         assertEquals(
             setOf(
                 ProductionAuthorizationGate.INSTALLED_SOFTWARE_NETWORK_APPROVED,
@@ -114,7 +126,6 @@ class JamiesonProductCatalogProductionContractTest {
         )
         assertEquals(
             setOf(
-                ProductionAuthorizationGate.PRICE_SEMANTICS_VALIDATED,
                 ProductionAuthorizationGate.DATASET_RECENCY_POLICY_DEFINED,
                 ProductionAuthorizationGate.OFFER_FRESHNESS_POLICY_DEFINED
             ),
@@ -223,7 +234,7 @@ class JamiesonProductCatalogProductionContractTest {
     }
 
     @Test
-    fun `partner contract contains no feed acquisition current price or runtime authority`() {
+    fun `partner contract contains no feed acquisition freshness or runtime authority`() {
         val source = source("JamiesonProductCatalogProductionContract.kt").readText()
 
         listOf(
@@ -237,6 +248,8 @@ class JamiesonProductCatalogProductionContractTest {
             "Notification",
             "MainActivity",
             "CURRENT_PRICE",
+            "priceObservedAtEpochMillis",
+            "EvidenceFreshnessPolicy(",
             "Offer(",
             "ftpUsername",
             "ftpPassword",
@@ -247,6 +260,7 @@ class JamiesonProductCatalogProductionContractTest {
         }
 
         assertTrue(source.contains("PRICE_SEMANTICS_VALIDATED"))
+        assertTrue(source.contains("RAKUTEN_PRODUCT_CATALOG_PRICE_SEMANTICS_BASIS_ID"))
         assertTrue(source.contains("ProductionAuthorizationState.UNKNOWN"))
         assertTrue(source.contains("WITHDRAWAL_REQUIRED"))
         assertTrue(source.contains("DOCUMENTED_DATASET_MARKET"))
