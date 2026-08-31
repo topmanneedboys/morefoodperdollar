@@ -36,6 +36,11 @@ data class UserProofBackedObservedPriceClaimResult(
  * corrupting, or otherwise making the retained artifact unverifiable therefore closes this path
  * on the next read.
  *
+ * Successful verification proves only that the retained bytes still match the exact artifact the
+ * user confirmed. It does not independently validate merchant authorship or the visible proof
+ * contents, and it does not decide freshness, rankability, availability, promotion, or any other
+ * merchant fact. Those remain separate explicit policy/evidence boundaries.
+ *
  * Product identity comes only from the confirmation's checksum-valid cross-source GTIN key.
  * Merchant/location/channel scope comes only from the already-exact confirmed store scope.
  * Price arithmetic is not recomputed: the exact Money value is fingerprinted by shared core.
