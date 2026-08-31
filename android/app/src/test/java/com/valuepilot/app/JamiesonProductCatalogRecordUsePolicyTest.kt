@@ -1,5 +1,7 @@
 package com.valuepilot.app
 
+import com.valuepilot.core.ProductionAuthorizationGate
+import com.valuepilot.core.ProductionAuthorizationState
 import com.valuepilot.core.ProductionDatasetDispositionState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -34,12 +36,35 @@ class JamiesonProductCatalogRecordUsePolicyTest {
         assertFalse(result.deletionOverdue)
         assertEquals(
             setOf(
-                JamiesonProductCatalogRecordUseBlocker.PRICE_SEMANTICS_UNVERIFIED,
                 JamiesonProductCatalogRecordUseBlocker.DATASET_RECENCY_UNVERIFIED,
                 JamiesonProductCatalogRecordUseBlocker.OFFER_FRESHNESS_UNVERIFIED
             ),
             result.blockers
         )
+    }
+
+    @Test
+    fun `record use reflects reviewed price semantics without granting freshness authority`() {
+        val priceSemantics =
+            contract
+                .partnerAuthorizationAssessment()
+                .assessmentFor(ProductionAuthorizationGate.PRICE_SEMANTICS_VALIDATED)
+
+        assertEquals(ProductionAuthorizationState.SATISFIED, priceSemantics?.state)
+
+        val result =
+            policy.evaluate(
+                datasetNamespaceId = contract.DATASET_NAMESPACE_ID,
+                sourceCurrencyCode = "CAD",
+                targetCountryCode = "CA",
+                partnershipTerminationAtEpochMillis = null,
+                evaluatedAtEpochMillis = now
+            )
+
+        assertFalse(JamiesonProductCatalogRecordUseBlocker.PRICE_SEMANTICS_UNVERIFIED in result.blockers)
+        assertTrue(JamiesonProductCatalogRecordUseBlocker.DATASET_RECENCY_UNVERIFIED in result.blockers)
+        assertTrue(JamiesonProductCatalogRecordUseBlocker.OFFER_FRESHNESS_UNVERIFIED in result.blockers)
+        assertFalse(result.priceRankingAllowed)
     }
 
     @Test
@@ -145,7 +170,7 @@ class JamiesonProductCatalogRecordUsePolicyTest {
     }
 
     @Test
-    fun `price ranking remains blocked by all three unresolved factual gates`() {
+    fun `price ranking remains blocked by unresolved recency and per offer freshness`() {
         val result =
             policy.evaluate(
                 datasetNamespaceId = contract.DATASET_NAMESPACE_ID,
@@ -156,7 +181,7 @@ class JamiesonProductCatalogRecordUsePolicyTest {
             )
 
         assertFalse(result.priceRankingAllowed)
-        assertTrue(JamiesonProductCatalogRecordUseBlocker.PRICE_SEMANTICS_UNVERIFIED in result.blockers)
+        assertFalse(JamiesonProductCatalogRecordUseBlocker.PRICE_SEMANTICS_UNVERIFIED in result.blockers)
         assertTrue(JamiesonProductCatalogRecordUseBlocker.DATASET_RECENCY_UNVERIFIED in result.blockers)
         assertTrue(JamiesonProductCatalogRecordUseBlocker.OFFER_FRESHNESS_UNVERIFIED in result.blockers)
     }
@@ -185,9 +210,11 @@ class JamiesonProductCatalogRecordUsePolicyTest {
             "JamiesonProductCatalogProductionContract",
             "geographyAssessment(targetCountryCode)",
             "matchesDeclaredFeedCurrency(sourceCurrencyCode)",
+            "partnerAuthorizationAssessment()",
+            "ProductionAuthorizationGate.PRICE_SEMANTICS_VALIDATED",
+            "ProductionAuthorizationState.SATISFIED",
             "evaluateTermination(",
             "priceRankingAllowed = false",
-            "PRICE_SEMANTICS_UNVERIFIED",
             "DATASET_RECENCY_UNVERIFIED",
             "OFFER_FRESHNESS_UNVERIFIED"
         ).forEach { required ->
