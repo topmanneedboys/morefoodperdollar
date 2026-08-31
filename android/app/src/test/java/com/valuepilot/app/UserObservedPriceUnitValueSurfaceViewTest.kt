@@ -81,13 +81,58 @@ class UserObservedPriceUnitValueSurfaceViewTest {
         }
     }
 
-    private fun source(fileName: String): File {
+    @Test
+    fun `shell physically attaches observed price renderer hidden by default`() {
+        val layout = appFile("app/src/main/res/layout/activity_shell.xml").readText()
+        val tag = "<com.valuepilot.app.UserObservedPriceUnitValueSurfaceView"
+        val id = "android:id=\"@+id/observedPriceUnitValueExperience\""
+
+        assertTrue("Shell must inflate the replaceable observed-price renderer", layout.contains(tag))
+        assertTrue("Observed-price renderer needs a stable shell id", layout.contains(id))
+
+        val surfaceBlock =
+            layout.substringAfter(tag)
+                .substringBefore("/>")
+
+        assertTrue(
+            "Observed-price renderer must be inert until a future authorized coordinator drives it",
+            surfaceBlock.contains("android:visibility=\"gone\"")
+        )
+    }
+
+    @Test
+    fun `shell attachment does not activate observed price evaluation in main activity`() {
+        val activity = appFile("app/src/main/java/com/valuepilot/app/MainActivity.kt").readText()
+
+        listOf(
+            "observedPriceUnitValueExperience",
+            "UserObservedPriceUnitValueSurfaceView",
+            "UserObservedPriceUnitValueSurfaceHost",
+            "UserObservedPriceUnitValueUiProjector",
+            "UserProofBackedObservedPriceUnitValueEligibilityEvaluator",
+            "UserProofBackedObservedPriceUsePolicy",
+            "ProductPackageQuantityFactResolver",
+            "ProductPackageQuantityEvidenceCandidate",
+            "EvidenceBackedUnitValuePolicy",
+            "OpenFoodFactsPackageQuantityEvidenceAdapter"
+        ).forEach { forbidden ->
+            assertFalse(
+                "MainActivity must not activate or gain observed-price authority through $forbidden",
+                activity.contains(forbidden)
+            )
+        }
+    }
+
+    private fun source(fileName: String): File =
+        appFile("app/src/main/java/com/valuepilot/app/$fileName")
+
+    private fun appFile(relativePath: String): File {
         var directory = File(System.getProperty("user.dir") ?: error("user.dir unavailable"))
         repeat(8) {
-            val candidate = File(directory, "app/src/main/java/com/valuepilot/app/$fileName")
+            val candidate = File(directory, relativePath)
             if (candidate.isFile) return candidate
             directory = directory.parentFile ?: return@repeat
         }
-        error("Could not locate $fileName")
+        error("Could not locate $relativePath")
     }
 }
