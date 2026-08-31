@@ -8,6 +8,8 @@ import com.valuepilot.core.SourceProductIdentity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
@@ -18,7 +20,36 @@ class StapleWatchSavedSelectionSurfacePresenterTest {
     private val north = ShoppingStoreKey("north")
 
     @Test
-    fun presenterHandsOnlyProjectedConsumerStateToRenderer() {
+    fun presenterFailsSafeWhenForegroundFactCheckIsNotConfigured() {
+        val saved = savedState()
+        val selection =
+            StapleWatchSavedIdentitySelection(
+                watchedItemKeys = listOf(milk, eggs),
+                usualStoreKey = north
+            )
+        val metadata = metadata()
+        val identityState =
+            StapleWatchSavedIdentitySelectionUiProjector.project(saved, selection, metadata)
+        var rendered: StapleWatchSavedSelectionUiState? = null
+        val presenter =
+            StapleWatchSavedSelectionSurfacePresenter { state -> rendered = state }
+
+        presenter.render(saved, selection, metadata)
+
+        val state = assertNotNullAndReturn(rendered)
+        assertEquals(StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK, state.status)
+        assertEquals(StapleWatchForegroundFactCheckCapability.NOT_CONFIGURED, state.factCheckCapability)
+        assertEquals(identityState.productRows, state.productRows)
+        assertEquals(identityState.storeRows, state.storeRows)
+        assertEquals(identityState.watchedItemCount, state.watchedItemCount)
+        assertEquals(identityState.usualStoreSelected, state.usualStoreSelected)
+        assertNull(state.continueAction)
+        assertNull(state.continueActionLabel)
+        assertTrue(state.notice?.contains("aren't available in this build yet") == true)
+    }
+
+    @Test
+    fun explicitlyConfiguredForegroundFactCheckPreservesIdentityReadyContinuation() {
         val saved = savedState()
         val selection =
             StapleWatchSavedIdentitySelection(
@@ -30,12 +61,36 @@ class StapleWatchSavedSelectionSurfacePresenterTest {
             StapleWatchSavedIdentitySelectionUiProjector.project(saved, selection, metadata)
         var rendered: StapleWatchSavedSelectionUiState? = null
         val presenter =
-            StapleWatchSavedSelectionSurfacePresenter { state -> rendered = state }
+            StapleWatchSavedSelectionSurfacePresenter(
+                StapleWatchForegroundFactCheckCapability.CONFIGURED
+            ) { state -> rendered = state }
 
         presenter.render(saved, selection, metadata)
 
         assertEquals(expected, rendered)
         assertEquals(StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK, rendered?.status)
+        assertEquals(StapleWatchForegroundFactCheckCapability.CONFIGURED, rendered?.factCheckCapability)
+        assertNotNull(rendered?.continueAction)
+    }
+
+    @Test
+    fun capabilityGateMarksNonReadyIdentityStateWithoutUpgradingIt() {
+        val saved = savedState()
+        val selection = StapleWatchSavedIdentitySelectionReducer.initial()
+        val projected =
+            StapleWatchSavedIdentitySelectionUiProjector.project(saved, selection, metadata())
+
+        val gated =
+            StapleWatchSavedFactCheckCapabilityUiAdapter.apply(
+                state = projected,
+                capability = StapleWatchForegroundFactCheckCapability.NOT_CONFIGURED
+            )
+
+        assertEquals(StapleWatchSavedSelectionUiStatus.NEEDS_SELECTION, gated.status)
+        assertEquals(StapleWatchForegroundFactCheckCapability.NOT_CONFIGURED, gated.factCheckCapability)
+        assertNull(gated.continueAction)
+        assertEquals(projected.productRows, gated.productRows)
+        assertEquals(projected.storeRows, gated.storeRows)
     }
 
     @Test
@@ -58,28 +113,38 @@ class StapleWatchSavedSelectionSurfacePresenterTest {
 
         val state = assertNotNullAndReturn(rendered)
         assertEquals(StapleWatchSavedSelectionUiStatus.DISPLAY_METADATA_INCOMPLETE, state.status)
+        assertEquals(StapleWatchForegroundFactCheckCapability.NOT_CONFIGURED, state.factCheckCapability)
         assertEquals(1, state.selectedDisplayNameBlockerCount)
         assertFalse(state.productRows.any { row -> row.title.contains(milk.value, ignoreCase = true) })
     }
 
     @Test
-    fun rendererContractAndPresenterSourceKeepAuthorityOutsidePhysicalSurface() {
+    fun rendererContractAndPresentationSourcesKeepAuthorityOutsidePhysicalSurface() {
         val renderMethod =
             StapleWatchSavedSelectionSurfaceRenderer::class.java.methods
                 .single { method -> method.name == "render" }
         assertEquals(listOf(StapleWatchSavedSelectionUiState::class.java), renderMethod.parameterTypes.toList())
 
-        val source = source("StapleWatchSavedSelectionSurfacePresenter.kt").readText()
-        assertFalse(source.contains("android."))
+        val presenterSource = source("StapleWatchSavedSelectionSurfacePresenter.kt").readText()
+        val capabilitySource = source("StapleWatchSavedFactCheckCapabilityPresentation.kt").readText()
+        assertTrue(presenterSource.contains("StapleWatchForegroundFactCheckCapability.NOT_CONFIGURED"))
+        assertTrue(capabilitySource.contains("state.status != StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK"))
+        assertFalse(presenterSource.contains("android."))
+        assertFalse(capabilitySource.contains("android."))
         listOf(
             "StapleWatchEconomicEvaluator",
             "StapleWatchEconomicDecision",
+            "StapleWatchFactResolutionHost",
+            "StapleWatchForegroundFactProducer",
+            "PracticalShoppingProduction",
             "NotificationManager",
             "WorkManager",
             "SharedPreferences",
-            "System.currentTimeMillis"
+            "System.currentTimeMillis",
+            "java.net"
         ).forEach { forbidden ->
-            assertFalse("Presenter must not own $forbidden", source.contains(forbidden))
+            assertFalse("Presenter must not own $forbidden", presenterSource.contains(forbidden))
+            assertFalse("Capability gate must not own $forbidden", capabilitySource.contains(forbidden))
         }
     }
 
