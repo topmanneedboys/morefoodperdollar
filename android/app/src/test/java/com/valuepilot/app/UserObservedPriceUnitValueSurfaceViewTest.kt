@@ -33,8 +33,12 @@ class UserObservedPriceUnitValueSurfaceViewTest {
     fun `physical renderer owns no observed price semantics or eligibility decision`() {
         val source = source("UserObservedPriceUnitValueSurfaceView.kt").readText()
 
+        assertFalse(
+            "Surface view must not read state.status",
+            Regex("""state\.status\b""").containsMatchIn(source)
+        )
+
         listOf(
-            "state.status",
             "state.valueComparisonEligible",
             "when (state",
             "UserObservedPriceUnitValueUiProjector",
