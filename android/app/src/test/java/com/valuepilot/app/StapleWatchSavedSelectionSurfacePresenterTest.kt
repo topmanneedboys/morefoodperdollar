@@ -9,7 +9,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -38,7 +37,8 @@ class StapleWatchSavedSelectionSurfacePresenterTest {
         presenter.render(saved, selection, metadata)
 
         val state = assertNotNullAndReturn(rendered)
-        assertEquals(StapleWatchSavedSelectionUiStatus.FACT_CHECK_UNAVAILABLE, state.status)
+        assertEquals(StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK, state.status)
+        assertEquals(StapleWatchForegroundFactCheckCapability.NOT_CONFIGURED, state.factCheckCapability)
         assertEquals(identityState.productRows, state.productRows)
         assertEquals(identityState.storeRows, state.storeRows)
         assertEquals(identityState.watchedItemCount, state.watchedItemCount)
@@ -70,11 +70,12 @@ class StapleWatchSavedSelectionSurfacePresenterTest {
 
         assertEquals(expected, rendered)
         assertEquals(StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK, rendered?.status)
+        assertEquals(StapleWatchForegroundFactCheckCapability.CONFIGURED, rendered?.factCheckCapability)
         assertNotNull(rendered?.continueAction)
     }
 
     @Test
-    fun capabilityGateLeavesNonReadyIdentityStateUntouched() {
+    fun capabilityGateMarksNonReadyIdentityStateWithoutUpgradingIt() {
         val saved = savedState()
         val selection = StapleWatchSavedIdentitySelectionReducer.initial()
         val projected =
@@ -86,8 +87,11 @@ class StapleWatchSavedSelectionSurfacePresenterTest {
                 capability = StapleWatchForegroundFactCheckCapability.NOT_CONFIGURED
             )
 
-        assertSame(projected, gated)
         assertEquals(StapleWatchSavedSelectionUiStatus.NEEDS_SELECTION, gated.status)
+        assertEquals(StapleWatchForegroundFactCheckCapability.NOT_CONFIGURED, gated.factCheckCapability)
+        assertNull(gated.continueAction)
+        assertEquals(projected.productRows, gated.productRows)
+        assertEquals(projected.storeRows, gated.storeRows)
     }
 
     @Test
@@ -110,6 +114,7 @@ class StapleWatchSavedSelectionSurfacePresenterTest {
 
         val state = assertNotNullAndReturn(rendered)
         assertEquals(StapleWatchSavedSelectionUiStatus.DISPLAY_METADATA_INCOMPLETE, state.status)
+        assertEquals(StapleWatchForegroundFactCheckCapability.NOT_CONFIGURED, state.factCheckCapability)
         assertEquals(1, state.selectedDisplayNameBlockerCount)
         assertFalse(state.productRows.any { row -> row.title.contains(milk.value, ignoreCase = true) })
     }
