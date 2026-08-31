@@ -24,6 +24,8 @@ private const val JAMIESON_GEOGRAPHY_BASIS_ID =
     "jamieson-documented-canadian-feed-market-2026-08-31"
 private const val JAMIESON_RETENTION_BASIS_ID =
     "jamieson-60-day-post-termination-deletion-2026-08-31"
+private const val RAKUTEN_PRODUCT_CATALOG_PRICE_SEMANTICS_BASIS_ID =
+    "rakuten-product-catalog-appendix-a-price-semantics-reviewed-2026-08-31"
 
 /**
  * Uses expressly covered by the advertiser's written Product Catalog confirmation.
@@ -80,17 +82,18 @@ data class JamiesonProductCatalogTerminationDecision(
  * Written advertiser confirmation dated 2026-08-31 establishes the allowed mobile uses,
  * Canadian consumer market, CAD-only feed expectation, and the requirement to remove feed
  * data within 60 days after partnership termination. Rakuten support separately confirmed
- * Product Catalog access for this advertiser.
+ * Product Catalog access for this advertiser. Rakuten Product Catalog Appendix A separately
+ * documents Sale Price as reflecting discounts and Retail Price as not reflecting discounts;
+ * the provider-specific price-role resolver applies those semantics row by row.
  *
  * This contract deliberately does NOT establish:
- * - which Rakuten price field is the production current price;
  * - per-offer freshness or a dataset recency policy;
  * - package quantity authority;
  * - installed-software networking approval; or
  * - tracking/privacy readiness.
  *
  * It performs no I/O, reads no clock, contains no provider credentials, and grants no
- * ranking or current-price authority by itself.
+ * ranking or current-price freshness authority by itself.
  */
 object JamiesonProductCatalogProductionContract {
     val providerId = EvidenceProviderId("rakuten-advertising")
@@ -146,12 +149,13 @@ object JamiesonProductCatalogProductionContract {
         currencyCode == EXPECTED_CURRENCY_CODE
 
     /**
-     * Current authorization record supported by the two written parties.
+     * Current authorization record supported by written partner evidence plus reviewed
+     * Rakuten Product Catalog field documentation.
      *
-     * Rights/geography gates that are actually evidenced are SATISFIED. Factual production
-     * gates not answered by either email remain explicitly UNKNOWN. Link use is rights-approved,
-     * but installed-app networking and tracking/privacy are still PENDING, so the network-link
-     * activation profile remains fail-closed.
+     * Rights/geography and source price-role gates that are actually evidenced are SATISFIED.
+     * Dataset recency and per-offer freshness remain explicitly UNKNOWN. Link use is
+     * rights-approved, but installed-app networking and tracking/privacy are still PENDING,
+     * so the network-link activation profile remains fail-closed.
      */
     fun partnerAuthorizationAssessment(): ProviderProductionAuthorizationAssessment =
         ProviderProductionAuthorizationAssessment(
@@ -184,9 +188,9 @@ object JamiesonProductCatalogProductionContract {
                         JAMIESON_RETENTION_BASIS_ID
                     ),
                     geographyAssessment().toProductionGateAssessment(),
-                    unknown(
+                    satisfied(
                         ProductionAuthorizationGate.PRICE_SEMANTICS_VALIDATED,
-                        "rakuten-sale-retail-current-price-semantics-unresolved"
+                        RAKUTEN_PRODUCT_CATALOG_PRICE_SEMANTICS_BASIS_ID
                     ),
                     unknown(
                         ProductionAuthorizationGate.DATASET_RECENCY_POLICY_DEFINED,
