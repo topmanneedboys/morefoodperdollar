@@ -48,7 +48,7 @@ class JamiesonProductCatalogProductionContractTest {
     }
 
     @Test
-    fun `partner rights clear rights gates but factual current-price gates remain unknown`() {
+    fun `partner rights and documented price semantics leave freshness gates unknown`() {
         val assessment =
             JamiesonProductCatalogProductionContract.partnerAuthorizationAssessment()
         val decision =
@@ -64,7 +64,6 @@ class JamiesonProductCatalogProductionContractTest {
         assertTrue(decision.deniedGates.isEmpty())
         assertEquals(
             setOf(
-                ProductionAuthorizationGate.PRICE_SEMANTICS_VALIDATED,
                 ProductionAuthorizationGate.DATASET_RECENCY_POLICY_DEFINED,
                 ProductionAuthorizationGate.OFFER_FRESHNESS_POLICY_DEFINED
             ),
@@ -78,7 +77,8 @@ class JamiesonProductCatalogProductionContractTest {
             ProductionAuthorizationGate.INDEX_AUTHORIZED,
             ProductionAuthorizationGate.MOBILE_APP_AUTHORIZED,
             ProductionAuthorizationGate.RETENTION_DELETION_POLICY_DEFINED,
-            ProductionAuthorizationGate.OFFER_GEOGRAPHY_VALIDATED
+            ProductionAuthorizationGate.OFFER_GEOGRAPHY_VALIDATED,
+            ProductionAuthorizationGate.PRICE_SEMANTICS_VALIDATED
         ).forEach { gate ->
             assertTrue("Expected satisfied gate $gate", gate in decision.satisfiedGates)
         }
@@ -105,6 +105,10 @@ class JamiesonProductCatalogProductionContractTest {
             ProductionAuthorizationGate.ADVERTISER_DISTRIBUTION_APPROVED in
                 decision.satisfiedGates
         )
+        assertTrue(
+            ProductionAuthorizationGate.PRICE_SEMANTICS_VALIDATED in
+                decision.satisfiedGates
+        )
         assertEquals(
             setOf(
                 ProductionAuthorizationGate.INSTALLED_SOFTWARE_NETWORK_APPROVED,
@@ -114,7 +118,6 @@ class JamiesonProductCatalogProductionContractTest {
         )
         assertEquals(
             setOf(
-                ProductionAuthorizationGate.PRICE_SEMANTICS_VALIDATED,
                 ProductionAuthorizationGate.DATASET_RECENCY_POLICY_DEFINED,
                 ProductionAuthorizationGate.OFFER_FRESHNESS_POLICY_DEFINED
             ),
@@ -247,6 +250,9 @@ class JamiesonProductCatalogProductionContractTest {
         }
 
         assertTrue(source.contains("PRICE_SEMANTICS_VALIDATED"))
+        assertTrue(source.contains("RAKUTEN_PRICE_SEMANTICS_BASIS_ID"))
+        assertTrue(source.contains("DATASET_RECENCY_POLICY_DEFINED"))
+        assertTrue(source.contains("OFFER_FRESHNESS_POLICY_DEFINED"))
         assertTrue(source.contains("ProductionAuthorizationState.UNKNOWN"))
         assertTrue(source.contains("WITHDRAWAL_REQUIRED"))
         assertTrue(source.contains("DOCUMENTED_DATASET_MARKET"))

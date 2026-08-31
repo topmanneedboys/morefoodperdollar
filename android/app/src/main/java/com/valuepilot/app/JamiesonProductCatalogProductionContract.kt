@@ -24,13 +24,15 @@ private const val JAMIESON_GEOGRAPHY_BASIS_ID =
     "jamieson-documented-canadian-feed-market-2026-08-31"
 private const val JAMIESON_RETENTION_BASIS_ID =
     "jamieson-60-day-post-termination-deletion-2026-08-31"
+private const val RAKUTEN_PRICE_SEMANTICS_BASIS_ID =
+    "rakuten-product-catalog-price-field-documentation-reviewed-2026-08-31"
 
 /**
  * Uses expressly covered by the advertiser's written Product Catalog confirmation.
  *
  * This provider-specific list is audit metadata. Production activation still runs through
- * the provider-neutral authorization evaluator and does not infer any factual price or
- * freshness semantics from these rights.
+ * the provider-neutral authorization evaluator and does not infer any factual freshness,
+ * quantity, rankability or economics from these rights.
  */
 enum class JamiesonProductCatalogApprovedUse {
     MOBILE_DISPLAY,
@@ -80,16 +82,20 @@ data class JamiesonProductCatalogTerminationDecision(
  * Written advertiser confirmation dated 2026-08-31 establishes the allowed mobile uses,
  * Canadian consumer market, CAD-only feed expectation, and the requirement to remove feed
  * data within 60 days after partnership termination. Rakuten support separately confirmed
- * Product Catalog access for this advertiser.
+ * Product Catalog access for this advertiser. Rakuten's reviewed Product Catalog field
+ * documentation establishes the sale/retail price vocabulary interpreted by
+ * [JamiesonProductCatalogPriceSemantics].
  *
  * This contract deliberately does NOT establish:
- * - which Rakuten price field is the production current price;
  * - per-offer freshness or a dataset recency policy;
  * - package quantity authority;
  * - installed-software networking approval; or
  * - tracking/privacy readiness.
  *
- * It performs no I/O, reads no clock, contains no provider credentials, and grants no
+ * Price-field semantics do not themselves make any row a live/current merchant fact.
+ * Production still requires the permanent lifecycle, disposition and per-offer freshness rail.
+ *
+ * This object performs no I/O, reads no clock, contains no provider credentials, and grants no
  * ranking or current-price authority by itself.
  */
 object JamiesonProductCatalogProductionContract {
@@ -146,12 +152,13 @@ object JamiesonProductCatalogProductionContract {
         currencyCode == EXPECTED_CURRENCY_CODE
 
     /**
-     * Current authorization record supported by the two written parties.
+     * Current authorization record supported by written partner evidence plus reviewed
+     * provider field documentation.
      *
-     * Rights/geography gates that are actually evidenced are SATISFIED. Factual production
-     * gates not answered by either email remain explicitly UNKNOWN. Link use is rights-approved,
-     * but installed-app networking and tracking/privacy are still PENDING, so the network-link
-     * activation profile remains fail-closed.
+     * Rights, geography and price-semantics gates that are actually evidenced are SATISFIED.
+     * Dataset recency and per-offer freshness remain explicitly UNKNOWN. Link use is
+     * rights-approved, but installed-app networking and tracking/privacy remain PENDING,
+     * so all production profiles remain fail-closed until their remaining gates are resolved.
      */
     fun partnerAuthorizationAssessment(): ProviderProductionAuthorizationAssessment =
         ProviderProductionAuthorizationAssessment(
@@ -184,9 +191,9 @@ object JamiesonProductCatalogProductionContract {
                         JAMIESON_RETENTION_BASIS_ID
                     ),
                     geographyAssessment().toProductionGateAssessment(),
-                    unknown(
+                    satisfied(
                         ProductionAuthorizationGate.PRICE_SEMANTICS_VALIDATED,
-                        "rakuten-sale-retail-current-price-semantics-unresolved"
+                        RAKUTEN_PRICE_SEMANTICS_BASIS_ID
                     ),
                     unknown(
                         ProductionAuthorizationGate.DATASET_RECENCY_POLICY_DEFINED,
