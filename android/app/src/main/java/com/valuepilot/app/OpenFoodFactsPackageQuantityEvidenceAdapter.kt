@@ -153,6 +153,6 @@ object OpenFoodFactsPackageQuantityEvidenceAdapter {
                 identity = SourceProductIdentity(gtin = gtin)
             )
 
-        return resolved.takeIf { it.usesCrossSourceRepresentation }?.value
+        return resolved?.takeIf { it.usesCrossSourceRepresentation }?.value
     }
 }
