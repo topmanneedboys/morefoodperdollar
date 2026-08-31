@@ -1,5 +1,16 @@
 package com.valuepilot.app
 
+/** Typed shell-facing availability of the explicit Staple Watch policy route. */
+internal enum class StapleWatchPolicyRouteAvailability {
+    AVAILABLE,
+    UNAVAILABLE
+}
+
+/** Receives only policy-route availability derived from verified baseline-money resolution. */
+internal fun interface StapleWatchPolicyRouteAvailabilityObserver {
+    fun onAvailabilityChanged(availability: StapleWatchPolicyRouteAvailability)
+}
+
 /**
  * Pure foreground composition owner for one explicit Staple Watch policy setup lifecycle.
  *
@@ -12,6 +23,11 @@ package com.valuepilot.app
  * session can be created. Exact duplicate object callbacks are idempotent. Blocked baseline-money
  * resolution creates no draft session.
  *
+ * [routeAvailabilityObserver] receives only whether that same authoritative money-spec resolution
+ * can support the policy route. It does not navigate, expose the money spec, imply policy
+ * completion, or grant evaluation/delivery authority. Exact duplicate evidence emits no duplicate
+ * availability callback and closing this coordinator emits none.
+ *
  * Merely completing a draft never emits policy. [onContinueAction] maps only the already-projected
  * explicit continuation marker to [requestPolicyHandoff]. A handoff is forwarded only when the
  * visible session supplies a completed finalization whose retained baseline assembly belongs to the
@@ -20,6 +36,8 @@ package com.valuepilot.app
  */
 internal class StapleWatchPolicySetupCompositionCoordinator(
     private val policyObserver: StapleWatchPolicyObserver = StapleWatchPolicyObserver { },
+    private val routeAvailabilityObserver: StapleWatchPolicyRouteAvailabilityObserver =
+        StapleWatchPolicyRouteAvailabilityObserver { },
     private val sessionFactory:
         (StapleWatchPolicyBaselineMoneySpec) -> StapleWatchPolicyDraftRouteSession
 ) : StapleWatchEconomicEvidencePreconditionsObserver, AutoCloseable {
@@ -37,6 +55,13 @@ internal class StapleWatchPolicySetupCompositionCoordinator(
         session = null
         latestPreconditions = preconditions
         latestMoneySpec = StapleWatchPolicyBaselineMoneySpecResolver.resolve(preconditions).moneySpec
+        routeAvailabilityObserver.onAvailabilityChanged(
+            if (latestMoneySpec != null) {
+                StapleWatchPolicyRouteAvailability.AVAILABLE
+            } else {
+                StapleWatchPolicyRouteAvailability.UNAVAILABLE
+            }
+        )
 
         if (routeVisible) {
             ensureSession()?.onRouteVisibilityChanged(true)
