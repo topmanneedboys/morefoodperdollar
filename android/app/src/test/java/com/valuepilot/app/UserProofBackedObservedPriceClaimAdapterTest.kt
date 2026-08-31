@@ -189,6 +189,8 @@ class UserProofBackedObservedPriceClaimAdapterTest {
         listOf(
             "ShoppingEvidence(",
             "EvidenceClaimDomain.CURRENT_PRICE",
+            "EvidenceAuthorityClass.MERCHANT_AUTHORITATIVE",
+            "EvidenceDisposition.RANKABLE",
             "ProductionCurrentPrice",
             "EvidenceAcceptanceEvaluator",
             "ProviderOfferImport",
