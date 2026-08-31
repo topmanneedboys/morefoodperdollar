@@ -35,7 +35,7 @@ class JamiesonRakutenPublishedPriceFieldRolesTest {
     }
 
     @Test
-    fun `absent optional sale price resolves retail as sole current field`() {
+    fun `absent optional sale price resolves retail only when no separate discount fields exist`() {
         val staged = staged(row(sale = "", retail = "19.99"))
         val result = JamiesonRakutenPublishedPriceFieldRoleResolver.resolve(staged)
         val resolved = result as JamiesonRakutenPublishedPriceRoleResolution.Resolved
@@ -43,6 +43,48 @@ class JamiesonRakutenPublishedPriceFieldRolesTest {
         assertEquals("Retail Price", resolved.roles.currentPriceFieldName)
         assertNull(resolved.roles.referencePriceFieldName)
         assertEquals(ProductionPriceRelationshipRule.NONE, resolved.roles.relationshipRule)
+    }
+
+    @Test
+    fun `sale absent with discount or discount type fails closed instead of ignoring adjustment`() {
+        listOf(
+            row(sale = "", retail = "19.99", discount = "5.00"),
+            row(sale = "", retail = "19.99", discountType = "amount"),
+            row(
+                sale = "",
+                retail = "19.99",
+                discount = "25",
+                discountType = "percentage"
+            )
+        ).forEach { sourceRow ->
+            val staged = staged(sourceRow)
+            val result = JamiesonRakutenPublishedPriceFieldRoleResolver.resolve(staged)
+            val blocked = result as JamiesonRakutenPublishedPriceRoleResolution.Blocked
+
+            assertEquals(
+                JamiesonRakutenPublishedPriceRoleBlocker
+                    .DISCOUNT_FIELDS_REQUIRE_SEPARATE_RESOLUTION,
+                blocked.blocker
+            )
+        }
+    }
+
+    @Test
+    fun `explicit sale price remains authoritative field even when discount metadata is also present`() {
+        val staged =
+            staged(
+                row(
+                    sale = "14.99",
+                    retail = "19.99",
+                    discount = "5.00",
+                    discountType = "amount"
+                )
+            )
+        val result = JamiesonRakutenPublishedPriceFieldRoleResolver.resolve(staged)
+        val resolved = result as JamiesonRakutenPublishedPriceRoleResolution.Resolved
+
+        assertEquals("Sale Price", resolved.roles.currentPriceFieldName)
+        assertEquals("Retail Price", resolved.roles.referencePriceFieldName)
     }
 
     @Test
@@ -116,14 +158,15 @@ class JamiesonRakutenPublishedPriceFieldRolesTest {
     }
 
     @Test
-    fun `price role resolver owns no freshness availability offer ranking network clock or persistence authority`() {
+    fun `price role resolver owns no freshness availability discount arithmetic offer ranking network clock or persistence authority`() {
         val source = source("JamiesonRakutenPublishedPriceFieldRoles.kt").readText()
 
         listOf(
             "ProductionPriceFieldRoles(",
             "CURRENT_MUST_NOT_EXCEED_REFERENCE",
             "SALE_PRICE_FIELD_NAME",
-            "RETAIL_PRICE_FIELD_NAME"
+            "RETAIL_PRICE_FIELD_NAME",
+            "DISCOUNT_FIELDS_REQUIRE_SEPARATE_RESOLUTION"
         ).forEach { required ->
             assertTrue("missing price-role boundary: $required", source.contains(required))
         }
@@ -133,6 +176,8 @@ class JamiesonRakutenPublishedPriceFieldRolesTest {
             "datasetGeneratedAtEpochMillis",
             "EvidenceFreshness",
             "AvailabilityEvidence(",
+            "Money.parse(",
+            "discount.toDouble",
             "Offer(",
             "ShoppingEvidence(",
             "ProductionOfferCandidateEvaluator",
@@ -163,7 +208,9 @@ class JamiesonRakutenPublishedPriceFieldRolesTest {
 
     private fun row(
         sale: String,
-        retail: String
+        retail: String,
+        discount: String = "",
+        discountType: String = ""
     ): JamiesonRakutenPublishedCatalogRow =
         JamiesonRakutenPublishedCatalogRow.decode(
             MutableList(JamiesonRakutenPublishedCatalogRow.PRIMARY_FIELD_COUNT) { "" }
@@ -174,6 +221,8 @@ class JamiesonRakutenPublishedPriceFieldRolesTest {
                     fields[JamiesonRakutenPublishedCatalogField.PRIMARY_CATEGORY.index] = "Health"
                     fields[JamiesonRakutenPublishedCatalogField.PRODUCT_URL.index] = "https://example.invalid/product"
                     fields[JamiesonRakutenPublishedCatalogField.PRODUCT_IMAGE_URL.index] = "https://example.invalid/image.jpg"
+                    fields[JamiesonRakutenPublishedCatalogField.DISCOUNT.index] = discount
+                    fields[JamiesonRakutenPublishedCatalogField.DISCOUNT_TYPE.index] = discountType
                     fields[JamiesonRakutenPublishedCatalogField.SALE_PRICE.index] = sale
                     fields[JamiesonRakutenPublishedCatalogField.RETAIL_PRICE.index] = retail
                     fields[JamiesonRakutenPublishedCatalogField.UNIVERSAL_PRODUCT_CODE.index] = "4006381333931"
