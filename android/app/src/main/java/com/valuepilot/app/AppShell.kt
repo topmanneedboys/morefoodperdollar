@@ -17,8 +17,8 @@ enum class AppPrimaryTab {
  * Routes that can be rendered by a presentation.
  *
  * COMPARE is a standalone workflow layered above the four permanent primary tabs.
- * STAPLE_WATCH_SETUP is a Saved-owned subroute layered above the Saved primary tab.
- * Neither workflow is a fifth primary tab.
+ * STAPLE_WATCH_SETUP and STAPLE_WATCH_POLICY are Saved-owned subroutes layered above the Saved
+ * primary tab. Neither workflow is a fifth primary tab.
  */
 enum class AppRoute {
     HOME,
@@ -26,6 +26,7 @@ enum class AppRoute {
     BASKET,
     SAVED,
     STAPLE_WATCH_SETUP,
+    STAPLE_WATCH_POLICY,
     COMPARE
 }
 
@@ -62,6 +63,8 @@ sealed interface AppShellIntent {
 
     data object OpenStapleWatchSetup : AppShellIntent
 
+    data object OpenStapleWatchPolicy : AppShellIntent
+
     data object OpenStandaloneCompare : AppShellIntent
 
     data object NavigateBack : AppShellIntent
@@ -85,6 +88,9 @@ object AppShellReducer {
 
             AppShellIntent.OpenStapleWatchSetup ->
                 openStapleWatchSetup(previous)
+
+            AppShellIntent.OpenStapleWatchPolicy ->
+                openStapleWatchPolicy(previous)
 
             AppShellIntent.OpenStandaloneCompare ->
                 openCompare(previous)
@@ -123,6 +129,26 @@ object AppShellReducer {
         )
     }
 
+    private fun openStapleWatchPolicy(
+        previous: AppShellState
+    ): AppShellState {
+        if (previous.route == AppRoute.STAPLE_WATCH_POLICY) {
+            return previous
+        }
+        if (
+            previous.selectedPrimaryTab != AppPrimaryTab.SAVED ||
+            previous.route != AppRoute.STAPLE_WATCH_SETUP
+        ) {
+            return previous
+        }
+
+        return previous.copy(
+            route = AppRoute.STAPLE_WATCH_POLICY,
+            compareReturnTab = null,
+            canNavigateBack = true
+        )
+    }
+
     private fun openCompare(
         previous: AppShellState
     ): AppShellState {
@@ -153,6 +179,14 @@ object AppShellReducer {
                     canNavigateBack = false
                 )
             }
+
+            AppRoute.STAPLE_WATCH_POLICY ->
+                AppShellState(
+                    selectedPrimaryTab = AppPrimaryTab.SAVED,
+                    route = AppRoute.STAPLE_WATCH_SETUP,
+                    compareReturnTab = null,
+                    canNavigateBack = true
+                )
 
             AppRoute.STAPLE_WATCH_SETUP ->
                 selectPrimary(AppPrimaryTab.SAVED)
