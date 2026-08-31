@@ -17,8 +17,8 @@ enum class AppPrimaryTab {
  * Routes that can be rendered by a presentation.
  *
  * COMPARE is a standalone workflow layered above the four permanent primary tabs.
- * STAPLE_WATCH_SETUP and STAPLE_WATCH_POLICY are Saved-owned subroutes layered above the Saved
- * primary tab. Neither workflow is a fifth primary tab.
+ * STAPLE_WATCH_SETUP, STAPLE_WATCH_POLICY and STAPLE_WATCH_RESULT are Saved-owned subroutes layered
+ * above the Saved primary tab. Neither workflow is a fifth primary tab.
  */
 enum class AppRoute {
     HOME,
@@ -27,6 +27,7 @@ enum class AppRoute {
     SAVED,
     STAPLE_WATCH_SETUP,
     STAPLE_WATCH_POLICY,
+    STAPLE_WATCH_RESULT,
     COMPARE
 }
 
@@ -65,6 +66,8 @@ sealed interface AppShellIntent {
 
     data object OpenStapleWatchPolicy : AppShellIntent
 
+    data object OpenStapleWatchResult : AppShellIntent
+
     data object OpenStandaloneCompare : AppShellIntent
 
     data object NavigateBack : AppShellIntent
@@ -91,6 +94,9 @@ object AppShellReducer {
 
             AppShellIntent.OpenStapleWatchPolicy ->
                 openStapleWatchPolicy(previous)
+
+            AppShellIntent.OpenStapleWatchResult ->
+                openStapleWatchResult(previous)
 
             AppShellIntent.OpenStandaloneCompare ->
                 openCompare(previous)
@@ -149,6 +155,26 @@ object AppShellReducer {
         )
     }
 
+    private fun openStapleWatchResult(
+        previous: AppShellState
+    ): AppShellState {
+        if (previous.route == AppRoute.STAPLE_WATCH_RESULT) {
+            return previous
+        }
+        if (
+            previous.selectedPrimaryTab != AppPrimaryTab.SAVED ||
+            previous.route != AppRoute.STAPLE_WATCH_POLICY
+        ) {
+            return previous
+        }
+
+        return previous.copy(
+            route = AppRoute.STAPLE_WATCH_RESULT,
+            compareReturnTab = null,
+            canNavigateBack = true
+        )
+    }
+
     private fun openCompare(
         previous: AppShellState
     ): AppShellState {
@@ -179,6 +205,14 @@ object AppShellReducer {
                     canNavigateBack = false
                 )
             }
+
+            AppRoute.STAPLE_WATCH_RESULT ->
+                AppShellState(
+                    selectedPrimaryTab = AppPrimaryTab.SAVED,
+                    route = AppRoute.STAPLE_WATCH_POLICY,
+                    compareReturnTab = null,
+                    canNavigateBack = true
+                )
 
             AppRoute.STAPLE_WATCH_POLICY ->
                 AppShellState(
