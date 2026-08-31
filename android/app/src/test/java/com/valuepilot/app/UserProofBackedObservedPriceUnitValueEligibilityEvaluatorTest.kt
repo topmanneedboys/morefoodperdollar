@@ -469,6 +469,7 @@ class UserProofBackedObservedPriceUnitValueEligibilityEvaluatorTest {
         val storage = CountingProofStorage()
         val store = UserProvidedPriceProofArtifactLocalStore(storage)
         assertTrue(store.retain(artifact, bytes).accepted)
+        storage.resetReadCalls()
         val claimAdapter = UserProofBackedObservedPriceClaimAdapter(store)
         val usePolicy = UserProofBackedObservedPriceUsePolicy(claimAdapter)
 
@@ -503,6 +504,10 @@ class UserProofBackedObservedPriceUnitValueEligibilityEvaluatorTest {
         private val entries = linkedMapOf<String, ByteArray>()
         var readCalls: Int = 0
             private set
+
+        fun resetReadCalls() {
+            readCalls = 0
+        }
 
         override fun read(
             storageKey: String,
