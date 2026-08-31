@@ -3,7 +3,7 @@ package com.valuepilot.app
 private const val MAX_STAPLE_WATCH_SAVED_PRODUCT_ROWS = 128
 private const val MAX_STAPLE_WATCH_SAVED_STORE_ROWS = 64
 
-/** UI-only readiness for configuring Watch My Staples from explicit Saved choices. */
+/** UI-only identity readiness for configuring Watch My Staples from explicit Saved choices. */
 enum class StapleWatchSavedSelectionUiStatus {
     NEEDS_SELECTION,
     READY_FOR_FACT_CHECK,
@@ -56,6 +56,8 @@ data class StapleWatchSavedStoreSelectionUiRow(
 /**
  * Immutable consumer-ready setup state.
  *
+ * [status] describes only explicit Saved identity readiness. [factCheckCapability] is a separate
+ * composition fact describing whether this build has a real foreground fact source configured.
  * Stable item/store identities exist only inside typed selection actions. The continuation marker
  * carries no identity. All normal strings come from already-sanitized Saved display metadata or
  * fixed product copy. A renderer must never parse a label to recover identity or infer whether an
@@ -77,7 +79,9 @@ data class StapleWatchSavedSelectionUiState(
     val clearSelectionAction: StapleWatchSavedIdentitySelectionAction.ClearSelection?,
     val clearSelectionActionLabel: String?,
     val continueAction: StapleWatchSavedIdentityHandoffUiAction?,
-    val continueActionLabel: String?
+    val continueActionLabel: String?,
+    val factCheckCapability: StapleWatchForegroundFactCheckCapability =
+        StapleWatchForegroundFactCheckCapability.CONFIGURED
 ) {
     init {
         require(headline.isNotBlank())
@@ -97,8 +101,10 @@ data class StapleWatchSavedSelectionUiState(
         require((continueAction != null) == (continueActionLabel != null))
         require(continueActionLabel == null || continueActionLabel.isNotBlank())
         require(
-            (status == StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK) ==
-                (continueAction != null)
+            (
+                status == StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK &&
+                    factCheckCapability == StapleWatchForegroundFactCheckCapability.CONFIGURED
+            ) == (continueAction != null)
         )
         require(
             continueAction == null ||
@@ -122,8 +128,10 @@ data class StapleWatchSavedSelectionUiState(
  * display name for an already selected watched product or usual store fails closed: setup is shown
  * as DISPLAY_METADATA_INCOMPLETE even if the identity reducer could otherwise form a handoff.
  *
- * The identity-only continuation marker is exposed only when the already-existing setup status is
- * READY_FOR_FACT_CHECK. It does not itself create a handoff or start any work.
+ * The identity-only continuation marker is exposed only when the identity setup status is
+ * READY_FOR_FACT_CHECK. The projection marks capability CONFIGURED only as a neutral default for
+ * this pure identity artifact; the physical presentation boundary must overwrite it with the actual
+ * composition capability before rendering. The marker does not itself create a handoff or start work.
  *
  * This boundary owns no fact retrieval, price calculation, route calculation, evidence-freshness
  * policy, scheduling, storage, Android lifecycle, or delivery authority.
