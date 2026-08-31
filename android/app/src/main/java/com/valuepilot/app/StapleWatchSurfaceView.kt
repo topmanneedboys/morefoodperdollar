@@ -27,6 +27,7 @@ class StapleWatchSurfaceView @JvmOverloads constructor(
     init {
         orientation = VERTICAL
         isSaveEnabled = false
+        visibility = GONE
 
         addView(headline)
         addView(statusTitle)
@@ -55,6 +56,19 @@ class StapleWatchSurfaceView @JvmOverloads constructor(
             notice.text = noticeText
             notice.visibility = VISIBLE
         }
+        visibility = VISIBLE
+    }
+
+    /** Removes all previously rendered consumer state and hides this physical result surface. */
+    fun clear() {
+        headline.text = ""
+        statusTitle.text = ""
+        guidance.text = ""
+        baselineEvidence.text = ""
+        renderSwitchCandidate(null)
+        notice.text = ""
+        notice.visibility = GONE
+        visibility = GONE
     }
 
     private fun renderSwitchCandidate(candidate: StapleWatchSwitchUiState?) {
