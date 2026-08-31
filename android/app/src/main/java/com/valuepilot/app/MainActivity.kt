@@ -60,6 +60,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var stapleWatchSetupExperience: StapleWatchSavedSelectionSurfaceView
     private lateinit var savedRouteCoordinator: PracticalShoppingSavedRouteCoordinator
     private lateinit var stapleWatchForegroundEvaluationInputHost: StapleWatchForegroundEvaluationInputHost
+    private lateinit var stapleWatchSavedDisplayMetadataCompositionCoordinator:
+        StapleWatchSavedDisplayMetadataCompositionCoordinator
     private lateinit var stapleWatchFactResolutionHost: StapleWatchFactResolutionHost
     private lateinit var stapleWatchSetupCoordinator: StapleWatchSavedSetupCompositionCoordinator
 
@@ -171,6 +173,7 @@ class MainActivity : AppCompatActivity() {
             stapleWatchSetupExperience.onContinueAction = null
             stapleWatchSetupCoordinator.close()
             stapleWatchFactResolutionHost.close()
+            stapleWatchSavedDisplayMetadataCompositionCoordinator.close()
             stapleWatchForegroundEvaluationInputHost.close()
             savedRouteCoordinator.close()
         }
@@ -325,9 +328,14 @@ class MainActivity : AppCompatActivity() {
             StapleWatchSavedSelectionSurfacePresenter(stapleWatchSetupExperience)
 
         stapleWatchForegroundEvaluationInputHost = StapleWatchForegroundEvaluationInputHost()
+        stapleWatchSavedDisplayMetadataCompositionCoordinator =
+            StapleWatchSavedDisplayMetadataCompositionCoordinator(
+                preconditionsObserver = stapleWatchForegroundEvaluationInputHost,
+                displayMetadataObserver = stapleWatchForegroundEvaluationInputHost
+            )
         stapleWatchFactResolutionHost =
             StapleWatchFactResolutionHost(
-                preconditionsObserver = stapleWatchForegroundEvaluationInputHost
+                preconditionsObserver = stapleWatchSavedDisplayMetadataCompositionCoordinator
             )
         stapleWatchSetupCoordinator =
             StapleWatchSavedSetupCompositionCoordinator(
@@ -345,6 +353,11 @@ class MainActivity : AppCompatActivity() {
                 savedPresenter.render(state)
                 stapleLaunchPresenter.render(state)
             }
+        val savedSnapshotObserver =
+            PracticalShoppingSavedValidatedSnapshotObserver { snapshot ->
+                stapleWatchSetupCoordinator.onSnapshot(snapshot)
+                stapleWatchSavedDisplayMetadataCompositionCoordinator.onSnapshot(snapshot)
+            }
 
         savedRouteCoordinator =
             PracticalShoppingSavedRouteCoordinator(
@@ -352,7 +365,7 @@ class MainActivity : AppCompatActivity() {
                     PracticalShoppingSavedAndroidSession.create(
                         context = this,
                         renderer = savedRenderer,
-                        snapshotObserver = stapleWatchSetupCoordinator
+                        snapshotObserver = savedSnapshotObserver
                     )
                 }
             )
