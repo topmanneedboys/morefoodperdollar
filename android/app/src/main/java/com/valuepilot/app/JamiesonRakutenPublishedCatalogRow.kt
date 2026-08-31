@@ -1,62 +1,70 @@
 package com.valuepilot.app
 
 /**
- * Published Rakuten Product Catalog primary-field layout used by the offline
- * qualification tooling.
+ * Published Rakuten Product Catalog primary-field layout mirrored from the
+ * repository's offline Product Catalog qualifier.
  *
- * This is deliberately a structural schema only. Field names describe the
- * provider's published columns; they do not establish which price is a
- * production-authoritative selling price, whether an offer is fresh, or whether
- * a real Jamieson feed has passed data-quality qualification.
+ * [qualifierFieldName] is the exact canonical key used by
+ * tools/qualify_rakuten_product_catalog.py. [publishedName] is a human-readable
+ * provider column label. Keeping both here lets tests mechanically catch schema
+ * drift instead of validating an Android-only invented layout.
+ *
+ * This remains a structural schema only. Field position does not establish a
+ * production-authoritative selling price, freshness, availability authority,
+ * geography, rights, or offer eligibility.
  */
 enum class JamiesonRakutenPublishedCatalogField(
     val index: Int,
+    val qualifierFieldName: String,
     val publishedName: String
 ) {
-    PRODUCT_NAME(0, "Product Name"),
-    SKU_NUMBER(1, "SKU Number"),
-    PRIMARY_CATEGORY(2, "Primary Category"),
-    PRODUCT_URL(3, "Product URL"),
-    IMAGE_URL(4, "Image URL"),
-    BUY_URL(5, "Buy URL"),
-    SHORT_PRODUCT_DESCRIPTION(6, "Short Product Description"),
-    LONG_PRODUCT_DESCRIPTION(7, "Long Product Description"),
-    DISCOUNT(8, "Discount"),
-    DISCOUNT_TYPE(9, "Discount Type"),
-    SALE_PRICE(10, "Sale Price"),
-    RETAIL_PRICE(11, "Retail Price"),
-    BEGIN_DATE(12, "Begin Date"),
-    END_DATE(13, "End Date"),
-    BRAND(14, "Brand"),
-    SHIPPING(15, "Shipping"),
-    KEYWORDS(16, "Keywords"),
-    MANUFACTURER_PART_NUMBER(17, "Manufacturer Part #"),
-    MANUFACTURER_NAME(18, "Manufacturer Name"),
-    SHIPPING_INFORMATION(19, "Shipping Information"),
-    AVAILABILITY(20, "Availability"),
-    UNIVERSAL_PRODUCT_CODE(21, "Universal Product Code"),
-    CLASS_ID(22, "Class ID"),
-    CURRENCY(23, "Currency"),
-    M1(24, "M1"),
-    PIXEL(25, "Pixel"),
-    MISC1(26, "Misc1"),
-    MISC2(27, "Misc2")
+    PRODUCT_ID(0, "product_id", "Product ID"),
+    PRODUCT_NAME(1, "product_name", "Product Name"),
+    SKU_NUMBER(2, "sku_number", "SKU Number"),
+    PRIMARY_CATEGORY(3, "primary_category", "Primary Category"),
+    SECONDARY_CATEGORY(4, "secondary_category", "Secondary Category"),
+    PRODUCT_URL(5, "product_url", "Product URL"),
+    PRODUCT_IMAGE_URL(6, "product_image_url", "Product Image URL"),
+    BUY_URL(7, "buy_url", "Buy URL"),
+    SHORT_PRODUCT_DESCRIPTION(8, "short_description", "Short Product Description"),
+    LONG_PRODUCT_DESCRIPTION(9, "long_description", "Long Product Description"),
+    DISCOUNT(10, "discount", "Discount"),
+    DISCOUNT_TYPE(11, "discount_type", "Discount Type"),
+    SALE_PRICE(12, "sale_price", "Sale Price"),
+    RETAIL_PRICE(13, "retail_price", "Retail Price"),
+    BEGIN_DATE(14, "begin_date", "Begin Date"),
+    END_DATE(15, "end_date", "End Date"),
+    BRAND(16, "brand", "Brand"),
+    SHIPPING(17, "shipping", "Shipping"),
+    KEYWORDS(18, "keywords", "Keywords"),
+    MANUFACTURER_PART_NUMBER(19, "manufacturer_part_number", "Manufacturer Part #"),
+    MANUFACTURER_NAME(20, "manufacturer_name", "Manufacturer Name"),
+    SHIPPING_INFORMATION(21, "shipping_information", "Shipping Information"),
+    AVAILABILITY(22, "availability", "Availability"),
+    UNIVERSAL_PRODUCT_CODE(23, "upc", "Universal Product Code"),
+    CLASS_ID(24, "class_id", "Class ID"),
+    CURRENCY(25, "currency", "Currency"),
+    M1(26, "m1", "M1"),
+    PIXEL(27, "pixel", "Pixel")
 }
 
 /**
  * Immutable decoding of one already-tokenized Rakuten Product Catalog product row.
  *
- * Delimiter detection, quoting, gzip/zip handling, HDR parsing and whole-feed
+ * Delimiter detection, quoting, gzip/zip handling, HDR/TRL parsing and whole-feed
  * qualification belong to the existing offline qualifier. This type receives a
- * row only after tokenization and preserves every supplied field exactly.
+ * product row only after tokenization and preserves every supplied field exactly.
  *
- * Extra fields after the 28 published primary fields are retained as opaque
- * extra-price fields because the published format permits advertiser-specific
- * additions there. No semantic meaning is assigned to those extras.
+ * Rakuten's documented Product Catalog has 28 primary fields followed by up to
+ * ten class-dependent attribute positions in the documented full shape. Real
+ * feeds may contain the documented full shape or more. Without matching class
+ * metadata those post-primary values cannot be named safely, so this boundary
+ * retains every value after field 28 opaquely and in order. It never interprets
+ * those values as prices, quantities, availability, or any other factual domain.
  */
 class JamiesonRakutenPublishedCatalogRow private constructor(
     val primaryFieldValues: List<String>,
-    val extraPriceFieldValues: List<String>
+    val opaquePostPrimaryFieldValues: List<String>
 ) {
     init {
         require(primaryFieldValues.size == PRIMARY_FIELD_COUNT) {
@@ -67,6 +75,9 @@ class JamiesonRakutenPublishedCatalogRow private constructor(
     fun value(field: JamiesonRakutenPublishedCatalogField): String =
         primaryFieldValues[field.index]
 
+    val productId: String
+        get() = value(JamiesonRakutenPublishedCatalogField.PRODUCT_ID)
+
     val productName: String
         get() = value(JamiesonRakutenPublishedCatalogField.PRODUCT_NAME)
 
@@ -76,11 +87,14 @@ class JamiesonRakutenPublishedCatalogRow private constructor(
     val primaryCategory: String
         get() = value(JamiesonRakutenPublishedCatalogField.PRIMARY_CATEGORY)
 
+    val secondaryCategory: String
+        get() = value(JamiesonRakutenPublishedCatalogField.SECONDARY_CATEGORY)
+
     val productUrl: String
         get() = value(JamiesonRakutenPublishedCatalogField.PRODUCT_URL)
 
-    val imageUrl: String
-        get() = value(JamiesonRakutenPublishedCatalogField.IMAGE_URL)
+    val productImageUrl: String
+        get() = value(JamiesonRakutenPublishedCatalogField.PRODUCT_IMAGE_URL)
 
     val buyUrl: String
         get() = value(JamiesonRakutenPublishedCatalogField.BUY_URL)
@@ -147,12 +161,6 @@ class JamiesonRakutenPublishedCatalogRow private constructor(
     val pixel: String
         get() = value(JamiesonRakutenPublishedCatalogField.PIXEL)
 
-    val misc1: String
-        get() = value(JamiesonRakutenPublishedCatalogField.MISC1)
-
-    val misc2: String
-        get() = value(JamiesonRakutenPublishedCatalogField.MISC2)
-
     companion object {
         const val PRIMARY_FIELD_COUNT = 28
 
@@ -163,7 +171,7 @@ class JamiesonRakutenPublishedCatalogRow private constructor(
 
             return JamiesonRakutenPublishedCatalogRow(
                 primaryFieldValues = tokenizedFields.take(PRIMARY_FIELD_COUNT).toList(),
-                extraPriceFieldValues = tokenizedFields.drop(PRIMARY_FIELD_COUNT).toList()
+                opaquePostPrimaryFieldValues = tokenizedFields.drop(PRIMARY_FIELD_COUNT).toList()
             )
         }
     }

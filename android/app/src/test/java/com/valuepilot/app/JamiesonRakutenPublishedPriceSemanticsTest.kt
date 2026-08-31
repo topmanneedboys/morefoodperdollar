@@ -31,6 +31,30 @@ class JamiesonRakutenPublishedPriceSemanticsTest {
     }
 
     @Test
+    fun `price semantics read official qualifier positions instead of obsolete android offsets`() {
+        val fields = publishedFields(sale = "12.34", retail = "15.99", currency = "CAD").toMutableList()
+        fields[10] = "not-a-sale-price"
+        fields[11] = "not-a-retail-price"
+        fields[23] = "064642012345"
+
+        val row = JamiesonRakutenPublishedCatalogRow.decode(fields)
+        val result = JamiesonRakutenPublishedPriceSemantics.assess(row)
+
+        assertEquals("not-a-sale-price", row.discount)
+        assertEquals("not-a-retail-price", row.discountType)
+        assertEquals("064642012345", row.universalProductCode)
+        assertEquals("12.34", row.salePriceFieldValue)
+        assertEquals("15.99", row.retailPriceFieldValue)
+        assertEquals("CAD", row.currencyFieldValue)
+        assertEquals(Money(1_234L, "CAD"), result.salePrice)
+        assertEquals(Money(1_599L, "CAD"), result.retailPrice)
+        assertEquals(
+            ImportedDiscountRelationship.DISCOUNTED_BELOW_REFERENCE,
+            result.relationshipAssessment?.relationship
+        )
+    }
+
+    @Test
     fun `equal sale and retail is preserved instead of being rewritten as a discount`() {
         val result = assess(sale = "15.99", retail = "15.99")
 
@@ -217,12 +241,18 @@ class JamiesonRakutenPublishedPriceSemanticsTest {
     ): List<String> =
         MutableList(JamiesonRakutenPublishedCatalogRow.PRIMARY_FIELD_COUNT) { index -> "field-$index" }
             .also { fields ->
-                fields[0] = "Jamieson Test Product"
-                fields[1] = "sku-1"
-                fields[10] = sale
-                fields[11] = retail
-                fields[20] = "in stock"
-                fields[23] = currency
+                fields[JamiesonRakutenPublishedCatalogField.PRODUCT_ID.index] = "product-1"
+                fields[JamiesonRakutenPublishedCatalogField.PRODUCT_NAME.index] = "Jamieson Test Product"
+                fields[JamiesonRakutenPublishedCatalogField.SKU_NUMBER.index] = "sku-1"
+                fields[JamiesonRakutenPublishedCatalogField.PRIMARY_CATEGORY.index] = "Health"
+                fields[JamiesonRakutenPublishedCatalogField.SECONDARY_CATEGORY.index] = "Vitamins"
+                fields[JamiesonRakutenPublishedCatalogField.DISCOUNT.index] = "discount-field"
+                fields[JamiesonRakutenPublishedCatalogField.DISCOUNT_TYPE.index] = "discount-type-field"
+                fields[JamiesonRakutenPublishedCatalogField.SALE_PRICE.index] = sale
+                fields[JamiesonRakutenPublishedCatalogField.RETAIL_PRICE.index] = retail
+                fields[JamiesonRakutenPublishedCatalogField.AVAILABILITY.index] = "in-stock"
+                fields[JamiesonRakutenPublishedCatalogField.UNIVERSAL_PRODUCT_CODE.index] = "064642012345"
+                fields[JamiesonRakutenPublishedCatalogField.CURRENCY.index] = currency
             }
 
     private fun source(fileName: String): File =
