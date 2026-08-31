@@ -60,7 +60,7 @@ object ProductPackageQuantityFactResolver {
     }
 
     fun resolve(
-        productKey: String?,
+        productKey: String,
         candidates: List<ProductPackageQuantityEvidenceCandidate>
     ): ProductPackageQuantityResolutionResult {
         validateCandidates(candidates)
