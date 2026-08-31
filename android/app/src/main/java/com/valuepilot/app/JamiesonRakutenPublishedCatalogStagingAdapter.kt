@@ -25,8 +25,7 @@ enum class JamiesonRakutenPublishedCatalogStagingRejectionReason {
     INVALID_PRODUCT_URL,
     INVALID_IMAGE_URL,
     UNUSABLE_PRICE_FIELDS,
-    DECLARED_CURRENCY_MISMATCH,
-    INVALID_VERIFIED_FEED_GENERATION_TIME
+    DECLARED_CURRENCY_MISMATCH
 }
 
 /**
@@ -72,6 +71,7 @@ class JamiesonRakutenPublishedCatalogStagedRecord private constructor(
         require(importRecord.channel == EvidenceChannel.FIRST_PARTY_FEED)
         require(importRecord.claimKind == EvidenceClaimKind.SOURCE_ASSERTED)
         require(importRecord.priceSemantics == ImportedPriceSemantics.UNRESOLVED_SOURCE_FIELDS)
+        require(importRecord.datasetGeneratedAtEpochMillis == null)
         require(importRecord.priceObservedAtEpochMillis == null)
         require(importRecord.availability.state == AvailabilityState.UNKNOWN)
         require(importRecord.availability.claimKind == EvidenceClaimKind.UNKNOWN)
@@ -106,9 +106,12 @@ class JamiesonRakutenPublishedCatalogStagedRecord private constructor(
  * Availability, Begin Date, End Date or post-primary attributes. It owns no network, clock,
  * filesystem, UI, ranking or background-work capability.
  *
- * [verifiedFeedHeaderGeneratedAtEpochMillis] may only be the positively parsed timestamp from
- * the Rakuten HDR record (file/dataset generation provenance). A download/import time must not
- * be passed here, and this timestamp is never copied into per-offer freshness.
+ * Dataset provenance time intentionally remains unknown here. Rakuten's HDR timestamp is useful
+ * file/deposit provenance, but this row-only boundary does not yet hold a source-bound Jamieson
+ * feed snapshot identity that can prove an HDR belongs to this exact advertiser dataset. Until
+ * that stronger boundary exists, callers cannot inject a timestamp and
+ * [ProviderOfferImportRecord.datasetGeneratedAtEpochMillis] remains null. It is also never
+ * substituted for per-offer price freshness.
  */
 object JamiesonRakutenPublishedCatalogStagingAdapter {
     const val PROVIDER_DISPLAY_NAME = "Rakuten Advertising"
@@ -120,8 +123,7 @@ object JamiesonRakutenPublishedCatalogStagingAdapter {
     private const val MAX_URL_LENGTH = 4096
 
     fun stage(
-        row: JamiesonRakutenPublishedCatalogRow,
-        verifiedFeedHeaderGeneratedAtEpochMillis: Long? = null
+        row: JamiesonRakutenPublishedCatalogRow
     ): JamiesonRakutenPublishedCatalogStagingResult {
         val priceAssessment = JamiesonRakutenPublishedPriceSemantics.assess(row)
         val reasons = linkedSetOf<JamiesonRakutenPublishedCatalogStagingRejectionReason>()
@@ -166,15 +168,6 @@ object JamiesonRakutenPublishedCatalogStagingAdapter {
             )
         ) {
             reasons += JamiesonRakutenPublishedCatalogStagingRejectionReason.DECLARED_CURRENCY_MISMATCH
-        }
-
-        if (
-            verifiedFeedHeaderGeneratedAtEpochMillis != null &&
-                verifiedFeedHeaderGeneratedAtEpochMillis <= 0L
-        ) {
-            reasons +=
-                JamiesonRakutenPublishedCatalogStagingRejectionReason
-                    .INVALID_VERIFIED_FEED_GENERATION_TIME
         }
 
         if (reasons.isNotEmpty()) {
@@ -225,7 +218,7 @@ object JamiesonRakutenPublishedCatalogStagingAdapter {
                     ),
                 productUrl = row.productUrl,
                 imageUrl = row.productImageUrl,
-                datasetGeneratedAtEpochMillis = verifiedFeedHeaderGeneratedAtEpochMillis,
+                datasetGeneratedAtEpochMillis = null,
                 priceObservedAtEpochMillis = null
             )
 
