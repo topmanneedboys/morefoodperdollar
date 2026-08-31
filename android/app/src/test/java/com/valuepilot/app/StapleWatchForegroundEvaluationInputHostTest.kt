@@ -69,6 +69,31 @@ class StapleWatchForegroundEvaluationInputHostTest {
     }
 
     @Test
+    fun policyObserverTargetsOnlyCurrentOpenEvidenceSession() {
+        val host = StapleWatchForegroundEvaluationInputHost()
+        val observer: StapleWatchPolicyObserver = host
+        val policy = policy()
+
+        observer.onPolicy(policy)
+        assertNull(host.currentSessionOrNull())
+
+        val preconditions = preconditions("policy-observer")
+        host.onPreconditions(preconditions)
+        observer.onPolicy(policy)
+
+        val session = requireNotNull(host.currentSessionOrNull())
+        assertSame(preconditions, session.preconditions)
+        assertSame(policy, session.policy)
+        assertNull(session.displayMetadata)
+        assertNull(session.evaluation)
+        assertFalse(session.readyForEvaluation)
+
+        host.close()
+        observer.onPolicy(policy())
+        assertNull(host.currentSessionOrNull())
+    }
+
+    @Test
     fun explicitInputsStayScopedToCurrentEvidenceSession() {
         val firstPreconditions = preconditions("first")
         val policy = policy()
@@ -128,7 +153,7 @@ class StapleWatchForegroundEvaluationInputHostTest {
 
         assertTrue(
             source.contains(
-                "StapleWatchEconomicEvidencePreconditionsObserver,\n    StapleWatchStoreDisplayMetadataObserver,"
+                "StapleWatchEconomicEvidencePreconditionsObserver,\n    StapleWatchPolicyObserver,\n    StapleWatchStoreDisplayMetadataObserver,"
             )
         )
         assertTrue(
@@ -136,6 +161,8 @@ class StapleWatchForegroundEvaluationInputHostTest {
                 "currentSession = StapleWatchForegroundEvaluationInputSession.start(preconditions)"
             )
         )
+        assertTrue(source.contains("override fun onPolicy(policy: StapleWatchPolicy)"))
+        assertTrue(source.contains("accept(policy)"))
         assertTrue(
             source.contains(
                 "override fun onDisplayMetadata(metadata: StapleWatchStoreDisplayMetadata)"

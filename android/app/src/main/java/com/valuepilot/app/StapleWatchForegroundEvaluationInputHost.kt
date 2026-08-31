@@ -10,6 +10,7 @@ import com.valuepilot.core.StapleWatchPolicy
  */
 internal class StapleWatchForegroundEvaluationInputHost :
     StapleWatchEconomicEvidencePreconditionsObserver,
+    StapleWatchPolicyObserver,
     StapleWatchStoreDisplayMetadataObserver,
     AutoCloseable {
 
@@ -19,6 +20,10 @@ internal class StapleWatchForegroundEvaluationInputHost :
     override fun onPreconditions(preconditions: StapleWatchEconomicEvidencePreconditions) {
         if (closed) return
         currentSession = StapleWatchForegroundEvaluationInputSession.start(preconditions)
+    }
+
+    override fun onPolicy(policy: StapleWatchPolicy) {
+        accept(policy)
     }
 
     override fun onDisplayMetadata(metadata: StapleWatchStoreDisplayMetadata) {
