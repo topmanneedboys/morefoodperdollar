@@ -95,12 +95,19 @@ data class ProductionActivationProfile(
  *
  * These profiles contain no provider names and grant no authorization by
  * themselves. They only declare what must already be satisfied.
+ *
+ * Metadata-only catalog activation is intentionally separate from price-bearing
+ * catalog activation. Product names, descriptions, images and other non-price
+ * catalog content still require an explicit dataset-recency policy, but they do
+ * not require current-price semantics or per-offer price freshness. The metadata
+ * profile grants no price, promotion, availability, stock, ranking, affiliate-link
+ * or networking authority.
  */
 object ProductionActivationProfiles {
 
-    val CONSUMER_MOBILE_CATALOG =
+    val CONSUMER_MOBILE_CATALOG_METADATA =
         ProductionActivationProfile(
-            id = "consumer-mobile-catalog",
+            id = "consumer-mobile-catalog-metadata",
             requiredGates =
                 setOf(
                     ProductionAuthorizationGate.DATA_ACCESS_AUTHORIZED,
@@ -110,10 +117,19 @@ object ProductionActivationProfiles {
                     ProductionAuthorizationGate.MOBILE_APP_AUTHORIZED,
                     ProductionAuthorizationGate.RETENTION_DELETION_POLICY_DEFINED,
                     ProductionAuthorizationGate.OFFER_GEOGRAPHY_VALIDATED,
-                    ProductionAuthorizationGate.PRICE_SEMANTICS_VALIDATED,
-                    ProductionAuthorizationGate.DATASET_RECENCY_POLICY_DEFINED,
-                    ProductionAuthorizationGate.OFFER_FRESHNESS_POLICY_DEFINED
+                    ProductionAuthorizationGate.DATASET_RECENCY_POLICY_DEFINED
                 )
+        )
+
+    val CONSUMER_MOBILE_CATALOG =
+        ProductionActivationProfile(
+            id = "consumer-mobile-catalog",
+            requiredGates =
+                CONSUMER_MOBILE_CATALOG_METADATA.requiredGates +
+                    setOf(
+                        ProductionAuthorizationGate.PRICE_SEMANTICS_VALIDATED,
+                        ProductionAuthorizationGate.OFFER_FRESHNESS_POLICY_DEFINED
+                    )
         )
 
     val CONSUMER_MOBILE_CATALOG_WITH_NETWORK_LINKS =
