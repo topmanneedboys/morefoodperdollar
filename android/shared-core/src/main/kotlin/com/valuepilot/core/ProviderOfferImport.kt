@@ -136,6 +136,53 @@ data class ImportedDiscountAssessment(
 }
 
 /**
+ * Pure provider-neutral evaluator for an adapter-declared discounted/reference
+ * price pair.
+ *
+ * The caller supplies role-bearing source field names from documented provider
+ * semantics plus already parsed exact money. Missing, malformed or non-positive
+ * money fails closed. This evaluator never chooses a current price, creates an
+ * Offer, assigns freshness, or makes evidence rankable.
+ */
+object ImportedDiscountRelationshipEvaluator {
+
+    fun assess(
+        discountedFieldName: String,
+        discountedAmount: Money?,
+        referenceFieldName: String,
+        referenceAmount: Money?
+    ): ImportedDiscountAssessment {
+        require(discountedFieldName.isNotBlank())
+        require(referenceFieldName.isNotBlank())
+        require(!discountedFieldName.equals(referenceFieldName, ignoreCase = true)) {
+            "Discounted and reference price fields must be distinct"
+        }
+
+        val relationship = when {
+            discountedAmount == null || referenceAmount == null ->
+                ImportedDiscountRelationship.UNAVAILABLE
+            discountedAmount.minorUnits <= 0L || referenceAmount.minorUnits <= 0L ->
+                ImportedDiscountRelationship.UNAVAILABLE
+            discountedAmount.currencyCode != referenceAmount.currencyCode ||
+                discountedAmount.fractionDigits != referenceAmount.fractionDigits ->
+                ImportedDiscountRelationship.INCOMPARABLE_MONEY
+            discountedAmount.minorUnits < referenceAmount.minorUnits ->
+                ImportedDiscountRelationship.DISCOUNTED_BELOW_REFERENCE
+            discountedAmount.minorUnits == referenceAmount.minorUnits ->
+                ImportedDiscountRelationship.EQUAL
+            else ->
+                ImportedDiscountRelationship.DISCOUNTED_ABOVE_REFERENCE_CONFLICT
+        }
+
+        return ImportedDiscountAssessment(
+            discountedFieldName = discountedFieldName,
+            referenceFieldName = referenceFieldName,
+            relationship = relationship
+        )
+    }
+}
+
+/**
  * Provider-neutral staging record for an offer-like product row.
  *
  * This is intentionally not an Offer and exposes no selected current price.
@@ -214,36 +261,11 @@ data class ProviderOfferImportRecord(
     fun assessDiscountRelationship(
         discountedFieldName: String,
         referenceFieldName: String
-    ): ImportedDiscountAssessment {
-        require(discountedFieldName.isNotBlank())
-        require(referenceFieldName.isNotBlank())
-        require(!discountedFieldName.equals(referenceFieldName, ignoreCase = true)) {
-            "Discounted and reference price fields must be distinct"
-        }
-
-        val discounted = priceField(discountedFieldName)?.parsedAmount
-        val reference = priceField(referenceFieldName)?.parsedAmount
-
-        val relationship = when {
-            discounted == null || reference == null ->
-                ImportedDiscountRelationship.UNAVAILABLE
-            discounted.minorUnits <= 0L || reference.minorUnits <= 0L ->
-                ImportedDiscountRelationship.UNAVAILABLE
-            discounted.currencyCode != reference.currencyCode ||
-                discounted.fractionDigits != reference.fractionDigits ->
-                ImportedDiscountRelationship.INCOMPARABLE_MONEY
-            discounted.minorUnits < reference.minorUnits ->
-                ImportedDiscountRelationship.DISCOUNTED_BELOW_REFERENCE
-            discounted.minorUnits == reference.minorUnits ->
-                ImportedDiscountRelationship.EQUAL
-            else ->
-                ImportedDiscountRelationship.DISCOUNTED_ABOVE_REFERENCE_CONFLICT
-        }
-
-        return ImportedDiscountAssessment(
+    ): ImportedDiscountAssessment =
+        ImportedDiscountRelationshipEvaluator.assess(
             discountedFieldName = discountedFieldName,
+            discountedAmount = priceField(discountedFieldName)?.parsedAmount,
             referenceFieldName = referenceFieldName,
-            relationship = relationship
+            referenceAmount = priceField(referenceFieldName)?.parsedAmount
         )
-    }
 }
