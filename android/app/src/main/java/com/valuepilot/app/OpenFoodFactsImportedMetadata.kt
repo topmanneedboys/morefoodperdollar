@@ -6,9 +6,12 @@ import com.valuepilot.core.EvidenceClaim
 import com.valuepilot.core.EvidenceClaimDomain
 import com.valuepilot.core.EvidenceClaimScope
 import com.valuepilot.core.EvidenceFingerprints
+import com.valuepilot.core.EvidenceProviderId
 import com.valuepilot.core.GtinValidation
 import com.valuepilot.core.NormalizedQuantity
+import com.valuepilot.core.ProductionProductEvidenceKeyResolver
 import com.valuepilot.core.QuantityNormalization
+import com.valuepilot.core.SourceProductIdentity
 import java.math.BigDecimal
 import java.util.Locale
 
@@ -104,7 +107,24 @@ object OpenFoodFactsImportedMetadataMapper {
         val failures = linkedSetOf<OpenFoodFactsImportFailure>()
 
         val gtin = row.code.trim()
-        if (!GtinValidation.isValid(gtin)) {
+        val gtinShapeValid = GtinValidation.isValid(gtin)
+        if (!gtinShapeValid) {
+            failures += OpenFoodFactsImportFailure.INVALID_GTIN
+        }
+
+        val productEvidenceKey =
+            if (gtinShapeValid) {
+                ProductionProductEvidenceKeyResolver.resolve(
+                    providerId = EvidenceProviderId(PROVIDER_ID),
+                    identity = SourceProductIdentity(gtin = gtin)
+                )
+            } else {
+                null
+            }
+        if (
+            gtinShapeValid &&
+            productEvidenceKey?.usesCrossSourceRepresentation != true
+        ) {
             failures += OpenFoodFactsImportFailure.INVALID_GTIN
         }
 
@@ -197,8 +217,7 @@ object OpenFoodFactsImportedMetadataMapper {
                 OpenFoodFactsQuantityBasis.STRUCTURED_MASS_OR_VOLUME
             }
 
-        val canonicalGtin = requireNotNull(GtinValidation.canonicalOrNull(gtin))
-        val productKey = "gtin:$canonicalGtin"
+        val productKey = requireNotNull(productEvidenceKey).value
         val valueFingerprint = EvidenceFingerprints.quantity(safeQuantity)
 
         val metadata =

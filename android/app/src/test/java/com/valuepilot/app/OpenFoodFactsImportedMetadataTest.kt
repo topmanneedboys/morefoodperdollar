@@ -85,6 +85,18 @@ class OpenFoodFactsImportedMetadataTest {
     }
 
     @Test
+    fun checksumValidButNonCanonicalZeroGtinFailsClosedInsteadOfThrowing() {
+        val result = OpenFoodFactsImportedMetadataMapper.map(
+            validProduct(code = "00000000")
+        )
+
+        assertFalse(result.accepted)
+        assertNull(result.metadata)
+        assertNull(result.quantityClaim)
+        assertTrue(OpenFoodFactsImportFailure.INVALID_GTIN in result.failures)
+    }
+
+    @Test
     fun acceptsMultipackWhenRawDisplayAndStructuredQuantityAgree() {
         val result = OpenFoodFactsImportedMetadataMapper.map(
             validProduct(
