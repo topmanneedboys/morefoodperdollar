@@ -77,10 +77,15 @@ data class OpenFoodFactsImportResult(
 /**
  * Strict Open Food Facts product-metadata adapter.
  *
- * This deliberately emits only PACKAGE_QUANTITY evidence keyed by validated
- * GTIN. It cannot emit price, stock, promotion, retailer, or market-benchmark
- * claims. That separation prevents community product metadata from becoming a
- * retailer offer by accident.
+ * This deliberately emits only PACKAGE_QUANTITY evidence keyed by validated,
+ * canonical cross-source GTIN identity. The exact source GTIN text remains in
+ * metadata and the source claim id for provenance; only the factual product
+ * scope is canonicalized so equivalent UPC/GTIN representations can join the
+ * same independently supported product across sources.
+ *
+ * It cannot emit price, stock, promotion, retailer, or market-benchmark claims.
+ * That separation prevents community product metadata from becoming a retailer
+ * offer by accident.
  *
  * Preferred source semantics:
  * - exact displayed supplement counts may become COUNT evidence only when the
@@ -192,7 +197,8 @@ object OpenFoodFactsImportedMetadataMapper {
                 OpenFoodFactsQuantityBasis.STRUCTURED_MASS_OR_VOLUME
             }
 
-        val productKey = "gtin:$gtin"
+        val canonicalGtin = requireNotNull(GtinValidation.canonicalOrNull(gtin))
+        val productKey = "gtin:$canonicalGtin"
         val valueFingerprint = EvidenceFingerprints.quantity(safeQuantity)
 
         val metadata =
