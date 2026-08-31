@@ -58,12 +58,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var savedExperience: PracticalShoppingSavedSurfaceView
     private lateinit var savedStapleLaunchExperience: PracticalShoppingSavedStapleLaunchView
     private lateinit var stapleWatchSetupExperience: StapleWatchSavedSelectionSurfaceView
+    private lateinit var stapleWatchPolicyExperience: StapleWatchPolicyDraftSurfaceView
     private lateinit var savedRouteCoordinator: PracticalShoppingSavedRouteCoordinator
     private lateinit var stapleWatchForegroundEvaluationInputHost: StapleWatchForegroundEvaluationInputHost
     private lateinit var stapleWatchSavedDisplayMetadataCompositionCoordinator:
         StapleWatchSavedDisplayMetadataCompositionCoordinator
     private lateinit var stapleWatchFactResolutionHost: StapleWatchFactResolutionHost
     private lateinit var stapleWatchSetupCoordinator: StapleWatchSavedSetupCompositionCoordinator
+    private lateinit var stapleWatchPolicySetupCoordinator: StapleWatchPolicySetupCompositionCoordinator
 
     private var comparisonActivityOpen = false
     private var suppressSearchInputCallback = false
@@ -92,6 +94,7 @@ class MainActivity : AppCompatActivity() {
         savedExperience = findViewById(R.id.savedExperience)
         savedStapleLaunchExperience = findViewById(R.id.savedStapleLaunchExperience)
         stapleWatchSetupExperience = findViewById(R.id.stapleWatchSetupExperience)
+        stapleWatchPolicyExperience = findViewById(R.id.stapleWatchPolicyExperience)
 
         installSystemBarInsets()
         shellState = restoreShellState(savedInstanceState)
@@ -118,7 +121,10 @@ class MainActivity : AppCompatActivity() {
             this,
             object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
-                    if (shellState.route == AppRoute.STAPLE_WATCH_SETUP) {
+                    if (
+                        shellState.route == AppRoute.STAPLE_WATCH_SETUP ||
+                        shellState.route == AppRoute.STAPLE_WATCH_POLICY
+                    ) {
                         dispatch(AppShellIntent.NavigateBack)
                     } else {
                         isEnabled = false
@@ -171,6 +177,9 @@ class MainActivity : AppCompatActivity() {
             savedStapleLaunchExperience.onAction = null
             stapleWatchSetupExperience.onAction = null
             stapleWatchSetupExperience.onContinueAction = null
+            stapleWatchPolicyExperience.onAction = null
+            stapleWatchPolicyExperience.onContinueAction = null
+            stapleWatchPolicySetupCoordinator.close()
             stapleWatchSetupCoordinator.close()
             stapleWatchFactResolutionHost.close()
             stapleWatchSavedDisplayMetadataCompositionCoordinator.close()
@@ -326,11 +335,34 @@ class MainActivity : AppCompatActivity() {
             PracticalShoppingSavedStapleLaunchPresenter(savedStapleLaunchExperience)
         val stapleSetupPresenter =
             StapleWatchSavedSelectionSurfacePresenter(stapleWatchSetupExperience)
+        val staplePolicyPresenter =
+            StapleWatchPolicyDraftSurfacePresenter(stapleWatchPolicyExperience)
 
         stapleWatchForegroundEvaluationInputHost = StapleWatchForegroundEvaluationInputHost()
+        val stapleWatchPolicyAvailabilityShellAdapter =
+            StapleWatchPolicyRouteAvailabilityShellAdapter(
+                currentRoute = { shellState.route },
+                emitIntent = ::dispatch
+            )
+        stapleWatchPolicySetupCoordinator =
+            StapleWatchPolicySetupCompositionCoordinator(
+                policyObserver = stapleWatchForegroundEvaluationInputHost,
+                routeAvailabilityObserver = stapleWatchPolicyAvailabilityShellAdapter,
+                sessionFactory = { moneySpec ->
+                    StapleWatchPolicyDraftRouteSession(
+                        moneySpec = moneySpec,
+                        presenter = staplePolicyPresenter
+                    )
+                }
+            )
+        val stapleWatchEvidencePreconditionsFanout =
+            StapleWatchEconomicEvidencePreconditionsFanout(
+                foregroundInputObserver = stapleWatchForegroundEvaluationInputHost,
+                policySetupObserver = stapleWatchPolicySetupCoordinator
+            )
         stapleWatchSavedDisplayMetadataCompositionCoordinator =
             StapleWatchSavedDisplayMetadataCompositionCoordinator(
-                preconditionsObserver = stapleWatchForegroundEvaluationInputHost,
+                preconditionsObserver = stapleWatchEvidencePreconditionsFanout,
                 displayMetadataObserver = stapleWatchForegroundEvaluationInputHost
             )
         stapleWatchFactResolutionHost =
@@ -379,6 +411,9 @@ class MainActivity : AppCompatActivity() {
         }
         stapleWatchSetupExperience.onAction = stapleWatchSetupCoordinator::onSurfaceAction
         stapleWatchSetupExperience.onContinueAction = stapleWatchSetupCoordinator::onContinueAction
+        stapleWatchPolicyExperience.onAction = stapleWatchPolicySetupCoordinator::onSurfaceAction
+        stapleWatchPolicyExperience.onContinueAction =
+            stapleWatchPolicySetupCoordinator::onContinueAction
     }
 
     private fun configureQuickSearch(chipId: Int, query: String) {
@@ -494,12 +529,16 @@ class MainActivity : AppCompatActivity() {
 
         val savedVisible = state.route == AppRoute.SAVED
         val stapleSetupVisible = state.route == AppRoute.STAPLE_WATCH_SETUP
+        val staplePolicyVisible = state.route == AppRoute.STAPLE_WATCH_POLICY
         savedExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
         savedStapleLaunchExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
         stapleWatchSetupExperience.visibility =
             if (stapleSetupVisible) View.VISIBLE else View.GONE
+        stapleWatchPolicyExperience.visibility =
+            if (staplePolicyVisible) View.VISIBLE else View.GONE
         savedRouteCoordinator.onRouteVisibilityChanged(savedVisible)
         stapleWatchSetupCoordinator.onRouteVisibilityChanged(stapleSetupVisible)
+        stapleWatchPolicySetupCoordinator.onRouteVisibilityChanged(staplePolicyVisible)
 
         val expectedMenuItem = menuIdFor(state.selectedPrimaryTab)
         if (bottomNavigation.selectedItemId != expectedMenuItem) {
