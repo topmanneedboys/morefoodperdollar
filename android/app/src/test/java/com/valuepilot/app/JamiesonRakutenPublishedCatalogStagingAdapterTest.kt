@@ -21,9 +21,8 @@ class JamiesonRakutenPublishedCatalogStagingAdapterTest {
     fun `valid catalog row stages unresolved source fields without factual activation`() {
         val extras = List(10) { index -> "opaque-${index + 1}" }
         val row = row(extras = extras)
-        val feedGeneratedAt = 1_788_000_000_000L
 
-        val staged = staged(row, feedGeneratedAt)
+        val staged = staged(row)
         val record = staged.importRecord
 
         assertSame(row, staged.sourceRow)
@@ -55,8 +54,8 @@ class JamiesonRakutenPublishedCatalogStagingAdapterTest {
 
         assertEquals(AvailabilityState.UNKNOWN, record.availability.state)
         assertEquals(EvidenceClaimKind.UNKNOWN, record.availability.claimKind)
+        assertNull(record.datasetGeneratedAtEpochMillis)
         assertNull(record.availability.observedAtEpochMillis)
-        assertEquals(feedGeneratedAt, record.datasetGeneratedAtEpochMillis)
         assertNull(record.priceObservedAtEpochMillis)
         assertEquals("https://example.invalid/product", record.productUrl)
         assertEquals("https://example.invalid/image.jpg", record.imageUrl)
@@ -185,24 +184,17 @@ class JamiesonRakutenPublishedCatalogStagingAdapterTest {
     }
 
     @Test
-    fun `verified feed header time is provenance only and invalid times fail closed`() {
-        val withoutHeaderTime = staged(row())
-        assertNull(withoutHeaderTime.importRecord.datasetGeneratedAtEpochMillis)
-        assertNull(withoutHeaderTime.importRecord.priceObservedAtEpochMillis)
-        assertNull(withoutHeaderTime.importRecord.availability.observedAtEpochMillis)
+    fun `row staging cannot accept or mint dataset provenance time`() {
+        val staged = staged(row())
+        val record = staged.importRecord
+        val source = source("JamiesonRakutenPublishedCatalogStagingAdapter.kt").readText()
 
-        listOf(0L, -1L).forEach { invalidTime ->
-            val result =
-                JamiesonRakutenPublishedCatalogStagingAdapter.stage(
-                    row = row(),
-                    verifiedFeedHeaderGeneratedAtEpochMillis = invalidTime
-                )
-            val quarantined = result as JamiesonRakutenPublishedCatalogStagingResult.Quarantined
-            assertTrue(
-                JamiesonRakutenPublishedCatalogStagingRejectionReason
-                    .INVALID_VERIFIED_FEED_GENERATION_TIME in quarantined.reasons
-            )
-        }
+        assertNull(record.datasetGeneratedAtEpochMillis)
+        assertNull(record.priceObservedAtEpochMillis)
+        assertNull(record.availability.observedAtEpochMillis)
+        assertTrue(source.contains("datasetGeneratedAtEpochMillis = null"))
+        assertFalse(source.contains("verifiedFeedHeaderGeneratedAtEpochMillis"))
+        assertFalse(source.contains("INVALID_VERIFIED_FEED_GENERATION_TIME"))
     }
 
     @Test
@@ -226,15 +218,15 @@ class JamiesonRakutenPublishedCatalogStagingAdapterTest {
     }
 
     @Test
-    fun `staging source boundary cannot mint current price availability freshness ranking or watch authority`() {
+    fun `staging source boundary cannot mint dataset current price availability freshness ranking or watch authority`() {
         val source = source("JamiesonRakutenPublishedCatalogStagingAdapter.kt").readText()
 
         listOf(
             "ProviderOfferImportRecord(",
             "ImportedPriceSemantics.UNRESOLVED_SOURCE_FIELDS",
             "AvailabilityState.UNKNOWN",
+            "datasetGeneratedAtEpochMillis = null",
             "priceObservedAtEpochMillis = null",
-            "verifiedFeedHeaderGeneratedAtEpochMillis",
             "EvidenceChannel.FIRST_PARTY_FEED",
             "EvidenceClaimKind.SOURCE_ASSERTED"
         ).forEach { required ->
@@ -242,6 +234,7 @@ class JamiesonRakutenPublishedCatalogStagingAdapterTest {
         }
 
         listOf(
+            "verifiedFeedHeaderGeneratedAtEpochMillis",
             "EvidenceClaimDomain.CURRENT_PRICE",
             "EvidenceClaim(",
             "ShoppingEvidence(",
@@ -267,14 +260,9 @@ class JamiesonRakutenPublishedCatalogStagingAdapterTest {
     }
 
     private fun staged(
-        row: JamiesonRakutenPublishedCatalogRow,
-        feedGeneratedAt: Long? = null
+        row: JamiesonRakutenPublishedCatalogRow
     ): JamiesonRakutenPublishedCatalogStagedRecord {
-        val result =
-            JamiesonRakutenPublishedCatalogStagingAdapter.stage(
-                row = row,
-                verifiedFeedHeaderGeneratedAtEpochMillis = feedGeneratedAt
-            )
+        val result = JamiesonRakutenPublishedCatalogStagingAdapter.stage(row)
         assertTrue("expected staged result, got $result", result is JamiesonRakutenPublishedCatalogStagingResult.Staged)
         return (result as JamiesonRakutenPublishedCatalogStagingResult.Staged).value
     }
