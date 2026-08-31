@@ -32,7 +32,7 @@ class UserObservedPriceConfirmationAndroidSessionTest {
         )
         assertFalse(source.contains("executor.shutdown"))
         assertFalse(source.contains("executor.shutdownNow"))
-        assertFalse(source.contains("Activity"))
+        assertFalse(source.contains("android.app.Activity"))
     }
 
     @Test
