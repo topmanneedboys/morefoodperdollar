@@ -79,15 +79,13 @@ data class ProductionUnitValueEligibilityResult(
  * to the existing exact unit-value policy.
  *
  * Ordering is deliberate:
- * 1. re-run ProductionCurrentPriceEligibilityEvaluator from raw price requests;
- * 2. keep only PACKAGE_QUANTITY claims for the exact selected product key;
- * 3. detect same-namespace claim-id mutations before resolution;
- * 4. resolve package quantity through the existing EvidenceFactResolver;
- * 5. evaluate each materialized supporter of the resolved value with the
- *    existing EvidenceBackedUnitValuePolicy;
- * 6. accept the first deterministic supporter that the policy itself approves.
+ * 1. validate package-quantity candidate bounds/identity before price evaluation;
+ * 2. re-run ProductionCurrentPriceEligibilityEvaluator from raw price requests;
+ * 3. resolve exact-product package quantity through ProductPackageQuantityFactResolver;
+ * 4. evaluate each resolved materialized supporter with EvidenceBackedUnitValuePolicy;
+ * 5. accept the first deterministic supporter that the policy itself approves.
  *
- * Step 5 intentionally avoids copying quantity-authority precedence into this
+ * Step 4 intentionally avoids copying quantity-authority precedence into this
  * class. If multiple claims support one resolved quantity, the authoritative
  * unit-value policy decides whether each supporter is strong and internally
  * consistent enough to drive a rate.
@@ -96,8 +94,6 @@ data class ProductionUnitValueEligibilityResult(
  * invents no package quantity and creates no provider network dependency.
  */
 object ProductionUnitValueEligibilityEvaluator {
-
-    private const val MAX_QUANTITY_CANDIDATES = 128
 
     fun evaluate(
         priceRequests: List<ProductionCurrentPriceEligibilityRequest>,
@@ -108,12 +104,7 @@ object ProductionUnitValueEligibilityEvaluator {
         acceptancePolicy: EvidenceAcceptancePolicy,
         quantityCandidates: List<ProductPackageQuantityEvidenceCandidate>
     ): ProductionUnitValueEligibilityResult {
-        require(quantityCandidates.size <= MAX_QUANTITY_CANDIDATES)
-
-        val quantityEvidenceIds = quantityCandidates.map { it.evidenceId }
-        require(quantityEvidenceIds.size == quantityEvidenceIds.toSet().size) {
-            "Package quantity evidence ids must be unique"
-        }
+        ProductPackageQuantityFactResolver.validateCandidates(quantityCandidates)
 
         val priceEligibility =
             ProductionCurrentPriceEligibilityEvaluator.evaluate(
@@ -150,81 +141,20 @@ object ProductionUnitValueEligibilityEvaluator {
         val offer = Offer(current = currentPrice)
         val productKey = priceEvidence.claim.scope.productKey
 
-        val relevantQuantities =
-            quantityCandidates.filter {
-                it.claim.scope.productKey == productKey
-            }
-
-        if (relevantQuantities.isEmpty()) {
-            blockers +=
-                ProductionUnitValueEligibilityBlocker.NO_RELEVANT_PACKAGE_QUANTITY
-            return blocked(
-                priceEligibility = priceEligibility,
-                blockers = blockers
+        val quantitySelection =
+            ProductPackageQuantityFactResolver.resolve(
+                productKey = productKey,
+                candidates = quantityCandidates
             )
-        }
 
-        val groupedByNamespaceClaimId =
-            relevantQuantities.groupBy {
-                it.namespace.id to it.claim.claimId
-            }
-
-        val hasClaimIdCollision =
-            groupedByNamespaceClaimId.values.any { grouped ->
-                grouped.map { it.claim }.distinct().size > 1
-            }
-
-        if (hasClaimIdCollision) {
+        if (!quantitySelection.resolved) {
             blockers +=
-                ProductionUnitValueEligibilityBlocker
-                    .PACKAGE_QUANTITY_CLAIM_ID_COLLISION
-            return blocked(
-                priceEligibility = priceEligibility,
-                blockers = blockers
-            )
-        }
-
-        val deduplicatedClaims =
-            groupedByNamespaceClaimId
-                .values
-                .map { grouped ->
-                    val candidate = grouped.first()
-                    IndexedEvidenceClaim(
-                        namespace = candidate.namespace,
-                        claim = candidate.claim
-                    )
+                quantitySelection.blockers.map { blocker ->
+                    blocker.toProductionBlocker()
                 }
-
-        val quantityFactKey =
-            EvidenceFactKey(
-                domain = EvidenceClaimDomain.PACKAGE_QUANTITY,
-                scope = EvidenceClaimScope(productKey = productKey)
-            )
-
-        val quantityResolution =
-            EvidenceFactResolver.resolve(deduplicatedClaims)
-                .firstOrNull { it.key == quantityFactKey }
-
-        if (quantityResolution == null) {
-            blockers +=
-                ProductionUnitValueEligibilityBlocker
-                    .PACKAGE_QUANTITY_FACT_RESOLUTION_MISSING
-            return blocked(
-                priceEligibility = priceEligibility,
-                blockers = blockers
-            )
-        }
-
-        if (
-            quantityResolution.status ==
-            EvidenceFactResolutionStatus.UNRESOLVED_CONFLICT
-        ) {
-            blockers +=
-                ProductionUnitValueEligibilityBlocker
-                    .UNRESOLVED_PACKAGE_QUANTITY_CONFLICT
             return ProductionUnitValueEligibilityResult(
                 priceEligibility = priceEligibility,
-                quantityResolution = quantityResolution,
+                quantityResolution = quantitySelection.factResolution,
                 policyAttempts = emptyList(),
                 selectedQuantityEvidence = null,
                 unitValueResult = null,
@@ -232,33 +162,8 @@ object ProductionUnitValueEligibilityEvaluator {
             )
         }
 
-        val selectedFingerprint =
-            requireNotNull(quantityResolution.selectedValueFingerprint)
-
-        val supportingCandidates =
-            relevantQuantities
-                .filter { candidate ->
-                    candidate.claim.valueFingerprint == selectedFingerprint &&
-                        quantityResolution.supportingClaims.any { supporting ->
-                            supporting.namespace == candidate.namespace &&
-                                supporting.claim == candidate.claim
-                        }
-                }
-                .sortedBy { it.evidenceId }
-
-        if (supportingCandidates.isEmpty()) {
-            blockers +=
-                ProductionUnitValueEligibilityBlocker
-                    .RESOLVED_PACKAGE_QUANTITY_NOT_MATERIALIZED
-            return ProductionUnitValueEligibilityResult(
-                priceEligibility = priceEligibility,
-                quantityResolution = quantityResolution,
-                policyAttempts = emptyList(),
-                selectedQuantityEvidence = null,
-                unitValueResult = null,
-                blockers = blockers
-            )
-        }
+        val quantityResolution = requireNotNull(quantitySelection.factResolution)
+        val supportingCandidates = quantitySelection.supportingCandidates
 
         val attempts =
             supportingCandidates.map { quantityEvidence ->
@@ -277,8 +182,7 @@ object ProductionUnitValueEligibilityEvaluator {
                 )
             }
 
-        val selectedAttempt =
-            attempts.firstOrNull { it.result.rankable }
+        val selectedAttempt = attempts.firstOrNull { it.result.rankable }
 
         if (selectedAttempt == null) {
             blockers +=
@@ -294,8 +198,8 @@ object ProductionUnitValueEligibilityEvaluator {
         }
 
         val selectedQuantityEvidence =
-            supportingCandidates.single {
-                it.evidenceId == selectedAttempt.quantityEvidenceId
+            supportingCandidates.single { candidate ->
+                candidate.evidenceId == selectedAttempt.quantityEvidenceId
             }
 
         return ProductionUnitValueEligibilityResult(
@@ -307,6 +211,25 @@ object ProductionUnitValueEligibilityEvaluator {
             blockers = emptySet()
         )
     }
+
+    private fun ProductPackageQuantityResolutionBlocker.toProductionBlocker():
+        ProductionUnitValueEligibilityBlocker =
+        when (this) {
+            ProductPackageQuantityResolutionBlocker.NO_RELEVANT_PACKAGE_QUANTITY ->
+                ProductionUnitValueEligibilityBlocker.NO_RELEVANT_PACKAGE_QUANTITY
+
+            ProductPackageQuantityResolutionBlocker.CLAIM_ID_COLLISION ->
+                ProductionUnitValueEligibilityBlocker.PACKAGE_QUANTITY_CLAIM_ID_COLLISION
+
+            ProductPackageQuantityResolutionBlocker.FACT_RESOLUTION_MISSING ->
+                ProductionUnitValueEligibilityBlocker.PACKAGE_QUANTITY_FACT_RESOLUTION_MISSING
+
+            ProductPackageQuantityResolutionBlocker.UNRESOLVED_CONFLICT ->
+                ProductionUnitValueEligibilityBlocker.UNRESOLVED_PACKAGE_QUANTITY_CONFLICT
+
+            ProductPackageQuantityResolutionBlocker.RESOLVED_VALUE_NOT_MATERIALIZED ->
+                ProductionUnitValueEligibilityBlocker.RESOLVED_PACKAGE_QUANTITY_NOT_MATERIALIZED
+        }
 
     private fun blocked(
         priceEligibility: ProductionCurrentPriceEligibilityResult,
