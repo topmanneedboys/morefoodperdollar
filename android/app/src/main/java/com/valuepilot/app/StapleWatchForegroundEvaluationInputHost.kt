@@ -6,9 +6,14 @@ import com.valuepilot.core.StapleWatchPolicy
  * Foreground-only owner for the exact inputs that may unlock one Staple Watch evaluation.
  *
  * Completed evidence starts a fresh immutable input session. Policy and display metadata must be
- * supplied explicitly for that same session; neither is carried across later evidence.
+ * supplied explicitly for that same session; neither is carried across later evidence. Output
+ * lifecycle changes are emitted through [outputObserver] without giving this host presentation,
+ * persistence, background-work, or notification authority.
  */
-internal class StapleWatchForegroundEvaluationInputHost :
+internal class StapleWatchForegroundEvaluationInputHost(
+    private val outputObserver: StapleWatchForegroundEvaluationOutputObserver =
+        StapleWatchForegroundEvaluationOutputObserver { }
+) :
     StapleWatchEconomicEvidencePreconditionsObserver,
     StapleWatchPolicyObserver,
     StapleWatchStoreDisplayMetadataObserver,
@@ -20,6 +25,7 @@ internal class StapleWatchForegroundEvaluationInputHost :
     override fun onPreconditions(preconditions: StapleWatchEconomicEvidencePreconditions) {
         if (closed) return
         currentSession = StapleWatchForegroundEvaluationInputSession.start(preconditions)
+        outputObserver.onOutputChanged(StapleWatchForegroundEvaluationOutput.Cleared)
     }
 
     override fun onPolicy(policy: StapleWatchPolicy) {
@@ -33,13 +39,17 @@ internal class StapleWatchForegroundEvaluationInputHost :
     fun accept(policy: StapleWatchPolicy) {
         if (closed) return
         val session = currentSession ?: return
-        currentSession = session.withPolicy(policy)
+        val updated = session.withPolicy(policy)
+        currentSession = updated
+        publishEvaluation(updated)
     }
 
     fun accept(displayMetadata: StapleWatchStoreDisplayMetadata) {
         if (closed) return
         val session = currentSession ?: return
-        currentSession = session.withDisplayMetadata(displayMetadata)
+        val updated = session.withDisplayMetadata(displayMetadata)
+        currentSession = updated
+        publishEvaluation(updated)
     }
 
     fun currentSessionOrNull(): StapleWatchForegroundEvaluationInputSession? = currentSession
@@ -50,5 +60,13 @@ internal class StapleWatchForegroundEvaluationInputHost :
         if (closed) return
         closed = true
         currentSession = null
+    }
+
+    private fun publishEvaluation(session: StapleWatchForegroundEvaluationInputSession) {
+        session.evaluation?.let { evaluation ->
+            outputObserver.onOutputChanged(
+                StapleWatchForegroundEvaluationOutput.Evaluated(evaluation)
+            )
+        }
     }
 }
