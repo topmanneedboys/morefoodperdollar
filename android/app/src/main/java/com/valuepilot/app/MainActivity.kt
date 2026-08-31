@@ -563,8 +563,8 @@ class MainActivity : AppCompatActivity() {
 
         searchButton.isEnabled =
             state.query.isNotBlank() &&
-                searchState.status != UniversalSearchStatus.LOADING &&
-                searchState.status != UniversalSearchStatus.QUERY_TOO_LONG
+                state.status != UniversalSearchStatus.LOADING &&
+                state.status != UniversalSearchStatus.QUERY_TOO_LONG
 
         searchResultsContainer.removeAllViews()
         searchResultsHeading.visibility =
