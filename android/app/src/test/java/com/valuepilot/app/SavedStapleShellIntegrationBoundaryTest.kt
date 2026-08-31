@@ -32,19 +32,36 @@ class SavedStapleShellIntegrationBoundaryTest {
     }
 
     @Test
-    fun `explicit staple continuation is wired only into foreground fact resolution host`() {
+    fun `explicit staple continuation preserves completed evidence only in foreground input host`() {
         val source = activitySource().readText()
 
+        assertTrue(
+            source.contains(
+                "private lateinit var stapleWatchForegroundEvaluationInputHost: StapleWatchForegroundEvaluationInputHost"
+            )
+        )
         assertTrue(
             source.contains(
                 "private lateinit var stapleWatchFactResolutionHost: StapleWatchFactResolutionHost"
             )
         )
-        assertTrue(source.contains("stapleWatchFactResolutionHost = StapleWatchFactResolutionHost()"))
+        assertTrue(
+            source.contains(
+                "stapleWatchForegroundEvaluationInputHost = StapleWatchForegroundEvaluationInputHost()"
+            )
+        )
+        assertTrue(
+            source.contains(
+                "preconditionsObserver = stapleWatchForegroundEvaluationInputHost"
+            )
+        )
         assertTrue(source.contains("factCheckIntentObserver = stapleWatchFactResolutionHost"))
 
         assertFalse(source.contains("stapleWatchFactResolutionHost.accept("))
+        assertFalse(source.contains("stapleWatchForegroundEvaluationInputHost.accept("))
         assertFalse(source.contains("StapleWatchEconomicEvidencePreconditions"))
+        assertFalse(source.contains("StapleWatchPolicy("))
+        assertFalse(source.contains("StapleWatchStoreDisplayMetadata("))
         assertFalse(source.contains("StapleWatchForegroundEvaluationCoordinator"))
         assertFalse(source.contains("PracticalShoppingProduction"))
         assertFalse(source.contains("ProductionCurrentPrice"))
@@ -88,6 +105,7 @@ class SavedStapleShellIntegrationBoundaryTest {
         assertTrue(source.contains("stapleWatchSetupExperience.onContinueAction = null"))
         assertTrue(source.contains("stapleWatchSetupCoordinator.close()"))
         assertTrue(source.contains("stapleWatchFactResolutionHost.close()"))
+        assertTrue(source.contains("stapleWatchForegroundEvaluationInputHost.close()"))
         assertTrue(source.contains("savedRouteCoordinator.close()"))
     }
 
