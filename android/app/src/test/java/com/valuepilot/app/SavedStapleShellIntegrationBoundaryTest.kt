@@ -16,7 +16,7 @@ class SavedStapleShellIntegrationBoundaryTest {
         assertTrue(source.contains("StapleWatchSavedSelectionSurfacePresenter"))
         assertTrue(source.contains("StapleWatchSavedSelectionRouteSession("))
         assertTrue(source.contains("PracticalShoppingSavedLifecycleRenderer { state ->"))
-        assertTrue(source.contains("snapshotObserver = stapleWatchSetupCoordinator"))
+        assertTrue(source.contains("snapshotObserver = savedSnapshotObserver"))
         assertTrue(
             source.contains(
                 "stapleWatchSetupExperience.onContinueAction = stapleWatchSetupCoordinator::onContinueAction"
@@ -32,12 +32,17 @@ class SavedStapleShellIntegrationBoundaryTest {
     }
 
     @Test
-    fun `explicit staple continuation preserves completed evidence only in foreground input host`() {
+    fun `explicit staple continuation composes evidence and saved display metadata without policy authority`() {
         val source = activitySource().readText()
 
         assertTrue(
             source.contains(
                 "private lateinit var stapleWatchForegroundEvaluationInputHost: StapleWatchForegroundEvaluationInputHost"
+            )
+        )
+        assertTrue(
+            source.contains(
+                "private lateinit var stapleWatchSavedDisplayMetadataCompositionCoordinator:"
             )
         )
         assertTrue(
@@ -52,7 +57,22 @@ class SavedStapleShellIntegrationBoundaryTest {
         )
         assertTrue(
             source.contains(
+                "stapleWatchSavedDisplayMetadataCompositionCoordinator =\n            StapleWatchSavedDisplayMetadataCompositionCoordinator("
+            )
+        )
+        assertTrue(
+            source.contains(
                 "preconditionsObserver = stapleWatchForegroundEvaluationInputHost"
+            )
+        )
+        assertTrue(
+            source.contains(
+                "displayMetadataObserver = stapleWatchForegroundEvaluationInputHost"
+            )
+        )
+        assertTrue(
+            source.contains(
+                "preconditionsObserver = stapleWatchSavedDisplayMetadataCompositionCoordinator"
             )
         )
         assertTrue(source.contains("factCheckIntentObserver = stapleWatchFactResolutionHost"))
@@ -62,9 +82,28 @@ class SavedStapleShellIntegrationBoundaryTest {
         assertFalse(source.contains("StapleWatchEconomicEvidencePreconditions"))
         assertFalse(source.contains("StapleWatchPolicy("))
         assertFalse(source.contains("StapleWatchStoreDisplayMetadata("))
+        assertFalse(source.contains("StapleWatchSavedAlternativeStoreDisplayMetadataAdapter"))
         assertFalse(source.contains("StapleWatchForegroundEvaluationCoordinator"))
         assertFalse(source.contains("PracticalShoppingProduction"))
         assertFalse(source.contains("ProductionCurrentPrice"))
+    }
+
+    @Test
+    fun `validated saved snapshot fans out only to setup and display metadata composition`() {
+        val source = activitySource().readText()
+
+        assertTrue(
+            source.contains(
+                "val savedSnapshotObserver =\n            PracticalShoppingSavedValidatedSnapshotObserver { snapshot ->"
+            )
+        )
+        assertTrue(source.contains("stapleWatchSetupCoordinator.onSnapshot(snapshot)"))
+        assertTrue(
+            source.contains(
+                "stapleWatchSavedDisplayMetadataCompositionCoordinator.onSnapshot(snapshot)"
+            )
+        )
+        assertTrue(source.contains("snapshotObserver = savedSnapshotObserver"))
     }
 
     @Test
@@ -105,6 +144,7 @@ class SavedStapleShellIntegrationBoundaryTest {
         assertTrue(source.contains("stapleWatchSetupExperience.onContinueAction = null"))
         assertTrue(source.contains("stapleWatchSetupCoordinator.close()"))
         assertTrue(source.contains("stapleWatchFactResolutionHost.close()"))
+        assertTrue(source.contains("stapleWatchSavedDisplayMetadataCompositionCoordinator.close()"))
         assertTrue(source.contains("stapleWatchForegroundEvaluationInputHost.close()"))
         assertTrue(source.contains("savedRouteCoordinator.close()"))
     }
