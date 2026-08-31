@@ -59,8 +59,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var savedStapleLaunchExperience: PracticalShoppingSavedStapleLaunchView
     private lateinit var stapleWatchSetupExperience: StapleWatchSavedSelectionSurfaceView
     private lateinit var stapleWatchPolicyExperience: StapleWatchPolicyDraftSurfaceView
+    private lateinit var stapleWatchResultExperience: StapleWatchSurfaceView
     private lateinit var savedRouteCoordinator: PracticalShoppingSavedRouteCoordinator
     private lateinit var stapleWatchForegroundEvaluationInputHost: StapleWatchForegroundEvaluationInputHost
+    private lateinit var stapleWatchForegroundResultSurfaceBinding:
+        StapleWatchForegroundResultSurfaceBinding
     private lateinit var stapleWatchSavedDisplayMetadataCompositionCoordinator:
         StapleWatchSavedDisplayMetadataCompositionCoordinator
     private lateinit var stapleWatchFactResolutionHost: StapleWatchFactResolutionHost
@@ -95,6 +98,7 @@ class MainActivity : AppCompatActivity() {
         savedStapleLaunchExperience = findViewById(R.id.savedStapleLaunchExperience)
         stapleWatchSetupExperience = findViewById(R.id.stapleWatchSetupExperience)
         stapleWatchPolicyExperience = findViewById(R.id.stapleWatchPolicyExperience)
+        stapleWatchResultExperience = findViewById(R.id.stapleWatchResultExperience)
 
         installSystemBarInsets()
         shellState = restoreShellState(savedInstanceState)
@@ -338,7 +342,15 @@ class MainActivity : AppCompatActivity() {
         val staplePolicyPresenter =
             StapleWatchPolicyDraftSurfacePresenter(stapleWatchPolicyExperience)
 
-        stapleWatchForegroundEvaluationInputHost = StapleWatchForegroundEvaluationInputHost()
+        stapleWatchForegroundResultSurfaceBinding =
+            StapleWatchForegroundResultSurfaceBinding(
+                renderer = stapleWatchResultExperience,
+                clearSurface = stapleWatchResultExperience::clear
+            )
+        stapleWatchForegroundEvaluationInputHost =
+            StapleWatchForegroundEvaluationInputHost(
+                outputObserver = stapleWatchForegroundResultSurfaceBinding.outputObserver
+            )
         val stapleWatchPolicyAvailabilityShellAdapter =
             StapleWatchPolicyRouteAvailabilityShellAdapter(
                 currentRoute = { shellState.route },
@@ -539,6 +551,8 @@ class MainActivity : AppCompatActivity() {
         savedRouteCoordinator.onRouteVisibilityChanged(savedVisible)
         stapleWatchSetupCoordinator.onRouteVisibilityChanged(stapleSetupVisible)
         stapleWatchPolicySetupCoordinator.onRouteVisibilityChanged(staplePolicyVisible)
+        stapleWatchForegroundResultSurfaceBinding
+            .onPolicyRouteVisibilityChanged(staplePolicyVisible)
 
         val expectedMenuItem = menuIdFor(state.selectedPrimaryTab)
         if (bottomNavigation.selectedItemId != expectedMenuItem) {
