@@ -57,7 +57,7 @@ class SavedStapleShellIntegrationBoundaryTest {
         )
         assertTrue(
             source.contains(
-                "stapleWatchForegroundEvaluationInputHost = StapleWatchForegroundEvaluationInputHost()"
+                "stapleWatchForegroundEvaluationInputHost =\n            StapleWatchForegroundEvaluationInputHost(\n                outputObserver = stapleWatchForegroundResultSurfaceBinding.outputObserver"
             )
         )
         assertTrue(
@@ -130,6 +130,47 @@ class SavedStapleShellIntegrationBoundaryTest {
         assertFalse(source.contains("StapleWatchPolicyRouteAvailability.AVAILABLE"))
         assertFalse(source.contains("StapleWatchPolicyRouteAvailability.UNAVAILABLE"))
         assertFalse(source.contains("AppShellIntent.OpenStapleWatchPolicy)"))
+    }
+
+    @Test
+    fun `foreground result surface is bound and route gated without output authority in shell`() {
+        val source = activitySource().readText()
+
+        assertTrue(source.contains("private lateinit var stapleWatchResultExperience: StapleWatchSurfaceView"))
+        assertTrue(
+            source.contains(
+                "private lateinit var stapleWatchForegroundResultSurfaceBinding:\n        StapleWatchForegroundResultSurfaceBinding"
+            )
+        )
+        assertTrue(
+            source.contains(
+                "stapleWatchResultExperience = findViewById(R.id.stapleWatchResultExperience)"
+            )
+        )
+        assertTrue(
+            source.contains(
+                "stapleWatchForegroundResultSurfaceBinding =\n            StapleWatchForegroundResultSurfaceBinding("
+            )
+        )
+        assertTrue(source.contains("renderer = stapleWatchResultExperience"))
+        assertTrue(source.contains("clearSurface = stapleWatchResultExperience::clear"))
+        assertTrue(
+            source.contains(
+                "outputObserver = stapleWatchForegroundResultSurfaceBinding.outputObserver"
+            )
+        )
+        assertTrue(
+            source.contains(
+                "stapleWatchForegroundResultSurfaceBinding\n            .onPolicyRouteVisibilityChanged(staplePolicyVisible)"
+            )
+        )
+
+        assertFalse(source.contains("StapleWatchForegroundEvaluationPresentationObserver"))
+        assertFalse(source.contains("StapleWatchPolicyRouteForegroundEvaluationOutputGate"))
+        assertFalse(source.contains(".projection"))
+        assertFalse(source.contains("StapleWatchForegroundEvaluationOutput.Cleared"))
+        assertFalse(source.contains("stapleWatchResultExperience.render("))
+        assertFalse(source.contains("stapleWatchResultExperience.visibility ="))
     }
 
     @Test
@@ -215,7 +256,7 @@ class SavedStapleShellIntegrationBoundaryTest {
     }
 
     @Test
-    fun `shell layout contains replaceable saved setup and policy surfaces hidden by default`() {
+    fun `shell layout contains replaceable saved setup policy and result surfaces hidden by default`() {
         val layout = layoutSource().readText()
 
         assertTrue(layout.contains("<com.valuepilot.app.PracticalShoppingSavedStapleLaunchView"))
@@ -224,6 +265,8 @@ class SavedStapleShellIntegrationBoundaryTest {
         assertTrue(layout.contains("android:id=\"@+id/stapleWatchSetupExperience\""))
         assertTrue(layout.contains("<com.valuepilot.app.StapleWatchPolicyDraftSurfaceView"))
         assertTrue(layout.contains("android:id=\"@+id/stapleWatchPolicyExperience\""))
+        assertTrue(layout.contains("<com.valuepilot.app.StapleWatchSurfaceView"))
+        assertTrue(layout.contains("android:id=\"@+id/stapleWatchResultExperience\""))
         assertTrue(
             layout.substringAfter("android:id=\"@+id/savedStapleLaunchExperience\"")
                 .substringBefore("/>")
@@ -236,6 +279,11 @@ class SavedStapleShellIntegrationBoundaryTest {
         )
         assertTrue(
             layout.substringAfter("android:id=\"@+id/stapleWatchPolicyExperience\"")
+                .substringBefore("/>")
+                .contains("android:visibility=\"gone\"")
+        )
+        assertTrue(
+            layout.substringAfter("android:id=\"@+id/stapleWatchResultExperience\"")
                 .substringBefore("/>")
                 .contains("android:visibility=\"gone\"")
         )
