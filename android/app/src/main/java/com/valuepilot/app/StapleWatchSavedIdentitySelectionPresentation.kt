@@ -7,6 +7,7 @@ private const val MAX_STAPLE_WATCH_SAVED_STORE_ROWS = 64
 enum class StapleWatchSavedSelectionUiStatus {
     NEEDS_SELECTION,
     READY_FOR_FACT_CHECK,
+    FACT_CHECK_UNAVAILABLE,
     DISPLAY_METADATA_INCOMPLETE
 }
 
@@ -123,7 +124,8 @@ data class StapleWatchSavedSelectionUiState(
  * as DISPLAY_METADATA_INCOMPLETE even if the identity reducer could otherwise form a handoff.
  *
  * The identity-only continuation marker is exposed only when the already-existing setup status is
- * READY_FOR_FACT_CHECK. It does not itself create a handoff or start any work.
+ * READY_FOR_FACT_CHECK. It does not itself create a handoff or start any work. A later presentation
+ * gate may remove that marker when the current composition has no configured foreground fact source.
  *
  * This boundary owns no fact retrieval, price calculation, route calculation, evidence-freshness
  * policy, scheduling, storage, Android lifecycle, or delivery authority.
@@ -228,6 +230,8 @@ object StapleWatchSavedIdentitySelectionUiProjector {
                 "Choose at least two saved staples and your usual store."
             StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK ->
                 "Staple identities are ready for current price, route, and evidence checks."
+            StapleWatchSavedSelectionUiStatus.FACT_CHECK_UNAVAILABLE ->
+                "Your saved staple choices are ready."
             StapleWatchSavedSelectionUiStatus.DISPLAY_METADATA_INCOMPLETE ->
                 "Refresh the selected saved choice names before continuing."
         }
