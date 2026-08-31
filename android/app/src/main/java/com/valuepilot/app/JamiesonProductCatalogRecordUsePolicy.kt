@@ -1,14 +1,17 @@
 package com.valuepilot.app
 
+import com.valuepilot.core.ProductionAuthorizationGate
+import com.valuepilot.core.ProductionAuthorizationState
 import com.valuepilot.core.ProductionDatasetDispositionState
 import com.valuepilot.core.ProviderDatasetCountryMatchStatus
 
 /**
  * Why one already-parsed Jamieson Product Catalog record cannot currently be used.
  *
- * This is a catalog-use boundary only. Price semantics, dataset recency and per-offer
- * freshness remain separate factual gates and are surfaced as ranking blockers rather
- * than being guessed from advertiser permission, CAD, or the existence of a feed row.
+ * This is a catalog-use boundary only. Reviewed source-field price semantics are reflected
+ * from the provider authorization contract, while dataset recency and per-offer freshness
+ * remain separate factual blockers rather than being guessed from advertiser permission,
+ * CAD, the existence of a feed row, or a file-generation timestamp.
  */
 enum class JamiesonProductCatalogRecordUseBlocker {
     DATASET_NAMESPACE_MISMATCH,
@@ -55,14 +58,16 @@ data class JamiesonProductCatalogRecordUseDecision(
  * Applies the verified Jamieson partner contract to one already-parsed catalog record.
  *
  * The caller supplies the exact dataset namespace, source currency, consumer target market,
- * partnership termination state and evaluation time. No field names from a Rakuten feed are
- * assumed here. This policy performs no parsing, I/O, networking, clock reads, persistence,
- * ranking, evidence creation or offer construction.
+ * partnership termination state and evaluation time. No Rakuten price field is selected here;
+ * the dedicated published-price-role resolver owns that row-level decision. This policy performs
+ * no parsing, I/O, networking, clock reads, persistence, ranking, evidence creation or offer
+ * construction.
  *
- * Catalog display/search/cache rights are independent from current-price rankability. The
- * advertiser has authorized the former for the Canadian CAD catalog, while current-price
- * semantics, dataset recency and per-offer freshness remain unresolved. Consequently this
- * boundary intentionally cannot authorize price ranking yet.
+ * Catalog display/search/cache rights are independent from current-price rankability. Reviewed
+ * Rakuten Product Catalog documentation now satisfies the provider-level price-semantics gate,
+ * but dataset recency and per-offer freshness remain unresolved. This boundary therefore still
+ * cannot authorize price ranking, and a later production bridge must independently require an
+ * exact per-offer observation timestamp and accepted freshness.
  */
 object JamiesonProductCatalogRecordUsePolicy {
 
@@ -105,8 +110,17 @@ object JamiesonProductCatalogRecordUsePolicy {
                 JamiesonProductCatalogRecordUseBlocker.SOURCE_CURRENCY_MISMATCH !in blockers &&
                 JamiesonProductCatalogRecordUseBlocker.PARTNERSHIP_TERMINATED !in blockers
 
-        // These three gates remain unresolved by the written partner confirmation.
-        blockers += JamiesonProductCatalogRecordUseBlocker.PRICE_SEMANTICS_UNVERIFIED
+        val priceSemanticsState =
+            contract
+                .partnerAuthorizationAssessment()
+                .assessmentFor(ProductionAuthorizationGate.PRICE_SEMANTICS_VALIDATED)
+                ?.state
+        if (priceSemanticsState != ProductionAuthorizationState.SATISFIED) {
+            blockers += JamiesonProductCatalogRecordUseBlocker.PRICE_SEMANTICS_UNVERIFIED
+        }
+
+        // These remain unresolved at this boundary. In particular, a dataset-generation
+        // timestamp is never substituted for an individual offer observation timestamp.
         blockers += JamiesonProductCatalogRecordUseBlocker.DATASET_RECENCY_UNVERIFIED
         blockers += JamiesonProductCatalogRecordUseBlocker.OFFER_FRESHNESS_UNVERIFIED
 
