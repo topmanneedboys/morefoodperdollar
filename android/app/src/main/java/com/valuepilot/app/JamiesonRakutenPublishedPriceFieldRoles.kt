@@ -6,6 +6,7 @@ import com.valuepilot.core.ProductionPriceRelationshipRule
 
 /** Why documented Jamieson/Rakuten price fields cannot be assigned production roles for one row. */
 enum class JamiesonRakutenPublishedPriceRoleBlocker {
+    DISCOUNT_FIELDS_REQUIRE_SEPARATE_RESOLUTION,
     DISCOUNTED_PRICE_ABOVE_RETAIL_REFERENCE,
     UNEXPECTED_PRICE_RELATIONSHIP
 }
@@ -34,9 +35,12 @@ sealed interface JamiesonRakutenPublishedPriceRoleResolution {
  * the required price that does not reflect discounts. Therefore:
  * - when a valid Sale Price is present, it is the discounted/current source field and Retail Price
  *   is its non-discounted reference;
- * - when Sale Price is absent, Retail Price is the only documented price field and becomes the
- *   current source field with no separate reference;
- * - a supplied Sale Price above Retail Price conflicts with those documented roles and fails closed.
+ * - when Sale Price is absent and both separate Discount fields are blank, Retail Price is the only
+ *   documented price adjustment and becomes the current source field with no separate reference;
+ * - when Sale Price is absent but Discount or Discount Type is populated, this resolver fails
+ *   closed rather than ignoring a possible source-declared adjustment whose arithmetic belongs to
+ *   a separate reviewed slice;
+ * - a supplied Sale Price above Retail Price conflicts with the documented roles and fails closed.
  *
  * This resolver deliberately consumes an already-staged Jamieson row so malformed money/currency
  * cannot bypass the staging boundary. It performs no I/O and grants no recency or freshness.
@@ -56,6 +60,14 @@ object JamiesonRakutenPublishedPriceFieldRoleResolver {
         require(assessment.retailPrice != null)
 
         if (assessment.salePrice == null) {
+            val sourceRow = stagedRecord.sourceRow
+            if (sourceRow.discount.isNotBlank() || sourceRow.discountType.isNotBlank()) {
+                return JamiesonRakutenPublishedPriceRoleResolution.Blocked(
+                    JamiesonRakutenPublishedPriceRoleBlocker
+                        .DISCOUNT_FIELDS_REQUIRE_SEPARATE_RESOLUTION
+                )
+            }
+
             return JamiesonRakutenPublishedPriceRoleResolution.Resolved(
                 roles =
                     ProductionPriceFieldRoles(
