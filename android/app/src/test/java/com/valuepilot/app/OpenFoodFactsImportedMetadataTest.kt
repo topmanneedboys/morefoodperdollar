@@ -11,6 +11,7 @@ import com.valuepilot.core.EvidenceFingerprints
 import com.valuepilot.core.QuantityNormalization
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -50,10 +51,37 @@ class OpenFoodFactsImportedMetadataTest {
 
         assertEquals(EvidenceClaimDomain.PACKAGE_QUANTITY, claim.domain)
         assertEquals(EvidenceAuthorityClass.SOURCE_ASSERTED_METADATA, claim.authority)
-        assertEquals("gtin:036000291452", claim.scope.productKey)
+        assertEquals("gtin:0036000291452", claim.scope.productKey)
         assertEquals("quantity:GRAM:1000000000", claim.valueFingerprint)
         assertNull(claim.scope.merchantKey)
         assertNull(claim.scope.currencyCode)
+    }
+
+    @Test
+    fun equivalentUpcAndGtin13ShareCanonicalProductScopeWithoutErasingSourceIdentity() {
+        val upc = OpenFoodFactsImportedMetadataMapper.map(
+            validProduct(code = "036000291452")
+        )
+        val gtin13 = OpenFoodFactsImportedMetadataMapper.map(
+            validProduct(code = "0036000291452")
+        )
+
+        assertTrue(upc.accepted)
+        assertTrue(gtin13.accepted)
+
+        val upcMetadata = requireNotNull(upc.metadata)
+        val gtin13Metadata = requireNotNull(gtin13.metadata)
+        val upcClaim = requireNotNull(upc.quantityClaim)
+        val gtin13Claim = requireNotNull(gtin13.quantityClaim)
+
+        assertEquals("036000291452", upcMetadata.gtin)
+        assertEquals("0036000291452", gtin13Metadata.gtin)
+        assertEquals("gtin:0036000291452", upcClaim.scope.productKey)
+        assertEquals(upcClaim.scope.productKey, gtin13Claim.scope.productKey)
+        assertEquals(upcClaim.valueFingerprint, gtin13Claim.valueFingerprint)
+        assertNotEquals(upcClaim.claimId, gtin13Claim.claimId)
+        assertEquals("open-food-facts:036000291452:package-quantity", upcClaim.claimId)
+        assertEquals("open-food-facts:0036000291452:package-quantity", gtin13Claim.claimId)
     }
 
     @Test
