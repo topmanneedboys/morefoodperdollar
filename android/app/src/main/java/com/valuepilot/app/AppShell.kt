@@ -17,8 +17,9 @@ enum class AppPrimaryTab {
  * Routes that can be rendered by a presentation.
  *
  * COMPARE is a standalone workflow layered above the four permanent primary tabs.
- * OBSERVED_PRICE_SAVED_SELECTION, STAPLE_WATCH_SETUP, and STAPLE_WATCH_POLICY are Saved-owned
- * subroutes layered above the Saved primary tab. None of these workflows is a fifth primary tab.
+ * OBSERVED_PRICE_SAVED_SELECTION, OBSERVED_PRICE_CONFIRMATION_DRAFT, STAPLE_WATCH_SETUP, and
+ * STAPLE_WATCH_POLICY are Saved-owned subroutes layered above the Saved primary tab. None of these
+ * workflows is a fifth primary tab.
  */
 enum class AppRoute {
     HOME,
@@ -26,6 +27,7 @@ enum class AppRoute {
     BASKET,
     SAVED,
     OBSERVED_PRICE_SAVED_SELECTION,
+    OBSERVED_PRICE_CONFIRMATION_DRAFT,
     STAPLE_WATCH_SETUP,
     STAPLE_WATCH_POLICY,
     COMPARE
@@ -64,6 +66,8 @@ sealed interface AppShellIntent {
 
     data object OpenObservedPriceSavedSelection : AppShellIntent
 
+    data object OpenObservedPriceConfirmationDraft : AppShellIntent
+
     data object OpenStapleWatchSetup : AppShellIntent
 
     data object OpenStapleWatchPolicy : AppShellIntent
@@ -91,6 +95,9 @@ object AppShellReducer {
 
             AppShellIntent.OpenObservedPriceSavedSelection ->
                 openObservedPriceSavedSelection(previous)
+
+            AppShellIntent.OpenObservedPriceConfirmationDraft ->
+                openObservedPriceConfirmationDraft(previous)
 
             AppShellIntent.OpenStapleWatchSetup ->
                 openStapleWatchSetup(previous)
@@ -130,6 +137,26 @@ object AppShellReducer {
 
         return previous.copy(
             route = AppRoute.OBSERVED_PRICE_SAVED_SELECTION,
+            compareReturnTab = null,
+            canNavigateBack = true
+        )
+    }
+
+    private fun openObservedPriceConfirmationDraft(
+        previous: AppShellState
+    ): AppShellState {
+        if (previous.route == AppRoute.OBSERVED_PRICE_CONFIRMATION_DRAFT) {
+            return previous
+        }
+        if (
+            previous.selectedPrimaryTab != AppPrimaryTab.SAVED ||
+            previous.route != AppRoute.OBSERVED_PRICE_SAVED_SELECTION
+        ) {
+            return previous
+        }
+
+        return previous.copy(
+            route = AppRoute.OBSERVED_PRICE_CONFIRMATION_DRAFT,
             compareReturnTab = null,
             canNavigateBack = true
         )
@@ -205,6 +232,14 @@ object AppShellReducer {
                     canNavigateBack = false
                 )
             }
+
+            AppRoute.OBSERVED_PRICE_CONFIRMATION_DRAFT ->
+                AppShellState(
+                    selectedPrimaryTab = AppPrimaryTab.SAVED,
+                    route = AppRoute.OBSERVED_PRICE_SAVED_SELECTION,
+                    compareReturnTab = null,
+                    canNavigateBack = true
+                )
 
             AppRoute.STAPLE_WATCH_POLICY ->
                 AppShellState(
