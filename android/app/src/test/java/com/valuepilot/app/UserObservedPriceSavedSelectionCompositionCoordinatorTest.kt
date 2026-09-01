@@ -7,6 +7,7 @@ import com.valuepilot.core.ShoppingStoreKey
 import com.valuepilot.core.SourceProductIdentity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -81,6 +82,78 @@ class UserObservedPriceSavedSelectionCompositionCoordinatorTest {
     }
 
     @Test
+    fun `typed prefill marker emits unchanged accepted handoff only after explicit ready selection`() {
+        val rendered = mutableListOf<UserObservedPriceSavedSelectionUiState>()
+        val createdSnapshots = mutableListOf<PracticalShoppingSavedValidatedSnapshot>()
+        val attempts = mutableListOf<UserObservedPriceSavedPrefillHandoffAttempt>()
+        val coordinator = coordinator(rendered, createdSnapshots, attempts)
+        coordinator.onSnapshot(snapshot())
+        coordinator.onRouteVisibilityChanged(true)
+
+        coordinator.onSurfaceAction(UserObservedPriceSavedSelectionAction.SelectProduct(milk))
+        coordinator.onSurfaceAction(UserObservedPriceSavedSelectionAction.SelectStore(north))
+
+        assertTrue(attempts.isEmpty())
+        coordinator.onCheckPrefillAction(UserObservedPriceSavedPrefillCheckUiAction.Request)
+
+        assertEquals(1, attempts.size)
+        val attempt = attempts.single()
+        assertTrue(attempt.accepted)
+        assertNull(attempt.issue)
+        assertNull(attempt.prefillIssue)
+        val prefill = requireNotNull(attempt.prefill)
+        assertEquals(milk, prefill.itemKey)
+        assertEquals(north, prefill.storeKey)
+        assertEquals("036000291452", prefill.rawGtin)
+        assertEquals("Whole Milk", prefill.productName)
+        assertEquals("North Market", prefill.storeDisplayName)
+    }
+
+    @Test
+    fun `direct prefill request with incomplete selection fails closed through typed handoff issue`() {
+        val rendered = mutableListOf<UserObservedPriceSavedSelectionUiState>()
+        val createdSnapshots = mutableListOf<PracticalShoppingSavedValidatedSnapshot>()
+        val attempts = mutableListOf<UserObservedPriceSavedPrefillHandoffAttempt>()
+        val coordinator = coordinator(rendered, createdSnapshots, attempts)
+        coordinator.onSnapshot(snapshot())
+        coordinator.onRouteVisibilityChanged(true)
+        coordinator.onSurfaceAction(UserObservedPriceSavedSelectionAction.SelectProduct(milk))
+
+        coordinator.requestPrefillHandoff()
+
+        assertEquals(1, attempts.size)
+        val attempt = attempts.single()
+        assertFalse(attempt.accepted)
+        assertEquals(UserObservedPriceSavedPrefillHandoffIssue.SELECTION_NOT_READY, attempt.issue)
+        assertNull(attempt.prefill)
+        assertNull(attempt.prefillIssue)
+    }
+
+    @Test
+    fun `hidden closed and pre-snapshot prefill requests emit no attempt`() {
+        val rendered = mutableListOf<UserObservedPriceSavedSelectionUiState>()
+        val createdSnapshots = mutableListOf<PracticalShoppingSavedValidatedSnapshot>()
+        val attempts = mutableListOf<UserObservedPriceSavedPrefillHandoffAttempt>()
+        val coordinator = coordinator(rendered, createdSnapshots, attempts)
+
+        coordinator.onRouteVisibilityChanged(true)
+        coordinator.onCheckPrefillAction(UserObservedPriceSavedPrefillCheckUiAction.Request)
+        assertTrue(attempts.isEmpty())
+
+        coordinator.onSnapshot(snapshot())
+        coordinator.onSurfaceAction(UserObservedPriceSavedSelectionAction.SelectProduct(milk))
+        coordinator.onSurfaceAction(UserObservedPriceSavedSelectionAction.SelectStore(north))
+        coordinator.onRouteVisibilityChanged(false)
+        coordinator.requestPrefillHandoff()
+        assertTrue(attempts.isEmpty())
+
+        coordinator.onRouteVisibilityChanged(true)
+        coordinator.close()
+        coordinator.onCheckPrefillAction(UserObservedPriceSavedPrefillCheckUiAction.Request)
+        assertTrue(attempts.isEmpty())
+    }
+
+    @Test
     fun `newer validated snapshot reconciles existing visible selection without a new session`() {
         val rendered = mutableListOf<UserObservedPriceSavedSelectionUiState>()
         val createdSnapshots = mutableListOf<PracticalShoppingSavedValidatedSnapshot>()
@@ -150,18 +223,20 @@ class UserObservedPriceSavedSelectionCompositionCoordinatorTest {
     }
 
     @Test
-    fun `selection composition owns no prefill draft evidence ranking storage navigation or android authority`() {
+    fun `selection composition owns only typed prefill handoff and no downstream authority`() {
         val source = source("UserObservedPriceSavedSelectionCompositionCoordinator.kt").readText()
 
         assertTrue(source.contains("PracticalShoppingSavedValidatedSnapshotObserver"))
         assertTrue(source.contains("UserObservedPriceSavedSelectionRouteSession"))
         assertTrue(source.contains("session?.onSelectionAction(action)"))
+        assertTrue(source.contains("UserObservedPriceSavedPrefillHandoffAttemptObserver"))
+        assertTrue(source.contains("UserObservedPriceSavedPrefillCheckUiAction.Request -> requestPrefillHandoff()"))
+        assertTrue(source.contains("?.requestPrefillOrNull()"))
+        assertTrue(source.contains("?.let(prefillHandoffAttemptObserver::onAttempt)"))
         assertFalse(source.contains("UserObservedPriceSavedSelectionUiStatus"))
         listOf(
-            "requestPrefillOrNull",
             "UserObservedPriceSavedPrefillHandoffGate",
             "UserObservedPriceSavedPrefillGate",
-            "UserObservedPriceSavedPrefillCheckUiAction",
             "PracticalShoppingSavedAndroidSession",
             "PracticalShoppingSavedExactPreferenceLocalStore",
             "PracticalShoppingSavedDisplayMetadataLocalStore",
@@ -197,18 +272,25 @@ class UserObservedPriceSavedSelectionCompositionCoordinatorTest {
 
     private fun coordinator(
         rendered: MutableList<UserObservedPriceSavedSelectionUiState>,
-        createdSnapshots: MutableList<PracticalShoppingSavedValidatedSnapshot>
+        createdSnapshots: MutableList<PracticalShoppingSavedValidatedSnapshot>,
+        attempts: MutableList<UserObservedPriceSavedPrefillHandoffAttempt> = mutableListOf()
     ): UserObservedPriceSavedSelectionCompositionCoordinator =
-        UserObservedPriceSavedSelectionCompositionCoordinator { acceptedSnapshot ->
-            createdSnapshots += acceptedSnapshot
-            UserObservedPriceSavedSelectionRouteSession(
-                initialSnapshot = acceptedSnapshot,
-                presenter =
-                    UserObservedPriceSavedSelectionSurfacePresenter { state ->
-                        rendered += state
-                    }
-            )
-        }
+        UserObservedPriceSavedSelectionCompositionCoordinator(
+            prefillHandoffAttemptObserver =
+                UserObservedPriceSavedPrefillHandoffAttemptObserver { attempt ->
+                    attempts += attempt
+                },
+            sessionFactory = { acceptedSnapshot ->
+                createdSnapshots += acceptedSnapshot
+                UserObservedPriceSavedSelectionRouteSession(
+                    initialSnapshot = acceptedSnapshot,
+                    presenter =
+                        UserObservedPriceSavedSelectionSurfacePresenter { state ->
+                            rendered += state
+                        }
+                )
+            }
+        )
 
     private fun snapshot(
         products: List<ShoppingItemKey> = listOf(milk, eggs),
