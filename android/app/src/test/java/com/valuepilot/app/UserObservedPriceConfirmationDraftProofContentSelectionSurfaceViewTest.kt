@@ -78,8 +78,8 @@ class UserObservedPriceConfirmationDraftProofContentSelectionSurfaceViewTest {
 
         listOf(
             "AndroidUserObservedPriceProofContentSource(contentResolver)",
-            "onReadResult = observedPriceConfirmationDraftProofContentSelectionCoordinator::onContentReadResult",
-            "requestForegroundSelection = { observedPriceConfirmationDraftProofContentPicker.launch() }",
+            "onReadResult =\n                    observedPriceConfirmationDraftProofContentSelectionCoordinator::onContentReadResult",
+            "requestForegroundSelection = {\n                    observedPriceConfirmationDraftProofContentPicker.launch()\n                }",
             "observer = observedPriceConfirmationDraftProofContentSelectionExperience"
         ).forEach { required ->
             assertTrue("Expected configureSaved composition $required", configureSaved.contains(required))
