@@ -8,7 +8,7 @@ import java.io.File
 class UserObservedPriceSavedShellIntegrationBoundaryTest {
 
     @Test
-    fun `saved lifecycle composes observed price launcher selection and typed prefill result without downstream authority`() {
+    fun `saved lifecycle composes observed price launcher selection typed result and passive confirmation draft route`() {
         val source = activitySource().readText()
         val configureSaved = configureSavedBlock(source)
 
@@ -16,9 +16,12 @@ class UserObservedPriceSavedShellIntegrationBoundaryTest {
         assertTrue(source.contains("private lateinit var observedPriceSavedSelectionExperience: UserObservedPriceSavedSelectionSurfaceView"))
         assertTrue(source.contains("private lateinit var observedPriceSavedPrefillResultExperience:"))
         assertTrue(source.contains("UserObservedPriceSavedPrefillHandoffSurfaceView"))
+        assertTrue(source.contains("private lateinit var observedPriceConfirmationDraftExperience:"))
+        assertTrue(source.contains("UserObservedPriceConfirmationDraftSurfaceView"))
         assertTrue(source.contains("private lateinit var observedPriceSavedSelectionCoordinator:"))
         assertTrue(source.contains("private lateinit var observedPriceSavedSelectionSurfaceCoordinator:"))
         assertTrue(source.contains("private lateinit var observedPriceSavedPrefillResultSurfaceBinding:"))
+        assertTrue(source.contains("private lateinit var observedPriceConfirmationDraftRouteCoordinator:"))
         assertTrue(source.contains("savedObservedPriceLaunchExperience = findViewById(R.id.savedObservedPriceLaunchExperience)"))
         assertTrue(source.contains("observedPriceSavedSelectionExperience = findViewById(R.id.observedPriceSavedSelectionExperience)"))
         assertTrue(
@@ -26,13 +29,25 @@ class UserObservedPriceSavedShellIntegrationBoundaryTest {
                 "observedPriceSavedPrefillResultExperience =\n            findViewById(R.id.observedPriceSavedPrefillResultExperience)"
             )
         )
+        assertTrue(
+            source.contains(
+                "observedPriceConfirmationDraftExperience =\n            findViewById(R.id.observedPriceConfirmationDraftExperience)"
+            )
+        )
 
         assertTrue(configureSaved.contains("PracticalShoppingSavedObservedPriceLaunchPresenter(savedObservedPriceLaunchExperience)"))
         assertTrue(configureSaved.contains("UserObservedPriceSavedPrefillHandoffResultSurfaceBinding("))
         assertTrue(configureSaved.contains("surface = observedPriceSavedPrefillResultExperience"))
         assertTrue(configureSaved.contains("UserObservedPriceSavedSelectionSurfacePresenter(observedPriceSelectionRenderer)"))
+        assertTrue(configureSaved.contains("UserObservedPriceConfirmationDraftSurfacePresenter("))
+        assertTrue(configureSaved.contains("UserObservedPriceConfirmationDraftRouteShellAdapter("))
+        assertTrue(configureSaved.contains("UserObservedPriceSavedConfirmationDraftRouteCoordinator("))
+        assertTrue(configureSaved.contains("UserObservedPriceConfirmationDraftRouteSession("))
+        assertTrue(configureSaved.contains("UserObservedPriceSavedPrefillHandoffAttemptFanout("))
+        assertTrue(configureSaved.contains("resultObserver = observedPriceSavedPrefillResultSurfaceBinding"))
+        assertTrue(configureSaved.contains("confirmationDraftObserver = observedPriceConfirmationDraftRouteCoordinator"))
         assertTrue(configureSaved.contains("UserObservedPriceSavedSelectionCompositionCoordinator("))
-        assertTrue(configureSaved.contains("prefillHandoffAttemptObserver = observedPriceSavedPrefillResultSurfaceBinding"))
+        assertTrue(configureSaved.contains("prefillHandoffAttemptObserver = observedPricePrefillAttemptFanout"))
         assertTrue(configureSaved.contains("UserObservedPriceSavedSelectionRouteSession("))
         assertTrue(configureSaved.contains("presenter = observedPriceSelectionPresenter"))
         assertTrue(configureSaved.contains("UserObservedPriceSavedSelectionSurfaceCoordinator("))
@@ -43,7 +58,7 @@ class UserObservedPriceSavedShellIntegrationBoundaryTest {
     }
 
     @Test
-    fun `typed launcher and selection surface route explicit prefill check without executing downstream authority`() {
+    fun `typed launcher and selection route only identity prefill into passive confirmation draft without downstream authority`() {
         val configureSaved = configureSavedBlock(activitySource().readText())
 
         assertTrue(configureSaved.contains("savedObservedPriceLaunchExperience.onAction = { action ->"))
@@ -63,14 +78,21 @@ class UserObservedPriceSavedShellIntegrationBoundaryTest {
             "requestPrefillOrNull(",
             "UserObservedPriceSavedPrefillHandoffGate",
             "UserObservedPriceSavedPrefillGate",
-            "UserObservedPriceConfirmationDraft",
             "UserObservedPriceConfirmationTransaction",
             "UserObservedPriceConfirmationExecution",
             "UserObservedPriceConfirmationAndroidSession",
             "UserProvidedPriceProof",
             "UserConfirmedObservedPrice",
             "UserProofBackedObservedPrice",
-            "ProductionCurrentPrice"
+            "ProductionCurrentPrice",
+            ".onArtifactReferenceChanged(",
+            ".onObservationReferenceChanged(",
+            ".onProductChanged(",
+            ".onPriceChanged(",
+            ".onStoreScopeChanged(",
+            ".onObservedAtChanged(",
+            ".onConfirmationChanged(",
+            ".currentSubmissionOrNull("
         ).forEach { forbidden ->
             assertFalse(
                 "Saved shell integration must not execute downstream authority $forbidden",
@@ -95,7 +117,7 @@ class UserObservedPriceSavedShellIntegrationBoundaryTest {
     }
 
     @Test
-    fun `exact shell route owns observed price selection lifecycle while result binding owns result visibility`() {
+    fun `exact shell routes own observed price selection result and confirmation draft visibility`() {
         val source = activitySource().readText()
 
         assertTrue(
@@ -103,10 +125,20 @@ class UserObservedPriceSavedShellIntegrationBoundaryTest {
                 "val observedPriceSelectionVisible =\n            state.route == AppRoute.OBSERVED_PRICE_SAVED_SELECTION"
             )
         )
+        assertTrue(
+            source.contains(
+                "val observedPriceConfirmationDraftVisible =\n            state.route == AppRoute.OBSERVED_PRICE_CONFIRMATION_DRAFT"
+            )
+        )
         assertTrue(source.contains("savedObservedPriceLaunchExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE"))
         assertTrue(
             source.contains(
                 "observedPriceSavedSelectionExperience.visibility =\n            if (observedPriceSelectionVisible) View.VISIBLE else View.GONE"
+            )
+        )
+        assertTrue(
+            source.contains(
+                "observedPriceConfirmationDraftExperience.visibility =\n            if (observedPriceConfirmationDraftVisible) View.VISIBLE else View.GONE"
             )
         )
         assertTrue(
@@ -119,25 +151,32 @@ class UserObservedPriceSavedShellIntegrationBoundaryTest {
                 "observedPriceSavedPrefillResultSurfaceBinding\n            .onRouteVisibilityChanged(observedPriceSelectionVisible)"
             )
         )
+        assertTrue(
+            source.contains(
+                "observedPriceConfirmationDraftRouteCoordinator\n            .onRouteVisibilityChanged(observedPriceConfirmationDraftVisible)"
+            )
+        )
         assertFalse(source.contains("observedPriceSavedPrefillResultExperience.visibility = View.VISIBLE"))
         assertTrue(source.contains("shellState.route == AppRoute.OBSERVED_PRICE_SAVED_SELECTION ||"))
+        assertTrue(source.contains("shellState.route == AppRoute.OBSERVED_PRICE_CONFIRMATION_DRAFT ||"))
         assertTrue(source.contains("dispatch(AppShellIntent.NavigateBack)"))
     }
 
     @Test
-    fun `activity teardown closes observed price surface result and session owners`() {
+    fun `activity teardown closes observed price surface result selection and confirmation draft owners`() {
         val source = activitySource().readText()
 
         assertTrue(source.contains("savedObservedPriceLaunchExperience.onAction = null"))
         assertTrue(source.contains("observedPriceSavedSelectionSurfaceCoordinator.close()"))
         assertTrue(source.contains("observedPriceSavedPrefillResultSurfaceBinding.close()"))
+        assertTrue(source.contains("observedPriceConfirmationDraftRouteCoordinator.close()"))
         assertTrue(source.contains("observedPriceSavedSelectionCoordinator.close()"))
         assertFalse(source.contains("observedPriceSavedSelectionExperience.onSelectionAction = null"))
         assertFalse(source.contains("observedPriceSavedSelectionExperience.onCheckPrefillAction = null"))
     }
 
     @Test
-    fun `shell layout contains replaceable observed price launcher selection and result surfaces hidden by default`() {
+    fun `shell layout contains replaceable observed price launcher selection result and confirmation surfaces hidden by default`() {
         val layout = layoutSource().readText()
 
         assertTrue(layout.contains("<com.valuepilot.app.PracticalShoppingSavedObservedPriceLaunchView"))
@@ -146,9 +185,12 @@ class UserObservedPriceSavedShellIntegrationBoundaryTest {
         assertTrue(layout.contains("android:id=\"@+id/observedPriceSavedSelectionExperience\""))
         assertTrue(layout.contains("<com.valuepilot.app.UserObservedPriceSavedPrefillHandoffSurfaceView"))
         assertTrue(layout.contains("android:id=\"@+id/observedPriceSavedPrefillResultExperience\""))
+        assertTrue(layout.contains("<com.valuepilot.app.UserObservedPriceConfirmationDraftSurfaceView"))
+        assertTrue(layout.contains("android:id=\"@+id/observedPriceConfirmationDraftExperience\""))
         assertTrue(hiddenByDefault(layout, "savedObservedPriceLaunchExperience"))
         assertTrue(hiddenByDefault(layout, "observedPriceSavedSelectionExperience"))
         assertTrue(hiddenByDefault(layout, "observedPriceSavedPrefillResultExperience"))
+        assertTrue(hiddenByDefault(layout, "observedPriceConfirmationDraftExperience"))
     }
 
     private fun configureSavedBlock(source: String): String =
