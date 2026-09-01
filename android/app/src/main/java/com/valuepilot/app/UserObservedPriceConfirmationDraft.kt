@@ -74,6 +74,39 @@ internal class UserObservedPriceConfirmationDraft private constructor(
             proofType = proofType
         )
 
+    fun withObservationReference(
+        observationId: String
+    ): UserObservedPriceConfirmationDraft =
+        copy(observationId = observationId)
+
+    fun withProductIdentity(
+        rawGtin: String,
+        productName: String
+    ): UserObservedPriceConfirmationDraft =
+        copy(
+            rawGtin = rawGtin,
+            productName = productName
+        )
+
+    /**
+     * Initializes the unanswered product/store identity bundle without replacing existing edits.
+     *
+     * Prefill is deliberately all-or-nothing: once any of GTIN, product name, or store scope has
+     * been answered, this operation leaves the draft unchanged. Observation identity remains a
+     * separate caller-owned field and is never invented here.
+     */
+    fun withIdentityPrefill(
+        prefill: UserObservedPriceConfirmationDraftIdentityPrefill
+    ): UserObservedPriceConfirmationDraft {
+        if (rawGtin != null || productName != null || storeScope != null) return this
+
+        return copy(
+            rawGtin = prefill.rawGtin,
+            productName = prefill.productName,
+            storeScope = prefill.storeScope
+        )
+    }
+
     fun withProduct(
         observationId: String,
         rawGtin: String,

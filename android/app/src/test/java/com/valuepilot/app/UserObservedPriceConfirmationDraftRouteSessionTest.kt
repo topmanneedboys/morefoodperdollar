@@ -33,6 +33,96 @@ class UserObservedPriceConfirmationDraftRouteSessionTest {
     }
 
     @Test
+    fun `visible identity prefill initializes only product and store identity without observation id`() {
+        val observed = mutableListOf<UserObservedPriceConfirmationDraftFinalization>()
+        val session = session(observed)
+        val storeScope = exactStoreScope()
+        val prefill =
+            UserObservedPriceConfirmationDraftIdentityPrefill(
+                rawGtin = "036000291452",
+                productName = "Whole Milk 2%",
+                storeScope = storeScope
+            )
+
+        session.onRouteVisibilityChanged(true)
+        session.onIdentityPrefill(prefill)
+
+        val afterPrefill = observed.last()
+        assertEquals(2, observed.size)
+        assertFalse(UserObservedPriceConfirmationDraftMissingField.GTIN in afterPrefill.missingFields)
+        assertFalse(UserObservedPriceConfirmationDraftMissingField.PRODUCT_NAME in afterPrefill.missingFields)
+        assertFalse(UserObservedPriceConfirmationDraftMissingField.STORE_SCOPE in afterPrefill.missingFields)
+        assertTrue(UserObservedPriceConfirmationDraftMissingField.OBSERVATION_ID in afterPrefill.missingFields)
+        assertTrue(UserObservedPriceConfirmationDraftMissingField.ARTIFACT_ID in afterPrefill.missingFields)
+        assertTrue(UserObservedPriceConfirmationDraftMissingField.PRICE in afterPrefill.missingFields)
+        assertTrue(UserObservedPriceConfirmationDraftMissingField.OBSERVED_AT in afterPrefill.missingFields)
+        assertTrue(UserObservedPriceConfirmationDraftMissingField.CONFIRMATION_ID in afterPrefill.missingFields)
+        assertTrue(UserObservedPriceConfirmationDraftMissingField.CONFIRMED_AT in afterPrefill.missingFields)
+
+        session.onObservationReferenceChanged("observation-001")
+        session.onArtifactReferenceChanged(
+            artifactId = "artifact-001",
+            proofType = UserProvidedPriceProofType.PRICE_TAG
+        )
+        session.onPriceChanged(Money(699L, "CAD"))
+        session.onObservedAtChanged(20_000L)
+        session.onConfirmationChanged(
+            confirmationId = "confirmation-001",
+            confirmedAtEpochMillis = 30_000L
+        )
+
+        val submission = requireNotNull(session.currentSubmissionOrNull())
+        assertEquals("observation-001", submission.fields.observationId)
+        assertEquals("036000291452", submission.fields.rawGtin)
+        assertEquals("Whole Milk 2%", submission.fields.productName)
+        assertSame(storeScope, submission.fields.storeScope)
+    }
+
+    @Test
+    fun `identity prefill never overwrites an existing product or store answer`() {
+        val observed = mutableListOf<UserObservedPriceConfirmationDraftFinalization>()
+        val session = session(observed)
+        val existingStoreScope = exactStoreScope()
+        val incomingStoreScope =
+            PracticalShoppingStoreIdentityScope(
+                merchantKey = "merchant-b",
+                locationKey = "location-b",
+                commerceChannelKey = "DELIVERY"
+            )
+
+        session.onRouteVisibilityChanged(true)
+        session.onProductChanged(
+            observationId = "observation-existing",
+            rawGtin = "4006381333931",
+            productName = "Existing Product"
+        )
+        session.onStoreScopeChanged(existingStoreScope)
+        session.onIdentityPrefill(
+            UserObservedPriceConfirmationDraftIdentityPrefill(
+                rawGtin = "036000291452",
+                productName = "Incoming Product",
+                storeScope = incomingStoreScope
+            )
+        )
+        session.onArtifactReferenceChanged(
+            artifactId = "artifact-001",
+            proofType = UserProvidedPriceProofType.RECEIPT
+        )
+        session.onPriceChanged(Money(799L, "CAD"))
+        session.onObservedAtChanged(20_000L)
+        session.onConfirmationChanged(
+            confirmationId = "confirmation-001",
+            confirmedAtEpochMillis = 30_000L
+        )
+
+        val submission = requireNotNull(session.currentSubmissionOrNull())
+        assertEquals("observation-existing", submission.fields.observationId)
+        assertEquals("4006381333931", submission.fields.rawGtin)
+        assertEquals("Existing Product", submission.fields.productName)
+        assertSame(existingStoreScope, submission.fields.storeScope)
+    }
+
+    @Test
     fun `hidden route ignores edits and re-show preserves only prior visible draft state`() {
         val observed = mutableListOf<UserObservedPriceConfirmationDraftFinalization>()
         val session = session(observed)
@@ -59,6 +149,13 @@ class UserObservedPriceConfirmationDraftRouteSessionTest {
 
         session.onRouteVisibilityChanged(false)
         assertNull(session.currentFinalizationOrNull())
+        session.onIdentityPrefill(
+            UserObservedPriceConfirmationDraftIdentityPrefill(
+                rawGtin = "036000291452",
+                productName = "Hidden Prefill",
+                storeScope = exactStoreScope()
+            )
+        )
         session.onProductChanged(
             observationId = "hidden-observation",
             rawGtin = "123",
@@ -76,6 +173,9 @@ class UserObservedPriceConfirmationDraftRouteSessionTest {
             UserObservedPriceConfirmationDraftMissingField.OBSERVATION_ID in
                 restored.missingFields
         )
+        assertTrue(UserObservedPriceConfirmationDraftMissingField.GTIN in restored.missingFields)
+        assertTrue(UserObservedPriceConfirmationDraftMissingField.PRODUCT_NAME in restored.missingFields)
+        assertTrue(UserObservedPriceConfirmationDraftMissingField.STORE_SCOPE in restored.missingFields)
     }
 
     @Test
@@ -200,13 +300,21 @@ class UserObservedPriceConfirmationDraftRouteSessionTest {
             artifactId = "artifact-002",
             proofType = UserProvidedPriceProofType.RECEIPT
         )
+        session.onIdentityPrefill(
+            UserObservedPriceConfirmationDraftIdentityPrefill(
+                rawGtin = "036000291452",
+                productName = "Closed Prefill",
+                storeScope = exactStoreScope()
+            )
+        )
+        session.onObservationReferenceChanged("closed-observation")
         session.onProductChanged("obs", "4006381333931", "Milk")
         assertEquals(2, observed.size)
         assertNull(session.currentFinalizationOrNull())
     }
 
     @Test
-    fun `route session retains no proof bytes and owns no execution semantic or Android authority`() {
+    fun `route session retains no proof bytes and owns no execution semantic Saved Android or network authority`() {
         assertTrue(
             UserObservedPriceConfirmationDraftRouteSession::class.java.declaredFields.none {
                 field -> field.type == ByteArray::class.java
@@ -216,6 +324,9 @@ class UserObservedPriceConfirmationDraftRouteSessionTest {
         val source = source("UserObservedPriceConfirmationDraftRouteSession.kt").readText()
         listOf(
             "ByteArray",
+            "UserObservedPriceSaved",
+            "ShoppingItemKey",
+            "ShoppingStoreKey",
             "UserObservedPriceConfirmationAndroidSession",
             "UserObservedPriceConfirmationExecutionHost",
             "UserObservedPriceConfirmationTransaction(",
@@ -241,10 +352,30 @@ class UserObservedPriceConfirmationDraftRouteSessionTest {
             assertFalse("Route draft session must not own $forbidden", source.contains(forbidden))
         }
 
+        val draftSource = source("UserObservedPriceConfirmationDraft.kt").readText()
+        listOf(
+            "UserObservedPriceSaved",
+            "ShoppingItemKey",
+            "ShoppingStoreKey",
+            "System.currentTimeMillis",
+            "UUID",
+            "android.",
+            "java.net"
+        ).forEach { forbidden ->
+            assertFalse("Confirmation draft must not own $forbidden", draftSource.contains(forbidden))
+        }
+
         assertTrue(source.contains("UserObservedPriceConfirmationDraft.start()"))
+        assertTrue(source.contains("current.withIdentityPrefill(prefill)"))
+        assertTrue(source.contains("current.withObservationReference(observationId)"))
         assertTrue(source.contains("UserObservedPriceConfirmationDraftFinalizer.finalize(current)"))
         assertTrue(source.contains("if (closed || !routeVisible) return"))
         assertTrue(source.contains("draft = null"))
+        assertTrue(
+            draftSource.contains(
+                "if (rawGtin != null || productName != null || storeScope != null) return this"
+            )
+        )
     }
 
     private fun session(
