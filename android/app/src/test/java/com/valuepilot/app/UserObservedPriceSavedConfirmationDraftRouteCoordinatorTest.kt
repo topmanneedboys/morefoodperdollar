@@ -1,5 +1,6 @@
 package com.valuepilot.app
 
+import com.valuepilot.core.Money
 import com.valuepilot.core.PracticalShoppingStoreIdentityScope
 import com.valuepilot.core.ShoppingItemKey
 import com.valuepilot.core.ShoppingStoreKey
@@ -62,6 +63,77 @@ class UserObservedPriceSavedConfirmationDraftRouteCoordinatorTest {
     }
 
     @Test
+    fun `explicit typed price is ignored before visibility and forwarded unchanged only to active draft`() {
+        val sessions = mutableListOf<UserObservedPriceConfirmationDraftRouteSession>()
+        val coordinator =
+            UserObservedPriceSavedConfirmationDraftRouteCoordinator(
+                routeOpenObserver = UserObservedPriceConfirmationDraftRouteOpenObserver { },
+                sessionFactory = {
+                    UserObservedPriceConfirmationDraftRouteSession()
+                        .also { created -> sessions += created }
+                }
+            )
+        val price = Money(minorUnits = 1_005L, currencyCode = "BHD", fractionDigits = 3)
+
+        coordinator.onAttempt(acceptedAttempt())
+        coordinator.onPriceInput(price)
+        coordinator.onRouteVisibilityChanged(true)
+
+        val session = sessions.single()
+        assertTrue(
+            UserObservedPriceConfirmationDraftMissingField.PRICE in
+                requireNotNull(session.currentFinalizationOrNull()).missingFields
+        )
+
+        coordinator.onPriceInput(price)
+
+        val afterPrice = requireNotNull(session.currentFinalizationOrNull())
+        assertFalse(UserObservedPriceConfirmationDraftMissingField.PRICE in afterPrice.missingFields)
+        assertNull(afterPrice.submission)
+
+        session.onArtifactReferenceChanged("artifact-001", UserProvidedPriceProofType.PRICE_TAG)
+        session.onObservationReferenceChanged("observation-001")
+        session.onObservedAtChanged(10_000L)
+        session.onConfirmationChanged("confirmation-001", 20_000L)
+
+        assertEquals(price, requireNotNull(session.currentSubmissionOrNull()).fields.price)
+    }
+
+    @Test
+    fun `price cannot survive leaving route or enter a later draft without a new explicit input`() {
+        val sessions = mutableListOf<UserObservedPriceConfirmationDraftRouteSession>()
+        val coordinator =
+            UserObservedPriceSavedConfirmationDraftRouteCoordinator(
+                routeOpenObserver = UserObservedPriceConfirmationDraftRouteOpenObserver { },
+                sessionFactory = {
+                    UserObservedPriceConfirmationDraftRouteSession()
+                        .also { created -> sessions += created }
+                }
+            )
+
+        coordinator.onAttempt(acceptedAttempt())
+        coordinator.onRouteVisibilityChanged(true)
+        coordinator.onPriceInput(Money(599L, "CAD"))
+        assertFalse(
+            UserObservedPriceConfirmationDraftMissingField.PRICE in
+                requireNotNull(sessions[0].currentFinalizationOrNull()).missingFields
+        )
+
+        coordinator.onRouteVisibilityChanged(false)
+        coordinator.onPriceInput(Money(699L, "USD"))
+        assertTrue(sessions[0].isClosed())
+
+        coordinator.onAttempt(acceptedAttempt())
+        coordinator.onRouteVisibilityChanged(true)
+
+        assertEquals(2, sessions.size)
+        assertTrue(
+            UserObservedPriceConfirmationDraftMissingField.PRICE in
+                requireNotNull(sessions[1].currentFinalizationOrNull()).missingFields
+        )
+    }
+
+    @Test
     fun `rejected Saved handoff cannot request or create confirmation draft route session`() {
         var openRequests = 0
         var createdSessions = 0
@@ -82,6 +154,7 @@ class UserObservedPriceSavedConfirmationDraftRouteCoordinatorTest {
             )
         )
         coordinator.onRouteVisibilityChanged(true)
+        coordinator.onPriceInput(Money(599L, "CAD"))
 
         assertEquals(0, openRequests)
         assertEquals(0, createdSessions)
@@ -136,6 +209,7 @@ class UserObservedPriceSavedConfirmationDraftRouteCoordinatorTest {
 
         coordinator.onAttempt(acceptedAttempt())
         coordinator.onRouteVisibilityChanged(true)
+        coordinator.onPriceInput(Money(599L, "CAD"))
         assertEquals(1, sessions.size)
     }
 
