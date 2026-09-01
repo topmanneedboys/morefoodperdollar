@@ -40,6 +40,11 @@ internal class UserObservedPriceConfirmationDraftRouteShellAdapter(
  * active draft and reused for the remainder of that route session. Merely opening the route does
  * not allocate an observation identity, and leaving the route discards the route-local allocation.
  *
+ * A later explicit action owner may read the current immutable completeness state and request a
+ * one-shot submission snapshot with already-captured technical confirmation metadata. Those reads
+ * are allowed only while this exact route and its session are active; the one-shot snapshot does not
+ * write confirmation metadata back into the editable draft.
+ *
  * The coordinator never chooses, parses, defaults, or infers price currency, civil time, UTC
  * offset, or proof facts. Hidden/closed routes and route states with no active draft session fail
  * closed. It does not implement the opaque-ID mechanism itself and never creates confirmation IDs
@@ -118,6 +123,18 @@ internal class UserObservedPriceSavedConfirmationDraftRouteCoordinator(
         val activeSession = session ?: return
         ensureObservationReference(activeSession)
         activeSession.onObservedAtChanged(observedAtEpochMillis)
+    }
+
+    fun currentFinalizationOrNull(): UserObservedPriceConfirmationDraftFinalization? {
+        if (closed || !routeVisible) return null
+        return session?.currentFinalizationOrNull()
+    }
+
+    fun currentSubmissionWithConfirmationOrNull(
+        metadata: UserObservedPriceConfirmationLifecycleMetadata
+    ): UserObservedPriceConfirmationDraftSubmission? {
+        if (closed || !routeVisible) return null
+        return session?.currentSubmissionWithConfirmationOrNull(metadata)
     }
 
     fun isVisible(): Boolean = !closed && routeVisible
