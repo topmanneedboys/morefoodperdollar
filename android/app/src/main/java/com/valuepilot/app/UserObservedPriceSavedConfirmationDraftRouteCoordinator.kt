@@ -32,14 +32,16 @@ internal class UserObservedPriceConfirmationDraftRouteShellAdapter(
  * point a fresh route-local session is created and receives only the identity prefill.
  *
  * While that exact route remains visible, an explicit typed [Money] emitted by the separate manual
- * price-input adapter and an explicit artifact-reference/proof-type pair emitted by the separate
- * non-byte proof-reference surface may be forwarded into the active draft. The coordinator never
- * chooses, parses, defaults, infers, fingerprints, reads, or stores proof content or price currency.
+ * price-input adapter, an explicit artifact-reference/proof-type pair emitted by the separate
+ * non-byte proof-reference surface, and an explicit observed-at epoch millisecond value emitted by
+ * a separate time-input adapter may be forwarded into the active draft. The coordinator never
+ * chooses, parses, defaults, or infers price currency, civil time, UTC offset, or proof facts.
  * Hidden/closed routes and route states with no active draft session fail closed.
  *
  * Leaving the route closes and clears that temporary session. This coordinator never supplies proof
- * bytes, observation/confirmation IDs or timestamps; never reads a clock; never submits, persists,
- * creates evidence, ranks offers, or authorizes current-price semantics.
+ * bytes; never generates observation/confirmation IDs or timestamps; never reads a clock; and never
+ * fingerprints or stores proof, submits, persists, creates evidence, ranks offers, or authorizes
+ * current-price semantics.
  */
 internal class UserObservedPriceSavedConfirmationDraftRouteCoordinator(
     private val routeOpenObserver: UserObservedPriceConfirmationDraftRouteOpenObserver,
@@ -97,6 +99,11 @@ internal class UserObservedPriceSavedConfirmationDraftRouteCoordinator(
             artifactId = artifactId,
             proofType = proofType
         )
+    }
+
+    fun onObservedAtInput(observedAtEpochMillis: Long) {
+        if (closed || !routeVisible) return
+        session?.onObservedAtChanged(observedAtEpochMillis)
     }
 
     fun isVisible(): Boolean = !closed && routeVisible
