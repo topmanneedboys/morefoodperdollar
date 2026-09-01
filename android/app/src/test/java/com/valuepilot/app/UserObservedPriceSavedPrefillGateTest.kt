@@ -58,7 +58,11 @@ class UserObservedPriceSavedPrefillGateTest {
     fun `unsaved product fails closed`() {
         val snapshot =
             snapshot(
-                products = listOf(product(eggs, SourceProductIdentity(gtin = "4006381333931")))
+                products = listOf(product(eggs, SourceProductIdentity(gtin = "4006381333931"))),
+                metadata =
+                    metadata(
+                        productNames = mapOf(eggs to "Large Eggs")
+                    )
             )
 
         val attempt = UserObservedPriceSavedPrefillGate.request(milk, north, snapshot)
@@ -70,7 +74,14 @@ class UserObservedPriceSavedPrefillGateTest {
 
     @Test
     fun `unsaved store fails closed`() {
-        val snapshot = snapshot(stores = listOf(store(west, westScope)))
+        val snapshot =
+            snapshot(
+                stores = listOf(store(west, westScope)),
+                metadata =
+                    metadata(
+                        storeNames = mapOf(west to "West Market")
+                    )
+            )
 
         val attempt = UserObservedPriceSavedPrefillGate.request(milk, north, snapshot)
 
