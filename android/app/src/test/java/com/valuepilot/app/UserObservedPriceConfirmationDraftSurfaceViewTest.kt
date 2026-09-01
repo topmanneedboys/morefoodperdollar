@@ -103,13 +103,54 @@ class UserObservedPriceConfirmationDraftSurfaceViewTest {
     }
 
     @Test
-    fun `physical renderer remains unattached until a real confirmation route owns visibility`() {
+    fun `physical renderer is attached only through the real confirmation route that owns visibility`() {
         val className = "UserObservedPriceConfirmationDraftSurfaceView"
         val layout = appFile("app/src/main/res/layout/activity_shell.xml").readText()
         val activity = appFile("app/src/main/java/com/valuepilot/app/MainActivity.kt").readText()
 
-        assertFalse("Shell must not attach the draft surface yet", layout.contains(className))
-        assertFalse("MainActivity must not activate the draft surface yet", activity.contains(className))
+        assertTrue("Shell must now contain the passive draft surface", layout.contains(className))
+        assertTrue(
+            "Draft surface must remain hidden by default in the shell layout",
+            layout
+                .substringAfter("android:id=\"@+id/observedPriceConfirmationDraftExperience\"")
+                .substringBefore("/>")
+                .contains("android:visibility=\"gone\"")
+        )
+        assertTrue(
+            "MainActivity must bind the passive draft surface",
+            activity.contains("private lateinit var observedPriceConfirmationDraftExperience:") &&
+                activity.contains(className)
+        )
+        assertTrue(
+            "Only the exact confirmation route may own foreground visibility",
+            activity.contains(
+                "val observedPriceConfirmationDraftVisible =\n            state.route == AppRoute.OBSERVED_PRICE_CONFIRMATION_DRAFT"
+            )
+        )
+        assertTrue(
+            "Physical visibility must follow only the exact confirmation-route boolean",
+            activity.contains(
+                "observedPriceConfirmationDraftExperience.visibility =\n            if (observedPriceConfirmationDraftVisible) View.VISIBLE else View.GONE"
+            )
+        )
+        assertTrue(
+            "Route-local coordinator must receive the same exact visibility ownership",
+            activity.contains(
+                "observedPriceConfirmationDraftRouteCoordinator\n            .onRouteVisibilityChanged(observedPriceConfirmationDraftVisible)"
+            )
+        )
+        assertFalse(
+            "Saved primary visibility must not directly activate the confirmation draft surface",
+            activity.contains(
+                "observedPriceConfirmationDraftExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE"
+            )
+        )
+        assertFalse(
+            "Selection-route visibility must not directly activate the confirmation draft surface",
+            activity.contains(
+                "observedPriceConfirmationDraftExperience.visibility = if (observedPriceSelectionVisible) View.VISIBLE else View.GONE"
+            )
+        )
     }
 
     private fun source(): File =
