@@ -1,12 +1,12 @@
 package com.valuepilot.app
 
-enum class UserObservedPriceConfirmationDraftUiStatus {
+internal enum class UserObservedPriceConfirmationDraftUiStatus {
     NEEDS_NON_BYTE_INPUT,
     NON_BYTE_INPUT_COMPLETE
 }
 
 /** Consumer-readable label for one exact completeness requirement from the draft finalizer. */
-data class UserObservedPriceConfirmationDraftMissingRequirementUi(
+internal data class UserObservedPriceConfirmationDraftMissingRequirementUi(
     val field: UserObservedPriceConfirmationDraftMissingField,
     val label: String
 ) {
@@ -23,7 +23,7 @@ data class UserObservedPriceConfirmationDraftMissingRequirementUi(
  * completeness means only that all non-byte fields are present; it never means those fields have
  * passed semantic confirmation validation or that proof has been retained.
  */
-data class UserObservedPriceConfirmationDraftUiState(
+internal data class UserObservedPriceConfirmationDraftUiState(
     val status: UserObservedPriceConfirmationDraftUiStatus,
     val headline: String,
     val statusTitle: String,
@@ -53,7 +53,7 @@ data class UserObservedPriceConfirmationDraftUiState(
  * time, create evidence, resolve package quantity, calculate unit value, rank offers, or authorize
  * current-price semantics.
  */
-object UserObservedPriceConfirmationDraftUiProjector {
+internal object UserObservedPriceConfirmationDraftUiProjector {
 
     fun project(
         finalization: UserObservedPriceConfirmationDraftFinalization
@@ -113,12 +113,12 @@ object UserObservedPriceConfirmationDraftUiProjector {
 }
 
 /** Narrow target for a future replaceable physical observed-price confirmation draft renderer. */
-fun interface UserObservedPriceConfirmationDraftSurfaceRenderer {
+internal fun interface UserObservedPriceConfirmationDraftSurfaceRenderer {
     fun render(state: UserObservedPriceConfirmationDraftUiState)
 }
 
 /** Presents completeness-only draft state without exposing the draft submission payload. */
-class UserObservedPriceConfirmationDraftSurfacePresenter(
+internal class UserObservedPriceConfirmationDraftSurfacePresenter(
     private val renderer: UserObservedPriceConfirmationDraftSurfaceRenderer
 ) {
     fun render(finalization: UserObservedPriceConfirmationDraftFinalization) {
