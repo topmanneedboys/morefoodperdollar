@@ -71,6 +71,154 @@ class AppShellTest {
     }
 
     @Test
+    fun observedPriceSavedSelectionOpensOnlyFromSavedPrimaryRoute() {
+        val saved = AppShellReducer.reduce(
+            AppShellState.initial(),
+            AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED)
+        )
+
+        val selection = AppShellReducer.reduce(
+            saved,
+            AppShellIntent.OpenObservedPriceSavedSelection
+        )
+
+        assertEquals(AppPrimaryTab.SAVED, selection.selectedPrimaryTab)
+        assertEquals(AppRoute.OBSERVED_PRICE_SAVED_SELECTION, selection.route)
+        assertEquals(null, selection.compareReturnTab)
+        assertTrue(selection.canNavigateBack)
+
+        val home = AppShellState.initial()
+        val fromHome = AppShellReducer.reduce(
+            home,
+            AppShellIntent.OpenObservedPriceSavedSelection
+        )
+        assertSame(home, fromHome)
+    }
+
+    @Test
+    fun observedPriceSavedSelectionCannotOpenOverCompareEvenWhenSavedOwnsPrimaryTab() {
+        val saved = AppShellReducer.reduce(
+            AppShellState.initial(),
+            AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED)
+        )
+        val compare = AppShellReducer.reduce(saved, AppShellIntent.OpenStandaloneCompare)
+
+        val attemptedSelection = AppShellReducer.reduce(
+            compare,
+            AppShellIntent.OpenObservedPriceSavedSelection
+        )
+
+        assertSame(compare, attemptedSelection)
+    }
+
+    @Test
+    fun savedSubroutesCannotOpenOverEachOther() {
+        val saved = AppShellReducer.reduce(
+            AppShellState.initial(),
+            AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED)
+        )
+        val observedPrice = AppShellReducer.reduce(
+            saved,
+            AppShellIntent.OpenObservedPriceSavedSelection
+        )
+        val stapleAttempt = AppShellReducer.reduce(
+            observedPrice,
+            AppShellIntent.OpenStapleWatchSetup
+        )
+        assertSame(observedPrice, stapleAttempt)
+
+        val staple = AppShellReducer.reduce(saved, AppShellIntent.OpenStapleWatchSetup)
+        val observedPriceAttempt = AppShellReducer.reduce(
+            staple,
+            AppShellIntent.OpenObservedPriceSavedSelection
+        )
+        assertSame(staple, observedPriceAttempt)
+    }
+
+    @Test
+    fun openingObservedPriceSavedSelectionTwiceIsIdempotent() {
+        val saved = AppShellReducer.reduce(
+            AppShellState.initial(),
+            AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED)
+        )
+        val first = AppShellReducer.reduce(
+            saved,
+            AppShellIntent.OpenObservedPriceSavedSelection
+        )
+        val second = AppShellReducer.reduce(
+            first,
+            AppShellIntent.OpenObservedPriceSavedSelection
+        )
+
+        assertSame(first, second)
+    }
+
+    @Test
+    fun backFromObservedPriceSavedSelectionReturnsToSavedPrimaryRoute() {
+        val saved = AppShellReducer.reduce(
+            AppShellState.initial(),
+            AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED)
+        )
+        val selection = AppShellReducer.reduce(
+            saved,
+            AppShellIntent.OpenObservedPriceSavedSelection
+        )
+
+        val returned = AppShellReducer.reduce(selection, AppShellIntent.NavigateBack)
+
+        assertEquals(AppPrimaryTab.SAVED, returned.selectedPrimaryTab)
+        assertEquals(AppRoute.SAVED, returned.route)
+        assertEquals(null, returned.compareReturnTab)
+        assertFalse(returned.canNavigateBack)
+    }
+
+    @Test
+    fun selectingPrimaryTabWhileObservedPriceSavedSelectionIsOpenExitsSubroute() {
+        val saved = AppShellReducer.reduce(
+            AppShellState.initial(),
+            AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED)
+        )
+        val selection = AppShellReducer.reduce(
+            saved,
+            AppShellIntent.OpenObservedPriceSavedSelection
+        )
+
+        val search = AppShellReducer.reduce(
+            selection,
+            AppShellIntent.SelectPrimary(AppPrimaryTab.SEARCH)
+        )
+
+        assertEquals(AppPrimaryTab.SEARCH, search.selectedPrimaryTab)
+        assertEquals(AppRoute.SEARCH, search.route)
+        assertEquals(null, search.compareReturnTab)
+        assertFalse(search.canNavigateBack)
+    }
+
+    @Test
+    fun compareOpenedFromObservedPriceSelectionReturnsToSavedNotSelection() {
+        val saved = AppShellReducer.reduce(
+            AppShellState.initial(),
+            AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED)
+        )
+        val selection = AppShellReducer.reduce(
+            saved,
+            AppShellIntent.OpenObservedPriceSavedSelection
+        )
+
+        val compare = AppShellReducer.reduce(selection, AppShellIntent.OpenStandaloneCompare)
+
+        assertEquals(AppPrimaryTab.SAVED, compare.selectedPrimaryTab)
+        assertEquals(AppRoute.COMPARE, compare.route)
+        assertEquals(AppPrimaryTab.SAVED, compare.compareReturnTab)
+        assertTrue(compare.canNavigateBack)
+
+        val returned = AppShellReducer.reduce(compare, AppShellIntent.NavigateBack)
+        assertEquals(AppPrimaryTab.SAVED, returned.selectedPrimaryTab)
+        assertEquals(AppRoute.SAVED, returned.route)
+        assertFalse(returned.canNavigateBack)
+    }
+
+    @Test
     fun stapleWatchSetupOpensOnlyFromSavedPrimaryRoute() {
         val saved = AppShellReducer.reduce(
             AppShellState.initial(),

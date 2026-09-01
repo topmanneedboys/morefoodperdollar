@@ -17,14 +17,15 @@ enum class AppPrimaryTab {
  * Routes that can be rendered by a presentation.
  *
  * COMPARE is a standalone workflow layered above the four permanent primary tabs.
- * STAPLE_WATCH_SETUP and STAPLE_WATCH_POLICY are Saved-owned subroutes layered above the Saved
- * primary tab. Neither workflow is a fifth primary tab.
+ * OBSERVED_PRICE_SAVED_SELECTION, STAPLE_WATCH_SETUP, and STAPLE_WATCH_POLICY are Saved-owned
+ * subroutes layered above the Saved primary tab. None of these workflows is a fifth primary tab.
  */
 enum class AppRoute {
     HOME,
     SEARCH,
     BASKET,
     SAVED,
+    OBSERVED_PRICE_SAVED_SELECTION,
     STAPLE_WATCH_SETUP,
     STAPLE_WATCH_POLICY,
     COMPARE
@@ -61,6 +62,8 @@ sealed interface AppShellIntent {
         val tab: AppPrimaryTab
     ) : AppShellIntent
 
+    data object OpenObservedPriceSavedSelection : AppShellIntent
+
     data object OpenStapleWatchSetup : AppShellIntent
 
     data object OpenStapleWatchPolicy : AppShellIntent
@@ -86,6 +89,9 @@ object AppShellReducer {
             is AppShellIntent.SelectPrimary ->
                 selectPrimary(intent.tab)
 
+            AppShellIntent.OpenObservedPriceSavedSelection ->
+                openObservedPriceSavedSelection(previous)
+
             AppShellIntent.OpenStapleWatchSetup ->
                 openStapleWatchSetup(previous)
 
@@ -108,6 +114,26 @@ object AppShellReducer {
             compareReturnTab = null,
             canNavigateBack = false
         )
+
+    private fun openObservedPriceSavedSelection(
+        previous: AppShellState
+    ): AppShellState {
+        if (previous.route == AppRoute.OBSERVED_PRICE_SAVED_SELECTION) {
+            return previous
+        }
+        if (
+            previous.selectedPrimaryTab != AppPrimaryTab.SAVED ||
+            previous.route != AppRoute.SAVED
+        ) {
+            return previous
+        }
+
+        return previous.copy(
+            route = AppRoute.OBSERVED_PRICE_SAVED_SELECTION,
+            compareReturnTab = null,
+            canNavigateBack = true
+        )
+    }
 
     private fun openStapleWatchSetup(
         previous: AppShellState
@@ -188,6 +214,7 @@ object AppShellReducer {
                     canNavigateBack = true
                 )
 
+            AppRoute.OBSERVED_PRICE_SAVED_SELECTION,
             AppRoute.STAPLE_WATCH_SETUP ->
                 selectPrimary(AppPrimaryTab.SAVED)
 
