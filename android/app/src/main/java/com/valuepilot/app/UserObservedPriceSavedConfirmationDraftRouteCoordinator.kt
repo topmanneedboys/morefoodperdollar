@@ -34,22 +34,28 @@ internal class UserObservedPriceConfirmationDraftRouteShellAdapter(
  * While that exact route remains visible, an explicit typed [Money] emitted by the separate manual
  * price-input adapter, an explicit artifact-reference/proof-type pair emitted by the separate
  * non-byte proof-reference surface, and an explicit observed-at epoch millisecond value emitted by
- * a separate time-input adapter may be forwarded into the active draft. The coordinator never
- * chooses, parses, defaults, or infers price currency, civil time, UTC offset, or proof facts.
- * Hidden/closed routes and route states with no active draft session fail closed.
+ * a separate time-input adapter may be forwarded into the active draft. The first such explicit
+ * observation fact lazily starts the route-local observation-record lifecycle by asking the
+ * injected [UserObservedPriceObservationIdSource] for one opaque ID. That ID is applied once to the
+ * active draft and reused for the remainder of that route session. Merely opening the route does
+ * not allocate an observation identity, and leaving the route discards the route-local allocation.
  *
- * Leaving the route closes and clears that temporary session. This coordinator never supplies proof
- * bytes; never generates observation/confirmation IDs or timestamps; never reads a clock; and never
- * fingerprints or stores proof, submits, persists, creates evidence, ranks offers, or authorizes
- * current-price semantics.
+ * The coordinator never chooses, parses, defaults, or infers price currency, civil time, UTC
+ * offset, or proof facts. Hidden/closed routes and route states with no active draft session fail
+ * closed. It does not implement the opaque-ID mechanism itself and never creates confirmation IDs
+ * or confirmation timestamps, reads a clock, supplies proof bytes, fingerprints or stores proof,
+ * submits, persists, creates evidence, ranks offers, or authorizes current-price semantics.
  */
 internal class UserObservedPriceSavedConfirmationDraftRouteCoordinator(
     private val routeOpenObserver: UserObservedPriceConfirmationDraftRouteOpenObserver,
-    private val sessionFactory: () -> UserObservedPriceConfirmationDraftRouteSession
+    private val sessionFactory: () -> UserObservedPriceConfirmationDraftRouteSession,
+    private val observationIdSource: UserObservedPriceObservationIdSource =
+        LocalUserObservedPriceObservationIdSource
 ) : UserObservedPriceSavedPrefillHandoffAttemptObserver, AutoCloseable {
 
     private var pendingPrefill: UserObservedPriceConfirmationDraftIdentityPrefill? = null
     private var session: UserObservedPriceConfirmationDraftRouteSession? = null
+    private var observationReferenceAssigned = false
     private var routeVisible = false
     private var closed = false
 
@@ -72,6 +78,7 @@ internal class UserObservedPriceSavedConfirmationDraftRouteCoordinator(
             pendingPrefill = null
             session?.close()
             session = null
+            observationReferenceAssigned = false
             return
         }
 
@@ -80,6 +87,7 @@ internal class UserObservedPriceSavedConfirmationDraftRouteCoordinator(
 
         val created = sessionFactory()
         session = created
+        observationReferenceAssigned = false
         created.onRouteVisibilityChanged(true)
         created.onIdentityPrefill(prefill)
         pendingPrefill = null
@@ -87,7 +95,9 @@ internal class UserObservedPriceSavedConfirmationDraftRouteCoordinator(
 
     fun onPriceInput(price: Money) {
         if (closed || !routeVisible) return
-        session?.onPriceChanged(price)
+        val activeSession = session ?: return
+        ensureObservationReference(activeSession)
+        activeSession.onPriceChanged(price)
     }
 
     fun onProofReferenceInput(
@@ -95,7 +105,9 @@ internal class UserObservedPriceSavedConfirmationDraftRouteCoordinator(
         proofType: UserProvidedPriceProofType
     ) {
         if (closed || !routeVisible) return
-        session?.onArtifactReferenceChanged(
+        val activeSession = session ?: return
+        ensureObservationReference(activeSession)
+        activeSession.onArtifactReferenceChanged(
             artifactId = artifactId,
             proofType = proofType
         )
@@ -103,7 +115,9 @@ internal class UserObservedPriceSavedConfirmationDraftRouteCoordinator(
 
     fun onObservedAtInput(observedAtEpochMillis: Long) {
         if (closed || !routeVisible) return
-        session?.onObservedAtChanged(observedAtEpochMillis)
+        val activeSession = session ?: return
+        ensureObservationReference(activeSession)
+        activeSession.onObservedAtChanged(observedAtEpochMillis)
     }
 
     fun isVisible(): Boolean = !closed && routeVisible
@@ -118,5 +132,15 @@ internal class UserObservedPriceSavedConfirmationDraftRouteCoordinator(
         pendingPrefill = null
         session?.close()
         session = null
+        observationReferenceAssigned = false
+    }
+
+    private fun ensureObservationReference(
+        activeSession: UserObservedPriceConfirmationDraftRouteSession
+    ) {
+        if (observationReferenceAssigned) return
+
+        activeSession.onObservationReferenceChanged(observationIdSource.nextObservationId())
+        observationReferenceAssigned = true
     }
 }
