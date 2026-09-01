@@ -17,7 +17,7 @@ import android.widget.TextView
  * and owns no reader, draft/session, artifact identity, persistence, submission, evidence, clock,
  * identifiers, ranking, or networking authority.
  */
-class UserObservedPriceConfirmationDraftProofContentSelectionSurfaceView @JvmOverloads constructor(
+internal class UserObservedPriceConfirmationDraftProofContentSelectionSurfaceView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
