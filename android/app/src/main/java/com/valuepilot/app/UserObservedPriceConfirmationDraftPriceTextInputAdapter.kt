@@ -40,9 +40,9 @@ internal sealed interface UserObservedPriceConfirmationDraftPriceTextInputResult
  *
  * Accepted amount syntax is deliberately locale-neutral: optional leading minus, ASCII digits and
  * an optional `.` fraction with no grouping separators, currency symbols, or plus sign. Exact
- * conversion is delegated to [Money.parse]; no Double/Float conversion occurs. Positive-price
- * semantics deliberately remain downstream in [UserConfirmedObservedPrice], so this adapter owns
- * syntax, currency metadata resolution, and numeric overflow only.
+ * conversion is delegated to [Money.parse]; no binary floating-point conversion occurs. Positive-
+ * price semantics deliberately remain downstream in [UserConfirmedObservedPrice], so this adapter
+ * owns syntax, currency metadata resolution, and numeric overflow only.
  *
  * This adapter owns no Android classes, draft/session mutation, product/store inference, proof,
  * identifiers, timestamps, persistence, evidence, current-price authority, ranking, or networking.
