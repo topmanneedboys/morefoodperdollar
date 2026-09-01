@@ -61,6 +61,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var observedPriceSavedSelectionExperience: UserObservedPriceSavedSelectionSurfaceView
     private lateinit var observedPriceSavedPrefillResultExperience:
         UserObservedPriceSavedPrefillHandoffSurfaceView
+    private lateinit var observedPriceConfirmationDraftExperience:
+        UserObservedPriceConfirmationDraftSurfaceView
     private lateinit var stapleWatchSetupExperience: StapleWatchSavedSelectionSurfaceView
     private lateinit var stapleWatchPolicyExperience: StapleWatchPolicyDraftSurfaceView
     private lateinit var stapleWatchResultExperience: StapleWatchSurfaceView
@@ -71,6 +73,8 @@ class MainActivity : AppCompatActivity() {
         UserObservedPriceSavedSelectionSurfaceCoordinator
     private lateinit var observedPriceSavedPrefillResultSurfaceBinding:
         UserObservedPriceSavedPrefillHandoffResultSurfaceBinding
+    private lateinit var observedPriceConfirmationDraftRouteCoordinator:
+        UserObservedPriceSavedConfirmationDraftRouteCoordinator
     private lateinit var stapleWatchForegroundEvaluationInputHost: StapleWatchForegroundEvaluationInputHost
     private lateinit var stapleWatchForegroundResultSurfaceBinding:
         StapleWatchForegroundResultSurfaceBinding
@@ -110,6 +114,8 @@ class MainActivity : AppCompatActivity() {
         observedPriceSavedSelectionExperience = findViewById(R.id.observedPriceSavedSelectionExperience)
         observedPriceSavedPrefillResultExperience =
             findViewById(R.id.observedPriceSavedPrefillResultExperience)
+        observedPriceConfirmationDraftExperience =
+            findViewById(R.id.observedPriceConfirmationDraftExperience)
         stapleWatchSetupExperience = findViewById(R.id.stapleWatchSetupExperience)
         stapleWatchPolicyExperience = findViewById(R.id.stapleWatchPolicyExperience)
         stapleWatchResultExperience = findViewById(R.id.stapleWatchResultExperience)
@@ -141,6 +147,7 @@ class MainActivity : AppCompatActivity() {
                 override fun handleOnBackPressed() {
                     if (
                         shellState.route == AppRoute.OBSERVED_PRICE_SAVED_SELECTION ||
+                        shellState.route == AppRoute.OBSERVED_PRICE_CONFIRMATION_DRAFT ||
                         shellState.route == AppRoute.STAPLE_WATCH_SETUP ||
                         shellState.route == AppRoute.STAPLE_WATCH_POLICY
                     ) {
@@ -197,6 +204,7 @@ class MainActivity : AppCompatActivity() {
             savedObservedPriceLaunchExperience.onAction = null
             observedPriceSavedSelectionSurfaceCoordinator.close()
             observedPriceSavedPrefillResultSurfaceBinding.close()
+            observedPriceConfirmationDraftRouteCoordinator.close()
             stapleWatchSetupExperience.onAction = null
             stapleWatchSetupExperience.onContinueAction = null
             stapleWatchPolicyExperience.onAction = null
@@ -369,6 +377,32 @@ class MainActivity : AppCompatActivity() {
             }
         val observedPriceSelectionPresenter =
             UserObservedPriceSavedSelectionSurfacePresenter(observedPriceSelectionRenderer)
+        val observedPriceConfirmationDraftPresenter =
+            UserObservedPriceConfirmationDraftSurfacePresenter(
+                observedPriceConfirmationDraftExperience
+            )
+        val observedPriceConfirmationDraftRouteShellAdapter =
+            UserObservedPriceConfirmationDraftRouteShellAdapter(
+                currentRoute = { shellState.route },
+                emitIntent = ::dispatch
+            )
+        observedPriceConfirmationDraftRouteCoordinator =
+            UserObservedPriceSavedConfirmationDraftRouteCoordinator(
+                routeOpenObserver = observedPriceConfirmationDraftRouteShellAdapter,
+                sessionFactory = {
+                    UserObservedPriceConfirmationDraftRouteSession(
+                        observer =
+                            UserObservedPriceConfirmationDraftObserver { finalization ->
+                                observedPriceConfirmationDraftPresenter.render(finalization)
+                            }
+                    )
+                }
+            )
+        val observedPricePrefillAttemptFanout =
+            UserObservedPriceSavedPrefillHandoffAttemptFanout(
+                resultObserver = observedPriceSavedPrefillResultSurfaceBinding,
+                confirmationDraftObserver = observedPriceConfirmationDraftRouteCoordinator
+            )
         val stapleSetupPresenter =
             StapleWatchSavedSelectionSurfacePresenter(stapleWatchSetupExperience)
         val staplePolicyPresenter =
@@ -376,7 +410,7 @@ class MainActivity : AppCompatActivity() {
 
         observedPriceSavedSelectionCoordinator =
             UserObservedPriceSavedSelectionCompositionCoordinator(
-                prefillHandoffAttemptObserver = observedPriceSavedPrefillResultSurfaceBinding
+                prefillHandoffAttemptObserver = observedPricePrefillAttemptFanout
             ) { snapshot ->
                 UserObservedPriceSavedSelectionRouteSession(
                     initialSnapshot = snapshot,
@@ -596,6 +630,8 @@ class MainActivity : AppCompatActivity() {
         val savedVisible = state.route == AppRoute.SAVED
         val observedPriceSelectionVisible =
             state.route == AppRoute.OBSERVED_PRICE_SAVED_SELECTION
+        val observedPriceConfirmationDraftVisible =
+            state.route == AppRoute.OBSERVED_PRICE_CONFIRMATION_DRAFT
         val stapleSetupVisible = state.route == AppRoute.STAPLE_WATCH_SETUP
         val staplePolicyVisible = state.route == AppRoute.STAPLE_WATCH_POLICY
         savedExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
@@ -603,6 +639,8 @@ class MainActivity : AppCompatActivity() {
         savedObservedPriceLaunchExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
         observedPriceSavedSelectionExperience.visibility =
             if (observedPriceSelectionVisible) View.VISIBLE else View.GONE
+        observedPriceConfirmationDraftExperience.visibility =
+            if (observedPriceConfirmationDraftVisible) View.VISIBLE else View.GONE
         stapleWatchSetupExperience.visibility =
             if (stapleSetupVisible) View.VISIBLE else View.GONE
         stapleWatchPolicyExperience.visibility =
@@ -611,6 +649,8 @@ class MainActivity : AppCompatActivity() {
         observedPriceSavedSelectionCoordinator.onRouteVisibilityChanged(observedPriceSelectionVisible)
         observedPriceSavedPrefillResultSurfaceBinding
             .onRouteVisibilityChanged(observedPriceSelectionVisible)
+        observedPriceConfirmationDraftRouteCoordinator
+            .onRouteVisibilityChanged(observedPriceConfirmationDraftVisible)
         stapleWatchSetupCoordinator.onRouteVisibilityChanged(stapleSetupVisible)
         stapleWatchPolicySetupCoordinator.onRouteVisibilityChanged(staplePolicyVisible)
         stapleWatchForegroundResultSurfaceBinding
