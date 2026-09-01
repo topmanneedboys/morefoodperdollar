@@ -85,15 +85,26 @@ class UserObservedPriceConfirmationDraftPriceInputSurfaceViewTest {
             )
         )
         assertTrue(
+            "Only the exact confirmation route may own editor foreground visibility",
             activity.contains(
-                "observedPriceConfirmationDraftPriceInputExperience.visibility =\n            if (observedPriceConfirmationDraftVisible) View.VISIBLE else View.GONE"
+                "val observedPriceConfirmationDraftVisible =\n            state.route == AppRoute.OBSERVED_PRICE_CONFIRMATION_DRAFT"
             )
         )
         assertTrue(
             activity.contains(
-                "if (!observedPriceConfirmationDraftVisible) {\n            observedPriceConfirmationDraftPriceInputExperience.clearInput()\n        }"
+                "observedPriceConfirmationDraftPriceInputExperience.visibility =\n            if (observedPriceConfirmationDraftVisible) View.VISIBLE else View.GONE"
             )
         )
+
+        val routeExitBlock =
+            activity
+                .substringAfter("if (!observedPriceConfirmationDraftVisible) {")
+                .substringBefore("}")
+        assertTrue(
+            "Price input raw text must be cleared inside the exact confirmation-route exit block",
+            routeExitBlock.contains("observedPriceConfirmationDraftPriceInputExperience.clearInput()")
+        )
+
         assertTrue(activity.contains("observedPriceConfirmationDraftPriceInputExperience.onCommit = null"))
 
         assertTrue(layout.contains("<com.valuepilot.app.UserObservedPriceConfirmationDraftPriceInputSurfaceView"))
