@@ -65,6 +65,10 @@ internal class UserObservedPriceConfirmationDraftRouteSession(
         update { current -> current.withIdentityPrefill(prefill) }
     }
 
+    fun onProductNameChanged(productName: String) {
+        update { current -> current.withProductName(productName) }
+    }
+
     fun onProductChanged(
         observationId: String,
         rawGtin: String,
