@@ -1,5 +1,7 @@
 package com.valuepilot.app
 
+import com.valuepilot.core.Money
+
 /** Requests the Saved-owned observed-price confirmation draft subroute. */
 internal fun interface UserObservedPriceConfirmationDraftRouteOpenObserver {
     fun onOpenRequested()
@@ -29,9 +31,14 @@ internal class UserObservedPriceConfirmationDraftRouteShellAdapter(
  * draft session is not created until the shell confirms that the draft route is visible. At that
  * point a fresh route-local session is created and receives only the identity prefill.
  *
- * Leaving the route closes and clears that temporary session. This coordinator never supplies price,
- * proof, observation/confirmation IDs or timestamps; never reads a clock; never submits, persists,
- * creates evidence, ranks offers, or authorizes current-price semantics.
+ * While that exact route remains visible, an explicit typed [Money] emitted by the separate manual
+ * price-input adapter may be forwarded into the active draft. The coordinator never chooses,
+ * parses, defaults, or infers that price or its currency. Hidden/closed routes and route states with
+ * no active draft session fail closed.
+ *
+ * Leaving the route closes and clears that temporary session. This coordinator never supplies proof,
+ * observation/confirmation IDs or timestamps; never reads a clock; never submits, persists, creates
+ * evidence, ranks offers, or authorizes current-price semantics.
  */
 internal class UserObservedPriceSavedConfirmationDraftRouteCoordinator(
     private val routeOpenObserver: UserObservedPriceConfirmationDraftRouteOpenObserver,
@@ -73,6 +80,11 @@ internal class UserObservedPriceSavedConfirmationDraftRouteCoordinator(
         created.onRouteVisibilityChanged(true)
         created.onIdentityPrefill(prefill)
         pendingPrefill = null
+    }
+
+    fun onPriceInput(price: Money) {
+        if (closed || !routeVisible) return
+        session?.onPriceChanged(price)
     }
 
     fun isVisible(): Boolean = !closed && routeVisible
