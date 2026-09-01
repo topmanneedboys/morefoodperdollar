@@ -297,7 +297,11 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
         session.onSavedSnapshotChanged(
             snapshot(
                 products = listOf(product(eggs, SourceProductIdentity(gtin = "4006381333931"))),
-                stores = listOf(store(west, westScope))
+                stores = listOf(store(west, westScope)),
+                metadata = metadata(
+                    productNames = mapOf(eggs to "Large Eggs"),
+                    storeNames = mapOf(west to "West Market")
+                )
             )
         )
         session.onRouteVisibilityChanged(true)
