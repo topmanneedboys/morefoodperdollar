@@ -8,28 +8,36 @@ import java.io.File
 class UserObservedPriceSavedSelectionSurfaceCoordinatorBoundaryTest {
 
     @Test
-    fun `coordinator only wires typed surface actions to route session and external prefill owner`() {
+    fun `coordinator only wires typed physical actions into verified composition boundary`() {
         val source = source("UserObservedPriceSavedSelectionSurfaceCoordinator.kt").readText()
 
         assertTrue(source.contains("UserObservedPriceSavedSelectionSurfaceView"))
-        assertTrue(source.contains("UserObservedPriceSavedSelectionRouteSession"))
-        assertTrue(source.contains("surface.onSelectionAction = ::forwardSelectionAction"))
-        assertTrue(source.contains("routeSession.onSelectionAction(action)"))
-        assertTrue(source.contains("surface.onCheckPrefillAction = ::forwardCheckPrefillAction"))
-        assertTrue(source.contains("onCheckPrefillAction(action)"))
+        assertTrue(source.contains("UserObservedPriceSavedSelectionCompositionCoordinator"))
+        assertTrue(
+            source.contains(
+                "surface.onSelectionAction = compositionCoordinator::onSurfaceAction"
+            )
+        )
+        assertTrue(
+            source.contains(
+                "surface.onCheckPrefillAction = compositionCoordinator::onCheckPrefillAction"
+            )
+        )
         assertTrue(source.contains("surface.onSelectionAction = null"))
         assertTrue(source.contains("surface.onCheckPrefillAction = null"))
-        assertFalse(source.contains("routeSession.close()"))
+        assertFalse(source.contains("compositionCoordinator.close()"))
     }
 
     @Test
-    fun `coordinator owns no route presentation prefill execution persistence evidence ranking navigation or price authority`() {
+    fun `coordinator owns no session route projection gate persistence evidence ranking navigation or price authority`() {
         val source = source("UserObservedPriceSavedSelectionSurfaceCoordinator.kt").readText()
 
         listOf(
+            "UserObservedPriceSavedSelectionRouteSession",
             "onRouteVisibilityChanged",
             "onSavedSnapshotChanged",
             "requestPrefillOrNull",
+            "requestPrefillHandoff",
             "UserObservedPriceSavedPrefillHandoffGate",
             "UserObservedPriceSavedPrefillGate",
             "UserObservedPriceSavedSelectionSurfacePresenter",
@@ -65,7 +73,7 @@ class UserObservedPriceSavedSelectionSurfaceCoordinatorBoundaryTest {
             "java.net"
         ).forEach { forbidden ->
             assertFalse(
-                "Observed-price Saved selection coordinator must not own $forbidden",
+                "Observed-price Saved surface coordinator must not own $forbidden",
                 source.contains(forbidden)
             )
         }
