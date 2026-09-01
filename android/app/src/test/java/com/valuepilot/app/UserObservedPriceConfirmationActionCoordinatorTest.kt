@@ -260,10 +260,11 @@ class UserObservedPriceConfirmationActionCoordinatorTest {
     private data class Rig(
         val route: UserObservedPriceSavedConfirmationDraftRouteCoordinator,
         val proof: UserObservedPriceConfirmationDraftProofContentSelectionCoordinator,
-        val action: UserObservedPriceConfirmationActionCoordinator
+        val action: UserObservedPriceConfirmationActionCoordinator,
+        val acceptedAttempt: UserObservedPriceSavedPrefillHandoffAttempt
     ) {
         fun openRoute() {
-            route.onAttempt(acceptedAttempt())
+            route.onAttempt(acceptedAttempt)
             route.onRouteVisibilityChanged(true)
             proof.onRouteVisibilityChanged(true)
         }
@@ -302,7 +303,12 @@ class UserObservedPriceConfirmationActionCoordinatorTest {
                 target = target,
                 metadataSource = metadataSource
             )
-        return Rig(route = route, proof = proof, action = action)
+        return Rig(
+            route = route,
+            proof = proof,
+            action = action,
+            acceptedAttempt = acceptedAttempt()
+        )
     }
 
     private fun metadata(
