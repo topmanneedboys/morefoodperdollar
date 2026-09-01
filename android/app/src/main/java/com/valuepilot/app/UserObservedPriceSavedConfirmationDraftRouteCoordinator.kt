@@ -29,9 +29,11 @@ internal class UserObservedPriceConfirmationDraftRouteShellAdapter(
  * draft session is not created until the shell confirms that the draft route is visible. At that
  * point a fresh route-local session is created and receives only the identity prefill.
  *
- * While that exact route is visible, already-adapted manual product-name actions may be forwarded to
- * the private route-local session. The session is never exposed to the Android host or physical
- * input adapter, and the action cannot replace GTIN/store scope or supply any other draft field.
+ * While that exact route is visible, an already-adapted manual product name may complete the field
+ * only while PRODUCT_NAME is still missing. Existing/prefilled product names are therefore never
+ * overwritten through this boundary. The private route-local session is not exposed to the Android
+ * host or physical input adapter, and this action cannot replace GTIN/store scope or supply any
+ * other draft field.
  *
  * Leaving the route closes and clears that temporary session. This coordinator never supplies price,
  * proof, observation/confirmation IDs or timestamps; never reads a clock; never submits, persists,
@@ -63,9 +65,13 @@ internal class UserObservedPriceSavedConfirmationDraftRouteCoordinator(
     override fun onProductNameAction(action: UserObservedPriceConfirmationProductNameUiAction) {
         if (closed || !routeVisible) return
 
+        val active = session ?: return
+        val missing = active.currentFinalizationOrNull()?.missingFields ?: return
+        if (UserObservedPriceConfirmationDraftMissingField.PRODUCT_NAME !in missing) return
+
         when (action) {
             is UserObservedPriceConfirmationProductNameUiAction.SetProductName ->
-                session?.onProductNameChanged(action.productName)
+                active.onProductNameChanged(action.productName)
         }
     }
 
