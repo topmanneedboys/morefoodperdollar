@@ -100,7 +100,48 @@ class UserObservedPriceSavedConfirmationDraftRouteCoordinatorTest {
     }
 
     @Test
-    fun `price cannot survive leaving route or enter a later draft without a new explicit input`() {
+    fun `explicit proof reference is ignored before visibility and forwarded unchanged only to active draft`() {
+        val sessions = mutableListOf<UserObservedPriceConfirmationDraftRouteSession>()
+        val coordinator =
+            UserObservedPriceSavedConfirmationDraftRouteCoordinator(
+                routeOpenObserver = UserObservedPriceConfirmationDraftRouteOpenObserver { },
+                sessionFactory = {
+                    UserObservedPriceConfirmationDraftRouteSession()
+                        .also { created -> sessions += created }
+                }
+            )
+
+        coordinator.onAttempt(acceptedAttempt())
+        coordinator.onProofReferenceInput("  receipt-sept-1  ", UserProvidedPriceProofType.RECEIPT)
+        coordinator.onRouteVisibilityChanged(true)
+
+        val session = sessions.single()
+        val beforeInput = requireNotNull(session.currentFinalizationOrNull())
+        assertTrue(UserObservedPriceConfirmationDraftMissingField.ARTIFACT_ID in beforeInput.missingFields)
+        assertTrue(UserObservedPriceConfirmationDraftMissingField.PROOF_TYPE in beforeInput.missingFields)
+
+        coordinator.onProofReferenceInput(
+            artifactId = "  receipt-sept-1  ",
+            proofType = UserProvidedPriceProofType.RECEIPT
+        )
+
+        val afterInput = requireNotNull(session.currentFinalizationOrNull())
+        assertFalse(UserObservedPriceConfirmationDraftMissingField.ARTIFACT_ID in afterInput.missingFields)
+        assertFalse(UserObservedPriceConfirmationDraftMissingField.PROOF_TYPE in afterInput.missingFields)
+        assertNull(afterInput.submission)
+
+        session.onPriceChanged(Money(599L, "CAD"))
+        session.onObservationReferenceChanged("observation-001")
+        session.onObservedAtChanged(10_000L)
+        session.onConfirmationChanged("confirmation-001", 20_000L)
+
+        val submission = requireNotNull(session.currentSubmissionOrNull())
+        assertEquals("  receipt-sept-1  ", submission.artifactId)
+        assertSame(UserProvidedPriceProofType.RECEIPT, submission.proofType)
+    }
+
+    @Test
+    fun `price and proof reference cannot survive leaving route or enter a later draft without new explicit input`() {
         val sessions = mutableListOf<UserObservedPriceConfirmationDraftRouteSession>()
         val coordinator =
             UserObservedPriceSavedConfirmationDraftRouteCoordinator(
@@ -114,23 +155,25 @@ class UserObservedPriceSavedConfirmationDraftRouteCoordinatorTest {
         coordinator.onAttempt(acceptedAttempt())
         coordinator.onRouteVisibilityChanged(true)
         coordinator.onPriceInput(Money(599L, "CAD"))
-        assertFalse(
-            UserObservedPriceConfirmationDraftMissingField.PRICE in
-                requireNotNull(sessions[0].currentFinalizationOrNull()).missingFields
-        )
+        coordinator.onProofReferenceInput("receipt-001", UserProvidedPriceProofType.RECEIPT)
+        val firstFinalization = requireNotNull(sessions[0].currentFinalizationOrNull())
+        assertFalse(UserObservedPriceConfirmationDraftMissingField.PRICE in firstFinalization.missingFields)
+        assertFalse(UserObservedPriceConfirmationDraftMissingField.ARTIFACT_ID in firstFinalization.missingFields)
+        assertFalse(UserObservedPriceConfirmationDraftMissingField.PROOF_TYPE in firstFinalization.missingFields)
 
         coordinator.onRouteVisibilityChanged(false)
         coordinator.onPriceInput(Money(699L, "USD"))
+        coordinator.onProofReferenceInput("price-tag-002", UserProvidedPriceProofType.PRICE_TAG)
         assertTrue(sessions[0].isClosed())
 
         coordinator.onAttempt(acceptedAttempt())
         coordinator.onRouteVisibilityChanged(true)
 
         assertEquals(2, sessions.size)
-        assertTrue(
-            UserObservedPriceConfirmationDraftMissingField.PRICE in
-                requireNotNull(sessions[1].currentFinalizationOrNull()).missingFields
-        )
+        val secondFinalization = requireNotNull(sessions[1].currentFinalizationOrNull())
+        assertTrue(UserObservedPriceConfirmationDraftMissingField.PRICE in secondFinalization.missingFields)
+        assertTrue(UserObservedPriceConfirmationDraftMissingField.ARTIFACT_ID in secondFinalization.missingFields)
+        assertTrue(UserObservedPriceConfirmationDraftMissingField.PROOF_TYPE in secondFinalization.missingFields)
     }
 
     @Test
@@ -155,6 +198,7 @@ class UserObservedPriceSavedConfirmationDraftRouteCoordinatorTest {
         )
         coordinator.onRouteVisibilityChanged(true)
         coordinator.onPriceInput(Money(599L, "CAD"))
+        coordinator.onProofReferenceInput("receipt-001", UserProvidedPriceProofType.RECEIPT)
 
         assertEquals(0, openRequests)
         assertEquals(0, createdSessions)
@@ -210,6 +254,7 @@ class UserObservedPriceSavedConfirmationDraftRouteCoordinatorTest {
         coordinator.onAttempt(acceptedAttempt())
         coordinator.onRouteVisibilityChanged(true)
         coordinator.onPriceInput(Money(599L, "CAD"))
+        coordinator.onProofReferenceInput("receipt-001", UserProvidedPriceProofType.RECEIPT)
         assertEquals(1, sessions.size)
     }
 
