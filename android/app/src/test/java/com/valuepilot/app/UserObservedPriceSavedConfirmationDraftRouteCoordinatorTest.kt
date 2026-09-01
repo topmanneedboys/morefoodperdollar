@@ -25,8 +25,11 @@ class UserObservedPriceSavedConfirmationDraftRouteCoordinatorTest {
                 sessionFactory = {
                     createdSessions += 1
                     UserObservedPriceConfirmationDraftRouteSession(
-                        observer = UserObservedPriceConfirmationDraftObserver(finalizations::add)
-                    ).also(sessions::add)
+                        observer =
+                            UserObservedPriceConfirmationDraftObserver { finalization ->
+                                finalizations += finalization
+                            }
+                    ).also { created -> sessions += created }
                 }
             )
 
@@ -92,7 +95,8 @@ class UserObservedPriceSavedConfirmationDraftRouteCoordinatorTest {
             UserObservedPriceSavedConfirmationDraftRouteCoordinator(
                 routeOpenObserver = UserObservedPriceConfirmationDraftRouteOpenObserver { },
                 sessionFactory = {
-                    UserObservedPriceConfirmationDraftRouteSession().also(sessions::add)
+                    UserObservedPriceConfirmationDraftRouteSession()
+                        .also { created -> sessions += created }
                 }
             )
 
@@ -116,7 +120,8 @@ class UserObservedPriceSavedConfirmationDraftRouteCoordinatorTest {
             UserObservedPriceSavedConfirmationDraftRouteCoordinator(
                 routeOpenObserver = UserObservedPriceConfirmationDraftRouteOpenObserver { },
                 sessionFactory = {
-                    UserObservedPriceConfirmationDraftRouteSession().also(sessions::add)
+                    UserObservedPriceConfirmationDraftRouteSession()
+                        .also { created -> sessions += created }
                 }
             )
 
@@ -141,7 +146,7 @@ class UserObservedPriceSavedConfirmationDraftRouteCoordinatorTest {
         val adapter =
             UserObservedPriceConfirmationDraftRouteShellAdapter(
                 currentRoute = { route },
-                emitIntent = intents::add
+                emitIntent = { intent -> intents += intent }
             )
 
         adapter.onOpenRequested()
