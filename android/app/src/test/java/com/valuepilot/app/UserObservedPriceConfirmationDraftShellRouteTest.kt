@@ -35,11 +35,12 @@ class UserObservedPriceConfirmationDraftShellRouteTest {
         )
         assertSame(saved, fromSaved)
 
+        val home = AppShellState.initial()
         val fromHome = AppShellReducer.reduce(
-            AppShellState.initial(),
+            home,
             AppShellIntent.OpenObservedPriceConfirmationDraft
         )
-        assertSame(AppShellState.initial(), fromHome)
+        assertSame(home, fromHome)
     }
 
     @Test
