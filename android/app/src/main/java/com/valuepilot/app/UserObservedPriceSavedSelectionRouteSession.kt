@@ -5,19 +5,22 @@ package com.valuepilot.app
  *
  * The validated Saved snapshot is the only Saved trust boundary accepted here. This session owns
  * only memory-local selection, route visibility, reconciliation against newer validated snapshots,
- * and an explicit request to the already-verified Saved-prefill handoff gate.
+ * re-presentation through the verified Saved-selection presenter, and an explicit request to the
+ * already-verified Saved-prefill handoff gate.
  *
  * Saved identities are never auto-selected. Hidden or closed routes ignore selection actions and
  * cannot request prefill. Hiding preserves temporary selection for the same open route session;
  * closing discards it. Snapshot changes may only reconcile removed identities and never select
  * newly Saved identities.
  *
- * This session does not render UI, mutate an observed-price draft, navigate, read proof bytes,
- * capture a price, generate ids or timestamps, persist anything, create evidence, resolve quantity,
- * classify freshness, rank offers, or authorize current-price semantics.
+ * This session does not implement physical UI, interpret presentation readiness, mutate an
+ * observed-price draft, navigate, read proof bytes, capture a price, generate ids or timestamps,
+ * persist anything, create evidence, resolve quantity, classify freshness, rank offers, or
+ * authorize current-price semantics.
  */
 internal class UserObservedPriceSavedSelectionRouteSession(
-    initialSnapshot: PracticalShoppingSavedValidatedSnapshot
+    initialSnapshot: PracticalShoppingSavedValidatedSnapshot,
+    private val presenter: UserObservedPriceSavedSelectionSurfacePresenter
 ) : AutoCloseable {
 
     private var snapshot = initialSnapshot
@@ -35,6 +38,7 @@ internal class UserObservedPriceSavedSelectionRouteSession(
                     previous = selection,
                     savedState = snapshot.exactState
                 )
+            renderCurrent()
         }
     }
 
@@ -47,6 +51,10 @@ internal class UserObservedPriceSavedSelectionRouteSession(
                 previous = selection,
                 savedState = snapshot.exactState
             )
+
+        if (routeVisible) {
+            renderCurrent()
+        }
     }
 
     fun onSelectionAction(
@@ -61,6 +69,7 @@ internal class UserObservedPriceSavedSelectionRouteSession(
                 action = action
             )
         selection = transition.state
+        renderCurrent()
         return transition
     }
 
@@ -88,5 +97,13 @@ internal class UserObservedPriceSavedSelectionRouteSession(
         closed = true
         routeVisible = false
         selection = UserObservedPriceSavedSelectionReducer.initial()
+    }
+
+    private fun renderCurrent() {
+        presenter.render(
+            savedState = snapshot.exactState,
+            selection = selection,
+            metadata = snapshot.displayMetadata
+        )
     }
 }
