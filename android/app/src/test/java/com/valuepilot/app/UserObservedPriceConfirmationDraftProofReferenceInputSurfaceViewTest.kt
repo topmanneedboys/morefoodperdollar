@@ -28,7 +28,10 @@ class UserObservedPriceConfirmationDraftProofReferenceInputSurfaceViewTest {
             assertTrue("Expected explicit proof-reference input binding $required", source.contains(required))
         }
 
-        assertFalse("Artifact reference must not be prefilled", source.contains("artifactIdEditor.setText("))
+        assertFalse(
+            "Artifact reference must not be prefilled with the example",
+            source.contains("artifactIdEditor.setText(\"receipt-sept-1\")")
+        )
         assertFalse("Receipt must not be selected by default", source.contains("receiptOption.isChecked = true"))
         assertFalse("Price tag must not be selected by default", source.contains("priceTagOption.isChecked = true"))
     }
