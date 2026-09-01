@@ -32,13 +32,14 @@ internal class UserObservedPriceConfirmationDraftRouteShellAdapter(
  * point a fresh route-local session is created and receives only the identity prefill.
  *
  * While that exact route remains visible, an explicit typed [Money] emitted by the separate manual
- * price-input adapter may be forwarded into the active draft. The coordinator never chooses,
- * parses, defaults, or infers that price or its currency. Hidden/closed routes and route states with
- * no active draft session fail closed.
+ * price-input adapter and an explicit artifact-reference/proof-type pair emitted by the separate
+ * non-byte proof-reference surface may be forwarded into the active draft. The coordinator never
+ * chooses, parses, defaults, infers, fingerprints, reads, or stores proof content or price currency.
+ * Hidden/closed routes and route states with no active draft session fail closed.
  *
- * Leaving the route closes and clears that temporary session. This coordinator never supplies proof,
- * observation/confirmation IDs or timestamps; never reads a clock; never submits, persists, creates
- * evidence, ranks offers, or authorizes current-price semantics.
+ * Leaving the route closes and clears that temporary session. This coordinator never supplies proof
+ * bytes, observation/confirmation IDs or timestamps; never reads a clock; never submits, persists,
+ * creates evidence, ranks offers, or authorizes current-price semantics.
  */
 internal class UserObservedPriceSavedConfirmationDraftRouteCoordinator(
     private val routeOpenObserver: UserObservedPriceConfirmationDraftRouteOpenObserver,
@@ -85,6 +86,17 @@ internal class UserObservedPriceSavedConfirmationDraftRouteCoordinator(
     fun onPriceInput(price: Money) {
         if (closed || !routeVisible) return
         session?.onPriceChanged(price)
+    }
+
+    fun onProofReferenceInput(
+        artifactId: String,
+        proofType: UserProvidedPriceProofType
+    ) {
+        if (closed || !routeVisible) return
+        session?.onArtifactReferenceChanged(
+            artifactId = artifactId,
+            proofType = proofType
+        )
     }
 
     fun isVisible(): Boolean = !closed && routeVisible
