@@ -57,10 +57,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var searchResultsContainer: LinearLayout
     private lateinit var savedExperience: PracticalShoppingSavedSurfaceView
     private lateinit var savedStapleLaunchExperience: PracticalShoppingSavedStapleLaunchView
+    private lateinit var savedObservedPriceLaunchExperience: PracticalShoppingSavedObservedPriceLaunchView
+    private lateinit var observedPriceSavedSelectionExperience: UserObservedPriceSavedSelectionSurfaceView
     private lateinit var stapleWatchSetupExperience: StapleWatchSavedSelectionSurfaceView
     private lateinit var stapleWatchPolicyExperience: StapleWatchPolicyDraftSurfaceView
     private lateinit var stapleWatchResultExperience: StapleWatchSurfaceView
     private lateinit var savedRouteCoordinator: PracticalShoppingSavedRouteCoordinator
+    private lateinit var observedPriceSavedSelectionCoordinator:
+        UserObservedPriceSavedSelectionCompositionCoordinator
     private lateinit var stapleWatchForegroundEvaluationInputHost: StapleWatchForegroundEvaluationInputHost
     private lateinit var stapleWatchForegroundResultSurfaceBinding:
         StapleWatchForegroundResultSurfaceBinding
@@ -96,6 +100,8 @@ class MainActivity : AppCompatActivity() {
         searchResultsContainer = findViewById(R.id.searchResultsContainer)
         savedExperience = findViewById(R.id.savedExperience)
         savedStapleLaunchExperience = findViewById(R.id.savedStapleLaunchExperience)
+        savedObservedPriceLaunchExperience = findViewById(R.id.savedObservedPriceLaunchExperience)
+        observedPriceSavedSelectionExperience = findViewById(R.id.observedPriceSavedSelectionExperience)
         stapleWatchSetupExperience = findViewById(R.id.stapleWatchSetupExperience)
         stapleWatchPolicyExperience = findViewById(R.id.stapleWatchPolicyExperience)
         stapleWatchResultExperience = findViewById(R.id.stapleWatchResultExperience)
@@ -126,6 +132,7 @@ class MainActivity : AppCompatActivity() {
             object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
                     if (
+                        shellState.route == AppRoute.OBSERVED_PRICE_SAVED_SELECTION ||
                         shellState.route == AppRoute.STAPLE_WATCH_SETUP ||
                         shellState.route == AppRoute.STAPLE_WATCH_POLICY
                     ) {
@@ -179,10 +186,14 @@ class MainActivity : AppCompatActivity() {
         if (::savedRouteCoordinator.isInitialized) {
             savedExperience.onAction = null
             savedStapleLaunchExperience.onAction = null
+            savedObservedPriceLaunchExperience.onAction = null
+            observedPriceSavedSelectionExperience.onSelectionAction = null
+            observedPriceSavedSelectionExperience.onCheckPrefillAction = null
             stapleWatchSetupExperience.onAction = null
             stapleWatchSetupExperience.onContinueAction = null
             stapleWatchPolicyExperience.onAction = null
             stapleWatchPolicyExperience.onContinueAction = null
+            observedPriceSavedSelectionCoordinator.close()
             stapleWatchPolicySetupCoordinator.close()
             stapleWatchSetupCoordinator.close()
             stapleWatchFactResolutionHost.close()
@@ -337,11 +348,22 @@ class MainActivity : AppCompatActivity() {
         val savedPresenter = PracticalShoppingSavedSurfacePresenter(savedExperience)
         val stapleLaunchPresenter =
             PracticalShoppingSavedStapleLaunchPresenter(savedStapleLaunchExperience)
+        val observedPriceLaunchPresenter =
+            PracticalShoppingSavedObservedPriceLaunchPresenter(savedObservedPriceLaunchExperience)
+        val observedPriceSelectionPresenter =
+            UserObservedPriceSavedSelectionSurfacePresenter(observedPriceSavedSelectionExperience)
         val stapleSetupPresenter =
             StapleWatchSavedSelectionSurfacePresenter(stapleWatchSetupExperience)
         val staplePolicyPresenter =
             StapleWatchPolicyDraftSurfacePresenter(stapleWatchPolicyExperience)
 
+        observedPriceSavedSelectionCoordinator =
+            UserObservedPriceSavedSelectionCompositionCoordinator { snapshot ->
+                UserObservedPriceSavedSelectionRouteSession(
+                    initialSnapshot = snapshot,
+                    presenter = observedPriceSelectionPresenter
+                )
+            }
         stapleWatchForegroundResultSurfaceBinding =
             StapleWatchForegroundResultSurfaceBinding(
                 renderer = stapleWatchResultExperience,
@@ -396,9 +418,11 @@ class MainActivity : AppCompatActivity() {
             PracticalShoppingSavedLifecycleRenderer { state ->
                 savedPresenter.render(state)
                 stapleLaunchPresenter.render(state)
+                observedPriceLaunchPresenter.render(state)
             }
         val savedSnapshotObserver =
             PracticalShoppingSavedValidatedSnapshotObserver { snapshot ->
+                observedPriceSavedSelectionCoordinator.onSnapshot(snapshot)
                 stapleWatchSetupCoordinator.onSnapshot(snapshot)
                 stapleWatchSavedDisplayMetadataCompositionCoordinator.onSnapshot(snapshot)
             }
@@ -421,6 +445,15 @@ class MainActivity : AppCompatActivity() {
                     dispatch(AppShellIntent.OpenStapleWatchSetup)
             }
         }
+        savedObservedPriceLaunchExperience.onAction = { action ->
+            when (action) {
+                PracticalShoppingSavedObservedPriceLaunchAction.OpenObservedPriceSavedSelection ->
+                    dispatch(AppShellIntent.OpenObservedPriceSavedSelection)
+            }
+        }
+        observedPriceSavedSelectionExperience.onSelectionAction =
+            observedPriceSavedSelectionCoordinator::onSurfaceAction
+        observedPriceSavedSelectionExperience.onCheckPrefillAction = null
         stapleWatchSetupExperience.onAction = stapleWatchSetupCoordinator::onSurfaceAction
         stapleWatchSetupExperience.onContinueAction = stapleWatchSetupCoordinator::onContinueAction
         stapleWatchPolicyExperience.onAction = stapleWatchPolicySetupCoordinator::onSurfaceAction
@@ -540,15 +573,21 @@ class MainActivity : AppCompatActivity() {
         }
 
         val savedVisible = state.route == AppRoute.SAVED
+        val observedPriceSelectionVisible =
+            state.route == AppRoute.OBSERVED_PRICE_SAVED_SELECTION
         val stapleSetupVisible = state.route == AppRoute.STAPLE_WATCH_SETUP
         val staplePolicyVisible = state.route == AppRoute.STAPLE_WATCH_POLICY
         savedExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
         savedStapleLaunchExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
+        savedObservedPriceLaunchExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
+        observedPriceSavedSelectionExperience.visibility =
+            if (observedPriceSelectionVisible) View.VISIBLE else View.GONE
         stapleWatchSetupExperience.visibility =
             if (stapleSetupVisible) View.VISIBLE else View.GONE
         stapleWatchPolicyExperience.visibility =
             if (staplePolicyVisible) View.VISIBLE else View.GONE
         savedRouteCoordinator.onRouteVisibilityChanged(savedVisible)
+        observedPriceSavedSelectionCoordinator.onRouteVisibilityChanged(observedPriceSelectionVisible)
         stapleWatchSetupCoordinator.onRouteVisibilityChanged(stapleSetupVisible)
         stapleWatchPolicySetupCoordinator.onRouteVisibilityChanged(staplePolicyVisible)
         stapleWatchForegroundResultSurfaceBinding
