@@ -73,7 +73,7 @@ class UserObservedPriceConfirmationDraftPriceInputSurfaceView @JvmOverloads cons
             isSingleLine = true
             isSaveEnabled = false
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
-            filters = arrayOf(InputFilter.LengthFilter(3))
+            filters = arrayOf<InputFilter>(InputFilter.LengthFilter(3))
             layoutParams =
                 LayoutParams(
                     LayoutParams.MATCH_PARENT,
