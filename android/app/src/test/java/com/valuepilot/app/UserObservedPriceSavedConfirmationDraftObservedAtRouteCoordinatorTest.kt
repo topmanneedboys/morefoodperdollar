@@ -24,21 +24,23 @@ class UserObservedPriceSavedConfirmationDraftObservedAtRouteCoordinatorTest {
         val session = sessions.single()
         val beforeInput = requireNotNull(session.currentFinalizationOrNull())
         assertTrue(UserObservedPriceConfirmationDraftMissingField.OBSERVED_AT in beforeInput.missingFields)
+        assertTrue(UserObservedPriceConfirmationDraftMissingField.OBSERVATION_ID in beforeInput.missingFields)
 
         coordinator.onObservedAtInput(observedAt)
 
         val afterInput = requireNotNull(session.currentFinalizationOrNull())
         assertFalse(UserObservedPriceConfirmationDraftMissingField.OBSERVED_AT in afterInput.missingFields)
-        assertTrue(UserObservedPriceConfirmationDraftMissingField.OBSERVATION_ID in afterInput.missingFields)
+        assertFalse(UserObservedPriceConfirmationDraftMissingField.OBSERVATION_ID in afterInput.missingFields)
         assertTrue(UserObservedPriceConfirmationDraftMissingField.CONFIRMATION_ID in afterInput.missingFields)
         assertTrue(UserObservedPriceConfirmationDraftMissingField.CONFIRMED_AT in afterInput.missingFields)
 
         session.onArtifactReferenceChanged("artifact-001", UserProvidedPriceProofType.RECEIPT)
-        session.onObservationReferenceChanged("observation-001")
         session.onPriceChanged(com.valuepilot.core.Money(599L, "CAD"))
         session.onConfirmationChanged("confirmation-001", observedAt + 1L)
 
-        assertEquals(observedAt, requireNotNull(session.currentSubmissionOrNull()).fields.observedAtEpochMillis)
+        val submission = requireNotNull(session.currentSubmissionOrNull())
+        assertEquals(observedAt, submission.fields.observedAtEpochMillis)
+        assertEquals("observation-route-test", submission.fields.observationId)
     }
 
     @Test
@@ -63,21 +65,25 @@ class UserObservedPriceSavedConfirmationDraftObservedAtRouteCoordinatorTest {
         coordinator.onRouteVisibilityChanged(true)
 
         assertEquals(2, sessions.size)
-        assertTrue(
-            UserObservedPriceConfirmationDraftMissingField.OBSERVED_AT in
-                requireNotNull(sessions[1].currentFinalizationOrNull()).missingFields
-        )
+        val laterDraft = requireNotNull(sessions[1].currentFinalizationOrNull())
+        assertTrue(UserObservedPriceConfirmationDraftMissingField.OBSERVED_AT in laterDraft.missingFields)
+        assertTrue(UserObservedPriceConfirmationDraftMissingField.OBSERVATION_ID in laterDraft.missingFields)
     }
 
     @Test
     fun `rejected handoff and closed coordinator cannot acquire observed time state`() {
         var createdSessions = 0
+        var idRequests = 0
         val coordinator =
             UserObservedPriceSavedConfirmationDraftRouteCoordinator(
                 routeOpenObserver = UserObservedPriceConfirmationDraftRouteOpenObserver { },
                 sessionFactory = {
                     createdSessions += 1
                     UserObservedPriceConfirmationDraftRouteSession()
+                },
+                observationIdSource = UserObservedPriceObservationIdSource {
+                    idRequests += 1
+                    "observation-$idRequests"
                 }
             )
 
@@ -90,20 +96,23 @@ class UserObservedPriceSavedConfirmationDraftObservedAtRouteCoordinatorTest {
         coordinator.onRouteVisibilityChanged(true)
         coordinator.onObservedAtInput(10_000L)
         assertEquals(0, createdSessions)
+        assertEquals(0, idRequests)
 
         coordinator.close()
         coordinator.onObservedAtInput(20_000L)
         coordinator.onAttempt(acceptedAttempt())
         coordinator.onRouteVisibilityChanged(true)
         assertEquals(0, createdSessions)
+        assertEquals(0, idRequests)
     }
 
     @Test
-    fun `coordinator forwards typed epoch only and owns no time parsing generation or downstream authority`() {
+    fun `coordinator forwards typed epoch and owns no time parsing generation or downstream authority`() {
         val source = source().readText()
 
         assertTrue(source.contains("fun onObservedAtInput(observedAtEpochMillis: Long)"))
-        assertTrue(source.contains("session?.onObservedAtChanged(observedAtEpochMillis)"))
+        assertTrue(source.contains("ensureObservationReference(activeSession)"))
+        assertTrue(source.contains("activeSession.onObservedAtChanged(observedAtEpochMillis)"))
         assertTrue(source.contains("if (closed || !routeVisible) return"))
 
         listOf(
@@ -140,7 +149,9 @@ class UserObservedPriceSavedConfirmationDraftObservedAtRouteCoordinatorTest {
             sessionFactory = {
                 UserObservedPriceConfirmationDraftRouteSession()
                     .also { created -> sessions += created }
-            }
+            },
+            observationIdSource =
+                UserObservedPriceObservationIdSource { "observation-route-test" }
         )
 
     private fun acceptedAttempt(): UserObservedPriceSavedPrefillHandoffAttempt =
