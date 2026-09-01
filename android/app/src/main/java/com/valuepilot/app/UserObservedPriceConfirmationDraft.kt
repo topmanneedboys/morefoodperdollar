@@ -89,6 +89,18 @@ internal class UserObservedPriceConfirmationDraft private constructor(
         )
 
     /**
+     * Replaces only the caller-supplied product name, preserving every other draft field exactly.
+     *
+     * This narrow edit exists so a foreground adapter can complete an optional Saved product name
+     * without re-supplying or exposing the already-prefilled GTIN/store identity bundle. Semantic
+     * product-name validation remains downstream in [UserConfirmedObservedPrice].
+     */
+    fun withProductName(
+        productName: String
+    ): UserObservedPriceConfirmationDraft =
+        copy(productName = productName)
+
+    /**
      * Initializes the unanswered product/store identity bundle without replacing existing edits.
      *
      * Prefill is deliberately all-or-nothing: once any of GTIN, product name, or store scope has
