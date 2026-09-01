@@ -19,6 +19,9 @@ internal fun interface UserObservedPriceConfirmationDraftObserver {
  * Hidden or closed routes ignore edits. Hiding preserves the temporary draft for the same open
  * route session; closing clears it permanently. A complete submission may be read only while the
  * route is visible, and reading it does not authorize proof retention or any factual promotion.
+ * A caller may also request a one-shot immutable submission snapshot with caller-supplied technical
+ * confirmation metadata. That snapshot overlays the metadata only for finalization and never writes
+ * the confirmation fields into the editable route draft or republishes presentation state.
  *
  * Raw proof bytes never enter this object. The session does not submit work, construct Android
  * runtime owners, fingerprint or persist proof, read a clock, generate identifiers, validate GTIN
@@ -111,6 +114,23 @@ internal class UserObservedPriceConfirmationDraftRouteSession(
 
     fun currentSubmissionOrNull(): UserObservedPriceConfirmationDraftSubmission? =
         currentFinalizationOrNull()?.submission
+
+    /**
+     * Builds one immutable action-time submission without mutating the route-local editable draft.
+     * Completeness only is checked here; semantic validation remains downstream and unchanged.
+     */
+    fun currentSubmissionWithConfirmationOrNull(
+        metadata: UserObservedPriceConfirmationLifecycleMetadata
+    ): UserObservedPriceConfirmationDraftSubmission? {
+        if (closed || !routeVisible) return null
+        val current = draft ?: return null
+        val actionSnapshot =
+            current.withConfirmation(
+                confirmationId = metadata.confirmationId,
+                confirmedAtEpochMillis = metadata.confirmedAtEpochMillis
+            )
+        return UserObservedPriceConfirmationDraftFinalizer.finalize(actionSnapshot).submission
+    }
 
     fun isVisible(): Boolean = !closed && routeVisible
 
