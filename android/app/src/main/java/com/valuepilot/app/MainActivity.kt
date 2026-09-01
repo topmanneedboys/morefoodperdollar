@@ -65,6 +65,8 @@ class MainActivity : AppCompatActivity() {
         UserObservedPriceConfirmationDraftSurfaceView
     private lateinit var observedPriceConfirmationDraftPriceInputExperience:
         UserObservedPriceConfirmationDraftPriceInputSurfaceView
+    private lateinit var observedPriceConfirmationDraftObservedAtInputExperience:
+        UserObservedPriceConfirmationDraftObservedAtInputSurfaceView
     private lateinit var observedPriceConfirmationDraftProofReferenceInputExperience:
         UserObservedPriceConfirmationDraftProofReferenceInputSurfaceView
     private lateinit var observedPriceConfirmationDraftProofContentSelectionExperience:
@@ -128,6 +130,8 @@ class MainActivity : AppCompatActivity() {
             findViewById(R.id.observedPriceConfirmationDraftExperience)
         observedPriceConfirmationDraftPriceInputExperience =
             findViewById(R.id.observedPriceConfirmationDraftPriceInputExperience)
+        observedPriceConfirmationDraftObservedAtInputExperience =
+            findViewById(R.id.observedPriceConfirmationDraftObservedAtInputExperience)
         observedPriceConfirmationDraftProofReferenceInputExperience =
             findViewById(R.id.observedPriceConfirmationDraftProofReferenceInputExperience)
         observedPriceConfirmationDraftProofContentSelectionExperience =
@@ -219,6 +223,7 @@ class MainActivity : AppCompatActivity() {
             savedStapleLaunchExperience.onAction = null
             savedObservedPriceLaunchExperience.onAction = null
             observedPriceConfirmationDraftPriceInputExperience.onCommit = null
+            observedPriceConfirmationDraftObservedAtInputExperience.onCommit = null
             observedPriceConfirmationDraftProofReferenceInputExperience.onCommit = null
             observedPriceConfirmationDraftProofContentSelectionExperience.onSelectRequested = null
             observedPriceConfirmationDraftProofContentPicker.close()
@@ -421,6 +426,8 @@ class MainActivity : AppCompatActivity() {
             )
         observedPriceConfirmationDraftPriceInputExperience.onCommit =
             observedPriceConfirmationDraftRouteCoordinator::onPriceInput
+        observedPriceConfirmationDraftObservedAtInputExperience.onCommit =
+            observedPriceConfirmationDraftRouteCoordinator::onObservedAtInput
         observedPriceConfirmationDraftProofReferenceInputExperience.onCommit =
             observedPriceConfirmationDraftRouteCoordinator::onProofReferenceInput
         observedPriceConfirmationDraftProofContentSelectionCoordinator =
@@ -684,6 +691,8 @@ class MainActivity : AppCompatActivity() {
             if (observedPriceConfirmationDraftVisible) View.VISIBLE else View.GONE
         observedPriceConfirmationDraftPriceInputExperience.visibility =
             if (observedPriceConfirmationDraftVisible) View.VISIBLE else View.GONE
+        observedPriceConfirmationDraftObservedAtInputExperience.visibility =
+            if (observedPriceConfirmationDraftVisible) View.VISIBLE else View.GONE
         observedPriceConfirmationDraftProofReferenceInputExperience.visibility =
             if (observedPriceConfirmationDraftVisible) View.VISIBLE else View.GONE
         observedPriceConfirmationDraftProofContentSelectionExperience.visibility =
@@ -691,6 +700,9 @@ class MainActivity : AppCompatActivity() {
         if (!observedPriceConfirmationDraftVisible) {
             observedPriceConfirmationDraftPriceInputExperience.clearInput()
             observedPriceConfirmationDraftProofReferenceInputExperience.clearInput()
+        }
+        if (!observedPriceConfirmationDraftVisible) {
+            observedPriceConfirmationDraftObservedAtInputExperience.clearInput()
         }
         stapleWatchSetupExperience.visibility =
             if (stapleSetupVisible) View.VISIBLE else View.GONE
