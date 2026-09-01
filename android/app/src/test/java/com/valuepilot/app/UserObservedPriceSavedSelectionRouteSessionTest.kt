@@ -32,9 +32,10 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
         )
 
     @Test
-    fun `route entry never auto selects even when only one saved pair exists`() {
+    fun `route entry never auto selects and renders once even when only one saved pair exists`() {
+        val rendered = mutableListOf<UserObservedPriceSavedSelectionUiState>()
         val session =
-            UserObservedPriceSavedSelectionRouteSession(
+            session(
                 initialSnapshot =
                     snapshot(
                         products = listOf(product(milk, SourceProductIdentity(gtin = "036000291452"))),
@@ -43,17 +44,21 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
                             productNames = mapOf(milk to "Whole Milk"),
                             storeNames = mapOf(north to "North Market")
                         )
-                    )
+                    ),
+                rendered = rendered
             )
 
         assertFalse(session.isVisible())
         assertNull(session.currentSelectionOrNull())
         assertNull(session.requestPrefillOrNull())
+        assertTrue(rendered.isEmpty())
 
         session.onRouteVisibilityChanged(true)
         session.onRouteVisibilityChanged(true)
 
         assertTrue(session.isVisible())
+        assertEquals(1, rendered.size)
+        assertEquals(UserObservedPriceSavedSelectionUiStatus.NEEDS_SELECTION, rendered.single().status)
         assertEquals(
             UserObservedPriceSavedSelection.initial(),
             session.currentSelectionOrNull()
@@ -65,9 +70,10 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
     }
 
     @Test
-    fun `visible explicit pair returns exact verified handoff attempt unchanged`() {
+    fun `visible explicit pair renders each action and returns exact verified handoff attempt unchanged`() {
         val savedSnapshot = snapshot()
-        val session = UserObservedPriceSavedSelectionRouteSession(savedSnapshot)
+        val rendered = mutableListOf<UserObservedPriceSavedSelectionUiState>()
+        val session = session(savedSnapshot, rendered)
         session.onRouteVisibilityChanged(true)
 
         val productTransition =
@@ -77,6 +83,8 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
                 )
             )
         assertTrue(productTransition.accepted)
+        assertEquals(UserObservedPriceSavedSelectionUiStatus.NEEDS_SELECTION, rendered.last().status)
+
         val storeTransition =
             requireNotNull(
                 session.onSelectionAction(
@@ -84,6 +92,11 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
                 )
             )
         assertTrue(storeTransition.accepted)
+        assertEquals(3, rendered.size)
+        assertEquals(
+            UserObservedPriceSavedSelectionUiStatus.READY_FOR_PREFILL_CHECK,
+            rendered.last().status
+        )
 
         val expected =
             UserObservedPriceSavedPrefillHandoffGate.request(
@@ -97,8 +110,9 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
     }
 
     @Test
-    fun `hidden route ignores actions and prefill while hide show preserves temporary selection`() {
-        val session = UserObservedPriceSavedSelectionRouteSession(snapshot())
+    fun `hidden route ignores actions and rendering while hide show preserves temporary selection`() {
+        val rendered = mutableListOf<UserObservedPriceSavedSelectionUiState>()
+        val session = session(rendered = rendered)
         session.onRouteVisibilityChanged(true)
         requireNotNull(
             session.onSelectionAction(
@@ -107,6 +121,7 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
         )
 
         session.onRouteVisibilityChanged(false)
+        val renderCountWhileHidden = rendered.size
 
         assertFalse(session.isVisible())
         assertNull(session.currentSelectionOrNull())
@@ -116,12 +131,16 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
                 UserObservedPriceSavedSelectionAction.SelectStore(north)
             )
         )
+        assertEquals(renderCountWhileHidden, rendered.size)
 
         session.onRouteVisibilityChanged(true)
 
         val restored = requireNotNull(session.currentSelectionOrNull())
+        assertEquals(renderCountWhileHidden + 1, rendered.size)
         assertEquals(milk, restored.itemKey)
         assertNull(restored.storeKey)
+        assertTrue(rendered.last().productSelected)
+        assertFalse(rendered.last().storeSelected)
         assertEquals(
             UserObservedPriceSavedPrefillHandoffIssue.SELECTION_NOT_READY,
             requireNotNull(session.requestPrefillOrNull()).issue
@@ -129,8 +148,9 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
     }
 
     @Test
-    fun `snapshot change reconciles removed selection without selecting additions`() {
-        val session = UserObservedPriceSavedSelectionRouteSession(snapshot())
+    fun `visible snapshot change reconciles removed selection and renders without selecting additions`() {
+        val rendered = mutableListOf<UserObservedPriceSavedSelectionUiState>()
+        val session = session(rendered = rendered)
         session.onRouteVisibilityChanged(true)
         requireNotNull(
             session.onSelectionAction(
@@ -142,6 +162,7 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
                 UserObservedPriceSavedSelectionAction.SelectStore(north)
             )
         )
+        val beforeSnapshot = rendered.size
 
         session.onSavedSnapshotChanged(
             snapshot(
@@ -154,10 +175,13 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
         )
 
         val reconciled = requireNotNull(session.currentSelectionOrNull())
+        assertEquals(beforeSnapshot + 1, rendered.size)
         assertNull(reconciled.itemKey)
         assertEquals(north, reconciled.storeKey)
         assertFalse(reconciled.itemKey == eggs)
         assertFalse(reconciled.storeKey == west)
+        assertFalse(rendered.last().productSelected)
+        assertTrue(rendered.last().storeSelected)
         assertEquals(
             UserObservedPriceSavedPrefillHandoffIssue.SELECTION_NOT_READY,
             requireNotNull(session.requestPrefillOrNull()).issue
@@ -165,8 +189,9 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
     }
 
     @Test
-    fun `hidden snapshot change still reconciles before route reentry`() {
-        val session = UserObservedPriceSavedSelectionRouteSession(snapshot())
+    fun `hidden snapshot change reconciles without rendering until route reentry`() {
+        val rendered = mutableListOf<UserObservedPriceSavedSelectionUiState>()
+        val session = session(rendered = rendered)
         session.onRouteVisibilityChanged(true)
         requireNotNull(
             session.onSelectionAction(
@@ -179,6 +204,7 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
             )
         )
         session.onRouteVisibilityChanged(false)
+        val renderCountBeforeSnapshot = rendered.size
 
         session.onSavedSnapshotChanged(
             snapshot(
@@ -192,12 +218,16 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
         )
 
         assertNull(session.currentSelectionOrNull())
+        assertEquals(renderCountBeforeSnapshot, rendered.size)
+
         session.onRouteVisibilityChanged(true)
 
+        assertEquals(renderCountBeforeSnapshot + 1, rendered.size)
         assertEquals(
             UserObservedPriceSavedSelection.initial(),
             session.currentSelectionOrNull()
         )
+        assertEquals(UserObservedPriceSavedSelectionUiStatus.NEEDS_SELECTION, rendered.last().status)
         assertEquals(
             UserObservedPriceSavedPrefillHandoffIssue.SELECTION_NOT_READY,
             requireNotNull(session.requestPrefillOrNull()).issue
@@ -205,8 +235,9 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
     }
 
     @Test
-    fun `stale visible selection action preserves typed reducer rejection`() {
-        val session = UserObservedPriceSavedSelectionRouteSession(snapshot())
+    fun `stale visible selection action preserves typed reducer rejection and reprojects safe state`() {
+        val rendered = mutableListOf<UserObservedPriceSavedSelectionUiState>()
+        val session = session(rendered = rendered)
         session.onRouteVisibilityChanged(true)
         requireNotNull(
             session.onSelectionAction(
@@ -225,6 +256,7 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
                 metadata = metadata(productNames = mapOf(eggs to "Large Eggs"))
             )
         )
+        val beforeStaleAction = rendered.size
 
         val transition =
             requireNotNull(
@@ -237,10 +269,13 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
         assertEquals(UserObservedPriceSavedSelectionIssue.PRODUCT_NOT_SAVED, transition.issue)
         assertNull(transition.state.itemKey)
         assertEquals(north, transition.state.storeKey)
+        assertEquals(beforeStaleAction + 1, rendered.size)
+        assertFalse(rendered.last().productSelected)
+        assertTrue(rendered.last().storeSelected)
     }
 
     @Test
-    fun `downstream prefill blocker remains unchanged through route session`() {
+    fun `presentation readiness stays weaker than downstream prefill GTIN authority`() {
         val savedSnapshot =
             snapshot(
                 products =
@@ -256,7 +291,8 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
                     storeNames = mapOf(north to "North Market")
                 )
             )
-        val session = UserObservedPriceSavedSelectionRouteSession(savedSnapshot)
+        val rendered = mutableListOf<UserObservedPriceSavedSelectionUiState>()
+        val session = session(savedSnapshot, rendered)
         session.onRouteVisibilityChanged(true)
         requireNotNull(
             session.onSelectionAction(
@@ -268,6 +304,12 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
                 UserObservedPriceSavedSelectionAction.SelectStore(north)
             )
         )
+
+        assertEquals(
+            UserObservedPriceSavedSelectionUiStatus.READY_FOR_PREFILL_CHECK,
+            rendered.last().status
+        )
+        assertEquals(UserObservedPriceSavedPrefillCheckUiAction.Request, rendered.last().checkPrefillAction)
 
         val expected =
             UserObservedPriceSavedPrefillHandoffGate.request(
@@ -283,14 +325,69 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
     }
 
     @Test
-    fun `close discards selection and blocks later route snapshot action and prefill work`() {
-        val session = UserObservedPriceSavedSelectionRouteSession(snapshot())
+    fun `display metadata changes can block and unblock presentation without changing selection`() {
+        val saved = snapshot()
+        val rendered = mutableListOf<UserObservedPriceSavedSelectionUiState>()
+        val session = session(saved, rendered)
         session.onRouteVisibilityChanged(true)
         requireNotNull(
             session.onSelectionAction(
                 UserObservedPriceSavedSelectionAction.SelectProduct(milk)
             )
         )
+        requireNotNull(
+            session.onSelectionAction(
+                UserObservedPriceSavedSelectionAction.SelectStore(north)
+            )
+        )
+        assertEquals(
+            UserObservedPriceSavedSelectionUiStatus.READY_FOR_PREFILL_CHECK,
+            rendered.last().status
+        )
+
+        session.onSavedSnapshotChanged(
+            snapshot(
+                products = saved.exactState.productPreferences,
+                stores = saved.exactState.storePreferences,
+                metadata = metadata(
+                    productNames = mapOf(eggs to "Large Eggs"),
+                    storeNames = mapOf(north to "North Market", west to "West Market")
+                )
+            )
+        )
+
+        assertEquals(
+            UserObservedPriceSavedSelectionUiStatus.DISPLAY_METADATA_INCOMPLETE,
+            rendered.last().status
+        )
+        assertTrue(rendered.last().productSelected)
+        assertTrue(rendered.last().storeSelected)
+        assertEquals(
+            UserObservedPriceSavedPrefillIssue.PRODUCT_DISPLAY_NAME_UNAVAILABLE,
+            requireNotNull(session.requestPrefillOrNull()).prefillIssue
+        )
+
+        session.onSavedSnapshotChanged(saved)
+
+        assertEquals(
+            UserObservedPriceSavedSelectionUiStatus.READY_FOR_PREFILL_CHECK,
+            rendered.last().status
+        )
+        assertTrue(rendered.last().productSelected)
+        assertTrue(rendered.last().storeSelected)
+    }
+
+    @Test
+    fun `close discards selection and blocks later route snapshot action prefill and rendering`() {
+        val rendered = mutableListOf<UserObservedPriceSavedSelectionUiState>()
+        val session = session(rendered = rendered)
+        session.onRouteVisibilityChanged(true)
+        requireNotNull(
+            session.onSelectionAction(
+                UserObservedPriceSavedSelectionAction.SelectProduct(milk)
+            )
+        )
+        val beforeClose = rendered.size
 
         session.close()
         session.close()
@@ -315,18 +412,23 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
                 UserObservedPriceSavedSelectionAction.SelectStore(west)
             )
         )
+        assertEquals(beforeClose, rendered.size)
     }
 
     @Test
-    fun `route session owns only temporary selection reconciliation and verified prefill handoff`() {
+    fun `route session owns only temporary selection presentation reconciliation and verified prefill handoff`() {
         val source = source("UserObservedPriceSavedSelectionRouteSession.kt").readText()
 
         assertTrue(source.contains("initialSnapshot: PracticalShoppingSavedValidatedSnapshot"))
+        assertTrue(source.contains("UserObservedPriceSavedSelectionSurfacePresenter"))
+        assertTrue(source.contains("presenter.render"))
         assertTrue(source.contains("UserObservedPriceSavedSelectionReducer.initial()"))
         assertTrue(source.contains("UserObservedPriceSavedSelectionReducer.reconcile"))
         assertTrue(source.contains("UserObservedPriceSavedSelectionReducer.reduce"))
         assertTrue(source.contains("UserObservedPriceSavedPrefillHandoffGate.request"))
         assertFalse(source.contains("UserObservedPriceSavedPrefillGate.request"))
+        assertFalse(source.contains("UserObservedPriceSavedSelectionUiStatus"))
+        assertFalse(source.contains("UserObservedPriceSavedPrefillCheckUiAction"))
         listOf(
             "android.",
             "PracticalShoppingSavedAndroidSession",
@@ -351,7 +453,6 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
             "MainActivity",
             "Intent",
             "startActivity",
-            "Presenter",
             "Renderer",
             "View",
             "java.net"
@@ -359,6 +460,18 @@ class UserObservedPriceSavedSelectionRouteSessionTest {
             assertFalse("Saved observed-price route session must not own $forbidden", source.contains(forbidden))
         }
     }
+
+    private fun session(
+        initialSnapshot: PracticalShoppingSavedValidatedSnapshot = snapshot(),
+        rendered: MutableList<UserObservedPriceSavedSelectionUiState> = mutableListOf()
+    ): UserObservedPriceSavedSelectionRouteSession =
+        UserObservedPriceSavedSelectionRouteSession(
+            initialSnapshot = initialSnapshot,
+            presenter =
+                UserObservedPriceSavedSelectionSurfacePresenter { state ->
+                    rendered += state
+                }
+        )
 
     private fun snapshot(
         products: List<PracticalShoppingSavedExactProductPreference> =
