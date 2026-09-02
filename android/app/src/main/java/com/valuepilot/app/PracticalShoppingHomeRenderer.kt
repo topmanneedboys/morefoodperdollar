@@ -23,12 +23,14 @@ data class PracticalShoppingHomeItemRenderState(
     val detail: String,
     val requestDetailsSummary: String,
     val requestDetailsNotice: String?,
-    val requestDetailsActionLabel: String
+    val requestDetailsActionLabel: String,
+    val storeAssignment: String? = null
 ) {
     init {
         require(key.value.isNotBlank())
         require(name.isNotBlank())
         require(detail.isNotBlank())
+        require(storeAssignment == null || storeAssignment.isNotBlank())
         require(requestDetailsSummary.isNotBlank())
         require(requestDetailsNotice == null || requestDetailsNotice.isNotBlank())
         require(requestDetailsActionLabel.isNotBlank())
@@ -108,8 +110,13 @@ object PracticalShoppingHomeRenderer {
     fun render(
         source: LocalSamplePracticalShoppingDemo.UiState,
         requestDetails: ShoppingRequestDetails?
-    ): PracticalShoppingHomeRenderState =
-        PracticalShoppingHomeRenderState(
+    ): PracticalShoppingHomeRenderState {
+        val storeAssignments =
+            source.result
+                ?.itemStoreAssignments
+                ?.associate { assignment -> assignment.itemKey to assignment.storeName }
+
+        return PracticalShoppingHomeRenderState(
             query = source.query,
             queryCharacterLimit = LocalSamplePracticalShoppingDemo.MAX_QUERY_CHARACTERS,
             submitEnabled =
@@ -137,6 +144,7 @@ object PracticalShoppingHomeRenderer {
                         key = item.key,
                         name = item.name,
                         detail = item.detail,
+                        storeAssignment = storeAssignments?.get(item.key),
                         requestDetailsSummary =
                             PracticalShoppingHomeItemDetailsPresentation.summary(itemDetails),
                         requestDetailsNotice =
@@ -182,4 +190,5 @@ object PracticalShoppingHomeRenderer {
                 ),
             sampleNotice = source.sampleNotice
         )
+    }
 }

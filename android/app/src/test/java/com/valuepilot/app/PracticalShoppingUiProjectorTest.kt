@@ -84,6 +84,15 @@ class PracticalShoppingUiProjectorTest {
         assertNull(card.notice)
         assertFalse(projection.state.toString().contains(primaryKey.value))
         assertEquals(primaryKey, projection.primaryStoreKey)
+        assertEquals(
+            listOf(eggs, milk, chicken),
+            projection.state.itemStoreAssignments.map { it.itemKey }
+        )
+        assertEquals(
+            listOf("Sample Market", "Sample Market", "Sample Market"),
+            projection.state.itemStoreAssignments.map { it.storeName }
+        )
+        assertFalse(projection.state.toString().contains(eggs.value))
     }
 
     @Test
@@ -128,6 +137,14 @@ class PracticalShoppingUiProjectorTest {
             state.secondaryMessage
         )
         assertNull(state.secondStop)
+        assertEquals(
+            listOf(eggs, milk),
+            state.itemStoreAssignments.map { it.itemKey }
+        )
+        assertEquals(
+            listOf("Sample Market", "Sample Market"),
+            state.itemStoreAssignments.map { it.storeName }
+        )
     }
 
     @Test
@@ -174,6 +191,15 @@ class PracticalShoppingUiProjectorTest {
         assertNull(projection.state.secondaryMessage)
         assertEquals(secondKey, projection.addedStoreKey)
         assertFalse(projection.state.toString().contains(secondKey.value))
+        assertEquals(
+            listOf(eggs, milk, chicken),
+            projection.state.itemStoreAssignments.map { it.itemKey }
+        )
+        assertEquals(
+            listOf("Sample Market", "Example Grocer", "Example Grocer"),
+            projection.state.itemStoreAssignments.map { it.storeName }
+        )
+        assertFalse(projection.state.toString().contains(eggs.value))
     }
 
     @Test
@@ -213,6 +239,10 @@ class PracticalShoppingUiProjectorTest {
             "Another stop is not worth it: your current rule requires at least " +
                 "15.00 CAD savings and caps extra travel at 10 min and 5 km.",
             state.secondaryMessage
+        )
+        assertEquals(
+            listOf("Sample Market", "Sample Market", "Sample Market"),
+            state.itemStoreAssignments.map { it.storeName }
         )
     }
 
@@ -320,6 +350,7 @@ class PracticalShoppingUiProjectorTest {
             projection.state.secondaryMessage
         )
         assertNull(projection.primaryStoreKey)
+        assertTrue(projection.state.itemStoreAssignments.isEmpty())
     }
 
     @Test

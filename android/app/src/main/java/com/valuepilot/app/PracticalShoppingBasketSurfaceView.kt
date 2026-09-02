@@ -31,8 +31,10 @@ internal fun practicalShoppingBasketCollectionActionDescription(
     collected: Boolean
 ): String {
     val state = if (collected) "not collected" else "collected"
+    val store = item.storeAssignment?.let { "Buy at $it. " }.orEmpty()
     val notice = item.requestDetailsNotice?.let { " $it" }.orEmpty()
     return "Mark ${item.name} (${item.detail}) as $state. " +
+        store +
         "${item.requestDetailsSummary}.$notice"
 }
 
@@ -231,6 +233,9 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         item: PracticalShoppingHomeItemRenderState,
         container: LinearLayout
     ) {
+        item.storeAssignment?.let { store ->
+            container.addView(line("Buy at $store", 12f, "#374151", topPadding = 2))
+        }
         container.addView(line(item.requestDetailsSummary, 12f, "#6B7280", topPadding = 2))
         item.requestDetailsNotice?.let { notice ->
             container.addView(line(notice, 12f, "#92400E", topPadding = 2))

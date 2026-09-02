@@ -134,6 +134,10 @@ class PracticalShoppingHomeRendererTest {
         assertEquals("Your best practical shop", rendered.result?.headline)
         assertEquals("Example Grocer East", rendered.result?.primary?.storeName)
         assertEquals("Basket 18.77 CAD", rendered.result?.primary?.basketCostText)
+        assertEquals(
+            listOf("Example Grocer East", "Example Grocer East", "Example Grocer East"),
+            rendered.items.map { it.storeAssignment }
+        )
         assertNull(rendered.refinement)
         assertTrue(rendered.unknownItems.isEmpty())
     }
@@ -153,6 +157,7 @@ class PracticalShoppingHomeRendererTest {
         assertTrue(rendered.extraStopSettings.visible)
         assertEquals("Known subtotal 4.49 CAD", rendered.result?.primary?.basketCostText)
         assertEquals("Missing price: Coffee", rendered.result?.primary?.missingItemsText)
+        assertEquals(listOf("Sample Market North", null), rendered.items.map { it.storeAssignment })
         assertTrue(rendered.sampleNotice.contains("Fictional sample data"))
     }
 

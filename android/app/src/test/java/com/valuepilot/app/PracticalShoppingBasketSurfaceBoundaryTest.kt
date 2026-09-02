@@ -17,6 +17,8 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
         assertTrue(source.contains("PracticalShoppingBasketUiAction.OpenHome"))
         assertTrue(source.contains("item.requestDetailsSummary"))
         assertTrue(source.contains("item.requestDetailsNotice"))
+        assertTrue(source.contains("item.storeAssignment"))
+        assertTrue(source.contains("line(\"Buy at ${'$'}store\""))
         assertTrue(source.contains("addItemDetails(item, this)"))
         assertTrue(source.contains("practicalShoppingBasketCollectionActionDescription(item, collected)"))
 

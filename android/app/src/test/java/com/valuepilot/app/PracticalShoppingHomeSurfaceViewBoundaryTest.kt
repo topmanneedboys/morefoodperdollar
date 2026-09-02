@@ -65,6 +65,8 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "item.requestDetailsSummary",
             "item.requestDetailsNotice",
             "item.requestDetailsActionLabel",
+            "item.storeAssignment",
+            "line(\"Buy at ${'$'}store\"",
             "onEditItemDetails?.invoke(item.key)"
         ).forEach { required ->
             assertTrue("Expected Home item-details binding $required", source.contains(required))

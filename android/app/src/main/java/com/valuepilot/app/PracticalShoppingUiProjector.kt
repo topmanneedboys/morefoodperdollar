@@ -66,15 +66,37 @@ data class PracticalShoppingSecondStopUiState(
     }
 }
 
+/** Consumer-facing store allocation for one already-covered requested item. */
+data class PracticalShoppingItemStoreAssignmentUiState(
+    val itemKey: ShoppingItemKey,
+    val storeName: String
+) {
+    init {
+        require(itemKey.value.isNotBlank())
+        require(storeName.isNotBlank())
+    }
+
+    /** Keep opaque item identity out of diagnostic/UI text while retaining typed lookup. */
+    override fun toString(): String =
+        "PracticalShoppingItemStoreAssignmentUiState(storeName=$storeName)"
+}
+
 data class PracticalShoppingUiState(
     val headline: String,
     val primary: PracticalShoppingPrimaryUiState?,
     val secondStop: PracticalShoppingSecondStopUiState?,
-    val secondaryMessage: String?
+    val secondaryMessage: String?,
+    val itemStoreAssignments: List<PracticalShoppingItemStoreAssignmentUiState> = emptyList()
 ) {
     init {
         require(headline.isNotBlank())
         require(secondaryMessage == null || secondaryMessage.isNotBlank())
+        require(
+            itemStoreAssignments.map { it.itemKey }.distinct().size ==
+                itemStoreAssignments.size
+        ) {
+            "Each practical-shopping item may have only one store allocation"
+        }
     }
 }
 
@@ -191,7 +213,13 @@ object PracticalShoppingUiProjector {
                 headline = headline(decision.primaryKind),
                 primary = primary,
                 secondStop = secondStop,
-                secondaryMessage = secondaryMessage(decision, policy)
+                secondaryMessage = secondaryMessage(decision, policy),
+                itemStoreAssignments =
+                    projectItemStoreAssignments(
+                        request = request,
+                        decision = decision,
+                        storeDisplayNames = storeDisplayNames
+                    )
             )
 
         return PracticalShoppingUiProjection(
@@ -200,6 +228,38 @@ object PracticalShoppingUiProjector {
             addedStoreKey = decision.secondStop?.addedStoreKey,
             exactDecision = decision
         )
+    }
+
+    /**
+     * Projects the exact plan's existing item allocation for consumer collection guidance.
+     * Missing items are intentionally omitted; no display string is used to infer coverage.
+     */
+    private fun projectItemStoreAssignments(
+        request: ShoppingRequest,
+        decision: PracticalShoppingDecision,
+        storeDisplayNames: Map<ShoppingStoreKey, String>
+    ): List<PracticalShoppingItemStoreAssignmentUiState> {
+        val primary = decision.primary ?: return emptyList()
+        val assignments = linkedMapOf<ShoppingItemKey, ShoppingStoreKey>()
+        primary.coveredItemKeys.forEach { itemKey ->
+            assignments[itemKey] = primary.storeKey
+        }
+
+        if (decision.secondStopDecision == SecondStopDecision.RECOMMENDED) {
+            val secondStop = requireNotNull(decision.secondStop)
+            secondStop.addedStoreItemKeys.forEach { itemKey ->
+                assignments[itemKey] = secondStop.addedStoreKey
+            }
+        }
+
+        return request.itemKeys.mapNotNull { itemKey ->
+            assignments[itemKey]?.let { storeKey ->
+                PracticalShoppingItemStoreAssignmentUiState(
+                    itemKey = itemKey,
+                    storeName = displayName(storeKey, storeDisplayNames)
+                )
+            }
+        }
     }
 
     private fun headline(kind: PrimaryShoppingPlanKind): String =

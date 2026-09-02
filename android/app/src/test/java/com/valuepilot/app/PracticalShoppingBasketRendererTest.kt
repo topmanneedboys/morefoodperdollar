@@ -136,4 +136,23 @@ class PracticalShoppingBasketRendererTest {
             practicalShoppingBasketCollectionActionDescription(item, collected = true)
         )
     }
+
+    @Test
+    fun collectionActionDescriptionIncludesTheExactPlannedStoreWhenAvailable() {
+        val item =
+            PracticalShoppingHomeItemRenderState(
+                key = ShoppingItemKey("sample-eggs-large-12"),
+                name = "Eggs",
+                detail = "12 pack",
+                requestDetailsSummary = "No extra preferences",
+                requestDetailsNotice = null,
+                requestDetailsActionLabel = "Add details",
+                storeAssignment = "Sample Market"
+            )
+
+        assertEquals(
+            "Mark Eggs (12 pack) as collected. Buy at Sample Market. No extra preferences.",
+            practicalShoppingBasketCollectionActionDescription(item, collected = false)
+        )
+    }
 }
