@@ -52,6 +52,19 @@ object LocalSamplePracticalShoppingDemo {
         GROUND("Ground chicken")
     }
 
+    enum class ExtraStopMinimumSavingsChoice(
+        val label: String,
+        internal val minimumSavings: Money
+    ) {
+        ONE_CAD("1.00 CAD", Money.parse("1.00", "CAD")),
+        FIFTEEN_CAD("15.00 CAD", Money.parse("15.00", "CAD")),
+        TWENTY_FIVE_CAD("25.00 CAD", Money.parse("25.00", "CAD"));
+
+        companion object {
+            val DEFAULT = FIFTEEN_CAD
+        }
+    }
+
     enum class Status {
         IDLE,
         QUERY_TOO_LONG,
@@ -63,6 +76,9 @@ object LocalSamplePracticalShoppingDemo {
         data class QueryChanged(val query: String) : Intent
         data object Submit : Intent
         data class ChooseChicken(val choice: ChickenChoice) : Intent
+        data class ChooseExtraStopMinimumSavings(
+            val choice: ExtraStopMinimumSavingsChoice
+        ) : Intent
     }
 
     data class ResolvedItemUiState(
@@ -93,6 +109,7 @@ object LocalSamplePracticalShoppingDemo {
         val unknownItems: List<String>,
         val result: PracticalShoppingUiState?,
         val message: String?,
+        val extraStopMinimumSavingsChoice: ExtraStopMinimumSavingsChoice,
         val sampleNotice: String
     ) {
         init {
@@ -287,17 +304,15 @@ object LocalSamplePracticalShoppingDemo {
             SamplePairTravel(marketC, marketB, ShoppingTravel(2_400L, 300L))
         )
 
-    private val policy =
-        PracticalShoppingPolicy(
-            minimumSecondStopSavings = Money.parse("15.00", "CAD"),
-            maxAdditionalTravelSeconds = 600L,
-            maxAdditionalDistanceMetres = 5_000L
-        )
-
     private val sampleNotice =
         "Fictional sample data only — not live retailer prices or availability."
 
     fun initialModel(): Model =
+        initialModel(ExtraStopMinimumSavingsChoice.DEFAULT)
+
+    private fun initialModel(
+        extraStopMinimumSavingsChoice: ExtraStopMinimumSavingsChoice
+    ): Model =
         Model(
             ui =
                 UiState(
@@ -308,6 +323,7 @@ object LocalSamplePracticalShoppingDemo {
                     unknownItems = emptyList(),
                     result = null,
                     message = "Type a few groceries to preview the shopping planner.",
+                    extraStopMinimumSavingsChoice = extraStopMinimumSavingsChoice,
                     sampleNotice = sampleNotice
                 ),
             selectedChicken = null
@@ -315,12 +331,31 @@ object LocalSamplePracticalShoppingDemo {
 
     fun reduce(model: Model, intent: Intent): Model =
         when (intent) {
-            is Intent.QueryChanged -> onQueryChanged(intent.query)
-            Intent.Submit -> evaluate(model.ui.query, model.selectedChicken)
-            is Intent.ChooseChicken -> evaluate(model.ui.query, intent.choice)
+            is Intent.QueryChanged ->
+                onQueryChanged(intent.query, model.ui.extraStopMinimumSavingsChoice)
+
+            Intent.Submit ->
+                evaluate(
+                    model.ui.query,
+                    model.selectedChicken,
+                    model.ui.extraStopMinimumSavingsChoice
+                )
+
+            is Intent.ChooseChicken ->
+                evaluate(
+                    model.ui.query,
+                    intent.choice,
+                    model.ui.extraStopMinimumSavingsChoice
+                )
+
+            is Intent.ChooseExtraStopMinimumSavings ->
+                onExtraStopMinimumSavingsChanged(model, intent.choice)
         }
 
-    private fun onQueryChanged(query: String): Model {
+    private fun onQueryChanged(
+        query: String,
+        extraStopMinimumSavingsChoice: ExtraStopMinimumSavingsChoice
+    ): Model {
         val boundedQuery = query.take(MAX_STORED_DEMO_QUERY_LENGTH)
         if (query.length > MAX_DEMO_QUERY_LENGTH) {
             return Model(
@@ -333,6 +368,7 @@ object LocalSamplePracticalShoppingDemo {
                         unknownItems = emptyList(),
                         result = null,
                         message = "Keep the sample shopping list to $MAX_DEMO_QUERY_LENGTH characters or fewer.",
+                        extraStopMinimumSavingsChoice = extraStopMinimumSavingsChoice,
                         sampleNotice = sampleNotice
                     ),
                 selectedChicken = null
@@ -354,22 +390,39 @@ object LocalSamplePracticalShoppingDemo {
                         } else {
                             "Ready to plan this sample list."
                         },
+                    extraStopMinimumSavingsChoice = extraStopMinimumSavingsChoice,
                     sampleNotice = sampleNotice
                 ),
             selectedChicken = null
         )
     }
 
-    private fun evaluate(rawQuery: String, chickenChoice: ChickenChoice?): Model {
+    private fun onExtraStopMinimumSavingsChanged(
+        model: Model,
+        choice: ExtraStopMinimumSavingsChoice
+    ): Model =
+        when (model.ui.status) {
+            Status.IDLE,
+            Status.QUERY_TOO_LONG -> onQueryChanged(model.ui.query, choice)
+
+            Status.NEEDS_REFINEMENT,
+            Status.RESULT -> evaluate(model.ui.query, model.selectedChicken, choice)
+        }
+
+    private fun evaluate(
+        rawQuery: String,
+        chickenChoice: ChickenChoice?,
+        extraStopMinimumSavingsChoice: ExtraStopMinimumSavingsChoice
+    ): Model {
         if (rawQuery.length > MAX_DEMO_QUERY_LENGTH) {
-            return onQueryChanged(rawQuery)
+            return onQueryChanged(rawQuery, extraStopMinimumSavingsChoice)
         }
 
         val resolution = resolve(rawQuery, chickenChoice)
         val rows = resolution.items.map { ResolvedItemUiState(it.displayName, it.detail) }
 
         if (rawQuery.isBlank()) {
-            return initialModel()
+            return initialModel(extraStopMinimumSavingsChoice)
         }
 
         if (resolution.items.size + resolution.unknownItems.size > MAX_DEMO_INTENTS) {
@@ -385,6 +438,7 @@ object LocalSamplePracticalShoppingDemo {
                         unknownItems = resolution.unknownItems.take(remainingUnknownSlots),
                         result = null,
                         message = "Keep this sample list to $MAX_DEMO_INTENTS distinct items or fewer.",
+                        extraStopMinimumSavingsChoice = extraStopMinimumSavingsChoice,
                         sampleNotice = sampleNotice
                     ),
                 selectedChicken = chickenChoice
@@ -421,6 +475,7 @@ object LocalSamplePracticalShoppingDemo {
                         unknownItems = resolution.unknownItems,
                         result = null,
                         message = message,
+                        extraStopMinimumSavingsChoice = extraStopMinimumSavingsChoice,
                         sampleNotice = sampleNotice
                     ),
                 selectedChicken = chickenChoice
@@ -438,6 +493,7 @@ object LocalSamplePracticalShoppingDemo {
                         unknownItems = emptyList(),
                         result = null,
                         message = "Add at least one recognized sample grocery.",
+                        extraStopMinimumSavingsChoice = extraStopMinimumSavingsChoice,
                         sampleNotice = sampleNotice
                     ),
                 selectedChicken = chickenChoice
@@ -447,6 +503,7 @@ object LocalSamplePracticalShoppingDemo {
         val request = ShoppingRequest(resolution.items.map { it.key })
         val singleCandidates = stores.map { singleCandidate(it, request) }
         val twoStoreCandidates = pairTravel.mapNotNull { pairCandidate(it, request) }
+        val policy = policy(extraStopMinimumSavingsChoice)
         val decision =
             PracticalShoppingPlanner.evaluate(
                 request = request,
@@ -473,11 +530,19 @@ object LocalSamplePracticalShoppingDemo {
                     unknownItems = emptyList(),
                     result = projection.state,
                     message = null,
+                    extraStopMinimumSavingsChoice = extraStopMinimumSavingsChoice,
                     sampleNotice = sampleNotice
                 ),
             selectedChicken = chickenChoice
         )
     }
+
+    private fun policy(choice: ExtraStopMinimumSavingsChoice): PracticalShoppingPolicy =
+        PracticalShoppingPolicy(
+            minimumSecondStopSavings = choice.minimumSavings,
+            maxAdditionalTravelSeconds = 600L,
+            maxAdditionalDistanceMetres = 5_000L
+        )
 
     private fun resolve(rawQuery: String, chickenChoice: ChickenChoice?): Resolution {
         val tokens = tokenize(rawQuery)

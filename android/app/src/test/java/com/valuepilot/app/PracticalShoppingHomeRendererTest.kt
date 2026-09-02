@@ -23,6 +23,15 @@ class PracticalShoppingHomeRendererTest {
         assertNull(rendered.refinement)
         assertTrue(rendered.unknownItems.isEmpty())
         assertNull(rendered.result)
+        assertEquals("Extra-stop rule · Save at least 15.00 CAD", rendered.extraStopSettings.summary)
+        assertEquals(
+            listOf("1.00 CAD", "15.00 CAD", "25.00 CAD"),
+            rendered.extraStopSettings.choices.map { it.label }
+        )
+        assertEquals(
+            listOf(false, true, false),
+            rendered.extraStopSettings.choices.map { it.selected }
+        )
         assertTrue(rendered.sampleNotice.contains("Fictional sample data"))
     }
 
@@ -111,6 +120,26 @@ class PracticalShoppingHomeRendererTest {
         assertEquals("Known subtotal 4.49 CAD", rendered.result?.primary?.basketCostText)
         assertEquals("Missing price: Coffee", rendered.result?.primary?.missingItemsText)
         assertTrue(rendered.sampleNotice.contains("Fictional sample data"))
+    }
+
+    @Test
+    fun selectedExactExtraStopPreferenceIsUiReadyAndRemainsTyped() {
+        var model = LocalSamplePracticalShoppingDemo.initialModel()
+        model =
+            PracticalShoppingHomeSession.chooseExtraStopMinimumSavings(
+                model,
+                LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.TWENTY_FIVE_CAD
+            )
+
+        val rendered = PracticalShoppingHomeRenderer.render(model.ui)
+
+        assertEquals("Extra-stop rule · Save at least 25.00 CAD", rendered.extraStopSettings.summary)
+        val selected = rendered.extraStopSettings.choices.single { it.selected }
+        assertEquals("25.00 CAD", selected.label)
+        assertEquals(
+            LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.TWENTY_FIVE_CAD,
+            selected.choice
+        )
     }
 
     @Test

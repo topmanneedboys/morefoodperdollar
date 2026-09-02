@@ -33,9 +33,12 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     var onQueryChanged: ((String) -> Unit)? = null
     var onSubmit: ((String) -> Unit)? = null
     var onChickenChoice: ((LocalSamplePracticalShoppingDemo.ChickenChoice) -> Unit)? = null
+    var onExtraStopMinimumSavingsChoice:
+        ((LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice) -> Unit)? = null
     var onCompare: (() -> Unit)? = null
 
     private var suppressInputCallback = false
+    private var extraStopSettingsExpanded = false
 
     private val input = TextInputEditText(context).apply {
         maxLines = 3
@@ -70,6 +73,23 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val unknownCard = card("#FFF7ED", "#FED7AA", 12, unknownBody)
 
     private val resultContainer = bareColumn()
+    private val extraStopSettingsButton = MaterialButton(context).apply {
+        isAllCaps = false
+        textSize = 14f
+        cornerRadius = dp(16)
+        strokeWidth = dp(1)
+        strokeColor = ColorStateList.valueOf(Color.parseColor("#D1D5DB"))
+        setTextColor(Color.parseColor("#374151"))
+        backgroundTintList = ColorStateList.valueOf(Color.WHITE)
+        layoutParams = fullWidth(dp(50), 12)
+        setOnClickListener {
+            extraStopSettingsExpanded = !extraStopSettingsExpanded
+            syncExtraStopSettingsVisibility()
+        }
+    }
+    private val extraStopSettingsBody = column()
+    private val extraStopSettingsCard =
+        card("#F9FAFB", "#E5E7EB", 8, extraStopSettingsBody)
     private val sampleNotice = line("", 13f, "#374151")
 
     init {
@@ -98,12 +118,15 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         addView(refinementCard)
         addView(unknownCard)
         addView(resultContainer)
+        addView(extraStopSettingsButton)
+        addView(extraStopSettingsCard)
         addView(sampleCard())
         addView(compareButton())
 
         itemsHeading.visibility = GONE
         refinementCard.visibility = GONE
         unknownCard.visibility = GONE
+        extraStopSettingsCard.visibility = GONE
 
         input.addTextChangedListener(
             object : TextWatcher {
@@ -133,6 +156,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         renderRefinement(state.refinement)
         renderUnknown(state.unknownItems)
         renderResult(state.result)
+        renderExtraStopSettings(state.extraStopSettings)
         sampleNotice.text = state.sampleNotice
     }
 
@@ -238,6 +262,40 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         result.secondaryMessage?.let {
             resultContainer.addView(line(it, 13f, "#6B7280", topPadding = 12))
         }
+    }
+
+    private fun renderExtraStopSettings(
+        state: PracticalShoppingHomeExtraStopSettingsRenderState
+    ) {
+        extraStopSettingsButton.text = state.summary
+        extraStopSettingsBody.removeAllViews()
+        extraStopSettingsBody.addView(line(state.prompt, 15f, "#111827", true))
+        extraStopSettingsBody.addView(
+            ChipGroup(context).apply {
+                isSingleLine = false
+                isSingleSelection = true
+                setPadding(0, dp(8), 0, 0)
+                setChipSpacingHorizontal(dp(8))
+                setChipSpacingVertical(dp(6))
+                state.choices.forEach { option ->
+                    addView(
+                        Chip(context).apply {
+                            text = option.label
+                            isCheckable = true
+                            isChecked = option.selected
+                            setOnClickListener {
+                                onExtraStopMinimumSavingsChoice?.invoke(option.choice)
+                            }
+                        }
+                    )
+                }
+            }
+        )
+        syncExtraStopSettingsVisibility()
+    }
+
+    private fun syncExtraStopSettingsVisibility() {
+        extraStopSettingsCard.visibility = if (extraStopSettingsExpanded) VISIBLE else GONE
     }
 
     private fun primaryCard(state: PracticalShoppingPrimaryUiState): View =

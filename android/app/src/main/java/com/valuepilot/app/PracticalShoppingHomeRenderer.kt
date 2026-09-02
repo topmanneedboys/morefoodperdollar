@@ -43,6 +43,29 @@ data class PracticalShoppingHomeRefinementRenderState(
     }
 }
 
+data class PracticalShoppingHomeExtraStopSavingsChoiceRenderState(
+    val choice: LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice,
+    val label: String,
+    val selected: Boolean
+) {
+    init {
+        require(label.isNotBlank())
+    }
+}
+
+data class PracticalShoppingHomeExtraStopSettingsRenderState(
+    val summary: String,
+    val prompt: String,
+    val choices: List<PracticalShoppingHomeExtraStopSavingsChoiceRenderState>
+) {
+    init {
+        require(summary.isNotBlank())
+        require(prompt.isNotBlank())
+        require(choices.isNotEmpty())
+        require(choices.count { it.selected } == 1)
+    }
+}
+
 data class PracticalShoppingHomeRenderState(
     val query: String,
     val submitEnabled: Boolean,
@@ -52,6 +75,7 @@ data class PracticalShoppingHomeRenderState(
     val refinement: PracticalShoppingHomeRefinementRenderState?,
     val unknownItems: List<String>,
     val result: PracticalShoppingUiState?,
+    val extraStopSettings: PracticalShoppingHomeExtraStopSettingsRenderState,
     val sampleNotice: String
 ) {
     init {
@@ -107,6 +131,22 @@ object PracticalShoppingHomeRenderer {
             unknownItems = source.unknownItems.toList(),
             // Already-projected shopping decision is passed through unchanged.
             result = source.result,
+            extraStopSettings =
+                PracticalShoppingHomeExtraStopSettingsRenderState(
+                    summary =
+                        "Extra-stop rule · Save at least " +
+                            source.extraStopMinimumSavingsChoice.label,
+                    prompt = "Minimum savings before adding another store",
+                    choices =
+                        LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.entries
+                            .map { choice ->
+                                PracticalShoppingHomeExtraStopSavingsChoiceRenderState(
+                                    choice = choice,
+                                    label = choice.label,
+                                    selected = choice == source.extraStopMinimumSavingsChoice
+                                )
+                            }
+                ),
             sampleNotice = source.sampleNotice
         )
 }

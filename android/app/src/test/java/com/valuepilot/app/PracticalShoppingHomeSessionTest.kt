@@ -97,4 +97,31 @@ class PracticalShoppingHomeSessionTest {
         assertEquals(LocalSamplePracticalShoppingDemo.Status.IDLE, model.ui.status)
         assertNull(model.ui.result)
     }
+
+    @Test
+    fun exactExtraStopPreferenceRestoresWithTheCompletedPlan() {
+        var model =
+            PracticalShoppingHomeSession.submit(
+                LocalSamplePracticalShoppingDemo.initialModel(),
+                "bananas eggs milk bread rice chicken breast"
+            )
+        model =
+            PracticalShoppingHomeSession.chooseExtraStopMinimumSavings(
+                model,
+                LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.ONE_CAD
+            )
+
+        val snapshot = PracticalShoppingHomeSession.snapshot(model)
+        val restored = PracticalShoppingHomeSession.restore(snapshot)
+
+        assertEquals(
+            LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.ONE_CAD,
+            snapshot.extraStopMinimumSavingsChoice
+        )
+        assertEquals(
+            LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.ONE_CAD,
+            restored.ui.extraStopMinimumSavingsChoice
+        )
+        assertEquals("Save 2.50 CAD", restored.ui.result?.secondStop?.savingsText)
+    }
 }

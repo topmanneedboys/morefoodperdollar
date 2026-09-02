@@ -148,6 +148,66 @@ class LocalSamplePracticalShoppingDemoTest {
     }
 
     @Test
+    fun exactMinimumSavingsChoiceReplansWithoutMovingPolicyIntoTheView() {
+        var model =
+            submit("bananas eggs milk bread rice chicken breast")
+
+        assertNull(model.ui.result?.secondStop)
+
+        model =
+            PracticalShoppingHomeSession.chooseExtraStopMinimumSavings(
+                model,
+                LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.ONE_CAD
+            )
+
+        val lowThresholdResult = requireNotNull(model.ui.result)
+        val secondStop = requireNotNull(lowThresholdResult.secondStop)
+        assertEquals(
+            LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.ONE_CAD,
+            model.ui.extraStopMinimumSavingsChoice
+        )
+        assertEquals("Example Grocer East", secondStop.storeName)
+        assertEquals("Save 2.50 CAD", secondStop.savingsText)
+        assertEquals("Combined basket 43.04 CAD", secondStop.combinedBasketCostText)
+
+        model =
+            PracticalShoppingHomeSession.chooseExtraStopMinimumSavings(
+                model,
+                LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.TWENTY_FIVE_CAD
+            )
+
+        val highThresholdResult = requireNotNull(model.ui.result)
+        assertNull(highThresholdResult.secondStop)
+        assertEquals(
+            "Another stop is not worth it: your current rule requires at least " +
+                "25.00 CAD savings and caps extra travel at 10 min and 5 km.",
+            highThresholdResult.secondaryMessage
+        )
+    }
+
+    @Test
+    fun editingTheListKeepsTheExplicitExtraStopPreference() {
+        var model = submit("eggs milk")
+        model =
+            PracticalShoppingHomeSession.chooseExtraStopMinimumSavings(
+                model,
+                LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.TWENTY_FIVE_CAD
+            )
+        model =
+            LocalSamplePracticalShoppingDemo.reduce(
+                model,
+                LocalSamplePracticalShoppingDemo.Intent.QueryChanged("eggs milk bread")
+            )
+
+        assertEquals(LocalSamplePracticalShoppingDemo.Status.IDLE, model.ui.status)
+        assertEquals(
+            LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.TWENTY_FIVE_CAD,
+            model.ui.extraStopMinimumSavingsChoice
+        )
+        assertNull(model.ui.result)
+    }
+
+    @Test
     fun queryLengthLimitFailsClosedBeforePlanning() {
         var model = LocalSamplePracticalShoppingDemo.initialModel()
         model = LocalSamplePracticalShoppingDemo.reduce(

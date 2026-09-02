@@ -213,6 +213,10 @@ class MainActivity : AppCompatActivity() {
         outState.putString(STATE_HOME_QUERY, homeSnapshot.query)
         outState.putBoolean(STATE_HOME_WAS_SUBMITTED, homeSnapshot.wasSubmitted)
         outState.putString(STATE_HOME_CHICKEN_CHOICE, homeSnapshot.chickenChoice?.name)
+        outState.putString(
+            STATE_HOME_EXTRA_STOP_MINIMUM_SAVINGS,
+            homeSnapshot.extraStopMinimumSavingsChoice.name
+        )
 
         outState.putString(STATE_SEARCH_QUERY, searchState.query)
         outState.putBoolean(
@@ -293,11 +297,22 @@ class MainActivity : AppCompatActivity() {
                     }.getOrNull()
                 }
 
+        val extraStopMinimumSavingsChoice =
+            savedInstanceState
+                ?.getString(STATE_HOME_EXTRA_STOP_MINIMUM_SAVINGS)
+                ?.let { saved ->
+                    runCatching {
+                        LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.valueOf(saved)
+                    }.getOrNull()
+                }
+                ?: LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.DEFAULT
+
         return PracticalShoppingHomeSession.restore(
             PracticalShoppingHomeSession.Snapshot(
                 query = savedInstanceState?.getString(STATE_HOME_QUERY).orEmpty(),
                 wasSubmitted = savedInstanceState?.getBoolean(STATE_HOME_WAS_SUBMITTED, false) ?: false,
-                chickenChoice = choice
+                chickenChoice = choice,
+                extraStopMinimumSavingsChoice = extraStopMinimumSavingsChoice
             )
         )
     }
@@ -317,6 +332,11 @@ class MainActivity : AppCompatActivity() {
         }
         homeExperience.onChickenChoice = { choice ->
             homeModel = PracticalShoppingHomeSession.chooseChicken(homeModel, choice)
+            renderHome()
+        }
+        homeExperience.onExtraStopMinimumSavingsChoice = { choice ->
+            homeModel =
+                PracticalShoppingHomeSession.chooseExtraStopMinimumSavings(homeModel, choice)
             renderHome()
         }
         homeExperience.onCompare = { openComparison() }
@@ -978,6 +998,8 @@ class MainActivity : AppCompatActivity() {
         private const val STATE_HOME_QUERY = "app_shell.home_query"
         private const val STATE_HOME_WAS_SUBMITTED = "app_shell.home_was_submitted"
         private const val STATE_HOME_CHICKEN_CHOICE = "app_shell.home_chicken_choice"
+        private const val STATE_HOME_EXTRA_STOP_MINIMUM_SAVINGS =
+            "app_shell.home_extra_stop_minimum_savings"
         private const val STATE_SEARCH_QUERY = "app_shell.search_query"
         private const val STATE_SEARCH_WAS_SUBMITTED = "app_shell.search_was_submitted"
     }

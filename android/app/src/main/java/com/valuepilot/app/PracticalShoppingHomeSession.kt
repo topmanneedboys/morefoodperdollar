@@ -12,7 +12,10 @@ object PracticalShoppingHomeSession {
     data class Snapshot(
         val query: String,
         val wasSubmitted: Boolean,
-        val chickenChoice: LocalSamplePracticalShoppingDemo.ChickenChoice?
+        val chickenChoice: LocalSamplePracticalShoppingDemo.ChickenChoice?,
+        val extraStopMinimumSavingsChoice:
+            LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice =
+                LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.DEFAULT
     )
 
     fun submit(
@@ -39,17 +42,28 @@ object PracticalShoppingHomeSession {
             LocalSamplePracticalShoppingDemo.Intent.ChooseChicken(choice)
         )
 
+    fun chooseExtraStopMinimumSavings(
+        model: LocalSamplePracticalShoppingDemo.Model,
+        choice: LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice
+    ): LocalSamplePracticalShoppingDemo.Model =
+        LocalSamplePracticalShoppingDemo.reduce(
+            model,
+            LocalSamplePracticalShoppingDemo.Intent.ChooseExtraStopMinimumSavings(choice)
+        )
+
     fun snapshot(model: LocalSamplePracticalShoppingDemo.Model): Snapshot =
         Snapshot(
             query = model.ui.query,
             wasSubmitted =
                 model.ui.query.isNotBlank() &&
                     model.ui.status != LocalSamplePracticalShoppingDemo.Status.IDLE,
-            chickenChoice = model.selectedChicken
+            chickenChoice = model.selectedChicken,
+            extraStopMinimumSavingsChoice = model.ui.extraStopMinimumSavingsChoice
         )
 
     fun restore(snapshot: Snapshot): LocalSamplePracticalShoppingDemo.Model {
         var model = LocalSamplePracticalShoppingDemo.initialModel()
+        model = chooseExtraStopMinimumSavings(model, snapshot.extraStopMinimumSavingsChoice)
         model =
             LocalSamplePracticalShoppingDemo.reduce(
                 model,
