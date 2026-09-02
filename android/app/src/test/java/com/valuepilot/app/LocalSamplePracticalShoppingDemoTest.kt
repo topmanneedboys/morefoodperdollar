@@ -113,6 +113,25 @@ class LocalSamplePracticalShoppingDemoTest {
     }
 
     @Test
+    fun incompleteSampleNamesTheItemWhosePriceIsUnknown() {
+        val state = submit("eggs coffee").ui
+        val result = requireNotNull(state.result)
+        val primary = requireNotNull(result.primary)
+
+        assertEquals(LocalSamplePracticalShoppingDemo.Status.RESULT, state.status)
+        assertEquals(listOf("Eggs", "Coffee"), state.items.map { it.name })
+        assertEquals("Best option with the prices we know", result.headline)
+        assertEquals("Known subtotal 4.49 CAD", primary.basketCostText)
+        assertEquals("1 of 2 items priced", primary.coverageText)
+        assertEquals("Missing price: Coffee", primary.missingItemsText)
+        assertEquals(
+            "1 item still has an unknown price. This is not a complete basket total.",
+            primary.notice
+        )
+        assertNull(result.secondStop)
+    }
+
+    @Test
     fun subThresholdSplitSavingsDoNotCreateASecondStopRecommendation() {
         val state = submit("eggs milk").ui
         val result = requireNotNull(state.result)

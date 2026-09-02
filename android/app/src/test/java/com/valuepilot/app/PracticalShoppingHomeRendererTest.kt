@@ -97,6 +97,23 @@ class PracticalShoppingHomeRendererTest {
     }
 
     @Test
+    fun incompleteHomeResultKeepsTheMissingPriceItemExplicit() {
+        val model =
+            PracticalShoppingHomeSession.submit(
+                LocalSamplePracticalShoppingDemo.initialModel(),
+                "eggs coffee"
+            )
+
+        val sourceResult = requireNotNull(model.ui.result)
+        val rendered = PracticalShoppingHomeRenderer.render(model.ui)
+
+        assertSame(sourceResult, rendered.result)
+        assertEquals("Known subtotal 4.49 CAD", rendered.result?.primary?.basketCostText)
+        assertEquals("Missing price: Coffee", rendered.result?.primary?.missingItemsText)
+        assertTrue(rendered.sampleNotice.contains("Fictional sample data"))
+    }
+
+    @Test
     fun overlongQueryIsRenderedAsAnErrorAndCannotSubmit() {
         val tooLong = "x".repeat(241)
         val model =

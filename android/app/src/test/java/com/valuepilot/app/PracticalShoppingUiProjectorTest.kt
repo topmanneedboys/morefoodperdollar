@@ -33,6 +33,12 @@ class PracticalShoppingUiProjectorTest {
         secondKey to "Example Grocer"
     )
 
+    private val itemNames = mapOf(
+        eggs to "Eggs",
+        milk to "Milk",
+        chicken to "Chicken"
+    )
+
     private val policy = PracticalShoppingPolicy(
         minimumSecondStopSavings = Money.parse("15.00", "CAD"),
         maxAdditionalTravelSeconds = 600L,
@@ -57,7 +63,8 @@ class PracticalShoppingUiProjectorTest {
         val projection = PracticalShoppingUiProjector.project(
             request,
             decision,
-            storeNames
+            storeNames,
+            itemNames
         )
 
         val card = requireNotNull(projection.state.primary)
@@ -66,6 +73,7 @@ class PracticalShoppingUiProjectorTest {
         assertEquals("Sample Market", card.storeName)
         assertEquals("Basket 54.80 CAD", card.basketCostText)
         assertEquals("3 of 3 items priced", card.coverageText)
+        assertNull(card.missingItemsText)
         assertEquals("7 min · 2.4 km", card.travelText)
         assertEquals("3 fresh · 0 stale · 0 unknown", card.evidenceText)
         assertEquals(
@@ -95,7 +103,8 @@ class PracticalShoppingUiProjectorTest {
         val state = PracticalShoppingUiProjector.project(
             request,
             decision,
-            storeNames
+            storeNames,
+            itemNames
         ).state
 
         val card = requireNotNull(state.primary)
@@ -103,6 +112,7 @@ class PracticalShoppingUiProjectorTest {
         assertEquals("BEST COVERAGE FOUND", card.badge)
         assertEquals("Known subtotal 32.10 CAD", card.basketCostText)
         assertEquals("2 of 3 items priced", card.coverageText)
+        assertEquals("Missing price: Chicken", card.missingItemsText)
         assertEquals(
             "No complete basket is priced yet; this option covers the most requested items.",
             card.whyText
@@ -144,7 +154,8 @@ class PracticalShoppingUiProjectorTest {
         val projection = PracticalShoppingUiProjector.project(
             request,
             decision,
-            storeNames
+            storeNames,
+            itemNames
         )
 
         val second = requireNotNull(projection.state.secondStop)
@@ -184,7 +195,8 @@ class PracticalShoppingUiProjectorTest {
         val state = PracticalShoppingUiProjector.project(
             request,
             decision,
-            storeNames
+            storeNames,
+            itemNames
         ).state
 
         assertNull(state.secondStop)
@@ -212,7 +224,8 @@ class PracticalShoppingUiProjectorTest {
         val projection = PracticalShoppingUiProjector.project(
             request,
             decision,
-            storeNames
+            storeNames,
+            itemNames
         )
 
         assertEquals("Not enough price coverage yet", projection.state.headline)
@@ -244,7 +257,33 @@ class PracticalShoppingUiProjectorTest {
             PracticalShoppingUiProjector.project(
                 request,
                 decision,
-                emptyMap()
+                emptyMap(),
+                itemNames
+            )
+        }
+    }
+
+    @Test
+    fun missingConsumerItemNameFailsClosedInsteadOfLeakingInternalKey() {
+        val primary = single(
+            key = primaryKey,
+            cost = "32.10",
+            covered = setOf(eggs, milk),
+            travel = ShoppingTravel(900L, 180L)
+        )
+        val decision = PracticalShoppingPlanner.evaluate(
+            request,
+            listOf(primary),
+            emptyList(),
+            policy
+        )
+
+        assertThrows(IllegalArgumentException::class.java) {
+            PracticalShoppingUiProjector.project(
+                request,
+                decision,
+                storeNames,
+                itemNames - chicken
             )
         }
     }

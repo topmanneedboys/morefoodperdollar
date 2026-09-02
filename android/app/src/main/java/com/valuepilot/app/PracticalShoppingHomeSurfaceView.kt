@@ -248,6 +248,9 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                     addView(line(state.storeName, 22f, "#111827", true, 6))
                     addView(line(state.basketCostText, 18f, "#111827", true, 8))
                     addView(line("${state.coverageText}  •  ${state.travelText}", 14f, "#374151", topPadding = 6))
+                    state.missingItemsText?.let {
+                        addView(line(it, 13f, "#92400E", true, 8))
+                    }
                     addView(line(state.evidenceText, 12f, "#6B7280", topPadding = 5))
                     addView(line(state.whyText, 13f, "#374151", topPadding = 9))
                     state.notice?.let { addView(line(it, 12f, "#92400E", topPadding = 7)) }

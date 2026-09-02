@@ -154,6 +154,14 @@ object LocalSamplePracticalShoppingDemo {
             aliases = listOf(listOf("rice"), listOf("basmati", "rice"))
         )
 
+    private val coffee =
+        SampleItem(
+            key = ShoppingItemKey("sample-ground-coffee-340g"),
+            displayName = "Coffee",
+            detail = "340 g ground coffee · fictional sample target",
+            aliases = listOf(listOf("coffee"))
+        )
+
     private val chickenBreast = chickenItem(
         suffix = "breast",
         displayName = "Chicken breast",
@@ -199,6 +207,7 @@ object LocalSamplePracticalShoppingDemo {
             chickenDrumsticks,
             wholeChicken,
             groundChicken,
+            coffee,
             rice,
             eggs,
             milk,
@@ -449,7 +458,8 @@ object LocalSamplePracticalShoppingDemo {
             PracticalShoppingUiProjector.project(
                 request = request,
                 decision = decision,
-                storeDisplayNames = stores.associate { it.key to it.displayName }
+                storeDisplayNames = stores.associate { it.key to it.displayName },
+                itemDisplayNames = resolution.items.associate { it.key to it.displayName }
             )
 
         return Model(

@@ -4,6 +4,7 @@ import com.valuepilot.core.Money
 import com.valuepilot.core.PracticalShoppingDecision
 import com.valuepilot.core.PrimaryShoppingPlanKind
 import com.valuepilot.core.SecondStopDecision
+import com.valuepilot.core.ShoppingItemKey
 import com.valuepilot.core.ShoppingPlanEvidenceSummary
 import com.valuepilot.core.ShoppingRequest
 import com.valuepilot.core.ShoppingStoreKey
@@ -22,6 +23,7 @@ data class PracticalShoppingPrimaryUiState(
     val storeName: String,
     val basketCostText: String,
     val coverageText: String,
+    val missingItemsText: String?,
     val travelText: String,
     val evidenceText: String,
     val whyText: String,
@@ -32,10 +34,12 @@ data class PracticalShoppingPrimaryUiState(
         require(storeName.isNotBlank())
         require(basketCostText.isNotBlank())
         require(coverageText.isNotBlank())
+        require(missingItemsText == null || missingItemsText.isNotBlank())
         require(travelText.isNotBlank())
         require(evidenceText.isNotBlank())
         require(whyText.isNotBlank())
         require(notice == null || notice.isNotBlank())
+        require((missingItemsText == null) == (notice == null))
     }
 }
 
@@ -92,14 +96,17 @@ object PracticalShoppingUiProjector {
     fun project(
         request: ShoppingRequest,
         decision: PracticalShoppingDecision,
-        storeDisplayNames: Map<ShoppingStoreKey, String>
+        storeDisplayNames: Map<ShoppingStoreKey, String>,
+        itemDisplayNames: Map<ShoppingItemKey, String>
     ): PracticalShoppingUiProjection {
         storeDisplayNames.values.forEach { require(it.isNotBlank()) }
+        itemDisplayNames.values.forEach { require(it.isNotBlank()) }
 
         val primary = decision.primary?.let { candidate ->
             val coveredCount = candidate.coveredItemKeys.size
             val totalCount = request.itemKeys.size
             val complete = decision.primaryKind == PrimaryShoppingPlanKind.COMPLETE_PRICE_COMPARISON
+            val missingItemKeys = request.itemKeys.filterNot(candidate.coveredItemKeys::contains)
 
             PracticalShoppingPrimaryUiState(
                 badge =
@@ -116,6 +123,12 @@ object PracticalShoppingUiProjector {
                         "Known subtotal ${formatMoney(candidate.knownBasketCost)}"
                     },
                 coverageText = coverageText(coveredCount, totalCount),
+                missingItemsText =
+                    if (complete) {
+                        null
+                    } else {
+                        missingItemsText(missingItemKeys, itemDisplayNames)
+                    },
                 travelText = formatTravel(candidate.travel),
                 evidenceText = formatEvidence(candidate.evidence),
                 whyText = primaryWhyText(decision.primaryKind),
@@ -216,6 +229,21 @@ object PracticalShoppingUiProjector {
 
     private fun coverageText(coveredCount: Int, totalCount: Int): String =
         "$coveredCount of $totalCount ${if (totalCount == 1) "item" else "items"} priced"
+
+    private fun missingItemsText(
+        missingItemKeys: List<ShoppingItemKey>,
+        itemDisplayNames: Map<ShoppingItemKey, String>
+    ): String {
+        require(missingItemKeys.isNotEmpty())
+        val names =
+            missingItemKeys.map { key ->
+                requireNotNull(itemDisplayNames[key]) {
+                    "Missing consumer display name for a practical-shopping item"
+                }.also { require(it.isNotBlank()) }
+            }
+        val label = if (names.size == 1) "Missing price" else "Missing prices"
+        return "$label: ${names.joinToString(", ")}"
+    }
 
     private fun incompleteNotice(missingCount: Int): String =
         if (missingCount == 1) {
