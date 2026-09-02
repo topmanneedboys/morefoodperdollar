@@ -186,12 +186,37 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         state.items.forEach { item ->
             if (item.key in progressState.eligibleItemKeys) {
                 val collected = item.key in progressState.collectedItemKeys
-                itemsContainer.addView(collectionButton(item, collected))
+                itemsContainer.addView(
+                    column(padded = false).apply {
+                        addView(collectionButton(item, collected))
+                        addItemDetails(item, this)
+                    }
+                )
             } else {
                 itemsContainer.addView(
-                    line("• ${item.name}  •  ${item.detail}", 14f, "#374151", topPadding = 7)
+                    column(padded = false).apply {
+                        addView(
+                            line(
+                                "• ${item.name}  •  ${item.detail}",
+                                14f,
+                                "#374151",
+                                topPadding = 7
+                            )
+                        )
+                        addItemDetails(item, this)
+                    }
                 )
             }
+        }
+    }
+
+    private fun addItemDetails(
+        item: PracticalShoppingHomeItemRenderState,
+        container: LinearLayout
+    ) {
+        container.addView(line(item.requestDetailsSummary, 12f, "#6B7280", topPadding = 2))
+        item.requestDetailsNotice?.let { notice ->
+            container.addView(line(notice, 12f, "#92400E", topPadding = 2))
         }
     }
 
