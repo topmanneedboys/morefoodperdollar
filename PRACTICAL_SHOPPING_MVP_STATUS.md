@@ -8,13 +8,13 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`e88db2c722857199e841dd601705d35498ff6860` — `Expose Compare Here price basis selection`
+`7a740b27ed0a48a93f59162c241b7d5301f5db11` — `Clarify missing Compare Here price evidence`
 
-GitHub Actions workflow run **33601674447** completed successfully (candidate run **33601160548** also passed).
+GitHub Actions workflow run **33625036923** completed successfully (candidate run **33624555558** also passed).
 
 The current promoted Home slice keeps the fictional sample flow isolated while allowing users to remove recognized items or unresolved tokens and immediately re-plan. Removal actions carry opaque typed keys/tokens through the controller, preserve unknown and ambiguous states, and expose item-specific accessibility descriptions. Natural conjunctions (`and`/`&`) are treated as list syntax while unknown product words still remain explicit. Result cards label their evidence line “Price freshness,” clarifying that an unknown count refers to freshness rather than price.
 
-Compare Here’s manual editor supports bounded per-entry removal and now gives the user an explicit choice between Current shelf prices and Member prices. The selected basis is carried through pure lifecycle state and the existing exact route; changing it invalidates an old comparison, draft restoration preserves it, malformed or legacy stored values safely default to CURRENT, and member mode continues to block products with no member price rather than falling back to current price. No planner, provider, shared-core arithmetic or Android privacy boundary was changed.
+Compare Here’s manual editor supports bounded per-entry removal and gives the user an explicit choice between Current shelf prices and Member prices. The selected basis is carried through pure lifecycle state and the existing exact route; changing it invalidates an old comparison, draft restoration preserves it, malformed or legacy stored values safely default to CURRENT, and member mode continues to block products with no member price rather than falling back to current price. The entry instructions now demonstrate the parser’s exact `Current price` and optional `Member price` labels. When fewer than two products have the selected evidence, the immutable projection names the missing basis; member mode explicitly states that current prices are not substitutes. No planner, provider, shared-core arithmetic or Android privacy boundary was changed.
 
 The preceding projector implementation and fixture history remain below as historical context.
 

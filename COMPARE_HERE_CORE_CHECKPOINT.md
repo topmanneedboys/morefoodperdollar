@@ -2,9 +2,9 @@
 
 ## Latest promoted consumer boundary
 
-- Promoted code commit: `e88db2c722857199e841dd601705d35498ff6860` (`Expose Compare Here price basis selection`)
-- Candidate workflow: **33601160548** — success
-- Promoted workflow: **33601674447** — success
+- Promoted code commit: `7a740b27ed0a48a93f59162c241b7d5301f5db11` (`Clarify missing Compare Here price evidence`)
+- Candidate workflow: **33624555558** — success
+- Promoted workflow: **33625036923** — success
 
 The manual Compare Here screen now exposes the exact core's existing CURRENT/MEMBER selection instead of silently using CURRENT for every comparison.
 
@@ -13,6 +13,8 @@ The manual Compare Here screen now exposes the exact core's existing CURRENT/MEM
 - Changing the basis invalidates the prior rendered comparison while preserving the user's like-for-like confirmation.
 - The selection is restored through instance state and the local draft using a bounded enum codec; missing, legacy or unknown values default to CURRENT.
 - MEMBER remains strict end to end: a product without an exact member price is blocked, never ranked using its current price.
+- Manual-entry instructions demonstrate the parser's exact `Current price` and optional `Member price` labels.
+- Insufficient-evidence guidance names the selected basis; member mode explicitly says current prices are not substitutes.
 - The activity passes typed state to the existing route coordinator and does not own comparison arithmetic or ranking authority.
 - The prior bounded product-row removal behavior and minimum two-slot editor shape remain intact.
 
@@ -98,4 +100,4 @@ The exact evaluator and permanent evidence/ranking rules above were not modified
 
 ## Next safe slice
 
-Inspect the current manual Compare Here input experience for the next smallest consumer correction or evidence-clarity gap. Reuse the existing adapter, exact evaluator, projector and route; do not duplicate them. Keep camera/barcode/OCR work separate until a user-controlled capture handoff can provide exact facts without giving Android Views or capture adapters ranking authority.
+Return to the Practical Shopping Home surface for the next smallest verified consumer-usability gap, while keeping the existing one-store planner/projector authoritative. Keep camera/barcode/OCR work separate until a user-controlled capture handoff can provide exact facts without giving Android Views or capture adapters ranking authority.
