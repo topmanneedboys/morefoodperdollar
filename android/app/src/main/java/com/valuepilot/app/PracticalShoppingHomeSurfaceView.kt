@@ -5,6 +5,7 @@ import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.text.Editable
+import android.text.InputFilter
 import android.text.TextWatcher
 import android.util.AttributeSet
 import android.util.TypedValue
@@ -54,6 +55,22 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         isSaveEnabled = false
     }
 
+    private val inputLayout = TextInputLayout(context).apply {
+        boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
+        hint = context.getString(R.string.home_list_hint)
+        setBoxBackgroundColor(Color.WHITE)
+        setBoxCornerRadii(
+            dp(18).toFloat(),
+            dp(18).toFloat(),
+            dp(18).toFloat(),
+            dp(18).toFloat()
+        )
+        endIconMode = TextInputLayout.END_ICON_CLEAR_TEXT
+        addView(input)
+    }
+
+    private var appliedQueryCharacterLimit: Int? = null
+
     private val submitButton = MaterialButton(context).apply {
         text = context.getString(R.string.home_plan_action)
         isAllCaps = false
@@ -99,21 +116,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         orientation = VERTICAL
         isSaveEnabled = false
 
-        addView(
-            TextInputLayout(context).apply {
-                boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
-                hint = context.getString(R.string.home_list_hint)
-                setBoxBackgroundColor(Color.WHITE)
-                setBoxCornerRadii(
-                    dp(18).toFloat(),
-                    dp(18).toFloat(),
-                    dp(18).toFloat(),
-                    dp(18).toFloat()
-                )
-                endIconMode = TextInputLayout.END_ICON_CLEAR_TEXT
-                addView(input)
-            }
-        )
+        addView(inputLayout)
         addView(submitButton)
         addView(message)
         addView(sampleCard())
@@ -152,6 +155,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     }
 
     fun render(state: PracticalShoppingHomeRenderState) {
+        syncQueryCharacterLimit(state.queryCharacterLimit)
         syncQuery(state.query)
         submitButton.isEnabled = state.submitEnabled
         renderMessage(state)
@@ -174,6 +178,15 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         input.setText(query)
         input.setSelection(query.length)
         suppressInputCallback = false
+    }
+
+    private fun syncQueryCharacterLimit(limit: Int) {
+        if (appliedQueryCharacterLimit == limit) return
+
+        input.filters = arrayOf(InputFilter.LengthFilter(limit + 1))
+        inputLayout.counterMaxLength = limit
+        inputLayout.isCounterEnabled = true
+        appliedQueryCharacterLimit = limit
     }
 
     private fun renderMessage(state: PracticalShoppingHomeRenderState) {

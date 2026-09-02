@@ -73,6 +73,7 @@ data class PracticalShoppingHomeExtraStopSettingsRenderState(
 
 data class PracticalShoppingHomeRenderState(
     val query: String,
+    val queryCharacterLimit: Int,
     val submitEnabled: Boolean,
     val message: String?,
     val messageTone: PracticalShoppingHomeMessageTone,
@@ -84,6 +85,8 @@ data class PracticalShoppingHomeRenderState(
     val sampleNotice: String
 ) {
     init {
+        require(queryCharacterLimit > 0)
+        require(query.length <= queryCharacterLimit + 1)
         require(message == null || message.isNotBlank())
         require(unknownItems.none(String::isBlank))
         require(sampleNotice.isNotBlank())
@@ -95,6 +98,7 @@ object PracticalShoppingHomeRenderer {
     fun render(source: LocalSamplePracticalShoppingDemo.UiState): PracticalShoppingHomeRenderState =
         PracticalShoppingHomeRenderState(
             query = source.query,
+            queryCharacterLimit = LocalSamplePracticalShoppingDemo.MAX_QUERY_CHARACTERS,
             submitEnabled =
                 source.query.isNotBlank() &&
                     source.status != LocalSamplePracticalShoppingDemo.Status.QUERY_TOO_LONG,

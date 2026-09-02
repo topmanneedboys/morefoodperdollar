@@ -11,8 +11,6 @@ import com.valuepilot.core.ShoppingTravel
 import com.valuepilot.core.SingleStorePlanCandidate
 import com.valuepilot.core.TwoStorePlanCandidate
 
-private const val MAX_DEMO_QUERY_LENGTH = 240
-private const val MAX_STORED_DEMO_QUERY_LENGTH = MAX_DEMO_QUERY_LENGTH + 1
 private const val MAX_DEMO_INTENTS = 32
 private val IGNORED_LIST_TOKENS = setOf("and", "&")
 
@@ -24,6 +22,9 @@ private val IGNORED_LIST_TOKENS = setOf("and", "&")
  * evidence of real-world availability.
  */
 object LocalSamplePracticalShoppingDemo {
+
+    internal const val MAX_QUERY_CHARACTERS = 240
+    private const val MAX_STORED_DEMO_QUERY_LENGTH = MAX_QUERY_CHARACTERS + 1
 
     private data class SampleItem(
         val key: ShoppingItemKey,
@@ -368,7 +369,7 @@ object LocalSamplePracticalShoppingDemo {
         extraStopMinimumSavingsChoice: ExtraStopMinimumSavingsChoice
     ): Model {
         val boundedQuery = query.take(MAX_STORED_DEMO_QUERY_LENGTH)
-        if (query.length > MAX_DEMO_QUERY_LENGTH) {
+        if (query.length > MAX_QUERY_CHARACTERS) {
             return Model(
                 ui =
                     UiState(
@@ -378,7 +379,7 @@ object LocalSamplePracticalShoppingDemo {
                         chickenClarification = null,
                         unknownItems = emptyList(),
                         result = null,
-                        message = "Keep the sample shopping list to $MAX_DEMO_QUERY_LENGTH characters or fewer.",
+                        message = "Keep the sample shopping list to $MAX_QUERY_CHARACTERS characters or fewer.",
                         extraStopMinimumSavingsChoice = extraStopMinimumSavingsChoice,
                         sampleNotice = sampleNotice
                     ),
@@ -465,7 +466,7 @@ object LocalSamplePracticalShoppingDemo {
         chickenChoice: ChickenChoice?,
         extraStopMinimumSavingsChoice: ExtraStopMinimumSavingsChoice
     ): Model {
-        if (rawQuery.length > MAX_DEMO_QUERY_LENGTH) {
+        if (rawQuery.length > MAX_QUERY_CHARACTERS) {
             return onQueryChanged(rawQuery, extraStopMinimumSavingsChoice)
         }
 

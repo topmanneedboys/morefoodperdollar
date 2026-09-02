@@ -8,6 +8,19 @@ import java.io.File
 class PracticalShoppingHomeSurfaceViewBoundaryTest {
 
     @Test
+    fun queryEditorMechanicallyAppliesImmutableBoundAndVisibleCounter() {
+        val source = source().readText()
+
+        assertTrue(
+            source.contains("InputFilter.LengthFilter(limit + 1)")
+        )
+        assertTrue(source.contains("inputLayout.counterMaxLength = limit"))
+        assertTrue(source.contains("inputLayout.isCounterEnabled = true"))
+        assertTrue(source.contains("syncQueryCharacterLimit(state.queryCharacterLimit)"))
+        assertFalse(source.contains("MAX_QUERY_CHARACTERS"))
+    }
+
+    @Test
     fun advancedExtraStopControlMechanicallyObeysImmutableVisibility() {
         val source = source().readText()
 

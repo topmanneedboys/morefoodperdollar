@@ -17,6 +17,7 @@ class PracticalShoppingHomeRendererTest {
             )
 
         assertEquals("", rendered.query)
+        assertEquals(240, rendered.queryCharacterLimit)
         assertFalse(rendered.submitEnabled)
         assertEquals(PracticalShoppingHomeMessageTone.NEUTRAL, rendered.messageTone)
         assertTrue(rendered.items.isEmpty())
@@ -188,6 +189,8 @@ class PracticalShoppingHomeRendererTest {
         val rendered = PracticalShoppingHomeRenderer.render(model.ui)
 
         assertEquals(tooLong, rendered.query)
+        assertEquals(240, rendered.queryCharacterLimit)
+        assertEquals(rendered.queryCharacterLimit + 1, rendered.query.length)
         assertFalse(rendered.submitEnabled)
         assertFalse(rendered.extraStopSettings.visible)
         assertEquals(PracticalShoppingHomeMessageTone.ERROR, rendered.messageTone)
