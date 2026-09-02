@@ -23,6 +23,22 @@ import com.google.android.material.textfield.TextInputLayout
 import com.valuepilot.core.ShoppingItemKey
 
 /**
+ * Gives assistive technology the same context as the visible extra-stop summary,
+ * including whether the progressive settings panel is currently open.
+ *
+ * This is fixed presentation copy. It does not interpret the threshold or make
+ * a second-stop decision.
+ */
+internal fun practicalShoppingExtraStopSettingsContentDescription(
+    summary: String,
+    expanded: Boolean
+): String {
+    require(summary.isNotBlank())
+    val action = if (expanded) "Hide" else "Show"
+    return "$action extra-stop rule settings. $summary"
+}
+
+/**
  * Replaceable Android renderer for the fictional Practical Shopping Home proof.
  * It receives immutable render state and forwards typed actions only.
  */
@@ -105,6 +121,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         layoutParams = fullWidth(dp(50), 12)
         setOnClickListener {
             extraStopSettingsExpanded = !extraStopSettingsExpanded
+            syncExtraStopSettingsAccessibility()
             syncExtraStopSettingsVisibility()
         }
     }
@@ -375,6 +392,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         extraStopSettingsButton.visibility = if (state.visible) VISIBLE else GONE
         if (!state.visible) extraStopSettingsExpanded = false
         extraStopSettingsButton.text = state.summary
+        syncExtraStopSettingsAccessibility()
         extraStopSettingsBody.removeAllViews()
         extraStopSettingsBody.addView(line(state.prompt, 15f, "#111827", true))
         extraStopSettingsBody.addView(
@@ -399,6 +417,18 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
             }
         )
         syncExtraStopSettingsVisibility()
+    }
+
+    private fun syncExtraStopSettingsAccessibility() {
+        extraStopSettingsButton.contentDescription =
+            if (extraStopSettingsButton.visibility == VISIBLE) {
+                practicalShoppingExtraStopSettingsContentDescription(
+                    summary = extraStopSettingsButton.text?.toString().orEmpty(),
+                    expanded = extraStopSettingsExpanded
+                )
+            } else {
+                null
+            }
     }
 
     private fun syncExtraStopSettingsVisibility() {

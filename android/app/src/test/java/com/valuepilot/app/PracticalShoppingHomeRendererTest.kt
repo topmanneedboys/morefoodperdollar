@@ -184,6 +184,20 @@ class PracticalShoppingHomeRendererTest {
     }
 
     @Test
+    fun extraStopSettingsDescriptionNamesTheProgressiveDisclosureDirection() {
+        val summary = "Extra-stop rule · Save at least 15.00 CAD"
+
+        assertEquals(
+            "Show extra-stop rule settings. $summary",
+            practicalShoppingExtraStopSettingsContentDescription(summary, expanded = false)
+        )
+        assertEquals(
+            "Hide extra-stop rule settings. $summary",
+            practicalShoppingExtraStopSettingsContentDescription(summary, expanded = true)
+        )
+    }
+
+    @Test
     fun overlongQueryIsRenderedAsAnErrorAndCannotSubmit() {
         val tooLong = "x".repeat(241)
         val model =

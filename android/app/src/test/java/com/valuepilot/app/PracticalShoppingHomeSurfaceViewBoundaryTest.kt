@@ -30,6 +30,9 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             )
         )
         assertTrue(source.contains("if (!state.visible) extraStopSettingsExpanded = false"))
+        assertTrue(source.contains("syncExtraStopSettingsAccessibility()"))
+        assertTrue(source.contains("extraStopSettingsButton.contentDescription"))
+        assertTrue(source.contains("practicalShoppingExtraStopSettingsContentDescription"))
         assertTrue(
             source.contains(
                 "extraStopSettingsButton.visibility == VISIBLE && extraStopSettingsExpanded"
