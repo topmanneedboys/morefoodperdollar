@@ -1,5 +1,7 @@
 package com.valuepilot.app
 
+import com.valuepilot.core.ShoppingItemKey
+
 /**
  * Android-facing immutable presentation for the Practical Shopping Home proof.
  *
@@ -15,10 +17,12 @@ enum class PracticalShoppingHomeMessageTone {
 }
 
 data class PracticalShoppingHomeItemRenderState(
+    val key: ShoppingItemKey,
     val name: String,
     val detail: String
 ) {
     init {
+        require(key.value.isNotBlank())
         require(name.isNotBlank())
         require(detail.isNotBlank())
     }
@@ -111,6 +115,7 @@ object PracticalShoppingHomeRenderer {
             items =
                 source.items.map { item ->
                     PracticalShoppingHomeItemRenderState(
+                        key = item.key,
                         name = item.name,
                         detail = item.detail
                     )

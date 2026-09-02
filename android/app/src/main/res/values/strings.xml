@@ -69,6 +69,7 @@
     <string name="home_list_hint">Try: chicken eggs milk</string>
     <string name="home_plan_action">Plan my shop</string>
     <string name="home_items_title">On your list</string>
+    <string name="home_remove_item">Remove</string>
     <string name="home_refinement_title">ONE QUICK QUESTION</string>
     <string name="home_refinement_question">Which %1$s?</string>
     <string name="home_unknown_title">Needs clarification</string>

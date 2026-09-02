@@ -1,5 +1,7 @@
 package com.valuepilot.app
 
+import com.valuepilot.core.ShoppingItemKey
+
 /**
  * Small application-level owner for the Home Practical Shopping session.
  *
@@ -40,6 +42,15 @@ object PracticalShoppingHomeSession {
         LocalSamplePracticalShoppingDemo.reduce(
             model,
             LocalSamplePracticalShoppingDemo.Intent.ChooseChicken(choice)
+        )
+
+    fun removeItem(
+        model: LocalSamplePracticalShoppingDemo.Model,
+        itemKey: ShoppingItemKey
+    ): LocalSamplePracticalShoppingDemo.Model =
+        LocalSamplePracticalShoppingDemo.reduce(
+            model,
+            LocalSamplePracticalShoppingDemo.Intent.RemoveItem(itemKey)
         )
 
     fun chooseExtraStopMinimumSavings(

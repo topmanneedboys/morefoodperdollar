@@ -85,6 +85,74 @@ class LocalSamplePracticalShoppingDemoTest {
     }
 
     @Test
+    fun removingRecognizedItemReplansTheRemainingCanonicalList() {
+        var model = submit("eggs milk")
+        val eggsKey = model.ui.items.single { it.name == "Eggs" }.key
+
+        model =
+            PracticalShoppingHomeSession.removeItem(
+                model,
+                eggsKey
+            )
+
+        val state = model.ui
+        val result = requireNotNull(state.result)
+        val primary = requireNotNull(result.primary)
+
+        assertEquals("Milk", state.query)
+        assertEquals(listOf("Milk"), state.items.map { it.name })
+        assertEquals("Example Grocer East", primary.storeName)
+        assertEquals("Basket 5.99 CAD", primary.basketCostText)
+        assertEquals("1 of 1 item priced", primary.coverageText)
+    }
+
+    @Test
+    fun removingChosenChickenClearsTheStaleChoiceBeforeReplanning() {
+        var model = submit("chicken eggs milk")
+        model =
+            PracticalShoppingHomeSession.chooseChicken(
+                model,
+                LocalSamplePracticalShoppingDemo.ChickenChoice.BREAST
+            )
+        val chickenKey = model.ui.items.single { it.name == "Chicken breast" }.key
+
+        model = PracticalShoppingHomeSession.removeItem(model, chickenKey)
+
+        assertEquals("Eggs Milk", model.ui.query)
+        assertEquals(listOf("Eggs", "Milk"), model.ui.items.map { it.name })
+        assertNull(model.selectedChicken)
+        assertEquals(LocalSamplePracticalShoppingDemo.Status.RESULT, model.ui.status)
+        assertEquals("Basket 10.28 CAD", requireNotNull(model.ui.result?.primary).basketCostText)
+    }
+
+    @Test
+    fun removingRecognizedItemPreservesUnknownTokensForCorrection() {
+        var model = submit("eggs dragonfruit")
+        val eggsKey = model.ui.items.single { it.name == "Eggs" }.key
+
+        model = PracticalShoppingHomeSession.removeItem(model, eggsKey)
+
+        assertEquals("dragonfruit", model.ui.query)
+        assertTrue(model.ui.items.isEmpty())
+        assertEquals(listOf("dragonfruit"), model.ui.unknownItems)
+        assertEquals(LocalSamplePracticalShoppingDemo.Status.NEEDS_REFINEMENT, model.ui.status)
+        assertNull(model.ui.result)
+    }
+
+    @Test
+    fun removingAnItemFromAmbiguousChickenListKeepsChickenClarification() {
+        var model = submit("chicken eggs")
+        val eggsKey = model.ui.items.single { it.name == "Eggs" }.key
+
+        model = PracticalShoppingHomeSession.removeItem(model, eggsKey)
+
+        assertEquals("chicken", model.ui.query)
+        assertTrue(model.ui.items.isEmpty())
+        assertEquals("Chicken", model.ui.chickenClarification?.prompt)
+        assertEquals(LocalSamplePracticalShoppingDemo.Status.NEEDS_REFINEMENT, model.ui.status)
+    }
+
+    @Test
     fun unknownItemsRemainVisibleAndBlockAFalseCompleteResult() {
         val state = submit("eggs dragonfruit milk mystery").ui
 

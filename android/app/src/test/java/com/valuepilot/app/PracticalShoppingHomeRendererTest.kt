@@ -77,6 +77,22 @@ class PracticalShoppingHomeRendererTest {
     }
 
     @Test
+    fun resolvedItemRenderRowsKeepOpaqueKeysForTypedRemovalActions() {
+        val model =
+            PracticalShoppingHomeSession.submit(
+                LocalSamplePracticalShoppingDemo.initialModel(),
+                "eggs milk"
+            )
+        val rendered = PracticalShoppingHomeRenderer.render(model.ui)
+
+        assertEquals(
+            model.ui.items.map { it.key },
+            rendered.items.map { it.key }
+        )
+        assertEquals(listOf("Eggs", "Milk"), rendered.items.map { it.name })
+    }
+
+    @Test
     fun unknownItemsRemainVisibleInsteadOfProducingAFalseCompleteResult() {
         val model =
             PracticalShoppingHomeSession.submit(

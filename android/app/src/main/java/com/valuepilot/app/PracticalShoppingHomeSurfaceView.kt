@@ -19,6 +19,7 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
+import com.valuepilot.core.ShoppingItemKey
 
 /**
  * Replaceable Android renderer for the fictional Practical Shopping Home proof.
@@ -32,6 +33,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
 
     var onQueryChanged: ((String) -> Unit)? = null
     var onSubmit: ((String) -> Unit)? = null
+    var onRemoveItem: ((ShoppingItemKey) -> Unit)? = null
     var onChickenChoice: ((LocalSamplePracticalShoppingDemo.ChickenChoice) -> Unit)? = null
     var onExtraStopMinimumSavingsChoice:
         ((LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice) -> Unit)? = null
@@ -196,11 +198,41 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         itemsContainer.removeAllViews()
         itemsHeading.visibility = if (items.isEmpty()) GONE else VISIBLE
         items.forEach { item ->
-            itemsContainer.addView(
-                line("${item.name}  •  ${item.detail}", 14f, "#374151", topPadding = 7)
-            )
+            itemsContainer.addView(itemRow(item))
         }
     }
+
+    private fun itemRow(item: PracticalShoppingHomeItemRenderState): View =
+        LinearLayout(context).apply {
+            orientation = HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 5)
+
+            addView(
+                line("${item.name}  •  ${item.detail}", 14f, "#374151", topPadding = 7).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
+                }
+            )
+            addView(
+                MaterialButton(context).apply {
+                    text = context.getString(R.string.home_remove_item)
+                    isAllCaps = false
+                    textSize = 12f
+                    minHeight = dp(40)
+                    minimumHeight = dp(40)
+                    minWidth = 0
+                    minimumWidth = 0
+                    insetTop = 0
+                    insetBottom = 0
+                    setPadding(dp(10), 0, dp(10), 0)
+                    layoutParams = LinearLayout.LayoutParams(
+                        LayoutParams.WRAP_CONTENT,
+                        dp(40)
+                    ).apply { leftMargin = dp(8) }
+                    setOnClickListener { onRemoveItem?.invoke(item.key) }
+                }
+            )
+        }
 
     private fun renderRefinement(state: PracticalShoppingHomeRefinementRenderState?) {
         refinementBody.removeAllViews()

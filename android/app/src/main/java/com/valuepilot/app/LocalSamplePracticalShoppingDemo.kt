@@ -75,6 +75,7 @@ object LocalSamplePracticalShoppingDemo {
     sealed interface Intent {
         data class QueryChanged(val query: String) : Intent
         data object Submit : Intent
+        data class RemoveItem(val itemKey: ShoppingItemKey) : Intent
         data class ChooseChicken(val choice: ChickenChoice) : Intent
         data class ChooseExtraStopMinimumSavings(
             val choice: ExtraStopMinimumSavingsChoice
@@ -82,10 +83,12 @@ object LocalSamplePracticalShoppingDemo {
     }
 
     data class ResolvedItemUiState(
+        val key: ShoppingItemKey,
         val name: String,
         val detail: String
     ) {
         init {
+            require(key.value.isNotBlank())
             require(name.isNotBlank())
             require(detail.isNotBlank())
         }
@@ -341,6 +344,9 @@ object LocalSamplePracticalShoppingDemo {
                     model.ui.extraStopMinimumSavingsChoice
                 )
 
+            is Intent.RemoveItem ->
+                removeItem(model, intent.itemKey)
+
             is Intent.ChooseChicken ->
                 evaluate(
                     model.ui.query,
@@ -409,6 +415,27 @@ object LocalSamplePracticalShoppingDemo {
             Status.RESULT -> evaluate(model.ui.query, model.selectedChicken, choice)
         }
 
+    private fun removeItem(model: Model, itemKey: ShoppingItemKey): Model {
+        val resolution = resolve(model.ui.query, model.selectedChicken)
+        if (resolution.items.none { it.key == itemKey }) return model
+
+        val removedChicken = chickenByChoice.values.any { it.key == itemKey }
+        val canonicalParts = buildList {
+            if (resolution.needsChickenChoice) add("chicken")
+            resolution.items
+                .asSequence()
+                .filterNot { it.key == itemKey }
+                .map(SampleItem::displayName)
+                .forEach(::add)
+            resolution.unknownItems.forEach(::add)
+        }
+        return evaluate(
+            rawQuery = canonicalParts.joinToString(" "),
+            chickenChoice = model.selectedChicken.takeUnless { removedChicken },
+            extraStopMinimumSavingsChoice = model.ui.extraStopMinimumSavingsChoice
+        )
+    }
+
     private fun evaluate(
         rawQuery: String,
         chickenChoice: ChickenChoice?,
@@ -419,7 +446,13 @@ object LocalSamplePracticalShoppingDemo {
         }
 
         val resolution = resolve(rawQuery, chickenChoice)
-        val rows = resolution.items.map { ResolvedItemUiState(it.displayName, it.detail) }
+        val rows = resolution.items.map {
+            ResolvedItemUiState(
+                key = it.key,
+                name = it.displayName,
+                detail = it.detail
+            )
+        }
 
         if (rawQuery.isBlank()) {
             return initialModel(extraStopMinimumSavingsChoice)

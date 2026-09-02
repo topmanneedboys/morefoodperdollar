@@ -332,6 +332,10 @@ class MainActivity : AppCompatActivity() {
             homeModel = PracticalShoppingHomeSession.submit(homeModel, rawQuery)
             renderHome()
         }
+        homeExperience.onRemoveItem = { itemKey ->
+            homeModel = PracticalShoppingHomeSession.removeItem(homeModel, itemKey)
+            renderHome()
+        }
         homeExperience.onChickenChoice = { choice ->
             homeModel = PracticalShoppingHomeSession.chooseChicken(homeModel, choice)
             renderHome()
