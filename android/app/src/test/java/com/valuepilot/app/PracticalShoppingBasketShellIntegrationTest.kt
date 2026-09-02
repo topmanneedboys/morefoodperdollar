@@ -52,6 +52,10 @@ class PracticalShoppingBasketShellIntegrationTest {
         assertTrue(basketBlock.contains("android:visibility=\"gone\""))
 
         assertTrue(strings.contains("Known subtotals remain labelled"))
+        assertTrue(strings.contains("Review your shopping list."))
+        assertFalse(strings.contains("Shop the plan, not one item."))
+        assertTrue(strings.contains("Review the shopping list from Home"))
+        assertFalse(strings.contains("Review the whole-basket plan created on Home"))
         assertFalse(strings.contains("Whole-basket optimization is not available"))
     }
 
