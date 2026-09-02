@@ -752,7 +752,8 @@ class MainActivity : AppCompatActivity() {
             )
         stapleWatchFactResolutionHost =
             StapleWatchFactResolutionHost(
-                preconditionsObserver = stapleWatchSavedDisplayMetadataCompositionCoordinator
+                preconditionsObserver = stapleWatchSavedDisplayMetadataCompositionCoordinator,
+                readinessObserver = stapleSetupPresenter::onFactResolutionReadiness
             )
         stapleWatchSetupCoordinator =
             StapleWatchSavedSetupCompositionCoordinator(

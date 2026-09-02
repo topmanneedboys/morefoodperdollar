@@ -184,6 +184,48 @@ class StapleWatchSavedSelectionSurfacePresenterTest {
     }
 
     @Test
+    fun acceptedHandoffCanShowBoundedFactResolutionProgressAndIgnoresLateProgressAfterChange() {
+        val saved = savedState()
+        val selection =
+            StapleWatchSavedIdentitySelection(
+                watchedItemKeys = listOf(milk, eggs),
+                usualStoreKey = north
+            )
+        val rendered = mutableListOf<StapleWatchSavedSelectionUiState>()
+        val presenter =
+            StapleWatchSavedSelectionSurfacePresenter(
+                StapleWatchForegroundFactCheckCapability.CONFIGURED
+            ) { state -> rendered += state }
+        val intent =
+            StapleWatchFactCheckIntent(
+                request = ShoppingRequest(listOf(milk, eggs)),
+                usualStoreKey = north
+            )
+
+        presenter.render(saved, selection, metadata())
+        presenter.onHandoffAttempt(
+            StapleWatchSavedIdentityHandoffAttempt(
+                handoff = StapleWatchSavedIdentityHandoff(intent.request, north),
+                issue = null
+            )
+        )
+        presenter.onFactResolutionReadiness(
+            StapleWatchFactResolutionReadiness.initial(intent)
+        )
+
+        assertEquals(0, rendered.last().factResolutionProgress?.resolvedRequirementCount)
+        assertEquals(5, rendered.last().factResolutionProgress?.totalRequirementCount)
+        assertTrue(rendered.last().factResolutionProgress?.guidance?.contains("No switch decision") == true)
+
+        presenter.render(saved, selection.copy(watchedItemKeys = listOf(milk)), metadata())
+        presenter.onFactResolutionReadiness(
+            StapleWatchFactResolutionReadiness.fromUnresolved(intent, emptySet())
+        )
+
+        assertEquals(null, rendered.last().factResolutionProgress)
+    }
+
+    @Test
     fun rendererContractAndPresentationSourcesKeepAuthorityOutsidePhysicalSurface() {
         val renderMethod =
             StapleWatchSavedSelectionSurfaceRenderer::class.java.methods

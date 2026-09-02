@@ -25,6 +25,7 @@ class StapleWatchSavedSelectionSurfacePresenter private constructor(
 ) {
     private var lastIdentityState: StapleWatchSavedSelectionUiState? = null
     private var handoffAttempt: StapleWatchSavedIdentityHandoffAttempt? = null
+    private var factResolutionReadiness: StapleWatchFactResolutionReadiness? = null
 
     constructor(renderer: StapleWatchSavedSelectionSurfaceRenderer) :
         this(
@@ -58,14 +59,10 @@ class StapleWatchSavedSelectionSurfacePresenter private constructor(
             )
         if (lastIdentityState != nextState) {
             handoffAttempt = null
+            factResolutionReadiness = null
         }
         lastIdentityState = nextState
-        renderer.render(
-            StapleWatchSavedSelectionHandoffUiAdapter.apply(
-                state = nextState,
-                attempt = handoffAttempt
-            )
-        )
+        renderCurrent()
     }
 
     /**
@@ -74,11 +71,37 @@ class StapleWatchSavedSelectionSurfacePresenter private constructor(
      */
     fun onHandoffAttempt(attempt: StapleWatchSavedIdentityHandoffAttempt) {
         handoffAttempt = attempt
+        factResolutionReadiness = null
+        renderCurrent()
+    }
+
+    /**
+     * Records progress from the exact active foreground fact-resolution session.
+     * The intent and fact values remain outside the renderer-facing state.
+     */
+    fun onFactResolutionReadiness(readiness: StapleWatchFactResolutionReadiness) {
+        if (handoffAttempt?.accepted != true) return
+        factResolutionReadiness = readiness
+        renderCurrent()
+    }
+
+    private fun renderCurrent() {
         lastIdentityState?.let { state ->
-            renderer.render(
+            val withHandoff =
                 StapleWatchSavedSelectionHandoffUiAdapter.apply(
                     state = state,
-                    attempt = attempt
+                    attempt = handoffAttempt
+                )
+            renderer.render(
+                withHandoff.copy(
+                    factResolutionProgress =
+                        if (handoffAttempt?.accepted == true) {
+                            factResolutionReadiness?.let(
+                                StapleWatchFactResolutionUiProjector::project
+                            )
+                        } else {
+                            null
+                        }
                 )
             )
         }

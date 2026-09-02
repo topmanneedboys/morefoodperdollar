@@ -62,6 +62,31 @@ class StapleWatchFactResolutionHostTest {
     }
 
     @Test
+    fun readinessObserverReceivesInitialAndEachExactFactTransition() {
+        val observed = mutableListOf<StapleWatchFactResolutionReadiness>()
+        val host =
+            StapleWatchFactResolutionHost(
+                readinessObserver =
+                    StapleWatchFactResolutionReadinessObserver { readiness ->
+                        observed += readiness
+                    }
+            )
+
+        host.onIntent(intent)
+        host.accept(identityFacts(intent))
+
+        assertEquals(2, observed.size)
+        assertEquals(intent.requirements, observed[0].unresolvedRequirements)
+        assertEquals(
+            intent.requirements.filterNot {
+                it == StapleWatchFactResolutionRequirement.ALTERNATIVE_STORE_CANDIDATE_IDENTITIES
+            },
+            observed[1].unresolvedRequirements
+        )
+        assertSame(intent, observed[1].intent)
+    }
+
+    @Test
     fun completedPreconditionsEmitOnlyAfterFifthExactFactAndExactReapplyDoesNotDuplicate() {
         val emitted = mutableListOf<StapleWatchEconomicEvidencePreconditions>()
         val host =
@@ -200,6 +225,8 @@ class StapleWatchFactResolutionHostTest {
         assertTrue(source.contains("current.accept(facts)"))
         assertTrue(source.contains("currentSessionOrNull"))
         assertTrue(source.contains("StapleWatchEconomicEvidencePreconditionsObserver"))
+        assertTrue(source.contains("StapleWatchFactResolutionReadinessObserver"))
+        assertTrue(source.contains("readinessObserver.onReadiness"))
         assertTrue(source.contains("economicPreconditionsOrNull()"))
 
         listOf(

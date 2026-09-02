@@ -82,7 +82,8 @@ data class StapleWatchSavedSelectionUiState(
     val continueAction: StapleWatchSavedIdentityHandoffUiAction?,
     val continueActionLabel: String?,
     val factCheckCapability: StapleWatchForegroundFactCheckCapability =
-        StapleWatchForegroundFactCheckCapability.CONFIGURED
+        StapleWatchForegroundFactCheckCapability.CONFIGURED,
+    val factResolutionProgress: StapleWatchFactResolutionUiState? = null
 ) {
     init {
         require(headline.isNotBlank())

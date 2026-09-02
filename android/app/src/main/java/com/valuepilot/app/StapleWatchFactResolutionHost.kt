@@ -5,6 +5,11 @@ internal fun interface StapleWatchEconomicEvidencePreconditionsObserver {
     fun onPreconditions(preconditions: StapleWatchEconomicEvidencePreconditions)
 }
 
+/** Receives bounded readiness progress for the current foreground fact-resolution session. */
+internal fun interface StapleWatchFactResolutionReadinessObserver {
+    fun onReadiness(readiness: StapleWatchFactResolutionReadiness)
+}
+
 /**
  * Foreground in-memory owner for one active Watch fact-resolution session.
  *
@@ -25,7 +30,9 @@ internal fun interface StapleWatchEconomicEvidencePreconditionsObserver {
  */
 internal class StapleWatchFactResolutionHost(
     private val preconditionsObserver: StapleWatchEconomicEvidencePreconditionsObserver =
-        StapleWatchEconomicEvidencePreconditionsObserver { }
+        StapleWatchEconomicEvidencePreconditionsObserver { },
+    private val readinessObserver: StapleWatchFactResolutionReadinessObserver =
+        StapleWatchFactResolutionReadinessObserver { }
 ) : StapleWatchFactCheckIntentObserver, AutoCloseable {
 
     private var session: StapleWatchFactResolutionSession? = null
@@ -34,7 +41,9 @@ internal class StapleWatchFactResolutionHost(
     @Synchronized
     override fun onIntent(intent: StapleWatchFactCheckIntent) {
         if (closed) return
-        session = StapleWatchFactResolutionSession.start(intent)
+        session = StapleWatchFactResolutionSession.start(intent).also { started ->
+            readinessObserver.onReadiness(started.readiness)
+        }
     }
 
     @Synchronized
@@ -84,6 +93,7 @@ internal class StapleWatchFactResolutionHost(
         if (next === current) return
 
         session = next
+        readinessObserver.onReadiness(next.readiness)
         next.economicPreconditionsOrNull()?.let(preconditionsObserver::onPreconditions)
     }
 }

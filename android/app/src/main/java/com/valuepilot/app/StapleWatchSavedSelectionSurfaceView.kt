@@ -49,6 +49,9 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
         addView(guidance(state.guidance))
         addView(selectionSummary(state.selectionSummary))
         state.notice?.let { message -> addView(notice(message)) }
+        state.factResolutionProgress?.let { progress ->
+            addView(factResolutionCard(progress))
+        }
 
         state.productSectionTitle?.let { sectionTitle ->
             addView(sectionHeading(sectionTitle))
@@ -178,6 +181,37 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
             textColor = "#92400E",
             topPadding = 10
         )
+
+    private fun factResolutionCard(progress: StapleWatchFactResolutionUiState): View =
+        MaterialCardView(context).apply {
+            radius = dp(16).toFloat()
+            cardElevation = 0f
+            setCardBackgroundColor(Color.parseColor("#F9FAFB"))
+            strokeColor = Color.parseColor("#D1D5DB")
+            strokeWidth = dp(1)
+            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(14)
+            }
+            addView(
+                LinearLayout(context).apply {
+                    orientation = VERTICAL
+                    setPadding(dp(16), dp(14), dp(16), dp(14))
+                    addView(textLine(progress.headline, 15f, "#111827", bold = true))
+                    addView(
+                        textLine(
+                            "${progress.resolvedRequirementCount} of ${progress.totalRequirementCount} required checks",
+                            13f,
+                            "#374151",
+                            topPadding = 5
+                        )
+                    )
+                    addView(textLine(progress.guidance, 13f, "#4B5563", topPadding = 5))
+                    progress.unresolvedRequirementLabels.forEach { label ->
+                        addView(textLine("Still needed · $label", 12f, "#92400E", topPadding = 5))
+                    }
+                }
+            )
+        }
 
     private fun sectionHeading(value: String): TextView =
         TextView(context).apply {

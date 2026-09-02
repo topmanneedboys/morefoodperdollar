@@ -15,6 +15,8 @@ class StapleWatchSavedSelectionSurfaceViewBoundaryTest {
         assertTrue(source.contains("render(state: StapleWatchSavedSelectionUiState)"))
         assertTrue(source.contains("state.selectionSummary"))
         assertTrue(source.contains("selectionSummary(value: String)"))
+        assertTrue(source.contains("state.factResolutionProgress"))
+        assertTrue(source.contains("factResolutionCard(progress)"))
         assertTrue(
             source.contains(
                 "var onAction: ((StapleWatchSavedIdentitySelectionAction) -> Unit)? = null"
@@ -45,7 +47,10 @@ class StapleWatchSavedSelectionSurfaceViewBoundaryTest {
             "SharedPreferences",
             "WorkManager",
             "NotificationManager",
-            "System.currentTimeMillis"
+            "System.currentTimeMillis",
+            "StapleWatchFactResolutionHost",
+            "StapleWatchFactResolutionSession",
+            "StapleWatchEconomicEvidencePreconditions"
         ).forEach { forbidden ->
             assertFalse("Physical staple setup View must not own $forbidden", source.contains(forbidden))
         }
