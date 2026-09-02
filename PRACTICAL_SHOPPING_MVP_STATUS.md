@@ -8,9 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`32345eb2ef9907ab04e29d447be39e229fd27f3c` — `Summarize practical plan cards for accessibility`
+`e5d62f55563d2b4d89b5f1ed1b4be977b162c302` — `Show planned store per basket item`
 
-GitHub Actions workflow run **33686576571** completed successfully (candidate run **33686048970** also passed).
+GitHub Actions candidate workflow **33687667849** completed successfully, and milestone provenance workflow **33688147590** completed successfully for the exact same SHA.
+
+The latest Home/Basket refinement closes a practical collection-context gap in the existing immutable plan. Each recognized covered item now shows “Buy at [store]” using the exact allocation already produced by the shared one-store/optional-second-stop planner. A recommended second stop moves only its explicitly added item keys; incomplete or unknown-price items remain unassigned rather than being guessed. The renderer maps typed item identities to these projected display names without re-ranking, recalculating, or parsing card text. Basket collection action descriptions include the same store context, while item details and preference-only notices remain visible. Opaque item identities are retained only for typed lookup and are excluded from normal UI/diagnostic text. Deterministic projector, renderer, and View-boundary tests cover complete, incomplete, recommended-second-stop, rejected-stop, no-coverage and collection-description cases.
 
 The latest shared Home/Basket result-card refinement closes a semantic accessibility gap. Primary and optional-second-stop cards now expose one explicit accessibility node whose summary contains every already-projected consumer field: badge, store, basket cost or savings, coverage/allocation, travel, evidence, and any incomplete-result caution. The physical renderer does not calculate or interpret these values; it binds the projected summary while retaining the existing visual lines. Deterministic presentation tests cover complete, incomplete and second-stop summaries, and the View boundary confirms this remains presentation-only.
 
