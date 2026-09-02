@@ -289,6 +289,27 @@ class SavedStapleShellIntegrationBoundaryTest {
         )
     }
 
+    @Test
+    fun `saved shell copy stays honest before choices are loaded`() {
+        val strings = File(
+            File(System.getProperty("user.dir")),
+            "src/main/res/values/strings.xml"
+        ).readText()
+
+        assertTrue(strings.contains("Manage saved choices."))
+        assertTrue(
+            strings.contains(
+                "Review or manage the products and stores you choose to remember here."
+            )
+        )
+        assertFalse(strings.contains("Your confirmed choices."))
+        assertFalse(
+            strings.contains(
+                "Review exact products and stores you chose to remember."
+            )
+        )
+    }
+
     private fun activitySource(): File {
         val root = File(System.getProperty("user.dir"))
         return File(root, "src/main/java/com/valuepilot/app/MainActivity.kt").also {
