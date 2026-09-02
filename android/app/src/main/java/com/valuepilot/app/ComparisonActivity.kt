@@ -7,6 +7,7 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.provider.Settings
 import android.text.Editable
+import android.text.InputFilter
 import android.text.InputType
 import android.text.TextUtils
 import android.text.TextWatcher
@@ -191,21 +192,28 @@ class ComparisonActivity : AppCompatActivity() {
         productInputsContainer.removeAllViews()
 
         val initialBlocks =
-            blocks
-                .take(CompareHereManualInputAdapter.MAX_OBSERVATIONS)
+            CompareHereManualProductDraft.prepareForEditor(blocks)
                 .toMutableList()
 
         while (initialBlocks.size < 2) {
-            initialBlocks += ""
+            initialBlocks += CompareHereManualEditorBlock(text = "")
         }
 
-        initialBlocks.forEach(::addProductInput)
+        initialBlocks.forEach { block ->
+            addProductInput(
+                initialText = block.text,
+                initialIssue = block.issue
+            )
+        }
 
         restoringDraft = false
         updateAddProductButton()
     }
 
-    private fun addProductInput(initialText: String) {
+    private fun addProductInput(
+        initialText: String,
+        initialIssue: CompareHereManualEditorBlockIssue? = null
+    ) {
         val index = productInputs.size + 1
 
         val card = LinearLayout(this).apply {
@@ -262,6 +270,12 @@ class ComparisonActivity : AppCompatActivity() {
                 InputType.TYPE_CLASS_TEXT or
                     InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
                     InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            filters =
+                arrayOf(
+                    InputFilter.LengthFilter(
+                        CompareHereManualProductDraft.MAX_BLOCK_CHARS
+                    )
+                )
 
             setTextSize(
                 TypedValue.COMPLEX_UNIT_SP,
@@ -307,10 +321,15 @@ class ComparisonActivity : AppCompatActivity() {
                         return
                     }
 
+                    input.error = null
                     onProductsChanged()
                 }
             }
         )
+
+        if (initialIssue == CompareHereManualEditorBlockIssue.TOO_LONG) {
+            input.error = getString(R.string.product_input_too_long)
+        }
 
         card.addView(label)
         card.addView(input)
