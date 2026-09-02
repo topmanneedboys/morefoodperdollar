@@ -24,7 +24,10 @@ class PracticalShoppingHomeDetailsAndroidBindingTest {
             "showHomeItemDetails(itemKey)",
             "PracticalShoppingHomeItemDetailsEditor.apply(",
             "PracticalShoppingHomeSession.withItemDetail(",
-            "PracticalShoppingHomeSession.withoutItemDetail("
+            "PracticalShoppingHomeSession.withoutItemDetail(",
+            "AndroidPracticalShoppingHomeSessionStore(applicationContext)",
+            "homeSessionStore.load()",
+            "homeSessionStore.save(PracticalShoppingHomeSession.snapshot(homeSessionState))"
         ).forEach { required ->
             assertTrue("Expected Home lifecycle binding $required", source.contains(required))
         }

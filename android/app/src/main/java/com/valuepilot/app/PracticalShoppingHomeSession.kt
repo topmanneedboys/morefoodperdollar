@@ -116,9 +116,13 @@ object PracticalShoppingHomeSession {
         val modelSnapshot = snapshot(state.model)
         return modelSnapshot.copy(
             requestDetailsLifecycleState =
-                PracticalShoppingRequestDetailsSession
-                    .encodedOrNull(state.requestDetails)
-                    ?.clone()
+                if (modelSnapshot.wasSubmitted) {
+                    PracticalShoppingRequestDetailsSession
+                        .encodedOrNull(state.requestDetails)
+                        ?.clone()
+                } else {
+                    null
+                }
         )
     }
 

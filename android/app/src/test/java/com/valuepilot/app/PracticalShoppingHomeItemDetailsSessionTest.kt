@@ -123,6 +123,20 @@ class PracticalShoppingHomeItemDetailsSessionTest {
     }
 
     @Test
+    fun unsubmittedDraftSnapshotDoesNotPersistOlderRequestDetailsBytes() {
+        var state =
+            PracticalShoppingHomeSession.submit(
+                PracticalShoppingHomeSession.initialState(),
+                "eggs milk"
+            )
+        state = PracticalShoppingHomeSession.withItemDetail(state, milkDetail)
+
+        val draft = PracticalShoppingHomeSession.queryChanged(state, "milk")
+
+        assertNull(PracticalShoppingHomeSession.snapshot(draft).requestDetailsLifecycleState)
+    }
+
+    @Test
     fun malformedLifecycleDetailsFailClosedWithoutChangingRestoredPlan() {
         val state =
             PracticalShoppingHomeSession.submit(

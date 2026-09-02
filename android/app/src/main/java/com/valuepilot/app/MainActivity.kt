@@ -38,6 +38,9 @@ class MainActivity : AppCompatActivity() {
 
     private var shellState = AppShellState.initial()
     private var homeSessionState = PracticalShoppingHomeSession.initialState()
+    private val homeSessionStore by lazy(LazyThreadSafetyMode.NONE) {
+        AndroidPracticalShoppingHomeSessionStore(applicationContext)
+    }
     private val homePreferenceStore by lazy(LazyThreadSafetyMode.NONE) {
         AndroidPracticalShoppingHomePreferenceStore(applicationContext)
     }
@@ -305,6 +308,12 @@ class MainActivity : AppCompatActivity() {
     private fun restoreHomeState(
         savedInstanceState: Bundle?
     ): PracticalShoppingHomeSession.State {
+        if (savedInstanceState?.containsKey(STATE_HOME_QUERY) != true) {
+            homeSessionStore.load()?.let { persisted ->
+                return PracticalShoppingHomeSession.restoreState(persisted)
+            }
+        }
+
         val choice =
             savedInstanceState
                 ?.getString(STATE_HOME_CHICKEN_CHOICE)
@@ -376,6 +385,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderHome() {
+        homeSessionStore.save(PracticalShoppingHomeSession.snapshot(homeSessionState))
         val homeState =
             PracticalShoppingHomeRenderer.render(
                 homeSessionState.model.ui,
