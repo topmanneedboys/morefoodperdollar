@@ -263,13 +263,20 @@ jobs:
           }
 
           const runs = await get(`/actions/runs?head_sha=${encodeURIComponent(sha)}&per_page=100`)
+          // Historical ValuePilot candidate branches use work/valuepilot-*.
+          // Keep the milestone branch itself ineligible so a direct milestone
+          // run can never satisfy its own provenance proof.
+          const isCandidateBranch = branch =>
+            branch?.startsWith('candidate/') ||
+            (branch?.startsWith('work/valuepilot-') &&
+              branch !== 'work/valuepilot-android-milestone')
           const candidates = runs.workflow_runs
             .filter(run =>
               run.id !== currentRunId &&
               run.name === workflowName &&
               run.path === workflowPath &&
               run.head_sha === sha &&
-              run.head_branch?.startsWith('candidate/') &&
+              isCandidateBranch(run.head_branch) &&
               run.event === 'push' &&
               run.status === 'completed' &&
               run.conclusion === 'success'
