@@ -4,6 +4,8 @@ Updated: 2026-09-02
 
 Branch: `work/valuepilot-android-milestone`
 
+Latest promoted head: `07b18f76d487656969f7b3e371ad2111cb34bf57` (`Accept historical ValuePilot candidate branches`), candidate workflow **33662190388**, milestone workflow **33662858066**. The current app slice adds an immutable `PracticalShoppingRequestDetailsSession` owner that restores only exact-request lifecycle state, fails closed on stale/reordered/partial/malformed/oversized payloads, supports explicit immutable edits/reconciliation, and delegates all request-details semantics to shared-core. The provenance proof accepts both `candidate/*` and historical `work/valuepilot-*` candidates but excludes the milestone branch. Full candidate Android/browser/privacy/signature/release checks and milestone provenance passed.
+
 Purpose: compact durable recovery point. Newer repository/account evidence overrides this file.
 
 ## Startup order

@@ -8,13 +8,15 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`227ed24059784989bc2ee38845181297f0430d0e` — `Show Home plan on Basket tab`
+`07b18f76d487656969f7b3e371ad2111cb34bf57` — `Accept historical ValuePilot candidate branches`
 
-GitHub Actions workflow run **33636063647** completed successfully (candidate run **33635484179** also passed).
+GitHub Actions workflow run **33662858066** completed successfully (candidate run **33662190388** also passed).
+
+The latest app-level slice adds `PracticalShoppingRequestDetailsSession`, a small immutable owner for the existing shared request-details core. It restores lifecycle state only when the encoded details belong to the exact current request; stale, reordered, partial, malformed, oversized, or persistence-failed state opens empty rather than guessing. Explicit item-detail edits and request reconciliation remain typed immutable transitions delegated to shared-core. The owner has no planner, ranking, price, quantity, evidence, clock, persistence, networking, or View authority. The milestone provenance check now also accepts the repository's historical `work/valuepilot-*` candidate branches while excluding the milestone branch itself.
 
 The Basket primary tab is now a real read-only continuation of Plan My Shop rather than placeholder copy. It receives the existing immutable Home presentation, preserves the exact projected plan object, and shows recognized items, unresolved items, complete or incomplete one-store results, any already-approved optional second stop, and the shopper's selected exact extra-stop rule. Empty, draft, refinement, and unresolved states cannot become a false plan and provide one typed action back to Home. Home and Basket share the same result-card View so complete totals, known subtotals, missing-price notices, travel, freshness/evidence, and second-stop details cannot drift between the two surfaces. The fictional/offline disclosure is repeated prominently on Basket. No shared-core planner/projector, provider integration, Android networking, ranking authority, or money calculation was duplicated or moved into a View.
 
-Clean-source verification passed all 1,546 JVM tests with zero failures/errors/skips, all 58 Android tasks, all 30 browser tests, Firefox packaging lint with zero findings, APK privacy inspection, and one-signer APK verification.
+Clean-source verification passed all 1,596 JVM tests (375 shared-core + 1,221 Android app) with zero failures/errors/skips, all 58 Android tasks, all 30 browser tests, Firefox packaging lint with zero findings, APK privacy inspection, and one-signer APK verification.
 
 The current promoted Home slice keeps the fictional sample flow isolated while allowing users to remove recognized items or unresolved tokens and immediately re-plan. Removal actions carry opaque typed keys/tokens through the controller, preserve unknown and ambiguous states, and expose item-specific accessibility descriptions. Natural conjunctions (`and`/`&`) are treated as list syntax while unknown product words still remain explicit. Result cards label their evidence line “Price freshness,” clarifying that an unknown count refers to freshness rather than price. The list editor now displays the model's existing 240-character limit and physically retains no more than its existing one-character over-limit sentinel, so a very large paste cannot flow through lifecycle state while the honest over-limit error remains reachable. Immutable presentation carries the limit; the Android View binds only the matching counter and filter.
 
