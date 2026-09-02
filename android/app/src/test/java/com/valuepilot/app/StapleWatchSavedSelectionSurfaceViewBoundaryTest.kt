@@ -13,6 +13,8 @@ class StapleWatchSavedSelectionSurfaceViewBoundaryTest {
 
         assertTrue(source.contains("StapleWatchSavedSelectionSurfaceRenderer"))
         assertTrue(source.contains("render(state: StapleWatchSavedSelectionUiState)"))
+        assertTrue(source.contains("state.selectionSummary"))
+        assertTrue(source.contains("selectionSummary(value: String)"))
         assertTrue(
             source.contains(
                 "var onAction: ((StapleWatchSavedIdentitySelectionAction) -> Unit)? = null"

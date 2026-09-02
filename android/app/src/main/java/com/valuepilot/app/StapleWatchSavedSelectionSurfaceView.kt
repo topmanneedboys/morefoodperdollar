@@ -47,6 +47,7 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
 
         addView(heading(state.headline))
         addView(guidance(state.guidance))
+        addView(selectionSummary(state.selectionSummary))
         state.notice?.let { message -> addView(notice(message)) }
 
         state.productSectionTitle?.let { sectionTitle ->
@@ -160,6 +161,14 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
             sizeSp = 14f,
             textColor = "#4B5563",
             topPadding = 8
+        )
+
+    private fun selectionSummary(value: String): TextView =
+        textLine(
+            value = value,
+            sizeSp = 13f,
+            textColor = "#374151",
+            topPadding = 10
         )
 
     private fun notice(value: String): TextView =

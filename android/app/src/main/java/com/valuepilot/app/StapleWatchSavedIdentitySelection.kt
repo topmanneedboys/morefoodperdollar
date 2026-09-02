@@ -4,7 +4,7 @@ import com.valuepilot.core.ShoppingItemKey
 import com.valuepilot.core.ShoppingRequest
 import com.valuepilot.core.ShoppingStoreKey
 
-private const val MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF = 2
+internal const val MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF = 2
 private const val MAX_WATCHED_SAVED_ITEMS = 128
 
 /**

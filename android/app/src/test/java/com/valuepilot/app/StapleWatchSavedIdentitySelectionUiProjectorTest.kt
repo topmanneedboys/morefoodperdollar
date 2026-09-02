@@ -33,6 +33,10 @@ class StapleWatchSavedIdentitySelectionUiProjectorTest {
         assertFalse(state.storeRows.single().usualStore)
         assertEquals(0, state.watchedItemCount)
         assertFalse(state.usualStoreSelected)
+        assertEquals(
+            "0 staples selected (2 minimum) · Usual store not selected",
+            state.selectionSummary
+        )
         assertNull(state.clearSelectionAction)
         assertNull(state.clearSelectionActionLabel)
     }
@@ -47,6 +51,10 @@ class StapleWatchSavedIdentitySelectionUiProjectorTest {
         assertEquals(StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK, state.status)
         assertEquals(2, state.watchedItemCount)
         assertTrue(state.usualStoreSelected)
+        assertEquals(
+            "2 staples selected (2 minimum) · Usual store selected",
+            state.selectionSummary
+        )
         assertEquals(0, state.selectedDisplayNameBlockerCount)
         assertEquals(0, state.unresolvedDisplayNameCount)
 

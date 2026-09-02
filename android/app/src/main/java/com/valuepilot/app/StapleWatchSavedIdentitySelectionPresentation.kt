@@ -67,6 +67,7 @@ data class StapleWatchSavedSelectionUiState(
     val status: StapleWatchSavedSelectionUiStatus,
     val headline: String,
     val guidance: String,
+    val selectionSummary: String,
     val productSectionTitle: String?,
     val productRows: List<StapleWatchSavedProductSelectionUiRow>,
     val storeSectionTitle: String?,
@@ -86,6 +87,7 @@ data class StapleWatchSavedSelectionUiState(
     init {
         require(headline.isNotBlank())
         require(guidance.isNotBlank())
+        require(selectionSummary.isNotBlank())
         require(productRows.size <= MAX_STAPLE_WATCH_SAVED_PRODUCT_ROWS)
         require(storeRows.size <= MAX_STAPLE_WATCH_SAVED_STORE_ROWS)
         require((productRows.isNotEmpty()) == (productSectionTitle != null))
@@ -212,6 +214,14 @@ object StapleWatchSavedIdentitySelectionUiProjector {
             status = status,
             headline = "Watch My Staples",
             guidance = guidance(status),
+            selectionSummary =
+                "${current.watchedItemKeys.size} staples selected " +
+                    "($MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF minimum) · " +
+                    if (current.usualStoreKey == null) {
+                        "Usual store not selected"
+                    } else {
+                        "Usual store selected"
+                    },
             productSectionTitle = if (productRows.isEmpty()) null else "Saved products",
             productRows = productRows,
             storeSectionTitle = if (storeRows.isEmpty()) null else "Usual store",
