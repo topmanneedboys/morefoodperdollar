@@ -25,6 +25,11 @@ class PracticalShoppingSavedStapleLaunchPresentationTest {
             PracticalShoppingSavedStapleLaunchAction.OpenStapleWatchSetup,
             state.action
         )
+        assertEquals("Watch My Staples", state.title)
+        assertEquals(
+            "Choose recurring saved items and a usual store to check whether a future switch is worth the trip.",
+            state.supportingText
+        )
         assertEquals("Choose staples to watch", state.actionLabel)
     }
 
@@ -52,8 +57,12 @@ class PracticalShoppingSavedStapleLaunchPresentationTest {
             )
 
         assertNull(oneProduct.action)
+        assertNull(oneProduct.title)
+        assertNull(oneProduct.supportingText)
         assertNull(oneProduct.actionLabel)
         assertNull(missingDisplayName.action)
+        assertNull(missingDisplayName.title)
+        assertNull(missingDisplayName.supportingText)
         assertNull(missingDisplayName.actionLabel)
     }
 
@@ -68,6 +77,8 @@ class PracticalShoppingSavedStapleLaunchPresentationTest {
             )
 
         assertNull(state.action)
+        assertNull(state.title)
+        assertNull(state.supportingText)
         assertNull(state.actionLabel)
     }
 
@@ -125,6 +136,9 @@ class PracticalShoppingSavedStapleLaunchPresentationTest {
 
         assertTrue(presentation.contains("PracticalShoppingSavedStapleLaunchAction"))
         assertTrue(presentation.contains("OpenStapleWatchSetup"))
+        assertTrue(presentation.contains("supportingText"))
+        assertTrue(view.contains("state.title"))
+        assertTrue(view.contains("state.supportingText"))
         assertFalse(presentation.contains("PracticalShoppingSavedSurfaceAction.Preference"))
         assertFalse(view.contains("visibility = View.VISIBLE"))
         assertTrue(view.contains("setOnClickListener { onAction?.invoke(action) }"))

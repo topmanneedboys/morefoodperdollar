@@ -1,11 +1,14 @@
 package com.valuepilot.app
 
 import android.content.Context
+import android.graphics.Color
+import android.graphics.Typeface
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.TextView
 
 /**
  * Replaceable physical launcher for the Saved-owned Watch My Staples setup route.
@@ -33,6 +36,22 @@ class PracticalShoppingSavedStapleLaunchView @JvmOverloads constructor(
         removeAllViews()
 
         state.action?.let { action ->
+            addView(
+                TextView(context).apply {
+                    text = requireNotNull(state.title)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f)
+                    setTextColor(Color.parseColor("#111827"))
+                    setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+                }
+            )
+            addView(
+                TextView(context).apply {
+                    text = requireNotNull(state.supportingText)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                    setTextColor(Color.parseColor("#4B5563"))
+                    setPadding(0, dp(6), 0, 0)
+                }
+            )
             addView(
                 Button(context).apply {
                     text = requireNotNull(state.actionLabel)

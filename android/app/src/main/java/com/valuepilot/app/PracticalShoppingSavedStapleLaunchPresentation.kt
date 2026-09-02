@@ -13,10 +13,16 @@ sealed interface PracticalShoppingSavedStapleLaunchAction {
  * unavailable.
  */
 data class PracticalShoppingSavedStapleLaunchUiState(
+    val title: String?,
+    val supportingText: String?,
     val action: PracticalShoppingSavedStapleLaunchAction.OpenStapleWatchSetup?,
     val actionLabel: String?
 ) {
     init {
+        require((title != null) == (action != null))
+        require((supportingText != null) == (action != null))
+        require(title == null || title.isNotBlank())
+        require(supportingText == null || supportingText.isNotBlank())
         require((action != null) == (actionLabel != null))
         require(actionLabel == null || actionLabel.isNotBlank())
     }
@@ -50,11 +56,17 @@ object PracticalShoppingSavedStapleLaunchUiProjector {
 
         return if (usable) {
             PracticalShoppingSavedStapleLaunchUiState(
+                title = "Watch My Staples",
+                supportingText =
+                    "Choose recurring saved items and a usual store to check whether a future " +
+                        "switch is worth the trip.",
                 action = PracticalShoppingSavedStapleLaunchAction.OpenStapleWatchSetup,
                 actionLabel = "Choose staples to watch"
             )
         } else {
             PracticalShoppingSavedStapleLaunchUiState(
+                title = null,
+                supportingText = null,
                 action = null,
                 actionLabel = null
             )
