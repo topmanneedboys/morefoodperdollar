@@ -8,9 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`636edb9ffc79e25c08a2865cb903fbab18fadeeb` — `Show Watch My Staples selection progress`
+`c2bb5f64d69d617ce898cf6f281ecf78c67d7e21` — `Explain Watch My Staples entry point`
 
-GitHub Actions workflow run **33670004754** completed successfully (candidate run **33669434308** also passed).
+GitHub Actions workflow run **33671233369** completed successfully (candidate run **33670610252** also passed).
+
+The latest Saved-tab refinement gives the Watch My Staples launcher renderer-ready explanatory copy: “Choose recurring saved items and a usual store to check whether a future switch is worth the trip.” The copy appears only when the existing navigation-readiness gate has visible saved products and a store. It is explicitly a future-check explanation, not a live merchant or notification claim; the launcher still emits only the existing typed setup-navigation action.
 
 The latest consumer-facing slice closes a Saved-backed Watch My Staples setup gap. Immutable setup presentation now supplies a deterministic selection summary such as “2 staples selected (2 minimum) · Usual store selected,” and the physical setup surface renders it below the guidance. The minimum remains the existing reducer-owned `MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF` constant, so the View does not infer readiness or duplicate selection policy. No identity, price, travel, evidence, notification, persistence, planner, ranking, or networking authority moved into the renderer.
 
