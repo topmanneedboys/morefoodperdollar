@@ -8,9 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`f4e260d721fc6768dbf0635f33a1ce2316b38162` — `Name Saved row removal actions`
+`9fa17302a8409f6c991c9761f0ac0fda3e08903f` — `Name Watch selection actions`
 
-GitHub Actions workflow run **33682397427** completed successfully (candidate run **33681822419** also passed).
+GitHub Actions workflow run **33683298432** completed successfully (candidate run **33682834699** also passed).
+
+The latest Watch-selection refinement closes an accessibility context gap in the existing immutable setup surface. Product toggles now identify the saved product they will watch or stop watching, and usual-store toggles identify the saved store they will select or clear. The descriptions are projected alongside the existing typed actions; the physical View binds them without reconstructing identity or interpreting readiness. Deterministic projector and View-boundary tests cover selected and unselected action directions while preserving the no-business-authority boundary.
 
 The latest Saved refinement closes an accessibility context gap in the existing immutable surface. Product and store rows now project item-specific descriptions for their removal actions, so repeated visible “Remove” buttons are unambiguous to assistive technology. Descriptions are emitted only in content/degraded states where the existing lifecycle permits mutation; loading, refreshing, updating and error states still expose no row actions. The physical View binds the supplied descriptions and emits the existing typed preference actions without reading storage, resolving identity, or owning policy/business authority. Deterministic projector and View-boundary tests cover product/store descriptions and busy-state suppression.
 
