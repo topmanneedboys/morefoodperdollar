@@ -8,9 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`de2a196fe32c9a29bddd2542f8bf4cb0db3d45ea` — `Show Watch fact check progress`
+`468729d68d4702ed9a9763a9d099295c0585fbc3` — `Clarify Watch policy requirements`
 
-GitHub Actions workflow run **33676645803** completed successfully (candidate run **33676067674** also passed).
+GitHub Actions workflow run **33678724010** completed successfully (candidate run **33678145394** also passed).
+
+The latest Watch policy refinement closes a consumer-facing clarity gap in the existing immutable draft result. When continuation is unavailable, the projector supplies fixed labels in finalization order and the surface renders them in an amber “Still needed” card: Minimum savings, Maximum extra travel time, Maximum extra distance (or no limit), and Minimum watched staples. Complete drafts render no card. The labels are renderer-ready copy only; the existing reducer/finalization remains the sole policy authority, and no planner, ranking, pricing, evidence, persistence, clock, notification or network capability was added. Deterministic projector, adapter and View-boundary tests cover the incomplete, complete and distance-only cases.
 
 The latest Watch setup refinement adds a bounded fact-check progress card after an accepted configured foreground handoff. The active exact session reports only a resolved count and fixed requirement labels to immutable presentation; raw product/store identities, prices, routes, evidence payloads and decision authority remain outside the renderer. The surface says that no switch decision is available yet, and even complete fact coverage explains that policy and display metadata remain separate. Progress is cleared when the immutable selection changes, and late updates cannot attach to a different selection. Deterministic projector, host, presenter and View-boundary tests cover initial, partial, complete, stale and prohibited-authority cases.
 

@@ -8,7 +8,7 @@ Android version: 101.1.0 (10101)
 
 ## Current verified engineering head
 
-`de2a196fe32c9a29bddd2542f8bf4cb0db3d45ea` (`Show Watch fact check progress`) is the promoted milestone, verified by candidate workflow **33676067674** and milestone workflow **33676645803**. The accepted Watch handoff now exposes only bounded fact-check progress: a resolved count, fixed requirement labels and honest no-decision guidance. Raw identities, prices, routes, evidence payloads and business authority remain outside immutable presentation; progress clears on selection changes and late updates cannot attach to another selection. Clean-source verification passed 1,631 JVM tests (375 shared-core + 1,256 Android app), all 58 Android tasks, all 30 browser tests, APK privacy checks and one-signer verification.
+`468729d68d4702ed9a9763a9d099295c0585fbc3` (`Clarify Watch policy requirements`) is the promoted milestone, verified by candidate workflow **33678145394** and milestone workflow **33678724010**. The Watch policy form now exposes a bounded amber “Still needed” summary with fixed labels for each unanswered rule, so shoppers know exactly what remains before continuation. Labels are derived from the existing immutable finalization result; the View only renders them and still owns no policy, planning, ranking, pricing, persistence, clock, notification or network authority. Clean-source verification passed 1,631 JVM tests (375 shared-core + 1,256 Android app), all 58 Android tasks, all 30 browser tests, APK privacy checks, one-signer verification and release-bundle provenance.
 
 ## Prior checkpoint (superseded)
 
