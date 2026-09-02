@@ -8,7 +8,7 @@ Android version: 101.1.0 (10101)
 
 ## Current verified engineering head
 
-`bdffea8dfb300ea183461b729ef151baa662d496` (`Keep basket eligibility typed`) is the promoted milestone, verified by candidate workflow **33689699742** and milestone provenance workflow **33690175893**. Basket check-off eligibility now comes exclusively from the projected typed `itemStoreAssignments` capability set, then reconciles those opaque item keys against Home rows; it never infers collectability from a display-name string. Incomplete plans still show missing-price rows as visible, unassigned and explicitly “not ready to collect,” while complete plans retain full collection. The preceding per-item store assignment, Home/Basket card accessibility summaries, check-off context, Watch selection descriptions, Saved removal actions and Watch policy field labels remain intact. Clean-source verification passed 1,638 JVM tests (375 shared-core + 1,263 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks, one-signer verification and release-bundle provenance.
+`b3c96da68b63894d1215109a226beb722bb0cc3a` (`Describe Home extra-stop disclosure`) is the promoted milestone, verified by candidate workflow **33690714227** and milestone provenance workflow **33691221473**. Home’s progressive extra-stop control now gives assistive technology an explicit “Show/Hide extra-stop rule settings” description while retaining the already-projected threshold summary; the physical View still makes no second-stop decision. Basket check-off remains typed to the projected `itemStoreAssignments` capability set and never infers collectability from display text. Incomplete plans still show missing-price rows as visible, unassigned and explicitly “not ready to collect,” while complete plans retain full collection. The preceding per-item store assignment, Home/Basket card accessibility summaries, check-off context, Watch selection descriptions, Saved removal actions and Watch policy field labels remain intact. Clean-source verification passed 1,639 JVM tests (375 shared-core + 1,264 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks, one-signer verification and release-bundle provenance.
 
 ## Prior checkpoint (superseded)
 
@@ -197,7 +197,7 @@ Do not silently change this boundary. Future networking/server additions require
 
 Do not keep adding speculative Android production/provider plumbing.
 
-The Practical Shopping MVP fixture/controller, one-store planner/projector, Home/Basket/Saved surfaces, Watch setup/policy presentation, and required consumer correction flows are implemented at the promoted head. The latest slice hardens Basket check-off eligibility to the planner's typed assignment projection without changing the existing collection state or shopping decision boundaries.
+The Practical Shopping MVP fixture/controller, one-store planner/projector, Home/Basket/Saved surfaces, Watch setup/policy presentation, and required consumer correction flows are implemented at the promoted head. The latest slice makes Home’s progressive extra-stop disclosure explicit to assistive technology without changing the existing policy or shopping decision boundaries.
 
 Next engineering slice: re-audit the current Home/Basket/Saved consumer surfaces and tests, then choose one small reversible clarity or accessibility improvement that uses existing immutable projection. Keep the following acceptance constraints active:
 

@@ -8,9 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`bdffea8dfb300ea183461b729ef151baa662d496` — `Keep basket eligibility typed`
+`b3c96da68b63894d1215109a226beb722bb0cc3a` — `Describe Home extra-stop disclosure`
 
-GitHub Actions candidate workflow **33689699742** completed successfully, and milestone provenance workflow **33690175893** completed successfully for the exact same SHA.
+GitHub Actions candidate workflow **33690714227** completed successfully, and milestone provenance workflow **33691221473** completed successfully for the exact same SHA.
+
+The latest Home refinement closes an accessibility gap in the progressive extra-stop control. Assistive technology now hears whether the existing threshold summary will show or hide its settings panel, while the visible summary and typed choice callbacks remain unchanged. This is fixed presentation copy derived from the immutable projected summary and local expanded state; no second-stop policy, planner, ranking, price arithmetic, evidence, persistence, clock, provider or network authority moved into the View.
 
 The latest Basket hardening keeps collection eligibility on the planner's typed boundary. Basket derives its collectible item keys from the already-projected `itemStoreAssignments` list and reconciles those opaque keys against rendered Home rows; it never treats a non-null display-name string as business authority. Incomplete plans continue to show missing-price rows as visible, unassigned and “No usable price yet — not ready to collect,” while complete plans retain full collection. This is a reversible boundary correction with deterministic source-boundary coverage; no planner, ranking, price arithmetic, evidence, persistence, clock, provider or network authority moved into the renderer or View.
 
