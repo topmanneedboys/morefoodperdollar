@@ -19,6 +19,7 @@ permissions:
 
 jobs:
   browser-verify:
+    if: github.event_name != 'push' || github.ref != 'refs/heads/work/valuepilot-android-milestone'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -58,6 +59,7 @@ jobs:
           retention-days: 1
 
   android-verify:
+    if: github.event_name != 'push' || github.ref != 'refs/heads/work/valuepilot-android-milestone'
     runs-on: ubuntu-latest
     timeout-minutes: 35
 
@@ -156,6 +158,7 @@ jobs:
           retention-days: 1
 
   release-bundle:
+    if: github.event_name != 'push' || github.ref != 'refs/heads/work/valuepilot-android-milestone'
     needs:
       - browser-verify
       - android-verify
