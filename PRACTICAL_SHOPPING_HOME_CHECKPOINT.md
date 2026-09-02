@@ -1,6 +1,6 @@
 # ValuePilot Practical Shopping Checkpoint
 
-Updated: 2026-08-29
+Updated: 2026-09-01
 
 Branch: `work/valuepilot-android-milestone`
 
@@ -8,9 +8,13 @@ This checkpoint records the verified Practical Shopping Home slice plus the prov
 
 ## Latest verified engineering head
 
-`2e6a71180738bb1d19be64c1eb850d6730bb139e` — `Batch production price eligibility for Practical Shopping`
+`dac075f24b1af2ba15d04a0b7cda3c09fc3cba6a` — `Label Home removal actions for accessibility`
 
-GitHub Actions workflow run **131** (`33263933735`) completed successfully.
+GitHub Actions workflow run **33595352412** completed successfully.
+
+Since the earlier production-input checkpoint, the visible fictional Home flow now supports typed removal of resolved items and unresolved tokens. Each removal reuses the existing controller -> shared-core planner -> projector path, preserves unknown/ambiguous state, and leaves the Android no-network boundary unchanged. Removal buttons expose item-specific accessibility descriptions.
+
+The earlier production-input head remains recorded in the historical verification list below.
 
 Verified gates all passed:
 

@@ -1,12 +1,20 @@
 # ValuePilot Practical Shopping MVP Status
 
-Updated: 2026-08-29
+Updated: 2026-09-01
 
 Branch: `work/valuepilot-android-milestone`
 
 Purpose: newest durable product/engineering checkpoint for the Practical Shopping MVP. Newer repository evidence overrides this file.
 
 ## Latest verified engineering head
+
+`dac075f24b1af2ba15d04a0b7cda3c09fc3cba6a` — `Label Home removal actions for accessibility`
+
+GitHub Actions workflow run **33595352412** completed successfully.
+
+The current promoted Home slice keeps the fictional sample flow isolated while allowing users to remove recognized items or unresolved tokens and immediately re-plan. Removal actions carry opaque typed keys/tokens through the controller, preserve unknown and ambiguous states, and expose item-specific accessibility descriptions. No planner, projector, provider or Android privacy boundary was changed.
+
+The preceding projector implementation and fixture history remain below as historical context.
 
 `87819246c02677198062bbf664213953c5ecfc30` — `Fix practical shopping projector test imports`
 
@@ -273,7 +281,7 @@ Company-by-company approvals are supplementary and should not block launch.
 
 Do **not** jump directly to real retailer data or networking.
 
-The next focused implementation is a tiny, clearly labeled **fictional Practical Shopping application fixture/controller** that produces bounded planner inputs and then consumes the verified shared-core planner + verified app projector.
+The fictional fixture/controller and visible Home consumer path are complete and verified at the latest head. The requirements below are the historical acceptance criteria for that completed boundary; future work should define a separate typed item-detail/quantity contract or provider-neutral production orchestration boundary before changing planner authority.
 
 Requirements:
 

@@ -1,6 +1,6 @@
 # ValuePilot Continuation Checkpoint
 
-Updated: 2026-08-29
+Updated: 2026-09-01
 
 Branch: `work/valuepilot-android-milestone`
 
@@ -78,6 +78,8 @@ Launch depth before breadth: one dense metro area, roughly 1,500–5,000 high-fr
 
 ## Latest verified engineering baseline
 
+The current promoted Home baseline is `dac075f24b1af2ba15d04a0b7cda3c09fc3cba6a` (`Label Home removal actions for accessibility`), verified by workflow **33595352412**. The Home surface supports typed removal of resolved items and unresolved tokens, immediate deterministic replanning, preserved unknown/ambiguous states, and item-specific accessibility descriptions. Both milestone and candidate branches point to this SHA; the local worktree was clean at verification.
+
 Minimum known durable code baseline before 2026-08-29 documentation changes: `deaa478c9b679f8820b47a80d7f43c5b18787677` with verified code parent `932838f8d5eedda5d17c7a9dadf76ae38f8bcc9f` (`Re-evaluate production search before display`). Always inspect the current branch tip before work.
 
 Verified production ranking/presentation includes exact unit value, bounded Best Value ranking, immutable presentation, source/UI leakage hardening, generation ordering, 128-item projection cap, renderer isolation, inactive hidden production Search view, and display-time re-evaluation from raw evidence/current lifecycle.
@@ -122,7 +124,9 @@ At the last verified checkpoint Android had no `INTERNET`, no `ACCESS_NETWORK_ST
 
 Do not wire Rakuten/GS1 into production Search and do not keep extending speculative provider plumbing.
 
-Next phase is a bounded **Practical Shopping MVP vertical slice**:
+The bounded Practical Shopping MVP fixture/controller, Home projection, one-store/second-stop controls, and consumer correction actions are now implemented and verified at the current head. The original implementation sequence is retained below as historical acceptance criteria; do not treat it as unfinished work.
+
+Historical MVP sequence:
 
 1. Inspect the existing Home/Search/Basket/Saved shell and immutable UI-state boundaries first.
 2. Define the smallest deterministic shopping-request/store-plan domain model: requested items, candidate store, matched/missing coverage, exact known basket cost, travel metadata, confidence/freshness, and optional second-stop incremental-savings decision.

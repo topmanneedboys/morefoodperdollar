@@ -1,10 +1,12 @@
 # Current state
 
-Updated: 2026-08-29
+Updated: 2026-09-01
 
 Branch: `work/valuepilot-android-milestone`
 
 Android version: 101.1.0 (10101)
+
+Latest promoted Home head: `dac075f24b1af2ba15d04a0b7cda3c09fc3cba6a` (`Label Home removal actions for accessibility`), verified by workflow **33595352412**. Home users can remove resolved items or unresolved tokens through typed controller actions; the sample remains explicitly fictional/offline and the Android privacy boundary is unchanged.
 
 ## Product direction now
 
