@@ -239,13 +239,23 @@ object CompareHereUiProjector {
                 "Lower exact unit price wins within this comparison."
 
             CompareHereUiStatus.NOT_ENOUGH_DATA ->
-                "Add at least two products with an exact price and package quantity."
+                selectedPriceGuidance(result.priceSelection)
 
             CompareHereUiStatus.DISPLAY_METADATA_INCOMPLETE ->
                 "Some product names cannot be shown safely, so no winner is displayed."
 
             CompareHereUiStatus.INCOMPATIBLE_DIMENSIONS ->
                 incompatibleGuidance(result.comparisonIssues)
+        }
+
+    private fun selectedPriceGuidance(selection: CompareHerePriceSelection): String =
+        when (selection) {
+            CompareHerePriceSelection.CURRENT ->
+                "Add at least two products with an exact current price and package quantity."
+
+            CompareHerePriceSelection.MEMBER ->
+                "Add at least two products with an exact member price and package quantity. " +
+                    "Current prices are not used as substitutes."
         }
 
     private fun incompatibleGuidance(issues: Set<CompareHereComparisonIssue>): String =

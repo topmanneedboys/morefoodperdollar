@@ -193,6 +193,10 @@ class CompareHereUiProjectorTest {
 
         assertEquals(CompareHereUiStatus.NOT_ENOUGH_DATA, state.status)
         assertEquals("Need more exact information", state.statusTitle)
+        assertEquals(
+            "Add at least two products with an exact current price and package quantity.",
+            state.guidance
+        )
         assertEquals(listOf("Known Milk"), state.rows.map { it.title })
         assertNull(state.rows.single().valueRank)
         assertFalse(state.rows.single().bestValue)
@@ -248,6 +252,39 @@ class CompareHereUiProjectorTest {
         assertEquals(
             "Member price unavailable",
             state.blockedRows.single { it.title == "Milk C" }.reasonText
+        )
+    }
+
+    @Test
+    fun `member mode explains missing member evidence without implying current fallback`() {
+        val core =
+            CompareHereEvaluator.evaluate(
+                comparisonIntentKey = milk,
+                priceSelection = CompareHerePriceSelection.MEMBER,
+                candidates =
+                    listOf(
+                        candidate("a", "5.00", QuantityNormalization.grams(500)),
+                        candidate("b", "6.00", QuantityNormalization.grams(500))
+                    )
+            )
+
+        val state =
+            CompareHereUiProjector.project(
+                core,
+                metadata("a" to "Milk A", "b" to "Milk B")
+            ).state
+
+        assertEquals(CompareHereUiStatus.NOT_ENOUGH_DATA, state.status)
+        assertEquals("Member prices", state.priceModeText)
+        assertEquals(
+            "Add at least two products with an exact member price and package quantity. " +
+                "Current prices are not used as substitutes.",
+            state.guidance
+        )
+        assertTrue(state.rows.isEmpty())
+        assertEquals(
+            listOf("Member price unavailable", "Member price unavailable"),
+            state.blockedRows.map { it.reasonText }
         )
     }
 
