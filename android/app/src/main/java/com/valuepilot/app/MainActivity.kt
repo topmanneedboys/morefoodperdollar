@@ -71,6 +71,8 @@ class MainActivity : AppCompatActivity() {
         UserObservedPriceConfirmationDraftProofReferenceInputSurfaceView
     private lateinit var observedPriceConfirmationDraftProofContentSelectionExperience:
         UserObservedPriceConfirmationDraftProofContentSelectionSurfaceView
+    private lateinit var observedPriceConfirmationActionExperience:
+        UserObservedPriceConfirmationActionSurfaceView
     private lateinit var stapleWatchSetupExperience: StapleWatchSavedSelectionSurfaceView
     private lateinit var stapleWatchPolicyExperience: StapleWatchPolicyDraftSurfaceView
     private lateinit var stapleWatchResultExperience: StapleWatchSurfaceView
@@ -87,6 +89,12 @@ class MainActivity : AppCompatActivity() {
         UserObservedPriceConfirmationDraftProofContentSelectionCoordinator
     private lateinit var observedPriceConfirmationDraftProofContentPicker:
         AndroidUserObservedPriceProofContentPicker
+    private lateinit var observedPriceConfirmationActionPresentationController:
+        UserObservedPriceConfirmationActionPresentationController
+    private lateinit var observedPriceConfirmationAndroidSession:
+        UserObservedPriceConfirmationAndroidSession
+    private lateinit var observedPriceConfirmationActionCoordinator:
+        UserObservedPriceConfirmationActionCoordinator
     private lateinit var stapleWatchForegroundEvaluationInputHost: StapleWatchForegroundEvaluationInputHost
     private lateinit var stapleWatchForegroundResultSurfaceBinding:
         StapleWatchForegroundResultSurfaceBinding
@@ -136,6 +144,8 @@ class MainActivity : AppCompatActivity() {
             findViewById(R.id.observedPriceConfirmationDraftProofReferenceInputExperience)
         observedPriceConfirmationDraftProofContentSelectionExperience =
             findViewById(R.id.observedPriceConfirmationDraftProofContentSelectionExperience)
+        observedPriceConfirmationActionExperience =
+            findViewById(R.id.observedPriceConfirmationActionExperience)
         stapleWatchSetupExperience = findViewById(R.id.stapleWatchSetupExperience)
         stapleWatchPolicyExperience = findViewById(R.id.stapleWatchPolicyExperience)
         stapleWatchResultExperience = findViewById(R.id.stapleWatchResultExperience)
@@ -226,6 +236,9 @@ class MainActivity : AppCompatActivity() {
             observedPriceConfirmationDraftObservedAtInputExperience.onCommit = null
             observedPriceConfirmationDraftProofReferenceInputExperience.onCommit = null
             observedPriceConfirmationDraftProofContentSelectionExperience.onSelectRequested = null
+            observedPriceConfirmationActionExperience.onAction = null
+            observedPriceConfirmationActionPresentationController.close()
+            observedPriceConfirmationAndroidSession.close()
             observedPriceConfirmationDraftProofContentPicker.close()
             observedPriceConfirmationDraftProofContentSelectionCoordinator.close()
             observedPriceSavedSelectionSurfaceCoordinator.close()
@@ -407,6 +420,16 @@ class MainActivity : AppCompatActivity() {
             UserObservedPriceConfirmationDraftSurfacePresenter(
                 observedPriceConfirmationDraftExperience
             )
+        observedPriceConfirmationActionPresentationController =
+            UserObservedPriceConfirmationActionPresentationController(
+                renderer = observedPriceConfirmationActionExperience,
+                submitAction = { observedPriceConfirmationActionCoordinator.submit() }
+            )
+        observedPriceConfirmationAndroidSession =
+            UserObservedPriceConfirmationAndroidSession.create(
+                context = this,
+                completionListener = observedPriceConfirmationActionPresentationController
+            )
         val observedPriceConfirmationDraftRouteShellAdapter =
             UserObservedPriceConfirmationDraftRouteShellAdapter(
                 currentRoute = { shellState.route },
@@ -420,6 +443,8 @@ class MainActivity : AppCompatActivity() {
                         observer =
                             UserObservedPriceConfirmationDraftObserver { finalization ->
                                 observedPriceConfirmationDraftPresenter.render(finalization)
+                                observedPriceConfirmationActionPresentationController
+                                    .onDraftOrProofChanged()
                             }
                     )
                 }
@@ -435,7 +460,13 @@ class MainActivity : AppCompatActivity() {
                 requestForegroundSelection = {
                     observedPriceConfirmationDraftProofContentPicker.launch()
                 },
-                observer = observedPriceConfirmationDraftProofContentSelectionExperience
+                observer =
+                    UserObservedPriceConfirmationDraftProofContentSelectionObserver { presentation ->
+                        observedPriceConfirmationDraftProofContentSelectionExperience
+                            .onPresentation(presentation)
+                        observedPriceConfirmationActionPresentationController
+                            .onDraftOrProofChanged()
+                    }
             )
         observedPriceConfirmationDraftProofContentPicker =
             AndroidUserObservedPriceProofContentPicker(
@@ -446,6 +477,18 @@ class MainActivity : AppCompatActivity() {
             )
         observedPriceConfirmationDraftProofContentSelectionExperience.onSelectRequested =
             observedPriceConfirmationDraftProofContentSelectionCoordinator::onSelectRequested
+        observedPriceConfirmationActionCoordinator =
+            UserObservedPriceConfirmationActionCoordinator(
+                routeCoordinator = observedPriceConfirmationDraftRouteCoordinator,
+                proofContentCoordinator =
+                    observedPriceConfirmationDraftProofContentSelectionCoordinator,
+                target =
+                    UserObservedPriceConfirmationAndroidSubmissionTarget(
+                        observedPriceConfirmationAndroidSession
+                    )
+            )
+        observedPriceConfirmationActionExperience.onAction =
+            observedPriceConfirmationActionPresentationController::onSubmitRequested
         val observedPricePrefillAttemptFanout =
             UserObservedPriceSavedPrefillHandoffAttemptFanout(
                 resultObserver = observedPriceSavedPrefillResultSurfaceBinding,
@@ -697,6 +740,8 @@ class MainActivity : AppCompatActivity() {
             if (observedPriceConfirmationDraftVisible) View.VISIBLE else View.GONE
         observedPriceConfirmationDraftProofContentSelectionExperience.visibility =
             if (observedPriceConfirmationDraftVisible) View.VISIBLE else View.GONE
+        observedPriceConfirmationActionExperience.visibility =
+            if (observedPriceConfirmationDraftVisible) View.VISIBLE else View.GONE
         if (!observedPriceConfirmationDraftVisible) {
             observedPriceConfirmationDraftPriceInputExperience.clearInput()
             observedPriceConfirmationDraftProofReferenceInputExperience.clearInput()
@@ -715,6 +760,8 @@ class MainActivity : AppCompatActivity() {
         observedPriceConfirmationDraftRouteCoordinator
             .onRouteVisibilityChanged(observedPriceConfirmationDraftVisible)
         observedPriceConfirmationDraftProofContentSelectionCoordinator
+            .onRouteVisibilityChanged(observedPriceConfirmationDraftVisible)
+        observedPriceConfirmationActionPresentationController
             .onRouteVisibilityChanged(observedPriceConfirmationDraftVisible)
         stapleWatchSetupCoordinator.onRouteVisibilityChanged(stapleSetupVisible)
         stapleWatchPolicySetupCoordinator.onRouteVisibilityChanged(staplePolicyVisible)
