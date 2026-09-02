@@ -8,7 +8,7 @@ Android version: 101.1.0 (10101)
 
 ## Current verified engineering head
 
-`3ee2739e58ee412e35d53ea4b6bf3b492aedcd8d` (`Enable partial basket check-off`) is the promoted milestone, verified by candidate workflow **33688724636** and milestone provenance workflow **33689170239**. Basket now lets a shopper check off covered items even when the overall plan is incomplete: the renderer supplies an exact collectible-item capability set from projected store assignments, while missing-price rows remain visible, unassigned and explicitly “not ready to collect.” Progress and guidance distinguish priced-item collection from a complete basket, and foreground marks remain local-only and reconciled against the immutable capability set. The preceding per-item store assignment, Home/Basket card accessibility summaries, check-off context, Watch selection descriptions, Saved removal actions and Watch policy field labels remain intact. Clean-source verification passed 1,638 JVM tests (375 shared-core + 1,263 Android app), all 58 Android tasks, all 30 browser tests, APK privacy checks, one-signer verification and release-bundle provenance.
+`bdffea8dfb300ea183461b729ef151baa662d496` (`Keep basket eligibility typed`) is the promoted milestone, verified by candidate workflow **33689699742** and milestone provenance workflow **33690175893**. Basket check-off eligibility now comes exclusively from the projected typed `itemStoreAssignments` capability set, then reconciles those opaque item keys against Home rows; it never infers collectability from a display-name string. Incomplete plans still show missing-price rows as visible, unassigned and explicitly “not ready to collect,” while complete plans retain full collection. The preceding per-item store assignment, Home/Basket card accessibility summaries, check-off context, Watch selection descriptions, Saved removal actions and Watch policy field labels remain intact. Clean-source verification passed 1,638 JVM tests (375 shared-core + 1,263 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks, one-signer verification and release-bundle provenance.
 
 ## Prior checkpoint (superseded)
 
@@ -197,7 +197,7 @@ Do not silently change this boundary. Future networking/server additions require
 
 Do not keep adding speculative Android production/provider plumbing.
 
-The Practical Shopping MVP fixture/controller, one-store planner/projector, Home/Basket/Saved surfaces, Watch setup/policy presentation, and required consumer correction flows are implemented at the promoted head. The latest slice gives Basket check-off actions full item and preference context for assistive technology without changing the existing typed collection state or shopping decision boundaries.
+The Practical Shopping MVP fixture/controller, one-store planner/projector, Home/Basket/Saved surfaces, Watch setup/policy presentation, and required consumer correction flows are implemented at the promoted head. The latest slice hardens Basket check-off eligibility to the planner's typed assignment projection without changing the existing collection state or shopping decision boundaries.
 
 Next engineering slice: re-audit the current Home/Basket/Saved consumer surfaces and tests, then choose one small reversible clarity or accessibility improvement that uses existing immutable projection. Keep the following acceptance constraints active:
 

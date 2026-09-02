@@ -8,9 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`3ee2739e58ee412e35d53ea4b6bf3b492aedcd8d` — `Enable partial basket check-off`
+`bdffea8dfb300ea183461b729ef151baa662d496` — `Keep basket eligibility typed`
 
-GitHub Actions candidate workflow **33688724636** completed successfully, and milestone provenance workflow **33689170239** completed successfully for the exact same SHA.
+GitHub Actions candidate workflow **33689699742** completed successfully, and milestone provenance workflow **33690175893** completed successfully for the exact same SHA.
+
+The latest Basket hardening keeps collection eligibility on the planner's typed boundary. Basket derives its collectible item keys from the already-projected `itemStoreAssignments` list and reconciles those opaque keys against rendered Home rows; it never treats a non-null display-name string as business authority. Incomplete plans continue to show missing-price rows as visible, unassigned and “No usable price yet — not ready to collect,” while complete plans retain full collection. This is a reversible boundary correction with deterministic source-boundary coverage; no planner, ranking, price arithmetic, evidence, persistence, clock, provider or network authority moved into the renderer or View.
 
 The latest Basket refinement closes a practical collection gap in incomplete plans. When the shared projection has usable prices for some requested items but not all, Basket now exposes check-off actions only for the exact assigned item keys. Missing-price rows remain visible without a button and say “No usable price yet — not ready to collect”; progress reads as priced items collected, and guidance explains that unpriced items stay unchecked until verified. Complete plans retain the existing full collection flow. The collectible capability set is emitted by immutable Basket rendering and bound by the View; no display-text parsing, ranking, price arithmetic, planner logic, evidence upgrade, persistence, clock, provider or network authority was added. Deterministic tests cover incomplete-plan eligibility, exact key preservation, guidance and the no-business-authority View boundary.
 
