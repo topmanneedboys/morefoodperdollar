@@ -56,6 +56,22 @@ class PracticalShoppingBasketProgressSessionTest {
     }
 
     @Test
+    fun clearingCollectedMarksPreservesEligibilityAndResetsOnlyForegroundProgress() {
+        var state =
+            PracticalShoppingBasketProgressSession.reconcile(
+                PracticalShoppingBasketProgressSession.initial(),
+                listOf(eggs, milk)
+            )
+        state = PracticalShoppingBasketProgressSession.toggle(state, eggs)
+        state = PracticalShoppingBasketProgressSession.toggle(state, milk)
+
+        val cleared = PracticalShoppingBasketProgressSession.clearCollected(state)
+
+        assertEquals(state.eligibleItemKeys, cleared.eligibleItemKeys)
+        assertTrue(cleared.collectedItemKeys.isEmpty())
+    }
+
+    @Test
     fun unknownIdentityFailsClosedWithoutMutation() {
         val state =
             PracticalShoppingBasketProgressSession.reconcile(

@@ -69,6 +69,15 @@ object PracticalShoppingBasketProgressSession {
         )
     }
 
+    /** Clears only the local check-off marks while preserving the current eligible plan items. */
+    fun clearCollected(
+        state: PracticalShoppingBasketProgressState
+    ): PracticalShoppingBasketProgressState =
+        PracticalShoppingBasketProgressState(
+            eligibleItemKeys = state.eligibleItemKeys,
+            collectedItemKeys = emptySet()
+        )
+
     /** Stable value-only snapshot for Android view-state restoration. */
     fun snapshot(state: PracticalShoppingBasketProgressState): List<String> =
         state.collectedItemKeys

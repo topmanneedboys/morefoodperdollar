@@ -34,6 +34,27 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
     }
 
     @Test
+    fun checkOffResetIsLocalForegroundStateAndAppearsOnlyWhenMarksExist() {
+        val source = source("PracticalShoppingBasketSurfaceView.kt").readText()
+
+        assertTrue(source.contains("PracticalShoppingBasketProgressSession.clearCollected"))
+        assertTrue(source.contains("progressState.collectedItemKeys.isNotEmpty()"))
+        assertTrue(source.contains("text = \"Clear check-off\""))
+        assertTrue(source.contains("contentDescription = \"Clear collected item marks\""))
+
+        listOf(
+            "PracticalShoppingPlanner",
+            "PracticalShoppingPolicy(",
+            "Money.parse",
+            "knownBasketCost",
+            "SecondStopDecision",
+            "System.currentTimeMillis"
+        ).forEach { forbidden ->
+            assertFalse("Check-off reset must stay outside shopping authority through $forbidden", source.contains(forbidden))
+        }
+    }
+
+    @Test
     fun homeAndBasketShareOneUiReadyPlanResultRenderer() {
         val home = source("PracticalShoppingHomeSurfaceView.kt").readText()
         val basket = source("PracticalShoppingBasketSurfaceView.kt").readText()

@@ -31,6 +31,26 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     private val headline = line("", 22f, "#111827", true)
     private val guidance = line("", 14f, "#4B5563", topPadding = 8)
     private val collectionProgress = line("", 13f, "#374151", true, 16)
+    private val clearCollectionButton = MaterialButton(context).apply {
+        text = "Clear check-off"
+        contentDescription = "Clear collected item marks"
+        isAllCaps = false
+        textSize = 13f
+        cornerRadius = dp(14)
+        strokeWidth = dp(1)
+        strokeColor = ColorStateList.valueOf(Color.parseColor("#D1D5DB"))
+        setTextColor(Color.parseColor("#374151"))
+        backgroundTintList = ColorStateList.valueOf(Color.WHITE)
+        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 6)
+        setOnClickListener {
+            progressState = PracticalShoppingBasketProgressSession.clearCollected(progressState)
+            lastRenderState?.let { state ->
+                renderCollectionProgress(state)
+                renderCollectionResetControl()
+                renderItems(state)
+            }
+        }
+    }
     private val itemsHeading =
         line(context.getString(R.string.basket_items_title), 13f, "#374151", true, 18)
     private val itemsContainer = column(padded = false)
@@ -62,6 +82,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         addView(headline.apply { setPadding(0, dp(20), 0, 0) })
         addView(guidance)
         addView(collectionProgress)
+        addView(clearCollectionButton)
         addView(itemsHeading)
         addView(itemsContainer)
         addView(unresolvedCard)
@@ -69,6 +90,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         addView(extraStopRule)
         addView(actionButton)
         collectionProgress.visibility = GONE
+        clearCollectionButton.visibility = GONE
         itemsHeading.visibility = GONE
         unresolvedCard.visibility = GONE
         extraStopRule.visibility = GONE
@@ -93,6 +115,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         sampleNotice.text = state.sampleNotice
         actionButton.text = state.actionLabel
         renderCollectionProgress(state)
+        renderCollectionResetControl()
         renderItems(state)
         renderUnknownItems(state.unknownItems)
         planResult.render(state.result)
@@ -150,6 +173,11 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
                 collectionProgress.visibility = GONE
             }
         }
+    }
+
+    private fun renderCollectionResetControl() {
+        clearCollectionButton.visibility =
+            if (progressState.collectedItemKeys.isNotEmpty()) VISIBLE else GONE
     }
 
     private fun renderItems(state: PracticalShoppingBasketRenderState) {
