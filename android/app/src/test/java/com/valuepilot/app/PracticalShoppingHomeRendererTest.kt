@@ -162,6 +162,21 @@ class PracticalShoppingHomeRendererTest {
     }
 
     @Test
+    fun noCoverageResultDoesNotExposeAnExtraStopRuleWithoutAStorePlan() {
+        val model =
+            PracticalShoppingHomeSession.submit(
+                LocalSamplePracticalShoppingDemo.initialModel(),
+                "coffee"
+            )
+
+        val rendered = PracticalShoppingHomeRenderer.render(model.ui)
+
+        assertEquals("Not enough price coverage yet", rendered.result?.headline)
+        assertNull(rendered.result?.primary)
+        assertFalse(rendered.extraStopSettings.visible)
+    }
+
+    @Test
     fun selectedExactExtraStopPreferenceIsUiReadyAfterAResultAndRemainsTyped() {
         var model = LocalSamplePracticalShoppingDemo.initialModel()
         model =

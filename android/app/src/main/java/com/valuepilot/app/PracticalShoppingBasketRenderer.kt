@@ -51,7 +51,7 @@ data class PracticalShoppingBasketRenderState(
         require(sampleNotice.isNotBlank())
         require(collectionNotice == null || collectionNotice.isNotBlank())
         require((status == PracticalShoppingBasketStatus.PLANNED) == (result != null))
-        require((result == null) == (extraStopRuleText == null))
+        require((result?.primary != null) == (extraStopRuleText != null))
         require(!collectionEnabled || status == PracticalShoppingBasketStatus.PLANNED)
         require(!collectionEnabled || result?.primary != null)
         require(collectibleItemKeys.distinct().size == collectibleItemKeys.size)
@@ -89,10 +89,15 @@ object PracticalShoppingBasketRenderer {
                 PracticalShoppingBasketStatus.NEEDS_ATTENTION ->
                     source.message ?: "Finish the items that need attention on Home."
                 PracticalShoppingBasketStatus.PLANNED ->
-                    if (source.result?.primary?.missingItemsText == null) {
-                        "Review the full recommendation before you shop. Return to Home to change any item."
-                    } else {
-                        "Review the priced items before you shop. Items without a usable price stay unchecked until verified."
+                    when {
+                        source.result?.primary == null ->
+                            "No usable price coverage yet. Return to Home to adjust your sample list."
+
+                        source.result.primary.missingItemsText == null ->
+                            "Review the full recommendation before you shop. Return to Home to change any item."
+
+                        else ->
+                            "Review the priced items before you shop. Items without a usable price stay unchecked until verified."
                     }
             }
 
@@ -116,7 +121,8 @@ object PracticalShoppingBasketRenderer {
             unknownItems = source.unknownItems,
             // Preserve the already-projected result object exactly.
             result = source.result,
-            extraStopRuleText = source.extraStopSettings.summary.takeIf { source.result != null },
+            extraStopRuleText =
+                source.extraStopSettings.summary.takeIf { source.result?.primary != null },
             collectionEnabled = collectionEnabled,
             actionLabel =
                 if (status == PracticalShoppingBasketStatus.EMPTY) {

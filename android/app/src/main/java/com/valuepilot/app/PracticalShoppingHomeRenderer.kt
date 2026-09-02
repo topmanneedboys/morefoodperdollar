@@ -173,7 +173,9 @@ object PracticalShoppingHomeRenderer {
             result = source.result,
             extraStopSettings =
                 PracticalShoppingHomeExtraStopSettingsRenderState(
-                    visible = source.result != null,
+                    // A no-coverage decision has a result headline but no store plan. The
+                    // extra-stop rule is meaningful only once a primary recommendation exists.
+                    visible = source.result?.primary != null,
                     summary =
                         "Extra-stop rule · Save at least " +
                             source.extraStopMinimumSavingsChoice.label,

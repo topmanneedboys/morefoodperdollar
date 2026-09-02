@@ -127,6 +127,29 @@ class PracticalShoppingBasketRendererTest {
     }
 
     @Test
+    fun noCoverageKeepsBasketHonestAndHidesRecommendationOnlyControls() {
+        val model =
+            PracticalShoppingHomeSession.submit(
+                LocalSamplePracticalShoppingDemo.initialModel(),
+                "coffee"
+            )
+        val home = PracticalShoppingHomeRenderer.render(model.ui)
+
+        val basket = PracticalShoppingBasketRenderer.render(home)
+
+        assertEquals(PracticalShoppingBasketStatus.PLANNED, basket.status)
+        assertEquals("Not enough price coverage yet", basket.result?.headline)
+        assertNull(basket.result?.primary)
+        assertNull(basket.extraStopRuleText)
+        assertEquals(
+            "No usable price coverage yet. Return to Home to adjust your sample list.",
+            basket.guidance
+        )
+        assertFalse(basket.collectionEnabled)
+        assertNull(basket.collectionNotice)
+    }
+
+    @Test
     fun collectionActionDescriptionKeepsItemDetailAndPreferenceBoundary() {
         val item =
             PracticalShoppingHomeItemRenderState(
