@@ -8,9 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`e5d62f55563d2b4d89b5f1ed1b4be977b162c302` — `Show planned store per basket item`
+`3ee2739e58ee412e35d53ea4b6bf3b492aedcd8d` — `Enable partial basket check-off`
 
-GitHub Actions candidate workflow **33687667849** completed successfully, and milestone provenance workflow **33688147590** completed successfully for the exact same SHA.
+GitHub Actions candidate workflow **33688724636** completed successfully, and milestone provenance workflow **33689170239** completed successfully for the exact same SHA.
+
+The latest Basket refinement closes a practical collection gap in incomplete plans. When the shared projection has usable prices for some requested items but not all, Basket now exposes check-off actions only for the exact assigned item keys. Missing-price rows remain visible without a button and say “No usable price yet — not ready to collect”; progress reads as priced items collected, and guidance explains that unpriced items stay unchecked until verified. Complete plans retain the existing full collection flow. The collectible capability set is emitted by immutable Basket rendering and bound by the View; no display-text parsing, ranking, price arithmetic, planner logic, evidence upgrade, persistence, clock, provider or network authority was added. Deterministic tests cover incomplete-plan eligibility, exact key preservation, guidance and the no-business-authority View boundary.
 
 The latest Home/Basket refinement closes a practical collection-context gap in the existing immutable plan. Each recognized covered item now shows “Buy at [store]” using the exact allocation already produced by the shared one-store/optional-second-stop planner. A recommended second stop moves only its explicitly added item keys; incomplete or unknown-price items remain unassigned rather than being guessed. The renderer maps typed item identities to these projected display names without re-ranking, recalculating, or parsing card text. Basket collection action descriptions include the same store context, while item details and preference-only notices remain visible. Opaque item identities are retained only for typed lookup and are excluded from normal UI/diagnostic text. Deterministic projector, renderer, and View-boundary tests cover complete, incomplete, recommended-second-stop, rejected-stop, no-coverage and collection-description cases.
 
