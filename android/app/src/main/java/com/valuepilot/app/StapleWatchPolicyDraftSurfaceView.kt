@@ -165,6 +165,7 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
             addView(
                 numericInputControl(
                     state = state,
+                    fieldLabel = state.distanceLimitLabel,
                     unitLabel = state.maxAdditionalDistanceUnitLabel,
                     value = limitedValue,
                     decimal = false,
@@ -174,6 +175,7 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
             addView(
                 Button(context).apply {
                     text = "No distance limit"
+                    contentDescription = "Set ${state.distanceLimitLabel} to no limit"
                     setAllCaps(false)
                     isSaveEnabled = false
                     isEnabled = onAction != null
@@ -204,6 +206,7 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
             addView(
                 numericInputControl(
                     state = state,
+                    fieldLabel = label,
                     unitLabel = unitLabel,
                     value = value,
                     decimal = decimal,
@@ -214,6 +217,7 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
 
     private fun numericInputControl(
         state: StapleWatchPolicyDraftUiState,
+        fieldLabel: String,
         unitLabel: String,
         value: String,
         decimal: Boolean,
@@ -227,6 +231,7 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
             EditText(context).apply {
                 setText(value)
                 hint = unitLabel
+                contentDescription = "$fieldLabel. Enter $unitLabel."
                 isSingleLine = true
                 isSaveEnabled = false
                 inputType =
@@ -237,6 +242,7 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
         val applyButton =
             Button(context).apply {
                 text = "Apply"
+                contentDescription = "Apply $fieldLabel"
                 setAllCaps(false)
                 isSaveEnabled = false
                 isEnabled = onAction != null

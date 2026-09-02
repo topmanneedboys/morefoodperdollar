@@ -111,6 +111,25 @@ class StapleWatchPolicyDraftSurfaceViewBoundaryTest {
     }
 
     @Test
+    fun editableControlsKeepProjectedFieldContextForAssistiveTechnology() {
+        val source = source("StapleWatchPolicyDraftSurfaceView.kt").readText()
+
+        assertTrue(source.contains("fieldLabel = state.distanceLimitLabel"))
+        assertTrue(source.contains("fieldLabel = label"))
+        assertTrue(
+            source.contains(
+                "contentDescription = \"${'$'}fieldLabel. Enter ${'$'}unitLabel.\""
+            )
+        )
+        assertTrue(source.contains("contentDescription = \"Apply ${'$'}fieldLabel\""))
+        assertTrue(
+            source.contains(
+                "contentDescription = \"Set ${'$'}{state.distanceLimitLabel} to no limit\""
+            )
+        )
+    }
+
+    @Test
     fun exactTextFormatterUsesExplicitFractionDigitsWithoutLocaleOrFloatingPoint() {
         assertEquals("", StapleWatchPolicyDraftTextValueFormatter.money(null, 2))
         assertEquals("15.00", StapleWatchPolicyDraftTextValueFormatter.money(1_500L, 2))
