@@ -33,6 +33,13 @@ data class PracticalShoppingBasketRenderState(
             items.map { it.key }
         } else {
             emptyList()
+        },
+    /** Explains the scope of foreground marks without implying cart/order authority. */
+    val collectionNotice: String? =
+        if (collectionEnabled) {
+            "Check-off is only a local shopping-session aid; it does not place an order or change the plan."
+        } else {
+            null
         }
 ) {
     init {
@@ -42,6 +49,7 @@ data class PracticalShoppingBasketRenderState(
         require(extraStopRuleText == null || extraStopRuleText.isNotBlank())
         require(actionLabel.isNotBlank())
         require(sampleNotice.isNotBlank())
+        require(collectionNotice == null || collectionNotice.isNotBlank())
         require((status == PracticalShoppingBasketStatus.PLANNED) == (result != null))
         require((result == null) == (extraStopRuleText == null))
         require(!collectionEnabled || status == PracticalShoppingBasketStatus.PLANNED)
@@ -49,6 +57,7 @@ data class PracticalShoppingBasketRenderState(
         require(collectibleItemKeys.distinct().size == collectibleItemKeys.size)
         require(collectibleItemKeys.all { key -> items.any { it.key == key } })
         require(collectionEnabled == collectibleItemKeys.isNotEmpty())
+        require((collectionNotice != null) == collectionEnabled)
         if (status == PracticalShoppingBasketStatus.EMPTY) {
             require(items.isEmpty())
             require(unknownItems.isEmpty())

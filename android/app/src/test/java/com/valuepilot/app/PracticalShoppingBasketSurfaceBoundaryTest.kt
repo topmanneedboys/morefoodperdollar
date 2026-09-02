@@ -21,6 +21,8 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
         assertTrue(source.contains("item.storeAssignment"))
         assertTrue(source.contains("line(\"Buy at ${'$'}store\""))
         assertTrue(source.contains("state.collectibleItemKeys"))
+        assertTrue(source.contains("collectionNotice.text = state.collectionNotice.orEmpty()"))
+        assertTrue(source.contains("state.collectionNotice == null"))
         assertTrue(source.contains("No usable price yet — not ready to collect"))
         assertTrue(source.contains("addItemDetails(item, this, state.collectionEnabled)"))
         assertTrue(source.contains("practicalShoppingBasketCollectionActionDescription(item, collected)"))

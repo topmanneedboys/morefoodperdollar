@@ -26,6 +26,7 @@ class PracticalShoppingBasketRendererTest {
         assertNull(basket.result)
         assertNull(basket.extraStopRuleText)
         assertFalse(basket.collectionEnabled)
+        assertNull(basket.collectionNotice)
         assertEquals("Build my basket on Home", basket.actionLabel)
         assertSame(home.items, basket.items)
         assertSame(home.unknownItems, basket.unknownItems)
@@ -86,6 +87,10 @@ class PracticalShoppingBasketRendererTest {
         assertEquals(home.extraStopSettings.summary, basket.extraStopRuleText)
         assertEquals("Basket 10.28 CAD", basket.result?.primary?.basketCostText)
         assertTrue(basket.collectionEnabled)
+        assertEquals(
+            "Check-off is only a local shopping-session aid; it does not place an order or change the plan.",
+            basket.collectionNotice
+        )
         assertEquals("Edit on Home", basket.actionLabel)
     }
 
@@ -105,6 +110,10 @@ class PracticalShoppingBasketRendererTest {
         assertEquals("Known subtotal 4.49 CAD", basket.result?.primary?.basketCostText)
         assertEquals("Missing price: Coffee", basket.result?.primary?.missingItemsText)
         assertTrue(basket.collectionEnabled)
+        assertEquals(
+            "Check-off is only a local shopping-session aid; it does not place an order or change the plan.",
+            basket.collectionNotice
+        )
         assertEquals(listOf(home.items.first().key), basket.collectibleItemKeys)
         assertEquals(
             "Review the priced items before you shop. Items without a usable price stay unchecked until verified.",

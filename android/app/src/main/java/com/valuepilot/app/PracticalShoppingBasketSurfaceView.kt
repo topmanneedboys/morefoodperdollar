@@ -50,6 +50,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     private val headline = line("", 22f, "#111827", true)
     private val guidance = line("", 14f, "#4B5563", topPadding = 8)
     private val collectionProgress = line("", 13f, "#374151", true, 16)
+    private val collectionNotice = line("", 12f, "#6B7280", topPadding = 4)
     private val clearCollectionButton = MaterialButton(context).apply {
         text = "Clear check-off"
         contentDescription = "Clear collected item marks"
@@ -101,6 +102,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         addView(headline.apply { setPadding(0, dp(20), 0, 0) })
         addView(guidance)
         addView(collectionProgress)
+        addView(collectionNotice)
         addView(clearCollectionButton)
         addView(itemsHeading)
         addView(itemsContainer)
@@ -109,6 +111,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         addView(extraStopRule)
         addView(actionButton)
         collectionProgress.visibility = GONE
+        collectionNotice.visibility = GONE
         clearCollectionButton.visibility = GONE
         itemsHeading.visibility = GONE
         unresolvedCard.visibility = GONE
@@ -134,6 +137,8 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         sampleNotice.text = state.sampleNotice
         actionButton.text = state.actionLabel
         renderCollectionProgress(state)
+        collectionNotice.text = state.collectionNotice.orEmpty()
+        collectionNotice.visibility = if (state.collectionNotice == null) GONE else VISIBLE
         renderCollectionResetControl()
         renderItems(state)
         renderUnknownItems(state.unknownItems)
