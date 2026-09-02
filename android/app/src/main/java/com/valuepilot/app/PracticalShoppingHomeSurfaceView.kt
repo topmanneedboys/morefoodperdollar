@@ -113,6 +113,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         )
         addView(submitButton)
         addView(message)
+        addView(sampleCard())
         addView(itemsHeading)
         addView(itemsContainer)
         addView(refinementCard)
@@ -120,7 +121,6 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         addView(resultContainer)
         addView(extraStopSettingsButton)
         addView(extraStopSettingsCard)
-        addView(sampleCard())
         addView(compareButton())
 
         itemsHeading.visibility = GONE

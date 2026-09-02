@@ -36,6 +36,19 @@ class PracticalShoppingHomeRendererTest {
     }
 
     @Test
+    fun sampleDisclosureExplicitlyRejectsLiveInterpretation() {
+        val rendered =
+            PracticalShoppingHomeRenderer.render(
+                LocalSamplePracticalShoppingDemo.initialModel().ui
+            )
+
+        assertEquals(
+            "Fictional sample data only — not live retailer prices or availability.",
+            rendered.sampleNotice
+        )
+    }
+
+    @Test
     fun chickenRefinementKeepsResolvedItemsAndOneTapChoicesVisible() {
         val model =
             PracticalShoppingHomeSession.submit(
