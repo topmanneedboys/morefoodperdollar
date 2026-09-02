@@ -78,7 +78,7 @@ Keep ODbL/share-alike sources source-isolated; do not collapse them into an inco
 
 Launch depth before breadth: one dense metro area, roughly 1,500–5,000 high-frequency grocery/household concepts for strong local utility, while millions of open identities remain backend recognition rather than a vanity KPI.
 
-## Latest verified engineering baseline
+## Earlier verified engineering baseline
 
 The current promoted baseline is `227ed24059784989bc2ee38845181297f0430d0e` (`Show Home plan on Basket tab`), verified by candidate workflow **33635484179** and promoted workflow **33636063647**. Basket now consumes the existing immutable Home render state and passes its exact projected result through unchanged. It exposes recognized and unresolved items, complete or honestly incomplete one-store results, any shared-core-approved optional second stop, the selected exact extra-stop rule, and the same explicit fictional/offline disclosure. Empty/refinement/unresolved states never fabricate a plan and provide one typed action back to Home. Home and Basket use one shared physical result renderer; neither Basket renderer nor View owns planning, ranking, money arithmetic, provider logic, or missing-fact inference. Independent clean-LF verification passed 1,546 JVM tests with zero failures/errors/skips, all 58 Android tasks, all 30 browser tests, Firefox lint, APK privacy inspection, and one-signer APK verification. The local worktree was clean at code verification.
 
