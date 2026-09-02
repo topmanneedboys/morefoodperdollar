@@ -8,9 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`a137b7816730c17a83acc91b49dbe95d7455b411` — `Make basket shell copy plan agnostic`
+`92ffa4c92d903f5de47a8be5dbc34e54380cd599` — `Make saved shell copy state safe`
 
-GitHub Actions candidate workflow **33694867066** completed successfully, and milestone provenance workflow **33695284687** completed successfully for the exact same SHA.
+GitHub Actions candidate workflow **33695634770** completed successfully, and milestone provenance workflow **33696077104** completed successfully for the exact same SHA.
+
+The latest Saved shell refinement removes the last static implication that confirmed choices must already exist. The Saved title is now “Manage saved choices.” and its description invites review or management of choices the shopper chooses to remember, so loading, empty and error states remain honest. A deterministic shell integration test asserts the new copy and rejects the old confirmed-choice wording. This remains a reversible presentation-only correction; planner, ranking, price arithmetic, evidence, persistence, clock, provider and network authority stay outside the renderer/View boundary.
 
 The latest Basket shell refinement removes the last static implication that a usable plan must already exist. The Basket title is now “Review your shopping list.” and its description refers to the shopping list from Home, so no-coverage, empty and attention-required states remain honest while complete plans still show their exact projected result below. Deterministic shell integration tests assert the new copy and reject the old plan-specific wording. This remains a reversible presentation-only correction; planner, ranking, price arithmetic, evidence, persistence, clock, provider and network authority stay outside the renderer/View boundary.
 
