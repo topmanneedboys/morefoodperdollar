@@ -90,6 +90,8 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
 
     private val submitButton = MaterialButton(context).apply {
         text = context.getString(R.string.home_plan_action)
+        // Fail closed until the first immutable render state supplies readiness.
+        isEnabled = false
         isAllCaps = false
         textSize = 16f
         cornerRadius = dp(16)
@@ -186,6 +188,12 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     }
 
     private fun submit() {
+        // The IME action can arrive independently of the visible button click. Keep
+        // both entry points on the same immutable readiness boundary.
+        if (!submitButton.isEnabled) {
+            hideKeyboard()
+            return
+        }
         onSubmit?.invoke(input.text?.toString().orEmpty())
         hideKeyboard()
     }

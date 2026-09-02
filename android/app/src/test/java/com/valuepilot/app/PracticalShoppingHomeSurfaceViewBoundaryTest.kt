@@ -21,6 +21,15 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
     }
 
     @Test
+    fun keyboardSubmitUsesTheSameRenderedReadinessAsTheVisibleButton() {
+        val source = source().readText()
+
+        assertTrue(source.contains("isEnabled = false"))
+        assertTrue(source.contains("if (!submitButton.isEnabled)"))
+        assertTrue(source.contains("onSubmit?.invoke(input.text?.toString().orEmpty())"))
+    }
+
+    @Test
     fun advancedExtraStopControlMechanicallyObeysImmutableVisibility() {
         val source = source().readText()
 
