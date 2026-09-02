@@ -85,6 +85,19 @@ class LocalSamplePracticalShoppingDemoTest {
     }
 
     @Test
+    fun naturalListConnectorsDoNotBecomeUnknownShoppingIntents() {
+        listOf("eggs and milk", "eggs & milk").forEach { query ->
+            val state = submit(query).ui
+            val primary = requireNotNull(requireNotNull(state.result).primary)
+
+            assertEquals(LocalSamplePracticalShoppingDemo.Status.RESULT, state.status)
+            assertEquals(listOf("Eggs", "Milk"), state.items.map { it.name })
+            assertTrue(state.unknownItems.isEmpty())
+            assertEquals("Basket 10.28 CAD", primary.basketCostText)
+        }
+    }
+
+    @Test
     fun removingRecognizedItemReplansTheRemainingCanonicalList() {
         var model = submit("eggs milk")
         val eggsKey = model.ui.items.single { it.name == "Eggs" }.key

@@ -14,6 +14,7 @@ import com.valuepilot.core.TwoStorePlanCandidate
 private const val MAX_DEMO_QUERY_LENGTH = 240
 private const val MAX_STORED_DEMO_QUERY_LENGTH = MAX_DEMO_QUERY_LENGTH + 1
 private const val MAX_DEMO_INTENTS = 32
+private val IGNORED_LIST_TOKENS = setOf("and", "&")
 
 /**
  * Tiny offline fixture used only to prove the Practical Shopping consumer flow.
@@ -629,7 +630,7 @@ object LocalSamplePracticalShoppingDemo {
                 } else if (selected.key !in resolved) {
                     resolved[selected.key] = selected
                 }
-            } else {
+            } else if (token !in IGNORED_LIST_TOKENS) {
                 unknown.add(token)
             }
             index += 1
