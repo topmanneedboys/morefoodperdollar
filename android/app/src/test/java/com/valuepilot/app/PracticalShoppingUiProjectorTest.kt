@@ -76,7 +76,7 @@ class PracticalShoppingUiProjectorTest {
         assertEquals("3 of 3 items priced", card.coverageText)
         assertNull(card.missingItemsText)
         assertEquals("7 min · 2.4 km", card.travelText)
-        assertEquals("3 fresh · 0 stale · 0 unknown", card.evidenceText)
+        assertEquals("Price freshness: 3 fresh · 0 stale · 0 unknown", card.evidenceText)
         assertEquals(
             "Lowest known complete basket among the one-store options compared.",
             card.whyText
@@ -168,6 +168,7 @@ class PracticalShoppingUiProjectorTest {
         assertEquals("Combined basket 52.50 CAD", second.combinedBasketCostText)
         assertEquals("Save 17.50 CAD", second.savingsText)
         assertEquals("Adds 4 min · 1.2 km", second.additionalTravelText)
+        assertEquals("Price freshness: 3 fresh · 0 stale · 0 unknown", second.evidenceText)
         assertEquals("Buy at Sample Market: Eggs", second.baseItemsText)
         assertEquals("Then buy at Example Grocer: Milk, Chicken", second.addedItemsText)
         assertNull(projection.state.secondaryMessage)
@@ -414,6 +415,39 @@ class PracticalShoppingUiProjectorTest {
         assertEquals("1 fresh · 1 stale · 1 unknown", text)
         assertTrue(text.contains("unknown"))
         assertTrue(text.contains("stale"))
+    }
+
+    @Test
+    fun homeEvidenceTextLabelsFreshnessInsteadOfLeavingUnknownAmbiguous() {
+        val primary = SingleStorePlanCandidate(
+            storeKey = primaryKey,
+            coveredItemKeys = setOf(eggs, milk),
+            knownBasketCost = Money.parse("32.10", "CAD"),
+            travel = ShoppingTravel(900L, 180L),
+            evidence = ShoppingPlanEvidenceSummary(
+                freshItemCount = 0,
+                staleItemCount = 0,
+                unknownFreshnessItemCount = 2
+            )
+        )
+
+        val decision = PracticalShoppingPlanner.evaluate(
+            request,
+            listOf(primary),
+            emptyList(),
+            policy
+        )
+        val card = requireNotNull(
+            PracticalShoppingUiProjector.project(
+                request,
+                decision,
+                storeNames,
+                itemNames,
+                policy
+            ).state.primary
+        )
+
+        assertEquals("Price freshness: 0 fresh · 0 stale · 2 unknown", card.evidenceText)
     }
 
     private fun single(

@@ -136,7 +136,7 @@ object PracticalShoppingUiProjector {
                         missingItemsText(missingItemKeys, itemDisplayNames)
                     },
                 travelText = formatTravel(candidate.travel),
-                evidenceText = formatEvidence(candidate.evidence),
+                evidenceText = formatHomeEvidence(candidate.evidence),
                 whyText = primaryWhyText(decision.primaryKind),
                 notice =
                     if (complete) {
@@ -180,7 +180,7 @@ object PracticalShoppingUiProjector {
                     savingsText = "Save ${formatMoney(savings)}",
                     additionalTravelText =
                         "Adds ${formatTravel(candidate.additionalTravel)}",
-                    evidenceText = formatEvidence(candidate.evidence)
+                    evidenceText = formatHomeEvidence(candidate.evidence)
                 )
             } else {
                 null
@@ -357,4 +357,8 @@ object PracticalShoppingUiProjector {
                 "${evidence.staleItemCount} stale · " +
                 "${evidence.unknownFreshnessItemCount} unknown"
         }
+
+    /** Home-facing label clarifies that unknown refers to freshness, not price. */
+    private fun formatHomeEvidence(evidence: ShoppingPlanEvidenceSummary): String =
+        "Price freshness: ${formatEvidence(evidence)}"
 }
