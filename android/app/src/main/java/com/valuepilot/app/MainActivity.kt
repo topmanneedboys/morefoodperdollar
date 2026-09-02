@@ -31,7 +31,7 @@ import java.util.concurrent.Executors
 class MainActivity : AppCompatActivity() {
 
     private var shellState = AppShellState.initial()
-    private var homeModel = LocalSamplePracticalShoppingDemo.initialModel()
+    private var homeSessionState = PracticalShoppingHomeSession.initialState()
     private val homePreferenceStore by lazy(LazyThreadSafetyMode.NONE) {
         AndroidPracticalShoppingHomePreferenceStore(applicationContext)
     }
@@ -157,7 +157,7 @@ class MainActivity : AppCompatActivity() {
 
         installSystemBarInsets()
         shellState = restoreShellState(savedInstanceState)
-        homeModel = restoreHomeState(savedInstanceState)
+        homeSessionState = restoreHomeState(savedInstanceState)
         searchState = restoreSearchState(savedInstanceState)
         configureHomeUi()
         configureBasketUi()
@@ -215,7 +215,7 @@ class MainActivity : AppCompatActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putString(STATE_PRIMARY_TAB, shellState.selectedPrimaryTab.name)
 
-        val homeSnapshot = PracticalShoppingHomeSession.snapshot(homeModel)
+        val homeSnapshot = PracticalShoppingHomeSession.snapshot(homeSessionState)
         outState.putString(STATE_HOME_QUERY, homeSnapshot.query)
         outState.putBoolean(STATE_HOME_WAS_SUBMITTED, homeSnapshot.wasSubmitted)
         outState.putString(STATE_HOME_CHICKEN_CHOICE, homeSnapshot.chickenChoice?.name)
@@ -223,6 +223,9 @@ class MainActivity : AppCompatActivity() {
             STATE_HOME_EXTRA_STOP_MINIMUM_SAVINGS,
             homeSnapshot.extraStopMinimumSavingsChoice.name
         )
+        homeSnapshot.requestDetailsLifecycleState?.let { encoded ->
+            outState.putByteArray(STATE_HOME_REQUEST_DETAILS, encoded)
+        }
 
         outState.putString(STATE_SEARCH_QUERY, searchState.query)
         outState.putBoolean(
@@ -293,7 +296,9 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun restoreHomeState(savedInstanceState: Bundle?): LocalSamplePracticalShoppingDemo.Model {
+    private fun restoreHomeState(
+        savedInstanceState: Bundle?
+    ): PracticalShoppingHomeSession.State {
         val choice =
             savedInstanceState
                 ?.getString(STATE_HOME_CHICKEN_CHOICE)
@@ -312,45 +317,49 @@ class MainActivity : AppCompatActivity() {
                 homePreferenceStore.loadExtraStopMinimumSavingsChoice()
             }
 
-        return PracticalShoppingHomeSession.restore(
+        return PracticalShoppingHomeSession.restoreState(
             PracticalShoppingHomeSession.Snapshot(
                 query = savedInstanceState?.getString(STATE_HOME_QUERY).orEmpty(),
                 wasSubmitted = savedInstanceState?.getBoolean(STATE_HOME_WAS_SUBMITTED, false) ?: false,
                 chickenChoice = choice,
-                extraStopMinimumSavingsChoice = extraStopMinimumSavingsChoice
+                extraStopMinimumSavingsChoice = extraStopMinimumSavingsChoice,
+                requestDetailsLifecycleState =
+                    savedInstanceState?.getByteArray(STATE_HOME_REQUEST_DETAILS)
             )
         )
     }
 
     private fun configureHomeUi() {
         homeExperience.onQueryChanged = { rawQuery ->
-            homeModel =
-                LocalSamplePracticalShoppingDemo.reduce(
-                    homeModel,
-                    LocalSamplePracticalShoppingDemo.Intent.QueryChanged(rawQuery)
-                )
+            homeSessionState =
+                PracticalShoppingHomeSession.queryChanged(homeSessionState, rawQuery)
             renderHome()
         }
         homeExperience.onSubmit = { rawQuery ->
-            homeModel = PracticalShoppingHomeSession.submit(homeModel, rawQuery)
+            homeSessionState = PracticalShoppingHomeSession.submit(homeSessionState, rawQuery)
             renderHome()
         }
         homeExperience.onRemoveItem = { itemKey ->
-            homeModel = PracticalShoppingHomeSession.removeItem(homeModel, itemKey)
+            homeSessionState = PracticalShoppingHomeSession.removeItem(homeSessionState, itemKey)
             renderHome()
         }
         homeExperience.onRemoveUnknownItem = { token ->
-            homeModel = PracticalShoppingHomeSession.removeUnknownItem(homeModel, token)
+            homeSessionState =
+                PracticalShoppingHomeSession.removeUnknownItem(homeSessionState, token)
             renderHome()
         }
         homeExperience.onChickenChoice = { choice ->
-            homeModel = PracticalShoppingHomeSession.chooseChicken(homeModel, choice)
+            homeSessionState =
+                PracticalShoppingHomeSession.chooseChicken(homeSessionState, choice)
             renderHome()
         }
         homeExperience.onExtraStopMinimumSavingsChoice = { choice ->
             homePreferenceStore.saveExtraStopMinimumSavingsChoice(choice)
-            homeModel =
-                PracticalShoppingHomeSession.chooseExtraStopMinimumSavings(homeModel, choice)
+            homeSessionState =
+                PracticalShoppingHomeSession.chooseExtraStopMinimumSavings(
+                    homeSessionState,
+                    choice
+                )
             renderHome()
         }
         homeExperience.onCompare = { openComparison() }
@@ -358,7 +367,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderHome() {
-        val homeState = PracticalShoppingHomeRenderer.render(homeModel.ui)
+        val homeState = PracticalShoppingHomeRenderer.render(homeSessionState.model.ui)
         homeExperience.render(homeState)
         basketExperience.render(PracticalShoppingBasketRenderer.render(homeState))
     }
@@ -1027,6 +1036,7 @@ class MainActivity : AppCompatActivity() {
         private const val STATE_HOME_CHICKEN_CHOICE = "app_shell.home_chicken_choice"
         private const val STATE_HOME_EXTRA_STOP_MINIMUM_SAVINGS =
             "app_shell.home_extra_stop_minimum_savings"
+        private const val STATE_HOME_REQUEST_DETAILS = "app_shell.home_request_details"
         private const val STATE_SEARCH_QUERY = "app_shell.search_query"
         private const val STATE_SEARCH_WAS_SUBMITTED = "app_shell.search_was_submitted"
     }
