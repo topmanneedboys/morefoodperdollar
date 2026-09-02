@@ -80,7 +80,12 @@ object PracticalShoppingBasketRenderer {
             when (status) {
                 PracticalShoppingBasketStatus.EMPTY -> "No basket planned yet"
                 PracticalShoppingBasketStatus.NEEDS_ATTENTION -> "Finish your shopping list"
-                PracticalShoppingBasketStatus.PLANNED -> "Your current basket plan"
+                PracticalShoppingBasketStatus.PLANNED ->
+                    if (source.result?.primary == null) {
+                        "Price coverage needed"
+                    } else {
+                        "Your current basket plan"
+                    }
             }
         val guidance =
             when (status) {

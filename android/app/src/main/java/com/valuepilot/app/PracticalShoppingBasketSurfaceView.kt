@@ -188,12 +188,6 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
                 collectionProgress.visibility = VISIBLE
             }
 
-            state.status == PracticalShoppingBasketStatus.PLANNED && state.items.isNotEmpty() -> {
-                collectionProgress.text =
-                    "Check-off starts for items with usable planned price coverage."
-                collectionProgress.visibility = VISIBLE
-            }
-
             else -> {
                 collectionProgress.text = ""
                 collectionProgress.visibility = GONE

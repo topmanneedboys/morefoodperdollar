@@ -138,6 +138,7 @@ class PracticalShoppingBasketRendererTest {
         val basket = PracticalShoppingBasketRenderer.render(home)
 
         assertEquals(PracticalShoppingBasketStatus.PLANNED, basket.status)
+        assertEquals("Price coverage needed", basket.headline)
         assertEquals("Not enough price coverage yet", basket.result?.headline)
         assertNull(basket.result?.primary)
         assertNull(basket.extraStopRuleText)
