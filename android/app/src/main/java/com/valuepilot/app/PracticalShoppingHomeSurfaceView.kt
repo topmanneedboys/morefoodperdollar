@@ -92,7 +92,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val unknownBody = column()
     private val unknownCard = card("#FFF7ED", "#FED7AA", 12, unknownBody)
 
-    private val resultContainer = bareColumn()
+    private val resultContainer = PracticalShoppingPlanResultSurfaceView(context)
     private val extraStopSettingsButton = MaterialButton(context).apply {
         isAllCaps = false
         textSize = 14f
@@ -162,7 +162,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         renderItems(state.items)
         renderRefinement(state.refinement)
         renderUnknown(state.unknownItems)
-        renderResult(state.result)
+        resultContainer.render(state.result)
         renderExtraStopSettings(state.extraStopSettings)
         sampleNotice.text = state.sampleNotice
     }
@@ -323,18 +323,6 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         unknownCard.visibility = VISIBLE
     }
 
-    private fun renderResult(result: PracticalShoppingUiState?) {
-        resultContainer.removeAllViews()
-        if (result == null) return
-
-        resultContainer.addView(line(result.headline, 22f, "#111827", true, 24))
-        result.primary?.let { resultContainer.addView(primaryCard(it)) }
-        result.secondStop?.let { resultContainer.addView(secondStopCard(it)) }
-        result.secondaryMessage?.let {
-            resultContainer.addView(line(it, 13f, "#6B7280", topPadding = 12))
-        }
-    }
-
     private fun renderExtraStopSettings(
         state: PracticalShoppingHomeExtraStopSettingsRenderState
     ) {
@@ -375,40 +363,6 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                 GONE
             }
     }
-
-    private fun primaryCard(state: PracticalShoppingPrimaryUiState): View =
-        card("#ECFDF5", "#A7F3D0", 12).apply {
-            addView(
-                column().apply {
-                    addView(line(state.badge, 11f, "#047857", true))
-                    addView(line(state.storeName, 22f, "#111827", true, 6))
-                    addView(line(state.basketCostText, 18f, "#111827", true, 8))
-                    addView(line("${state.coverageText}  •  ${state.travelText}", 14f, "#374151", topPadding = 6))
-                    state.missingItemsText?.let {
-                        addView(line(it, 13f, "#92400E", true, 8))
-                    }
-                    addView(line(state.evidenceText, 12f, "#6B7280", topPadding = 5))
-                    addView(line(state.whyText, 13f, "#374151", topPadding = 9))
-                    state.notice?.let { addView(line(it, 12f, "#92400E", topPadding = 7)) }
-                }
-            )
-        }
-
-    private fun secondStopCard(state: PracticalShoppingSecondStopUiState): View =
-        card("#FFFFFF", "#D1FAE5", 12).apply {
-            addView(
-                column().apply {
-                    addView(line(state.badge, 11f, "#047857", true))
-                    addView(line(state.storeName, 18f, "#111827", true, 6))
-                    addView(line(state.baseItemsText, 13f, "#374151", topPadding = 8))
-                    addView(line(state.addedItemsText, 13f, "#374151", topPadding = 4))
-                    addView(line(state.savingsText, 17f, "#047857", true, 7))
-                    addView(line(state.combinedBasketCostText, 14f, "#374151", topPadding = 5))
-                    addView(line(state.additionalTravelText, 13f, "#374151", topPadding = 4))
-                    addView(line(state.evidenceText, 12f, "#6B7280", topPadding = 5))
-                }
-            )
-        }
 
     private fun sampleCard(): View =
         card("#F0FDF4", "#BBF7D0", 20).apply {

@@ -110,9 +110,11 @@
     </plurals>
 
     <string name="basket_eyebrow">BASKET</string>
-    <string name="basket_title">Optimize the whole shop.</string>
-    <string name="basket_body">Basket will evaluate what you actually need together instead of optimizing every product in isolation.</string>
-    <string name="basket_footnote">Whole-basket optimization is not available in this build yet.</string>
+    <string name="basket_title">Shop the plan, not one item.</string>
+    <string name="basket_body">Review the whole-basket plan created on Home, including coverage, travel, evidence, and any optional extra stop.</string>
+    <string name="basket_footnote">Known subtotals remain labelled when any requested price is missing.</string>
+    <string name="basket_items_title">ITEMS IN THIS BASKET</string>
+    <string name="basket_unresolved_title">UNRESOLVED ITEMS — FINISH ON HOME</string>
 
     <string name="saved_eyebrow">SAVED</string>
     <string name="saved_title">Your confirmed choices.</string>

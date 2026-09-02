@@ -51,6 +51,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var screenFootnote: TextView
     private lateinit var primaryAction: Button
     private lateinit var homeExperience: PracticalShoppingHomeSurfaceView
+    private lateinit var basketExperience: PracticalShoppingBasketSurfaceView
     private lateinit var searchExperience: View
     private lateinit var searchInput: TextInputEditText
     private lateinit var searchButton: MaterialButton
@@ -124,6 +125,7 @@ class MainActivity : AppCompatActivity() {
         screenFootnote = findViewById(R.id.screenFootnote)
         primaryAction = findViewById(R.id.primaryAction)
         homeExperience = findViewById(R.id.homeExperience)
+        basketExperience = findViewById(R.id.basketExperience)
         searchExperience = findViewById(R.id.searchExperience)
         searchInput = findViewById(R.id.searchInput)
         searchButton = findViewById(R.id.searchButton)
@@ -158,6 +160,7 @@ class MainActivity : AppCompatActivity() {
         homeModel = restoreHomeState(savedInstanceState)
         searchState = restoreSearchState(savedInstanceState)
         configureHomeUi()
+        configureBasketUi()
         configureSearchUi()
         configureSavedUi()
 
@@ -355,9 +358,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderHome() {
-        homeExperience.render(
-            PracticalShoppingHomeRenderer.render(homeModel.ui)
-        )
+        val homeState = PracticalShoppingHomeRenderer.render(homeModel.ui)
+        homeExperience.render(homeState)
+        basketExperience.render(PracticalShoppingBasketRenderer.render(homeState))
+    }
+
+    private fun configureBasketUi() {
+        basketExperience.onAction = { action ->
+            when (action) {
+                PracticalShoppingBasketUiAction.OpenHome ->
+                    dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.HOME))
+            }
+        }
     }
 
     private fun restoreSearchState(savedInstanceState: Bundle?): UniversalSearchState {
@@ -736,6 +748,10 @@ class MainActivity : AppCompatActivity() {
         val homeVisible = state.selectedPrimaryTab == AppPrimaryTab.HOME
         homeExperience.visibility = if (homeVisible) View.VISIBLE else View.GONE
         if (homeVisible) renderHome()
+
+        val basketVisible = state.selectedPrimaryTab == AppPrimaryTab.BASKET
+        basketExperience.visibility = if (basketVisible) View.VISIBLE else View.GONE
+        if (basketVisible) renderHome()
 
         val searchVisible = state.selectedPrimaryTab == AppPrimaryTab.SEARCH
         searchExperience.visibility = if (searchVisible) View.VISIBLE else View.GONE
