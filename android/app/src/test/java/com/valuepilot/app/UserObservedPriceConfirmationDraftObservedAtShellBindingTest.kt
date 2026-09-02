@@ -62,7 +62,7 @@ class UserObservedPriceConfirmationDraftObservedAtShellBindingTest {
     }
 
     @Test
-    fun `shell composition owns no observed time parsing clock identity submission or evidence authority`() {
+    fun `shell composition owns no observed time parsing clock identity or evidence authority`() {
         val source = source("MainActivity.kt").readText()
         val configureSaved =
             source.substring(
@@ -86,7 +86,6 @@ class UserObservedPriceConfirmationDraftObservedAtShellBindingTest {
             "onConfirmationChanged(",
             "UserObservedPriceConfirmationDraftSubmissionHandoff",
             "UserObservedPriceConfirmationTransaction",
-            "UserObservedPriceConfirmationAndroidSession",
             "UserProvidedPriceProofArtifactLocalStore",
             "ShoppingEvidence(",
             "EvidenceClaim(",

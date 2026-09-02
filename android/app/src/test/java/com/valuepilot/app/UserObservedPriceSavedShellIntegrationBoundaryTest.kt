@@ -82,7 +82,7 @@ class UserObservedPriceSavedShellIntegrationBoundaryTest {
     }
 
     @Test
-    fun `shell routes only identity prefill explicit typed price and explicit proof reference without downstream authority`() {
+    fun `shell routes draft inputs and explicit confirmation only through narrow boundaries without direct authority`() {
         val configureSaved = configureSavedBlock(activitySource().readText())
 
         assertTrue(configureSaved.contains("savedObservedPriceLaunchExperience.onAction = { action ->"))
@@ -97,6 +97,14 @@ class UserObservedPriceSavedShellIntegrationBoundaryTest {
         assertTrue(configureSaved.contains("compositionCoordinator = observedPriceSavedSelectionCoordinator"))
         assertTrue(configureSaved.contains("observedPriceConfirmationDraftRouteCoordinator::onPriceInput"))
         assertTrue(configureSaved.contains("observedPriceConfirmationDraftRouteCoordinator::onProofReferenceInput"))
+        assertTrue(configureSaved.contains("UserObservedPriceConfirmationActionCoordinator("))
+        assertTrue(configureSaved.contains("UserObservedPriceConfirmationAndroidSession.create("))
+        assertTrue(configureSaved.contains("UserObservedPriceConfirmationAndroidSubmissionTarget("))
+        assertTrue(
+            configureSaved.contains(
+                "observedPriceConfirmationActionExperience.onAction =\n            observedPriceConfirmationActionPresentationController::onSubmitRequested"
+            )
+        )
         assertFalse(configureSaved.contains("observedPriceSavedSelectionExperience.onSelectionAction"))
         assertFalse(configureSaved.contains("observedPriceSavedSelectionExperience.onCheckPrefillAction"))
 
@@ -106,7 +114,6 @@ class UserObservedPriceSavedShellIntegrationBoundaryTest {
             "UserObservedPriceSavedPrefillGate",
             "UserObservedPriceConfirmationTransaction",
             "UserObservedPriceConfirmationExecution",
-            "UserObservedPriceConfirmationAndroidSession",
             "UserProvidedPriceProofArtifact",
             "UserConfirmedObservedPrice",
             "UserProofBackedObservedPrice",
@@ -130,7 +137,7 @@ class UserObservedPriceSavedShellIntegrationBoundaryTest {
             "UserObservedPriceProofReadSubmissionGate"
         ).forEach { forbidden ->
             assertFalse(
-                "Saved shell integration must not execute downstream authority $forbidden",
+                "Saved shell integration must not execute direct downstream authority $forbidden",
                 configureSaved.contains(forbidden)
             )
         }

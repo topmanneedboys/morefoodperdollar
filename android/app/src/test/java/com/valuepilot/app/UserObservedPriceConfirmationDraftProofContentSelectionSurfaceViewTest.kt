@@ -50,7 +50,7 @@ class UserObservedPriceConfirmationDraftProofContentSelectionSurfaceViewTest {
     }
 
     @Test
-    fun `shell composes picker and transient owner only on exact confirmation route`() {
+    fun `shell composes picker transient owner and action invalidation only on exact confirmation route`() {
         val activity = appFile("app/src/main/java/com/valuepilot/app/MainActivity.kt").readText()
         val layout = appFile("app/src/main/res/layout/activity_shell.xml").readText()
         val configureSaved =
@@ -80,7 +80,8 @@ class UserObservedPriceConfirmationDraftProofContentSelectionSurfaceViewTest {
             "AndroidUserObservedPriceProofContentSource(contentResolver)",
             "onReadResult =\n                    observedPriceConfirmationDraftProofContentSelectionCoordinator::onContentReadResult",
             "requestForegroundSelection = {\n                    observedPriceConfirmationDraftProofContentPicker.launch()\n                }",
-            "observer = observedPriceConfirmationDraftProofContentSelectionExperience"
+            "observedPriceConfirmationDraftProofContentSelectionExperience\n                            .onPresentation(presentation)",
+            "observedPriceConfirmationActionPresentationController\n                            .onDraftOrProofChanged()"
         ).forEach { required ->
             assertTrue("Expected configureSaved composition $required", configureSaved.contains(required))
         }
