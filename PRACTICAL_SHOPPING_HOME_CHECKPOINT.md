@@ -1,6 +1,6 @@
 # ValuePilot Practical Shopping Checkpoint
 
-Updated: 2026-09-01
+Updated: 2026-09-02
 
 Branch: `work/valuepilot-android-milestone`
 
@@ -8,11 +8,13 @@ This checkpoint records the verified Practical Shopping Home slice plus the prov
 
 ## Latest verified engineering head
 
-`b1bc2188be5d323fc7cc6f4461d219220b4b199f` — `Let Compare Here remove extra products`
+`c67286f83bc23f53f31ef72d311ceb22e3716041` — `Reveal extra-stop preference after planning`
 
-GitHub Actions workflow run **33599960509** completed successfully (candidate run **33599532313** also passed).
+GitHub Actions workflow run **33626580579** completed successfully (candidate run **33626116787** also passed).
 
 Since the earlier production-input checkpoint, the visible fictional Home flow now supports typed removal of resolved items and unresolved tokens. Each removal reuses the existing controller -> shared-core planner -> projector path, preserves unknown/ambiguous state, and leaves the Android no-network boundary unchanged. Removal buttons expose item-specific accessibility descriptions, ordinary conjunctions (`and`/`&`) no longer become false unknown groceries, and Home result evidence is labeled “Price freshness” so freshness-unknown is not mistaken for an unknown price.
+
+The advanced extra-stop preference is now hidden until an actual Home result exists, keeping the first screen focused on the single `Plan my shop` action. Complete and incomplete result states expose the persisted exact threshold for immediate typed replanning. The renderer owns this presentation decision; the View only binds immutable visibility and resets its local expansion state when the control becomes unavailable.
 
 The Compare Here manual entry surface now also offers a per-entry Remove action once more than the minimum two product slots exist. Removing an extra slot preserves the other entry text, renumbers the remaining slots, re-enables the bounded add action, and clears the existing like-for-like confirmation through the activity reducer. With exactly two slots, removal clears only the selected slot so the comparison shape remains usable.
 

@@ -8,11 +8,13 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`7a740b27ed0a48a93f59162c241b7d5301f5db11` — `Clarify missing Compare Here price evidence`
+`c67286f83bc23f53f31ef72d311ceb22e3716041` — `Reveal extra-stop preference after planning`
 
-GitHub Actions workflow run **33625036923** completed successfully (candidate run **33624555558** also passed).
+GitHub Actions workflow run **33626580579** completed successfully (candidate run **33626116787** also passed).
 
 The current promoted Home slice keeps the fictional sample flow isolated while allowing users to remove recognized items or unresolved tokens and immediately re-plan. Removal actions carry opaque typed keys/tokens through the controller, preserve unknown and ambiguous states, and expose item-specific accessibility descriptions. Natural conjunctions (`and`/`&`) are treated as list syntax while unknown product words still remain explicit. Result cards label their evidence line “Price freshness,” clarifying that an unknown count refers to freshness rather than price.
+
+The extra-stop preference is now genuine progressive disclosure. It stays off the untouched, draft, clarification and error surfaces so `Plan my shop` remains the obvious first action. Once an actual complete or incomplete result exists, immutable render state exposes the persisted exact savings threshold; changing it continues through the existing typed controller and shared-core planner. The physical View only binds visibility and owns no status, money, policy or ranking decision.
 
 Compare Here’s manual editor supports bounded per-entry removal and gives the user an explicit choice between Current shelf prices and Member prices. The selected basis is carried through pure lifecycle state and the existing exact route; changing it invalidates an old comparison, draft restoration preserves it, malformed or legacy stored values safely default to CURRENT, and member mode continues to block products with no member price rather than falling back to current price. The entry instructions now demonstrate the parser’s exact `Current price` and optional `Member price` labels. When fewer than two products have the selected evidence, the immutable projection names the missing basis; member mode explicitly states that current prices are not substitutes. No planner, provider, shared-core arithmetic or Android privacy boundary was changed.
 
