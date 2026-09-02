@@ -6,7 +6,7 @@ Branch: `work/valuepilot-android-milestone`
 
 Android version: 101.1.0 (10101)
 
-Latest promoted Home head: `b9b62dba2383c19c99177d569089db77ee4809b3` (`Accept common list connectors on Home`), verified by candidate workflow **33596286688** and promoted workflow **33596637364**. Home users can remove resolved items or unresolved tokens through typed controller actions, and natural `and`/`&` list syntax is supported; the sample remains explicitly fictional/offline and the Android privacy boundary is unchanged.
+Latest promoted Home head: `fcbdf6a90319f6912572a3bfd7c77c70d64d445c` (`Clarify Home price freshness evidence`), verified by candidate workflow **33597935908** and promoted workflow **33598340137**. Home users can remove resolved items or unresolved tokens through typed controller actions, natural `and`/`&` list syntax is supported, and result cards label freshness explicitly; the sample remains explicitly fictional/offline and the Android privacy boundary is unchanged.
 
 ## Product direction now
 

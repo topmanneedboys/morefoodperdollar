@@ -8,11 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`b9b62dba2383c19c99177d569089db77ee4809b3` — `Accept common list connectors on Home`
+`fcbdf6a90319f6912572a3bfd7c77c70d64d445c` — `Clarify Home price freshness evidence`
 
-GitHub Actions workflow run **33595352412** completed successfully.
+GitHub Actions workflow run **33598340137** completed successfully (candidate run **33597935908** also passed).
 
-The current promoted Home slice keeps the fictional sample flow isolated while allowing users to remove recognized items or unresolved tokens and immediately re-plan. Removal actions carry opaque typed keys/tokens through the controller, preserve unknown and ambiguous states, and expose item-specific accessibility descriptions. Natural conjunctions (`and`/`&`) are treated as list syntax while unknown product words still remain explicit. No planner, projector, provider or Android privacy boundary was changed.
+The current promoted Home slice keeps the fictional sample flow isolated while allowing users to remove recognized items or unresolved tokens and immediately re-plan. Removal actions carry opaque typed keys/tokens through the controller, preserve unknown and ambiguous states, and expose item-specific accessibility descriptions. Natural conjunctions (`and`/`&`) are treated as list syntax while unknown product words still remain explicit. Result cards now label their evidence line “Price freshness,” clarifying that an unknown count refers to freshness rather than price. No planner, provider or Android privacy boundary was changed.
 
 The preceding projector implementation and fixture history remain below as historical context.
 

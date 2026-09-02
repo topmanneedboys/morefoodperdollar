@@ -8,11 +8,11 @@ This checkpoint records the verified Practical Shopping Home slice plus the prov
 
 ## Latest verified engineering head
 
-`b9b62dba2383c19c99177d569089db77ee4809b3` — `Accept common list connectors on Home`
+`fcbdf6a90319f6912572a3bfd7c77c70d64d445c` — `Clarify Home price freshness evidence`
 
-GitHub Actions workflow run **33595352412** completed successfully.
+GitHub Actions workflow run **33598340137** completed successfully (candidate run **33597935908** also passed).
 
-Since the earlier production-input checkpoint, the visible fictional Home flow now supports typed removal of resolved items and unresolved tokens. Each removal reuses the existing controller -> shared-core planner -> projector path, preserves unknown/ambiguous state, and leaves the Android no-network boundary unchanged. Removal buttons expose item-specific accessibility descriptions, and ordinary conjunctions (`and`/`&`) no longer become false unknown groceries.
+Since the earlier production-input checkpoint, the visible fictional Home flow now supports typed removal of resolved items and unresolved tokens. Each removal reuses the existing controller -> shared-core planner -> projector path, preserves unknown/ambiguous state, and leaves the Android no-network boundary unchanged. Removal buttons expose item-specific accessibility descriptions, ordinary conjunctions (`and`/`&`) no longer become false unknown groceries, and Home result evidence is labeled “Price freshness” so freshness-unknown is not mistaken for an unknown price.
 
 The earlier production-input head remains recorded in the historical verification list below.
 

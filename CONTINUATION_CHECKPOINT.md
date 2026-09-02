@@ -78,7 +78,7 @@ Launch depth before breadth: one dense metro area, roughly 1,500–5,000 high-fr
 
 ## Latest verified engineering baseline
 
-The current promoted Home baseline is `b9b62dba2383c19c99177d569089db77ee4809b3` (`Accept common list connectors on Home`), verified by candidate workflow **33596286688** and promoted workflow **33596637364**. The Home surface supports typed removal of resolved items and unresolved tokens, immediate deterministic replanning, preserved unknown/ambiguous states, item-specific accessibility descriptions, and deterministic `and`/`&` list syntax. Both milestone and candidate branches point to this SHA; the local worktree was clean at verification.
+The current promoted Home baseline is `fcbdf6a90319f6912572a3bfd7c77c70d64d445c` (`Clarify Home price freshness evidence`), verified by candidate workflow **33597935908** and promoted workflow **33598340137**. The Home surface supports typed removal of resolved items and unresolved tokens, immediate deterministic replanning, preserved unknown/ambiguous states, item-specific accessibility descriptions, deterministic `and`/`&` list syntax, and an explicit “Price freshness” label on result evidence summaries. Both milestone and candidate branches point to this SHA; the local worktree was clean at verification.
 
 Minimum known durable code baseline before 2026-08-29 documentation changes: `deaa478c9b679f8820b47a80d7f43c5b18787677` with verified code parent `932838f8d5eedda5d17c7a9dadf76ae38f8bcc9f` (`Re-evaluate production search before display`). Always inspect the current branch tip before work.
 
