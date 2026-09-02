@@ -40,6 +40,48 @@ internal fun practicalShoppingPrimaryCardStyle(
         )
     }
 
+/**
+ * Gives assistive technology one complete, card-level summary of the projected result.
+ *
+ * The summary is assembled exclusively from renderer-ready fields already visible in the card;
+ * it does not infer completeness, recalculate money, or create an action.
+ */
+internal fun practicalShoppingPrimaryCardContentDescription(
+    state: PracticalShoppingPrimaryUiState
+): String =
+    accessibilitySummary(
+        listOfNotNull(
+            state.badge,
+            "Store: ${state.storeName}",
+            state.basketCostText,
+            state.coverageText,
+            state.missingItemsText,
+            state.travelText,
+            state.evidenceText,
+            state.whyText,
+            state.notice
+        )
+    )
+
+internal fun practicalShoppingSecondStopCardContentDescription(
+    state: PracticalShoppingSecondStopUiState
+): String =
+    accessibilitySummary(
+        listOf(
+            state.badge,
+            "Store: ${state.storeName}",
+            state.baseItemsText,
+            state.addedItemsText,
+            state.combinedBasketCostText,
+            state.savingsText,
+            state.additionalTravelText,
+            state.evidenceText
+        )
+    )
+
+private fun accessibilitySummary(parts: List<String>): String =
+    parts.joinToString(". ") { it.trim().trimEnd('.', '!', '?') } + "."
+
 /** Mechanically renders an already-projected Practical Shopping decision. */
 class PracticalShoppingPlanResultSurfaceView @JvmOverloads constructor(
     context: Context,
@@ -67,6 +109,8 @@ class PracticalShoppingPlanResultSurfaceView @JvmOverloads constructor(
     private fun primaryCard(state: PracticalShoppingPrimaryUiState): View {
         val style = practicalShoppingPrimaryCardStyle(state)
         return card(style.backgroundColor, style.strokeColor, 12).apply {
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+            contentDescription = practicalShoppingPrimaryCardContentDescription(state)
             addView(
                 column().apply {
                     addView(line(state.badge, 11f, style.accentColor, true))
@@ -95,6 +139,8 @@ class PracticalShoppingPlanResultSurfaceView @JvmOverloads constructor(
 
     private fun secondStopCard(state: PracticalShoppingSecondStopUiState): View =
         card("#FFFFFF", "#D1FAE5", 12).apply {
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+            contentDescription = practicalShoppingSecondStopCardContentDescription(state)
             addView(
                 column().apply {
                     addView(line(state.badge, 11f, "#047857", true))

@@ -105,6 +105,9 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
         assertTrue(source.contains("style.strokeColor"))
         assertTrue(source.contains("style.accentColor"))
         assertTrue(source.contains("state.missingItemsText == null"))
+        assertTrue(source.contains("importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES"))
+        assertTrue(source.contains("practicalShoppingPrimaryCardContentDescription(state)"))
+        assertTrue(source.contains("practicalShoppingSecondStopCardContentDescription(state)"))
     }
 
     private fun source(name: String): File {
