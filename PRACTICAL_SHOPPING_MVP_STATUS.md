@@ -8,9 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`fe0c284e2ffdf496dad1fc40843b033b40c8ab51` — `Clarify Home preference-only details`
+`bd2588f2b6b1d824ef6128548dc3e5bdef30d49c` — `Clarify Watch policy control context`
 
-GitHub Actions workflow run **33680191624** completed successfully (candidate run **33679577545** also passed).
+GitHub Actions workflow run **33681240579** completed successfully (candidate run **33680680786** also passed).
+
+The latest Watch policy refinement closes an accessibility context gap in the existing immutable draft form. Each numeric editor now exposes its projected field label and unit to assistive technology, each repeated Apply button identifies the field it applies, and the no-limit control identifies the distance rule it changes. The descriptions are fixed renderer copy only; typed input still flows through the promoted exact adapter, finalization remains the sole policy authority, and no planner, ranking, pricing, evidence, persistence, clock, notification or network capability was added. Deterministic View-boundary tests cover the field-to-control bindings and preserve the no-business-authority boundary.
 
 The latest Home refinement closes a consumer-facing scope gap around explicit item details. When a shopper saves a package count, preferred brand or exact-product preference, the corresponding Home row now shows the compact saved summary plus “Preference only — not applied to this sample plan.” Rows without details remain unchanged. This copy is fixed renderer-ready guidance and does not claim product matching, change the fictional sample total, or grant any planner, ranking, price, evidence, persistence, clock, notification or network authority. Deterministic presentation and View-boundary tests cover present and absent details while asserting that the already-projected plan object remains identical.
 
@@ -32,7 +34,7 @@ The latest app-level slice adds bounded local-only cross-session retention aroun
 
 The Basket primary tab is now a real read-only continuation of Plan My Shop rather than placeholder copy. It receives the existing immutable Home presentation, preserves the exact projected plan object, and shows recognized items, unresolved items, complete or incomplete one-store results, any already-approved optional second stop, and the shopper's selected exact extra-stop rule. Empty, draft, refinement, and unresolved states cannot become a false plan and provide one typed action back to Home. Home and Basket share the same result-card View so complete totals, known subtotals, missing-price notices, travel, freshness/evidence, and second-stop details cannot drift between the two surfaces. The fictional/offline disclosure is repeated prominently on Basket. No shared-core planner/projector, provider integration, Android networking, ranking authority, or money calculation was duplicated or moved into a View.
 
-Clean-source verification passed all 1,631 JVM tests (375 shared-core + 1,256 Android app) with zero failures/errors/skips, all 58 Android tasks, all 30 browser tests, Firefox packaging lint with zero findings, APK privacy inspection, and one-signer APK verification.
+Clean-source verification passed all 1,632 JVM tests (375 shared-core + 1,257 Android app) with zero failures/errors/skips, all 58 Android tasks, all 30 browser tests, Firefox packaging lint with zero findings, APK privacy inspection, and one-signer APK verification.
 
 The current promoted Home slice keeps the fictional sample flow isolated while allowing users to remove recognized items or unresolved tokens and immediately re-plan. Removal actions carry opaque typed keys/tokens through the controller, preserve unknown and ambiguous states, and expose item-specific accessibility descriptions. Natural conjunctions (`and`/`&`) are treated as list syntax while unknown product words still remain explicit. Result cards label their evidence line “Price freshness,” clarifying that an unknown count refers to freshness rather than price. The list editor now displays the model's existing 240-character limit and physically retains no more than its existing one-character over-limit sentinel, so a very large paste cannot flow through lifecycle state while the honest over-limit error remains reachable. Immutable presentation carries the limit; the Android View binds only the matching counter and filter.
 

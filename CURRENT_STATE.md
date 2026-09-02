@@ -8,7 +8,7 @@ Android version: 101.1.0 (10101)
 
 ## Current verified engineering head
 
-`fe0c284e2ffdf496dad1fc40843b033b40c8ab51` (`Clarify Home preference-only details`) is the promoted milestone, verified by candidate workflow **33679577545** and milestone workflow **33680191624**. Home item rows now pair any saved package, brand or exact-product intent with a fixed “Preference only — not applied to this sample plan.” note, closing the gap between truthful detail editing and the still-fictional sample planner. The note is derived in immutable presentation and rendered mechanically; the View still owns no policy, planning, ranking, pricing, persistence, clock, notification or network authority. Clean-source verification passed 1,631 JVM tests (375 shared-core + 1,256 Android app), all 58 Android tasks, all 30 browser tests, APK privacy checks, one-signer verification and release-bundle provenance.
+`bd2588f2b6b1d824ef6128548dc3e5bdef30d49c` (`Clarify Watch policy control context`) is the promoted milestone, verified by candidate workflow **33680680786** and milestone workflow **33681240579**. The Watch policy form now gives each numeric editor an assistive-technology label that includes its projected field and unit, names each repeated Apply action for its field, and names the no-distance-limit choice as the distance rule it changes. These descriptions are fixed presentation copy derived from immutable state; the View still owns no policy, planning, ranking, pricing, persistence, clock, notification or network authority. The prior Home refinement remains intact: saved package, brand or exact-product intent is paired with “Preference only — not applied to this sample plan.” and never changes the fictional sample total. Clean-source verification passed 1,632 JVM tests (375 shared-core + 1,257 Android app), all 58 Android tasks, all 30 browser tests, APK privacy checks, one-signer verification and release-bundle provenance.
 
 ## Prior checkpoint (superseded)
 
@@ -197,18 +197,15 @@ Do not silently change this boundary. Future networking/server additions require
 
 Do not keep adding speculative Android production/provider plumbing.
 
-Next phase is the **Practical Shopping MVP**:
+The Practical Shopping MVP fixture/controller, one-store planner/projector, Home/Basket/Saved surfaces, Watch setup/policy presentation, and required consumer correction flows are implemented at the promoted head. The latest slice adds assistive-technology context to the Watch policy controls without changing the existing typed input, finalization, or handoff boundaries.
+
+Next engineering slice: re-audit the current Home/Basket/Saved consumer surfaces and tests, then choose one small reversible clarity or accessibility improvement that uses existing immutable projection. Keep the following acceptance constraints active:
 
 1. Inspect current Home/Search/Basket/Saved shell and immutable UI-state boundaries before changing them.
-2. Define the smallest deterministic domain model for shopping request/list, candidate store plan, matched/missing coverage, exact known basket cost, travel metadata, confidence/freshness, and optional second-stop incremental-savings decision.
-3. Reuse existing exact money/quantity/value components. Do not duplicate arithmetic.
-4. Encode one-store-first as the default invariant. Use an explicit second-stop minimum savings/route constraint rather than a hidden hassle score.
-5. Use a tiny fictional/sample multi-store fixture solely to prove the decision flow/UX; never imply live merchant data.
-6. Build Home around one primary action and one primary recommendation card. Advanced settings are progressive disclosure.
-7. Add performance budgets/tests early: bounded candidates/list size, no heavy main-thread work, stable immutable rendering, smooth scrolling/interactions and no random jump-to-top behavior.
-8. After the decision flow is excellent, integrate source-isolated open product/location data.
-9. Build `Compare Here` as the second major vertical slice.
-10. Build `Watch My Staples` as the third retention slice.
-11. Continue Jamieson/GS1/provider replies in parallel; incorporate them only when they unlock real high-authority evidence/commerce value.
+2. Reuse existing exact money/quantity/value components; never duplicate arithmetic.
+3. Preserve one-store-first and explicit second-stop savings/travel rules; never hide inconvenience in a score.
+4. Keep fictional/sample data visibly offline and unknown prices unknown.
+5. Keep Views as immutable renderers with typed actions; no Android networking, persistent overlay foundation, or provider economics in organic ranking.
+6. Add deterministic failure/unknown/stale/conflict/bounds tests with each relevant slice, then run the full Android/browser/privacy/signature/release verification.
 
 No user/device action is required for this documentation checkpoint.

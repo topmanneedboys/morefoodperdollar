@@ -6,7 +6,7 @@ Branch: `work/valuepilot-android-milestone`
 
 ## Current verified engineering head
 
-`fe0c284e2ffdf496dad1fc40843b033b40c8ab51` (`Clarify Home preference-only details`) is the promoted milestone, verified by candidate workflow **33679577545** and milestone workflow **33680191624**. Home item rows now pair any saved package, brand or exact-product intent with a fixed “Preference only — not applied to this sample plan.” note, closing the gap between truthful detail editing and the still-fictional sample planner. The note is derived in immutable presentation and rendered mechanically; the View still owns no policy, planning, ranking, pricing, persistence, clock, notification or network authority. Clean-source verification passed 1,631 JVM tests (375 shared-core + 1,256 Android app), all 58 Android tasks, all 30 browser tests, APK privacy checks, one-signer verification and release-bundle provenance.
+`bd2588f2b6b1d824ef6128548dc3e5bdef30d49c` (`Clarify Watch policy control context`) is the promoted milestone, verified by candidate workflow **33680680786** and milestone workflow **33681240579**. The Watch policy form now gives each numeric editor an assistive-technology label that includes its projected field and unit, names each repeated Apply action for its field, and names the no-distance-limit choice as the distance rule it changes. These descriptions are fixed presentation copy derived from immutable state; the View still owns no policy, planning, ranking, pricing, persistence, clock, notification or network authority. The preceding Home refinement remains intact: saved package, brand or exact-product intent is paired with “Preference only — not applied to this sample plan.” and never changes the fictional sample total. Clean-source verification passed 1,632 JVM tests (375 shared-core + 1,257 Android app), all 58 Android tasks, all 30 browser tests, APK privacy checks, one-signer verification and release-bundle provenance.
 
 ## Prior checkpoint (superseded)
 
@@ -135,6 +135,10 @@ At the last verified checkpoint Android had no `INTERNET`, no `ACCESS_NETWORK_ST
 Do not wire Rakuten/GS1 into production Search and do not keep extending speculative provider plumbing.
 
 The bounded Practical Shopping MVP fixture/controller, Home projection, one-store/second-stop controls, and consumer correction actions are now implemented and verified at the current head. The original implementation sequence is retained below as historical acceptance criteria; do not treat it as unfinished work.
+
+The latest promoted slice also adds assistive-technology context to the existing Watch policy controls: projected field/unit context for each editor, field-specific names for repeated Apply actions, and a distance-rule name for the no-limit choice. It changes no typed input, finalization, policy, planner, ranking, pricing, evidence, persistence, clock, notification, network, or View authority.
+
+Next engineering slice: re-audit the current Home/Basket/Saved consumer surfaces and tests, then choose one small reversible clarity or accessibility improvement that uses existing immutable projection. Keep fictional/sample data visibly offline, unknown prices unknown, one-store-first explicit, and Views limited to rendering and typed actions.
 
 Historical MVP sequence:
 
