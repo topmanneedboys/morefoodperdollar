@@ -8,9 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`b3c96da68b63894d1215109a226beb722bb0cc3a` — `Describe Home extra-stop disclosure`
+`7714a4c8ffc06b3d5ebd2b4b8b234bea817dc70c` — `Explain local basket check-off scope`
 
-GitHub Actions candidate workflow **33690714227** completed successfully, and milestone provenance workflow **33691221473** completed successfully for the exact same SHA.
+GitHub Actions candidate workflow **33691649928** completed successfully, and milestone provenance workflow **33692091233** completed successfully for the exact same SHA.
+
+The latest Basket refinement closes a consumer-facing scope gap in the existing check-off flow. When immutable rendering enables local collection marks, Basket now shows a renderer-ready notice: “Check-off is only a local shopping-session aid; it does not place an order or change the plan.” The notice is absent when collection is unavailable, so the UI cannot imply collection authority for incomplete or unresolved plans. Deterministic renderer and View-boundary tests cover both enabled and disabled states. This is presentation-only copy; no planner, ranking, price arithmetic, evidence, persistence, clock, provider or network authority moved into Android, and the existing immutable plan and typed eligible item keys remain unchanged.
 
 The latest Home refinement closes an accessibility gap in the progressive extra-stop control. Assistive technology now hears whether the existing threshold summary will show or hide its settings panel, while the visible summary and typed choice callbacks remain unchanged. This is fixed presentation copy derived from the immutable projected summary and local expanded state; no second-stop policy, planner, ranking, price arithmetic, evidence, persistence, clock, provider or network authority moved into the View.
 
