@@ -1,5 +1,6 @@
 package com.valuepilot.app
 
+import com.valuepilot.core.ShoppingItemKey
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -108,6 +109,31 @@ class PracticalShoppingBasketRendererTest {
         assertEquals(
             "Fictional sample data only — not live retailer prices or availability.",
             basket.sampleNotice
+        )
+    }
+
+    @Test
+    fun collectionActionDescriptionKeepsItemDetailAndPreferenceBoundary() {
+        val item =
+            PracticalShoppingHomeItemRenderState(
+                key = ShoppingItemKey("sample-eggs-large-12"),
+                name = "Eggs",
+                detail = "12 pack",
+                requestDetailsSummary = "2 packages",
+                requestDetailsNotice =
+                    "Preference only — not applied to this sample plan.",
+                requestDetailsActionLabel = "Edit details"
+            )
+
+        assertEquals(
+            "Mark Eggs (12 pack) as collected. 2 packages. " +
+                "Preference only — not applied to this sample plan.",
+            practicalShoppingBasketCollectionActionDescription(item, collected = false)
+        )
+        assertEquals(
+            "Mark Eggs (12 pack) as not collected. 2 packages. " +
+                "Preference only — not applied to this sample plan.",
+            practicalShoppingBasketCollectionActionDescription(item, collected = true)
         )
     }
 }

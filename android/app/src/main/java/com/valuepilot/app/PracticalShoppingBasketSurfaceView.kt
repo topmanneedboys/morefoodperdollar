@@ -19,6 +19,23 @@ sealed interface PracticalShoppingBasketUiAction {
     data object OpenHome : PracticalShoppingBasketUiAction
 }
 
+/**
+ * Keeps the check-off action understandable when a screen reader replaces the
+ * button's visible label with its content description.
+ *
+ * Every value comes from the immutable Home projection. This helper adds no
+ * matching, pricing, eligibility, or collection policy.
+ */
+internal fun practicalShoppingBasketCollectionActionDescription(
+    item: PracticalShoppingHomeItemRenderState,
+    collected: Boolean
+): String {
+    val state = if (collected) "not collected" else "collected"
+    val notice = item.requestDetailsNotice?.let { " $it" }.orEmpty()
+    return "Mark ${item.name} (${item.detail}) as $state. " +
+        "${item.requestDetailsSummary}.$notice"
+}
+
 /** Renders immutable Basket state and owns only typed foreground check-off UI state. */
 class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     context: Context,
@@ -234,12 +251,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         backgroundTintList = ColorStateList.valueOf(Color.WHITE)
         layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 7)
         text = "${if (collected) "✓" else "○"} ${item.name}  •  ${item.detail}"
-        contentDescription =
-            if (collected) {
-                "Mark ${item.name} not collected"
-            } else {
-                "Mark ${item.name} collected"
-            }
+        contentDescription = practicalShoppingBasketCollectionActionDescription(item, collected)
         setOnClickListener {
             progressState = PracticalShoppingBasketProgressSession.toggle(progressState, item.key)
             lastRenderState?.let { state ->

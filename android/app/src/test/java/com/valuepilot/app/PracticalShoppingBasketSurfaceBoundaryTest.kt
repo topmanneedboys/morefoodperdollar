@@ -18,6 +18,7 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
         assertTrue(source.contains("item.requestDetailsSummary"))
         assertTrue(source.contains("item.requestDetailsNotice"))
         assertTrue(source.contains("addItemDetails(item, this)"))
+        assertTrue(source.contains("practicalShoppingBasketCollectionActionDescription(item, collected)"))
 
         listOf(
             "PracticalShoppingPlanner",
