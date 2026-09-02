@@ -8,9 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`773549b6138e18bb5e876d4486584c6370e855e1` — `Hide extra-stop controls without a plan`
+`b415cb7b6e723bf3c52958fd62a9e651662623e1` — `Clarify basket without price coverage`
 
-GitHub Actions candidate workflow **33692769781** completed successfully, and milestone provenance workflow **33693409380** completed successfully for the exact same SHA.
+GitHub Actions candidate workflow **33693965885** completed successfully, and milestone provenance workflow **33694455323** completed successfully for the exact same SHA.
+
+The latest Basket presentation refinement completes the no-coverage correction. A recognized request with no usable prices still exposes the honest planner result headline, but Basket now says “Price coverage needed” instead of “Your current basket plan” and hides the generic check-off progress line until a primary store plan exists. The existing Home extra-stop disclosure and Basket extra-stop summary remain hidden without that primary plan, and guidance continues to direct the shopper back to adjust the sample list. Deterministic renderer and View-boundary tests cover the state while preserving complete and incomplete-primary behavior. This remains a presentation-only fail-closed correction; planner, ranking, price arithmetic, evidence, persistence, clock, provider and network authority stay outside the renderer/View boundary.
 
 The latest Home/Basket refinement closes a no-coverage clarity gap. A recognized request with no usable prices still produces an honest planner result headline, but it has no primary store plan; Home therefore hides the extra-stop rule, and Basket hides the rule summary instead of implying that a recommendation exists. Basket guidance now says that usable price coverage is missing and directs the shopper back to adjust the sample list. Deterministic Home and Basket renderer tests cover this state while preserving the existing complete and incomplete-primary paths. This is a presentation-only fail-closed correction; planner, ranking, price arithmetic, evidence, persistence, clock, provider and network authority remain outside the renderer/View boundary.
 
