@@ -4,8 +4,11 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
+import android.os.Bundle
+import android.os.Parcelable
 import android.util.AttributeSet
 import android.util.TypedValue
+import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -16,7 +19,7 @@ sealed interface PracticalShoppingBasketUiAction {
     data object OpenHome : PracticalShoppingBasketUiAction
 }
 
-/** Renders immutable Basket state and emits typed navigation actions only. */
+/** Renders immutable Basket state and owns only typed foreground check-off UI state. */
 class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -27,6 +30,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
 
     private val headline = line("", 22f, "#111827", true)
     private val guidance = line("", 14f, "#4B5563", topPadding = 8)
+    private val collectionProgress = line("", 13f, "#374151", true, 16)
     private val itemsHeading =
         line(context.getString(R.string.basket_items_title), 13f, "#374151", true, 18)
     private val itemsContainer = column(padded = false)
@@ -47,42 +51,148 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         setOnClickListener { onAction?.invoke(PracticalShoppingBasketUiAction.OpenHome) }
     }
 
+    private var progressState = PracticalShoppingBasketProgressSession.initial()
+    private var lastRenderState: PracticalShoppingBasketRenderState? = null
+    private var pendingRestoredCollectedKeys: List<String>? = null
+
     init {
         orientation = VERTICAL
-        isSaveEnabled = false
+        isSaveEnabled = true
         addView(sampleCard())
         addView(headline.apply { setPadding(0, dp(20), 0, 0) })
         addView(guidance)
+        addView(collectionProgress)
         addView(itemsHeading)
         addView(itemsContainer)
         addView(unresolvedCard)
         addView(planResult)
         addView(extraStopRule)
         addView(actionButton)
+        collectionProgress.visibility = GONE
         itemsHeading.visibility = GONE
         unresolvedCard.visibility = GONE
         extraStopRule.visibility = GONE
     }
 
     fun render(state: PracticalShoppingBasketRenderState) {
+        lastRenderState = state
+        progressState =
+            pendingRestoredCollectedKeys?.let { restored ->
+                pendingRestoredCollectedKeys = null
+                PracticalShoppingBasketProgressSession.restore(
+                    collectedItemKeyValues = restored,
+                    eligibleItemKeys = eligibleKeys(state)
+                )
+            } ?: PracticalShoppingBasketProgressSession.reconcile(
+                progressState,
+                eligibleKeys(state)
+            )
+
         headline.text = state.headline
         guidance.text = state.guidance
         sampleNotice.text = state.sampleNotice
         actionButton.text = state.actionLabel
-        renderItems(state.items)
+        renderCollectionProgress(state)
+        renderItems(state)
         renderUnknownItems(state.unknownItems)
         planResult.render(state.result)
         extraStopRule.text = state.extraStopRuleText.orEmpty()
         extraStopRule.visibility = if (state.extraStopRuleText == null) GONE else VISIBLE
     }
 
-    private fun renderItems(items: List<PracticalShoppingHomeItemRenderState>) {
+    override fun onSaveInstanceState(): Parcelable? {
+        val state = Bundle()
+        state.putParcelable(SAVED_SUPER_STATE, super.onSaveInstanceState())
+        state.putStringArrayList(
+            SAVED_COLLECTED_KEYS,
+            ArrayList(PracticalShoppingBasketProgressSession.snapshot(progressState))
+        )
+        return state
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onRestoreInstanceState(state: Parcelable?) {
+        if (state !is Bundle) {
+            super.onRestoreInstanceState(state)
+            return
+        }
+
+        pendingRestoredCollectedKeys = state.getStringArrayList(SAVED_COLLECTED_KEYS)?.toList()
+        super.onRestoreInstanceState(state.getParcelable(SAVED_SUPER_STATE))
+
+        lastRenderState?.let(::render)
+    }
+
+    private fun eligibleKeys(state: PracticalShoppingBasketRenderState) =
+        if (state.collectionEnabled) {
+            state.items.map(PracticalShoppingHomeItemRenderState::key)
+        } else {
+            emptyList()
+        }
+
+    private fun renderCollectionProgress(state: PracticalShoppingBasketRenderState) {
+        when {
+            state.collectionEnabled -> {
+                collectionProgress.text =
+                    "${progressState.collectedItemKeys.size} of " +
+                        "${progressState.eligibleItemKeys.size} planned items collected"
+                collectionProgress.visibility = VISIBLE
+            }
+
+            state.status == PracticalShoppingBasketStatus.PLANNED && state.items.isNotEmpty() -> {
+                collectionProgress.text =
+                    "Check-off starts when this basket has complete usable price coverage."
+                collectionProgress.visibility = VISIBLE
+            }
+
+            else -> {
+                collectionProgress.text = ""
+                collectionProgress.visibility = GONE
+            }
+        }
+    }
+
+    private fun renderItems(state: PracticalShoppingBasketRenderState) {
         itemsContainer.removeAllViews()
-        itemsHeading.visibility = if (items.isEmpty()) GONE else VISIBLE
-        items.forEach { item ->
-            itemsContainer.addView(
-                line("• ${item.name}  •  ${item.detail}", 14f, "#374151", topPadding = 7)
-            )
+        itemsHeading.visibility = if (state.items.isEmpty()) GONE else VISIBLE
+        state.items.forEach { item ->
+            if (item.key in progressState.eligibleItemKeys) {
+                val collected = item.key in progressState.collectedItemKeys
+                itemsContainer.addView(collectionButton(item, collected))
+            } else {
+                itemsContainer.addView(
+                    line("• ${item.name}  •  ${item.detail}", 14f, "#374151", topPadding = 7)
+                )
+            }
+        }
+    }
+
+    private fun collectionButton(
+        item: PracticalShoppingHomeItemRenderState,
+        collected: Boolean
+    ): MaterialButton = MaterialButton(context).apply {
+        isAllCaps = false
+        textSize = 14f
+        gravity = Gravity.START or Gravity.CENTER_VERTICAL
+        cornerRadius = dp(14)
+        strokeWidth = dp(1)
+        strokeColor = ColorStateList.valueOf(Color.parseColor("#D1D5DB"))
+        setTextColor(Color.parseColor("#374151"))
+        backgroundTintList = ColorStateList.valueOf(Color.WHITE)
+        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 7)
+        text = "${if (collected) "✓" else "○"} ${item.name}  •  ${item.detail}"
+        contentDescription =
+            if (collected) {
+                "Mark ${item.name} not collected"
+            } else {
+                "Mark ${item.name} collected"
+            }
+        setOnClickListener {
+            progressState = PracticalShoppingBasketProgressSession.toggle(progressState, item.key)
+            lastRenderState?.let { state ->
+                renderCollectionProgress(state)
+                renderItems(state)
+            }
         }
     }
 
@@ -161,4 +271,9 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         LayoutParams(LayoutParams.MATCH_PARENT, height).apply { this.topMargin = dp(topMargin) }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
+    companion object {
+        private const val SAVED_SUPER_STATE = "basket.super_state"
+        private const val SAVED_COLLECTED_KEYS = "basket.collected_keys"
+    }
 }

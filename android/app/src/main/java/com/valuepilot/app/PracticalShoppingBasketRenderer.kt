@@ -20,6 +20,7 @@ data class PracticalShoppingBasketRenderState(
     val unknownItems: List<String>,
     val result: PracticalShoppingUiState?,
     val extraStopRuleText: String?,
+    val collectionEnabled: Boolean,
     val actionLabel: String,
     val sampleNotice: String
 ) {
@@ -32,6 +33,9 @@ data class PracticalShoppingBasketRenderState(
         require(sampleNotice.isNotBlank())
         require((status == PracticalShoppingBasketStatus.PLANNED) == (result != null))
         require((result == null) == (extraStopRuleText == null))
+        require(!collectionEnabled || status == PracticalShoppingBasketStatus.PLANNED)
+        require(!collectionEnabled || result?.primary != null)
+        require(!collectionEnabled || result?.primary?.missingItemsText == null)
         if (status == PracticalShoppingBasketStatus.EMPTY) {
             require(items.isEmpty())
             require(unknownItems.isEmpty())
@@ -66,6 +70,14 @@ object PracticalShoppingBasketRenderer {
                     "Review the full recommendation before you shop. Return to Home to change any item."
             }
 
+        // Check-off is deliberately conservative. The current projection does not
+        // expose the exact subset of covered item keys, so incomplete plans never
+        // infer eligibility from consumer text such as "Missing price: ...".
+        val collectionEnabled =
+            status == PracticalShoppingBasketStatus.PLANNED &&
+                source.result?.primary != null &&
+                source.result.primary.missingItemsText == null
+
         return PracticalShoppingBasketRenderState(
             status = status,
             headline = headline,
@@ -75,6 +87,7 @@ object PracticalShoppingBasketRenderer {
             // Preserve the already-projected result object exactly.
             result = source.result,
             extraStopRuleText = source.extraStopSettings.summary.takeIf { source.result != null },
+            collectionEnabled = collectionEnabled,
             actionLabel =
                 if (status == PracticalShoppingBasketStatus.EMPTY) {
                     "Build my basket on Home"

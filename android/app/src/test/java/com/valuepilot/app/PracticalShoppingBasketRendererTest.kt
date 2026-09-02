@@ -1,6 +1,7 @@
 package com.valuepilot.app
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -23,13 +24,14 @@ class PracticalShoppingBasketRendererTest {
         assertTrue(basket.unknownItems.isEmpty())
         assertNull(basket.result)
         assertNull(basket.extraStopRuleText)
+        assertFalse(basket.collectionEnabled)
         assertEquals("Build my basket on Home", basket.actionLabel)
         assertSame(home.items, basket.items)
         assertSame(home.unknownItems, basket.unknownItems)
     }
 
     @Test
-    fun unresolvedInputStaysUnresolvedAndNeverBecomesAPlan() {
+    fun unresolvedInputStaysUnresolvedAndNeverBecomesAPlanOrCheckOffSession() {
         val model =
             PracticalShoppingHomeSession.submit(
                 LocalSamplePracticalShoppingDemo.initialModel(),
@@ -45,6 +47,7 @@ class PracticalShoppingBasketRendererTest {
         assertEquals(home.message, basket.guidance)
         assertNull(basket.result)
         assertNull(basket.extraStopRuleText)
+        assertFalse(basket.collectionEnabled)
     }
 
     @Test
@@ -62,10 +65,11 @@ class PracticalShoppingBasketRendererTest {
         assertEquals("Finish your shopping list", basket.headline)
         assertEquals(home.message, basket.guidance)
         assertNull(basket.result)
+        assertFalse(basket.collectionEnabled)
     }
 
     @Test
-    fun completedPlanPassesThroughTheExactProjectionAndExactRuleText() {
+    fun completedPlanPassesThroughTheExactProjectionAndEnablesCheckOff() {
         val model =
             PracticalShoppingHomeSession.submit(
                 LocalSamplePracticalShoppingDemo.initialModel(),
@@ -80,11 +84,12 @@ class PracticalShoppingBasketRendererTest {
         assertSame(home.items, basket.items)
         assertEquals(home.extraStopSettings.summary, basket.extraStopRuleText)
         assertEquals("Basket 10.28 CAD", basket.result?.primary?.basketCostText)
+        assertTrue(basket.collectionEnabled)
         assertEquals("Edit on Home", basket.actionLabel)
     }
 
     @Test
-    fun incompleteKnownSubtotalAndFictionalDisclosurePassThroughUnchanged() {
+    fun incompleteKnownSubtotalAndMissingPriceRemainNonCheckable() {
         val model =
             PracticalShoppingHomeSession.submit(
                 LocalSamplePracticalShoppingDemo.initialModel(),
@@ -98,6 +103,7 @@ class PracticalShoppingBasketRendererTest {
         assertSame(home.result, basket.result)
         assertEquals("Known subtotal 4.49 CAD", basket.result?.primary?.basketCostText)
         assertEquals("Missing price: Coffee", basket.result?.primary?.missingItemsText)
+        assertFalse(basket.collectionEnabled)
         assertEquals(home.sampleNotice, basket.sampleNotice)
         assertEquals(
             "Fictional sample data only — not live retailer prices or availability.",
