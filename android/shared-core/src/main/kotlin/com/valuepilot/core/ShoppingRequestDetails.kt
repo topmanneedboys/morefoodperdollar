@@ -138,4 +138,59 @@ data class ShoppingRequestDetails(
         itemDetails.associateBy { it.itemKey }
 
     fun detailFor(itemKey: ShoppingItemKey): ShoppingItemRequestDetail? = detailsByItem[itemKey]
+
+    /**
+     * Returns a new value with exactly this explicit detail upserted for its stable item key.
+     *
+     * The detail must already belong to [request]. This operation only preserves shopper
+     * intent and canonicalizes detail order to [ShoppingRequest.itemKeys]; it does not
+     * interpret quantity, resolve a product, attach price/evidence, or change ranking.
+     */
+    fun withItemDetail(detail: ShoppingItemRequestDetail): ShoppingRequestDetails {
+        require(request.itemKeySet.contains(detail.itemKey)) {
+            "Shopping request detail contains an item outside the shopping request"
+        }
+
+        val nextByItem = detailsByItem + (detail.itemKey to detail)
+        return ShoppingRequestDetails(
+            request = request,
+            itemDetails = request.itemKeys.mapNotNull { itemKey -> nextByItem[itemKey] }
+        )
+    }
+
+    /**
+     * Returns a new value with explicit detail removed for [itemKey].
+     *
+     * The item must belong to [request]. Removing detail means unspecified intent for that
+     * item; it does not create defaults with product, quantity, brand, price, or ranking
+     * authority. Remaining details are emitted in request order.
+     */
+    fun withoutItemDetail(itemKey: ShoppingItemKey): ShoppingRequestDetails {
+        require(request.itemKeySet.contains(itemKey)) {
+            "Cannot clear detail for an item outside the shopping request"
+        }
+
+        return ShoppingRequestDetails(
+            request = request,
+            itemDetails =
+                request.itemKeys.mapNotNull { candidateKey ->
+                    if (candidateKey == itemKey) null else detailsByItem[candidateKey]
+                }
+        )
+    }
+
+    /**
+     * Carries explicit details into an already-established revision of the same logical list.
+     *
+     * This method does NOT decide whether two searches/queries are the same shopper session.
+     * That continuity decision belongs to the caller. Only details whose stable keys survive in
+     * [newRequest] are retained, in the new request's order. Removed items are dropped and newly
+     * introduced items remain unspecified. No quantity/package arithmetic or product inference
+     * is performed.
+     */
+    fun reconciledTo(newRequest: ShoppingRequest): ShoppingRequestDetails =
+        ShoppingRequestDetails(
+            request = newRequest,
+            itemDetails = newRequest.itemKeys.mapNotNull { itemKey -> detailsByItem[itemKey] }
+        )
 }

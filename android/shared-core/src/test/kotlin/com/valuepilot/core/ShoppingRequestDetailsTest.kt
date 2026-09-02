@@ -132,4 +132,102 @@ class ShoppingRequestDetailsTest {
         assertEquals(128, details.itemDetails.size)
         assertTrue(keys.all { details.detailFor(it) != null })
     }
+
+    @Test
+    fun `upsert replaces only target canonicalizes request order and leaves source unchanged`() {
+        val originalMilk =
+            ShoppingItemRequestDetail(
+                itemKey = milk,
+                requestedQuantity = ShoppingRequestedQuantity(packageCount = 2)
+            )
+        val eggsDetail =
+            ShoppingItemRequestDetail(
+                itemKey = eggs,
+                brandPreference = ShoppingBrandPreference.exact(ShoppingBrandKey("brand:eggs"))
+            )
+        val source = ShoppingRequestDetails(request, listOf(eggsDetail, originalMilk))
+        val replacement =
+            ShoppingItemRequestDetail(
+                itemKey = milk,
+                productSpecificity = ShoppingProductSpecificity.EXACT_PRODUCT_REQUIRED
+            )
+
+        val updated = source.withItemDetail(replacement)
+
+        assertSame(request, updated.request)
+        assertEquals(listOf(replacement, eggsDetail), updated.itemDetails)
+        assertEquals(replacement, updated.detailFor(milk))
+        assertEquals(eggsDetail, updated.detailFor(eggs))
+        assertEquals(listOf(eggsDetail, originalMilk), source.itemDetails)
+        assertEquals(originalMilk, source.detailFor(milk))
+    }
+
+    @Test
+    fun `explicit default detail remains distinct from absent detail when editing`() {
+        val exact =
+            ShoppingItemRequestDetail(
+                itemKey = milk,
+                productSpecificity = ShoppingProductSpecificity.EXACT_PRODUCT_REQUIRED
+            )
+        val source = ShoppingRequestDetails(request, listOf(exact))
+        val explicitDefault = ShoppingItemRequestDetail(itemKey = milk)
+
+        val updated = source.withItemDetail(explicitDefault)
+        val cleared = updated.withoutItemDetail(milk)
+
+        assertEquals(explicitDefault, updated.detailFor(milk))
+        assertEquals(listOf(explicitDefault), updated.itemDetails)
+        assertNull(cleared.detailFor(milk))
+        assertTrue(cleared.itemDetails.isEmpty())
+        assertEquals(explicitDefault, updated.detailFor(milk))
+        assertEquals(exact, source.detailFor(milk))
+    }
+
+    @Test
+    fun `edit operations reject item keys outside the current request`() {
+        val bread = ShoppingItemKey("bread")
+
+        assertThrows(IllegalArgumentException::class.java) {
+            ShoppingRequestDetails(request).withItemDetail(ShoppingItemRequestDetail(bread))
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            ShoppingRequestDetails(request).withoutItemDetail(bread)
+        }
+    }
+
+    @Test
+    fun `reconcile preserves only surviving explicit details in new request order without inference`() {
+        val rice = ShoppingItemKey("rice")
+        val bread = ShoppingItemKey("bread")
+        val oldRequest = ShoppingRequest(listOf(milk, eggs, rice))
+        val milkDetail =
+            ShoppingItemRequestDetail(
+                itemKey = milk,
+                productSpecificity = ShoppingProductSpecificity.EXACT_PRODUCT_REQUIRED
+            )
+        val eggsDetail =
+            ShoppingItemRequestDetail(
+                itemKey = eggs,
+                requestedQuantity = ShoppingRequestedQuantity(packageCount = 3),
+                brandPreference = ShoppingBrandPreference.exact(ShoppingBrandKey("brand:eggs"))
+            )
+        val riceDetail = ShoppingItemRequestDetail(itemKey = rice)
+        val source = ShoppingRequestDetails(oldRequest, listOf(milkDetail, eggsDetail, riceDetail))
+        val newRequest = ShoppingRequest(listOf(eggs, milk, bread))
+
+        val reconciled = source.reconciledTo(newRequest)
+
+        assertSame(newRequest, reconciled.request)
+        assertEquals(listOf(eggsDetail, milkDetail), reconciled.itemDetails)
+        assertNull(reconciled.detailFor(rice))
+        assertNull(reconciled.detailFor(bread))
+
+        val preservedQuantity = reconciled.detailFor(eggs)?.requestedQuantity
+        assertEquals(3L, preservedQuantity?.packageCount)
+        assertNull(preservedQuantity?.totalQuantity)
+        assertNull(preservedQuantity?.preferredPackageQuantity)
+
+        assertEquals(riceDetail, source.detailFor(rice))
+        assertEquals(listOf(milkDetail, eggsDetail, riceDetail), source.itemDetails)
+    }
 }
