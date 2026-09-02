@@ -8,9 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`0cf9b253c7f6f28835cb4f2fd0019099b66ce783` — `Acknowledge Watch setup handoff`
+`de2a196fe32c9a29bddd2542f8bf4cb0db3d45ea` — `Show Watch fact check progress`
 
-GitHub Actions workflow run **33675293225** completed successfully (candidate run **33674718972** also passed).
+GitHub Actions workflow run **33676645803** completed successfully (candidate run **33676067674** also passed).
+
+The latest Watch setup refinement adds a bounded fact-check progress card after an accepted configured foreground handoff. The active exact session reports only a resolved count and fixed requirement labels to immutable presentation; raw product/store identities, prices, routes, evidence payloads and decision authority remain outside the renderer. The surface says that no switch decision is available yet, and even complete fact coverage explains that policy and display metadata remain separate. Progress is cleared when the immutable selection changes, and late updates cannot attach to a different selection. Deterministic projector, host, presenter and View-boundary tests cover initial, partial, complete, stale and prohibited-authority cases.
 
 The latest Watch setup refinement gives a configured foreground handoff an honest acknowledgement on the existing Saved-backed surface. After the explicit selection is accepted, the user sees that no switch decision has been made and that current prices, route details and evidence checks are still required. Rejected attempts explain the fail-closed setup issue; the message clears when the immutable selection projection changes. This is presentation-only feedback and does not acquire facts, retry work, calculate savings, persist setup, or authorize alerts/notifications.
 
@@ -26,7 +28,7 @@ The latest app-level slice adds bounded local-only cross-session retention aroun
 
 The Basket primary tab is now a real read-only continuation of Plan My Shop rather than placeholder copy. It receives the existing immutable Home presentation, preserves the exact projected plan object, and shows recognized items, unresolved items, complete or incomplete one-store results, any already-approved optional second stop, and the shopper's selected exact extra-stop rule. Empty, draft, refinement, and unresolved states cannot become a false plan and provide one typed action back to Home. Home and Basket share the same result-card View so complete totals, known subtotals, missing-price notices, travel, freshness/evidence, and second-stop details cannot drift between the two surfaces. The fictional/offline disclosure is repeated prominently on Basket. No shared-core planner/projector, provider integration, Android networking, ranking authority, or money calculation was duplicated or moved into a View.
 
-Clean-source verification passed all 1,625 JVM tests (375 shared-core + 1,250 Android app) with zero failures/errors/skips, all 58 Android tasks, all 30 browser tests, Firefox packaging lint with zero findings, APK privacy inspection, and one-signer APK verification.
+Clean-source verification passed all 1,631 JVM tests (375 shared-core + 1,256 Android app) with zero failures/errors/skips, all 58 Android tasks, all 30 browser tests, Firefox packaging lint with zero findings, APK privacy inspection, and one-signer APK verification.
 
 The current promoted Home slice keeps the fictional sample flow isolated while allowing users to remove recognized items or unresolved tokens and immediately re-plan. Removal actions carry opaque typed keys/tokens through the controller, preserve unknown and ambiguous states, and expose item-specific accessibility descriptions. Natural conjunctions (`and`/`&`) are treated as list syntax while unknown product words still remain explicit. Result cards label their evidence line “Price freshness,” clarifying that an unknown count refers to freshness rather than price. The list editor now displays the model's existing 240-character limit and physically retains no more than its existing one-character over-limit sentinel, so a very large paste cannot flow through lifecycle state while the honest over-limit error remains reachable. Immutable presentation carries the limit; the Android View binds only the matching counter and filter.
 
