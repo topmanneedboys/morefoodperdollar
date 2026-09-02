@@ -104,7 +104,12 @@ class PracticalShoppingBasketRendererTest {
         assertSame(home.result, basket.result)
         assertEquals("Known subtotal 4.49 CAD", basket.result?.primary?.basketCostText)
         assertEquals("Missing price: Coffee", basket.result?.primary?.missingItemsText)
-        assertFalse(basket.collectionEnabled)
+        assertTrue(basket.collectionEnabled)
+        assertEquals(listOf(home.items.first().key), basket.collectibleItemKeys)
+        assertEquals(
+            "Review the priced items before you shop. Items without a usable price stay unchecked until verified.",
+            basket.guidance
+        )
         assertEquals(home.sampleNotice, basket.sampleNotice)
         assertEquals(
             "Fictional sample data only — not live retailer prices or availability.",

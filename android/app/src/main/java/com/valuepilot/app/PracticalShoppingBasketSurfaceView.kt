@@ -166,24 +166,26 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     }
 
     private fun eligibleKeys(state: PracticalShoppingBasketRenderState) =
-        if (state.collectionEnabled) {
-            state.items.map(PracticalShoppingHomeItemRenderState::key)
-        } else {
-            emptyList()
-        }
+        state.collectibleItemKeys
 
     private fun renderCollectionProgress(state: PracticalShoppingBasketRenderState) {
         when {
             state.collectionEnabled -> {
+                val itemLabel =
+                    if (state.result?.primary?.missingItemsText == null) {
+                        "planned items"
+                    } else {
+                        "priced items"
+                    }
                 collectionProgress.text =
                     "${progressState.collectedItemKeys.size} of " +
-                        "${progressState.eligibleItemKeys.size} planned items collected"
+                        "${progressState.eligibleItemKeys.size} $itemLabel collected"
                 collectionProgress.visibility = VISIBLE
             }
 
             state.status == PracticalShoppingBasketStatus.PLANNED && state.items.isNotEmpty() -> {
                 collectionProgress.text =
-                    "Check-off starts when this basket has complete usable price coverage."
+                    "Check-off starts for items with usable planned price coverage."
                 collectionProgress.visibility = VISIBLE
             }
 
@@ -208,7 +210,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
                 itemsContainer.addView(
                     column(padded = false).apply {
                         addView(collectionButton(item, collected))
-                        addItemDetails(item, this)
+                        addItemDetails(item, this, state.collectionEnabled)
                     }
                 )
             } else {
@@ -222,7 +224,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
                                 topPadding = 7
                             )
                         )
-                        addItemDetails(item, this)
+                        addItemDetails(item, this, state.collectionEnabled)
                     }
                 )
             }
@@ -231,10 +233,21 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
 
     private fun addItemDetails(
         item: PracticalShoppingHomeItemRenderState,
-        container: LinearLayout
+        container: LinearLayout,
+        collectionEnabled: Boolean
     ) {
         item.storeAssignment?.let { store ->
             container.addView(line("Buy at $store", 12f, "#374151", topPadding = 2))
+        }
+        if (collectionEnabled && item.storeAssignment == null) {
+            container.addView(
+                line(
+                    "No usable price yet — not ready to collect",
+                    12f,
+                    "#92400E",
+                    topPadding = 2
+                )
+            )
         }
         container.addView(line(item.requestDetailsSummary, 12f, "#6B7280", topPadding = 2))
         item.requestDetailsNotice?.let { notice ->

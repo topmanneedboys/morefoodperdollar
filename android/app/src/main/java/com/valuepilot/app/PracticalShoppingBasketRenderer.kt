@@ -1,5 +1,7 @@
 package com.valuepilot.app
 
+import com.valuepilot.core.ShoppingItemKey
+
 /**
  * Immutable Basket-tab presentation derived from the already-rendered Home state.
  *
@@ -22,7 +24,15 @@ data class PracticalShoppingBasketRenderState(
     val extraStopRuleText: String?,
     val collectionEnabled: Boolean,
     val actionLabel: String,
-    val sampleNotice: String
+    val sampleNotice: String,
+    /** Exact covered item identities that the foreground check-off may mark. */
+    val collectibleItemKeys: List<ShoppingItemKey> =
+        if (collectionEnabled) {
+            val assigned = items.filter { it.storeAssignment != null }.map { it.key }
+            if (assigned.isNotEmpty()) assigned else items.map { it.key }
+        } else {
+            emptyList()
+        }
 ) {
     init {
         require(headline.isNotBlank())
@@ -35,7 +45,9 @@ data class PracticalShoppingBasketRenderState(
         require((result == null) == (extraStopRuleText == null))
         require(!collectionEnabled || status == PracticalShoppingBasketStatus.PLANNED)
         require(!collectionEnabled || result?.primary != null)
-        require(!collectionEnabled || result?.primary?.missingItemsText == null)
+        require(collectibleItemKeys.distinct().size == collectibleItemKeys.size)
+        require(collectibleItemKeys.all { key -> items.any { it.key == key } })
+        require(collectionEnabled == collectibleItemKeys.isNotEmpty())
         if (status == PracticalShoppingBasketStatus.EMPTY) {
             require(items.isEmpty())
             require(unknownItems.isEmpty())
@@ -67,16 +79,23 @@ object PracticalShoppingBasketRenderer {
                 PracticalShoppingBasketStatus.NEEDS_ATTENTION ->
                     source.message ?: "Finish the items that need attention on Home."
                 PracticalShoppingBasketStatus.PLANNED ->
-                    "Review the full recommendation before you shop. Return to Home to change any item."
+                    if (source.result?.primary?.missingItemsText == null) {
+                        "Review the full recommendation before you shop. Return to Home to change any item."
+                    } else {
+                        "Review the priced items before you shop. Items without a usable price stay unchecked until verified."
+                    }
             }
 
-        // Check-off is deliberately conservative. The current projection does not
-        // expose the exact subset of covered item keys, so incomplete plans never
-        // infer eligibility from consumer text such as "Missing price: ...".
-        val collectionEnabled =
-            status == PracticalShoppingBasketStatus.PLANNED &&
-                source.result?.primary != null &&
-                source.result.primary.missingItemsText == null
+        // Check-off uses only the exact item-to-store assignments projected by
+        // the planner boundary. Incomplete plans expose covered items only;
+        // missing-price rows remain visible but have no collection action.
+        val collectibleItemKeys =
+            if (status == PracticalShoppingBasketStatus.PLANNED && source.result?.primary != null) {
+                source.items.filter { it.storeAssignment != null }.map { it.key }
+            } else {
+                emptyList()
+            }
+        val collectionEnabled = collectibleItemKeys.isNotEmpty()
 
         return PracticalShoppingBasketRenderState(
             status = status,
@@ -94,7 +113,8 @@ object PracticalShoppingBasketRenderer {
                 } else {
                     "Edit on Home"
                 },
-            sampleNotice = source.sampleNotice
+            sampleNotice = source.sampleNotice,
+            collectibleItemKeys = collectibleItemKeys
         )
     }
 }
