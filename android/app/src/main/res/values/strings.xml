@@ -7,11 +7,11 @@
 
     <string name="products_to_compare">Products to compare</string>
 
-    <string name="product_input_instructions">Put the product name, package size and price in the same box. Use a concrete currency such as CA$ or US$ instead of a bare $. Blank lines inside a product are fine.</string>
+    <string name="product_input_instructions">Put the product name, package size and current price in the same box. To compare member prices, add a clearly labeled member price too. Use a concrete currency such as CA$ or US$ instead of a bare $. Blank lines inside a product are fine.</string>
 
     <string name="product_number">Product %1$d</string>
 
-    <string name="product_input_hint">Honeycrisp apples&#10;3 lb&#10;CA$5.99</string>
+    <string name="product_input_hint">Honeycrisp apples&#10;3 lb&#10;Current price CA$5.99&#10;Member price CA$4.99</string>
 
     <string name="add_another_product">Add another product</string>
     <string name="remove_product">Remove</string>
