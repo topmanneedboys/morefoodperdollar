@@ -78,7 +78,7 @@ Launch depth before breadth: one dense metro area, roughly 1,500–5,000 high-fr
 
 ## Latest verified engineering baseline
 
-The current promoted Home baseline is `fcbdf6a90319f6912572a3bfd7c77c70d64d445c` (`Clarify Home price freshness evidence`), verified by candidate workflow **33597935908** and promoted workflow **33598340137**. The Home surface supports typed removal of resolved items and unresolved tokens, immediate deterministic replanning, preserved unknown/ambiguous states, item-specific accessibility descriptions, deterministic `and`/`&` list syntax, and an explicit “Price freshness” label on result evidence summaries. Both milestone and candidate branches point to this SHA; the local worktree was clean at verification.
+The current promoted baseline is `b1bc2188be5d323fc7cc6f4461d219220b4b199f` (`Let Compare Here remove extra products`), verified by candidate workflow **33599532313** and promoted workflow **33599960509**. Home supports typed removal of resolved items and unresolved tokens, immediate deterministic replanning, preserved unknown/ambiguous states, item-specific accessibility descriptions, deterministic `and`/`&` list syntax, and an explicit “Price freshness” label on result evidence summaries. Compare Here supports bounded per-entry removal while preserving its minimum two-slot input shape; the local worktree was clean at verification.
 
 Minimum known durable code baseline before 2026-08-29 documentation changes: `deaa478c9b679f8820b47a80d7f43c5b18787677` with verified code parent `932838f8d5eedda5d17c7a9dadf76ae38f8bcc9f` (`Re-evaluate production search before display`). Always inspect the current branch tip before work.
 

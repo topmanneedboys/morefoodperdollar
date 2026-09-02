@@ -8,11 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`fcbdf6a90319f6912572a3bfd7c77c70d64d445c` — `Clarify Home price freshness evidence`
+`b1bc2188be5d323fc7cc6f4461d219220b4b199f` — `Let Compare Here remove extra products`
 
-GitHub Actions workflow run **33598340137** completed successfully (candidate run **33597935908** also passed).
+GitHub Actions workflow run **33599960509** completed successfully (candidate run **33599532313** also passed).
 
-The current promoted Home slice keeps the fictional sample flow isolated while allowing users to remove recognized items or unresolved tokens and immediately re-plan. Removal actions carry opaque typed keys/tokens through the controller, preserve unknown and ambiguous states, and expose item-specific accessibility descriptions. Natural conjunctions (`and`/`&`) are treated as list syntax while unknown product words still remain explicit. Result cards now label their evidence line “Price freshness,” clarifying that an unknown count refers to freshness rather than price. No planner, provider or Android privacy boundary was changed.
+The current promoted Home slice keeps the fictional sample flow isolated while allowing users to remove recognized items or unresolved tokens and immediately re-plan. Removal actions carry opaque typed keys/tokens through the controller, preserve unknown and ambiguous states, and expose item-specific accessibility descriptions. Natural conjunctions (`and`/`&`) are treated as list syntax while unknown product words still remain explicit. Result cards now label their evidence line “Price freshness,” clarifying that an unknown count refers to freshness rather than price. Compare Here’s manual editor also supports bounded per-entry removal without changing the exact comparison core. No planner, provider or Android privacy boundary was changed.
 
 The preceding projector implementation and fixture history remain below as historical context.
 

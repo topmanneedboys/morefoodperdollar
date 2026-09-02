@@ -6,7 +6,7 @@ Branch: `work/valuepilot-android-milestone`
 
 Android version: 101.1.0 (10101)
 
-Latest promoted Home head: `fcbdf6a90319f6912572a3bfd7c77c70d64d445c` (`Clarify Home price freshness evidence`), verified by candidate workflow **33597935908** and promoted workflow **33598340137**. Home users can remove resolved items or unresolved tokens through typed controller actions, natural `and`/`&` list syntax is supported, and result cards label freshness explicitly; the sample remains explicitly fictional/offline and the Android privacy boundary is unchanged.
+Latest promoted Home head: `b1bc2188be5d323fc7cc6f4461d219220b4b199f` (`Let Compare Here remove extra products`), verified by candidate workflow **33599532313** and promoted workflow **33599960509**. Home users can remove resolved items or unresolved tokens through typed controller actions, natural `and`/`&` list syntax is supported, and result cards label freshness explicitly. Compare Here also supports removing extra product entries while preserving its minimum two-slot shape; the sample remains explicitly fictional/offline and the Android privacy boundary is unchanged.
 
 ## Product direction now
 

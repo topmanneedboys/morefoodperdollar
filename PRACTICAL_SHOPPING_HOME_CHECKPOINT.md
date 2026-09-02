@@ -8,11 +8,13 @@ This checkpoint records the verified Practical Shopping Home slice plus the prov
 
 ## Latest verified engineering head
 
-`fcbdf6a90319f6912572a3bfd7c77c70d64d445c` — `Clarify Home price freshness evidence`
+`b1bc2188be5d323fc7cc6f4461d219220b4b199f` — `Let Compare Here remove extra products`
 
-GitHub Actions workflow run **33598340137** completed successfully (candidate run **33597935908** also passed).
+GitHub Actions workflow run **33599960509** completed successfully (candidate run **33599532313** also passed).
 
 Since the earlier production-input checkpoint, the visible fictional Home flow now supports typed removal of resolved items and unresolved tokens. Each removal reuses the existing controller -> shared-core planner -> projector path, preserves unknown/ambiguous state, and leaves the Android no-network boundary unchanged. Removal buttons expose item-specific accessibility descriptions, ordinary conjunctions (`and`/`&`) no longer become false unknown groceries, and Home result evidence is labeled “Price freshness” so freshness-unknown is not mistaken for an unknown price.
+
+The Compare Here manual entry surface now also offers a per-entry Remove action once more than the minimum two product slots exist. Removing an extra slot preserves the other entry text, renumbers the remaining slots, re-enables the bounded add action, and clears the existing like-for-like confirmation through the activity reducer. With exactly two slots, removal clears only the selected slot so the comparison shape remains usable.
 
 The earlier production-input head remains recorded in the historical verification list below.
 
