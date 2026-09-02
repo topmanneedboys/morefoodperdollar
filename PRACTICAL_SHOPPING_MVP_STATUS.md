@@ -8,9 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`95636977ab3b5d29beaa059713c2b97082c4bccf` — `Give Basket check-off actions full context`
+`32345eb2ef9907ab04e29d447be39e229fd27f3c` — `Summarize practical plan cards for accessibility`
 
-GitHub Actions workflow run **33685422755** completed successfully (candidate run **33684835762** also passed).
+GitHub Actions workflow run **33686576571** completed successfully (candidate run **33686048970** also passed).
+
+The latest shared Home/Basket result-card refinement closes a semantic accessibility gap. Primary and optional-second-stop cards now expose one explicit accessibility node whose summary contains every already-projected consumer field: badge, store, basket cost or savings, coverage/allocation, travel, evidence, and any incomplete-result caution. The physical renderer does not calculate or interpret these values; it binds the projected summary while retaining the existing visual lines. Deterministic presentation tests cover complete, incomplete and second-stop summaries, and the View boundary confirms this remains presentation-only.
 
 The latest Basket accessibility refinement closes a semantic context gap in the existing check-off controls. Because a button content description replaces its visible label for assistive technology, each collection action now names the item, its existing detail, the saved preference summary and the preference-only notice, followed by whether the action will mark it collected or not collected. This copy is derived from immutable Home projection plus local foreground collection state; it adds no matching, pricing, eligibility, planner, ranking, evidence, persistence or networking authority. Deterministic tests cover both action directions and the no-business-authority View boundary.
 
