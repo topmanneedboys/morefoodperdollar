@@ -10,6 +10,36 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.google.android.material.card.MaterialCardView
 
+/**
+ * Presentation-only treatment for the already-projected primary result card.
+ *
+ * A known subtotal is useful, but it must not look like a complete basket. The
+ * completeness marker is supplied by the projector; this mapping only chooses
+ * calm visual emphasis and never decides a shopping outcome.
+ */
+internal data class PracticalShoppingPrimaryCardStyle(
+    val backgroundColor: String,
+    val strokeColor: String,
+    val accentColor: String
+)
+
+internal fun practicalShoppingPrimaryCardStyle(
+    state: PracticalShoppingPrimaryUiState
+): PracticalShoppingPrimaryCardStyle =
+    if (state.missingItemsText == null) {
+        PracticalShoppingPrimaryCardStyle(
+            backgroundColor = "#ECFDF5",
+            strokeColor = "#A7F3D0",
+            accentColor = "#047857"
+        )
+    } else {
+        PracticalShoppingPrimaryCardStyle(
+            backgroundColor = "#FFFBEB",
+            strokeColor = "#FDE68A",
+            accentColor = "#92400E"
+        )
+    }
+
 /** Mechanically renders an already-projected Practical Shopping decision. */
 class PracticalShoppingPlanResultSurfaceView @JvmOverloads constructor(
     context: Context,
@@ -34,11 +64,12 @@ class PracticalShoppingPlanResultSurfaceView @JvmOverloads constructor(
         }
     }
 
-    private fun primaryCard(state: PracticalShoppingPrimaryUiState): View =
-        card("#ECFDF5", "#A7F3D0", 12).apply {
+    private fun primaryCard(state: PracticalShoppingPrimaryUiState): View {
+        val style = practicalShoppingPrimaryCardStyle(state)
+        return card(style.backgroundColor, style.strokeColor, 12).apply {
             addView(
                 column().apply {
-                    addView(line(state.badge, 11f, "#047857", true))
+                    addView(line(state.badge, 11f, style.accentColor, true))
                     addView(line(state.storeName, 22f, "#111827", true, 6))
                     addView(line(state.basketCostText, 18f, "#111827", true, 8))
                     addView(
@@ -60,6 +91,7 @@ class PracticalShoppingPlanResultSurfaceView @JvmOverloads constructor(
                 }
             )
         }
+    }
 
     private fun secondStopCard(state: PracticalShoppingSecondStopUiState): View =
         card("#FFFFFF", "#D1FAE5", 12).apply {

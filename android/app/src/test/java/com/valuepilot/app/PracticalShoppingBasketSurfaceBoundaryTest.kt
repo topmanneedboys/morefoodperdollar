@@ -71,6 +71,17 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
         }
     }
 
+    @Test
+    fun sharedPlanViewUsesProjectedCompletenessForCautionStyling() {
+        val source = source("PracticalShoppingPlanResultSurfaceView.kt").readText()
+
+        assertTrue(source.contains("practicalShoppingPrimaryCardStyle(state)"))
+        assertTrue(source.contains("style.backgroundColor"))
+        assertTrue(source.contains("style.strokeColor"))
+        assertTrue(source.contains("style.accentColor"))
+        assertTrue(source.contains("state.missingItemsText == null"))
+    }
+
     private fun source(name: String): File {
         val workingDirectory =
             requireNotNull(System.getProperty("user.dir")) {
