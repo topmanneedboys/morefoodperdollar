@@ -322,6 +322,8 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                 column().apply {
                     addView(line(state.badge, 11f, "#047857", true))
                     addView(line(state.storeName, 18f, "#111827", true, 6))
+                    addView(line(state.baseItemsText, 13f, "#374151", topPadding = 8))
+                    addView(line(state.addedItemsText, 13f, "#374151", topPadding = 4))
                     addView(line(state.savingsText, 17f, "#047857", true, 7))
                     addView(line(state.combinedBasketCostText, 14f, "#374151", topPadding = 5))
                     addView(line(state.additionalTravelText, 13f, "#374151", topPadding = 4))

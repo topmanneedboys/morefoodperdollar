@@ -142,6 +142,7 @@ class PracticalShoppingUiProjectorTest {
             baseStoreKey = primaryKey,
             addedStoreKey = secondKey,
             coveredItemKeys = requested,
+            addedStoreItemKeys = setOf(milk, chicken),
             knownCombinedBasketCost = Money.parse("52.50", "CAD"),
             additionalTravel = ShoppingTravel(1_200L, 181L),
             evidence = freshEvidence(3)
@@ -167,6 +168,8 @@ class PracticalShoppingUiProjectorTest {
         assertEquals("Combined basket 52.50 CAD", second.combinedBasketCostText)
         assertEquals("Save 17.50 CAD", second.savingsText)
         assertEquals("Adds 4 min · 1.2 km", second.additionalTravelText)
+        assertEquals("Buy at Sample Market: Eggs", second.baseItemsText)
+        assertEquals("Then buy at Example Grocer: Milk, Chicken", second.addedItemsText)
         assertNull(projection.state.secondaryMessage)
         assertEquals(secondKey, projection.addedStoreKey)
         assertFalse(projection.state.toString().contains(secondKey.value))
@@ -184,6 +187,7 @@ class PracticalShoppingUiProjectorTest {
             baseStoreKey = primaryKey,
             addedStoreKey = secondKey,
             coveredItemKeys = requested,
+            addedStoreItemKeys = setOf(chicken),
             knownCombinedBasketCost = Money.parse("53.00", "CAD"),
             additionalTravel = ShoppingTravel(800L, 120L),
             evidence = freshEvidence(3)
@@ -209,6 +213,44 @@ class PracticalShoppingUiProjectorTest {
                 "15.00 CAD savings and caps extra travel at 10 min and 5 km.",
             state.secondaryMessage
         )
+    }
+
+    @Test
+    fun secondStopAllocationUsesRequestOrderWhenEveryItemMovesToAddedStore() {
+        val primary = single(
+            key = primaryKey,
+            cost = "60.00",
+            covered = requested,
+            travel = ShoppingTravel(2_000L, 300L)
+        )
+        val pair = TwoStorePlanCandidate(
+            baseStoreKey = primaryKey,
+            addedStoreKey = secondKey,
+            coveredItemKeys = requested,
+            addedStoreItemKeys = setOf(chicken, eggs, milk),
+            knownCombinedBasketCost = Money.parse("40.00", "CAD"),
+            additionalTravel = ShoppingTravel(1_200L, 181L),
+            evidence = freshEvidence(3)
+        )
+
+        val decision = PracticalShoppingPlanner.evaluate(
+            request,
+            listOf(primary),
+            listOf(pair),
+            policy
+        )
+        val second = requireNotNull(
+            PracticalShoppingUiProjector.project(
+                request,
+                decision,
+                storeNames,
+                itemNames,
+                policy
+            ).state.secondStop
+        )
+
+        assertEquals("Buy at Sample Market: none", second.baseItemsText)
+        assertEquals("Then buy at Example Grocer: Eggs, Milk, Chicken", second.addedItemsText)
     }
 
     @Test

@@ -178,6 +178,7 @@ class PracticalShoppingProductionDecisionEvaluatorTest {
                     baseStoreKey = baseStoreKey,
                     addedStoreKey = addedStoreKey,
                     coveredItemKeys = request.itemKeys.toSet(),
+                    addedStoreItemKeys = setOf(eggs),
                     knownCombinedBasketCost = Money(combinedMinorUnits, "CAD"),
                     additionalTravel = pair.additionalTravel,
                     evidence = freshEvidence(request.itemKeys.size)

@@ -62,6 +62,7 @@ class PracticalShoppingProductionPlanCandidateBridgeTest {
         assertTrue(evaluation.blockers.isEmpty())
         assertEquals(Money(1_000L, "CAD"), candidate.knownCombinedBasketCost)
         assertEquals(request.itemKeys.toSet(), candidate.coveredItemKeys)
+        assertEquals(setOf(eggs), candidate.addedStoreItemKeys)
         assertEquals(pair.additionalTravel, candidate.additionalTravel)
         assertEquals(
             listOf(addedStore.storeKey, baseStore.storeKey),

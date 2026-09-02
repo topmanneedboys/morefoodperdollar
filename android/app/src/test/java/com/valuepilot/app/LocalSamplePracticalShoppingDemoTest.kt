@@ -167,6 +167,14 @@ class LocalSamplePracticalShoppingDemoTest {
             model.ui.extraStopMinimumSavingsChoice
         )
         assertEquals("Example Grocer East", secondStop.storeName)
+        assertEquals(
+            "Buy at Sample Market West: Bananas, Eggs",
+            secondStop.baseItemsText
+        )
+        assertEquals(
+            "Then buy at Example Grocer East: Milk, Bread, Basmati rice, Chicken breast",
+            secondStop.addedItemsText
+        )
         assertEquals("Save 2.50 CAD", secondStop.savingsText)
         assertEquals("Combined basket 43.04 CAD", secondStop.combinedBasketCostText)
 

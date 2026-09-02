@@ -105,6 +105,7 @@ data class TwoStorePlanCandidate(
     val baseStoreKey: ShoppingStoreKey,
     val addedStoreKey: ShoppingStoreKey,
     val coveredItemKeys: Set<ShoppingItemKey>,
+    val addedStoreItemKeys: Set<ShoppingItemKey>,
     val knownCombinedBasketCost: Money,
     val additionalTravel: ShoppingTravel,
     val evidence: ShoppingPlanEvidenceSummary
@@ -112,6 +113,9 @@ data class TwoStorePlanCandidate(
     init {
         require(baseStoreKey != addedStoreKey)
         require(coveredItemKeys.size <= MAX_SHOPPING_ITEMS)
+        require(addedStoreItemKeys.isNotEmpty())
+        require(addedStoreItemKeys.size <= coveredItemKeys.size)
+        require(coveredItemKeys.containsAll(addedStoreItemKeys))
         require(knownCombinedBasketCost.minorUnits >= 0L)
         require(evidence.totalItemCount == coveredItemKeys.size)
     }
@@ -186,6 +190,7 @@ object PracticalShoppingPlanner {
 
         twoStoreCandidates.forEach { candidate ->
             validateCandidateItems(requestedItems, candidate.coveredItemKeys)
+            validateCandidateItems(requestedItems, candidate.addedStoreItemKeys)
             requireSameMoneySpec(candidate.knownCombinedBasketCost, policy.minimumSecondStopSavings)
         }
 

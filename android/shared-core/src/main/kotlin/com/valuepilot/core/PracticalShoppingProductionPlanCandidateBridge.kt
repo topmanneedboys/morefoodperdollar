@@ -308,6 +308,10 @@ object PracticalShoppingProductionPlanCandidateBridge {
                     baseStoreKey = pair.baseStoreKey,
                     addedStoreKey = pair.addedStoreKey,
                     coveredItemKeys = request.itemKeySet,
+                    addedStoreItemKeys =
+                        selections
+                            .filter { it.selectedStoreKey == pair.addedStoreKey }
+                            .mapTo(linkedSetOf()) { it.itemKey },
                     knownCombinedBasketCost = combinedBasketCost,
                     additionalTravel = pair.additionalTravel,
                     evidence = evidence

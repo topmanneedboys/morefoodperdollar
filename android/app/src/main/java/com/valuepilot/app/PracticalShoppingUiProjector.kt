@@ -47,6 +47,8 @@ data class PracticalShoppingPrimaryUiState(
 data class PracticalShoppingSecondStopUiState(
     val badge: String,
     val storeName: String,
+    val baseItemsText: String,
+    val addedItemsText: String,
     val combinedBasketCostText: String,
     val savingsText: String,
     val additionalTravelText: String,
@@ -55,6 +57,8 @@ data class PracticalShoppingSecondStopUiState(
     init {
         require(badge.isNotBlank())
         require(storeName.isNotBlank())
+        require(baseItemsText.isNotBlank())
+        require(addedItemsText.isNotBlank())
         require(combinedBasketCostText.isNotBlank())
         require(savingsText.isNotBlank())
         require(additionalTravelText.isNotBlank())
@@ -147,10 +151,30 @@ object PracticalShoppingUiProjector {
             if (decision.secondStopDecision == SecondStopDecision.RECOMMENDED) {
                 val candidate = requireNotNull(decision.secondStop)
                 val savings = requireNotNull(decision.incrementalSecondStopSavings)
+                require(request.itemKeys.containsAll(candidate.addedStoreItemKeys)) {
+                    "Second-stop item allocation must stay inside the shopping request"
+                }
+                val addedItemKeys =
+                    request.itemKeys.filter(candidate.addedStoreItemKeys::contains)
+                val baseItemKeys = request.itemKeys.filterNot(candidate.addedStoreItemKeys::contains)
+                val addedStoreName = displayName(candidate.addedStoreKey, storeDisplayNames)
+                val baseStoreName = displayName(candidate.baseStoreKey, storeDisplayNames)
 
                 PracticalShoppingSecondStopUiState(
                     badge = "OPTIONAL EXTRA STOP",
-                    storeName = displayName(candidate.addedStoreKey, storeDisplayNames),
+                    storeName = addedStoreName,
+                    baseItemsText =
+                        itemsText(
+                            prefix = "Buy at $baseStoreName",
+                            itemKeys = baseItemKeys,
+                            itemDisplayNames = itemDisplayNames
+                        ),
+                    addedItemsText =
+                        itemsText(
+                            prefix = "Then buy at $addedStoreName",
+                            itemKeys = addedItemKeys,
+                            itemDisplayNames = itemDisplayNames
+                        ),
                     combinedBasketCostText =
                         "Combined basket ${formatMoney(candidate.knownCombinedBasketCost)}",
                     savingsText = "Save ${formatMoney(savings)}",
@@ -258,6 +282,22 @@ object PracticalShoppingUiProjector {
             }
         val label = if (names.size == 1) "Missing price" else "Missing prices"
         return "$label: ${names.joinToString(", ")}"
+    }
+
+    private fun itemsText(
+        prefix: String,
+        itemKeys: List<ShoppingItemKey>,
+        itemDisplayNames: Map<ShoppingItemKey, String>
+    ): String {
+        require(prefix.isNotBlank())
+        if (itemKeys.isEmpty()) return "$prefix: none"
+        val names =
+            itemKeys.map { key ->
+                requireNotNull(itemDisplayNames[key]) {
+                    "Missing consumer display name for a practical-shopping item"
+                }.also { require(it.isNotBlank()) }
+            }
+        return "$prefix: ${names.joinToString(", ")}"
     }
 
     private fun incompleteNotice(missingCount: Int): String =

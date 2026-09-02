@@ -443,6 +443,7 @@ class PracticalShoppingPlanTest {
             baseStoreKey = ShoppingStoreKey(base),
             addedStoreKey = ShoppingStoreKey(added),
             coveredItemKeys = covered,
+            addedStoreItemKeys = covered.take(1).toSet(),
             knownCombinedBasketCost = Money.parse(cost, "CAD"),
             additionalTravel = ShoppingTravel(extraDistanceMetres, extraSeconds),
             evidence = evidenceFor(covered.size)

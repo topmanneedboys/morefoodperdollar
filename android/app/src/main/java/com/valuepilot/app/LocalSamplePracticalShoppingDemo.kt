@@ -630,20 +630,31 @@ object LocalSamplePracticalShoppingDemo {
         val added = stores.first { it.key == pair.added }
         val selectedPrices = mutableListOf<Money>()
         val covered = linkedSetOf<ShoppingItemKey>()
+        val addedStoreItems = linkedSetOf<ShoppingItemKey>()
 
         for (itemKey in request.itemKeys) {
-            val prices = listOfNotNull(base.prices[itemKey], added.prices[itemKey])
+            val basePrice = base.prices[itemKey]
+            val addedPrice = added.prices[itemKey]
+            val prices = listOfNotNull(basePrice, addedPrice)
             if (prices.isEmpty()) continue
             covered += itemKey
             selectedPrices += prices.minBy { it.minorUnits }
+            if (
+                addedPrice != null &&
+                    (basePrice == null || addedPrice.minorUnits < basePrice.minorUnits)
+            ) {
+                addedStoreItems += itemKey
+            }
         }
 
         if (covered != request.itemKeys.toSet()) return null
+        if (addedStoreItems.isEmpty()) return null
 
         return TwoStorePlanCandidate(
             baseStoreKey = pair.base,
             addedStoreKey = pair.added,
             coveredItemKeys = covered,
+            addedStoreItemKeys = addedStoreItems,
             knownCombinedBasketCost = exactTotal(selectedPrices),
             additionalTravel = pair.additionalTravel,
             evidence = unknownEvidence(covered.size)
