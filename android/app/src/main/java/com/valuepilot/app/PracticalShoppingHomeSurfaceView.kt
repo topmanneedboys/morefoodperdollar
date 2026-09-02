@@ -325,6 +325,8 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private fun renderExtraStopSettings(
         state: PracticalShoppingHomeExtraStopSettingsRenderState
     ) {
+        extraStopSettingsButton.visibility = if (state.visible) VISIBLE else GONE
+        if (!state.visible) extraStopSettingsExpanded = false
         extraStopSettingsButton.text = state.summary
         extraStopSettingsBody.removeAllViews()
         extraStopSettingsBody.addView(line(state.prompt, 15f, "#111827", true))
@@ -353,7 +355,12 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     }
 
     private fun syncExtraStopSettingsVisibility() {
-        extraStopSettingsCard.visibility = if (extraStopSettingsExpanded) VISIBLE else GONE
+        extraStopSettingsCard.visibility =
+            if (extraStopSettingsButton.visibility == VISIBLE && extraStopSettingsExpanded) {
+                VISIBLE
+            } else {
+                GONE
+            }
     }
 
     private fun primaryCard(state: PracticalShoppingPrimaryUiState): View =

@@ -23,6 +23,7 @@ class PracticalShoppingHomeRendererTest {
         assertNull(rendered.refinement)
         assertTrue(rendered.unknownItems.isEmpty())
         assertNull(rendered.result)
+        assertFalse(rendered.extraStopSettings.visible)
         assertEquals("Extra-stop rule · Save at least 15.00 CAD", rendered.extraStopSettings.summary)
         assertEquals(
             listOf("1.00 CAD", "15.00 CAD", "25.00 CAD"),
@@ -74,6 +75,7 @@ class PracticalShoppingHomeRendererTest {
             refinement.choices.map { it.choice }
         )
         assertNull(rendered.result)
+        assertFalse(rendered.extraStopSettings.visible)
     }
 
     @Test
@@ -127,6 +129,7 @@ class PracticalShoppingHomeRendererTest {
         val rendered = PracticalShoppingHomeRenderer.render(model.ui)
 
         assertSame(sourceResult, rendered.result)
+        assertTrue(rendered.extraStopSettings.visible)
         assertEquals("Your best practical shop", rendered.result?.headline)
         assertEquals("Example Grocer East", rendered.result?.primary?.storeName)
         assertEquals("Basket 18.77 CAD", rendered.result?.primary?.basketCostText)
@@ -146,22 +149,25 @@ class PracticalShoppingHomeRendererTest {
         val rendered = PracticalShoppingHomeRenderer.render(model.ui)
 
         assertSame(sourceResult, rendered.result)
+        assertTrue(rendered.extraStopSettings.visible)
         assertEquals("Known subtotal 4.49 CAD", rendered.result?.primary?.basketCostText)
         assertEquals("Missing price: Coffee", rendered.result?.primary?.missingItemsText)
         assertTrue(rendered.sampleNotice.contains("Fictional sample data"))
     }
 
     @Test
-    fun selectedExactExtraStopPreferenceIsUiReadyAndRemainsTyped() {
+    fun selectedExactExtraStopPreferenceIsUiReadyAfterAResultAndRemainsTyped() {
         var model = LocalSamplePracticalShoppingDemo.initialModel()
         model =
             PracticalShoppingHomeSession.chooseExtraStopMinimumSavings(
                 model,
                 LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.TWENTY_FIVE_CAD
             )
+        model = PracticalShoppingHomeSession.submit(model, "eggs milk")
 
         val rendered = PracticalShoppingHomeRenderer.render(model.ui)
 
+        assertTrue(rendered.extraStopSettings.visible)
         assertEquals("Extra-stop rule · Save at least 25.00 CAD", rendered.extraStopSettings.summary)
         val selected = rendered.extraStopSettings.choices.single { it.selected }
         assertEquals("25.00 CAD", selected.label)
@@ -183,6 +189,7 @@ class PracticalShoppingHomeRendererTest {
 
         assertEquals(tooLong, rendered.query)
         assertFalse(rendered.submitEnabled)
+        assertFalse(rendered.extraStopSettings.visible)
         assertEquals(PracticalShoppingHomeMessageTone.ERROR, rendered.messageTone)
         assertTrue(rendered.items.isEmpty())
         assertTrue(rendered.unknownItems.isEmpty())

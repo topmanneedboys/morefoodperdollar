@@ -58,6 +58,7 @@ data class PracticalShoppingHomeExtraStopSavingsChoiceRenderState(
 }
 
 data class PracticalShoppingHomeExtraStopSettingsRenderState(
+    val visible: Boolean,
     val summary: String,
     val prompt: String,
     val choices: List<PracticalShoppingHomeExtraStopSavingsChoiceRenderState>
@@ -138,6 +139,7 @@ object PracticalShoppingHomeRenderer {
             result = source.result,
             extraStopSettings =
                 PracticalShoppingHomeExtraStopSettingsRenderState(
+                    visible = source.result != null,
                     summary =
                         "Extra-stop rule · Save at least " +
                             source.extraStopMinimumSavingsChoice.label,
