@@ -8,9 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`be9824b66545704da237bcc4c9066f32df6d7167` — `Keep Basket item preferences visible`
+`95636977ab3b5d29beaa059713c2b97082c4bccf` — `Give Basket check-off actions full context`
 
-GitHub Actions workflow run **33684272016** completed successfully (candidate run **33683624793** also passed).
+GitHub Actions workflow run **33685422755** completed successfully (candidate run **33684835762** also passed).
+
+The latest Basket accessibility refinement closes a semantic context gap in the existing check-off controls. Because a button content description replaces its visible label for assistive technology, each collection action now names the item, its existing detail, the saved preference summary and the preference-only notice, followed by whether the action will mark it collected or not collected. This copy is derived from immutable Home projection plus local foreground collection state; it adds no matching, pricing, eligibility, planner, ranking, evidence, persistence or networking authority. Deterministic tests cover both action directions and the no-business-authority View boundary.
 
 The latest Basket refinement closes a consumer-facing context gap in the existing immutable Home/Basket projection. Check-off and recognized-item rows now render the already-projected request-details summary and optional preference-only notice beneath each item, so saved package count, preferred brand and exact-product intent remain visible during collection. This is renderer-ready copy only: the physical View does not reconstruct details or make matching decisions, and the change does not alter the immutable plan, eligible item keys, totals, ranking, pricing, evidence or persistence.
 

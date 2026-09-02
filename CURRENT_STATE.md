@@ -8,7 +8,7 @@ Android version: 101.1.0 (10101)
 
 ## Current verified engineering head
 
-`be9824b66545704da237bcc4c9066f32df6d7167` (`Keep Basket item preferences visible`) is the promoted milestone, verified by candidate workflow **33683624793** and milestone workflow **33684272016**. Basket check-off and recognized-item rows now carry the existing immutable `requestDetailsSummary` and optional `requestDetailsNotice`, so package/brand/exact-product intent stays visible while collecting items. The notice remains explicitly preference-only and the View only binds renderer-ready text; plan, eligibility, totals, ranking, pricing, evidence and persistence authority are unchanged. Watch selection rows still carry item-specific toggle descriptions, Saved removal actions remain item-specific, and Watch policy editors remain field-specific. Clean-source verification passed 1,634 JVM tests (375 shared-core + 1,259 Android app), all 58 Android tasks, all 30 browser tests, APK privacy checks, one-signer verification and release-bundle provenance.
+`95636977ab3b5d29beaa059713c2b97082c4bccf` (`Give Basket check-off actions full context`) is the promoted milestone, verified by candidate workflow **33684835762** and milestone workflow **33685422755**. Basket check-off buttons now give assistive technology the item name, existing item detail, saved preference summary and preference-only notice alongside the collected/not-collected action. The description is derived only from immutable Home projection plus local foreground check-off state; plan, eligibility, totals, ranking, pricing, evidence and persistence authority are unchanged. Basket rows still visibly carry the same details, Watch selection rows still carry item-specific toggle descriptions, Saved removal actions remain item-specific, and Watch policy editors remain field-specific. Clean-source verification passed 1,635 JVM tests (375 shared-core + 1,260 Android app), all 58 Android tasks, all 30 browser tests, APK privacy checks, one-signer verification and release-bundle provenance.
 
 ## Prior checkpoint (superseded)
 
@@ -197,7 +197,7 @@ Do not silently change this boundary. Future networking/server additions require
 
 Do not keep adding speculative Android production/provider plumbing.
 
-The Practical Shopping MVP fixture/controller, one-store planner/projector, Home/Basket/Saved surfaces, Watch setup/policy presentation, and required consumer correction flows are implemented at the promoted head. The latest slice adds assistive-technology context to the Watch policy controls without changing the existing typed input, finalization, or handoff boundaries.
+The Practical Shopping MVP fixture/controller, one-store planner/projector, Home/Basket/Saved surfaces, Watch setup/policy presentation, and required consumer correction flows are implemented at the promoted head. The latest slice gives Basket check-off actions full item and preference context for assistive technology without changing the existing typed collection state or shopping decision boundaries.
 
 Next engineering slice: re-audit the current Home/Basket/Saved consumer surfaces and tests, then choose one small reversible clarity or accessibility improvement that uses existing immutable projection. Keep the following acceptance constraints active:
 
