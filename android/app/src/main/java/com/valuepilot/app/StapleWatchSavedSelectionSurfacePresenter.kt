@@ -23,6 +23,9 @@ class StapleWatchSavedSelectionSurfacePresenter private constructor(
     private val renderer: StapleWatchSavedSelectionSurfaceRenderer,
     private val factCheckCapability: StapleWatchForegroundFactCheckCapability
 ) {
+    private var lastIdentityState: StapleWatchSavedSelectionUiState? = null
+    private var handoffAttempt: StapleWatchSavedIdentityHandoffAttempt? = null
+
     constructor(renderer: StapleWatchSavedSelectionSurfaceRenderer) :
         this(
             renderer,
@@ -48,11 +51,36 @@ class StapleWatchSavedSelectionSurfacePresenter private constructor(
                 selection = selection,
                 metadata = metadata
             )
-        renderer.render(
+        val nextState =
             StapleWatchSavedFactCheckCapabilityUiAdapter.apply(
                 state = identityState,
                 capability = factCheckCapability
             )
+        if (lastIdentityState != nextState) {
+            handoffAttempt = null
+        }
+        lastIdentityState = nextState
+        renderer.render(
+            StapleWatchSavedSelectionHandoffUiAdapter.apply(
+                state = nextState,
+                attempt = handoffAttempt
+            )
         )
+    }
+
+    /**
+     * Records the latest explicit handoff result for the current immutable setup projection.
+     * This is presentation-only feedback; it does not create or retry a fact check.
+     */
+    fun onHandoffAttempt(attempt: StapleWatchSavedIdentityHandoffAttempt) {
+        handoffAttempt = attempt
+        lastIdentityState?.let { state ->
+            renderer.render(
+                StapleWatchSavedSelectionHandoffUiAdapter.apply(
+                    state = state,
+                    attempt = attempt
+                )
+            )
+        }
     }
 }

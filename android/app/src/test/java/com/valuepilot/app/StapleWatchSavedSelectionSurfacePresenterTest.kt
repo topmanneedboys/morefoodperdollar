@@ -3,6 +3,7 @@ package com.valuepilot.app
 import com.valuepilot.core.EvidenceProviderId
 import com.valuepilot.core.PracticalShoppingStoreIdentityScope
 import com.valuepilot.core.ShoppingItemKey
+import com.valuepilot.core.ShoppingRequest
 import com.valuepilot.core.ShoppingStoreKey
 import com.valuepilot.core.SourceProductIdentity
 import org.junit.Assert.assertEquals
@@ -119,6 +120,70 @@ class StapleWatchSavedSelectionSurfacePresenterTest {
     }
 
     @Test
+    fun acceptedHandoffIsAcknowledgedUntilTheSelectionChanges() {
+        val saved = savedState()
+        val selection =
+            StapleWatchSavedIdentitySelection(
+                watchedItemKeys = listOf(milk, eggs),
+                usualStoreKey = north
+            )
+        val rendered = mutableListOf<StapleWatchSavedSelectionUiState>()
+        val presenter =
+            StapleWatchSavedSelectionSurfacePresenter(
+                StapleWatchForegroundFactCheckCapability.CONFIGURED
+            ) { state -> rendered += state }
+
+        presenter.render(saved, selection, metadata())
+        presenter.onHandoffAttempt(
+            StapleWatchSavedIdentityHandoffAttempt(
+                handoff =
+                    StapleWatchSavedIdentityHandoff(
+                        request = ShoppingRequest(listOf(milk, eggs)),
+                        usualStoreKey = north
+                    ),
+                issue = null
+            )
+        )
+
+        assertTrue(rendered.last().notice?.contains("Selection accepted") == true)
+        assertTrue(rendered.last().notice?.contains("No switch decision has been made") == true)
+
+        presenter.render(
+            saved,
+            selection.copy(watchedItemKeys = listOf(milk)),
+            metadata()
+        )
+
+        assertFalse(rendered.last().notice?.contains("Selection accepted") == true)
+    }
+
+    @Test
+    fun rejectedHandoffExplainsTheFailClosedSetupIssue() {
+        val saved = savedState()
+        val selection =
+            StapleWatchSavedIdentitySelection(
+                watchedItemKeys = listOf(milk, eggs),
+                usualStoreKey = north
+            )
+        var rendered: StapleWatchSavedSelectionUiState? = null
+        val presenter =
+            StapleWatchSavedSelectionSurfacePresenter(
+                StapleWatchForegroundFactCheckCapability.CONFIGURED
+            ) { state -> rendered = state }
+
+        presenter.render(saved, selection, metadata())
+        presenter.onHandoffAttempt(
+            StapleWatchSavedIdentityHandoffAttempt(
+                handoff = null,
+                issue = StapleWatchSavedIdentityHandoffIssue.NOT_READY
+            )
+        )
+
+        assertTrue(rendered?.notice?.contains("no longer ready") == true)
+        assertEquals(StapleWatchSavedIdentityHandoffUiAction.Request, rendered?.continueAction)
+    }
+
+    @Test
     fun rendererContractAndPresentationSourcesKeepAuthorityOutsidePhysicalSurface() {
         val renderMethod =
             StapleWatchSavedSelectionSurfaceRenderer::class.java.methods
@@ -127,10 +192,12 @@ class StapleWatchSavedSelectionSurfacePresenterTest {
 
         val presenterSource = source("StapleWatchSavedSelectionSurfacePresenter.kt").readText()
         val capabilitySource = source("StapleWatchSavedFactCheckCapabilityPresentation.kt").readText()
+        val handoffSource = source("StapleWatchSavedSelectionHandoffPresentation.kt").readText()
         assertTrue(presenterSource.contains("StapleWatchForegroundFactCheckCapability.NOT_CONFIGURED"))
         assertTrue(capabilitySource.contains("state.status != StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK"))
         assertFalse(presenterSource.contains("android."))
         assertFalse(capabilitySource.contains("android."))
+        assertFalse(handoffSource.contains("android."))
         listOf(
             "StapleWatchEconomicEvaluator",
             "StapleWatchEconomicDecision",
@@ -145,6 +212,7 @@ class StapleWatchSavedSelectionSurfacePresenterTest {
         ).forEach { forbidden ->
             assertFalse("Presenter must not own $forbidden", presenterSource.contains(forbidden))
             assertFalse("Capability gate must not own $forbidden", capabilitySource.contains(forbidden))
+            assertFalse("Handoff presentation must not own $forbidden", handoffSource.contains(forbidden))
         }
     }
 

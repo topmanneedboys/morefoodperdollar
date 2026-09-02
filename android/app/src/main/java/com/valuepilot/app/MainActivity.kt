@@ -756,6 +756,7 @@ class MainActivity : AppCompatActivity() {
             )
         stapleWatchSetupCoordinator =
             StapleWatchSavedSetupCompositionCoordinator(
+                handoffAttemptObserver = stapleSetupPresenter::onHandoffAttempt,
                 factCheckIntentObserver = stapleWatchFactResolutionHost,
                 sessionFactory = { snapshot ->
                     StapleWatchSavedSelectionRouteSession(
