@@ -8,11 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`dac075f24b1af2ba15d04a0b7cda3c09fc3cba6a` — `Label Home removal actions for accessibility`
+`b9b62dba2383c19c99177d569089db77ee4809b3` — `Accept common list connectors on Home`
 
 GitHub Actions workflow run **33595352412** completed successfully.
 
-The current promoted Home slice keeps the fictional sample flow isolated while allowing users to remove recognized items or unresolved tokens and immediately re-plan. Removal actions carry opaque typed keys/tokens through the controller, preserve unknown and ambiguous states, and expose item-specific accessibility descriptions. No planner, projector, provider or Android privacy boundary was changed.
+The current promoted Home slice keeps the fictional sample flow isolated while allowing users to remove recognized items or unresolved tokens and immediately re-plan. Removal actions carry opaque typed keys/tokens through the controller, preserve unknown and ambiguous states, and expose item-specific accessibility descriptions. Natural conjunctions (`and`/`&`) are treated as list syntax while unknown product words still remain explicit. No planner, projector, provider or Android privacy boundary was changed.
 
 The preceding projector implementation and fixture history remain below as historical context.
 
