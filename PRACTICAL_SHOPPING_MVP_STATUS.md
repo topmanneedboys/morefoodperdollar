@@ -8,11 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`e0c98dcd2cccd161b8ad25a762f0a846e74f6165` — `Bound Compare Here editor drafts`
+`c6c36416ab136473d7ddc22eef232de6ed090e55` — `Bound Practical Shopping Home query input`
 
-GitHub Actions workflow run **33630064672** completed successfully (candidate run **33629519482** also passed).
+GitHub Actions workflow run **33631859937** completed successfully (candidate run **33631294443** also passed).
 
-The current promoted Home slice keeps the fictional sample flow isolated while allowing users to remove recognized items or unresolved tokens and immediately re-plan. Removal actions carry opaque typed keys/tokens through the controller, preserve unknown and ambiguous states, and expose item-specific accessibility descriptions. Natural conjunctions (`and`/`&`) are treated as list syntax while unknown product words still remain explicit. Result cards label their evidence line “Price freshness,” clarifying that an unknown count refers to freshness rather than price.
+The current promoted Home slice keeps the fictional sample flow isolated while allowing users to remove recognized items or unresolved tokens and immediately re-plan. Removal actions carry opaque typed keys/tokens through the controller, preserve unknown and ambiguous states, and expose item-specific accessibility descriptions. Natural conjunctions (`and`/`&`) are treated as list syntax while unknown product words still remain explicit. Result cards label their evidence line “Price freshness,” clarifying that an unknown count refers to freshness rather than price. The list editor now displays the model's existing 240-character limit and physically retains no more than its existing one-character over-limit sentinel, so a very large paste cannot flow through lifecycle state while the honest over-limit error remains reachable. Immutable presentation carries the limit; the Android View binds only the matching counter and filter.
 
 The extra-stop preference is now genuine progressive disclosure. It stays off the untouched, draft, clarification and error surfaces so `Plan my shop` remains the obvious first action. Once an actual complete or incomplete result exists, immutable render state exposes the persisted exact savings threshold; changing it continues through the existing typed controller and shared-core planner. The physical View only binds visibility and owns no status, money, policy or ranking decision.
 
