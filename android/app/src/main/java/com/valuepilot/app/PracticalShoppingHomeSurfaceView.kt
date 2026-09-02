@@ -39,6 +39,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     var onChickenChoice: ((LocalSamplePracticalShoppingDemo.ChickenChoice) -> Unit)? = null
     var onExtraStopMinimumSavingsChoice:
         ((LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice) -> Unit)? = null
+    var onEditItemDetails: ((ShoppingItemKey) -> Unit)? = null
     var onCompare: (() -> Unit)? = null
 
     private var suppressInputCallback = false
@@ -217,18 +218,31 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     }
 
     private fun itemRow(item: PracticalShoppingHomeItemRenderState): View =
-        actionRow(
-            label = "${item.name}  •  ${item.detail}",
-            onRemove = { onRemoveItem?.invoke(item.key) },
-            removeDescription =
-                context.getString(R.string.home_remove_item_description, item.name)
-        )
+        bareColumn().apply {
+            layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 5)
+            addView(
+                actionRow(
+                    label = "${item.name}  •  ${item.detail}",
+                    onRemove = { onRemoveItem?.invoke(item.key) },
+                    removeDescription =
+                        context.getString(R.string.home_remove_item_description, item.name),
+                    onDetails = { onEditItemDetails?.invoke(item.key) },
+                    detailsLabel = item.requestDetailsActionLabel,
+                    detailsDescription =
+                        context.getString(R.string.home_item_details_action_description, item.name)
+                )
+            )
+            addView(line(item.requestDetailsSummary, 12f, "#6B7280", topPadding = 2))
+        }
 
     private fun actionRow(
         label: String,
         onRemove: () -> Unit,
         lineColor: String = "#374151",
-        removeDescription: String = context.getString(R.string.home_remove_item)
+        removeDescription: String = context.getString(R.string.home_remove_item),
+        onDetails: (() -> Unit)? = null,
+        detailsLabel: String = context.getString(R.string.home_item_details_action),
+        detailsDescription: String = detailsLabel
     ): View =
         LinearLayout(context).apply {
             orientation = HORIZONTAL
@@ -240,8 +254,34 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                     layoutParams = LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
                 }
             )
+            onDetails?.let {
+                addView(detailButton(it, detailsLabel, detailsDescription))
+            }
             addView(removeButton(onRemove, removeDescription))
         }
+
+    private fun detailButton(
+        onDetails: () -> Unit,
+        label: String,
+        description: String
+    ): MaterialButton = MaterialButton(context).apply {
+        text = label
+        contentDescription = description
+        isAllCaps = false
+        textSize = 12f
+        minHeight = dp(40)
+        minimumHeight = dp(40)
+        minWidth = 0
+        minimumWidth = 0
+        insetTop = 0
+        insetBottom = 0
+        setPadding(dp(8), 0, dp(8), 0)
+        layoutParams = LinearLayout.LayoutParams(
+            LayoutParams.WRAP_CONTENT,
+            dp(40)
+        ).apply { leftMargin = dp(4) }
+        setOnClickListener { onDetails() }
+    }
 
     private fun removeButton(onRemove: () -> Unit, description: String): MaterialButton =
         MaterialButton(context).apply {

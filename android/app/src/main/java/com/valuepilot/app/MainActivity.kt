@@ -7,6 +7,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.Editable
+import android.text.InputFilter
+import android.text.InputType
 import android.text.TextWatcher
 import android.util.TypedValue
 import android.view.Gravity
@@ -14,10 +16,12 @@ import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -26,6 +30,8 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.chip.Chip
 import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
+import com.valuepilot.core.ShoppingItemKey
 import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
@@ -362,14 +368,148 @@ class MainActivity : AppCompatActivity() {
                 )
             renderHome()
         }
+        homeExperience.onEditItemDetails = { itemKey ->
+            showHomeItemDetails(itemKey)
+        }
         homeExperience.onCompare = { openComparison() }
         renderHome()
     }
 
     private fun renderHome() {
-        val homeState = PracticalShoppingHomeRenderer.render(homeSessionState.model.ui)
+        val homeState =
+            PracticalShoppingHomeRenderer.render(
+                homeSessionState.model.ui,
+                homeSessionState.requestDetails.details
+            )
         homeExperience.render(homeState)
         basketExperience.render(PracticalShoppingBasketRenderer.render(homeState))
+    }
+
+    private fun showHomeItemDetails(itemKey: ShoppingItemKey) {
+        val item = homeSessionState.model.ui.items.firstOrNull { it.key == itemKey } ?: return
+        val current = homeSessionState.requestDetails.details?.detailFor(itemKey)
+        if (homeSessionState.requestDetails.details == null) return
+
+        val draft = PracticalShoppingHomeItemDetailsEditor.initialDraft(current)
+        val body = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(4), dp(4), dp(4), 0)
+        }
+        val packageLayout = TextInputLayout(this).apply {
+            hint = getString(R.string.home_item_details_package_count_hint)
+            isCounterEnabled = true
+            counterMaxLength = 7
+        }
+        val packageInput = TextInputEditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+            imeOptions = EditorInfo.IME_ACTION_NEXT
+            filters = arrayOf(InputFilter.LengthFilter(7))
+            setText(draft.packageCountText)
+            setSelectAllOnFocus(false)
+        }
+        packageLayout.addView(packageInput)
+
+        val brandLayout = TextInputLayout(this).apply {
+            hint = getString(R.string.home_item_details_brand_hint)
+            isCounterEnabled = true
+            counterMaxLength = 160
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(12) }
+        }
+        val brandInput = TextInputEditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
+            imeOptions = EditorInfo.IME_ACTION_DONE
+            filters = arrayOf(InputFilter.LengthFilter(160))
+            setText(draft.brandText)
+            setSingleLine(true)
+        }
+        brandLayout.addView(brandInput)
+
+        val exactProduct = CheckBox(this).apply {
+            text = getString(R.string.home_item_details_exact_product)
+            isChecked = draft.exactProduct
+            setPadding(0, dp(8), 0, 0)
+        }
+        body.addView(packageLayout)
+        body.addView(brandLayout)
+        body.addView(exactProduct)
+        body.addView(
+            TextView(this).apply {
+                text = getString(R.string.home_item_details_exact_product_note)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                setTextColor(Color.parseColor("#6B7280"))
+                setPadding(dp(4), 0, dp(4), 0)
+            }
+        )
+
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(getString(R.string.home_item_details_title, item.name))
+                .setMessage(getString(R.string.home_item_details_body))
+                .setView(body)
+                .setNegativeButton(R.string.cancel, null)
+                .setNeutralButton(R.string.home_item_details_clear) { _, _ ->
+                    homeSessionState =
+                        PracticalShoppingHomeSession.withoutItemDetail(
+                            homeSessionState,
+                            itemKey
+                        )
+                    renderHome()
+                }
+                .setPositiveButton(R.string.home_item_details_save, null)
+                .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                packageLayout.error = null
+                brandLayout.error = null
+                when (
+                    val outcome =
+                        PracticalShoppingHomeItemDetailsEditor.apply(
+                            itemKey = itemKey,
+                            current = current,
+                            draft =
+                                PracticalShoppingHomeItemDetailsEditor.Draft(
+                                    packageCountText = packageInput.text?.toString().orEmpty(),
+                                    brandText = brandInput.text?.toString().orEmpty(),
+                                    exactProduct = exactProduct.isChecked
+                                )
+                        )
+                ) {
+                    is PracticalShoppingHomeItemDetailsEditor.Outcome.Accepted -> {
+                        homeSessionState =
+                            outcome.detail?.let { detail ->
+                                PracticalShoppingHomeSession.withItemDetail(
+                                    homeSessionState,
+                                    detail
+                                )
+                            } ?: PracticalShoppingHomeSession.withoutItemDetail(
+                                homeSessionState,
+                                itemKey
+                            )
+                        renderHome()
+                        dialog.dismiss()
+                    }
+
+                    is PracticalShoppingHomeItemDetailsEditor.Outcome.Rejected -> {
+                        when (outcome.field) {
+                            PracticalShoppingHomeItemDetailsEditor.Field.PACKAGE_COUNT -> {
+                                packageLayout.error = outcome.message
+                                packageInput.requestFocus()
+                            }
+
+                            PracticalShoppingHomeItemDetailsEditor.Field.BRAND -> {
+                                brandLayout.error = outcome.message
+                                brandInput.requestFocus()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        dialog.show()
     }
 
     private fun configureBasketUi() {

@@ -78,6 +78,16 @@
     <string name="home_items_title">On your list</string>
     <string name="home_remove_item">Remove</string>
     <string name="home_remove_item_description">Remove %1$s from this list</string>
+    <string name="home_item_details_action">Add details</string>
+    <string name="home_item_details_action_description">Add or edit preferences for %1$s</string>
+    <string name="home_item_details_title">%1$s preferences</string>
+    <string name="home_item_details_body">Optional preferences are saved with this list. The fictional sample plan total stays unchanged until a verified planner mapping is introduced.</string>
+    <string name="home_item_details_package_count_hint">Package count (optional)</string>
+    <string name="home_item_details_brand_hint">Preferred brand (optional)</string>
+    <string name="home_item_details_exact_product">Require this exact product</string>
+    <string name="home_item_details_exact_product_note">This is your preference, not proof of product identity. A verified product match is still required before any planner can use it.</string>
+    <string name="home_item_details_clear">Clear preferences</string>
+    <string name="home_item_details_save">Save preferences</string>
     <string name="home_refinement_title">ONE QUICK QUESTION</string>
     <string name="home_refinement_question">Which %1$s?</string>
     <string name="home_unknown_title">Needs clarification</string>

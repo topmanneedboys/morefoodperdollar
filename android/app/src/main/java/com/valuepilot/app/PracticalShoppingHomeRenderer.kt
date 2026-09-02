@@ -1,6 +1,7 @@
 package com.valuepilot.app
 
 import com.valuepilot.core.ShoppingItemKey
+import com.valuepilot.core.ShoppingRequestDetails
 
 /**
  * Android-facing immutable presentation for the Practical Shopping Home proof.
@@ -19,12 +20,16 @@ enum class PracticalShoppingHomeMessageTone {
 data class PracticalShoppingHomeItemRenderState(
     val key: ShoppingItemKey,
     val name: String,
-    val detail: String
+    val detail: String,
+    val requestDetailsSummary: String,
+    val requestDetailsActionLabel: String
 ) {
     init {
         require(key.value.isNotBlank())
         require(name.isNotBlank())
         require(detail.isNotBlank())
+        require(requestDetailsSummary.isNotBlank())
+        require(requestDetailsActionLabel.isNotBlank())
     }
 }
 
@@ -96,6 +101,12 @@ data class PracticalShoppingHomeRenderState(
 object PracticalShoppingHomeRenderer {
 
     fun render(source: LocalSamplePracticalShoppingDemo.UiState): PracticalShoppingHomeRenderState =
+        render(source, requestDetails = null)
+
+    fun render(
+        source: LocalSamplePracticalShoppingDemo.UiState,
+        requestDetails: ShoppingRequestDetails?
+    ): PracticalShoppingHomeRenderState =
         PracticalShoppingHomeRenderState(
             query = source.query,
             queryCharacterLimit = LocalSamplePracticalShoppingDemo.MAX_QUERY_CHARACTERS,
@@ -119,10 +130,15 @@ object PracticalShoppingHomeRenderer {
                 },
             items =
                 source.items.map { item ->
+                    val itemDetails = requestDetails?.detailFor(item.key)
                     PracticalShoppingHomeItemRenderState(
                         key = item.key,
                         name = item.name,
-                        detail = item.detail
+                        detail = item.detail,
+                        requestDetailsSummary =
+                            PracticalShoppingHomeItemDetailsPresentation.summary(itemDetails),
+                        requestDetailsActionLabel =
+                            PracticalShoppingHomeItemDetailsPresentation.actionLabel(itemDetails)
                     )
                 },
             refinement =

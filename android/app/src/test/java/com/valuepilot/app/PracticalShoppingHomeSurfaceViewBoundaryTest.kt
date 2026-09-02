@@ -56,6 +56,30 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
         }
     }
 
+    @Test
+    fun itemDetailsAreRenderedFromImmutableStateAndForwardedAsTypedKeys() {
+        val source = source().readText()
+
+        listOf(
+            "var onEditItemDetails: ((ShoppingItemKey) -> Unit)? = null",
+            "item.requestDetailsSummary",
+            "item.requestDetailsActionLabel",
+            "onEditItemDetails?.invoke(item.key)"
+        ).forEach { required ->
+            assertTrue("Expected Home item-details binding $required", source.contains(required))
+        }
+
+        listOf(
+            "ShoppingRequestedQuantity(",
+            "ShoppingItemRequestDetail(",
+            "ShoppingBrandKey(",
+            "PracticalShoppingPlanner",
+            "Money.parse"
+        ).forEach { forbidden ->
+            assertFalse("Home View must not construct or interpret item intent through $forbidden", source.contains(forbidden))
+        }
+    }
+
     private fun source(): File {
         val workingDirectory =
             requireNotNull(System.getProperty("user.dir")) {

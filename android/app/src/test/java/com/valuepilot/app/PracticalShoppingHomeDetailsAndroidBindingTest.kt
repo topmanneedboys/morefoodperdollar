@@ -19,7 +19,12 @@ class PracticalShoppingHomeDetailsAndroidBindingTest {
             "savedInstanceState?.getByteArray(STATE_HOME_REQUEST_DETAILS)",
             "PracticalShoppingHomeSession.restoreState(",
             "PracticalShoppingHomeSession.queryChanged(homeSessionState, rawQuery)",
-            "PracticalShoppingHomeSession.submit(homeSessionState, rawQuery)"
+            "PracticalShoppingHomeSession.submit(homeSessionState, rawQuery)",
+            "homeExperience.onEditItemDetails",
+            "showHomeItemDetails(itemKey)",
+            "PracticalShoppingHomeItemDetailsEditor.apply(",
+            "PracticalShoppingHomeSession.withItemDetail(",
+            "PracticalShoppingHomeSession.withoutItemDetail("
         ).forEach { required ->
             assertTrue("Expected Home lifecycle binding $required", source.contains(required))
         }
@@ -29,6 +34,7 @@ class PracticalShoppingHomeDetailsAndroidBindingTest {
             "ShoppingRequestDetailsCodec",
             "ShoppingItemRequestDetail(",
             "ShoppingRequestedQuantity(",
+            "ShoppingBrandKey(",
             "PracticalShoppingPlanner",
             "Money.parse"
         ).forEach { forbidden ->
