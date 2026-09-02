@@ -28,8 +28,9 @@ data class PracticalShoppingBasketRenderState(
     /** Exact covered item identities that the foreground check-off may mark. */
     val collectibleItemKeys: List<ShoppingItemKey> =
         if (collectionEnabled) {
-            val assigned = items.filter { it.storeAssignment != null }.map { it.key }
-            if (assigned.isNotEmpty()) assigned else items.map { it.key }
+            // Preserve older direct constructor call sites; the renderer below
+            // always supplies the typed assignment set explicitly.
+            items.map { it.key }
         } else {
             emptyList()
         }
@@ -91,7 +92,8 @@ object PracticalShoppingBasketRenderer {
         // missing-price rows remain visible but have no collection action.
         val collectibleItemKeys =
             if (status == PracticalShoppingBasketStatus.PLANNED && source.result?.primary != null) {
-                source.items.filter { it.storeAssignment != null }.map { it.key }
+                val assignedKeys = source.result.itemStoreAssignments.map { it.itemKey }.toSet()
+                source.items.map { it.key }.filter(assignedKeys::contains)
             } else {
                 emptyList()
             }

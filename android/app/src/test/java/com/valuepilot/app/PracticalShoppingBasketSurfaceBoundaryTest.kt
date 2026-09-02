@@ -10,6 +10,7 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
     @Test
     fun basketMechanicallyRendersImmutableStateAndEmitsOnlyTypedNavigation() {
         val source = source("PracticalShoppingBasketSurfaceView.kt").readText()
+        val renderer = source("PracticalShoppingBasketRenderer.kt").readText()
 
         assertTrue(source.contains("fun render(state: PracticalShoppingBasketRenderState)"))
         assertTrue(source.contains("planResult.render(state.result)"))
@@ -23,6 +24,8 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
         assertTrue(source.contains("No usable price yet — not ready to collect"))
         assertTrue(source.contains("addItemDetails(item, this, state.collectionEnabled)"))
         assertTrue(source.contains("practicalShoppingBasketCollectionActionDescription(item, collected)"))
+        assertTrue(renderer.contains("source.result.itemStoreAssignments"))
+        assertFalse(renderer.contains("storeAssignment != null"))
 
         listOf(
             "PracticalShoppingPlanner",
