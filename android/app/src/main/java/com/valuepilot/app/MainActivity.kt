@@ -454,20 +454,26 @@ class MainActivity : AppCompatActivity() {
             }
         )
 
-        val dialog =
+        val dialogBuilder =
             AlertDialog.Builder(this)
                 .setTitle(getString(R.string.home_item_details_title, item.name))
                 .setMessage(getString(R.string.home_item_details_body))
                 .setView(body)
                 .setNegativeButton(R.string.cancel, null)
-                .setNeutralButton(R.string.home_item_details_clear) { _, _ ->
-                    homeSessionState =
-                        PracticalShoppingHomeSession.withoutItemDetail(
-                            homeSessionState,
-                            itemKey
-                        )
-                    renderHome()
-                }
+
+        if (current != null) {
+            dialogBuilder.setNeutralButton(R.string.home_item_details_clear) { _, _ ->
+                homeSessionState =
+                    PracticalShoppingHomeSession.withoutItemDetail(
+                        homeSessionState,
+                        itemKey
+                    )
+                renderHome()
+            }
+        }
+
+        val dialog =
+            dialogBuilder
                 .setPositiveButton(R.string.home_item_details_save, null)
                 .create()
 

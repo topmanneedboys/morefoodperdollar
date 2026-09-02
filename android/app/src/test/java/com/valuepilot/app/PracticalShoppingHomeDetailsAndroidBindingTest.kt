@@ -25,6 +25,8 @@ class PracticalShoppingHomeDetailsAndroidBindingTest {
             "PracticalShoppingHomeItemDetailsEditor.apply(",
             "PracticalShoppingHomeSession.withItemDetail(",
             "PracticalShoppingHomeSession.withoutItemDetail(",
+            "if (current != null)",
+            "dialogBuilder.setNeutralButton(R.string.home_item_details_clear)",
             "AndroidPracticalShoppingHomeSessionStore(applicationContext)",
             "homeSessionStore.load()",
             "homeSessionStore.save(PracticalShoppingHomeSession.snapshot(homeSessionState))"
