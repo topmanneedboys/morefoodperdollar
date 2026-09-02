@@ -8,9 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`b415cb7b6e723bf3c52958fd62a9e651662623e1` — `Clarify basket without price coverage`
+`a137b7816730c17a83acc91b49dbe95d7455b411` — `Make basket shell copy plan agnostic`
 
-GitHub Actions candidate workflow **33693965885** completed successfully, and milestone provenance workflow **33694455323** completed successfully for the exact same SHA.
+GitHub Actions candidate workflow **33694867066** completed successfully, and milestone provenance workflow **33695284687** completed successfully for the exact same SHA.
+
+The latest Basket shell refinement removes the last static implication that a usable plan must already exist. The Basket title is now “Review your shopping list.” and its description refers to the shopping list from Home, so no-coverage, empty and attention-required states remain honest while complete plans still show their exact projected result below. Deterministic shell integration tests assert the new copy and reject the old plan-specific wording. This remains a reversible presentation-only correction; planner, ranking, price arithmetic, evidence, persistence, clock, provider and network authority stay outside the renderer/View boundary.
 
 The latest Basket presentation refinement completes the no-coverage correction. A recognized request with no usable prices still exposes the honest planner result headline, but Basket now says “Price coverage needed” instead of “Your current basket plan” and hides the generic check-off progress line until a primary store plan exists. The existing Home extra-stop disclosure and Basket extra-stop summary remain hidden without that primary plan, and guidance continues to direct the shopper back to adjust the sample list. Deterministic renderer and View-boundary tests cover the state while preserving complete and incomplete-primary behavior. This remains a presentation-only fail-closed correction; planner, ranking, price arithmetic, evidence, persistence, clock, provider and network authority stay outside the renderer/View boundary.
 
