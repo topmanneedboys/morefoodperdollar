@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   browser-verify:
@@ -214,5 +215,187 @@ jobs:
         with:
           name: ValuePilot-v101-release
           path: release/
+          if-no-files-found: error
+          retention-days: 90
+
+  milestone-provenance-proof:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/work/valuepilot-android-milestone'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Find successful full candidate run for exact SHA
+        id: candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs')
+
+          const token = process.env.GH_TOKEN
+          const repository = process.env.GITHUB_REPOSITORY
+          const sha = process.env.GITHUB_SHA
+          const currentRunId = Number(process.env.GITHUB_RUN_ID)
+          const workflowName = 'Build ValuePilot v101 release'
+          const workflowPath = '.github/workflows/build-valuepilot-android.yml'
+          const requiredJobs = new Set(['browser-verify', 'android-verify', 'release-bundle'])
+          const headers = {
+            Accept: 'application/vnd.github+json',
+            Authorization: `Bearer ${token}`,
+            'X-GitHub-Api-Version': '2022-11-28',
+            'User-Agent': 'valuepilot-milestone-provenance'
+          }
+
+          async function get(path) {
+            const response = await fetch(`https://api.github.com/repos/${repository}${path}`, { headers })
+            if (!response.ok) {
+              throw new Error(`GitHub API ${response.status} for ${path}: ${await response.text()}`)
+            }
+            return response.json()
+          }
+
+          const runs = await get(`/actions/runs?head_sha=${encodeURIComponent(sha)}&per_page=100`)
+          const candidates = runs.workflow_runs
+            .filter(run =>
+              run.id !== currentRunId &&
+              run.name === workflowName &&
+              run.path === workflowPath &&
+              run.head_sha === sha &&
+              run.head_branch?.startsWith('candidate/') &&
+              run.event === 'push' &&
+              run.status === 'completed' &&
+              run.conclusion === 'success'
+            )
+            .sort((left, right) => right.id - left.id)
+
+          let selected = null
+          for (const run of candidates) {
+            const jobs = await get(`/actions/runs/${run.id}/jobs?per_page=100`)
+            const successfulJobs = new Set(
+              jobs.jobs
+                .filter(job => job.status === 'completed' && job.conclusion === 'success')
+                .map(job => job.name)
+            )
+            if (![...requiredJobs].every(name => successfulJobs.has(name))) continue
+
+            const artifacts = await get(`/actions/runs/${run.id}/artifacts?per_page=100`)
+            const release = artifacts.artifacts.find(artifact =>
+              artifact.name === 'ValuePilot-v101-release' &&
+              artifact.expired === false &&
+              artifact.workflow_run?.head_sha === sha
+            )
+            if (!release) continue
+
+            selected = { run, release }
+            break
+          }
+
+          if (!selected) {
+            throw new Error(`No successful full candidate run with a verified release artifact exists for ${sha}`)
+          }
+
+          const output = process.env.GITHUB_OUTPUT
+          fs.appendFileSync(output, `run_id=${selected.run.id}\n`)
+          fs.appendFileSync(output, `artifact_id=${selected.release.id}\n`)
+          fs.appendFileSync(output, `artifact_digest=${selected.release.digest ?? ''}\n`)
+          console.log(`Using candidate run ${selected.run.id} from ${selected.run.head_branch}`)
+          console.log(`Release artifact ${selected.release.id} digest ${selected.release.digest ?? 'unavailable'}`)
+          NODE
+
+      - name: Download exact verified candidate release
+        uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ steps.candidate.outputs.artifact_id }}
+          path: verified-candidate
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.candidate.outputs.run_id }}
+
+      - name: Verify candidate bundle and current milestone ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFIED_CANDIDATE_RUN_ID: ${{ steps.candidate.outputs.run_id }}
+          VERIFIED_ARTIFACT_DIGEST: ${{ steps.candidate.outputs.artifact_digest }}
+        run: |
+          set -euo pipefail
+
+          expected_files=(
+            'COMMIT_SHA.txt'
+            'SHA256SUMS.txt'
+            'ValuePilot-v101-chromium.zip'
+            'ValuePilot-v101-firefox.zip'
+            'ValuePilot-v101.1-android.apk'
+          )
+          actual="$(find verified-candidate -maxdepth 1 -type f -printf '%f\n' | sort)"
+          expected="$(printf '%s\n' "${expected_files[@]}" | sort)"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "Candidate release bundle has unexpected files" >&2
+            echo "Expected:" >&2
+            printf '%s\n' "$expected" >&2
+            echo "Actual:" >&2
+            printf '%s\n' "$actual" >&2
+            exit 1
+          fi
+
+          recorded_sha="$(tr -d '\r\n' < verified-candidate/COMMIT_SHA.txt)"
+          if [[ "$recorded_sha" != "$GITHUB_SHA" ]]; then
+            echo "Candidate artifact SHA $recorded_sha does not match promoted SHA $GITHUB_SHA" >&2
+            exit 1
+          fi
+
+          expected_manifest_files="$(printf '%s\n' \
+            'COMMIT_SHA.txt' \
+            'ValuePilot-v101-chromium.zip' \
+            'ValuePilot-v101-firefox.zip' \
+            'ValuePilot-v101.1-android.apk' | sort)"
+          actual_manifest_files="$(awk '{print $2}' verified-candidate/SHA256SUMS.txt | sed 's/^\*//' | sort)"
+          if [[ "$actual_manifest_files" != "$expected_manifest_files" ]]; then
+            echo "Candidate checksum manifest has unexpected entries" >&2
+            exit 1
+          fi
+
+          (cd verified-candidate && sha256sum -c SHA256SUMS.txt)
+
+          branch_sha="$(node <<'NODE'
+          const token = process.env.GH_TOKEN
+          const repository = process.env.GITHUB_REPOSITORY
+          const branch = encodeURIComponent('work/valuepilot-android-milestone')
+          const response = await fetch(`https://api.github.com/repos/${repository}/branches/${branch}`, {
+            headers: {
+              Accept: 'application/vnd.github+json',
+              Authorization: `Bearer ${token}`,
+              'X-GitHub-Api-Version': '2022-11-28',
+              'User-Agent': 'valuepilot-milestone-provenance'
+            }
+          })
+          if (!response.ok) throw new Error(`Branch lookup failed: ${response.status} ${await response.text()}`)
+          const body = await response.json()
+          console.log(body.commit.sha)
+          NODE
+          )"
+          if [[ "$branch_sha" != "$GITHUB_SHA" ]]; then
+            echo "Milestone branch moved from $GITHUB_SHA to $branch_sha during verification" >&2
+            exit 1
+          fi
+
+          {
+            echo '### ValuePilot milestone provenance proof'
+            echo "- promoted SHA: \`$GITHUB_SHA\`"
+            echo "- verified candidate run: \`$VERIFIED_CANDIDATE_RUN_ID\`"
+            echo "- candidate artifact digest: \`$VERIFIED_ARTIFACT_DIGEST\`"
+            echo '- candidate bundle SHA and internal SHA-256 manifest: verified'
+            echo '- milestone ref still points to promoted SHA: verified'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload provenance-verified candidate copy
+        uses: actions/upload-artifact@v6
+        with:
+          name: ValuePilot-v101-provenance-proof
+          path: verified-candidate/
           if-no-files-found: error
           retention-days: 90
