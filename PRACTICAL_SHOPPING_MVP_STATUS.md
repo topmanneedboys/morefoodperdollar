@@ -8,9 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`9fa17302a8409f6c991c9761f0ac0fda3e08903f` — `Name Watch selection actions`
+`be9824b66545704da237bcc4c9066f32df6d7167` — `Keep Basket item preferences visible`
 
-GitHub Actions workflow run **33683298432** completed successfully (candidate run **33682834699** also passed).
+GitHub Actions workflow run **33684272016** completed successfully (candidate run **33683624793** also passed).
+
+The latest Basket refinement closes a consumer-facing context gap in the existing immutable Home/Basket projection. Check-off and recognized-item rows now render the already-projected request-details summary and optional preference-only notice beneath each item, so saved package count, preferred brand and exact-product intent remain visible during collection. This is renderer-ready copy only: the physical View does not reconstruct details or make matching decisions, and the change does not alter the immutable plan, eligible item keys, totals, ranking, pricing, evidence or persistence.
 
 The latest Watch-selection refinement closes an accessibility context gap in the existing immutable setup surface. Product toggles now identify the saved product they will watch or stop watching, and usual-store toggles identify the saved store they will select or clear. The descriptions are projected alongside the existing typed actions; the physical View binds them without reconstructing identity or interpreting readiness. Deterministic projector and View-boundary tests cover selected and unselected action directions while preserving the no-business-authority boundary.
 
