@@ -32,6 +32,9 @@ class MainActivity : AppCompatActivity() {
 
     private var shellState = AppShellState.initial()
     private var homeModel = LocalSamplePracticalShoppingDemo.initialModel()
+    private val homePreferenceStore by lazy(LazyThreadSafetyMode.NONE) {
+        AndroidPracticalShoppingHomePreferenceStore(applicationContext)
+    }
 
     private val searchController = UniversalSearchController()
     private var searchState = searchController.initialState()
@@ -298,14 +301,13 @@ class MainActivity : AppCompatActivity() {
                 }
 
         val extraStopMinimumSavingsChoice =
-            savedInstanceState
-                ?.getString(STATE_HOME_EXTRA_STOP_MINIMUM_SAVINGS)
-                ?.let { saved ->
-                    runCatching {
-                        LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.valueOf(saved)
-                    }.getOrNull()
-                }
-                ?: LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.DEFAULT
+            if (savedInstanceState?.containsKey(STATE_HOME_EXTRA_STOP_MINIMUM_SAVINGS) == true) {
+                PracticalShoppingHomePreferenceCodec.decode(
+                    savedInstanceState.getString(STATE_HOME_EXTRA_STOP_MINIMUM_SAVINGS)
+                )
+            } else {
+                homePreferenceStore.loadExtraStopMinimumSavingsChoice()
+            }
 
         return PracticalShoppingHomeSession.restore(
             PracticalShoppingHomeSession.Snapshot(
@@ -335,6 +337,7 @@ class MainActivity : AppCompatActivity() {
             renderHome()
         }
         homeExperience.onExtraStopMinimumSavingsChoice = { choice ->
+            homePreferenceStore.saveExtraStopMinimumSavingsChoice(choice)
             homeModel =
                 PracticalShoppingHomeSession.chooseExtraStopMinimumSavings(homeModel, choice)
             renderHome()
