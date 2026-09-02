@@ -8,9 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`41b269e01e850f9fd12a4fae879cf14e49626844` — `Clarify incomplete plan card treatment`
+`63fe5d1dff6a7038718acb2a50002ad51d547ab5` — `Add Basket check-off reset`
 
-GitHub Actions workflow run **33672562969** completed successfully (candidate run **33671805399** also passed).
+GitHub Actions workflow run **33673790542** completed successfully (candidate run **33673131975** also passed).
+
+The latest Basket refinement adds a local-only “Clear check-off” control. It is hidden until at least one planned item is marked collected, then resets only foreground collection marks while preserving eligible item identities and the immutable plan. Pure progress tests and the physical View boundary test cover the behavior; no planner, ranking, pricing, evidence, provider, or network authority changed.
 
 The latest consumer-facing refinement makes incomplete known-subtotal results visibly distinct from complete baskets without changing any decision or projected text. The shared Home/Basket result-card renderer maps the projector's existing missing-price marker to an amber caution background, border and accent; complete baskets retain the confident green treatment. A pure presentation test covers both styles, and the boundary test confirms that the View still consumes immutable strings only.
 
@@ -22,7 +24,7 @@ The latest app-level slice adds bounded local-only cross-session retention aroun
 
 The Basket primary tab is now a real read-only continuation of Plan My Shop rather than placeholder copy. It receives the existing immutable Home presentation, preserves the exact projected plan object, and shows recognized items, unresolved items, complete or incomplete one-store results, any already-approved optional second stop, and the shopper's selected exact extra-stop rule. Empty, draft, refinement, and unresolved states cannot become a false plan and provide one typed action back to Home. Home and Basket share the same result-card View so complete totals, known subtotals, missing-price notices, travel, freshness/evidence, and second-stop details cannot drift between the two surfaces. The fictional/offline disclosure is repeated prominently on Basket. No shared-core planner/projector, provider integration, Android networking, ranking authority, or money calculation was duplicated or moved into a View.
 
-Clean-source verification passed all 1,621 JVM tests (375 shared-core + 1,246 Android app) with zero failures/errors/skips, all 58 Android tasks, all 30 browser tests, Firefox packaging lint with zero findings, APK privacy inspection, and one-signer APK verification.
+Clean-source verification passed all 1,623 JVM tests (375 shared-core + 1,248 Android app) with zero failures/errors/skips, all 58 Android tasks, all 30 browser tests, Firefox packaging lint with zero findings, APK privacy inspection, and one-signer APK verification.
 
 The current promoted Home slice keeps the fictional sample flow isolated while allowing users to remove recognized items or unresolved tokens and immediately re-plan. Removal actions carry opaque typed keys/tokens through the controller, preserve unknown and ambiguous states, and expose item-specific accessibility descriptions. Natural conjunctions (`and`/`&`) are treated as list syntax while unknown product words still remain explicit. Result cards label their evidence line “Price freshness,” clarifying that an unknown count refers to freshness rather than price. The list editor now displays the model's existing 240-character limit and physically retains no more than its existing one-character over-limit sentinel, so a very large paste cannot flow through lifecycle state while the honest over-limit error remains reachable. Immutable presentation carries the limit; the Android View binds only the matching counter and filter.
 
