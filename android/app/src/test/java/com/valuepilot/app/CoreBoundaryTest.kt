@@ -63,6 +63,8 @@ class CoreBoundaryTest {
         assertTrue(source.contains("CompareHereManualRouteCoordinator.compareBlocks"))
         assertTrue(source.contains("CompareHereManualScreenPresenter"))
         assertTrue(source.contains("CompareHereManualActivitySessionReducer"))
+        assertTrue(source.contains("CompareHereManualProductDraft.removeAt"))
+        assertTrue(source.contains("R.string.remove_product"))
 
         assertFalse(source.contains("StandaloneComparisonController"))
         assertFalse(source.contains("StandaloneComparisonIntent"))

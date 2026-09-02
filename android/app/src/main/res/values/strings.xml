@@ -14,6 +14,8 @@
     <string name="product_input_hint">Honeycrisp apples&#10;3 lb&#10;CA$5.99</string>
 
     <string name="add_another_product">Add another product</string>
+    <string name="remove_product">Remove</string>
+    <string name="remove_product_description">Remove product %1$d</string>
     <string name="like_for_like_confirmation">These products are like-for-like alternatives</string>
     <string name="like_for_like_confirmation_body">Confirm only when every product is a substitute you would reasonably choose between. Editing or adding a product clears this confirmation.</string>
     <string name="compare_value">Compare exact value</string>

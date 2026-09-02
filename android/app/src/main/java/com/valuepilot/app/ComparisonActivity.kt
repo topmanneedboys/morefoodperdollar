@@ -32,6 +32,7 @@ class ComparisonActivity : AppCompatActivity() {
     private lateinit var scannerStatus: TextView
 
     private val productInputs = mutableListOf<EditText>()
+    private val productInputRows = mutableListOf<ProductInputRow>()
 
     private var activityState = CompareHereManualActivitySessionState.initial()
     private var restoringDraft = false
@@ -150,6 +151,7 @@ class ComparisonActivity : AppCompatActivity() {
         restoringDraft = true
 
         productInputs.clear()
+        productInputRows.clear()
         productInputsContainer.removeAllViews()
 
         val initialBlocks =
@@ -241,6 +243,13 @@ class ComparisonActivity : AppCompatActivity() {
             setText(initialText)
         }
 
+        val removeButton = Button(this).apply {
+            text = getString(R.string.remove_product)
+            contentDescription = getString(R.string.remove_product_description, index)
+            isAllCaps = false
+            setOnClickListener { removeProductInput(input) }
+        }
+
         input.addTextChangedListener(
             object : TextWatcher {
                 override fun beforeTextChanged(
@@ -269,11 +278,51 @@ class ComparisonActivity : AppCompatActivity() {
 
         card.addView(label)
         card.addView(input)
+        card.addView(removeButton)
 
         productInputs += input
+        productInputRows += ProductInputRow(card, label, removeButton)
         productInputsContainer.addView(card)
 
         updateAddProductButton()
+        updateRemoveProductButtons()
+    }
+
+    private fun removeProductInput(input: EditText) {
+        val index = productInputs.indexOf(input)
+        if (index < 0) return
+
+        val nextBlocks =
+            CompareHereManualProductDraft.removeAt(
+                blocks = currentProductBlocks(),
+                index = index
+            )
+
+        if (productInputs.size <= 2) {
+            input.setText(nextBlocks[index])
+            return
+        }
+
+        productInputs.removeAt(index)
+        val row = productInputRows.removeAt(index)
+        productInputsContainer.removeView(row.card)
+        refreshProductInputRows()
+        updateAddProductButton()
+        onProductsChanged()
+    }
+
+    private fun refreshProductInputRows() {
+        productInputRows.forEachIndexed { index, row ->
+            row.label.text = getString(R.string.product_number, index + 1)
+            row.removeButton.contentDescription =
+                getString(R.string.remove_product_description, index + 1)
+        }
+        updateRemoveProductButtons()
+    }
+
+    private fun updateRemoveProductButtons() {
+        val visible = if (productInputs.size > 2) View.VISIBLE else View.GONE
+        productInputRows.forEach { row -> row.removeButton.visibility = visible }
     }
 
     private fun currentProductBlocks(): List<String> =
@@ -607,6 +656,12 @@ class ComparisonActivity : AppCompatActivity() {
         val compared: Boolean,
         val observedAtEpochMillis: Long,
         val likeForLikeConfirmed: Boolean
+    )
+
+    private data class ProductInputRow(
+        val card: View,
+        val label: TextView,
+        val removeButton: Button
     )
 
     companion object {
