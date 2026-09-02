@@ -2,9 +2,9 @@
 
 ## Latest promoted consumer boundary
 
-- Promoted code commit: `7a5a9aad412e6672a2b8b1b35d319a1991051e0e` (`Gate Compare Here action on draft readiness`)
-- Candidate workflow: **33627821483** — success
-- Promoted workflow: **33628342847** — success
+- Promoted code commit: `e0c98dcd2cccd161b8ad25a762f0a846e74f6165` (`Bound Compare Here editor drafts`)
+- Candidate workflow: **33629519482** — success
+- Promoted workflow: **33630064672** — success
 
 The manual Compare Here screen now exposes the exact core's existing CURRENT/MEMBER selection instead of silently using CURRENT for every comparison.
 
@@ -17,6 +17,8 @@ The manual Compare Here screen now exposes the exact core's existing CURRENT/MEM
 - Insufficient-evidence guidance names the selected basis; member mode explicitly says current prices are not substitutes.
 - The primary Compare action is disabled until two entries contain text and the user explicitly confirms like-for-like substitutability.
 - Action readiness is pure and bounded but does not parse facts; the exact route remains the sole authority for price, quantity, currency, promotion and ranking outcomes.
+- Each physical editor block uses the evidence adapter's existing 4,096-character limit, bounding paste, lifecycle and persistence work before parsing.
+- Oversized restored blocks fail closed as empty/error entries; they are never silently truncated into partial evidence.
 - The activity passes typed state to the existing route coordinator and does not own comparison arithmetic or ranking authority.
 - The prior bounded product-row removal behavior and minimum two-slot editor shape remain intact.
 
