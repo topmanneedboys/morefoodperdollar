@@ -8,9 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`468729d68d4702ed9a9763a9d099295c0585fbc3` — `Clarify Watch policy requirements`
+`fe0c284e2ffdf496dad1fc40843b033b40c8ab51` — `Clarify Home preference-only details`
 
-GitHub Actions workflow run **33678724010** completed successfully (candidate run **33678145394** also passed).
+GitHub Actions workflow run **33680191624** completed successfully (candidate run **33679577545** also passed).
+
+The latest Home refinement closes a consumer-facing scope gap around explicit item details. When a shopper saves a package count, preferred brand or exact-product preference, the corresponding Home row now shows the compact saved summary plus “Preference only — not applied to this sample plan.” Rows without details remain unchanged. This copy is fixed renderer-ready guidance and does not claim product matching, change the fictional sample total, or grant any planner, ranking, price, evidence, persistence, clock, notification or network authority. Deterministic presentation and View-boundary tests cover present and absent details while asserting that the already-projected plan object remains identical.
 
 The latest Watch policy refinement closes a consumer-facing clarity gap in the existing immutable draft result. When continuation is unavailable, the projector supplies fixed labels in finalization order and the surface renders them in an amber “Still needed” card: Minimum savings, Maximum extra travel time, Maximum extra distance (or no limit), and Minimum watched staples. Complete drafts render no card. The labels are renderer-ready copy only; the existing reducer/finalization remains the sole policy authority, and no planner, ranking, pricing, evidence, persistence, clock, notification or network capability was added. Deterministic projector, adapter and View-boundary tests cover the incomplete, complete and distance-only cases.
 

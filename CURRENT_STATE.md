@@ -8,7 +8,7 @@ Android version: 101.1.0 (10101)
 
 ## Current verified engineering head
 
-`468729d68d4702ed9a9763a9d099295c0585fbc3` (`Clarify Watch policy requirements`) is the promoted milestone, verified by candidate workflow **33678145394** and milestone workflow **33678724010**. The Watch policy form now exposes a bounded amber “Still needed” summary with fixed labels for each unanswered rule, so shoppers know exactly what remains before continuation. Labels are derived from the existing immutable finalization result; the View only renders them and still owns no policy, planning, ranking, pricing, persistence, clock, notification or network authority. Clean-source verification passed 1,631 JVM tests (375 shared-core + 1,256 Android app), all 58 Android tasks, all 30 browser tests, APK privacy checks, one-signer verification and release-bundle provenance.
+`fe0c284e2ffdf496dad1fc40843b033b40c8ab51` (`Clarify Home preference-only details`) is the promoted milestone, verified by candidate workflow **33679577545** and milestone workflow **33680191624**. Home item rows now pair any saved package, brand or exact-product intent with a fixed “Preference only — not applied to this sample plan.” note, closing the gap between truthful detail editing and the still-fictional sample planner. The note is derived in immutable presentation and rendered mechanically; the View still owns no policy, planning, ranking, pricing, persistence, clock, notification or network authority. Clean-source verification passed 1,631 JVM tests (375 shared-core + 1,256 Android app), all 58 Android tasks, all 30 browser tests, APK privacy checks, one-signer verification and release-bundle provenance.
 
 ## Prior checkpoint (superseded)
 
