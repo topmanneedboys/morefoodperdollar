@@ -8,9 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`ba7568e00f31b482afb317ac0018b18ab11294a1` — `Remember Home session preferences locally`
+`636edb9ffc79e25c08a2865cb903fbab18fadeeb` — `Show Watch My Staples selection progress`
 
-GitHub Actions workflow run **33668654967** completed successfully (candidate run **33668046164** also passed).
+GitHub Actions workflow run **33670004754** completed successfully (candidate run **33669434308** also passed).
+
+The latest consumer-facing slice closes a Saved-backed Watch My Staples setup gap. Immutable setup presentation now supplies a deterministic selection summary such as “2 staples selected (2 minimum) · Usual store selected,” and the physical setup surface renders it below the guidance. The minimum remains the existing reducer-owned `MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF` constant, so the View does not infer readiness or duplicate selection policy. No identity, price, travel, evidence, notification, persistence, planner, ranking, or networking authority moved into the renderer.
 
 The latest app-level slice adds bounded local-only cross-session retention around the existing progressive per-item Home details surface and typed `PracticalShoppingHomeSession.State`. The Home session store remembers the last bounded list, chicken choice, extra-stop preference and opaque request-details payload so explicit package count, preferred brand and exact-product intent can survive an app restart. It restores details only for the exact established request, drops oversized/corrupt values safely, and clears stale detail bytes while a draft is being edited. The store reuses the shared-core codec boundary and carries no planner, ranking, price, quantity arithmetic, evidence, clock, networking, or View authority. The existing sample plan object remains unchanged by item intent, and the fictional-plan/no-arithmetic disclosure stays explicit. The milestone provenance check accepts the repository's historical `work/valuepilot-*` candidate branches while excluding the milestone branch itself.
 
