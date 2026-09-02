@@ -1,6 +1,24 @@
 # Compare Here Exact Core Checkpoint
 
-## Verified boundary
+## Latest promoted consumer boundary
+
+- Promoted code commit: `e88db2c722857199e841dd601705d35498ff6860` (`Expose Compare Here price basis selection`)
+- Candidate workflow: **33601160548** — success
+- Promoted workflow: **33601674447** — success
+
+The manual Compare Here screen now exposes the exact core's existing CURRENT/MEMBER selection instead of silently using CURRENT for every comparison.
+
+- Current shelf prices remain the safe default.
+- Member prices require an explicit user selection.
+- Changing the basis invalidates the prior rendered comparison while preserving the user's like-for-like confirmation.
+- The selection is restored through instance state and the local draft using a bounded enum codec; missing, legacy or unknown values default to CURRENT.
+- MEMBER remains strict end to end: a product without an exact member price is blocked, never ranked using its current price.
+- The activity passes typed state to the existing route coordinator and does not own comparison arithmetic or ranking authority.
+- The prior bounded product-row removal behavior and minimum two-slot editor shape remain intact.
+
+Independent verification from a clean LF clone passed shared-core tests, all app JVM tests, Android lint, debug APK assembly, browser checks, Firefox lint, APK privacy permissions, and APK signature verification. Android still has no `INTERNET` or `ACCESS_NETWORK_STATE` permission.
+
+## Original exact-core boundary
 
 - Verified code commit: `389fb72d34d4a214407f826b8093d9beb0aabef2` (`Add exact Compare Here core evaluator`)
 - Workflow: `Build ValuePilot v101 release`
@@ -65,12 +83,10 @@ Focused shared-core tests cover:
 - 32-candidate bound;
 - stable/bounded/control-free comparison-intent keys.
 
-## Boundaries intentionally unchanged
+## Boundaries intentionally unchanged by the latest UI slice
 
-This slice does not modify or activate:
+The exact evaluator and permanent evidence/ranking rules above were not modified. The latest UI slice also does not modify or activate:
 
-- `ComparisonActivity` or the legacy `StandaloneComparisonController`;
-- any Android layout/View/route;
 - barcode/camera/OCR capture;
 - production Search;
 - Saved/confirmation flows;
@@ -78,18 +94,8 @@ This slice does not modify or activate:
 - Android `INTERNET` / `ACCESS_NETWORK_STATE` permissions;
 - accounts, telemetry, remote AI or backend access.
 
-The existing standalone comparison remains a legacy/manual-capture reference and must not become the permanent Compare Here ranking authority because it still routes through legacy `ValueItem` / SMART ranking.
+`ComparisonActivity` now routes the explicit selected basis through `CompareHereManualRouteCoordinator`; it still does not invoke `StandaloneComparisonController`, `ValueEngine`, or legacy SMART ranking authority.
 
 ## Next safe slice
 
-Add a pure Android-application presentation projector around `CompareHereComparisonResult` before changing a View.
-
-The projector should:
-
-1. accept separately supplied human display labels keyed by opaque candidate id;
-2. never fall back to candidate ids or technical/source identifiers;
-3. format exact money/quantity/unit-rate values only, without recalculating ranking;
-4. distinguish READY, not-enough-data, incompatible-dimensions and blocked-candidate states with simple consumer copy;
-5. preserve typed opaque lookups/actions outside renderer strings if future capture/edit flows need them;
-6. remain bounded and JVM-tested;
-7. leave `ComparisonActivity` untouched until the projector itself passes full CI.
+Inspect the current manual Compare Here input experience for the next smallest consumer correction or evidence-clarity gap. Reuse the existing adapter, exact evaluator, projector and route; do not duplicate them. Keep camera/barcode/OCR work separate until a user-controlled capture handoff can provide exact facts without giving Android Views or capture adapters ranking authority.

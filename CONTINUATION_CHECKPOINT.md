@@ -1,6 +1,6 @@
 # ValuePilot Continuation Checkpoint
 
-Updated: 2026-09-01
+Updated: 2026-09-02
 
 Branch: `work/valuepilot-android-milestone`
 
@@ -78,7 +78,7 @@ Launch depth before breadth: one dense metro area, roughly 1,500–5,000 high-fr
 
 ## Latest verified engineering baseline
 
-The current promoted baseline is `b1bc2188be5d323fc7cc6f4461d219220b4b199f` (`Let Compare Here remove extra products`), verified by candidate workflow **33599532313** and promoted workflow **33599960509**. Home supports typed removal of resolved items and unresolved tokens, immediate deterministic replanning, preserved unknown/ambiguous states, item-specific accessibility descriptions, deterministic `and`/`&` list syntax, and an explicit “Price freshness” label on result evidence summaries. Compare Here supports bounded per-entry removal while preserving its minimum two-slot input shape; the local worktree was clean at verification.
+The current promoted baseline is `e88db2c722857199e841dd601705d35498ff6860` (`Expose Compare Here price basis selection`), verified by candidate workflow **33601160548** and promoted workflow **33601674447**. Home supports typed removal of resolved items and unresolved tokens, immediate deterministic replanning, preserved unknown/ambiguous states, item-specific accessibility descriptions, deterministic `and`/`&` list syntax, and an explicit “Price freshness” label on result evidence summaries. Compare Here supports bounded per-entry removal while preserving its minimum two-slot input shape, plus an explicit Current shelf prices / Member prices control wired through pure session state into the existing exact route. Price-basis changes invalidate stale output, restore safely across lifecycle state, default legacy/unknown stored values to CURRENT, and preserve strict member semantics with no current-price fallback. The local worktree was clean at verification.
 
 Minimum known durable code baseline before 2026-08-29 documentation changes: `deaa478c9b679f8820b47a80d7f43c5b18787677` with verified code parent `932838f8d5eedda5d17c7a9dadf76ae38f8bcc9f` (`Re-evaluate production search before display`). Always inspect the current branch tip before work.
 

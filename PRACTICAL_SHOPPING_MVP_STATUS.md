@@ -1,6 +1,6 @@
 # ValuePilot Practical Shopping MVP Status
 
-Updated: 2026-09-01
+Updated: 2026-09-02
 
 Branch: `work/valuepilot-android-milestone`
 
@@ -8,11 +8,13 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`b1bc2188be5d323fc7cc6f4461d219220b4b199f` — `Let Compare Here remove extra products`
+`e88db2c722857199e841dd601705d35498ff6860` — `Expose Compare Here price basis selection`
 
-GitHub Actions workflow run **33599960509** completed successfully (candidate run **33599532313** also passed).
+GitHub Actions workflow run **33601674447** completed successfully (candidate run **33601160548** also passed).
 
-The current promoted Home slice keeps the fictional sample flow isolated while allowing users to remove recognized items or unresolved tokens and immediately re-plan. Removal actions carry opaque typed keys/tokens through the controller, preserve unknown and ambiguous states, and expose item-specific accessibility descriptions. Natural conjunctions (`and`/`&`) are treated as list syntax while unknown product words still remain explicit. Result cards now label their evidence line “Price freshness,” clarifying that an unknown count refers to freshness rather than price. Compare Here’s manual editor also supports bounded per-entry removal without changing the exact comparison core. No planner, provider or Android privacy boundary was changed.
+The current promoted Home slice keeps the fictional sample flow isolated while allowing users to remove recognized items or unresolved tokens and immediately re-plan. Removal actions carry opaque typed keys/tokens through the controller, preserve unknown and ambiguous states, and expose item-specific accessibility descriptions. Natural conjunctions (`and`/`&`) are treated as list syntax while unknown product words still remain explicit. Result cards label their evidence line “Price freshness,” clarifying that an unknown count refers to freshness rather than price.
+
+Compare Here’s manual editor supports bounded per-entry removal and now gives the user an explicit choice between Current shelf prices and Member prices. The selected basis is carried through pure lifecycle state and the existing exact route; changing it invalidates an old comparison, draft restoration preserves it, malformed or legacy stored values safely default to CURRENT, and member mode continues to block products with no member price rather than falling back to current price. No planner, provider, shared-core arithmetic or Android privacy boundary was changed.
 
 The preceding projector implementation and fixture history remain below as historical context.
 

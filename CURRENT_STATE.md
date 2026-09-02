@@ -1,12 +1,12 @@
 # Current state
 
-Updated: 2026-09-01
+Updated: 2026-09-02
 
 Branch: `work/valuepilot-android-milestone`
 
 Android version: 101.1.0 (10101)
 
-Latest promoted Home head: `b1bc2188be5d323fc7cc6f4461d219220b4b199f` (`Let Compare Here remove extra products`), verified by candidate workflow **33599532313** and promoted workflow **33599960509**. Home users can remove resolved items or unresolved tokens through typed controller actions, natural `and`/`&` list syntax is supported, and result cards label freshness explicitly. Compare Here also supports removing extra product entries while preserving its minimum two-slot shape; the sample remains explicitly fictional/offline and the Android privacy boundary is unchanged.
+Latest promoted engineering head: `e88db2c722857199e841dd601705d35498ff6860` (`Expose Compare Here price basis selection`), verified by candidate workflow **33601160548** and promoted workflow **33601674447**. Home users can remove resolved items or unresolved tokens through typed controller actions, natural `and`/`&` list syntax is supported, and result cards label freshness explicitly. Compare Here supports removing extra product entries while preserving its minimum two-slot shape and now exposes an explicit Current shelf prices / Member prices choice. Changing the price basis invalidates a stale result, the choice survives draft restoration, and member mode never substitutes a current price when member evidence is missing. The sample remains explicitly fictional/offline and the Android privacy boundary is unchanged.
 
 ## Product direction now
 
