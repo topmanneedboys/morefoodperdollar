@@ -3,10 +3,63 @@ package com.valuepilot.app
 import com.valuepilot.core.CompareHerePriceSelection
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CompareHereManualActivitySessionTest {
+
+    @Test
+    fun `compare action needs two nonblank product entries`() {
+        listOf(
+            emptyList(),
+            listOf(""),
+            listOf("Milk", "   ")
+        ).forEach { blocks ->
+            val state =
+                CompareHereManualDraftActionEvaluator.evaluate(
+                    rawBlocks = blocks,
+                    likeForLikeConfirmed = true
+                )
+
+            assertEquals(CompareHereManualDraftReadiness.ADD_PRODUCTS, state.readiness)
+            assertFalse(state.compareEnabled)
+        }
+    }
+
+    @Test
+    fun `compare action needs explicit like for like confirmation`() {
+        val state =
+            CompareHereManualDraftActionEvaluator.evaluate(
+                rawBlocks = listOf("Small milk", "Large milk"),
+                likeForLikeConfirmed = false
+            )
+
+        assertEquals(CompareHereManualDraftReadiness.CONFIRM_LIKE_FOR_LIKE, state.readiness)
+        assertFalse(state.compareEnabled)
+    }
+
+    @Test
+    fun `confirmed two-entry draft enables exact route without parsing evidence in readiness`() {
+        val state =
+            CompareHereManualDraftActionEvaluator.evaluate(
+                rawBlocks = listOf("unparsed first block", "unparsed second block"),
+                likeForLikeConfirmed = true
+            )
+
+        assertEquals(CompareHereManualDraftReadiness.READY, state.readiness)
+        assertTrue(state.compareEnabled)
+    }
+
+    @Test
+    fun `draft action evaluation rejects an impossible activity slot count`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            CompareHereManualDraftActionEvaluator.evaluate(
+                rawBlocks = List(CompareHereManualInputAdapter.MAX_OBSERVATIONS + 1) { "product" },
+                likeForLikeConfirmed = true
+            )
+        }
+    }
 
     @Test
     fun `product change invalidates prior comparison and like for like confirmation`() {

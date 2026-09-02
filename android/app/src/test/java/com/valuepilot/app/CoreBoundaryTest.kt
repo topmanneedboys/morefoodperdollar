@@ -68,6 +68,8 @@ class CoreBoundaryTest {
         assertTrue(source.contains("CompareHereManualRouteCoordinator.compareBlocks"))
         assertTrue(source.contains("CompareHereManualScreenPresenter"))
         assertTrue(source.contains("CompareHereManualActivitySessionReducer"))
+        assertTrue(source.contains("CompareHereManualDraftActionEvaluator.evaluate"))
+        assertTrue(source.contains("compareButton.isEnabled = actionState.compareEnabled"))
         assertTrue(source.contains("priceSelectionGroup"))
         assertTrue(source.contains("priceSelectionChanged"))
         assertTrue(source.contains("CompareHerePriceSelectionPersistence"))

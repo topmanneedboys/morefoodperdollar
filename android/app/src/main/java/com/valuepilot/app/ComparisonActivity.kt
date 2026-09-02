@@ -28,6 +28,7 @@ import com.valuepilot.core.CompareHerePriceSelection
 class ComparisonActivity : AppCompatActivity() {
     private lateinit var productInputsContainer: LinearLayout
     private lateinit var addProductButton: Button
+    private lateinit var compareButton: Button
     private lateinit var likeForLikeConfirmation: CheckBox
     private lateinit var priceSelectionGroup: RadioGroup
     private lateinit var comparisonScreen: CompareHereManualScreenView
@@ -48,6 +49,7 @@ class ComparisonActivity : AppCompatActivity() {
 
         productInputsContainer = findViewById(R.id.productInputsContainer)
         addProductButton = findViewById(R.id.addProductButton)
+        compareButton = findViewById(R.id.compareButton)
         likeForLikeConfirmation = findViewById(R.id.likeForLikeConfirmation)
         priceSelectionGroup = findViewById(R.id.priceSelectionGroup)
         comparisonScreen = findViewById(R.id.compareHereScreen)
@@ -106,7 +108,7 @@ class ComparisonActivity : AppCompatActivity() {
             }
         }
 
-        findViewById<Button>(R.id.compareButton).setOnClickListener {
+        compareButton.setOnClickListener {
             val now = System.currentTimeMillis()
             runComparison(
                 blocks = currentProductBlocks(),
@@ -128,7 +130,10 @@ class ComparisonActivity : AppCompatActivity() {
             openAccessibilitySettings()
         }
 
-        if (activityState.comparisonWasRun) {
+        if (
+            activityState.comparisonWasRun &&
+            currentDraftActionState().compareEnabled
+        ) {
             val restoreTime =
                 activityState.observedAtEpochMillis.takeIf { it > 0L }
                     ?: System.currentTimeMillis()
@@ -423,22 +428,23 @@ class ComparisonActivity : AppCompatActivity() {
     }
 
     private fun renderIdleScreen() {
-        val nonBlankProducts = currentProductBlocks().count { it.isNotBlank() }
+        val actionState = currentDraftActionState()
+        compareButton.isEnabled = actionState.compareEnabled
         val content =
-            when {
-                nonBlankProducts < 2 ->
+            when (actionState.readiness) {
+                CompareHereManualDraftReadiness.ADD_PRODUCTS ->
                     CompareHereManualScreenContent.Message(
                         title = getString(R.string.compare_add_products_title),
                         guidance = getString(R.string.compare_add_products_body)
                     )
 
-                !activityState.likeForLikeConfirmed ->
+                CompareHereManualDraftReadiness.CONFIRM_LIKE_FOR_LIKE ->
                     CompareHereManualScreenContent.Message(
                         title = getString(R.string.compare_confirmation_needed_title),
                         guidance = getString(R.string.compare_confirmation_needed_body)
                     )
 
-                else ->
+                CompareHereManualDraftReadiness.READY ->
                     CompareHereManualScreenContent.Message(
                         title = getString(R.string.compare_ready_title),
                         guidance = getString(R.string.compare_ready_body)
@@ -447,6 +453,12 @@ class ComparisonActivity : AppCompatActivity() {
 
         comparisonScreen.render(content)
     }
+
+    private fun currentDraftActionState(): CompareHereManualDraftActionState =
+        CompareHereManualDraftActionEvaluator.evaluate(
+            rawBlocks = currentProductBlocks(),
+            likeForLikeConfirmed = activityState.likeForLikeConfirmed
+        )
 
     private fun clearComparison() {
         activityState = CompareHereManualActivitySessionReducer.clear()

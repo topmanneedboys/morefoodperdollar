@@ -40,6 +40,46 @@ data class CompareHereManualActivitySessionState(
     }
 }
 
+enum class CompareHereManualDraftReadiness {
+    ADD_PRODUCTS,
+    CONFIRM_LIKE_FOR_LIKE,
+    READY
+}
+
+data class CompareHereManualDraftActionState(
+    val readiness: CompareHereManualDraftReadiness
+) {
+    val compareEnabled: Boolean
+        get() = readiness == CompareHereManualDraftReadiness.READY
+}
+
+/**
+ * Pure presentation readiness for the manual Compare Here primary action.
+ *
+ * This boundary intentionally checks only that two product-entry slots contain text and that the
+ * user explicitly confirmed semantic substitutability. It does not parse, validate or rank price,
+ * quantity, currency or promotion evidence; those decisions remain in the existing exact route.
+ */
+object CompareHereManualDraftActionEvaluator {
+
+    fun evaluate(
+        rawBlocks: List<String>,
+        likeForLikeConfirmed: Boolean
+    ): CompareHereManualDraftActionState {
+        require(rawBlocks.size <= CompareHereManualInputAdapter.MAX_OBSERVATIONS)
+
+        val nonBlankProductCount = rawBlocks.count { it.isNotBlank() }
+        val readiness =
+            when {
+                nonBlankProductCount < 2 -> CompareHereManualDraftReadiness.ADD_PRODUCTS
+                !likeForLikeConfirmed -> CompareHereManualDraftReadiness.CONFIRM_LIKE_FOR_LIKE
+                else -> CompareHereManualDraftReadiness.READY
+            }
+
+        return CompareHereManualDraftActionState(readiness)
+    }
+}
+
 /** Deterministic transitions for the activity lifecycle around an unchanged manual draft. */
 object CompareHereManualActivitySessionReducer {
 
