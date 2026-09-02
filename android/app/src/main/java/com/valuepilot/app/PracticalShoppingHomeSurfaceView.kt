@@ -206,13 +206,16 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private fun itemRow(item: PracticalShoppingHomeItemRenderState): View =
         actionRow(
             label = "${item.name}  •  ${item.detail}",
-            onRemove = { onRemoveItem?.invoke(item.key) }
+            onRemove = { onRemoveItem?.invoke(item.key) },
+            removeDescription =
+                context.getString(R.string.home_remove_item_description, item.name)
         )
 
     private fun actionRow(
         label: String,
         onRemove: () -> Unit,
-        lineColor: String = "#374151"
+        lineColor: String = "#374151",
+        removeDescription: String = context.getString(R.string.home_remove_item)
     ): View =
         LinearLayout(context).apply {
             orientation = HORIZONTAL
@@ -224,12 +227,13 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                     layoutParams = LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
                 }
             )
-            addView(removeButton(onRemove))
+            addView(removeButton(onRemove, removeDescription))
         }
 
-    private fun removeButton(onRemove: () -> Unit): MaterialButton =
+    private fun removeButton(onRemove: () -> Unit, description: String): MaterialButton =
         MaterialButton(context).apply {
             text = context.getString(R.string.home_remove_item)
+            contentDescription = description
             isAllCaps = false
             textSize = 12f
             minHeight = dp(40)
@@ -297,7 +301,9 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                 actionRow(
                     label = "• $token",
                     onRemove = { onRemoveUnknownItem?.invoke(token) },
-                    lineColor = "#92400E"
+                    lineColor = "#92400E",
+                    removeDescription =
+                        context.getString(R.string.home_remove_item_description, token)
                 )
             )
         }
