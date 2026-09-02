@@ -34,6 +34,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     var onQueryChanged: ((String) -> Unit)? = null
     var onSubmit: ((String) -> Unit)? = null
     var onRemoveItem: ((ShoppingItemKey) -> Unit)? = null
+    var onRemoveUnknownItem: ((String) -> Unit)? = null
     var onChickenChoice: ((LocalSamplePracticalShoppingDemo.ChickenChoice) -> Unit)? = null
     var onExtraStopMinimumSavingsChoice:
         ((LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice) -> Unit)? = null
@@ -203,35 +204,46 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     }
 
     private fun itemRow(item: PracticalShoppingHomeItemRenderState): View =
+        actionRow(
+            label = "${item.name}  •  ${item.detail}",
+            onRemove = { onRemoveItem?.invoke(item.key) }
+        )
+
+    private fun actionRow(
+        label: String,
+        onRemove: () -> Unit,
+        lineColor: String = "#374151"
+    ): View =
         LinearLayout(context).apply {
             orientation = HORIZONTAL
             gravity = android.view.Gravity.CENTER_VERTICAL
             layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 5)
 
             addView(
-                line("${item.name}  •  ${item.detail}", 14f, "#374151", topPadding = 7).apply {
+                line(label, 14f, lineColor, topPadding = 7).apply {
                     layoutParams = LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
                 }
             )
-            addView(
-                MaterialButton(context).apply {
-                    text = context.getString(R.string.home_remove_item)
-                    isAllCaps = false
-                    textSize = 12f
-                    minHeight = dp(40)
-                    minimumHeight = dp(40)
-                    minWidth = 0
-                    minimumWidth = 0
-                    insetTop = 0
-                    insetBottom = 0
-                    setPadding(dp(10), 0, dp(10), 0)
-                    layoutParams = LinearLayout.LayoutParams(
-                        LayoutParams.WRAP_CONTENT,
-                        dp(40)
-                    ).apply { leftMargin = dp(8) }
-                    setOnClickListener { onRemoveItem?.invoke(item.key) }
-                }
-            )
+            addView(removeButton(onRemove))
+        }
+
+    private fun removeButton(onRemove: () -> Unit): MaterialButton =
+        MaterialButton(context).apply {
+            text = context.getString(R.string.home_remove_item)
+            isAllCaps = false
+            textSize = 12f
+            minHeight = dp(40)
+            minimumHeight = dp(40)
+            minWidth = 0
+            minimumWidth = 0
+            insetTop = 0
+            insetBottom = 0
+            setPadding(dp(10), 0, dp(10), 0)
+            layoutParams = LinearLayout.LayoutParams(
+                LayoutParams.WRAP_CONTENT,
+                dp(40)
+            ).apply { leftMargin = dp(8) }
+            setOnClickListener { onRemove() }
         }
 
     private fun renderRefinement(state: PracticalShoppingHomeRefinementRenderState?) {
@@ -280,7 +292,15 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
             return
         }
         unknownBody.addView(line(context.getString(R.string.home_unknown_title), 13f, "#92400E", true))
-        items.forEach { unknownBody.addView(line("• $it", 14f, "#92400E", topPadding = 5)) }
+        items.forEach { token ->
+            unknownBody.addView(
+                actionRow(
+                    label = "• $token",
+                    onRemove = { onRemoveUnknownItem?.invoke(token) },
+                    lineColor = "#92400E"
+                )
+            )
+        }
         unknownCard.visibility = VISIBLE
     }
 

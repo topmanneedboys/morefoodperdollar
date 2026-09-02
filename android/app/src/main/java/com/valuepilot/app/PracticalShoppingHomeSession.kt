@@ -53,6 +53,15 @@ object PracticalShoppingHomeSession {
             LocalSamplePracticalShoppingDemo.Intent.RemoveItem(itemKey)
         )
 
+    fun removeUnknownItem(
+        model: LocalSamplePracticalShoppingDemo.Model,
+        token: String
+    ): LocalSamplePracticalShoppingDemo.Model =
+        LocalSamplePracticalShoppingDemo.reduce(
+            model,
+            LocalSamplePracticalShoppingDemo.Intent.RemoveUnknownItem(token)
+        )
+
     fun chooseExtraStopMinimumSavings(
         model: LocalSamplePracticalShoppingDemo.Model,
         choice: LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice

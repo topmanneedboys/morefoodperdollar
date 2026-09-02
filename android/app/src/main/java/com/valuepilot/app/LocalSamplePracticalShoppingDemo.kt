@@ -76,6 +76,7 @@ object LocalSamplePracticalShoppingDemo {
         data class QueryChanged(val query: String) : Intent
         data object Submit : Intent
         data class RemoveItem(val itemKey: ShoppingItemKey) : Intent
+        data class RemoveUnknownItem(val token: String) : Intent
         data class ChooseChicken(val choice: ChickenChoice) : Intent
         data class ChooseExtraStopMinimumSavings(
             val choice: ExtraStopMinimumSavingsChoice
@@ -347,6 +348,9 @@ object LocalSamplePracticalShoppingDemo {
             is Intent.RemoveItem ->
                 removeItem(model, intent.itemKey)
 
+            is Intent.RemoveUnknownItem ->
+                removeUnknownItem(model, intent.token)
+
             is Intent.ChooseChicken ->
                 evaluate(
                     model.ui.query,
@@ -420,21 +424,40 @@ object LocalSamplePracticalShoppingDemo {
         if (resolution.items.none { it.key == itemKey }) return model
 
         val removedChicken = chickenByChoice.values.any { it.key == itemKey }
-        val canonicalParts = buildList {
-            if (resolution.needsChickenChoice) add("chicken")
-            resolution.items
-                .asSequence()
-                .filterNot { it.key == itemKey }
-                .map(SampleItem::displayName)
-                .forEach(::add)
-            resolution.unknownItems.forEach(::add)
-        }
         return evaluate(
-            rawQuery = canonicalParts.joinToString(" "),
+            rawQuery = canonicalQuery(resolution, excludedItemKey = itemKey),
             chickenChoice = model.selectedChicken.takeUnless { removedChicken },
             extraStopMinimumSavingsChoice = model.ui.extraStopMinimumSavingsChoice
         )
     }
+
+    private fun removeUnknownItem(model: Model, token: String): Model {
+        val resolution = resolve(model.ui.query, model.selectedChicken)
+        if (token !in resolution.unknownItems) return model
+
+        return evaluate(
+            rawQuery = canonicalQuery(resolution, excludedUnknownToken = token),
+            chickenChoice = model.selectedChicken,
+            extraStopMinimumSavingsChoice = model.ui.extraStopMinimumSavingsChoice
+        )
+    }
+
+    private fun canonicalQuery(
+        resolution: Resolution,
+        excludedItemKey: ShoppingItemKey? = null,
+        excludedUnknownToken: String? = null
+    ): String = buildList {
+        if (resolution.needsChickenChoice) add("chicken")
+        resolution.items
+            .asSequence()
+            .filterNot { it.key == excludedItemKey }
+            .map(SampleItem::displayName)
+            .forEach(::add)
+        resolution.unknownItems
+            .asSequence()
+            .filterNot { it == excludedUnknownToken }
+            .forEach(::add)
+    }.joinToString(" ")
 
     private fun evaluate(
         rawQuery: String,

@@ -336,6 +336,10 @@ class MainActivity : AppCompatActivity() {
             homeModel = PracticalShoppingHomeSession.removeItem(homeModel, itemKey)
             renderHome()
         }
+        homeExperience.onRemoveUnknownItem = { token ->
+            homeModel = PracticalShoppingHomeSession.removeUnknownItem(homeModel, token)
+            renderHome()
+        }
         homeExperience.onChickenChoice = { choice ->
             homeModel = PracticalShoppingHomeSession.chooseChicken(homeModel, choice)
             renderHome()
