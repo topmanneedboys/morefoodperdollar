@@ -63,6 +63,7 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
         listOf(
             "var onEditItemDetails: ((ShoppingItemKey) -> Unit)? = null",
             "item.requestDetailsSummary",
+            "item.requestDetailsNotice",
             "item.requestDetailsActionLabel",
             "onEditItemDetails?.invoke(item.key)"
         ).forEach { required ->

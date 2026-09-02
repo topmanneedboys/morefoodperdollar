@@ -22,6 +22,7 @@ data class PracticalShoppingHomeItemRenderState(
     val name: String,
     val detail: String,
     val requestDetailsSummary: String,
+    val requestDetailsNotice: String?,
     val requestDetailsActionLabel: String
 ) {
     init {
@@ -29,6 +30,7 @@ data class PracticalShoppingHomeItemRenderState(
         require(name.isNotBlank())
         require(detail.isNotBlank())
         require(requestDetailsSummary.isNotBlank())
+        require(requestDetailsNotice == null || requestDetailsNotice.isNotBlank())
         require(requestDetailsActionLabel.isNotBlank())
     }
 }
@@ -137,6 +139,10 @@ object PracticalShoppingHomeRenderer {
                         detail = item.detail,
                         requestDetailsSummary =
                             PracticalShoppingHomeItemDetailsPresentation.summary(itemDetails),
+                        requestDetailsNotice =
+                            itemDetails?.let {
+                                "Preference only — not applied to this sample plan."
+                            },
                         requestDetailsActionLabel =
                             PracticalShoppingHomeItemDetailsPresentation.actionLabel(itemDetails)
                     )

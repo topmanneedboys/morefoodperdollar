@@ -7,6 +7,7 @@ import com.valuepilot.core.ShoppingItemRequestDetail
 import com.valuepilot.core.ShoppingProductSpecificity
 import com.valuepilot.core.ShoppingRequestedQuantity
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class PracticalShoppingHomeItemDetailsPresentationTest {
@@ -67,8 +68,13 @@ class PracticalShoppingHomeItemDetailsPresentationTest {
             )
 
         assertEquals("2 packages", rendered.items.first { it.key == eggs }.requestDetailsSummary)
+        assertEquals(
+            "Preference only — not applied to this sample plan.",
+            rendered.items.first { it.key == eggs }.requestDetailsNotice
+        )
         assertEquals("Edit details", rendered.items.first { it.key == eggs }.requestDetailsActionLabel)
         assertEquals("No extra preferences", rendered.items.first { it.key.value.contains("milk") }.requestDetailsSummary)
+        assertNull(rendered.items.first { it.key.value.contains("milk") }.requestDetailsNotice)
         org.junit.Assert.assertSame(projected, rendered.result)
     }
 }

@@ -233,6 +233,9 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                 )
             )
             addView(line(item.requestDetailsSummary, 12f, "#6B7280", topPadding = 2))
+            item.requestDetailsNotice?.let { notice ->
+                addView(line(notice, 12f, "#92400E", topPadding = 2))
+            }
         }
 
     private fun actionRow(
