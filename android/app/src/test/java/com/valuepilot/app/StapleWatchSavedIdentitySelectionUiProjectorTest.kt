@@ -62,11 +62,13 @@ class StapleWatchSavedIdentitySelectionUiProjectorTest {
         assertTrue(milkRow.watched)
         assertFalse(milkRow.action.watched)
         assertEquals("Stop watching", milkRow.actionLabel)
+        assertEquals("Stop watching saved product Whole Milk", milkRow.actionDescription)
 
         val northRow = state.storeRows.single { it.title == "North Market" }
         assertTrue(northRow.usualStore)
         assertEquals(StapleWatchSavedIdentitySelectionAction.ClearUsualStore, northRow.action)
         assertEquals("Clear usual store", northRow.actionLabel)
+        assertEquals("Clear North Market as usual store", northRow.actionDescription)
         assertEquals(StapleWatchSavedIdentitySelectionAction.ClearSelection, state.clearSelectionAction)
         assertEquals("Clear staple setup", state.clearSelectionActionLabel)
     }

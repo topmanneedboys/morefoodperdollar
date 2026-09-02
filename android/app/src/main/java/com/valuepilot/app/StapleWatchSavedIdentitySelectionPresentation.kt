@@ -25,11 +25,13 @@ data class StapleWatchSavedProductSelectionUiRow(
     val title: String,
     val watched: Boolean,
     val action: StapleWatchSavedIdentitySelectionAction.SetProductWatched,
-    val actionLabel: String
+    val actionLabel: String,
+    val actionDescription: String
 ) {
     init {
         require(title.isNotBlank())
         require(actionLabel.isNotBlank())
+        require(actionDescription.isNotBlank())
         require(action.watched != watched)
     }
 }
@@ -38,11 +40,13 @@ data class StapleWatchSavedStoreSelectionUiRow(
     val title: String,
     val usualStore: Boolean,
     val action: StapleWatchSavedIdentitySelectionAction,
-    val actionLabel: String
+    val actionLabel: String,
+    val actionDescription: String
 ) {
     init {
         require(title.isNotBlank())
         require(actionLabel.isNotBlank())
+        require(actionDescription.isNotBlank())
         require(
             if (usualStore) {
                 action == StapleWatchSavedIdentitySelectionAction.ClearUsualStore
@@ -166,7 +170,13 @@ object StapleWatchSavedIdentitySelectionUiProjector {
                             itemKey = itemKey,
                             watched = !isWatched
                         ),
-                    actionLabel = if (isWatched) "Stop watching" else "Watch"
+                    actionLabel = if (isWatched) "Stop watching" else "Watch",
+                    actionDescription =
+                        if (isWatched) {
+                            "Stop watching saved product ${savedRow.title}"
+                        } else {
+                            "Watch saved product ${savedRow.title}"
+                        }
                 )
             }
 
@@ -183,7 +193,13 @@ object StapleWatchSavedIdentitySelectionUiProjector {
                         } else {
                             StapleWatchSavedIdentitySelectionAction.SelectUsualStore(storeKey)
                         },
-                    actionLabel = if (isUsualStore) "Clear usual store" else "Use as usual store"
+                    actionLabel = if (isUsualStore) "Clear usual store" else "Use as usual store",
+                    actionDescription =
+                        if (isUsualStore) {
+                            "Clear ${savedRow.title} as usual store"
+                        } else {
+                            "Use ${savedRow.title} as usual store"
+                        }
                 )
             }
 

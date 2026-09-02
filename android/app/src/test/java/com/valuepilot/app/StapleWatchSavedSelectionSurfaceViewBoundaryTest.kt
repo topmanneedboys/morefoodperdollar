@@ -76,6 +76,9 @@ class StapleWatchSavedSelectionSurfaceViewBoundaryTest {
 
         assertTrue(source.contains("action = row.action"))
         assertTrue(source.contains("actionLabel = row.actionLabel"))
+        assertTrue(source.contains("actionDescription = row.actionDescription"))
+        assertTrue(source.contains("contentDescription = actionDescription"))
+        assertTrue(source.contains("this.contentDescription = contentDescription"))
         assertFalse(source.contains("startActivity"))
         assertFalse(source.contains("Intent("))
         assertFalse(source.contains("requestIdentityHandoff"))

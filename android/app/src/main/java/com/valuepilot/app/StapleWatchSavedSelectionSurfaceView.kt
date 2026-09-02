@@ -91,7 +91,8 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
             title = row.title,
             selected = row.watched,
             action = row.action,
-            actionLabel = row.actionLabel
+            actionLabel = row.actionLabel,
+            actionDescription = row.actionDescription
         )
 
     private fun storeCard(row: StapleWatchSavedStoreSelectionUiRow): View =
@@ -99,14 +100,16 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
             title = row.title,
             selected = row.usualStore,
             action = row.action,
-            actionLabel = row.actionLabel
+            actionLabel = row.actionLabel,
+            actionDescription = row.actionDescription
         )
 
     private fun selectionCard(
         title: String,
         selected: Boolean,
         action: StapleWatchSavedIdentitySelectionAction,
-        actionLabel: String
+        actionLabel: String,
+        actionDescription: String
     ): View {
         val card =
             MaterialCardView(context).apply {
@@ -142,7 +145,8 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
                 label = actionLabel,
                 action = action,
                 destructive = selected,
-                compact = true
+                compact = true,
+                contentDescription = actionDescription
             )
         )
 
@@ -226,10 +230,12 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
         label: String,
         action: StapleWatchSavedIdentitySelectionAction,
         destructive: Boolean,
-        compact: Boolean
+        compact: Boolean,
+        contentDescription: String? = null
     ): Button =
         Button(context).apply {
             text = label
+            this.contentDescription = contentDescription
             setAllCaps(false)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, if (compact) 13f else 14f)
             if (destructive) {
