@@ -8,9 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`92ffa4c92d903f5de47a8be5dbc34e54380cd599` — `Make saved shell copy state safe`
+`3ba5fca294ba74df571c1b6227189d11d70c218a` — `Keep Home keyboard submit readiness safe`
 
-GitHub Actions candidate workflow **33695634770** completed successfully, and milestone provenance workflow **33696077104** completed successfully for the exact same SHA.
+GitHub Actions candidate workflow **33696558319** completed successfully, and milestone provenance workflow **33696985567** completed successfully for the exact same SHA.
+
+The latest Home surface refinement closes a keyboard-submission readiness gap. The visible Plan my shop button and the keyboard “Done” action now share the same immutable `submitEnabled` gate, and the button starts disabled until its first render state arrives. Blank and over-limit drafts cannot dispatch a submit through the IME path. This is a small presentation-boundary correction with deterministic View-boundary coverage; the Home controller remains the sole owner of query handling, and no planner, ranking, pricing, evidence, persistence, clock, provider or network authority moved into the View. Clean-source verification passed 1,643 JVM tests (375 shared-core + 1,268 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 The latest Saved shell refinement removes the last static implication that confirmed choices must already exist. The Saved title is now “Manage saved choices.” and its description invites review or management of choices the shopper chooses to remember, so loading, empty and error states remain honest. A deterministic shell integration test asserts the new copy and rejects the old confirmed-choice wording. This remains a reversible presentation-only correction; planner, ranking, price arithmetic, evidence, persistence, clock, provider and network authority stay outside the renderer/View boundary.
 
