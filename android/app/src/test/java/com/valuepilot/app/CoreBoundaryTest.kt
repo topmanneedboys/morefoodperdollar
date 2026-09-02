@@ -59,12 +59,23 @@ class CoreBoundaryTest {
     @Test
     fun comparisonActivityUsesExactReplaceableCompareHereBoundary() {
         val source = source("ComparisonActivity.kt").readText()
+        val layout =
+            File(
+                System.getProperty("user.dir"),
+                "src/main/res/layout/activity_main.xml"
+            ).readText()
 
         assertTrue(source.contains("CompareHereManualRouteCoordinator.compareBlocks"))
         assertTrue(source.contains("CompareHereManualScreenPresenter"))
         assertTrue(source.contains("CompareHereManualActivitySessionReducer"))
+        assertTrue(source.contains("priceSelectionGroup"))
+        assertTrue(source.contains("priceSelectionChanged"))
+        assertTrue(source.contains("CompareHerePriceSelectionPersistence"))
         assertTrue(source.contains("CompareHereManualProductDraft.removeAt"))
         assertTrue(source.contains("R.string.remove_product"))
+        assertTrue(layout.contains("priceSelectionGroup"))
+        assertTrue(layout.contains("priceSelectionCurrent"))
+        assertTrue(layout.contains("priceSelectionMember"))
 
         assertFalse(source.contains("StandaloneComparisonController"))
         assertFalse(source.contains("StandaloneComparisonIntent"))

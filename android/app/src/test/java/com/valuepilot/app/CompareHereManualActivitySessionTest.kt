@@ -1,5 +1,6 @@
 package com.valuepilot.app
 
+import com.valuepilot.core.CompareHerePriceSelection
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -78,6 +79,28 @@ class CompareHereManualActivitySessionTest {
     }
 
     @Test
+    fun `price basis change invalidates prior comparison but preserves confirmation`() {
+        val prior =
+            CompareHereManualActivitySessionState.restore(
+                comparisonWasRun = true,
+                observedAtEpochMillis = 123L,
+                likeForLikeConfirmed = true,
+                priceSelection = CompareHerePriceSelection.CURRENT
+            )
+
+        val next =
+            CompareHereManualActivitySessionReducer.priceSelectionChanged(
+                state = prior,
+                selection = CompareHerePriceSelection.MEMBER
+            )
+
+        assertFalse(next.comparisonWasRun)
+        assertEquals(0L, next.observedAtEpochMillis)
+        assertTrue(next.likeForLikeConfirmed)
+        assertEquals(CompareHerePriceSelection.MEMBER, next.priceSelection)
+    }
+
+    @Test
     fun `restore preserves unchanged confirmed draft while legacy restore defaults unconfirmed`() {
         val confirmed =
             CompareHereManualActivitySessionState.restore(
@@ -88,6 +111,7 @@ class CompareHereManualActivitySessionTest {
         assertTrue(confirmed.comparisonWasRun)
         assertEquals(123L, confirmed.observedAtEpochMillis)
         assertTrue(confirmed.likeForLikeConfirmed)
+        assertEquals(CompareHerePriceSelection.CURRENT, confirmed.priceSelection)
 
         val legacy =
             CompareHereManualActivitySessionState.restore(
@@ -97,6 +121,7 @@ class CompareHereManualActivitySessionTest {
         assertTrue(legacy.comparisonWasRun)
         assertEquals(123L, legacy.observedAtEpochMillis)
         assertFalse(legacy.likeForLikeConfirmed)
+        assertEquals(CompareHerePriceSelection.CURRENT, legacy.priceSelection)
     }
 
     @Test
@@ -106,5 +131,6 @@ class CompareHereManualActivitySessionTest {
         assertFalse(next.comparisonWasRun)
         assertEquals(0L, next.observedAtEpochMillis)
         assertFalse(next.likeForLikeConfirmed)
+        assertEquals(CompareHerePriceSelection.CURRENT, next.priceSelection)
     }
 }

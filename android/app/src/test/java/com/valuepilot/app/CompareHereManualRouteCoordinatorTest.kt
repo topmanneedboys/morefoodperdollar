@@ -91,6 +91,29 @@ class CompareHereManualRouteCoordinatorTest {
     }
 
     @Test
+    fun `selected member basis reaches the projection without current-price fallback`() {
+        val state =
+            CompareHereManualRouteCoordinator.compareBlocks(
+                rawBlocks =
+                    listOf(
+                        "Small Milk\nCurrent price CA$5.00\nMember price CA$3.00\n500 g",
+                        "Large Milk\nCurrent price CA$7.00\nMember price CA$4.00\n500 g"
+                    ),
+                observedAtEpochMillis = 1L,
+                userConfirmedLikeForLike = true,
+                priceSelection = CompareHerePriceSelection.MEMBER
+            )
+
+        assertEquals(CompareHereManualRouteStatus.EVALUATED, state.status)
+        val comparison = requireNotNull(state.comparisonState)
+        assertEquals("Member prices", comparison.priceModeText)
+        assertEquals(
+            listOf("3.00 CAD", "4.00 CAD"),
+            comparison.rows.map { it.priceText }
+        )
+    }
+
+    @Test
     fun `estimated quantity remains an evaluated typed core blocker`() {
         val state =
             CompareHereManualRouteCoordinator.compareBlocks(

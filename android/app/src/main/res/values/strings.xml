@@ -18,6 +18,10 @@
     <string name="remove_product_description">Remove product %1$d</string>
     <string name="like_for_like_confirmation">These products are like-for-like alternatives</string>
     <string name="like_for_like_confirmation_body">Confirm only when every product is a substitute you would reasonably choose between. Editing or adding a product clears this confirmation.</string>
+    <string name="price_selection_title">Price basis</string>
+    <string name="price_selection_body">Choose the price you want to compare. A missing member price stays unranked; ValuePilot never substitutes a current price.</string>
+    <string name="price_selection_current">Current shelf prices</string>
+    <string name="price_selection_member">Member prices</string>
     <string name="compare_value">Compare exact value</string>
     <string name="clear_comparison">Clear</string>
     <string name="compare_add_products_title">Add at least two products</string>

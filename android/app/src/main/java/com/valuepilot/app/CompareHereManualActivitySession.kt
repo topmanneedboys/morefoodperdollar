@@ -1,34 +1,41 @@
 package com.valuepilot.app
 
+import com.valuepilot.core.CompareHerePriceSelection
+
 /**
  * Pure lifecycle state for the manual Compare Here activity.
  *
  * This state intentionally contains no Android View references, raw product text, parser output,
  * candidate ids or ranking objects. It only records whether the current unchanged draft was
- * compared, when that attempt happened, and whether the user confirmed like-for-like semantics.
+ * compared, when that attempt happened, whether the user confirmed like-for-like semantics, and
+ * which explicit price basis the next comparison should use.
  */
 data class CompareHereManualActivitySessionState(
     val comparisonWasRun: Boolean,
     val observedAtEpochMillis: Long,
-    val likeForLikeConfirmed: Boolean
+    val likeForLikeConfirmed: Boolean,
+    val priceSelection: CompareHerePriceSelection
 ) {
     companion object {
         fun initial(): CompareHereManualActivitySessionState =
             CompareHereManualActivitySessionState(
                 comparisonWasRun = false,
                 observedAtEpochMillis = 0L,
-                likeForLikeConfirmed = false
+                likeForLikeConfirmed = false,
+                priceSelection = CompareHerePriceSelection.CURRENT
             )
 
         fun restore(
             comparisonWasRun: Boolean,
             observedAtEpochMillis: Long,
-            likeForLikeConfirmed: Boolean = false
+            likeForLikeConfirmed: Boolean = false,
+            priceSelection: CompareHerePriceSelection = CompareHerePriceSelection.CURRENT
         ): CompareHereManualActivitySessionState =
             CompareHereManualActivitySessionState(
                 comparisonWasRun = comparisonWasRun,
                 observedAtEpochMillis = observedAtEpochMillis,
-                likeForLikeConfirmed = likeForLikeConfirmed
+                likeForLikeConfirmed = likeForLikeConfirmed,
+                priceSelection = priceSelection
             )
     }
 }
@@ -53,6 +60,16 @@ object CompareHereManualActivitySessionReducer {
             comparisonWasRun = false,
             observedAtEpochMillis = 0L,
             likeForLikeConfirmed = confirmed
+        )
+
+    fun priceSelectionChanged(
+        state: CompareHereManualActivitySessionState,
+        selection: CompareHerePriceSelection
+    ): CompareHereManualActivitySessionState =
+        state.copy(
+            comparisonWasRun = false,
+            observedAtEpochMillis = 0L,
+            priceSelection = selection
         )
 
     fun comparisonAttempted(

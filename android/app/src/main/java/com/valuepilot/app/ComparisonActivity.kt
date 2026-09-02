@@ -17,16 +17,19 @@ import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.RadioGroup
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.valuepilot.core.CompareHerePriceSelection
 
 class ComparisonActivity : AppCompatActivity() {
     private lateinit var productInputsContainer: LinearLayout
     private lateinit var addProductButton: Button
     private lateinit var likeForLikeConfirmation: CheckBox
+    private lateinit var priceSelectionGroup: RadioGroup
     private lateinit var comparisonScreen: CompareHereManualScreenView
     private lateinit var comparisonPresenter: CompareHereManualScreenPresenter
     private lateinit var scannerStatus: TextView
@@ -46,6 +49,7 @@ class ComparisonActivity : AppCompatActivity() {
         productInputsContainer = findViewById(R.id.productInputsContainer)
         addProductButton = findViewById(R.id.addProductButton)
         likeForLikeConfirmation = findViewById(R.id.likeForLikeConfirmation)
+        priceSelectionGroup = findViewById(R.id.priceSelectionGroup)
         comparisonScreen = findViewById(R.id.compareHereScreen)
         comparisonPresenter = CompareHereManualScreenPresenter(comparisonScreen)
         scannerStatus = findViewById(R.id.scannerStatus)
@@ -55,11 +59,13 @@ class ComparisonActivity : AppCompatActivity() {
             CompareHereManualActivitySessionState.restore(
                 comparisonWasRun = draft.compared,
                 observedAtEpochMillis = draft.observedAtEpochMillis,
-                likeForLikeConfirmed = draft.likeForLikeConfirmed
+                likeForLikeConfirmed = draft.likeForLikeConfirmed,
+                priceSelection = draft.priceSelection
             )
 
         renderProductInputs(draft.blocks)
         syncLikeForLikeConfirmation()
+        syncPriceSelection()
 
         likeForLikeConfirmation.setOnCheckedChangeListener { _, isChecked ->
             if (!restoringDraft) {
@@ -70,6 +76,26 @@ class ComparisonActivity : AppCompatActivity() {
                     )
                 renderIdleScreen()
             }
+        }
+
+        priceSelectionGroup.setOnCheckedChangeListener { _, checkedId ->
+            if (restoringDraft) {
+                return@setOnCheckedChangeListener
+            }
+
+            val selection =
+                when (checkedId) {
+                    R.id.priceSelectionCurrent -> CompareHerePriceSelection.CURRENT
+                    R.id.priceSelectionMember -> CompareHerePriceSelection.MEMBER
+                    else -> return@setOnCheckedChangeListener
+                }
+
+            activityState =
+                CompareHereManualActivitySessionReducer.priceSelectionChanged(
+                    state = activityState,
+                    selection = selection
+                )
+            renderIdleScreen()
         }
 
         addProductButton.setOnClickListener {
@@ -85,6 +111,7 @@ class ComparisonActivity : AppCompatActivity() {
             runComparison(
                 blocks = currentProductBlocks(),
                 observedAtEpochMillis = now,
+                priceSelection = activityState.priceSelection,
                 persist = true
             )
         }
@@ -142,6 +169,10 @@ class ComparisonActivity : AppCompatActivity() {
         outState.putBoolean(
             STATE_LIKE_FOR_LIKE_CONFIRMED,
             activityState.likeForLikeConfirmed
+        )
+        outState.putString(
+            STATE_PRICE_SELECTION,
+            CompareHerePriceSelectionPersistence.encode(activityState.priceSelection)
         )
 
         super.onSaveInstanceState(outState)
@@ -333,13 +364,15 @@ class ComparisonActivity : AppCompatActivity() {
     private fun runComparison(
         blocks: List<String>,
         observedAtEpochMillis: Long,
+        priceSelection: CompareHerePriceSelection = activityState.priceSelection,
         persist: Boolean
     ) {
         val routeState =
             CompareHereManualRouteCoordinator.compareBlocks(
                 rawBlocks = blocks,
                 observedAtEpochMillis = observedAtEpochMillis,
-                userConfirmedLikeForLike = activityState.likeForLikeConfirmed
+                userConfirmedLikeForLike = activityState.likeForLikeConfirmed,
+                priceSelection = priceSelection
             )
 
         activityState =
@@ -372,6 +405,23 @@ class ComparisonActivity : AppCompatActivity() {
         restoringDraft = false
     }
 
+    private fun syncPriceSelection() {
+        val selectedId =
+            if (activityState.priceSelection == CompareHerePriceSelection.MEMBER) {
+                R.id.priceSelectionMember
+            } else {
+                R.id.priceSelectionCurrent
+            }
+
+        if (priceSelectionGroup.checkedRadioButtonId == selectedId) {
+            return
+        }
+
+        restoringDraft = true
+        priceSelectionGroup.check(selectedId)
+        restoringDraft = false
+    }
+
     private fun renderIdleScreen() {
         val nonBlankProducts = currentProductBlocks().count { it.isNotBlank() }
         val content =
@@ -401,6 +451,7 @@ class ComparisonActivity : AppCompatActivity() {
     private fun clearComparison() {
         activityState = CompareHereManualActivitySessionReducer.clear()
         syncLikeForLikeConfirmation()
+        syncPriceSelection()
 
         getSharedPreferences(
             PREFS_NAME,
@@ -461,6 +512,10 @@ class ComparisonActivity : AppCompatActivity() {
                     PREF_LIKE_FOR_LIKE_CONFIRMED,
                     activityState.likeForLikeConfirmed
                 )
+                .putString(
+                    PREF_PRICE_SELECTION,
+                    CompareHerePriceSelectionPersistence.encode(activityState.priceSelection)
+                )
 
         blocks.forEachIndexed { index, value ->
             editor.putString(
@@ -499,6 +554,10 @@ class ComparisonActivity : AppCompatActivity() {
                     savedInstanceState.getBoolean(
                         STATE_LIKE_FOR_LIKE_CONFIRMED,
                         false
+                    ),
+                priceSelection =
+                    CompareHerePriceSelectionPersistence.decode(
+                        savedInstanceState.getString(STATE_PRICE_SELECTION)
                     )
             )
         }
@@ -521,7 +580,8 @@ class ComparisonActivity : AppCompatActivity() {
                 blocks = listOf("", ""),
                 compared = false,
                 observedAtEpochMillis = 0L,
-                likeForLikeConfirmed = false
+                likeForLikeConfirmed = false,
+                priceSelection = CompareHerePriceSelection.CURRENT
             )
         }
 
@@ -548,6 +608,10 @@ class ComparisonActivity : AppCompatActivity() {
                 prefs.getBoolean(
                     PREF_LIKE_FOR_LIKE_CONFIRMED,
                     false
+                ),
+            priceSelection =
+                CompareHerePriceSelectionPersistence.decode(
+                    prefs.getString(PREF_PRICE_SELECTION, null)
                 )
         )
     }
@@ -655,7 +719,8 @@ class ComparisonActivity : AppCompatActivity() {
         val blocks: List<String>,
         val compared: Boolean,
         val observedAtEpochMillis: Long,
-        val likeForLikeConfirmed: Boolean
+        val likeForLikeConfirmed: Boolean,
+        val priceSelection: CompareHerePriceSelection
     )
 
     private data class ProductInputRow(
@@ -680,6 +745,9 @@ class ComparisonActivity : AppCompatActivity() {
         private const val PREF_LIKE_FOR_LIKE_CONFIRMED =
             "like_for_like_confirmed"
 
+        private const val PREF_PRICE_SELECTION =
+            "price_selection"
+
         private const val PREF_BLOCK_PREFIX =
             "product_"
 
@@ -694,5 +762,8 @@ class ComparisonActivity : AppCompatActivity() {
 
         private const val STATE_LIKE_FOR_LIKE_CONFIRMED =
             "standalone.like_for_like_confirmed"
+
+        private const val STATE_PRICE_SELECTION =
+            "standalone.price_selection"
     }
 }

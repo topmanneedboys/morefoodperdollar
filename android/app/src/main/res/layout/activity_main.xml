@@ -89,6 +89,47 @@
             android:textColor="#6B7280"
             android:textSize="12sp" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="@string/price_selection_title"
+            android:textColor="#111827"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:text="@string/price_selection_body"
+            android:textColor="#6B7280"
+            android:textSize="12sp" />
+
+        <RadioGroup
+            android:id="@+id/priceSelectionGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/priceSelectionCurrent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/price_selection_current"
+                android:textColor="#111827"
+                android:textSize="15sp" />
+
+            <RadioButton
+                android:id="@+id/priceSelectionMember"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/price_selection_member"
+                android:textColor="#111827"
+                android:textSize="15sp" />
+        </RadioGroup>
+
         <Button
             android:id="@+id/compareButton"
             android:layout_width="match_parent"
