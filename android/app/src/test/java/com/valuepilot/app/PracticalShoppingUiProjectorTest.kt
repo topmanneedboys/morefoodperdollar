@@ -64,7 +64,8 @@ class PracticalShoppingUiProjectorTest {
             request,
             decision,
             storeNames,
-            itemNames
+            itemNames,
+            policy
         )
 
         val card = requireNotNull(projection.state.primary)
@@ -104,7 +105,8 @@ class PracticalShoppingUiProjectorTest {
             request,
             decision,
             storeNames,
-            itemNames
+            itemNames,
+            policy
         ).state
 
         val card = requireNotNull(state.primary)
@@ -155,7 +157,8 @@ class PracticalShoppingUiProjectorTest {
             request,
             decision,
             storeNames,
-            itemNames
+            itemNames,
+            policy
         )
 
         val second = requireNotNull(projection.state.secondStop)
@@ -196,12 +199,49 @@ class PracticalShoppingUiProjectorTest {
             request,
             decision,
             storeNames,
-            itemNames
+            itemNames,
+            policy
         ).state
 
         assertNull(state.secondStop)
         assertEquals(
-            "Another stop is not worth it under your current savings and travel limits.",
+            "Another stop is not worth it: your current rule requires at least " +
+                "15.00 CAD savings and caps extra travel at 10 min and 5 km.",
+            state.secondaryMessage
+        )
+    }
+
+    @Test
+    fun rejectedSecondStopExplainsAnExactTimeOnlyRuleWithoutInventingDistance() {
+        val timeOnlyPolicy = policy.copy(
+            minimumSecondStopSavings = Money.parse("20.25", "CAD"),
+            maxAdditionalTravelSeconds = 61L,
+            maxAdditionalDistanceMetres = null
+        )
+        val primary = single(
+            key = primaryKey,
+            cost = "60.00",
+            covered = requested,
+            travel = ShoppingTravel(1_500L, 240L)
+        )
+        val decision = PracticalShoppingPlanner.evaluate(
+            request,
+            listOf(primary),
+            emptyList(),
+            timeOnlyPolicy
+        )
+
+        val state = PracticalShoppingUiProjector.project(
+            request,
+            decision,
+            storeNames,
+            itemNames,
+            timeOnlyPolicy
+        ).state
+
+        assertEquals(
+            "Another stop is not worth it: your current rule requires at least " +
+                "20.25 CAD savings and caps extra travel at 61 sec.",
             state.secondaryMessage
         )
     }
@@ -225,7 +265,8 @@ class PracticalShoppingUiProjectorTest {
             request,
             decision,
             storeNames,
-            itemNames
+            itemNames,
+            policy
         )
 
         assertEquals("Not enough price coverage yet", projection.state.headline)
@@ -258,7 +299,8 @@ class PracticalShoppingUiProjectorTest {
                 request,
                 decision,
                 emptyMap(),
-                itemNames
+                itemNames,
+                policy
             )
         }
     }
@@ -283,7 +325,8 @@ class PracticalShoppingUiProjectorTest {
                 request,
                 decision,
                 storeNames,
-                itemNames - chicken
+                itemNames - chicken,
+                policy
             )
         }
     }

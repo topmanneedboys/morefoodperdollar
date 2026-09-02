@@ -52,7 +52,8 @@ class LocalSamplePracticalShoppingDemoTest {
         assertEquals("3 of 3 items priced", primary.coverageText)
         assertNull(result.secondStop)
         assertEquals(
-            "Another stop is not worth it under your current savings and travel limits.",
+            "Another stop is not worth it: your current rule requires at least " +
+                "15.00 CAD savings and caps extra travel at 10 min and 5 km.",
             result.secondaryMessage
         )
     }
@@ -140,7 +141,8 @@ class LocalSamplePracticalShoppingDemoTest {
         assertEquals("Basket 10.28 CAD", primary.basketCostText)
         assertNull(result.secondStop)
         assertEquals(
-            "Another stop is not worth it under your current savings and travel limits.",
+            "Another stop is not worth it: your current rule requires at least " +
+                "15.00 CAD savings and caps extra travel at 10 min and 5 km.",
             result.secondaryMessage
         )
     }

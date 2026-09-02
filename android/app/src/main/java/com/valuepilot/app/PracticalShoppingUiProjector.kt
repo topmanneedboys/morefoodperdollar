@@ -2,6 +2,7 @@ package com.valuepilot.app
 
 import com.valuepilot.core.Money
 import com.valuepilot.core.PracticalShoppingDecision
+import com.valuepilot.core.PracticalShoppingPolicy
 import com.valuepilot.core.PrimaryShoppingPlanKind
 import com.valuepilot.core.SecondStopDecision
 import com.valuepilot.core.ShoppingItemKey
@@ -97,7 +98,8 @@ object PracticalShoppingUiProjector {
         request: ShoppingRequest,
         decision: PracticalShoppingDecision,
         storeDisplayNames: Map<ShoppingStoreKey, String>,
-        itemDisplayNames: Map<ShoppingItemKey, String>
+        itemDisplayNames: Map<ShoppingItemKey, String>,
+        policy: PracticalShoppingPolicy
     ): PracticalShoppingUiProjection {
         storeDisplayNames.values.forEach { require(it.isNotBlank()) }
         itemDisplayNames.values.forEach { require(it.isNotBlank()) }
@@ -165,7 +167,7 @@ object PracticalShoppingUiProjector {
                 headline = headline(decision.primaryKind),
                 primary = primary,
                 secondStop = secondStop,
-                secondaryMessage = secondaryMessage(decision)
+                secondaryMessage = secondaryMessage(decision, policy)
             )
 
         return PracticalShoppingUiProjection(
@@ -204,7 +206,10 @@ object PracticalShoppingUiProjector {
                 "No complete basket is priced yet; this option covers the most requested items."
         }
 
-    private fun secondaryMessage(decision: PracticalShoppingDecision): String? =
+    private fun secondaryMessage(
+        decision: PracticalShoppingDecision,
+        policy: PracticalShoppingPolicy
+    ): String? =
         when (decision.secondStopDecision) {
             SecondStopDecision.NOT_EVALUATED_NO_PRIMARY ->
                 "No requested item has a usable price yet."
@@ -213,11 +218,21 @@ object PracticalShoppingUiProjector {
                 "Not enough complete price coverage to judge another stop fairly."
 
             SecondStopDecision.NOT_WORTH_IT ->
-                "Another stop is not worth it under your current savings and travel limits."
+                notWorthItMessage(policy)
 
             SecondStopDecision.RECOMMENDED ->
                 null
         }
+
+    private fun notWorthItMessage(policy: PracticalShoppingPolicy): String {
+        val distanceLimit =
+            policy.maxAdditionalDistanceMetres?.let { distanceMetres ->
+                " and ${formatDistance(distanceMetres)}"
+            }.orEmpty()
+        return "Another stop is not worth it: your current rule requires at least " +
+            "${formatMoney(policy.minimumSecondStopSavings)} savings and caps extra travel at " +
+            "${formatDurationLimit(policy.maxAdditionalTravelSeconds)}$distanceLimit."
+    }
 
     private fun displayName(
         key: ShoppingStoreKey,
@@ -265,19 +280,30 @@ object PracticalShoppingUiProjector {
                 wholeMinutes + 1L
             }
 
-        val distance =
-            if (travel.distanceMetres < 1_000L) {
-                "${travel.distanceMetres} m"
-            } else {
-                val kilometres =
-                    BigDecimal.valueOf(travel.distanceMetres)
-                        .movePointLeft(3)
-                        .stripTrailingZeros()
-                        .toPlainString()
-                "$kilometres km"
-            }
+        return "$minutes min · ${formatDistance(travel.distanceMetres)}"
+    }
 
-        return "$minutes min · $distance"
+    internal fun formatDurationLimit(seconds: Long): String {
+        require(seconds >= 0L)
+        return if (seconds % 60L == 0L) {
+            "${seconds / 60L} min"
+        } else {
+            "$seconds sec"
+        }
+    }
+
+    private fun formatDistance(distanceMetres: Long): String {
+        require(distanceMetres >= 0L)
+        return if (distanceMetres < 1_000L) {
+            "$distanceMetres m"
+        } else {
+            val kilometres =
+                BigDecimal.valueOf(distanceMetres)
+                    .movePointLeft(3)
+                    .stripTrailingZeros()
+                    .toPlainString()
+            "$kilometres km"
+        }
     }
 
     internal fun formatEvidence(evidence: ShoppingPlanEvidenceSummary): String =

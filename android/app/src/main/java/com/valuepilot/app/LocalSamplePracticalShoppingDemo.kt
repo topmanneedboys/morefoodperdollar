@@ -459,7 +459,8 @@ object LocalSamplePracticalShoppingDemo {
                 request = request,
                 decision = decision,
                 storeDisplayNames = stores.associate { it.key to it.displayName },
-                itemDisplayNames = resolution.items.associate { it.key to it.displayName }
+                itemDisplayNames = resolution.items.associate { it.key to it.displayName },
+                policy = policy
             )
 
         return Model(
