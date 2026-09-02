@@ -234,8 +234,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          node <<'NODE'
-          const fs = require('node:fs')
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs'
 
           const token = process.env.GH_TOKEN
           const repository = process.env.GITHUB_REPOSITORY
@@ -312,6 +312,7 @@ jobs:
         with:
           artifact-ids: ${{ steps.candidate.outputs.artifact_id }}
           path: verified-candidate
+          merge-multiple: true
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}
           run-id: ${{ steps.candidate.outputs.run_id }}
@@ -361,7 +362,7 @@ jobs:
 
           (cd verified-candidate && sha256sum -c SHA256SUMS.txt)
 
-          branch_sha="$(node <<'NODE'
+          branch_sha="$(node --input-type=module <<'NODE'
           const token = process.env.GH_TOKEN
           const repository = process.env.GITHUB_REPOSITORY
           const branch = encodeURIComponent('work/valuepilot-android-milestone')
