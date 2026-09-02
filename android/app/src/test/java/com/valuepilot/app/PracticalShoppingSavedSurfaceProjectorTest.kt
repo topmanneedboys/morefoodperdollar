@@ -96,6 +96,14 @@ class PracticalShoppingSavedSurfaceProjectorTest {
             surface.storeRows.single().action
         )
         assertEquals(
+            "Remove saved product Free-range eggs",
+            surface.productRows.single().actionDescription
+        )
+        assertEquals(
+            "Remove saved store Neighbourhood Market",
+            surface.storeRows.single().actionDescription
+        )
+        assertEquals(
             PracticalShoppingSavedSurfaceAction.Preference(
                 PracticalShoppingSavedExactPreferenceUiAction.ClearAll
             ),
@@ -188,7 +196,9 @@ class PracticalShoppingSavedSurfaceProjectorTest {
         assertTrue(surface.progressVisible)
         assertEquals("Free-range eggs", surface.productRows.single().title)
         assertNull(surface.productRows.single().action)
+        assertNull(surface.productRows.single().actionDescription)
         assertNull(surface.storeRows.single().action)
+        assertNull(surface.storeRows.single().actionDescription)
         assertNull(surface.clearAllAction)
         assertNull(surface.refreshAction)
     }

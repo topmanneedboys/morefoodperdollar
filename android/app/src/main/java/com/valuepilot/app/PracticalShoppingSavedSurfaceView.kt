@@ -91,7 +91,8 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
             title = row.title,
             supportingText = row.supportingText,
             action = row.action,
-            actionLabel = row.actionLabel
+            actionLabel = row.actionLabel,
+            actionDescription = row.actionDescription
         )
 
     private fun storeCard(row: PracticalShoppingSavedSurfaceStoreRow): View =
@@ -99,14 +100,16 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
             title = row.title,
             supportingText = row.supportingText,
             action = row.action,
-            actionLabel = row.actionLabel
+            actionLabel = row.actionLabel,
+            actionDescription = row.actionDescription
         )
 
     private fun preferenceCard(
         title: String,
         supportingText: String,
         action: PracticalShoppingSavedSurfaceAction.Preference?,
-        actionLabel: String?
+        actionLabel: String?,
+        actionDescription: String?
     ): View {
         val card =
             MaterialCardView(context).apply {
@@ -149,7 +152,8 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
                     label = requireNotNull(actionLabel),
                     action = typedAction,
                     destructive = true,
-                    compact = true
+                    compact = true,
+                    contentDescription = requireNotNull(actionDescription)
                 )
             )
         }
@@ -221,10 +225,12 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
         label: String,
         action: PracticalShoppingSavedSurfaceAction,
         destructive: Boolean,
-        compact: Boolean = false
+        compact: Boolean = false,
+        contentDescription: String? = null
     ): Button =
         Button(context).apply {
             text = label
+            this.contentDescription = contentDescription
             setAllCaps(false)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, if (compact) 13f else 14f)
             if (destructive) {

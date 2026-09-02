@@ -29,13 +29,16 @@ data class PracticalShoppingSavedSurfaceProductRow(
     val title: String,
     val supportingText: String,
     val action: PracticalShoppingSavedSurfaceAction.Preference?,
-    val actionLabel: String?
+    val actionLabel: String?,
+    val actionDescription: String?
 ) {
     init {
         require(title.isNotBlank())
         require(supportingText.isNotBlank())
         require((action != null) == (actionLabel != null))
+        require((action != null) == (actionDescription != null))
         require(actionLabel == null || actionLabel.isNotBlank())
+        require(actionDescription == null || actionDescription.isNotBlank())
     }
 }
 
@@ -43,13 +46,16 @@ data class PracticalShoppingSavedSurfaceStoreRow(
     val title: String,
     val supportingText: String,
     val action: PracticalShoppingSavedSurfaceAction.Preference?,
-    val actionLabel: String?
+    val actionLabel: String?,
+    val actionDescription: String?
 ) {
     init {
         require(title.isNotBlank())
         require(supportingText.isNotBlank())
         require((action != null) == (actionLabel != null))
+        require((action != null) == (actionDescription != null))
         require(actionLabel == null || actionLabel.isNotBlank())
+        require(actionDescription == null || actionDescription.isNotBlank())
     }
 }
 
@@ -233,7 +239,13 @@ object PracticalShoppingSavedSurfaceProjector {
                         } else {
                             null
                         },
-                    actionLabel = if (interactionsEnabled) "Remove" else null
+                    actionLabel = if (interactionsEnabled) "Remove" else null,
+                    actionDescription =
+                        if (interactionsEnabled) {
+                            "Remove saved product ${row.title}"
+                        } else {
+                            null
+                        }
                 )
             }
         val stores =
@@ -247,7 +259,13 @@ object PracticalShoppingSavedSurfaceProjector {
                         } else {
                             null
                         },
-                    actionLabel = if (interactionsEnabled) "Remove" else null
+                    actionLabel = if (interactionsEnabled) "Remove" else null,
+                    actionDescription =
+                        if (interactionsEnabled) {
+                            "Remove saved store ${row.title}"
+                        } else {
+                            null
+                        }
                 )
             }
         val clearAll =
