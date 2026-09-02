@@ -291,6 +291,13 @@ class StapleWatchPolicyDraftTextInputAdapterTest {
                     StapleWatchPolicyDraftRequirement.DISTANCE_LIMIT_CHOICE,
                     StapleWatchPolicyDraftRequirement.MINIMUM_STAPLE_ITEM_COUNT
                 ),
+            missingRequirementLabels =
+                listOf(
+                    "Minimum savings",
+                    "Maximum extra travel time",
+                    "Maximum extra distance (or no limit)",
+                    "Minimum watched staples"
+                ),
             notice = "Complete all switch preferences to continue.",
             continueAction = null,
             continueActionLabel = null

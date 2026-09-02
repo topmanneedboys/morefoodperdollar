@@ -11,6 +11,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.google.android.material.card.MaterialCardView
 
 /**
  * Replaceable physical renderer for one explicit Staple Watch policy draft.
@@ -45,6 +46,9 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
         addView(heading(state.headline))
         addView(guidance(state.guidance))
         state.notice?.let { message -> addView(notice(message)) }
+        if (state.missingRequirementLabels.isNotEmpty()) {
+            addView(missingRequirementsCard(state.missingRequirementLabels))
+        }
 
         addView(
             numericField(
@@ -93,6 +97,43 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
                 )
             }
     }
+
+    private fun missingRequirementsCard(labels: List<String>): View =
+        MaterialCardView(context).apply {
+            radius = dp(16).toFloat()
+            cardElevation = 0f
+            setCardBackgroundColor(Color.parseColor("#FFFBEB"))
+            strokeColor = Color.parseColor("#FDE68A")
+            strokeWidth = dp(1)
+            layoutParams =
+                LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+                    topMargin = dp(14)
+                }
+            addView(
+                LinearLayout(context).apply {
+                    orientation = VERTICAL
+                    setPadding(dp(14), dp(12), dp(14), dp(12))
+                    addView(
+                        TextView(context).apply {
+                            text = "Still needed"
+                            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                            setTextColor(Color.parseColor("#92400E"))
+                            setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+                        }
+                    )
+                    labels.forEach { label ->
+                        addView(
+                            TextView(context).apply {
+                                text = "• $label"
+                                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                                setTextColor(Color.parseColor("#92400E"))
+                                setPadding(0, dp(5), 0, 0)
+                            }
+                        )
+                    }
+                }
+            )
+        }
 
     private fun distanceField(state: StapleWatchPolicyDraftUiState): View =
         LinearLayout(context).apply {

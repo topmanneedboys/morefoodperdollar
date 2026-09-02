@@ -53,6 +53,15 @@ class StapleWatchPolicyDraftPresentationTest {
             ),
             state.missingRequirements
         )
+        assertEquals(
+            listOf(
+                "Minimum savings",
+                "Maximum extra travel time",
+                "Maximum extra distance (or no limit)",
+                "Minimum watched staples"
+            ),
+            state.missingRequirementLabels
+        )
         assertEquals("Complete all switch preferences to continue.", state.notice)
         assertNull(state.continueAction)
         assertNull(state.continueActionLabel)
@@ -81,6 +90,7 @@ class StapleWatchPolicyDraftPresentationTest {
         assertEquals(0L, state.maxAdditionalDistanceMetres)
         assertEquals(2, state.minimumStapleItemCount)
         assertTrue(state.missingRequirements.isEmpty())
+        assertTrue(state.missingRequirementLabels.isEmpty())
         assertNull(state.notice)
         assertSame(StapleWatchPolicyHandoffUiAction.Request, state.continueAction)
         assertEquals("Continue", state.continueActionLabel)
@@ -110,11 +120,16 @@ class StapleWatchPolicyDraftPresentationTest {
             listOf(StapleWatchPolicyDraftRequirement.DISTANCE_LIMIT_CHOICE),
             unanswered.missingRequirements
         )
+        assertEquals(
+            listOf("Maximum extra distance (or no limit)"),
+            unanswered.missingRequirementLabels
+        )
         assertNull(unanswered.maxAdditionalDistanceMetres)
         assertNull(unanswered.continueAction)
 
         assertEquals(StapleWatchPolicyDistanceLimitUiMode.UNLIMITED, unlimited.distanceLimitMode)
         assertTrue(unlimited.missingRequirements.isEmpty())
+        assertTrue(unlimited.missingRequirementLabels.isEmpty())
         assertNull(unlimited.maxAdditionalDistanceMetres)
         assertSame(StapleWatchPolicyHandoffUiAction.Request, unlimited.continueAction)
     }

@@ -51,10 +51,12 @@ sealed interface StapleWatchPolicyHandoffUiAction {
  * fraction digits. Presentation never converts them through device locale or a floating-point type.
  * Numeric edit actions carry exact typed values but do not themselves mutate or validate the draft.
  *
- * [missingRequirements] comes from the already-produced finalization result. The projector does not
- * re-run finalization or construct policy. A continuation marker is exposed only when that retained
- * finalization is already complete; it carries no policy payload and grants no evaluation,
- * persistence, background, or notification authority.
+ * [missingRequirements] comes from the already-produced finalization result. The paired
+ * [missingRequirementLabels] list is a fixed consumer copy of the same order for progressive
+ * guidance; it never exposes the enum to a renderer. The projector does not re-run finalization
+ * or construct policy. A continuation marker is exposed only when that retained finalization is
+ * already complete; it carries no policy payload and grants no evaluation, persistence,
+ * background, or notification authority.
  */
 data class StapleWatchPolicyDraftUiState(
     val status: StapleWatchPolicyDraftUiStatus,
@@ -75,6 +77,7 @@ data class StapleWatchPolicyDraftUiState(
     val minimumStapleItemCountLabel: String,
     val minimumStapleItemCount: Int?,
     val missingRequirements: List<StapleWatchPolicyDraftRequirement>,
+    val missingRequirementLabels: List<String>,
     val notice: String?,
     val continueAction: StapleWatchPolicyHandoffUiAction?,
     val continueActionLabel: String?
@@ -92,6 +95,9 @@ data class StapleWatchPolicyDraftUiState(
         require(maxAdditionalDistanceUnitLabel.isNotBlank())
         require(minimumStapleItemCountLabel.isNotBlank())
         require(missingRequirements.distinct().size == missingRequirements.size)
+        require(missingRequirementLabels.size == missingRequirements.size)
+        require(missingRequirementLabels.distinct().size == missingRequirementLabels.size)
+        require(missingRequirementLabels.none(String::isBlank))
         require(notice == null || notice.isNotBlank())
         require((continueAction != null) == (continueActionLabel != null))
         require(continueActionLabel == null || continueActionLabel.isNotBlank())
@@ -187,6 +193,8 @@ object StapleWatchPolicyDraftUiProjector {
             minimumStapleItemCountLabel = "Minimum watched staples",
             minimumStapleItemCount = draft.minimumStapleItemCount,
             missingRequirements = finalization.missingRequirements.toList(),
+            missingRequirementLabels =
+                finalization.missingRequirements.map(::requirementLabel),
             notice =
                 if (ready) {
                     null
@@ -198,6 +206,18 @@ object StapleWatchPolicyDraftUiProjector {
             continueActionLabel = if (ready) "Continue" else null
         )
     }
+
+    private fun requirementLabel(requirement: StapleWatchPolicyDraftRequirement): String =
+        when (requirement) {
+            StapleWatchPolicyDraftRequirement.MINIMUM_SWITCH_SAVINGS ->
+                "Minimum savings"
+            StapleWatchPolicyDraftRequirement.MAX_ADDITIONAL_TRAVEL ->
+                "Maximum extra travel time"
+            StapleWatchPolicyDraftRequirement.DISTANCE_LIMIT_CHOICE ->
+                "Maximum extra distance (or no limit)"
+            StapleWatchPolicyDraftRequirement.MINIMUM_STAPLE_ITEM_COUNT ->
+                "Minimum watched staples"
+        }
 }
 
 /** Narrow target for any replaceable physical Staple Watch policy renderer. */

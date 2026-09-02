@@ -100,6 +100,8 @@ class StapleWatchPolicyDraftSurfaceViewBoundaryTest {
         assertTrue(source.contains("state.maxAdditionalTravelSeconds"))
         assertTrue(source.contains("state.maxAdditionalDistanceMetres"))
         assertTrue(source.contains("state.minimumStapleItemCount"))
+        assertTrue(source.contains("state.missingRequirementLabels"))
+        assertTrue(source.contains("missingRequirementsCard(state.missingRequirementLabels)"))
         assertFalse(source.contains("MIN_STAPLE_WATCH_POLICY_ITEM_COUNT"))
         assertFalse(source.contains("MAX_STAPLE_WATCH_POLICY_ITEM_COUNT"))
         assertFalse(source.contains("minimumSwitchSavings ="))
