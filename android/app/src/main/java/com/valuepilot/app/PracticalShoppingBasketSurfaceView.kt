@@ -45,7 +45,15 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : LinearLayout(context, attrs, defStyleAttr) {
 
+    private var hasRenderedState = false
+
     var onAction: ((PracticalShoppingBasketUiAction) -> Unit)? = null
+        set(value) {
+            field = value
+            // The route owner may detach while this surface remains mounted.
+            // Keep the already-rendered navigation control inert immediately.
+            actionButton.isEnabled = value != null && hasRenderedState
+        }
 
     private val headline = line("", 22f, "#111827", true)
     private val guidance = line("", 14f, "#4B5563", topPadding = 8)
@@ -134,6 +142,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     }
 
     fun render(state: PracticalShoppingBasketRenderState) {
+        hasRenderedState = true
         lastRenderState = state
         progressState =
             pendingRestoredCollectedKeys?.let { restored ->
@@ -151,7 +160,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         guidance.text = state.guidance
         sampleNotice.text = state.sampleNotice
         actionButton.text = state.actionLabel
-        actionButton.isEnabled = onAction != null
+        actionButton.isEnabled = onAction != null && hasRenderedState
         renderCollectionProgress(state)
         collectionNotice.text = state.collectionNotice.orEmpty()
         collectionNotice.visibility = if (state.collectionNotice == null) GONE else VISIBLE

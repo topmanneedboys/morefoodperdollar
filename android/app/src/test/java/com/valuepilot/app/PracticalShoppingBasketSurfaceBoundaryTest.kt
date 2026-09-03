@@ -55,6 +55,21 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
     }
 
     @Test
+    fun ownerCallbackChangesFailClosedForAlreadyRenderedNavigation() {
+        val source = source("PracticalShoppingBasketSurfaceView.kt").readText()
+
+        listOf(
+            "private var hasRenderedState = false",
+            "actionButton.isEnabled = value != null && hasRenderedState",
+            "hasRenderedState = true",
+            "actionButton.isEnabled = onAction != null && hasRenderedState",
+            "setOnClickListener { onAction?.invoke(PracticalShoppingBasketUiAction.OpenHome) }"
+        ).forEach { required ->
+            assertTrue("Expected live Basket owner invalidation binding $required", source.contains(required))
+        }
+    }
+
+    @Test
     fun checkOffResetIsLocalForegroundStateAndAppearsOnlyWhenMarksExist() {
         val source = source("PracticalShoppingBasketSurfaceView.kt").readText()
 
