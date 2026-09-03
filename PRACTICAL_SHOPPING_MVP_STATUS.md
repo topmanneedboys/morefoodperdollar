@@ -8,11 +8,19 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+`f1ad62c4a1c7d76c52e9dae4a7fd84ce16773b7e` — `Gate Home extra-stop disclosure by owner`
+
+GitHub Actions candidate workflow **33731893804** completed successfully, and milestone provenance workflow **33732437637** completed successfully for the exact same SHA.
+
+The latest Home refinement closes an owner-lifecycle affordance gap. The advanced extra-stop disclosure now mirrors the existing callback gate used by its option chips: a detached/reused Home renderer cannot open the interactive panel without its typed owner callback, while an attached owner preserves the existing progressive disclosure. This is presentation/lifecycle-only; provider execution, ranking, evidence, persistence, clock, provider economics and network authority remain unchanged. Clean-source verification passed 1,681 JVM tests (375 shared-core + 1,306 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+
+## Previous verified engineering head (superseded)
+
 `7285a35da741eaad71d81914e17279c3ca7e334a` — `Disable duplicate Search quick-entry chip`
 
 GitHub Actions candidate workflow **33730319345** completed successfully, and milestone provenance workflow **33730738420** completed successfully for the exact same SHA.
 
-The latest Search refinement closes an affordance-consistency gap. Quick-entry chips now mirror the existing immutable lifecycle guard: the chip for the query already `LOADING` is visibly disabled, while different quick queries remain enabled as explicit replacement choices. The click guard and controller no-op remain in place as defense-in-depth. This is presentation/lifecycle-only; provider execution, ranking, evidence, persistence, clock, provider economics and network authority remain unchanged. Clean-source verification passed 1,681 JVM tests (375 shared-core + 1,306 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+Quick-entry chips now mirror Search’s immutable lifecycle guard: the chip for the query already `LOADING` is visibly disabled, while different quick queries remain enabled as explicit replacement choices. The click guard and controller no-op remain in place as defense-in-depth. This is presentation/lifecycle-only and leaves provider execution, ranking, evidence, persistence, clock, provider economics and network authority unchanged. Clean-source verification passed 1,681 JVM tests (375 shared-core + 1,306 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
