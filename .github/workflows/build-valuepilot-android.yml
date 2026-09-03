@@ -8,7 +8,9 @@ on:
       - 'browser-extension/**'
       - 'tools/build_offline_catalog_snapshot.py'
       - 'tools/verify_offline_catalog_snapshot.py'
+      - 'tools/promote_offline_catalog_snapshot.py'
       - 'tools/tests/test_build_offline_catalog_snapshot.py'
+      - 'tools/tests/test_promote_offline_catalog_snapshot.py'
       - '.github/workflows/build-valuepilot-android.yml'
   pull_request:
     paths:
@@ -16,7 +18,9 @@ on:
       - 'browser-extension/**'
       - 'tools/build_offline_catalog_snapshot.py'
       - 'tools/verify_offline_catalog_snapshot.py'
+      - 'tools/promote_offline_catalog_snapshot.py'
       - 'tools/tests/test_build_offline_catalog_snapshot.py'
+      - 'tools/tests/test_promote_offline_catalog_snapshot.py'
       - '.github/workflows/build-valuepilot-android.yml'
 
 permissions:
