@@ -8,11 +8,19 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+`3e8c94865de43cb0d20fbe353b56b53afb4558c2` — `Release Home owners when activity is destroyed`
+
+GitHub Actions candidate workflow **33743220204** completed successfully, and milestone provenance workflow **33743655775** completed successfully for the exact same SHA.
+
+The latest Home lifecycle refinement closes the remaining Activity teardown gap. MainActivity now releases every Home and Basket callback on destruction, so detached/reused surfaces cannot retain actionable owners or an Activity reference. This is lifecycle-only and does not alter the existing immutable Home result rendering, planner, projector, pricing, evidence, persistence, clock, provider, provider-economics or network authority. Clean-source verification passed 1,685 JVM tests (375 shared-core + 1,310 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+
+## Previous verified engineering head (superseded)
+
 `daa70e4c9d62305a83022758b30cdf9072abc38b` — `Fail closed observed price draft editors`
 
 GitHub Actions candidate workflow **33741793189** completed successfully, and milestone provenance workflow **33742341341** completed successfully for the exact same SHA.
 
-The latest observed-price refinement extends the owner-boundary correction across the draft editors themselves. Price amount/currency, observed date/time/offset, and proof-reference/type controls now update immediately when their typed owner callback is installed or cleared; detached evidence drafts cannot remain editable without their owner, and each editor starts disabled. This is presentation/lifecycle-only; no parsing, policy, planner, ranking, pricing, evidence, persistence, clock, provider, provider-economics or network authority changed. Clean-source verification passed 1,684 JVM tests (375 shared-core + 1,309 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+The previous observed-price refinement extended the owner-boundary correction across the draft editors themselves. Price amount/currency, observed date/time/offset, and proof-reference/type controls now update immediately when their typed owner callback is installed or cleared; detached evidence drafts cannot remain editable without their owner, and each editor starts disabled. This is presentation/lifecycle-only; no parsing, policy, planner, ranking, pricing, evidence, persistence, clock, provider, provider-economics or network authority changed. Clean-source verification passed 1,684 JVM tests (375 shared-core + 1,309 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
