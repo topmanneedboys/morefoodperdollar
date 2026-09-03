@@ -5,11 +5,13 @@ on:
   push:
     paths:
       - 'tools/build_offline_catalog_snapshot.py'
+      - 'tools/verify_offline_catalog_snapshot.py'
       - 'tools/tests/test_build_offline_catalog_snapshot.py'
       - '.github/workflows/test-offline-catalog-snapshot.yml'
   pull_request:
     paths:
       - 'tools/build_offline_catalog_snapshot.py'
+      - 'tools/verify_offline_catalog_snapshot.py'
       - 'tools/tests/test_build_offline_catalog_snapshot.py'
       - '.github/workflows/test-offline-catalog-snapshot.yml'
 
@@ -31,7 +33,10 @@ jobs:
           python-version: '3.12'
 
       - name: Compile snapshot builder
-        run: python -m py_compile tools/build_offline_catalog_snapshot.py
+        run: >-
+          python -m py_compile
+          tools/build_offline_catalog_snapshot.py
+          tools/verify_offline_catalog_snapshot.py
 
       - name: Run deterministic snapshot tests
         run: python -m unittest tools.tests.test_build_offline_catalog_snapshot -v

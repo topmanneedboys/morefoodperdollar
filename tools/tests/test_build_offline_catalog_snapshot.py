@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 from tools.build_offline_catalog_snapshot import SnapshotBuildError, build_snapshot
+from tools.verify_offline_catalog_snapshot import verify_snapshot
 
 
 DISCOVERY_GATES = [
@@ -207,6 +208,43 @@ class OfflineCatalogSnapshotBuilderTest(unittest.TestCase):
             )
             self.assertEqual(0, verification.returncode)
             self.assertIn("Verified OK", verification.stdout)
+
+    def test_verifier_accepts_canonical_unsigned_output_but_not_tampering(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = self.make_config(root, [self.make_source(root)])
+            out = root / "out"
+            build_snapshot(config, out)
+            result = verify_snapshot(out)
+            self.assertEqual("UNSIGNED", result["signatureState"])
+            self.assertEqual(2, result["records"])
+            source = out / "sources" / "off-ca.jsonl"
+            source.write_bytes(source.read_bytes() + b"\n")
+            with self.assertRaisesRegex(SnapshotBuildError, "Source content hash mismatch"):
+                verify_snapshot(out)
+
+    def test_verifier_requires_public_key_for_signed_snapshot(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = self.make_config(root, [self.make_source(root)])
+            private_key = root / "private-key.pem"
+            public_key = root / "public-key.pem"
+            subprocess.run(
+                ["openssl", "genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:2048", "-out", str(private_key)],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["openssl", "rsa", "-in", str(private_key), "-pubout", "-out", str(public_key)],
+                check=True,
+                capture_output=True,
+            )
+            out = root / "out"
+            build_snapshot(config, out, private_key=private_key, require_signature=True)
+            with self.assertRaisesRegex(SnapshotBuildError, "public key"):
+                verify_snapshot(out)
+            result = verify_snapshot(out, public_key=public_key, require_signature=True)
+            self.assertEqual("VERIFIED", result["signatureState"])
 
 
 if __name__ == "__main__":
