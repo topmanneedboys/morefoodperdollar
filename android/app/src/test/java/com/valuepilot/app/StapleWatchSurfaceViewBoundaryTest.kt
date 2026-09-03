@@ -89,6 +89,21 @@ class StapleWatchSurfaceViewBoundaryTest {
         }
     }
 
+    @Test
+    fun `projected Watch warning is also a polite live region`() {
+        val source = source("StapleWatchSurfaceView.kt").readText()
+        val noticeStart = source.indexOf("private val notice =")
+        val noticeEnd = source.indexOf("\n\n    init {", noticeStart)
+
+        assertTrue("Watch warning field must exist", noticeStart >= 0)
+        assertTrue("Watch warning block must be complete", noticeEnd > noticeStart)
+        assertTrue(
+            source.substring(noticeStart, noticeEnd).contains(
+                "accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"
+            )
+        )
+    }
+
     private fun source(name: String): File {
         val workingDirectory =
             requireNotNull(System.getProperty("user.dir")) { "Missing user.dir for source boundary test" }

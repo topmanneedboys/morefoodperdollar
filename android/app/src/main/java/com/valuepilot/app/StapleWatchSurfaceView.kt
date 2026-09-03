@@ -27,7 +27,12 @@ class StapleWatchSurfaceView @JvmOverloads constructor(
     private val guidance = line("", 14f, "#374151", topPadding = 5)
     private val baselineEvidence = line("", 13f, "#6B7280", topPadding = 10)
     private val switchContainer = bareColumn()
-    private val notice = line("", 12f, "#92400E", topPadding = 12)
+    private val notice = line("", 12f, "#92400E", topPadding = 12).apply {
+        // Safety and display-metadata warnings are projected state changes.
+        // Announce the specific warning politely without granting the View
+        // policy, economic, notification, or data authority.
+        accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+    }
 
     init {
         orientation = VERTICAL
