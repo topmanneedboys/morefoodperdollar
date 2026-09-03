@@ -8,11 +8,19 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+`4bc6a0ab50e4a4a82f351c4ff5b60ac601f2d703` — `Bound Search received observation state`
+
+GitHub Actions candidate workflow **33732943799** completed successfully, and milestone provenance workflow **33733488198** completed successfully for the exact same SHA.
+
+The latest Search refinement closes a bounded-state reporting gap. Search now reports only the provider observations admitted for evaluation, never an oversized raw batch count; parsing, ranking, visible results, evidence and provider authority are unchanged. This is controller-state/bounds-only; provider execution, ranking, evidence, persistence, clock, provider economics and network authority remain unchanged. Clean-source verification passed 1,681 JVM tests (375 shared-core + 1,306 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+
+## Previous verified engineering head (superseded)
+
 `f1ad62c4a1c7d76c52e9dae4a7fd84ce16773b7e` — `Gate Home extra-stop disclosure by owner`
 
 GitHub Actions candidate workflow **33731893804** completed successfully, and milestone provenance workflow **33732437637** completed successfully for the exact same SHA.
 
-The latest Home refinement closes an owner-lifecycle affordance gap. The advanced extra-stop disclosure now mirrors the existing callback gate used by its option chips: a detached/reused Home renderer cannot open the interactive panel without its typed owner callback, while an attached owner preserves the existing progressive disclosure. This is presentation/lifecycle-only; provider execution, ranking, evidence, persistence, clock, provider economics and network authority remain unchanged. Clean-source verification passed 1,681 JVM tests (375 shared-core + 1,306 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+Home’s advanced extra-stop disclosure now mirrors the existing callback gate used by its option chips: a detached/reused Home renderer cannot open the interactive panel without its typed owner callback, while an attached owner preserves the existing progressive disclosure. This is presentation/lifecycle-only and leaves provider execution, ranking, evidence, persistence, clock, provider economics and network authority unchanged. Clean-source verification passed 1,681 JVM tests (375 shared-core + 1,306 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
