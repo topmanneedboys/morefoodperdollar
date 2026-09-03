@@ -8,11 +8,13 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`6d87e7bf2b5a97eb986acc3021b1c3c7a8d1d754` — `Clarify incomplete extra-stop evaluation`
+`2bdb750d8d067371ee68bed88cbcfcfca82110f1` — `Explain missing Home item prices`
 
-GitHub Actions candidate workflow **33721658319** completed successfully, and milestone provenance workflow **33722072845** completed successfully for the exact same SHA.
+GitHub Actions candidate workflow **33722478794** completed successfully, and milestone provenance workflow **33722879331** completed successfully for the exact same SHA.
 
-The latest Home refinement closes a consumer-facing ambiguity in the existing extra-stop control. Incomplete known-subtotal results may still expose the saved threshold for future complete coverage, but the expanded panel and accessibility summary now state that another stop is not evaluated until every requested item has a usable price. Complete results remain unchanged. This is renderer-ready guidance only; no money, ranking, missing-price, planner-policy or provider authority moved into Home.
+The latest Home refinement closes a per-item coverage clarity gap. Whenever the existing projected result has no store assignment for an item, Home now shows “No usable price yet — not included in this plan.” beside that item. Complete covered rows remain unchanged, and the notice is renderer-ready only; it does not infer prices, repair coverage, recalculate totals, or affect ranking.
+
+The preceding Home refinement closes a consumer-facing ambiguity in the existing extra-stop control. Incomplete known-subtotal results may still expose the saved threshold for future complete coverage, but the expanded panel and accessibility summary now state that another stop is not evaluated until every requested item has a usable price. Complete results remain unchanged. This is renderer-ready guidance only; no money, ranking, missing-price, planner-policy or provider authority moved into Home.
 
 The preceding Saved refinement closes a consumer guidance gap in the observed-price entry point. When saved content exists, the launcher now explains the evidence setup in plain language: choose a saved product and store, then record a personally observed price with proof. If the existing readiness gate is missing a named product, a named store, or both, the surface shows a precise heading and notice while keeping the action unavailable. Empty, loading and error states stay quiet. This is renderer-ready copy only; it does not create current-price authority, infer evidence, change persistence, or alter planner/ranking behavior.
 
