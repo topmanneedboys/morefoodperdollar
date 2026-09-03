@@ -60,7 +60,12 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
                 "extraStopSettingsButton.visibility = if (state.visible) VISIBLE else GONE"
             )
         )
-        assertTrue(source.contains("if (!state.visible) extraStopSettingsExpanded = false"))
+        assertTrue(
+            source.contains(
+                "if (!state.visible || onExtraStopMinimumSavingsChoice == null)"
+            )
+        )
+        assertTrue(source.contains("extraStopSettingsExpanded = false"))
         assertTrue(source.contains("syncExtraStopSettingsAccessibility()"))
         assertTrue(source.contains("extraStopSettingsButton.contentDescription"))
         assertTrue(source.contains("practicalShoppingExtraStopSettingsContentDescription"))

@@ -439,7 +439,11 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         // settings panel visible; the option chips below use the same gate.
         extraStopSettingsButton.isEnabled =
             state.visible && onExtraStopMinimumSavingsChoice != null
-        if (!state.visible) extraStopSettingsExpanded = false
+        if (!state.visible || onExtraStopMinimumSavingsChoice == null) {
+            // Do not leave a stale expanded panel on screen after its owner
+            // disappears; a detached/reused renderer should look inert too.
+            extraStopSettingsExpanded = false
+        }
         currentExtraStopSettingsNotice = state.notice
         extraStopSettingsButton.text = state.summary
         syncExtraStopSettingsAccessibility()
