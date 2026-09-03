@@ -8,11 +8,19 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+`2e2e526178043eb8e8d534df64ed1a380b6ff07e` — `Restore Home item details drafts`
+
+GitHub Actions candidate workflow **33750002662** completed successfully, and milestone provenance workflow **33750549290** completed successfully for the exact same SHA.
+
+The latest Home refinement preserves an in-progress item-details draft across Activity recreation. Package count, preferred brand and exact-product intent are saved only in ephemeral `onSaveInstanceState`, restored only on the Home route for an item still present in the restored request, and remain outside the persistent Home session and planner until explicit Save. This is presentation/lifecycle-only and does not alter the typed Home session, planner, projector, pricing, evidence, persistence, provider, provider-economics or network authority. Clean-source verification passed 1,690 JVM tests (375 shared-core + 1,315 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+
+## Previous verified engineering head (superseded)
+
 `cff0a346fb3ae37f59a52d92cdc718cd053ee030` — `Dismiss stale Home item details dialogs`
 
 GitHub Actions candidate workflow **33748458980** completed successfully, and milestone provenance workflow **33748992285** completed successfully for the exact same SHA.
 
-The latest Home refinement closes a lifecycle gap around the item-details editor. The Activity now retains the open dialog, dismisses any previous editor before opening another, closes it whenever the shell leaves Home or opens Compare, and releases it during teardown. A package-count/brand/exact-product editor therefore cannot remain visibly actionable over another destination or reappear with stale Home state. This is presentation/lifecycle-only and does not alter the typed Home session, planner, projector, pricing, evidence, persistence, provider, provider-economics or network authority. Clean-source verification passed 1,689 JVM tests (375 shared-core + 1,314 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+The Home item-details editor is lifecycle-bound to the Home route: opening a new editor dismisses any prior instance, leaving Home or opening Compare dismisses it, and Activity teardown releases it. This prevents an old package-count/brand/exact-product dialog from remaining visibly actionable over another destination or reappearing with stale Home state. This is presentation/lifecycle-only and does not alter the typed Home session, planner, projector, pricing, evidence, persistence, provider, provider-economics or network authority. Clean-source verification passed 1,689 JVM tests (375 shared-core + 1,314 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
