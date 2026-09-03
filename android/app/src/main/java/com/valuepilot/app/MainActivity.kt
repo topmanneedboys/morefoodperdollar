@@ -118,6 +118,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var stapleWatchPolicySetupCoordinator: StapleWatchPolicySetupCompositionCoordinator
 
     private var comparisonActivityOpen = false
+    private var homeItemDetailsDialog: AlertDialog? = null
     private var suppressSearchInputCallback = false
     private var restoreSearchOnNextOpen = false
 
@@ -250,6 +251,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        dismissHomeItemDetailsDialog()
         if (::homeExperience.isInitialized) {
             homeExperience.onQueryChanged = null
             homeExperience.onSubmit = null
@@ -408,7 +410,13 @@ class MainActivity : AppCompatActivity() {
         basketExperience.render(PracticalShoppingBasketRenderer.render(homeState))
     }
 
+    private fun dismissHomeItemDetailsDialog() {
+        homeItemDetailsDialog?.dismiss()
+        homeItemDetailsDialog = null
+    }
+
     private fun showHomeItemDetails(itemKey: ShoppingItemKey) {
+        dismissHomeItemDetailsDialog()
         val item = homeSessionState.model.ui.items.firstOrNull { it.key == itemKey } ?: return
         val current = homeSessionState.requestDetails.details?.detailFor(itemKey)
         if (homeSessionState.requestDetails.details == null) return
@@ -489,6 +497,12 @@ class MainActivity : AppCompatActivity() {
             dialogBuilder
                 .setPositiveButton(R.string.home_item_details_save, null)
                 .create()
+        homeItemDetailsDialog = dialog
+        dialog.setOnDismissListener {
+            if (homeItemDetailsDialog === dialog) {
+                homeItemDetailsDialog = null
+            }
+        }
 
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
@@ -916,6 +930,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openComparison() {
+        dismissHomeItemDetailsDialog()
         shellState = AppShellReducer.reduce(
             shellState,
             AppShellIntent.OpenStandaloneCompare
@@ -932,6 +947,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderShell(state: AppShellState) {
+        if (state.route != AppRoute.HOME) {
+            dismissHomeItemDetailsDialog()
+        }
         if (state.route == AppRoute.COMPARE) return
 
         val copy = copyFor(state.selectedPrimaryTab)

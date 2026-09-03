@@ -27,6 +27,25 @@ class MainActivityHomeLifecycleBoundaryTest {
         }
     }
 
+    @Test
+    fun homeDetailsDialogIsDismissedOutsideHomeAndOnActivityTeardown() {
+        val source = source().readText()
+
+        listOf(
+            "private var homeItemDetailsDialog: AlertDialog? = null",
+            "private fun dismissHomeItemDetailsDialog()",
+            "dismissHomeItemDetailsDialog()",
+            "homeItemDetailsDialog?.dismiss()",
+            "homeItemDetailsDialog = null",
+            "homeItemDetailsDialog = dialog",
+            "dialog.setOnDismissListener {",
+            "if (homeItemDetailsDialog === dialog)",
+            "if (state.route != AppRoute.HOME)"
+        ).forEach { required ->
+            assertTrue("Expected Home item-details dialog lifecycle boundary: $required", source.contains(required))
+        }
+    }
+
     private fun source(): File {
         val workingDirectory =
             requireNotNull(System.getProperty("user.dir")) {
