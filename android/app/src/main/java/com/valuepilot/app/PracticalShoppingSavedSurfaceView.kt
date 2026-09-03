@@ -218,7 +218,12 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
                     else -> "#4B5563"
                 },
             topPadding = 12
-        )
+        ).apply {
+            // Refresh, mutation, degradation and error messages are projected
+            // state changes. Announce them politely without making the View
+            // interpret Saved lifecycle or persistence state.
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        }
 
     private fun notice(value: String): TextView =
         textLine(

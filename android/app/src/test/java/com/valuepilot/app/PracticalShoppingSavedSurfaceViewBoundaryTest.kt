@@ -31,6 +31,17 @@ class PracticalShoppingSavedSurfaceViewBoundaryTest {
     }
 
     @Test
+    fun projectedSavedStatusFeedbackUsesAPoliteAccessibilityLiveRegion() {
+        val source = source().readText()
+
+        assertTrue(
+            source.contains(
+                "accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"
+            )
+        )
+    }
+
+    @Test
     fun physicalSavedViewHasNoPersistenceProviderOrDecisionAuthority() {
         val source = source().readText()
 
