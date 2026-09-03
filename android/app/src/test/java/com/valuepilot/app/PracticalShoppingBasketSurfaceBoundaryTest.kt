@@ -83,6 +83,20 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
     }
 
     @Test
+    fun collectionSafetyDisclosureUsesAPoliteAccessibilityLiveRegion() {
+        val source = source("PracticalShoppingBasketSurfaceView.kt").readText()
+
+        assertEquals(
+            2,
+            source
+                .split("accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE")
+                .size - 1
+        )
+        assertTrue(source.contains("private val collectionNotice"))
+        assertTrue(source.contains("projected safety disclosure"))
+    }
+
+    @Test
     fun homeAndBasketShareOneUiReadyPlanResultRenderer() {
         val home = source("PracticalShoppingHomeSurfaceView.kt").readText()
         val basket = source("PracticalShoppingBasketSurfaceView.kt").readText()

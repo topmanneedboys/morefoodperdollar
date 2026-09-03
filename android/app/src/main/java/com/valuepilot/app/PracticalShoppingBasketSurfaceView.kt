@@ -55,7 +55,12 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         // shopping-decision authority.
         accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
     }
-    private val collectionNotice = line("", 12f, "#6B7280", topPadding = 4)
+    private val collectionNotice = line("", 12f, "#6B7280", topPadding = 4).apply {
+        // This projected safety disclosure appears when foreground check-off
+        // becomes available. Announce it politely without granting the View
+        // order, plan, or shopping-decision authority.
+        accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+    }
     private val clearCollectionButton = MaterialButton(context).apply {
         text = "Clear check-off"
         contentDescription = "Clear collected item marks"
