@@ -7,16 +7,20 @@ on:
       - 'tools/build_offline_catalog_snapshot.py'
       - 'tools/verify_offline_catalog_snapshot.py'
       - 'tools/promote_offline_catalog_snapshot.py'
+      - 'tools/import_open_food_facts_catalog.py'
       - 'tools/tests/test_build_offline_catalog_snapshot.py'
       - 'tools/tests/test_promote_offline_catalog_snapshot.py'
+      - 'tools/tests/test_import_open_food_facts_catalog.py'
       - '.github/workflows/test-offline-catalog-snapshot.yml'
   pull_request:
     paths:
       - 'tools/build_offline_catalog_snapshot.py'
       - 'tools/verify_offline_catalog_snapshot.py'
       - 'tools/promote_offline_catalog_snapshot.py'
+      - 'tools/import_open_food_facts_catalog.py'
       - 'tools/tests/test_build_offline_catalog_snapshot.py'
       - 'tools/tests/test_promote_offline_catalog_snapshot.py'
+      - 'tools/tests/test_import_open_food_facts_catalog.py'
       - '.github/workflows/test-offline-catalog-snapshot.yml'
 
 permissions:
@@ -42,10 +46,12 @@ jobs:
           tools/build_offline_catalog_snapshot.py
           tools/verify_offline_catalog_snapshot.py
           tools/promote_offline_catalog_snapshot.py
+          tools/import_open_food_facts_catalog.py
 
       - name: Run deterministic snapshot tests
         run: >-
           python -m unittest
           tools.tests.test_build_offline_catalog_snapshot
           tools.tests.test_promote_offline_catalog_snapshot
+          tools.tests.test_import_open_food_facts_catalog
           -v
