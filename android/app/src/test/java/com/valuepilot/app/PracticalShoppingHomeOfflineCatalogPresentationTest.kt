@@ -41,7 +41,11 @@ class PracticalShoppingHomeOfflineCatalogPresentationTest {
         assertEquals("milk", presentation.query)
         assertEquals(listOf("Whole Milk", "Oat Milk"), presentation.matches.map { it.displayName })
         assertEquals(listOf("exact name", "name match"), presentation.matches.map { it.matchLabel })
+        assertEquals(2, presentation.evaluatedCandidateCount)
         assertTrue(presentation.message.contains("Identity suggestions"))
+        assertTrue(presentation.message.contains("Open Food Facts"))
+        assertTrue(presentation.message.contains("ODbL-1.0"))
+        assertTrue(presentation.message.contains("Checked 2 bundled product identities"))
         assertTrue(presentation.message.contains("no current prices"))
         assertFalse(presentation.message.contains("CAD"))
         assertFalse(presentation.message.contains("stocked"))
@@ -61,6 +65,8 @@ class PracticalShoppingHomeOfflineCatalogPresentationTest {
             )
 
         assertTrue(presentation.matches.isEmpty())
+        assertEquals(3_000, presentation.evaluatedCandidateCount)
+        assertTrue(presentation.message.contains("Checked 3000 bundled product identities"))
         assertTrue(presentation.message.contains("No matching product identity"))
         assertTrue(presentation.message.contains("no current prices"))
     }

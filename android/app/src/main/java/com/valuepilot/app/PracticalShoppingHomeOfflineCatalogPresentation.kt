@@ -3,6 +3,7 @@ package com.valuepilot.app
 import com.valuepilot.core.OfflineCatalogDiscoveryMatch
 import com.valuepilot.core.OfflineCatalogDiscoveryResult
 import com.valuepilot.core.OfflineCatalogMatchKind
+import com.valuepilot.core.OfflineCatalogSnapshotManifest
 
 /**
  * Immutable Home presentation for an offline catalog lookup.
@@ -14,6 +15,7 @@ import com.valuepilot.core.OfflineCatalogMatchKind
 data class PracticalShoppingHomeOfflineCatalogPresentation(
     val query: String,
     val matches: List<Match>,
+    val evaluatedCandidateCount: Int,
     val notice: String
 ) {
     data class Match(
@@ -31,6 +33,8 @@ data class PracticalShoppingHomeOfflineCatalogPresentation(
     init {
         require(query.isNotBlank())
         require(matches.size <= 24)
+        require(evaluatedCandidateCount >= matches.size)
+        require(evaluatedCandidateCount <= OfflineCatalogSnapshotManifest.MAX_TOTAL_RECORDS)
         require(notice.isNotBlank())
     }
 
@@ -38,8 +42,11 @@ data class PracticalShoppingHomeOfflineCatalogPresentation(
     val message: String
         get() = buildString {
             append(notice)
+            append("\n\nChecked ")
+            append(evaluatedCandidateCount)
+            append(" bundled product identities.")
             if (matches.isEmpty()) {
-                append("\n\nNo matching product identity was found in this bundled snapshot.")
+                append("\nNo matching product identity was found in this bundled snapshot.")
             } else {
                 append("\n\n")
                 matches.forEachIndexed { index, match ->
@@ -54,7 +61,7 @@ data class PracticalShoppingHomeOfflineCatalogPresentation(
 
     companion object {
         private const val NOTICE =
-            "Identity suggestions from a Canada-labelled offline snapshot only — no current prices, package quantities, stock, store availability or freshness are included."
+            "Identity suggestions from a Canada-labelled Open Food Facts snapshot (ODbL-1.0) only — no current prices, package quantities, stock, store availability or freshness are included."
 
         fun from(
             query: String,
@@ -65,6 +72,7 @@ data class PracticalShoppingHomeOfflineCatalogPresentation(
             return PracticalShoppingHomeOfflineCatalogPresentation(
                 query = normalizedQuery,
                 matches = result.matches.map(::mapMatch),
+                evaluatedCandidateCount = result.evaluatedCandidateCount,
                 notice = NOTICE
             )
         }
