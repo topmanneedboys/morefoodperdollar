@@ -8,6 +8,14 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+`2a31c0d96e733c667a7fa7ed1636506eb423aad6` — `Explain incomplete Basket extra stop`
+
+GitHub Actions candidate workflow **33724167757** completed successfully, and milestone provenance workflow **33724622104** completed successfully for the exact same SHA.
+
+The latest Basket refinement closes a second-stop disclosure gap. When an incomplete known-subtotal result still has a primary plan and the saved extra-stop rule is visible, Basket now carries Home's existing explanation that another stop is not evaluated until every requested item has a usable price. Complete plans remain unchanged, and no-coverage plans keep the rule hidden. This is renderer-only copy from immutable projection; it does not infer prices, alter totals, change planner policy, or add provider/network authority.
+
+## Previous verified engineering head (superseded)
+
 `2690b78d3c8c61b2f844c357c4c096b792ce244a` — `Carry missing price notice into Basket`
 
 GitHub Actions candidate workflow **33723174528** completed successfully, and milestone provenance workflow **33723634750** completed successfully for the exact same SHA.
