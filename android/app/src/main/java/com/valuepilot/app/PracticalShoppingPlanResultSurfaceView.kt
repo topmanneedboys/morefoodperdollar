@@ -100,6 +100,10 @@ class PracticalShoppingPlanResultSurfaceView @JvmOverloads constructor(
     init {
         orientation = VERTICAL
         isSaveEnabled = false
+        // A newly projected plan replaces the empty result area after a user
+        // action. Announce that change politely while keeping all decision
+        // content and authority in the immutable projection.
+        accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
     }
 
     fun render(state: PracticalShoppingUiState?) {

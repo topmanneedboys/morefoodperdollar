@@ -135,6 +135,19 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
     }
 
     @Test
+    fun sharedPlanResultAnnouncesProjectedChangesPolitely() {
+        val source = source("PracticalShoppingPlanResultSurfaceView.kt").readText()
+
+        assertTrue(
+            source.contains(
+                "accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"
+            )
+        )
+        assertTrue(source.contains("fun render(state: PracticalShoppingUiState?)"))
+        assertTrue(source.contains("if (state == null) return"))
+    }
+
+    @Test
     fun sharedPlanCardsExposeOneSummaryInsteadOfRepeatingDecorativeChildren() {
         val source = source("PracticalShoppingPlanResultSurfaceView.kt").readText()
 
