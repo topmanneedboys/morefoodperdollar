@@ -71,7 +71,9 @@ internal class UserObservedPriceConfirmationActionSurfaceView @JvmOverloads cons
     override fun render(state: UserObservedPriceConfirmationActionUiState) {
         statusText.text = state.message
         actionButton.text = state.actionLabel
-        actionButton.isEnabled = state.actionEnabled
+        // A replaceable renderer must stay inert when its typed owner is detached,
+        // even if the immutable state was ready at the last render.
+        actionButton.isEnabled = state.actionEnabled && onAction != null
     }
 
     override fun onDetachedFromWindow() {
