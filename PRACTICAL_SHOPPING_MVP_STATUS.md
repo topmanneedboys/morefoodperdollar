@@ -8,11 +8,19 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+`bd35d8a2a042226013ce6b93e0c60767a2c1d0e6` — `Collapse inert Home extra-stop panel`
+
+GitHub Actions candidate workflow **33733994101** completed successfully, and milestone provenance workflow **33734530262** completed successfully for the exact same SHA.
+
+The latest Home refinement closes a lifecycle clarity gap. If the typed owner callback disappears while the extra-stop settings panel is expanded, Home now collapses that panel instead of leaving an inert interactive-looking surface visible. This is presentation/lifecycle-only; provider execution, ranking, evidence, persistence, clock, provider economics and network authority remain unchanged. Clean-source verification passed 1,681 JVM tests (375 shared-core + 1,306 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+
+## Previous verified engineering head (superseded)
+
 `4bc6a0ab50e4a4a82f351c4ff5b60ac601f2d703` — `Bound Search received observation state`
 
 GitHub Actions candidate workflow **33732943799** completed successfully, and milestone provenance workflow **33733488198** completed successfully for the exact same SHA.
 
-The latest Search refinement closes a bounded-state reporting gap. Search now reports only the provider observations admitted for evaluation, never an oversized raw batch count; parsing, ranking, visible results, evidence and provider authority are unchanged. This is controller-state/bounds-only; provider execution, ranking, evidence, persistence, clock, provider economics and network authority remain unchanged. Clean-source verification passed 1,681 JVM tests (375 shared-core + 1,306 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+The previous Search refinement closed a bounded-state reporting gap. Search now reports only the provider observations admitted for evaluation, never an oversized raw batch count; parsing, ranking, visible results, evidence and provider authority are unchanged. This is controller-state/bounds-only; provider execution, ranking, evidence, persistence, clock, provider economics and network authority remain unchanged. Clean-source verification passed 1,681 JVM tests (375 shared-core + 1,306 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
