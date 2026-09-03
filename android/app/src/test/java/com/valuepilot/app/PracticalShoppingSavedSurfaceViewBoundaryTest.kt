@@ -1,5 +1,6 @@
 package com.valuepilot.app
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -39,6 +40,20 @@ class PracticalShoppingSavedSurfaceViewBoundaryTest {
                 "accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"
             )
         )
+    }
+
+    @Test
+    fun projectedSavedWarningFeedbackUsesAPoliteAccessibilityLiveRegion() {
+        val source = source().readText()
+
+        assertEquals(
+            2,
+            source
+                .split("accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE")
+                .size - 1
+        )
+        assertTrue(source.contains("private fun notice(value: String): TextView"))
+        assertTrue(source.contains("unresolved display-metadata warning"))
     }
 
     @Test

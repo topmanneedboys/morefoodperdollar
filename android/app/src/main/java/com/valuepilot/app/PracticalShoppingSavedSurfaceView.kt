@@ -231,7 +231,12 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
             sizeSp = 13f,
             textColor = "#92400E",
             topPadding = 10
-        )
+        ).apply {
+            // An unresolved display-metadata warning is projected state, not a
+            // decision. Announce it politely when Saved content changes while
+            // keeping interpretation and exact-key handling in the projector.
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        }
 
     private fun emptyMessage(value: String): TextView =
         textLine(
