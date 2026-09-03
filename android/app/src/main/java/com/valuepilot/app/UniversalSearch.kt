@@ -288,7 +288,9 @@ class UniversalSearchController(
         if (
             previous.query.isBlank() ||
             previous.status ==
-                UniversalSearchStatus.QUERY_TOO_LONG
+                UniversalSearchStatus.QUERY_TOO_LONG ||
+            previous.status ==
+                UniversalSearchStatus.LOADING
         ) {
             return UniversalSearchTransition(
                 previous

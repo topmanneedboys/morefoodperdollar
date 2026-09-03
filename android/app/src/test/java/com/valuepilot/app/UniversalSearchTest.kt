@@ -140,6 +140,21 @@ class UniversalSearchTest {
     }
 
     @Test
+    fun submitWhileLoadingIsIgnoredUntilTheQueryChanges() {
+        val controller = UniversalSearchController()
+        val started = start(controller, "eggs")
+
+        val duplicate =
+            controller.reduce(
+                started.state,
+                UniversalSearchIntent.Submit
+            )
+
+        assertEquals(started.state, duplicate.state)
+        assertNull(duplicate.request)
+    }
+
+    @Test
     fun staleProviderCompletionCannotReplaceNewerSearch() {
         val controller =
             UniversalSearchController()
