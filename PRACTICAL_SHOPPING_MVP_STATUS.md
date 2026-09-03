@@ -8,11 +8,19 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+`b2c93b52cb9fa47aac6bad3cdc5b2587b2fc515c` — `Fail closed observed-price Saved selection`
+
+GitHub Actions candidate workflow **33746227407** completed successfully, and milestone provenance workflow **33746657577** completed successfully for the exact same SHA.
+
+The latest observed-price Saved-selection refinement closes a lifecycle gap. Every rendered product/store/clear-selection and prefill-check button now updates immediately when its typed lifecycle owner is installed or cleared, so detached surfaces cannot leave controls looking actionable. This is presentation/lifecycle-only and does not alter Saved identity, persistence, prefill, planner, projector, pricing, evidence, notification, provider, provider-economics or network authority. Clean-source verification passed 1,688 JVM tests (375 shared-core + 1,313 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+
+## Previous verified engineering head (superseded)
+
 `62c931ac136b6b4fd7853069cc1359a545b14bac` — `Dismiss detached Saved confirmations`
 
 GitHub Actions candidate workflow **33745130893** completed successfully, and milestone provenance workflow **33745673251** completed successfully for the exact same SHA.
 
-The latest Saved lifecycle refinement closes the stale confirmation gap. Saved now dismisses an open “Clear all” confirmation when its lifecycle owner detaches, and when a fresh immutable projection replaces the state that opened it, so a detached or stale dialog cannot remain visibly actionable. The existing typed clear-all action still emits only after explicit confirmation. This is presentation/lifecycle-only and does not alter Saved persistence, identity, planner, projector, pricing, evidence, notification, provider, provider-economics or network authority. Clean-source verification passed 1,687 JVM tests (375 shared-core + 1,312 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+Saved now dismisses an open “Clear all” confirmation when its lifecycle owner detaches, and when a fresh immutable projection replaces the state that opened it, so a detached or stale dialog cannot remain visibly actionable. The existing typed clear-all action still emits only after explicit confirmation. This is presentation/lifecycle-only and does not alter Saved persistence, identity, planner, projector, pricing, evidence, notification, provider, provider-economics or network authority. Clean-source verification passed 1,687 JVM tests (375 shared-core + 1,312 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
