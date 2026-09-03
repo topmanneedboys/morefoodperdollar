@@ -8,11 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`5f36a19e3467fcf58a0bca84d5864f56dcdf74d6` — `Dismiss stale Saved confirmations on route changes`
+`d4ba87d39589a0e78af0e69033ffbd05337c45b2` — `Explain offline catalog source and coverage`
 
-GitHub Actions candidate workflow **33756824438** completed successfully, and milestone provenance workflow **33756823998** completed successfully for the exact same SHA.
+GitHub Actions candidate workflow **33802015980** completed successfully, and milestone provenance workflow **33802633723** completed successfully for the exact same SHA.
 
-Saved now dismisses its window-level “Clear all” confirmation whenever the shell leaves Saved, including the Compare route, so a destructive confirmation opened for Saved cannot float over Home, Basket, Search or another destination. This is presentation/lifecycle-only and does not alter the planner, projector, ranking, pricing, evidence, persistence, provider, provider-economics or network authority. Clean-source verification passed 1,696 JVM tests (375 shared-core + 1,321 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+Home’s bounded offline identity lookup now names its Open Food Facts ODbL-1.0 source and reports how many bundled identities were checked, without implying complete market coverage. The preceding `36c3092` slice distinguishes an admission-blocked/expired/invalid snapshot from a valid snapshot with no match; `621f130` cancels stale queued lookup work when a newer lookup starts, its dialog closes, Home is left, or the Activity is destroyed. These are presentation/lifecycle-only changes: no current offers, stock, availability, planner, projector, ranking, pricing, evidence, persistence, provider, provider-economics or network authority changed. Clean-source verification passed 397 shared-core tests and 1,333 Android app tests with zero failures, all 58 Android tasks, 59 Python tests, 30 browser tests, Firefox lint with zero findings, APK privacy inspection with no INTERNET/ACCESS_NETWORK_STATE, one-signer verification, and exact-SHA release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
