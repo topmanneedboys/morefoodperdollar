@@ -53,6 +53,28 @@ class PracticalShoppingBasketRendererTest {
     }
 
     @Test
+    fun typedButUnsubmittedDraftExplainsThatPlanningStartsOnHome() {
+        val model =
+            LocalSamplePracticalShoppingDemo.reduce(
+                LocalSamplePracticalShoppingDemo.initialModel(),
+                LocalSamplePracticalShoppingDemo.Intent.QueryChanged("eggs milk")
+            )
+        val home = PracticalShoppingHomeRenderer.render(model.ui)
+
+        val basket = PracticalShoppingBasketRenderer.render(home)
+
+        assertEquals(PracticalShoppingBasketStatus.NEEDS_ATTENTION, basket.status)
+        assertEquals("Plan this list on Home", basket.headline)
+        assertEquals(
+            "Your list is ready to plan. Return to Home and tap Plan my shop to see the sample result.",
+            basket.guidance
+        )
+        assertEquals("Plan this list on Home", basket.actionLabel)
+        assertNull(basket.result)
+        assertFalse(basket.collectionEnabled)
+    }
+
+    @Test
     fun refinementCannotBeMistakenForACompletedBasket() {
         val model =
             PracticalShoppingHomeSession.submit(

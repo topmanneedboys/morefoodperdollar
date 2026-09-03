@@ -68,6 +68,12 @@ data class PracticalShoppingBasketRenderState(
 object PracticalShoppingBasketRenderer {
 
     fun render(source: PracticalShoppingHomeRenderState): PracticalShoppingBasketRenderState {
+        val draftReadyForPlanning =
+            source.result == null &&
+                source.query.isNotBlank() &&
+                source.items.isEmpty() &&
+                source.unknownItems.isEmpty() &&
+                source.submitEnabled
         val status =
             when {
                 source.result != null -> PracticalShoppingBasketStatus.PLANNED
@@ -79,7 +85,12 @@ object PracticalShoppingBasketRenderer {
         val headline =
             when (status) {
                 PracticalShoppingBasketStatus.EMPTY -> "No basket planned yet"
-                PracticalShoppingBasketStatus.NEEDS_ATTENTION -> "Finish your shopping list"
+                PracticalShoppingBasketStatus.NEEDS_ATTENTION ->
+                    if (draftReadyForPlanning) {
+                        "Plan this list on Home"
+                    } else {
+                        "Finish your shopping list"
+                    }
                 PracticalShoppingBasketStatus.PLANNED ->
                     if (source.result?.primary == null) {
                         "Price coverage needed"
@@ -92,7 +103,11 @@ object PracticalShoppingBasketRenderer {
                 PracticalShoppingBasketStatus.EMPTY ->
                     "Build your shopping list on Home, then its plan will appear here."
                 PracticalShoppingBasketStatus.NEEDS_ATTENTION ->
-                    source.message ?: "Finish the items that need attention on Home."
+                    if (draftReadyForPlanning) {
+                        "Your list is ready to plan. Return to Home and tap Plan my shop to see the sample result."
+                    } else {
+                        source.message ?: "Finish the items that need attention on Home."
+                    }
                 PracticalShoppingBasketStatus.PLANNED ->
                     when {
                         source.result?.primary == null ->
@@ -132,6 +147,8 @@ object PracticalShoppingBasketRenderer {
             actionLabel =
                 if (status == PracticalShoppingBasketStatus.EMPTY) {
                     "Build my basket on Home"
+                } else if (draftReadyForPlanning) {
+                    "Plan this list on Home"
                 } else {
                     "Edit on Home"
                 },
