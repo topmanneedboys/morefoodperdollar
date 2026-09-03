@@ -98,9 +98,17 @@ data class ProductionActivationProfile(
  */
 object ProductionActivationProfiles {
 
-    val CONSUMER_MOBILE_CATALOG =
+    /**
+     * Product identity/label discovery in an offline mobile catalog.
+     *
+     * This deliberately excludes offer geography, price semantics and price
+     * freshness. A product may be truthfully discoverable even when ValuePilot
+     * knows no current merchant offer for it. The profile grants no price,
+     * availability, exact-intent binding, affiliate-link or network authority.
+     */
+    val CONSUMER_MOBILE_PRODUCT_DISCOVERY =
         ProductionActivationProfile(
-            id = "consumer-mobile-catalog",
+            id = "consumer-mobile-product-discovery",
             requiredGates =
                 setOf(
                     ProductionAuthorizationGate.DATA_ACCESS_AUTHORIZED,
@@ -108,7 +116,16 @@ object ProductionActivationProfiles {
                     ProductionAuthorizationGate.CACHE_AUTHORIZED,
                     ProductionAuthorizationGate.INDEX_AUTHORIZED,
                     ProductionAuthorizationGate.MOBILE_APP_AUTHORIZED,
-                    ProductionAuthorizationGate.RETENTION_DELETION_POLICY_DEFINED,
+                    ProductionAuthorizationGate.RETENTION_DELETION_POLICY_DEFINED
+                )
+        )
+
+    val CONSUMER_MOBILE_CATALOG =
+        ProductionActivationProfile(
+            id = "consumer-mobile-catalog",
+            requiredGates =
+                CONSUMER_MOBILE_PRODUCT_DISCOVERY.requiredGates +
+                setOf(
                     ProductionAuthorizationGate.OFFER_GEOGRAPHY_VALIDATED,
                     ProductionAuthorizationGate.PRICE_SEMANTICS_VALIDATED,
                     ProductionAuthorizationGate.DATASET_RECENCY_POLICY_DEFINED,

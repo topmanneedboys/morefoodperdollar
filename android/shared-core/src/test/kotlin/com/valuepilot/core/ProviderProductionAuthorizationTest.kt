@@ -64,6 +64,24 @@ class ProviderProductionAuthorizationTest {
     }
 
     @Test
+    fun priceBearingCatalogProfileIncludesEveryProductDiscoveryRight() {
+        val discovery =
+            ProductionActivationProfiles.CONSUMER_MOBILE_PRODUCT_DISCOVERY
+        val priceBearing =
+            ProductionActivationProfiles.CONSUMER_MOBILE_CATALOG
+
+        assertTrue(priceBearing.requiredGates.containsAll(discovery.requiredGates))
+        assertTrue(
+            ProductionAuthorizationGate.PRICE_SEMANTICS_VALIDATED in
+                priceBearing.requiredGates
+        )
+        assertTrue(
+            ProductionAuthorizationGate.OFFER_FRESHNESS_POLICY_DEFINED in
+                priceBearing.requiredGates
+        )
+    }
+
+    @Test
     fun feedAccessAloneCanNeverAuthorizeMobileCatalogProduction() {
         val assessment =
             ProviderProductionAuthorizationAssessment(
