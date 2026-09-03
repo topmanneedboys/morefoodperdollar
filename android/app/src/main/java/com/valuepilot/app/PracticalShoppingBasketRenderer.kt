@@ -1,6 +1,7 @@
 package com.valuepilot.app
 
 import com.valuepilot.core.ShoppingItemKey
+import java.security.MessageDigest
 
 /**
  * Immutable Basket-tab presentation derived from the already-rendered Home state.
@@ -36,6 +37,12 @@ data class PracticalShoppingBasketRenderState(
         } else {
             emptyList()
         },
+    /**
+     * Opaque foreground-only scope for the projected item/store assignments.
+     * It lets Basket keep check-off marks across redraws while invalidating them
+     * when the plan's destination or requested presentation changes.
+     */
+    val collectionScopeId: String? = null,
     /** Explains the scope of foreground marks without implying cart/order authority. */
     val collectionNotice: String? =
         if (collectionEnabled) {
@@ -61,6 +68,9 @@ data class PracticalShoppingBasketRenderState(
         require(collectibleItemKeys.distinct().size == collectibleItemKeys.size)
         require(collectibleItemKeys.all { key -> items.any { it.key == key } })
         require(collectionEnabled == collectibleItemKeys.isNotEmpty())
+        require(collectionScopeId == null || collectionScopeId.isNotBlank())
+        require(collectionScopeId == null || collectionScopeId.length <= 64)
+        require((collectionScopeId != null) == collectionEnabled)
         require((collectionNotice != null) == collectionEnabled)
         if (status == PracticalShoppingBasketStatus.EMPTY) {
             require(items.isEmpty())
@@ -136,6 +146,16 @@ object PracticalShoppingBasketRenderer {
                 emptyList()
             }
         val collectionEnabled = collectibleItemKeys.isNotEmpty()
+        val collectionScopeId =
+            if (collectionEnabled) {
+                collectionScopeId(
+                    items = source.items,
+                    collectibleItemKeys = collectibleItemKeys,
+                    assignments = source.result?.itemStoreAssignments.orEmpty()
+                )
+            } else {
+                null
+            }
 
         return PracticalShoppingBasketRenderState(
             status = status,
@@ -150,6 +170,7 @@ object PracticalShoppingBasketRenderer {
             extraStopRuleNotice =
                 source.extraStopSettings.notice.takeIf { source.result?.primary != null },
             collectionEnabled = collectionEnabled,
+            collectionScopeId = collectionScopeId,
             actionLabel =
                 if (status == PracticalShoppingBasketStatus.EMPTY) {
                     "Build my basket on Home"
@@ -161,5 +182,41 @@ object PracticalShoppingBasketRenderer {
             sampleNotice = source.sampleNotice,
             collectibleItemKeys = collectibleItemKeys
         )
+    }
+
+    /**
+     * Creates a stable, opaque scope from already-projected consumer fields.
+     * Prices, ranking and planner decisions are never recomputed here. The
+     * scope only answers whether a local check-off belongs to the same visible
+     * item/store plan as the previous render.
+     */
+    private fun collectionScopeId(
+        items: List<PracticalShoppingHomeItemRenderState>,
+        collectibleItemKeys: List<ShoppingItemKey>,
+        assignments: List<PracticalShoppingItemStoreAssignmentUiState>
+    ): String {
+        val assignmentsByItem = assignments.associateBy { it.itemKey }
+        val itemsByKey = items.associateBy { it.key }
+        val material =
+            collectibleItemKeys
+                .sortedBy(ShoppingItemKey::value)
+                .joinToString(separator = "|") { itemKey ->
+                    val item = requireNotNull(itemsByKey[itemKey])
+                    val assignment = requireNotNull(assignmentsByItem[itemKey])
+                    listOf(
+                        itemKey.value,
+                        item.name,
+                        item.detail,
+                        item.requestDetailsSummary,
+                        assignment.storeName
+                    ).joinToString(separator = "\u001f") { value ->
+                        "${value.length}:$value"
+                    }
+                }
+
+        return MessageDigest
+            .getInstance("SHA-256")
+            .digest(material.toByteArray(Charsets.UTF_8))
+            .joinToString(separator = "") { byte -> "%02x".format(byte) }
     }
 }

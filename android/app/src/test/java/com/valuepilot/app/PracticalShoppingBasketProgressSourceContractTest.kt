@@ -15,6 +15,7 @@ class PracticalShoppingBasketProgressSourceContractTest {
             "ShoppingItemKey",
             "eligibleItemKeys",
             "collectedItemKeys",
+            "collectionScopeId",
             "MAX_BASKET_PROGRESS_ITEMS",
             "fun reconcile(",
             "fun toggle(",
@@ -22,6 +23,11 @@ class PracticalShoppingBasketProgressSourceContractTest {
         ).forEach { required ->
             assertTrue("Expected Basket progress boundary $required", source.contains(required))
         }
+
+        assertTrue(
+            "A changed projected plan scope must invalidate foreground marks",
+            source.contains("state.collectionScopeId == collectionScopeId")
+        )
 
         listOf(
             "Money",

@@ -115,6 +115,8 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     private var progressState = PracticalShoppingBasketProgressSession.initial()
     private var lastRenderState: PracticalShoppingBasketRenderState? = null
     private var pendingRestoredCollectedKeys: List<String>? = null
+    private var pendingRestoredCollectionScopeId: String? = null
+    private var pendingRestoredCollectionScopePresent = false
 
     init {
         orientation = VERTICAL
@@ -147,13 +149,22 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         progressState =
             pendingRestoredCollectedKeys?.let { restored ->
                 pendingRestoredCollectedKeys = null
+                val savedCollectionScopeId =
+                    pendingRestoredCollectionScopeId.takeIf {
+                        pendingRestoredCollectionScopePresent
+                    }
+                pendingRestoredCollectionScopeId = null
+                pendingRestoredCollectionScopePresent = false
                 PracticalShoppingBasketProgressSession.restore(
                     collectedItemKeyValues = restored,
-                    eligibleItemKeys = eligibleKeys(state)
+                    eligibleItemKeys = eligibleKeys(state),
+                    collectionScopeId = state.collectionScopeId,
+                    savedCollectionScopeId = savedCollectionScopeId
                 )
             } ?: PracticalShoppingBasketProgressSession.reconcile(
                 progressState,
-                eligibleKeys(state)
+                eligibleKeys(state),
+                collectionScopeId = state.collectionScopeId
             )
 
         headline.text = state.headline
@@ -182,6 +193,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             SAVED_COLLECTED_KEYS,
             ArrayList(PracticalShoppingBasketProgressSession.snapshot(progressState))
         )
+        state.putString(SAVED_COLLECTION_SCOPE_ID, progressState.collectionScopeId)
         return state
     }
 
@@ -193,6 +205,8 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         }
 
         pendingRestoredCollectedKeys = state.getStringArrayList(SAVED_COLLECTED_KEYS)?.toList()
+        pendingRestoredCollectionScopePresent = state.containsKey(SAVED_COLLECTION_SCOPE_ID)
+        pendingRestoredCollectionScopeId = state.getString(SAVED_COLLECTION_SCOPE_ID)
         super.onRestoreInstanceState(state.getParcelable(SAVED_SUPER_STATE))
 
         lastRenderState?.let(::render)
@@ -390,5 +404,6 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     companion object {
         private const val SAVED_SUPER_STATE = "basket.super_state"
         private const val SAVED_COLLECTED_KEYS = "basket.collected_keys"
+        private const val SAVED_COLLECTION_SCOPE_ID = "basket.collection_scope_id"
     }
 }

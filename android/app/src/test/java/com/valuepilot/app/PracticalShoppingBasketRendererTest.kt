@@ -4,6 +4,7 @@ import com.valuepilot.core.ShoppingItemKey
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -109,6 +110,7 @@ class PracticalShoppingBasketRendererTest {
         assertEquals(home.extraStopSettings.summary, basket.extraStopRuleText)
         assertEquals("Basket 10.28 CAD", basket.result?.primary?.basketCostText)
         assertTrue(basket.collectionEnabled)
+        assertTrue(basket.collectionScopeId?.isNotBlank() == true)
         assertEquals(
             "Check-off is only a local shopping-session aid; it does not place an order or change the plan.",
             basket.collectionNotice
@@ -142,6 +144,7 @@ class PracticalShoppingBasketRendererTest {
             basket.extraStopRuleNotice
         )
         assertEquals(listOf(home.items.first().key), basket.collectibleItemKeys)
+        assertTrue(basket.collectionScopeId?.isNotBlank() == true)
         assertEquals(
             "Review the priced items before you shop. Items without a usable price stay unchecked until verified.",
             basket.guidance
@@ -151,6 +154,39 @@ class PracticalShoppingBasketRendererTest {
             "Fictional sample data only — not live retailer prices or availability.",
             basket.sampleNotice
         )
+    }
+
+    @Test
+    fun changedExtraStopPlanProducesANewCollectionScope() {
+        var model =
+            PracticalShoppingHomeSession.submit(
+                PracticalShoppingHomeSession.initialState(),
+                "bananas eggs milk bread rice chicken breast"
+            )
+        val defaultBasket =
+            PracticalShoppingBasketRenderer.render(
+                PracticalShoppingHomeRenderer.render(
+                    model.model.ui,
+                    model.requestDetails.details
+                )
+            )
+
+        model =
+            PracticalShoppingHomeSession.chooseExtraStopMinimumSavings(
+                model,
+                LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.ONE_CAD
+            )
+        val splitBasket =
+            PracticalShoppingBasketRenderer.render(
+                PracticalShoppingHomeRenderer.render(
+                    model.model.ui,
+                    model.requestDetails.details
+                )
+            )
+
+        assertNotEquals(defaultBasket.collectionScopeId, splitBasket.collectionScopeId)
+        assertTrue(defaultBasket.collectionScopeId?.isNotBlank() == true)
+        assertTrue(splitBasket.collectionScopeId?.isNotBlank() == true)
     }
 
     @Test
@@ -179,6 +215,7 @@ class PracticalShoppingBasketRendererTest {
             basket.guidance
         )
         assertFalse(basket.collectionEnabled)
+        assertNull(basket.collectionScopeId)
         assertNull(basket.collectionNotice)
     }
 

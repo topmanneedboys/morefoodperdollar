@@ -105,14 +105,40 @@ class PracticalShoppingBasketProgressSessionTest {
         var state =
             PracticalShoppingBasketProgressSession.reconcile(
                 PracticalShoppingBasketProgressSession.initial(),
-                listOf(eggs, milk)
+                listOf(eggs, milk),
+                collectionScopeId = "plan-a"
             )
         state = PracticalShoppingBasketProgressSession.toggle(state, milk)
 
         val rerendered =
-            PracticalShoppingBasketProgressSession.reconcile(state, listOf(eggs, milk))
+            PracticalShoppingBasketProgressSession.reconcile(
+                state,
+                listOf(eggs, milk),
+                collectionScopeId = "plan-a"
+            )
 
         assertEquals(setOf(milk), rerendered.collectedItemKeys)
+    }
+
+    @Test
+    fun changedCollectionScopeClearsMarksEvenWhenItemKeysRemainEligible() {
+        var state =
+            PracticalShoppingBasketProgressSession.reconcile(
+                PracticalShoppingBasketProgressSession.initial(),
+                listOf(eggs, milk),
+                collectionScopeId = "plan-at-market-a"
+            )
+        state = PracticalShoppingBasketProgressSession.toggle(state, eggs)
+
+        val changedPlan =
+            PracticalShoppingBasketProgressSession.reconcile(
+                state,
+                listOf(eggs, milk),
+                collectionScopeId = "plan-at-market-b"
+            )
+
+        assertTrue(changedPlan.collectedItemKeys.isEmpty())
+        assertEquals("plan-at-market-b", changedPlan.collectionScopeId)
     }
 
     @Test
@@ -120,7 +146,8 @@ class PracticalShoppingBasketProgressSessionTest {
         var state =
             PracticalShoppingBasketProgressSession.reconcile(
                 PracticalShoppingBasketProgressSession.initial(),
-                listOf(milk, eggs)
+                listOf(milk, eggs),
+                collectionScopeId = "plan-a"
             )
         state = PracticalShoppingBasketProgressSession.toggle(state, milk)
         state = PracticalShoppingBasketProgressSession.toggle(state, eggs)
@@ -129,12 +156,28 @@ class PracticalShoppingBasketProgressSessionTest {
         val restored =
             PracticalShoppingBasketProgressSession.restore(
                 collectedItemKeyValues = snapshot,
-                eligibleItemKeys = listOf(eggs, coffee)
+                eligibleItemKeys = listOf(eggs, coffee),
+                collectionScopeId = "plan-a",
+                savedCollectionScopeId = "plan-a"
             )
 
         assertEquals(listOf("eggs", "milk"), snapshot)
         assertEquals(setOf(eggs, coffee), restored.eligibleItemKeys)
         assertEquals(setOf(eggs), restored.collectedItemKeys)
+    }
+
+    @Test
+    fun restoreFailsClosedWhenSavedCollectionScopeIsStale() {
+        val restored =
+            PracticalShoppingBasketProgressSession.restore(
+                collectedItemKeyValues = listOf("eggs"),
+                eligibleItemKeys = listOf(eggs),
+                collectionScopeId = "plan-b",
+                savedCollectionScopeId = "plan-a"
+            )
+
+        assertTrue(restored.collectedItemKeys.isEmpty())
+        assertEquals("plan-b", restored.collectionScopeId)
     }
 
     @Test
