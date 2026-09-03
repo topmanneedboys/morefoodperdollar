@@ -33,6 +33,7 @@ import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.valuepilot.core.ShoppingItemKey
 import java.util.concurrent.Executors
+import java.util.concurrent.Future
 
 class MainActivity : AppCompatActivity() {
 
@@ -124,6 +125,7 @@ class MainActivity : AppCompatActivity() {
     private var homeItemDetailsBrandInput: TextInputEditText? = null
     private var homeItemDetailsExactProduct: CheckBox? = null
     private var offlineCatalogDialog: AlertDialog? = null
+    private var offlineCatalogLookup: Future<*>? = null
     private var offlineCatalogRequestId = 0L
     private var suppressSearchInputCallback = false
     private var restoreSearchOnNextOpen = false
@@ -276,6 +278,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         dismissHomeItemDetailsDialog()
+        cancelOfflineCatalogLookup()
         offlineCatalogDialog?.dismiss()
         offlineCatalogDialog = null
         if (::homeExperience.isInitialized) {
@@ -461,10 +464,18 @@ class MainActivity : AppCompatActivity() {
         homeItemDetailsExactProduct = null
     }
 
+    private fun cancelOfflineCatalogLookup() {
+        offlineCatalogLookup?.cancel(true)
+        offlineCatalogLookup = null
+    }
+
     private fun showOfflineCatalogMatches(token: String) {
         val query = token.trim()
         if (query.isBlank()) return
 
+        // A newer unresolved item replaces the previous dialog and work. Do
+        // not let stale catalog scans accumulate behind the single executor.
+        cancelOfflineCatalogLookup()
         offlineCatalogDialog?.dismiss()
         val requestId = Math.addExact(offlineCatalogRequestId, 1L)
         offlineCatalogRequestId = requestId
@@ -478,11 +489,12 @@ class MainActivity : AppCompatActivity() {
         dialog.setOnDismissListener {
             if (offlineCatalogDialog === dialog) {
                 offlineCatalogDialog = null
+                cancelOfflineCatalogLookup()
             }
         }
         dialog.show()
 
-        searchExecutor.execute {
+        offlineCatalogLookup = searchExecutor.submit {
             val presentation =
                 try {
                     val result =
@@ -1094,6 +1106,7 @@ class MainActivity : AppCompatActivity() {
     private fun renderShell(state: AppShellState) {
         if (state.route != AppRoute.HOME) {
             dismissHomeItemDetailsDialog()
+            cancelOfflineCatalogLookup()
             offlineCatalogDialog?.dismiss()
         }
         if (state.route == AppRoute.COMPARE) {

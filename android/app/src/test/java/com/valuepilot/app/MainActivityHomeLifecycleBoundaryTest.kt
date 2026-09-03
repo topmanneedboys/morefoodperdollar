@@ -55,6 +55,11 @@ class MainActivityHomeLifecycleBoundaryTest {
 
         listOf(
             "private fun showOfflineCatalogMatches(token: String)",
+            "private fun cancelOfflineCatalogLookup()",
+            "private var offlineCatalogLookup: Future<*>? = null",
+            "offlineCatalogLookup?.cancel(true)",
+            "offlineCatalogLookup = searchExecutor.submit",
+            "cancelOfflineCatalogLookup()",
             "BundledOfflineCatalog.discover(",
             "PracticalShoppingHomeOfflineCatalogPresentation.from(query, result)",
             "requestId != offlineCatalogRequestId",
