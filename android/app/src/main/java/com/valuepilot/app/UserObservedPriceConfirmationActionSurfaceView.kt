@@ -30,6 +30,9 @@ internal class UserObservedPriceConfirmationActionSurfaceView @JvmOverloads cons
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             setTextColor(Color.parseColor("#4B5563"))
             isSaveEnabled = false
+            // Confirmation and failure arrive asynchronously. Announce the
+            // projected message without moving any execution authority here.
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         }
 
     private val actionButton =

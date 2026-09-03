@@ -13,6 +13,7 @@ class UserObservedPriceConfirmationActionSurfaceViewBoundaryTest {
 
         assertTrue(source.contains("actionButton.isEnabled = state.actionEnabled && onAction != null"))
         assertTrue(source.contains("setOnClickListener { onAction?.invoke() }"))
+        assertTrue(source.contains("accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"))
         assertFalse(source.contains("actionButton.isEnabled = state.actionEnabled\n"))
 
         listOf(
