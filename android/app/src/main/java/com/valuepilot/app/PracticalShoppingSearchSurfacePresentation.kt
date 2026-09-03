@@ -14,3 +14,14 @@ internal fun practicalShoppingSearchSubmitEnabled(
     rawQuery.isNotBlank() &&
         state.status != UniversalSearchStatus.LOADING &&
         state.status != UniversalSearchStatus.QUERY_TOO_LONG
+
+/**
+ * Prevents a quick-entry chip from restarting the exact request already in
+ * flight. A different quick query remains an explicit replacement choice.
+ */
+internal fun practicalShoppingSearchQuickEntryBlocked(
+    state: UniversalSearchState,
+    rawQuery: String
+): Boolean =
+    state.status == UniversalSearchStatus.LOADING &&
+        state.query == rawQuery

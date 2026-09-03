@@ -819,6 +819,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun configureQuickSearch(chipId: Int, query: String) {
         findViewById<Chip>(chipId).setOnClickListener {
+            if (practicalShoppingSearchQuickEntryBlocked(searchState, query)) {
+                hideKeyboard()
+                return@setOnClickListener
+            }
             setSearchQuery(query)
             submitSearch()
         }

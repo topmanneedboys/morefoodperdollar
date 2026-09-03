@@ -25,8 +25,14 @@ class MainActivitySearchSubmissionBoundaryTest {
                 "if (!practicalShoppingSearchSubmitEnabled(searchState, rawQuery))"
             )
         )
+        assertTrue(
+            activity.contains(
+                "if (practicalShoppingSearchQuickEntryBlocked(searchState, query))"
+            )
+        )
         assertTrue(presentation.contains("UniversalSearchStatus.LOADING"))
         assertTrue(presentation.contains("UniversalSearchStatus.QUERY_TOO_LONG"))
+        assertTrue(presentation.contains("state.query == rawQuery"))
 
         listOf(
             "PracticalShoppingPlanner(",

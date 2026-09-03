@@ -59,4 +59,22 @@ class PracticalShoppingSearchSurfacePresentationTest {
         assertTrue(practicalShoppingSearchSubmitEnabled(ready))
         assertFalse(practicalShoppingSearchSubmitEnabled(tooLong))
     }
+
+    @Test
+    fun identicalQuickEntryIsBlockedOnlyWhileThatQueryIsLoading() {
+        val ready =
+            controller.reduce(
+                controller.initialState(),
+                UniversalSearchIntent.QueryChanged("eggs")
+            ).state
+        val loading =
+            controller.reduce(
+                ready,
+                UniversalSearchIntent.Submit
+            ).state
+
+        assertTrue(practicalShoppingSearchQuickEntryBlocked(loading, "eggs"))
+        assertFalse(practicalShoppingSearchQuickEntryBlocked(loading, "milk"))
+        assertFalse(practicalShoppingSearchQuickEntryBlocked(ready, "eggs"))
+    }
 }
