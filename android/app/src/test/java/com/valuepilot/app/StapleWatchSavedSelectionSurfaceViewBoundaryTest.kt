@@ -1,5 +1,6 @@
 package com.valuepilot.app
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -84,6 +85,22 @@ class StapleWatchSavedSelectionSurfaceViewBoundaryTest {
         assertFalse(source.contains("requestIdentityHandoff"))
         assertFalse(source.contains("Check prices"))
         assertFalse(source.contains("Start watching"))
+    }
+
+    @Test
+    fun projectedSelectionFeedbackUsesPoliteAccessibilityLiveRegions() {
+        val source = source("StapleWatchSavedSelectionSurfaceView.kt").readText()
+
+        assertEquals(
+            3,
+            source
+                .split("accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE")
+                .size - 1
+        )
+        assertTrue(source.contains("selectionSummary(value: String)"))
+        assertTrue(source.contains("state.notice?.let { message -> addView(notice(message)) }"))
+        assertTrue(source.contains("state.factResolutionProgress"))
+        assertTrue(source.contains("factResolutionCard(progress)"))
     }
 
     private fun source(name: String): File {

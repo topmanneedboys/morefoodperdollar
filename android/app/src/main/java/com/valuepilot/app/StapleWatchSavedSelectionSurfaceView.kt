@@ -176,7 +176,12 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
             sizeSp = 13f,
             textColor = "#374151",
             topPadding = 10
-        )
+        ).apply {
+            // The immutable selection summary changes after typed toggles.
+            // Announce that projected context politely without inferring
+            // readiness in this physical renderer.
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        }
 
     private fun notice(value: String): TextView =
         textLine(
@@ -184,12 +189,19 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
             sizeSp = 13f,
             textColor = "#92400E",
             topPadding = 10
-        )
+        ).apply {
+            // Handoff and display-metadata feedback is projected state. Keep
+            // its announcement polite and renderer-only.
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        }
 
     private fun factResolutionCard(progress: StapleWatchFactResolutionUiState): View =
         MaterialCardView(context).apply {
             radius = dp(16).toFloat()
             cardElevation = 0f
+            // Foreground fact-resolution progress is an immutable projection;
+            // announce changes without giving this card fact authority.
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
             setCardBackgroundColor(Color.parseColor("#F9FAFB"))
             strokeColor = Color.parseColor("#D1D5DB")
             strokeWidth = dp(1)
