@@ -61,7 +61,7 @@ data class PracticalShoppingHomeOfflineCatalogPresentation(
 
     companion object {
         private const val NOTICE =
-            "Identity suggestions from a Canada-labelled Open Food Facts snapshot (ODbL-1.0) only — no current prices, package quantities, stock, store availability or freshness are included."
+            "Identity suggestions from Canada-labelled Open Food Facts snapshots for the GTA and Metro Vancouver (ODbL-1.0) only — no current prices, package quantities, stock, store availability or freshness are included."
 
         fun from(
             query: String,

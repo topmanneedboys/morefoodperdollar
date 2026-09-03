@@ -354,8 +354,53 @@ class OfflineCatalogDiscoveryIndex private constructor(
 
     companion object {
         const val MAX_INDEX_PRODUCTS = OfflineCatalogSnapshotManifest.MAX_TOTAL_RECORDS
+        const val MAX_SNAPSHOT_COUNT = 4
 
         fun build(products: List<OfflineCatalogProduct>): OfflineCatalogDiscoveryIndex =
             OfflineCatalogDiscoveryIndex(products)
+
+        /**
+         * Merge a bounded set of independently admitted identity snapshots.
+         *
+         * A record repeated with identical identity fields is represented once.
+         * A repeated record id with conflicting fields is omitted instead of
+         * allowing snapshot order to choose a product identity silently. The
+         * merged index remains capped at [MAX_INDEX_PRODUCTS] and is sorted by
+         * record id before matching, so discovery is deterministic regardless
+         * of snapshot or record input order.
+         */
+        fun buildAcrossSnapshots(
+            snapshots: List<List<OfflineCatalogProduct>>
+        ): OfflineCatalogDiscoveryIndex {
+            require(snapshots.isNotEmpty()) {
+                "Offline catalog discovery requires at least one snapshot"
+            }
+            require(snapshots.size <= MAX_SNAPSHOT_COUNT) {
+                "Offline catalog discovery snapshot count exceeds the bounded limit"
+            }
+            snapshots.forEach { snapshot ->
+                require(snapshot.size <= MAX_INDEX_PRODUCTS) {
+                    "Offline catalog snapshot exceeds the bounded product limit"
+                }
+            }
+
+            val productsByRecordId = linkedMapOf<String, MutableList<OfflineCatalogProduct>>()
+            snapshots.forEach { snapshot ->
+                snapshot.forEach { product ->
+                    productsByRecordId.getOrPut(product.recordId) { mutableListOf() }.add(product)
+                }
+            }
+
+            val mergedProducts =
+                productsByRecordId
+                    .asSequence()
+                    .filter { (_, products) -> products.distinct().size == 1 }
+                    .map { (_, products) -> products.first() }
+                    .sortedBy { it.recordId }
+                    .take(MAX_INDEX_PRODUCTS)
+                    .toList()
+
+            return OfflineCatalogDiscoveryIndex(mergedProducts)
+        }
     }
 }

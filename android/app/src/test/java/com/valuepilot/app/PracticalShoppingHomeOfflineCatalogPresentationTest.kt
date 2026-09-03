@@ -45,6 +45,7 @@ class PracticalShoppingHomeOfflineCatalogPresentationTest {
         assertTrue(presentation.message.contains("Identity suggestions"))
         assertTrue(presentation.message.contains("Open Food Facts"))
         assertTrue(presentation.message.contains("ODbL-1.0"))
+        assertTrue(presentation.message.contains("GTA and Metro Vancouver"))
         assertTrue(presentation.message.contains("Checked 2 bundled product identities"))
         assertTrue(presentation.message.contains("no current prices"))
         assertFalse(presentation.message.contains("CAD"))

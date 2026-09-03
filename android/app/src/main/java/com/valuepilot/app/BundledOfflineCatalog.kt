@@ -2,6 +2,7 @@ package com.valuepilot.app
 
 import android.content.Context
 import com.valuepilot.core.OfflineCatalogDiscoveryResult
+import com.valuepilot.core.OfflineCatalogDiscoveryIndex
 import com.valuepilot.core.OfflineCatalogDiscoveryRequest
 import com.valuepilot.core.OfflineCatalogIntegrityAssessment
 import com.valuepilot.core.TextCanonicalizer
@@ -91,6 +92,42 @@ object BundledOfflineCatalog {
             maximumSnapshotAgeMillis = maximumSnapshotAgeMillis,
             lastKnownGoodGeneratedAtEpochMillis = lastKnownGoodGeneratedAtEpochMillis
         ).discover(rawQuery, canonicalizer, maxResults)
+
+    /**
+     * Discover against every supported metro snapshot as one identity-only
+     * surface. Each manifest is still loaded and region-bound independently;
+     * a blocked or malformed region fails the combined lookup closed so the
+     * Home notice cannot imply complete supported-region coverage. The merged
+     * core index deduplicates identical records and omits conflicting ids.
+     */
+    fun discoverSupportedRegions(
+        context: Context,
+        rawQuery: String,
+        canonicalizer: TextCanonicalizer,
+        evaluatedAtEpochMillis: Long,
+        maximumSnapshotAgeMillis: Long,
+        lastKnownGoodGeneratedAtEpochMillis: Long? = null,
+        maxResults: Int = OfflineCatalogDiscoveryRequest.MAX_RESULTS
+    ): OfflineCatalogDiscoveryResult {
+        val snapshots =
+            BundledOfflineCatalogRegion.values().map { region ->
+                load(
+                    context = context,
+                    region = region,
+                    evaluatedAtEpochMillis = evaluatedAtEpochMillis,
+                    maximumSnapshotAgeMillis = maximumSnapshotAgeMillis,
+                    lastKnownGoodGeneratedAtEpochMillis = lastKnownGoodGeneratedAtEpochMillis
+                ).also { loaded ->
+                    check(loaded.admission.accepted) {
+                        "Bundled catalog region ${region.regionId} is not admitted"
+                    }
+                }
+            }
+
+        return OfflineCatalogDiscoveryIndex
+            .buildAcrossSnapshots(snapshots.map { it.products })
+            .discover(rawQuery, canonicalizer, maxResults)
+    }
 
     private fun ByteArray.toStringUtf8(): String =
         String(this, StandardCharsets.UTF_8)

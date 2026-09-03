@@ -173,6 +173,53 @@ class OfflineCatalogDiscoveryTest {
     }
 
     @Test
+    fun `multi-snapshot index deduplicates identical identities and drops conflicts`() {
+        val shared = product("shared", "whole milk")
+        val onlyFirst = product("first", "oat milk")
+        val conflictingFirst = product("conflict", "brown rice")
+        val conflictingSecond = product("conflict", "white rice")
+
+        val first = listOf(shared, onlyFirst, conflictingFirst)
+        val second = listOf(shared, conflictingSecond)
+        val merged = OfflineCatalogDiscoveryIndex.buildAcrossSnapshots(listOf(first, second))
+
+        val result = merged.discover("milk", canonicalizer)
+        assertEquals(listOf("first", "shared"), result.matches.map { it.product.recordId })
+        assertEquals(2, result.evaluatedCandidateCount)
+        assertTrue(merged.discover("rice", canonicalizer).matches.isEmpty())
+    }
+
+    @Test
+    fun `multi-snapshot index is deterministic independent of snapshot order`() {
+        val first = listOf(product("z", "whole milk"), product("a", "oat milk"))
+        val second = listOf(product("m", "almond milk"))
+
+        val left =
+            OfflineCatalogDiscoveryIndex
+                .buildAcrossSnapshots(listOf(first, second))
+                .discover("milk", canonicalizer)
+        val right =
+            OfflineCatalogDiscoveryIndex
+                .buildAcrossSnapshots(listOf(second, first))
+                .discover("milk", canonicalizer)
+
+        assertEquals(left, right)
+        assertEquals(listOf("m", "a", "z"), left.matches.map { it.product.recordId })
+    }
+
+    @Test
+    fun `multi-snapshot index enforces snapshot count bound`() {
+        try {
+            OfflineCatalogDiscoveryIndex.buildAcrossSnapshots(
+                List(OfflineCatalogDiscoveryIndex.MAX_SNAPSHOT_COUNT + 1) { emptyList() }
+            )
+            fail("Expected snapshot count bound rejection")
+        } catch (expected: IllegalArgumentException) {
+            assertTrue(expected.message.orEmpty().contains("snapshot count"))
+        }
+    }
+
+    @Test
     fun `catalog record has no price or availability authority`() {
         val names = OfflineCatalogProduct::class.java.declaredFields.map { it.name }.toSet()
 

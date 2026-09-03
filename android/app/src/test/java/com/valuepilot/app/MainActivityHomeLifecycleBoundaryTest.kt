@@ -60,9 +60,9 @@ class MainActivityHomeLifecycleBoundaryTest {
             "offlineCatalogLookup?.cancel(true)",
             "offlineCatalogLookup = searchExecutor.submit",
             "cancelOfflineCatalogLookup()",
-            "BundledOfflineCatalog.load(",
-            "if (!loaded.admission.accepted)",
-            "loaded.discover(query, JvmTextCanonicalizer)",
+            "BundledOfflineCatalog.discoverSupportedRegions(",
+            "rawQuery = query",
+            "canonicalizer = JvmTextCanonicalizer",
             "PracticalShoppingHomeOfflineCatalogPresentation.from(",
             "requestId != offlineCatalogRequestId",
             "offlineCatalogDialog !== dialog",
@@ -71,6 +71,15 @@ class MainActivityHomeLifecycleBoundaryTest {
         ).forEach { required ->
             assertTrue("Expected safe offline catalog Home lookup boundary: $required", source.contains(required))
         }
+
+        assertTrue(
+            "Home should expose every supported metro snapshot through one bounded lookup",
+            source.contains("BundledOfflineCatalog.discoverSupportedRegions(")
+        )
+        assertTrue(
+            "Home must not silently pin offline discovery to the GTA snapshot",
+            !source.contains("BundledOfflineCatalogRegion.GTA")
+        )
 
         listOf(
             "URL(",
