@@ -8,11 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`7b3792011b91b138d86f02211fd2494ece0987ef` — `Invalidate stale Basket check-off scopes`
+`14a0ad8578e14f4b0a58d6d88077ff13ae9c7117` — `Dismiss stale Home item detail editors`
 
-GitHub Actions candidate workflow **33752546557** completed successfully, and milestone provenance workflow **33753219912** completed successfully for the exact same SHA.
+GitHub Actions candidate workflow **33754507941** completed successfully, and milestone provenance workflow **33754908086** completed successfully for the exact same SHA.
 
-Basket now derives an opaque scope from the already-projected collectible item keys, item/request presentation and assigned store names. Foreground check-off marks survive redraws and Activity recreation only when that scope is unchanged; a changed planned store or requested presentation clears the old marks conservatively, and legacy saved state without a matching scope fails closed. This is presentation/session-state-only and does not alter the planner, projector, ranking, pricing, evidence, persistence, provider, provider-economics or network authority. Clean-source verification passed 1,693 JVM tests (375 shared-core + 1,318 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+Home now dismisses an open item-details editor before a changed immutable projection can leave its item identity absent; removing or replacing that item therefore cannot leave a Save action targeting a request that no longer contains it. This is presentation/lifecycle-only and does not alter the planner, projector, ranking, pricing, evidence, persistence, provider, provider-economics or network authority. Clean-source verification passed 1,695 JVM tests (375 shared-core + 1,320 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
