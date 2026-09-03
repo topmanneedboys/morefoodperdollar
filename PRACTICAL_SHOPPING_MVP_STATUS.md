@@ -8,11 +8,19 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+`941f2c267f4913a7554ae7593f8df85bb9884af9` — `Fail closed observed price confirmation action`
+
+GitHub Actions candidate workflow **33740867817** completed successfully, and milestone provenance workflow **33741392931** completed successfully for the exact same SHA.
+
+The latest observed-price refinement extends the owner-boundary correction to the confirmation action. Its button updates immediately when the typed owner callback is installed or cleared and remains inert before the first immutable render, so a detached confirmation surface cannot look ready to submit evidence. This is presentation/lifecycle-only; no policy, planner, ranking, pricing, evidence, persistence, clock, provider, provider-economics or network authority changed. Clean-source verification passed 1,684 JVM tests (375 shared-core + 1,309 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+
+## Previous verified engineering head (superseded)
+
 `6ac3ae2cbc6a6a4a855017911d060c458b795408` — `Fail closed Basket navigation on owner changes`
 
 GitHub Actions candidate workflow **33739991354** completed successfully, and milestone provenance workflow **33740563023** completed successfully for the exact same SHA.
 
-The latest Basket refinement extends the owner-boundary correction to its Open Home navigation control. The button updates immediately when its typed owner callback is installed or cleared and remains inert before the first immutable render, so a detached Basket surface cannot look actionable. This is presentation/lifecycle-only; no policy, planner, ranking, pricing, evidence, persistence, clock, provider, provider-economics or network authority changed. Clean-source verification passed 1,684 JVM tests (375 shared-core + 1,309 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+The previous Basket refinement extended the owner-boundary correction to its Open Home navigation control. The button updates immediately when its typed owner callback is installed or cleared and remains inert before the first immutable render, so a detached Basket surface cannot look actionable. This is presentation/lifecycle-only; no policy, planner, ranking, pricing, evidence, persistence, clock, provider, provider-economics or network authority changed. Clean-source verification passed 1,684 JVM tests (375 shared-core + 1,309 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
