@@ -112,6 +112,12 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
             extraStopChoiceOwnerControls.forEach { control ->
                 control.isEnabled = value != null
             }
+            if (value == null) {
+                // A detached owner must not leave a previously expanded settings
+                // panel visible with stale choices while the surface remains mounted.
+                extraStopSettingsExpanded = false
+                syncExtraStopSettingsVisibility()
+            }
         }
     var onEditItemDetails: ((ShoppingItemKey) -> Unit)? = null
         set(value) {

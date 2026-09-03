@@ -93,6 +93,19 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
     }
 
     @Test
+    fun clearingExtraStopOwnerCollapsesExpandedSettingsImmediately() {
+        val source = source().readText()
+        val setterStart = source.indexOf("var onExtraStopMinimumSavingsChoice:")
+        val setterEnd = source.indexOf("var onEditItemDetails", setterStart)
+        assertTrue("Expected extra-stop owner setter", setterStart >= 0 && setterEnd > setterStart)
+
+        val setter = source.substring(setterStart, setterEnd)
+        assertTrue(setter.contains("if (value == null)"))
+        assertTrue(setter.contains("extraStopSettingsExpanded = false"))
+        assertTrue(setter.contains("syncExtraStopSettingsVisibility()"))
+    }
+
+    @Test
     fun advancedExtraStopControlMechanicallyObeysImmutableVisibility() {
         val source = source().readText()
 
