@@ -8,6 +8,14 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+`2690b78d3c8c61b2f844c357c4c096b792ce244a` — `Carry missing price notice into Basket`
+
+GitHub Actions candidate workflow **33723174528** completed successfully, and milestone provenance workflow **33723634750** completed successfully for the exact same SHA.
+
+The latest Basket refinement closes a parity gap with Home's per-item coverage explanation. No-coverage Basket rows now render the already-projected “No usable price yet — not included in this plan.” notice, while incomplete plans retain the existing collection-specific “No usable price yet — not ready to collect” warning and complete plans remain unchanged. This is renderer-only copy from immutable projection; it does not infer prices, alter totals, enable collection, change planner or ranking policy, or add provider/network authority.
+
+## Previous verified engineering head (superseded)
+
 `2bdb750d8d067371ee68bed88cbcfcfca82110f1` — `Explain missing Home item prices`
 
 GitHub Actions candidate workflow **33722478794** completed successfully, and milestone provenance workflow **33722879331** completed successfully for the exact same SHA.
