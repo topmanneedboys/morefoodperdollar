@@ -24,7 +24,12 @@ class CompareHereSurfaceView @JvmOverloads constructor(
 
     private val headline = line("", 24f, "#111827", true)
     private val priceMode = line("", 13f, "#6B7280", topPadding = 4)
-    private val statusTitle = line("", 18f, "#111827", true, 18)
+    private val statusTitle = line("", 18f, "#111827", true, 18).apply {
+        // Comparison readiness and evaluated-result status change after the
+        // user's typed action. Announce the projected status without moving
+        // any comparison or ranking authority into this View.
+        accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+    }
     private val guidance = line("", 14f, "#374151", topPadding = 5)
     private val rowsContainer = bareColumn()
     private val blockedContainer = bareColumn()
@@ -81,8 +86,14 @@ class CompareHereSurfaceView @JvmOverloads constructor(
             stroke = if (row.bestValue) "#A7F3D0" else "#E5E7EB",
             topMargin = 12
         ).apply {
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+            contentDescription = compareHereExactCardContentDescription(row)
             addView(
                 column().apply {
+                    // The card exposes one complete projected summary. Hide
+                    // decorative child labels to avoid repeated announcements.
+                    importantForAccessibility =
+                        View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
                     row.valueRank?.let { rank ->
                         addView(
                             line(
@@ -113,8 +124,14 @@ class CompareHereSurfaceView @JvmOverloads constructor(
             stroke = "#FDE68A",
             topMargin = 10
         ).apply {
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+            contentDescription = compareHereBlockedCardContentDescription(row)
             addView(
                 column().apply {
+                    // Keep this blocked result as one concise accessibility
+                    // node while preserving the visible explanation.
+                    importantForAccessibility =
+                        View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
                     addView(line("Needs information", 11f, "#92400E", true))
                     addView(line(row.title, 17f, "#111827", true, 5))
                     addView(line(row.reasonText, 13f, "#92400E", topPadding = 5))
@@ -172,3 +189,20 @@ class CompareHereSurfaceView @JvmOverloads constructor(
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 }
+
+private fun accessibilitySummary(parts: List<String>): String =
+    parts.joinToString(". ") { it.trim().trimEnd('.', '!', '?') } + "."
+
+internal fun compareHereExactCardContentDescription(row: CompareHereUiRow): String =
+    accessibilitySummary(
+        listOfNotNull(
+            row.valueRank?.let { rank -> if (row.bestValue) "Best value" else "Value rank #$rank" },
+            row.title,
+            row.priceText,
+            row.quantityText,
+            row.unitRateText
+        )
+    )
+
+internal fun compareHereBlockedCardContentDescription(row: CompareHereBlockedUiRow): String =
+    accessibilitySummary(listOf("Needs information", row.title, row.reasonText))
