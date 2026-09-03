@@ -29,6 +29,7 @@ from typing import Any, Iterable, Mapping, Sequence
 
 from tools.build_offline_catalog_snapshot import (
     NAMESPACE_RE,
+    NO_CURRENT_OFFERS_STATUS,
     SnapshotBuildError,
     _canonical_json,
     _parse_timestamp,
@@ -48,6 +49,7 @@ from tools.verify_offline_catalog_snapshot import verify_snapshot
 
 DEFAULT_REGIONS = tuple(sorted(SUPPORTED_METRO_REGIONS))
 DEFAULT_MAX_RECORDS = 3_000
+COVERAGE_REPORT_NAME = "coverage-report.json"
 
 
 class OfflineCatalogRefreshError(ValueError):
@@ -126,6 +128,85 @@ def _write_config(
         "sources": [source],
     }
     path.write_bytes(_canonical_json(config))
+
+
+def _write_json_atomically(path: Path, payload: Mapping[str, Any]) -> None:
+    """Write a diagnostic report without exposing a partially written file."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            temporary = Path(handle.name)
+            handle.write(_canonical_json(payload))
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None and temporary.exists():
+            temporary.unlink()
+
+
+def _coverage_report(
+    *,
+    generated_epoch: int,
+    evaluated_epoch: int,
+    source_snapshot_id: str,
+    selected_count: int,
+    minimum_catalog_records: int,
+    maximum_catalog_records: int,
+    regions: Sequence[Mapping[str, Any]],
+    promoted: bool,
+) -> dict[str, Any]:
+    """Build a non-authoritative, deterministic coverage summary.
+
+    The signed regional manifests remain the authority.  This report exists so
+    a weekly operator run can inspect identity coverage and current-offer
+    coverage as two separate measurements without reading or inferring facts
+    from display data.
+    """
+
+    return {
+        "schemaVersion": 1,
+        "reportType": "OFFLINE_CATALOG_COVERAGE",
+        "generatedAtEpochMillis": generated_epoch,
+        "evaluatedAtEpochMillis": evaluated_epoch,
+        "sourceSnapshotId": source_snapshot_id,
+        "catalog": {
+            "coverageStatus": "MEASURED",
+            "recordCount": selected_count,
+            "minimumRecordCount": minimum_catalog_records,
+            "maximumRecordCount": maximum_catalog_records,
+        },
+        "currentOffers": {
+            "coverageStatus": NO_CURRENT_OFFERS_STATUS,
+            "recordCount": 0,
+            "authority": "NONE",
+        },
+        "regions": [
+            {
+                "regionId": item["regionId"],
+                "snapshotId": item["snapshotId"],
+                "manifestSha256": item["manifestSha256"],
+                "catalogRecordCount": item["catalogRecordCount"],
+                "currentOfferRecordCount": item["currentOfferRecordCount"],
+                "currentOfferCoverage": item["currentOfferCoverage"],
+            }
+            for item in sorted(regions, key=lambda value: str(value["regionId"]))
+        ],
+        "promoted": promoted,
+        "authorityNote": (
+            "Diagnostic summary only; signed regional manifest verification and "
+            "promotion pointers remain authoritative. Identity coverage does not "
+            "claim price, package quantity, stock, availability, store scope or freshness."
+        ),
+    }
 
 
 def refresh_snapshots(
@@ -281,11 +362,21 @@ def refresh_snapshots(
                 manifest.get("coverage", {}).get("catalogRecordCount") == selected_count,
                 f"Candidate coverage mismatch for {region_id}",
             )
+            candidate_coverage = manifest.get("coverage")
+            _require(isinstance(candidate_coverage, Mapping), f"Candidate coverage metadata missing for {region_id}")
+            current_offer_count = candidate_coverage.get("currentOfferRecordCount")
+            current_offer_coverage = candidate_coverage.get("currentOfferCoverage")
+            _require(
+                current_offer_count == 0 and current_offer_coverage == NO_CURRENT_OFFERS_STATUS,
+                f"Identity-only candidate current-offer coverage is invalid for {region_id}",
+            )
             verified.append(
                 {
                     "regionId": region_id,
                     "snapshotId": snapshot_id,
                     "catalogRecordCount": selected_count,
+                    "currentOfferRecordCount": current_offer_count,
+                    "currentOfferCoverage": current_offer_coverage,
                     "manifestSha256": verification["manifestSha256"],
                     "candidatePath": candidate_dir.as_posix(),
                     "_stagedCandidatePath": staged_candidate_dir.as_posix(),
@@ -326,10 +417,30 @@ def refresh_snapshots(
                     ) from exc
                 item["promotion"] = promotion
 
+        _write_json_atomically(
+            output_root / COVERAGE_REPORT_NAME,
+            _coverage_report(
+                generated_epoch=generated_epoch,
+                evaluated_epoch=evaluated_epoch,
+                source_snapshot_id=source_snapshot_id,
+                selected_count=selected_count,
+                minimum_catalog_records=minimum_catalog_records,
+                maximum_catalog_records=maximum_catalog_records,
+                regions=verified,
+                promoted=promote,
+            ),
+        )
+
     return {
         "generatedAtEpochMillis": generated_epoch,
         "evaluatedAtEpochMillis": evaluated_epoch,
         "catalogRecordCount": selected_count,
+        "coverageReportPath": (output_root / COVERAGE_REPORT_NAME).as_posix(),
+        "coverage": {
+            "catalogRecordCount": selected_count,
+            "currentOfferRecordCount": 0,
+            "currentOfferCoverage": NO_CURRENT_OFFERS_STATUS,
+        },
         "regions": verified,
         "promoted": promote,
     }

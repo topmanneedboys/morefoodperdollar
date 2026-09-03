@@ -52,3 +52,12 @@ coverage only. `currentOfferRecordCount` remains zero and
 claim a current price, local stock, store availability, package quantity or
 freshness. Any future current-offer rail must be authorized and measured
 separately before it can enter the existing production planner/ranking path.
+
+Every successful refresh also writes a deterministic `coverage-report.json` at
+the output root. It is a diagnostic summary for the weekly operator: the
+`catalog` object reports the selected identity-record count and configured
+bounds, while `currentOffers` reports `0` with `NOT_INCLUDED`. Per-region
+manifest hashes and the same two measurements are included for audit. The
+report is not a signed authority and must never replace verification of the
+regional manifest or promotion pointers; a rejected/regressed refresh leaves
+the previous report and last-known-good pointers unchanged.

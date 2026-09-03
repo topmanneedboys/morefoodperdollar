@@ -59,10 +59,32 @@ class OfflineCatalogRefreshTest(unittest.TestCase):
                 ["ca-gta", "ca-metro-vancouver"],
                 [item["regionId"] for item in first["regions"]],
             )
+            self.assertEqual(
+                {
+                    "catalogRecordCount": 1_500,
+                    "currentOfferRecordCount": 0,
+                    "currentOfferCoverage": "NOT_INCLUDED",
+                },
+                first["coverage"],
+            )
+            first_report = json.loads((root / "first" / "coverage-report.json").read_text())
+            second_report = json.loads((root / "second" / "coverage-report.json").read_text())
+            self.assertEqual(first_report, second_report)
+            self.assertEqual("OFFLINE_CATALOG_COVERAGE", first_report["reportType"])
+            self.assertEqual(1_500, first_report["catalog"]["recordCount"])
+            self.assertEqual("MEASURED", first_report["catalog"]["coverageStatus"])
+            self.assertEqual(0, first_report["currentOffers"]["recordCount"])
+            self.assertEqual("NOT_INCLUDED", first_report["currentOffers"]["coverageStatus"])
+            self.assertEqual(
+                ["ca-gta", "ca-metro-vancouver"],
+                [item["regionId"] for item in first_report["regions"]],
+            )
             for left, right in zip(first["regions"], second["regions"]):
                 left_dir = Path(left["candidatePath"])
                 right_dir = Path(right["candidatePath"])
                 self.assertEqual(left["manifestSha256"], right["manifestSha256"])
+                self.assertEqual(0, left["currentOfferRecordCount"])
+                self.assertEqual("NOT_INCLUDED", left["currentOfferCoverage"])
                 for name in (
                     "manifest.json",
                     "manifest.sha256",
@@ -109,6 +131,7 @@ class OfflineCatalogRefreshTest(unittest.TestCase):
                 }
                 for region in ("ca-gta", "ca-metro-vancouver")
             }
+            coverage_report_before = (state / "coverage-report.json").read_bytes()
             for pointers in before.values():
                 self.assertEqual(pointers["current.json"], pointers["last-known-good.json"])
 
@@ -128,6 +151,7 @@ class OfflineCatalogRefreshTest(unittest.TestCase):
             for region, pointers in before.items():
                 for name, content in pointers.items():
                     self.assertEqual(content, (state / region / name).read_bytes())
+            self.assertEqual(coverage_report_before, (state / "coverage-report.json").read_bytes())
 
     @staticmethod
     def run_args() -> dict[str, object]:
