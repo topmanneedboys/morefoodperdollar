@@ -121,7 +121,10 @@ object PracticalShoppingHomeRenderer {
             queryCharacterLimit = LocalSamplePracticalShoppingDemo.MAX_QUERY_CHARACTERS,
             submitEnabled =
                 source.query.isNotBlank() &&
-                    source.status != LocalSamplePracticalShoppingDemo.Status.QUERY_TOO_LONG,
+                    source.status !in setOf(
+                        LocalSamplePracticalShoppingDemo.Status.QUERY_TOO_LONG,
+                        LocalSamplePracticalShoppingDemo.Status.NEEDS_REFINEMENT
+                    ),
             message = source.message,
             messageTone =
                 when (source.status) {

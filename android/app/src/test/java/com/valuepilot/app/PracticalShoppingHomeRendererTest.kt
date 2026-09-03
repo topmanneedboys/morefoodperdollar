@@ -59,7 +59,7 @@ class PracticalShoppingHomeRendererTest {
             )
         val rendered = PracticalShoppingHomeRenderer.render(model.ui)
 
-        assertTrue(rendered.submitEnabled)
+        assertFalse(rendered.submitEnabled)
         assertEquals(
             PracticalShoppingHomeMessageTone.ACTION_REQUIRED,
             rendered.messageTone
@@ -77,6 +77,21 @@ class PracticalShoppingHomeRendererTest {
         )
         assertNull(rendered.result)
         assertFalse(rendered.extraStopSettings.visible)
+    }
+
+    @Test
+    fun unresolvedItemsDisableRepeatSubmitUntilTheListIsCorrected() {
+        val model =
+            PracticalShoppingHomeSession.submit(
+                LocalSamplePracticalShoppingDemo.initialModel(),
+                "eggs dragonfruit"
+            )
+
+        val rendered = PracticalShoppingHomeRenderer.render(model.ui)
+
+        assertEquals(LocalSamplePracticalShoppingDemo.Status.NEEDS_REFINEMENT, model.ui.status)
+        assertFalse(rendered.submitEnabled)
+        assertTrue(rendered.unknownItems.contains("dragonfruit"))
     }
 
     @Test
