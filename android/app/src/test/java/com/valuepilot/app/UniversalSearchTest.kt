@@ -266,7 +266,7 @@ class UniversalSearchTest {
         )
 
         assertEquals(
-            250,
+            UniversalSearchController.MAX_PROVIDER_OBSERVATIONS,
             finished.receivedObservationCount
         )
 

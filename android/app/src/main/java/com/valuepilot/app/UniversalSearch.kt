@@ -363,6 +363,11 @@ class UniversalSearchController(
             batch.evidence.take(
                 MAX_PROVIDER_OBSERVATIONS
             )
+        // Keep every terminal state bounded as well as the work itself. A
+        // provider may return more observations than requested; those extra
+        // entries are intentionally not admitted to Search evaluation or
+        // represented as received state.
+        val receivedObservationCount = boundedEvidence.size
 
         val parsed =
             ArrayList<EvaluatedSearchItem>(
@@ -466,7 +471,7 @@ class UniversalSearchController(
                     statusText = message,
                     activeRequestId = null,
                     receivedObservationCount =
-                        batch.evidence.size,
+                        receivedObservationCount,
                     parsedProductCount =
                         parsed.size,
                     matchedProductCount = 0,
@@ -502,7 +507,7 @@ class UniversalSearchController(
                         "Rankable results use different currencies and cannot be value-ranked together",
                     activeRequestId = null,
                     receivedObservationCount =
-                        batch.evidence.size,
+                        receivedObservationCount,
                     parsedProductCount =
                         parsed.size,
                     matchedProductCount =
@@ -649,7 +654,7 @@ class UniversalSearchController(
                         "No trustworthy matching products found",
                     activeRequestId = null,
                     receivedObservationCount =
-                        batch.evidence.size,
+                        receivedObservationCount,
                     parsedProductCount =
                         parsed.size,
                     matchedProductCount =
@@ -687,7 +692,7 @@ class UniversalSearchController(
                     statusText,
                 activeRequestId = null,
                 receivedObservationCount =
-                    batch.evidence.size,
+                    receivedObservationCount,
                 parsedProductCount =
                     parsed.size,
                 matchedProductCount =
