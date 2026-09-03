@@ -102,6 +102,10 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
 
     private val message = line("", 14f, "#6B7280").apply {
         setPadding(dp(2), dp(14), dp(2), 0)
+        // Refinement and validation feedback changes after user actions. Let
+        // assistive technology hear the new immutable message without making
+        // the View infer any shopping state.
+        accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
     }
 
     private val itemsHeading = heading(context.getString(R.string.home_items_title))

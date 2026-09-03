@@ -69,6 +69,17 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
     }
 
     @Test
+    fun changingHomeStatusFeedbackUsesAPoliteAccessibilityLiveRegion() {
+        val source = source().readText()
+
+        assertTrue(
+            source.contains(
+                "accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"
+            )
+        )
+    }
+
+    @Test
     fun physicalViewDoesNotDecideWhenAdvancedControlIsAvailable() {
         val source = source().readText()
 
