@@ -28,7 +28,10 @@ data class PracticalShoppingPrimaryUiState(
     val travelText: String,
     val evidenceText: String,
     val whyText: String,
-    val notice: String?
+    val notice: String?,
+    /** Presentation-only caution derived from explicit evidence freshness counts. */
+    val hasPriceFreshnessCaution: Boolean = false,
+    val freshnessNotice: String? = null
 ) {
     init {
         require(badge.isNotBlank())
@@ -40,6 +43,8 @@ data class PracticalShoppingPrimaryUiState(
         require(evidenceText.isNotBlank())
         require(whyText.isNotBlank())
         require(notice == null || notice.isNotBlank())
+        require(freshnessNotice == null || freshnessNotice.isNotBlank())
+        require(!hasPriceFreshnessCaution || freshnessNotice != null)
         require((missingItemsText == null) == (notice == null))
     }
 }
@@ -165,7 +170,9 @@ object PracticalShoppingUiProjector {
                         null
                     } else {
                         incompleteNotice(totalCount - coveredCount)
-                    }
+                    },
+                hasPriceFreshnessCaution = hasPriceFreshnessCaution(candidate.evidence),
+                freshnessNotice = freshnessNotice(candidate.evidence)
             )
         }
 
@@ -365,6 +372,18 @@ object PracticalShoppingUiProjector {
             "1 item still has an unknown price. This is not a complete basket total."
         } else {
             "$missingCount items still have unknown prices. This is not a complete basket total."
+        }
+
+    private fun hasPriceFreshnessCaution(evidence: ShoppingPlanEvidenceSummary): Boolean =
+        evidence.agingItemCount > 0 ||
+            evidence.staleItemCount > 0 ||
+            evidence.unknownFreshnessItemCount > 0
+
+    private fun freshnessNotice(evidence: ShoppingPlanEvidenceSummary): String? =
+        if (hasPriceFreshnessCaution(evidence)) {
+            "Some price evidence is not fully fresh. Verify before buying."
+        } else {
+            null
         }
 
     /** Exact decimal formatting only; never convert Money to Double. */

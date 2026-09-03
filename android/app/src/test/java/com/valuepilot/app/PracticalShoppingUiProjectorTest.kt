@@ -82,6 +82,8 @@ class PracticalShoppingUiProjectorTest {
             card.whyText
         )
         assertNull(card.notice)
+        assertFalse(card.hasPriceFreshnessCaution)
+        assertNull(card.freshnessNotice)
         assertFalse(projection.state.toString().contains(primaryKey.value))
         assertEquals(primaryKey, projection.primaryStoreKey)
         assertEquals(
@@ -479,6 +481,11 @@ class PracticalShoppingUiProjectorTest {
         )
 
         assertEquals("Price freshness: 0 fresh · 0 stale · 2 unknown", card.evidenceText)
+        assertTrue(card.hasPriceFreshnessCaution)
+        assertEquals(
+            "Some price evidence is not fully fresh. Verify before buying.",
+            card.freshnessNotice
+        )
     }
 
     private fun single(

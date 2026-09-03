@@ -28,6 +28,29 @@ class PracticalShoppingPlanResultPresentationTest {
     }
 
     @Test
+    fun completeBasketWithNonFreshEvidenceUsesCautionTreatmentAndExplainsWhy() {
+        val state =
+            primary(missingItemsText = null).copy(
+                hasPriceFreshnessCaution = true,
+                freshnessNotice = "Some price evidence is not fully fresh. Verify before buying.",
+                evidenceText = "Price freshness: 1 fresh · 1 aging · 0 stale · 0 unknown"
+            )
+
+        val style = practicalShoppingPrimaryCardStyle(state)
+
+        assertEquals("#FFFBEB", style.backgroundColor)
+        assertEquals("#FDE68A", style.strokeColor)
+        assertEquals("#92400E", style.accentColor)
+        assertEquals(
+            "BEST ONE-STORE OPTION. Store: Sample Market. Basket 10.00 CAD. " +
+                "2 of 2 items priced. 3 min · 1 km. Price freshness: 1 fresh · 1 aging · 0 stale · 0 unknown. " +
+                "Lowest known complete basket among the one-store options compared. " +
+                "Some price evidence is not fully fresh. Verify before buying.",
+            practicalShoppingPrimaryCardContentDescription(state)
+        )
+    }
+
+    @Test
     fun primaryCardAccessibilitySummaryIncludesEveryProjectedStateAndNotice() {
         assertEquals(
             "BEST ONE-STORE OPTION. Store: Sample Market. Basket 10.00 CAD. " +
