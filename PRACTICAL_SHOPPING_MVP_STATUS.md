@@ -8,11 +8,19 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+`00f8e3fdff369b4ce3237f2b3a4cbc78984ba035` — `Announce Watch projected warnings`
+
+GitHub Actions candidate workflow **33727646911** completed successfully, and milestone provenance workflow **33728147638** completed successfully for the exact same SHA.
+
+The latest Watch My Staples refinement closes an accessibility feedback gap. Its projected safety/display-metadata warning is now a polite accessibility live region, so the specific warning is announced when it appears or changes instead of relying only on the broader status title. This is a presentation-only accessibility correction; the renderer consumes immutable `StapleWatchUiState`, and Watch policy, economics, notification, evidence, persistence, provider and network authority remain unchanged. Clean-source verification passed 1,679 JVM tests (375 shared-core + 1,304 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+
+## Previous verified engineering head (superseded)
+
 `3e3862fce53dfca7564c9c3b99764995efe67737` — `Prevent duplicate Search quick entries`
 
 GitHub Actions candidate workflow **33726614855** completed successfully, and milestone provenance workflow **33727114141** completed successfully for the exact same SHA.
 
-The latest Search refinement closes the remaining identical-quick-entry lifecycle gap. Search's visible button, keyboard path and quick-entry chips now share one immutable gate: blank, over-limit and active-loading searches cannot submit, and tapping the same quick-entry chip during loading cannot restart identical provider work. A different quick query remains an explicit replacement choice. This is a small presentation/lifecycle guard; the helper consumes only existing `UniversalSearchState`, and controller request identity, provider, ranking, evidence, persistence and network authority remain unchanged. Clean-source verification passed 1,678 JVM tests (375 shared-core + 1,303 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+The previous Search refinement closed the identical-quick-entry lifecycle gap. Search's visible button, keyboard path and quick-entry chips now share one immutable gate: blank, over-limit and active-loading searches cannot submit, and tapping the same quick-entry chip during loading cannot restart identical provider work. A different quick query remains an explicit replacement choice. This remained presentation/lifecycle-only.
 
 ## Previous verified engineering head (superseded)
 
