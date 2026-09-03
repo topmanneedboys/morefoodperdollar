@@ -8,11 +8,19 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+`bad95f10c83235596532ed1caf05793ad376219c` — `Fail closed Home controls on owner changes`
+
+GitHub Actions candidate workflow **33739072386** completed successfully, and milestone provenance workflow **33739628868** completed successfully for the exact same SHA.
+
+The latest Home refinement extends the owner-boundary correction across query editing, submit, compare, item-detail/remove, refinement, and extra-stop controls. Each control updates immediately when its typed owner callback is installed or cleared, and Home remains inert before the first immutable render; detached surfaces cannot look actionable or accept edits without their owner. This is presentation/lifecycle-only; no policy, planner, ranking, pricing, evidence, persistence, clock, provider, provider-economics or network authority changed. Clean-source verification passed 1,683 JVM tests (375 shared-core + 1,308 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+
+## Previous verified engineering head (superseded)
+
 `d03bba4aa08ff1b21889f857aa6e0f1fcf37663d` — `Fail closed Watch setup controls on owner changes`
 
 GitHub Actions candidate workflow **33737614216** completed successfully, and milestone provenance workflow **33738144350** completed successfully for the exact same SHA.
 
-The latest Watch setup refinement extends the owner-boundary correction to the Saved selection and policy surfaces. Selection toggles, policy Apply/no-limit controls and numeric policy editors now update immediately when the typed owner callback is installed or cleared, so detached setup surfaces cannot look actionable or remain editable. This is presentation/lifecycle-only; no policy, planner, ranking, pricing, evidence, persistence, clock, provider, provider-economics or network authority changed. Clean-source verification passed 1,682 JVM tests (375 shared-core + 1,307 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+The previous Watch setup refinement extended the owner-boundary correction to the Saved selection and policy surfaces. Selection toggles, policy Apply/no-limit controls and numeric policy editors now update immediately when the typed owner callback is installed or cleared, so detached setup surfaces cannot look actionable or remain editable. This is presentation/lifecycle-only; no policy, planner, ranking, pricing, evidence, persistence, clock, provider, provider-economics or network authority changed. Clean-source verification passed 1,682 JVM tests (375 shared-core + 1,307 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
