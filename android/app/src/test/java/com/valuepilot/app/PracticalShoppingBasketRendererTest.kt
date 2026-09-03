@@ -113,6 +113,7 @@ class PracticalShoppingBasketRendererTest {
             "Check-off is only a local shopping-session aid; it does not place an order or change the plan.",
             basket.collectionNotice
         )
+        assertNull(basket.extraStopRuleNotice)
         assertEquals("Edit on Home", basket.actionLabel)
     }
 
@@ -135,6 +136,10 @@ class PracticalShoppingBasketRendererTest {
         assertEquals(
             "Check-off is only a local shopping-session aid; it does not place an order or change the plan.",
             basket.collectionNotice
+        )
+        assertEquals(
+            "Another stop is not evaluated until every requested item has a usable price.",
+            basket.extraStopRuleNotice
         )
         assertEquals(listOf(home.items.first().key), basket.collectibleItemKeys)
         assertEquals(
@@ -168,6 +173,7 @@ class PracticalShoppingBasketRendererTest {
             basket.items.map { it.priceCoverageNotice }
         )
         assertNull(basket.extraStopRuleText)
+        assertNull(basket.extraStopRuleNotice)
         assertEquals(
             "No usable price coverage yet. Return to Home to adjust your sample list.",
             basket.guidance

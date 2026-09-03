@@ -26,12 +26,15 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
         assertTrue(source.contains("line(\"Buy at ${'$'}store\""))
         assertTrue(source.contains("state.collectibleItemKeys"))
         assertTrue(source.contains("collectionNotice.text = state.collectionNotice.orEmpty()"))
+        assertTrue(source.contains("extraStopRuleNotice.text = state.extraStopRuleNotice.orEmpty()"))
+        assertTrue(source.contains("state.extraStopRuleNotice == null"))
         assertTrue(source.contains("state.collectionNotice == null"))
         assertTrue(source.contains("No usable price yet — not ready to collect"))
         assertTrue(source.contains("addItemDetails(item, this, state.collectionEnabled)"))
         assertTrue(source.contains("practicalShoppingBasketCollectionActionDescription(item, collected)"))
         assertFalse(source.contains("Check-off starts for items with usable planned price coverage."))
         assertTrue(renderer.contains("source.result.itemStoreAssignments"))
+        assertTrue(renderer.contains("source.extraStopSettings.notice"))
         assertFalse(renderer.contains("storeAssignment != null"))
 
         listOf(

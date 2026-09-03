@@ -88,6 +88,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     private val unresolvedCard = card("#FFF7ED", "#FED7AA", 12, unresolvedBody)
     private val planResult = PracticalShoppingPlanResultSurfaceView(context)
     private val extraStopRule = line("", 13f, "#374151", topPadding = 12)
+    private val extraStopRuleNotice = line("", 12f, "#92400E", topPadding = 4)
     private val sampleNotice = line("", 13f, "#374151", topPadding = 4)
     private val actionButton = MaterialButton(context).apply {
         isAllCaps = false
@@ -121,6 +122,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         addView(unresolvedCard)
         addView(planResult)
         addView(extraStopRule)
+        addView(extraStopRuleNotice)
         addView(actionButton)
         collectionProgress.visibility = GONE
         collectionNotice.visibility = GONE
@@ -128,6 +130,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         itemsHeading.visibility = GONE
         unresolvedCard.visibility = GONE
         extraStopRule.visibility = GONE
+        extraStopRuleNotice.visibility = GONE
     }
 
     fun render(state: PracticalShoppingBasketRenderState) {
@@ -158,6 +161,9 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         planResult.render(state.result, state.sampleNotice)
         extraStopRule.text = state.extraStopRuleText.orEmpty()
         extraStopRule.visibility = if (state.extraStopRuleText == null) GONE else VISIBLE
+        extraStopRuleNotice.text = state.extraStopRuleNotice.orEmpty()
+        extraStopRuleNotice.visibility =
+            if (state.extraStopRuleNotice == null) GONE else VISIBLE
     }
 
     override fun onSaveInstanceState(): Parcelable? {

@@ -22,6 +22,8 @@ data class PracticalShoppingBasketRenderState(
     val unknownItems: List<String>,
     val result: PracticalShoppingUiState?,
     val extraStopRuleText: String?,
+    /** Explains when the already-selected rule is not evaluated for an incomplete result. */
+    val extraStopRuleNotice: String? = null,
     val collectionEnabled: Boolean,
     val actionLabel: String,
     val sampleNotice: String,
@@ -47,6 +49,8 @@ data class PracticalShoppingBasketRenderState(
         require(guidance.isNotBlank())
         require(unknownItems.none(String::isBlank))
         require(extraStopRuleText == null || extraStopRuleText.isNotBlank())
+        require(extraStopRuleNotice == null || extraStopRuleNotice.isNotBlank())
+        require(extraStopRuleNotice == null || extraStopRuleText != null)
         require(actionLabel.isNotBlank())
         require(sampleNotice.isNotBlank())
         require(collectionNotice == null || collectionNotice.isNotBlank())
@@ -143,6 +147,8 @@ object PracticalShoppingBasketRenderer {
             result = source.result,
             extraStopRuleText =
                 source.extraStopSettings.summary.takeIf { source.result?.primary != null },
+            extraStopRuleNotice =
+                source.extraStopSettings.notice.takeIf { source.result?.primary != null },
             collectionEnabled = collectionEnabled,
             actionLabel =
                 if (status == PracticalShoppingBasketStatus.EMPTY) {
