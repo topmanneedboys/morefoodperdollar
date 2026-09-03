@@ -8,11 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`2e2e526178043eb8e8d534df64ed1a380b6ff07e` — `Restore Home item details drafts`
+`7b3792011b91b138d86f02211fd2494ece0987ef` — `Invalidate stale Basket check-off scopes`
 
-GitHub Actions candidate workflow **33750002662** completed successfully, and milestone provenance workflow **33750549290** completed successfully for the exact same SHA.
+GitHub Actions candidate workflow **33752546557** completed successfully, and milestone provenance workflow **33753219912** completed successfully for the exact same SHA.
 
-The latest Home refinement preserves an in-progress item-details draft across Activity recreation. Package count, preferred brand and exact-product intent are saved only in ephemeral `onSaveInstanceState`, restored only on the Home route for an item still present in the restored request, and remain outside the persistent Home session and planner until explicit Save. This is presentation/lifecycle-only and does not alter the typed Home session, planner, projector, pricing, evidence, persistence, provider, provider-economics or network authority. Clean-source verification passed 1,690 JVM tests (375 shared-core + 1,315 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+Basket now derives an opaque scope from the already-projected collectible item keys, item/request presentation and assigned store names. Foreground check-off marks survive redraws and Activity recreation only when that scope is unchanged; a changed planned store or requested presentation clears the old marks conservatively, and legacy saved state without a matching scope fails closed. This is presentation/session-state-only and does not alter the planner, projector, ranking, pricing, evidence, persistence, provider, provider-economics or network authority. Clean-source verification passed 1,693 JVM tests (375 shared-core + 1,318 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
