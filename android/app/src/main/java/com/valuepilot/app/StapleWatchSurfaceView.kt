@@ -18,7 +18,12 @@ class StapleWatchSurfaceView @JvmOverloads constructor(
 ) : LinearLayout(context, attrs, defStyleAttr), StapleWatchSurfaceRenderer {
 
     private val headline = line("", 24f, "#111827", true)
-    private val statusTitle = line("", 18f, "#111827", true, 16)
+    private val statusTitle = line("", 18f, "#111827", true, 16).apply {
+        // Watch readiness and economic status are projected after a saved
+        // selection changes. Announce the status without granting the View
+        // policy, freshness, notification, or ranking authority.
+        accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+    }
     private val guidance = line("", 14f, "#374151", topPadding = 5)
     private val baselineEvidence = line("", 13f, "#6B7280", topPadding = 10)
     private val switchContainer = bareColumn()
@@ -78,8 +83,14 @@ class StapleWatchSurfaceView @JvmOverloads constructor(
 
     private fun switchCard(candidate: StapleWatchSwitchUiState): View =
         card(background = "#ECFDF5", stroke = "#A7F3D0", topMargin = 12).apply {
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+            contentDescription = stapleWatchSwitchCardContentDescription(candidate)
             addView(
                 column().apply {
+                    // Keep the candidate as one complete projected summary
+                    // instead of repeating every visible child label.
+                    importantForAccessibility =
+                        View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
                     addView(line(candidate.badge, 11f, "#047857", true))
                     addView(line(candidate.storeName, 18f, "#111827", true, 5))
                     addView(line(candidate.savingsText, 17f, "#047857", true, 7))
@@ -141,3 +152,15 @@ class StapleWatchSurfaceView @JvmOverloads constructor(
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 }
+
+internal fun stapleWatchSwitchCardContentDescription(
+    candidate: StapleWatchSwitchUiState
+): String =
+    listOf(
+        candidate.badge,
+        "Store: ${candidate.storeName}",
+        candidate.savingsText,
+        candidate.additionalTravelText,
+        candidate.alternativeEvidenceText,
+        candidate.actionText
+    ).joinToString(". ") { it.trim().trimEnd('.', '!', '?') } + "."
