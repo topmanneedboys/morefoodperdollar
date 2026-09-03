@@ -69,6 +69,21 @@ class PracticalShoppingSavedSurfaceViewBoundaryTest {
     }
 
     @Test
+    fun detachedOwnerDismissesAnySavedConfirmationDialog() {
+        val source = source().readText()
+
+        assertTrue(source.contains("private var clearAllConfirmationDialog: AlertDialog? = null"))
+        assertTrue(source.contains("if (value == null)"))
+        assertTrue(source.contains("clearAllConfirmationDialog?.dismiss()"))
+        assertTrue(source.contains("clearAllConfirmationDialog = null"))
+        assertTrue(source.contains("val dialog = AlertDialog.Builder(context)"))
+        assertTrue(source.contains(".create()"))
+        assertTrue(source.contains("clearAllConfirmationDialog = dialog"))
+        assertTrue(source.contains("dialog.setOnDismissListener"))
+        assertTrue(source.contains("if (clearAllConfirmationDialog === dialog)"))
+    }
+
+    @Test
     fun physicalSavedViewHasNoPersistenceProviderOrDecisionAuthority() {
         val source = source().readText()
 

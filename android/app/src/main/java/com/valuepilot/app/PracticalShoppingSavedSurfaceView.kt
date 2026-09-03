@@ -33,6 +33,7 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
 ) : LinearLayout(context, attrs, defStyleAttr), PracticalShoppingSavedSurfaceRenderer {
 
     private val ownerBoundButtons = mutableListOf<Button>()
+    private var clearAllConfirmationDialog: AlertDialog? = null
 
     var onAction: ((PracticalShoppingSavedSurfaceAction) -> Unit)? = null
         set(value) {
@@ -43,6 +44,10 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
             ownerBoundButtons.forEach { button ->
                 button.isEnabled = value != null
             }
+            if (value == null) {
+                clearAllConfirmationDialog?.dismiss()
+                clearAllConfirmationDialog = null
+            }
         }
 
     init {
@@ -52,6 +57,10 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
     }
 
     override fun render(state: PracticalShoppingSavedSurfaceState) {
+        // A fresh projection supersedes any confirmation tied to the previous
+        // projection. Do not leave a detached or stale dialog actionable.
+        clearAllConfirmationDialog?.dismiss()
+        clearAllConfirmationDialog = null
         ownerBoundButtons.clear()
         removeAllViews()
 
@@ -103,14 +112,21 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
     private fun showClearAllConfirmation(
         action: PracticalShoppingSavedSurfaceAction.Preference
     ) {
-        AlertDialog.Builder(context)
+        val dialog = AlertDialog.Builder(context)
             .setTitle(context.getString(R.string.saved_clear_all_confirmation_title))
             .setMessage(context.getString(R.string.saved_clear_all_confirmation_body))
             .setNegativeButton(R.string.cancel, null)
             .setPositiveButton(R.string.saved_clear_all_confirmation_confirm) { _, _ ->
                 onAction?.invoke(action)
             }
-            .show()
+            .create()
+        clearAllConfirmationDialog = dialog
+        dialog.setOnDismissListener {
+            if (clearAllConfirmationDialog === dialog) {
+                clearAllConfirmationDialog = null
+            }
+        }
+        dialog.show()
     }
 
     private fun productCard(row: PracticalShoppingSavedSurfaceProductRow): View =
