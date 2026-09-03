@@ -8,11 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`8e6b04a5fee463fb990a028ac07515b4a025a2f7` — `Fail closed confirmation action renderer`
+`2a56bcfa8948865b63ab51a9eb0b74ed57188991` — `Announce confirmation action feedback`
 
-GitHub Actions candidate workflow **33719304591** completed successfully, and milestone provenance workflow **33719753545** completed successfully for the exact same SHA.
+GitHub Actions candidate workflow **33719909094** completed successfully, and milestone provenance workflow **33720299585** completed successfully for the exact same SHA.
 
-The latest observed-price confirmation refinement closes a replaceable-surface safety gap. Its action button is now enabled only when the immutable confirmation state is ready and the typed owner callback is attached, so a detached renderer cannot appear actionable. The callback gate is presentation-only and does not change confirmation, evidence, storage, pricing or persistence authority. Clean-source verification passed 1,670 JVM tests (375 shared-core + 1,295 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+The latest observed-price confirmation refinement closes an accessibility feedback gap. Asynchronous confirmation, rejection and failure messages are now announced through a polite live region, while the action remains fail-closed unless both the immutable state and its typed owner callback are ready. This is renderer-only behavior; confirmation, evidence, storage, pricing and persistence authority remain unchanged. Clean-source verification passed 1,670 JVM tests (375 shared-core + 1,295 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 The preceding Saved refinement closes a consumer guidance gap. When saved content exists but the established Watch My Staples readiness gate is not met, the Saved-owned launcher now projects a short heading and a precise missing-requirement notice (one more named product, a named store, or both) while keeping navigation unavailable. Fully empty, loading and error states remain quiet. The notice is rendered with a polite accessibility live region. This is immutable projection and rendering only; it does not alter Saved persistence, planner readiness, pricing, evidence, notification, clock, networking or View authority.
 
