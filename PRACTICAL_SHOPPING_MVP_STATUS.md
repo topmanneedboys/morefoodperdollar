@@ -8,11 +8,19 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+`a6260eb2edfe40769013bf05241308d3c500a4e7` — `Reject duplicate Search submits while loading`
+
+GitHub Actions candidate workflow **33728615359** completed successfully, and milestone provenance workflow **33729137572** completed successfully for the exact same SHA.
+
+The latest Search refinement closes a controller lifecycle gap. The controller now rejects a raw `Submit` while an existing request is `LOADING`, preserving the active immutable state and emitting no replacement request. `QueryChanged` remains the intentional cancellation/replacement boundary, and the visible button, keyboard path and quick-entry chips retain their existing readiness gates. This is lifecycle defense-in-depth only; provider execution, ranking, evidence, persistence, clock, provider economics and network authority remain unchanged. Clean-source verification passed 1,680 JVM tests (375 shared-core + 1,305 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+
+## Previous verified engineering head (superseded)
+
 `00f8e3fdff369b4ce3237f2b3a4cbc78984ba035` — `Announce Watch projected warnings`
 
 GitHub Actions candidate workflow **33727646911** completed successfully, and milestone provenance workflow **33728147638** completed successfully for the exact same SHA.
 
-The latest Watch My Staples refinement closes an accessibility feedback gap. Its projected safety/display-metadata warning is now a polite accessibility live region, so the specific warning is announced when it appears or changes instead of relying only on the broader status title. This is a presentation-only accessibility correction; the renderer consumes immutable `StapleWatchUiState`, and Watch policy, economics, notification, evidence, persistence, provider and network authority remain unchanged. Clean-source verification passed 1,679 JVM tests (375 shared-core + 1,304 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+The preceding Watch My Staples refinement closes an accessibility feedback gap. Its projected safety/display-metadata warning is a polite accessibility live region, so the specific warning is announced when it appears or changes instead of relying only on the broader status title. This is a presentation-only accessibility correction; the renderer consumes immutable `StapleWatchUiState`, and Watch policy, economics, notification, evidence, persistence, provider and network authority remain unchanged. Clean-source verification passed 1,679 JVM tests (375 shared-core + 1,304 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
