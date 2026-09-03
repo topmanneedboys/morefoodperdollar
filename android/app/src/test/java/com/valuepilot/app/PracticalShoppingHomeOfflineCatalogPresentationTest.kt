@@ -47,6 +47,10 @@ class PracticalShoppingHomeOfflineCatalogPresentationTest {
         assertTrue(presentation.message.contains("ODbL-1.0"))
         assertTrue(presentation.message.contains("GTA and Metro Vancouver"))
         assertTrue(presentation.message.contains("Checked 2 bundled product identities"))
+        assertEquals(
+            "Identity suggestions from Canada-labelled Open Food Facts snapshots for the GTA and Metro Vancouver (ODbL-1.0) only — no current prices, package quantities, stock, store availability or freshness are included.\n\nChecked 2 bundled product identities.",
+            presentation.summaryMessage
+        )
         assertTrue(presentation.message.contains("no current prices"))
         assertFalse(presentation.message.contains("CAD"))
         assertFalse(presentation.message.contains("stocked"))

@@ -521,12 +521,99 @@ class MainActivity : AppCompatActivity() {
                 ) {
                     return@post
                 }
-                dialog.setMessage(
-                    presentation?.message
-                        ?: getString(R.string.home_offline_catalog_unavailable)
-                )
+                offlineCatalogLookup = null
+                if (presentation == null) {
+                    dialog.setMessage(getString(R.string.home_offline_catalog_unavailable))
+                } else {
+                    showOfflineCatalogResult(
+                        token = query,
+                        presentation = presentation,
+                        requestId = requestId
+                    )
+                }
             }
         }
+    }
+
+    /**
+     * Replaces the loading dialog with an explicit, reversible name-selection surface.
+     * Selecting a name only edits the unresolved Home query; it never confirms a product or
+     * submits a plan. The shopper reviews the edited list and presses Plan My Shop themselves.
+     */
+    private fun showOfflineCatalogResult(
+        token: String,
+        presentation: PracticalShoppingHomeOfflineCatalogPresentation,
+        requestId: Long
+    ) {
+        if (requestId != offlineCatalogRequestId || offlineCatalogDialog == null) return
+
+        offlineCatalogDialog?.dismiss()
+        offlineCatalogDialog = null
+
+        if (presentation.matches.isEmpty()) {
+            val dialog =
+                AlertDialog.Builder(this)
+                    .setTitle(R.string.home_unknown_find_matches)
+                    .setMessage(presentation.message)
+                    .setNegativeButton(R.string.cancel, null)
+                    .create()
+            offlineCatalogDialog = dialog
+            dialog.setOnDismissListener {
+                if (offlineCatalogDialog === dialog) offlineCatalogDialog = null
+            }
+            dialog.show()
+            return
+        }
+
+        var selectedIndex = -1
+        lateinit var resultDialog: AlertDialog
+        val labels =
+            presentation.matches
+                .map { match ->
+                    buildString {
+                        append(match.displayName)
+                        match.brand?.let { append(" · ").append(it) }
+                        append(" (").append(match.matchLabel).append(")")
+                    }
+                }
+                .toTypedArray()
+        val builder =
+            AlertDialog.Builder(this)
+                .setTitle(R.string.home_unknown_find_matches)
+                .setMessage(
+                    presentation.summaryMessage +
+                        "\n\n" +
+                        getString(R.string.home_offline_catalog_select_match)
+                )
+                .setSingleChoiceItems(labels, -1) { _, which ->
+                    selectedIndex = which
+                    resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.home_offline_catalog_use_match, null)
+
+        resultDialog = builder.create()
+        offlineCatalogDialog = resultDialog
+        resultDialog.setOnDismissListener {
+            if (offlineCatalogDialog === resultDialog) offlineCatalogDialog = null
+        }
+        resultDialog.setOnShowListener {
+            resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+            resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val match = presentation.matches.getOrNull(selectedIndex) ?: return@setOnClickListener
+                val editedQuery =
+                    PracticalShoppingHomeOfflineCatalogSelection.replaceUnknownToken(
+                        rawQuery = homeSessionState.model.ui.query,
+                        unknownToken = token,
+                        replacementName = match.displayName
+                    ) ?: return@setOnClickListener
+                homeSessionState =
+                    PracticalShoppingHomeSession.queryChanged(homeSessionState, editedQuery)
+                renderHome()
+                resultDialog.dismiss()
+            }
+        }
+        resultDialog.show()
     }
 
     private fun restoreHomeItemDetailsDialog(savedInstanceState: Bundle?) {

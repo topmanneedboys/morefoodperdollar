@@ -95,6 +95,8 @@
     <string name="home_unknown_find_matches_description">Find offline identity matches for %1$s</string>
     <string name="home_offline_catalog_loading">Checking the bundled identity catalog…</string>
     <string name="home_offline_catalog_unavailable">The bundled identity catalog is unavailable. No price or availability claim was made.</string>
+    <string name="home_offline_catalog_select_match">Select a name to replace the unresolved list word. Review the list, then tap Plan My Shop. This does not confirm an exact product.</string>
+    <string name="home_offline_catalog_use_match">Use selected name</string>
     <string name="home_sample_badge">OFFLINE FICTIONAL DEMO</string>
     <string name="home_compare_secondary">Compare two products instead</string>
 

@@ -39,12 +39,18 @@ data class PracticalShoppingHomeOfflineCatalogPresentation(
     }
 
     /** Dialog-safe text that keeps the identity-only boundary visible. */
-    val message: String
+    val summaryMessage: String
         get() = buildString {
             append(notice)
             append("\n\nChecked ")
             append(evaluatedCandidateCount)
             append(" bundled product identities.")
+        }
+
+    /** Dialog-safe text that keeps the identity-only boundary visible. */
+    val message: String
+        get() = buildString {
+            append(summaryMessage)
             if (matches.isEmpty()) {
                 append("\nNo matching product identity was found in this bundled snapshot.")
             } else {
