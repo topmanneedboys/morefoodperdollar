@@ -56,6 +56,19 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
         isSaveEnabled = false
     }
 
+    /**
+     * Closes window-level confirmation UI when the shell leaves Saved.
+     *
+     * Route ownership remains with MainActivity; this callback only prevents a
+     * confirmation opened on Saved from floating above another destination.
+     */
+    fun onRouteVisibilityChanged(visible: Boolean) {
+        if (visible) return
+
+        clearAllConfirmationDialog?.dismiss()
+        clearAllConfirmationDialog = null
+    }
+
     override fun render(state: PracticalShoppingSavedSurfaceState) {
         // A fresh projection supersedes any confirmation tied to the previous
         // projection. Do not leave a detached or stale dialog actionable.

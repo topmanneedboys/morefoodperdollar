@@ -84,6 +84,16 @@ class PracticalShoppingSavedSurfaceViewBoundaryTest {
     }
 
     @Test
+    fun leavingSavedDismissesWindowLevelConfirmationThroughRouteLifecycle() {
+        val source = source().readText()
+
+        assertTrue(source.contains("fun onRouteVisibilityChanged(visible: Boolean)"))
+        assertTrue(source.contains("if (visible) return"))
+        assertTrue(source.contains("clearAllConfirmationDialog?.dismiss()"))
+        assertTrue(source.contains("clearAllConfirmationDialog = null"))
+    }
+
+    @Test
     fun physicalSavedViewHasNoPersistenceProviderOrDecisionAuthority() {
         val source = source().readText()
 

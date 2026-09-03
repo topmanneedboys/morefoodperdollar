@@ -196,7 +196,13 @@ class SavedStapleShellIntegrationBoundaryTest {
     fun `saved setup and policy physical visibility is owned by exact shell routes`() {
         val source = activitySource().readText()
 
+        assertTrue(
+            source.contains(
+                "if (state.route == AppRoute.COMPARE) {\n            savedExperience.onRouteVisibilityChanged(false)\n            return\n        }"
+            )
+        )
         assertTrue(source.contains("val savedVisible = state.route == AppRoute.SAVED"))
+        assertTrue(source.contains("savedExperience.onRouteVisibilityChanged(savedVisible)"))
         assertTrue(
             source.contains(
                 "val stapleSetupVisible = state.route == AppRoute.STAPLE_WATCH_SETUP"

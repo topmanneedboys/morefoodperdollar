@@ -1029,7 +1029,10 @@ class MainActivity : AppCompatActivity() {
         if (state.route != AppRoute.HOME) {
             dismissHomeItemDetailsDialog()
         }
-        if (state.route == AppRoute.COMPARE) return
+        if (state.route == AppRoute.COMPARE) {
+            savedExperience.onRouteVisibilityChanged(false)
+            return
+        }
 
         val copy = copyFor(state.selectedPrimaryTab)
         screenEyebrow.text = copy.eyebrow
@@ -1093,6 +1096,7 @@ class MainActivity : AppCompatActivity() {
             if (stapleSetupVisible) View.VISIBLE else View.GONE
         stapleWatchPolicyExperience.visibility =
             if (staplePolicyVisible) View.VISIBLE else View.GONE
+        savedExperience.onRouteVisibilityChanged(savedVisible)
         savedRouteCoordinator.onRouteVisibilityChanged(savedVisible)
         observedPriceSavedSelectionCoordinator.onRouteVisibilityChanged(observedPriceSelectionVisible)
         observedPriceSavedPrefillResultSurfaceBinding
