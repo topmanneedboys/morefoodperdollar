@@ -8,11 +8,19 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+`fda5749f1a821f369a6a170c4175e3d9e0c912b5` — `Collapse detached Home extra-stop settings`
+
+GitHub Actions candidate workflow **33743998315** completed successfully, and milestone provenance workflow **33744536925** completed successfully for the exact same SHA.
+
+The latest Home lifecycle refinement closes the stale expanded-panel gap. Clearing the extra-stop owner now collapses an already-expanded settings panel immediately, so detached/reused Home surfaces cannot leave stale rule choices visibly open. This is presentation/lifecycle-only and does not alter the existing immutable Home result rendering, planner, projector, pricing, evidence, persistence, clock, provider, provider-economics or network authority. Clean-source verification passed 1,686 JVM tests (375 shared-core + 1,311 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+
+## Previous verified engineering head (superseded)
+
 `3e8c94865de43cb0d20fbe353b56b53afb4558c2` — `Release Home owners when activity is destroyed`
 
 GitHub Actions candidate workflow **33743220204** completed successfully, and milestone provenance workflow **33743655775** completed successfully for the exact same SHA.
 
-The latest Home lifecycle refinement closes the remaining Activity teardown gap. MainActivity now releases every Home and Basket callback on destruction, so detached/reused surfaces cannot retain actionable owners or an Activity reference. This is lifecycle-only and does not alter the existing immutable Home result rendering, planner, projector, pricing, evidence, persistence, clock, provider, provider-economics or network authority. Clean-source verification passed 1,685 JVM tests (375 shared-core + 1,310 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+The previous Home lifecycle refinement closed the Activity teardown gap. MainActivity now releases every Home and Basket callback on destruction, so detached/reused surfaces cannot retain actionable owners or an Activity reference. This is lifecycle-only and does not alter the existing immutable Home result rendering, planner, projector, pricing, evidence, persistence, clock, provider, provider-economics or network authority. Clean-source verification passed 1,685 JVM tests (375 shared-core + 1,310 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 

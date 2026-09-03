@@ -8,7 +8,11 @@ Android version: 101.1.0 (10101)
 
 ## Current verified engineering head
 
-`3e8c94865de43cb0d20fbe353b56b53afb4558c2` (`Release Home owners when activity is destroyed`) is the promoted milestone, verified by candidate workflow **33743220204** and milestone provenance workflow **33743655775**. MainActivity now releases every Home and Basket callback on destruction, so detached/reused surfaces cannot retain actionable owners or an Activity reference; the change is lifecycle-only and does not alter the existing immutable Home result rendering. Clean-source verification passed 1,685 JVM tests (375 shared-core + 1,310 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+`fda5749f1a821f369a6a170c4175e3d9e0c912b5` (`Collapse detached Home extra-stop settings`) is the promoted milestone, verified by candidate workflow **33743998315** and milestone provenance workflow **33744536925**. Clearing the Home extra-stop owner now collapses an already-expanded settings panel immediately, so detached/reused Home surfaces cannot leave stale rule choices visibly open; the change is presentation/lifecycle-only and does not alter the existing immutable planner result. Clean-source verification passed 1,686 JVM tests (375 shared-core + 1,311 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+
+## Previous verified engineering head (superseded)
+
+`3e8c94865de43cb0d20fbe353b56b53afb4558c2` (`Release Home owners when activity is destroyed`) was the promoted milestone, verified by candidate workflow **33743220204** and milestone provenance workflow **33743655775**. MainActivity now releases every Home and Basket callback on destruction, so detached/reused surfaces cannot retain actionable owners or an Activity reference; the change is lifecycle-only and does not alter the existing immutable Home result rendering. Clean-source verification passed 1,685 JVM tests (375 shared-core + 1,310 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
