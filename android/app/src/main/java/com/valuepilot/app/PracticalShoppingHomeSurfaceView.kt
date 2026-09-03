@@ -70,6 +70,8 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                 android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
         isSaveEnabled = false
+        // A detached Home surface must not accept edits that have no owner to consume them.
+        isEnabled = false
     }
 
     private val inputLayout = TextInputLayout(context).apply {
@@ -131,6 +133,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val extraStopSettingsCard =
         card("#F9FAFB", "#E5E7EB", 8, extraStopSettingsBody)
     private val sampleNotice = line("", 13f, "#374151")
+    private val compareActionButton = compareButton()
 
     init {
         orientation = VERTICAL
@@ -147,7 +150,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         addView(resultContainer)
         addView(extraStopSettingsButton)
         addView(extraStopSettingsCard)
-        addView(compareButton())
+        addView(compareActionButton)
 
         itemsHeading.visibility = GONE
         refinementCard.visibility = GONE
@@ -177,7 +180,9 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     fun render(state: PracticalShoppingHomeRenderState) {
         syncQueryCharacterLimit(state.queryCharacterLimit)
         syncQuery(state.query)
-        submitButton.isEnabled = state.submitEnabled
+        input.isEnabled = onQueryChanged != null
+        submitButton.isEnabled = state.submitEnabled && onSubmit != null
+        compareActionButton.isEnabled = onCompare != null
         renderMessage(state)
         renderItems(state.items)
         renderRefinement(state.refinement)
@@ -190,7 +195,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private fun submit() {
         // The IME action can arrive independently of the visible button click. Keep
         // both entry points on the same immutable readiness boundary.
-        if (!submitButton.isEnabled) {
+        if (!submitButton.isEnabled || onSubmit == null) {
             hideKeyboard()
             return
         }
@@ -249,9 +254,11 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                 actionRow(
                     label = "${item.name}  •  ${item.detail}",
                     onRemove = { onRemoveItem?.invoke(item.key) },
+                    removeEnabled = onRemoveItem != null,
                     removeDescription =
                         context.getString(R.string.home_remove_item_description, item.name),
                     onDetails = { onEditItemDetails?.invoke(item.key) },
+                    detailsEnabled = onEditItemDetails != null,
                     detailsLabel = item.requestDetailsActionLabel,
                     detailsDescription =
                         context.getString(R.string.home_item_details_action_description, item.name)
@@ -269,9 +276,11 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private fun actionRow(
         label: String,
         onRemove: () -> Unit,
+        removeEnabled: Boolean = false,
         lineColor: String = "#374151",
         removeDescription: String = context.getString(R.string.home_remove_item),
         onDetails: (() -> Unit)? = null,
+        detailsEnabled: Boolean = false,
         detailsLabel: String = context.getString(R.string.home_item_details_action),
         detailsDescription: String = detailsLabel
     ): View =
@@ -286,15 +295,16 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                 }
             )
             onDetails?.let {
-                addView(detailButton(it, detailsLabel, detailsDescription))
+                addView(detailButton(it, detailsLabel, detailsDescription, detailsEnabled))
             }
-            addView(removeButton(onRemove, removeDescription))
+            addView(removeButton(onRemove, removeDescription, removeEnabled))
         }
 
     private fun detailButton(
         onDetails: () -> Unit,
         label: String,
-        description: String
+        description: String,
+        enabled: Boolean
     ): MaterialButton = MaterialButton(context).apply {
         text = label
         contentDescription = description
@@ -306,6 +316,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         minimumWidth = 0
         insetTop = 0
         insetBottom = 0
+        isEnabled = enabled
         setPadding(dp(8), 0, dp(8), 0)
         layoutParams = LinearLayout.LayoutParams(
             LayoutParams.WRAP_CONTENT,
@@ -314,7 +325,11 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         setOnClickListener { onDetails() }
     }
 
-    private fun removeButton(onRemove: () -> Unit, description: String): MaterialButton =
+    private fun removeButton(
+        onRemove: () -> Unit,
+        description: String,
+        enabled: Boolean
+    ): MaterialButton =
         MaterialButton(context).apply {
             text = context.getString(R.string.home_remove_item)
             contentDescription = description
@@ -326,6 +341,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
             minimumWidth = 0
             insetTop = 0
             insetBottom = 0
+            isEnabled = enabled
             setPadding(dp(10), 0, dp(10), 0)
             layoutParams = LinearLayout.LayoutParams(
                 LayoutParams.WRAP_CONTENT,
@@ -361,6 +377,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                         Chip(context).apply {
                             text = option.label
                             isCheckable = false
+                            isEnabled = onChickenChoice != null
                             setOnClickListener {
                                 onChickenChoice?.invoke(option.choice)
                                 hideKeyboard()
@@ -385,6 +402,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                 actionRow(
                     label = "• $token",
                     onRemove = { onRemoveUnknownItem?.invoke(token) },
+                    removeEnabled = onRemoveUnknownItem != null,
                     lineColor = "#92400E",
                     removeDescription =
                         context.getString(R.string.home_remove_item_description, token)
@@ -416,6 +434,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                             text = option.label
                             isCheckable = true
                             isChecked = option.selected
+                            isEnabled = onExtraStopMinimumSavingsChoice != null
                             setOnClickListener {
                                 onExtraStopMinimumSavingsChoice?.invoke(option.choice)
                             }
@@ -469,6 +488,8 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         setTextColor(Color.parseColor("#374151"))
         backgroundTintList = ColorStateList.valueOf(Color.WHITE)
         layoutParams = fullWidth(dp(50), 12)
+        // Keep the owner-driven comparison route inert until its callback is attached.
+        isEnabled = false
         setOnClickListener { onCompare?.invoke() }
     }
 

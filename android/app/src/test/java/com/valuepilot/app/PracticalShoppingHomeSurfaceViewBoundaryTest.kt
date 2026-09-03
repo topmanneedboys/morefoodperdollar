@@ -25,8 +25,27 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
         val source = source().readText()
 
         assertTrue(source.contains("isEnabled = false"))
-        assertTrue(source.contains("if (!submitButton.isEnabled)"))
+        assertTrue(source.contains("submitButton.isEnabled = state.submitEnabled && onSubmit != null"))
+        assertTrue(source.contains("if (!submitButton.isEnabled || onSubmit == null)"))
         assertTrue(source.contains("onSubmit?.invoke(input.text?.toString().orEmpty())"))
+    }
+
+    @Test
+    fun ownerDrivenHomeControlsFailClosedWhenCallbacksAreMissing() {
+        val source = source().readText()
+
+        listOf(
+            "input.isEnabled = onQueryChanged != null",
+            "compareActionButton.isEnabled = onCompare != null",
+            "removeEnabled = onRemoveItem != null",
+            "detailsEnabled = onEditItemDetails != null",
+            "removeEnabled = onRemoveUnknownItem != null",
+            "isEnabled = onChickenChoice != null",
+            "isEnabled = onExtraStopMinimumSavingsChoice != null",
+            "isEnabled = enabled"
+        ).forEach { required ->
+            assertTrue("Expected callback readiness binding $required", source.contains(required))
+        }
     }
 
     @Test
