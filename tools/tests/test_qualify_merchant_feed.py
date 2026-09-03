@@ -35,6 +35,31 @@ class MerchantFeedQualificationTest(unittest.TestCase):
             self.assertEqual("REVIEW_DATA_AND_RIGHTS", report["decision"]["status"])
             self.assertEqual(2, report["decision"]["structural_current_offer_candidates"])
             self.assertEqual(2, report["decision"]["structural_unit_value_candidates"])
+            self.assertEqual(
+                {
+                    "coverage_status": "MEASURED",
+                    "rows_with_identity": 2,
+                    "unique_identity_scopes": 2,
+                },
+                report["coverage"]["identity"],
+            )
+            self.assertEqual(
+                {
+                    "coverage_status": "STRUCTURAL_ONLY",
+                    "candidate_count": 2,
+                    "authority": "NONE",
+                },
+                report["coverage"]["current_offers"],
+            )
+            self.assertEqual(
+                {
+                    "coverage_status": "STRUCTURAL_ONLY",
+                    "candidate_count": 2,
+                    "authority": "NONE",
+                },
+                report["coverage"]["unit_values"],
+            )
+            self.assertIn("separate measurements", report["coverage"]["note"])
             self.assertEqual(1, report["quality"]["gtin_valid"])
             self.assertEqual(1, report["quality"]["gtin_invalid"])
             self.assertFalse(report["decision"]["production_authorized"])
@@ -51,6 +76,32 @@ class MerchantFeedQualificationTest(unittest.TestCase):
             report = qualify_feed(QualificationConfig(input_path=feed))
             self.assertEqual("FAIL_NO_STRUCTURAL_CURRENT_OFFERS", report["decision"]["status"])
             self.assertEqual(1, report["quality"]["unexpected_currency_rows"])
+            self.assertEqual(1, report["coverage"]["identity"]["unique_identity_scopes"])
+            self.assertEqual(0, report["coverage"]["current_offers"]["candidate_count"])
+            self.assertEqual("STRUCTURAL_ONLY", report["coverage"]["current_offers"]["coverage_status"])
+
+    def test_coverage_block_is_deterministic_and_non_authoritative(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            feed = self.write(
+                root,
+                "feed.csv",
+                "product_id,product_name,currency,price,quantity_value,quantity_unit,country\n"
+                "a,Tea,CAD,4.99,100,g,CA\n"
+                "b,Coffee,CAD,5.99,,,CA\n",
+            )
+            first = qualify_feed(QualificationConfig(input_path=feed))
+            second = qualify_feed(QualificationConfig(input_path=feed))
+
+            self.assertEqual(
+                json.dumps(first["coverage"], sort_keys=True),
+                json.dumps(second["coverage"], sort_keys=True),
+            )
+            self.assertEqual(2, first["coverage"]["identity"]["rows_with_identity"])
+            self.assertEqual(2, first["coverage"]["current_offers"]["candidate_count"])
+            self.assertEqual(1, first["coverage"]["unit_values"]["candidate_count"])
+            self.assertEqual("NONE", first["coverage"]["current_offers"]["authority"])
+            self.assertEqual("NONE", first["coverage"]["unit_values"]["authority"])
 
     def test_bad_price_is_not_structural_candidate(self):
         with tempfile.TemporaryDirectory() as tmp:

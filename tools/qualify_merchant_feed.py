@@ -639,6 +639,28 @@ def qualify_feed(config: QualificationConfig) -> dict[str, object]:
             "conflicting_identity_scopes": conflicting_scopes,
             "unique_identity_scopes": len(identity_rows),
         },
+        "coverage": {
+            "identity": {
+                "coverage_status": "MEASURED",
+                "rows_with_identity": counts["identity_present"],
+                "unique_identity_scopes": len(identity_rows),
+            },
+            "current_offers": {
+                "coverage_status": "STRUCTURAL_ONLY",
+                "candidate_count": counts["structural_current_offer_candidates"],
+                "authority": "NONE",
+            },
+            "unit_values": {
+                "coverage_status": "STRUCTURAL_ONLY",
+                "candidate_count": counts["structural_unit_value_candidates"],
+                "authority": "NONE",
+            },
+            "note": (
+                "Identity coverage and structural current-offer candidates are separate measurements. "
+                "Structural candidates do not prove current price, package quantity, stock, freshness, "
+                "rights, or production rankability."
+            ),
+        },
         "currencies": dict(sorted(currencies.items())),
         "countries": dict(sorted(countries.items())),
         "availability": dict(sorted(availability.items())),
@@ -681,6 +703,7 @@ def report_markdown(report: Mapping[str, object]) -> str:
         f"- Rows scanned: **{inp['rows_scanned']:,}**",
         f"- Format: **{inp['format']}**{' + gzip' if inp['compressed_gzip'] else ''}",
         f"- Mapping mode: **{mapping['mode']}**",
+        f"- Identity rows / unique scopes: **{report['coverage']['identity']['rows_with_identity']:,} / {report['coverage']['identity']['unique_identity_scopes']:,}**",
         f"- Structural current-offer candidates: **{decision['structural_current_offer_candidates']:,}**",
         f"- Structural unit-value candidates: **{decision['structural_unit_value_candidates']:,}**",
         f"- Valid GTIN rows: **{quality.get('gtin_valid', 0):,}**",
@@ -691,6 +714,8 @@ def report_markdown(report: Mapping[str, object]) -> str:
         "## Safety / authorization boundary",
         "",
         "**This report never authorizes production use.** Rights/caching/indexing/display/redistribution permission is a separate provider-specific gate.",
+        "",
+        "Identity coverage is measured separately from structural current-offer candidates; neither count grants current-price or ranking authority.",
         "",
         "Ambiguous mappings are not guessed. XML requires an explicit record tag. Freshness is evaluated only when an explicit evaluation timestamp is supplied.",
     ]
