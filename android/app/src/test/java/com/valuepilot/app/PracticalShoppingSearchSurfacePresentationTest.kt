@@ -77,4 +77,22 @@ class PracticalShoppingSearchSurfacePresentationTest {
         assertFalse(practicalShoppingSearchQuickEntryBlocked(loading, "milk"))
         assertFalse(practicalShoppingSearchQuickEntryBlocked(ready, "eggs"))
     }
+
+    @Test
+    fun quickEntryEnabledStateMatchesTheClickGuard() {
+        val ready =
+            controller.reduce(
+                controller.initialState(),
+                UniversalSearchIntent.QueryChanged("eggs")
+            ).state
+        val loading =
+            controller.reduce(
+                ready,
+                UniversalSearchIntent.Submit
+            ).state
+
+        assertFalse(practicalShoppingSearchQuickEntryEnabled(loading, "eggs"))
+        assertTrue(practicalShoppingSearchQuickEntryEnabled(loading, "milk"))
+        assertTrue(practicalShoppingSearchQuickEntryEnabled(ready, "eggs"))
+    }
 }

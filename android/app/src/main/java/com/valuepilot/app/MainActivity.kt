@@ -600,11 +600,9 @@ class MainActivity : AppCompatActivity() {
 
         searchButton.setOnClickListener { submitSearch() }
 
-        configureQuickSearch(R.id.quickEggs, getString(R.string.search_quick_eggs))
-        configureQuickSearch(R.id.quickMilk, getString(R.string.search_quick_milk))
-        configureQuickSearch(R.id.quickChicken, getString(R.string.search_quick_chicken))
-        configureQuickSearch(R.id.quickRice, getString(R.string.search_quick_rice))
-        configureQuickSearch(R.id.quickPizza, getString(R.string.search_quick_pizza))
+        quickSearchEntries().forEach { (chipId, query) ->
+            configureQuickSearch(chipId, query)
+        }
     }
 
     private fun configureSavedUi() {
@@ -828,6 +826,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun quickSearchEntries(): List<Pair<Int, String>> =
+        listOf(
+            R.id.quickEggs to getString(R.string.search_quick_eggs),
+            R.id.quickMilk to getString(R.string.search_quick_milk),
+            R.id.quickChicken to getString(R.string.search_quick_chicken),
+            R.id.quickRice to getString(R.string.search_quick_rice),
+            R.id.quickPizza to getString(R.string.search_quick_pizza)
+        )
+
     private fun setSearchQuery(query: String) {
         suppressSearchInputCallback = true
         searchInput.setText(query)
@@ -1013,6 +1020,10 @@ class MainActivity : AppCompatActivity() {
             if (state.status == UniversalSearchStatus.LOADING) View.VISIBLE else View.GONE
 
         searchButton.isEnabled = practicalShoppingSearchSubmitEnabled(state)
+        quickSearchEntries().forEach { (chipId, query) ->
+            findViewById<Chip>(chipId).isEnabled =
+                practicalShoppingSearchQuickEntryEnabled(state, query)
+        }
 
         searchResultsContainer.removeAllViews()
         searchResultsHeading.visibility =

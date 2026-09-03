@@ -25,3 +25,13 @@ internal fun practicalShoppingSearchQuickEntryBlocked(
 ): Boolean =
     state.status == UniversalSearchStatus.LOADING &&
         state.query == rawQuery
+
+/**
+ * Mirrors the quick-entry click guard in the physical chip state. A different
+ * quick query remains enabled during loading because it is an explicit
+ * replacement choice.
+ */
+internal fun practicalShoppingSearchQuickEntryEnabled(
+    state: UniversalSearchState,
+    rawQuery: String
+): Boolean = !practicalShoppingSearchQuickEntryBlocked(state, rawQuery)
