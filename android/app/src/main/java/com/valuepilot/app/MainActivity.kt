@@ -497,18 +497,23 @@ class MainActivity : AppCompatActivity() {
         offlineCatalogLookup = searchExecutor.submit {
             val presentation =
                 try {
-                    val result =
-                        BundledOfflineCatalog.discover(
+                    val loaded =
+                        BundledOfflineCatalog.load(
                             context = applicationContext,
                             // This launch artifact is a Canada-labelled identity baseline;
                             // the region manifest does not assert local stocking.
                             region = BundledOfflineCatalogRegion.GTA,
-                            rawQuery = query,
-                            canonicalizer = JvmTextCanonicalizer,
                             evaluatedAtEpochMillis = System.currentTimeMillis(),
                             maximumSnapshotAgeMillis = OFFLINE_CATALOG_MAX_AGE_MILLIS
                         )
-                    PracticalShoppingHomeOfflineCatalogPresentation.from(query, result)
+                    if (!loaded.admission.accepted) {
+                        null
+                    } else {
+                        PracticalShoppingHomeOfflineCatalogPresentation.from(
+                            query,
+                            loaded.discover(query, JvmTextCanonicalizer)
+                        )
+                    }
                 } catch (ignored: Exception) {
                     null
                 }
