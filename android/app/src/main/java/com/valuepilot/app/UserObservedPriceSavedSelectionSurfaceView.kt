@@ -35,8 +35,23 @@ internal class UserObservedPriceSavedSelectionSurfaceView @JvmOverloads construc
     defStyleAttr: Int = 0
 ) : LinearLayout(context, attrs, defStyleAttr), UserObservedPriceSavedSelectionSurfaceRenderer {
 
+    private val ownerBoundSelectionButtons = mutableListOf<Button>()
+    private val ownerBoundPrefillButtons = mutableListOf<Button>()
+
     var onSelectionAction: ((UserObservedPriceSavedSelectionAction) -> Unit)? = null
+        set(value) {
+            field = value
+            ownerBoundSelectionButtons.forEach { button ->
+                button.isEnabled = value != null
+            }
+        }
     var onCheckPrefillAction: ((UserObservedPriceSavedPrefillCheckUiAction) -> Unit)? = null
+        set(value) {
+            field = value
+            ownerBoundPrefillButtons.forEach { button ->
+                button.isEnabled = value != null
+            }
+        }
 
     init {
         orientation = VERTICAL
@@ -45,6 +60,8 @@ internal class UserObservedPriceSavedSelectionSurfaceView @JvmOverloads construc
     }
 
     override fun render(state: UserObservedPriceSavedSelectionUiState) {
+        ownerBoundSelectionButtons.clear()
+        ownerBoundPrefillButtons.clear()
         removeAllViews()
 
         addView(heading(state.headline))
@@ -188,6 +205,7 @@ internal class UserObservedPriceSavedSelectionSurfaceView @JvmOverloads construc
         compact: Boolean
     ): Button =
         Button(context).apply {
+            ownerBoundSelectionButtons += this
             text = label
             setAllCaps(false)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, if (compact) 13f else 14f)
@@ -211,6 +229,7 @@ internal class UserObservedPriceSavedSelectionSurfaceView @JvmOverloads construc
         action: UserObservedPriceSavedPrefillCheckUiAction
     ): Button =
         Button(context).apply {
+            ownerBoundPrefillButtons += this
             text = label
             setAllCaps(false)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)

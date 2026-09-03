@@ -29,6 +29,32 @@ class UserObservedPriceSavedSelectionSurfaceViewBoundaryTest {
         assertTrue(source.contains("state.checkPrefillAction"))
         assertTrue(source.contains("takeIf { onCheckPrefillAction != null }"))
         assertTrue(source.contains("onCheckPrefillAction?.invoke(action)"))
+        assertTrue(source.contains("private val ownerBoundSelectionButtons = mutableListOf<Button>()"))
+        assertTrue(source.contains("private val ownerBoundPrefillButtons = mutableListOf<Button>()"))
+        assertTrue(source.contains("ownerBoundSelectionButtons.forEach { button ->"))
+        assertTrue(source.contains("ownerBoundPrefillButtons.forEach { button ->"))
+        assertTrue(source.contains("ownerBoundSelectionButtons.clear()"))
+        assertTrue(source.contains("ownerBoundPrefillButtons.clear()"))
+        assertTrue(source.contains("ownerBoundSelectionButtons += this"))
+        assertTrue(source.contains("ownerBoundPrefillButtons += this"))
+    }
+
+    @Test
+    fun `selection and prefill owners fail closed after already-rendered controls`() {
+        val source = source("UserObservedPriceSavedSelectionSurfaceView.kt").readText()
+
+        assertTrue(
+            source.contains(
+                "var onSelectionAction: ((UserObservedPriceSavedSelectionAction) -> Unit)? = null"
+            )
+        )
+        assertTrue(
+            source.contains(
+                "var onCheckPrefillAction: ((UserObservedPriceSavedPrefillCheckUiAction) -> Unit)? = null"
+            )
+        )
+        assertEquals(2, source.split("field = value").size - 1)
+        assertEquals(2, source.split("button.isEnabled = value != null").size - 1)
     }
 
     @Test
