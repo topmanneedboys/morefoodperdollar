@@ -173,6 +173,10 @@ class PracticalShoppingHomeRendererTest {
         assertEquals("Known subtotal 4.49 CAD", rendered.result?.primary?.basketCostText)
         assertEquals("Missing price: Coffee", rendered.result?.primary?.missingItemsText)
         assertEquals(listOf("Sample Market North", null), rendered.items.map { it.storeAssignment })
+        assertEquals(
+            listOf(null, "No usable price yet — not included in this plan."),
+            rendered.items.map { it.priceCoverageNotice }
+        )
         assertTrue(rendered.extraStopSettings.visible)
         assertEquals(
             "Another stop is not evaluated until every requested item has a usable price.",
@@ -192,6 +196,7 @@ class PracticalShoppingHomeRendererTest {
 
         assertTrue(rendered.extraStopSettings.visible)
         assertNull(rendered.extraStopSettings.notice)
+        assertTrue(rendered.items.all { it.priceCoverageNotice == null })
     }
 
     @Test
@@ -206,6 +211,10 @@ class PracticalShoppingHomeRendererTest {
 
         assertEquals("Not enough price coverage yet", rendered.result?.headline)
         assertNull(rendered.result?.primary)
+        assertEquals(
+            listOf("No usable price yet — not included in this plan."),
+            rendered.items.map { it.priceCoverageNotice }
+        )
         assertFalse(rendered.extraStopSettings.visible)
     }
 

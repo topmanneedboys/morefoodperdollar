@@ -24,13 +24,15 @@ data class PracticalShoppingHomeItemRenderState(
     val requestDetailsSummary: String,
     val requestDetailsNotice: String?,
     val requestDetailsActionLabel: String,
-    val storeAssignment: String? = null
+    val storeAssignment: String? = null,
+    val priceCoverageNotice: String? = null
 ) {
     init {
         require(key.value.isNotBlank())
         require(name.isNotBlank())
         require(detail.isNotBlank())
         require(storeAssignment == null || storeAssignment.isNotBlank())
+        require(priceCoverageNotice == null || priceCoverageNotice.isNotBlank())
         require(requestDetailsSummary.isNotBlank())
         require(requestDetailsNotice == null || requestDetailsNotice.isNotBlank())
         require(requestDetailsActionLabel.isNotBlank())
@@ -147,11 +149,18 @@ object PracticalShoppingHomeRenderer {
             items =
                 source.items.map { item ->
                     val itemDetails = requestDetails?.detailFor(item.key)
+                    val storeAssignment = storeAssignments?.get(item.key)
                     PracticalShoppingHomeItemRenderState(
                         key = item.key,
                         name = item.name,
                         detail = item.detail,
-                        storeAssignment = storeAssignments?.get(item.key),
+                        storeAssignment = storeAssignment,
+                        priceCoverageNotice =
+                            if (source.result != null && storeAssignment == null) {
+                                "No usable price yet — not included in this plan."
+                            } else {
+                                null
+                            },
                         requestDetailsSummary =
                             PracticalShoppingHomeItemDetailsPresentation.summary(itemDetails),
                         requestDetailsNotice =

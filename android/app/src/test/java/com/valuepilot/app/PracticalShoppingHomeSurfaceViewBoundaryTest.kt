@@ -111,6 +111,7 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "item.requestDetailsNotice",
             "item.requestDetailsActionLabel",
             "item.storeAssignment",
+            "item.priceCoverageNotice",
             "line(\"Buy at ${'$'}store\"",
             "onEditItemDetails?.invoke(item.key)"
         ).forEach { required ->
