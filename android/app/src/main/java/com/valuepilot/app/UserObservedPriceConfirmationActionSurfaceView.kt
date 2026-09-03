@@ -23,7 +23,16 @@ internal class UserObservedPriceConfirmationActionSurfaceView @JvmOverloads cons
     defStyleAttr: Int = 0
 ) : LinearLayout(context, attrs, defStyleAttr), UserObservedPriceConfirmationActionSurfaceRenderer {
 
+    private var hasRenderedState = false
+
     var onAction: (() -> Unit)? = null
+        set(value) {
+            field = value
+            // A route owner can detach while the confirmation surface remains
+            // mounted. Update the existing control immediately rather than
+            // waiting for another immutable render.
+            actionButton.isEnabled = value != null && hasRenderedState
+        }
 
     private val statusText =
         TextView(context).apply {
@@ -72,6 +81,7 @@ internal class UserObservedPriceConfirmationActionSurfaceView @JvmOverloads cons
     }
 
     override fun render(state: UserObservedPriceConfirmationActionUiState) {
+        hasRenderedState = true
         statusText.text = state.message
         actionButton.text = state.actionLabel
         // A replaceable renderer must stay inert when its typed owner is detached,

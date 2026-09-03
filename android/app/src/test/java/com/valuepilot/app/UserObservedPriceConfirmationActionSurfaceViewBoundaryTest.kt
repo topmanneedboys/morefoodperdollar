@@ -11,6 +11,9 @@ class UserObservedPriceConfirmationActionSurfaceViewBoundaryTest {
     fun `confirmation action renderer fails closed when owner callback is detached`() {
         val source = source().readText()
 
+        assertTrue(source.contains("private var hasRenderedState = false"))
+        assertTrue(source.contains("actionButton.isEnabled = value != null && hasRenderedState"))
+        assertTrue(source.contains("hasRenderedState = true"))
         assertTrue(source.contains("actionButton.isEnabled = state.actionEnabled && onAction != null"))
         assertTrue(source.contains("setOnClickListener { onAction?.invoke() }"))
         assertTrue(source.contains("accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"))
