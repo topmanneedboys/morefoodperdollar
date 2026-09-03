@@ -33,8 +33,23 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : LinearLayout(context, attrs, defStyleAttr), StapleWatchSavedSelectionSurfaceRenderer {
 
+    private val ownerBoundActionButtons = mutableListOf<Button>()
+    private val ownerBoundContinuationButtons = mutableListOf<Button>()
+
     var onAction: ((StapleWatchSavedIdentitySelectionAction) -> Unit)? = null
+        set(value) {
+            field = value
+            ownerBoundActionButtons.forEach { button ->
+                button.isEnabled = value != null
+            }
+        }
     var onContinueAction: ((StapleWatchSavedIdentityHandoffUiAction) -> Unit)? = null
+        set(value) {
+            field = value
+            ownerBoundContinuationButtons.forEach { button ->
+                button.isEnabled = value != null
+            }
+        }
 
     init {
         orientation = VERTICAL
@@ -43,6 +58,8 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
     }
 
     override fun render(state: StapleWatchSavedSelectionUiState) {
+        ownerBoundActionButtons.clear()
+        ownerBoundContinuationButtons.clear()
         removeAllViews()
 
         addView(heading(state.headline))
@@ -246,6 +263,7 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
         contentDescription: String? = null
     ): Button =
         Button(context).apply {
+            ownerBoundActionButtons += this
             text = label
             this.contentDescription = contentDescription
             setAllCaps(false)
@@ -270,6 +288,7 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
         action: StapleWatchSavedIdentityHandoffUiAction
     ): Button =
         Button(context).apply {
+            ownerBoundContinuationButtons += this
             text = label
             setAllCaps(false)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)

@@ -24,6 +24,22 @@ class StapleWatchPolicyDraftSurfaceViewBoundaryTest {
                 "var onContinueAction: ((StapleWatchPolicyHandoffUiAction) -> Unit)? = null"
             )
         )
+        assertTrue(source.contains("private val ownerBoundActionButtons = mutableListOf<Button>()"))
+        assertTrue(source.contains("private val ownerBoundEditors = mutableListOf<EditText>()"))
+        assertTrue(
+            source.contains(
+                "private val ownerBoundContinuationButtons = mutableListOf<Button>()"
+            )
+        )
+        assertTrue(source.contains("ownerBoundActionButtons.forEach { button ->"))
+        assertTrue(source.contains("ownerBoundEditors.forEach { editor ->"))
+        assertTrue(source.contains("ownerBoundContinuationButtons.forEach { button ->"))
+        assertTrue(source.contains("ownerBoundActionButtons.clear()"))
+        assertTrue(source.contains("ownerBoundEditors.clear()"))
+        assertTrue(source.contains("ownerBoundContinuationButtons.clear()"))
+        assertTrue(source.contains("ownerBoundActionButtons += this"))
+        assertTrue(source.contains("ownerBoundEditors += this"))
+        assertTrue(source.contains("ownerBoundContinuationButtons += this"))
         assertTrue(source.contains("visibility = View.GONE"))
         assertFalse(source.contains("visibility = View.VISIBLE"))
 
@@ -96,6 +112,7 @@ class StapleWatchPolicyDraftSurfaceViewBoundaryTest {
         val source = source("StapleWatchPolicyDraftSurfaceView.kt").readText()
 
         assertTrue(source.contains("isSaveEnabled = false"))
+        assertTrue(source.contains("isEnabled = onAction != null"))
         assertTrue(source.contains("state.minimumSwitchSavingsMinorUnits"))
         assertTrue(source.contains("state.maxAdditionalTravelSeconds"))
         assertTrue(source.contains("state.maxAdditionalDistanceMetres"))

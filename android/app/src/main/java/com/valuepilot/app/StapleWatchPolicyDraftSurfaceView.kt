@@ -31,8 +31,27 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : LinearLayout(context, attrs, defStyleAttr), StapleWatchPolicyDraftSurfaceRenderer {
 
+    private val ownerBoundActionButtons = mutableListOf<Button>()
+    private val ownerBoundEditors = mutableListOf<EditText>()
+    private val ownerBoundContinuationButtons = mutableListOf<Button>()
+
     var onAction: ((StapleWatchPolicyDraftUiAction) -> Unit)? = null
+        set(value) {
+            field = value
+            ownerBoundActionButtons.forEach { button ->
+                button.isEnabled = value != null
+            }
+            ownerBoundEditors.forEach { editor ->
+                editor.isEnabled = value != null
+            }
+        }
     var onContinueAction: ((StapleWatchPolicyHandoffUiAction) -> Unit)? = null
+        set(value) {
+            field = value
+            ownerBoundContinuationButtons.forEach { button ->
+                button.isEnabled = value != null
+            }
+        }
 
     init {
         orientation = VERTICAL
@@ -41,6 +60,9 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
     }
 
     override fun render(state: StapleWatchPolicyDraftUiState) {
+        ownerBoundActionButtons.clear()
+        ownerBoundEditors.clear()
+        ownerBoundContinuationButtons.clear()
         removeAllViews()
 
         addView(heading(state.headline))
@@ -178,6 +200,7 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
             )
             addView(
                 Button(context).apply {
+                    ownerBoundActionButtons += this
                     text = "No distance limit"
                     contentDescription = "Set ${state.distanceLimitLabel} to no limit"
                     setAllCaps(false)
@@ -233,6 +256,7 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
             }
         val editor =
             EditText(context).apply {
+                ownerBoundEditors += this
                 setText(value)
                 hint = unitLabel
                 contentDescription = "$fieldLabel. Enter $unitLabel."
@@ -245,6 +269,7 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
             }
         val applyButton =
             Button(context).apply {
+                ownerBoundActionButtons += this
                 text = "Apply"
                 contentDescription = "Apply $fieldLabel"
                 setAllCaps(false)
@@ -285,6 +310,7 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
         action: StapleWatchPolicyHandoffUiAction
     ): Button =
         Button(context).apply {
+            ownerBoundContinuationButtons += this
             text = label
             setAllCaps(false)
             isSaveEnabled = false

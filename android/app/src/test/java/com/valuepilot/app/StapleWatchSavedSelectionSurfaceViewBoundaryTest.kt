@@ -30,6 +30,18 @@ class StapleWatchSavedSelectionSurfaceViewBoundaryTest {
         )
         assertTrue(source.contains("setOnClickListener { onAction?.invoke(action) }"))
         assertTrue(source.contains("setOnClickListener { onContinueAction?.invoke(action) }"))
+        assertTrue(source.contains("private val ownerBoundActionButtons = mutableListOf<Button>()"))
+        assertTrue(
+            source.contains(
+                "private val ownerBoundContinuationButtons = mutableListOf<Button>()"
+            )
+        )
+        assertTrue(source.contains("ownerBoundActionButtons.forEach { button ->"))
+        assertTrue(source.contains("ownerBoundContinuationButtons.forEach { button ->"))
+        assertTrue(source.contains("ownerBoundActionButtons.clear()"))
+        assertTrue(source.contains("ownerBoundContinuationButtons.clear()"))
+        assertTrue(source.contains("ownerBoundActionButtons += this"))
+        assertTrue(source.contains("ownerBoundContinuationButtons += this"))
         assertTrue(source.contains("visibility = View.GONE"))
         assertFalse(source.contains("visibility = View.VISIBLE"))
 
