@@ -15,14 +15,19 @@ sealed interface PracticalShoppingSavedStapleLaunchAction {
 data class PracticalShoppingSavedStapleLaunchUiState(
     val title: String?,
     val supportingText: String?,
+    val notice: String?,
     val action: PracticalShoppingSavedStapleLaunchAction.OpenStapleWatchSetup?,
     val actionLabel: String?
 ) {
+    private val hasContent = action != null || notice != null
+
     init {
-        require((title != null) == (action != null))
+        require((title != null) == hasContent)
         require((supportingText != null) == (action != null))
         require(title == null || title.isNotBlank())
         require(supportingText == null || supportingText.isNotBlank())
+        require(notice == null || notice.isNotBlank())
+        require(notice == null || action == null)
         require((action != null) == (actionLabel != null))
         require(actionLabel == null || actionLabel.isNotBlank())
     }
@@ -60,18 +65,54 @@ object PracticalShoppingSavedStapleLaunchUiProjector {
                 supportingText =
                     "Choose recurring saved items and a usual store to check whether a future " +
                         "switch is worth the trip.",
+                notice = null,
                 action = PracticalShoppingSavedStapleLaunchAction.OpenStapleWatchSetup,
                 actionLabel = "Choose staples to watch"
+            )
+        } else if (
+            accepted &&
+                projection != null &&
+                projection.state.emptyMessage == null
+        ) {
+            PracticalShoppingSavedStapleLaunchUiState(
+                title = "Watch My Staples",
+                supportingText = null,
+                notice = unavailableNotice(
+                    visibleProductCount = projection.state.productRows.size,
+                    visibleStoreCount = projection.state.storeRows.size
+                ),
+                action = null,
+                actionLabel = null
             )
         } else {
             PracticalShoppingSavedStapleLaunchUiState(
                 title = null,
                 supportingText = null,
+                notice = null,
                 action = null,
                 actionLabel = null
             )
         }
     }
+
+    private fun unavailableNotice(
+        visibleProductCount: Int,
+        visibleStoreCount: Int
+    ): String =
+        when {
+            visibleProductCount < MIN_STAPLE_PRODUCTS && visibleStoreCount == 0 ->
+                "Save at least two named products and one named store to set up Watch My Staples."
+
+            visibleProductCount < MIN_STAPLE_PRODUCTS ->
+                if (visibleProductCount == MIN_STAPLE_PRODUCTS - 1) {
+                    "Save one more named product to set up Watch My Staples."
+                } else {
+                    "Save at least two named products to set up Watch My Staples."
+                }
+
+            else ->
+                "Save a named store to set up Watch My Staples."
+        }
 
     private const val MIN_STAPLE_PRODUCTS = 2
 }

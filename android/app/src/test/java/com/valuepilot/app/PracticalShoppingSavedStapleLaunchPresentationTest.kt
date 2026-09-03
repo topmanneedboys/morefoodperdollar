@@ -30,6 +30,7 @@ class PracticalShoppingSavedStapleLaunchPresentationTest {
             "Choose recurring saved items and a usual store to check whether a future switch is worth the trip.",
             state.supportingText
         )
+        assertNull(state.notice)
         assertEquals("Choose staples to watch", state.actionLabel)
     }
 
@@ -57,12 +58,20 @@ class PracticalShoppingSavedStapleLaunchPresentationTest {
             )
 
         assertNull(oneProduct.action)
-        assertNull(oneProduct.title)
+        assertEquals("Watch My Staples", oneProduct.title)
         assertNull(oneProduct.supportingText)
+        assertEquals(
+            "Save one more named product to set up Watch My Staples.",
+            oneProduct.notice
+        )
         assertNull(oneProduct.actionLabel)
         assertNull(missingDisplayName.action)
-        assertNull(missingDisplayName.title)
+        assertEquals("Watch My Staples", missingDisplayName.title)
         assertNull(missingDisplayName.supportingText)
+        assertEquals(
+            "Save one more named product to set up Watch My Staples.",
+            missingDisplayName.notice
+        )
         assertNull(missingDisplayName.actionLabel)
     }
 
@@ -77,8 +86,28 @@ class PracticalShoppingSavedStapleLaunchPresentationTest {
             )
 
         assertNull(state.action)
-        assertNull(state.title)
+        assertEquals("Watch My Staples", state.title)
         assertNull(state.supportingText)
+        assertEquals(
+            "Save a named store to set up Watch My Staples.",
+            state.notice
+        )
+        assertNull(state.actionLabel)
+    }
+
+    @Test
+    fun emptySavedContentDoesNotAddRedundantWatchSetupGuidance() {
+        val state =
+            PracticalShoppingSavedStapleLaunchUiProjector.project(
+                lifecycle(
+                    status = PracticalShoppingSavedLifecycleStatus.READY,
+                    projection = projection(productCount = 0, storeCount = 0)
+                )
+            )
+
+        assertNull(state.title)
+        assertNull(state.notice)
+        assertNull(state.action)
         assertNull(state.actionLabel)
     }
 
@@ -125,7 +154,11 @@ class PracticalShoppingSavedStapleLaunchPresentationTest {
                 )
             ).map(PracticalShoppingSavedStapleLaunchUiProjector::project)
 
-        assertTrue(states.all { it.action == null && it.actionLabel == null })
+        assertTrue(
+            states.all {
+                it.action == null && it.actionLabel == null && it.notice == null
+            }
+        )
     }
 
     @Test
@@ -137,11 +170,14 @@ class PracticalShoppingSavedStapleLaunchPresentationTest {
         assertTrue(presentation.contains("PracticalShoppingSavedStapleLaunchAction"))
         assertTrue(presentation.contains("OpenStapleWatchSetup"))
         assertTrue(presentation.contains("supportingText"))
+        assertTrue(presentation.contains("notice"))
         assertTrue(view.contains("state.title"))
         assertTrue(view.contains("state.supportingText"))
+        assertTrue(view.contains("state.notice"))
         assertFalse(presentation.contains("PracticalShoppingSavedSurfaceAction.Preference"))
         assertFalse(view.contains("visibility = View.VISIBLE"))
         assertTrue(view.contains("setOnClickListener { onAction?.invoke(action) }"))
+        assertTrue(view.contains("accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"))
 
         listOf(
             "PracticalShoppingSavedExactPreferenceLocalStore",

@@ -35,23 +35,40 @@ class PracticalShoppingSavedStapleLaunchView @JvmOverloads constructor(
     override fun render(state: PracticalShoppingSavedStapleLaunchUiState) {
         removeAllViews()
 
-        state.action?.let { action ->
+        state.title?.let { titleText ->
             addView(
                 TextView(context).apply {
-                    text = requireNotNull(state.title)
+                    text = titleText
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f)
                     setTextColor(Color.parseColor("#111827"))
                     setTypeface(Typeface.DEFAULT, Typeface.BOLD)
                 }
             )
+        }
+        state.supportingText?.let { supportingText ->
             addView(
                 TextView(context).apply {
-                    text = requireNotNull(state.supportingText)
+                    text = supportingText
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
                     setTextColor(Color.parseColor("#4B5563"))
                     setPadding(0, dp(6), 0, 0)
                 }
             )
+        }
+        state.notice?.let { noticeText ->
+            addView(
+                TextView(context).apply {
+                    text = noticeText
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                    setTextColor(Color.parseColor("#92400E"))
+                    setPadding(0, dp(8), 0, 0)
+                    // This projected readiness explanation is important
+                    // feedback when navigation is intentionally unavailable.
+                    accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+                }
+            )
+        }
+        state.action?.let { action ->
             addView(
                 Button(context).apply {
                     text = requireNotNull(state.actionLabel)
