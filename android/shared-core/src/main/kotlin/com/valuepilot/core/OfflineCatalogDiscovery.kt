@@ -170,23 +170,45 @@ object OfflineCatalogDiscoveryEngine {
 
         val queryTokens = normalizedQuery.split(' ').filter(String::isNotBlank).distinct()
         val matches =
-            request.candidates
-                .mapNotNull { product -> match(product, normalizedQuery, queryTokens) }
-                .sortedWith(
-                    compareBy<OfflineCatalogDiscoveryMatch>(
-                        { it.kind.ordinal },
-                        { extraTokenCount(it.product, queryTokens) },
-                        { it.product.canonicalSearchName },
-                        { it.product.recordId }
-                    )
-                )
-                .take(request.maxResults)
+            matchingCandidates(
+                products = request.candidates,
+                normalizedQuery = normalizedQuery,
+                queryTokens = queryTokens
+            ).take(request.maxResults)
 
         return OfflineCatalogDiscoveryResult(
             normalizedQuery = normalizedQuery,
             evaluatedCandidateCount = request.candidates.size,
             matches = matches
         )
+    }
+
+    internal fun matchingCandidates(
+        products: List<OfflineCatalogProduct>,
+        normalizedQuery: String,
+        queryTokens: List<String>
+    ): List<OfflineCatalogDiscoveryMatch> {
+        val queryGtin = normalizedQuery.takeIf { it.all(Char::isDigit) }
+            ?.let(GtinValidation::canonicalOrNull)
+        if (queryGtin != null) {
+            return products
+                .asSequence()
+                .filter { it.canonicalGtin == queryGtin }
+                .sortedBy { it.recordId }
+                .map { OfflineCatalogDiscoveryMatch(it, OfflineCatalogMatchKind.EXACT_GTIN) }
+                .toList()
+        }
+
+        return products
+            .mapNotNull { product -> match(product, normalizedQuery, queryTokens) }
+            .sortedWith(
+                compareBy<OfflineCatalogDiscoveryMatch>(
+                    { it.kind.ordinal },
+                    { extraTokenCount(it.product, queryTokens) },
+                    { it.product.canonicalSearchName },
+                    { it.product.recordId }
+                )
+            )
     }
 
     private fun match(
@@ -274,4 +296,66 @@ object OfflineCatalogDiscoveryEngine {
 
     private const val MIN_PREFIX_TOKEN_LENGTH = 3
     private const val MIN_TYPO_TOKEN_LENGTH = 5
+}
+
+/**
+ * Bounded adapter for snapshots larger than the final discovery request bound.
+ *
+ * The snapshot may contain up to [MAX_INDEX_PRODUCTS] identity records, while
+ * the final matching engine intentionally evaluates at most
+ * [OfflineCatalogDiscoveryRequest.MAX_CANDIDATES] candidates.  Matching stays
+ * deterministic and provider-neutral: the index scans the immutable snapshot
+ * once, applies the same core ordering, and forwards only the bounded prefix.
+ */
+class OfflineCatalogDiscoveryIndex private constructor(
+    products: List<OfflineCatalogProduct>
+) {
+    private val products = products.toList()
+
+    init {
+        require(this.products.size <= MAX_INDEX_PRODUCTS) {
+            "Offline catalog index exceeds the bounded product limit"
+        }
+        val recordIds = this.products.map { it.recordId }
+        require(recordIds.distinct().size == recordIds.size) {
+            "Offline catalog index record ids must be unique"
+        }
+    }
+
+    fun discover(
+        rawQuery: String,
+        canonicalizer: TextCanonicalizer,
+        maxResults: Int = OfflineCatalogDiscoveryRequest.MAX_RESULTS
+    ): OfflineCatalogDiscoveryResult {
+        val request =
+            OfflineCatalogDiscoveryRequest(
+                rawQuery = rawQuery,
+                candidates = emptyList(),
+                maxResults = maxResults
+            )
+        val normalizedQuery = canonicalizer.search(request.rawQuery)
+        require(normalizedQuery.isNotBlank())
+        val queryTokens = normalizedQuery.split(' ').filter(String::isNotBlank).distinct()
+        val boundedMatches =
+            OfflineCatalogDiscoveryEngine
+                .matchingCandidates(
+                    products = products,
+                    normalizedQuery = normalizedQuery,
+                    queryTokens = queryTokens
+                )
+                .take(OfflineCatalogDiscoveryRequest.MAX_CANDIDATES)
+
+        return OfflineCatalogDiscoveryResult(
+            normalizedQuery = normalizedQuery,
+            evaluatedCandidateCount = products.size,
+            matches = boundedMatches.take(request.maxResults)
+        )
+    }
+
+    companion object {
+        const val MAX_INDEX_PRODUCTS = OfflineCatalogSnapshotManifest.MAX_TOTAL_RECORDS
+
+        fun build(products: List<OfflineCatalogProduct>): OfflineCatalogDiscoveryIndex =
+            OfflineCatalogDiscoveryIndex(products)
+    }
 }

@@ -125,6 +125,54 @@ class OfflineCatalogDiscoveryTest {
     }
 
     @Test
+    fun `index keeps discovery bounded while evaluating the full snapshot`() {
+        val exact = product("z-exact", "whole milk")
+        val broad = (0 until OfflineCatalogDiscoveryRequest.MAX_CANDIDATES + 40)
+            .map { index -> product("milk-$index", "whole milk $index") }
+        val index = OfflineCatalogDiscoveryIndex.build(broad + exact)
+
+        val result = index.discover("whole milk", canonicalizer)
+
+        assertEquals(broad.size + 1, result.evaluatedCandidateCount)
+        assertEquals(OfflineCatalogDiscoveryRequest.MAX_RESULTS, result.matches.size)
+        assertEquals("z-exact", result.matches.first().product.recordId)
+        assertEquals(OfflineCatalogMatchKind.EXACT_NAME, result.matches.first().kind)
+    }
+
+    @Test
+    fun `index preserves exact barcode matching across large snapshots`() {
+        val exact = product("milk-upc", "whole milk", gtin = "036000291452")
+        val products = (0 until OfflineCatalogDiscoveryRequest.MAX_CANDIDATES + 10)
+            .map { index -> product("other-$index", "other product $index") }
+        val result = OfflineCatalogDiscoveryIndex.build(products + exact)
+            .discover("00036000291452", canonicalizer)
+
+        assertEquals(products.size + 1, result.evaluatedCandidateCount)
+        assertEquals(listOf("milk-upc"), result.matches.map { it.product.recordId })
+        assertEquals(OfflineCatalogMatchKind.EXACT_GTIN, result.matches.single().kind)
+    }
+
+    @Test
+    fun `index rejects duplicate records and overlarge snapshots`() {
+        try {
+            OfflineCatalogDiscoveryIndex.build(listOf(product("same", "milk"), product("same", "milk")))
+            fail("Expected duplicate record rejection")
+        } catch (expected: IllegalArgumentException) {
+            assertTrue(expected.message.orEmpty().contains("record ids"))
+        }
+
+        try {
+            OfflineCatalogDiscoveryIndex.build(
+                (0..OfflineCatalogDiscoveryIndex.MAX_INDEX_PRODUCTS)
+                    .map { index -> product("large-$index", "product $index") }
+            )
+            fail("Expected snapshot bound rejection")
+        } catch (expected: IllegalArgumentException) {
+            assertTrue(expected.message.orEmpty().contains("bounded product limit"))
+        }
+    }
+
+    @Test
     fun `catalog record has no price or availability authority`() {
         val names = OfflineCatalogProduct::class.java.declaredFields.map { it.name }.toSet()
 
