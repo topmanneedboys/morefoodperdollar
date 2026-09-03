@@ -8,11 +8,19 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+`daa70e4c9d62305a83022758b30cdf9072abc38b` — `Fail closed observed price draft editors`
+
+GitHub Actions candidate workflow **33741793189** completed successfully, and milestone provenance workflow **33742341341** completed successfully for the exact same SHA.
+
+The latest observed-price refinement extends the owner-boundary correction across the draft editors themselves. Price amount/currency, observed date/time/offset, and proof-reference/type controls now update immediately when their typed owner callback is installed or cleared; detached evidence drafts cannot remain editable without their owner, and each editor starts disabled. This is presentation/lifecycle-only; no parsing, policy, planner, ranking, pricing, evidence, persistence, clock, provider, provider-economics or network authority changed. Clean-source verification passed 1,684 JVM tests (375 shared-core + 1,309 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+
+## Previous verified engineering head (superseded)
+
 `941f2c267f4913a7554ae7593f8df85bb9884af9` — `Fail closed observed price confirmation action`
 
 GitHub Actions candidate workflow **33740867817** completed successfully, and milestone provenance workflow **33741392931** completed successfully for the exact same SHA.
 
-The latest observed-price refinement extends the owner-boundary correction to the confirmation action. Its button updates immediately when the typed owner callback is installed or cleared and remains inert before the first immutable render, so a detached confirmation surface cannot look ready to submit evidence. This is presentation/lifecycle-only; no policy, planner, ranking, pricing, evidence, persistence, clock, provider, provider-economics or network authority changed. Clean-source verification passed 1,684 JVM tests (375 shared-core + 1,309 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+The previous observed-price refinement extended the owner-boundary correction to the confirmation action. Its button updates immediately when the typed owner callback is installed or cleared and remains inert before the first immutable render, so a detached confirmation surface cannot look ready to submit evidence. This is presentation/lifecycle-only; no policy, planner, ranking, pricing, evidence, persistence, clock, provider, provider-economics or network authority changed. Clean-source verification passed 1,684 JVM tests (375 shared-core + 1,309 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
