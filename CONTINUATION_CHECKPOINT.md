@@ -236,7 +236,7 @@ The newest promoted slice adds item-specific assistive-technology descriptions t
 
 The newest promoted slice extends that context to Watch product and usual-store selection actions. Each toggle names the saved choice it changes, while the selection projector continues to own identity reconciliation, readiness, and typed action direction. It changes no fact, price, route, policy, persistence, planner, ranking, notification, network, or View authority.
 
-Next engineering slice: re-audit the current Home/Basket/Saved consumer surfaces and tests, then choose one small reversible clarity or accessibility improvement that uses existing immutable projection. Keep fictional/sample data visibly offline, unknown prices unknown, one-store-first explicit, and Views limited to rendering and typed actions.
+Next engineering slice: re-audit the now-actionable Home catalog handoff plus Basket/Saved consumer surfaces and tests, then choose one small reversible clarity or accessibility improvement that uses existing immutable projection. Keep catalog selections query-only until the separate exact-identity confirmation boundary is deliberately wired; keep fictional/sample data visibly offline, unknown prices unknown, one-store-first explicit, and Views limited to rendering and typed actions.
 
 Historical MVP sequence:
 
