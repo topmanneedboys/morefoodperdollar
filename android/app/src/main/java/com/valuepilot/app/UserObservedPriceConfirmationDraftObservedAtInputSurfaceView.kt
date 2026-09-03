@@ -33,11 +33,14 @@ class UserObservedPriceConfirmationDraftObservedAtInputSurfaceView @JvmOverloads
     private val timeEditor = EditText(context)
     private val utcOffsetEditor = EditText(context)
     private val applyButton = Button(context)
+    private val ownerBoundControls = mutableListOf<View>()
 
     var onCommit: ((Long) -> Unit)? = null
         set(value) {
             field = value
-            applyButton.isEnabled = value != null
+            ownerBoundControls.forEach { control ->
+                control.isEnabled = value != null
+            }
         }
 
     init {
@@ -54,9 +57,11 @@ class UserObservedPriceConfirmationDraftObservedAtInputSurfaceView @JvmOverloads
         )
 
         dateEditor.apply {
+            ownerBoundControls += this
             hint = "Date: YYYY-MM-DD"
             isSingleLine = true
             isSaveEnabled = false
+            isEnabled = false
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
             filters = arrayOf<InputFilter>(InputFilter.LengthFilter(10))
             layoutParams =
@@ -68,9 +73,11 @@ class UserObservedPriceConfirmationDraftObservedAtInputSurfaceView @JvmOverloads
         addView(dateEditor)
 
         timeEditor.apply {
+            ownerBoundControls += this
             hint = "Time: HH:MM or HH:MM:SS"
             isSingleLine = true
             isSaveEnabled = false
+            isEnabled = false
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
             filters = arrayOf<InputFilter>(InputFilter.LengthFilter(8))
             layoutParams =
@@ -82,9 +89,11 @@ class UserObservedPriceConfirmationDraftObservedAtInputSurfaceView @JvmOverloads
         addView(timeEditor)
 
         utcOffsetEditor.apply {
+            ownerBoundControls += this
             hint = "UTC offset: for example -04:00 or Z"
             isSingleLine = true
             isSaveEnabled = false
+            isEnabled = false
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
             filters = arrayOf<InputFilter>(InputFilter.LengthFilter(6))
             layoutParams =
@@ -102,6 +111,7 @@ class UserObservedPriceConfirmationDraftObservedAtInputSurfaceView @JvmOverloads
         )
 
         applyButton.apply {
+            ownerBoundControls += this
             text = "Set observed time"
             setAllCaps(false)
             isSaveEnabled = false

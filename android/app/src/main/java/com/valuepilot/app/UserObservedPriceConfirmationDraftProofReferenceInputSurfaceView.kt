@@ -40,11 +40,14 @@ class UserObservedPriceConfirmationDraftProofReferenceInputSurfaceView @JvmOverl
     private val priceTagOption = RadioButton(context)
     private val proofTypeError = TextView(context)
     private val applyButton = Button(context)
+    private val ownerBoundControls = mutableListOf<View>()
 
     var onCommit: ((String, UserProvidedPriceProofType) -> Unit)? = null
         set(value) {
             field = value
-            applyButton.isEnabled = value != null
+            ownerBoundControls.forEach { control ->
+                control.isEnabled = value != null
+            }
         }
 
     init {
@@ -61,9 +64,11 @@ class UserObservedPriceConfirmationDraftProofReferenceInputSurfaceView @JvmOverl
         )
 
         artifactIdEditor.apply {
+            ownerBoundControls += this
             hint = "Proof reference, for example receipt-sept-1"
             isSingleLine = true
             isSaveEnabled = false
+            isEnabled = false
             inputType = InputType.TYPE_CLASS_TEXT
             filters = arrayOf<InputFilter>(InputFilter.LengthFilter(160))
             layoutParams =
@@ -75,8 +80,10 @@ class UserObservedPriceConfirmationDraftProofReferenceInputSurfaceView @JvmOverl
         addView(artifactIdEditor)
 
         proofTypeGroup.apply {
+            ownerBoundControls += this
             orientation = HORIZONTAL
             isSaveEnabled = false
+            isEnabled = false
             layoutParams =
                 LayoutParams(
                     LayoutParams.MATCH_PARENT,
@@ -84,14 +91,18 @@ class UserObservedPriceConfirmationDraftProofReferenceInputSurfaceView @JvmOverl
                 ).apply { topMargin = dp(8) }
         }
         receiptOption.apply {
+            ownerBoundControls += this
             id = View.generateViewId()
             text = "Receipt"
             isSaveEnabled = false
+            isEnabled = false
         }
         priceTagOption.apply {
+            ownerBoundControls += this
             id = View.generateViewId()
             text = "Price tag"
             isSaveEnabled = false
+            isEnabled = false
         }
         proofTypeGroup.addView(receiptOption)
         proofTypeGroup.addView(priceTagOption)
@@ -112,6 +123,7 @@ class UserObservedPriceConfirmationDraftProofReferenceInputSurfaceView @JvmOverl
         )
 
         applyButton.apply {
+            ownerBoundControls += this
             text = "Set proof reference"
             setAllCaps(false)
             isSaveEnabled = false

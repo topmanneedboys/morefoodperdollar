@@ -32,11 +32,14 @@ class UserObservedPriceConfirmationDraftPriceInputSurfaceView @JvmOverloads cons
     private val amountEditor = EditText(context)
     private val currencyEditor = EditText(context)
     private val applyButton = Button(context)
+    private val ownerBoundControls = mutableListOf<View>()
 
     var onCommit: ((Money) -> Unit)? = null
         set(value) {
             field = value
-            applyButton.isEnabled = value != null
+            ownerBoundControls.forEach { control ->
+                control.isEnabled = value != null
+            }
         }
 
     init {
@@ -53,9 +56,11 @@ class UserObservedPriceConfirmationDraftPriceInputSurfaceView @JvmOverloads cons
         )
 
         amountEditor.apply {
+            ownerBoundControls += this
             hint = "Amount, for example 5.99"
             isSingleLine = true
             isSaveEnabled = false
+            isEnabled = false
             inputType =
                 InputType.TYPE_CLASS_NUMBER or
                     InputType.TYPE_NUMBER_FLAG_SIGNED or
@@ -69,9 +74,11 @@ class UserObservedPriceConfirmationDraftPriceInputSurfaceView @JvmOverloads cons
         addView(amountEditor)
 
         currencyEditor.apply {
+            ownerBoundControls += this
             hint = "Currency code, for example CAD"
             isSingleLine = true
             isSaveEnabled = false
+            isEnabled = false
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
             filters = arrayOf<InputFilter>(InputFilter.LengthFilter(3))
             layoutParams =
@@ -89,6 +96,7 @@ class UserObservedPriceConfirmationDraftPriceInputSurfaceView @JvmOverloads cons
         )
 
         applyButton.apply {
+            ownerBoundControls += this
             text = "Set observed price"
             setAllCaps(false)
             isSaveEnabled = false
