@@ -8,11 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`12f3d5b400b501280933093f0c2a199de1ba8934` — `Bind offline catalog manifests to selected region`
+`b6018ab9d08f22558f01c0fe36609dad832b22f5` — `Search offline identity snapshots across supported metros`
 
-GitHub Actions candidate workflow **33807185013** completed successfully, and milestone provenance workflow **33807942372** completed successfully for the exact same SHA.
+GitHub Actions candidate workflow **33809477765** completed successfully, and milestone provenance workflow **33809973694** completed successfully for the exact same SHA.
 
-The offline catalog now has a deterministic, offline refresh coordinator for the supported Greater Toronto Area and Metro Vancouver identity snapshots, and the Android asset boundary now rejects a manifest whose declared region does not match the selected metro. It requires explicit source export, rights evidence, timestamps, and signing keys; selects and imports only bounded Canada-labelled identity fields; builds and verifies every regional candidate before promotion; and preserves existing per-region pointers when a candidate regresses. It does not fetch data, add current prices/offers, claim stock or availability, or change the existing planner/ranking authority. Clean-source verification passed 397 shared-core tests and 1,333 Android app tests with zero failures, all 58 Android tasks, 61 Python tests, 30 browser tests, Firefox lint with zero findings, APK privacy inspection with no INTERNET/ACCESS_NETWORK_STATE, one-signer verification, and exact-SHA release-bundle provenance.
+The offline catalog now has a deterministic, offline refresh coordinator for the supported Greater Toronto Area and Metro Vancouver identity snapshots, and Home’s bounded identity lookup searches both independently region-bound snapshots instead of silently pinning discovery to GTA. The shared discovery index deduplicates identical identities, omits conflicting record ids, and caps merged work; the combined Android lookup fails closed if either bundled region is not admitted. It requires explicit source export, rights evidence, timestamps, and signing keys; selects and imports only bounded Canada-labelled identity fields; builds and verifies every regional candidate before promotion; and preserves existing per-region pointers when a candidate regresses. It does not fetch data, add current prices/offers, claim stock or availability, or change the existing planner/ranking authority. Clean-source verification passed 397 shared-core tests and 1,333 Android app tests with zero failures, all 58 Android tasks, 61 Python tests, 30 browser tests, Firefox lint with zero findings, APK privacy inspection with no INTERNET/ACCESS_NETWORK_STATE, one-signer verification, and exact-SHA release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
