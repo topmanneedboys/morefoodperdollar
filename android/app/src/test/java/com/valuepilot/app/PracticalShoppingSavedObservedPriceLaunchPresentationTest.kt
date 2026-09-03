@@ -25,6 +25,12 @@ class PracticalShoppingSavedObservedPriceLaunchPresentationTest {
             PracticalShoppingSavedObservedPriceLaunchAction.OpenObservedPriceSavedSelection,
             state.action
         )
+        assertEquals("Confirm an observed price", state.title)
+        assertEquals(
+            "Choose a saved product and store, then record a price you personally observed with proof.",
+            state.supportingText
+        )
+        assertNull(state.notice)
         assertEquals("Confirm an observed price", state.actionLabel)
     }
 
@@ -63,9 +69,38 @@ class PracticalShoppingSavedObservedPriceLaunchPresentationTest {
             )
 
         assertNull(missingProduct.action)
+        assertEquals("Confirm an observed price", missingProduct.title)
+        assertNull(missingProduct.supportingText)
+        assertEquals(
+            "Save a named product to confirm an observed price.",
+            missingProduct.notice
+        )
         assertNull(missingProduct.actionLabel)
         assertNull(missingStore.action)
+        assertEquals("Confirm an observed price", missingStore.title)
+        assertNull(missingStore.supportingText)
+        assertEquals(
+            "Save a named store to confirm an observed price.",
+            missingStore.notice
+        )
         assertNull(missingStore.actionLabel)
+    }
+
+    @Test
+    fun `empty saved content stays quiet instead of adding setup guidance`() {
+        val state =
+            PracticalShoppingSavedObservedPriceLaunchUiProjector.project(
+                lifecycle(
+                    status = PracticalShoppingSavedLifecycleStatus.READY,
+                    projection = projection(productCount = 0, storeCount = 0)
+                )
+            )
+
+        assertNull(state.title)
+        assertNull(state.supportingText)
+        assertNull(state.notice)
+        assertNull(state.action)
+        assertNull(state.actionLabel)
     }
 
     @Test
@@ -124,7 +159,11 @@ class PracticalShoppingSavedObservedPriceLaunchPresentationTest {
                 )
             ).map(PracticalShoppingSavedObservedPriceLaunchUiProjector::project)
 
-        assertTrue(states.all { it.action == null && it.actionLabel == null })
+        assertTrue(
+            states.all {
+                it.action == null && it.actionLabel == null && it.notice == null
+            }
+        )
     }
 
     @Test
@@ -134,6 +173,8 @@ class PracticalShoppingSavedObservedPriceLaunchPresentationTest {
         assertTrue(source.contains("OpenObservedPriceSavedSelection"))
         assertTrue(source.contains("projection.state.productRows.isNotEmpty()"))
         assertTrue(source.contains("projection.state.storeRows.isNotEmpty()"))
+        assertTrue(source.contains("supportingText"))
+        assertTrue(source.contains("notice"))
         listOf(
             "UserObservedPriceSavedPrefillGate",
             "UserObservedPriceSavedPrefillHandoffGate",

@@ -1,11 +1,14 @@
 package com.valuepilot.app
 
 import android.content.Context
+import android.graphics.Color
+import android.graphics.Typeface
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.TextView
 
 /**
  * Replaceable physical launcher for the Saved-owned observed-price selection route.
@@ -32,6 +35,39 @@ internal class PracticalShoppingSavedObservedPriceLaunchView @JvmOverloads const
     override fun render(state: PracticalShoppingSavedObservedPriceLaunchUiState) {
         removeAllViews()
 
+        state.title?.let { titleText ->
+            addView(
+                TextView(context).apply {
+                    text = titleText
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f)
+                    setTextColor(Color.parseColor("#111827"))
+                    setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+                }
+            )
+        }
+        state.supportingText?.let { supportingText ->
+            addView(
+                TextView(context).apply {
+                    text = supportingText
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                    setTextColor(Color.parseColor("#4B5563"))
+                    setPadding(0, dp(6), 0, 0)
+                }
+            )
+        }
+        state.notice?.let { noticeText ->
+            addView(
+                TextView(context).apply {
+                    text = noticeText
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                    setTextColor(Color.parseColor("#92400E"))
+                    setPadding(0, dp(8), 0, 0)
+                    // Explain why navigation is intentionally unavailable to
+                    // assistive technology without changing readiness policy.
+                    accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+                }
+            )
+        }
         state.action?.let { action ->
             addView(
                 Button(context).apply {

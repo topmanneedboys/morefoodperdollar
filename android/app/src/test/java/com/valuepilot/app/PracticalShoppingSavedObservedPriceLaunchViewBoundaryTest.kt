@@ -23,9 +23,13 @@ class PracticalShoppingSavedObservedPriceLaunchViewBoundaryTest {
             )
         )
         assertTrue(source.contains("state.action?.let { action ->"))
+        assertTrue(source.contains("state.title?.let"))
+        assertTrue(source.contains("state.supportingText?.let"))
+        assertTrue(source.contains("state.notice?.let"))
         assertTrue(source.contains("text = requireNotNull(state.actionLabel)"))
         assertTrue(source.contains("isEnabled = onAction != null"))
         assertTrue(source.contains("setOnClickListener { onAction?.invoke(action) }"))
+        assertTrue(source.contains("accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"))
     }
 
     @Test
