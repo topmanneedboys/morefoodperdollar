@@ -1,5 +1,6 @@
 package com.valuepilot.app
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -118,6 +119,16 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
         assertTrue(source.contains("importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES"))
         assertTrue(source.contains("practicalShoppingPrimaryCardContentDescription(state)"))
         assertTrue(source.contains("practicalShoppingSecondStopCardContentDescription(state)"))
+    }
+
+    @Test
+    fun sharedPlanCardsExposeOneSummaryInsteadOfRepeatingDecorativeChildren() {
+        val source = source("PracticalShoppingPlanResultSurfaceView.kt").readText()
+
+        assertEquals(
+            2,
+            source.split("descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS").size - 1
+        )
     }
 
     private fun source(name: String): File {
