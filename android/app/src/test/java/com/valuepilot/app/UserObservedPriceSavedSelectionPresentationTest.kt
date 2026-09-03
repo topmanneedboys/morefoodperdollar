@@ -49,6 +49,14 @@ class UserObservedPriceSavedSelectionPresentationTest {
             UserObservedPriceSavedSelectionAction.SelectStore(north),
             state.storeRows.single().action
         )
+        assertEquals(
+            "Select saved product Whole Milk",
+            state.productRows.single().actionDescription
+        )
+        assertEquals(
+            "Select saved store North Market",
+            state.storeRows.single().actionDescription
+        )
     }
 
     @Test
@@ -66,6 +74,14 @@ class UserObservedPriceSavedSelectionPresentationTest {
         assertTrue(state.storeRows.single().selected)
         assertEquals(UserObservedPriceSavedSelectionAction.ClearProduct, state.productRows.single().action)
         assertEquals(UserObservedPriceSavedSelectionAction.ClearStore, state.storeRows.single().action)
+        assertEquals(
+            "Clear selected saved product Whole Milk",
+            state.productRows.single().actionDescription
+        )
+        assertEquals(
+            "Clear selected saved store North Market",
+            state.storeRows.single().actionDescription
+        )
         assertEquals(UserObservedPriceSavedSelectionAction.ClearSelection, state.clearSelectionAction)
         assertEquals(UserObservedPriceSavedPrefillCheckUiAction.Request, state.checkPrefillAction)
         assertTrue(state.guidance.contains("checked", ignoreCase = true))

@@ -23,11 +23,13 @@ internal data class UserObservedPriceSavedProductSelectionUiRow(
     val title: String,
     val selected: Boolean,
     val action: UserObservedPriceSavedSelectionAction,
-    val actionLabel: String
+    val actionLabel: String,
+    val actionDescription: String
 ) {
     init {
         require(title.isNotBlank())
         require(actionLabel.isNotBlank())
+        require(actionDescription.isNotBlank())
         require(
             if (selected) {
                 action == UserObservedPriceSavedSelectionAction.ClearProduct
@@ -42,11 +44,13 @@ internal data class UserObservedPriceSavedStoreSelectionUiRow(
     val title: String,
     val selected: Boolean,
     val action: UserObservedPriceSavedSelectionAction,
-    val actionLabel: String
+    val actionLabel: String,
+    val actionDescription: String
 ) {
     init {
         require(title.isNotBlank())
         require(actionLabel.isNotBlank())
+        require(actionDescription.isNotBlank())
         require(
             if (selected) {
                 action == UserObservedPriceSavedSelectionAction.ClearStore
@@ -154,7 +158,13 @@ internal object UserObservedPriceSavedSelectionUiProjector {
                         } else {
                             UserObservedPriceSavedSelectionAction.SelectProduct(itemKey)
                         },
-                    actionLabel = if (isSelected) "Clear product" else "Select product"
+                    actionLabel = if (isSelected) "Clear product" else "Select product",
+                    actionDescription =
+                        if (isSelected) {
+                            "Clear selected saved product ${savedRow.title}"
+                        } else {
+                            "Select saved product ${savedRow.title}"
+                        }
                 )
             }
 
@@ -171,7 +181,13 @@ internal object UserObservedPriceSavedSelectionUiProjector {
                         } else {
                             UserObservedPriceSavedSelectionAction.SelectStore(storeKey)
                         },
-                    actionLabel = if (isSelected) "Clear store" else "Select store"
+                    actionLabel = if (isSelected) "Clear store" else "Select store",
+                    actionDescription =
+                        if (isSelected) {
+                            "Clear selected saved store ${savedRow.title}"
+                        } else {
+                            "Select saved store ${savedRow.title}"
+                        }
                 )
             }
 

@@ -25,6 +25,8 @@ class UserObservedPriceSavedSelectionSurfaceViewBoundaryTest {
         assertTrue(source.contains("state.storeRows.forEach"))
         assertTrue(source.contains("action = row.action"))
         assertTrue(source.contains("onSelectionAction?.invoke(action)"))
+        assertTrue(source.contains("actionDescription = row.actionDescription"))
+        assertTrue(source.contains("contentDescription = actionDescription"))
         assertTrue(source.contains("state.clearSelectionAction"))
         assertTrue(source.contains("state.checkPrefillAction"))
         assertTrue(source.contains("takeIf { onCheckPrefillAction != null }"))

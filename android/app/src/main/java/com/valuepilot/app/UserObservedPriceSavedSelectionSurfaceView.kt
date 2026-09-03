@@ -106,7 +106,8 @@ internal class UserObservedPriceSavedSelectionSurfaceView @JvmOverloads construc
             title = row.title,
             selected = row.selected,
             action = row.action,
-            actionLabel = row.actionLabel
+            actionLabel = row.actionLabel,
+            actionDescription = row.actionDescription
         )
 
     private fun storeCard(row: UserObservedPriceSavedStoreSelectionUiRow): View =
@@ -114,14 +115,16 @@ internal class UserObservedPriceSavedSelectionSurfaceView @JvmOverloads construc
             title = row.title,
             selected = row.selected,
             action = row.action,
-            actionLabel = row.actionLabel
+            actionLabel = row.actionLabel,
+            actionDescription = row.actionDescription
         )
 
     private fun selectionCard(
         title: String,
         selected: Boolean,
         action: UserObservedPriceSavedSelectionAction,
-        actionLabel: String
+        actionLabel: String,
+        actionDescription: String
     ): View {
         val card =
             MaterialCardView(context).apply {
@@ -157,7 +160,8 @@ internal class UserObservedPriceSavedSelectionSurfaceView @JvmOverloads construc
                 label = actionLabel,
                 action = action,
                 destructive = selected,
-                compact = true
+                compact = true,
+                contentDescription = actionDescription
             )
         )
 
@@ -202,11 +206,13 @@ internal class UserObservedPriceSavedSelectionSurfaceView @JvmOverloads construc
         label: String,
         action: UserObservedPriceSavedSelectionAction,
         destructive: Boolean,
-        compact: Boolean
+        compact: Boolean,
+        contentDescription: String = label
     ): Button =
         Button(context).apply {
             ownerBoundSelectionButtons += this
             text = label
+            this.contentDescription = contentDescription
             setAllCaps(false)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, if (compact) 13f else 14f)
             if (destructive) {
