@@ -118,6 +118,37 @@ class OfflineCatalogSnapshotAssetLoaderTest {
     }
 
     @Test
+    fun `manifest region must match the region selected by the asset boundary`() {
+        val source = sourceText(listOf(productLine("off:milk", "Whole Milk", providerItemId = "milk")))
+
+        try {
+            OfflineCatalogSnapshotAssetLoader.load(
+                manifestJson = manifestJson(source),
+                sourceJsonByNamespace = mapOf(DATASET_ID to source),
+                integrity = verifiedIntegrity(),
+                evaluatedAtEpochMillis = NOW,
+                maximumSnapshotAgeMillis = MAX_AGE,
+                expectedRegionId = "ca-metro-vancouver"
+            )
+            throw AssertionError("Expected region binding rejection")
+        } catch (expected: IllegalArgumentException) {
+            assertTrue(expected.message.orEmpty().contains("does not match expected region"))
+        }
+
+        val loaded =
+            OfflineCatalogSnapshotAssetLoader.load(
+                manifestJson = manifestJson(source),
+                sourceJsonByNamespace = mapOf(DATASET_ID to source),
+                integrity = verifiedIntegrity(),
+                evaluatedAtEpochMillis = NOW,
+                maximumSnapshotAgeMillis = MAX_AGE,
+                expectedRegionId = "ca-gta"
+            )
+        assertTrue(loaded.admission.accepted)
+        assertEquals("ca-gta", loaded.manifest.regionId)
+    }
+
+    @Test
     fun `offer fields and duplicate record ids never enter the catalog`() {
         val offerLine = productLine("off:milk", "Whole Milk", providerItemId = "milk")
             .dropLast(1) + ",\"price\":\"4.99\"}"

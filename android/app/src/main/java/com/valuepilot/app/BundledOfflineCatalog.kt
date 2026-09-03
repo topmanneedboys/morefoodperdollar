@@ -69,7 +69,8 @@ object BundledOfflineCatalog {
             integrity = integrity,
             evaluatedAtEpochMillis = evaluatedAtEpochMillis,
             maximumSnapshotAgeMillis = maximumSnapshotAgeMillis,
-            lastKnownGoodGeneratedAtEpochMillis = lastKnownGoodGeneratedAtEpochMillis
+            lastKnownGoodGeneratedAtEpochMillis = lastKnownGoodGeneratedAtEpochMillis,
+            expectedRegionId = region.regionId
         )
     }
 

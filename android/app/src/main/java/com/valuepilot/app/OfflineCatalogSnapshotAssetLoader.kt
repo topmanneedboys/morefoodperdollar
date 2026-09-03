@@ -106,10 +106,18 @@ object OfflineCatalogSnapshotAssetLoader {
         integrity: OfflineCatalogIntegrityAssessment,
         evaluatedAtEpochMillis: Long,
         maximumSnapshotAgeMillis: Long,
-        lastKnownGoodGeneratedAtEpochMillis: Long? = null
+        lastKnownGoodGeneratedAtEpochMillis: Long? = null,
+        expectedRegionId: String? = null
     ): OfflineCatalogAssetLoadResult {
         require(manifestJson.isNotBlank()) { "Catalog manifest must not be blank" }
         val root = JSONObject(manifestJson)
+        val declaredRegionId = root.getString("regionId")
+        expectedRegionId?.let { expected ->
+            require(expected.isNotBlank()) { "Expected catalog region must not be blank" }
+            require(declaredRegionId == expected) {
+                "Catalog manifest region $declaredRegionId does not match expected region $expected"
+            }
+        }
         val sourceObjects = root.getJSONArray("sources")
         val expectedNamespaces = buildSet {
             for (index in 0 until sourceObjects.length()) {
@@ -132,7 +140,7 @@ object OfflineCatalogSnapshotAssetLoader {
                         root.getString("catalogRole")
                     ),
                 snapshotId = root.getString("snapshotId"),
-                regionId = root.getString("regionId"),
+                regionId = declaredRegionId,
                 generatedAtEpochMillis = root.getLong("generatedAtEpochMillis"),
                 sources = sources
             )
@@ -188,7 +196,8 @@ object OfflineCatalogSnapshotAssetLoader {
         integrity: OfflineCatalogIntegrityAssessment,
         evaluatedAtEpochMillis: Long,
         maximumSnapshotAgeMillis: Long,
-        lastKnownGoodGeneratedAtEpochMillis: Long? = null
+        lastKnownGoodGeneratedAtEpochMillis: Long? = null,
+        expectedRegionId: String? = null
     ): OfflineCatalogAssetLoadResult {
         val manifestJson = context.assets.open(manifestAssetPath).readUtf8()
         val sources =
@@ -201,7 +210,8 @@ object OfflineCatalogSnapshotAssetLoader {
             integrity = integrity,
             evaluatedAtEpochMillis = evaluatedAtEpochMillis,
             maximumSnapshotAgeMillis = maximumSnapshotAgeMillis,
-            lastKnownGoodGeneratedAtEpochMillis = lastKnownGoodGeneratedAtEpochMillis
+            lastKnownGoodGeneratedAtEpochMillis = lastKnownGoodGeneratedAtEpochMillis,
+            expectedRegionId = expectedRegionId
         )
     }
 
