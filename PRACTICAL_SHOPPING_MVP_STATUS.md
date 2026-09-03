@@ -8,6 +8,14 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+`52211c9a68e7c7537c872f5d62a48513de2d5122` — `Make offline Home catalog matches actionable`
+
+GitHub Actions candidate workflow **33811804791** completed successfully, and milestone provenance workflow **33812349630** completed successfully for the exact same SHA.
+
+Home’s offline catalog result surface is now explicitly actionable without overstating what the catalog proves: a shopper can select a bounded display name, replace only the first whole unresolved list token, review the edited list, and press Plan My Shop themselves. Malformed, ambiguous, control-character, or overlong edits fail closed. The action never confirms a product identity, submits a plan, adds a price, or claims availability; identity suggestions remain Canada-labelled Open Food Facts metadata only. The preceding deterministic refresh/search coordinator still covers the supported Greater Toronto Area and Metro Vancouver identity snapshots, deduplicates identical identities, omits conflicting record ids, caps merged work, and fails closed if either region is not admitted. Clean-source verification passed 400 shared-core tests and 1,337 Android app tests with zero failures, all 58 Android tasks, 61 Python tests, 30 browser tests, Firefox lint with zero findings, APK privacy inspection with no INTERNET/ACCESS_NETWORK_STATE, one-signer verification, and exact-SHA release-bundle provenance.
+
+## Previous verified engineering head (superseded)
+
 `b6018ab9d08f22558f01c0fe36609dad832b22f5` — `Search offline identity snapshots across supported metros`
 
 GitHub Actions candidate workflow **33809477765** completed successfully, and milestone provenance workflow **33809973694** completed successfully for the exact same SHA.
