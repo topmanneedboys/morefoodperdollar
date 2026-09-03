@@ -434,6 +434,11 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         state: PracticalShoppingHomeExtraStopSettingsRenderState
     ) {
         extraStopSettingsButton.visibility = if (state.visible) VISIBLE else GONE
+        // The disclosure itself is an owner-driven control too. Keep a detached
+        // Home renderer inert even when an already-projected result makes the
+        // settings panel visible; the option chips below use the same gate.
+        extraStopSettingsButton.isEnabled =
+            state.visible && onExtraStopMinimumSavingsChoice != null
         if (!state.visible) extraStopSettingsExpanded = false
         currentExtraStopSettingsNotice = state.notice
         extraStopSettingsButton.text = state.summary

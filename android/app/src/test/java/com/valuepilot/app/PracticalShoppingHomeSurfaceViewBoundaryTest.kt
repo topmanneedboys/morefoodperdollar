@@ -42,6 +42,8 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "detailsEnabled = onEditItemDetails != null",
             "removeEnabled = onRemoveUnknownItem != null",
             "isEnabled = onChickenChoice != null",
+            "extraStopSettingsButton.isEnabled =",
+            "state.visible && onExtraStopMinimumSavingsChoice != null",
             "isEnabled = onExtraStopMinimumSavingsChoice != null",
             "isEnabled = enabled"
         ).forEach { required ->
@@ -63,6 +65,11 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
         assertTrue(source.contains("extraStopSettingsButton.contentDescription"))
         assertTrue(source.contains("practicalShoppingExtraStopSettingsContentDescription"))
         assertTrue(source.contains("currentExtraStopSettingsNotice = state.notice"))
+        assertTrue(
+            source.contains(
+                "state.visible && onExtraStopMinimumSavingsChoice != null"
+            )
+        )
         assertTrue(source.contains("state.notice?.let"))
         assertTrue(
             source.contains(
