@@ -54,15 +54,77 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : LinearLayout(context, attrs, defStyleAttr) {
 
+    private val queryOwnerControls = mutableListOf<View>()
+    private val submitOwnerControls = mutableListOf<View>()
+    private val itemRemovalOwnerControls = mutableListOf<View>()
+    private val unknownRemovalOwnerControls = mutableListOf<View>()
+    private val itemDetailsOwnerControls = mutableListOf<View>()
+    private val chickenChoiceOwnerControls = mutableListOf<View>()
+    private val extraStopOwnerControls = mutableListOf<View>()
+    private val extraStopChoiceOwnerControls = mutableListOf<View>()
+
+    private var hasRenderedState = false
+    private var lastRenderedSubmitEnabled = false
+
     var onQueryChanged: ((String) -> Unit)? = null
+        set(value) {
+            field = value
+            queryOwnerControls.forEach { control ->
+                control.isEnabled = value != null && hasRenderedState
+            }
+        }
     var onSubmit: ((String) -> Unit)? = null
+        set(value) {
+            field = value
+            submitOwnerControls.forEach { control ->
+                control.isEnabled = value != null && lastRenderedSubmitEnabled
+            }
+        }
     var onRemoveItem: ((ShoppingItemKey) -> Unit)? = null
+        set(value) {
+            field = value
+            itemRemovalOwnerControls.forEach { control ->
+                control.isEnabled = value != null
+            }
+        }
     var onRemoveUnknownItem: ((String) -> Unit)? = null
+        set(value) {
+            field = value
+            unknownRemovalOwnerControls.forEach { control ->
+                control.isEnabled = value != null
+            }
+        }
     var onChickenChoice: ((LocalSamplePracticalShoppingDemo.ChickenChoice) -> Unit)? = null
+        set(value) {
+            field = value
+            chickenChoiceOwnerControls.forEach { control ->
+                control.isEnabled = value != null
+            }
+        }
     var onExtraStopMinimumSavingsChoice:
         ((LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice) -> Unit)? = null
+        set(value) {
+            field = value
+            extraStopOwnerControls.forEach { control ->
+                control.isEnabled =
+                    value != null && hasRenderedState && extraStopSettingsButton.visibility == VISIBLE
+            }
+            extraStopChoiceOwnerControls.forEach { control ->
+                control.isEnabled = value != null
+            }
+        }
     var onEditItemDetails: ((ShoppingItemKey) -> Unit)? = null
+        set(value) {
+            field = value
+            itemDetailsOwnerControls.forEach { control ->
+                control.isEnabled = value != null
+            }
+        }
     var onCompare: (() -> Unit)? = null
+        set(value) {
+            field = value
+            compareActionButton.isEnabled = value != null && hasRenderedState
+        }
 
     private var suppressInputCallback = false
     private var extraStopSettingsExpanded = false
@@ -150,6 +212,11 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         orientation = VERTICAL
         isSaveEnabled = false
 
+        queryOwnerControls += inputLayout
+        queryOwnerControls += input
+        submitOwnerControls += submitButton
+        extraStopOwnerControls += extraStopSettingsButton
+
         addView(inputLayout)
         addView(submitButton)
         addView(message)
@@ -189,6 +256,13 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     }
 
     fun render(state: PracticalShoppingHomeRenderState) {
+        itemRemovalOwnerControls.clear()
+        unknownRemovalOwnerControls.clear()
+        itemDetailsOwnerControls.clear()
+        chickenChoiceOwnerControls.clear()
+        extraStopChoiceOwnerControls.clear()
+        hasRenderedState = true
+
         syncQueryCharacterLimit(state.queryCharacterLimit)
         syncQuery(state.query)
         // The clear-text end icon belongs to the TextInputLayout wrapper, so
@@ -196,6 +270,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         // query changes.
         inputLayout.isEnabled = onQueryChanged != null
         input.isEnabled = onQueryChanged != null
+        lastRenderedSubmitEnabled = state.submitEnabled
         submitButton.isEnabled = state.submitEnabled && onSubmit != null
         compareActionButton.isEnabled = onCompare != null
         renderMessage(state)
@@ -270,10 +345,12 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                     label = "${item.name}  •  ${item.detail}",
                     onRemove = { onRemoveItem?.invoke(item.key) },
                     removeEnabled = onRemoveItem != null,
+                    removeOwnerControls = itemRemovalOwnerControls,
                     removeDescription =
                         context.getString(R.string.home_remove_item_description, item.name),
                     onDetails = { onEditItemDetails?.invoke(item.key) },
                     detailsEnabled = onEditItemDetails != null,
+                    detailsOwnerControls = itemDetailsOwnerControls,
                     detailsLabel = item.requestDetailsActionLabel,
                     detailsDescription =
                         context.getString(R.string.home_item_details_action_description, item.name)
@@ -295,10 +372,12 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         label: String,
         onRemove: () -> Unit,
         removeEnabled: Boolean = false,
+        removeOwnerControls: MutableList<View>? = null,
         lineColor: String = "#374151",
         removeDescription: String = context.getString(R.string.home_remove_item),
         onDetails: (() -> Unit)? = null,
         detailsEnabled: Boolean = false,
+        detailsOwnerControls: MutableList<View>? = null,
         detailsLabel: String = context.getString(R.string.home_item_details_action),
         detailsDescription: String = detailsLabel
     ): View =
@@ -313,17 +392,34 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                 }
             )
             onDetails?.let {
-                addView(detailButton(it, detailsLabel, detailsDescription, detailsEnabled))
+                addView(
+                    detailButton(
+                        it,
+                        detailsLabel,
+                        detailsDescription,
+                        detailsEnabled,
+                        detailsOwnerControls
+                    )
+                )
             }
-            addView(removeButton(onRemove, removeDescription, removeEnabled))
+            addView(
+                removeButton(
+                    onRemove,
+                    removeDescription,
+                    removeEnabled,
+                    removeOwnerControls
+                )
+            )
         }
 
     private fun detailButton(
         onDetails: () -> Unit,
         label: String,
         description: String,
-        enabled: Boolean
+        enabled: Boolean,
+        ownerControls: MutableList<View>? = null
     ): MaterialButton = MaterialButton(context).apply {
+        ownerControls?.add(this)
         text = label
         contentDescription = description
         isAllCaps = false
@@ -346,9 +442,11 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private fun removeButton(
         onRemove: () -> Unit,
         description: String,
-        enabled: Boolean
+        enabled: Boolean,
+        ownerControls: MutableList<View>? = null
     ): MaterialButton =
         MaterialButton(context).apply {
+            ownerControls?.add(this)
             text = context.getString(R.string.home_remove_item)
             contentDescription = description
             isAllCaps = false
@@ -393,6 +491,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                 state.choices.forEach { option ->
                     addView(
                         Chip(context).apply {
+                            chickenChoiceOwnerControls += this
                             text = option.label
                             isCheckable = false
                             isEnabled = onChickenChoice != null
@@ -421,6 +520,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                     label = "• $token",
                     onRemove = { onRemoveUnknownItem?.invoke(token) },
                     removeEnabled = onRemoveUnknownItem != null,
+                    removeOwnerControls = unknownRemovalOwnerControls,
                     lineColor = "#92400E",
                     removeDescription =
                         context.getString(R.string.home_remove_item_description, token)
@@ -462,6 +562,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                 state.choices.forEach { option ->
                     addView(
                         Chip(context).apply {
+                            extraStopChoiceOwnerControls += this
                             text = option.label
                             isCheckable = true
                             isChecked = option.selected

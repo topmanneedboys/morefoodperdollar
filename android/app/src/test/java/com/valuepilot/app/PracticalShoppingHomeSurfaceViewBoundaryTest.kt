@@ -52,6 +52,47 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
     }
 
     @Test
+    fun ownerCallbackChangesFailClosedForAlreadyRenderedHomeControls() {
+        val source = source().readText()
+
+        listOf(
+            "private val queryOwnerControls = mutableListOf<View>()",
+            "private val submitOwnerControls = mutableListOf<View>()",
+            "private val itemRemovalOwnerControls = mutableListOf<View>()",
+            "private val unknownRemovalOwnerControls = mutableListOf<View>()",
+            "private val itemDetailsOwnerControls = mutableListOf<View>()",
+            "private val chickenChoiceOwnerControls = mutableListOf<View>()",
+            "private val extraStopOwnerControls = mutableListOf<View>()",
+            "private val extraStopChoiceOwnerControls = mutableListOf<View>()",
+            "private var hasRenderedState = false",
+            "submitOwnerControls.forEach { control ->",
+            "control.isEnabled = value != null && lastRenderedSubmitEnabled",
+            "control.isEnabled = value != null && hasRenderedState",
+            "queryOwnerControls += inputLayout",
+            "queryOwnerControls += input",
+            "submitOwnerControls += submitButton",
+            "extraStopOwnerControls += extraStopSettingsButton",
+            "itemRemovalOwnerControls.clear()",
+            "unknownRemovalOwnerControls.clear()",
+            "itemDetailsOwnerControls.clear()",
+            "chickenChoiceOwnerControls.clear()",
+            "extraStopChoiceOwnerControls.clear()",
+            "hasRenderedState = true",
+            "removeOwnerControls = itemRemovalOwnerControls",
+            "removeOwnerControls = unknownRemovalOwnerControls",
+            "detailsOwnerControls = itemDetailsOwnerControls",
+            "ownerControls?.add(this)",
+            "chickenChoiceOwnerControls += this",
+            "extraStopChoiceOwnerControls += this",
+            "extraStopOwnerControls.forEach { control ->",
+            "extraStopChoiceOwnerControls.forEach { control ->",
+            "compareActionButton.isEnabled = value != null && hasRenderedState"
+        ).forEach { required ->
+            assertTrue("Expected live owner invalidation binding $required", source.contains(required))
+        }
+    }
+
+    @Test
     fun advancedExtraStopControlMechanicallyObeysImmutableVisibility() {
         val source = source().readText()
 
