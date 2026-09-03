@@ -8,19 +8,19 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+`697c6319d40e4094b607135964f3a791e774c3be` — `Fail closed Saved launchers when owner clears`
+
+GitHub Actions candidate workflow **33736212427** completed successfully, and milestone provenance workflow **33737249953** completed successfully for the exact same SHA.
+
+The latest Saved refinement extends the owner-boundary correction to the Watch My Staples and observed-price launchers. Their rendered buttons now update immediately when the typed owner callback is installed or cleared, so detached Saved entry points cannot continue to look actionable. This is presentation/lifecycle-only; persistence, identity, provider execution, ranking, evidence, clock, provider economics and network authority remain unchanged. Clean-source verification passed 1,682 JVM tests (375 shared-core + 1,307 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+
+## Previous verified engineering head (superseded)
+
 `d15fa825dc9e429a4f8043a543bcdba012a571ab` — `Fail closed Saved controls when owner clears`
 
 GitHub Actions candidate workflow **33735195361** completed successfully, and milestone provenance workflow **33735675051** completed successfully for the exact same SHA.
 
-The latest Saved refinement closes a lifecycle clarity gap. Saved action buttons now update immediately when their typed owner callback is installed or cleared, so an already-rendered Saved surface cannot continue to look actionable after detachment. This is presentation/lifecycle-only; persistence, identity, provider execution, ranking, evidence, clock, provider economics and network authority remain unchanged. Clean-source verification passed 1,682 JVM tests (375 shared-core + 1,307 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
-
-## Previous verified engineering head (superseded)
-
-`bd35d8a2a042226013ce6b93e0c60767a2c1d0e6` — `Collapse inert Home extra-stop panel`
-
-GitHub Actions candidate workflow **33733994101** completed successfully, and milestone provenance workflow **33734530262** completed successfully for the exact same SHA.
-
-The previous Home refinement closed a lifecycle clarity gap. If the typed owner callback disappears while the extra-stop settings panel is expanded, Home now collapses that panel instead of leaving an inert interactive-looking surface visible. This is presentation/lifecycle-only; provider execution, ranking, evidence, persistence, clock, provider economics and network authority remain unchanged. Clean-source verification passed 1,681 JVM tests (375 shared-core + 1,306 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+The previous Saved refinement closed a lifecycle clarity gap. Saved action buttons now update immediately when their typed owner callback is installed or cleared, so an already-rendered Saved surface cannot continue to look actionable after detachment. This is presentation/lifecycle-only; persistence, identity, provider execution, ranking, evidence, clock, provider economics and network authority remain unchanged. Clean-source verification passed 1,682 JVM tests (375 shared-core + 1,307 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
