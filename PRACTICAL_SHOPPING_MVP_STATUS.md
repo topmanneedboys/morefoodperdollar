@@ -8,11 +8,19 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+`cff0a346fb3ae37f59a52d92cdc718cd053ee030` — `Dismiss stale Home item details dialogs`
+
+GitHub Actions candidate workflow **33748458980** completed successfully, and milestone provenance workflow **33748992285** completed successfully for the exact same SHA.
+
+The latest Home refinement closes a lifecycle gap around the item-details editor. The Activity now retains the open dialog, dismisses any previous editor before opening another, closes it whenever the shell leaves Home or opens Compare, and releases it during teardown. A package-count/brand/exact-product editor therefore cannot remain visibly actionable over another destination or reappear with stale Home state. This is presentation/lifecycle-only and does not alter the typed Home session, planner, projector, pricing, evidence, persistence, provider, provider-economics or network authority. Clean-source verification passed 1,689 JVM tests (375 shared-core + 1,314 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+
+## Previous verified engineering head (superseded)
+
 `8182c1dd6bb6e7aea9c1fc22f5c40371eac1dec1` — `Name observed-price Saved selection actions`
 
 GitHub Actions candidate workflow **33747358617** completed successfully, and milestone provenance workflow **33747877782** completed successfully for the exact same SHA.
 
-The latest observed-price Saved-selection refinement closes an accessibility context gap. Product/store controls now expose projected, display-name-specific descriptions so assistive technology can identify exactly which saved choice a typed action changes. This is presentation-only and does not alter Saved identity, persistence, prefill, planner, projector, pricing, evidence, notification, provider, provider-economics or network authority. Clean-source verification passed 1,688 JVM tests (375 shared-core + 1,313 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+Observed-price Saved product/store controls now expose projected, display-name-specific descriptions so assistive technology can identify exactly which saved choice a typed action changes. This is presentation-only and does not alter Saved identity, persistence, prefill, planner, projector, pricing, evidence, notification, provider, provider-economics or network authority. Clean-source verification passed 1,688 JVM tests (375 shared-core + 1,313 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
