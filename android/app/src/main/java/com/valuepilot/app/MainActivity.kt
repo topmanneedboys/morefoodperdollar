@@ -840,6 +840,11 @@ class MainActivity : AppCompatActivity() {
     private fun submitSearch() {
         val rawQuery = searchInput.text?.toString().orEmpty()
 
+        if (!practicalShoppingSearchSubmitEnabled(searchState, rawQuery)) {
+            hideKeyboard()
+            return
+        }
+
         searchState = searchController.reduce(
             searchState,
             UniversalSearchIntent.QueryChanged(rawQuery)
@@ -1003,10 +1008,7 @@ class MainActivity : AppCompatActivity() {
         searchProgress.visibility =
             if (state.status == UniversalSearchStatus.LOADING) View.VISIBLE else View.GONE
 
-        searchButton.isEnabled =
-            state.query.isNotBlank() &&
-                state.status != UniversalSearchStatus.LOADING &&
-                state.status != UniversalSearchStatus.QUERY_TOO_LONG
+        searchButton.isEnabled = practicalShoppingSearchSubmitEnabled(state)
 
         searchResultsContainer.removeAllViews()
         searchResultsHeading.visibility =
