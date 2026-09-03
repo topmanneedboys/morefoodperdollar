@@ -70,13 +70,17 @@ data class PracticalShoppingHomeExtraStopSettingsRenderState(
     val visible: Boolean,
     val summary: String,
     val prompt: String,
-    val choices: List<PracticalShoppingHomeExtraStopSavingsChoiceRenderState>
+    val choices: List<PracticalShoppingHomeExtraStopSavingsChoiceRenderState>,
+    /** Explains when the saved rule is not yet evaluated for the current result. */
+    val notice: String? = null
 ) {
     init {
         require(summary.isNotBlank())
         require(prompt.isNotBlank())
         require(choices.isNotEmpty())
         require(choices.count { it.selected } == 1)
+        require(notice == null || notice.isNotBlank())
+        require(visible || notice == null)
     }
 }
 
@@ -191,6 +195,12 @@ object PracticalShoppingHomeRenderer {
                                     label = choice.label,
                                     selected = choice == source.extraStopMinimumSavingsChoice
                                 )
+                            },
+                    notice =
+                        source.result?.primary
+                            ?.missingItemsText
+                            ?.let {
+                                "Another stop is not evaluated until every requested item has a usable price."
                             }
                 ),
             sampleNotice = source.sampleNotice

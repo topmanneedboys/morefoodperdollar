@@ -173,7 +173,25 @@ class PracticalShoppingHomeRendererTest {
         assertEquals("Known subtotal 4.49 CAD", rendered.result?.primary?.basketCostText)
         assertEquals("Missing price: Coffee", rendered.result?.primary?.missingItemsText)
         assertEquals(listOf("Sample Market North", null), rendered.items.map { it.storeAssignment })
+        assertTrue(rendered.extraStopSettings.visible)
+        assertEquals(
+            "Another stop is not evaluated until every requested item has a usable price.",
+            rendered.extraStopSettings.notice
+        )
         assertTrue(rendered.sampleNotice.contains("Fictional sample data"))
+    }
+
+    @Test
+    fun completeHomeResultDoesNotCarryAnIncompleteExtraStopNotice() {
+        val model =
+            PracticalShoppingHomeSession.submit(
+                PracticalShoppingHomeSession.initialState(),
+                "eggs milk"
+            )
+        val rendered = PracticalShoppingHomeRenderer.render(model.model.ui)
+
+        assertTrue(rendered.extraStopSettings.visible)
+        assertNull(rendered.extraStopSettings.notice)
     }
 
     @Test
@@ -224,6 +242,22 @@ class PracticalShoppingHomeRendererTest {
         assertEquals(
             "Hide extra-stop rule settings. $summary",
             practicalShoppingExtraStopSettingsContentDescription(summary, expanded = true)
+        )
+    }
+
+    @Test
+    fun incompleteExtraStopSettingsDescriptionKeepsEvaluationBoundaryExplicit() {
+        val summary = "Extra-stop rule · Save at least 15.00 CAD"
+        val notice =
+            "Another stop is not evaluated until every requested item has a usable price."
+
+        assertEquals(
+            "Show extra-stop rule settings. $summary. $notice.",
+            practicalShoppingExtraStopSettingsContentDescription(
+                summary,
+                expanded = false,
+                notice = notice
+            )
         )
     }
 

@@ -31,11 +31,17 @@ import com.valuepilot.core.ShoppingItemKey
  */
 internal fun practicalShoppingExtraStopSettingsContentDescription(
     summary: String,
-    expanded: Boolean
+    expanded: Boolean,
+    notice: String? = null
 ): String {
     require(summary.isNotBlank())
+    require(notice == null || notice.isNotBlank())
     val action = if (expanded) "Hide" else "Show"
-    return "$action extra-stop rule settings. $summary"
+    return if (notice == null) {
+        "$action extra-stop rule settings. $summary"
+    } else {
+        "$action extra-stop rule settings. $summary. $notice."
+    }
 }
 
 /**
@@ -60,6 +66,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
 
     private var suppressInputCallback = false
     private var extraStopSettingsExpanded = false
+    private var currentExtraStopSettingsNotice: String? = null
 
     private val input = TextInputEditText(context).apply {
         maxLines = 3
@@ -425,10 +432,14 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     ) {
         extraStopSettingsButton.visibility = if (state.visible) VISIBLE else GONE
         if (!state.visible) extraStopSettingsExpanded = false
+        currentExtraStopSettingsNotice = state.notice
         extraStopSettingsButton.text = state.summary
         syncExtraStopSettingsAccessibility()
         extraStopSettingsBody.removeAllViews()
         extraStopSettingsBody.addView(line(state.prompt, 15f, "#111827", true))
+        state.notice?.let {
+            extraStopSettingsBody.addView(line(it, 13f, "#92400E", topPadding = 8))
+        }
         extraStopSettingsBody.addView(
             ChipGroup(context).apply {
                 isSingleLine = false
@@ -459,7 +470,8 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
             if (extraStopSettingsButton.visibility == VISIBLE) {
                 practicalShoppingExtraStopSettingsContentDescription(
                     summary = extraStopSettingsButton.text?.toString().orEmpty(),
-                    expanded = extraStopSettingsExpanded
+                    expanded = extraStopSettingsExpanded,
+                    notice = currentExtraStopSettingsNotice
                 )
             } else {
                 null
