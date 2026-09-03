@@ -57,6 +57,18 @@ class PracticalShoppingSavedSurfaceViewBoundaryTest {
     }
 
     @Test
+    fun ownerCallbackChangesFailClosedForAlreadyRenderedButtons() {
+        val source = source().readText()
+
+        assertTrue(source.contains("private val ownerBoundButtons = mutableListOf<Button>()"))
+        assertTrue(source.contains("set(value)"))
+        assertTrue(source.contains("ownerBoundButtons.forEach { button ->"))
+        assertTrue(source.contains("button.isEnabled = value != null"))
+        assertTrue(source.contains("ownerBoundButtons.clear()"))
+        assertTrue(source.contains("ownerBoundButtons += this"))
+    }
+
+    @Test
     fun physicalSavedViewHasNoPersistenceProviderOrDecisionAuthority() {
         val source = source().readText()
 

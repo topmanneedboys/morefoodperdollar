@@ -32,7 +32,18 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : LinearLayout(context, attrs, defStyleAttr), PracticalShoppingSavedSurfaceRenderer {
 
+    private val ownerBoundButtons = mutableListOf<Button>()
+
     var onAction: ((PracticalShoppingSavedSurfaceAction) -> Unit)? = null
+        set(value) {
+            field = value
+            // The lifecycle owner may clear the callback after a render while
+            // the route is being replaced. Update existing controls too, so
+            // a detached surface cannot still look actionable.
+            ownerBoundButtons.forEach { button ->
+                button.isEnabled = value != null
+            }
+        }
 
     init {
         orientation = VERTICAL
@@ -41,6 +52,7 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
     }
 
     override fun render(state: PracticalShoppingSavedSurfaceState) {
+        ownerBoundButtons.clear()
         removeAllViews()
 
         addView(heading(state.headline))
@@ -255,6 +267,7 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
         onClick: (() -> Unit)? = null
     ): Button =
         Button(context).apply {
+            ownerBoundButtons += this
             text = label
             this.contentDescription = contentDescription
             setAllCaps(false)
