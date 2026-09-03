@@ -176,6 +176,12 @@ class PracticalShoppingSavedStapleLaunchPresentationTest {
         assertTrue(view.contains("state.notice"))
         assertFalse(presentation.contains("PracticalShoppingSavedSurfaceAction.Preference"))
         assertFalse(view.contains("visibility = View.VISIBLE"))
+        assertTrue(view.contains("private val ownerBoundButtons = mutableListOf<Button>()"))
+        assertTrue(view.contains("set(value)"))
+        assertTrue(view.contains("ownerBoundButtons.forEach { button ->"))
+        assertTrue(view.contains("button.isEnabled = value != null"))
+        assertTrue(view.contains("ownerBoundButtons.clear()"))
+        assertTrue(view.contains("ownerBoundButtons += this"))
         assertTrue(view.contains("setOnClickListener { onAction?.invoke(action) }"))
         assertTrue(view.contains("accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"))
 

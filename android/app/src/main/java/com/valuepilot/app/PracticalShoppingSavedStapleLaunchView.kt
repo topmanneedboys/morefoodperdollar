@@ -24,7 +24,17 @@ class PracticalShoppingSavedStapleLaunchView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : LinearLayout(context, attrs, defStyleAttr), PracticalShoppingSavedStapleLaunchRenderer {
 
+    private val ownerBoundButtons = mutableListOf<Button>()
+
     var onAction: ((PracticalShoppingSavedStapleLaunchAction) -> Unit)? = null
+        set(value) {
+            field = value
+            // The shell may clear the owner while this route is being
+            // replaced. Keep an already-rendered launcher visibly inert too.
+            ownerBoundButtons.forEach { button ->
+                button.isEnabled = value != null
+            }
+        }
 
     init {
         orientation = VERTICAL
@@ -33,6 +43,7 @@ class PracticalShoppingSavedStapleLaunchView @JvmOverloads constructor(
     }
 
     override fun render(state: PracticalShoppingSavedStapleLaunchUiState) {
+        ownerBoundButtons.clear()
         removeAllViews()
 
         state.title?.let { titleText ->
@@ -71,6 +82,7 @@ class PracticalShoppingSavedStapleLaunchView @JvmOverloads constructor(
         state.action?.let { action ->
             addView(
                 Button(context).apply {
+                    ownerBoundButtons += this
                     text = requireNotNull(state.actionLabel)
                     setAllCaps(false)
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)

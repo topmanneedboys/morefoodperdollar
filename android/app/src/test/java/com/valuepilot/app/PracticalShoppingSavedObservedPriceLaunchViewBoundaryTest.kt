@@ -28,6 +28,12 @@ class PracticalShoppingSavedObservedPriceLaunchViewBoundaryTest {
         assertTrue(source.contains("state.notice?.let"))
         assertTrue(source.contains("text = requireNotNull(state.actionLabel)"))
         assertTrue(source.contains("isEnabled = onAction != null"))
+        assertTrue(source.contains("private val ownerBoundButtons = mutableListOf<Button>()"))
+        assertTrue(source.contains("set(value)"))
+        assertTrue(source.contains("ownerBoundButtons.forEach { button ->"))
+        assertTrue(source.contains("button.isEnabled = value != null"))
+        assertTrue(source.contains("ownerBoundButtons.clear()"))
+        assertTrue(source.contains("ownerBoundButtons += this"))
         assertTrue(source.contains("setOnClickListener { onAction?.invoke(action) }"))
         assertTrue(source.contains("accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"))
     }
