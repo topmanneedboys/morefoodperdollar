@@ -8,11 +8,19 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+`62c931ac136b6b4fd7853069cc1359a545b14bac` — `Dismiss detached Saved confirmations`
+
+GitHub Actions candidate workflow **33745130893** completed successfully, and milestone provenance workflow **33745673251** completed successfully for the exact same SHA.
+
+The latest Saved lifecycle refinement closes the stale confirmation gap. Saved now dismisses an open “Clear all” confirmation when its lifecycle owner detaches, and when a fresh immutable projection replaces the state that opened it, so a detached or stale dialog cannot remain visibly actionable. The existing typed clear-all action still emits only after explicit confirmation. This is presentation/lifecycle-only and does not alter Saved persistence, identity, planner, projector, pricing, evidence, notification, provider, provider-economics or network authority. Clean-source verification passed 1,687 JVM tests (375 shared-core + 1,312 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+
+## Previous verified engineering head (superseded)
+
 `fda5749f1a821f369a6a170c4175e3d9e0c912b5` — `Collapse detached Home extra-stop settings`
 
 GitHub Actions candidate workflow **33743998315** completed successfully, and milestone provenance workflow **33744536925** completed successfully for the exact same SHA.
 
-The latest Home lifecycle refinement closes the stale expanded-panel gap. Clearing the extra-stop owner now collapses an already-expanded settings panel immediately, so detached/reused Home surfaces cannot leave stale rule choices visibly open. This is presentation/lifecycle-only and does not alter the existing immutable Home result rendering, planner, projector, pricing, evidence, persistence, clock, provider, provider-economics or network authority. Clean-source verification passed 1,686 JVM tests (375 shared-core + 1,311 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+Clearing the Home extra-stop owner now collapses an already-expanded settings panel immediately, so detached/reused Home surfaces cannot leave stale rule choices visibly open. This is presentation/lifecycle-only and does not alter the existing immutable Home result rendering, planner, projector, pricing, evidence, persistence, clock, provider, provider-economics or network authority. Clean-source verification passed 1,686 JVM tests (375 shared-core + 1,311 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
