@@ -8,9 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`3ba5fca294ba74df571c1b6227189d11d70c218a` — `Keep Home keyboard submit readiness safe`
+`28275a56ce768df732d085f8f64a9ff3146c38eb` — `Hide empty Home preference clear action`
 
-GitHub Actions candidate workflow **33696558319** completed successfully, and milestone provenance workflow **33696985567** completed successfully for the exact same SHA.
+GitHub Actions candidate workflow **33697350458** completed successfully, and milestone provenance workflow **33697768786** completed successfully for the exact same SHA.
+
+The latest Home item-preferences refinement removes a misleading no-op action. The dialog now shows “Clear preferences” only for an item that already has a saved detail; a new detail editor exposes only the meaningful Save and Cancel choices. The prior keyboard “Done” readiness gate remains intact. This is a small presentation/lifecycle correction with deterministic Android binding coverage; the Home controller remains the sole owner of query and preference state, and no planner, ranking, pricing, evidence, persistence, clock, provider or network authority moved into the View. Clean-source verification passed 1,643 JVM tests (375 shared-core + 1,268 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 The latest Home surface refinement closes a keyboard-submission readiness gap. The visible Plan my shop button and the keyboard “Done” action now share the same immutable `submitEnabled` gate, and the button starts disabled until its first render state arrives. Blank and over-limit drafts cannot dispatch a submit through the IME path. This is a small presentation-boundary correction with deterministic View-boundary coverage; the Home controller remains the sole owner of query handling, and no planner, ranking, pricing, evidence, persistence, clock, provider or network authority moved into the View. Clean-source verification passed 1,643 JVM tests (375 shared-core + 1,268 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
