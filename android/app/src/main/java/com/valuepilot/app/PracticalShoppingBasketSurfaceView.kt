@@ -88,6 +88,8 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         setTextColor(Color.parseColor("#374151"))
         backgroundTintList = ColorStateList.valueOf(Color.WHITE)
         layoutParams = fullWidth(dp(52), 16)
+        // Keep the replaceable navigation control inert until its typed owner is attached.
+        isEnabled = false
         setOnClickListener { onAction?.invoke(PracticalShoppingBasketUiAction.OpenHome) }
     }
 
@@ -136,6 +138,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         guidance.text = state.guidance
         sampleNotice.text = state.sampleNotice
         actionButton.text = state.actionLabel
+        actionButton.isEnabled = onAction != null
         renderCollectionProgress(state)
         collectionNotice.text = state.collectionNotice.orEmpty()
         collectionNotice.visibility = if (state.collectionNotice == null) GONE else VISIBLE
