@@ -19,6 +19,18 @@ class PracticalShoppingSavedSurfaceViewBoundaryTest {
     }
 
     @Test
+    fun clearAllRequiresExplicitConfirmationBeforeEmittingTheTypedAction() {
+        val source = source().readText()
+
+        assertTrue(source.contains("showClearAllConfirmation(action)"))
+        assertTrue(source.contains("AlertDialog.Builder(context)"))
+        assertTrue(source.contains("R.string.saved_clear_all_confirmation_title"))
+        assertTrue(source.contains("R.string.saved_clear_all_confirmation_body"))
+        assertTrue(source.contains("R.string.saved_clear_all_confirmation_confirm"))
+        assertTrue(source.contains("onAction?.invoke(action)"))
+    }
+
+    @Test
     fun physicalSavedViewHasNoPersistenceProviderOrDecisionAuthority() {
         val source = source().readText()
 

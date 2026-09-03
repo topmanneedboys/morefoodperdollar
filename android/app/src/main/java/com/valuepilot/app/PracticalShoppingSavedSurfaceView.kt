@@ -11,6 +11,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import com.google.android.material.card.MaterialCardView
 
 /**
@@ -80,10 +81,24 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
                 actionButton(
                     label = requireNotNull(state.clearAllActionLabel),
                     action = action,
-                    destructive = true
+                    destructive = true,
+                    onClick = { showClearAllConfirmation(action) }
                 )
             )
         }
+    }
+
+    private fun showClearAllConfirmation(
+        action: PracticalShoppingSavedSurfaceAction.Preference
+    ) {
+        AlertDialog.Builder(context)
+            .setTitle(context.getString(R.string.saved_clear_all_confirmation_title))
+            .setMessage(context.getString(R.string.saved_clear_all_confirmation_body))
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.saved_clear_all_confirmation_confirm) { _, _ ->
+                onAction?.invoke(action)
+            }
+            .show()
     }
 
     private fun productCard(row: PracticalShoppingSavedSurfaceProductRow): View =
@@ -226,7 +241,8 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
         action: PracticalShoppingSavedSurfaceAction,
         destructive: Boolean,
         compact: Boolean = false,
-        contentDescription: String? = null
+        contentDescription: String? = null,
+        onClick: (() -> Unit)? = null
     ): Button =
         Button(context).apply {
             text = label
@@ -237,7 +253,7 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
                 setTextColor(Color.parseColor("#B91C1C"))
             }
             isEnabled = onAction != null
-            setOnClickListener { onAction?.invoke(action) }
+            setOnClickListener { onClick?.invoke() ?: onAction?.invoke(action) }
             layoutParams =
                 LayoutParams(
                     if (compact) LayoutParams.WRAP_CONTENT else LayoutParams.MATCH_PARENT,

@@ -130,4 +130,7 @@
     <string name="saved_title">Manage saved choices.</string>
     <string name="saved_body">Review or manage the products and stores you choose to remember here.</string>
     <string name="saved_footnote">Saved choices are local preferences only. They do not confirm current price, stock, promotions, availability or travel.</string>
+    <string name="saved_clear_all_confirmation_title">Clear all saved choices?</string>
+    <string name="saved_clear_all_confirmation_body">This removes every saved product and store from ValuePilot on this device.</string>
+    <string name="saved_clear_all_confirmation_confirm">Clear all</string>
 </resources>
