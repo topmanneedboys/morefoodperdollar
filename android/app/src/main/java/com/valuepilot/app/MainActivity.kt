@@ -250,6 +250,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        if (::homeExperience.isInitialized) {
+            homeExperience.onQueryChanged = null
+            homeExperience.onSubmit = null
+            homeExperience.onRemoveItem = null
+            homeExperience.onRemoveUnknownItem = null
+            homeExperience.onChickenChoice = null
+            homeExperience.onExtraStopMinimumSavingsChoice = null
+            homeExperience.onEditItemDetails = null
+            homeExperience.onCompare = null
+        }
+        if (::basketExperience.isInitialized) {
+            basketExperience.onAction = null
+        }
         if (::savedRouteCoordinator.isInitialized) {
             savedExperience.onAction = null
             savedStapleLaunchExperience.onAction = null
