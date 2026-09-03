@@ -130,6 +130,25 @@ class StapleWatchPolicyDraftSurfaceViewBoundaryTest {
     }
 
     @Test
+    fun projectedPolicyFeedbackUsesPoliteAccessibilityLiveRegions() {
+        val source = source("StapleWatchPolicyDraftSurfaceView.kt").readText()
+
+        assertTrue(
+            source.contains(
+                "accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"
+            )
+        )
+        assertEquals(
+            2,
+            source
+                .split("accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE")
+                .size - 1
+        )
+        assertTrue(source.contains("state.notice?.let { message -> addView(notice(message)) }"))
+        assertTrue(source.contains("addView(missingRequirementsCard(state.missingRequirementLabels))"))
+    }
+
+    @Test
     fun exactTextFormatterUsesExplicitFractionDigitsWithoutLocaleOrFloatingPoint() {
         assertEquals("", StapleWatchPolicyDraftTextValueFormatter.money(null, 2))
         assertEquals("15.00", StapleWatchPolicyDraftTextValueFormatter.money(1_500L, 2))

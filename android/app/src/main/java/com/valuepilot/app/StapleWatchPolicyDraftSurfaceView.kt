@@ -102,6 +102,10 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
         MaterialCardView(context).apply {
             radius = dp(16).toFloat()
             cardElevation = 0f
+            // Requirement changes are projected state updates. Announce the
+            // existing renderer-ready labels politely without making this
+            // physical card interpret policy readiness.
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
             setCardBackgroundColor(Color.parseColor("#FFFBEB"))
             strokeColor = Color.parseColor("#FDE68A")
             strokeWidth = dp(1)
@@ -322,6 +326,9 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
             setTextColor(Color.parseColor("#92400E"))
             setPadding(0, dp(10), 0, 0)
+            // Handoff and validation feedback comes from immutable projected
+            // state. Keep announcements polite and let the View only render it.
+            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         }
 
     private fun fieldLabel(value: String): TextView =
