@@ -8,11 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`a036f3799f95f05ec6ed142ffc2bb7cca87ad3a4` — `Add deterministic offline catalog refresh pipeline`
+`12f3d5b400b501280933093f0c2a199de1ba8934` — `Bind offline catalog manifests to selected region`
 
-GitHub Actions candidate workflow **33805171665** completed successfully, the dedicated catalog workflow **33805171629** completed successfully, and milestone provenance workflow **33805935576** completed successfully for the exact same SHA.
+GitHub Actions candidate workflow **33807185013** completed successfully, and milestone provenance workflow **33807942372** completed successfully for the exact same SHA.
 
-The offline catalog now has a deterministic, offline refresh coordinator for the supported Greater Toronto Area and Metro Vancouver identity snapshots. It requires explicit source export, rights evidence, timestamps, and signing keys; selects and imports only bounded Canada-labelled identity fields; builds and verifies every regional candidate before promotion; and preserves existing per-region pointers when a candidate regresses. It does not fetch data, add current prices/offers, claim stock or availability, or change the existing planner/ranking authority. Clean-source verification passed 397 shared-core tests and 1,333 Android app tests with zero failures, all 58 Android tasks, 61 Python tests, 30 browser tests, Firefox lint with zero findings, APK privacy inspection with no INTERNET/ACCESS_NETWORK_STATE, one-signer verification, and exact-SHA release-bundle provenance.
+The offline catalog now has a deterministic, offline refresh coordinator for the supported Greater Toronto Area and Metro Vancouver identity snapshots, and the Android asset boundary now rejects a manifest whose declared region does not match the selected metro. It requires explicit source export, rights evidence, timestamps, and signing keys; selects and imports only bounded Canada-labelled identity fields; builds and verifies every regional candidate before promotion; and preserves existing per-region pointers when a candidate regresses. It does not fetch data, add current prices/offers, claim stock or availability, or change the existing planner/ranking authority. Clean-source verification passed 397 shared-core tests and 1,333 Android app tests with zero failures, all 58 Android tasks, 61 Python tests, 30 browser tests, Firefox lint with zero findings, APK privacy inspection with no INTERNET/ACCESS_NETWORK_STATE, one-signer verification, and exact-SHA release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
