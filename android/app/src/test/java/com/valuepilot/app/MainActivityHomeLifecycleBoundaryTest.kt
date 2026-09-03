@@ -46,6 +46,28 @@ class MainActivityHomeLifecycleBoundaryTest {
         }
     }
 
+    @Test
+    fun homeDetailsDraftRestoresOnlyThroughEphemeralActivityState() {
+        val source = source().readText()
+
+        listOf(
+            "restoreHomeItemDetailsDialog(savedInstanceState)",
+            "if (homeItemDetailsDialog?.isShowing == true)",
+            "STATE_HOME_DETAILS_ITEM_KEY",
+            "STATE_HOME_DETAILS_PACKAGE_COUNT",
+            "STATE_HOME_DETAILS_BRAND",
+            "STATE_HOME_DETAILS_EXACT_PRODUCT",
+            "homeItemDetailsPackageInput?.text?.toString().orEmpty()",
+            "homeItemDetailsBrandInput?.text?.toString().orEmpty()",
+            "homeItemDetailsExactProduct?.isChecked == true",
+            "if (shellState.route != AppRoute.HOME) return",
+            "draftOverride =",
+            "draftOverride ?: PracticalShoppingHomeItemDetailsEditor.initialDraft(current)"
+        ).forEach { required ->
+            assertTrue("Expected ephemeral Home item-details draft restore: $required", source.contains(required))
+        }
+    }
+
     private fun source(): File {
         val workingDirectory =
             requireNotNull(System.getProperty("user.dir")) {

@@ -119,6 +119,10 @@ class MainActivity : AppCompatActivity() {
 
     private var comparisonActivityOpen = false
     private var homeItemDetailsDialog: AlertDialog? = null
+    private var homeItemDetailsItemKey: ShoppingItemKey? = null
+    private var homeItemDetailsPackageInput: TextInputEditText? = null
+    private var homeItemDetailsBrandInput: TextInputEditText? = null
+    private var homeItemDetailsExactProduct: CheckBox? = null
     private var suppressSearchInputCallback = false
     private var restoreSearchOnNextOpen = false
 
@@ -211,6 +215,7 @@ class MainActivity : AppCompatActivity() {
 
         bottomNavigation.selectedItemId = menuIdFor(shellState.selectedPrimaryTab)
         renderShell(shellState)
+        restoreHomeItemDetailsDialog(savedInstanceState)
     }
 
     override fun onResume() {
@@ -235,6 +240,23 @@ class MainActivity : AppCompatActivity() {
         )
         homeSnapshot.requestDetailsLifecycleState?.let { encoded ->
             outState.putByteArray(STATE_HOME_REQUEST_DETAILS, encoded)
+        }
+        if (homeItemDetailsDialog?.isShowing == true) {
+            homeItemDetailsItemKey?.let { itemKey ->
+                outState.putString(STATE_HOME_DETAILS_ITEM_KEY, itemKey.value)
+                outState.putString(
+                    STATE_HOME_DETAILS_PACKAGE_COUNT,
+                    homeItemDetailsPackageInput?.text?.toString().orEmpty()
+                )
+                outState.putString(
+                    STATE_HOME_DETAILS_BRAND,
+                    homeItemDetailsBrandInput?.text?.toString().orEmpty()
+                )
+                outState.putBoolean(
+                    STATE_HOME_DETAILS_EXACT_PRODUCT,
+                    homeItemDetailsExactProduct?.isChecked == true
+                )
+            }
         }
 
         outState.putString(STATE_SEARCH_QUERY, searchState.query)
@@ -413,15 +435,52 @@ class MainActivity : AppCompatActivity() {
     private fun dismissHomeItemDetailsDialog() {
         homeItemDetailsDialog?.dismiss()
         homeItemDetailsDialog = null
+        homeItemDetailsItemKey = null
+        homeItemDetailsPackageInput = null
+        homeItemDetailsBrandInput = null
+        homeItemDetailsExactProduct = null
     }
 
-    private fun showHomeItemDetails(itemKey: ShoppingItemKey) {
+    private fun restoreHomeItemDetailsDialog(savedInstanceState: Bundle?) {
+        if (shellState.route != AppRoute.HOME) return
+        val state = savedInstanceState ?: return
+
+        val itemKey =
+            state
+                .getString(STATE_HOME_DETAILS_ITEM_KEY)
+                ?.takeIf(String::isNotBlank)
+                ?.let(::ShoppingItemKey)
+                ?: return
+
+        showHomeItemDetails(
+            itemKey = itemKey,
+            draftOverride =
+                PracticalShoppingHomeItemDetailsEditor.Draft(
+                    packageCountText =
+                        state
+                            .getString(STATE_HOME_DETAILS_PACKAGE_COUNT)
+                            .orEmpty(),
+                    brandText =
+                        state
+                            .getString(STATE_HOME_DETAILS_BRAND)
+                            .orEmpty(),
+                    exactProduct =
+                        state.getBoolean(STATE_HOME_DETAILS_EXACT_PRODUCT, false)
+                )
+        )
+    }
+
+    private fun showHomeItemDetails(
+        itemKey: ShoppingItemKey,
+        draftOverride: PracticalShoppingHomeItemDetailsEditor.Draft? = null
+    ) {
         dismissHomeItemDetailsDialog()
         val item = homeSessionState.model.ui.items.firstOrNull { it.key == itemKey } ?: return
         val current = homeSessionState.requestDetails.details?.detailFor(itemKey)
         if (homeSessionState.requestDetails.details == null) return
 
-        val draft = PracticalShoppingHomeItemDetailsEditor.initialDraft(current)
+        val draft =
+            draftOverride ?: PracticalShoppingHomeItemDetailsEditor.initialDraft(current)
         val body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(4), dp(4), dp(4), 0)
@@ -498,9 +557,17 @@ class MainActivity : AppCompatActivity() {
                 .setPositiveButton(R.string.home_item_details_save, null)
                 .create()
         homeItemDetailsDialog = dialog
+        homeItemDetailsItemKey = itemKey
+        homeItemDetailsPackageInput = packageInput
+        homeItemDetailsBrandInput = brandInput
+        homeItemDetailsExactProduct = exactProduct
         dialog.setOnDismissListener {
             if (homeItemDetailsDialog === dialog) {
                 homeItemDetailsDialog = null
+                homeItemDetailsItemKey = null
+                homeItemDetailsPackageInput = null
+                homeItemDetailsBrandInput = null
+                homeItemDetailsExactProduct = null
             }
         }
 
@@ -1260,6 +1327,10 @@ class MainActivity : AppCompatActivity() {
         private const val STATE_HOME_EXTRA_STOP_MINIMUM_SAVINGS =
             "app_shell.home_extra_stop_minimum_savings"
         private const val STATE_HOME_REQUEST_DETAILS = "app_shell.home_request_details"
+        private const val STATE_HOME_DETAILS_ITEM_KEY = "app_shell.home_details_item_key"
+        private const val STATE_HOME_DETAILS_PACKAGE_COUNT = "app_shell.home_details_package_count"
+        private const val STATE_HOME_DETAILS_BRAND = "app_shell.home_details_brand"
+        private const val STATE_HOME_DETAILS_EXACT_PRODUCT = "app_shell.home_details_exact_product"
         private const val STATE_SEARCH_QUERY = "app_shell.search_query"
         private const val STATE_SEARCH_WAS_SUBMITTED = "app_shell.search_was_submitted"
     }
