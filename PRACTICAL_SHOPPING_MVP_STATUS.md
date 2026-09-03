@@ -8,19 +8,19 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+`d15fa825dc9e429a4f8043a543bcdba012a571ab` — `Fail closed Saved controls when owner clears`
+
+GitHub Actions candidate workflow **33735195361** completed successfully, and milestone provenance workflow **33735675051** completed successfully for the exact same SHA.
+
+The latest Saved refinement closes a lifecycle clarity gap. Saved action buttons now update immediately when their typed owner callback is installed or cleared, so an already-rendered Saved surface cannot continue to look actionable after detachment. This is presentation/lifecycle-only; persistence, identity, provider execution, ranking, evidence, clock, provider economics and network authority remain unchanged. Clean-source verification passed 1,682 JVM tests (375 shared-core + 1,307 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+
+## Previous verified engineering head (superseded)
+
 `bd35d8a2a042226013ce6b93e0c60767a2c1d0e6` — `Collapse inert Home extra-stop panel`
 
 GitHub Actions candidate workflow **33733994101** completed successfully, and milestone provenance workflow **33734530262** completed successfully for the exact same SHA.
 
-The latest Home refinement closes a lifecycle clarity gap. If the typed owner callback disappears while the extra-stop settings panel is expanded, Home now collapses that panel instead of leaving an inert interactive-looking surface visible. This is presentation/lifecycle-only; provider execution, ranking, evidence, persistence, clock, provider economics and network authority remain unchanged. Clean-source verification passed 1,681 JVM tests (375 shared-core + 1,306 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
-
-## Previous verified engineering head (superseded)
-
-`4bc6a0ab50e4a4a82f351c4ff5b60ac601f2d703` — `Bound Search received observation state`
-
-GitHub Actions candidate workflow **33732943799** completed successfully, and milestone provenance workflow **33733488198** completed successfully for the exact same SHA.
-
-The previous Search refinement closed a bounded-state reporting gap. Search now reports only the provider observations admitted for evaluation, never an oversized raw batch count; parsing, ranking, visible results, evidence and provider authority are unchanged. This is controller-state/bounds-only; provider execution, ranking, evidence, persistence, clock, provider economics and network authority remain unchanged. Clean-source verification passed 1,681 JVM tests (375 shared-core + 1,306 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+The previous Home refinement closed a lifecycle clarity gap. If the typed owner callback disappears while the extra-stop settings panel is expanded, Home now collapses that panel instead of leaving an inert interactive-looking surface visible. This is presentation/lifecycle-only; provider execution, ranking, evidence, persistence, clock, provider economics and network authority remain unchanged. Clean-source verification passed 1,681 JVM tests (375 shared-core + 1,306 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
