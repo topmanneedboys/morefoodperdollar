@@ -6,7 +6,6 @@ import android.graphics.Typeface
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
-import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.google.android.material.card.MaterialCardView
@@ -111,13 +110,14 @@ class PracticalShoppingPlanResultSurfaceView @JvmOverloads constructor(
         val style = practicalShoppingPrimaryCardStyle(state)
         return card(style.backgroundColor, style.strokeColor, 12).apply {
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
-            // The card already exposes one complete projected summary. Keep its
-            // decorative child labels out of the accessibility traversal so
-            // TalkBack does not repeat the same result field by field.
-            descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
             contentDescription = practicalShoppingPrimaryCardContentDescription(state)
             addView(
                 column().apply {
+                    // The card already exposes one complete projected summary.
+                    // Hide only this decorative body from TalkBack so the same
+                    // projected fields are not repeated child by child.
+                    importantForAccessibility =
+                        View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
                     addView(line(state.badge, 11f, style.accentColor, true))
                     addView(line(state.storeName, 22f, "#111827", true, 6))
                     addView(line(state.basketCostText, 18f, "#111827", true, 8))
@@ -145,12 +145,13 @@ class PracticalShoppingPlanResultSurfaceView @JvmOverloads constructor(
     private fun secondStopCard(state: PracticalShoppingSecondStopUiState): View =
         card("#FFFFFF", "#D1FAE5", 12).apply {
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
-            // See the primary card: this summary is intentionally the single
-            // accessibility stop for the projected optional-stop result.
-            descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
             contentDescription = practicalShoppingSecondStopCardContentDescription(state)
             addView(
                 column().apply {
+                    // This summary is intentionally the single accessibility
+                    // stop for the projected optional-stop result.
+                    importantForAccessibility =
+                        View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
                     addView(line(state.badge, 11f, "#047857", true))
                     addView(line(state.storeName, 18f, "#111827", true, 6))
                     addView(line(state.baseItemsText, 13f, "#374151", topPadding = 8))

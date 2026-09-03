@@ -127,7 +127,9 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
 
         assertEquals(
             2,
-            source.split("descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS").size - 1
+            source.split(
+                "importantForAccessibility =\n                        View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS"
+            ).size - 1
         )
     }
 
