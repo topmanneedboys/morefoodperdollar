@@ -184,6 +184,10 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     fun render(state: PracticalShoppingHomeRenderState) {
         syncQueryCharacterLimit(state.queryCharacterLimit)
         syncQuery(state.query)
+        // The clear-text end icon belongs to the TextInputLayout wrapper, so
+        // gate the wrapper as well as the editor when no owner can consume
+        // query changes.
+        inputLayout.isEnabled = onQueryChanged != null
         input.isEnabled = onQueryChanged != null
         submitButton.isEnabled = state.submitEnabled && onSubmit != null
         compareActionButton.isEnabled = onCompare != null

@@ -35,6 +35,7 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
         val source = source().readText()
 
         listOf(
+            "inputLayout.isEnabled = onQueryChanged != null",
             "input.isEnabled = onQueryChanged != null",
             "compareActionButton.isEnabled = onCompare != null",
             "removeEnabled = onRemoveItem != null",
