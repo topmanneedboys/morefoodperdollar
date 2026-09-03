@@ -163,6 +163,10 @@ class PracticalShoppingBasketRendererTest {
         assertEquals("Price coverage needed", basket.headline)
         assertEquals("Not enough price coverage yet", basket.result?.headline)
         assertNull(basket.result?.primary)
+        assertEquals(
+            listOf("No usable price yet — not included in this plan."),
+            basket.items.map { it.priceCoverageNotice }
+        )
         assertNull(basket.extraStopRuleText)
         assertEquals(
             "No usable price coverage yet. Return to Home to adjust your sample list.",

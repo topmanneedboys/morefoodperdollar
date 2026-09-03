@@ -261,6 +261,11 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
                 )
             )
         }
+        if (!collectionEnabled) {
+            item.priceCoverageNotice?.let { notice ->
+                container.addView(line(notice, 12f, "#92400E", topPadding = 2))
+            }
+        }
         container.addView(line(item.requestDetailsSummary, 12f, "#6B7280", topPadding = 2))
         item.requestDetailsNotice?.let { notice ->
             container.addView(line(notice, 12f, "#92400E", topPadding = 2))
