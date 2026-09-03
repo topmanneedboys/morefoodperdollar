@@ -72,6 +72,17 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
     }
 
     @Test
+    fun checkOffProgressUsesAPoliteAccessibilityLiveRegion() {
+        val source = source("PracticalShoppingBasketSurfaceView.kt").readText()
+
+        assertTrue(
+            source.contains(
+                "accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"
+            )
+        )
+    }
+
+    @Test
     fun homeAndBasketShareOneUiReadyPlanResultRenderer() {
         val home = source("PracticalShoppingHomeSurfaceView.kt").readText()
         val basket = source("PracticalShoppingBasketSurfaceView.kt").readText()
