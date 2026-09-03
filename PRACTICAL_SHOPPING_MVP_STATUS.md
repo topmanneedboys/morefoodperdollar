@@ -8,11 +8,19 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+`8182c1dd6bb6e7aea9c1fc22f5c40371eac1dec1` — `Name observed-price Saved selection actions`
+
+GitHub Actions candidate workflow **33747358617** completed successfully, and milestone provenance workflow **33747877782** completed successfully for the exact same SHA.
+
+The latest observed-price Saved-selection refinement closes an accessibility context gap. Product/store controls now expose projected, display-name-specific descriptions so assistive technology can identify exactly which saved choice a typed action changes. This is presentation-only and does not alter Saved identity, persistence, prefill, planner, projector, pricing, evidence, notification, provider, provider-economics or network authority. Clean-source verification passed 1,688 JVM tests (375 shared-core + 1,313 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+
+## Previous verified engineering head (superseded)
+
 `b2c93b52cb9fa47aac6bad3cdc5b2587b2fc515c` — `Fail closed observed-price Saved selection`
 
 GitHub Actions candidate workflow **33746227407** completed successfully, and milestone provenance workflow **33746657577** completed successfully for the exact same SHA.
 
-The latest observed-price Saved-selection refinement closes a lifecycle gap. Every rendered product/store/clear-selection and prefill-check button now updates immediately when its typed lifecycle owner is installed or cleared, so detached surfaces cannot leave controls looking actionable. This is presentation/lifecycle-only and does not alter Saved identity, persistence, prefill, planner, projector, pricing, evidence, notification, provider, provider-economics or network authority. Clean-source verification passed 1,688 JVM tests (375 shared-core + 1,313 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+The observed-price Saved-selection renderer now updates every product/store/clear-selection and prefill-check button immediately when its typed lifecycle owner is installed or cleared, so detached surfaces cannot leave controls looking actionable. This is presentation/lifecycle-only and does not alter Saved identity, persistence, prefill, planner, projector, pricing, evidence, notification, provider, provider-economics or network authority. Clean-source verification passed 1,688 JVM tests (375 shared-core + 1,313 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
