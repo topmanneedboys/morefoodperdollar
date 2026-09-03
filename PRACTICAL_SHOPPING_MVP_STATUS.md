@@ -8,11 +8,19 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+`6ac3ae2cbc6a6a4a855017911d060c458b795408` — `Fail closed Basket navigation on owner changes`
+
+GitHub Actions candidate workflow **33739991354** completed successfully, and milestone provenance workflow **33740563023** completed successfully for the exact same SHA.
+
+The latest Basket refinement extends the owner-boundary correction to its Open Home navigation control. The button updates immediately when its typed owner callback is installed or cleared and remains inert before the first immutable render, so a detached Basket surface cannot look actionable. This is presentation/lifecycle-only; no policy, planner, ranking, pricing, evidence, persistence, clock, provider, provider-economics or network authority changed. Clean-source verification passed 1,684 JVM tests (375 shared-core + 1,309 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+
+## Previous verified engineering head (superseded)
+
 `bad95f10c83235596532ed1caf05793ad376219c` — `Fail closed Home controls on owner changes`
 
 GitHub Actions candidate workflow **33739072386** completed successfully, and milestone provenance workflow **33739628868** completed successfully for the exact same SHA.
 
-The latest Home refinement extends the owner-boundary correction across query editing, submit, compare, item-detail/remove, refinement, and extra-stop controls. Each control updates immediately when its typed owner callback is installed or cleared, and Home remains inert before the first immutable render; detached surfaces cannot look actionable or accept edits without their owner. This is presentation/lifecycle-only; no policy, planner, ranking, pricing, evidence, persistence, clock, provider, provider-economics or network authority changed. Clean-source verification passed 1,683 JVM tests (375 shared-core + 1,308 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+The previous Home refinement extended the owner-boundary correction across query editing, submit, compare, item-detail/remove, refinement, and extra-stop controls. Each control updates immediately when its typed owner callback is installed or cleared, and Home remains inert before the first immutable render; detached surfaces cannot look actionable or accept edits without their owner. This is presentation/lifecycle-only; no policy, planner, ranking, pricing, evidence, persistence, clock, provider, provider-economics or network authority changed. Clean-source verification passed 1,683 JVM tests (375 shared-core + 1,308 Android app), all 58 Android tasks, 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
