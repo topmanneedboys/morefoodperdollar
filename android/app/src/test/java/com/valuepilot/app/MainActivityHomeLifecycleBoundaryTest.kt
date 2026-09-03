@@ -47,6 +47,21 @@ class MainActivityHomeLifecycleBoundaryTest {
     }
 
     @Test
+    fun homeDetailsDialogClosesWhenItsItemDisappearsFromTheLatestProjection() {
+        val source = source().readText()
+
+        listOf(
+            "homeItemDetailsDialog?.isShowing == true",
+            "practicalShoppingHomeItemDetailsDialogShouldDismiss(",
+            "activeItemKey = homeItemDetailsItemKey",
+            "visibleItemKeys = homeState.items.map { it.key }",
+            "dismissHomeItemDetailsDialog()"
+        ).forEach { required ->
+            assertTrue("Expected stale Home item-details dismissal: $required", source.contains(required))
+        }
+    }
+
+    @Test
     fun homeDetailsDraftRestoresOnlyThroughEphemeralActivityState() {
         val source = source().readText()
 

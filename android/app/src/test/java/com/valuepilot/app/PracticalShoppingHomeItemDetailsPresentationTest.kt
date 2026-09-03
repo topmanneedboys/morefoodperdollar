@@ -7,7 +7,9 @@ import com.valuepilot.core.ShoppingItemRequestDetail
 import com.valuepilot.core.ShoppingProductSpecificity
 import com.valuepilot.core.ShoppingRequestedQuantity
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PracticalShoppingHomeItemDetailsPresentationTest {
@@ -76,5 +78,29 @@ class PracticalShoppingHomeItemDetailsPresentationTest {
         assertEquals("No extra preferences", rendered.items.first { it.key.value.contains("milk") }.requestDetailsSummary)
         assertNull(rendered.items.first { it.key.value.contains("milk") }.requestDetailsNotice)
         org.junit.Assert.assertSame(projected, rendered.result)
+    }
+
+    @Test
+    fun editorRemainsOpenOnlyWhileItsItemIdentityIsStillVisible() {
+        val milkKey = ShoppingItemKey("sample-milk-2pct-4l")
+
+        assertFalse(
+            practicalShoppingHomeItemDetailsDialogShouldDismiss(
+                activeItemKey = eggs,
+                visibleItemKeys = listOf(eggs, milkKey)
+            )
+        )
+        assertTrue(
+            practicalShoppingHomeItemDetailsDialogShouldDismiss(
+                activeItemKey = eggs,
+                visibleItemKeys = listOf(milkKey)
+            )
+        )
+        assertTrue(
+            practicalShoppingHomeItemDetailsDialogShouldDismiss(
+                activeItemKey = null,
+                visibleItemKeys = listOf(eggs, milkKey)
+            )
+        )
     }
 }

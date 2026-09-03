@@ -428,6 +428,18 @@ class MainActivity : AppCompatActivity() {
                 homeSessionState.model.ui,
                 homeSessionState.requestDetails.details
             )
+        if (
+            homeItemDetailsDialog?.isShowing == true &&
+                practicalShoppingHomeItemDetailsDialogShouldDismiss(
+                    activeItemKey = homeItemDetailsItemKey,
+                    visibleItemKeys = homeState.items.map { it.key }
+                )
+        ) {
+            // A list edit can remove or replace the item while its editor is
+            // still open. Close the stale editor before it can save details
+            // against a request that no longer contains that identity.
+            dismissHomeItemDetailsDialog()
+        }
         homeExperience.render(homeState)
         basketExperience.render(PracticalShoppingBasketRenderer.render(homeState))
     }
