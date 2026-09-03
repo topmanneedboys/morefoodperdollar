@@ -58,6 +58,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val submitOwnerControls = mutableListOf<View>()
     private val itemRemovalOwnerControls = mutableListOf<View>()
     private val unknownRemovalOwnerControls = mutableListOf<View>()
+    private val offlineCatalogOwnerControls = mutableListOf<View>()
     private val itemDetailsOwnerControls = mutableListOf<View>()
     private val chickenChoiceOwnerControls = mutableListOf<View>()
     private val extraStopOwnerControls = mutableListOf<View>()
@@ -91,6 +92,13 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         set(value) {
             field = value
             unknownRemovalOwnerControls.forEach { control ->
+                control.isEnabled = value != null
+            }
+        }
+    var onFindOfflineCatalogMatch: ((String) -> Unit)? = null
+        set(value) {
+            field = value
+            offlineCatalogOwnerControls.forEach { control ->
                 control.isEnabled = value != null
             }
         }
@@ -264,6 +272,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     fun render(state: PracticalShoppingHomeRenderState) {
         itemRemovalOwnerControls.clear()
         unknownRemovalOwnerControls.clear()
+        offlineCatalogOwnerControls.clear()
         itemDetailsOwnerControls.clear()
         chickenChoiceOwnerControls.clear()
         extraStopChoiceOwnerControls.clear()
@@ -529,7 +538,13 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                     removeOwnerControls = unknownRemovalOwnerControls,
                     lineColor = "#92400E",
                     removeDescription =
-                        context.getString(R.string.home_remove_item_description, token)
+                        context.getString(R.string.home_remove_item_description, token),
+                    onDetails = { onFindOfflineCatalogMatch?.invoke(token) },
+                    detailsEnabled = onFindOfflineCatalogMatch != null,
+                    detailsOwnerControls = offlineCatalogOwnerControls,
+                    detailsLabel = context.getString(R.string.home_unknown_find_matches),
+                    detailsDescription =
+                        context.getString(R.string.home_unknown_find_matches_description, token)
                 )
             )
         }

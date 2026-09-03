@@ -60,6 +60,7 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "private val submitOwnerControls = mutableListOf<View>()",
             "private val itemRemovalOwnerControls = mutableListOf<View>()",
             "private val unknownRemovalOwnerControls = mutableListOf<View>()",
+            "private val offlineCatalogOwnerControls = mutableListOf<View>()",
             "private val itemDetailsOwnerControls = mutableListOf<View>()",
             "private val chickenChoiceOwnerControls = mutableListOf<View>()",
             "private val extraStopOwnerControls = mutableListOf<View>()",
@@ -80,6 +81,7 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "hasRenderedState = true",
             "removeOwnerControls = itemRemovalOwnerControls",
             "removeOwnerControls = unknownRemovalOwnerControls",
+            "detailsOwnerControls = offlineCatalogOwnerControls",
             "detailsOwnerControls = itemDetailsOwnerControls",
             "ownerControls?.add(this)",
             "chickenChoiceOwnerControls += this",
@@ -89,6 +91,30 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "compareActionButton.isEnabled = value != null && hasRenderedState"
         ).forEach { required ->
             assertTrue("Expected live owner invalidation binding $required", source.contains(required))
+        }
+    }
+
+    @Test
+    fun unknownItemsForwardOfflineCatalogLookupThroughAnOwnerCallback() {
+        val source = source().readText()
+
+        listOf(
+            "var onFindOfflineCatalogMatch: ((String) -> Unit)? = null",
+            "offlineCatalogOwnerControls.forEach { control ->",
+            "detailsEnabled = onFindOfflineCatalogMatch != null",
+            "detailsLabel = context.getString(R.string.home_unknown_find_matches)",
+            "onFindOfflineCatalogMatch?.invoke(token)"
+        ).forEach { required ->
+            assertTrue("Expected bounded offline catalog Home action $required", source.contains(required))
+        }
+
+        listOf(
+            "OfflineCatalogDiscoveryEngine",
+            "OfflineCatalogProduct(",
+            "Money.parse",
+            "PracticalShoppingPlanner"
+        ).forEach { forbidden ->
+            assertFalse("Home View must not own catalog or planner authority through $forbidden", source.contains(forbidden))
         }
     }
 

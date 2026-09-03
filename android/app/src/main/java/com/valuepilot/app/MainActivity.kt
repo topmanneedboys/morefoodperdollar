@@ -123,6 +123,8 @@ class MainActivity : AppCompatActivity() {
     private var homeItemDetailsPackageInput: TextInputEditText? = null
     private var homeItemDetailsBrandInput: TextInputEditText? = null
     private var homeItemDetailsExactProduct: CheckBox? = null
+    private var offlineCatalogDialog: AlertDialog? = null
+    private var offlineCatalogRequestId = 0L
     private var suppressSearchInputCallback = false
     private var restoreSearchOnNextOpen = false
 
@@ -274,11 +276,14 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         dismissHomeItemDetailsDialog()
+        offlineCatalogDialog?.dismiss()
+        offlineCatalogDialog = null
         if (::homeExperience.isInitialized) {
             homeExperience.onQueryChanged = null
             homeExperience.onSubmit = null
             homeExperience.onRemoveItem = null
             homeExperience.onRemoveUnknownItem = null
+            homeExperience.onFindOfflineCatalogMatch = null
             homeExperience.onChickenChoice = null
             homeExperience.onExtraStopMinimumSavingsChoice = null
             homeExperience.onEditItemDetails = null
@@ -400,6 +405,9 @@ class MainActivity : AppCompatActivity() {
                 PracticalShoppingHomeSession.removeUnknownItem(homeSessionState, token)
             renderHome()
         }
+        homeExperience.onFindOfflineCatalogMatch = { token ->
+            showOfflineCatalogMatches(token)
+        }
         homeExperience.onChickenChoice = { choice ->
             homeSessionState =
                 PracticalShoppingHomeSession.chooseChicken(homeSessionState, choice)
@@ -451,6 +459,64 @@ class MainActivity : AppCompatActivity() {
         homeItemDetailsPackageInput = null
         homeItemDetailsBrandInput = null
         homeItemDetailsExactProduct = null
+    }
+
+    private fun showOfflineCatalogMatches(token: String) {
+        val query = token.trim()
+        if (query.isBlank()) return
+
+        offlineCatalogDialog?.dismiss()
+        val requestId = Math.addExact(offlineCatalogRequestId, 1L)
+        offlineCatalogRequestId = requestId
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(R.string.home_unknown_find_matches)
+                .setMessage(R.string.home_offline_catalog_loading)
+                .setNegativeButton(R.string.cancel, null)
+                .create()
+        offlineCatalogDialog = dialog
+        dialog.setOnDismissListener {
+            if (offlineCatalogDialog === dialog) {
+                offlineCatalogDialog = null
+            }
+        }
+        dialog.show()
+
+        searchExecutor.execute {
+            val presentation =
+                try {
+                    val result =
+                        BundledOfflineCatalog.discover(
+                            context = applicationContext,
+                            // This launch artifact is a Canada-labelled identity baseline;
+                            // the region manifest does not assert local stocking.
+                            region = BundledOfflineCatalogRegion.GTA,
+                            rawQuery = query,
+                            canonicalizer = JvmTextCanonicalizer,
+                            evaluatedAtEpochMillis = System.currentTimeMillis(),
+                            maximumSnapshotAgeMillis = OFFLINE_CATALOG_MAX_AGE_MILLIS
+                        )
+                    PracticalShoppingHomeOfflineCatalogPresentation.from(query, result)
+                } catch (ignored: Exception) {
+                    null
+                }
+
+            mainHandler.post {
+                if (
+                    isFinishing ||
+                        isDestroyed ||
+                        requestId != offlineCatalogRequestId ||
+                        offlineCatalogDialog !== dialog ||
+                        !dialog.isShowing
+                ) {
+                    return@post
+                }
+                dialog.setMessage(
+                    presentation?.message
+                        ?: getString(R.string.home_offline_catalog_unavailable)
+                )
+            }
+        }
     }
 
     private fun restoreHomeItemDetailsDialog(savedInstanceState: Bundle?) {
@@ -1028,6 +1094,7 @@ class MainActivity : AppCompatActivity() {
     private fun renderShell(state: AppShellState) {
         if (state.route != AppRoute.HOME) {
             dismissHomeItemDetailsDialog()
+            offlineCatalogDialog?.dismiss()
         }
         if (state.route == AppRoute.COMPARE) {
             savedExperience.onRouteVisibilityChanged(false)
@@ -1349,5 +1416,6 @@ class MainActivity : AppCompatActivity() {
         private const val STATE_HOME_DETAILS_EXACT_PRODUCT = "app_shell.home_details_exact_product"
         private const val STATE_SEARCH_QUERY = "app_shell.search_query"
         private const val STATE_SEARCH_WAS_SUBMITTED = "app_shell.search_was_submitted"
+        private const val OFFLINE_CATALOG_MAX_AGE_MILLIS = 8L * 24L * 60L * 60L * 1_000L
     }
 }

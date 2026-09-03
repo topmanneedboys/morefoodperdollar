@@ -91,6 +91,10 @@
     <string name="home_refinement_title">ONE QUICK QUESTION</string>
     <string name="home_refinement_question">Which %1$s?</string>
     <string name="home_unknown_title">Needs clarification</string>
+    <string name="home_unknown_find_matches">Find offline matches</string>
+    <string name="home_unknown_find_matches_description">Find offline identity matches for %1$s</string>
+    <string name="home_offline_catalog_loading">Checking the bundled identity catalog…</string>
+    <string name="home_offline_catalog_unavailable">The bundled identity catalog is unavailable. No price or availability claim was made.</string>
     <string name="home_sample_badge">OFFLINE FICTIONAL DEMO</string>
     <string name="home_compare_secondary">Compare two products instead</string>
 

@@ -21,6 +21,8 @@ class PracticalShoppingHomeDetailsAndroidBindingTest {
             "PracticalShoppingHomeSession.queryChanged(homeSessionState, rawQuery)",
             "PracticalShoppingHomeSession.submit(homeSessionState, rawQuery)",
             "homeExperience.onEditItemDetails",
+            "homeExperience.onFindOfflineCatalogMatch",
+            "showOfflineCatalogMatches(token)",
             "showHomeItemDetails(itemKey)",
             "PracticalShoppingHomeItemDetailsEditor.apply(",
             "PracticalShoppingHomeSession.withItemDetail(",

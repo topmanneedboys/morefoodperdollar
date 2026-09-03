@@ -16,6 +16,7 @@ class MainActivityHomeLifecycleBoundaryTest {
             "homeExperience.onSubmit = null",
             "homeExperience.onRemoveItem = null",
             "homeExperience.onRemoveUnknownItem = null",
+            "homeExperience.onFindOfflineCatalogMatch = null",
             "homeExperience.onChickenChoice = null",
             "homeExperience.onExtraStopMinimumSavingsChoice = null",
             "homeExperience.onEditItemDetails = null",
@@ -33,8 +34,10 @@ class MainActivityHomeLifecycleBoundaryTest {
 
         listOf(
             "private var homeItemDetailsDialog: AlertDialog? = null",
+            "private var offlineCatalogDialog: AlertDialog? = null",
             "private fun dismissHomeItemDetailsDialog()",
             "dismissHomeItemDetailsDialog()",
+            "offlineCatalogDialog?.dismiss()",
             "homeItemDetailsDialog?.dismiss()",
             "homeItemDetailsDialog = null",
             "homeItemDetailsDialog = dialog",
@@ -43,6 +46,33 @@ class MainActivityHomeLifecycleBoundaryTest {
             "if (state.route != AppRoute.HOME)"
         ).forEach { required ->
             assertTrue("Expected Home item-details dialog lifecycle boundary: $required", source.contains(required))
+        }
+    }
+
+    @Test
+    fun offlineCatalogLookupIsBoundedToHomeAndIgnoresStaleCompletions() {
+        val source = source().readText()
+
+        listOf(
+            "private fun showOfflineCatalogMatches(token: String)",
+            "BundledOfflineCatalog.discover(",
+            "PracticalShoppingHomeOfflineCatalogPresentation.from(query, result)",
+            "requestId != offlineCatalogRequestId",
+            "offlineCatalogDialog !== dialog",
+            "OFFLINE_CATALOG_MAX_AGE_MILLIS",
+            "home_offline_catalog_unavailable"
+        ).forEach { required ->
+            assertTrue("Expected safe offline catalog Home lookup boundary: $required", source.contains(required))
+        }
+
+        listOf(
+            "URL(",
+            "HttpURLConnection",
+            "startActivity(Intent.ACTION_VIEW",
+            "PracticalShoppingPlanner",
+            "Money.parse"
+        ).forEach { forbidden ->
+            assertTrue("Expected no network/planner authority in Home lookup binding: $forbidden", !source.contains(forbidden))
         }
     }
 
