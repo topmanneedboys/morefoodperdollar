@@ -8,9 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`08c59e9c3952466f3470fdb11abca477b17b6654` — `Carry offline sample disclosure into accessibility summaries`
+`6764967ce57b54f6ed28010011d5bdfc7d87c8cc` — `Fail closed for unwired basket navigation`
 
-GitHub Actions candidate workflow **33701234302** completed successfully, and milestone provenance workflow **33701864964** completed successfully for the exact same SHA.
+GitHub Actions candidate workflow **33702254567** completed successfully, and milestone provenance workflow **33702886806** completed successfully for the exact same SHA.
+
+The latest Basket refinement closes a replaceable-surface lifecycle gap. The typed “open Home” navigation button starts disabled and is enabled only when the immutable render owner has attached its callback, preventing a detached or standalone Basket view from exposing an enabled no-op control. This is a small presentation-boundary safety correction with deterministic source coverage; the callback still emits only `PracticalShoppingBasketUiAction.OpenHome`, and no planner, ranking, pricing, evidence, persistence, clock, provider or network authority moved into the View. Clean-source verification passed 1,647 JVM tests (375 shared-core + 1,272 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 The latest Home/Basket result-card refinement completes the accessibility disclosure contract. Home and Basket pass their existing fictional/offline sample notice into the shared primary and optional-second-stop card summaries, so a card focused directly by TalkBack still states that the displayed prices are not live retailer offers. The reusable renderer keeps sample context optional, rejects blank disclosure text, and hides only decorative child labels through Android’s accessibility-tree flag. This is presentation-only and retains every projected field, visual line and exact typed result; no planner, ranking, pricing, evidence, persistence, clock, provider or network authority moved into the View. Clean-source verification passed 1,647 JVM tests (375 shared-core + 1,272 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
