@@ -48,6 +48,9 @@ class OfflineCatalogSnapshotPromotionTest(unittest.TestCase):
             self.assertEqual(current, last_good)
             self.assertEqual("ca-gta", current["regionId"])
             self.assertEqual(1_500, current["catalogRecordCount"])
+            self.assertEqual("IDENTITY_ONLY", current["catalogRole"])
+            self.assertEqual(0, current["currentOfferRecordCount"])
+            self.assertEqual("NOT_INCLUDED", current["currentOfferCoverage"])
             self.assertEqual("out", current["snapshotPath"])
 
     @unittest.skipUnless(shutil.which("openssl"), "openssl is required for promotion tests")

@@ -91,6 +91,9 @@ class OfflineCatalogSnapshotBuilderTest(unittest.TestCase):
                 self.assertEqual((first / relative).read_bytes(), (second / relative).read_bytes())
             self.assertEqual(2, manifest_one["coverage"]["catalogRecordCount"])
             self.assertEqual(1, manifest_one["coverage"]["recordsWithValidGtin"])
+            self.assertEqual("IDENTITY_ONLY", manifest_one["catalogRole"])
+            self.assertEqual(0, manifest_one["coverage"]["currentOfferRecordCount"])
+            self.assertEqual("NOT_INCLUDED", manifest_one["coverage"]["currentOfferCoverage"])
             self.assertEqual(manifest_one, manifest_two)
             records = [json.loads(line) for line in (first / "sources/off-ca.jsonl").read_text(encoding="utf-8").splitlines()]
             self.assertEqual(["off:milk-1", "off:tea-1"], [record["recordId"] for record in records])
@@ -179,6 +182,16 @@ class OfflineCatalogSnapshotBuilderTest(unittest.TestCase):
             root = Path(tmp)
             config = self.make_config(root, [self.make_source(root, rows=[{"record_id": "a", "sku": "a", "display_name": "Tea", "source_note": "ambiguous"}])])
             with self.assertRaisesRegex(SnapshotBuildError, "unsupported fields"):
+                build_snapshot(config, root / "out")
+
+    def test_non_identity_catalog_role_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = self.make_config(root, [self.make_source(root)])
+            config_data = json.loads(config.read_text(encoding="utf-8"))
+            config_data["catalog_role"] = "IDENTITY_AND_OFFERS"
+            config.write_text(json.dumps(config_data), encoding="utf-8")
+            with self.assertRaisesRegex(SnapshotBuildError, "IDENTITY_ONLY"):
                 build_snapshot(config, root / "out")
 
     @unittest.skipUnless(shutil.which("openssl"), "openssl is required for signature integration test")

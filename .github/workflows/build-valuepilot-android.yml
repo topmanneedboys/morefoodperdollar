@@ -10,9 +10,12 @@ on:
       - 'tools/verify_offline_catalog_snapshot.py'
       - 'tools/promote_offline_catalog_snapshot.py'
       - 'tools/import_open_food_facts_catalog.py'
+      - 'tools/select_open_food_facts_launch_catalog.py'
       - 'tools/tests/test_build_offline_catalog_snapshot.py'
       - 'tools/tests/test_promote_offline_catalog_snapshot.py'
       - 'tools/tests/test_import_open_food_facts_catalog.py'
+      - 'tools/tests/test_select_open_food_facts_launch_catalog.py'
+      - 'tools/tests/test_bundled_offline_catalog_assets.py'
       - '.github/workflows/build-valuepilot-android.yml'
   pull_request:
     paths:
@@ -22,9 +25,12 @@ on:
       - 'tools/verify_offline_catalog_snapshot.py'
       - 'tools/promote_offline_catalog_snapshot.py'
       - 'tools/import_open_food_facts_catalog.py'
+      - 'tools/select_open_food_facts_launch_catalog.py'
       - 'tools/tests/test_build_offline_catalog_snapshot.py'
       - 'tools/tests/test_promote_offline_catalog_snapshot.py'
       - 'tools/tests/test_import_open_food_facts_catalog.py'
+      - 'tools/tests/test_select_open_food_facts_launch_catalog.py'
+      - 'tools/tests/test_bundled_offline_catalog_assets.py'
       - '.github/workflows/build-valuepilot-android.yml'
 
 permissions:

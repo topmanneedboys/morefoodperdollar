@@ -19,7 +19,12 @@ import tempfile
 from pathlib import Path
 from typing import Any, Mapping
 
-from tools.build_offline_catalog_snapshot import _canonical_json, _parse_timestamp
+from tools.build_offline_catalog_snapshot import (
+    IDENTITY_ONLY_CATALOG_ROLE,
+    NO_CURRENT_OFFERS_STATUS,
+    _canonical_json,
+    _parse_timestamp,
+)
 from tools.verify_offline_catalog_snapshot import SnapshotBuildError, verify_snapshot
 
 
@@ -59,13 +64,17 @@ def _pointer_payload(snapshot_dir: Path, state_root: Path, manifest: Mapping[str
     except ValueError as exc:
         raise SnapshotPromotionError("Snapshot directory must be inside the promotion state root") from exc
     records = manifest.get("coverage", {}).get("catalogRecordCount") if isinstance(manifest.get("coverage"), dict) else None
+    coverage = manifest.get("coverage") if isinstance(manifest.get("coverage"), dict) else {}
     return {
         "schemaVersion": 1,
+        "catalogRole": manifest["catalogRole"],
         "snapshotId": manifest["snapshotId"],
         "regionId": manifest["regionId"],
         "generatedAtEpochMillis": manifest["generatedAtEpochMillis"],
         "manifestSha256": verification["manifestSha256"],
         "catalogRecordCount": records,
+        "currentOfferRecordCount": coverage.get("currentOfferRecordCount"),
+        "currentOfferCoverage": coverage.get("currentOfferCoverage"),
         "snapshotPath": relative_snapshot.as_posix(),
     }
 
@@ -119,6 +128,10 @@ def _verify_existing_pointer(pointer_path: Path, state_root: Path, public_key: P
         raise SnapshotPromotionError(f"Existing pointer verification failed: {pointer_path.name}: {exc}") from exc
     manifest = _load_manifest(snapshot_dir)
     _require(pointer.get("snapshotId") == manifest.get("snapshotId"), f"Pointer {pointer_path.name} snapshot id mismatch")
+    _require(pointer.get("catalogRole") == manifest.get("catalogRole") == IDENTITY_ONLY_CATALOG_ROLE, f"Pointer {pointer_path.name} catalog role mismatch")
+    coverage = manifest.get("coverage") if isinstance(manifest.get("coverage"), dict) else {}
+    _require(pointer.get("currentOfferRecordCount") == coverage.get("currentOfferRecordCount") == 0, f"Pointer {pointer_path.name} current-offer count mismatch")
+    _require(pointer.get("currentOfferCoverage") == coverage.get("currentOfferCoverage") == NO_CURRENT_OFFERS_STATUS, f"Pointer {pointer_path.name} current-offer status mismatch")
     _require(pointer.get("manifestSha256") == verification.get("manifestSha256"), f"Pointer {pointer_path.name} manifest hash mismatch")
     _require(pointer.get("generatedAtEpochMillis") == manifest.get("generatedAtEpochMillis"), f"Pointer {pointer_path.name} generated time mismatch")
     return pointer, snapshot_dir
@@ -150,6 +163,7 @@ def promote_snapshot(
     except (SnapshotBuildError, OSError) as exc:
         raise SnapshotPromotionError(f"Candidate verification failed: {exc}") from exc
     manifest = _load_manifest(candidate_dir)
+    _require(manifest.get("catalogRole") == IDENTITY_ONLY_CATALOG_ROLE, "Candidate catalog role must be IDENTITY_ONLY")
     region_id = manifest.get("regionId")
     _require(region_id in SUPPORTED_METRO_REGIONS, f"Candidate region is outside the Canada-first metro scope: {region_id}")
     if expected_region_id is not None:
@@ -162,6 +176,8 @@ def promote_snapshot(
     _require(isinstance(coverage, dict), "Candidate coverage metadata is missing")
     records = coverage.get("catalogRecordCount")
     _require(isinstance(records, int) and minimum_catalog_records <= records <= maximum_catalog_records, f"Candidate catalog coverage must be between {minimum_catalog_records} and {maximum_catalog_records} records")
+    _require(coverage.get("currentOfferRecordCount") == 0, "Identity-only candidate cannot contain current offers")
+    _require(coverage.get("currentOfferCoverage") == NO_CURRENT_OFFERS_STATUS, "Candidate current-offer coverage status is invalid")
 
     state_root.mkdir(parents=True, exist_ok=True)
     current_path = state_root / CURRENT_POINTER_NAME

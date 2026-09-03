@@ -13,6 +13,7 @@ import com.valuepilot.core.OfflineCatalogDiscoveryRequest
 import com.valuepilot.core.OfflineCatalogDiscoveryResult
 import com.valuepilot.core.OfflineCatalogIntegrityAssessment
 import com.valuepilot.core.OfflineCatalogProduct
+import com.valuepilot.core.OfflineCatalogRole
 import com.valuepilot.core.OfflineCatalogSnapshotManifest
 import com.valuepilot.core.OfflineCatalogSnapshotSource
 import com.valuepilot.core.ProductionAuthorizationGate
@@ -126,16 +127,25 @@ object OfflineCatalogSnapshotAssetLoader {
         val manifest =
             OfflineCatalogSnapshotManifest(
                 schemaVersion = root.getInt("schemaVersion"),
+                catalogRole =
+                    OfflineCatalogRole.valueOf(
+                        root.getString("catalogRole")
+                    ),
                 snapshotId = root.getString("snapshotId"),
                 regionId = root.getString("regionId"),
                 generatedAtEpochMillis = root.getLong("generatedAtEpochMillis"),
                 sources = sources
             )
 
-        root.optJSONObject("coverage")?.let { coverage ->
-            require(coverage.getInt("catalogRecordCount") == manifest.totalRecordCount) {
-                "Catalog coverage count does not match source records"
-            }
+        val coverage = root.getJSONObject("coverage")
+        require(coverage.getInt("catalogRecordCount") == manifest.totalRecordCount) {
+            "Catalog coverage count does not match source records"
+        }
+        require(coverage.getInt("currentOfferRecordCount") == 0) {
+            "Identity-only catalog cannot contain current offers"
+        }
+        require(coverage.getString("currentOfferCoverage") == "NOT_INCLUDED") {
+            "Catalog current-offer coverage status is invalid"
         }
 
         val admission =

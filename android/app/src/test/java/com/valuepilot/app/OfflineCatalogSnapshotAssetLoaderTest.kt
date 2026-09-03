@@ -184,11 +184,18 @@ class OfflineCatalogSnapshotAssetLoaderTest {
     private fun manifestJson(sources: List<JSONObject>, generatedAt: Long = NOW): String =
         JSONObject()
             .put("schemaVersion", 1)
+            .put("catalogRole", "IDENTITY_ONLY")
             .put("snapshotId", "ca-gta-2026-09-03")
             .put("regionId", "ca-gta")
             .put("generatedAtEpochMillis", generatedAt)
             .put("sources", JSONArray(sources))
-            .put("coverage", JSONObject().put("catalogRecordCount", sources.sumOf { it.getInt("recordCount") }))
+            .put(
+                "coverage",
+                JSONObject()
+                    .put("catalogRecordCount", sources.sumOf { it.getInt("recordCount") })
+                    .put("currentOfferRecordCount", 0)
+                    .put("currentOfferCoverage", "NOT_INCLUDED")
+            )
             .toString()
 
     private fun sourceJson(

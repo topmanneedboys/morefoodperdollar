@@ -47,6 +47,17 @@ data class OfflineCatalogSnapshotSource(
 }
 
 /**
+ * Explicit role of an offline catalog snapshot.
+ *
+ * The only currently admissible role contains product identity/search metadata
+ * and never current offers.  A future offer snapshot would need a separate
+ * contract and independently verified authority rather than reusing this role.
+ */
+enum class OfflineCatalogRole {
+    IDENTITY_ONLY
+}
+
+/**
  * Deterministic manifest metadata for one bounded regional offline catalog.
  *
  * Sources remain independent entries so attribution, withdrawal and licence
@@ -54,6 +65,7 @@ data class OfflineCatalogSnapshotSource(
  */
 data class OfflineCatalogSnapshotManifest(
     val schemaVersion: Int,
+    val catalogRole: OfflineCatalogRole = OfflineCatalogRole.IDENTITY_ONLY,
     val snapshotId: String,
     val regionId: String,
     val generatedAtEpochMillis: Long,
@@ -61,6 +73,7 @@ data class OfflineCatalogSnapshotManifest(
 ) {
     init {
         require(schemaVersion > 0)
+        require(catalogRole == OfflineCatalogRole.IDENTITY_ONLY)
         require(snapshotId.matches(ID_PATTERN))
         require(regionId.matches(ID_PATTERN))
         require(generatedAtEpochMillis > 0L)

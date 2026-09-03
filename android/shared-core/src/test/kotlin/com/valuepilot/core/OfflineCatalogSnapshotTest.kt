@@ -18,6 +18,7 @@ class OfflineCatalogSnapshotTest {
         assertTrue(decision.blockers.isEmpty())
         assertTrue(decision.sourceAuthorization.getValue(DATASET_ID).authorized)
         assertEquals(2, request.manifest.totalRecordCount)
+        assertEquals(OfflineCatalogRole.IDENTITY_ONLY, request.manifest.catalogRole)
     }
 
     @Test

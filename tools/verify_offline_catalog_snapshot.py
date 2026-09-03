@@ -21,9 +21,11 @@ from typing import Any, Mapping
 
 from tools.build_offline_catalog_snapshot import (
     CURRENT_SCHEMA_VERSION,
+    IDENTITY_ONLY_CATALOG_ROLE,
     MAX_RECORDS_PER_SOURCE,
     MAX_SOURCES,
     MAX_TOTAL_RECORDS,
+    NO_CURRENT_OFFERS_STATUS,
     NAMESPACE_RE,
     SHA256_RE,
     SnapshotBuildError,
@@ -110,7 +112,13 @@ def _verify_signature(snapshot_dir: Path, manifest_path: Path, integrity: Mappin
     return state
 
 
-def verify_snapshot(snapshot_dir: Path, *, public_key: Path | None = None, require_signature: bool = False) -> dict[str, Any]:
+def verify_snapshot(
+    snapshot_dir: Path,
+    *,
+    public_key: Path | None = None,
+    require_signature: bool = False,
+    source_root: Path | None = None,
+) -> dict[str, Any]:
     _require(snapshot_dir.is_dir(), f"Missing snapshot directory: {snapshot_dir}")
     manifest_path = snapshot_dir / "manifest.json"
     manifest_bytes = manifest_path.read_bytes() if manifest_path.is_file() else b""
@@ -121,6 +129,7 @@ def verify_snapshot(snapshot_dir: Path, *, public_key: Path | None = None, requi
         raise SnapshotBuildError("manifest.json is not valid JSON") from exc
     _require(isinstance(manifest, dict) and manifest_bytes == _canonical_json(manifest), "manifest.json is not canonical JSON")
     _require(manifest.get("schemaVersion") == CURRENT_SCHEMA_VERSION, "Unsupported snapshot schema")
+    _require(manifest.get("catalogRole") == IDENTITY_ONLY_CATALOG_ROLE, "Snapshot catalog role must be IDENTITY_ONLY")
     _require(isinstance(manifest.get("snapshotId"), str) and NAMESPACE_RE.fullmatch(manifest["snapshotId"]) is not None, "Invalid manifest snapshot id")
     _require(isinstance(manifest.get("regionId"), str) and NAMESPACE_RE.fullmatch(manifest["regionId"]) is not None, "Invalid manifest region id")
     _require(isinstance(manifest.get("generatedAtEpochMillis"), int) and manifest["generatedAtEpochMillis"] > 0, "Invalid manifest generated time")
@@ -138,6 +147,13 @@ def verify_snapshot(snapshot_dir: Path, *, public_key: Path | None = None, requi
     _require(integrity_path.read_bytes() == _canonical_json(integrity), "integrity.json is not canonical JSON")
     _require(integrity.get("manifestSha256") == manifest_hash, "Integrity metadata references a different manifest")
     signature_state = _verify_signature(snapshot_dir, manifest_path, integrity, public_key, require_signature)
+
+    # Bundled APK assets may share a read-only source payload across several
+    # regional manifests.  Standalone snapshots keep the historical
+    # ``<snapshot>/sources`` layout; callers can provide the explicit shared
+    # root without weakening the manifest's namespace/hash checks.
+    resolved_source_root = source_root if source_root is not None else snapshot_dir / "sources"
+    _require(resolved_source_root.is_dir(), f"Missing snapshot source directory: {resolved_source_root}")
 
     seen_namespaces: set[str] = set()
     seen_snapshots: set[tuple[str, str]] = set()
@@ -162,7 +178,7 @@ def verify_snapshot(snapshot_dir: Path, *, public_key: Path | None = None, requi
         content_hash = source.get("contentSha256")
         _require(isinstance(record_count, int) and 1 <= record_count <= MAX_RECORDS_PER_SOURCE, f"manifest source {source_index} has invalid record count")
         _require(isinstance(content_hash, str) and SHA256_RE.fullmatch(content_hash) is not None, f"manifest source {source_index} has invalid content hash")
-        source_path = snapshot_dir / "sources" / f"{dataset_id}.jsonl"
+        source_path = resolved_source_root / f"{dataset_id}.jsonl"
         content = source_path.read_bytes() if source_path.is_file() else b""
         _require(bool(content) and hashlib.sha256(content).hexdigest() == content_hash, f"Source content hash mismatch: {dataset_id}")
         lines = content.splitlines(keepends=True)
@@ -181,6 +197,8 @@ def verify_snapshot(snapshot_dir: Path, *, public_key: Path | None = None, requi
 
     coverage = manifest.get("coverage")
     _require(isinstance(coverage, dict) and coverage.get("catalogRecordCount") == total_records, "Manifest coverage count mismatch")
+    _require(coverage.get("currentOfferRecordCount") == 0, "Identity-only snapshot cannot contain current offers")
+    _require(coverage.get("currentOfferCoverage") == NO_CURRENT_OFFERS_STATUS, "Manifest current-offer coverage status is invalid")
     return {"snapshotId": manifest["snapshotId"], "records": total_records, "signatureState": signature_state, "manifestSha256": manifest_hash}
 
 

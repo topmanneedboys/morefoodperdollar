@@ -41,6 +41,8 @@ from typing import Any, Mapping
 
 
 CURRENT_SCHEMA_VERSION = 1
+IDENTITY_ONLY_CATALOG_ROLE = "IDENTITY_ONLY"
+NO_CURRENT_OFFERS_STATUS = "NOT_INCLUDED"
 MAX_SOURCES = 32
 MAX_RECORDS_PER_SOURCE = 50_000
 MAX_TOTAL_RECORDS = 50_000
@@ -357,6 +359,8 @@ def build_snapshot(config_path: Path, output_dir: Path, *, private_key: Path | N
     _require(NAMESPACE_RE.fullmatch(region_id) is not None, "config.region_id has invalid form")
     snapshot_id = _text(config.get("snapshot_id"), "config.snapshot_id", max_length=128)
     _require(NAMESPACE_RE.fullmatch(snapshot_id) is not None, "config.snapshot_id has invalid form")
+    catalog_role = _text(config.get("catalog_role", IDENTITY_ONLY_CATALOG_ROLE), "config.catalog_role", max_length=64)
+    _require(catalog_role == IDENTITY_ONLY_CATALOG_ROLE, "Only IDENTITY_ONLY catalog snapshots are supported")
     generated_at = _parse_timestamp(config.get("generated_at"), "config.generated_at")
     sources = config.get("sources")
     _require(isinstance(sources, list) and 1 <= len(sources) <= MAX_SOURCES, f"config.sources must contain 1..{MAX_SOURCES} sources")
@@ -431,6 +435,7 @@ def build_snapshot(config_path: Path, output_dir: Path, *, private_key: Path | N
 
     manifest = {
         "schemaVersion": CURRENT_SCHEMA_VERSION,
+        "catalogRole": catalog_role,
         "snapshotId": snapshot_id,
         "regionId": region_id,
         "generatedAtEpochMillis": generated_at,
@@ -439,6 +444,8 @@ def build_snapshot(config_path: Path, output_dir: Path, *, private_key: Path | N
             "catalogRecordCount": total_records,
             "recordsWithUsableIdentity": total_records,
             "recordsWithValidGtin": sum(item["recordsWithValidGtin"] for item in source_metrics),
+            "currentOfferRecordCount": 0,
+            "currentOfferCoverage": NO_CURRENT_OFFERS_STATUS,
             "sources": source_metrics,
         },
     }
