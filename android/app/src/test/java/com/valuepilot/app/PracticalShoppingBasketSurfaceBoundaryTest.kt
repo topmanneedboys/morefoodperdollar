@@ -14,7 +14,7 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
         val renderer = source("PracticalShoppingBasketRenderer.kt").readText()
 
         assertTrue(source.contains("fun render(state: PracticalShoppingBasketRenderState)"))
-        assertTrue(source.contains("planResult.render(state.result)"))
+        assertTrue(source.contains("planResult.render(state.result, state.sampleNotice)"))
         assertTrue(source.contains("sampleNotice.text = state.sampleNotice"))
         assertTrue(source.contains("PracticalShoppingBasketUiAction.OpenHome"))
         assertTrue(source.contains("item.requestDetailsSummary"))
@@ -76,7 +76,7 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
         val result = source("PracticalShoppingPlanResultSurfaceView.kt").readText()
 
         assertTrue(home.contains("PracticalShoppingPlanResultSurfaceView(context)"))
-        assertTrue(home.contains("resultContainer.render(state.result)"))
+        assertTrue(home.contains("resultContainer.render(state.result, state.sampleNotice)"))
         assertTrue(basket.contains("PracticalShoppingPlanResultSurfaceView(context)"))
         assertTrue(result.contains("fun render(state: PracticalShoppingUiState?)"))
 
@@ -117,8 +117,8 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
         assertTrue(source.contains("style.accentColor"))
         assertTrue(source.contains("state.missingItemsText == null"))
         assertTrue(source.contains("importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES"))
-        assertTrue(source.contains("practicalShoppingPrimaryCardContentDescription(state)"))
-        assertTrue(source.contains("practicalShoppingSecondStopCardContentDescription(state)"))
+        assertTrue(source.contains("practicalShoppingPrimaryCardContentDescription(state, sampleNotice)"))
+        assertTrue(source.contains("practicalShoppingSecondStopCardContentDescription(state, sampleNotice)"))
     }
 
     @Test

@@ -182,7 +182,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         renderItems(state.items)
         renderRefinement(state.refinement)
         renderUnknown(state.unknownItems)
-        resultContainer.render(state.result)
+        resultContainer.render(state.result, state.sampleNotice)
         renderExtraStopSettings(state.extraStopSettings)
         sampleNotice.text = state.sampleNotice
     }

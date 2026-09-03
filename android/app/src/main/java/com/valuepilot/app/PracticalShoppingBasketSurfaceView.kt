@@ -142,7 +142,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         renderCollectionResetControl()
         renderItems(state)
         renderUnknownItems(state.unknownItems)
-        planResult.render(state.result)
+        planResult.render(state.result, state.sampleNotice)
         extraStopRule.text = state.extraStopRuleText.orEmpty()
         extraStopRule.visibility = if (state.extraStopRuleText == null) GONE else VISIBLE
     }

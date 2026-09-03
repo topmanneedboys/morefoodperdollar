@@ -1,6 +1,7 @@
 package com.valuepilot.app
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class PracticalShoppingPlanResultPresentationTest {
@@ -66,6 +67,60 @@ class PracticalShoppingPlanResultPresentationTest {
                 "Adds 4 min · 2 km. Price freshness: 2 fresh · 0 stale · 0 unknown.",
             practicalShoppingSecondStopCardContentDescription(state)
         )
+    }
+
+    @Test
+    fun sampleDisclosureIsIncludedWhenTheOwningSurfaceProvidesIt() {
+        val notice = "Fictional sample data only — not live retailer prices or availability."
+
+        assertEquals(
+            "BEST ONE-STORE OPTION. Store: Sample Market. Basket 10.00 CAD. " +
+                "2 of 2 items priced. 3 min · 1 km. Price freshness: 2 fresh · 0 stale · 0 unknown. " +
+                "Lowest known complete basket among the one-store options compared. " +
+                "Fictional sample data only — not live retailer prices or availability.",
+            practicalShoppingPrimaryCardContentDescription(primary(null), notice)
+        )
+
+        val secondStop =
+            PracticalShoppingSecondStopUiState(
+                badge = "OPTIONAL EXTRA STOP",
+                storeName = "Example Grocer",
+                baseItemsText = "Buy at Sample Market: Eggs",
+                addedItemsText = "Then buy at Example Grocer: Milk",
+                combinedBasketCostText = "Combined basket 20.00 CAD",
+                savingsText = "Save 3.00 CAD",
+                additionalTravelText = "Adds 4 min · 2 km",
+                evidenceText = "Price freshness: 2 fresh · 0 stale · 0 unknown"
+            )
+        assertEquals(
+            "OPTIONAL EXTRA STOP. Store: Example Grocer. Buy at Sample Market: Eggs. " +
+                "Then buy at Example Grocer: Milk. Combined basket 20.00 CAD. Save 3.00 CAD. " +
+                "Adds 4 min · 2 km. Price freshness: 2 fresh · 0 stale · 0 unknown. " +
+                "Fictional sample data only — not live retailer prices or availability.",
+            practicalShoppingSecondStopCardContentDescription(secondStop, notice)
+        )
+    }
+
+    @Test
+    fun blankSampleDisclosureFailsClosedInsteadOfCreatingAnEmptySummarySegment() {
+        assertThrows(IllegalArgumentException::class.java) {
+            practicalShoppingPrimaryCardContentDescription(primary(null), " ")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            practicalShoppingSecondStopCardContentDescription(
+                PracticalShoppingSecondStopUiState(
+                    badge = "OPTIONAL EXTRA STOP",
+                    storeName = "Example Grocer",
+                    baseItemsText = "Buy at Sample Market: Eggs",
+                    addedItemsText = "Then buy at Example Grocer: Milk",
+                    combinedBasketCostText = "Combined basket 20.00 CAD",
+                    savingsText = "Save 3.00 CAD",
+                    additionalTravelText = "Adds 4 min · 2 km",
+                    evidenceText = "Price freshness: 2 fresh · 0 stale · 0 unknown"
+                ),
+                ""
+            )
+        }
     }
 
     private fun primary(missingItemsText: String?): PracticalShoppingPrimaryUiState =

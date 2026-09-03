@@ -47,9 +47,11 @@ internal fun practicalShoppingPrimaryCardStyle(
  * it does not infer completeness, recalculate money, or create an action.
  */
 internal fun practicalShoppingPrimaryCardContentDescription(
-    state: PracticalShoppingPrimaryUiState
-): String =
-    accessibilitySummary(
+    state: PracticalShoppingPrimaryUiState,
+    sampleNotice: String? = null
+): String {
+    require(sampleNotice == null || sampleNotice.isNotBlank())
+    return accessibilitySummary(
         listOfNotNull(
             state.badge,
             "Store: ${state.storeName}",
@@ -59,15 +61,19 @@ internal fun practicalShoppingPrimaryCardContentDescription(
             state.travelText,
             state.evidenceText,
             state.whyText,
-            state.notice
+            state.notice,
+            sampleNotice
         )
     )
+}
 
 internal fun practicalShoppingSecondStopCardContentDescription(
-    state: PracticalShoppingSecondStopUiState
-): String =
-    accessibilitySummary(
-        listOf(
+    state: PracticalShoppingSecondStopUiState,
+    sampleNotice: String? = null
+): String {
+    require(sampleNotice == null || sampleNotice.isNotBlank())
+    return accessibilitySummary(
+        listOfNotNull(
             state.badge,
             "Store: ${state.storeName}",
             state.baseItemsText,
@@ -75,9 +81,11 @@ internal fun practicalShoppingSecondStopCardContentDescription(
             state.combinedBasketCostText,
             state.savingsText,
             state.additionalTravelText,
-            state.evidenceText
+            state.evidenceText,
+            sampleNotice
         )
     )
+}
 
 private fun accessibilitySummary(parts: List<String>): String =
     parts.joinToString(". ") { it.trim().trimEnd('.', '!', '?') } + "."
@@ -95,22 +103,38 @@ class PracticalShoppingPlanResultSurfaceView @JvmOverloads constructor(
     }
 
     fun render(state: PracticalShoppingUiState?) {
+        render(state, sampleNotice = null)
+    }
+
+    /**
+     * Renders a result with optional already-visible context from its owning
+     * surface. The context is used only to keep accessibility disclosure in
+     * parity with the nearby visible sample notice.
+     */
+    fun render(
+        state: PracticalShoppingUiState?,
+        sampleNotice: String?
+    ) {
         removeAllViews()
         if (state == null) return
 
         addView(line(state.headline, 22f, "#111827", true, 24))
-        state.primary?.let { addView(primaryCard(it)) }
-        state.secondStop?.let { addView(secondStopCard(it)) }
+        state.primary?.let { addView(primaryCard(it, sampleNotice)) }
+        state.secondStop?.let { addView(secondStopCard(it, sampleNotice)) }
         state.secondaryMessage?.let {
             addView(line(it, 13f, "#6B7280", topPadding = 12))
         }
     }
 
-    private fun primaryCard(state: PracticalShoppingPrimaryUiState): View {
+    private fun primaryCard(
+        state: PracticalShoppingPrimaryUiState,
+        sampleNotice: String?
+    ): View {
         val style = practicalShoppingPrimaryCardStyle(state)
         return card(style.backgroundColor, style.strokeColor, 12).apply {
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
-            contentDescription = practicalShoppingPrimaryCardContentDescription(state)
+            contentDescription =
+                practicalShoppingPrimaryCardContentDescription(state, sampleNotice)
             addView(
                 column().apply {
                     // The card already exposes one complete projected summary.
@@ -142,10 +166,14 @@ class PracticalShoppingPlanResultSurfaceView @JvmOverloads constructor(
         }
     }
 
-    private fun secondStopCard(state: PracticalShoppingSecondStopUiState): View =
+    private fun secondStopCard(
+        state: PracticalShoppingSecondStopUiState,
+        sampleNotice: String?
+    ): View =
         card("#FFFFFF", "#D1FAE5", 12).apply {
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
-            contentDescription = practicalShoppingSecondStopCardContentDescription(state)
+            contentDescription =
+                practicalShoppingSecondStopCardContentDescription(state, sampleNotice)
             addView(
                 column().apply {
                     // This summary is intentionally the single accessibility
