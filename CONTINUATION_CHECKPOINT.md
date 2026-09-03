@@ -1,12 +1,16 @@
 # ValuePilot Continuation Checkpoint
 
-Updated: 2026-09-02
+Updated: 2026-09-03
 
 Branch: `work/valuepilot-android-milestone`
 
 ## Current verified engineering head
 
-`2a31c0d96e733c667a7fa7ed1636506eb423aad6` (`Explain incomplete Basket extra stop`) is the promoted milestone, verified by candidate workflow **33724167757** and milestone provenance workflow **33724622104**. Basket now carries Home's existing typed explanation that the extra-stop rule is not evaluated until every requested item has a usable price, so incomplete known-subtotal plans cannot imply that a second stop was evaluated. Complete plans remain unchanged; no-coverage plans keep the rule hidden. This is presentation-only parity: the renderer consumes immutable projected fields, does not infer or calculate prices, and does not change planner, ranking, evidence, persistence, provider or network authority. Clean-source verification passed 1,673 JVM tests (375 shared-core + 1,298 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+`6822542020da9a652b8fb067b5d9afde1793b22f` (`Guard Search keyboard duplicate submissions`) is the promoted milestone, verified by candidate workflow **33725677152** and milestone provenance workflow **33726058966**. Search's visible button and keyboard/quick-entry paths now share one immutable readiness gate: blank, over-limit and active-loading searches cannot submit, so an IME action cannot clear an active request or start duplicate work. This is a presentation/lifecycle guard only: the helper consumes existing `UniversalSearchState`, while controller request identity, provider execution, ranking, evidence, persistence and network boundaries remain unchanged. Clean-source verification passed 1,677 JVM tests (375 shared-core + 1,302 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+
+## Previous verified engineering head (superseded)
+
+`2a31c0d96e733c667a7fa7ed1636506eb423aad6` (`Explain incomplete Basket extra stop`) was the promoted milestone, verified by candidate workflow **33724167757** and milestone provenance workflow **33724622104**. Basket now carries Home's existing typed explanation that the extra-stop rule is not evaluated until every requested item has a usable price, so incomplete known-subtotal plans cannot imply that a second stop was evaluated. Complete plans remain unchanged; no-coverage plans keep the rule hidden. This is presentation-only parity: the renderer consumes immutable projected fields, does not infer or calculate prices, and does not change planner, ranking, evidence, persistence, provider or network authority. Clean-source verification passed 1,673 JVM tests (375 shared-core + 1,298 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 

@@ -1,6 +1,6 @@
 # ValuePilot Practical Shopping MVP Status
 
-Updated: 2026-09-02
+Updated: 2026-09-03
 
 Branch: `work/valuepilot-android-milestone`
 
@@ -8,11 +8,19 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+`6822542020da9a652b8fb067b5d9afde1793b22f` — `Guard Search keyboard duplicate submissions`
+
+GitHub Actions candidate workflow **33725677152** completed successfully, and milestone provenance workflow **33726058966** completed successfully for the exact same SHA.
+
+The latest Search refinement closes a keyboard/lifecycle consistency gap. Search's visible button and keyboard/quick-entry paths now share one immutable readiness gate, so blank, over-limit and active-loading searches cannot submit. In particular, an IME action during loading cannot clear the active query state or start duplicate provider work. This is a small presentation/lifecycle guard; the helper consumes only existing `UniversalSearchState`, and controller request identity, provider, ranking, evidence, persistence and network authority remain unchanged. Clean-source verification passed 1,677 JVM tests (375 shared-core + 1,302 Android app), all 58 Android tasks, all 30 browser tests, Firefox lint with zero findings, APK privacy checks with no network permissions, one-signer verification and release-bundle provenance.
+
+## Previous verified engineering head (superseded)
+
 `2a31c0d96e733c667a7fa7ed1636506eb423aad6` — `Explain incomplete Basket extra stop`
 
 GitHub Actions candidate workflow **33724167757** completed successfully, and milestone provenance workflow **33724622104** completed successfully for the exact same SHA.
 
-The latest Basket refinement closes a second-stop disclosure gap. When an incomplete known-subtotal result still has a primary plan and the saved extra-stop rule is visible, Basket now carries Home's existing explanation that another stop is not evaluated until every requested item has a usable price. Complete plans remain unchanged, and no-coverage plans keep the rule hidden. This is renderer-only copy from immutable projection; it does not infer prices, alter totals, change planner policy, or add provider/network authority.
+The previous Basket refinement closes a second-stop disclosure gap. When an incomplete known-subtotal result still has a primary plan and the saved extra-stop rule is visible, Basket now carries Home's existing explanation that another stop is not evaluated until every requested item has a usable price. Complete plans remain unchanged, and no-coverage plans keep the rule hidden. This is renderer-only copy from immutable projection; it does not infer prices, alter totals, change planner policy, or add provider/network authority.
 
 ## Previous verified engineering head (superseded)
 
