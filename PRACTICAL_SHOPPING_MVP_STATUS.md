@@ -8,11 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-`d4ba87d39589a0e78af0e69033ffbd05337c45b2` — `Explain offline catalog source and coverage`
+`a036f3799f95f05ec6ed142ffc2bb7cca87ad3a4` — `Add deterministic offline catalog refresh pipeline`
 
-GitHub Actions candidate workflow **33802015980** completed successfully, and milestone provenance workflow **33802633723** completed successfully for the exact same SHA.
+GitHub Actions candidate workflow **33805171665** completed successfully, the dedicated catalog workflow **33805171629** completed successfully, and milestone provenance workflow **33805935576** completed successfully for the exact same SHA.
 
-Home’s bounded offline identity lookup now names its Open Food Facts ODbL-1.0 source and reports how many bundled identities were checked, without implying complete market coverage. The preceding `36c3092` slice distinguishes an admission-blocked/expired/invalid snapshot from a valid snapshot with no match; `621f130` cancels stale queued lookup work when a newer lookup starts, its dialog closes, Home is left, or the Activity is destroyed. These are presentation/lifecycle-only changes: no current offers, stock, availability, planner, projector, ranking, pricing, evidence, persistence, provider, provider-economics or network authority changed. Clean-source verification passed 397 shared-core tests and 1,333 Android app tests with zero failures, all 58 Android tasks, 59 Python tests, 30 browser tests, Firefox lint with zero findings, APK privacy inspection with no INTERNET/ACCESS_NETWORK_STATE, one-signer verification, and exact-SHA release-bundle provenance.
+The offline catalog now has a deterministic, offline refresh coordinator for the supported Greater Toronto Area and Metro Vancouver identity snapshots. It requires explicit source export, rights evidence, timestamps, and signing keys; selects and imports only bounded Canada-labelled identity fields; builds and verifies every regional candidate before promotion; and preserves existing per-region pointers when a candidate regresses. It does not fetch data, add current prices/offers, claim stock or availability, or change the existing planner/ranking authority. Clean-source verification passed 397 shared-core tests and 1,333 Android app tests with zero failures, all 58 Android tasks, 61 Python tests, 30 browser tests, Firefox lint with zero findings, APK privacy inspection with no INTERNET/ACCESS_NETWORK_STATE, one-signer verification, and exact-SHA release-bundle provenance.
 
 ## Previous verified engineering head (superseded)
 
