@@ -23,6 +23,10 @@ class CompareHereManualScreenView @JvmOverloads constructor(
 
     private val messageContainer = LinearLayout(context).apply {
         orientation = VERTICAL
+        // Input/readiness messages change as the shopper edits products or
+        // confirms like-for-like comparison. Announce the projected message
+        // block without moving route or comparison authority into the View.
+        accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
     }
     private val messageTitle = textView(18f, "#111827", true)
     private val messageGuidance = textView(14f, "#4B5563", false, topPadding = 5)

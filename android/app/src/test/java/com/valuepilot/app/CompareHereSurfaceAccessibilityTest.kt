@@ -64,6 +64,22 @@ class CompareHereSurfaceAccessibilityTest {
         }
     }
 
+    @Test
+    fun manualReadinessMessagesAreAnnouncedAsOneProjectedBlock() {
+        val source = manualSource().readText()
+
+        assertTrue(
+            source.contains(
+                "accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"
+            )
+        )
+        assertTrue(source.contains("private val messageContainer = LinearLayout(context).apply"))
+        assertTrue(source.contains("messageContainer.addView(messageTitle)"))
+        assertTrue(source.contains("messageContainer.addView(messageGuidance)"))
+        assertFalse(source.contains("CompareHereEvaluator"))
+        assertFalse(source.contains("Money.parse"))
+    }
+
     private fun source(): File {
         val workingDirectory =
             requireNotNull(System.getProperty("user.dir")) {
@@ -76,4 +92,12 @@ class CompareHereSurfaceAccessibilityTest {
             assertTrue("Missing source at ${it.absolutePath}", it.isFile)
         }
     }
+
+    private fun manualSource(): File =
+        File(
+            requireNotNull(System.getProperty("user.dir")),
+            "src/main/java/com/valuepilot/app/CompareHereManualScreenView.kt"
+        ).also {
+            assertTrue("Missing source at ${it.absolutePath}", it.isFile)
+        }
 }
