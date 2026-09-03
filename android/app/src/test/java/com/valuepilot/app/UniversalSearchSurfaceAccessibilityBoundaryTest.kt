@@ -19,6 +19,15 @@ class UniversalSearchSurfaceAccessibilityBoundaryTest {
         val statusBlock = layout.substring(statusStart, statusEnd)
         assertTrue(statusBlock.contains("android:accessibilityLiveRegion=\"polite\""))
         assertTrue(activity.contains("searchStatus.text = state.statusText"))
+        assertTrue(activity.contains("importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES"))
+        assertTrue(activity.contains("contentDescription = searchResultContentDescription(row)"))
+        assertTrue(activity.contains("row.sampleEvidence"))
+        assertTrue(activity.contains("Fictional sample data only — not live retailer prices or availability"))
+        assertTrue(
+            activity.contains(
+                "importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS"
+            )
+        )
     }
 
     @Test

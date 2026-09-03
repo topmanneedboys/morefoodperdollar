@@ -1030,31 +1030,21 @@ class MainActivity : AppCompatActivity() {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { topMargin = dp(12) }
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+            contentDescription = searchResultContentDescription(row)
         }
 
         val body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(15), dp(16), dp(15))
+            // The card exposes one complete projected summary. Keep the
+            // visible child labels decorative for assistive technology so the
+            // same fields are not announced repeatedly.
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         }
 
         val rank = TextView(this).apply {
-            text =
-                when {
-                    row.best ->
-                        getString(
-                            R.string.best_value_rank,
-                            row.rank
-                        )
-
-                    row.rank != null ->
-                        getString(
-                            R.string.rank_number,
-                            row.rank
-                        )
-
-                    else ->
-                        "REFERENCE ONLY"
-                }
+            text = searchResultRankLabel(row)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setTextColor(Color.parseColor(if (row.best) "#047857" else "#6B7280"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
@@ -1134,6 +1124,33 @@ class MainActivity : AppCompatActivity() {
         body.addView(source)
         card.addView(body)
         return card
+    }
+
+    private fun searchResultRankLabel(row: UniversalSearchRow): String =
+        when {
+            row.best -> getString(R.string.best_value_rank, row.rank)
+            row.rank != null -> getString(R.string.rank_number, row.rank)
+            else -> "REFERENCE ONLY"
+        }
+
+    private fun searchResultContentDescription(row: UniversalSearchRow): String {
+        val sampleNotice =
+            if (row.sampleEvidence) {
+                "Fictional sample data only — not live retailer prices or availability"
+            } else {
+                null
+            }
+        return listOfNotNull(
+            searchResultRankLabel(row),
+            row.name,
+            row.priceSummary,
+            row.quantity?.takeIf(String::isNotBlank),
+            row.metricLabel,
+            row.exactnessLabel,
+            row.evidenceNotice?.takeIf(String::isNotBlank),
+            row.sourceSummary,
+            sampleNotice
+        ).joinToString(". ") { it.trim().trimEnd('.', '!', '?') } + "."
     }
 
     private fun copyFor(tab: AppPrimaryTab): ScreenCopy =
