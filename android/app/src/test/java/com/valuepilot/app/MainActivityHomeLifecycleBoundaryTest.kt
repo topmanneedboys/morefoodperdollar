@@ -41,6 +41,7 @@ class MainActivityHomeLifecycleBoundaryTest {
             "dismissHomeItemDetailsDialog()",
             "offlineCatalogDialog?.dismiss()",
             "homeItemDetailsDialog?.dismiss()",
+            "privatePriceHistoryDialog?.dismiss()",
             "homeItemDetailsDialog = null",
             "homeItemDetailsDialog = dialog",
             "dialog.setOnDismissListener {",
@@ -207,16 +208,21 @@ class MainActivityHomeLifecycleBoundaryTest {
     }
 
     @Test
-    fun homePrivateMemoryReviewActionUsesTheExistingCompareRoute() {
+    fun homePrivateMemoryReviewActionUsesTheReadOnlyHistoryRoute() {
         val source = source().readText()
 
         listOf(
-            "homeExperience.onReviewPrivateMemory = { openComparison() }",
+            "homeExperience.onReviewPrivateMemory = { reviewPrivatePriceHistory() }",
             "homeExperience.onReviewPrivateMemory = null",
             "private fun openComparison()",
-            "Intent(this, ComparisonActivity::class.java)"
+            "Intent(this, ComparisonActivity::class.java)",
+            "private fun reviewPrivatePriceHistory()",
+            "PracticalShoppingPrivatePriceHistoryPresentation.from(homePrivateMemoryState)",
+            "privatePriceHistoryDialog?.dismiss()",
+            ".setMessage(presentation.message)",
+            ".setPositiveButton(R.string.home_compare_secondary)"
         ).forEach { required ->
-            assertTrue("Expected Home private-history review navigation boundary: $required", source.contains(required))
+            assertTrue("Expected Home private-history review boundary: $required", source.contains(required))
         }
 
         listOf(

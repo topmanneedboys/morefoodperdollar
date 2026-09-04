@@ -133,6 +133,7 @@ class MainActivity : AppCompatActivity() {
     private var homeItemDetailsExactProduct: CheckBox? = null
     private var offlineCatalogDialog: AlertDialog? = null
     private var dataStatusDialog: AlertDialog? = null
+    private var privatePriceHistoryDialog: AlertDialog? = null
     private var offlineCatalogLookup: Future<*>? = null
     private var offlineCatalogRequestId = 0L
     private var suppressSearchInputCallback = false
@@ -298,6 +299,8 @@ class MainActivity : AppCompatActivity() {
         offlineCatalogDialog = null
         dataStatusDialog?.dismiss()
         dataStatusDialog = null
+        privatePriceHistoryDialog?.dismiss()
+        privatePriceHistoryDialog = null
         if (::homeExperience.isInitialized) {
             homeExperience.onQueryChanged = null
             homeExperience.onSubmit = null
@@ -448,7 +451,7 @@ class MainActivity : AppCompatActivity() {
             showHomeItemDetails(itemKey)
         }
         homeExperience.onCompare = { openComparison() }
-        homeExperience.onReviewPrivateMemory = { openComparison() }
+        homeExperience.onReviewPrivateMemory = { reviewPrivatePriceHistory() }
         homeExperience.onGoodPrice = { openGoodPriceCheck() }
         renderHome()
     }
@@ -499,6 +502,8 @@ class MainActivity : AppCompatActivity() {
         homePrivateMemoryLoadIssue = nextIssue
         dataStatusDialog?.dismiss()
         dataStatusDialog = null
+        privatePriceHistoryDialog?.dismiss()
+        privatePriceHistoryDialog = null
         if (
             ::homeExperience.isInitialized &&
                 shellState.route != AppRoute.COMPARE
@@ -1241,6 +1246,41 @@ class MainActivity : AppCompatActivity() {
         )
         comparisonActivityOpen = true
         startActivity(Intent(this, ComparisonActivity::class.java))
+    }
+
+    /**
+     * Shows the existing device-only comparison memory without making the user re-run a
+     * comparison. An unavailable store still goes to the existing recovery route so its clear
+     * controls remain reachable; no history-derived value is shown in that state.
+     */
+    private fun reviewPrivatePriceHistory() {
+        if (homePrivateMemoryLoadIssue != null) {
+            openComparison()
+            return
+        }
+
+        val presentation =
+            PracticalShoppingPrivatePriceHistoryPresentation.from(homePrivateMemoryState)
+        if (presentation.rows.isEmpty()) {
+            openComparison()
+            return
+        }
+
+        privatePriceHistoryDialog?.dismiss()
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(presentation.title)
+                .setMessage(presentation.message)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.home_compare_secondary) { _, _ ->
+                    openComparison()
+                }
+                .create()
+        dialog.setOnDismissListener {
+            if (privatePriceHistoryDialog === dialog) privatePriceHistoryDialog = null
+        }
+        privatePriceHistoryDialog = dialog
+        dialog.show()
     }
 
     private fun showSourcesLicences() {
