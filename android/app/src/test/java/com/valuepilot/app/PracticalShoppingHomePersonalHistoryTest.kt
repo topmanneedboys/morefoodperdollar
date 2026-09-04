@@ -17,6 +17,39 @@ import org.junit.Test
 class PracticalShoppingHomePersonalHistoryTest {
 
     @Test
+    fun `summary makes nonempty private history discoverable without exposing price facts`() {
+        val summary =
+            requireNotNull(
+                PracticalShoppingHomePersonalHistory.summaryFor(
+                    CompareHerePrivatePriceMemoryState(
+                        listOf(
+                            entry("Milk", 600L, 12L, observedAt = 1L),
+                            entry("Eggs", 700L, 14L, observedAt = 2L)
+                        )
+                    )
+                )
+            )
+
+        assertEquals(
+            "Private comparison history: 2 observations on this device. " +
+                "Home shows matching context only; package and promotion details may differ. " +
+                "This is not live store pricing.",
+            summary
+        )
+        assertTrue(!summary.contains("CAD"))
+        assertTrue(!summary.contains("6.00"))
+    }
+
+    @Test
+    fun `empty private history has no summary`() {
+        assertNull(
+            PracticalShoppingHomePersonalHistory.summaryFor(
+                CompareHerePrivatePriceMemoryState.empty()
+            )
+        )
+    }
+
+    @Test
     fun `notice counts normalized label history without exposing a price`() {
         val memory =
             CompareHerePrivatePriceMemoryState(
@@ -72,6 +105,12 @@ class PracticalShoppingHomePersonalHistoryTest {
 
         assertSame(sourceResult, rendered.result)
         assertEquals(
+            "Private comparison history: 1 observation on this device. " +
+                "Home shows matching context only; package and promotion details may differ. " +
+                "This is not live store pricing.",
+            rendered.privateMemorySummary
+        )
+        assertEquals(
             listOf(null, "Private comparison history: 1 observation for this name. " +
                 "Package and promotion details may differ; not live store pricing."),
             rendered.items.map { it.personalHistoryNotice }
@@ -102,6 +141,7 @@ class PracticalShoppingHomePersonalHistoryTest {
             PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE,
             rendered.privateMemoryStatus
         )
+        assertNull(rendered.privateMemorySummary)
         assertEquals(listOf(null, null), rendered.items.map { it.personalHistoryNotice })
     }
 

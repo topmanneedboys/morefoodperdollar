@@ -112,6 +112,7 @@ data class PracticalShoppingHomeRenderState(
     val result: PracticalShoppingUiState?,
     val extraStopSettings: PracticalShoppingHomeExtraStopSettingsRenderState,
     val sampleNotice: String,
+    val privateMemorySummary: String? = null,
     val privateMemoryStatus: PracticalShoppingHomePrivateMemoryStatus =
         PracticalShoppingHomePrivateMemoryStatus.AVAILABLE
 ) {
@@ -121,6 +122,7 @@ data class PracticalShoppingHomeRenderState(
         require(message == null || message.isNotBlank())
         require(unknownItems.none(String::isBlank))
         require(sampleNotice.isNotBlank())
+        require(privateMemorySummary == null || privateMemorySummary.isNotBlank())
     }
 }
 
@@ -247,6 +249,8 @@ object PracticalShoppingHomeRenderer {
                             }
                 ),
             sampleNotice = source.sampleNotice,
+            privateMemorySummary =
+                usablePrivateMemory?.let(PracticalShoppingHomePersonalHistory::summaryFor),
             privateMemoryStatus = privateMemoryStatus
         )
     }

@@ -227,6 +227,10 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val extraStopSettingsBody = column()
     private val extraStopSettingsCard =
         card("#F9FAFB", "#E5E7EB", 8, extraStopSettingsBody)
+    private val privateMemorySummary = line("", 13f, "#6B7280").apply {
+        accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        visibility = GONE
+    }
     private val privateMemoryNotice = line("", 13f, "#92400E").apply {
         accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         visibility = GONE
@@ -248,6 +252,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         addView(submitButton)
         addView(message)
         addView(sampleCard())
+        addView(privateMemorySummary)
         addView(privateMemoryNotice)
         addView(itemsHeading)
         addView(itemsContainer)
@@ -309,7 +314,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         renderUnknown(state.unknownItems)
         resultContainer.render(state.result, state.sampleNotice)
         renderExtraStopSettings(state.extraStopSettings)
-        renderPrivateMemory(state.privateMemoryStatus)
+        renderPrivateMemory(state.privateMemoryStatus, state.privateMemorySummary)
         sampleNotice.text = state.sampleNotice
         goodPriceOwnerControls.forEach { control ->
             control.isEnabled = onGoodPrice != null && hasRenderedState
@@ -363,11 +368,18 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         message.visibility = VISIBLE
     }
 
-    private fun renderPrivateMemory(status: PracticalShoppingHomePrivateMemoryStatus) {
+    private fun renderPrivateMemory(
+        status: PracticalShoppingHomePrivateMemoryStatus,
+        summary: String?
+    ) {
         if (status == PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE) {
+            privateMemorySummary.text = ""
+            privateMemorySummary.visibility = GONE
             privateMemoryNotice.text = context.getString(R.string.home_private_memory_unavailable)
             privateMemoryNotice.visibility = VISIBLE
         } else {
+            privateMemorySummary.text = summary.orEmpty()
+            privateMemorySummary.visibility = if (summary == null) GONE else VISIBLE
             privateMemoryNotice.text = ""
             privateMemoryNotice.visibility = GONE
         }

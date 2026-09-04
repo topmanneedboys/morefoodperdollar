@@ -11,6 +11,23 @@ package com.valuepilot.app
  */
 internal object PracticalShoppingHomePersonalHistory {
 
+    /**
+     * Gives Home a compact, non-price summary when private comparison memory exists.
+     *
+     * The count is deliberately the only aggregate exposed here. It makes the automatic,
+     * device-only memory discoverable even when no current Home row has a matching display label,
+     * without implying that a broad list name is an exact product or a live offer.
+     */
+    fun summaryFor(memory: CompareHerePrivatePriceMemoryState): String? {
+        val observationCount = memory.entries.size
+        if (observationCount == 0) return null
+
+        val noun = if (observationCount == 1) "observation" else "observations"
+        return "Private comparison history: $observationCount $noun on this device. " +
+            "Home shows matching context only; package and promotion details may differ. " +
+            "This is not live store pricing."
+    }
+
     fun noticeFor(
         itemDisplayName: String,
         memory: CompareHerePrivatePriceMemoryState
