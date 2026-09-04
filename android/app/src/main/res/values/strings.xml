@@ -96,6 +96,9 @@ Prices and comparisons you enter or confirm stay private on this device. They ar
 
 This build does not include a store directory or an authorized current-offer feed. No flyer content is copied here. Source rights and attribution are reviewed before any future dataset is activated.</string>
 
+    <string name="data_status">Data status</string>
+    <string name="data_status_title">ValuePilot data status</string>
+
     <string name="accessibility_description">Automatically reads newly visible product and menu labels in the active app so ValuePilot can compare exact unit value and clearly labeled local estimates. It scrolls only when you explicitly choose off-screen collection; this build has no internet permission.</string>
 
     <string name="how_to_use">How to use</string>

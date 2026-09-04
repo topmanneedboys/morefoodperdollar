@@ -66,6 +66,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var screenFootnote: TextView
     private lateinit var primaryAction: Button
     private lateinit var sourcesLicencesButton: MaterialButton
+    private lateinit var dataStatusButton: MaterialButton
     private lateinit var homeExperience: PracticalShoppingHomeSurfaceView
     private lateinit var basketExperience: PracticalShoppingBasketSurfaceView
     private lateinit var searchExperience: View
@@ -131,6 +132,7 @@ class MainActivity : AppCompatActivity() {
     private var homeItemDetailsBrandInput: TextInputEditText? = null
     private var homeItemDetailsExactProduct: CheckBox? = null
     private var offlineCatalogDialog: AlertDialog? = null
+    private var dataStatusDialog: AlertDialog? = null
     private var offlineCatalogLookup: Future<*>? = null
     private var offlineCatalogRequestId = 0L
     private var suppressSearchInputCallback = false
@@ -149,6 +151,7 @@ class MainActivity : AppCompatActivity() {
         screenFootnote = findViewById(R.id.screenFootnote)
         primaryAction = findViewById(R.id.primaryAction)
         sourcesLicencesButton = findViewById(R.id.sourcesLicencesButton)
+        dataStatusButton = findViewById(R.id.dataStatusButton)
         homeExperience = findViewById(R.id.homeExperience)
         basketExperience = findViewById(R.id.basketExperience)
         searchExperience = findViewById(R.id.searchExperience)
@@ -225,6 +228,7 @@ class MainActivity : AppCompatActivity() {
 
         primaryAction.setOnClickListener { openComparison() }
         sourcesLicencesButton.setOnClickListener { showSourcesLicences() }
+        dataStatusButton.setOnClickListener { showDataStatus() }
 
         bottomNavigation.selectedItemId = menuIdFor(shellState.selectedPrimaryTab)
         renderShell(shellState)
@@ -292,6 +296,8 @@ class MainActivity : AppCompatActivity() {
         cancelOfflineCatalogLookup()
         offlineCatalogDialog?.dismiss()
         offlineCatalogDialog = null
+        dataStatusDialog?.dismiss()
+        dataStatusDialog = null
         if (::homeExperience.isInitialized) {
             homeExperience.onQueryChanged = null
             homeExperience.onSubmit = null
@@ -491,6 +497,8 @@ class MainActivity : AppCompatActivity() {
 
         homePrivateMemoryState = next
         homePrivateMemoryLoadIssue = nextIssue
+        dataStatusDialog?.dismiss()
+        dataStatusDialog = null
         if (
             ::homeExperience.isInitialized &&
                 shellState.route != AppRoute.COMPARE
@@ -1241,6 +1249,26 @@ class MainActivity : AppCompatActivity() {
             .setMessage(R.string.sources_licences_body)
             .setPositiveButton(android.R.string.ok, null)
             .show()
+    }
+
+    private fun showDataStatus() {
+        dataStatusDialog?.dismiss()
+        val presentation =
+            PracticalShoppingDataStatusPresentation.from(
+                privateMemory = homePrivateMemoryState,
+                privateMemoryAvailable = homePrivateMemoryLoadIssue == null
+            )
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(R.string.data_status_title)
+                .setMessage(presentation.message)
+                .setPositiveButton(android.R.string.ok, null)
+                .create()
+        dialog.setOnDismissListener {
+            if (dataStatusDialog === dialog) dataStatusDialog = null
+        }
+        dataStatusDialog = dialog
+        dialog.show()
     }
 
     private fun openGoodPriceCheck() {

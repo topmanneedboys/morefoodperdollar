@@ -427,6 +427,17 @@
                 app:cornerRadius="16dp"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/dataStatusButton"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="8dp"
+                android:text="@string/data_status"
+                android:textAllCaps="false"
+                android:textSize="15sp"
+                app:cornerRadius="16dp"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
         </LinearLayout>
 
     </ScrollView>
