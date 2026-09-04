@@ -1,9 +1,12 @@
 package com.valuepilot.app
 
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.text.Editable
@@ -20,11 +23,14 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.RadioGroup
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.valuepilot.core.CompareHerePriceSelection
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 class ComparisonActivity : AppCompatActivity() {
     private lateinit var productInputsContainer: LinearLayout
@@ -35,12 +41,22 @@ class ComparisonActivity : AppCompatActivity() {
     private lateinit var comparisonScreen: CompareHereManualScreenView
     private lateinit var comparisonPresenter: CompareHereManualScreenPresenter
     private lateinit var scannerStatus: TextView
+    private lateinit var importPhotoButton: Button
+    private lateinit var photoImportStatus: TextView
 
     private val productInputs = mutableListOf<EditText>()
     private val productInputRows = mutableListOf<ProductInputRow>()
+    private val photoExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val photoPickerLauncher =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            onPhotoSelected(uri)
+        }
 
     private var activityState = CompareHereManualActivitySessionState.initial()
     private var restoringDraft = false
+    private var photoRequestId = 0L
+    private var photoImportInFlight = false
+    private var photoImportClosed = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,6 +72,12 @@ class ComparisonActivity : AppCompatActivity() {
         comparisonScreen = findViewById(R.id.compareHereScreen)
         comparisonPresenter = CompareHereManualScreenPresenter(comparisonScreen)
         scannerStatus = findViewById(R.id.scannerStatus)
+        importPhotoButton = findViewById(R.id.importPhotoButton)
+        photoImportStatus = findViewById(R.id.photoImportStatus)
+
+        importPhotoButton.setOnClickListener {
+            beginPhotoImport()
+        }
 
         val draft = restoreDraft(savedInstanceState)
         activityState =
@@ -159,6 +181,13 @@ class ComparisonActivity : AppCompatActivity() {
         super.onPause()
     }
 
+    override fun onDestroy() {
+        photoImportClosed = true
+        photoRequestId += 1
+        photoExecutor.shutdownNow()
+        super.onDestroy()
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putStringArrayList(
             STATE_BLOCKS,
@@ -182,6 +211,157 @@ class ComparisonActivity : AppCompatActivity() {
         )
 
         super.onSaveInstanceState(outState)
+    }
+
+    private fun beginPhotoImport() {
+        if (photoImportClosed || photoImportInFlight) {
+            return
+        }
+
+        photoImportInFlight = true
+        photoRequestId += 1
+        importPhotoButton.isEnabled = false
+        photoImportStatus.text = getString(R.string.compare_photo_processing)
+        try {
+            photoPickerLauncher.launch("image/*")
+        } catch (_: Exception) {
+            photoImportInFlight = false
+            importPhotoButton.isEnabled = true
+            photoImportStatus.text = getString(R.string.compare_photo_error)
+        }
+    }
+
+    private fun onPhotoSelected(uri: Uri?) {
+        if (photoImportClosed || !photoImportInFlight) {
+            return
+        }
+
+        val requestId = photoRequestId
+        if (uri == null) {
+            photoImportInFlight = false
+            importPhotoButton.isEnabled = true
+            photoImportStatus.text = getString(R.string.compare_photo_cancelled)
+            return
+        }
+
+        try {
+            photoExecutor.execute {
+                val bitmap = decodeBoundedPhoto(uri)
+                if (bitmap == null) {
+                    postPhotoImportResult(requestId, emptyList(), IllegalArgumentException("decode"))
+                    return@execute
+                }
+
+                try {
+                    OcrScanner.scan(bitmap) { recognizedBlocks, error ->
+                        if (!bitmap.isRecycled) {
+                            bitmap.recycle()
+                        }
+                        postPhotoImportResult(requestId, recognizedBlocks, error)
+                    }
+                } catch (error: Throwable) {
+                    if (!bitmap.isRecycled) {
+                        bitmap.recycle()
+                    }
+                    postPhotoImportResult(requestId, emptyList(), error)
+                }
+            }
+        } catch (error: Throwable) {
+            postPhotoImportResult(requestId, emptyList(), error)
+        }
+    }
+
+    private fun postPhotoImportResult(
+        requestId: Long,
+        recognizedBlocks: List<String>,
+        error: Throwable?
+    ) {
+        runOnUiThread {
+            applyPhotoImportResult(requestId, recognizedBlocks, error)
+        }
+    }
+
+    private fun applyPhotoImportResult(
+        requestId: Long,
+        recognizedBlocks: List<String>,
+        error: Throwable?
+    ) {
+        if (
+            photoImportClosed ||
+            requestId != photoRequestId ||
+            !photoImportInFlight ||
+            isFinishing ||
+            isDestroyed
+        ) {
+            return
+        }
+
+        photoImportInFlight = false
+        importPhotoButton.isEnabled = true
+
+        if (error != null) {
+            photoImportStatus.text = getString(R.string.compare_photo_error)
+            return
+        }
+
+        val result =
+            CompareHerePhotoDraft.append(
+                existingBlocks = currentProductBlocks(),
+                recognizedBlocks = recognizedBlocks
+            )
+
+        if (result.addedCount == 0) {
+            photoImportStatus.text = getString(R.string.compare_photo_no_matches)
+            return
+        }
+
+        renderProductInputs(result.blocks)
+        activityState =
+            CompareHereManualActivitySessionReducer.productsChanged(activityState)
+        syncLikeForLikeConfirmation()
+        syncPriceSelection()
+        renderIdleScreen()
+        saveDraftToPreferences()
+        photoImportStatus.text =
+            getString(
+                R.string.compare_photo_added,
+                result.addedCount,
+                result.skippedCount
+            )
+    }
+
+    /** Decode an image to a bounded bitmap before handing it to on-device OCR. */
+    private fun decodeBoundedPhoto(uri: Uri): Bitmap? {
+        return try {
+            val bounds = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+            }
+            contentResolver.openInputStream(uri).use { stream ->
+                if (stream == null) return null
+                BitmapFactory.decodeStream(stream, null, bounds)
+            }
+
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+                return null
+            }
+
+            val largestDimension = maxOf(bounds.outWidth, bounds.outHeight)
+            var sampleSize = 1
+            while (largestDimension / sampleSize > MAX_PHOTO_DIMENSION) {
+                sampleSize *= 2
+            }
+
+            val options = BitmapFactory.Options().apply {
+                inSampleSize = sampleSize
+                inPreferredConfig = Bitmap.Config.ARGB_8888
+            }
+            contentResolver.openInputStream(uri).use { stream ->
+                if (stream == null) return null
+                BitmapFactory.decodeStream(stream, null, options)
+            }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun renderProductInputs(blocks: List<String>) {
@@ -781,6 +961,9 @@ class ComparisonActivity : AppCompatActivity() {
 
         private const val PREF_BLOCK_PREFIX =
             "product_"
+
+        private const val MAX_PHOTO_DIMENSION =
+            2_048
 
         private const val STATE_BLOCKS =
             "standalone.blocks"

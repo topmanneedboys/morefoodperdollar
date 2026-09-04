@@ -80,9 +80,13 @@ class CoreBoundaryTest {
         assertTrue(source.contains("CompareHerePriceSelectionPersistence"))
         assertTrue(source.contains("CompareHereManualProductDraft.removeAt"))
         assertTrue(source.contains("R.string.remove_product"))
+        assertTrue(source.contains("ActivityResultContracts.GetContent"))
+        assertTrue(source.contains("CompareHerePhotoDraft.append"))
         assertTrue(layout.contains("priceSelectionGroup"))
         assertTrue(layout.contains("priceSelectionCurrent"))
         assertTrue(layout.contains("priceSelectionMember"))
+        assertTrue(layout.contains("importPhotoButton"))
+        assertTrue(layout.contains("photoImportStatus"))
 
         assertFalse(source.contains("StandaloneComparisonController"))
         assertFalse(source.contains("StandaloneComparisonIntent"))
