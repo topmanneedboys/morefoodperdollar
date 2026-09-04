@@ -7,11 +7,13 @@ on:
       - 'tools/build_offline_catalog_snapshot.py'
       - 'tools/verify_offline_catalog_snapshot.py'
       - 'tools/promote_offline_catalog_snapshot.py'
+      - 'tools/promote_offline_catalog_release.py'
       - 'tools/import_open_food_facts_catalog.py'
       - 'tools/select_open_food_facts_launch_catalog.py'
       - 'tools/refresh_offline_catalog_snapshots.py'
       - 'tools/tests/test_build_offline_catalog_snapshot.py'
       - 'tools/tests/test_promote_offline_catalog_snapshot.py'
+      - 'tools/tests/test_promote_offline_catalog_release.py'
       - 'tools/tests/test_import_open_food_facts_catalog.py'
       - 'tools/tests/test_select_open_food_facts_launch_catalog.py'
       - 'tools/tests/test_refresh_offline_catalog_snapshots.py'
@@ -22,10 +24,13 @@ on:
       - 'tools/build_offline_catalog_snapshot.py'
       - 'tools/verify_offline_catalog_snapshot.py'
       - 'tools/promote_offline_catalog_snapshot.py'
+      - 'tools/promote_offline_catalog_release.py'
       - 'tools/import_open_food_facts_catalog.py'
       - 'tools/select_open_food_facts_launch_catalog.py'
       - 'tools/tests/test_build_offline_catalog_snapshot.py'
       - 'tools/tests/test_promote_offline_catalog_snapshot.py'
+      - 'tools/tests/test_promote_offline_catalog_release.py'
+      - 'tools/refresh_offline_catalog_snapshots.py'
       - 'tools/tests/test_import_open_food_facts_catalog.py'
       - 'tools/tests/test_select_open_food_facts_launch_catalog.py'
       - 'tools/tests/test_bundled_offline_catalog_assets.py'
@@ -54,6 +59,7 @@ jobs:
           tools/build_offline_catalog_snapshot.py
           tools/verify_offline_catalog_snapshot.py
           tools/promote_offline_catalog_snapshot.py
+          tools/promote_offline_catalog_release.py
           tools/import_open_food_facts_catalog.py
           tools/select_open_food_facts_launch_catalog.py
           tools/refresh_offline_catalog_snapshots.py
@@ -63,6 +69,7 @@ jobs:
           python -m unittest
           tools.tests.test_build_offline_catalog_snapshot
           tools.tests.test_promote_offline_catalog_snapshot
+          tools.tests.test_promote_offline_catalog_release
           tools.tests.test_import_open_food_facts_catalog
           tools.tests.test_select_open_food_facts_launch_catalog
           tools.tests.test_refresh_offline_catalog_snapshots

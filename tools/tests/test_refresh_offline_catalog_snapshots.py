@@ -9,7 +9,11 @@ from pathlib import Path
 from unittest.mock import patch
 
 import tools.refresh_offline_catalog_snapshots as refresh_module
-from tools.promote_offline_catalog_snapshot import SnapshotPromotionError
+from tools.promote_offline_catalog_release import (
+    ACTIVE_GENERATION_POINTER_NAME,
+    CatalogReleasePromotionError,
+    read_active_release,
+)
 from tools.refresh_offline_catalog_snapshots import (
     OfflineCatalogRefreshError,
     refresh_snapshots,
@@ -110,7 +114,7 @@ class OfflineCatalogRefreshTest(unittest.TestCase):
                 )
                 self.assertEqual(left["manifestSha256"], verified["manifestSha256"])
 
-    def test_promotes_only_after_preflight_and_preserves_pointers_on_regression(self):
+    def test_promotes_only_after_preflight_and_preserves_active_generation_on_regression(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             source = root / "products.jsonl"
@@ -130,16 +134,12 @@ class OfflineCatalogRefreshTest(unittest.TestCase):
                 promote=True,
             )
             self.assertTrue(result["promoted"])
-            before = {
-                region: {
-                    name: (state / region / name).read_bytes()
-                    for name in ("current.json", "last-known-good.json")
-                }
-                for region in ("ca-gta", "ca-metro-vancouver")
-            }
+            before = (state / ACTIVE_GENERATION_POINTER_NAME).read_bytes()
             coverage_report_before = (state / "coverage-report.json").read_bytes()
-            for pointers in before.values():
-                self.assertEqual(pointers["current.json"], pointers["last-known-good.json"])
+            self.assertEqual(
+                ["ca-gta", "ca-metro-vancouver"],
+                [item["regionId"] for item in read_active_release(state, public_key)["regions"]],
+            )
 
             self.write_export(source, count=1_499)
             with self.assertRaisesRegex(OfflineCatalogRefreshError, "between 1500 and 5000"):
@@ -154,9 +154,7 @@ class OfflineCatalogRefreshTest(unittest.TestCase):
                     promote=True,
                 )
 
-            for region, pointers in before.items():
-                for name, content in pointers.items():
-                    self.assertEqual(content, (state / region / name).read_bytes())
+            self.assertEqual(before, (state / ACTIVE_GENERATION_POINTER_NAME).read_bytes())
             self.assertEqual(coverage_report_before, (state / "coverage-report.json").read_bytes())
 
     def test_rejects_catalog_outside_identity_variety_target_before_building(self):
@@ -183,7 +181,7 @@ class OfflineCatalogRefreshTest(unittest.TestCase):
 
             self.assertFalse((root / "state" / "coverage-report.json").exists())
 
-    def test_rolls_back_all_region_pointers_if_later_promotion_fails(self):
+    def test_keeps_active_generation_when_release_promotion_fails(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             source = root / "products.jsonl"
@@ -202,13 +200,7 @@ class OfflineCatalogRefreshTest(unittest.TestCase):
                 max_records=1_500,
                 promote=True,
             )
-            before_pointers = {
-                region: {
-                    name: (state / region / name).read_bytes()
-                    for name in ("current.json", "last-known-good.json")
-                }
-                for region in ("ca-gta", "ca-metro-vancouver")
-            }
+            before_pointer = (state / ACTIVE_GENERATION_POINTER_NAME).read_bytes()
             before_report = (state / "coverage-report.json").read_bytes()
 
             updated_args = self.run_args()
@@ -219,24 +211,14 @@ class OfflineCatalogRefreshTest(unittest.TestCase):
                     "evaluated_at": "2026-09-03T13:00:00Z",
                 }
             )
-            real_promote = refresh_module.promote_snapshot
-            calls = 0
-
-            def promote_with_failure(*args, **kwargs):
-                nonlocal calls
-                calls += 1
-                if calls == 2:
-                    raise SnapshotPromotionError("simulated later-region failure")
-                return real_promote(*args, **kwargs)
-
             with patch.object(
                 refresh_module,
-                "promote_snapshot",
-                side_effect=promote_with_failure,
+                "promote_release",
+                side_effect=CatalogReleasePromotionError("simulated release promotion failure"),
             ):
                 with self.assertRaisesRegex(
                     OfflineCatalogRefreshError,
-                    "Snapshot promotion failed for ca-metro-vancouver",
+                    "Catalog release promotion failed: simulated release promotion failure",
                 ):
                     refresh_snapshots(
                         source,
@@ -249,13 +231,10 @@ class OfflineCatalogRefreshTest(unittest.TestCase):
                         promote=True,
                     )
 
-            self.assertEqual(2, calls)
-            for region, pointers in before_pointers.items():
-                for name, content in pointers.items():
-                    self.assertEqual(content, (state / region / name).read_bytes())
+            self.assertEqual(before_pointer, (state / ACTIVE_GENERATION_POINTER_NAME).read_bytes())
             self.assertEqual(before_report, (state / "coverage-report.json").read_bytes())
 
-    def test_rolls_back_region_pointers_if_coverage_report_write_fails(self):
+    def test_keeps_new_active_generation_if_compatibility_report_write_fails(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             source = root / "products.jsonl"
@@ -274,13 +253,7 @@ class OfflineCatalogRefreshTest(unittest.TestCase):
                 max_records=1_500,
                 promote=True,
             )
-            before_pointers = {
-                region: {
-                    name: (state / region / name).read_bytes()
-                    for name in ("current.json", "last-known-good.json")
-                }
-                for region in ("ca-gta", "ca-metro-vancouver")
-            }
+            before_pointer = (state / ACTIVE_GENERATION_POINTER_NAME).read_bytes()
             before_report = (state / "coverage-report.json").read_bytes()
             updated_args = self.run_args()
             updated_args.update(
@@ -308,10 +281,13 @@ class OfflineCatalogRefreshTest(unittest.TestCase):
                         promote=True,
                     )
 
-            for region, pointers in before_pointers.items():
-                for name, content in pointers.items():
-                    self.assertEqual(content, (state / region / name).read_bytes())
+            after_pointer = (state / ACTIVE_GENERATION_POINTER_NAME).read_bytes()
+            self.assertNotEqual(before_pointer, after_pointer)
             self.assertEqual(before_report, (state / "coverage-report.json").read_bytes())
+            before_active = json.loads(before_pointer)["activeGeneration"]
+            after_active = json.loads(after_pointer)["activeGeneration"]
+            self.assertGreater(after_active["generatedAtEpochMillis"], before_active["generatedAtEpochMillis"])
+            self.assertEqual(after_active["generationId"], read_active_release(state, public_key)["generationId"])
 
     @staticmethod
     def run_args() -> dict[str, object]:

@@ -68,7 +68,7 @@ class OfflineCatalogSnapshotPromotionTest(unittest.TestCase):
             }
 
             undersized = self.make_snapshot(state, record_count=1_499, snapshot_name="under", private_key=private_key)
-            with self.assertRaisesRegex(SnapshotPromotionError, "between 1500 and 5000"):
+            with self.assertRaisesRegex(SnapshotPromotionError, "between 1500 and 30000"):
                 promote_snapshot(undersized, state, public_key, evaluated_at_epoch_millis=NOW, maximum_snapshot_age_millis=MAX_AGE)
 
             self.assertEqual(before["current.json"], (state / "current.json").read_bytes())

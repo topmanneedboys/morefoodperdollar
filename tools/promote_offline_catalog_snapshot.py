@@ -29,7 +29,7 @@ from tools.verify_offline_catalog_snapshot import SnapshotBuildError, verify_sna
 
 
 MIN_CATALOG_RECORDS = 1_500
-MAX_CATALOG_RECORDS = 5_000
+MAX_CATALOG_RECORDS = 30_000
 SUPPORTED_METRO_REGIONS = frozenset({"ca-gta", "ca-metro-vancouver"})
 CURRENT_POINTER_NAME = "current.json"
 LAST_KNOWN_GOOD_POINTER_NAME = "last-known-good.json"

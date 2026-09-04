@@ -11,10 +11,11 @@ Vancouver identity snapshots.
 No network request, price, package quantity, availability, store claim or
 hidden wall clock is introduced here.  Without ``--promote`` the run only
 creates verified candidates in a new empty output directory.  With
-``--promote`` that output directory is also the per-region promotion state
-root, and each region's pointers are changed only after every requested
-candidate has been built and signature-verified.  If any region promotion
-fails, all pointer files are restored byte-for-byte to their pre-run state.
+   ``--promote`` that output directory is also the release state root.  A
+   complete immutable generation record is written before one root-level
+   ``active-generation.json`` pointer is atomically replaced.  If promotion
+   fails, the existing active generation remains authoritative; orphaned
+   generation records are ignored.
 """
 
 from __future__ import annotations
@@ -40,8 +41,10 @@ from tools.promote_offline_catalog_snapshot import (
     MAX_CATALOG_RECORDS,
     MIN_CATALOG_RECORDS,
     SUPPORTED_METRO_REGIONS,
-    SnapshotPromotionError,
-    promote_snapshot,
+)
+from tools.promote_offline_catalog_release import (
+    CatalogReleasePromotionError,
+    promote_release,
 )
 from tools.import_open_food_facts_catalog import import_catalog
 from tools.select_open_food_facts_launch_catalog import select_catalog
@@ -49,7 +52,7 @@ from tools.verify_offline_catalog_snapshot import verify_snapshot
 
 
 DEFAULT_REGIONS = tuple(sorted(SUPPORTED_METRO_REGIONS))
-DEFAULT_MAX_RECORDS = 5_000
+DEFAULT_MAX_RECORDS = 30_000
 COVERAGE_REPORT_NAME = "coverage-report.json"
 
 
@@ -152,52 +155,6 @@ def _write_json_atomically(path: Path, payload: Mapping[str, Any]) -> None:
     finally:
         if temporary is not None and temporary.exists():
             temporary.unlink()
-
-
-def _write_bytes_atomically(path: Path, payload: bytes) -> None:
-    """Restore an exact pointer byte sequence without exposing a partial file."""
-
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary: Path | None = None
-    try:
-        with tempfile.NamedTemporaryFile(
-            mode="wb",
-            dir=path.parent,
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as handle:
-            temporary = Path(handle.name)
-            handle.write(payload)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, path)
-    finally:
-        if temporary is not None and temporary.exists():
-            temporary.unlink()
-
-
-def _capture_pointer_state(output_root: Path, region_ids: Sequence[str]) -> dict[Path, bytes | None]:
-    """Capture only the exact per-region pointers that promotion may mutate."""
-
-    state: dict[Path, bytes | None] = {}
-    for region_id in region_ids:
-        region_root = output_root / region_id
-        for pointer_name in ("current.json", "last-known-good.json"):
-            pointer_path = region_root / pointer_name
-            state[pointer_path] = pointer_path.read_bytes() if pointer_path.exists() else None
-    return state
-
-
-def _restore_pointer_state(state: Mapping[Path, bytes | None]) -> None:
-    """Restore a captured pointer set, including removing newly-created files."""
-
-    for pointer_path, payload in state.items():
-        if payload is None:
-            if pointer_path.exists():
-                pointer_path.unlink()
-        else:
-            _write_bytes_atomically(pointer_path, payload)
 
 
 def _coverage_report(
@@ -491,55 +448,39 @@ def refresh_snapshots(
                     f"Unable to stage verified candidate for {item['regionId']}: {exc}"
                 ) from exc
 
-        pointer_state: dict[Path, bytes | None] | None = None
-        try:
-            if promote:
-                pointer_state = _capture_pointer_state(
+        coverage_report = _coverage_report(
+            generated_epoch=generated_epoch,
+            evaluated_epoch=evaluated_epoch,
+            source_snapshot_id=source_snapshot_id,
+            selected_count=selected_count,
+            minimum_catalog_records=minimum_catalog_records,
+            maximum_catalog_records=maximum_catalog_records,
+            selection_coverage=selection_coverage,
+            regions=verified,
+            promoted=promote,
+        )
+        if promote:
+            try:
+                promotion = promote_release(
+                    verified,
                     output_root,
-                    [str(item["regionId"]) for item in verified],
-                )
-                for item in verified:
-                    region_id = item["regionId"]
-                    try:
-                        promotion = promote_snapshot(
-                            output_root / region_id / "candidates" / item["snapshotId"],
-                            output_root / region_id,
-                            public_key,
-                            evaluated_at_epoch_millis=evaluated_epoch,
-                            maximum_snapshot_age_millis=maximum_snapshot_age_millis,
-                            expected_region_id=region_id,
-                            minimum_catalog_records=minimum_catalog_records,
-                            maximum_catalog_records=maximum_catalog_records,
-                        )
-                    except (SnapshotPromotionError, SnapshotBuildError, OSError) as exc:
-                        raise OfflineCatalogRefreshError(
-                            f"Snapshot promotion failed for {region_id}: {exc}"
-                        ) from exc
-                    item["promotion"] = promotion
-            _write_json_atomically(
-                output_root / COVERAGE_REPORT_NAME,
-                _coverage_report(
-                    generated_epoch=generated_epoch,
-                    evaluated_epoch=evaluated_epoch,
-                    source_snapshot_id=source_snapshot_id,
-                    selected_count=selected_count,
+                    public_key,
+                    generated_at_epoch_millis=generated_epoch,
+                    evaluated_at_epoch_millis=evaluated_epoch,
+                    maximum_snapshot_age_millis=maximum_snapshot_age_millis,
                     minimum_catalog_records=minimum_catalog_records,
                     maximum_catalog_records=maximum_catalog_records,
-                    selection_coverage=selection_coverage,
-                    regions=verified,
-                    promoted=promote,
-                ),
-            )
-        except Exception as exc:
-            if pointer_state is None:
-                raise
-            try:
-                _restore_pointer_state(pointer_state)
-            except OSError as rollback_exc:
-                raise OfflineCatalogRefreshError(
-                    f"Snapshot promotion failed and pointer rollback failed: {rollback_exc}"
-                ) from exc
-            raise
+                    coverage_report=coverage_report,
+                )
+            except (CatalogReleasePromotionError, OSError) as exc:
+                raise OfflineCatalogRefreshError(f"Catalog release promotion failed: {exc}") from exc
+            for item in verified:
+                item["promotion"] = promotion
+
+        # This root-level report is a compatibility/diagnostic cache.  The
+        # generation file written before the active pointer is authoritative,
+        # so a failure here cannot expose a partial or mixed release.
+        _write_json_atomically(output_root / COVERAGE_REPORT_NAME, coverage_report)
 
     return {
         "generatedAtEpochMillis": generated_epoch,
@@ -576,7 +517,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--promote",
         action="store_true",
-        help="After all regions verify, update each region's current and last-known-good pointers",
+        help="After all regions verify, publish one immutable generation through the root active pointer",
     )
     args = parser.parse_args(argv)
     try:

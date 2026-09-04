@@ -10,7 +10,8 @@ the authorities for each decision.
 The pipeline performs these bounded steps:
 
 1. Selects only Canada-labelled Open Food Facts identities, with deterministic
-   ordering and a caller-selected maximum (3,000 by default).
+   ordering and a caller-selected maximum (30,000 by default at the current
+   launch gate).
 2. Imports only identity/display fields into the `off-ca` source namespace.
    Price, promotion, package quantity, stock, availability, store and
    freshness fields are rejected or omitted.
@@ -18,9 +19,11 @@ The pipeline performs these bounded steps:
    `ca-metro-vancouver` from the same explicitly supplied source snapshot.
 4. Verifies every candidate's canonical JSON, source hash, rights gates,
    signature, identity-only role, and coverage before any pointer changes.
-5. With `--promote`, updates each region's `current.json` and
-   `last-known-good.json` only after all requested candidates pass preflight.
-   A rejected candidate never replaces the existing pointers.
+5. With `--promote`, writes one immutable release record under `generations/`
+   and atomically replaces the root `active-generation.json` pointer only after
+   every requested candidate passes preflight. The pointer embeds the prior
+   complete release as `lastKnownGoodGeneration`; an interrupted run can leave
+   an orphaned generation record, but it cannot expose a mixed regional release.
 
 Example (all dates are explicit and must describe the supplied export):
 
@@ -42,11 +45,14 @@ python tools/refresh_offline_catalog_snapshots.py `
 
 `--promote` is optional. Without it, the output root must be new or empty and
 contains only verified candidates. With it, the output root is the promotion
-state root and may already contain per-region pointers/candidates. Existing
-candidate directories are never overwritten. The private signing key is read
-only for detached RSA signing and must remain outside the repository.
+state root and may already contain regional candidate directories and an
+`active-generation.json` pointer. Existing candidate directories and release
+records are never overwritten. The private signing key is read only for
+detached RSA signing and must remain outside the repository. The older
+single-region promotion helper remains available for compatibility, but the
+multi-region refresh authority is the generation pointer.
 
-The `catalogRecordCount` band (1,500–5,000 by default) measures identity
+The `catalogRecordCount` band (1,500–30,000 by default) measures identity
 coverage only. `currentOfferRecordCount` remains zero and
 `currentOfferCoverage` remains `NOT_INCLUDED`; the catalog therefore does not
 claim a current price, local stock, store availability, package quantity or
@@ -59,5 +65,6 @@ the output root. It is a diagnostic summary for the weekly operator: the
 bounds, while `currentOffers` reports `0` with `NOT_INCLUDED`. Per-region
 manifest hashes and the same two measurements are included for audit. The
 report is not a signed authority and must never replace verification of the
-regional manifest or promotion pointers; a rejected/regressed refresh leaves
-the previous report and last-known-good pointers unchanged.
+regional manifest or the active generation. It is a compatibility cache; the
+generation record remains complete even if writing that cache fails. A
+rejected/regressed refresh leaves the active generation unchanged.

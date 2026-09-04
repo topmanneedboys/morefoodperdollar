@@ -26,7 +26,7 @@ class BundledOfflineCatalogAssetTest(unittest.TestCase):
                     require_signature=True,
                     source_root=self.assets / "sources",
                 )
-                self.assertEqual(5_000, result["records"])
+                self.assertEqual(30_000, result["records"])
                 self.assertEqual("VERIFIED", result["signatureState"])
                 manifest = json.loads((snapshot / "manifest.json").read_text(encoding="utf-8"))
                 self.assertEqual("IDENTITY_ONLY", manifest["catalogRole"])
@@ -50,7 +50,7 @@ class BundledOfflineCatalogAssetTest(unittest.TestCase):
             "currency",
         }
         rows = [json.loads(line) for line in source.read_text(encoding="utf-8").splitlines()]
-        self.assertEqual(5_000, len(rows))
+        self.assertEqual(30_000, len(rows))
         for row in rows:
             self.assertTrue(forbidden.isdisjoint(row))
             self.assertEqual("open-food-facts", row["providerId"])

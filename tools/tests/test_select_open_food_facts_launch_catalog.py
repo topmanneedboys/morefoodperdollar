@@ -172,6 +172,12 @@ class OpenFoodFactsLaunchSelectionTest(unittest.TestCase):
         self.assertEqual(1, _household_hint({"product_name_en": "Kitchen sponge"}))
         self.assertEqual(1, _household_hint({"product_name_en": "Fabric conditioner"}))
 
+    def test_taxonomy_tags_supply_household_selection_hint(self):
+        self.assertEqual(
+            1,
+            _household_hint({"categories_tags": "en:household-products,en:cleaning"}),
+        )
+
     @staticmethod
     def gtin(index: int) -> str:
         body = f"036000{index:05d}"
@@ -189,7 +195,7 @@ class OpenFoodFactsLaunchSelectionTest(unittest.TestCase):
                 source,
                 [{"code": "036000291452", "product_name": "Milk", "countries_en": "Canada"}],
             )
-            with self.assertRaisesRegex(OpenFoodFactsLaunchSelectionError, "between 1 and 5000"):
+            with self.assertRaisesRegex(OpenFoodFactsLaunchSelectionError, "between 1 and 30000"):
                 select_catalog(source, root / "out.jsonl", root / "report.json", max_records=0)
             output = root / "out.jsonl"
             output.write_text("existing\n", encoding="utf-8")

@@ -34,8 +34,8 @@ from tools.build_offline_catalog_snapshot import _canonical_json
 from tools.open_facts_barcode import canonical_open_facts_gtin
 
 
-DEFAULT_MAX_RECORDS = 5_000
-MAX_RECORDS = 5_000
+DEFAULT_MAX_RECORDS = 30_000
+MAX_RECORDS = 30_000
 MAX_FIELD_SIZE = 16 * 1024 * 1024
 
 # These are deliberately broad category hints.  They rank likely grocery
@@ -157,7 +157,8 @@ HOUSEHOLD_NAME_HINTS = frozenset(
 COUNTRY_CANADA = "en:canada"
 _WHITESPACE = re.compile(r"\s+")
 MIN_IDENTITY_NAME_VARIETY = 1_500
-MAX_IDENTITY_NAME_VARIETY = 5_000
+MAX_IDENTITY_NAME_VARIETY = 30_000
+MIN_IDENTITY_NAME_VARIETY_PERCENT = 50
 HOUSEHOLD_RESERVE_PERCENT = 10
 
 
@@ -199,8 +200,20 @@ def _has_search_tokens(value: str) -> bool:
 
 
 def _category_tokens(row: dict[str, Any]) -> set[str]:
-    value = _clean(row.get("categories_en")) or _clean(row.get("main_category_en"))
-    return {token for token in re.findall(r"[a-z0-9]+(?:-[a-z0-9]+)?", value.casefold())}
+    # The full OFF export carries both translated labels and source taxonomy
+    # tags.  Use both for deterministic selection hints; these tags remain
+    # selection metadata and are never emitted as consumer category authority.
+    values = (
+        _clean(row.get("categories_en")),
+        _clean(row.get("categories_tags")),
+        _clean(row.get("main_category_en")),
+        _clean(row.get("main_category")),
+    )
+    return {
+        token
+        for value in values
+        for token in re.findall(r"[a-z0-9]+(?:-[a-z0-9]+)*", value.casefold())
+    }
 
 
 def _scan_count(row: dict[str, Any]) -> int:
@@ -266,6 +279,22 @@ def _canonical_identity_name(value: str) -> str:
         .lower()
     )
     return " ".join(re.findall(r"[a-z0-9]+", ascii_value))
+
+
+def _identity_name_variety_target(max_records: int) -> tuple[int, int]:
+    """Return a size-aware variety gate for a bounded launch catalog.
+
+    Small deterministic fixtures remain useful in tests, while a 30,000-row
+    release must not be satisfied by a handful of repeated display names.
+    The lower bound is therefore at least 50% of the requested records and
+    never below the original 1,500-name launch floor.
+    """
+
+    minimum = max(
+        MIN_IDENTITY_NAME_VARIETY,
+        (max_records * MIN_IDENTITY_NAME_VARIETY_PERCENT + 99) // 100,
+    )
+    return min(minimum, max_records), min(max_records, MAX_IDENTITY_NAME_VARIETY)
 
 
 def _raw_record(row: dict[str, Any], *, code: str, name: str) -> dict[str, Any]:
@@ -338,6 +367,7 @@ def select_catalog(
     _require(output_path != report_path, "Catalog and report outputs must differ")
     _require(not output_path.exists(), f"Refusing to overwrite output: {output_path}")
     _require(not report_path.exists(), f"Refusing to overwrite report: {report_path}")
+    minimum_identity_name_variety, maximum_identity_name_variety = _identity_name_variety_target(max_records)
 
     stats: Counter[str] = Counter()
     candidates: list[tuple[tuple[Any, ...], str, dict[str, Any], int, int, str]] = []
@@ -452,12 +482,12 @@ def select_catalog(
             "uniqueCanonicalIdentityNames": unique_identity_names,
             "identityNameVarietyStatus": (
                 "WITHIN_TARGET"
-                if MIN_IDENTITY_NAME_VARIETY <= unique_identity_names <= MAX_IDENTITY_NAME_VARIETY
+                if minimum_identity_name_variety <= unique_identity_names <= maximum_identity_name_variety
                 else "OUTSIDE_TARGET"
             ),
             "identityNameVarietyTarget": {
-                "minimum": MIN_IDENTITY_NAME_VARIETY,
-                "maximum": MAX_IDENTITY_NAME_VARIETY,
+                "minimum": minimum_identity_name_variety,
+                "maximum": maximum_identity_name_variety,
             },
             "note": (
                 "Canonical identity-name variety and category hints are bounded selection measurements, "
