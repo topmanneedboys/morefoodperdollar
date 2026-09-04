@@ -109,11 +109,30 @@ class PracticalShoppingHomePersonalHistoryTest {
 
         assertEquals(
             "Personal history: 2 observations for this name and package. " +
-                "Last recorded 5.79 CAD (5 CAD/L). " +
+                "Last recorded 5.79 CAD (5 CAD/L) on 1970-01-01 00:00 UTC. " +
                 "Remembered range 5 CAD/L–6 CAD/L. " +
                 "Product identity, brand, promotion and store may differ; not live store pricing.",
             notice
         )
+    }
+
+    @Test
+    fun `missing observation date stays explicit in exact package context`() {
+        val quantity = NormalizedQuantity(4_000_000_000L, BaseUnit.MILLILITRE)
+        val notice =
+            requireNotNull(
+                PracticalShoppingHomePersonalHistory.noticeFor(
+                    itemDisplayName = "Milk",
+                    memory =
+                        CompareHerePrivatePriceMemoryState(
+                            listOf(entry("Milk", 649L, 6L, observedAt = 0L, quantity = quantity))
+                        ),
+                    itemQuantity = quantity
+                )
+            )
+
+        assertTrue(notice.contains("on date not recorded."))
+        assertTrue(notice.contains("not live store pricing"))
     }
 
     @Test
@@ -175,7 +194,7 @@ class PracticalShoppingHomePersonalHistoryTest {
         assertEquals(1, rendered.items.size)
         assertTrue(
             requireNotNull(rendered.items.single().personalHistoryNotice)
-                .contains("Last recorded 6.49 CAD (6 CAD/L)")
+                .contains("Last recorded 6.49 CAD (6 CAD/L) on 1970-01-01 00:00 UTC")
         )
     }
 

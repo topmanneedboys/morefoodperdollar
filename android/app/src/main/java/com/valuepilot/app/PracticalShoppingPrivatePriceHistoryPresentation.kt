@@ -8,6 +8,20 @@ import java.util.TimeZone
 private const val MAX_PRIVATE_HISTORY_ROWS = 32
 
 /**
+ * Stable, timezone-explicit formatting for private observation dates.
+ *
+ * Both the review dialog and Home's compact context use this formatter so a
+ * remembered price never loses the date semantics that make it clearly
+ * historical rather than a current retailer offer.
+ */
+internal fun formatPrivateObservationDate(epochMillis: Long): String {
+    if (epochMillis <= 0L) return "date not recorded"
+    return SimpleDateFormat("yyyy-MM-dd HH:mm 'UTC'", Locale.ROOT).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }.format(Date(epochMillis))
+}
+
+/**
  * One exact package history projected for a consumer-facing read-only summary.
  *
  * Rows are grouped only when the existing private-memory equivalence rule agrees on name,
@@ -188,7 +202,7 @@ internal data class PracticalShoppingPrivatePriceHistoryPresentation(
                     "${formatCompareHereRate(lowest.rate)}–${formatCompareHereRate(highest.rate)}",
                 packageText = formatCompareHereQuantity(latest.quantity),
                 priceBasisText = priceBasisLabel(latest.priceSelection),
-                latestObservedText = observedAtLabel(latest.observedAtEpochMillis),
+                latestObservedText = formatPrivateObservationDate(latest.observedAtEpochMillis),
                 sourceText = sources,
                 promotionText = latest.promotionLabel?.let { "Promotion: $it" }
             )
@@ -217,11 +231,5 @@ internal data class PracticalShoppingPrivatePriceHistoryPresentation(
                 com.valuepilot.core.CompareHerePriceSelection.MEMBER -> "Member price"
             }
 
-        private fun observedAtLabel(epochMillis: Long): String {
-            if (epochMillis <= 0L) return "date not recorded"
-            return SimpleDateFormat("yyyy-MM-dd HH:mm 'UTC'", Locale.ROOT).apply {
-                timeZone = TimeZone.getTimeZone("UTC")
-            }.format(Date(epochMillis))
-        }
     }
 }

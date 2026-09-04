@@ -113,7 +113,8 @@ internal object PracticalShoppingHomePersonalHistory {
         val noun = if (comparable.size == 1) "observation" else "observations"
         return "Personal history: ${comparable.size} $noun for this name and package. " +
             "Last recorded ${formatCompareHereMoney(latest.price)} " +
-            "(${formatCompareHereRate(latest.rate)}). " +
+            "(${formatCompareHereRate(latest.rate)}) on " +
+            "${formatPrivateObservationDate(latest.observedAtEpochMillis)}. " +
             "Remembered range ${formatCompareHereRate(lowest.rate)}–" +
             "${formatCompareHereRate(highest.rate)}. " +
             "Product identity, brand, promotion and store may differ; not live store pricing."
