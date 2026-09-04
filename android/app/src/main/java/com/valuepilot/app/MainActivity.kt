@@ -629,7 +629,7 @@ class MainActivity : AppCompatActivity() {
                     resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
                 }
                 .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(R.string.home_offline_catalog_use_match, null)
+                .setPositiveButton(R.string.home_offline_catalog_replace_list_word, null)
 
         resultDialog = builder.create()
         offlineCatalogDialog = resultDialog
@@ -637,7 +637,11 @@ class MainActivity : AppCompatActivity() {
             if (offlineCatalogDialog === resultDialog) offlineCatalogDialog = null
         }
         resultDialog.setOnShowListener {
-            resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+            resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).apply {
+                isEnabled = false
+                contentDescription =
+                    getString(R.string.home_offline_catalog_replace_list_word_description)
+            }
             resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val match = presentation.matches.getOrNull(selectedIndex) ?: return@setOnClickListener
                 val editedQuery =

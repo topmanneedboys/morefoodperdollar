@@ -71,7 +71,9 @@ class MainActivityHomeLifecycleBoundaryTest {
             "getString(R.string.home_unknown_find_matches_title, token)",
             "setSingleChoiceItems(labels, -1)",
             "PracticalShoppingHomeOfflineCatalogSelection.replaceUnknownToken(",
-            "home_offline_catalog_use_match",
+            "setPositiveButton(R.string.home_offline_catalog_replace_list_word, null)",
+            "home_offline_catalog_replace_list_word",
+            "home_offline_catalog_replace_list_word_description",
             "home_offline_catalog_match_apply_failed",
             "resultDialog.setMessage(getString(R.string.home_offline_catalog_match_apply_failed))",
             "resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false",
@@ -82,6 +84,10 @@ class MainActivityHomeLifecycleBoundaryTest {
         ).forEach { required ->
             assertTrue("Expected safe offline catalog Home lookup boundary: $required", source.contains(required))
         }
+        assertTrue(
+            "The catalog action must not use an ambiguous exact-product-sounding label",
+            !source.contains("home_offline_catalog_use_match")
+        )
 
         assertTrue(
             "Home should expose every supported metro snapshot through one bounded lookup",
