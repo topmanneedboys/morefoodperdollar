@@ -1,6 +1,8 @@
 package com.valuepilot.app
 
+import com.valuepilot.core.BaseUnit
 import com.valuepilot.core.Money
+import com.valuepilot.core.NormalizedQuantity
 import com.valuepilot.core.PracticalShoppingPlanner
 import com.valuepilot.core.PracticalShoppingPolicy
 import com.valuepilot.core.ShoppingItemKey
@@ -30,6 +32,7 @@ object LocalSamplePracticalShoppingDemo {
         val key: ShoppingItemKey,
         val displayName: String,
         val detail: String,
+        val quantity: NormalizedQuantity,
         val aliases: List<List<String>>
     )
 
@@ -88,12 +91,15 @@ object LocalSamplePracticalShoppingDemo {
     data class ResolvedItemUiState(
         val key: ShoppingItemKey,
         val name: String,
-        val detail: String
+        val detail: String,
+        /** Optional fixture quantity used only for conservative private-history display context. */
+        val quantity: NormalizedQuantity? = null
     ) {
         init {
             require(key.value.isNotBlank())
             require(name.isNotBlank())
             require(detail.isNotBlank())
+            quantity?.let { require(it.amountMicros > 0L) }
         }
     }
 
@@ -142,6 +148,7 @@ object LocalSamplePracticalShoppingDemo {
             key = ShoppingItemKey("sample-eggs-large-12"),
             displayName = "Eggs",
             detail = "12 large · sample default",
+            quantity = NormalizedQuantity(12_000_000L, BaseUnit.COUNT),
             aliases = listOf(listOf("egg"), listOf("eggs"))
         )
 
@@ -150,6 +157,7 @@ object LocalSamplePracticalShoppingDemo {
             key = ShoppingItemKey("sample-milk-2pct-4l"),
             displayName = "Milk",
             detail = "2% · 4 L · sample default",
+            quantity = NormalizedQuantity(4_000_000_000L, BaseUnit.MILLILITRE),
             aliases = listOf(listOf("milk"))
         )
 
@@ -158,6 +166,7 @@ object LocalSamplePracticalShoppingDemo {
             key = ShoppingItemKey("sample-bananas-1kg"),
             displayName = "Bananas",
             detail = "Approx. 1 kg · sample target",
+            quantity = NormalizedQuantity(1_000_000_000L, BaseUnit.GRAM),
             aliases = listOf(listOf("banana"), listOf("bananas"))
         )
 
@@ -166,6 +175,7 @@ object LocalSamplePracticalShoppingDemo {
             key = ShoppingItemKey("sample-bread-675g"),
             displayName = "Bread",
             detail = "675 g loaf · sample default",
+            quantity = NormalizedQuantity(675_000_000L, BaseUnit.GRAM),
             aliases = listOf(listOf("bread"))
         )
 
@@ -174,6 +184,7 @@ object LocalSamplePracticalShoppingDemo {
             key = ShoppingItemKey("sample-basmati-rice-2kg"),
             displayName = "Basmati rice",
             detail = "2 kg · sample default",
+            quantity = NormalizedQuantity(2_000_000_000L, BaseUnit.GRAM),
             aliases = listOf(listOf("rice"), listOf("basmati", "rice"))
         )
 
@@ -182,6 +193,7 @@ object LocalSamplePracticalShoppingDemo {
             key = ShoppingItemKey("sample-ground-coffee-340g"),
             displayName = "Coffee",
             detail = "340 g ground coffee · fictional sample target",
+            quantity = NormalizedQuantity(340_000_000L, BaseUnit.GRAM),
             aliases = listOf(listOf("coffee"))
         )
 
@@ -475,7 +487,8 @@ object LocalSamplePracticalShoppingDemo {
             ResolvedItemUiState(
                 key = it.key,
                 name = it.displayName,
-                detail = it.detail
+                detail = it.detail,
+                quantity = it.quantity
             )
         }
 
@@ -750,6 +763,7 @@ object LocalSamplePracticalShoppingDemo {
             key = ShoppingItemKey("sample-chicken-$suffix-1kg"),
             displayName = displayName,
             detail = "Approx. 1 kg · fictional sample target",
+            quantity = NormalizedQuantity(1_000_000_000L, BaseUnit.GRAM),
             aliases = aliases
         )
 }

@@ -231,7 +231,8 @@ object PracticalShoppingHomeRenderer {
                             usablePrivateMemory?.let { memory ->
                                 PracticalShoppingHomePersonalHistory.noticeFor(
                                     itemDisplayName = item.name,
-                                    memory = memory
+                                    memory = memory,
+                                    itemQuantity = item.quantity
                                 )
                             },
                         // A missing price is an actionable evidence gap. The action only opens

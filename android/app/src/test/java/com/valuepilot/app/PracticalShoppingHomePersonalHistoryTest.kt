@@ -88,6 +88,98 @@ class PracticalShoppingHomePersonalHistoryTest {
     }
 
     @Test
+    fun `matching package exposes deterministic last price and remembered range`() {
+        val quantity = NormalizedQuantity(4_000_000_000L, BaseUnit.MILLILITRE)
+        val memory =
+            CompareHerePrivatePriceMemoryState(
+                listOf(
+                    entry("Milk", 649L, 6L, observedAt = 10L, quantity = quantity),
+                    entry("  milk  ", 579L, 5L, observedAt = 20L, quantity = quantity)
+                )
+            )
+
+        val notice =
+            requireNotNull(
+                PracticalShoppingHomePersonalHistory.noticeFor(
+                    itemDisplayName = " MILK ",
+                    memory = memory,
+                    itemQuantity = quantity
+                )
+            )
+
+        assertEquals(
+            "Personal history: 2 observations for this name and package. " +
+                "Last recorded 5.79 CAD (5 CAD/L). " +
+                "Remembered range 5 CAD/L–6 CAD/L. " +
+                "Product identity, brand, promotion and store may differ; not live store pricing.",
+            notice
+        )
+    }
+
+    @Test
+    fun `mixed promotion shape falls back to cautious name-only notice`() {
+        val quantity = NormalizedQuantity(4_000_000_000L, BaseUnit.MILLILITRE)
+        val memory =
+            CompareHerePrivatePriceMemoryState(
+                listOf(
+                    entry("Milk", 649L, 6L, observedAt = 10L, quantity = quantity),
+                    entry(
+                        "Milk",
+                        579L,
+                        5L,
+                        observedAt = 20L,
+                        quantity = quantity,
+                        promotionLabel = "2 for 1"
+                    )
+                )
+            )
+
+        val notice =
+            requireNotNull(
+                PracticalShoppingHomePersonalHistory.noticeFor(
+                    itemDisplayName = "Milk",
+                    memory = memory,
+                    itemQuantity = quantity
+                )
+            )
+
+        assertEquals(
+            "Private comparison history: 2 observations for this name. " +
+                "Package and promotion details may differ; not live store pricing.",
+            notice
+        )
+        assertTrue(!notice.contains("Last recorded"))
+        assertTrue(!notice.contains("CAD"))
+    }
+
+    @Test
+    fun `home forwards resolved package quantity for private history context`() {
+        val model =
+            PracticalShoppingHomeSession.submit(
+                LocalSamplePracticalShoppingDemo.initialModel(),
+                "milk"
+            )
+        val sourceResult = requireNotNull(model.ui.result)
+        val quantity = NormalizedQuantity(4_000_000_000L, BaseUnit.MILLILITRE)
+        val rendered =
+            PracticalShoppingHomeRenderer.render(
+                source = model.ui,
+                requestDetails = null,
+                privateMemory =
+                    CompareHerePrivatePriceMemoryState(
+                        listOf(entry("Milk", 649L, 6L, quantity = quantity))
+                    )
+            )
+
+        assertSame(sourceResult, rendered.result)
+        assertEquals(1, rendered.items.size)
+        assertTrue(
+            requireNotNull(rendered.items.single().personalHistoryNotice)
+                .contains("Last recorded 6.49 CAD (6 CAD/L)")
+        )
+    }
+
+    @Test
     fun `different labels and empty memory stay undisclosed`() {
         val memory = CompareHerePrivatePriceMemoryState(listOf(entry("Whole milk", 600L, 12L)))
 
@@ -209,7 +301,12 @@ class PracticalShoppingHomePersonalHistoryTest {
         name: String,
         priceMinor: Long,
         rateMicros: Long,
-        observedAt: Long = 1L
+        observedAt: Long = 1L,
+        quantity: NormalizedQuantity = NormalizedQuantity(500_000_000L, BaseUnit.GRAM),
+        priceSelection: CompareHerePriceSelection = CompareHerePriceSelection.CURRENT,
+        promotionLabel: String? = null,
+        promotionReceivedUnits: Long = 1L,
+        promotionPaidUnits: Long = 1L
     ): CompareHerePrivatePriceMemoryEntry =
         CompareHerePrivatePriceMemoryEntry.fromExactCandidate(
             candidate =
@@ -217,19 +314,25 @@ class PracticalShoppingHomePersonalHistoryTest {
                     candidateId = "$name-$observedAt-$priceMinor",
                     comparisonIntentKey = CompareHereComparisonIntentKey("intent:milk"),
                     selectedPrice = Money(priceMinor, "CAD"),
-                    quantity = NormalizedQuantity(500_000_000L, BaseUnit.GRAM),
+                    quantity = quantity,
                     rate =
                         UnitRate(
                             currencyCode = "CAD",
                             currencyMicrosPerUnit = rateMicros * 1_000_000L,
-                            unit = RateUnit.KILOGRAM
+                            unit =
+                                when (quantity.unit) {
+                                    BaseUnit.GRAM -> RateUnit.KILOGRAM
+                                    BaseUnit.MILLILITRE -> RateUnit.LITRE
+                                    BaseUnit.COUNT -> RateUnit.ITEM
+                                    BaseUnit.SQUARE_INCH -> RateUnit.SQUARE_INCH
+                                }
                         )
                 ),
             displayName = name,
-            priceSelection = CompareHerePriceSelection.CURRENT,
-            promotionLabel = null,
-            promotionReceivedUnits = 1L,
-            promotionPaidUnits = 1L,
+            priceSelection = priceSelection,
+            promotionLabel = promotionLabel,
+            promotionReceivedUnits = promotionReceivedUnits,
+            promotionPaidUnits = promotionPaidUnits,
             observedAtEpochMillis = observedAt
         )
 }
