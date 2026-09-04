@@ -8,6 +8,10 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+The promoted milestone is `c05ea098f4f8a6d375817b551befa890b3d250e4` (`Explain stale offline match application failure`), verified by candidate build workflow **33827937894** and milestone provenance workflow **33828361403**. Home’s offline identity-match dialog identifies the exact unresolved word being searched and now explains when a selected identity can no longer be applied because the list changed while the bounded lookup was open; the stale action is disabled so the shopper can review and retry. This presentation/lifecycle correction adds no price, offer, availability, planner/ranking, network, or identity authority. The existing 5,000-per-metro signed identity snapshots, `0` / `NOT_INCLUDED` current-offer coverage, deterministic refresh quality gates, and no-price/no-availability disclosures remain unchanged. Candidate verification passed the full browser, Android, privacy, signer, and release-bundle checks; the unchanged snapshot inputs remain covered by offline-catalog workflows **33826706509** and **33827098104**.
+
+## Previous verified engineering head (superseded)
+
 `ee38c00792aaa2374e470fbd54bee30bfd3beb4e` — `Fail closed catalog quality regressions`
 
 GitHub Actions candidate build workflow **33826706479** and milestone provenance workflow **33827098123** completed successfully for the exact same SHA. The offline-catalog candidate and milestone workflows **33826706509** and **33827098104** also completed successfully for the exact same snapshot inputs.
