@@ -97,6 +97,46 @@ class GoodPriceCheckBoundaryTest {
         assertTrue(strings.contains("name=\"good_price_memory_unavailable\""))
     }
 
+    @Test
+    fun `good price sharing stays explicit generic and offline`() {
+        val activity = source("GoodPriceActivity.kt").readText()
+        val share = source("GoodPriceShareCard.kt").readText()
+        val layout = layout().readText()
+        val strings = strings().readText()
+
+        listOf(
+            "GoodPriceShareCard",
+            "renderShareCard(evaluation.state.shareCard)",
+            "shareGoodPriceResult()",
+            "Intent(Intent.ACTION_SEND)",
+            "good_price_share_preview_body"
+        ).forEach { required -> assertTrue(activity.contains(required)) }
+        listOf(
+            "GoodPriceShareCardProjector",
+            "not live store pricing",
+            "product name",
+            "private history",
+            "Character.isISOControl"
+        ).forEach { required -> assertTrue(share.contains(required)) }
+        listOf(
+            "goodPriceShareButton",
+            "goodPriceShareStatus",
+            "@string/good_price_share_result"
+        ).forEach { required -> assertTrue(layout.contains(required)) }
+        listOf(
+            "name=\"good_price_share_result\"",
+            "name=\"good_price_share_result_description\"",
+            "name=\"good_price_share_unavailable\""
+        ).forEach { required -> assertTrue(strings.contains(required)) }
+        listOf(
+            "HttpURLConnection",
+            "URL(",
+            "INTERNET",
+            "PracticalShoppingPlanner",
+            "RankingEngine"
+        ).forEach { forbidden -> assertFalse(activity.contains(forbidden)) }
+    }
+
     private fun source(name: String): File =
         File(
             requireNotNull(System.getProperty("user.dir")),

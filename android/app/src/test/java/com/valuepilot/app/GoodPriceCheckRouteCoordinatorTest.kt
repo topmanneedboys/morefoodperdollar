@@ -35,6 +35,9 @@ class GoodPriceCheckRouteCoordinatorTest {
         assertEquals(GoodPriceCheckAnswerTone.NEUTRAL, result.answerTone)
         assertNull(result.historyText)
         assertTrue(result.disclosure.contains("Not live store pricing"))
+        val shareCard = requireNotNull(evaluation.state.shareCard)
+        assertTrue(shareCard.text.contains("1.6225 CAD/L"))
+        assertFalse(shareCard.text.contains("Whole Milk"))
 
         val capture = requireNotNull(evaluation.privateMemoryCapture)
         assertEquals(1, capture.entries.size)

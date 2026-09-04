@@ -200,6 +200,12 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="good_price_memory_saved">Remembered %1$s privately on this device. This is personal history, not live store pricing.</string>
     <string name="good_price_memory_error">Price checked, but it could not be remembered. Nothing was sent online.</string>
     <string name="good_price_memory_unavailable">Private history is unavailable, so this answer cannot use it. Clear private history to start fresh; nothing is sent online.</string>
+    <string name="good_price_share_result">Share this price result</string>
+    <string name="good_price_share_result_description">Share a privacy-safe summary of this exact price check without the product name or private history.</string>
+    <string name="good_price_share_preview_title">Review price share card</string>
+    <string name="good_price_share_preview_body">This card shares only the exact entered price, package quantity and unit-rate math. It does not include the product name, private history, receipts, location or account data.</string>
+    <string name="good_price_share_send">Share</string>
+    <string name="good_price_share_unavailable">No sharing app is available. Your price result is unchanged.</string>
     <string name="good_price_barcode_action">Scan a package barcode</string>
     <string name="good_price_barcode_ready">A barcode can suggest the product name offline. You still enter the package quantity and price you personally see.</string>
     <string name="good_price_barcode_processing">Looking up that identity in the bundled offline catalog…</string>

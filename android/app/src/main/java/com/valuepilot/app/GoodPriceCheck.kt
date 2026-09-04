@@ -59,12 +59,16 @@ internal data class GoodPriceCheckRouteState(
     val status: GoodPriceCheckRouteStatus,
     val title: String,
     val guidance: String,
-    val result: GoodPriceCheckUiState? = null
+    val result: GoodPriceCheckUiState? = null,
+    /** Optional generic share card for one exact evaluated result only. */
+    val shareCard: GoodPriceShareCard? = null
 ) {
     init {
         require(title.isNotBlank())
         require(guidance.isNotBlank())
         require((result != null) == (status == GoodPriceCheckRouteStatus.EVALUATED))
+        require(shareCard == null || status == GoodPriceCheckRouteStatus.EVALUATED)
+        require(shareCard == null || result != null)
     }
 }
 
@@ -240,32 +244,35 @@ internal object GoodPriceCheckRouteCoordinator {
                 }
             }
 
+        val result =
+            GoodPriceCheckUiState(
+                headline = "Is this a good price?",
+                priceModeText =
+                    if (priceSelection == CompareHerePriceSelection.MEMBER) {
+                        "Member price"
+                    } else {
+                        "Price you entered"
+                    },
+                productName = displayName,
+                priceText = formatCompareHereMoney(exact.selectedPrice),
+                quantityText = formatCompareHereQuantity(exact.quantity),
+                unitRateText = formatCompareHereRate(exact.rate),
+                answerTitle = answerTitle,
+                answerGuidance = answerGuidance,
+                answerTone = tone,
+                historyText = historyText,
+                disclosure =
+                    "Not live store pricing. Personal history matches exact package quantity, currency, price basis, and promotion terms."
+            )
+
         return GoodPriceCheckRouteEvaluation(
             state =
                 GoodPriceCheckRouteState(
                     status = GoodPriceCheckRouteStatus.EVALUATED,
                     title = "Price checked",
                     guidance = "This answer uses your private history only; it is not a live store claim.",
-                    result =
-                        GoodPriceCheckUiState(
-                            headline = "Is this a good price?",
-                            priceModeText =
-                                if (priceSelection == CompareHerePriceSelection.MEMBER) {
-                                    "Member price"
-                                } else {
-                                    "Price you entered"
-                                },
-                            productName = displayName,
-                            priceText = formatCompareHereMoney(exact.selectedPrice),
-                            quantityText = formatCompareHereQuantity(exact.quantity),
-                            unitRateText = formatCompareHereRate(exact.rate),
-                            answerTitle = answerTitle,
-                            answerGuidance = answerGuidance,
-                            answerTone = tone,
-                            historyText = historyText,
-                            disclosure =
-                                "Not live store pricing. Personal history matches exact package quantity, currency, price basis, and promotion terms."
-                        )
+                    result = result,
+                    shareCard = GoodPriceShareCardProjector.project(result)
                 ),
             privateMemoryCapture = CompareHerePrivatePriceMemoryCapture(listOf(entry))
         )

@@ -1,5 +1,6 @@
 package com.valuepilot.app
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Bundle
 import android.graphics.Color
@@ -32,6 +33,8 @@ class GoodPriceActivity : AppCompatActivity() {
     private lateinit var memoryStore: CompareHerePrivatePriceMemoryStore
     private lateinit var barcodeButton: Button
     private lateinit var barcodeStatus: TextView
+    private lateinit var shareGoodPriceButton: Button
+    private lateinit var shareGoodPriceStatus: TextView
 
     private var priceSelection = CompareHerePriceSelection.CURRENT
     private var privateMemory = CompareHerePrivatePriceMemoryState.empty()
@@ -41,6 +44,7 @@ class GoodPriceActivity : AppCompatActivity() {
     private var barcodeLookupRequestId = 0L
     private var barcodeLookupClosed = false
     private var barcodeDialog: AlertDialog? = null
+    private var shareCard: GoodPriceShareCard? = null
     private val barcodeCaptureLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode != RESULT_OK) return@registerForActivityResult
@@ -67,6 +71,9 @@ class GoodPriceActivity : AppCompatActivity() {
         barcodeButton = findViewById(R.id.goodPriceBarcodeButton)
         barcodeStatus = findViewById(R.id.goodPriceBarcodeStatus)
         barcodeStatus.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        shareGoodPriceButton = findViewById(R.id.goodPriceShareButton)
+        shareGoodPriceStatus = findViewById(R.id.goodPriceShareStatus)
+        shareGoodPriceStatus.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         memoryStore = CompareHerePrivatePriceMemoryAndroidStore(this)
 
         privateMemory = loadPrivateMemory()
@@ -100,6 +107,7 @@ class GoodPriceActivity : AppCompatActivity() {
         }
 
         checkButton.setOnClickListener { runCheck() }
+        shareGoodPriceButton.setOnClickListener { shareGoodPriceResult() }
         findViewById<Button>(R.id.clearGoodPriceButton).setOnClickListener {
             restoring = true
             productInput.setText("")
@@ -185,6 +193,7 @@ class GoodPriceActivity : AppCompatActivity() {
                 privateMemory = privateMemory
             )
         presenter.render(evaluation.state)
+        renderShareCard(evaluation.state.shareCard)
 
         val capture = evaluation.privateMemoryCapture
         if (capture == null) {
@@ -221,6 +230,7 @@ class GoodPriceActivity : AppCompatActivity() {
 
     private fun renderIdle() {
         if (privateMemoryLoadIssue == null) hideMemoryStatus() else showMemoryUnavailable()
+        renderShareCard(null)
         checkButton.isEnabled = productInput.text?.toString()?.isNotBlank() == true
         presenter.render(
             GoodPriceCheckRouteState(
@@ -229,6 +239,64 @@ class GoodPriceActivity : AppCompatActivity() {
                 guidance = "Enter one product, then tap Check this price."
             )
         )
+    }
+
+    /** Shows sharing only for the immutable exact result returned by the Good Price route. */
+    private fun renderShareCard(card: GoodPriceShareCard?) {
+        shareCard = card
+        shareGoodPriceButton.visibility = if (card == null) View.GONE else View.VISIBLE
+        shareGoodPriceButton.isEnabled = card != null
+        shareGoodPriceButton.contentDescription =
+            if (card == null) {
+                ""
+            } else {
+                getString(R.string.good_price_share_result_description)
+            }
+        if (card == null) {
+            shareGoodPriceStatus.text = ""
+            shareGoodPriceStatus.visibility = View.GONE
+        } else {
+            shareGoodPriceStatus.text = ""
+            shareGoodPriceStatus.visibility = View.GONE
+        }
+    }
+
+    private fun shareGoodPriceResult() {
+        val card = shareCard ?: return
+        val preview =
+            card.preview + "\n\n" + getString(R.string.good_price_share_preview_body)
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(R.string.good_price_share_preview_title)
+                .setMessage(preview)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.good_price_share_send, null)
+                .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val sendIntent =
+                    Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_SUBJECT, card.title)
+                        putExtra(Intent.EXTRA_TEXT, card.text)
+                    }
+                try {
+                    startActivity(
+                        Intent.createChooser(
+                            sendIntent,
+                            getString(R.string.good_price_share_result)
+                        )
+                    )
+                    dialog.dismiss()
+                } catch (_: ActivityNotFoundException) {
+                    shareGoodPriceStatus.text =
+                        getString(R.string.good_price_share_unavailable)
+                    shareGoodPriceStatus.visibility = View.VISIBLE
+                    dialog.dismiss()
+                }
+            }
+        }
+        dialog.show()
     }
 
     private fun beginBarcodeCapture() {
