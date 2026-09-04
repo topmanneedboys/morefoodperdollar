@@ -63,6 +63,12 @@
     <string name="compare_ready_title">Ready to compare exact value</string>
     <string name="compare_ready_body">Tap Compare exact value to evaluate the confirmed products.</string>
     <string name="enter_two_products">Enter at least two products to compare</string>
+    <string name="compare_share_result">Share this result</string>
+    <string name="compare_share_result_description">Share a privacy-safe summary of this completed comparison without product names or private history.</string>
+    <string name="compare_share_preview_title">Review share card</string>
+    <string name="compare_share_preview_body">This card shares only the generic comparison result and the exact unit-rate outcome. It does not include product names, private history, receipts, location or account data.</string>
+    <string name="compare_share_send">Share</string>
+    <string name="compare_share_unavailable">No sharing app is available. Your comparison result is unchanged.</string>
     <string name="results">Results</string>
     <string name="best_value_rank">#%1$d  Best value</string>
     <string name="rank_number">#%1$d</string>

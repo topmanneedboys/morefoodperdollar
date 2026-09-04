@@ -73,6 +73,9 @@ class CoreBoundaryTest {
         assertTrue(source.contains("CompareHereManualScreenPresenter"))
         assertTrue(source.contains("CompareHereManualActivitySessionReducer"))
         assertTrue(source.contains("CompareHereManualDraftActionEvaluator.evaluate"))
+        assertTrue(source.contains("CompareHereShareCardProjector"))
+        assertTrue(source.contains("Intent.ACTION_SEND"))
+        assertTrue(source.contains("Intent.EXTRA_TEXT"))
         assertTrue(source.contains("compareButton.isEnabled = actionState.compareEnabled"))
         assertTrue(source.contains("CompareHereManualProductDraft.prepareForEditor"))
         assertTrue(source.contains("InputFilter.LengthFilter"))
@@ -93,6 +96,8 @@ class CoreBoundaryTest {
         assertTrue(layout.contains("photoImportStatus"))
         assertTrue(layout.contains("privateMemoryStatus"))
         assertTrue(layout.contains("clearPrivateMemoryButton"))
+        assertTrue(layout.contains("shareComparisonButton"))
+        assertTrue(layout.contains("shareComparisonStatus"))
 
         assertFalse(source.contains("StandaloneComparisonController"))
         assertFalse(source.contains("StandaloneComparisonIntent"))

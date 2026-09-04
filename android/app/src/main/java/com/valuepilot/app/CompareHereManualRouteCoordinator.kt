@@ -24,7 +24,9 @@ data class CompareHereManualRouteState(
     val title: String,
     val guidance: String,
     val comparisonState: CompareHereUiState? = null,
-    val rejectedProductCount: Int = 0
+    val rejectedProductCount: Int = 0,
+    /** Optional generic share card for a complete, fully labelled comparison only. */
+    val shareCard: CompareHereShareCard? = null
 ) {
     init {
         require(rejectedProductCount >= 0)
@@ -33,6 +35,9 @@ data class CompareHereManualRouteState(
             (rejectedProductCount > 0) ==
                 (status == CompareHereManualRouteStatus.PRODUCTS_REJECTED)
         )
+        require(shareCard == null || status == CompareHereManualRouteStatus.EVALUATED)
+        require(shareCard == null || comparisonState != null)
+        require(shareCard == null || comparisonState?.status == CompareHereUiStatus.READY)
     }
 }
 
@@ -134,7 +139,8 @@ object CompareHereManualRouteCoordinator {
                             status = CompareHereManualRouteStatus.EVALUATED,
                             title = state.statusTitle,
                             guidance = state.guidance,
-                            comparisonState = state
+                            comparisonState = state,
+                            shareCard = CompareHereShareCardProjector.project(state)
                         ),
                     privateMemoryCapture =
                         CompareHerePrivatePriceMemoryAssembler.from(

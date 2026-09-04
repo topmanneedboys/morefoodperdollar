@@ -86,6 +86,10 @@ class CompareHereManualRouteCoordinatorTest {
         assertEquals(listOf(1, 2), comparison.rows.map { it.valueRank })
         assertTrue(comparison.rows.first().bestValue)
         assertFalse(comparison.rows.last().bestValue)
+        val shareCard = requireNotNull(state.shareCard)
+        assertTrue(shareCard.text.contains("Best exact unit price"))
+        assertTrue(shareCard.text.contains("not live store pricing"))
+        assertFalse(shareCard.text.contains("Large Milk"))
         assertEquals(0, state.rejectedProductCount)
         assertTrue(allConsumerStrings(state).none { it.contains("manual-") })
     }
@@ -133,6 +137,7 @@ class CompareHereManualRouteCoordinatorTest {
         assertNull(comparison.rows.single().valueRank)
         assertEquals(listOf("Range Milk"), comparison.blockedRows.map { it.title })
         assertEquals("Package quantity needed", comparison.blockedRows.single().reasonText)
+        assertNull(state.shareCard)
     }
 
     @Test
