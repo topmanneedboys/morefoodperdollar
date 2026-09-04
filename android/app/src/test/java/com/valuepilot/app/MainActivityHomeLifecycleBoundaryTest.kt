@@ -147,10 +147,16 @@ class MainActivityHomeLifecycleBoundaryTest {
         listOf(
             "homePrivateMemoryStore",
             "homePrivateMemoryState = CompareHerePrivatePriceMemoryState.empty()",
+            "homePrivateMemoryLoadIssue",
             "refreshHomePrivateMemory()",
-            "homePrivateMemoryStore.load().state",
+            "val loaded = homePrivateMemoryStore.load()",
+            "val next = loaded.state ?: CompareHerePrivatePriceMemoryState.empty()",
+            "val nextIssue = loaded.issue",
+            "nextIssue == homePrivateMemoryLoadIssue",
             "PracticalShoppingHomeRenderer.render(",
-            "homePrivateMemoryState"
+            "homePrivateMemoryState",
+            "privateMemoryStatus =",
+            "PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE"
         ).forEach { required ->
             assertTrue("Expected Home private-history refresh boundary: $required", source.contains(required))
         }

@@ -24,6 +24,10 @@ class PracticalShoppingHomeRendererTest {
         assertNull(rendered.refinement)
         assertTrue(rendered.unknownItems.isEmpty())
         assertNull(rendered.result)
+        assertEquals(
+            PracticalShoppingHomePrivateMemoryStatus.AVAILABLE,
+            rendered.privateMemoryStatus
+        )
         assertFalse(rendered.extraStopSettings.visible)
         assertEquals("Extra-stop rule · Save at least 15.00 CAD", rendered.extraStopSettings.summary)
         assertEquals(

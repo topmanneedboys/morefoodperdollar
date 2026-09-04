@@ -227,6 +227,10 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val extraStopSettingsBody = column()
     private val extraStopSettingsCard =
         card("#F9FAFB", "#E5E7EB", 8, extraStopSettingsBody)
+    private val privateMemoryNotice = line("", 13f, "#92400E").apply {
+        accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        visibility = GONE
+    }
     private val sampleNotice = line("", 13f, "#374151")
     private val goodPriceActionButton = goodPriceButton()
     private val compareActionButton = compareButton()
@@ -244,6 +248,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         addView(submitButton)
         addView(message)
         addView(sampleCard())
+        addView(privateMemoryNotice)
         addView(itemsHeading)
         addView(itemsContainer)
         addView(refinementCard)
@@ -304,6 +309,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         renderUnknown(state.unknownItems)
         resultContainer.render(state.result, state.sampleNotice)
         renderExtraStopSettings(state.extraStopSettings)
+        renderPrivateMemory(state.privateMemoryStatus)
         sampleNotice.text = state.sampleNotice
         goodPriceOwnerControls.forEach { control ->
             control.isEnabled = onGoodPrice != null && hasRenderedState
@@ -355,6 +361,16 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
             )
         )
         message.visibility = VISIBLE
+    }
+
+    private fun renderPrivateMemory(status: PracticalShoppingHomePrivateMemoryStatus) {
+        if (status == PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE) {
+            privateMemoryNotice.text = context.getString(R.string.home_private_memory_unavailable)
+            privateMemoryNotice.visibility = VISIBLE
+        } else {
+            privateMemoryNotice.text = ""
+            privateMemoryNotice.visibility = GONE
+        }
     }
 
     private fun renderItems(items: List<PracticalShoppingHomeItemRenderState>) {

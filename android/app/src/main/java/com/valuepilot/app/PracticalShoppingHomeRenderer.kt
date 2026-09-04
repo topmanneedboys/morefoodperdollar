@@ -17,6 +17,18 @@ enum class PracticalShoppingHomeMessageTone {
     ERROR
 }
 
+/**
+ * Describes whether Home can safely read the shopper's device-only comparison history.
+ *
+ * This is deliberately not the storage-layer issue enum. Home only needs the smallest
+ * presentation fact and must not expose persistence details or turn a read failure into a
+ * shopping decision.
+ */
+enum class PracticalShoppingHomePrivateMemoryStatus {
+    AVAILABLE,
+    UNAVAILABLE
+}
+
 data class PracticalShoppingHomeItemRenderState(
     val key: ShoppingItemKey,
     val name: String,
@@ -99,7 +111,9 @@ data class PracticalShoppingHomeRenderState(
     val unknownItems: List<String>,
     val result: PracticalShoppingUiState?,
     val extraStopSettings: PracticalShoppingHomeExtraStopSettingsRenderState,
-    val sampleNotice: String
+    val sampleNotice: String,
+    val privateMemoryStatus: PracticalShoppingHomePrivateMemoryStatus =
+        PracticalShoppingHomePrivateMemoryStatus.AVAILABLE
 ) {
     init {
         require(queryCharacterLimit > 0)
@@ -118,8 +132,18 @@ object PracticalShoppingHomeRenderer {
     internal fun render(
         source: LocalSamplePracticalShoppingDemo.UiState,
         requestDetails: ShoppingRequestDetails?,
-        privateMemory: CompareHerePrivatePriceMemoryState? = null
+        privateMemory: CompareHerePrivatePriceMemoryState? = null,
+        privateMemoryStatus: PracticalShoppingHomePrivateMemoryStatus =
+            PracticalShoppingHomePrivateMemoryStatus.AVAILABLE
     ): PracticalShoppingHomeRenderState {
+        // A failed read is not permission to display stale or caller-provided history. Keep the
+        // status visible while suppressing every history-derived row notice until recovery.
+        val usablePrivateMemory =
+            if (privateMemoryStatus == PracticalShoppingHomePrivateMemoryStatus.AVAILABLE) {
+                privateMemory
+            } else {
+                null
+            }
         val storeAssignments =
             source.result
                 ?.itemStoreAssignments
@@ -165,7 +189,7 @@ object PracticalShoppingHomeRenderer {
                                 null
                             },
                         personalHistoryNotice =
-                            privateMemory?.let { memory ->
+                            usablePrivateMemory?.let { memory ->
                                 PracticalShoppingHomePersonalHistory.noticeFor(
                                     itemDisplayName = item.name,
                                     memory = memory
@@ -222,7 +246,8 @@ object PracticalShoppingHomeRenderer {
                                 "Another stop is not evaluated until every requested item has a usable price."
                             }
                 ),
-            sampleNotice = source.sampleNotice
+            sampleNotice = source.sampleNotice,
+            privateMemoryStatus = privateMemoryStatus
         )
     }
 }

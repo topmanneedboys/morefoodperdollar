@@ -113,6 +113,7 @@
     <string name="home_sample_badge">OFFLINE FICTIONAL DEMO</string>
     <string name="home_compare_secondary">Scan &amp; compare prices</string>
     <string name="home_good_price_secondary">Is this a good price?</string>
+    <string name="home_private_memory_unavailable">Private comparison history is unavailable. Open Scan &amp; compare prices to review or clear it; no live prices or recommendations are affected.</string>
 
     <string name="good_price_intro">Enter one product, its package quantity and the price you see. ValuePilot gives personal context when your private history has an exact match.</string>
     <string name="good_price_input_hint">Whole milk&#10;4 L&#10;Current price CA$6.49</string>

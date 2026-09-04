@@ -232,6 +232,15 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
 
         assertTrue(source.contains("item.personalHistoryNotice?.let"))
         listOf(
+            "privateMemoryNotice",
+            "renderPrivateMemory(state.privateMemoryStatus)",
+            "PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE",
+            "R.string.home_private_memory_unavailable",
+            "accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"
+        ).forEach { required ->
+            assertTrue("Expected explicit private-history availability disclosure $required", source.contains(required))
+        }
+        listOf(
             "PracticalShoppingPlanner",
             "Money.parse",
             "CompareHerePrivatePriceMemoryStore"

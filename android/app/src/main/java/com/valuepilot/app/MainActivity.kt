@@ -49,6 +49,7 @@ class MainActivity : AppCompatActivity() {
         CompareHerePrivatePriceMemoryAndroidStore(applicationContext)
     }
     private var homePrivateMemoryState = CompareHerePrivatePriceMemoryState.empty()
+    private var homePrivateMemoryLoadIssue: CompareHerePrivatePriceMemoryStoreIssue? = null
 
     private val searchController = UniversalSearchController()
     private var searchState = searchController.initialState()
@@ -447,7 +448,13 @@ class MainActivity : AppCompatActivity() {
             PracticalShoppingHomeRenderer.render(
                 homeSessionState.model.ui,
                 homeSessionState.requestDetails.details,
-                homePrivateMemoryState
+                homePrivateMemoryState,
+                privateMemoryStatus =
+                    if (homePrivateMemoryLoadIssue == null) {
+                        PracticalShoppingHomePrivateMemoryStatus.AVAILABLE
+                    } else {
+                        PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE
+                    }
             )
         if (
             homeItemDetailsDialog?.isShowing == true &&
@@ -467,16 +474,18 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Refreshes bounded local comparison memory when Home resumes, including after Compare Here
-     * returns. A corrupt/read-failed store is treated as no context; it never becomes planner or
-     * offer authority and never blocks the already-usable Home surface.
+     * returns. A corrupt/read-failed store is treated as no usable context, but the issue is
+     * retained so Home can distinguish unavailable history from an empty history. It never
+     * becomes planner or offer authority and never blocks the already-usable Home surface.
      */
     private fun refreshHomePrivateMemory() {
-        val next =
-            homePrivateMemoryStore.load().state
-                ?: CompareHerePrivatePriceMemoryState.empty()
-        if (next == homePrivateMemoryState) return
+        val loaded = homePrivateMemoryStore.load()
+        val next = loaded.state ?: CompareHerePrivatePriceMemoryState.empty()
+        val nextIssue = loaded.issue
+        if (next == homePrivateMemoryState && nextIssue == homePrivateMemoryLoadIssue) return
 
         homePrivateMemoryState = next
+        homePrivateMemoryLoadIssue = nextIssue
         if (
             ::homeExperience.isInitialized &&
                 shellState.route != AppRoute.COMPARE

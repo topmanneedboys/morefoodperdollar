@@ -78,6 +78,33 @@ class PracticalShoppingHomePersonalHistoryTest {
         )
     }
 
+    @Test
+    fun `unavailable history is disclosed without exposing the unreadable rows`() {
+        val model =
+            PracticalShoppingHomeSession.submit(
+                LocalSamplePracticalShoppingDemo.initialModel(),
+                "eggs milk"
+            )
+        val sourceResult = requireNotNull(model.ui.result)
+        val rendered =
+            PracticalShoppingHomeRenderer.render(
+                source = model.ui,
+                requestDetails = null,
+                privateMemory =
+                    CompareHerePrivatePriceMemoryState(
+                        listOf(entry("Milk", 600L, 12L))
+                    ),
+                privateMemoryStatus = PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE
+            )
+
+        assertSame(sourceResult, rendered.result)
+        assertEquals(
+            PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE,
+            rendered.privateMemoryStatus
+        )
+        assertEquals(listOf(null, null), rendered.items.map { it.personalHistoryNotice })
+    }
+
     private fun entry(
         name: String,
         priceMinor: Long,
