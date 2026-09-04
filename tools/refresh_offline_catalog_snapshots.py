@@ -346,6 +346,14 @@ def refresh_snapshots(
             minimum_catalog_records <= selected_count <= maximum_catalog_records,
             f"Selected catalog coverage must be between {minimum_catalog_records} and {maximum_catalog_records} records",
         )
+        _require(
+            selection_coverage.get("householdReserveSatisfied") is True,
+            "Selection report household reserve requirement is not satisfied",
+        )
+        _require(
+            selection_coverage.get("identityNameVarietyStatus") == "WITHIN_TARGET",
+            "Selection report identity-name variety is outside the launch target",
+        )
         try:
             imported = import_catalog(
                 selected_raw_catalog,

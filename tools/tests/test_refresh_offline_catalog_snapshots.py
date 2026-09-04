@@ -156,6 +156,30 @@ class OfflineCatalogRefreshTest(unittest.TestCase):
                     self.assertEqual(content, (state / region / name).read_bytes())
             self.assertEqual(coverage_report_before, (state / "coverage-report.json").read_bytes())
 
+    def test_rejects_catalog_outside_identity_variety_target_before_building(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "products.jsonl"
+            self.write_export(source, count=1_500, same_name=True)
+            rights = self.write_rights(root / "off-rights.json")
+            private_key, public_key = self.make_keypair(root)
+
+            with self.assertRaisesRegex(
+                OfflineCatalogRefreshError,
+                "identity-name variety is outside the launch target",
+            ):
+                refresh_snapshots(
+                    source,
+                    root / "state",
+                    rights,
+                    private_key,
+                    public_key,
+                    **self.run_args(),
+                    max_records=1_500,
+                )
+
+            self.assertFalse((root / "state" / "coverage-report.json").exists())
+
     @staticmethod
     def run_args() -> dict[str, object]:
         return {
@@ -170,13 +194,13 @@ class OfflineCatalogRefreshTest(unittest.TestCase):
         }
 
     @staticmethod
-    def write_export(path: Path, *, count: int) -> None:
+    def write_export(path: Path, *, count: int, same_name: bool = False) -> None:
         path.write_text(
             "".join(
                 json.dumps(
                     {
                         "code": OfflineCatalogRefreshTest.gtin(index),
-                        "product_name_en": f"Grocery Item {index}",
+                        "product_name_en": "Grocery Item" if same_name else f"Grocery Item {index}",
                         "brands": "ValuePilot Test",
                         "countries_tags": "en:canada",
                         "categories_tags": "en:beverages",
