@@ -112,6 +112,16 @@
     <string name="home_offline_catalog_match_apply_failed">This match can’t be applied to the current list. Review the list and try again.</string>
     <string name="home_sample_badge">OFFLINE FICTIONAL DEMO</string>
     <string name="home_compare_secondary">Scan &amp; compare prices</string>
+    <string name="home_good_price_secondary">Is this a good price?</string>
+
+    <string name="good_price_intro">Enter one product, its package quantity and the price you see. ValuePilot gives personal context when your private history has an exact match.</string>
+    <string name="good_price_input_hint">Whole milk&#10;4 L&#10;Current price CA$6.49</string>
+    <string name="good_price_input_body">Use a concrete currency such as CA$ or US$. A price you enter is not treated as a live store offer.</string>
+    <string name="check_good_price">Check this price</string>
+    <string name="clear_good_price">Clear</string>
+    <string name="good_price_privacy">Your check and any remembered observation stay on this device. No account or network connection is required.</string>
+    <string name="good_price_memory_saved">Remembered %1$s privately on this device. This is personal history, not live store pricing.</string>
+    <string name="good_price_memory_error">Price checked, but it could not be remembered. Nothing was sent online.</string>
 
     <string name="search_eyebrow">SMART SEARCH • SAMPLE DATA</string>
     <string name="search_title">What are you shopping for?</string>

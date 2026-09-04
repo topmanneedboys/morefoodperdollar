@@ -63,6 +63,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val chickenChoiceOwnerControls = mutableListOf<View>()
     private val extraStopOwnerControls = mutableListOf<View>()
     private val extraStopChoiceOwnerControls = mutableListOf<View>()
+    private val goodPriceOwnerControls = mutableListOf<View>()
 
     private var hasRenderedState = false
     private var lastRenderedSubmitEnabled = false
@@ -138,6 +139,13 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         set(value) {
             field = value
             compareActionButton.isEnabled = value != null && hasRenderedState
+        }
+    var onGoodPrice: (() -> Unit)? = null
+        set(value) {
+            field = value
+            goodPriceOwnerControls.forEach { control ->
+                control.isEnabled = value != null && hasRenderedState
+            }
         }
 
     private var suppressInputCallback = false
@@ -220,6 +228,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val extraStopSettingsCard =
         card("#F9FAFB", "#E5E7EB", 8, extraStopSettingsBody)
     private val sampleNotice = line("", 13f, "#374151")
+    private val goodPriceActionButton = goodPriceButton()
     private val compareActionButton = compareButton()
 
     init {
@@ -242,6 +251,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         addView(resultContainer)
         addView(extraStopSettingsButton)
         addView(extraStopSettingsCard)
+        addView(goodPriceActionButton)
         addView(compareActionButton)
 
         itemsHeading.visibility = GONE
@@ -295,6 +305,9 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         resultContainer.render(state.result, state.sampleNotice)
         renderExtraStopSettings(state.extraStopSettings)
         sampleNotice.text = state.sampleNotice
+        goodPriceOwnerControls.forEach { control ->
+            control.isEnabled = onGoodPrice != null && hasRenderedState
+        }
     }
 
     private fun submit() {
@@ -648,6 +661,22 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         // Keep the owner-driven comparison route inert until its callback is attached.
         isEnabled = false
         setOnClickListener { onCompare?.invoke() }
+    }
+
+    private fun goodPriceButton(): MaterialButton = MaterialButton(context).apply {
+        goodPriceOwnerControls += this
+        text = context.getString(R.string.home_good_price_secondary)
+        isAllCaps = false
+        textSize = 14f
+        cornerRadius = dp(16)
+        strokeWidth = dp(1)
+        strokeColor = ColorStateList.valueOf(Color.parseColor("#D1D5DB"))
+        setTextColor(Color.parseColor("#374151"))
+        backgroundTintList = ColorStateList.valueOf(Color.WHITE)
+        layoutParams = fullWidth(dp(50), 12)
+        // Keep the owner-driven price question inert until its callback is attached.
+        isEnabled = false
+        setOnClickListener { onGoodPrice?.invoke() }
     }
 
     private fun heading(value: String): TextView = line(value, 13f, "#374151", true, 18)

@@ -38,6 +38,7 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "inputLayout.isEnabled = onQueryChanged != null",
             "input.isEnabled = onQueryChanged != null",
             "compareActionButton.isEnabled = onCompare != null",
+            "goodPriceOwnerControls.forEach { control ->",
             "removeEnabled = onRemoveItem != null",
             "detailsEnabled = onEditItemDetails != null",
             "removeEnabled = onRemoveUnknownItem != null",
@@ -65,6 +66,7 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "private val chickenChoiceOwnerControls = mutableListOf<View>()",
             "private val extraStopOwnerControls = mutableListOf<View>()",
             "private val extraStopChoiceOwnerControls = mutableListOf<View>()",
+            "private val goodPriceOwnerControls = mutableListOf<View>()",
             "private var hasRenderedState = false",
             "submitOwnerControls.forEach { control ->",
             "control.isEnabled = value != null && lastRenderedSubmitEnabled",
@@ -72,6 +74,7 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "queryOwnerControls += inputLayout",
             "queryOwnerControls += input",
             "submitOwnerControls += submitButton",
+            "goodPriceOwnerControls += this",
             "extraStopOwnerControls += extraStopSettingsButton",
             "itemRemovalOwnerControls.clear()",
             "unknownRemovalOwnerControls.clear()",
@@ -88,7 +91,9 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "extraStopChoiceOwnerControls += this",
             "extraStopOwnerControls.forEach { control ->",
             "extraStopChoiceOwnerControls.forEach { control ->",
-            "compareActionButton.isEnabled = value != null && hasRenderedState"
+            "compareActionButton.isEnabled = value != null && hasRenderedState",
+            "goodPriceOwnerControls.forEach { control ->",
+            "control.isEnabled = value != null && hasRenderedState"
         ).forEach { required ->
             assertTrue("Expected live owner invalidation binding $required", source.contains(required))
         }
@@ -235,6 +240,29 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
                 "Home View must not own personal-history or planner authority through $forbidden",
                 source.contains(forbidden)
             )
+        }
+    }
+
+    @Test
+    fun goodPriceActionIsAnOwnerDrivenHomeNavigationControl() {
+        val source = source().readText()
+
+        listOf(
+            "var onGoodPrice: (() -> Unit)? = null",
+            "goodPriceActionButton",
+            "onGoodPrice?.invoke()",
+            "home_good_price_secondary"
+        ).forEach { required ->
+            assertTrue("Expected Home good-price action binding $required", source.contains(required))
+        }
+
+        listOf(
+            "GoodPriceCheckRouteCoordinator",
+            "CompareHerePriceMemoryEvaluator",
+            "Money.parse",
+            "PracticalShoppingPlanner"
+        ).forEach { forbidden ->
+            assertFalse("Home View must not own good-price authority through $forbidden", source.contains(forbidden))
         }
     }
 

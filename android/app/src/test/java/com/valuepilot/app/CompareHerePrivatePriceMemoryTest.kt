@@ -118,6 +118,33 @@ class CompareHerePrivatePriceMemoryTest {
     }
 
     @Test
+    fun `good price source is retained and round trips through the integrity codec`() {
+        val entry =
+            CompareHerePrivatePriceMemoryEntry.fromExactCandidate(
+                candidate = exactCandidate("good-price-candidate"),
+                displayName = "Good Price Product",
+                priceSelection = CompareHerePriceSelection.CURRENT,
+                promotionLabel = null,
+                promotionReceivedUnits = 1L,
+                promotionPaidUnits = 1L,
+                observedAtEpochMillis = 88L,
+                source = CompareHerePrivatePriceMemorySource.CONFIRMED_GOOD_PRICE_CHECK
+            )
+        assertEquals(
+            CompareHerePrivatePriceMemorySource.CONFIRMED_GOOD_PRICE_CHECK,
+            entry.source
+        )
+
+        val encoded = CompareHerePrivatePriceMemoryCodec.encode(
+            CompareHerePrivatePriceMemoryState(listOf(entry))
+        )
+        assertTrue(encoded.accepted)
+        val decoded = CompareHerePrivatePriceMemoryCodec.decode(requireNotNull(encoded.bytes))
+        assertTrue(decoded.accepted)
+        assertEquals(entry, requireNotNull(decoded.state).entries.single())
+    }
+
+    @Test
     fun `state manager keeps newest 256 snapshots with stable order`() {
         var state = CompareHerePrivatePriceMemoryState.empty()
         (0 until 9).forEach { batch ->

@@ -18,9 +18,10 @@ private const val MEMORY_CODEC_MAGIC = "VALUEPILOT_COMPARE_MEMORY"
 private const val MEMORY_RECORD = "M"
 private const val NULL_FIELD = "~"
 
-/** The only source currently allowed to create an automatic private comparison memory entry. */
+/** Sources currently allowed to create an automatic private memory entry after user value. */
 internal enum class CompareHerePrivatePriceMemorySource {
-    CONFIRMED_COMPARE_HERE
+    CONFIRMED_COMPARE_HERE,
+    CONFIRMED_GOOD_PRICE_CHECK
 }
 
 /**
@@ -68,7 +69,9 @@ internal data class CompareHerePrivatePriceMemoryEntry(
             promotionLabel: String?,
             promotionReceivedUnits: Long,
             promotionPaidUnits: Long,
-            observedAtEpochMillis: Long
+            observedAtEpochMillis: Long,
+            source: CompareHerePrivatePriceMemorySource =
+                CompareHerePrivatePriceMemorySource.CONFIRMED_COMPARE_HERE
         ): CompareHerePrivatePriceMemoryEntry {
             val safePromotionLabel = normalizeOptionalLabel(promotionLabel)
             val fingerprint =
@@ -81,7 +84,8 @@ internal data class CompareHerePrivatePriceMemoryEntry(
                     promotionLabel = safePromotionLabel,
                     promotionReceivedUnits = promotionReceivedUnits,
                     promotionPaidUnits = promotionPaidUnits,
-                    observedAtEpochMillis = observedAtEpochMillis
+                    observedAtEpochMillis = observedAtEpochMillis,
+                    source = source
                 )
             return CompareHerePrivatePriceMemoryEntry(
                 observationId = fingerprint,
@@ -93,7 +97,8 @@ internal data class CompareHerePrivatePriceMemoryEntry(
                 promotionLabel = safePromotionLabel,
                 promotionReceivedUnits = promotionReceivedUnits,
                 promotionPaidUnits = promotionPaidUnits,
-                observedAtEpochMillis = observedAtEpochMillis
+                observedAtEpochMillis = observedAtEpochMillis,
+                source = source
             )
         }
 
@@ -107,7 +112,8 @@ internal data class CompareHerePrivatePriceMemoryEntry(
                 promotionLabel = entry.promotionLabel,
                 promotionReceivedUnits = entry.promotionReceivedUnits,
                 promotionPaidUnits = entry.promotionPaidUnits,
-                observedAtEpochMillis = entry.observedAtEpochMillis
+                observedAtEpochMillis = entry.observedAtEpochMillis,
+                source = entry.source
             )
 
         private fun fingerprint(
@@ -119,7 +125,8 @@ internal data class CompareHerePrivatePriceMemoryEntry(
             promotionLabel: String?,
             promotionReceivedUnits: Long,
             promotionPaidUnits: Long,
-            observedAtEpochMillis: Long
+            observedAtEpochMillis: Long,
+            source: CompareHerePrivatePriceMemorySource
         ): String {
             val fields =
                 listOf(
@@ -137,7 +144,7 @@ internal data class CompareHerePrivatePriceMemoryEntry(
                     promotionReceivedUnits.toString(),
                     promotionPaidUnits.toString(),
                     observedAtEpochMillis.toString(),
-                    CompareHerePrivatePriceMemorySource.CONFIRMED_COMPARE_HERE.name
+                    source.name
                 )
             val canonical =
                 fields.joinToString("") { field ->
@@ -368,9 +375,6 @@ internal object CompareHerePrivatePriceMemoryCodec {
         val paidUnits = parseLong(parts[14], positive = true)
         val observedAt = parseLong(parts[15], positive = false)
         val source = parseEnum<CompareHerePrivatePriceMemorySource>(parts[16])
-        if (source != CompareHerePrivatePriceMemorySource.CONFIRMED_COMPARE_HERE) {
-            throw CodecParseFailure()
-        }
         return CompareHerePrivatePriceMemoryEntry(
             observationId = observationId,
             displayName = displayName,

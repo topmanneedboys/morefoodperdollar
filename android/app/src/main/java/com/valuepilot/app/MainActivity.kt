@@ -298,6 +298,7 @@ class MainActivity : AppCompatActivity() {
             homeExperience.onExtraStopMinimumSavingsChoice = null
             homeExperience.onEditItemDetails = null
             homeExperience.onCompare = null
+            homeExperience.onGoodPrice = null
         }
         if (::basketExperience.isInitialized) {
             basketExperience.onAction = null
@@ -436,6 +437,7 @@ class MainActivity : AppCompatActivity() {
             showHomeItemDetails(itemKey)
         }
         homeExperience.onCompare = { openComparison() }
+        homeExperience.onGoodPrice = { openGoodPriceCheck() }
         renderHome()
     }
 
@@ -1213,6 +1215,11 @@ class MainActivity : AppCompatActivity() {
         )
         comparisonActivityOpen = true
         startActivity(Intent(this, ComparisonActivity::class.java))
+    }
+
+    private fun openGoodPriceCheck() {
+        dismissHomeItemDetailsDialog()
+        startActivity(Intent(this, GoodPriceActivity::class.java))
     }
 
     private fun dispatch(intent: AppShellIntent) {
