@@ -9,6 +9,7 @@ from pathlib import Path
 
 from tools.select_open_food_facts_launch_catalog import (
     OpenFoodFactsLaunchSelectionError,
+    _household_hint,
     select_catalog,
 )
 
@@ -133,7 +134,7 @@ class OpenFoodFactsLaunchSelectionTest(unittest.TestCase):
                 "code": self.gtin(11),
                 "product_name_en": "Laundry detergent",
                 "countries_tags": "en:canada",
-                "categories_en": "Household products,Laundry detergents",
+                "categories_en": "",
                 "unique_scans_n": "0",
                 "completeness": "0",
             }
@@ -162,6 +163,14 @@ class OpenFoodFactsLaunchSelectionTest(unittest.TestCase):
                 for line in output.read_text(encoding="utf-8").splitlines()
             ]
             self.assertIn("Laundry detergent", selected_names)
+
+    def test_name_hints_reject_common_food_false_positives(self):
+        self.assertEqual(0, _household_hint({"product_name_en": "Garbage Candy"}))
+        self.assertEqual(0, _household_hint({"product_name_en": "Sponge Toffee"}))
+        self.assertEqual(0, _household_hint({"product_name_en": "Dough conditioner"}))
+        self.assertEqual(1, _household_hint({"product_name_en": "Garbage bags"}))
+        self.assertEqual(1, _household_hint({"product_name_en": "Kitchen sponge"}))
+        self.assertEqual(1, _household_hint({"product_name_en": "Fabric conditioner"}))
 
     @staticmethod
     def gtin(index: int) -> str:

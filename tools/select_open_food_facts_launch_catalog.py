@@ -127,6 +127,33 @@ HOUSEHOLD_HINTS = frozenset(
         "household",
     }
 )
+# Some otherwise usable rows have no category labels.  These strong product
+# name tokens are a fallback selection hint only; they never become a
+# consumer-facing category claim.
+HOUSEHOLD_NAME_HINTS = frozenset(
+    {
+        "bleach",
+        "cleaner",
+        "cleaning",
+        "deodorant",
+        "detergent",
+        "diaper",
+        "diapers",
+        "dishwasher",
+        "dishwashing",
+        "feminine",
+        "laundry",
+        "napkin",
+        "razor",
+        "shampoo",
+        "soap",
+        "tampon",
+        "tissue",
+        "toilet",
+        "toothpaste",
+        "trash",
+    }
+)
 COUNTRY_CANADA = "en:canada"
 _WHITESPACE = re.compile(r"\s+")
 MIN_IDENTITY_NAME_VARIETY = 1_500
@@ -206,7 +233,27 @@ def _grocery_hint(row: dict[str, Any]) -> int:
 
 
 def _household_hint(row: dict[str, Any]) -> int:
-    return int(bool(_category_tokens(row) & HOUSEHOLD_HINTS))
+    if _category_tokens(row) & HOUSEHOLD_HINTS:
+        return 1
+    name = _name(row)
+    ascii_name = (
+        unicodedata.normalize("NFKD", name)
+        .encode("ascii", "ignore")
+        .decode("ascii")
+        .casefold()
+    )
+    name_tokens = set(re.findall(r"[a-z0-9]+", ascii_name))
+    if name_tokens & HOUSEHOLD_NAME_HINTS:
+        return 1
+    if "garbage" in name_tokens and name_tokens & {"bag", "bags", "bin", "can"}:
+        return 1
+    if "sponge" in name_tokens and name_tokens & {"bath", "clean", "cleaning", "dish", "kitchen", "scrub"}:
+        return 1
+    if "conditioner" in name_tokens and name_tokens & {"clothing", "fabric", "hair", "laundry"}:
+        return 1
+    if "feminine" in name_tokens and name_tokens & {"pad", "pads", "hygiene"}:
+        return 1
+    return 0
 
 
 def _canonical_identity_name(value: str) -> str:
