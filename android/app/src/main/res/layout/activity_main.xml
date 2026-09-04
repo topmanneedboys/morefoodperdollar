@@ -82,6 +82,23 @@
             android:textColor="#6B7280"
             android:textSize="12sp" />
 
+        <Button
+            android:id="@+id/compareBarcodeButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/compare_barcode_action"
+            android:textAllCaps="false" />
+
+        <TextView
+            android:id="@+id/compareBarcodeStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/compare_barcode_ready"
+            android:textColor="#6B7280"
+            android:textSize="12sp" />
+
         <LinearLayout
             android:id="@+id/productInputsContainer"
             android:layout_width="match_parent"

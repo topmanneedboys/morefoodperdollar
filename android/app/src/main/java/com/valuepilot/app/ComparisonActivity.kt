@@ -52,6 +52,8 @@ class ComparisonActivity : AppCompatActivity() {
     private lateinit var importPhotoButton: Button
     private lateinit var capturePhotoButton: Button
     private lateinit var photoImportStatus: TextView
+    private lateinit var compareBarcodeButton: Button
+    private lateinit var compareBarcodeStatus: TextView
     private lateinit var privateMemoryStatus: TextView
     private lateinit var clearPrivateMemoryButton: Button
     private lateinit var privateMemoryStore: CompareHerePrivatePriceMemoryStore
@@ -59,6 +61,7 @@ class ComparisonActivity : AppCompatActivity() {
     private val productInputs = mutableListOf<EditText>()
     private val productInputRows = mutableListOf<ProductInputRow>()
     private val photoExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val barcodeLookupExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private val photoPickerLauncher =
         registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             onPhotoSelected(uri, cleanupFile = null)
@@ -71,6 +74,10 @@ class ComparisonActivity : AppCompatActivity() {
         registerForActivityResult(CameraCaptureContract()) { captured ->
             onCameraCaptureCompleted(captured)
         }
+    private val barcodeCaptureLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            onBarcodeCaptureResult(result.resultCode, result.data?.getStringExtra(BarcodeCaptureActivity.EXTRA_GTIN))
+        }
 
     private var activityState = CompareHereManualActivitySessionState.initial()
     private var restoringDraft = false
@@ -80,6 +87,10 @@ class ComparisonActivity : AppCompatActivity() {
     private var cameraCaptureRequestId = 0L
     private var cameraCaptureUri: Uri? = null
     private var cameraCaptureFile: File? = null
+    private var barcodeLookupRequestId = 0L
+    private var barcodeLookupInFlight = false
+    private var barcodeLookupClosed = false
+    private var barcodeDialog: AlertDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -99,6 +110,9 @@ class ComparisonActivity : AppCompatActivity() {
         capturePhotoButton = findViewById(R.id.capturePhotoButton)
         photoImportStatus = findViewById(R.id.photoImportStatus)
         photoImportStatus.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        compareBarcodeButton = findViewById(R.id.compareBarcodeButton)
+        compareBarcodeStatus = findViewById(R.id.compareBarcodeStatus)
+        compareBarcodeStatus.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         privateMemoryStatus = findViewById(R.id.privateMemoryStatus)
         clearPrivateMemoryButton = findViewById(R.id.clearPrivateMemoryButton)
         privateMemoryStore = CompareHerePrivatePriceMemoryAndroidStore(this)
@@ -119,6 +133,10 @@ class ComparisonActivity : AppCompatActivity() {
 
         capturePhotoButton.setOnClickListener {
             beginCameraCapture()
+        }
+
+        compareBarcodeButton.setOnClickListener {
+            beginBarcodeCapture()
         }
 
         syncPhotoActionButtons()
@@ -230,6 +248,11 @@ class ComparisonActivity : AppCompatActivity() {
         photoRequestId += 1
         cleanupCameraCaptureFile()
         photoExecutor.shutdownNow()
+        barcodeLookupClosed = true
+        barcodeLookupRequestId += 1L
+        barcodeDialog?.dismiss()
+        barcodeDialog = null
+        barcodeLookupExecutor.shutdownNow()
         super.onDestroy()
     }
 
@@ -258,8 +281,209 @@ class ComparisonActivity : AppCompatActivity() {
         super.onSaveInstanceState(outState)
     }
 
+    private fun beginBarcodeCapture() {
+        if (barcodeLookupClosed || barcodeLookupInFlight || photoImportInFlight) {
+            return
+        }
+
+        barcodeLookupInFlight = true
+        barcodeLookupRequestId += 1L
+        syncPhotoActionButtons()
+        compareBarcodeStatus.text = getString(R.string.compare_barcode_processing)
+        compareBarcodeStatus.visibility = View.VISIBLE
+
+        try {
+            barcodeCaptureLauncher.launch(
+                Intent(this, BarcodeCaptureActivity::class.java)
+            )
+        } catch (_: Exception) {
+            finishBarcodeRequest(R.string.compare_barcode_unavailable)
+        }
+    }
+
+    private fun onBarcodeCaptureResult(resultCode: Int, gtin: String?) {
+        if (barcodeLookupClosed || !barcodeLookupInFlight) {
+            return
+        }
+        if (resultCode != RESULT_OK || gtin.isNullOrBlank()) {
+            finishBarcodeRequest(R.string.compare_barcode_cancelled)
+            return
+        }
+        beginBarcodeIdentityLookup(gtin)
+    }
+
+    private fun beginBarcodeIdentityLookup(gtin: String) {
+        val trimmed = gtin.trim()
+        if (barcodeLookupClosed || trimmed.isBlank()) {
+            finishBarcodeRequest(R.string.compare_barcode_unavailable)
+            return
+        }
+
+        val requestId = barcodeLookupRequestId
+        compareBarcodeStatus.text = getString(R.string.compare_barcode_processing)
+        compareBarcodeStatus.visibility = View.VISIBLE
+
+        try {
+            barcodeLookupExecutor.execute {
+                val presentation =
+                    runCatching {
+                        GoodPriceBarcodeIdentityPresentation.from(
+                            gtin = trimmed,
+                            result =
+                                BundledOfflineCatalog.discoverSupportedRegions(
+                                    context = applicationContext,
+                                    rawQuery = trimmed,
+                                    canonicalizer = JvmTextCanonicalizer,
+                                    evaluatedAtEpochMillis = System.currentTimeMillis(),
+                                    maximumSnapshotAgeMillis = OFFLINE_CATALOG_MAX_AGE_MILLIS
+                                )
+                        )
+                    }.getOrNull()
+
+                runOnUiThread {
+                    if (
+                        barcodeLookupClosed ||
+                        requestId != barcodeLookupRequestId ||
+                        !barcodeLookupInFlight ||
+                        isFinishing ||
+                        isDestroyed
+                    ) {
+                        return@runOnUiThread
+                    }
+                    if (presentation == null) {
+                        finishBarcodeRequest(R.string.compare_barcode_unavailable)
+                        return@runOnUiThread
+                    }
+                    showBarcodeIdentityChoices(presentation)
+                }
+            }
+        } catch (_: Throwable) {
+            finishBarcodeRequest(R.string.compare_barcode_unavailable)
+        }
+    }
+
+    private fun showBarcodeIdentityChoices(
+        presentation: GoodPriceBarcodeIdentityPresentation
+    ) {
+        if (presentation.options.isEmpty()) {
+            finishBarcodeRequest(
+                R.string.compare_barcode_no_match,
+                presentation.gtin
+            )
+            return
+        }
+
+        var selectedIndex = if (presentation.options.size == 1) 0 else -1
+        lateinit var dialog: AlertDialog
+        val builder =
+            AlertDialog.Builder(this)
+                .setTitle(R.string.compare_barcode_match_title)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.compare_barcode_use_name, null)
+
+        if (presentation.options.size == 1) {
+            builder.setMessage(
+                getString(
+                    R.string.compare_barcode_match_message,
+                    presentation.options.single().label
+                )
+            )
+        } else {
+            builder
+                .setMessage(
+                    getString(
+                        R.string.compare_barcode_multiple_message,
+                        presentation.gtin
+                    )
+                )
+                .setSingleChoiceItems(
+                    presentation.options.map { it.label }.toTypedArray(),
+                    -1
+                ) { _, which ->
+                    selectedIndex = which
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
+                }
+        }
+
+        dialog = builder.create()
+        barcodeDialog = dialog
+        dialog.setOnDismissListener {
+            if (barcodeDialog === dialog) {
+                barcodeDialog = null
+            }
+            if (barcodeLookupInFlight) {
+                barcodeLookupInFlight = false
+                syncPhotoActionButtons()
+            }
+        }
+        dialog.setOnShowListener {
+            val button = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            button.contentDescription =
+                getString(R.string.compare_barcode_use_name_description)
+            button.isEnabled = selectedIndex >= 0
+            button.setOnClickListener {
+                val option = presentation.options.getOrNull(selectedIndex)
+                    ?: return@setOnClickListener
+                val result =
+                    CompareHereBarcodeDraft.apply(
+                        existingBlocks = currentProductBlocks(),
+                        displayName = option.displayName
+                    )
+                if (!result.added) {
+                    compareBarcodeStatus.text =
+                        getString(
+                            when (result.issue) {
+                                CompareHereBarcodeDraftIssue.IDENTITY_TOO_LONG ->
+                                    R.string.compare_barcode_identity_too_long
+                                CompareHereBarcodeDraftIssue.NO_EMPTY_SLOT ->
+                                    R.string.compare_barcode_no_empty_slot
+                                else -> R.string.compare_barcode_unavailable
+                            }
+                        )
+                    compareBarcodeStatus.visibility = View.VISIBLE
+                    dialog.dismiss()
+                    return@setOnClickListener
+                }
+
+                renderProductInputs(result.blocks)
+                activityState =
+                    CompareHereManualActivitySessionReducer.productsChanged(activityState)
+                syncLikeForLikeConfirmation()
+                syncPriceSelection()
+                renderIdleScreen()
+                saveDraftToPreferences()
+                compareBarcodeStatus.text =
+                    getString(
+                        R.string.compare_barcode_used,
+                        option.label,
+                        presentation.gtin
+                    )
+                compareBarcodeStatus.visibility = View.VISIBLE
+                dialog.dismiss()
+            }
+        }
+        dialog.show()
+    }
+
+    private fun finishBarcodeRequest(@StringRes statusRes: Int, vararg formatArgs: Any) {
+        barcodeLookupInFlight = false
+        syncPhotoActionButtons()
+        compareBarcodeStatus.text = getString(statusRes, *formatArgs)
+        compareBarcodeStatus.visibility = View.VISIBLE
+    }
+
+    private fun clearBarcodeStatus() {
+        barcodeLookupRequestId += 1L
+        barcodeDialog?.dismiss()
+        barcodeDialog = null
+        barcodeLookupInFlight = false
+        compareBarcodeStatus.text = getString(R.string.compare_barcode_ready)
+        compareBarcodeStatus.visibility = View.VISIBLE
+        syncPhotoActionButtons()
+    }
+
     private fun beginPhotoImport() {
-        if (photoImportClosed || photoImportInFlight) {
+        if (photoImportClosed || photoImportInFlight || barcodeLookupInFlight) {
             return
         }
 
@@ -277,7 +501,7 @@ class ComparisonActivity : AppCompatActivity() {
     }
 
     private fun beginCameraCapture() {
-        if (photoImportClosed || photoImportInFlight) {
+        if (photoImportClosed || photoImportInFlight || barcodeLookupInFlight) {
             return
         }
 
@@ -485,11 +709,19 @@ class ComparisonActivity : AppCompatActivity() {
     }
 
     private fun syncPhotoActionButtons() {
+        val enabled =
+            !photoImportInFlight &&
+                !barcodeLookupInFlight &&
+                !photoImportClosed &&
+                !barcodeLookupClosed
         if (::importPhotoButton.isInitialized) {
-            importPhotoButton.isEnabled = !photoImportInFlight && !photoImportClosed
+            importPhotoButton.isEnabled = enabled
         }
         if (::capturePhotoButton.isInitialized) {
-            capturePhotoButton.isEnabled = !photoImportInFlight && !photoImportClosed
+            capturePhotoButton.isEnabled = enabled
+        }
+        if (::compareBarcodeButton.isInitialized) {
+            compareBarcodeButton.isEnabled = enabled
         }
     }
 
@@ -775,6 +1007,7 @@ class ComparisonActivity : AppCompatActivity() {
     }
 
     private fun onProductsChanged() {
+        clearBarcodeStatus()
         activityState =
             CompareHereManualActivitySessionReducer.productsChanged(activityState)
         syncLikeForLikeConfirmation()
@@ -843,6 +1076,7 @@ class ComparisonActivity : AppCompatActivity() {
         )
 
     private fun clearComparison() {
+        clearBarcodeStatus()
         hidePrivateMemoryStatus()
         activityState = CompareHereManualActivitySessionReducer.clear()
         syncLikeForLikeConfirmation()
@@ -1247,6 +1481,9 @@ class ComparisonActivity : AppCompatActivity() {
 
         private const val CAMERA_FILE_SUFFIX =
             ".jpg"
+
+        private const val OFFLINE_CATALOG_MAX_AGE_MILLIS =
+            8L * 24L * 60L * 60L * 1_000L
 
         private const val STATE_BLOCKS =
             "standalone.blocks"
