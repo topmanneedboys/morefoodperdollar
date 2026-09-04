@@ -116,7 +116,12 @@ data class PracticalShoppingHomeRenderState(
     /** Whether Home may expose the contextual route into the private history screen. */
     val privateMemoryReviewActionVisible: Boolean = false,
     val privateMemoryStatus: PracticalShoppingHomePrivateMemoryStatus =
-        PracticalShoppingHomePrivateMemoryStatus.AVAILABLE
+        PracticalShoppingHomePrivateMemoryStatus.AVAILABLE,
+    /**
+     * Renderer-only aggregate for a no-coverage result. A projected primary plan already
+     * carries its own exact coverage text, so this remains null whenever one exists.
+     */
+    val noCoverageSummary: String? = null
 ) {
     init {
         require(queryCharacterLimit > 0)
@@ -125,6 +130,7 @@ data class PracticalShoppingHomeRenderState(
         require(unknownItems.none(String::isBlank))
         require(sampleNotice.isNotBlank())
         require(privateMemorySummary == null || privateMemorySummary.isNotBlank())
+        require(noCoverageSummary == null || noCoverageSummary.isNotBlank())
         require(
             !privateMemoryReviewActionVisible ||
                 privateMemoryStatus == PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE ||
@@ -273,7 +279,24 @@ object PracticalShoppingHomeRenderer {
             privateMemoryReviewActionVisible =
                 privateMemoryStatus == PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE ||
                     privateMemorySummary != null,
-            privateMemoryStatus = privateMemoryStatus
+            privateMemoryStatus = privateMemoryStatus,
+            noCoverageSummary = noCoverageSummary(source)
         )
+    }
+
+    /**
+     * The shared projector has no primary plan when no candidate covers any item. In that one
+     * state, give Home a compact aggregate that complements (rather than replaces) the per-item
+     * unknown-price notices. This is presentation only: the no-coverage decision is already
+     * encoded by [source.result] and no price is inferred here.
+     */
+    private fun noCoverageSummary(
+        source: LocalSamplePracticalShoppingDemo.UiState
+    ): String? {
+        if (source.result == null || source.result.primary != null || source.items.isEmpty()) {
+            return null
+        }
+        val itemCount = source.items.size
+        return "0 of $itemCount ${if (itemCount == 1) "item" else "items"} priced yet."
     }
 }

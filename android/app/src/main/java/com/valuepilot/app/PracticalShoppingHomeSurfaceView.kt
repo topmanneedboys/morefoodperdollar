@@ -248,6 +248,10 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val goodPriceActionButton = goodPriceButton()
     private val privateMemoryReviewActionButton = privateMemoryReviewButton()
     private val compareActionButton = compareButton()
+    private val noCoverageSummary = line("", 13f, "#92400E", true).apply {
+        accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        visibility = GONE
+    }
 
     init {
         orientation = VERTICAL
@@ -269,6 +273,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         addView(itemsContainer)
         addView(refinementCard)
         addView(unknownCard)
+        addView(noCoverageSummary)
         addView(resultContainer)
         addView(extraStopSettingsButton)
         addView(extraStopSettingsCard)
@@ -324,6 +329,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         renderItems(state.items)
         renderRefinement(state.refinement)
         renderUnknown(state.unknownItems)
+        renderNoCoverageSummary(state.noCoverageSummary)
         resultContainer.render(state.result, state.sampleNotice)
         renderExtraStopSettings(state.extraStopSettings)
         renderPrivateMemory(
@@ -415,6 +421,11 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         items.forEach { item ->
             itemsContainer.addView(itemRow(item))
         }
+    }
+
+    private fun renderNoCoverageSummary(summary: String?) {
+        noCoverageSummary.text = summary.orEmpty()
+        noCoverageSummary.visibility = if (summary == null) GONE else VISIBLE
     }
 
     private fun itemRow(item: PracticalShoppingHomeItemRenderState): View =

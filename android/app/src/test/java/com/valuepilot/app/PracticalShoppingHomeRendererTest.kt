@@ -1,5 +1,6 @@
 package com.valuepilot.app
 
+import com.valuepilot.core.ShoppingItemKey
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -229,7 +230,55 @@ class PracticalShoppingHomeRendererTest {
             listOf("No usable price yet — not included in this plan."),
             rendered.items.map { it.priceCoverageNotice }
         )
+        assertEquals("0 of 1 item priced yet.", rendered.noCoverageSummary)
         assertFalse(rendered.extraStopSettings.visible)
+    }
+
+    @Test
+    fun noCoverageSummaryCountsEveryRequestedItem() {
+        val source =
+            LocalSamplePracticalShoppingDemo.initialModel().ui.copy(
+                query = "coffee rice",
+                status = LocalSamplePracticalShoppingDemo.Status.RESULT,
+                items =
+                    listOf(
+                        LocalSamplePracticalShoppingDemo.ResolvedItemUiState(
+                            key = ShoppingItemKey("sample-coffee"),
+                            name = "Coffee",
+                            detail = "340 g"
+                        ),
+                        LocalSamplePracticalShoppingDemo.ResolvedItemUiState(
+                            key = ShoppingItemKey("sample-rice"),
+                            name = "Rice",
+                            detail = "2 kg"
+                        )
+                    ),
+                result =
+                    PracticalShoppingUiState(
+                        headline = "Not enough price coverage yet",
+                        primary = null,
+                        secondStop = null,
+                        secondaryMessage = "No requested item has a usable price yet."
+                    ),
+                message = null
+            )
+
+        val rendered = PracticalShoppingHomeRenderer.render(source)
+
+        assertEquals("0 of 2 items priced yet.", rendered.noCoverageSummary)
+    }
+
+    @Test
+    fun coverageSummaryStaysHiddenWhenAProjectedPrimaryPlanExists() {
+        val model =
+            PracticalShoppingHomeSession.submit(
+                LocalSamplePracticalShoppingDemo.initialModel(),
+                "eggs milk"
+            )
+
+        val rendered = PracticalShoppingHomeRenderer.render(model.ui)
+
+        assertNull(rendered.noCoverageSummary)
     }
 
     @Test

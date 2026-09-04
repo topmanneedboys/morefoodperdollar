@@ -264,6 +264,30 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
     }
 
     @Test
+    fun noCoverageSummaryIsRenderedAsImmutableHomePresentation() {
+        val source = source().readText()
+
+        listOf(
+            "private val noCoverageSummary = line(\"\", 13f, \"#92400E\", true)",
+            "addView(noCoverageSummary)",
+            "renderNoCoverageSummary(state.noCoverageSummary)",
+            "noCoverageSummary.text = summary.orEmpty()",
+            "noCoverageSummary.visibility = if (summary == null) GONE else VISIBLE",
+            "accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"
+        ).forEach { required ->
+            assertTrue("Expected no-coverage summary binding $required", source.contains(required))
+        }
+
+        listOf(
+            "PracticalShoppingPlanner",
+            "Money.parse",
+            "PracticalShoppingUiProjector"
+        ).forEach { forbidden ->
+            assertFalse("Home View must not decide coverage through $forbidden", source.contains(forbidden))
+        }
+    }
+
+    @Test
     fun goodPriceActionIsAnOwnerDrivenHomeNavigationControl() {
         val source = source().readText()
 
