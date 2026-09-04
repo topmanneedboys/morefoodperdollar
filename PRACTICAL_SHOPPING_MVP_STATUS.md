@@ -8,6 +8,10 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
+The promoted milestone is `a5cfa0e609d18f1e3730f934788a72ade88ba37a` (`Rollback coverage report write failures`), verified by candidate build workflow **33829634963** and milestone provenance workflow **33830070695**. The weekly multi-metro refresh now keeps pointer promotion and diagnostic coverage reporting in one rollback boundary: if any region promotion or the final report write fails, every captured `current.json` and `last-known-good.json` pointer is restored byte-for-byte and the prior coverage report remains unchanged. Deterministic tests cover both a later-region failure and a report-write failure. This adds no price, offer, availability, planner/ranking, network, or identity authority. Candidate verification passed the full browser, Android, privacy, signer, and release-bundle checks; offline snapshot tests passed in workflow **33829634993**.
+
+## Previous verified engineering head (superseded)
+
 The promoted milestone is `b462f01250d0987adfb16fcca7b908bc7bce9bd1` (`Rollback multi-region snapshot promotion failures`), verified by candidate build workflow **33829078507** and milestone provenance workflow **33829440551**. The weekly multi-metro refresh now captures each requested region’s `current.json` and `last-known-good.json` bytes before promotion and restores every pointer byte-for-byte if any later region promotion fails; a deterministic test covers a simulated second-region failure and preserves the prior coverage report. This closes the cross-region partial-promotion gap without adding price, offer, availability, planner/ranking, network, or identity authority. The existing signed 5,000-per-metro identity snapshots, `0` / `NOT_INCLUDED` current-offer coverage, rights gates, and Home stale-selection guidance remain unchanged. Candidate verification passed the full browser, Android, privacy, signer, and release-bundle checks; the offline-catalog workflow **33829078425** also passed.
 
 ## Previous verified engineering head (superseded)
