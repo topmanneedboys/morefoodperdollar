@@ -8,6 +8,10 @@ This checkpoint records the verified Practical Shopping Home slice plus the prov
 
 ## Latest verified engineering head
 
+`594876bc0e0eb414dafc5a69e9b91e76a9e85b21` — `Make missing Home prices actionable`
+
+Candidate workflow **33903776239** and milestone provenance workflow **33904354573** passed for the exact SHA. When the existing Home projection marks a row with an explicit missing-price notice, the immutable renderer now exposes `Add observed price`. Its typed callback opens the local Good Price screen with a bounded item name as untrusted prefill; exact package quantity and observed price remain required before private-memory capture. Blank or oversized external prefills are ignored, complete-price rows stay quiet, and teardown clears the callback. The handoff does not establish product identity, store, live price, offer, availability, planner or ranking authority and leaves the fictional sample result unchanged. Candidate Linux Android/browser/privacy/signing/release and Python/catalog gates passed; the local Windows run retains the known 18 line-ending-sensitive boundary failures, while physical-device ergonomics and production Home wiring remain open.
+
 `d206331e2d3927e3b084b0fed1d92b40f16cdc68` — `Show Home personal history coverage`
 
 Candidate workflow **33900346836** and milestone provenance workflow **33900879487** passed for the exact SHA. Home now adds a renderer-owned `Name-matched personal history: X of N list items.` summary when the current list has nonblank names and readable private comparison memory. It is derived only from normalized display labels and is explicitly not current-price coverage; it does not establish exact product identity, package quantity, price, freshness, store, stock, availability, offer or ranking. Blank/empty requested names keep the general private-history summary, unreadable memory remains suppressed, and the fictional planner/sample path remains separate. This focused presentation change reuses the existing immutable projection and private store, adds no planner/projector, money, evidence, persistence, network or provider-economics authority, and is covered by deterministic Home history/renderer tests. Candidate Linux Android/browser/privacy/signing/release and Python/catalog gates passed; the local Windows run retains the known 18 line-ending-sensitive boundary failures, while physical-device ergonomics and production Home wiring remain open.
@@ -270,12 +274,13 @@ The production path is synchronous shared-core code. When eventually wired into 
 
 Do not connect this path to real retailer networking or route provider data through the fictional Home controller yet.
 
-The identified raw-evaluation complexity issue is now hardened. The next adapter-facing step is an explicit provider-neutral **Practical Shopping orchestration input contract** that can assemble a production evaluation request without manufacturing evidence.
+The identified raw-evaluation complexity issue is now hardened, and Home now has an honest action for collecting a missing personal price. The next adapter-facing step is an explicit provider-neutral **exact product/store/quantity/price handoff contract** that can assemble a production evaluation request without manufacturing evidence.
 
 That contract should carry only already-established facts and raw evidence inputs:
 
-- resolved shopping intent -> exact `ProductionProductEvidenceKey` binding;
-- explicit merchant/location/channel store scopes;
+- explicitly confirmed product identity -> exact `ProductionProductEvidenceKey` binding;
+- explicitly selected merchant/location/channel store scopes;
+- exact package quantity, currency and observed price with proof/source and observation time;
 - raw current-price eligibility requests and current lifecycle/disposition registries at execution;
 - explicit user-to-store and base-to-added-store travel facts;
 - explicit planning policy and evaluation instant.
@@ -284,6 +289,7 @@ It must validate cross-reference completeness and bounds before invoking `Practi
 
 - resolve products from names/descriptions/images;
 - infer merchant/location/channel identity;
+- promote an identity-catalog row or location-directory row into an offer;
 - calculate or fetch route facts;
 - enable Android networking;
 - create provider authorization;
