@@ -60,6 +60,7 @@ internal data class CompareHerePriceMemoryHistorySummary(
 }
 
 internal object CompareHerePriceMemoryEvaluator {
+    // This is private display context only; it never becomes offer, availability, or ranking authority.
     fun assess(
         current: CompareHerePrivatePriceMemoryEntry,
         history: CompareHerePrivatePriceMemoryState
