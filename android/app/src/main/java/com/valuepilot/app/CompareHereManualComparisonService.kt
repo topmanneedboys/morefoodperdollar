@@ -8,7 +8,8 @@ import com.valuepilot.core.ProductObservation
 sealed interface CompareHereManualComparisonResult {
     data class Success(
         val projection: CompareHereUiProjection,
-        val adaptationIssues: List<CompareHereManualObservationIssueEntry>
+        val adaptationIssues: List<CompareHereManualObservationIssueEntry>,
+        internal val adaptation: CompareHereManualInputAdaptation
     ) : CompareHereManualComparisonResult
 
     data class InputFailure(
@@ -77,7 +78,8 @@ object CompareHereManualComparisonService {
                                 result = exactResult,
                                 metadata = adaptation.displayMetadata
                             ),
-                        adaptationIssues = adaptation.issues
+                        adaptationIssues = adaptation.issues,
+                        adaptation = adaptation
                     )
                 }
             }

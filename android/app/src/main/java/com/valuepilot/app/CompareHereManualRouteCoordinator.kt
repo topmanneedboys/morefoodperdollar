@@ -36,6 +36,12 @@ data class CompareHereManualRouteState(
     }
 }
 
+/** Route state plus the optional typed capture produced by a successful confirmed comparison. */
+internal data class CompareHereManualRouteEvaluation(
+    val state: CompareHereManualRouteState,
+    val privateMemoryCapture: CompareHerePrivatePriceMemoryCapture? = null
+)
+
 /**
  * Pure application coordinator for the eventual manual Compare Here screen.
  *
@@ -45,7 +51,9 @@ data class CompareHereManualRouteState(
  * after that confirmation; it is never derived from names, prices, barcodes, package units or
  * other product text.
  *
- * This coordinator owns no Android View, clock, persistence, network or ranking engine.
+ * The public [compareBlocks] result owns no Android View, clock, persistence, network or ranking
+ * engine. The internal evaluation path additionally hands the owning Activity a typed, private
+ * memory capture after a READY result; that capture is never sent to the renderer or evaluator.
  */
 object CompareHereManualRouteCoordinator {
 
@@ -55,7 +63,22 @@ object CompareHereManualRouteCoordinator {
         userConfirmedLikeForLike: Boolean,
         priceSelection: CompareHerePriceSelection = CompareHerePriceSelection.CURRENT,
         parser: ProductParser = DeterministicProductParser
-    ): CompareHereManualRouteState {
+    ): CompareHereManualRouteState =
+        evaluateBlocks(
+            rawBlocks = rawBlocks,
+            observedAtEpochMillis = observedAtEpochMillis,
+            userConfirmedLikeForLike = userConfirmedLikeForLike,
+            priceSelection = priceSelection,
+            parser = parser
+        ).state
+
+    internal fun evaluateBlocks(
+        rawBlocks: List<String>,
+        observedAtEpochMillis: Long,
+        userConfirmedLikeForLike: Boolean,
+        priceSelection: CompareHerePriceSelection = CompareHerePriceSelection.CURRENT,
+        parser: ProductParser = DeterministicProductParser
+    ): CompareHereManualRouteEvaluation {
         val capture =
             ManualProductObservationAdapter.captureBlocks(
                 rawBlocks = rawBlocks,
@@ -64,28 +87,32 @@ object CompareHereManualRouteCoordinator {
 
         val observations =
             when (capture) {
-                is ManualCaptureResult.Failure -> return captureFailure(capture.reason)
+                is ManualCaptureResult.Failure -> return CompareHereManualRouteEvaluation(captureFailure(capture.reason))
                 is ManualCaptureResult.Success -> capture.observations
             }
 
         if (observations.size < 2) {
-            return CompareHereManualRouteState(
-                status = CompareHereManualRouteStatus.NEEDS_PRODUCTS,
-                title = "Add at least two products",
-                guidance = "Enter two or more products before comparing exact value."
+            return CompareHereManualRouteEvaluation(
+                CompareHereManualRouteState(
+                    status = CompareHereManualRouteStatus.NEEDS_PRODUCTS,
+                    title = "Add at least two products",
+                    guidance = "Enter two or more products before comparing exact value."
+                )
             )
         }
 
         if (observations.size > CompareHereManualInputAdapter.MAX_OBSERVATIONS) {
-            return tooManyProducts()
+            return CompareHereManualRouteEvaluation(tooManyProducts())
         }
 
         if (!userConfirmedLikeForLike) {
-            return CompareHereManualRouteState(
-                status = CompareHereManualRouteStatus.NEEDS_LIKE_FOR_LIKE_CONFIRMATION,
-                title = "Confirm comparable products",
-                guidance =
-                    "Confirm that every product is a like-for-like alternative before comparing exact value."
+            return CompareHereManualRouteEvaluation(
+                CompareHereManualRouteState(
+                    status = CompareHereManualRouteStatus.NEEDS_LIKE_FOR_LIKE_CONFIRMATION,
+                    title = "Confirm comparable products",
+                    guidance =
+                        "Confirm that every product is a like-for-like alternative before comparing exact value."
+                )
             )
         }
 
@@ -101,24 +128,36 @@ object CompareHereManualRouteCoordinator {
         ) {
             is CompareHereManualComparisonResult.Success -> {
                 val state = comparison.projection.state
-                CompareHereManualRouteState(
-                    status = CompareHereManualRouteStatus.EVALUATED,
-                    title = state.statusTitle,
-                    guidance = state.guidance,
-                    comparisonState = state
+                CompareHereManualRouteEvaluation(
+                    state =
+                        CompareHereManualRouteState(
+                            status = CompareHereManualRouteStatus.EVALUATED,
+                            title = state.statusTitle,
+                            guidance = state.guidance,
+                            comparisonState = state
+                        ),
+                    privateMemoryCapture =
+                        CompareHerePrivatePriceMemoryAssembler.from(
+                            success = comparison,
+                            observedAtEpochMillis = observedAtEpochMillis
+                        )
                 )
             }
 
             is CompareHereManualComparisonResult.InputFailure ->
-                when (comparison.reason) {
-                    CompareHereManualInputFailure.TOO_MANY_OBSERVATIONS -> tooManyProducts()
-                    CompareHereManualInputFailure.DUPLICATE_OBSERVATION_IDS ->
-                        rejectedProducts(1)
-                }
+                CompareHereManualRouteEvaluation(
+                    when (comparison.reason) {
+                        CompareHereManualInputFailure.TOO_MANY_OBSERVATIONS -> tooManyProducts()
+                        CompareHereManualInputFailure.DUPLICATE_OBSERVATION_IDS ->
+                            rejectedProducts(1)
+                    }
+                )
 
             is CompareHereManualComparisonResult.RejectedObservations ->
-                rejectedProducts(
-                    comparison.issues.map { it.observationId }.distinct().size
+                CompareHereManualRouteEvaluation(
+                    rejectedProducts(
+                        comparison.issues.map { it.observationId }.distinct().size
+                    )
                 )
         }
     }

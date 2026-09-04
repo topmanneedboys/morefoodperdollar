@@ -65,7 +65,9 @@ class CoreBoundaryTest {
                 "src/main/res/layout/activity_main.xml"
             ).readText()
 
-        assertTrue(source.contains("CompareHereManualRouteCoordinator.compareBlocks"))
+        assertTrue(source.contains("CompareHereManualRouteCoordinator.evaluateBlocks"))
+        assertTrue(source.contains("CompareHerePrivatePriceMemoryStore"))
+        assertTrue(source.contains("updatePrivateMemoryStatus"))
         assertTrue(source.contains("CompareHereManualScreenPresenter"))
         assertTrue(source.contains("CompareHereManualActivitySessionReducer"))
         assertTrue(source.contains("CompareHereManualDraftActionEvaluator.evaluate"))
@@ -87,6 +89,8 @@ class CoreBoundaryTest {
         assertTrue(layout.contains("priceSelectionMember"))
         assertTrue(layout.contains("importPhotoButton"))
         assertTrue(layout.contains("photoImportStatus"))
+        assertTrue(layout.contains("privateMemoryStatus"))
+        assertTrue(layout.contains("clearPrivateMemoryButton"))
 
         assertFalse(source.contains("StandaloneComparisonController"))
         assertFalse(source.contains("StandaloneComparisonIntent"))
@@ -102,6 +106,20 @@ class CoreBoundaryTest {
         assertFalse(source.contains("CompareHereManualInputAdapter.capture"))
         assertFalse(source.contains("CompareHereManualComparisonService"))
         assertFalse(source.contains("ManualProductObservationAdapter"))
+    }
+
+    @Test
+    fun privateComparisonMemoryIsNotAnOfferOrRankingAuthority() {
+        val memory = source("CompareHerePrivatePriceMemory.kt").readText()
+        val store = source("CompareHerePrivatePriceMemoryStore.kt").readText()
+
+        assertTrue(memory.contains("CONFIRMED_COMPARE_HERE"))
+        assertTrue(memory.contains("not a current offer"))
+        assertFalse(memory.contains("ObservedOffer"))
+        assertFalse(memory.contains("RankingEngine"))
+        assertFalse(memory.contains("ProductResultId"))
+        assertFalse(store.contains("INTERNET"))
+        assertFalse(store.contains("Http"))
     }
 
     private fun source(name: String): File {

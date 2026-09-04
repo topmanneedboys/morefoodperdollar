@@ -43,6 +43,9 @@ class ComparisonActivity : AppCompatActivity() {
     private lateinit var scannerStatus: TextView
     private lateinit var importPhotoButton: Button
     private lateinit var photoImportStatus: TextView
+    private lateinit var privateMemoryStatus: TextView
+    private lateinit var clearPrivateMemoryButton: Button
+    private lateinit var privateMemoryStore: CompareHerePrivatePriceMemoryStore
 
     private val productInputs = mutableListOf<EditText>()
     private val productInputRows = mutableListOf<ProductInputRow>()
@@ -74,6 +77,19 @@ class ComparisonActivity : AppCompatActivity() {
         scannerStatus = findViewById(R.id.scannerStatus)
         importPhotoButton = findViewById(R.id.importPhotoButton)
         photoImportStatus = findViewById(R.id.photoImportStatus)
+        privateMemoryStatus = findViewById(R.id.privateMemoryStatus)
+        clearPrivateMemoryButton = findViewById(R.id.clearPrivateMemoryButton)
+        privateMemoryStore = CompareHerePrivatePriceMemoryAndroidStore(this)
+
+        clearPrivateMemoryButton.setOnClickListener {
+            val result = privateMemoryStore.clear()
+            if (result.accepted) {
+                hidePrivateMemoryStatus()
+            } else {
+                privateMemoryStatus.text = getString(R.string.compare_memory_clear_error)
+                privateMemoryStatus.visibility = View.VISIBLE
+            }
+        }
 
         importPhotoButton.setOnClickListener {
             beginPhotoImport()
@@ -571,8 +587,8 @@ class ComparisonActivity : AppCompatActivity() {
         priceSelection: CompareHerePriceSelection = activityState.priceSelection,
         persist: Boolean
     ) {
-        val routeState =
-            CompareHereManualRouteCoordinator.compareBlocks(
+        val evaluation =
+            CompareHereManualRouteCoordinator.evaluateBlocks(
                 rawBlocks = blocks,
                 observedAtEpochMillis = observedAtEpochMillis,
                 userConfirmedLikeForLike = activityState.likeForLikeConfirmed,
@@ -585,9 +601,10 @@ class ComparisonActivity : AppCompatActivity() {
                 observedAtEpochMillis = observedAtEpochMillis
             )
 
-        comparisonPresenter.render(routeState)
+        comparisonPresenter.render(evaluation.state)
 
         if (persist) {
+            updatePrivateMemoryStatus(evaluation.privateMemoryCapture)
             saveDraftToPreferences()
         }
     }
@@ -627,6 +644,7 @@ class ComparisonActivity : AppCompatActivity() {
     }
 
     private fun renderIdleScreen() {
+        hidePrivateMemoryStatus()
         val actionState = currentDraftActionState()
         compareButton.isEnabled = actionState.compareEnabled
         val content =
@@ -660,6 +678,7 @@ class ComparisonActivity : AppCompatActivity() {
         )
 
     private fun clearComparison() {
+        hidePrivateMemoryStatus()
         activityState = CompareHereManualActivitySessionReducer.clear()
         syncLikeForLikeConfirmation()
         syncPriceSelection()
@@ -677,6 +696,39 @@ class ComparisonActivity : AppCompatActivity() {
         )
 
         renderIdleScreen()
+    }
+
+    private fun updatePrivateMemoryStatus(
+        capture: CompareHerePrivatePriceMemoryCapture?
+    ) {
+        if (capture == null) {
+            hidePrivateMemoryStatus()
+            return
+        }
+
+        val result = privateMemoryStore.append(capture)
+        if (result.accepted) {
+            privateMemoryStatus.text =
+                getString(
+                    R.string.compare_memory_saved,
+                    capture.entries.size
+                )
+            privateMemoryStatus.visibility = View.VISIBLE
+            clearPrivateMemoryButton.visibility = View.VISIBLE
+        } else {
+            privateMemoryStatus.text = getString(R.string.compare_memory_error)
+            privateMemoryStatus.visibility = View.VISIBLE
+            clearPrivateMemoryButton.visibility = View.VISIBLE
+        }
+    }
+
+    private fun hidePrivateMemoryStatus() {
+        if (!::privateMemoryStatus.isInitialized) return
+        privateMemoryStatus.text = ""
+        privateMemoryStatus.visibility = View.GONE
+        if (::clearPrivateMemoryButton.isInitialized) {
+            clearPrivateMemoryButton.visibility = View.GONE
+        }
     }
 
     private fun updateAddProductButton() {

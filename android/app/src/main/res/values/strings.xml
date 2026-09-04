@@ -32,6 +32,10 @@
     <string name="price_selection_member">Member prices</string>
     <string name="compare_value">Compare exact value</string>
     <string name="clear_comparison">Clear</string>
+    <string name="compare_memory_saved">Remembered %1$d product prices privately on this device. This is comparison history, not live store pricing.</string>
+    <string name="compare_memory_error">Comparison shown, but private memory could not be updated. Nothing was sent online.</string>
+    <string name="compare_memory_clear">Clear private comparison memory</string>
+    <string name="compare_memory_clear_error">Private comparison memory could not be cleared. Try again from this screen.</string>
     <string name="compare_add_products_title">Add at least two products</string>
     <string name="compare_add_products_body">Enter two or more products before comparing exact value.</string>
     <string name="compare_confirmation_needed_title">Confirm comparable products</string>

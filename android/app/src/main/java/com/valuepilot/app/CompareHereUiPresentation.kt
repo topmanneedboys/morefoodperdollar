@@ -114,7 +114,9 @@ data class CompareHereUiState(
 class CompareHereUiProjection internal constructor(
     val state: CompareHereUiState,
     internal val exactByCandidateId: Map<String, CompareHereExactCandidate>,
-    internal val blockedByCandidateId: Map<String, CompareHereBlockedCandidate>
+    internal val blockedByCandidateId: Map<String, CompareHereBlockedCandidate>,
+    internal val displayNameByCandidateId: Map<String, String>,
+    internal val priceSelection: CompareHerePriceSelection
 )
 
 /**
@@ -213,7 +215,9 @@ object CompareHereUiProjector {
                     notice = omittedNotice(omittedCount)
                 ),
             exactByCandidateId = exactById,
-            blockedByCandidateId = blockedById
+            blockedByCandidateId = blockedById,
+            displayNameByCandidateId = labels.filterValues { it != null }.mapValues { requireNotNull(it.value) },
+            priceSelection = result.priceSelection
         )
     }
 

@@ -169,6 +169,25 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp" />
 
+        <TextView
+            android:id="@+id/privateMemoryStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:textColor="#047857"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/clearPrivateMemoryButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/compare_memory_clear"
+            android:textAllCaps="false"
+            android:visibility="gone" />
+
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
