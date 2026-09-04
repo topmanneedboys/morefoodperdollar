@@ -34,7 +34,7 @@ from tools.build_offline_catalog_snapshot import _canonical_json
 from tools.open_facts_barcode import canonical_open_facts_gtin
 
 
-DEFAULT_MAX_RECORDS = 3_000
+DEFAULT_MAX_RECORDS = 5_000
 MAX_RECORDS = 5_000
 MAX_FIELD_SIZE = 16 * 1024 * 1024
 

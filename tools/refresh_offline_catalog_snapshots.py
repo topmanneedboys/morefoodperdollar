@@ -48,7 +48,7 @@ from tools.verify_offline_catalog_snapshot import verify_snapshot
 
 
 DEFAULT_REGIONS = tuple(sorted(SUPPORTED_METRO_REGIONS))
-DEFAULT_MAX_RECORDS = 3_000
+DEFAULT_MAX_RECORDS = 5_000
 COVERAGE_REPORT_NAME = "coverage-report.json"
 
 
