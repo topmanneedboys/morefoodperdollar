@@ -64,6 +64,7 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "private val unknownRemovalOwnerControls = mutableListOf<View>()",
             "private val offlineCatalogOwnerControls = mutableListOf<View>()",
             "private val itemDetailsOwnerControls = mutableListOf<View>()",
+            "private val exactProductOwnerControls = mutableListOf<View>()",
             "private val observedPriceOwnerControls = mutableListOf<View>()",
             "private val chickenChoiceOwnerControls = mutableListOf<View>()",
             "private val extraStopOwnerControls = mutableListOf<View>()",
@@ -89,6 +90,9 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "removeOwnerControls = unknownRemovalOwnerControls",
             "detailsOwnerControls = offlineCatalogOwnerControls",
             "detailsOwnerControls = itemDetailsOwnerControls",
+            "exactProductOwnerControls.clear()",
+            "exactProductOwnerControls.forEach { control ->",
+            "control.isEnabled = value != null",
             "ownerControls = observedPriceOwnerControls",
             "ownerControls?.add(this)",
             "chickenChoiceOwnerControls += this",
@@ -234,6 +238,32 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "Money.parse"
         ).forEach { forbidden ->
             assertFalse("Home View must not construct or interpret item intent through $forbidden", source.contains(forbidden))
+        }
+    }
+
+    @Test
+    fun exactProductChoiceIsAnOwnerDrivenIdentityOnlyHomeAction() {
+        val source = source().readText()
+
+        listOf(
+            "var onChooseExactProduct: ((ShoppingItemKey) -> Unit)? = null",
+            "item.exactProductActionVisible",
+            "R.string.home_choose_exact_product",
+            "R.string.home_choose_exact_product_description",
+            "onChooseExactProduct?.invoke(item.key)",
+            "ownerControls = exactProductOwnerControls"
+        ).forEach { required ->
+            assertTrue("Expected exact-product Home action binding $required", source.contains(required))
+        }
+
+        listOf(
+            "PracticalShoppingPlanner",
+            "Money.parse",
+            "OfflineCatalogDiscoveryEngine",
+            "current_price",
+            "availability"
+        ).forEach { forbidden ->
+            assertFalse("Home View must not own identity, price or planner authority through $forbidden", source.contains(forbidden))
         }
     }
 

@@ -42,7 +42,9 @@ data class PracticalShoppingHomeItemRenderState(
     val priceCoverageNotice: String? = null,
     val personalHistoryNotice: String? = null,
     /** Whether the missing-price handoff into the local observed-price flow is shown. */
-    val observedPriceActionVisible: Boolean = false
+    val observedPriceActionVisible: Boolean = false,
+    /** Whether an explicit offline identity choice can be saved for this item. */
+    val exactProductActionVisible: Boolean = false
 ) {
     init {
         require(key.value.isNotBlank())
@@ -240,6 +242,7 @@ object PracticalShoppingHomeRenderer {
                         // a live offer or changes the already-projected result.
                         observedPriceActionVisible =
                             source.result != null && storeAssignment == null,
+                        exactProductActionVisible = true,
                         requestDetailsSummary =
                             PracticalShoppingHomeItemDetailsPresentation.summary(itemDetails),
                         requestDetailsNotice =

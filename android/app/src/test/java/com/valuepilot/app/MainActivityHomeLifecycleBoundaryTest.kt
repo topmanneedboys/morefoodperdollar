@@ -17,6 +17,7 @@ class MainActivityHomeLifecycleBoundaryTest {
             "homeExperience.onRemoveItem = null",
             "homeExperience.onRemoveUnknownItem = null",
             "homeExperience.onFindOfflineCatalogMatch = null",
+            "homeExperience.onChooseExactProduct = null",
             "homeExperience.onChickenChoice = null",
             "homeExperience.onExtraStopMinimumSavingsChoice = null",
             "homeExperience.onEditItemDetails = null",
@@ -24,6 +25,8 @@ class MainActivityHomeLifecycleBoundaryTest {
             "homeExperience.onCompare = null",
             "homeExperience.onReviewPrivateMemory = null",
             "homeExperience.onGoodPrice = null",
+            "if (::rememberConfirmedChoiceAndroidSession.isInitialized)",
+            "rememberConfirmedChoiceAndroidSession.close()",
             "if (::basketExperience.isInitialized)",
             "basketExperience.onAction = null"
         ).forEach { required ->
@@ -58,7 +61,7 @@ class MainActivityHomeLifecycleBoundaryTest {
         val source = source().readText()
 
         listOf(
-            "private fun showOfflineCatalogMatches(token: String)",
+            "private fun showOfflineCatalogMatches(",
             "private fun cancelOfflineCatalogLookup()",
             "private var offlineCatalogLookup: Future<*>? = null",
             "offlineCatalogLookup?.cancel(true)",
@@ -74,12 +77,20 @@ class MainActivityHomeLifecycleBoundaryTest {
             "getString(R.string.home_unknown_find_matches_title, token)",
             "setSingleChoiceItems(labels, -1)",
             "PracticalShoppingHomeOfflineCatalogSelection.replaceUnknownToken(",
-            "setPositiveButton(R.string.home_offline_catalog_replace_list_word, null)",
+            "setPositiveButton(",
             "home_offline_catalog_replace_list_word",
             "home_offline_catalog_replace_list_word_description",
             "home_offline_catalog_match_apply_failed",
             "resultDialog.setMessage(getString(R.string.home_offline_catalog_match_apply_failed))",
             "resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false",
+            "exactProductItemKey: ShoppingItemKey?",
+            "OfflineCatalogLookup(",
+            "PracticalShoppingHomeOfflineCatalogExactSelection.confirm(",
+            "rememberConfirmedChoiceAndroidSession.remember(chosen.rememberRequest)",
+            "home_offline_catalog_confirm_exact_message",
+            "home_offline_catalog_confirm_exact_product",
+            "home_offline_catalog_saved_title",
+            "home_offline_catalog_save_failed_title",
             "requestId != offlineCatalogRequestId",
             "offlineCatalogDialog !== dialog",
             "OFFLINE_CATALOG_MAX_AGE_MILLIS",

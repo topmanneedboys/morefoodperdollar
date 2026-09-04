@@ -31,11 +31,17 @@ import com.google.android.material.card.MaterialCardView
 import com.google.android.material.chip.Chip
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
+import com.valuepilot.core.OfflineCatalogDiscoveryResult
 import com.valuepilot.core.ShoppingItemKey
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 
 class MainActivity : AppCompatActivity() {
+
+    private data class OfflineCatalogLookup(
+        val discoveryResult: OfflineCatalogDiscoveryResult,
+        val presentation: PracticalShoppingHomeOfflineCatalogPresentation
+    )
 
     private var shellState = AppShellState.initial()
     private var homeSessionState = PracticalShoppingHomeSession.initialState()
@@ -125,6 +131,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var stapleWatchFactResolutionHost: StapleWatchFactResolutionHost
     private lateinit var stapleWatchSetupCoordinator: StapleWatchSavedSetupCompositionCoordinator
     private lateinit var stapleWatchPolicySetupCoordinator: StapleWatchPolicySetupCompositionCoordinator
+    private lateinit var rememberConfirmedChoiceAndroidSession:
+        PracticalShoppingRememberConfirmedChoiceAndroidSession
 
     private var comparisonActivityOpen = false
     private var homeItemDetailsDialog: AlertDialog? = null
@@ -133,6 +141,7 @@ class MainActivity : AppCompatActivity() {
     private var homeItemDetailsBrandInput: TextInputEditText? = null
     private var homeItemDetailsExactProduct: CheckBox? = null
     private var offlineCatalogDialog: AlertDialog? = null
+    private var pendingExactProductLabel: String? = null
     private var dataStatusDialog: AlertDialog? = null
     private var privatePriceHistoryDialog: AlertDialog? = null
     private var privatePriceHistoryClearDialog: AlertDialog? = null
@@ -303,6 +312,7 @@ class MainActivity : AppCompatActivity() {
         cancelOfflineCatalogLookup()
         offlineCatalogDialog?.dismiss()
         offlineCatalogDialog = null
+        pendingExactProductLabel = null
         dismissSearchIdentityDialog()
         dataStatusDialog?.dismiss()
         dataStatusDialog = null
@@ -316,6 +326,7 @@ class MainActivity : AppCompatActivity() {
             homeExperience.onRemoveItem = null
             homeExperience.onRemoveUnknownItem = null
             homeExperience.onFindOfflineCatalogMatch = null
+            homeExperience.onChooseExactProduct = null
             homeExperience.onChickenChoice = null
             homeExperience.onExtraStopMinimumSavingsChoice = null
             homeExperience.onEditItemDetails = null
@@ -354,6 +365,9 @@ class MainActivity : AppCompatActivity() {
             stapleWatchSavedDisplayMetadataCompositionCoordinator.close()
             stapleWatchForegroundEvaluationInputHost.close()
             savedRouteCoordinator.close()
+        }
+        if (::rememberConfirmedChoiceAndroidSession.isInitialized) {
+            rememberConfirmedChoiceAndroidSession.close()
         }
         searchExecutor.shutdownNow()
         mainHandler.removeCallbacksAndMessages(null)
@@ -443,6 +457,11 @@ class MainActivity : AppCompatActivity() {
         homeExperience.onFindOfflineCatalogMatch = { token ->
             showOfflineCatalogMatches(token)
         }
+        homeExperience.onChooseExactProduct = { itemKey ->
+            homeSessionState.model.ui.items.firstOrNull { it.key == itemKey }?.let { item ->
+                showOfflineCatalogMatches(item.name, exactProductItemKey = itemKey)
+            }
+        }
         homeExperience.onChickenChoice = { choice ->
             homeSessionState =
                 PracticalShoppingHomeSession.chooseChicken(homeSessionState, choice)
@@ -466,6 +485,11 @@ class MainActivity : AppCompatActivity() {
         homeExperience.onCompare = { openComparison() }
         homeExperience.onReviewPrivateMemory = { reviewPrivatePriceHistory() }
         homeExperience.onGoodPrice = { openGoodPriceCheck() }
+        rememberConfirmedChoiceAndroidSession =
+            PracticalShoppingRememberConfirmedChoiceAndroidSession.create(
+                context = this,
+                completionListener = ::onHomeExactProductRemembered
+            )
         renderHome()
     }
 
@@ -541,7 +565,10 @@ class MainActivity : AppCompatActivity() {
         offlineCatalogLookup = null
     }
 
-    private fun showOfflineCatalogMatches(token: String) {
+    private fun showOfflineCatalogMatches(
+        token: String,
+        exactProductItemKey: ShoppingItemKey? = null
+    ) {
         val query = token.trim()
         if (query.isBlank()) return
 
@@ -567,17 +594,22 @@ class MainActivity : AppCompatActivity() {
         dialog.show()
 
         offlineCatalogLookup = searchExecutor.submit {
-            val presentation =
+            val lookup =
                 try {
-                    PracticalShoppingHomeOfflineCatalogPresentation.from(
-                        query,
-                        BundledOfflineCatalog.discoverSupportedRegions(
+                    val discoveryResult = BundledOfflineCatalog.discoverSupportedRegions(
                             context = applicationContext,
                             rawQuery = query,
                             canonicalizer = JvmTextCanonicalizer,
                             evaluatedAtEpochMillis = System.currentTimeMillis(),
                             maximumSnapshotAgeMillis = OFFLINE_CATALOG_MAX_AGE_MILLIS
                         )
+                    OfflineCatalogLookup(
+                        discoveryResult = discoveryResult,
+                        presentation =
+                            PracticalShoppingHomeOfflineCatalogPresentation.from(
+                                query,
+                                discoveryResult
+                            )
                     )
                 } catch (ignored: Exception) {
                     null
@@ -594,13 +626,15 @@ class MainActivity : AppCompatActivity() {
                     return@post
                 }
                 offlineCatalogLookup = null
-                if (presentation == null) {
+                if (lookup == null) {
                     dialog.setMessage(getString(R.string.home_offline_catalog_unavailable))
                 } else {
                     showOfflineCatalogResult(
                         token = query,
-                        presentation = presentation,
-                        requestId = requestId
+                        presentation = lookup.presentation,
+                        discoveryResult = lookup.discoveryResult,
+                        requestId = requestId,
+                        exactProductItemKey = exactProductItemKey
                     )
                 }
             }
@@ -608,14 +642,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Replaces the loading dialog with an explicit, reversible name-selection surface.
-     * Selecting a name only edits the unresolved Home query; it never confirms a product or
-     * submits a plan. The shopper reviews the edited list and presses Plan My Shop themselves.
+     * Replaces the loading dialog with an explicit, reversible identity-choice surface.
+     * Unknown Home words remain query-only. A resolved item may additionally be saved as an
+     * exact product preference, but only after the existing source-revalidated confirmation
+     * boundary accepts the selected catalog row.
      */
     private fun showOfflineCatalogResult(
         token: String,
         presentation: PracticalShoppingHomeOfflineCatalogPresentation,
-        requestId: Long
+        discoveryResult: OfflineCatalogDiscoveryResult,
+        requestId: Long,
+        exactProductItemKey: ShoppingItemKey?
     ) {
         if (requestId != offlineCatalogRequestId || offlineCatalogDialog == null) return
 
@@ -655,14 +692,27 @@ class MainActivity : AppCompatActivity() {
                 .setMessage(
                     presentation.summaryMessage +
                         "\n\n" +
-                        getString(R.string.home_offline_catalog_select_match)
+                        getString(
+                            if (exactProductItemKey == null) {
+                                R.string.home_offline_catalog_select_match
+                            } else {
+                                R.string.home_offline_catalog_confirm_exact_message
+                            }
+                        )
                 )
                 .setSingleChoiceItems(labels, -1) { _, which ->
                     selectedIndex = which
                     resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
                 }
                 .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(R.string.home_offline_catalog_replace_list_word, null)
+                .setPositiveButton(
+                    if (exactProductItemKey == null) {
+                        R.string.home_offline_catalog_replace_list_word
+                    } else {
+                        R.string.home_offline_catalog_confirm_exact_product
+                    },
+                    null
+                )
 
         resultDialog = builder.create()
         offlineCatalogDialog = resultDialog
@@ -673,10 +723,27 @@ class MainActivity : AppCompatActivity() {
             resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).apply {
                 isEnabled = false
                 contentDescription =
-                    getString(R.string.home_offline_catalog_replace_list_word_description)
+                    getString(
+                        if (exactProductItemKey == null) {
+                            R.string.home_offline_catalog_replace_list_word_description
+                        } else {
+                            R.string.home_offline_catalog_confirm_exact_description
+                        }
+                    )
             }
             resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val match = presentation.matches.getOrNull(selectedIndex) ?: return@setOnClickListener
+                if (exactProductItemKey != null) {
+                    confirmHomeExactProduct(
+                        itemKey = exactProductItemKey,
+                        discoveryResult = discoveryResult,
+                        matchIndex = selectedIndex,
+                        presentationGeneration = requestId,
+                        displayName = match.displayName,
+                        resultDialog = resultDialog
+                    )
+                    return@setOnClickListener
+                }
                 val editedQuery =
                     PracticalShoppingHomeOfflineCatalogSelection.replaceUnknownToken(
                         rawQuery = homeSessionState.model.ui.query,
@@ -696,6 +763,100 @@ class MainActivity : AppCompatActivity() {
             }
         }
         resultDialog.show()
+    }
+
+    private fun confirmHomeExactProduct(
+        itemKey: ShoppingItemKey,
+        discoveryResult: OfflineCatalogDiscoveryResult,
+        matchIndex: Int,
+        presentationGeneration: Long,
+        displayName: String,
+        resultDialog: AlertDialog
+    ) {
+        if (
+            presentationGeneration != offlineCatalogRequestId ||
+                offlineCatalogDialog !== resultDialog ||
+                !resultDialog.isShowing
+        ) {
+            return
+        }
+
+        val currentItem = homeSessionState.model.ui.items.firstOrNull { it.key == itemKey }
+        if (currentItem == null) {
+            resultDialog.setMessage(getString(R.string.home_offline_catalog_confirm_unavailable))
+            resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+            return
+        }
+
+        val selection =
+            PracticalShoppingHomeOfflineCatalogExactSelection.confirm(
+                itemKey = itemKey,
+                result = discoveryResult,
+                matchIndex = matchIndex,
+                presentationGeneration = presentationGeneration,
+                confirmedCandidateId = "home-confirmed-$presentationGeneration-${matchIndex + 1}"
+            )
+        val chosen = selection.selection
+        if (chosen == null) {
+            resultDialog.setMessage(getString(R.string.home_offline_catalog_confirm_unavailable))
+            resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+            return
+        }
+
+        if (!rememberConfirmedChoiceAndroidSession.remember(chosen.rememberRequest)) {
+            resultDialog.setMessage(getString(R.string.home_offline_catalog_save_progress))
+            resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+            return
+        }
+
+        pendingExactProductLabel = displayName
+        resultDialog.setMessage(getString(R.string.home_offline_catalog_save_progress))
+        resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+    }
+
+    private fun onHomeExactProductRemembered(
+        completion: PracticalShoppingRememberConfirmedChoiceCompletion
+    ) {
+        val label = pendingExactProductLabel
+        pendingExactProductLabel = null
+        val dialog = offlineCatalogDialog
+        offlineCatalogDialog = null
+        dialog?.dismiss()
+
+        val outcome = completion.outcome
+        val title: Int
+        val message: String
+        when (outcome) {
+            is PracticalShoppingRememberConfirmedChoiceExecutionOutcome.Completed -> {
+                val result = outcome.result
+                if (result.exactSaved) {
+                    title = R.string.home_offline_catalog_saved_title
+                    message =
+                        if (result.fullyLabeled && label != null) {
+                            getString(R.string.home_offline_catalog_saved_message, label)
+                        } else {
+                            getString(R.string.home_offline_catalog_saved_unlabelled_message)
+                        }
+                } else {
+                    title = R.string.home_offline_catalog_save_failed_title
+                    message = getString(R.string.home_offline_catalog_save_failed_message)
+                }
+            }
+
+            PracticalShoppingRememberConfirmedChoiceExecutionOutcome.Failed -> {
+                title = R.string.home_offline_catalog_save_failed_title
+                message = getString(R.string.home_offline_catalog_save_failed_message)
+            }
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton(R.string.nav_saved) { _, _ ->
+                dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED))
+            }
+            .setNegativeButton(R.string.home_stay, null)
+            .show()
     }
 
     private fun restoreHomeItemDetailsDialog(savedInstanceState: Bundle?) {

@@ -60,6 +60,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val unknownRemovalOwnerControls = mutableListOf<View>()
     private val offlineCatalogOwnerControls = mutableListOf<View>()
     private val itemDetailsOwnerControls = mutableListOf<View>()
+    private val exactProductOwnerControls = mutableListOf<View>()
     private val observedPriceOwnerControls = mutableListOf<View>()
     private val chickenChoiceOwnerControls = mutableListOf<View>()
     private val extraStopOwnerControls = mutableListOf<View>()
@@ -134,6 +135,13 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         set(value) {
             field = value
             itemDetailsOwnerControls.forEach { control ->
+                control.isEnabled = value != null
+            }
+        }
+    var onChooseExactProduct: ((ShoppingItemKey) -> Unit)? = null
+        set(value) {
+            field = value
+            exactProductOwnerControls.forEach { control ->
                 control.isEnabled = value != null
             }
         }
@@ -319,6 +327,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         unknownRemovalOwnerControls.clear()
         offlineCatalogOwnerControls.clear()
         itemDetailsOwnerControls.clear()
+        exactProductOwnerControls.clear()
         observedPriceOwnerControls.clear()
         chickenChoiceOwnerControls.clear()
         extraStopChoiceOwnerControls.clear()
@@ -456,6 +465,21 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                         context.getString(R.string.home_item_details_action_description, item.name)
                 )
             )
+            if (item.exactProductActionVisible) {
+                addView(
+                    detailButton(
+                        onDetails = { onChooseExactProduct?.invoke(item.key) },
+                        label = context.getString(R.string.home_choose_exact_product),
+                        description =
+                            context.getString(
+                                R.string.home_choose_exact_product_description,
+                                item.name
+                            ),
+                        enabled = onChooseExactProduct != null,
+                        ownerControls = exactProductOwnerControls
+                    )
+                )
+            }
             item.storeAssignment?.let { store ->
                 addView(line("Buy at $store", 12f, "#374151", topPadding = 2))
             }
