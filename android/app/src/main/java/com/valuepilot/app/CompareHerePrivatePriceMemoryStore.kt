@@ -147,6 +147,8 @@ private class AndroidAtomicMemoryByteStorage(context: Context) : MemoryByteStora
 /**
  * App-internal, device-only comparison memory. A malformed document blocks mutation rather than
  * selectively accepting records; the user can clear it and recover without affecting Compare Here.
+ * This adapter is intentionally the only Android persistence boundary for these snapshots; no
+ * Home/planner/evidence surface can silently promote them into live shopping facts.
  */
 internal class CompareHerePrivatePriceMemoryAndroidStore internal constructor(
     private val storage: MemoryByteStorage
