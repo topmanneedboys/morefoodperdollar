@@ -6,7 +6,10 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+import tools.refresh_offline_catalog_snapshots as refresh_module
+from tools.promote_offline_catalog_snapshot import SnapshotPromotionError
 from tools.refresh_offline_catalog_snapshots import (
     OfflineCatalogRefreshError,
     refresh_snapshots,
@@ -179,6 +182,78 @@ class OfflineCatalogRefreshTest(unittest.TestCase):
                 )
 
             self.assertFalse((root / "state" / "coverage-report.json").exists())
+
+    def test_rolls_back_all_region_pointers_if_later_promotion_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "products.jsonl"
+            self.write_export(source, count=1_500)
+            rights = self.write_rights(root / "off-rights.json")
+            private_key, public_key = self.make_keypair(root)
+            state = root / "state"
+
+            refresh_snapshots(
+                source,
+                state,
+                rights,
+                private_key,
+                public_key,
+                **self.run_args(),
+                max_records=1_500,
+                promote=True,
+            )
+            before_pointers = {
+                region: {
+                    name: (state / region / name).read_bytes()
+                    for name in ("current.json", "last-known-good.json")
+                }
+                for region in ("ca-gta", "ca-metro-vancouver")
+            }
+            before_report = (state / "coverage-report.json").read_bytes()
+
+            updated_args = self.run_args()
+            updated_args.update(
+                {
+                    "generated_at": "2026-09-03T13:00:00Z",
+                    "acquired_at": "2026-09-03T12:00:00Z",
+                    "evaluated_at": "2026-09-03T13:00:00Z",
+                }
+            )
+            real_promote = refresh_module.promote_snapshot
+            calls = 0
+
+            def promote_with_failure(*args, **kwargs):
+                nonlocal calls
+                calls += 1
+                if calls == 2:
+                    raise SnapshotPromotionError("simulated later-region failure")
+                return real_promote(*args, **kwargs)
+
+            with patch.object(
+                refresh_module,
+                "promote_snapshot",
+                side_effect=promote_with_failure,
+            ):
+                with self.assertRaisesRegex(
+                    OfflineCatalogRefreshError,
+                    "Snapshot promotion failed for ca-metro-vancouver",
+                ):
+                    refresh_snapshots(
+                        source,
+                        state,
+                        rights,
+                        private_key,
+                        public_key,
+                        **updated_args,
+                        max_records=1_500,
+                        promote=True,
+                    )
+
+            self.assertEqual(2, calls)
+            for region, pointers in before_pointers.items():
+                for name, content in pointers.items():
+                    self.assertEqual(content, (state / region / name).read_bytes())
+            self.assertEqual(before_report, (state / "coverage-report.json").read_bytes())
 
     @staticmethod
     def run_args() -> dict[str, object]:

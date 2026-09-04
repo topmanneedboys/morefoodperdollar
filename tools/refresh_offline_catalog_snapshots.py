@@ -13,7 +13,8 @@ hidden wall clock is introduced here.  Without ``--promote`` the run only
 creates verified candidates in a new empty output directory.  With
 ``--promote`` that output directory is also the per-region promotion state
 root, and each region's pointers are changed only after every requested
-candidate has been built and signature-verified.
+candidate has been built and signature-verified.  If any region promotion
+fails, all pointer files are restored byte-for-byte to their pre-run state.
 """
 
 from __future__ import annotations
@@ -151,6 +152,52 @@ def _write_json_atomically(path: Path, payload: Mapping[str, Any]) -> None:
     finally:
         if temporary is not None and temporary.exists():
             temporary.unlink()
+
+
+def _write_bytes_atomically(path: Path, payload: bytes) -> None:
+    """Restore an exact pointer byte sequence without exposing a partial file."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            dir=path.parent,
+            prefix=f".{path.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            temporary = Path(handle.name)
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None and temporary.exists():
+            temporary.unlink()
+
+
+def _capture_pointer_state(output_root: Path, region_ids: Sequence[str]) -> dict[Path, bytes | None]:
+    """Capture only the exact per-region pointers that promotion may mutate."""
+
+    state: dict[Path, bytes | None] = {}
+    for region_id in region_ids:
+        region_root = output_root / region_id
+        for pointer_name in ("current.json", "last-known-good.json"):
+            pointer_path = region_root / pointer_name
+            state[pointer_path] = pointer_path.read_bytes() if pointer_path.exists() else None
+    return state
+
+
+def _restore_pointer_state(state: Mapping[Path, bytes | None]) -> None:
+    """Restore a captured pointer set, including removing newly-created files."""
+
+    for pointer_path, payload in state.items():
+        if payload is None:
+            if pointer_path.exists():
+                pointer_path.unlink()
+        else:
+            _write_bytes_atomically(pointer_path, payload)
 
 
 def _coverage_report(
@@ -445,24 +492,37 @@ def refresh_snapshots(
                 ) from exc
 
         if promote:
-            for item in verified:
-                region_id = item["regionId"]
+            pointer_state = _capture_pointer_state(
+                output_root,
+                [str(item["regionId"]) for item in verified],
+            )
+            try:
+                for item in verified:
+                    region_id = item["regionId"]
+                    try:
+                        promotion = promote_snapshot(
+                            output_root / region_id / "candidates" / item["snapshotId"],
+                            output_root / region_id,
+                            public_key,
+                            evaluated_at_epoch_millis=evaluated_epoch,
+                            maximum_snapshot_age_millis=maximum_snapshot_age_millis,
+                            expected_region_id=region_id,
+                            minimum_catalog_records=minimum_catalog_records,
+                            maximum_catalog_records=maximum_catalog_records,
+                        )
+                    except (SnapshotPromotionError, SnapshotBuildError, OSError) as exc:
+                        raise OfflineCatalogRefreshError(
+                            f"Snapshot promotion failed for {region_id}: {exc}"
+                        ) from exc
+                    item["promotion"] = promotion
+            except Exception as exc:
                 try:
-                    promotion = promote_snapshot(
-                        output_root / region_id / "candidates" / item["snapshotId"],
-                        output_root / region_id,
-                        public_key,
-                        evaluated_at_epoch_millis=evaluated_epoch,
-                        maximum_snapshot_age_millis=maximum_snapshot_age_millis,
-                        expected_region_id=region_id,
-                        minimum_catalog_records=minimum_catalog_records,
-                        maximum_catalog_records=maximum_catalog_records,
-                    )
-                except (SnapshotPromotionError, SnapshotBuildError, OSError) as exc:
+                    _restore_pointer_state(pointer_state)
+                except OSError as rollback_exc:
                     raise OfflineCatalogRefreshError(
-                        f"Snapshot promotion failed for {region_id}: {exc}"
+                        f"Snapshot promotion failed and pointer rollback failed: {rollback_exc}"
                     ) from exc
-                item["promotion"] = promotion
+                raise
 
         _write_json_atomically(
             output_root / COVERAGE_REPORT_NAME,
