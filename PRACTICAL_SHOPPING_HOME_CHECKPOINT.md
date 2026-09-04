@@ -8,6 +8,12 @@ This checkpoint records the verified Practical Shopping Home slice plus the prov
 
 ## Latest verified engineering head
 
+`1b47547ddb04cb06afc5ed8b6400d8429705a5f9` — `Clarify pending extra-stop evaluation on Home`
+
+Candidate workflow **33871829169** and milestone provenance workflow **33872307030** completed successfully for the exact SHA. When a Home result has a missing usable price, the collapsed extra-stop disclosure now says `Not evaluated yet` in its immutable renderer summary, matching the existing expanded notice that another stop is not evaluated until every requested item has a usable price. Complete plans retain the original threshold summary. This is a reversible presentation-only correction; no planner, ranking, price, offer, store, stock, availability, provider-economics or persistence authority moved into the surface.
+
+## Previous verified engineering head (superseded)
+
 `6743181977f1500772444599a667284b8d7ea2e3` — `Add actionable Home private history review route`
 
 Candidate workflow **33867138431** and milestone provenance workflow **33867613305** completed successfully for the exact SHA. When readable nonempty private comparison history exists, Home now exposes a renderer-owned `Review private price history` action that opens the existing Scan & compare screen. Empty history stays quiet and unavailable history stays on its recovery notice. The existing count-only, name/package/promotion mismatch and non-live-price disclosures remain unchanged. Deterministic Home history, renderer, lifecycle and View-boundary coverage protects visibility, callback ownership and route wiring. This is reversible navigation only; no planner, ranking, price, offer, store, stock, availability, provider-economics or persistence authority moved into the surface.
