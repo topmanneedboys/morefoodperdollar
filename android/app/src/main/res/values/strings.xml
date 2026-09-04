@@ -74,6 +74,14 @@
 
     <string name="privacy_body">Standalone comparison, deterministic parsing and exact value evaluation run on-device. This build has no INTERNET permission and does not send your product text, screen contents, credentials or shopping data to a server.</string>
 
+    <string name="sources_licences">Sources &amp; licences</string>
+    <string name="sources_licences_title">Sources &amp; licences</string>
+    <string name="sources_licences_body">Product identity discovery uses an attributed, Canada-labelled Open Food Facts snapshot under ODbL-1.0. Source: https://world.openfoodfacts.org/ • licence: https://opendatacommons.org/licenses/odbl/1-0/. It supplies names, aliases and barcodes for offline search only; it does not prove a current price, package quantity, store stock, store location or availability.
+
+Prices and comparisons you enter or confirm stay private on this device. They are personal observations, not live retailer offers. Home and Search cards are clearly labelled fictional demo data and must not be read as retailer data.
+
+This build does not include a store directory or an authorized current-offer feed. No flyer content is copied here. Source rights and attribution are reviewed before any future dataset is activated.</string>
+
     <string name="accessibility_description">Automatically reads newly visible product and menu labels in the active app so ValuePilot can compare exact unit value and clearly labeled local estimates. It scrolls only when you explicitly choose off-screen collection; this build has no internet permission.</string>
 
     <string name="how_to_use">How to use</string>

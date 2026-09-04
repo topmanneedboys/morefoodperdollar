@@ -416,6 +416,17 @@
                 android:textColor="#6B7280"
                 android:textSize="13sp" />
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/sourcesLicencesButton"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="12dp"
+                android:text="@string/sources_licences"
+                android:textAllCaps="false"
+                android:textSize="15sp"
+                app:cornerRadius="16dp"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
         </LinearLayout>
 
     </ScrollView>

@@ -65,6 +65,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var screenBody: TextView
     private lateinit var screenFootnote: TextView
     private lateinit var primaryAction: Button
+    private lateinit var sourcesLicencesButton: MaterialButton
     private lateinit var homeExperience: PracticalShoppingHomeSurfaceView
     private lateinit var basketExperience: PracticalShoppingBasketSurfaceView
     private lateinit var searchExperience: View
@@ -147,6 +148,7 @@ class MainActivity : AppCompatActivity() {
         screenBody = findViewById(R.id.screenBody)
         screenFootnote = findViewById(R.id.screenFootnote)
         primaryAction = findViewById(R.id.primaryAction)
+        sourcesLicencesButton = findViewById(R.id.sourcesLicencesButton)
         homeExperience = findViewById(R.id.homeExperience)
         basketExperience = findViewById(R.id.basketExperience)
         searchExperience = findViewById(R.id.searchExperience)
@@ -222,6 +224,7 @@ class MainActivity : AppCompatActivity() {
         )
 
         primaryAction.setOnClickListener { openComparison() }
+        sourcesLicencesButton.setOnClickListener { showSourcesLicences() }
 
         bottomNavigation.selectedItemId = menuIdFor(shellState.selectedPrimaryTab)
         renderShell(shellState)
@@ -1230,6 +1233,14 @@ class MainActivity : AppCompatActivity() {
         )
         comparisonActivityOpen = true
         startActivity(Intent(this, ComparisonActivity::class.java))
+    }
+
+    private fun showSourcesLicences() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.sources_licences_title)
+            .setMessage(R.string.sources_licences_body)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
     }
 
     private fun openGoodPriceCheck() {
