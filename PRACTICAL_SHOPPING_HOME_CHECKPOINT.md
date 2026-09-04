@@ -8,6 +8,14 @@ This checkpoint records the verified Practical Shopping Home slice plus the prov
 
 ## Latest verified engineering head
 
+`ba1effcc34e0acefecedd2e4aed7dfc534324d59` — `Add review-first price photo import to Compare Here`
+
+Candidate workflow **33840519086** and milestone provenance workflow **33840982046** completed successfully for the exact SHA. The Home comparison entry is now labelled `Scan & compare prices` and opens Compare Here, whose user-triggered local photo import proposes bounded OCR text for review. This does not change Home planner authority: the visible Home experience remains the clearly labelled fictional demo, and the Home offline identity catalog still provides names only, never prices, availability or stock.
+
+The same release includes the signed 30,000-record shared Canada identity catalog and atomic multi-region release pointer described in the current state checkpoint. Real evidence-backed Home/private price-book wiring remains a later milestone; physical-device testing is still required before declaring Scan & Compare or launch UX complete.
+
+## Previous verified engineering head (superseded)
+
 `c67286f83bc23f53f31ef72d311ceb22e3716041` — `Reveal extra-stop preference after planning`
 
 GitHub Actions workflow run **33626580579** completed successfully (candidate run **33626116787** also passed).

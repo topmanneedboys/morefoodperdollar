@@ -2,6 +2,18 @@
 
 ## Latest promoted consumer boundary
 
+- Promoted code commit: `ba1effcc34e0acefecedd2e4aed7dfc534324d59` (`Add review-first price photo import to Compare Here`)
+- Candidate workflow: **33840519086** — success
+- Promoted workflow/provenance: **33840982046** — success
+
+Compare Here now includes a user-triggered `Import a price photo` action. The image is bounded before on-device ML Kit OCR, OCR snippets are capped at the existing 32-entry comparison limit and rejected when blank, unsafe-control or overlong, and accepted snippets fill empty editor slots before appending. The activity only inserts suggestions; the shopper reviews every entry, can edit or remove it, confirms like-for-like alternatives and then invokes the existing exact route. Images are never persisted, OCR never creates a product identity or price authority, and cancellation/error leaves existing entries unchanged.
+
+The Home secondary entry is now labelled `Scan & compare prices` and still opens the same manual comparison route. The optional Accessibility scanner remains a separate opt-in adapter.
+
+The prior editor-draft boundary remains recorded in the historical verification list below.
+
+## Previous promoted consumer boundary (superseded)
+
 - Promoted code commit: `e0c98dcd2cccd161b8ad25a762f0a846e74f6165` (`Bound Compare Here editor drafts`)
 - Candidate workflow: **33629519482** — success
 - Promoted workflow: **33630064672** — success
