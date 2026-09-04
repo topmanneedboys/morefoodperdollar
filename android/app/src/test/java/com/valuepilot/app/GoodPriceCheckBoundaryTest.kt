@@ -57,6 +57,8 @@ class GoodPriceCheckBoundaryTest {
         listOf(
             "GoodPriceCheckRouteCoordinator.checkBlock",
             "CompareHerePrivatePriceMemoryAndroidStore",
+            "privateMemoryLoadIssue",
+            "good_price_memory_unavailable",
             "memoryStore.append",
             "memoryStore.clear"
         ).forEach { required -> assertTrue(source.contains(required)) }
@@ -80,6 +82,16 @@ class GoodPriceCheckBoundaryTest {
         assertTrue(manifest.substring(activityStart, activityEnd).contains("android:exported=\"false\""))
     }
 
+    @Test
+    fun `good price layout keeps its own basis and unavailable-history copy`() {
+        val layout = layout().readText()
+        val strings = strings().readText()
+
+        assertTrue(layout.contains("@string/good_price_selection_body"))
+        assertTrue(strings.contains("name=\"good_price_selection_body\""))
+        assertTrue(strings.contains("name=\"good_price_memory_unavailable\""))
+    }
+
     private fun source(name: String): File =
         File(
             requireNotNull(System.getProperty("user.dir")),
@@ -91,4 +103,16 @@ class GoodPriceCheckBoundaryTest {
             requireNotNull(System.getProperty("user.dir")),
             "src/main/AndroidManifest.xml"
         ).also { assertTrue("Missing manifest at ${it.absolutePath}", it.isFile) }
+
+    private fun layout(): File =
+        File(
+            requireNotNull(System.getProperty("user.dir")),
+            "src/main/res/layout/activity_good_price.xml"
+        ).also { assertTrue("Missing layout at ${it.absolutePath}", it.isFile) }
+
+    private fun strings(): File =
+        File(
+            requireNotNull(System.getProperty("user.dir")),
+            "src/main/res/values/strings.xml"
+        ).also { assertTrue("Missing strings at ${it.absolutePath}", it.isFile) }
 }

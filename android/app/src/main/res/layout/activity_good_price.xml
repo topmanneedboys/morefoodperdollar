@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/goodPriceRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -40,7 +41,6 @@
             android:layout_marginTop="22dp"
             android:hint="@string/good_price_input_hint"
             app:boxBackgroundColor="#FFFFFF"
-            xmlns:app="http://schemas.android.com/apk/res-auto"
             app:boxCornerRadiusBottomEnd="18dp"
             app:boxCornerRadiusBottomStart="18dp"
             app:boxCornerRadiusTopEnd="18dp"
@@ -80,7 +80,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
-            android:text="@string/price_selection_body"
+            android:text="@string/good_price_selection_body"
             android:textColor="#6B7280"
             android:textSize="12sp" />
 

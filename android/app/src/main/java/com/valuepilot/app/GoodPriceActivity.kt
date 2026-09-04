@@ -27,6 +27,7 @@ class GoodPriceActivity : AppCompatActivity() {
 
     private var priceSelection = CompareHerePriceSelection.CURRENT
     private var privateMemory = CompareHerePrivatePriceMemoryState.empty()
+    private var privateMemoryLoadIssue: CompareHerePrivatePriceMemoryStoreIssue? = null
     private var restoring = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -77,10 +78,13 @@ class GoodPriceActivity : AppCompatActivity() {
             val result = memoryStore.clear()
             if (result.accepted) {
                 privateMemory = CompareHerePrivatePriceMemoryState.empty()
+                privateMemoryLoadIssue = null
                 hideMemoryStatus()
             } else {
                 memoryStatus.text = getString(R.string.compare_memory_clear_error)
+                memoryStatus.setTextColor(Color.parseColor("#92400E"))
                 memoryStatus.visibility = View.VISIBLE
+                clearMemoryButton.visibility = View.VISIBLE
             }
         }
 
@@ -103,6 +107,7 @@ class GoodPriceActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         privateMemory = loadPrivateMemory()
+        if (privateMemoryLoadIssue != null) showMemoryUnavailable()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -125,13 +130,14 @@ class GoodPriceActivity : AppCompatActivity() {
 
         val capture = evaluation.privateMemoryCapture
         if (capture == null) {
-            hideMemoryStatus()
+            if (privateMemoryLoadIssue == null) hideMemoryStatus() else showMemoryUnavailable()
             return
         }
 
         val saved = memoryStore.append(capture)
         if (saved.accepted) {
             privateMemory = requireNotNull(saved.state)
+            privateMemoryLoadIssue = null
             memoryStatus.text =
                 getString(
                     R.string.good_price_memory_saved,
@@ -141,15 +147,22 @@ class GoodPriceActivity : AppCompatActivity() {
             memoryStatus.visibility = View.VISIBLE
             clearMemoryButton.visibility = View.VISIBLE
         } else {
-            memoryStatus.text = getString(R.string.good_price_memory_error)
-            memoryStatus.setTextColor(Color.parseColor("#92400E"))
-            memoryStatus.visibility = View.VISIBLE
-            clearMemoryButton.visibility = View.VISIBLE
+            if (privateMemoryLoadIssue != null ||
+                saved.issue == CompareHerePrivatePriceMemoryStoreIssue.STORED_DATA_INVALID
+            ) {
+                privateMemoryLoadIssue = saved.issue ?: privateMemoryLoadIssue
+                showMemoryUnavailable()
+            } else {
+                memoryStatus.text = getString(R.string.good_price_memory_error)
+                memoryStatus.setTextColor(Color.parseColor("#92400E"))
+                memoryStatus.visibility = View.VISIBLE
+                clearMemoryButton.visibility = View.VISIBLE
+            }
         }
     }
 
     private fun renderIdle() {
-        hideMemoryStatus()
+        if (privateMemoryLoadIssue == null) hideMemoryStatus() else showMemoryUnavailable()
         checkButton.isEnabled = productInput.text?.toString()?.isNotBlank() == true
         presenter.render(
             GoodPriceCheckRouteState(
@@ -160,8 +173,18 @@ class GoodPriceActivity : AppCompatActivity() {
         )
     }
 
-    private fun loadPrivateMemory(): CompareHerePrivatePriceMemoryState =
-        memoryStore.load().state ?: CompareHerePrivatePriceMemoryState.empty()
+    private fun loadPrivateMemory(): CompareHerePrivatePriceMemoryState {
+        val loaded = memoryStore.load()
+        privateMemoryLoadIssue = loaded.issue
+        return loaded.state ?: CompareHerePrivatePriceMemoryState.empty()
+    }
+
+    private fun showMemoryUnavailable() {
+        memoryStatus.text = getString(R.string.good_price_memory_unavailable)
+        memoryStatus.setTextColor(Color.parseColor("#92400E"))
+        memoryStatus.visibility = View.VISIBLE
+        clearMemoryButton.visibility = View.VISIBLE
+    }
 
     private fun hideMemoryStatus() {
         memoryStatus.text = ""
