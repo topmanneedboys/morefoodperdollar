@@ -8,7 +8,11 @@ Android version: 101.1.0 (10101)
 
 ## Current verified engineering head
 
-The promoted milestone is now `22e45377d40511e5a42aa786264cb562f15a1336` (`Point Home memory summary to review route`). Candidate workflow **33864992864** and milestone provenance workflow **33865459380** passed for this exact SHA. When Home has nonempty private comparison history but no current list label matches, its renderer-owned summary now tells the shopper to open Scan & compare prices to review those observations. This is a small route-discovery refinement: it adds no action, storage, price, offer, store, stock, availability, planner, ranking, network, provider-economics or persistence authority, and the existing non-live-price and package/promotion caveats remain explicit.
+The promoted milestone is now `6743181977f1500772444599a667284b8d7ea2e3` (`Add actionable Home private history review route`). Candidate workflow **33867138431** and milestone provenance workflow **33867613305** passed for this exact SHA. When Home has readable nonempty private comparison history, its renderer-owned `Review private price history` action opens the existing Scan & compare screen; empty history stays quiet and unavailable history stays on its recovery notice. This is a small reversible navigation refinement: it adds no price, offer, store, stock, availability, planner, ranking, network, provider-economics or persistence authority, and the existing non-live-price and package/promotion caveats remain explicit.
+
+## Previous verified engineering head (superseded)
+
+The promoted milestone was `22e45377d40511e5a42aa786264cb562f15a1336` (`Point Home memory summary to review route`). Candidate workflow **33864992864** and milestone provenance workflow **33865459380** passed for this exact SHA. When Home had nonempty private comparison history but no current list label matched, its renderer-owned summary told the shopper to open Scan & compare prices to review those observations. This was a small route-discovery refinement with no action, storage, price, offer, store, stock, availability, planner, ranking, network, provider-economics or persistence authority.
 
 ## Previous verified engineering head (superseded)
 

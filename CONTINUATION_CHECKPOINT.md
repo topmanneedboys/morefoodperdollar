@@ -6,7 +6,11 @@ Branch: `work/valuepilot-android-milestone`
 
 ## Current verified engineering head
 
-The promoted milestone is now `22e45377d40511e5a42aa786264cb562f15a1336` (`Point Home memory summary to review route`). Candidate workflow **33864992864** and milestone provenance workflow **33865459380** completed successfully for the exact same SHA. When nonempty private comparison memory has no matching Home list label, the renderer-owned summary now points the shopper to Scan & compare prices to review it. This is a reversible route-discovery refinement: it adds no action, storage, price, offer, store, stock, availability, planner, ranking, network, provider-economics or persistence authority, and the existing non-live-price and package/promotion caveats remain explicit.
+The promoted milestone is now `6743181977f1500772444599a667284b8d7ea2e3` (`Add actionable Home private history review route`). Candidate workflow **33867138431** and milestone provenance workflow **33867613305** completed successfully for the exact same SHA. When readable nonempty private comparison history exists, Home now exposes a renderer-owned `Review private price history` action that opens the existing Scan & compare screen; empty history stays quiet and unavailable history stays on its recovery notice. This is a reversible navigation refinement: it adds no price, offer, store, stock, availability, planner, ranking, network, provider-economics or persistence authority, and the existing non-live-price and package/promotion caveats remain explicit.
+
+## Previous verified engineering head (superseded)
+
+The promoted milestone was `22e45377d40511e5a42aa786264cb562f15a1336` (`Point Home memory summary to review route`). Candidate workflow **33864992864** and milestone provenance workflow **33865459380** completed successfully for the exact same SHA. When nonempty private comparison memory had no matching Home list label, the renderer-owned summary pointed the shopper to Scan & compare prices to review it. This was a reversible route-discovery refinement with no action, storage, price, offer, store, stock, availability, planner, ranking, network, provider-economics or persistence authority.
 
 ## Previous verified engineering head (superseded)
 

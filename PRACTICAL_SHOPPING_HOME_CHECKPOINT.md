@@ -8,9 +8,15 @@ This checkpoint records the verified Practical Shopping Home slice plus the prov
 
 ## Latest verified engineering head
 
+`6743181977f1500772444599a667284b8d7ea2e3` — `Add actionable Home private history review route`
+
+Candidate workflow **33867138431** and milestone provenance workflow **33867613305** completed successfully for the exact SHA. When readable nonempty private comparison history exists, Home now exposes a renderer-owned `Review private price history` action that opens the existing Scan & compare screen. Empty history stays quiet and unavailable history stays on its recovery notice. The existing count-only, name/package/promotion mismatch and non-live-price disclosures remain unchanged. Deterministic Home history, renderer, lifecycle and View-boundary coverage protects visibility, callback ownership and route wiring. This is reversible navigation only; no planner, ranking, price, offer, store, stock, availability, provider-economics or persistence authority moved into the surface.
+
+## Previous verified engineering head (superseded)
+
 `22e45377d40511e5a42aa786264cb562f15a1336` — `Point Home memory summary to review route`
 
-Candidate workflow **33864992864** and milestone provenance workflow **33865459380** completed successfully for the exact SHA. When nonempty private comparison history has no matching Home list label, the renderer-owned summary now tells the shopper to open Scan & compare prices to review it. The existing count-only, name/package/promotion mismatch and non-live-price disclosures remain unchanged. Deterministic Home history, renderer and View-boundary coverage protects the wording. This is presentation-only; no action, storage, planner, ranking, price, offer, store, stock, availability, provider-economics or persistence authority moved into the surface.
+Candidate workflow **33864992864** and milestone provenance workflow **33865459380** completed successfully for the exact SHA. When nonempty private comparison history had no matching Home list label, the renderer-owned summary told the shopper to open Scan & compare prices to review it. This was presentation-only and added no action, storage, planner, ranking, price, offer, store, stock, availability, provider-economics or persistence authority.
 
 ## Previous verified engineering head (superseded)
 

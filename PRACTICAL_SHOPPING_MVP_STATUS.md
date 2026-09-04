@@ -8,7 +8,11 @@ Purpose: newest durable product/engineering checkpoint for the Practical Shoppin
 
 ## Latest verified engineering head
 
-The promoted milestone is now `22e45377d40511e5a42aa786264cb562f15a1336` (`Point Home memory summary to review route`), verified by candidate workflow **33864992864** and milestone provenance workflow **33865459380**. When Home has nonempty private comparison history but no current list label matches, its renderer-owned summary now points the shopper to `Scan & compare prices` to review that device-only history. Deterministic Home history/renderer/View coverage protects the exact wording and existing non-live-price boundary. This is a presentation-only route-discovery refinement: no action, storage, planner, ranking, price, offer, store, stock, availability, provider-economics or persistence authority changed; the fictional sample planner and identity-only catalog disclosure remain intact.
+The promoted milestone is now `6743181977f1500772444599a667284b8d7ea2e3` (`Add actionable Home private history review route`), verified by candidate workflow **33867138431** and milestone provenance workflow **33867613305**. When Home has readable nonempty private comparison history, its renderer-owned `Review private price history` action opens the existing `Scan & compare prices` screen; empty history stays quiet and unavailable history stays on its recovery notice. Deterministic Home history/renderer/View/lifecycle coverage protects visibility, callback ownership and route wiring while preserving the existing non-live-price boundary. This is a reversible navigation refinement: no planner, ranking, price, offer, store, stock, availability, provider-economics or persistence authority changed; the fictional sample planner and identity-only catalog disclosure remain intact.
+
+## Previous verified engineering head (superseded)
+
+The promoted milestone was `22e45377d40511e5a42aa786264cb562f15a1336` (`Point Home memory summary to review route`), verified by candidate workflow **33864992864** and milestone provenance workflow **33865459380**. When Home had nonempty private comparison history but no current list label matched, its renderer-owned summary pointed the shopper to `Scan & compare prices` to review that device-only history. This was presentation-only and added no action, storage, planner, ranking, price, offer, store, stock, availability, provider-economics or persistence authority.
 
 ## Previous verified engineering head (superseded)
 
