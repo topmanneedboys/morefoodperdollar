@@ -481,7 +481,7 @@ class MainActivity : AppCompatActivity() {
         offlineCatalogRequestId = requestId
         val dialog =
             AlertDialog.Builder(this)
-                .setTitle(R.string.home_unknown_find_matches)
+                .setTitle(getString(R.string.home_unknown_find_matches_title, query))
                 .setMessage(R.string.home_offline_catalog_loading)
                 .setNegativeButton(R.string.cancel, null)
                 .create()
@@ -553,7 +553,7 @@ class MainActivity : AppCompatActivity() {
         if (presentation.matches.isEmpty()) {
             val dialog =
                 AlertDialog.Builder(this)
-                    .setTitle(R.string.home_unknown_find_matches)
+                    .setTitle(getString(R.string.home_unknown_find_matches_title, token))
                     .setMessage(presentation.message)
                     .setNegativeButton(R.string.cancel, null)
                     .create()
@@ -579,7 +579,7 @@ class MainActivity : AppCompatActivity() {
                 .toTypedArray()
         val builder =
             AlertDialog.Builder(this)
-                .setTitle(R.string.home_unknown_find_matches)
+                .setTitle(getString(R.string.home_unknown_find_matches_title, token))
                 .setMessage(
                     presentation.summaryMessage +
                         "\n\n" +
