@@ -8,13 +8,19 @@
     <string name="products_to_compare">Products to compare</string>
 
     <string name="product_input_instructions">Put the product name, package size and current price in the same box. To compare member prices, add a clearly labeled member price too. Use a concrete currency such as CA$ or US$ instead of a bare $. Blank lines inside a product are fine.</string>
+    <string name="compare_capture_photo">Take a price photo</string>
     <string name="compare_import_photo">Import a price photo</string>
-    <string name="compare_photo_ready">Choose a shelf-label or product photo. OCR only proposes text; review every entry before comparing.</string>
+    <string name="compare_photo_ready">Take or choose a shelf-label or product photo. OCR only proposes text; review every entry before comparing.</string>
     <string name="compare_photo_processing">Reading the photo on this device…</string>
     <string name="compare_photo_cancelled">Photo import cancelled. Your existing entries are unchanged.</string>
     <string name="compare_photo_no_matches">No new price-tag text was found. Your existing entries are unchanged.</string>
     <string name="compare_photo_error">That photo could not be read on this device. Your existing entries are unchanged.</string>
     <string name="compare_photo_added">Added %1$d photo suggestion(s). %2$d snippet(s) were skipped; review the entries and confirm like-for-like before comparing.</string>
+    <string name="compare_camera_permission_needed">Camera access is needed only to take this photo. Nothing is sent online.</string>
+    <string name="compare_camera_permission_denied">Camera access was not granted. Your existing entries are unchanged; you can import a photo instead.</string>
+    <string name="compare_camera_unavailable">This device has no available camera. Your existing entries are unchanged; you can import a photo instead.</string>
+    <string name="compare_camera_cancelled">Camera photo cancelled. Your existing entries are unchanged.</string>
+    <string name="compare_camera_error">That camera photo could not be created. Your existing entries are unchanged; you can import a photo instead.</string>
 
     <string name="product_number">Product %1$d</string>
 

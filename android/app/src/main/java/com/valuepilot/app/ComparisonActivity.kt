@@ -1,5 +1,8 @@
 package com.valuepilot.app
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -23,12 +26,17 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.RadioGroup
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.valuepilot.core.CompareHerePriceSelection
+import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -42,6 +50,7 @@ class ComparisonActivity : AppCompatActivity() {
     private lateinit var comparisonPresenter: CompareHereManualScreenPresenter
     private lateinit var scannerStatus: TextView
     private lateinit var importPhotoButton: Button
+    private lateinit var capturePhotoButton: Button
     private lateinit var photoImportStatus: TextView
     private lateinit var privateMemoryStatus: TextView
     private lateinit var clearPrivateMemoryButton: Button
@@ -52,7 +61,15 @@ class ComparisonActivity : AppCompatActivity() {
     private val photoExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private val photoPickerLauncher =
         registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-            onPhotoSelected(uri)
+            onPhotoSelected(uri, cleanupFile = null)
+        }
+    private val cameraPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            onCameraPermissionResult(granted)
+        }
+    private val cameraCaptureLauncher =
+        registerForActivityResult(CameraCaptureContract()) { captured ->
+            onCameraCaptureCompleted(captured)
         }
 
     private var activityState = CompareHereManualActivitySessionState.initial()
@@ -60,6 +77,9 @@ class ComparisonActivity : AppCompatActivity() {
     private var photoRequestId = 0L
     private var photoImportInFlight = false
     private var photoImportClosed = false
+    private var cameraCaptureRequestId = 0L
+    private var cameraCaptureUri: Uri? = null
+    private var cameraCaptureFile: File? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,7 +96,9 @@ class ComparisonActivity : AppCompatActivity() {
         comparisonPresenter = CompareHereManualScreenPresenter(comparisonScreen)
         scannerStatus = findViewById(R.id.scannerStatus)
         importPhotoButton = findViewById(R.id.importPhotoButton)
+        capturePhotoButton = findViewById(R.id.capturePhotoButton)
         photoImportStatus = findViewById(R.id.photoImportStatus)
+        photoImportStatus.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         privateMemoryStatus = findViewById(R.id.privateMemoryStatus)
         clearPrivateMemoryButton = findViewById(R.id.clearPrivateMemoryButton)
         privateMemoryStore = CompareHerePrivatePriceMemoryAndroidStore(this)
@@ -94,6 +116,12 @@ class ComparisonActivity : AppCompatActivity() {
         importPhotoButton.setOnClickListener {
             beginPhotoImport()
         }
+
+        capturePhotoButton.setOnClickListener {
+            beginCameraCapture()
+        }
+
+        syncPhotoActionButtons()
 
         val draft = restoreDraft(savedInstanceState)
         activityState =
@@ -200,6 +228,7 @@ class ComparisonActivity : AppCompatActivity() {
     override fun onDestroy() {
         photoImportClosed = true
         photoRequestId += 1
+        cleanupCameraCaptureFile()
         photoExecutor.shutdownNow()
         super.onDestroy()
     }
@@ -236,27 +265,126 @@ class ComparisonActivity : AppCompatActivity() {
 
         photoImportInFlight = true
         photoRequestId += 1
-        importPhotoButton.isEnabled = false
+        syncPhotoActionButtons()
         photoImportStatus.text = getString(R.string.compare_photo_processing)
         try {
             photoPickerLauncher.launch("image/*")
         } catch (_: Exception) {
             photoImportInFlight = false
-            importPhotoButton.isEnabled = true
+            syncPhotoActionButtons()
             photoImportStatus.text = getString(R.string.compare_photo_error)
         }
     }
 
-    private fun onPhotoSelected(uri: Uri?) {
+    private fun beginCameraCapture() {
+        if (photoImportClosed || photoImportInFlight) {
+            return
+        }
+
+        if (!packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)) {
+            finishPhotoRequest(R.string.compare_camera_unavailable)
+            return
+        }
+
+        photoImportInFlight = true
+        photoRequestId += 1
+        cameraCaptureRequestId = photoRequestId
+        syncPhotoActionButtons()
+
+        if (
+            ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
+                PackageManager.PERMISSION_GRANTED
+        ) {
+            launchCameraCapture(cameraCaptureRequestId)
+        } else {
+            photoImportStatus.text = getString(R.string.compare_camera_permission_needed)
+            try {
+                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+            } catch (_: Exception) {
+                finishPhotoRequest(R.string.compare_camera_error)
+            }
+        }
+    }
+
+    private fun onCameraPermissionResult(granted: Boolean) {
+        if (
+            photoImportClosed ||
+            !photoImportInFlight ||
+            cameraCaptureRequestId != photoRequestId
+        ) {
+            return
+        }
+
+        if (!granted) {
+            finishPhotoRequest(R.string.compare_camera_permission_denied)
+            return
+        }
+
+        launchCameraCapture(cameraCaptureRequestId)
+    }
+
+    private fun launchCameraCapture(requestId: Long) {
+        if (
+            photoImportClosed ||
+            !photoImportInFlight ||
+            requestId != photoRequestId
+        ) {
+            return
+        }
+
+        try {
+            val directory = File(cacheDir, CAMERA_CACHE_DIRECTORY).apply {
+                mkdirs()
+            }
+            val file = File.createTempFile(CAMERA_FILE_PREFIX, CAMERA_FILE_SUFFIX, directory)
+            val uri =
+                FileProvider.getUriForFile(
+                    this,
+                    "$packageName.fileprovider",
+                    file
+                )
+            cameraCaptureFile = file
+            cameraCaptureUri = uri
+            photoImportStatus.text = getString(R.string.compare_photo_processing)
+            cameraCaptureLauncher.launch(uri)
+        } catch (_: Exception) {
+            cleanupCameraCaptureFile()
+            finishPhotoRequest(R.string.compare_camera_error)
+        }
+    }
+
+    private fun onCameraCaptureCompleted(captured: Boolean) {
+        val requestId = cameraCaptureRequestId
+        val uri = cameraCaptureUri
+        if (
+            photoImportClosed ||
+            requestId != photoRequestId ||
+            !photoImportInFlight
+        ) {
+            cleanupCameraCaptureFile()
+            return
+        }
+
+        cameraCaptureUri = null
+        if (!captured || uri == null) {
+            cleanupCameraCaptureFile()
+            finishPhotoRequest(R.string.compare_camera_cancelled)
+            return
+        }
+
+        onPhotoSelected(uri, cleanupFile = cameraCaptureFile)
+    }
+
+    private fun onPhotoSelected(uri: Uri?, cleanupFile: File?) {
         if (photoImportClosed || !photoImportInFlight) {
+            cleanupFile?.let { deleteCameraCaptureFile(it) }
             return
         }
 
         val requestId = photoRequestId
         if (uri == null) {
-            photoImportInFlight = false
-            importPhotoButton.isEnabled = true
-            photoImportStatus.text = getString(R.string.compare_photo_cancelled)
+            cleanupFile?.let { deleteCameraCaptureFile(it) }
+            finishPhotoRequest(R.string.compare_photo_cancelled)
             return
         }
 
@@ -264,6 +392,7 @@ class ComparisonActivity : AppCompatActivity() {
             photoExecutor.execute {
                 val bitmap = decodeBoundedPhoto(uri)
                 if (bitmap == null) {
+                    cleanupFile?.let { deleteCameraCaptureFile(it) }
                     postPhotoImportResult(requestId, emptyList(), IllegalArgumentException("decode"))
                     return@execute
                 }
@@ -273,16 +402,19 @@ class ComparisonActivity : AppCompatActivity() {
                         if (!bitmap.isRecycled) {
                             bitmap.recycle()
                         }
+                        cleanupFile?.let { deleteCameraCaptureFile(it) }
                         postPhotoImportResult(requestId, recognizedBlocks, error)
                     }
                 } catch (error: Throwable) {
                     if (!bitmap.isRecycled) {
                         bitmap.recycle()
                     }
+                    cleanupFile?.let { deleteCameraCaptureFile(it) }
                     postPhotoImportResult(requestId, emptyList(), error)
                 }
             }
         } catch (error: Throwable) {
+            cleanupFile?.let { deleteCameraCaptureFile(it) }
             postPhotoImportResult(requestId, emptyList(), error)
         }
     }
@@ -313,7 +445,7 @@ class ComparisonActivity : AppCompatActivity() {
         }
 
         photoImportInFlight = false
-        importPhotoButton.isEnabled = true
+        syncPhotoActionButtons()
 
         if (error != null) {
             photoImportStatus.text = getString(R.string.compare_photo_error)
@@ -344,6 +476,39 @@ class ComparisonActivity : AppCompatActivity() {
                 result.addedCount,
                 result.skippedCount
             )
+    }
+
+    private fun finishPhotoRequest(@StringRes statusRes: Int) {
+        photoImportInFlight = false
+        syncPhotoActionButtons()
+        photoImportStatus.text = getString(statusRes)
+    }
+
+    private fun syncPhotoActionButtons() {
+        if (::importPhotoButton.isInitialized) {
+            importPhotoButton.isEnabled = !photoImportInFlight && !photoImportClosed
+        }
+        if (::capturePhotoButton.isInitialized) {
+            capturePhotoButton.isEnabled = !photoImportInFlight && !photoImportClosed
+        }
+    }
+
+    private fun cleanupCameraCaptureFile() {
+        cameraCaptureFile?.let { deleteCameraCaptureFile(it) }
+        cameraCaptureFile = null
+        cameraCaptureUri = null
+    }
+
+    private fun deleteCameraCaptureFile(file: File) {
+        runCatching {
+            if (file.exists()) {
+                file.delete()
+            }
+        }
+        if (cameraCaptureFile == file) {
+            cameraCaptureFile = null
+            cameraCaptureUri = null
+        }
     }
 
     /** Decode an image to a bounded bitmap before handing it to on-device OCR. */
@@ -1074,6 +1239,15 @@ class ComparisonActivity : AppCompatActivity() {
         private const val MAX_PHOTO_DIMENSION =
             2_048
 
+        private const val CAMERA_CACHE_DIRECTORY =
+            "camera"
+
+        private const val CAMERA_FILE_PREFIX =
+            "valuepilot-price-"
+
+        private const val CAMERA_FILE_SUFFIX =
+            ".jpg"
+
         private const val STATE_BLOCKS =
             "standalone.blocks"
 
@@ -1088,5 +1262,21 @@ class ComparisonActivity : AppCompatActivity() {
 
         private const val STATE_PRICE_SELECTION =
             "standalone.price_selection"
+    }
+
+    /** Adds the URI grants that the stock TakePicture contract intentionally leaves to callers. */
+    private class CameraCaptureContract : ActivityResultContract<Uri, Boolean>() {
+        private val delegate = ActivityResultContracts.TakePicture()
+
+        override fun createIntent(context: Context, input: Uri): Intent =
+            delegate.createIntent(context, input).apply {
+                addFlags(
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            }
+
+        override fun parseResult(resultCode: Int, intent: Intent?): Boolean =
+            delegate.parseResult(resultCode, intent)
     }
 }

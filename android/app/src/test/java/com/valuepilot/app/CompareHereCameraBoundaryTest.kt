@@ -1,0 +1,74 @@
+package com.valuepilot.app
+
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.io.File
+
+class CompareHereCameraBoundaryTest {
+    @Test
+    fun cameraCaptureIsUserInitiatedAndReusesBoundedOnDevicePhotoRoute() {
+        val source = source("ComparisonActivity.kt").readText()
+        val layout = file("src/main/res/layout/activity_main.xml").readText()
+        val onCreateBody =
+            source.substringAfter("override fun onCreate").substringBefore("override fun onResume")
+
+        assertTrue(source.contains("capturePhotoButton.setOnClickListener"))
+        assertTrue(source.contains("ActivityResultContracts.RequestPermission"))
+        assertTrue(source.contains("ActivityResultContracts.TakePicture"))
+        assertTrue(source.contains("CameraCaptureContract"))
+        assertTrue(source.contains("Intent.FLAG_GRANT_READ_URI_PERMISSION"))
+        assertTrue(source.contains("Intent.FLAG_GRANT_WRITE_URI_PERMISSION"))
+        assertTrue(source.contains("Manifest.permission.CAMERA"))
+        assertTrue(source.contains("ContextCompat.checkSelfPermission"))
+        assertTrue(source.contains("PackageManager.FEATURE_CAMERA_ANY"))
+        assertTrue(source.contains("FileProvider.getUriForFile"))
+        assertTrue(source.contains("cacheDir"))
+        assertTrue(source.contains("syncPhotoActionButtons"))
+        assertTrue(source.contains("photoRequestId"))
+        assertTrue(source.contains("photoImportClosed"))
+        assertTrue(source.contains("isDestroyed"))
+        assertTrue(source.contains("decodeBoundedPhoto"))
+        assertTrue(source.contains("OcrScanner.scan"))
+        assertTrue(source.contains("CompareHerePhotoDraft.append"))
+        assertTrue(source.contains("cleanupCameraCaptureFile"))
+        assertTrue(source.contains("ACCESSIBILITY_LIVE_REGION_POLITE"))
+        assertTrue(layout.contains("capturePhotoButton"))
+        assertTrue(layout.contains("importPhotoButton"))
+        assertFalse(onCreateBody.contains("cameraPermissionLauncher.launch"))
+
+        assertFalse(source.contains("getExternalStorage"))
+        assertFalse(source.contains("MediaStore"))
+        assertFalse(source.contains("android.permission.INTERNET"))
+        assertFalse(source.contains("ACCESS_NETWORK_STATE"))
+        assertFalse(source.contains("http://"))
+        assertFalse(source.contains("https://"))
+    }
+
+    @Test
+    fun cameraPermissionAndFileProviderAreOptionalAndCacheScoped() {
+        val manifest = file("src/main/AndroidManifest.xml").readText()
+        val paths = file("src/main/res/xml/file_paths.xml").readText()
+
+        assertTrue(manifest.contains("android.permission.CAMERA"))
+        assertTrue(manifest.contains("android.hardware.camera.any"))
+        assertTrue(manifest.contains("android:required=\"false\""))
+        assertTrue(manifest.contains("androidx.core.content.FileProvider"))
+        assertTrue(manifest.contains("\${applicationId}.fileprovider"))
+        assertTrue(manifest.contains("android:grantUriPermissions=\"true\""))
+        assertTrue(manifest.contains("@xml/file_paths"))
+        assertTrue(paths.contains("<cache-path"))
+        assertTrue(paths.contains("name=\"camera_cache\""))
+        assertTrue(paths.contains("path=\"camera/\""))
+        assertFalse(paths.contains("external-path"))
+        assertFalse(paths.contains("root-path"))
+    }
+
+    private fun source(name: String): File =
+        file("src/main/java/com/valuepilot/app/$name").also {
+            assertTrue("Missing source $name at ${it.absolutePath}", it.isFile)
+        }
+
+    private fun file(path: String): File =
+        File(System.getProperty("user.dir"), path)
+}
