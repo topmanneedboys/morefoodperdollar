@@ -16,6 +16,8 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
         assertTrue(source.contains("fun render(state: PracticalShoppingBasketRenderState)"))
         assertTrue(source.contains("planResult.render(state.result, state.sampleNotice)"))
         assertTrue(source.contains("sampleNotice.text = state.sampleNotice"))
+        assertTrue(source.contains("noCoverageSummary.text = state.noCoverageSummary.orEmpty()"))
+        assertTrue(source.contains("state.noCoverageSummary == null"))
         assertTrue(source.contains("PracticalShoppingBasketUiAction.OpenHome"))
         assertTrue(source.contains("isEnabled = false"))
         assertTrue(source.contains("actionButton.isEnabled = onAction != null"))
@@ -31,6 +33,7 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
         assertTrue(source.contains("state.containsKey(SAVED_COLLECTION_SCOPE_ID)"))
         assertTrue(source.contains("collectionNotice.text = state.collectionNotice.orEmpty()"))
         assertTrue(source.contains("extraStopRuleNotice.text = state.extraStopRuleNotice.orEmpty()"))
+        assertTrue(source.contains("private val noCoverageSummary"))
         assertTrue(source.contains("state.extraStopRuleNotice == null"))
         assertTrue(source.contains("state.collectionNotice == null"))
         assertTrue(source.contains("No usable price yet — not ready to collect"))
@@ -110,7 +113,7 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
         val source = source("PracticalShoppingBasketSurfaceView.kt").readText()
 
         assertEquals(
-            2,
+            3,
             source
                 .split("accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE")
                 .size - 1

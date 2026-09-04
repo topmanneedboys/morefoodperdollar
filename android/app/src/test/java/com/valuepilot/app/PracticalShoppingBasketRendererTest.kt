@@ -25,6 +25,7 @@ class PracticalShoppingBasketRendererTest {
         assertTrue(basket.items.isEmpty())
         assertTrue(basket.unknownItems.isEmpty())
         assertNull(basket.result)
+        assertNull(basket.noCoverageSummary)
         assertNull(basket.extraStopRuleText)
         assertFalse(basket.collectionEnabled)
         assertNull(basket.collectionNotice)
@@ -49,6 +50,7 @@ class PracticalShoppingBasketRendererTest {
         assertEquals(listOf("dragonfruit"), basket.unknownItems)
         assertEquals(home.message, basket.guidance)
         assertNull(basket.result)
+        assertNull(basket.noCoverageSummary)
         assertNull(basket.extraStopRuleText)
         assertFalse(basket.collectionEnabled)
     }
@@ -72,6 +74,7 @@ class PracticalShoppingBasketRendererTest {
         )
         assertEquals("Plan this list on Home", basket.actionLabel)
         assertNull(basket.result)
+        assertNull(basket.noCoverageSummary)
         assertFalse(basket.collectionEnabled)
     }
 
@@ -90,6 +93,7 @@ class PracticalShoppingBasketRendererTest {
         assertEquals("Finish your shopping list", basket.headline)
         assertEquals(home.message, basket.guidance)
         assertNull(basket.result)
+        assertNull(basket.noCoverageSummary)
         assertFalse(basket.collectionEnabled)
     }
 
@@ -106,6 +110,7 @@ class PracticalShoppingBasketRendererTest {
 
         assertEquals(PracticalShoppingBasketStatus.PLANNED, basket.status)
         assertSame(home.result, basket.result)
+        assertNull(basket.noCoverageSummary)
         assertSame(home.items, basket.items)
         assertEquals(home.extraStopSettings.summary, basket.extraStopRuleText)
         assertEquals("Basket 10.28 CAD", basket.result?.primary?.basketCostText)
@@ -132,6 +137,7 @@ class PracticalShoppingBasketRendererTest {
 
         assertEquals(PracticalShoppingBasketStatus.PLANNED, basket.status)
         assertSame(home.result, basket.result)
+        assertNull(basket.noCoverageSummary)
         assertEquals("Known subtotal 4.49 CAD", basket.result?.primary?.basketCostText)
         assertEquals("Missing price: Coffee", basket.result?.primary?.missingItemsText)
         assertTrue(basket.collectionEnabled)
@@ -204,6 +210,7 @@ class PracticalShoppingBasketRendererTest {
         assertEquals("Price coverage needed", basket.headline)
         assertEquals("Not enough price coverage yet", basket.result?.headline)
         assertNull(basket.result?.primary)
+        assertEquals("0 of 1 item priced yet.", basket.noCoverageSummary)
         assertEquals(
             listOf("No usable price yet — not included in this plan."),
             basket.items.map { it.priceCoverageNotice }

@@ -57,6 +57,12 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
 
     private val headline = line("", 22f, "#111827", true)
     private val guidance = line("", 14f, "#4B5563", topPadding = 8)
+    private val noCoverageSummary = line("", 13f, "#92400E", true, 8).apply {
+        // This aggregate is already projected by Home and only clarifies the
+        // existing no-coverage state. Announce it without giving the View any
+        // pricing or planning authority.
+        accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+    }
     private val collectionProgress = line("", 13f, "#374151", true, 16).apply {
         // Foreground check-off changes after each typed local action. Announce
         // the projected progress politely without granting the View order or
@@ -124,6 +130,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         addView(sampleCard())
         addView(headline.apply { setPadding(0, dp(20), 0, 0) })
         addView(guidance)
+        addView(noCoverageSummary)
         addView(collectionProgress)
         addView(collectionNotice)
         addView(clearCollectionButton)
@@ -135,6 +142,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         addView(extraStopRuleNotice)
         addView(actionButton)
         collectionProgress.visibility = GONE
+        noCoverageSummary.visibility = GONE
         collectionNotice.visibility = GONE
         clearCollectionButton.visibility = GONE
         itemsHeading.visibility = GONE
@@ -169,6 +177,9 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
 
         headline.text = state.headline
         guidance.text = state.guidance
+        noCoverageSummary.text = state.noCoverageSummary.orEmpty()
+        noCoverageSummary.visibility =
+            if (state.noCoverageSummary == null) GONE else VISIBLE
         sampleNotice.text = state.sampleNotice
         actionButton.text = state.actionLabel
         actionButton.isEnabled = onAction != null && hasRenderedState

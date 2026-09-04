@@ -22,6 +22,8 @@ data class PracticalShoppingBasketRenderState(
     val items: List<PracticalShoppingHomeItemRenderState>,
     val unknownItems: List<String>,
     val result: PracticalShoppingUiState?,
+    /** The existing Home renderer's aggregate for a result with no primary plan. */
+    val noCoverageSummary: String? = null,
     val extraStopRuleText: String?,
     /** Explains when the already-selected rule is not evaluated for an incomplete result. */
     val extraStopRuleNotice: String? = null,
@@ -55,6 +57,7 @@ data class PracticalShoppingBasketRenderState(
         require(headline.isNotBlank())
         require(guidance.isNotBlank())
         require(unknownItems.none(String::isBlank))
+        require(noCoverageSummary == null || noCoverageSummary.isNotBlank())
         require(extraStopRuleText == null || extraStopRuleText.isNotBlank())
         require(extraStopRuleNotice == null || extraStopRuleNotice.isNotBlank())
         require(extraStopRuleNotice == null || extraStopRuleText != null)
@@ -63,6 +66,7 @@ data class PracticalShoppingBasketRenderState(
         require(collectionNotice == null || collectionNotice.isNotBlank())
         require((status == PracticalShoppingBasketStatus.PLANNED) == (result != null))
         require((result?.primary != null) == (extraStopRuleText != null))
+        require(noCoverageSummary == null || (result != null && result.primary == null))
         require(!collectionEnabled || status == PracticalShoppingBasketStatus.PLANNED)
         require(!collectionEnabled || result?.primary != null)
         require(collectibleItemKeys.distinct().size == collectibleItemKeys.size)
@@ -165,6 +169,7 @@ object PracticalShoppingBasketRenderer {
             unknownItems = source.unknownItems,
             // Preserve the already-projected result object exactly.
             result = source.result,
+            noCoverageSummary = source.noCoverageSummary,
             extraStopRuleText =
                 source.extraStopSettings.summary.takeIf { source.result?.primary != null },
             extraStopRuleNotice =
