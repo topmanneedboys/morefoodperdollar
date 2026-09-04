@@ -8,6 +8,10 @@ This checkpoint records the verified Practical Shopping Home slice plus the prov
 
 ## Latest verified engineering head
 
+`1be6628b3fb48b67fa7ee272a8ed3a3a35984529` — `Clarify Home no-coverage summary`
+
+Candidate workflow **33885576989** and milestone provenance workflow **33886216516** passed for the exact SHA. Home now shows a compact renderer-owned `0 of N items priced yet.` summary when the already-projected result has no primary plan, complementing the existing per-item unknown-price notices. The summary stays hidden for empty/refinement states and for any projected primary plan that already exposes coverage. This is reversible presentation/accessibility work only; it does not duplicate or alter the shared planner/projector and adds no price, offer, store, availability, network, persistence, or provider-economics authority. Focused tests and full candidate/milestone verification passed; the Windows run retains the known 18 line-ending-sensitive boundary failures and physical-device ergonomics remain open.
+
 `ec7ed377c27e7e6b4ece9030bedc5e7cbf997188` — `Add signed GTA GVA store directory snapshot`
 
 Candidate workflow **33883155939** and milestone provenance workflow **33883690098** passed for the exact SHA. The shell’s `Data status` action now reports the signed, ODbL-attributed OpenStreetMap directory summary: 6,093 source-listed locations (4,311 GTA; 1,782 Metro Vancouver) and its observed date. Android verifies the manifest/source hashes, detached signature, rights gates, launch geography and freshness before exposing any row; invalid or stale artifacts expose no records. The directory is explicitly location-only and cannot become a product, package, price, offer, stock, availability or ranking fact. The existing shared 30,000-record identity rail, `0` authorized current offers, private-observation recovery, flyer absence, offline connectivity and fictional Home/Search sample disclosure remain intact. Candidate Linux Android/browser/privacy/signing/release and Python snapshot verification passed; the Windows run retains the known 18 line-ending-sensitive boundary failures. Physical-device ergonomics remain open.
