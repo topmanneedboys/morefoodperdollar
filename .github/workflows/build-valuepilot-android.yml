@@ -27,6 +27,10 @@ on:
       - 'tools/tests/test_build_store_directory_snapshot.py'
       - 'tools/tests/test_bundled_store_directory_assets.py'
       - 'tools/store_directory/**'
+      - 'CURRENT_STATE.md'
+      - 'CONTINUATION_CHECKPOINT.md'
+      - 'PRACTICAL_SHOPPING_MVP_STATUS.md'
+      - 'PRACTICAL_SHOPPING_HOME_CHECKPOINT.md'
       - '.github/workflows/build-valuepilot-android.yml'
   pull_request:
     paths:
@@ -53,6 +57,10 @@ on:
       - 'tools/tests/test_build_store_directory_snapshot.py'
       - 'tools/tests/test_bundled_store_directory_assets.py'
       - 'tools/store_directory/**'
+      - 'CURRENT_STATE.md'
+      - 'CONTINUATION_CHECKPOINT.md'
+      - 'PRACTICAL_SHOPPING_MVP_STATUS.md'
+      - 'PRACTICAL_SHOPPING_HOME_CHECKPOINT.md'
       - '.github/workflows/build-valuepilot-android.yml'
 
 permissions:
