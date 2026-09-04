@@ -127,6 +127,7 @@ data class PracticalShoppingHomeRenderState(
         require(privateMemorySummary == null || privateMemorySummary.isNotBlank())
         require(
             !privateMemoryReviewActionVisible ||
+                privateMemoryStatus == PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE ||
                 (privateMemoryStatus == PracticalShoppingHomePrivateMemoryStatus.AVAILABLE &&
                     privateMemorySummary != null)
         )
@@ -259,7 +260,13 @@ object PracticalShoppingHomeRenderer {
                 ),
             sampleNotice = source.sampleNotice,
             privateMemorySummary = privateMemorySummary,
-            privateMemoryReviewActionVisible = privateMemorySummary != null,
+            // A readable nonempty history gets a review action. An unreadable
+            // store gets the same route so the shopper can open Compare Here
+            // and use its existing clear/recovery controls; no unreadable rows
+            // or history-derived facts are exposed on Home.
+            privateMemoryReviewActionVisible =
+                privateMemoryStatus == PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE ||
+                    privateMemorySummary != null,
             privateMemoryStatus = privateMemoryStatus
         )
     }

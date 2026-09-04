@@ -245,6 +245,8 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "privateMemoryNotice",
             "PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE",
             "R.string.home_private_memory_unavailable",
+            "if (reviewActionVisible) VISIBLE else GONE",
+            "reviewActionVisible && onReviewPrivateMemory != null && hasRenderedState",
             "accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"
         ).forEach { required ->
             assertTrue("Expected explicit private-history availability disclosure $required", source.contains(required))

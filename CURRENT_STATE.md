@@ -8,6 +8,13 @@ Android version: 101.1.0 (10101)
 
 ## Current verified engineering head
 
+The current working slice corrects Home's private-history recovery path on top of the promoted
+`6743181` milestone: an unreadable device-only comparison store now keeps the existing typed
+`Review private price history` action visible, allowing the shopper to open Scan & compare and use
+its recovery/clear controls. Home still hides all unreadable history rows and summaries. Focused
+tests pass; the full Windows Android test task retains the repository's known line-ending-sensitive
+source-boundary failures, while lint/build, browser checks and Python/catalog tests pass.
+
 The promoted milestone is now `6743181977f1500772444599a667284b8d7ea2e3` (`Add actionable Home private history review route`). Candidate workflow **33867138431** and milestone provenance workflow **33867613305** passed for this exact SHA. When Home has readable nonempty private comparison history, its renderer-owned `Review private price history` action opens the existing Scan & compare screen; empty history stays quiet and unavailable history stays on its recovery notice. This is a small reversible navigation refinement: it adds no price, offer, store, stock, availability, planner, ranking, network, provider-economics or persistence authority, and the existing non-live-price and package/promotion caveats remain explicit.
 
 ## Previous verified engineering head (superseded)

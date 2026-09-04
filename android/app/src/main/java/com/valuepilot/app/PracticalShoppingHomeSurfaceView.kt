@@ -392,7 +392,10 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         if (status == PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE) {
             privateMemorySummary.text = ""
             privateMemorySummary.visibility = GONE
-            privateMemoryReviewActionButton.visibility = GONE
+            privateMemoryReviewActionButton.visibility =
+                if (reviewActionVisible) VISIBLE else GONE
+            privateMemoryReviewActionButton.isEnabled =
+                reviewActionVisible && onReviewPrivateMemory != null && hasRenderedState
             privateMemoryNotice.text = context.getString(R.string.home_private_memory_unavailable)
             privateMemoryNotice.visibility = VISIBLE
         } else {

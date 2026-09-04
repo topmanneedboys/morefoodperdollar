@@ -159,7 +159,7 @@ class PracticalShoppingHomePersonalHistoryTest {
             rendered.privateMemoryStatus
         )
         assertNull(rendered.privateMemorySummary)
-        assertTrue(!rendered.privateMemoryReviewActionVisible)
+        assertTrue(rendered.privateMemoryReviewActionVisible)
         assertEquals(listOf(null, null), rendered.items.map { it.personalHistoryNotice })
     }
 
