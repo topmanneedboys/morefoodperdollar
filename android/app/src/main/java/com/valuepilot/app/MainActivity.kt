@@ -45,6 +45,10 @@ class MainActivity : AppCompatActivity() {
     private val homePreferenceStore by lazy(LazyThreadSafetyMode.NONE) {
         AndroidPracticalShoppingHomePreferenceStore(applicationContext)
     }
+    private val homePrivateMemoryStore by lazy(LazyThreadSafetyMode.NONE) {
+        CompareHerePrivatePriceMemoryAndroidStore(applicationContext)
+    }
+    private var homePrivateMemoryState = CompareHerePrivatePriceMemoryState.empty()
 
     private val searchController = UniversalSearchController()
     private var searchState = searchController.initialState()
@@ -176,6 +180,7 @@ class MainActivity : AppCompatActivity() {
         installSystemBarInsets()
         shellState = restoreShellState(savedInstanceState)
         homeSessionState = restoreHomeState(savedInstanceState)
+        refreshHomePrivateMemory()
         searchState = restoreSearchState(savedInstanceState)
         configureHomeUi()
         configureBasketUi()
@@ -224,6 +229,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+
+        refreshHomePrivateMemory()
 
         if (comparisonActivityOpen && shellState.route == AppRoute.COMPARE) {
             comparisonActivityOpen = false
@@ -437,7 +444,8 @@ class MainActivity : AppCompatActivity() {
         val homeState =
             PracticalShoppingHomeRenderer.render(
                 homeSessionState.model.ui,
-                homeSessionState.requestDetails.details
+                homeSessionState.requestDetails.details,
+                homePrivateMemoryState
             )
         if (
             homeItemDetailsDialog?.isShowing == true &&
@@ -453,6 +461,26 @@ class MainActivity : AppCompatActivity() {
         }
         homeExperience.render(homeState)
         basketExperience.render(PracticalShoppingBasketRenderer.render(homeState))
+    }
+
+    /**
+     * Refreshes bounded local comparison memory when Home resumes, including after Compare Here
+     * returns. A corrupt/read-failed store is treated as no context; it never becomes planner or
+     * offer authority and never blocks the already-usable Home surface.
+     */
+    private fun refreshHomePrivateMemory() {
+        val next =
+            homePrivateMemoryStore.load().state
+                ?: CompareHerePrivatePriceMemoryState.empty()
+        if (next == homePrivateMemoryState) return
+
+        homePrivateMemoryState = next
+        if (
+            ::homeExperience.isInitialized &&
+                shellState.route != AppRoute.COMPARE
+        ) {
+            renderHome()
+        }
     }
 
     private fun dismissHomeItemDetailsDialog() {

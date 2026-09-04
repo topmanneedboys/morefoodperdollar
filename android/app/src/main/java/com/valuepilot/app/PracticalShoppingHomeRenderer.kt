@@ -25,7 +25,8 @@ data class PracticalShoppingHomeItemRenderState(
     val requestDetailsNotice: String?,
     val requestDetailsActionLabel: String,
     val storeAssignment: String? = null,
-    val priceCoverageNotice: String? = null
+    val priceCoverageNotice: String? = null,
+    val personalHistoryNotice: String? = null
 ) {
     init {
         require(key.value.isNotBlank())
@@ -33,6 +34,7 @@ data class PracticalShoppingHomeItemRenderState(
         require(detail.isNotBlank())
         require(storeAssignment == null || storeAssignment.isNotBlank())
         require(priceCoverageNotice == null || priceCoverageNotice.isNotBlank())
+        require(personalHistoryNotice == null || personalHistoryNotice.isNotBlank())
         require(requestDetailsSummary.isNotBlank())
         require(requestDetailsNotice == null || requestDetailsNotice.isNotBlank())
         require(requestDetailsActionLabel.isNotBlank())
@@ -111,11 +113,12 @@ data class PracticalShoppingHomeRenderState(
 object PracticalShoppingHomeRenderer {
 
     fun render(source: LocalSamplePracticalShoppingDemo.UiState): PracticalShoppingHomeRenderState =
-        render(source, requestDetails = null)
+        render(source, requestDetails = null, privateMemory = null)
 
-    fun render(
+    internal fun render(
         source: LocalSamplePracticalShoppingDemo.UiState,
-        requestDetails: ShoppingRequestDetails?
+        requestDetails: ShoppingRequestDetails?,
+        privateMemory: CompareHerePrivatePriceMemoryState? = null
     ): PracticalShoppingHomeRenderState {
         val storeAssignments =
             source.result
@@ -160,6 +163,13 @@ object PracticalShoppingHomeRenderer {
                                 "No usable price yet — not included in this plan."
                             } else {
                                 null
+                            },
+                        personalHistoryNotice =
+                            privateMemory?.let { memory ->
+                                PracticalShoppingHomePersonalHistory.noticeFor(
+                                    itemDisplayName = item.name,
+                                    memory = memory
+                                )
                             },
                         requestDetailsSummary =
                             PracticalShoppingHomeItemDetailsPresentation.summary(itemDetails),

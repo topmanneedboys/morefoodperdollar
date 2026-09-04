@@ -221,6 +221,23 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
         }
     }
 
+    @Test
+    fun personalHistoryNoticeIsBoundAsReadOnlyItemContext() {
+        val source = source().readText()
+
+        assertTrue(source.contains("item.personalHistoryNotice?.let"))
+        listOf(
+            "PracticalShoppingPlanner",
+            "Money.parse",
+            "CompareHerePrivatePriceMemoryStore"
+        ).forEach { forbidden ->
+            assertFalse(
+                "Home View must not own personal-history or planner authority through $forbidden",
+                source.contains(forbidden)
+            )
+        }
+    }
+
     private fun source(): File {
         val workingDirectory =
             requireNotNull(System.getProperty("user.dir")) {

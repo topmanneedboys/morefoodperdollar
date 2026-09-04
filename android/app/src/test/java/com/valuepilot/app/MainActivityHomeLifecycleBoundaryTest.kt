@@ -139,6 +139,34 @@ class MainActivityHomeLifecycleBoundaryTest {
         }
     }
 
+    @Test
+    fun homeRefreshesPrivateComparisonMemoryOnResumeWithoutOwningPlannerAuthority() {
+        val source = source().readText()
+
+        listOf(
+            "homePrivateMemoryStore",
+            "homePrivateMemoryState = CompareHerePrivatePriceMemoryState.empty()",
+            "refreshHomePrivateMemory()",
+            "homePrivateMemoryStore.load().state",
+            "PracticalShoppingHomeRenderer.render(",
+            "homePrivateMemoryState"
+        ).forEach { required ->
+            assertTrue("Expected Home private-history refresh boundary: $required", source.contains(required))
+        }
+
+        listOf(
+            "PracticalShoppingPlanner",
+            "Money.parse",
+            "HttpURLConnection",
+            "INTERNET"
+        ).forEach { forbidden ->
+            assertTrue(
+                "Home private-history refresh must not add business/network authority: $forbidden",
+                !source.contains(forbidden)
+            )
+        }
+    }
+
     private fun source(): File {
         val workingDirectory =
             requireNotNull(System.getProperty("user.dir")) {
