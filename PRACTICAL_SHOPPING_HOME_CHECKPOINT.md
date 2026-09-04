@@ -8,6 +8,10 @@ This checkpoint records the verified Practical Shopping Home slice plus the prov
 
 ## Latest verified engineering head
 
+`7c7be8d5215d2f6261049398700486252dda407c` — `Carry no-coverage summary into Basket`
+
+Candidate workflow **33887664746** and milestone provenance workflow **33888215450** passed for the exact SHA. Basket now forwards the existing Home renderer-owned `0 of N items priced yet.` summary whenever the already-projected result has no primary plan, keeping coverage clarity intact when the shopper switches destinations. It remains hidden for empty/refinement states and for any projected primary plan that already exposes exact coverage text. This is reversible presentation/accessibility work only; it does not duplicate or alter the shared planner/projector and adds no price, offer, store, availability, network, persistence, or provider-economics authority. Focused tests and full candidate/milestone verification passed; the Windows run retains the known 18 line-ending-sensitive boundary failures and physical-device ergonomics remain open.
+
 `1be6628b3fb48b67fa7ee272a8ed3a3a35984529` — `Clarify Home no-coverage summary`
 
 Candidate workflow **33885576989** and milestone provenance workflow **33886216516** passed for the exact SHA. Home now shows a compact renderer-owned `0 of N items priced yet.` summary when the already-projected result has no primary plan, complementing the existing per-item unknown-price notices. The summary stays hidden for empty/refinement states and for any projected primary plan that already exposes coverage. This is reversible presentation/accessibility work only; it does not duplicate or alter the shared planner/projector and adds no price, offer, store, availability, network, persistence, or provider-economics authority. Focused tests and full candidate/milestone verification passed; the Windows run retains the known 18 line-ending-sensitive boundary failures and physical-device ergonomics remain open.
