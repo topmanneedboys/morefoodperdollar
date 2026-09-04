@@ -452,7 +452,11 @@ object PracticalShoppingProductionCandidateBridge {
                     coveredItemKeys = coveredItemKeys,
                     knownBasketCost = basketTotal,
                     travel = store.travelFromUser,
-                    evidence = evidence
+                    evidence = evidence,
+                    itemPrices =
+                        usable.associate { evaluation ->
+                            evaluation.binding.itemKey to requireNotNull(evaluation.selectedPrice)
+                        }
                 ),
             blockers = emptySet()
         )

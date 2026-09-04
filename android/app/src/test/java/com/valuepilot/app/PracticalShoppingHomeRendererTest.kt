@@ -160,6 +160,10 @@ class PracticalShoppingHomeRendererTest {
             listOf("Example Grocer East", "Example Grocer East", "Example Grocer East"),
             rendered.items.map { it.storeAssignment }
         )
+        assertEquals(
+            listOf("8.49 CAD", "4.29 CAD", "5.99 CAD"),
+            rendered.items.map { it.plannedPriceText }
+        )
         assertNull(rendered.refinement)
         assertTrue(rendered.unknownItems.isEmpty())
     }
@@ -180,6 +184,10 @@ class PracticalShoppingHomeRendererTest {
         assertEquals("Known subtotal 4.49 CAD", rendered.result?.primary?.basketCostText)
         assertEquals("Missing price: Coffee", rendered.result?.primary?.missingItemsText)
         assertEquals(listOf("Sample Market North", null), rendered.items.map { it.storeAssignment })
+        assertEquals(
+            listOf("4.49 CAD", null),
+            rendered.items.map { it.plannedPriceText }
+        )
         assertEquals(
             listOf(null, "No usable price yet — not included in this plan."),
             rendered.items.map { it.priceCoverageNotice }
@@ -216,6 +224,7 @@ class PracticalShoppingHomeRendererTest {
         )
         assertNull(rendered.extraStopSettings.notice)
         assertTrue(rendered.items.all { it.priceCoverageNotice == null })
+        assertTrue(rendered.items.all { it.plannedPriceText != null })
         assertTrue(rendered.items.none { it.observedPriceActionVisible })
     }
 

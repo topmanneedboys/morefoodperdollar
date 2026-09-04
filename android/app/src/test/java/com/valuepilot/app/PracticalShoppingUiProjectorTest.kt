@@ -94,6 +94,10 @@ class PracticalShoppingUiProjectorTest {
             listOf("Sample Market", "Sample Market", "Sample Market"),
             projection.state.itemStoreAssignments.map { it.storeName }
         )
+        assertEquals(
+            listOf(null, null, null),
+            projection.state.itemStoreAssignments.map { it.priceText }
+        )
         assertFalse(projection.state.toString().contains(eggs.value))
     }
 
@@ -147,6 +151,10 @@ class PracticalShoppingUiProjectorTest {
             listOf("Sample Market", "Sample Market"),
             state.itemStoreAssignments.map { it.storeName }
         )
+        assertEquals(
+            listOf(null, null),
+            state.itemStoreAssignments.map { it.priceText }
+        )
     }
 
     @Test
@@ -155,7 +163,13 @@ class PracticalShoppingUiProjectorTest {
             key = primaryKey,
             cost = "70.00",
             covered = requested,
-            travel = ShoppingTravel(2_000L, 300L)
+            travel = ShoppingTravel(2_000L, 300L),
+            itemPrices =
+                mapOf(
+                    eggs to Money.parse("10.00", "CAD"),
+                    milk to Money.parse("30.00", "CAD"),
+                    chicken to Money.parse("30.00", "CAD")
+                )
         )
         val pair = TwoStorePlanCandidate(
             baseStoreKey = primaryKey,
@@ -164,7 +178,13 @@ class PracticalShoppingUiProjectorTest {
             addedStoreItemKeys = setOf(milk, chicken),
             knownCombinedBasketCost = Money.parse("52.50", "CAD"),
             additionalTravel = ShoppingTravel(1_200L, 181L),
-            evidence = freshEvidence(3)
+            evidence = freshEvidence(3),
+            itemPrices =
+                mapOf(
+                    eggs to Money.parse("10.00", "CAD"),
+                    milk to Money.parse("20.00", "CAD"),
+                    chicken to Money.parse("22.50", "CAD")
+                )
         )
 
         val decision = PracticalShoppingPlanner.evaluate(
@@ -201,7 +221,107 @@ class PracticalShoppingUiProjectorTest {
             listOf("Sample Market", "Example Grocer", "Example Grocer"),
             projection.state.itemStoreAssignments.map { it.storeName }
         )
+        assertEquals(
+            listOf("10.00 CAD", "20.00 CAD", "22.50 CAD"),
+            projection.state.itemStoreAssignments.map { it.priceText }
+        )
         assertFalse(projection.state.toString().contains(eggs.value))
+    }
+
+    @Test
+    fun completeDecisionProjectsExactItemPricesInRequestOrder() {
+        val primary = single(
+            key = primaryKey,
+            cost = "54.80",
+            covered = requested,
+            travel = ShoppingTravel(2_400L, 391L),
+            itemPrices =
+                mapOf(
+                    eggs to Money.parse("10.00", "CAD"),
+                    milk to Money.parse("20.00", "CAD"),
+                    chicken to Money.parse("24.80", "CAD")
+                )
+        )
+
+        val decision = PracticalShoppingPlanner.evaluate(
+            request,
+            listOf(primary),
+            emptyList(),
+            policy
+        )
+        val state = PracticalShoppingUiProjector.project(
+            request,
+            decision,
+            storeNames,
+            itemNames,
+            policy
+        ).state
+
+        assertEquals(
+            listOf("10.00 CAD", "20.00 CAD", "24.80 CAD"),
+            state.itemStoreAssignments.map { it.priceText }
+        )
+    }
+
+    @Test
+    fun incompleteDecisionOnlyProjectsPricesForKnownItems() {
+        val primary = single(
+            key = primaryKey,
+            cost = "30.00",
+            covered = setOf(eggs, milk),
+            travel = ShoppingTravel(900L, 180L),
+            itemPrices =
+                mapOf(
+                    eggs to Money.parse("10.00", "CAD"),
+                    milk to Money.parse("20.00", "CAD")
+                )
+        )
+
+        val decision = PracticalShoppingPlanner.evaluate(
+            request,
+            listOf(primary),
+            emptyList(),
+            policy
+        )
+        val state = PracticalShoppingUiProjector.project(
+            request,
+            decision,
+            storeNames,
+            itemNames,
+            policy
+        ).state
+
+        assertEquals(listOf(eggs, milk), state.itemStoreAssignments.map { it.itemKey })
+        assertEquals(
+            listOf("10.00 CAD", "20.00 CAD"),
+            state.itemStoreAssignments.map { it.priceText }
+        )
+    }
+
+    @Test
+    fun legacyCandidateWithoutBreakdownKeepsAssignmentPriceUnknown() {
+        val primary = single(
+            key = primaryKey,
+            cost = "54.80",
+            covered = requested,
+            travel = ShoppingTravel(2_400L, 391L)
+        )
+
+        val decision = PracticalShoppingPlanner.evaluate(
+            request,
+            listOf(primary),
+            emptyList(),
+            policy
+        )
+        val state = PracticalShoppingUiProjector.project(
+            request,
+            decision,
+            storeNames,
+            itemNames,
+            policy
+        ).state
+
+        assertEquals(listOf(null, null, null), state.itemStoreAssignments.map { it.priceText })
     }
 
     @Test
@@ -492,14 +612,16 @@ class PracticalShoppingUiProjectorTest {
         key: ShoppingStoreKey,
         cost: String,
         covered: Set<ShoppingItemKey>,
-        travel: ShoppingTravel
+        travel: ShoppingTravel,
+        itemPrices: Map<ShoppingItemKey, Money> = emptyMap()
     ): SingleStorePlanCandidate =
         SingleStorePlanCandidate(
             storeKey = key,
             coveredItemKeys = covered,
             knownBasketCost = Money.parse(cost, "CAD"),
             travel = travel,
-            evidence = freshEvidence(covered.size)
+            evidence = freshEvidence(covered.size),
+            itemPrices = itemPrices
         )
 
     private fun freshEvidence(count: Int): ShoppingPlanEvidenceSummary =

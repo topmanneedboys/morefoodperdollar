@@ -213,7 +213,8 @@ object PracticalShoppingBasketRenderer {
                         item.name,
                         item.detail,
                         item.requestDetailsSummary,
-                        assignment.storeName
+                        assignment.storeName,
+                        assignment.priceText ?: ""
                     ).joinToString(separator = "\u001f") { value ->
                         "${value.length}:$value"
                     }

@@ -60,6 +60,13 @@ class PracticalShoppingProductionCandidateBridgeTest {
         assertEquals(store.storeKey, candidate.storeKey)
         assertEquals(setOf(eggs, milk), candidate.coveredItemKeys)
         assertEquals(Money(1_000L, "CAD"), candidate.knownBasketCost)
+        assertEquals(
+            mapOf(
+                eggs to Money(400L, "CAD"),
+                milk to Money(600L, "CAD")
+            ),
+            candidate.itemPrices
+        )
         assertEquals(store.travelFromUser, candidate.travel)
         assertEquals(1, candidate.evidence.freshItemCount)
         assertEquals(1, candidate.evidence.agingItemCount)

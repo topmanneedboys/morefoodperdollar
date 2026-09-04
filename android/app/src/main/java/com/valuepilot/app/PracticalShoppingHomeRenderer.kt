@@ -37,6 +37,8 @@ data class PracticalShoppingHomeItemRenderState(
     val requestDetailsNotice: String?,
     val requestDetailsActionLabel: String,
     val storeAssignment: String? = null,
+    /** Exact price included for this item when the projected plan supplied a breakdown. */
+    val plannedPriceText: String? = null,
     val priceCoverageNotice: String? = null,
     val personalHistoryNotice: String? = null,
     /** Whether the missing-price handoff into the local observed-price flow is shown. */
@@ -47,6 +49,7 @@ data class PracticalShoppingHomeItemRenderState(
         require(name.isNotBlank())
         require(detail.isNotBlank())
         require(storeAssignment == null || storeAssignment.isNotBlank())
+        require(plannedPriceText == null || plannedPriceText.isNotBlank())
         require(priceCoverageNotice == null || priceCoverageNotice.isNotBlank())
         require(personalHistoryNotice == null || personalHistoryNotice.isNotBlank())
         require(!observedPriceActionVisible || priceCoverageNotice != null) {
@@ -168,7 +171,7 @@ object PracticalShoppingHomeRenderer {
         val storeAssignments =
             source.result
                 ?.itemStoreAssignments
-                ?.associate { assignment -> assignment.itemKey to assignment.storeName }
+                ?.associateBy { assignment -> assignment.itemKey }
         val privateMemorySummary =
             usablePrivateMemory?.let { memory ->
                 PracticalShoppingHomePersonalHistory.summaryFor(
@@ -210,12 +213,14 @@ object PracticalShoppingHomeRenderer {
             items =
                 source.items.map { item ->
                     val itemDetails = requestDetails?.detailFor(item.key)
-                    val storeAssignment = storeAssignments?.get(item.key)
+                    val itemStoreAssignment = storeAssignments?.get(item.key)
+                    val storeAssignment = itemStoreAssignment?.storeName
                     PracticalShoppingHomeItemRenderState(
                         key = item.key,
                         name = item.name,
                         detail = item.detail,
                         storeAssignment = storeAssignment,
+                        plannedPriceText = itemStoreAssignment?.priceText,
                         priceCoverageNotice =
                             if (source.result != null && storeAssignment == null) {
                                 "No usable price yet — not included in this plan."

@@ -61,6 +61,13 @@ class PracticalShoppingProductionPlanCandidateBridgeTest {
         val candidate = requireNotNull(evaluation.candidate)
         assertTrue(evaluation.blockers.isEmpty())
         assertEquals(Money(1_000L, "CAD"), candidate.knownCombinedBasketCost)
+        assertEquals(
+            mapOf(
+                eggs to Money(400L, "CAD"),
+                milk to Money(600L, "CAD")
+            ),
+            candidate.itemPrices
+        )
         assertEquals(request.itemKeys.toSet(), candidate.coveredItemKeys)
         assertEquals(setOf(eggs), candidate.addedStoreItemKeys)
         assertEquals(pair.additionalTravel, candidate.additionalTravel)

@@ -42,6 +42,7 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
         assertFalse(source.contains("Check-off starts for items with usable planned price coverage."))
         assertTrue(renderer.contains("source.result.itemStoreAssignments"))
         assertTrue(renderer.contains("source.extraStopSettings.notice"))
+        assertTrue(renderer.contains("assignment.priceText"))
         assertFalse(renderer.contains("storeAssignment != null"))
 
         listOf(

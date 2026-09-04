@@ -196,6 +196,33 @@ class PracticalShoppingBasketRendererTest {
     }
 
     @Test
+    fun changedProjectedItemPriceProducesANewCollectionScope() {
+        val home =
+            PracticalShoppingHomeRenderer.render(
+                PracticalShoppingHomeSession.submit(
+                    LocalSamplePracticalShoppingDemo.initialModel(),
+                    "eggs milk"
+                ).ui
+            )
+        val originalBasket = PracticalShoppingBasketRenderer.render(home)
+        val originalResult = requireNotNull(home.result)
+        val changedAssignments =
+            originalResult.itemStoreAssignments.mapIndexed { index, assignment ->
+                if (index == 0) {
+                    assignment.copy(priceText = "999.99 CAD")
+                } else {
+                    assignment
+                }
+            }
+        val changedHome = home.copy(
+            result = originalResult.copy(itemStoreAssignments = changedAssignments)
+        )
+        val changedBasket = PracticalShoppingBasketRenderer.render(changedHome)
+
+        assertNotEquals(originalBasket.collectionScopeId, changedBasket.collectionScopeId)
+    }
+
+    @Test
     fun noCoverageKeepsBasketHonestAndHidesRecommendationOnlyControls() {
         val model =
             PracticalShoppingHomeSession.submit(

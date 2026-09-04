@@ -410,6 +410,103 @@ class PracticalShoppingPlanTest {
     }
 
     @Test
+    fun exactItemPriceBreakdownIsValidatedButCannotChangePlanningOutcome() {
+        val withBreakdown =
+            single(
+                store = "with-breakdown",
+                cost = "30.00",
+                covered = request.itemKeySet,
+                travelSeconds = 300L,
+                itemPrices =
+                    mapOf(
+                        eggs to Money.parse("10.00", "CAD"),
+                        milk to Money.parse("8.00", "CAD"),
+                        chicken to Money.parse("12.00", "CAD")
+                    )
+            )
+        val withoutBreakdown =
+            single(
+                store = "without-breakdown",
+                cost = "30.00",
+                covered = request.itemKeySet,
+                travelSeconds = 600L
+            )
+
+        val decision =
+            PracticalShoppingPlanner.evaluate(
+                request,
+                listOf(withBreakdown, withoutBreakdown),
+                emptyList(),
+                policy
+            )
+
+        assertEquals(ShoppingStoreKey("with-breakdown"), decision.primary?.storeKey)
+        assertEquals(
+            Money.parse("30.00", "CAD"),
+            decision.primary?.knownBasketCost
+        )
+    }
+
+    @Test
+    fun exactItemPriceBreakdownRejectsMissingExtraCurrencyAndSubtotalErrors() {
+        assertFailsWith<IllegalArgumentException> {
+            single(
+                store = "missing-item",
+                cost = "30.00",
+                covered = request.itemKeySet,
+                travelSeconds = 1L,
+                itemPrices =
+                    mapOf(
+                        eggs to Money.parse("10.00", "CAD"),
+                        milk to Money.parse("20.00", "CAD")
+                    )
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            single(
+                store = "extra-item",
+                cost = "30.00",
+                covered = setOf(eggs, milk),
+                travelSeconds = 1L,
+                itemPrices =
+                    mapOf(
+                        eggs to Money.parse("10.00", "CAD"),
+                        milk to Money.parse("20.00", "CAD"),
+                        chicken to Money.parse("0.00", "CAD")
+                    )
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            single(
+                store = "currency-mismatch",
+                cost = "30.00",
+                covered = request.itemKeySet,
+                travelSeconds = 1L,
+                itemPrices =
+                    mapOf(
+                        eggs to Money.parse("10.00", "USD"),
+                        milk to Money.parse("8.00", "CAD"),
+                        chicken to Money.parse("12.00", "CAD")
+                    )
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            single(
+                store = "subtotal-mismatch",
+                cost = "30.00",
+                covered = request.itemKeySet,
+                travelSeconds = 1L,
+                itemPrices =
+                    mapOf(
+                        eggs to Money.parse("10.00", "CAD"),
+                        milk to Money.parse("8.00", "CAD"),
+                        chicken to Money.parse("11.99", "CAD")
+                    )
+            )
+        }
+    }
+
+    @Test
     fun duplicateShoppingItemsAreRejected() {
         assertFailsWith<IllegalArgumentException> {
             ShoppingRequest(listOf(eggs, milk, eggs))
@@ -421,14 +518,16 @@ class PracticalShoppingPlanTest {
         cost: String,
         covered: Set<ShoppingItemKey>,
         travelSeconds: Long,
-        distanceMetres: Long = 1_000L
+        distanceMetres: Long = 1_000L,
+        itemPrices: Map<ShoppingItemKey, Money> = emptyMap()
     ): SingleStorePlanCandidate =
         SingleStorePlanCandidate(
             storeKey = ShoppingStoreKey(store),
             coveredItemKeys = covered,
             knownBasketCost = Money.parse(cost, "CAD"),
             travel = ShoppingTravel(distanceMetres, travelSeconds),
-            evidence = evidenceFor(covered.size)
+            evidence = evidenceFor(covered.size),
+            itemPrices = itemPrices
         )
 
     private fun twoStore(

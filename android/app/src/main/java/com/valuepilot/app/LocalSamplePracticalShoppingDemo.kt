@@ -676,7 +676,10 @@ object LocalSamplePracticalShoppingDemo {
             coveredItemKeys = covered,
             knownBasketCost = total,
             travel = store.travelFromUser,
-            evidence = unknownEvidence(covered.size)
+            evidence = unknownEvidence(covered.size),
+            itemPrices = request.itemKeys.mapNotNull { itemKey ->
+                store.prices[itemKey]?.let { price -> itemKey to price }
+            }.toMap()
         )
     }
 
@@ -715,7 +718,13 @@ object LocalSamplePracticalShoppingDemo {
             addedStoreItemKeys = addedStoreItems,
             knownCombinedBasketCost = exactTotal(selectedPrices),
             additionalTravel = pair.additionalTravel,
-            evidence = unknownEvidence(covered.size)
+            evidence = unknownEvidence(covered.size),
+            itemPrices = request.itemKeys.mapNotNull { itemKey ->
+                val basePrice = base.prices[itemKey]
+                val addedPrice = added.prices[itemKey]
+                val selected = listOfNotNull(basePrice, addedPrice).minBy { it.minorUnits }
+                itemKey to selected
+            }.toMap()
         )
     }
 

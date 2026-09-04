@@ -74,11 +74,14 @@ data class PracticalShoppingSecondStopUiState(
 /** Consumer-facing store allocation for one already-covered requested item. */
 data class PracticalShoppingItemStoreAssignmentUiState(
     val itemKey: ShoppingItemKey,
-    val storeName: String
+    val storeName: String,
+    /** Exact price used for this covered item, when the upstream candidate supplied a breakdown. */
+    val priceText: String? = null
 ) {
     init {
         require(itemKey.value.isNotBlank())
         require(storeName.isNotBlank())
+        require(priceText == null || priceText.isNotBlank())
     }
 
     /** Keep opaque item identity out of diagnostic/UI text while retaining typed lookup. */
@@ -247,23 +250,24 @@ object PracticalShoppingUiProjector {
         storeDisplayNames: Map<ShoppingStoreKey, String>
     ): List<PracticalShoppingItemStoreAssignmentUiState> {
         val primary = decision.primary ?: return emptyList()
-        val assignments = linkedMapOf<ShoppingItemKey, ShoppingStoreKey>()
+        val assignments = linkedMapOf<ShoppingItemKey, Pair<ShoppingStoreKey, Money?>>()
         primary.coveredItemKeys.forEach { itemKey ->
-            assignments[itemKey] = primary.storeKey
+            assignments[itemKey] = primary.storeKey to primary.itemPrices[itemKey]
         }
 
         if (decision.secondStopDecision == SecondStopDecision.RECOMMENDED) {
             val secondStop = requireNotNull(decision.secondStop)
             secondStop.addedStoreItemKeys.forEach { itemKey ->
-                assignments[itemKey] = secondStop.addedStoreKey
+                assignments[itemKey] = secondStop.addedStoreKey to secondStop.itemPrices[itemKey]
             }
         }
 
         return request.itemKeys.mapNotNull { itemKey ->
-            assignments[itemKey]?.let { storeKey ->
+            assignments[itemKey]?.let { (storeKey, price) ->
                 PracticalShoppingItemStoreAssignmentUiState(
                     itemKey = itemKey,
-                    storeName = displayName(storeKey, storeDisplayNames)
+                    storeName = displayName(storeKey, storeDisplayNames),
+                    priceText = price?.let(::formatMoney)
                 )
             }
         }

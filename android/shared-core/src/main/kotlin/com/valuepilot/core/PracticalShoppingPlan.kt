@@ -88,12 +88,27 @@ data class SingleStorePlanCandidate(
     val coveredItemKeys: Set<ShoppingItemKey>,
     val knownBasketCost: Money,
     val travel: ShoppingTravel,
-    val evidence: ShoppingPlanEvidenceSummary
+    val evidence: ShoppingPlanEvidenceSummary,
+    /**
+     * Optional exact line-item prices for consumer explanation.
+     *
+     * The planner intentionally ignores this map: [knownBasketCost], coverage and evidence remain
+     * the only decision inputs. An empty map preserves older adapter candidates that carry only a
+     * validated subtotal. When supplied, the map must cover exactly the candidate's known items
+     * and sum to the already-authoritative subtotal so a presentation layer cannot display a
+     * contradictory breakdown.
+     */
+    val itemPrices: Map<ShoppingItemKey, Money> = emptyMap()
 ) {
     init {
         require(coveredItemKeys.size <= MAX_SHOPPING_ITEMS)
         require(knownBasketCost.minorUnits >= 0L)
         require(evidence.totalItemCount == coveredItemKeys.size)
+        validateItemPriceBreakdown(
+            coveredItemKeys = coveredItemKeys,
+            knownBasketCost = knownBasketCost,
+            itemPrices = itemPrices
+        )
     }
 }
 
@@ -108,7 +123,15 @@ data class TwoStorePlanCandidate(
     val addedStoreItemKeys: Set<ShoppingItemKey>,
     val knownCombinedBasketCost: Money,
     val additionalTravel: ShoppingTravel,
-    val evidence: ShoppingPlanEvidenceSummary
+    val evidence: ShoppingPlanEvidenceSummary,
+    /**
+     * Optional exact line-item prices for consumer explanation.
+     *
+     * This is descriptive data only. The planner continues to choose by the existing combined
+     * basket cost, coverage, travel and explicit savings policy. If present, the breakdown is
+     * validated against the exact combined cost before it can reach a renderer.
+     */
+    val itemPrices: Map<ShoppingItemKey, Money> = emptyMap()
 ) {
     init {
         require(baseStoreKey != addedStoreKey)
@@ -118,6 +141,53 @@ data class TwoStorePlanCandidate(
         require(coveredItemKeys.containsAll(addedStoreItemKeys))
         require(knownCombinedBasketCost.minorUnits >= 0L)
         require(evidence.totalItemCount == coveredItemKeys.size)
+        validateItemPriceBreakdown(
+            coveredItemKeys = coveredItemKeys,
+            knownBasketCost = knownCombinedBasketCost,
+            itemPrices = itemPrices
+        )
+    }
+}
+
+/**
+ * Validates an optional exact breakdown without making it a planning input.
+ *
+ * Older callers may omit [itemPrices]. Once an adapter supplies a breakdown, however, accepting
+ * missing/extra keys or a subtotal mismatch would let a consumer surface disagree with the
+ * already-decided plan. All arithmetic remains exact [Money] arithmetic.
+ */
+private fun validateItemPriceBreakdown(
+    coveredItemKeys: Set<ShoppingItemKey>,
+    knownBasketCost: Money,
+    itemPrices: Map<ShoppingItemKey, Money>
+) {
+    if (itemPrices.isEmpty()) return
+
+    require(itemPrices.keys == coveredItemKeys) {
+        "Item-price breakdown must cover exactly the candidate's known items"
+    }
+    itemPrices.values.forEach { price ->
+        require(price.minorUnits >= 0L)
+        require(
+            price.currencyCode == knownBasketCost.currencyCode &&
+                price.fractionDigits == knownBasketCost.fractionDigits
+        ) {
+            "Item-price breakdown must use the candidate's money specification"
+        }
+    }
+
+    val total =
+        itemPrices.values.fold(
+            Money(
+                minorUnits = 0L,
+                currencyCode = knownBasketCost.currencyCode,
+                fractionDigits = knownBasketCost.fractionDigits
+            )
+        ) { subtotal, price ->
+            subtotal + price
+        }
+    require(total == knownBasketCost) {
+        "Item-price breakdown must sum to the candidate's known basket cost"
     }
 }
 

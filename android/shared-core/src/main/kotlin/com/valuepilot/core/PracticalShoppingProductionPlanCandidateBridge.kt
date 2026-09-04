@@ -314,7 +314,10 @@ object PracticalShoppingProductionPlanCandidateBridge {
                             .mapTo(linkedSetOf()) { it.itemKey },
                     knownCombinedBasketCost = combinedBasketCost,
                     additionalTravel = pair.additionalTravel,
-                    evidence = evidence
+                    evidence = evidence,
+                    itemPrices = selections.associate { selection ->
+                        selection.itemKey to selection.selectedPrice
+                    }
                 ),
             blockers = emptySet()
         )
