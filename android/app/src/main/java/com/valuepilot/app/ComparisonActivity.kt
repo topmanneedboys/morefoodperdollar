@@ -91,6 +91,7 @@ class ComparisonActivity : AppCompatActivity() {
     private var barcodeLookupInFlight = false
     private var barcodeLookupClosed = false
     private var barcodeDialog: AlertDialog? = null
+    private var sharedTextDialog: AlertDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -151,6 +152,7 @@ class ComparisonActivity : AppCompatActivity() {
             )
 
         renderProductInputs(draft.blocks)
+        val sharedTextImportIssue = applySharedTextIfPresent(savedInstanceState)
         syncLikeForLikeConfirmation()
         syncPriceSelection()
 
@@ -231,6 +233,8 @@ class ComparisonActivity : AppCompatActivity() {
         } else {
             renderIdleScreen()
         }
+
+        sharedTextImportIssue?.let(::showSharedTextImportFailure)
     }
 
     override fun onResume() {
@@ -252,6 +256,8 @@ class ComparisonActivity : AppCompatActivity() {
         barcodeLookupRequestId += 1L
         barcodeDialog?.dismiss()
         barcodeDialog = null
+        sharedTextDialog?.dismiss()
+        sharedTextDialog = null
         barcodeLookupExecutor.shutdownNow()
         super.onDestroy()
     }
@@ -1097,6 +1103,85 @@ class ComparisonActivity : AppCompatActivity() {
         renderIdleScreen()
     }
 
+    /**
+     * Applies one intentionally shared text value to the earliest empty Compare Here slot. The
+     * source remains raw and reviewable; this never replaces an existing entry or parses it in the
+     * lifecycle owner. Instance-state restoration wins so rotation cannot apply the share twice.
+     */
+    private fun applySharedTextIfPresent(
+        savedInstanceState: Bundle?
+    ): CompareHereSharedTextDraftIssue? {
+        if (savedInstanceState != null) return null
+
+        val rawText =
+            runCatching {
+                intent?.getStringExtra(EXTRA_SHARED_TEXT)
+            }.getOrNull()
+                ?: return null
+        val input = ShareToValuePilotInput.validate(rawText)
+        val sharedText =
+            input.text
+                ?: return when (input.issue) {
+                    ShareToValuePilotInputIssue.EMPTY ->
+                        CompareHereSharedTextDraftIssue.BLANK_TEXT
+                    ShareToValuePilotInputIssue.TOO_LONG ->
+                        CompareHereSharedTextDraftIssue.TEXT_TOO_LONG
+                    null -> null
+                }
+
+        val result =
+            CompareHereSharedTextDraft.apply(
+                existingBlocks = currentProductBlocks(),
+                sharedText = sharedText
+            )
+        if (!result.added) return result.issue
+
+        restoringDraft = true
+        renderProductInputs(result.blocks)
+        restoringDraft = false
+        onProductsChanged()
+        return null
+    }
+
+    private fun showSharedTextImportFailure(
+        issue: CompareHereSharedTextDraftIssue
+    ) {
+        val message =
+            when (issue) {
+                CompareHereSharedTextDraftIssue.BLANK_TEXT ->
+                    getString(R.string.compare_shared_text_empty_body)
+                CompareHereSharedTextDraftIssue.TEXT_TOO_LONG ->
+                    getString(
+                        R.string.share_to_valuepilot_too_large_guidance,
+                        ShareToValuePilotInput.MAX_CHARS
+                    )
+                CompareHereSharedTextDraftIssue.NO_EMPTY_SLOT ->
+                    getString(R.string.compare_shared_text_no_empty_slot_body)
+            }
+
+        sharedTextDialog?.dismiss()
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(
+                    when (issue) {
+                        CompareHereSharedTextDraftIssue.BLANK_TEXT ->
+                            R.string.share_to_valuepilot_empty_title
+                        CompareHereSharedTextDraftIssue.TEXT_TOO_LONG ->
+                            R.string.share_to_valuepilot_too_large_title
+                        CompareHereSharedTextDraftIssue.NO_EMPTY_SLOT ->
+                            R.string.compare_shared_text_no_empty_slot_title
+                    }
+                )
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok, null)
+                .create()
+        dialog.setOnDismissListener {
+            if (sharedTextDialog === dialog) sharedTextDialog = null
+        }
+        sharedTextDialog = dialog
+        dialog.show()
+    }
+
     private fun updatePrivateMemoryStatus(
         capture: CompareHerePrivatePriceMemoryCapture?
     ) {
@@ -1449,6 +1534,9 @@ class ComparisonActivity : AppCompatActivity() {
     )
 
     companion object {
+        const val EXTRA_SHARED_TEXT =
+            "com.valuepilot.app.extra.SHARED_TEXT"
+
         private const val PREFS_NAME =
             "standalone_comparison_draft"
 

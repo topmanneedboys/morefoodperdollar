@@ -157,6 +157,18 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="home_private_memory_clear_error_title">History was not cleared</string>
     <string name="home_private_memory_clear_error">ValuePilot could not confirm clearing private history. Your existing observations remain available; try again or use Scan &amp; compare.</string>
 
+    <string name="share_to_valuepilot_ready_title">Review shared content</string>
+    <string name="share_to_valuepilot_ready_guidance">This came from another app. ValuePilot treats it as untrusted text; review and edit it in Scan &amp; compare before comparing. Nothing is sent online.</string>
+    <string name="share_to_valuepilot_preview_label">Shared text preview</string>
+    <string name="share_to_valuepilot_open_comparison">Open in Scan &amp; compare</string>
+    <string name="share_to_valuepilot_empty_title">Nothing was shared</string>
+    <string name="share_to_valuepilot_empty_guidance">Share product text from another app, or return and use Scan &amp; compare directly. No data was sent online.</string>
+    <string name="share_to_valuepilot_too_large_title">Shared content is too large</string>
+    <string name="share_to_valuepilot_too_large_guidance">ValuePilot accepts up to %1$d characters from a share. Open Scan &amp; compare and enter a smaller selection instead. Nothing was sent online.</string>
+    <string name="compare_shared_text_empty_body">The shared content was empty, so your comparison draft was unchanged.</string>
+    <string name="compare_shared_text_no_empty_slot_title">Shared text was not added</string>
+    <string name="compare_shared_text_no_empty_slot_body">Your existing comparison entries were kept. Remove an entry or leave an empty slot, then share the text again.</string>
+
     <string name="good_price_intro">Enter one product, its package quantity and the price you see. ValuePilot gives personal context when your private history has an exact match.</string>
     <string name="good_price_input_hint">Whole milk&#10;4 L&#10;Current price CA$6.49</string>
     <string name="good_price_input_body">Use a concrete currency such as CA$ or US$. A price you enter is not treated as a live store offer.</string>
