@@ -172,6 +172,18 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
     }
 
     @Test
+    fun resultCardsRepeatTheProvidedSampleDisclosureVisibly() {
+        val source = source("PracticalShoppingPlanResultSurfaceView.kt").readText()
+
+        assertTrue(source.contains("require(sampleNotice == null || sampleNotice.isNotBlank())"))
+        assertEquals(
+            2,
+            source.split("sampleNotice?.let { notice ->").size - 1
+        )
+        assertTrue(source.contains("line(\n                                notice,"))
+    }
+
+    @Test
     fun sharedPlanResultAnnouncesProjectedChangesPolitely() {
         val source = source("PracticalShoppingPlanResultSurfaceView.kt").readText()
 

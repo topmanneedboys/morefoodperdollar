@@ -120,6 +120,7 @@ class PracticalShoppingPlanResultSurfaceView @JvmOverloads constructor(
         state: PracticalShoppingUiState?,
         sampleNotice: String?
     ) {
+        require(sampleNotice == null || sampleNotice.isNotBlank())
         removeAllViews()
         if (state == null) return
 
@@ -148,6 +149,17 @@ class PracticalShoppingPlanResultSurfaceView @JvmOverloads constructor(
                     importantForAccessibility =
                         View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
                     addView(line(state.badge, 11f, style.accentColor, true))
+                    sampleNotice?.let { notice ->
+                        addView(
+                            line(
+                                notice,
+                                12f,
+                                "#92400E",
+                                true,
+                                topPadding = 7
+                            )
+                        )
+                    }
                     addView(line(state.storeName, 22f, "#111827", true, 6))
                     addView(line(state.basketCostText, 18f, "#111827", true, 8))
                     addView(
@@ -189,6 +201,17 @@ class PracticalShoppingPlanResultSurfaceView @JvmOverloads constructor(
                     importantForAccessibility =
                         View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
                     addView(line(state.badge, 11f, "#047857", true))
+                    sampleNotice?.let { notice ->
+                        addView(
+                            line(
+                                notice,
+                                12f,
+                                "#92400E",
+                                true,
+                                topPadding = 7
+                            )
+                        )
+                    }
                     addView(line(state.storeName, 18f, "#111827", true, 6))
                     addView(line(state.baseItemsText, 13f, "#374151", topPadding = 8))
                     addView(line(state.addedItemsText, 13f, "#374151", topPadding = 4))
