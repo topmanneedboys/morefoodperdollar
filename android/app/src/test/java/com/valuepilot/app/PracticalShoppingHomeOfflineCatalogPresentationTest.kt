@@ -75,6 +75,8 @@ class PracticalShoppingHomeOfflineCatalogPresentationTest {
         assertEquals(3_000, presentation.evaluatedCandidateCount)
         assertTrue(presentation.message.contains("Checked 3000 bundled product identities"))
         assertTrue(presentation.message.contains("No matching product identity"))
+        assertTrue(presentation.message.contains("does not mean the product is unavailable"))
+        assertTrue(presentation.message.contains("this snapshot had no match"))
         assertTrue(presentation.message.contains("no current prices"))
     }
 

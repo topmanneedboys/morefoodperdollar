@@ -53,6 +53,7 @@ data class PracticalShoppingHomeOfflineCatalogPresentation(
             append(summaryMessage)
             if (matches.isEmpty()) {
                 append("\nNo matching product identity was found in this bundled snapshot.")
+                append(" This does not mean the product is unavailable; it only means this snapshot had no match.")
             } else {
                 append("\n\n")
                 matches.forEachIndexed { index, match ->
