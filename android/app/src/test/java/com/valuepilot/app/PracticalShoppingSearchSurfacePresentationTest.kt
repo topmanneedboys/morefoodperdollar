@@ -61,6 +61,33 @@ class PracticalShoppingSearchSurfacePresentationTest {
     }
 
     @Test
+    fun offlineIdentityLookupUsesTheSameSafeQueryBoundary() {
+        val initial = controller.initialState()
+        val ready =
+            controller.reduce(
+                initial,
+                UniversalSearchIntent.QueryChanged("milk")
+            ).state
+        val loading =
+            controller.reduce(
+                ready,
+                UniversalSearchIntent.Submit
+            ).state
+        val tooLong =
+            controller.reduce(
+                initial,
+                UniversalSearchIntent.QueryChanged(
+                    "x".repeat(UniversalSearchController.MAX_QUERY_CHARS + 1)
+                )
+            ).state
+
+        assertFalse(practicalShoppingSearchIdentityEnabled(initial))
+        assertTrue(practicalShoppingSearchIdentityEnabled(ready))
+        assertFalse(practicalShoppingSearchIdentityEnabled(loading))
+        assertFalse(practicalShoppingSearchIdentityEnabled(tooLong))
+    }
+
+    @Test
     fun identicalQuickEntryIsBlockedOnlyWhileThatQueryIsLoading() {
         val ready =
             controller.reduce(

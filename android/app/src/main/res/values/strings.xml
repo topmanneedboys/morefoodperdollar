@@ -218,6 +218,14 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="search_quick_pizza">pizza</string>
     <string name="search_sample_badge">BUILT-IN SAMPLE CATALOG</string>
     <string name="search_sample_notice">Use this to test how ValuePilot makes a buying decision. Every price and source shown here is fictional sample data, not a live store offer.</string>
+    <string name="search_identity_action">Find product identity offline</string>
+    <string name="search_identity_action_description">Search the signed offline product-identity catalog. No current price, stock or availability is claimed.</string>
+    <string name="search_identity_dialog_title">Offline product identities for “%1$s”</string>
+    <string name="search_identity_loading">Checking the signed offline identity catalog…</string>
+    <string name="search_identity_unavailable">Offline product identity search is unavailable right now. Nothing was changed.</string>
+    <string name="search_identity_select">Choose a name to review in Scan &amp; compare. This catalog does not confirm quantity, price or availability.</string>
+    <string name="search_identity_open_compare">Open in Scan &amp; compare</string>
+    <string name="search_identity_open_compare_description">Put the selected identity name into Scan &amp; compare for review. This does not confirm quantity, price or availability.</string>
     <string name="search_results_title">Best matches</string>
     <string name="search_sample_source">Sample source: %1$s</string>
     <string name="search_sample_default_source">Built-in sample</string>

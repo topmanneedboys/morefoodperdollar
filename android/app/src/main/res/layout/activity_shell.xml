@@ -252,6 +252,20 @@
 
                 </com.google.android.material.card.MaterialCardView>
 
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/searchIdentityButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="54dp"
+                    android:layout_marginTop="12dp"
+                    android:contentDescription="@string/search_identity_action_description"
+                    android:text="@string/search_identity_action"
+                    android:textAllCaps="false"
+                    android:textSize="15sp"
+                    app:backgroundTint="#FFFFFF"
+                    app:cornerRadius="16dp"
+                    app:strokeColor="#D1D5DB"
+                    app:strokeWidth="1dp" />
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

@@ -16,6 +16,18 @@ internal fun practicalShoppingSearchSubmitEnabled(
         state.status != UniversalSearchStatus.QUERY_TOO_LONG
 
 /**
+ * The offline identity lookup uses the same immutable query/lifecycle gate as
+ * the visible sample-search action. It never starts work from the View itself.
+ */
+internal fun practicalShoppingSearchIdentityEnabled(
+    state: UniversalSearchState,
+    rawQuery: String = state.query
+): Boolean =
+    rawQuery.isNotBlank() &&
+        state.status != UniversalSearchStatus.LOADING &&
+        state.status != UniversalSearchStatus.QUERY_TOO_LONG
+
+/**
  * Prevents a quick-entry chip from restarting the exact request already in
  * flight. A different quick query remains an explicit replacement choice.
  */

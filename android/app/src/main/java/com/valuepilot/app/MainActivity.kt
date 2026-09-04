@@ -72,6 +72,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var searchExperience: View
     private lateinit var searchInput: TextInputEditText
     private lateinit var searchButton: MaterialButton
+    private lateinit var searchIdentityButton: MaterialButton
     private lateinit var searchStatus: TextView
     private lateinit var searchProgress: ProgressBar
     private lateinit var searchResultsHeading: TextView
@@ -137,6 +138,9 @@ class MainActivity : AppCompatActivity() {
     private var privatePriceHistoryClearDialog: AlertDialog? = null
     private var offlineCatalogLookup: Future<*>? = null
     private var offlineCatalogRequestId = 0L
+    private var searchIdentityDialog: AlertDialog? = null
+    private var searchIdentityLookup: Future<*>? = null
+    private var searchIdentityRequestId = 0L
     private var suppressSearchInputCallback = false
     private var restoreSearchOnNextOpen = false
 
@@ -159,6 +163,7 @@ class MainActivity : AppCompatActivity() {
         searchExperience = findViewById(R.id.searchExperience)
         searchInput = findViewById(R.id.searchInput)
         searchButton = findViewById(R.id.searchButton)
+        searchIdentityButton = findViewById(R.id.searchIdentityButton)
         searchStatus = findViewById(R.id.searchStatus)
         searchProgress = findViewById(R.id.searchProgress)
         searchResultsHeading = findViewById(R.id.searchResultsHeading)
@@ -298,6 +303,7 @@ class MainActivity : AppCompatActivity() {
         cancelOfflineCatalogLookup()
         offlineCatalogDialog?.dismiss()
         offlineCatalogDialog = null
+        dismissSearchIdentityDialog()
         dataStatusDialog?.dismiss()
         dataStatusDialog = null
         privatePriceHistoryDialog?.dismiss()
@@ -921,6 +927,7 @@ class MainActivity : AppCompatActivity() {
                 override fun afterTextChanged(s: Editable?) {
                     if (suppressSearchInputCallback) return
 
+                    dismissSearchIdentityDialog()
                     searchState = searchController.reduce(
                         searchState,
                         UniversalSearchIntent.QueryChanged(s?.toString().orEmpty())
@@ -940,6 +947,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         searchButton.setOnClickListener { submitSearch() }
+        searchIdentityButton.setOnClickListener { showSearchIdentityMatches() }
 
         quickSearchEntries().forEach { (chipId, query) ->
             configureQuickSearch(chipId, query)
@@ -1177,6 +1185,7 @@ class MainActivity : AppCompatActivity() {
         )
 
     private fun setSearchQuery(query: String) {
+        dismissSearchIdentityDialog()
         suppressSearchInputCallback = true
         searchInput.setText(query)
         searchInput.setSelection(query.length)
@@ -1190,6 +1199,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun submitSearch() {
+        dismissSearchIdentityDialog()
         val rawQuery = searchInput.text?.toString().orEmpty()
 
         if (!practicalShoppingSearchSubmitEnabled(searchState, rawQuery)) {
@@ -1211,6 +1221,178 @@ class MainActivity : AppCompatActivity() {
         renderSearch(searchState)
         hideKeyboard()
         transition.request?.let(::executeSearch)
+    }
+
+    /**
+     * Searches the signed, bundled identity rail without routing identity rows through the
+     * fictional price/ranking provider. The result is deliberately a reviewable dialog; only a
+     * selected display name can be handed to the existing Scan & compare draft route.
+     */
+    private fun showSearchIdentityMatches() {
+        val query = searchState.query.trim()
+        if (!practicalShoppingSearchIdentityEnabled(searchState, query)) return
+
+        dismissSearchIdentityDialog()
+        val requestId = Math.addExact(searchIdentityRequestId, 1L)
+        searchIdentityRequestId = requestId
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(getString(R.string.search_identity_dialog_title, query))
+                .setMessage(R.string.search_identity_loading)
+                .setNegativeButton(R.string.cancel, null)
+                .create()
+        searchIdentityDialog = dialog
+        dialog.setOnDismissListener {
+            if (searchIdentityDialog === dialog) {
+                searchIdentityDialog = null
+                cancelSearchIdentityLookup()
+            }
+        }
+        dialog.show()
+
+        searchIdentityLookup = searchExecutor.submit {
+            val presentation =
+                try {
+                    PracticalShoppingSearchIdentityPresentation.from(
+                        query = query,
+                        result =
+                            BundledOfflineCatalog.discoverSupportedRegions(
+                                context = applicationContext,
+                                rawQuery = query,
+                                canonicalizer = JvmTextCanonicalizer,
+                                evaluatedAtEpochMillis = System.currentTimeMillis(),
+                                maximumSnapshotAgeMillis = OFFLINE_CATALOG_MAX_AGE_MILLIS
+                            )
+                    )
+                } catch (ignored: Exception) {
+                    null
+                }
+
+            mainHandler.post {
+                if (
+                    isFinishing ||
+                        isDestroyed ||
+                        requestId != searchIdentityRequestId ||
+                        searchIdentityDialog !== dialog ||
+                        !dialog.isShowing
+                ) {
+                    return@post
+                }
+                searchIdentityLookup = null
+                if (presentation == null) {
+                    dialog.setMessage(getString(R.string.search_identity_unavailable))
+                } else {
+                    showSearchIdentityResult(
+                        query = query,
+                        presentation = presentation,
+                        requestId = requestId
+                    )
+                }
+            }
+        }
+    }
+
+    private fun cancelSearchIdentityLookup() {
+        searchIdentityLookup?.cancel(true)
+        searchIdentityLookup = null
+    }
+
+    private fun dismissSearchIdentityDialog() {
+        cancelSearchIdentityLookup()
+        searchIdentityDialog?.dismiss()
+        searchIdentityDialog = null
+    }
+
+    /**
+     * Replaces the loading dialog with a bounded, explicit identity choice. A positive selection
+     * uses the existing untrusted text handoff so Scan & compare still owns all exact evidence
+     * entry and validation.
+     */
+    private fun showSearchIdentityResult(
+        query: String,
+        presentation: PracticalShoppingSearchIdentityPresentation,
+        requestId: Long
+    ) {
+        if (requestId != searchIdentityRequestId || searchIdentityDialog == null) return
+
+        searchIdentityDialog?.dismiss()
+        searchIdentityDialog = null
+
+        if (presentation.matches.isEmpty()) {
+            val dialog =
+                AlertDialog.Builder(this)
+                    .setTitle(getString(R.string.search_identity_dialog_title, query))
+                    .setMessage(presentation.message)
+                    .setNegativeButton(R.string.cancel, null)
+                    .create()
+            searchIdentityDialog = dialog
+            dialog.setOnDismissListener {
+                if (searchIdentityDialog === dialog) searchIdentityDialog = null
+            }
+            dialog.show()
+            return
+        }
+
+        var selectedIndex = -1
+        lateinit var resultDialog: AlertDialog
+        val labels =
+            presentation.matches
+                .map { match ->
+                    buildString {
+                        append(match.displayName)
+                        match.brand?.let { append(" · ").append(it) }
+                        append(" (").append(match.matchLabel).append(")")
+                    }
+                }
+                .toTypedArray()
+        val builder =
+            AlertDialog.Builder(this)
+                .setTitle(getString(R.string.search_identity_dialog_title, query))
+                .setMessage(
+                    presentation.summaryMessage +
+                        "\n\n" +
+                        getString(R.string.search_identity_select)
+                )
+                .setSingleChoiceItems(labels, -1) { _, which ->
+                    selectedIndex = which
+                    resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.search_identity_open_compare, null)
+
+        resultDialog = builder.create()
+        searchIdentityDialog = resultDialog
+        resultDialog.setOnDismissListener {
+            if (searchIdentityDialog === resultDialog) searchIdentityDialog = null
+        }
+        resultDialog.setOnShowListener {
+            resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).apply {
+                isEnabled = false
+                contentDescription =
+                    getString(R.string.search_identity_open_compare_description)
+            }
+            resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val match = presentation.matches.getOrNull(selectedIndex) ?: return@setOnClickListener
+                resultDialog.dismiss()
+                openComparisonWithSharedText(match.displayName)
+            }
+        }
+        resultDialog.show()
+    }
+
+    private fun openComparisonWithSharedText(displayName: String) {
+        dismissHomeItemDetailsDialog()
+        shellState =
+            AppShellReducer.reduce(
+                shellState,
+                AppShellIntent.OpenStandaloneCompare
+            )
+        comparisonActivityOpen = true
+        startActivity(
+            Intent(this, ComparisonActivity::class.java).apply {
+                putExtra(ComparisonActivity.EXTRA_SHARED_TEXT, displayName)
+            }
+        )
     }
 
     private fun executeSearch(request: ProductSearchRequest) {
@@ -1412,6 +1594,9 @@ class MainActivity : AppCompatActivity() {
             cancelOfflineCatalogLookup()
             offlineCatalogDialog?.dismiss()
         }
+        if (state.route != AppRoute.SEARCH) {
+            dismissSearchIdentityDialog()
+        }
         if (state.route == AppRoute.COMPARE) {
             savedExperience.onRouteVisibilityChanged(false)
             return
@@ -1517,6 +1702,7 @@ class MainActivity : AppCompatActivity() {
             if (state.status == UniversalSearchStatus.LOADING) View.VISIBLE else View.GONE
 
         searchButton.isEnabled = practicalShoppingSearchSubmitEnabled(state)
+        searchIdentityButton.isEnabled = practicalShoppingSearchIdentityEnabled(state)
         quickSearchEntries().forEach { (chipId, query) ->
             findViewById<Chip>(chipId).isEnabled =
                 practicalShoppingSearchQuickEntryEnabled(state, query)
