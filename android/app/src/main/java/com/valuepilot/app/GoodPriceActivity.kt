@@ -123,6 +123,20 @@ class GoodPriceActivity : AppCompatActivity() {
             }
         }
 
+        if (savedInstanceState == null) {
+            GoodPriceActivityPrefill
+                .sanitize(intent.getStringExtra(EXTRA_PRODUCT_NAME))
+                ?.let { value ->
+                    // This is only an untrusted name prefill. The shopper still supplies the
+                    // exact package quantity and observed price before any private memory entry
+                    // can be created.
+                    restoring = true
+                    productInput.setText(value)
+                    productInput.setSelection(value.length)
+                    restoring = false
+                }
+        }
+
         priceSelection =
             savedInstanceState?.getString(STATE_PRICE_SELECTION)?.let {
                 CompareHerePriceSelectionPersistence.decode(it)
@@ -382,6 +396,7 @@ class GoodPriceActivity : AppCompatActivity() {
     }
 
     companion object {
+        const val EXTRA_PRODUCT_NAME = "com.valuepilot.app.extra.PRODUCT_NAME"
         private const val STATE_PRICE_SELECTION = "good_price.price_selection"
         private const val OFFLINE_CATALOG_MAX_AGE_MILLIS = 8L * 24L * 60L * 60L * 1_000L
     }

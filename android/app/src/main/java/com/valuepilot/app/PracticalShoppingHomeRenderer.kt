@@ -38,7 +38,9 @@ data class PracticalShoppingHomeItemRenderState(
     val requestDetailsActionLabel: String,
     val storeAssignment: String? = null,
     val priceCoverageNotice: String? = null,
-    val personalHistoryNotice: String? = null
+    val personalHistoryNotice: String? = null,
+    /** Whether the missing-price handoff into the local observed-price flow is shown. */
+    val observedPriceActionVisible: Boolean = false
 ) {
     init {
         require(key.value.isNotBlank())
@@ -47,6 +49,9 @@ data class PracticalShoppingHomeItemRenderState(
         require(storeAssignment == null || storeAssignment.isNotBlank())
         require(priceCoverageNotice == null || priceCoverageNotice.isNotBlank())
         require(personalHistoryNotice == null || personalHistoryNotice.isNotBlank())
+        require(!observedPriceActionVisible || priceCoverageNotice != null) {
+            "Observed-price action requires an explicit missing-price notice"
+        }
         require(requestDetailsSummary.isNotBlank())
         require(requestDetailsNotice == null || requestDetailsNotice.isNotBlank())
         require(requestDetailsActionLabel.isNotBlank())
@@ -224,6 +229,11 @@ object PracticalShoppingHomeRenderer {
                                     memory = memory
                                 )
                             },
+                        // A missing price is an actionable evidence gap. The action only opens
+                        // the existing local Good Price flow; it never turns the sample plan into
+                        // a live offer or changes the already-projected result.
+                        observedPriceActionVisible =
+                            source.result != null && storeAssignment == null,
                         requestDetailsSummary =
                             PracticalShoppingHomeItemDetailsPresentation.summary(itemDetails),
                         requestDetailsNotice =

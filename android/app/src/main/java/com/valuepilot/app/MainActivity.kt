@@ -319,6 +319,7 @@ class MainActivity : AppCompatActivity() {
             homeExperience.onChickenChoice = null
             homeExperience.onExtraStopMinimumSavingsChoice = null
             homeExperience.onEditItemDetails = null
+            homeExperience.onAddObservedPrice = null
             homeExperience.onCompare = null
             homeExperience.onReviewPrivateMemory = null
             homeExperience.onGoodPrice = null
@@ -458,6 +459,9 @@ class MainActivity : AppCompatActivity() {
         }
         homeExperience.onEditItemDetails = { itemKey ->
             showHomeItemDetails(itemKey)
+        }
+        homeExperience.onAddObservedPrice = { itemKey ->
+            openGoodPriceForHomeItem(itemKey)
         }
         homeExperience.onCompare = { openComparison() }
         homeExperience.onReviewPrivateMemory = { reviewPrivatePriceHistory() }
@@ -1579,6 +1583,22 @@ class MainActivity : AppCompatActivity() {
     private fun openGoodPriceCheck() {
         dismissHomeItemDetailsDialog()
         startActivity(Intent(this, GoodPriceActivity::class.java))
+    }
+
+    /**
+     * Starts the existing local observed-price flow for one unresolved Home item.
+     * The name is an untrusted prefill only; Good Price still requires the shopper
+     * to enter an exact package quantity and observed price before remembering it.
+     */
+    private fun openGoodPriceForHomeItem(itemKey: ShoppingItemKey) {
+        dismissHomeItemDetailsDialog()
+        val item = homeSessionState.model.ui.items.firstOrNull { it.key == itemKey } ?: return
+        startActivity(
+            Intent(this, GoodPriceActivity::class.java).putExtra(
+                GoodPriceActivity.EXTRA_PRODUCT_NAME,
+                item.name
+            )
+        )
     }
 
     private fun dispatch(intent: AppShellIntent) {

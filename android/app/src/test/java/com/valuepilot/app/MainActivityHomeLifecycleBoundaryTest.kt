@@ -20,6 +20,7 @@ class MainActivityHomeLifecycleBoundaryTest {
             "homeExperience.onChickenChoice = null",
             "homeExperience.onExtraStopMinimumSavingsChoice = null",
             "homeExperience.onEditItemDetails = null",
+            "homeExperience.onAddObservedPrice = null",
             "homeExperience.onCompare = null",
             "homeExperience.onReviewPrivateMemory = null",
             "homeExperience.onGoodPrice = null",
@@ -202,6 +203,35 @@ class MainActivityHomeLifecycleBoundaryTest {
         ).forEach { forbidden ->
             assertTrue(
                 "MainActivity must not own good-price business/network authority: $forbidden",
+                !source.contains(forbidden)
+            )
+        }
+    }
+
+    @Test
+    fun missingHomePriceActionPrefillsOnlyAnUntrustedProductName() {
+        val source = source().readText()
+
+        listOf(
+            "homeExperience.onAddObservedPrice = { itemKey ->",
+            "openGoodPriceForHomeItem(itemKey)",
+            "private fun openGoodPriceForHomeItem(itemKey: ShoppingItemKey)",
+            "homeSessionState.model.ui.items.firstOrNull { it.key == itemKey }",
+            "GoodPriceActivity.EXTRA_PRODUCT_NAME",
+            "item.name",
+            "The name is an untrusted prefill only"
+        ).forEach { required ->
+            assertTrue("Expected actionable missing-price handoff: $required", source.contains(required))
+        }
+
+        listOf(
+            "PracticalShoppingPlanner",
+            "Money.parse",
+            "HttpURLConnection",
+            "AuthorizedOfferSnapshot"
+        ).forEach { forbidden ->
+            assertTrue(
+                "Missing-price handoff must not own shopping authority: $forbidden",
                 !source.contains(forbidden)
             )
         }

@@ -60,6 +60,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val unknownRemovalOwnerControls = mutableListOf<View>()
     private val offlineCatalogOwnerControls = mutableListOf<View>()
     private val itemDetailsOwnerControls = mutableListOf<View>()
+    private val observedPriceOwnerControls = mutableListOf<View>()
     private val chickenChoiceOwnerControls = mutableListOf<View>()
     private val extraStopOwnerControls = mutableListOf<View>()
     private val extraStopChoiceOwnerControls = mutableListOf<View>()
@@ -133,6 +134,13 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         set(value) {
             field = value
             itemDetailsOwnerControls.forEach { control ->
+                control.isEnabled = value != null
+            }
+        }
+    var onAddObservedPrice: ((ShoppingItemKey) -> Unit)? = null
+        set(value) {
+            field = value
+            observedPriceOwnerControls.forEach { control ->
                 control.isEnabled = value != null
             }
         }
@@ -311,6 +319,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         unknownRemovalOwnerControls.clear()
         offlineCatalogOwnerControls.clear()
         itemDetailsOwnerControls.clear()
+        observedPriceOwnerControls.clear()
         chickenChoiceOwnerControls.clear()
         extraStopChoiceOwnerControls.clear()
         hasRenderedState = true
@@ -455,6 +464,21 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
             }
             item.personalHistoryNotice?.let { notice ->
                 addView(line(notice, 12f, "#6B7280", topPadding = 2))
+            }
+            if (item.observedPriceActionVisible) {
+                addView(
+                    detailButton(
+                        onDetails = { onAddObservedPrice?.invoke(item.key) },
+                        label = context.getString(R.string.home_item_observed_price_action),
+                        description =
+                            context.getString(
+                                R.string.home_item_observed_price_action_description,
+                                item.name
+                            ),
+                        enabled = onAddObservedPrice != null,
+                        ownerControls = observedPriceOwnerControls
+                    )
+                )
             }
             addView(line(item.requestDetailsSummary, 12f, "#6B7280", topPadding = 2))
             item.requestDetailsNotice?.let { notice ->

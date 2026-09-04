@@ -60,7 +60,12 @@ class GoodPriceCheckBoundaryTest {
             "privateMemoryLoadIssue",
             "good_price_memory_unavailable",
             "memoryStore.append",
-            "memoryStore.clear"
+            "memoryStore.clear",
+            "EXTRA_PRODUCT_NAME",
+            "GoodPriceActivityPrefill",
+            ".sanitize(intent.getStringExtra(EXTRA_PRODUCT_NAME))",
+            "savedInstanceState == null",
+            "productInput.setText(value)"
         ).forEach { required -> assertTrue(source.contains(required)) }
         listOf(
             "HttpURLConnection",

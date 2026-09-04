@@ -184,6 +184,10 @@ class PracticalShoppingHomeRendererTest {
             listOf(null, "No usable price yet — not included in this plan."),
             rendered.items.map { it.priceCoverageNotice }
         )
+        assertEquals(
+            listOf(false, true),
+            rendered.items.map { it.observedPriceActionVisible }
+        )
         assertTrue(rendered.extraStopSettings.visible)
         assertEquals(
             "Extra-stop rule · Save at least 15.00 CAD · Not evaluated yet",
@@ -212,6 +216,7 @@ class PracticalShoppingHomeRendererTest {
         )
         assertNull(rendered.extraStopSettings.notice)
         assertTrue(rendered.items.all { it.priceCoverageNotice == null })
+        assertTrue(rendered.items.none { it.observedPriceActionVisible })
     }
 
     @Test
@@ -232,6 +237,7 @@ class PracticalShoppingHomeRendererTest {
         )
         assertEquals("0 of 1 item priced yet.", rendered.noCoverageSummary)
         assertFalse(rendered.extraStopSettings.visible)
+        assertTrue(rendered.items.single().observedPriceActionVisible)
     }
 
     @Test

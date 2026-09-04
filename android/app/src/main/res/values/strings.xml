@@ -132,6 +132,8 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="home_item_details_exact_product_note">This is your preference, not proof of product identity. A verified product match is still required before any planner can use it.</string>
     <string name="home_item_details_clear">Clear preferences</string>
     <string name="home_item_details_save">Save preferences</string>
+    <string name="home_item_observed_price_action">Add observed price</string>
+    <string name="home_item_observed_price_action_description">Enter the price and package quantity you see for %1$s. This stays private and does not change the sample plan.</string>
     <string name="home_refinement_title">ONE QUICK QUESTION</string>
     <string name="home_refinement_question">Which %1$s?</string>
     <string name="home_unknown_title">Needs clarification</string>
