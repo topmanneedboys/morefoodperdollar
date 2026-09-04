@@ -1,6 +1,6 @@
 # ValuePilot Practical Shopping Checkpoint
 
-Updated: 2026-09-02
+Updated: 2026-09-04
 
 Branch: `work/valuepilot-android-milestone`
 
@@ -8,9 +8,9 @@ This checkpoint records the verified Practical Shopping Home slice plus the prov
 
 ## Latest verified engineering head
 
-`482941bd0aa33ec72d93c60985a9dc753d13df78` — `Show personal price history insight after comparison`
+`642e8666e144dbd0bdb4a65d765eb3890aa759a0` — `Surface private comparison history on Home`
 
-Candidate workflow **33846053326** and milestone provenance workflow **33846493362** completed successfully for the exact SHA. Compare Here now remembers fully confirmed exact comparisons locally and reports a conservative personal-price context from matching history: one prior observation is compared with the last remembered rate, while multiple observations expose a personal range; mismatches remain no-history. The Home comparison entry remains labelled `Scan & compare prices` and opens Compare Here, whose user-triggered local photo import proposes bounded OCR text for review. This does not change Home planner authority: the visible Home experience remains the clearly labelled fictional demo, and the Home offline identity catalog still provides names only, never prices, availability or stock.
+Candidate workflow **33848650056** and milestone provenance workflow **33849153306** completed successfully for the exact SHA. Compare Here now remembers fully confirmed exact comparisons locally and reports a conservative personal-price context from matching history: one prior observation is compared with the last remembered rate, while multiple observations expose a personal range; mismatches remain no-history. Home now adds a neutral label-only private-history count to matching list rows, with an explicit package/promotion mismatch and non-live caveat; it does not expose remembered prices or feed memory into planning. The Home comparison entry remains labelled `Scan & compare prices` and opens Compare Here, whose user-triggered local photo import proposes bounded OCR text for review. This does not change Home planner authority: the visible Home experience remains the clearly labelled fictional demo, and the Home offline identity catalog still provides names only, never prices, availability or stock.
 
 The same release includes the signed 30,000-record shared Canada identity catalog and atomic multi-region release pointer described in the current state checkpoint. Real evidence-backed Home/private price-book wiring remains a later milestone; physical-device testing is still required before declaring Scan & Compare or launch UX complete.
 
