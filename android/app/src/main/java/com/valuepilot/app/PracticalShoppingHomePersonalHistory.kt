@@ -25,7 +25,7 @@ internal object PracticalShoppingHomePersonalHistory {
         val noun = if (observationCount == 1) "observation" else "observations"
         return "Private comparison history: $observationCount $noun on this device. " +
             "Home shows matching context only; package and promotion details may differ. " +
-            "This is not live store pricing."
+            "This is not live store pricing. Open Scan & compare prices to review it."
     }
 
     fun noticeFor(

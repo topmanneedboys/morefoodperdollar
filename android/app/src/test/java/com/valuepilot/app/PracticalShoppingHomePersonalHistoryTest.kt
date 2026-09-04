@@ -33,7 +33,7 @@ class PracticalShoppingHomePersonalHistoryTest {
         assertEquals(
             "Private comparison history: 2 observations on this device. " +
                 "Home shows matching context only; package and promotion details may differ. " +
-                "This is not live store pricing.",
+                "This is not live store pricing. Open Scan & compare prices to review it.",
             summary
         )
         assertTrue(!summary.contains("CAD"))
@@ -107,7 +107,7 @@ class PracticalShoppingHomePersonalHistoryTest {
         assertEquals(
             "Private comparison history: 1 observation on this device. " +
                 "Home shows matching context only; package and promotion details may differ. " +
-                "This is not live store pricing.",
+                "This is not live store pricing. Open Scan & compare prices to review it.",
             rendered.privateMemorySummary
         )
         assertEquals(
