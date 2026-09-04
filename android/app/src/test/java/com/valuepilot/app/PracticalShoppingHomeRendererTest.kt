@@ -185,6 +185,10 @@ class PracticalShoppingHomeRendererTest {
         )
         assertTrue(rendered.extraStopSettings.visible)
         assertEquals(
+            "Extra-stop rule · Save at least 15.00 CAD · Not evaluated yet",
+            rendered.extraStopSettings.summary
+        )
+        assertEquals(
             "Another stop is not evaluated until every requested item has a usable price.",
             rendered.extraStopSettings.notice
         )
@@ -201,6 +205,10 @@ class PracticalShoppingHomeRendererTest {
         val rendered = PracticalShoppingHomeRenderer.render(model.model.ui)
 
         assertTrue(rendered.extraStopSettings.visible)
+        assertEquals(
+            "Extra-stop rule · Save at least 15.00 CAD",
+            rendered.extraStopSettings.summary
+        )
         assertNull(rendered.extraStopSettings.notice)
         assertTrue(rendered.items.all { it.priceCoverageNotice == null })
     }

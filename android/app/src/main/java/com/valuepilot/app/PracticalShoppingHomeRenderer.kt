@@ -160,6 +160,12 @@ object PracticalShoppingHomeRenderer {
                 ?.associate { assignment -> assignment.itemKey to assignment.storeName }
         val privateMemorySummary =
             usablePrivateMemory?.let(PracticalShoppingHomePersonalHistory::summaryFor)
+        val extraStopSettingsNotice =
+            source.result?.primary
+                ?.missingItemsText
+                ?.let {
+                    "Another stop is not evaluated until every requested item has a usable price."
+                }
 
         return PracticalShoppingHomeRenderState(
             query = source.query,
@@ -240,7 +246,12 @@ object PracticalShoppingHomeRenderer {
                     visible = source.result?.primary != null,
                     summary =
                         "Extra-stop rule · Save at least " +
-                            source.extraStopMinimumSavingsChoice.label,
+                            source.extraStopMinimumSavingsChoice.label +
+                            if (extraStopSettingsNotice == null) {
+                                ""
+                            } else {
+                                " · Not evaluated yet"
+                            },
                     prompt = "Minimum savings before adding another store",
                     choices =
                         LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.entries
@@ -251,12 +262,7 @@ object PracticalShoppingHomeRenderer {
                                     selected = choice == source.extraStopMinimumSavingsChoice
                                 )
                             },
-                    notice =
-                        source.result?.primary
-                            ?.missingItemsText
-                            ?.let {
-                                "Another stop is not evaluated until every requested item has a usable price."
-                            }
+                    notice = extraStopSettingsNotice
                 ),
             sampleNotice = source.sampleNotice,
             privateMemorySummary = privateMemorySummary,
