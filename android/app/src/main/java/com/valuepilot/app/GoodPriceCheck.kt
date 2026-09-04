@@ -2,6 +2,9 @@ package com.valuepilot.app
 
 import com.valuepilot.core.CompareHereComparisonIntentKey
 import com.valuepilot.core.CompareHerePriceSelection
+import com.valuepilot.core.UnitRate
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 /** Presentation tone for a personal-price answer; it is not a ranking score. */
 internal enum class GoodPriceCheckAnswerTone {
@@ -227,7 +230,7 @@ internal object GoodPriceCheckRouteCoordinator {
                 )
 
         val insight = CompareHerePriceMemoryEvaluator.assess(entry, privateMemory)
-        val (answerTitle, answerGuidance, tone) = answerFor(insight)
+        val (answerTitle, answerGuidance, tone) = answerFor(insight, entry.rate)
         val historyText =
             if (insight.assessment == CompareHerePriceMemoryAssessment.NO_MATCHING_HISTORY) {
                 null
@@ -269,7 +272,8 @@ internal object GoodPriceCheckRouteCoordinator {
     }
 
     private fun answerFor(
-        insight: CompareHerePriceMemoryInsight
+        insight: CompareHerePriceMemoryInsight,
+        currentRate: UnitRate
     ): Triple<String, String, GoodPriceCheckAnswerTone> =
         when (insight.assessment) {
             CompareHerePriceMemoryAssessment.NO_MATCHING_HISTORY ->
@@ -282,7 +286,11 @@ internal object GoodPriceCheckRouteCoordinator {
             CompareHerePriceMemoryAssessment.LOWER_THAN_LAST ->
                 Triple(
                     "Below your last remembered price",
-                    "This is lower than your last matching observation. That is useful personal context, not a guarantee of the cheapest price.",
+                    lowerRateGuidance(
+                        currentRate = currentRate,
+                        referenceRate = requireNotNull(insight.lastRate),
+                        referenceDescription = "your last matching observation"
+                    ),
                     GoodPriceCheckAnswerTone.POSITIVE
                 )
 
@@ -296,14 +304,23 @@ internal object GoodPriceCheckRouteCoordinator {
             CompareHerePriceMemoryAssessment.HIGHER_THAN_LAST ->
                 Triple(
                     "Above your last remembered price",
-                    "This is higher than your last matching observation. Check the package and promotion details before deciding.",
+                    higherRateGuidance(
+                        currentRate = currentRate,
+                        referenceRate = requireNotNull(insight.lastRate),
+                        referenceDescription = "your last matching observation"
+                    ),
                     GoodPriceCheckAnswerTone.CAUTION
                 )
 
             CompareHerePriceMemoryAssessment.BELOW_PERSONAL_RANGE ->
                 Triple(
                     "Below your remembered range",
-                    "This is below every matching observation in your private history. It looks better for you, but it is not a live-market guarantee.",
+                    lowerRateGuidance(
+                        currentRate = currentRate,
+                        referenceRate = requireNotNull(insight.minimumRate),
+                        referenceDescription = "your previous personal low",
+                        suffix = "It looks better for you, but it is not a live-market guarantee."
+                    ),
                     GoodPriceCheckAnswerTone.POSITIVE
                 )
 
@@ -317,10 +334,78 @@ internal object GoodPriceCheckRouteCoordinator {
             CompareHerePriceMemoryAssessment.ABOVE_PERSONAL_RANGE ->
                 Triple(
                     "Above your remembered range",
-                    "This is above every matching observation in your private history. Check the package and promotion details before deciding.",
+                    higherRateGuidance(
+                        currentRate = currentRate,
+                        referenceRate = requireNotNull(insight.maximumRate),
+                        referenceDescription = "your previous personal high",
+                        suffix = "Check the package and promotion details before deciding."
+                    ),
                     GoodPriceCheckAnswerTone.CAUTION
                 )
         }
+
+    private fun lowerRateGuidance(
+        currentRate: UnitRate,
+        referenceRate: UnitRate,
+        referenceDescription: String,
+        suffix: String =
+            "That is useful personal context, not a guarantee of the cheapest price."
+    ): String {
+        val percentage = relativeRateGapPercentage(currentRate, referenceRate)
+        val comparison =
+            percentage?.let {
+                "This is about $it% lower per unit than $referenceDescription."
+            } ?: "This is lower per unit than $referenceDescription."
+        return "$comparison $suffix"
+    }
+
+    private fun higherRateGuidance(
+        currentRate: UnitRate,
+        referenceRate: UnitRate,
+        referenceDescription: String,
+        suffix: String =
+            "Check the package and promotion details before deciding."
+    ): String {
+        val percentage = relativeRateGapPercentage(currentRate, referenceRate)
+        val comparison =
+            percentage?.let {
+                "This is about $it% higher per unit than $referenceDescription."
+            } ?: "This is higher per unit than $referenceDescription."
+        return "$comparison $suffix"
+    }
+
+    /**
+     * Formats an exact relative unit-rate gap for personal context only. The caller has already
+     * established that both rates describe the same package/history match; this helper never
+     * creates a ranking or market claim. A rounded zero stays unquantified rather than implying
+     * a meaningful difference that the one-decimal display cannot show.
+     */
+    private fun relativeRateGapPercentage(
+        currentRate: UnitRate,
+        referenceRate: UnitRate
+    ): String? {
+        if (
+            currentRate.currencyCode != referenceRate.currencyCode ||
+            currentRate.unit != referenceRate.unit ||
+            currentRate.currencyMicrosPerUnit <= 0L ||
+            referenceRate.currencyMicrosPerUnit <= 0L ||
+            currentRate.currencyMicrosPerUnit == referenceRate.currencyMicrosPerUnit
+        ) {
+            return null
+        }
+
+        val percentage =
+            BigDecimal.valueOf(currentRate.currencyMicrosPerUnit)
+                .subtract(BigDecimal.valueOf(referenceRate.currencyMicrosPerUnit))
+                .abs()
+                .multiply(BigDecimal.valueOf(100L))
+                .divide(
+                    BigDecimal.valueOf(referenceRate.currencyMicrosPerUnit),
+                    1,
+                    RoundingMode.HALF_UP
+                )
+        return percentage.takeIf { it.signum() > 0 }?.toPlainString()
+    }
 
     private fun message(
         status: GoodPriceCheckRouteStatus,

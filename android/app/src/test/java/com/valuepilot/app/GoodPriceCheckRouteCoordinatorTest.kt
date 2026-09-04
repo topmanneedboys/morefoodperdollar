@@ -65,12 +65,36 @@ class GoodPriceCheckRouteCoordinatorTest {
         val result = requireNotNull(second.state.result)
         assertEquals("Below your last remembered price", result.answerTitle)
         assertEquals(GoodPriceCheckAnswerTone.POSITIVE, result.answerTone)
+        assertTrue(result.answerGuidance.contains("about 13.4% lower per unit"))
         assertTrue(result.historyText.orEmpty().contains("Personal history: 2 observations"))
         assertTrue(result.historyText.orEmpty().contains("lowest 1.6225 CAD/L"))
         assertEquals(
             CompareHerePrivatePriceMemorySource.CONFIRMED_GOOD_PRICE_CHECK,
             requireNotNull(second.privateMemoryCapture).entries.single().source
         )
+    }
+
+    @Test
+    fun `a higher repeat quantifies the personal rate increase`() {
+        val first = check("Whole Milk\nCA$6.49\n4 L", observedAt = 100L)
+        val history =
+            CompareHerePrivatePriceMemoryStateManager.append(
+                CompareHerePrivatePriceMemoryState.empty(),
+                requireNotNull(first.privateMemoryCapture)
+            )
+
+        val second =
+            GoodPriceCheckRouteCoordinator.checkBlock(
+                rawBlock = "Whole Milk\nCA$7.49\n4 L",
+                observedAtEpochMillis = 200L,
+                priceSelection = CompareHerePriceSelection.CURRENT,
+                privateMemory = history
+            )
+
+        val result = requireNotNull(second.state.result)
+        assertEquals("Above your last remembered price", result.answerTitle)
+        assertEquals(GoodPriceCheckAnswerTone.CAUTION, result.answerTone)
+        assertTrue(result.answerGuidance.contains("about 15.4% higher per unit"))
     }
 
     @Test
