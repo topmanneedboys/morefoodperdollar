@@ -28,6 +28,9 @@
         <activity
             android:name=".GoodPriceActivity"
             android:exported="false" />
+        <activity
+            android:name=".BarcodeCaptureActivity"
+            android:exported="false" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

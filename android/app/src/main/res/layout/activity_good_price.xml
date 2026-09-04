@@ -67,6 +67,23 @@
             android:textColor="#6B7280"
             android:textSize="13sp" />
 
+        <Button
+            android:id="@+id/goodPriceBarcodeButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="@string/good_price_barcode_action"
+            android:textAllCaps="false" />
+
+        <TextView
+            android:id="@+id/goodPriceBarcodeStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:text="@string/good_price_barcode_ready"
+            android:textColor="#6B7280"
+            android:textSize="12sp" />
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
