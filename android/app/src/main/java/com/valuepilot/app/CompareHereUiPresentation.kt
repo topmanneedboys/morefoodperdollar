@@ -14,6 +14,7 @@ import com.valuepilot.core.NormalizedQuantity
 import com.valuepilot.core.RateUnit
 import com.valuepilot.core.UnitRate
 import java.math.BigDecimal
+import java.math.RoundingMode
 
 private const val MAX_COMPARE_HERE_DISPLAY_METADATA = 32
 private const val MAX_COMPARE_HERE_RAW_LABEL_LENGTH = 500
@@ -240,7 +241,7 @@ object CompareHereUiProjector {
     ): String =
         when (status) {
             CompareHereUiStatus.READY ->
-                "Lower exact unit price wins within this comparison."
+                readyGuidance(result)
 
             CompareHereUiStatus.NOT_ENOUGH_DATA ->
                 selectedPriceGuidance(result.priceSelection)
@@ -251,6 +252,42 @@ object CompareHereUiProjector {
             CompareHereUiStatus.INCOMPATIBLE_DIMENSIONS ->
                 incompatibleGuidance(result.comparisonIssues)
         }
+
+    /**
+     * Adds an immediate, deterministic payoff to a completed comparison without creating a new
+     * ranking rule. The rates and order already came from the exact core evaluator; this only
+     * formats the relative gap for the shopper. Ties deliberately do not claim an advantage.
+     */
+    private fun readyGuidance(result: CompareHereComparisonResult): String {
+        if (result.bestValueCandidateIds.size != 1) {
+            return "These options tie at the lowest exact unit price. Lower exact unit price wins within this comparison."
+        }
+
+        val best = result.rankedCandidates.firstOrNull()?.candidate?.rate
+        val nextBest =
+            result.rankedCandidates
+                .firstOrNull { it.valueRank == 2 }
+                ?.candidate
+                ?.rate
+        if (best == null || nextBest == null || best.currencyMicrosPerUnit >= nextBest.currencyMicrosPerUnit) {
+            return "Lower exact unit price wins within this comparison."
+        }
+
+        val percentage =
+            BigDecimal.valueOf(nextBest.currencyMicrosPerUnit - best.currencyMicrosPerUnit)
+                .multiply(BigDecimal.valueOf(100L))
+                .divide(
+                    BigDecimal.valueOf(nextBest.currencyMicrosPerUnit),
+                    1,
+                    RoundingMode.HALF_UP
+                )
+        return if (percentage.signum() > 0) {
+            "Lower exact unit price wins within this comparison. Best value is about " +
+                "${percentage.toPlainString()}% lower per unit than the next-best option."
+        } else {
+            "Lower exact unit price wins within this comparison."
+        }
+    }
 
     private fun selectedPriceGuidance(selection: CompareHerePriceSelection): String =
         when (selection) {

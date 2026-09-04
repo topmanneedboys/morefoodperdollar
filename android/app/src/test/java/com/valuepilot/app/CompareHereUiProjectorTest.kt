@@ -48,6 +48,27 @@ class CompareHereUiProjectorTest {
     }
 
     @Test
+    fun `ready comparison explains the relative unit value advantage`() {
+        val core =
+            current(
+                candidate("best", "4.00", QuantityNormalization.grams(500)),
+                candidate("next", "9.00", QuantityNormalization.grams(1_000))
+            )
+
+        val state =
+            CompareHereUiProjector.project(
+                core,
+                metadata("best" to "Best Milk", "next" to "Next Milk")
+            ).state
+
+        assertEquals(
+            "Lower exact unit price wins within this comparison. " +
+                "Best value is about 11.1% lower per unit than the next-best option.",
+            state.guidance
+        )
+    }
+
+    @Test
     fun `ready exact tie preserves both best value rows from core`() {
         val core =
             current(
@@ -65,6 +86,11 @@ class CompareHereUiProjectorTest {
         assertEquals("Best value tie", state.statusTitle)
         assertEquals(listOf(1, 1), state.rows.map { it.valueRank })
         assertTrue(state.rows.all { it.bestValue })
+        assertEquals(
+            "These options tie at the lowest exact unit price. " +
+                "Lower exact unit price wins within this comparison.",
+            state.guidance
+        )
     }
 
     @Test
