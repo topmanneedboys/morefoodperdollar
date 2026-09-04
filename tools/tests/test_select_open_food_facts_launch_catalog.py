@@ -116,6 +116,62 @@ class OpenFoodFactsLaunchSelectionTest(unittest.TestCase):
             with self.assertRaisesRegex(OpenFoodFactsLaunchSelectionError, "No usable Canada"):
                 select_catalog(source, root / "out.jsonl", root / "report.json")
 
+    def test_household_reserve_and_identity_variety_are_measured_deterministically(self):
+        rows = [
+            {
+                "code": self.gtin(index),
+                "product_name_en": f"Food staple {index}",
+                "countries_tags": "en:canada",
+                "categories_en": "Food products,Beverages",
+                "unique_scans_n": "100",
+                "completeness": "1",
+            }
+            for index in range(11)
+        ]
+        rows.append(
+            {
+                "code": self.gtin(11),
+                "product_name_en": "Laundry detergent",
+                "countries_tags": "en:canada",
+                "categories_en": "Household products,Laundry detergents",
+                "unique_scans_n": "0",
+                "completeness": "0",
+            }
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "off.csv.gz"
+            self.write_tsv_gz(source, rows)
+            output = root / "out.jsonl"
+            report_path = root / "report.json"
+            report = select_catalog(source, output, report_path, max_records=10)
+            report_again = select_catalog(
+                source,
+                root / "out-again.jsonl",
+                root / "report-again.json",
+                max_records=10,
+            )
+
+            self.assertEqual(report, report_again)
+            self.assertEqual(1, report["coverage"]["householdReserveTarget"])
+            self.assertEqual(1, report["coverage"]["selectedHouseholdHintRecords"])
+            self.assertTrue(report["coverage"]["householdReserveSatisfied"])
+            self.assertEqual(10, report["coverage"]["records"])
+            selected_names = [
+                json.loads(line)["product_name_en"]
+                for line in output.read_text(encoding="utf-8").splitlines()
+            ]
+            self.assertIn("Laundry detergent", selected_names)
+
+    @staticmethod
+    def gtin(index: int) -> str:
+        body = f"036000{index:05d}"
+        total = sum(
+            int(digit) * (3 if (len(body) - offset) % 2 else 1)
+            for offset, digit in enumerate(body)
+        )
+        return body + str((10 - total % 10) % 10)
+
     def test_bounds_and_overwrite_are_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

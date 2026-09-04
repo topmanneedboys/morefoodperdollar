@@ -73,6 +73,9 @@ class OfflineCatalogRefreshTest(unittest.TestCase):
             self.assertEqual("OFFLINE_CATALOG_COVERAGE", first_report["reportType"])
             self.assertEqual(1_500, first_report["catalog"]["recordCount"])
             self.assertEqual("MEASURED", first_report["catalog"]["coverageStatus"])
+            self.assertEqual(1_500, first_report["catalog"]["selection"]["uniqueCanonicalIdentityNames"])
+            self.assertEqual(0, first_report["catalog"]["selection"]["selectedHouseholdHintRecords"])
+            self.assertEqual("NONE", first_report["catalog"]["selection"]["authority"])
             self.assertEqual(0, first_report["currentOffers"]["recordCount"])
             self.assertEqual("NOT_INCLUDED", first_report["currentOffers"]["coverageStatus"])
             self.assertEqual(

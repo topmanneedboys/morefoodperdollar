@@ -161,6 +161,7 @@ def _coverage_report(
     selected_count: int,
     minimum_catalog_records: int,
     maximum_catalog_records: int,
+    selection_coverage: Mapping[str, Any],
     regions: Sequence[Mapping[str, Any]],
     promoted: bool,
 ) -> dict[str, Any]:
@@ -183,6 +184,21 @@ def _coverage_report(
             "recordCount": selected_count,
             "minimumRecordCount": minimum_catalog_records,
             "maximumRecordCount": maximum_catalog_records,
+            "selection": {
+                "selectedGroceryHintRecords": selection_coverage["selectedGroceryHintRecords"],
+                "selectedHouseholdHintRecords": selection_coverage["selectedHouseholdHintRecords"],
+                "householdReserveTarget": selection_coverage["householdReserveTarget"],
+                "householdReserveSatisfied": selection_coverage["householdReserveSatisfied"],
+                "uniqueCanonicalIdentityNames": selection_coverage["uniqueCanonicalIdentityNames"],
+                "identityNameVarietyStatus": selection_coverage["identityNameVarietyStatus"],
+                "identityNameVarietyTarget": selection_coverage["identityNameVarietyTarget"],
+                "authority": "NONE",
+                "note": (
+                    "Selection hints and canonical-name variety are bounded identity measurements, "
+                    "not demand, retailer availability, stock, price, package quantity, freshness, "
+                    "or ranking authority."
+                ),
+            },
         },
         "currentOffers": {
             "coverageStatus": NO_CURRENT_OFFERS_STATUS,
@@ -300,6 +316,29 @@ def refresh_snapshots(
 
         metrics = selection_report.get("metrics")
         _require(isinstance(metrics, Mapping), "Selection report metrics are missing")
+        selection_coverage = selection_report.get("coverage")
+        _require(isinstance(selection_coverage, Mapping), "Selection report coverage is missing")
+        for field in (
+            "selectedGroceryHintRecords",
+            "selectedHouseholdHintRecords",
+            "householdReserveTarget",
+            "uniqueCanonicalIdentityNames",
+        ):
+            _require(isinstance(selection_coverage.get(field), int), f"Selection report {field} is invalid")
+        _require(
+            isinstance(selection_coverage.get("householdReserveSatisfied"), bool),
+            "Selection report householdReserveSatisfied is invalid",
+        )
+        _require(
+            selection_coverage.get("identityNameVarietyStatus") in {"WITHIN_TARGET", "OUTSIDE_TARGET"},
+            "Selection report identityNameVarietyStatus is invalid",
+        )
+        target = selection_coverage.get("identityNameVarietyTarget")
+        _require(isinstance(target, Mapping), "Selection report identityNameVarietyTarget is invalid")
+        _require(
+            isinstance(target.get("minimum"), int) and isinstance(target.get("maximum"), int),
+            "Selection report identityNameVarietyTarget bounds are invalid",
+        )
         selected_value = metrics.get("records_selected")
         _require(isinstance(selected_value, int), "Selection report selected count is invalid")
         selected_count = selected_value
@@ -426,6 +465,7 @@ def refresh_snapshots(
                 selected_count=selected_count,
                 minimum_catalog_records=minimum_catalog_records,
                 maximum_catalog_records=maximum_catalog_records,
+                selection_coverage=selection_coverage,
                 regions=verified,
                 promoted=promote,
             ),

@@ -79,8 +79,59 @@ GROCERY_HINTS = frozenset(
         "yogurt",
     }
 )
+# Open Food Facts category labels vary by language and nesting.  These tokens
+# cover common household/non-food branches without treating a category label
+# as proof of retailer assortment or demand.
+HOUSEHOLD_HINTS = frozenset(
+    {
+        "baby-care",
+        "beauty",
+        "cleaning",
+        "cleaner",
+        "cleaning-products",
+        "cosmetics",
+        "dental-care",
+        "deodorant",
+        "diaper",
+        "diapers",
+        "dishwashing",
+        "dishwasher",
+        "feminine-hygiene",
+        "hair-care",
+        "hand-wash",
+        "health",
+        "home-and-garden",
+        "home-care",
+        "household-products",
+        "hygiene",
+        "kitchen-supplies",
+        "laundry",
+        "laundry-care",
+        "non-food-products",
+        "oral-care",
+        "paper-goods",
+        "paper-products",
+        "personal-care",
+        "pet-products",
+        "pet-care",
+        "pet-food",
+        "razor",
+        "shampoo",
+        "shaving",
+        "soap",
+        "sponge",
+        "tissue",
+        "toilet-paper",
+        "toiletries",
+        "toothpaste",
+        "household",
+    }
+)
 COUNTRY_CANADA = "en:canada"
 _WHITESPACE = re.compile(r"\s+")
+MIN_IDENTITY_NAME_VARIETY = 1_500
+MAX_IDENTITY_NAME_VARIETY = 5_000
+HOUSEHOLD_RESERVE_PERCENT = 10
 
 
 class OpenFoodFactsLaunchSelectionError(ValueError):
@@ -152,6 +203,22 @@ def _canadian_popularity(row: dict[str, Any]) -> int:
 
 def _grocery_hint(row: dict[str, Any]) -> int:
     return int(bool(_category_tokens(row) & GROCERY_HINTS))
+
+
+def _household_hint(row: dict[str, Any]) -> int:
+    return int(bool(_category_tokens(row) & HOUSEHOLD_HINTS))
+
+
+def _canonical_identity_name(value: str) -> str:
+    """Return a stable identity-name variety key for coverage measurement."""
+
+    ascii_value = (
+        unicodedata.normalize("NFKD", value)
+        .encode("ascii", "ignore")
+        .decode("ascii")
+        .lower()
+    )
+    return " ".join(re.findall(r"[a-z0-9]+", ascii_value))
 
 
 def _raw_record(row: dict[str, Any], *, code: str, name: str) -> dict[str, Any]:
@@ -226,7 +293,7 @@ def select_catalog(
     _require(not report_path.exists(), f"Refusing to overwrite report: {report_path}")
 
     stats: Counter[str] = Counter()
-    candidates: list[tuple[tuple[Any, ...], str, dict[str, Any]]] = []
+    candidates: list[tuple[tuple[Any, ...], str, dict[str, Any], int, int, str]] = []
     canonical_codes: dict[str, str] = {}
 
     for row in _iter_rows(input_path):
@@ -255,18 +322,61 @@ def select_catalog(
         stats["rows_usable_identity"] += 1
         popularity = _canadian_popularity(row)
         grocery = _grocery_hint(row)
+        household = _household_hint(row)
         scans = _scan_count(row)
         completeness = _completeness(row)
+        relevance = max(grocery, household)
         # Sort descending on quality/relevance, then ascending on canonical
         # identity.  Decimal is used instead of float for reproducibility.
-        score = (popularity, grocery, scans, completeness, canonical)
-        candidates.append((score, canonical, _raw_record(row, code=code, name=name)))
+        score = (popularity, relevance, scans, completeness, canonical)
+        candidates.append(
+            (
+                score,
+                canonical,
+                _raw_record(row, code=code, name=name),
+                grocery,
+                household,
+                _canonical_identity_name(name),
+            )
+        )
 
     candidates.sort(key=lambda item: item[0], reverse=True)
-    selected = [item[2] for item in candidates[:max_records]]
+    selected_candidates = list(candidates[:max_records])
+    household_candidates = [item for item in candidates if item[4] == 1]
+    household_reserve_target = min(
+        len(household_candidates),
+        (max_records * HOUSEHOLD_RESERVE_PERCENT) // 100,
+    )
+    # Keep a small deterministic household reserve when the bounded launch
+    # window is large enough.  This prevents high-scan food rows from crowding
+    # out all household identities while preserving the normal quality order
+    # for the remaining slots.
+    selected_keys = {item[1] for item in selected_candidates}
+    selected_household = sum(item[4] for item in selected_candidates)
+    if selected_household < household_reserve_target:
+        replacement_indexes = [
+            index for index, item in enumerate(selected_candidates) if item[4] == 0
+        ]
+        for item in household_candidates:
+            if selected_household >= household_reserve_target:
+                break
+            if item[1] in selected_keys or not replacement_indexes:
+                continue
+            replacement_index = replacement_indexes.pop()
+            selected_keys.remove(selected_candidates[replacement_index][1])
+            selected_candidates[replacement_index] = item
+            selected_keys.add(item[1])
+            selected_household += 1
+        selected_candidates.sort(key=lambda item: item[0], reverse=True)
+
+    selected = [item[2] for item in selected_candidates]
     stats["records_selected"] = len(selected)
     stats["records_omitted_by_bound"] = max(0, len(candidates) - len(selected))
     _require(selected, "No usable Canada-labelled Open Food Facts identities found")
+
+    selected_grocery_hints = sum(item[3] for item in selected_candidates)
+    selected_household_hints = sum(item[4] for item in selected_candidates)
+    unique_identity_names = len({item[5] for item in selected_candidates if item[5]})
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_bytes(b"".join(_canonical_json(record) for record in selected))
@@ -282,8 +392,30 @@ def select_catalog(
         "selection": {
             "scope": "CANADA_LABELLED_IDENTITY_ONLY",
             "maxRecords": max_records,
-            "ordering": "canadian_popularity,grocery_hint,unique_scans,completeness,canonical_gtin_desc",
+            "ordering": "canadian_popularity,grocery_or_household_hint,unique_scans,completeness,canonical_gtin_desc",
+            "householdReservePercent": HOUSEHOLD_RESERVE_PERCENT,
             "doesNotEstablish": ["retailer_availability", "store_stock", "current_price", "package_quantity", "freshness"],
+        },
+        "coverage": {
+            "records": len(selected),
+            "selectedGroceryHintRecords": selected_grocery_hints,
+            "selectedHouseholdHintRecords": selected_household_hints,
+            "householdReserveTarget": household_reserve_target,
+            "householdReserveSatisfied": selected_household_hints >= household_reserve_target,
+            "uniqueCanonicalIdentityNames": unique_identity_names,
+            "identityNameVarietyStatus": (
+                "WITHIN_TARGET"
+                if MIN_IDENTITY_NAME_VARIETY <= unique_identity_names <= MAX_IDENTITY_NAME_VARIETY
+                else "OUTSIDE_TARGET"
+            ),
+            "identityNameVarietyTarget": {
+                "minimum": MIN_IDENTITY_NAME_VARIETY,
+                "maximum": MAX_IDENTITY_NAME_VARIETY,
+            },
+            "note": (
+                "Canonical identity-name variety and category hints are bounded selection measurements, "
+                "not demand, retailer availability, stock, price, package quantity, freshness, or ranking authority."
+            ),
         },
         "metrics": dict(sorted(stats.items())),
         "output": {
