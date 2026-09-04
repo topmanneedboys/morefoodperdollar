@@ -67,6 +67,18 @@ Promotions record both a received-quantity multiplier and the actual minimum spe
 
 The content script combines semantic/card candidates, price-text ancestor scoring, Product/MenuItem/Offer JSON-LD, mutation rescans, and an explicit controlled-scroll collector. A Shadow DOM isolates the overlay. Results are rendered with DOM nodes and `textContent`, so scraped strings are never interpreted as markup.
 
+## Signed location directory
+
+The bundled GTA and Metro Vancouver store directory is a separate signed,
+source-isolated artifact. Its rows carry only an OpenStreetMap source element,
+name/optional address, coordinates, region, observation time and explicit
+`LOCATION_ONLY` status. `StoreDirectorySnapshotAssetLoader` verifies the
+manifest, source hash, signature, geography and freshness before exposing any
+row; blocked or stale artifacts expose no records. A directory location never
+creates a product, price, stock, availability, offer or ranking fact. The
+Android loader reads only APK assets, so this feature does not add networking or
+retailer scraping.
+
 ## Android incremental pipeline
 
 `ValueAccessibilityService` tracks the last external app window and rejects all events from ValuePilot's own package. A bounded recent-signature gate coalesces event storms into at most one pending scan and one follow-up flag, so rapid callbacks cannot create polling-loop fan-out or indefinitely postpone a scan.

@@ -92,9 +92,11 @@
     <string name="sources_licences_title">Sources &amp; licences</string>
     <string name="sources_licences_body">Product identity discovery uses an attributed, Canada-labelled Open Food Facts snapshot under ODbL-1.0. Source: https://world.openfoodfacts.org/ • licence: https://opendatacommons.org/licenses/odbl/1-0/. It supplies names, aliases and barcodes for offline search only; it does not prove a current price, package quantity, store stock, store location or availability.
 
+The bundled store directory uses a separately attributed OpenStreetMap snapshot under ODbL-1.0. Source: https://www.openstreetmap.org/copyright • licence: https://opendatacommons.org/licenses/odbl/1-0/. It contains source-listed GTA and Metro Vancouver locations only. A location row does not prove that a store carries an item, has stock, or has a current price.
+
 Prices and comparisons you enter or confirm stay private on this device. They are personal observations, not live retailer offers. Home and Search cards are clearly labelled fictional demo data and must not be read as retailer data.
 
-This build does not include a store directory or an authorized current-offer feed. No flyer content is copied here. Source rights and attribution are reviewed before any future dataset is activated.</string>
+This build does not include an authorized current-offer feed. No flyer content is copied here. Source rights and attribution are reviewed before any future dataset is activated.</string>
 
     <string name="data_status">Data status</string>
     <string name="data_status_title">ValuePilot data status</string>

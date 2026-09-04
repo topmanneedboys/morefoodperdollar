@@ -73,6 +73,32 @@ class PracticalShoppingDataStatusPresentationTest {
         )
     }
 
+    @Test
+    fun `accepted directory summary reports locations without turning them into offers`() {
+        val presentation =
+            PracticalShoppingDataStatusPresentation.from(
+                privateMemory = CompareHerePrivatePriceMemoryState.empty(),
+                storeDirectorySummary =
+                    StoreDirectorySummary(
+                        snapshotId = "directory-test",
+                        generatedAtEpochMillis = 1_800_000_000_000L,
+                        observedAtEpochMillis = 1_800_000_000_000L,
+                        totalRecordCount = 6_093,
+                        regionRecordCounts = mapOf("ca-gta" to 4_311, "ca-metro-vancouver" to 1_782),
+                        sourceDisplayName = "OpenStreetMap places",
+                        licenseId = "ODbL-1.0",
+                        attribution = "© OpenStreetMap contributors",
+                        admissionState = StoreDirectoryAdmissionState.ACCEPTED
+                    )
+            )
+
+        assertTrue(presentation.storeDirectory.contains("6,093 source-listed locations"))
+        assertTrue(presentation.storeDirectory.contains("4,311 in GTA"))
+        assertTrue(presentation.storeDirectory.contains("1,782 in Metro Vancouver"))
+        assertTrue(presentation.storeDirectory.contains("Location only"))
+        assertTrue(presentation.storeDirectory.contains("no price"))
+    }
+
     private fun memoryEntry(name: String, suffix: Int): CompareHerePrivatePriceMemoryEntry =
         CompareHerePrivatePriceMemoryEntry.fromExactCandidate(
             candidate =

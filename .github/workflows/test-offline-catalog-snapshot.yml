@@ -18,6 +18,11 @@ on:
       - 'tools/tests/test_select_open_food_facts_launch_catalog.py'
       - 'tools/tests/test_refresh_offline_catalog_snapshots.py'
       - 'tools/tests/test_bundled_offline_catalog_assets.py'
+      - 'tools/build_store_directory_snapshot.py'
+      - 'tools/verify_store_directory_snapshot.py'
+      - 'tools/tests/test_build_store_directory_snapshot.py'
+      - 'tools/tests/test_bundled_store_directory_assets.py'
+      - 'tools/store_directory/**'
       - '.github/workflows/test-offline-catalog-snapshot.yml'
   pull_request:
     paths:
@@ -34,6 +39,11 @@ on:
       - 'tools/tests/test_import_open_food_facts_catalog.py'
       - 'tools/tests/test_select_open_food_facts_launch_catalog.py'
       - 'tools/tests/test_bundled_offline_catalog_assets.py'
+      - 'tools/build_store_directory_snapshot.py'
+      - 'tools/verify_store_directory_snapshot.py'
+      - 'tools/tests/test_build_store_directory_snapshot.py'
+      - 'tools/tests/test_bundled_store_directory_assets.py'
+      - 'tools/store_directory/**'
       - '.github/workflows/test-offline-catalog-snapshot.yml'
 
 permissions:
@@ -63,6 +73,8 @@ jobs:
           tools/import_open_food_facts_catalog.py
           tools/select_open_food_facts_launch_catalog.py
           tools/refresh_offline_catalog_snapshots.py
+          tools/build_store_directory_snapshot.py
+          tools/verify_store_directory_snapshot.py
 
       - name: Run deterministic snapshot tests
         run: >-
@@ -74,4 +86,6 @@ jobs:
           tools.tests.test_select_open_food_facts_launch_catalog
           tools.tests.test_refresh_offline_catalog_snapshots
           tools.tests.test_bundled_offline_catalog_assets
+          tools.tests.test_build_store_directory_snapshot
+          tools.tests.test_bundled_store_directory_assets
           -v

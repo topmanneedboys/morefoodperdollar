@@ -30,6 +30,7 @@ class MainActivityDataStatusBoundaryTest {
             "dataStatusButton = findViewById(R.id.dataStatusButton)",
             "dataStatusButton.setOnClickListener { showDataStatus() }",
             "private fun showDataStatus()",
+            "BundledStoreDirectory.loadSummary(",
             "PracticalShoppingDataStatusPresentation.from(",
             ".setTitle(R.string.data_status_title)",
             ".setMessage(presentation.message)",

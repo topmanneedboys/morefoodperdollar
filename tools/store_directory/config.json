@@ -1,0 +1,14 @@
+{
+  "generated_at": "2026-09-04T14:00:00Z",
+  "regions": [
+    "ca-gta",
+    "ca-metro-vancouver"
+  ],
+  "snapshot_id": "store-directory-osm-20260904",
+  "source": {
+    "acquired_at": "2026-09-04T13:46:43Z",
+    "observed_at": "2026-09-04T13:46:43Z",
+    "rights_manifest": "osm-rights.json",
+    "source_snapshot_id": "overpass-gta-gva-20260904"
+  }
+}

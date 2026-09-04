@@ -1253,10 +1253,18 @@ class MainActivity : AppCompatActivity() {
 
     private fun showDataStatus() {
         dataStatusDialog?.dismiss()
+        val storeDirectorySummary =
+            runCatching {
+                BundledStoreDirectory.loadSummary(
+                    context = applicationContext,
+                    evaluatedAtEpochMillis = System.currentTimeMillis()
+                )
+            }.getOrNull()
         val presentation =
             PracticalShoppingDataStatusPresentation.from(
                 privateMemory = homePrivateMemoryState,
-                privateMemoryAvailable = homePrivateMemoryLoadIssue == null
+                privateMemoryAvailable = homePrivateMemoryLoadIssue == null,
+                storeDirectorySummary = storeDirectorySummary
             )
         val dialog =
             AlertDialog.Builder(this)

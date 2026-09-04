@@ -22,6 +22,11 @@ on:
       - 'tools/tests/test_refresh_offline_catalog_snapshots.py'
       - 'tools/tests/test_qualify_merchant_feed.py'
       - 'tools/tests/test_bundled_offline_catalog_assets.py'
+      - 'tools/build_store_directory_snapshot.py'
+      - 'tools/verify_store_directory_snapshot.py'
+      - 'tools/tests/test_build_store_directory_snapshot.py'
+      - 'tools/tests/test_bundled_store_directory_assets.py'
+      - 'tools/store_directory/**'
       - '.github/workflows/build-valuepilot-android.yml'
   pull_request:
     paths:
@@ -43,6 +48,11 @@ on:
       - 'tools/tests/test_refresh_offline_catalog_snapshots.py'
       - 'tools/tests/test_qualify_merchant_feed.py'
       - 'tools/tests/test_bundled_offline_catalog_assets.py'
+      - 'tools/build_store_directory_snapshot.py'
+      - 'tools/verify_store_directory_snapshot.py'
+      - 'tools/tests/test_build_store_directory_snapshot.py'
+      - 'tools/tests/test_bundled_store_directory_assets.py'
+      - 'tools/store_directory/**'
       - '.github/workflows/build-valuepilot-android.yml'
 
 permissions:
