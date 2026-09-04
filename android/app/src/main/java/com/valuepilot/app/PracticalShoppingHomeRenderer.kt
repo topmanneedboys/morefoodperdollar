@@ -165,7 +165,12 @@ object PracticalShoppingHomeRenderer {
                 ?.itemStoreAssignments
                 ?.associate { assignment -> assignment.itemKey to assignment.storeName }
         val privateMemorySummary =
-            usablePrivateMemory?.let(PracticalShoppingHomePersonalHistory::summaryFor)
+            usablePrivateMemory?.let { memory ->
+                PracticalShoppingHomePersonalHistory.summaryFor(
+                    memory = memory,
+                    requestedItemNames = source.items.map { item -> item.name }
+                )
+            }
         val extraStopSettingsNotice =
             source.result?.primary
                 ?.missingItemsText

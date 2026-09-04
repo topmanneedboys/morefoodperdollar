@@ -124,7 +124,8 @@ class PracticalShoppingHomePersonalHistoryTest {
         assertEquals(
             "Private comparison history: 1 observation on this device. " +
                 "Home shows matching context only; package and promotion details may differ. " +
-                "This is not live store pricing. Open Scan & compare prices to review it.",
+                "This is not live store pricing. Open Scan & compare prices to review it.\n" +
+                "Name-matched personal history: 1 of 2 list items. This is not current-price coverage.",
             rendered.privateMemorySummary
         )
         assertEquals(
@@ -132,6 +133,47 @@ class PracticalShoppingHomePersonalHistoryTest {
                 "Package and promotion details may differ; not live store pricing."),
             rendered.items.map { it.personalHistoryNotice }
         )
+    }
+
+    @Test
+    fun `history coverage counts distinct normalized list names without claiming current prices`() {
+        val summary =
+            requireNotNull(
+                PracticalShoppingHomePersonalHistory.summaryFor(
+                    memory =
+                        CompareHerePrivatePriceMemoryState(
+                            listOf(
+                                entry("Milk", 600L, 12L, observedAt = 1L),
+                                entry("  milk  ", 700L, 14L, observedAt = 2L),
+                                entry("Eggs", 500L, 10L, observedAt = 3L)
+                            )
+                        ),
+                    requestedItemNames = listOf("MILK", "milk", "Bread")
+                )
+            )
+
+        assertTrue(summary.contains("Name-matched personal history: 1 of 2 list items."))
+        assertTrue(summary.contains("not current-price coverage"))
+        assertTrue(!summary.contains("6.00"))
+        assertTrue(!summary.contains("CAD"))
+    }
+
+    @Test
+    fun `empty or blank requested names keep the general history summary`() {
+        val memory =
+            CompareHerePrivatePriceMemoryState(
+                listOf(entry("Milk", 600L, 12L))
+            )
+
+        val summary = requireNotNull(
+            PracticalShoppingHomePersonalHistory.summaryFor(
+                memory = memory,
+                requestedItemNames = listOf(" ", "\n")
+            )
+        )
+
+        assertTrue(summary.startsWith("Private comparison history: 1 observation"))
+        assertTrue(!summary.contains("Name-matched personal history"))
     }
 
     @Test

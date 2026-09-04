@@ -18,14 +18,32 @@ internal object PracticalShoppingHomePersonalHistory {
      * device-only memory discoverable even when no current Home row has a matching display label,
      * without implying that a broad list name is an exact product or a live offer.
      */
-    fun summaryFor(memory: CompareHerePrivatePriceMemoryState): String? {
+    fun summaryFor(
+        memory: CompareHerePrivatePriceMemoryState,
+        requestedItemNames: List<String> = emptyList()
+    ): String? {
         val observationCount = memory.entries.size
         if (observationCount == 0) return null
 
         val noun = if (observationCount == 1) "observation" else "observations"
-        return "Private comparison history: $observationCount $noun on this device. " +
+        val summary = "Private comparison history: $observationCount $noun on this device. " +
             "Home shows matching context only; package and promotion details may differ. " +
             "This is not live store pricing. Open Scan & compare prices to review it."
+
+        val distinctNames =
+            requestedItemNames
+                .map(::canonicalLabel)
+                .filter(String::isNotBlank)
+                .distinct()
+        if (distinctNames.isEmpty()) return summary
+
+        val matchedItemCount =
+            distinctNames.count { name ->
+                memory.entries.any { entry -> canonicalLabel(entry.displayName) == name }
+            }
+        return summary +
+            "\nName-matched personal history: $matchedItemCount of " +
+            "${distinctNames.size} list items. This is not current-price coverage."
     }
 
     fun noticeFor(
