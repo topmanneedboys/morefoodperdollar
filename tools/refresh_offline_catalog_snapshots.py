@@ -491,12 +491,13 @@ def refresh_snapshots(
                     f"Unable to stage verified candidate for {item['regionId']}: {exc}"
                 ) from exc
 
-        if promote:
-            pointer_state = _capture_pointer_state(
-                output_root,
-                [str(item["regionId"]) for item in verified],
-            )
-            try:
+        pointer_state: dict[Path, bytes | None] | None = None
+        try:
+            if promote:
+                pointer_state = _capture_pointer_state(
+                    output_root,
+                    [str(item["regionId"]) for item in verified],
+                )
                 for item in verified:
                     region_id = item["regionId"]
                     try:
@@ -515,29 +516,30 @@ def refresh_snapshots(
                             f"Snapshot promotion failed for {region_id}: {exc}"
                         ) from exc
                     item["promotion"] = promotion
-            except Exception as exc:
-                try:
-                    _restore_pointer_state(pointer_state)
-                except OSError as rollback_exc:
-                    raise OfflineCatalogRefreshError(
-                        f"Snapshot promotion failed and pointer rollback failed: {rollback_exc}"
-                    ) from exc
+            _write_json_atomically(
+                output_root / COVERAGE_REPORT_NAME,
+                _coverage_report(
+                    generated_epoch=generated_epoch,
+                    evaluated_epoch=evaluated_epoch,
+                    source_snapshot_id=source_snapshot_id,
+                    selected_count=selected_count,
+                    minimum_catalog_records=minimum_catalog_records,
+                    maximum_catalog_records=maximum_catalog_records,
+                    selection_coverage=selection_coverage,
+                    regions=verified,
+                    promoted=promote,
+                ),
+            )
+        except Exception as exc:
+            if pointer_state is None:
                 raise
-
-        _write_json_atomically(
-            output_root / COVERAGE_REPORT_NAME,
-            _coverage_report(
-                generated_epoch=generated_epoch,
-                evaluated_epoch=evaluated_epoch,
-                source_snapshot_id=source_snapshot_id,
-                selected_count=selected_count,
-                minimum_catalog_records=minimum_catalog_records,
-                maximum_catalog_records=maximum_catalog_records,
-                selection_coverage=selection_coverage,
-                regions=verified,
-                promoted=promote,
-            ),
-        )
+            try:
+                _restore_pointer_state(pointer_state)
+            except OSError as rollback_exc:
+                raise OfflineCatalogRefreshError(
+                    f"Snapshot promotion failed and pointer rollback failed: {rollback_exc}"
+                ) from exc
+            raise
 
     return {
         "generatedAtEpochMillis": generated_epoch,

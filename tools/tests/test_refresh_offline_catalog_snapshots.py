@@ -255,6 +255,64 @@ class OfflineCatalogRefreshTest(unittest.TestCase):
                     self.assertEqual(content, (state / region / name).read_bytes())
             self.assertEqual(before_report, (state / "coverage-report.json").read_bytes())
 
+    def test_rolls_back_region_pointers_if_coverage_report_write_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "products.jsonl"
+            self.write_export(source, count=1_500)
+            rights = self.write_rights(root / "off-rights.json")
+            private_key, public_key = self.make_keypair(root)
+            state = root / "state"
+
+            refresh_snapshots(
+                source,
+                state,
+                rights,
+                private_key,
+                public_key,
+                **self.run_args(),
+                max_records=1_500,
+                promote=True,
+            )
+            before_pointers = {
+                region: {
+                    name: (state / region / name).read_bytes()
+                    for name in ("current.json", "last-known-good.json")
+                }
+                for region in ("ca-gta", "ca-metro-vancouver")
+            }
+            before_report = (state / "coverage-report.json").read_bytes()
+            updated_args = self.run_args()
+            updated_args.update(
+                {
+                    "generated_at": "2026-09-03T13:00:00Z",
+                    "acquired_at": "2026-09-03T12:00:00Z",
+                    "evaluated_at": "2026-09-03T13:00:00Z",
+                }
+            )
+
+            with patch.object(
+                refresh_module,
+                "_write_json_atomically",
+                side_effect=OSError("simulated coverage report failure"),
+            ):
+                with self.assertRaisesRegex(OSError, "simulated coverage report failure"):
+                    refresh_snapshots(
+                        source,
+                        state,
+                        rights,
+                        private_key,
+                        public_key,
+                        **updated_args,
+                        max_records=1_500,
+                        promote=True,
+                    )
+
+            for region, pointers in before_pointers.items():
+                for name, content in pointers.items():
+                    self.assertEqual(content, (state / region / name).read_bytes())
+            self.assertEqual(before_report, (state / "coverage-report.json").read_bytes())
+
     @staticmethod
     def run_args() -> dict[str, object]:
         return {
