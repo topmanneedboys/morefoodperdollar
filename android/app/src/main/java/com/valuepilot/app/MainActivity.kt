@@ -606,7 +606,13 @@ class MainActivity : AppCompatActivity() {
                         rawQuery = homeSessionState.model.ui.query,
                         unknownToken = token,
                         replacementName = match.displayName
-                    ) ?: return@setOnClickListener
+                    ) ?: run {
+                        // The Home list may have changed while the bounded lookup was open.
+                        // Explain the stale/unsafe selection instead of silently ignoring it.
+                        resultDialog.setMessage(getString(R.string.home_offline_catalog_match_apply_failed))
+                        resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+                        return@setOnClickListener
+                    }
                 homeSessionState =
                     PracticalShoppingHomeSession.queryChanged(homeSessionState, editedQuery)
                 renderHome()

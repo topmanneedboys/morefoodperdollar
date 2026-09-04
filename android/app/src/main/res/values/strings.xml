@@ -98,6 +98,7 @@
     <string name="home_offline_catalog_unavailable">The bundled identity catalog is unavailable. No price or availability claim was made.</string>
     <string name="home_offline_catalog_select_match">Select a name to replace the unresolved list word. Review the list, then tap Plan My Shop. This only edits the Home list; the fictional sample planner may still leave the inserted name unresolved, and this does not confirm an exact product.</string>
     <string name="home_offline_catalog_use_match">Use selected name</string>
+    <string name="home_offline_catalog_match_apply_failed">This match can’t be applied to the current list. Review the list and try again.</string>
     <string name="home_sample_badge">OFFLINE FICTIONAL DEMO</string>
     <string name="home_compare_secondary">Compare two products instead</string>
 
