@@ -8,6 +8,12 @@ This checkpoint records the verified Practical Shopping Home slice plus the prov
 
 ## Latest verified engineering head
 
+`08657541629f5e7beb44c046573a8ae5d79be22a` — `Clarify offline catalog list replacement action`
+
+Candidate workflow **33864027611** and milestone provenance workflow **33864356368** completed successfully for the exact SHA. The Home offline identity-match dialog now labels its positive action `Replace list word` and gives it a matching assistive-technology description that states the action only edits the unresolved Home query and does not confirm an exact product, price or availability. The existing bounded identity lookup, identity-only disclosure, review-before-Plan step, fictional planner and query-only replacement boundary remain unchanged. Deterministic Home lifecycle-boundary coverage protects the new wording and no-network boundary; no planner, ranking, price, offer, store, stock, availability, provider-economics or persistence authority moved into the surface.
+
+## Previous verified engineering head (superseded)
+
 `e02e358eb29ea28e4287ebef717d2d800d2b0720` — `Record Home private memory summary milestone`
 
 Candidate workflow **33862278396** and milestone provenance workflow **33862848704** completed successfully for the exact SHA. Scan & Compare now has a direct `Take a price photo` action in addition to photo import. CAMERA is requested only after the user taps the action. The capture is written to a cache-scoped FileProvider URI with explicit temporary read/write grants and sent through the existing bounded on-device OCR suggestion/review route. Both photo actions share one in-flight gate; stale/lifecycle callbacks are ignored; temporary files are deleted on success, failure, cancellation and teardown; no-camera, denied-permission and camera-error states preserve existing entries. The OCR status is a polite accessibility live region. Home additionally exposes a bounded count of nonempty private comparison observations when no current item name matches, with deterministic helper, renderer and View-boundary coverage. This does not add Home planner/ranking/current-offer authority or Android networking.
