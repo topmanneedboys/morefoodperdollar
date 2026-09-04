@@ -150,6 +150,12 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="home_private_memory_review">Review private price history</string>
     <string name="home_private_memory_review_description">Open Scan &amp; compare prices to review or clear private comparison history on this device.</string>
     <string name="home_private_memory_unavailable">Private comparison history is unavailable. Open Scan &amp; compare prices to review or clear it; no live prices or recommendations are affected.</string>
+    <string name="home_private_memory_clear">Clear private history</string>
+    <string name="home_private_memory_clear_title">Clear private price history?</string>
+    <string name="home_private_memory_clear_body">This deletes only comparison observations saved on this device. It does not change your Home list, the identity catalog, store locations, live offers, or recommendations.</string>
+    <string name="home_private_memory_clear_confirm">Clear history</string>
+    <string name="home_private_memory_clear_error_title">History was not cleared</string>
+    <string name="home_private_memory_clear_error">ValuePilot could not confirm clearing private history. Your existing observations remain available; try again or use Scan &amp; compare.</string>
 
     <string name="good_price_intro">Enter one product, its package quantity and the price you see. ValuePilot gives personal context when your private history has an exact match.</string>
     <string name="good_price_input_hint">Whole milk&#10;4 L&#10;Current price CA$6.49</string>

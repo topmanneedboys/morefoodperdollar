@@ -134,6 +134,7 @@ class MainActivity : AppCompatActivity() {
     private var offlineCatalogDialog: AlertDialog? = null
     private var dataStatusDialog: AlertDialog? = null
     private var privatePriceHistoryDialog: AlertDialog? = null
+    private var privatePriceHistoryClearDialog: AlertDialog? = null
     private var offlineCatalogLookup: Future<*>? = null
     private var offlineCatalogRequestId = 0L
     private var suppressSearchInputCallback = false
@@ -301,6 +302,8 @@ class MainActivity : AppCompatActivity() {
         dataStatusDialog = null
         privatePriceHistoryDialog?.dismiss()
         privatePriceHistoryDialog = null
+        privatePriceHistoryClearDialog?.dismiss()
+        privatePriceHistoryClearDialog = null
         if (::homeExperience.isInitialized) {
             homeExperience.onQueryChanged = null
             homeExperience.onSubmit = null
@@ -504,6 +507,8 @@ class MainActivity : AppCompatActivity() {
         dataStatusDialog = null
         privatePriceHistoryDialog?.dismiss()
         privatePriceHistoryDialog = null
+        privatePriceHistoryClearDialog?.dismiss()
+        privatePriceHistoryClearDialog = null
         if (
             ::homeExperience.isInitialized &&
                 shellState.route != AppRoute.COMPARE
@@ -1266,12 +1271,15 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        privatePriceHistoryClearDialog?.dismiss()
+        privatePriceHistoryClearDialog = null
         privatePriceHistoryDialog?.dismiss()
         val dialog =
             AlertDialog.Builder(this)
                 .setTitle(presentation.title)
                 .setMessage(presentation.message)
                 .setNegativeButton(android.R.string.cancel, null)
+                .setNeutralButton(R.string.home_private_memory_clear, null)
                 .setPositiveButton(R.string.home_compare_secondary) { _, _ ->
                     openComparison()
                 }
@@ -1280,6 +1288,73 @@ class MainActivity : AppCompatActivity() {
             if (privatePriceHistoryDialog === dialog) privatePriceHistoryDialog = null
         }
         privatePriceHistoryDialog = dialog
+        dialog.show()
+        dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+            confirmClearPrivatePriceHistory()
+        }
+    }
+
+    /**
+     * Confirms deletion of only the bounded, device-local comparison memory. This action never
+     * treats the memory as a current offer, changes the Home request, or changes planner output.
+     */
+    private fun confirmClearPrivatePriceHistory() {
+        if (
+            homePrivateMemoryLoadIssue != null ||
+                homePrivateMemoryState.entries.isEmpty()
+        ) {
+            return
+        }
+
+        privatePriceHistoryClearDialog?.dismiss()
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(R.string.home_private_memory_clear_title)
+                .setMessage(R.string.home_private_memory_clear_body)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.home_private_memory_clear_confirm) { _, _ ->
+                    clearPrivatePriceHistory()
+                }
+                .create()
+        dialog.setOnDismissListener {
+            if (privatePriceHistoryClearDialog === dialog) {
+                privatePriceHistoryClearDialog = null
+            }
+        }
+        privatePriceHistoryClearDialog = dialog
+        dialog.show()
+    }
+
+    private fun clearPrivatePriceHistory() {
+        val result = homePrivateMemoryStore.clear()
+        if (!result.accepted) {
+            showPrivatePriceHistoryClearError()
+            return
+        }
+
+        homePrivateMemoryState = CompareHerePrivatePriceMemoryState.empty()
+        homePrivateMemoryLoadIssue = null
+        privatePriceHistoryDialog?.dismiss()
+        privatePriceHistoryDialog = null
+        if (::homeExperience.isInitialized && shellState.route != AppRoute.COMPARE) {
+            renderHome()
+        }
+    }
+
+    private fun showPrivatePriceHistoryClearError() {
+        privatePriceHistoryClearDialog?.dismiss()
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(R.string.home_private_memory_clear_error_title)
+                .setMessage(R.string.home_private_memory_clear_error)
+                .setPositiveButton(android.R.string.ok, null)
+                .create()
+        dialog.setOnDismissListener {
+            if (privatePriceHistoryClearDialog === dialog) {
+                privatePriceHistoryClearDialog = null
+            }
+        }
+        privatePriceHistoryClearDialog = dialog
         dialog.show()
     }
 

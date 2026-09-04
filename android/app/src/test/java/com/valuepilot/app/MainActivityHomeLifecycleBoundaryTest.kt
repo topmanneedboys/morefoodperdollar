@@ -208,7 +208,7 @@ class MainActivityHomeLifecycleBoundaryTest {
     }
 
     @Test
-    fun homePrivateMemoryReviewActionUsesTheReadOnlyHistoryRoute() {
+    fun homePrivateMemoryReviewActionUsesTheLocalHistoryRoute() {
         val source = source().readText()
 
         listOf(
@@ -218,9 +218,12 @@ class MainActivityHomeLifecycleBoundaryTest {
             "Intent(this, ComparisonActivity::class.java)",
             "private fun reviewPrivatePriceHistory()",
             "PracticalShoppingPrivatePriceHistoryPresentation.from(homePrivateMemoryState)",
+            ".setNeutralButton(R.string.home_private_memory_clear, null)",
             "privatePriceHistoryDialog?.dismiss()",
             ".setMessage(presentation.message)",
-            ".setPositiveButton(R.string.home_compare_secondary)"
+            ".setPositiveButton(R.string.home_compare_secondary)",
+            "dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener",
+            "confirmClearPrivatePriceHistory()"
         ).forEach { required ->
             assertTrue("Expected Home private-history review boundary: $required", source.contains(required))
         }
@@ -232,6 +235,39 @@ class MainActivityHomeLifecycleBoundaryTest {
         ).forEach { forbidden ->
             assertTrue(
                 "Home private-history review must not own shopping authority: $forbidden",
+                !source.contains(forbidden)
+            )
+        }
+    }
+
+    @Test
+    fun homePrivateMemoryClearRequiresConfirmationAndOnlyResetsLocalContext() {
+        val source = source().readText()
+
+        listOf(
+            "private var privatePriceHistoryClearDialog: AlertDialog? = null",
+            "private fun confirmClearPrivatePriceHistory()",
+            "homePrivateMemoryState.entries.isEmpty()",
+            "private fun clearPrivatePriceHistory()",
+            "val result = homePrivateMemoryStore.clear()",
+            "setPositiveButton(R.string.home_private_memory_clear_confirm)",
+            "homePrivateMemoryState = CompareHerePrivatePriceMemoryState.empty()",
+            "homePrivateMemoryLoadIssue = null",
+            "privatePriceHistoryDialog?.dismiss()",
+            "private fun showPrivatePriceHistoryClearError()",
+            "R.string.home_private_memory_clear_error"
+        ).forEach { required ->
+            assertTrue("Expected explicit, local private-history deletion boundary: $required", source.contains(required))
+        }
+
+        listOf(
+            "PracticalShoppingPlanner",
+            "Money.parse",
+            "HttpURLConnection",
+            "AuthorizedOfferSnapshot"
+        ).forEach { forbidden ->
+            assertTrue(
+                "Private-history deletion must not add shopping/network authority: $forbidden",
                 !source.contains(forbidden)
             )
         }
