@@ -8,7 +8,11 @@ Android version: 101.1.0 (10101)
 
 ## Current verified engineering head
 
-The promoted milestone is now `08657541629f5e7beb44c046573a8ae5d79be22a` (`Clarify offline catalog list replacement action`). Candidate workflow **33864027611** and milestone provenance workflow **33864356368** passed for this exact SHA. Home’s offline identity-match action now says `Replace list word` and exposes a matching assistive-technology description that explicitly says the action only edits the unresolved Home query and does not confirm an exact product, price or availability. The existing bounded, source-labelled identity lookup, review-before-Plan flow, fictional planner disclosure and query-only replacement remain unchanged. This is a presentation/accessibility refinement with no price, offer, store, stock, availability, planner, ranking, network, provider-economics or persistence authority added.
+The promoted milestone is now `22e45377d40511e5a42aa786264cb562f15a1336` (`Point Home memory summary to review route`). Candidate workflow **33864992864** and milestone provenance workflow **33865459380** passed for this exact SHA. When Home has nonempty private comparison history but no current list label matches, its renderer-owned summary now tells the shopper to open Scan & compare prices to review those observations. This is a small route-discovery refinement: it adds no action, storage, price, offer, store, stock, availability, planner, ranking, network, provider-economics or persistence authority, and the existing non-live-price and package/promotion caveats remain explicit.
+
+## Previous verified engineering head (superseded)
+
+The promoted milestone was `08657541629f5e7beb44c046573a8ae5d79be22a` (`Clarify offline catalog list replacement action`). Candidate workflow **33864027611** and milestone provenance workflow **33864356368** passed for this exact SHA. Home’s offline identity-match action now says `Replace list word` and exposes a matching assistive-technology description that explicitly says the action only edits the unresolved Home query and does not confirm an exact product, price or availability. The existing bounded, source-labelled identity lookup, review-before-Plan flow, fictional planner disclosure and query-only replacement remain unchanged. This is a presentation/accessibility refinement with no price, offer, store, stock, availability, planner, ranking, network, provider-economics or persistence authority added.
 
 ## Previous verified engineering head (superseded)
 

@@ -8,6 +8,12 @@ This checkpoint records the verified Practical Shopping Home slice plus the prov
 
 ## Latest verified engineering head
 
+`22e45377d40511e5a42aa786264cb562f15a1336` — `Point Home memory summary to review route`
+
+Candidate workflow **33864992864** and milestone provenance workflow **33865459380** completed successfully for the exact SHA. When nonempty private comparison history has no matching Home list label, the renderer-owned summary now tells the shopper to open Scan & compare prices to review it. The existing count-only, name/package/promotion mismatch and non-live-price disclosures remain unchanged. Deterministic Home history, renderer and View-boundary coverage protects the wording. This is presentation-only; no action, storage, planner, ranking, price, offer, store, stock, availability, provider-economics or persistence authority moved into the surface.
+
+## Previous verified engineering head (superseded)
+
 `08657541629f5e7beb44c046573a8ae5d79be22a` — `Clarify offline catalog list replacement action`
 
 Candidate workflow **33864027611** and milestone provenance workflow **33864356368** completed successfully for the exact SHA. The Home offline identity-match dialog now labels its positive action `Replace list word` and gives it a matching assistive-technology description that states the action only edits the unresolved Home query and does not confirm an exact product, price or availability. The existing bounded identity lookup, identity-only disclosure, review-before-Plan step, fictional planner and query-only replacement boundary remain unchanged. Deterministic Home lifecycle-boundary coverage protects the new wording and no-network boundary; no planner, ranking, price, offer, store, stock, availability, provider-economics or persistence authority moved into the surface.
