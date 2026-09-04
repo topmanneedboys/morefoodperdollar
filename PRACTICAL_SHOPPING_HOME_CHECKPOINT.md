@@ -8,6 +8,10 @@ This checkpoint records the verified Practical Shopping Home slice plus the prov
 
 ## Latest verified engineering head
 
+`730794ed111658383ede5350fededfd57c98ece9` — `Add generation-safe production Home handoff`
+
+Candidate workflow **33930515512** passed for the exact SHA, including shared-core/Android tests, lint/build, browser/Firefox, release-bundle, APK privacy and single-signer checks. The production Home seam now has a narrow Android adapter that delegates valid orchestration decisions to the existing `PracticalShoppingUiProjector`, plus a bounded generation-aware surface host that re-evaluates raw orchestration inputs against current lifecycle/disposition registries. Stale, duplicate and same-generation-conflicting refreshes are rejected; structural/reference failures become an explicit unavailable state, while a valid no-coverage decision remains a truthful projected outcome. The renderer receives only the sanitized immutable projection. This is preparation for a future production Home activation: the visible Home remains the clearly labelled fictional controller, with no Android networking, retailer feed, provider economics or demo-data promotion. Candidate Linux verification covered 402 shared-core tests and 1,473 Android tests with zero failures, lint/build/privacy/single-signer/release-bundle, browser (30 tests/Firefox lint) and Python/catalog (79 tests) gates; the local Windows run retains the known 18 line-ending-sensitive boundary failures, while physical-device ergonomics and full production Home activation remain open.
+
 `3efdb688d5ff981b4f421bf349d49ef1432679e1` — `Add privacy-safe Good Price result sharing`
 
 Candidate workflow **33927693684** and milestone provenance workflow **33928182141** passed for the exact code SHA. The first-class Good Price route now exposes `Share this price result` only after one exact evaluated result. The user reviews a bounded, generic `text/plain` card before the Android Sharesheet; it contains only the exact entered price, package quantity, selected basis and unit-rate math, says it is not live store pricing, and omits the product name, private history, receipts, location, account and source identifiers. Blocked, incomplete, ambiguous or unsafe display facts never receive a card. This focused consumer handoff does not duplicate the shared planner/projector and adds no money/quantity, evidence, offer, store/availability, persistence, Android networking, demo-data or provider-economics authority. Candidate Linux verification passed 402 shared-core tests and 1,465 Android tests with zero failures, lint/build/privacy/single-signer/release-bundle, browser (30 tests/Firefox lint) and Python/catalog (79 tests) gates; the local Windows run retains the known 18 line-ending-sensitive boundary failures, while physical-device ergonomics and production Home wiring remain open.
@@ -290,7 +294,7 @@ The production path is synchronous shared-core code. When eventually wired into 
 
 Do not connect this path to real retailer networking or route provider data through the fictional Home controller yet.
 
-The identified raw-evaluation complexity issue is now hardened, and Home now has an honest action for collecting a missing personal price. The next adapter-facing step is an explicit provider-neutral **exact product/store/quantity/price handoff contract** that can assemble a production evaluation request without manufacturing evidence.
+The identified raw-evaluation complexity issue is now hardened, Home has an honest action for collecting a missing personal price, and the provider-neutral **exact product/store/quantity/price handoff contract** is implemented by `PracticalShoppingProductionAssembler` and the production orchestration path.
 
 That contract should carry only already-established facts and raw evidence inputs:
 
@@ -312,4 +316,4 @@ It must validate cross-reference completeness and bounds before invoking `Practi
 - upgrade open-data/reference evidence into current retailer offers;
 - persist a production decision or eligibility result as continuing authority.
 
-After that contract is regression-tested, Android can later gain an off-main-thread coordinator that consumes such an assembled request. Provider networking/rights and actual Home production activation remain separate future gates.
+The next production-facing gate is now the Android coordinator that supplies assembled requests off the main thread and binds its immutable output into the visible Home surface. `PracticalShoppingProductionHomeSurfaceHost` already provides the bounded generation/stale-result seam for that future coordinator. It must still be wired only after a lawful offer source and a production Home state model replace the fictional controller. Provider networking/rights, private price-book persistence, location/origin handling and actual Home production activation remain separate future gates.
