@@ -68,6 +68,8 @@ class CoreBoundaryTest {
         assertTrue(source.contains("CompareHereManualRouteCoordinator.evaluateBlocks"))
         assertTrue(source.contains("CompareHerePrivatePriceMemoryStore"))
         assertTrue(source.contains("updatePrivateMemoryStatus"))
+        assertTrue(source.contains("CompareHerePriceMemoryEvaluator"))
+        assertTrue(source.contains("CompareHerePriceMemoryHistory"))
         assertTrue(source.contains("CompareHereManualScreenPresenter"))
         assertTrue(source.contains("CompareHereManualActivitySessionReducer"))
         assertTrue(source.contains("CompareHereManualDraftActionEvaluator.evaluate"))

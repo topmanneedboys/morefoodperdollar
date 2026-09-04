@@ -706,17 +706,74 @@ class ComparisonActivity : AppCompatActivity() {
             return
         }
 
+        val loaded = privateMemoryStore.load()
+        val insights =
+            if (loaded.accepted) {
+                capture.entries
+                    .map { entry ->
+                        CompareHerePriceMemoryEvaluator.assess(
+                            current = entry,
+                            history = requireNotNull(loaded.state)
+                        )
+                    }
+                    .filterNot {
+                        it.assessment == CompareHerePriceMemoryAssessment.NO_MATCHING_HISTORY
+                    }
+                    .sortedBy { it.displayName.lowercase() }
+                    .take(3)
+            } else {
+                emptyList()
+            }
+
         val result = privateMemoryStore.append(capture)
         if (result.accepted) {
+            val savedText = getString(R.string.compare_memory_saved, capture.entries.size)
+            val summaries =
+                capture.entries
+                    .mapNotNull { entry ->
+                        result.state?.let { state ->
+                            CompareHerePriceMemoryHistory.summarize(
+                                current = entry,
+                                state = state
+                            )
+                        }
+                    }
+                    .sortedBy { it.displayName.lowercase() }
+                    .take(3)
+            val insightText =
+                summaries
+                    .map { summary ->
+                        val insight = insights.firstOrNull { it.displayName == summary.displayName }
+                        buildString {
+                            append(summary.displayName)
+                            insight?.let {
+                                append(": ")
+                                append(CompareHerePriceMemoryInsightPresenter.describe(it))
+                            }
+                            append(if (insight == null) ": " else " ")
+                            append(CompareHerePriceMemoryInsightPresenter.describeHistory(summary))
+                        }
+                    }
+                    .joinToString(separator = "\n")
             privateMemoryStatus.text =
-                getString(
-                    R.string.compare_memory_saved,
-                    capture.entries.size
-                )
+                if (insightText.isBlank()) savedText else "$savedText\n$insightText"
+            privateMemoryStatus.setTextColor(
+                if (
+                    insights.any {
+                        it.assessment == CompareHerePriceMemoryAssessment.ABOVE_PERSONAL_RANGE ||
+                            it.assessment == CompareHerePriceMemoryAssessment.HIGHER_THAN_LAST
+                    }
+                ) {
+                    Color.parseColor("#92400E")
+                } else {
+                    Color.parseColor("#047857")
+                }
+            )
             privateMemoryStatus.visibility = View.VISIBLE
             clearPrivateMemoryButton.visibility = View.VISIBLE
         } else {
             privateMemoryStatus.text = getString(R.string.compare_memory_error)
+            privateMemoryStatus.setTextColor(Color.parseColor("#92400E"))
             privateMemoryStatus.visibility = View.VISIBLE
             clearPrivateMemoryButton.visibility = View.VISIBLE
         }
