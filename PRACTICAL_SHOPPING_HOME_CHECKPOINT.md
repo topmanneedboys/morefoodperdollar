@@ -14,6 +14,8 @@ Candidate workflow **33859783985** and milestone provenance workflow **338602673
 
 The prior verified head was `ed9fc561b01dcdbb04c80bee965535aa8f81752d` (`Add first-class good price check`). The same release includes the signed 30,000-record shared Canada identity catalog and atomic multi-region release pointer described in the current state checkpoint. Real evidence-backed Home/private price-book wiring remains a later milestone; physical-device testing is still required before declaring camera/OCR or launch UX complete.
 
+The latest Home presentation refinement makes automatic private comparison memory discoverable even when no current item name matches. It exposes only a bounded on-device observation count and keeps the name-based context, package/promotion mismatch and non-live-price boundary explicit. Empty memory stays quiet; unreadable memory retains the existing recovery notice and suppresses row context. The change is renderer/View presentation only and is covered by deterministic helper, renderer and boundary tests; it does not alter the fictional plan or add current-offer, store, availability, planner, ranking or network authority.
+
 ## Previous verified engineering head (superseded)
 
 `c67286f83bc23f53f31ef72d311ceb22e3716041` — `Reveal extra-stop preference after planning`
