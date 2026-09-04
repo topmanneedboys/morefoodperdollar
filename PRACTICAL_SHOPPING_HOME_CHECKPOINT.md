@@ -8,9 +8,9 @@ This checkpoint records the verified Practical Shopping Home slice plus the prov
 
 ## Latest verified engineering head
 
-`8f6f950c9326b1f6350d2415446e5821e6eada14` — `Explain Scan and Compare value advantage`
+`838374f2b951e65f7782c1bf21f7bf47afc56520` — `Quantify Good Price history context`
 
-Candidate workflow **33907686165** and milestone provenance workflow **33908194019** passed for the exact SHA. Scan & Compare’s existing immutable READY projection now adds a deterministic relative-gap explanation for a unique winner with a safe second-ranked option and explicit tie guidance when exact unit rates are equal. It reuses existing ranked rates with BigDecimal/HALF_UP display rounding and adds no ranking, money, quantity, evidence, product, store, offer, availability, planner, network or provider-economics authority. Existing exact manual input gates, private-memory behavior and fictional Home/sample separation remain intact. Candidate Linux Android/browser/privacy/signing/release and Python/catalog gates passed; the local Windows run retains the known 18 line-ending-sensitive boundary failures, while physical-device ergonomics and production Home wiring remain open.
+Candidate workflow **33910095700** and milestone provenance workflow **33910627680** passed for the exact SHA. Good Price’s existing private-history answer now adds a deterministic one-decimal percentage when the current exact unit rate is lower or higher than the shopper’s last matching observation or personal range boundary. It is explicitly personal context—not live-market coverage or a cheapest-price claim—and uses validated same-currency, same-unit rates with BigDecimal/HALF_UP display rounding. Unknown, equal, mismatched or unsafe rates remain unquantified; no ranking, money, quantity, evidence, product, store, offer, availability, planner, network or provider-economics authority changed. Existing private-memory/manual gates and fictional Home/sample separation remain intact. Candidate Linux Android/browser/privacy/signing/release and Python/catalog gates passed; the local Windows run retains the known 18 line-ending-sensitive boundary failures, while physical-device ergonomics and production Home wiring remain open.
 
 `d206331e2d3927e3b084b0fed1d92b40f16cdc68` — `Show Home personal history coverage`
 
