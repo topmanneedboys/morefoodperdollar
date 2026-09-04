@@ -36,6 +36,16 @@ class PracticalShoppingHomePersonalHistoryTest {
                 "This is not live store pricing. Open Scan & compare prices to review it.",
             summary
         )
+        val rendered =
+            PracticalShoppingHomeRenderer.render(
+                LocalSamplePracticalShoppingDemo.initialModel().ui,
+                requestDetails = null,
+                privateMemory =
+                    CompareHerePrivatePriceMemoryState(
+                        listOf(entry("Milk", 600L, 12L, observedAt = 1L))
+                    )
+            )
+        assertTrue(rendered.privateMemoryReviewActionVisible)
         assertTrue(!summary.contains("CAD"))
         assertTrue(!summary.contains("6.00"))
     }
@@ -46,6 +56,13 @@ class PracticalShoppingHomePersonalHistoryTest {
             PracticalShoppingHomePersonalHistory.summaryFor(
                 CompareHerePrivatePriceMemoryState.empty()
             )
+        )
+        assertTrue(
+            !PracticalShoppingHomeRenderer.render(
+                LocalSamplePracticalShoppingDemo.initialModel().ui,
+                requestDetails = null,
+                privateMemory = CompareHerePrivatePriceMemoryState.empty()
+            ).privateMemoryReviewActionVisible
         )
     }
 
@@ -142,6 +159,7 @@ class PracticalShoppingHomePersonalHistoryTest {
             rendered.privateMemoryStatus
         )
         assertNull(rendered.privateMemorySummary)
+        assertTrue(!rendered.privateMemoryReviewActionVisible)
         assertEquals(listOf(null, null), rendered.items.map { it.personalHistoryNotice })
     }
 

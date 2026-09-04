@@ -113,6 +113,8 @@ data class PracticalShoppingHomeRenderState(
     val extraStopSettings: PracticalShoppingHomeExtraStopSettingsRenderState,
     val sampleNotice: String,
     val privateMemorySummary: String? = null,
+    /** Whether Home may expose the contextual route into the private history screen. */
+    val privateMemoryReviewActionVisible: Boolean = false,
     val privateMemoryStatus: PracticalShoppingHomePrivateMemoryStatus =
         PracticalShoppingHomePrivateMemoryStatus.AVAILABLE
 ) {
@@ -123,6 +125,11 @@ data class PracticalShoppingHomeRenderState(
         require(unknownItems.none(String::isBlank))
         require(sampleNotice.isNotBlank())
         require(privateMemorySummary == null || privateMemorySummary.isNotBlank())
+        require(
+            !privateMemoryReviewActionVisible ||
+                (privateMemoryStatus == PracticalShoppingHomePrivateMemoryStatus.AVAILABLE &&
+                    privateMemorySummary != null)
+        )
     }
 }
 
@@ -150,6 +157,8 @@ object PracticalShoppingHomeRenderer {
             source.result
                 ?.itemStoreAssignments
                 ?.associate { assignment -> assignment.itemKey to assignment.storeName }
+        val privateMemorySummary =
+            usablePrivateMemory?.let(PracticalShoppingHomePersonalHistory::summaryFor)
 
         return PracticalShoppingHomeRenderState(
             query = source.query,
@@ -249,8 +258,8 @@ object PracticalShoppingHomeRenderer {
                             }
                 ),
             sampleNotice = source.sampleNotice,
-            privateMemorySummary =
-                usablePrivateMemory?.let(PracticalShoppingHomePersonalHistory::summaryFor),
+            privateMemorySummary = privateMemorySummary,
+            privateMemoryReviewActionVisible = privateMemorySummary != null,
             privateMemoryStatus = privateMemoryStatus
         )
     }

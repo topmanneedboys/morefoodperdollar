@@ -21,6 +21,7 @@ class MainActivityHomeLifecycleBoundaryTest {
             "homeExperience.onExtraStopMinimumSavingsChoice = null",
             "homeExperience.onEditItemDetails = null",
             "homeExperience.onCompare = null",
+            "homeExperience.onReviewPrivateMemory = null",
             "homeExperience.onGoodPrice = null",
             "if (::basketExperience.isInitialized)",
             "basketExperience.onAction = null"
@@ -200,6 +201,31 @@ class MainActivityHomeLifecycleBoundaryTest {
         ).forEach { forbidden ->
             assertTrue(
                 "MainActivity must not own good-price business/network authority: $forbidden",
+                !source.contains(forbidden)
+            )
+        }
+    }
+
+    @Test
+    fun homePrivateMemoryReviewActionUsesTheExistingCompareRoute() {
+        val source = source().readText()
+
+        listOf(
+            "homeExperience.onReviewPrivateMemory = { openComparison() }",
+            "homeExperience.onReviewPrivateMemory = null",
+            "private fun openComparison()",
+            "Intent(this, ComparisonActivity::class.java)"
+        ).forEach { required ->
+            assertTrue("Expected Home private-history review navigation boundary: $required", source.contains(required))
+        }
+
+        listOf(
+            "PracticalShoppingPlanner",
+            "Money.parse",
+            "HttpURLConnection"
+        ).forEach { forbidden ->
+            assertTrue(
+                "Home private-history review must not own shopping authority: $forbidden",
                 !source.contains(forbidden)
             )
         }

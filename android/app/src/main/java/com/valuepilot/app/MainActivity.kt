@@ -299,6 +299,7 @@ class MainActivity : AppCompatActivity() {
             homeExperience.onExtraStopMinimumSavingsChoice = null
             homeExperience.onEditItemDetails = null
             homeExperience.onCompare = null
+            homeExperience.onReviewPrivateMemory = null
             homeExperience.onGoodPrice = null
         }
         if (::basketExperience.isInitialized) {
@@ -438,6 +439,7 @@ class MainActivity : AppCompatActivity() {
             showHomeItemDetails(itemKey)
         }
         homeExperience.onCompare = { openComparison() }
+        homeExperience.onReviewPrivateMemory = { openComparison() }
         homeExperience.onGoodPrice = { openGoodPriceCheck() }
         renderHome()
     }

@@ -233,7 +233,14 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
         assertTrue(source.contains("item.personalHistoryNotice?.let"))
         listOf(
             "privateMemorySummary",
-            "renderPrivateMemory(state.privateMemoryStatus, state.privateMemorySummary)",
+            "renderPrivateMemory(",
+            "status = state.privateMemoryStatus",
+            "summary = state.privateMemorySummary",
+            "privateMemoryReviewActionButton",
+            "state.privateMemoryReviewActionVisible",
+            "var onReviewPrivateMemory: (() -> Unit)? = null",
+            "onReviewPrivateMemory?.invoke()",
+            "home_private_memory_review",
             "privateMemorySummary.visibility",
             "privateMemoryNotice",
             "PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE",

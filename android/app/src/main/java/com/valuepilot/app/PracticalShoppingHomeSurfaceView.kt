@@ -64,6 +64,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val extraStopOwnerControls = mutableListOf<View>()
     private val extraStopChoiceOwnerControls = mutableListOf<View>()
     private val goodPriceOwnerControls = mutableListOf<View>()
+    private val privateMemoryReviewOwnerControls = mutableListOf<View>()
 
     private var hasRenderedState = false
     private var lastRenderedSubmitEnabled = false
@@ -145,6 +146,14 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
             field = value
             goodPriceOwnerControls.forEach { control ->
                 control.isEnabled = value != null && hasRenderedState
+            }
+        }
+    var onReviewPrivateMemory: (() -> Unit)? = null
+        set(value) {
+            field = value
+            privateMemoryReviewOwnerControls.forEach { control ->
+                control.isEnabled =
+                    value != null && hasRenderedState && control.visibility == VISIBLE
             }
         }
 
@@ -237,6 +246,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     }
     private val sampleNotice = line("", 13f, "#374151")
     private val goodPriceActionButton = goodPriceButton()
+    private val privateMemoryReviewActionButton = privateMemoryReviewButton()
     private val compareActionButton = compareButton()
 
     init {
@@ -253,6 +263,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         addView(message)
         addView(sampleCard())
         addView(privateMemorySummary)
+        addView(privateMemoryReviewActionButton)
         addView(privateMemoryNotice)
         addView(itemsHeading)
         addView(itemsContainer)
@@ -268,6 +279,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         refinementCard.visibility = GONE
         unknownCard.visibility = GONE
         extraStopSettingsCard.visibility = GONE
+        privateMemoryReviewActionButton.visibility = GONE
 
         input.addTextChangedListener(
             object : TextWatcher {
@@ -314,7 +326,11 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         renderUnknown(state.unknownItems)
         resultContainer.render(state.result, state.sampleNotice)
         renderExtraStopSettings(state.extraStopSettings)
-        renderPrivateMemory(state.privateMemoryStatus, state.privateMemorySummary)
+        renderPrivateMemory(
+            status = state.privateMemoryStatus,
+            summary = state.privateMemorySummary,
+            reviewActionVisible = state.privateMemoryReviewActionVisible
+        )
         sampleNotice.text = state.sampleNotice
         goodPriceOwnerControls.forEach { control ->
             control.isEnabled = onGoodPrice != null && hasRenderedState
@@ -370,16 +386,21 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
 
     private fun renderPrivateMemory(
         status: PracticalShoppingHomePrivateMemoryStatus,
-        summary: String?
+        summary: String?,
+        reviewActionVisible: Boolean
     ) {
         if (status == PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE) {
             privateMemorySummary.text = ""
             privateMemorySummary.visibility = GONE
+            privateMemoryReviewActionButton.visibility = GONE
             privateMemoryNotice.text = context.getString(R.string.home_private_memory_unavailable)
             privateMemoryNotice.visibility = VISIBLE
         } else {
             privateMemorySummary.text = summary.orEmpty()
             privateMemorySummary.visibility = if (summary == null) GONE else VISIBLE
+            privateMemoryReviewActionButton.visibility = if (reviewActionVisible) VISIBLE else GONE
+            privateMemoryReviewActionButton.isEnabled =
+                reviewActionVisible && onReviewPrivateMemory != null && hasRenderedState
             privateMemoryNotice.text = ""
             privateMemoryNotice.visibility = GONE
         }
@@ -705,6 +726,23 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         // Keep the owner-driven price question inert until its callback is attached.
         isEnabled = false
         setOnClickListener { onGoodPrice?.invoke() }
+    }
+
+    private fun privateMemoryReviewButton(): MaterialButton = MaterialButton(context).apply {
+        privateMemoryReviewOwnerControls += this
+        text = context.getString(R.string.home_private_memory_review)
+        contentDescription = context.getString(R.string.home_private_memory_review_description)
+        isAllCaps = false
+        textSize = 14f
+        cornerRadius = dp(16)
+        strokeWidth = dp(1)
+        strokeColor = ColorStateList.valueOf(Color.parseColor("#D1D5DB"))
+        setTextColor(Color.parseColor("#374151"))
+        backgroundTintList = ColorStateList.valueOf(Color.WHITE)
+        layoutParams = fullWidth(dp(50), 8)
+        // Keep the owner-driven history route inert until its callback is attached.
+        isEnabled = false
+        setOnClickListener { onReviewPrivateMemory?.invoke() }
     }
 
     private fun heading(value: String): TextView = line(value, 13f, "#374151", true, 18)
