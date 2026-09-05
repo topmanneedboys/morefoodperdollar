@@ -119,6 +119,10 @@ class ComparisonActivity : AppCompatActivity() {
         shareComparisonStatus = findViewById(R.id.shareComparisonStatus)
         shareComparisonStatus.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         scannerStatus = findViewById(R.id.scannerStatus)
+        // Optional scanner availability can change while this screen resumes. Announce the
+        // projected status politely without making the legacy accessibility adapter a product
+        // or shopping authority.
+        scannerStatus.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         importPhotoButton = findViewById(R.id.importPhotoButton)
         capturePhotoButton = findViewById(R.id.capturePhotoButton)
         photoImportStatus = findViewById(R.id.photoImportStatus)

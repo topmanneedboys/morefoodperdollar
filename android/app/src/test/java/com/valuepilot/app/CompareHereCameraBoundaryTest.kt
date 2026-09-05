@@ -40,6 +40,11 @@ class CompareHereCameraBoundaryTest {
         assertTrue(source.contains("retryPhotoButton"))
         assertTrue(source.contains("cleanupCameraCaptureFile"))
         assertTrue(source.contains("ACCESSIBILITY_LIVE_REGION_POLITE"))
+        assertTrue(
+            source.contains(
+                "scannerStatus.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"
+            )
+        )
         assertTrue(layout.contains("capturePhotoButton"))
         assertTrue(layout.contains("importPhotoButton"))
         assertTrue(layout.contains("retryPhotoButton"))
