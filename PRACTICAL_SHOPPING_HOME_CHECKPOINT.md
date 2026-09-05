@@ -8,6 +8,10 @@ This checkpoint records the verified Practical Shopping Home slice plus the prov
 
 ## Latest verified engineering head
 
+`9432604ca89572233e64b8268a0673ed35c6c0ce` — `Announce scanner availability accessibly`
+
+Candidate workflow **33964877138** passed for the exact SHA, and milestone provenance workflow **33965190171** verified the promoted ref and release artifact lineage. Compare Here’s existing optional scanner status now announces availability changes through a polite accessibility live region when the screen resumes. This renderer-only correction adds no parser, exact money/quantity, evidence, offer, store/availability, planner, ranking, persistence or Android networking authority. Candidate Linux verification passed 402 shared-core tests and 1,505 Android tests with zero failures, lint/build/privacy/single-signer/release-bundle and browser/Firefox checks; local Python/catalog verification passed 79 tests. Physical-device camera/OCR ergonomics and lawful production Home activation remain open.
+
 `60bd0358bc03a50c5180fea1e29a1ee3e65597cd` — `Invalidate stale private memory on resume`
 
 Candidate workflow **33964012615** passed for the exact SHA, and milestone provenance workflow **33964271194** verified the promoted ref and release artifact lineage. Good Price reloads device-only private history when it resumes and returns to its explicit idle projection if the state or load issue changed, preventing erased or changed personal context from remaining in the result/share card. Compare Here tracks the state associated with its visible memory message and hides that message when paused storage is changed or unreadable. This fail-closed lifecycle behavior changes no planner, parser, exact money/quantity, evidence, offer, store/availability, ranking, persistence or Android networking authority. Candidate Linux verification passed 402 shared-core tests and 1,505 Android tests with zero failures, lint/build/privacy/single-signer/release-bundle and browser/Firefox checks; local Python/catalog verification passed 79 tests. Physical-device camera/OCR ergonomics and lawful production Home activation remain open.

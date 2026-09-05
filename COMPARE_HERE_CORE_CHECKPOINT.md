@@ -2,6 +2,12 @@
 
 ## Latest promoted consumer boundary
 
+- Promoted code commit: `9432604ca89572233e64b8268a0673ed35c6c0ce` (`Announce scanner availability accessibly`)
+- Candidate workflow: **33964877138** — success
+- Promoted workflow/provenance: **33965190171** — success
+
+Compare Here’s optional scanner status now uses a polite accessibility live region, so availability changes rendered after resume are announced to assistive technology. This renderer-only boundary adds no scanner/product/price authority and does not alter the existing review-first photo route, exact comparison, private memory, planner, ranking, persistence or Android networking behavior.
+
 - Promoted code commit: `60bd0358bc03a50c5180fea1e29a1ee3e65597cd` (`Invalidate stale private memory on resume`)
 - Candidate workflow: **33964012615** — success
 - Promoted workflow/provenance: **33964271194** — success
