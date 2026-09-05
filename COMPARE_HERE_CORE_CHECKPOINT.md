@@ -2,6 +2,12 @@
 
 ## Latest promoted consumer boundary
 
+- Promoted code commit: `44767d3a89c5fe79e3916c09ef91a589e42230dc` (`Invalidate Good Price result after memory clear`)
+- Candidate workflow: **33961384703** — success
+- Promoted workflow/provenance: **33961699432** — success
+
+Good Price now clears its rendered result and share action after the existing device-only private history store accepts deletion. A deleted history observation can no longer remain visible in the answer card or be shared; failed deletion still stays on the explicit error path. This is a presentation/lifecycle correction and adds no parser, exact money/quantity, evidence, ranking, planner, offer, store, availability, persistence or network authority.
+
 - Promoted code commit: `9c164ecd2566f26e9805cbcfce1356090cdf9ad6` (`Make photo retry outcomes explicit`)
 - Candidate workflow: **33960585727** — success
 - Promoted workflow/provenance: **33960929862** — success
