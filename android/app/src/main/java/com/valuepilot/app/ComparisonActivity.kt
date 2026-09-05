@@ -907,6 +907,7 @@ class ComparisonActivity : AppCompatActivity() {
                 }
 
                 renderProductInputs(result.blocks)
+                val firstAddedIndex = result.firstAddedIndex
                 activityState =
                     CompareHereManualActivitySessionReducer.productsChanged(activityState)
                 syncLikeForLikeConfirmation()
@@ -927,6 +928,7 @@ class ComparisonActivity : AppCompatActivity() {
                 hidePhotoRetry()
                 outcomeCommitted = true
                 dialog.dismiss()
+                focusProductInput(firstAddedIndex)
             }
 
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {

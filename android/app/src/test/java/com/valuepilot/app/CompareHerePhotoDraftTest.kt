@@ -74,6 +74,7 @@ class CompareHerePhotoDraftTest {
         )
         assertEquals(2, result.addedCount)
         assertEquals(0, result.skippedCount)
+        assertEquals(1, result.firstAddedIndex)
     }
 
     @Test
@@ -99,6 +100,7 @@ class CompareHerePhotoDraftTest {
         )
         assertEquals(1, result.addedCount)
         assertEquals(4, result.skippedCount)
+        assertEquals(1, result.firstAddedIndex)
     }
 
     @Test
@@ -117,6 +119,7 @@ class CompareHerePhotoDraftTest {
         assertEquals(existing, result.blocks)
         assertEquals(0, result.addedCount)
         assertEquals(2, result.skippedCount)
+        assertEquals(null, result.firstAddedIndex)
     }
 
     @Test
@@ -133,5 +136,6 @@ class CompareHerePhotoDraftTest {
         assertEquals(CompareHereManualInputAdapter.MAX_OBSERVATIONS, first.addedCount)
         assertEquals(3, first.skippedCount)
         assertEquals(CompareHereManualInputAdapter.MAX_OBSERVATIONS, first.blocks.size)
+        assertEquals(0, first.firstAddedIndex)
     }
 }

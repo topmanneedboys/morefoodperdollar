@@ -12,12 +12,15 @@ import java.util.Locale
 internal data class CompareHerePhotoDraftImportResult(
     val blocks: List<String>,
     val addedCount: Int,
-    val skippedCount: Int
+    val skippedCount: Int,
+    val firstAddedIndex: Int?
 ) {
     init {
         require(blocks.size <= CompareHereManualInputAdapter.MAX_OBSERVATIONS)
         require(addedCount >= 0)
         require(skippedCount >= 0)
+        require((firstAddedIndex == null) == (addedCount == 0))
+        firstAddedIndex?.let { require(it in blocks.indices) }
     }
 }
 
@@ -101,15 +104,23 @@ internal object CompareHerePhotoDraft {
         val review = review(existingBlocks, recognizedBlocks)
         var addedCount = 0
         var skippedCount = review.skippedCount
+        var firstAddedIndex: Int? = null
 
         review.candidates.forEach { candidate ->
             val blankIndex = blocks.indexOfFirst { it.isBlank() }
             if (blankIndex >= 0) {
                 blocks[blankIndex] = candidate
+                if (firstAddedIndex == null) {
+                    firstAddedIndex = blankIndex
+                }
             } else if (
                 blocks.size < CompareHereManualInputAdapter.MAX_OBSERVATIONS
             ) {
+                val appendedIndex = blocks.size
                 blocks += candidate
+                if (firstAddedIndex == null) {
+                    firstAddedIndex = appendedIndex
+                }
             } else {
                 skippedCount += 1
                 return@forEach
@@ -121,7 +132,8 @@ internal object CompareHerePhotoDraft {
         return CompareHerePhotoDraftImportResult(
             blocks = blocks.toList(),
             addedCount = addedCount,
-            skippedCount = skippedCount
+            skippedCount = skippedCount,
+            firstAddedIndex = firstAddedIndex
         )
     }
 

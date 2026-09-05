@@ -31,6 +31,8 @@ class CompareHereCameraBoundaryTest {
         assertTrue(source.contains("decodeBoundedPhoto"))
         assertTrue(source.contains("OcrScanner.scan"))
         assertTrue(source.contains("CompareHerePhotoDraft.review"))
+        assertTrue(source.contains("result.firstAddedIndex"))
+        assertTrue(source.contains("focusProductInput(firstAddedIndex)"))
         assertTrue(source.contains("CompareHerePhotoSuggestionPresentationFactory"))
         assertTrue(source.contains("editorPrefill"))
         assertTrue(source.contains("compare_photo_add_with_details"))
@@ -123,6 +125,23 @@ class CompareHereCameraBoundaryTest {
         assertTrue(productsChanged.contains("cancelPhotoRequestForDraftChange()"))
         assertTrue(clearComparison.contains("cancelPhotoRequestForDraftChange()"))
         assertTrue(source.contains("CompareHerePhotoRequestPolicy.accepts"))
+    }
+
+    @Test
+    fun `photo review focuses the first explicitly added suggestion after dismissal`() {
+        val source = source("ComparisonActivity.kt").readText()
+        val commitSelection =
+            source
+                .substringAfter("fun commitSelection(useDetectedDetails: Boolean)")
+                .substringBefore("dialog.show()")
+
+        assertTrue(commitSelection.contains("val firstAddedIndex = result.firstAddedIndex"))
+        assertTrue(commitSelection.contains("dialog.dismiss()"))
+        assertTrue(commitSelection.contains("focusProductInput(firstAddedIndex)"))
+        assertTrue(
+            commitSelection.indexOf("dialog.dismiss()") <
+                commitSelection.indexOf("focusProductInput(firstAddedIndex)")
+        )
     }
 
     private fun source(name: String): File =
