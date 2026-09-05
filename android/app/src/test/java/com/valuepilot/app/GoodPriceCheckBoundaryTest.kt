@@ -137,6 +137,22 @@ class GoodPriceCheckBoundaryTest {
         ).forEach { forbidden -> assertFalse(activity.contains(forbidden)) }
     }
 
+    @Test
+    fun `clearing private memory invalidates any displayed good price result`() {
+        val activity = source("GoodPriceActivity.kt").readText()
+        val clearHandler =
+            activity
+                .substringAfter("clearMemoryButton.setOnClickListener")
+                .substringBefore("checkButton.setOnClickListener")
+
+        assertTrue(clearHandler.contains("privateMemory = CompareHerePrivatePriceMemoryState.empty()"))
+        assertTrue(clearHandler.contains("renderIdle()"))
+        assertTrue(
+            "Clearing Good Price history must not leave the deleted result/share card visible",
+            clearHandler.contains("renderIdle()")
+        )
+    }
+
     private fun source(name: String): File =
         File(
             requireNotNull(System.getProperty("user.dir")),

@@ -123,6 +123,10 @@ class GoodPriceActivity : AppCompatActivity() {
                 privateMemory = CompareHerePrivatePriceMemoryState.empty()
                 privateMemoryLoadIssue = null
                 hideMemoryStatus()
+                // A displayed answer may include the history that was just deleted. Clear the
+                // projected result and share card so removed private context cannot remain visible
+                // or be shared; the shopper can run a fresh explicit check if they still want one.
+                renderIdle()
             } else {
                 memoryStatus.text = getString(R.string.compare_memory_clear_error)
                 memoryStatus.setTextColor(Color.parseColor("#92400E"))
