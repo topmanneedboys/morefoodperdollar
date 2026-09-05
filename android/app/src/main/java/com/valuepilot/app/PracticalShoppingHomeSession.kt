@@ -62,7 +62,14 @@ object PracticalShoppingHomeSession {
         return reconcileDetails(submitted, changed.requestDetails)
     }
 
-    /** Re-runs only an already-completed list through the existing deterministic Home controller. */
+    /**
+     * Re-runs only an already-completed list through the existing deterministic Home controller.
+     *
+     * Replay starts from the completed model rather than routing through [queryChanged]. A
+     * completed model may carry a resolved refinement (for example the shopper's chosen chicken
+     * cut); treating the unchanged query as a new draft would discard that explicit choice and
+     * make a one-tap repeat unexpectedly ask the same question again.
+     */
     fun shopAgain(state: State): State {
         if (
             state.model.ui.status != LocalSamplePracticalShoppingDemo.Status.RESULT ||
@@ -70,7 +77,12 @@ object PracticalShoppingHomeSession {
         ) {
             return state
         }
-        return submit(state, state.model.ui.query)
+        val replayedModel =
+            LocalSamplePracticalShoppingDemo.reduce(
+                state.model,
+                LocalSamplePracticalShoppingDemo.Intent.Submit
+            )
+        return reconcileDetails(replayedModel, state.requestDetails)
     }
 
     fun removeItem(state: State, itemKey: ShoppingItemKey): State {

@@ -143,6 +143,28 @@ class PracticalShoppingHomeSessionTest {
     }
 
     @Test
+    fun shopAgainPreservesAnExplicitRefinementChoice() {
+        val submitted =
+            PracticalShoppingHomeSession.submit(
+                PracticalShoppingHomeSession.initialState(),
+                "chicken eggs milk"
+            )
+        val completed =
+            PracticalShoppingHomeSession.chooseChicken(
+                submitted,
+                LocalSamplePracticalShoppingDemo.ChickenChoice.DRUMSTICKS
+            )
+        val replayed = PracticalShoppingHomeSession.shopAgain(completed)
+
+        assertEquals(LocalSamplePracticalShoppingDemo.Status.RESULT, replayed.model.ui.status)
+        assertEquals(completed.model.ui.query, replayed.model.ui.query)
+        assertEquals(completed.model.ui.items, replayed.model.ui.items)
+        assertEquals(completed.model.ui.result, replayed.model.ui.result)
+        assertEquals(completed.model.selectedChicken, replayed.model.selectedChicken)
+        assertEquals(completed.requestDetails, replayed.requestDetails)
+    }
+
+    @Test
     fun `shop again is a no-op before a completed result`() {
         val idle = PracticalShoppingHomeSession.initialState()
         val draft =
