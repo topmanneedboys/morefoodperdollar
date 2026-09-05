@@ -56,6 +56,50 @@ class BundledOfflineCatalogDiscoverySessionTest {
     }
 
     @Test
+    fun `one session serves a bounded thirty thousand identity index`() {
+        var loadCount = 0
+        val session =
+            BundledOfflineCatalogDiscoverySession { _, _, _ ->
+                loadCount++
+                BundledOfflineCatalogLoadedIndex(
+                    index =
+                        OfflineCatalogDiscoveryIndex.build(
+                            (0 until 30_000).map { index ->
+                                product(
+                                    id = "identity-$index",
+                                    name = "Grocery item $index"
+                                )
+                            }
+                        ),
+                    earliestGeneratedAtEpochMillis = 4_000L
+                )
+            }
+
+        val first =
+            session.discover(
+                rawQuery = "grocery item 29999",
+                canonicalizer = canonicalizer,
+                evaluatedAtEpochMillis = 4_000L,
+                maximumSnapshotAgeMillis = 10_000L,
+                maxResults = 1
+            )
+        val second =
+            session.discover(
+                rawQuery = "grocery item 1",
+                canonicalizer = canonicalizer,
+                evaluatedAtEpochMillis = 4_001L,
+                maximumSnapshotAgeMillis = 10_000L,
+                maxResults = 1
+            )
+
+        assertEquals(1, loadCount)
+        assertEquals(30_000, first.evaluatedCandidateCount)
+        assertEquals(30_000, second.evaluatedCandidateCount)
+        assertEquals(listOf("identity-29999"), first.matches.map { it.product.recordId })
+        assertEquals(listOf("identity-1"), second.matches.map { it.product.recordId })
+    }
+
+    @Test
     fun `expired cached generation is discarded before the next lookup`() {
         var loadCount = 0
         val session =
@@ -160,16 +204,21 @@ class BundledOfflineCatalogDiscoverySessionTest {
     private fun product(id: String, name: String): OfflineCatalogProduct =
         OfflineCatalogProduct(
             recordId = id,
-            providerId = EvidenceProviderId("session-fixture-provider"),
-            dataset =
-                EvidenceDatasetNamespace(
-                    id = "session-fixture-dataset",
-                    displayName = "Session fixture",
-                    licenseId = "fixture-reviewed-rights",
-                    storageBoundary = EvidenceStorageBoundary.OPEN_SHARE_ALIKE
-                ),
+            providerId = FIXTURE_PROVIDER,
+            dataset = FIXTURE_DATASET,
             sourceIdentity = SourceProductIdentity(providerItemId = id),
             displayName = name,
             canonicalSearchName = name.lowercase()
         )
+
+    companion object {
+        private val FIXTURE_PROVIDER = EvidenceProviderId("session-fixture-provider")
+        private val FIXTURE_DATASET =
+            EvidenceDatasetNamespace(
+                id = "session-fixture-dataset",
+                displayName = "Session fixture",
+                licenseId = "fixture-reviewed-rights",
+                storageBoundary = EvidenceStorageBoundary.OPEN_SHARE_ALIKE
+            )
+    }
 }
