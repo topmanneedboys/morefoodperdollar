@@ -30,8 +30,14 @@ class GoodPriceCheckRouteCoordinatorTest {
         assertEquals("6.49 CAD", result.priceText)
         assertEquals("4000 mL", result.quantityText)
         assertEquals("1.6225 CAD/L", result.unitRateText)
-        assertEquals("Not enough history yet", result.answerTitle)
-        assertTrue(result.answerGuidance.contains("not enough matching evidence"))
+        assertEquals(
+            "Not enough evidence yet to know whether this is unusually good.",
+            result.answerTitle
+        )
+        assertEquals(
+            "ValuePilot will remember this exact package on this device.",
+            result.answerGuidance
+        )
         assertEquals(GoodPriceCheckAnswerTone.NEUTRAL, result.answerTone)
         assertNull(result.historyText)
         assertTrue(result.disclosure.contains("Not live store pricing"))
@@ -95,7 +101,10 @@ class GoodPriceCheckRouteCoordinatorTest {
             )
 
         val result = requireNotNull(replay.state.result)
-        assertEquals("Not enough history yet", result.answerTitle)
+        assertEquals(
+            "Not enough evidence yet to know whether this is unusually good.",
+            result.answerTitle
+        )
         assertNull(result.historyText)
     }
 

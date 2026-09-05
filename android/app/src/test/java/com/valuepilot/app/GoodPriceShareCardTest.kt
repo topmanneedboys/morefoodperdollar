@@ -67,7 +67,7 @@ class GoodPriceShareCardTest {
                 priceText = "6.49\u0000 CAD",
                 quantityText = "4000 mL",
                 unitRateText = "1.6225 CAD/L",
-                answerTitle = "Not enough history yet",
+                answerTitle = "Not enough evidence yet to know whether this is unusually good.",
                 answerGuidance = "Personal context is limited.",
                 answerTone = GoodPriceCheckAnswerTone.NEUTRAL,
                 historyText = null,

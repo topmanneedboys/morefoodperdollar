@@ -285,8 +285,8 @@ internal object GoodPriceCheckRouteCoordinator {
         when (insight.assessment) {
             CompareHerePriceMemoryAssessment.NO_MATCHING_HISTORY ->
                 Triple(
-                    "Not enough history yet",
-                    "There is not enough matching evidence to tell whether this is unusually good. ValuePilot will remember this exact package on this device.",
+                    "Not enough evidence yet to know whether this is unusually good.",
+                    "ValuePilot will remember this exact package on this device.",
                     GoodPriceCheckAnswerTone.NEUTRAL
                 )
 
