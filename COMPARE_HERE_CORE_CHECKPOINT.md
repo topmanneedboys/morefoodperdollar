@@ -2,6 +2,12 @@
 
 ## Latest promoted consumer boundary
 
+- Promoted code commit: `8499e8ad2b566947d6bd6af70d8ab24b47cbf5c2` (`Open Home catalog identities in Compare Here`)
+- Candidate workflow: **33970594096** — success
+- Promoted workflow/provenance: **33970918134** — success
+
+Home's signed offline identity result now exposes `Use in Scan & compare` for a selected identity when a list word has no exact local catalog match. The existing bounded untrusted text handoff receives only the selected display label; Scan & compare still requires the shopper to enter and review exact package quantity, currency, observed price and like-for-like basis before comparison or private-memory capture. Invalid, oversized, control-character and stale dialog selections fail closed. This does not add Compare Here parser, product, price, package, store, stock, availability, freshness, evidence, planner, ranking, persistence, provider or Android networking authority, and the visible Home fixture remains clearly fictional/demo-only.
+
 - Promoted code commit: `a231f0ecc962737f815dc2bfa9fe894037dd2bf9` (`Cancel stale Compare Here photo work`)
 - Candidate workflow: **33969229838** — success
 - Promoted workflow/provenance: **33969555817** — success
