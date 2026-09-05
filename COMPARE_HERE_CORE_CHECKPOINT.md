@@ -2,6 +2,12 @@
 
 ## Latest promoted consumer boundary
 
+- Promoted code commit: `9318a70d5b6a9a31ba0d4377efdfebd676ccf749` (`Restore Good Price results after recreation`)
+- Candidate workflow: **33967685757** — success
+- Promoted workflow/provenance: **33967990673** — success
+
+The adjacent Good Price route now restores a previously evaluated answer/share card after activity recreation without appending private memory again. The exact observation fingerprint is excluded from its own history; edits, clear actions and changed/unavailable memory clear the replay marker. This remains separate from Compare Here’s review-first photo/scanner authority and changes no parser, exact money/quantity, evidence, offer, store/availability, planner, ranking, persistence or Android networking behavior.
+
 - Promoted code commit: `8c0f4e843b0c1cce266f17fcceda19f278b5711a` (`Preserve Good Price capture draft safely`)
 - Candidate workflow: **33966599555** — success
 - Promoted workflow/provenance: **33966897180** — success
