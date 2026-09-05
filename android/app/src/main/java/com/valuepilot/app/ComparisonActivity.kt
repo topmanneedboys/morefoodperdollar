@@ -21,6 +21,7 @@ import android.text.TextWatcher
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -1333,6 +1334,9 @@ class ComparisonActivity : AppCompatActivity() {
         priceSelection: CompareHerePriceSelection = activityState.priceSelection,
         persist: Boolean
     ) {
+        // The result replaces the editor's primary task. Close the IME before the projected
+        // answer is rendered so it cannot cover the exact comparison or its memory outcome.
+        hideKeyboard()
         val evaluation =
             CompareHereManualRouteCoordinator.evaluateBlocks(
                 rawBlocks = blocks,
@@ -1354,6 +1358,16 @@ class ComparisonActivity : AppCompatActivity() {
             updatePrivateMemoryStatus(evaluation.privateMemoryCapture)
             saveDraftToPreferences()
         }
+    }
+
+    private fun hideKeyboard() {
+        val manager = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+        val focusedView = currentFocus ?: productInputs.firstOrNull()
+        val windowToken = focusedView?.windowToken ?: window.decorView.windowToken
+        if (windowToken != null) {
+            manager?.hideSoftInputFromWindow(windowToken, 0)
+        }
+        focusedView?.clearFocus()
     }
 
     private fun onProductsChanged() {

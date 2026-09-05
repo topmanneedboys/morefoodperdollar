@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.RadioGroup
 import android.widget.TextView
@@ -250,6 +251,9 @@ class GoodPriceActivity : AppCompatActivity() {
         observedAtEpochMillis: Long = System.currentTimeMillis(),
         persist: Boolean = true
     ) {
+        // The answer and any private-memory outcome are the next task. Dismiss the IME first so
+        // the projected result is visible immediately after an aisle-side check.
+        hideKeyboard()
         val evaluation =
             GoodPriceCheckRouteCoordinator.checkBlock(
                 rawBlock = productInput.text?.toString().orEmpty(),
@@ -299,6 +303,13 @@ class GoodPriceActivity : AppCompatActivity() {
                 clearMemoryButton.visibility = View.VISIBLE
             }
         }
+    }
+
+    private fun hideKeyboard() {
+        val manager = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+        val focusedView = currentFocus ?: productInput
+        manager?.hideSoftInputFromWindow(focusedView.windowToken, 0)
+        focusedView.clearFocus()
     }
 
     private fun renderIdle() {
