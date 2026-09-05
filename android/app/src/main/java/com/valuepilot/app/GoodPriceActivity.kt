@@ -67,6 +67,10 @@ class GoodPriceActivity : AppCompatActivity() {
         screen = findViewById(R.id.goodPriceScreen)
         presenter = GoodPriceCheckScreenPresenter(screen)
         memoryStatus = findViewById(R.id.goodPriceMemoryStatus)
+        // Memory reads, saves, clears, and recovery failures are user-visible outcomes. Keep
+        // them in a polite live region so assistive technology receives the same state changes
+        // that sighted shoppers see, without changing any memory authority or result math.
+        memoryStatus.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         clearMemoryButton = findViewById(R.id.clearGoodPriceMemoryButton)
         barcodeButton = findViewById(R.id.goodPriceBarcodeButton)
         barcodeStatus = findViewById(R.id.goodPriceBarcodeStatus)

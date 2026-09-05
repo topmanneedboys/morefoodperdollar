@@ -84,6 +84,18 @@ class GoodPriceCheckBoundaryTest {
     }
 
     @Test
+    fun `good price private memory outcomes use a polite live region`() {
+        val source = source("GoodPriceActivity.kt").readText()
+
+        assertTrue(
+            source.contains(
+                "memoryStatus.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"
+            )
+        )
+        assertTrue(source.contains("memoryStatus = findViewById(R.id.goodPriceMemoryStatus)"))
+    }
+
+    @Test
     fun `good price activity is not exported`() {
         val manifest = manifest().readText()
         val activityStart = manifest.indexOf("android:name=\".GoodPriceActivity\"")

@@ -82,6 +82,11 @@ class CoreBoundaryTest {
         assertTrue(source.contains("CompareHereManualProductDraft.MAX_BLOCK_CHARS"))
         assertTrue(source.contains("R.string.product_input_too_long"))
         assertFalse(source.contains(".take(CompareHereManualProductDraft.MAX_BLOCK_CHARS)"))
+        assertTrue(
+            source.contains(
+                "privateMemoryStatus.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"
+            )
+        )
         assertTrue(source.contains("priceSelectionGroup"))
         assertTrue(source.contains("priceSelectionChanged"))
         assertTrue(source.contains("CompareHerePriceSelectionPersistence"))

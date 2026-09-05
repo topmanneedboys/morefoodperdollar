@@ -135,6 +135,10 @@ class ComparisonActivity : AppCompatActivity() {
         compareBarcodeStatus = findViewById(R.id.compareBarcodeStatus)
         compareBarcodeStatus.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         privateMemoryStatus = findViewById(R.id.privateMemoryStatus)
+        // Private-memory outcomes (saved history, unavailable reads, and clear failures) are
+        // dynamic feedback. Announce them politely while keeping the evidence and comparison
+        // authorities in the existing coordinator/store layers.
+        privateMemoryStatus.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         clearPrivateMemoryButton = findViewById(R.id.clearPrivateMemoryButton)
         privateMemoryStore = CompareHerePrivatePriceMemoryAndroidStore(this)
 
