@@ -4,7 +4,7 @@ ValuePilot is a private, local-first value ranker for groceries and restaurant m
 
 ## Android v101.1 milestone candidate
 
-The existing Android app now has a search-scoped incremental pipeline, a virtualized consumer bottom sheet, clean offer/name parsing, and fail-closed exact-product reopening. It is designed and regression-tested for 20–500 collected products. Physical Motorola Edge 2025 validation is still required before the Android milestone is declared complete; see [`CURRENT_STATE.md`](CURRENT_STATE.md), [`PERFORMANCE_BUDGETS.md`](PERFORMANCE_BUDGETS.md), and [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
+The existing Android app now has a search-scoped incremental pipeline, a virtualized consumer bottom sheet, clean offer/name parsing, and fail-closed exact-product reopening. It is designed and regression-tested for 20–500 collected products. Physical Motorola Edge 2025 validation is still required before the Android milestone is declared complete; see [`CURRENT_STATE.md`](CURRENT_STATE.md), [`PERFORMANCE_BUDGETS.md`](PERFORMANCE_BUDGETS.md), [`DEVICE_VALIDATION.md`](DEVICE_VALIDATION.md), and [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
 
 ## What changed in v101
 

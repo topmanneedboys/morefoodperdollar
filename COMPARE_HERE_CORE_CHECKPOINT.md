@@ -2,6 +2,12 @@
 
 ## Latest promoted consumer boundary
 
+- Promoted code commit: `2bdf246c5a5843ff9f7384f4743c472e2b71dfda` (`Focus first OCR addition in Compare Here`)
+- Candidate workflow: **33976684845** — success
+- Promoted code/provenance workflow: **33977035497** — success
+
+After an explicit photo-review add action, the existing bounded `CompareHerePhotoDraft` now carries `firstAddedIndex` with a deterministic invariant: it is non-null exactly when at least one suggestion was added and always points into the resulting editor blocks. Compare Here dismisses the review dialog before focusing that block. The same UI-only navigation rule focuses the block populated by a selected barcode identity, and Good Price focuses its manual product field after barcode identity selection. These affordances do not parse or confirm OCR/barcode values; exact package quantity, currency, observed price, promotion semantics and like-for-like confirmation remain downstream authorities. No planner/projector, product, offer, store, availability, evidence, ranking, persistence, provider or Android networking authority changed. Candidate Linux verification passed 402 shared-core tests and 1,529 Android tests with zero failures or skips, lint/build/privacy/single-signer/release-bundle and browser/Firefox checks; local Python/catalog verification passed 79 tests. Physical-device camera/OCR ergonomics and accessibility remain pending, with the manual protocol captured in `DEVICE_VALIDATION.md`.
+
 - Promoted code commit: `06c37ae4e3c2834bb01dc73d7b85f7e6815c9cd0` (`Preserve Home refinements when shopping again`)
 - Candidate workflow: **33974689463** — success
 - Promoted code/provenance workflow: **33975020123** — success
