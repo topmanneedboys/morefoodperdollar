@@ -160,7 +160,9 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="home_unknown_find_matches_description">Find offline identity matches for %1$s</string>
     <string name="home_offline_catalog_loading">Checking the bundled identity catalog…</string>
     <string name="home_offline_catalog_unavailable">The bundled identity catalog is unavailable. No price or availability claim was made.</string>
-    <string name="home_offline_catalog_select_match">Select a name to replace the unresolved list word. Review the list, then tap Plan My Shop. This only edits the Home list; the fictional sample planner may still leave the inserted name unresolved, and this does not confirm an exact product.</string>
+    <string name="home_offline_catalog_select_match">Select a name to replace the unresolved list word, or use the selected name in Scan &amp; compare. Review the list, then tap Plan My Shop. This only edits the Home list; the fictional sample planner may still leave the inserted name unresolved, and this does not confirm an exact product.</string>
+    <string name="home_offline_catalog_open_compare">Use in Scan &amp; compare</string>
+    <string name="home_offline_catalog_open_compare_description">Open the selected offline identity name in Scan &amp; compare as untrusted text. You still enter and review the package quantity and price; no availability is confirmed.</string>
     <string name="home_offline_catalog_replace_list_word">Replace list word</string>
     <string name="home_offline_catalog_replace_list_word_description">Replace only the unresolved word in the Home list with this identity name. This does not confirm an exact product, price, or availability.</string>
     <string name="home_offline_catalog_confirm_exact_product">Confirm exact product</string>

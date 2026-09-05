@@ -708,6 +708,13 @@ class MainActivity : AppCompatActivity() {
                 .setSingleChoiceItems(labels, -1) { _, which ->
                     selectedIndex = which
                     resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
+                    if (exactProductItemKey == null) {
+                        resultDialog.getButton(AlertDialog.BUTTON_NEUTRAL).isEnabled =
+                            PracticalShoppingHomeOfflineCatalogComparisonSelection.displayNameFor(
+                                matches = presentation.matches,
+                                selectedIndex = selectedIndex
+                            ) != null
+                    }
                 }
                 .setNegativeButton(R.string.cancel, null)
                 .setPositiveButton(
@@ -718,6 +725,10 @@ class MainActivity : AppCompatActivity() {
                     },
                     null
                 )
+
+        if (exactProductItemKey == null) {
+            builder.setNeutralButton(R.string.home_offline_catalog_open_compare, null)
+        }
 
         resultDialog = builder.create()
         offlineCatalogDialog = resultDialog
@@ -735,6 +746,13 @@ class MainActivity : AppCompatActivity() {
                             R.string.home_offline_catalog_confirm_exact_description
                         }
                     )
+            }
+            if (exactProductItemKey == null) {
+                resultDialog.getButton(AlertDialog.BUTTON_NEUTRAL).apply {
+                    isEnabled = false
+                    contentDescription =
+                        getString(R.string.home_offline_catalog_open_compare_description)
+                }
             }
             resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val match = presentation.matches.getOrNull(selectedIndex) ?: return@setOnClickListener
@@ -765,6 +783,25 @@ class MainActivity : AppCompatActivity() {
                     PracticalShoppingHomeSession.queryChanged(homeSessionState, editedQuery)
                 renderHome()
                 resultDialog.dismiss()
+            }
+            if (exactProductItemKey == null) {
+                resultDialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                    if (
+                        requestId != offlineCatalogRequestId ||
+                            offlineCatalogDialog !== resultDialog ||
+                            !resultDialog.isShowing
+                    ) {
+                        resultDialog.dismiss()
+                        return@setOnClickListener
+                    }
+                    val displayName =
+                        PracticalShoppingHomeOfflineCatalogComparisonSelection.displayNameFor(
+                            matches = presentation.matches,
+                            selectedIndex = selectedIndex
+                        ) ?: return@setOnClickListener
+                    resultDialog.dismiss()
+                    openComparisonWithSharedText(displayName)
+                }
             }
         }
         resultDialog.show()
