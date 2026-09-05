@@ -178,6 +178,11 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="home_private_memory_clear_error_title">History was not cleared</string>
     <string name="home_private_memory_clear_error">ValuePilot could not confirm clearing private history. Your existing observations remain available; try again or use Scan &amp; compare.</string>
 
+    <string name="production_home_items_title">Your shopping list</string>
+    <string name="production_home_unavailable_title">Shopping plan unavailable</string>
+    <string name="production_home_store_assignment">Buy at %1$s</string>
+    <string name="production_home_included_price">Included in plan: %1$s</string>
+
     <string name="share_to_valuepilot_ready_title">Review shared content</string>
     <string name="share_to_valuepilot_ready_guidance">This came from another app. ValuePilot treats it as untrusted text; review and edit it in Scan &amp; compare before comparing. Nothing is sent online.</string>
     <string name="share_to_valuepilot_preview_label">Shared text preview</string>

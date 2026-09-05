@@ -77,13 +77,19 @@ object PracticalShoppingProductionHomeAdapter {
         }
 
         val projection =
-            PracticalShoppingUiProjector.project(
-                request = request.shoppingRequest,
-                decision = decisionResult.decision,
-                storeDisplayNames = storeDisplayNames,
-                itemDisplayNames = itemDisplayNames,
-                policy = request.planningPolicy
-            )
+            try {
+                PracticalShoppingUiProjector.project(
+                    request = request.shoppingRequest,
+                    decision = decisionResult.decision,
+                    storeDisplayNames = storeDisplayNames,
+                    itemDisplayNames = itemDisplayNames,
+                    policy = request.planningPolicy
+                )
+            } catch (_: IllegalArgumentException) {
+                // Missing/unsafe display metadata is a presentation defect, not
+                // permission to expose a partial or guessed production result.
+                return unavailable()
+            }
 
         return PracticalShoppingProductionHomeProjection(
             status = PracticalShoppingProductionHomeStatus.READY,

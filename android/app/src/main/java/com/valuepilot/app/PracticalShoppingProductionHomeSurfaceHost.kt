@@ -11,17 +11,22 @@ import com.valuepilot.core.ShoppingStoreKey
  * Immutable ordering state for a future production Home refresh.
  *
  * Generation is supplied by the application coordinator and represents request
- * ordering, not wall-clock time. A projection is retained only after the
- * renderer accepts it, so a failed render can be retried at the same generation.
+ * ordering, not wall-clock time. The production projection and its UI state are
+ * retained only after the renderer accepts the UI state, so a failed render can
+ * be retried at the same generation.
  */
-data class PracticalShoppingProductionHomeRefreshState(
+internal data class PracticalShoppingProductionHomeRefreshState(
     val latestGeneration: Long? = null,
-    val projection: PracticalShoppingProductionHomeProjection? = null
+    val projection: PracticalShoppingProductionHomeProjection? = null,
+    val uiState: PracticalShoppingProductionHomeUiState? = null
 ) {
     init {
         latestGeneration?.let { require(it >= 0L) }
-        require(latestGeneration != null || projection == null) {
-            "A production Home projection requires an applied refresh generation"
+        require(latestGeneration != null || (projection == null && uiState == null)) {
+            "A production Home result requires an applied refresh generation"
+        }
+        require((projection == null) == (uiState == null)) {
+            "A production Home projection and UI state must be applied together"
         }
     }
 }
@@ -33,9 +38,9 @@ enum class PracticalShoppingProductionHomeRefreshDisposition {
     GENERATION_CONFLICT
 }
 
-/** Renderer receives only the sanitized production Home projection. */
+/** Renderer receives only the demo-free, consumer-ready production Home state. */
 fun interface PracticalShoppingProductionHomeRenderer {
-    fun render(projection: PracticalShoppingProductionHomeProjection?)
+    fun render(state: PracticalShoppingProductionHomeUiState?)
 }
 
 /**
@@ -48,9 +53,10 @@ fun interface PracticalShoppingProductionHomeRenderer {
  * [evaluateAndApply] away from the Android main thread and publish the renderer
  * callback on the UI thread when appropriate.
  *
- * A renderer never receives a detached orchestration result or raw evidence. The
- * adapter turns structural/reference failure into an unavailable state, while a
- * valid no-coverage decision remains a normal, truthful Home result.
+ * A renderer never receives a detached orchestration result, exact decision,
+ * opaque store key or raw evidence. The adapter turns structural/reference
+ * failure into an unavailable state, while the UI projector keeps a valid
+ * no-coverage decision as a normal, truthful Home result.
  */
 class PracticalShoppingProductionHomeSurfaceHost(
     private val renderer: PracticalShoppingProductionHomeRenderer
@@ -86,6 +92,12 @@ class PracticalShoppingProductionHomeSurfaceHost(
                 storeDisplayNames = storeDisplayNames,
                 itemDisplayNames = itemDisplayNames
             )
+        val incomingState =
+            PracticalShoppingProductionHomeUiProjector.project(
+                request = request,
+                projection = incomingProjection,
+                itemDisplayNames = itemDisplayNames
+            )
 
         if (currentGeneration == generation) {
             return if (refreshState.projection == incomingProjection) {
@@ -95,11 +107,12 @@ class PracticalShoppingProductionHomeSurfaceHost(
             }
         }
 
-        renderer.render(incomingProjection)
+        renderer.render(incomingState)
         refreshState =
             PracticalShoppingProductionHomeRefreshState(
                 latestGeneration = generation,
-                projection = incomingProjection
+                projection = incomingProjection,
+                uiState = incomingState
             )
         return PracticalShoppingProductionHomeRefreshDisposition.APPLIED
     }
@@ -123,7 +136,8 @@ class PracticalShoppingProductionHomeSurfaceHost(
         refreshState =
             PracticalShoppingProductionHomeRefreshState(
                 latestGeneration = generation,
-                projection = null
+                projection = null,
+                uiState = null
             )
         return PracticalShoppingProductionHomeRefreshDisposition.APPLIED
     }

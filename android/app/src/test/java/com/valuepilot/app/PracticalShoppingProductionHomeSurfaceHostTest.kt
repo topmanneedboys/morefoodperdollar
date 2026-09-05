@@ -29,13 +29,13 @@ class PracticalShoppingProductionHomeSurfaceHostTest {
         )
 
     @Test
-    fun rendererContractExposesOnlyTheSanitizedHomeProjection() {
+    fun rendererContractExposesOnlyTheDemoFreeHomeUiState() {
         val renderMethod =
             PracticalShoppingProductionHomeRenderer::class.java.methods
                 .single { method -> method.name == "render" }
 
         assertEquals(
-            listOf(PracticalShoppingProductionHomeProjection::class.java),
+            listOf(PracticalShoppingProductionHomeUiState::class.java),
             renderMethod.parameterTypes.toList()
         )
         assertEquals(Void.TYPE, renderMethod.returnType)
@@ -60,8 +60,8 @@ class PracticalShoppingProductionHomeSurfaceHostTest {
 
     @Test
     fun hostRerunsProductionEvaluationAndKeepsGenerationsOrdered() {
-        val rendered = mutableListOf<PracticalShoppingProductionHomeProjection?>()
-        val host = PracticalShoppingProductionHomeSurfaceHost { projection -> rendered += projection }
+        val rendered = mutableListOf<PracticalShoppingProductionHomeUiState?>()
+        val host = PracticalShoppingProductionHomeSurfaceHost { state -> rendered += state }
         val lifecycleRegistry = ProductionDatasetLifecycleRegistry()
         val dispositionRegistry = ProductionDatasetDispositionRegistry()
         val request = request(ShoppingItemKey("host-coffee"), "host-store")
@@ -81,7 +81,7 @@ class PracticalShoppingProductionHomeSurfaceHostTest {
         )
         assertEquals(1, rendered.size)
         assertEquals(PracticalShoppingProductionHomeStatus.READY, rendered.single()?.status)
-        assertEquals("Not enough price coverage yet", rendered.single()?.state?.headline)
+        assertEquals("Not enough price coverage yet", rendered.single()?.result?.headline)
 
         assertEquals(
             PracticalShoppingProductionHomeRefreshDisposition.STALE,
@@ -158,8 +158,8 @@ class PracticalShoppingProductionHomeSurfaceHostTest {
                 planningPolicy = policy
             )
         val registries = fixture.registries(listOf(price))
-        val rendered = mutableListOf<PracticalShoppingProductionHomeProjection?>()
-        val host = PracticalShoppingProductionHomeSurfaceHost { projection -> rendered += projection }
+        val rendered = mutableListOf<PracticalShoppingProductionHomeUiState?>()
+        val host = PracticalShoppingProductionHomeSurfaceHost { state -> rendered += state }
 
         assertEquals(
             PracticalShoppingProductionHomeRefreshDisposition.APPLIED,
@@ -184,17 +184,17 @@ class PracticalShoppingProductionHomeSurfaceHostTest {
             )
         )
         assertEquals(1, rendered.size)
-        assertEquals("First Market", rendered.single()?.state?.primary?.storeName)
+        assertEquals("First Market", rendered.single()?.result?.primary?.storeName)
     }
 
     @Test
     fun rendererFailureDoesNotConsumeTheGeneration() {
         var shouldFail = true
-        var rendered: PracticalShoppingProductionHomeProjection? = null
+        var rendered: PracticalShoppingProductionHomeUiState? = null
         val host =
-            PracticalShoppingProductionHomeSurfaceHost { projection ->
+            PracticalShoppingProductionHomeSurfaceHost { state ->
                 if (shouldFail) error("synthetic renderer failure")
-                rendered = projection
+                rendered = state
             }
         val lifecycleRegistry = ProductionDatasetLifecycleRegistry()
         val dispositionRegistry = ProductionDatasetDispositionRegistry()

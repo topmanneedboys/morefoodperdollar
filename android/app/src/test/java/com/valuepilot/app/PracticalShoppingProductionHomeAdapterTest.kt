@@ -123,6 +123,58 @@ class PracticalShoppingProductionHomeAdapterTest {
     }
 
     @Test
+    fun incompleteResultWithMissingDisplayMetadataFailsClosed() {
+        val knownItem = ShoppingItemKey("home-known-item")
+        val missingItem = ShoppingItemKey("home-missing-label")
+        val store = store("home-missing-label-store")
+        val price =
+            fixture.case(
+                requestId = "home-missing-label-price",
+                providerItemId = "known-item",
+                merchantKey = store.merchantKey,
+                locationKey = store.locationKey,
+                commerceChannelKey = store.commerceChannelKey
+            )
+        val request =
+            orchestrationRequest(
+                shoppingRequest = ShoppingRequest(listOf(knownItem, missingItem)),
+                store = store,
+                priceBindings =
+                    listOf(
+                        PracticalShoppingProductionPriceBinding(
+                            itemKey = knownItem,
+                            productKey = price.productKey,
+                            storeKey = store.storeKey,
+                            currentPriceRequestId = price.request.requestId
+                        )
+                    ),
+                priceRequests = listOf(price.request)
+            )
+        val registries = fixture.registries(listOf(price))
+        val orchestrationResult =
+            PracticalShoppingProductionOrchestrator.evaluate(
+                request = request,
+                lifecycleRegistry = registries.lifecycle,
+                dispositionRegistry = registries.disposition
+            )
+
+        val projection =
+            PracticalShoppingProductionHomeAdapter.project(
+                request = request,
+                orchestrationResult = orchestrationResult,
+                storeDisplayNames = mapOf(store.storeKey to "Neighbourhood Market"),
+                itemDisplayNames = mapOf(knownItem to "Known item")
+            )
+
+        assertEquals(PracticalShoppingProductionHomeStatus.UNAVAILABLE, projection.status)
+        assertNull(projection.result)
+        assertEquals(
+            PracticalShoppingProductionHomeAdapter.UNAVAILABLE_NOTICE,
+            projection.notice
+        )
+    }
+
+    @Test
     fun invalidProductionResultCannotMasqueradeAsNoCoverage() {
         val firstItem = ShoppingItemKey("home-eggs")
         val secondItem = ShoppingItemKey("home-milk")
