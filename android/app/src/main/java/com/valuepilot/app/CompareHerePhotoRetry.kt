@@ -1,23 +1,45 @@
 package com.valuepilot.app
 
-/** The user-triggered photo path that can be offered again after a terminal OCR failure. */
+/** The user-triggered photo path that can be offered again after a recoverable terminal outcome. */
 internal enum class CompareHerePhotoCaptureKind {
     CAMERA,
     IMPORT
 }
 
 /**
+ * Terminal states for a user-triggered photo attempt. The reason is deliberately coarse: it is
+ * only a presentation/recovery signal and never carries OCR, price or product meaning.
+ */
+internal enum class CompareHerePhotoRetryOutcome {
+    NO_USABLE_SUGGESTION,
+    OCR_FAILURE,
+    CAPTURE_FAILURE,
+    CANCELLED,
+    PERMISSION_DENIED,
+    UNAVAILABLE
+}
+
+/**
  * Presentation-only retry policy for the bounded on-device OCR handoff.
  *
- * A retry is offered only for a known user-triggered photo action and a terminal failure/no-match
- * outcome. It never interprets OCR text, changes a draft, or makes a comparison decision.
+ * A retry is offered only for a known user-triggered photo action and a recoverable failure or
+ * no-match outcome. Permission denial, cancellation and unavailable hardware remain explicit
+ * terminal states instead of prompting the same impossible action again. This policy never
+ * interprets OCR text, changes a draft, or makes a comparison decision.
  */
 internal object CompareHerePhotoRetryPolicy {
     fun shouldOfferRetry(
         captureKind: CompareHerePhotoCaptureKind?,
-        recognizedCount: Int,
-        error: Throwable?
+        outcome: CompareHerePhotoRetryOutcome?
     ): Boolean =
         captureKind != null &&
-            (error != null || recognizedCount <= 0)
+            when (outcome) {
+                CompareHerePhotoRetryOutcome.NO_USABLE_SUGGESTION,
+                CompareHerePhotoRetryOutcome.OCR_FAILURE,
+                CompareHerePhotoRetryOutcome.CAPTURE_FAILURE -> true
+                null,
+                CompareHerePhotoRetryOutcome.CANCELLED,
+                CompareHerePhotoRetryOutcome.PERMISSION_DENIED,
+                CompareHerePhotoRetryOutcome.UNAVAILABLE -> false
+            }
 }

@@ -6,21 +6,41 @@ import org.junit.Test
 
 class CompareHerePhotoRetryTest {
     @Test
-    fun `failed or empty OCR result offers retry for the same user chosen path`() {
+    fun `recoverable OCR and capture outcomes offer retry for the same user chosen path`() {
         assertTrue(
             CompareHerePhotoRetryPolicy.shouldOfferRetry(
                 captureKind = CompareHerePhotoCaptureKind.CAMERA,
-                recognizedCount = 0,
-                error = null
+                outcome = CompareHerePhotoRetryOutcome.NO_USABLE_SUGGESTION
             )
         )
         assertTrue(
             CompareHerePhotoRetryPolicy.shouldOfferRetry(
                 captureKind = CompareHerePhotoCaptureKind.IMPORT,
-                recognizedCount = 2,
-                error = IllegalStateException("ocr")
+                outcome = CompareHerePhotoRetryOutcome.OCR_FAILURE
             )
         )
+        assertTrue(
+            CompareHerePhotoRetryPolicy.shouldOfferRetry(
+                captureKind = CompareHerePhotoCaptureKind.CAMERA,
+                outcome = CompareHerePhotoRetryOutcome.CAPTURE_FAILURE
+            )
+        )
+    }
+
+    @Test
+    fun `permission denial cancellation and unavailable camera never offer retry`() {
+        listOf(
+            CompareHerePhotoRetryOutcome.PERMISSION_DENIED,
+            CompareHerePhotoRetryOutcome.CANCELLED,
+            CompareHerePhotoRetryOutcome.UNAVAILABLE
+        ).forEach { outcome ->
+            assertFalse(
+                CompareHerePhotoRetryPolicy.shouldOfferRetry(
+                    captureKind = CompareHerePhotoCaptureKind.CAMERA,
+                    outcome = outcome
+                )
+            )
+        }
     }
 
     @Test
@@ -28,15 +48,13 @@ class CompareHerePhotoRetryTest {
         assertFalse(
             CompareHerePhotoRetryPolicy.shouldOfferRetry(
                 captureKind = CompareHerePhotoCaptureKind.CAMERA,
-                recognizedCount = 1,
-                error = null
+                outcome = null
             )
         )
         assertFalse(
             CompareHerePhotoRetryPolicy.shouldOfferRetry(
                 captureKind = null,
-                recognizedCount = 0,
-                error = IllegalStateException("stale")
+                outcome = CompareHerePhotoRetryOutcome.OCR_FAILURE
             )
         )
     }
@@ -46,14 +64,12 @@ class CompareHerePhotoRetryTest {
         val first =
             CompareHerePhotoRetryPolicy.shouldOfferRetry(
                 captureKind = CompareHerePhotoCaptureKind.IMPORT,
-                recognizedCount = 0,
-                error = null
+                outcome = CompareHerePhotoRetryOutcome.NO_USABLE_SUGGESTION
             )
         val second =
             CompareHerePhotoRetryPolicy.shouldOfferRetry(
                 captureKind = CompareHerePhotoCaptureKind.IMPORT,
-                recognizedCount = 0,
-                error = null
+                outcome = CompareHerePhotoRetryOutcome.NO_USABLE_SUGGESTION
             )
 
         assertTrue(first)

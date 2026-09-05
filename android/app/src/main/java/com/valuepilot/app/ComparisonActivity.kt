@@ -535,9 +535,10 @@ class ComparisonActivity : AppCompatActivity() {
         try {
             photoPickerLauncher.launch("image/*")
         } catch (_: Exception) {
-            photoImportInFlight = false
-            syncPhotoActionButtons()
-            photoImportStatus.text = getString(R.string.compare_photo_error)
+            finishPhotoRequest(
+                R.string.compare_photo_error,
+                retryOutcome = CompareHerePhotoRetryOutcome.CAPTURE_FAILURE
+            )
         }
     }
 
@@ -573,7 +574,10 @@ class ComparisonActivity : AppCompatActivity() {
             try {
                 cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
             } catch (_: Exception) {
-                finishPhotoRequest(R.string.compare_camera_error, offerRetry = true)
+                finishPhotoRequest(
+                    R.string.compare_camera_error,
+                    retryOutcome = CompareHerePhotoRetryOutcome.CAPTURE_FAILURE
+                )
             }
         }
     }
@@ -588,7 +592,10 @@ class ComparisonActivity : AppCompatActivity() {
         }
 
         if (!granted) {
-            finishPhotoRequest(R.string.compare_camera_permission_denied, offerRetry = true)
+            finishPhotoRequest(
+                R.string.compare_camera_permission_denied,
+                retryOutcome = CompareHerePhotoRetryOutcome.PERMISSION_DENIED
+            )
             return
         }
 
@@ -621,7 +628,10 @@ class ComparisonActivity : AppCompatActivity() {
             cameraCaptureLauncher.launch(uri)
         } catch (_: Exception) {
             cleanupCameraCaptureFile()
-            finishPhotoRequest(R.string.compare_camera_error, offerRetry = true)
+            finishPhotoRequest(
+                R.string.compare_camera_error,
+                retryOutcome = CompareHerePhotoRetryOutcome.CAPTURE_FAILURE
+            )
         }
     }
 
@@ -721,7 +731,7 @@ class ComparisonActivity : AppCompatActivity() {
 
         if (error != null) {
             photoImportStatus.text = getString(R.string.compare_photo_error)
-            showPhotoRetryIfEligible(recognizedBlocks.size, error)
+            showPhotoRetryIfEligible(CompareHerePhotoRetryOutcome.OCR_FAILURE)
             return
         }
 
@@ -733,7 +743,7 @@ class ComparisonActivity : AppCompatActivity() {
 
         if (review.candidates.isEmpty()) {
             photoImportStatus.text = getString(R.string.compare_photo_no_matches)
-            showPhotoRetryIfEligible(recognizedBlocks.size, null)
+            showPhotoRetryIfEligible(CompareHerePhotoRetryOutcome.NO_USABLE_SUGGESTION)
             return
         }
 
@@ -871,27 +881,24 @@ class ComparisonActivity : AppCompatActivity() {
     }
 
     private fun finishPhotoRequest(@StringRes statusRes: Int) {
-        finishPhotoRequest(statusRes, offerRetry = false)
+        finishPhotoRequest(statusRes, retryOutcome = null)
     }
 
     private fun finishPhotoRequest(
         @StringRes statusRes: Int,
-        offerRetry: Boolean
+        retryOutcome: CompareHerePhotoRetryOutcome?
     ) {
         photoImportInFlight = false
         syncPhotoActionButtons()
         photoImportStatus.text = getString(statusRes)
-        if (offerRetry) {
-            showPhotoRetryIfEligible(recognizedCount = 0, error = IllegalStateException("photo"))
-        }
+        showPhotoRetryIfEligible(retryOutcome)
     }
 
-    private fun showPhotoRetryIfEligible(recognizedCount: Int, error: Throwable?) {
+    private fun showPhotoRetryIfEligible(outcome: CompareHerePhotoRetryOutcome?) {
         if (
             !CompareHerePhotoRetryPolicy.shouldOfferRetry(
                 captureKind = lastPhotoCaptureKind,
-                recognizedCount = recognizedCount,
-                error = error
+                outcome = outcome
             )
         ) {
             hidePhotoRetry()

@@ -36,6 +36,7 @@ class CompareHereCameraBoundaryTest {
         assertTrue(source.contains("photoReviewDialog"))
         assertTrue(source.contains("CompareHerePhotoDraft.append"))
         assertTrue(source.contains("CompareHerePhotoRetryPolicy"))
+        assertTrue(source.contains("CompareHerePhotoRetryOutcome.PERMISSION_DENIED"))
         assertTrue(source.contains("retryPhotoButton"))
         assertTrue(source.contains("cleanupCameraCaptureFile"))
         assertTrue(source.contains("ACCESSIBILITY_LIVE_REGION_POLITE"))
@@ -50,6 +51,11 @@ class CompareHereCameraBoundaryTest {
         assertFalse(source.contains("ACCESS_NETWORK_STATE"))
         assertFalse(source.contains("http://"))
         assertFalse(source.contains("https://"))
+
+        val deniedCall =
+            source.substringAfter("if (!granted)").substringBefore("launchCameraCapture")
+        assertTrue(deniedCall.contains("CompareHerePhotoRetryOutcome.PERMISSION_DENIED"))
+        assertFalse(deniedCall.contains("CAPTURE_FAILURE"))
     }
 
     @Test
