@@ -3,6 +3,7 @@ package com.valuepilot.app
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.Rect
 import android.graphics.Typeface
 import android.text.Editable
 import android.text.InputFilter
@@ -14,6 +15,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.doOnLayout
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.chip.Chip
@@ -74,6 +76,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
 
     private var hasRenderedState = false
     private var lastRenderedSubmitEnabled = false
+    private var projectedResultVisible = false
 
     var onQueryChanged: ((String) -> Unit)? = null
         set(value) {
@@ -397,6 +400,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         renderUnknown(state.unknownItems)
         renderNoCoverageSummary(state.noCoverageSummary)
         resultContainer.render(state.result, state.sampleNotice)
+        projectedResultVisible = state.result != null
         renderShopAgain(state.shopAgainVisible)
         renderSharePlan(state.result?.primary != null)
         renderExtraStopSettings(state.extraStopSettings)
@@ -410,6 +414,27 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         sampleNotice.text = state.sampleNotice
         goodPriceOwnerControls.forEach { control ->
             control.isEnabled = onGoodPrice != null && hasRenderedState
+        }
+    }
+
+    /**
+     * Asks the Home scroll container to reveal the latest projected answer after an explicit
+     * shopper action. The bounded rectangle keeps a long result from forcing the whole card into
+     * a tiny viewport, while all shopping authority remains in the immutable render state.
+     */
+    fun revealProjectedResult() {
+        if (!projectedResultVisible) return
+
+        // Rendering replaces result children and may request a new layout. Waiting for that
+        // layout avoids scrolling to an old/zero-height result when the answer first appears.
+        resultContainer.doOnLayout {
+            if (!projectedResultVisible) return@doOnLayout
+            val revealHeight = minOf(resultContainer.height, dp(320))
+            if (resultContainer.width <= 0 || revealHeight <= 0) return@doOnLayout
+            resultContainer.requestRectangleOnScreen(
+                Rect(0, 0, resultContainer.width, revealHeight),
+                true
+            )
         }
     }
 

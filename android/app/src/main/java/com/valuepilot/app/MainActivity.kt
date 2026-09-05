@@ -458,7 +458,7 @@ class MainActivity : AppCompatActivity() {
         }
         homeExperience.onSubmit = { rawQuery ->
             homeSessionState = PracticalShoppingHomeSession.submit(homeSessionState, rawQuery)
-            renderHome()
+            renderHome(revealResult = true)
         }
         homeExperience.onRemoveItem = { itemKey ->
             homeSessionState = PracticalShoppingHomeSession.removeItem(homeSessionState, itemKey)
@@ -480,7 +480,7 @@ class MainActivity : AppCompatActivity() {
         homeExperience.onChickenChoice = { choice ->
             homeSessionState =
                 PracticalShoppingHomeSession.chooseChicken(homeSessionState, choice)
-            renderHome()
+            renderHome(revealResult = true)
         }
         homeExperience.onExtraStopMinimumSavingsChoice = { choice ->
             homePreferenceStore.saveExtraStopMinimumSavingsChoice(choice)
@@ -504,7 +504,7 @@ class MainActivity : AppCompatActivity() {
         homeExperience.onGoodPrice = { openGoodPriceCheck() }
         homeExperience.onShopAgain = {
             homeSessionState = PracticalShoppingHomeSession.shopAgain(homeSessionState)
-            renderHome()
+            renderHome(revealResult = true)
         }
         homeExperience.onSharePlan = { shareHomePlan() }
         rememberConfirmedChoiceAndroidSession =
@@ -515,7 +515,7 @@ class MainActivity : AppCompatActivity() {
         renderHome()
     }
 
-    private fun renderHome() {
+    private fun renderHome(revealResult: Boolean = false) {
         homeSessionStore.save(PracticalShoppingHomeSession.snapshot(homeSessionState))
         val homeState =
             PracticalShoppingHomeRenderer.render(
@@ -546,6 +546,9 @@ class MainActivity : AppCompatActivity() {
             dismissHomeItemDetailsDialog()
         }
         homeExperience.render(homeState)
+        if (revealResult) {
+            homeExperience.revealProjectedResult()
+        }
         basketExperience.render(PracticalShoppingBasketRenderer.render(homeState))
     }
 

@@ -197,6 +197,38 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
     }
 
     @Test
+    fun explicitResultRevealUsesOnlyTheLatestBoundedProjection() {
+        val source = source().readText()
+
+        listOf(
+            "private var projectedResultVisible = false",
+            "projectedResultVisible = state.result != null",
+            "fun revealProjectedResult()",
+            "if (!projectedResultVisible) return",
+            "resultContainer.doOnLayout",
+            "if (!projectedResultVisible) return@doOnLayout",
+            "val revealHeight = minOf(resultContainer.height, dp(320))",
+            "resultContainer.requestRectangleOnScreen(",
+            "Rect(0, 0, resultContainer.width, revealHeight)",
+            "true"
+        ).forEach { required ->
+            assertTrue("Expected bounded projected-result reveal binding $required", source.contains(required))
+        }
+
+        listOf(
+            "PracticalShoppingPlanner",
+            "PracticalShoppingUiProjector",
+            "Money.parse",
+            "LocalSamplePracticalShoppingDemo.Status"
+        ).forEach { forbidden ->
+            assertFalse(
+                "Result reveal must not own shopping authority through $forbidden",
+                source.contains(forbidden)
+            )
+        }
+    }
+
+    @Test
     fun physicalViewDoesNotDecideWhenAdvancedControlIsAvailable() {
         val source = source().readText()
 

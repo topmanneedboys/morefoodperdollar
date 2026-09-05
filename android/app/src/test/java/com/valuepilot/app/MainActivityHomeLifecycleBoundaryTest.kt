@@ -232,6 +232,56 @@ class MainActivityHomeLifecycleBoundaryTest {
     }
 
     @Test
+    fun explicitHomeResultActionsRevealAfterRenderingWithoutPassiveScrollJumps() {
+        val source = source().readText()
+
+        listOf(
+            "private fun renderHome(revealResult: Boolean = false)",
+            "homeExperience.render(homeState)",
+            "if (revealResult) {",
+            "homeExperience.revealProjectedResult()",
+            "homeExperience.onSubmit = { rawQuery ->",
+            "renderHome(revealResult = true)",
+            "homeExperience.onChickenChoice = { choice ->",
+            "homeExperience.onShopAgain = {"
+        ).forEach { required ->
+            assertTrue("Expected explicit Home result reveal wiring: $required", source.contains(required))
+        }
+
+        val submitStart = source.indexOf("homeExperience.onSubmit = { rawQuery ->")
+        val submitEnd = source.indexOf("homeExperience.onRemoveItem =", submitStart)
+        assertTrue("Expected bounded Home submit callback", submitStart >= 0 && submitEnd > submitStart)
+        assertTrue(
+            "Submit must render with an explicit result reveal",
+            source.substring(submitStart, submitEnd).contains("renderHome(revealResult = true)")
+        )
+
+        val queryStart = source.indexOf("homeExperience.onQueryChanged = { rawQuery ->")
+        val queryEnd = source.indexOf("homeExperience.onSubmit =", queryStart)
+        assertTrue("Expected passive Home query callback", queryStart >= 0 && queryEnd > queryStart)
+        assertTrue(
+            "Typing must keep the passive render path without a scroll jump",
+            source.substring(queryStart, queryEnd).contains("renderHome()")
+        )
+
+        val renderIndex = source.indexOf("homeExperience.render(homeState)")
+        val revealIndex = source.indexOf("homeExperience.revealProjectedResult()")
+        assertTrue("The immutable Home projection must render before it is revealed", renderIndex >= 0 && revealIndex > renderIndex)
+
+        listOf(
+            "PracticalShoppingPlanner",
+            "Money.parse",
+            "HttpURLConnection",
+            "INTERNET"
+        ).forEach { forbidden ->
+            assertTrue(
+                "Home result reveal must not add shopping or network authority: $forbidden",
+                !source.contains(forbidden)
+            )
+        }
+    }
+
+    @Test
     fun homeShareActionUsesAStaleSafePreviewAndExplicitChooser() {
         val source = source().readText()
 
