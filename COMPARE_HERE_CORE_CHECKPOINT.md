@@ -2,6 +2,12 @@
 
 ## Latest promoted consumer boundary
 
+- Promoted code commit: `58c8732f1fe5dcb1a450fb9c0d28aa743f5dfb56` (`Add retry action for failed comparison photos`)
+- Candidate workflow: **33959540807** — success
+- Promoted workflow/provenance: **33959812269** — success
+
+When a user-triggered camera/import OCR attempt fails or yields no usable price-tag suggestion, Scan & Compare now offers `Try another photo` for the same method. The retry is a bounded presentation action, hidden while another photo/review is active and cleared after a successful review or a new request; every failure/cancellation path preserves the existing editor blocks. It reuses the existing review-first OCR boundary and adds no parser, exact money/quantity, evidence, ranking, planner, offer, store, availability, persistence or network authority.
+
 - Promoted code commit: `42f86e7dbd6a1e03a694c85032f30f21b1ab752e` (`Let saved products reopen Good Price`)
 - Candidate workflow: **33957008185** — success
 - Promoted workflow/provenance: **33957294707** — success
