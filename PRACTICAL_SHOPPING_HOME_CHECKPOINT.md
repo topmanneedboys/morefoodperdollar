@@ -8,6 +8,10 @@ This checkpoint records the verified Practical Shopping Home slice plus the prov
 
 ## Latest verified engineering head
 
+`3864a339ded3c975f909789add947397e27dbc3b` — `Clarify fictional Shop Again disclosure`
+
+Candidate workflow **33984116186** passed for the exact SHA, including Android tests/lint/debug, browser/Firefox checks, release-bundle, APK privacy and single-signer verification. Home's repeat-list action now says it reuses offline fictional demo data and is not a live retailer plan, so its standalone accessibility description cannot imply current retailer evidence. This presentation-only correction adds no planner, product, offer, store, availability, evidence, ranking, persistence, provider, networking, account, tracking, demo-data or provider-economics authority. Local verification passed 402 shared-core tests, 1,538 Android tests, and 79 Python/catalog tests with zero failures or skips. Physical-device ergonomics/accessibility and lawful production Home activation remain open; provider feeds remain blocked pending explicit rights.
+
 `445af5f80d5624e35af2c4c27cbd2b04516bcb18` — `Clarify projected savings as potential`
 
 Candidate workflow **33981634428** passed for the exact SHA, and milestone provenance workflow **33982413282** verified the promoted ref at docs head `2a11bdde5863f1e565726b954f68b7ca34be0cb1` and release artifact lineage. The optional second-stop card now says `Could save ...` so shoppers see a projected, evidence-backed scenario rather than a claim that savings were already realized; exact savings math and eligibility remain in the existing planner/projector. This presentation-only correction adds no planner, product, offer, store, availability, evidence, ranking, persistence, provider, networking, account, tracking, demo-data or provider-economics authority. Local verification passed 402 shared-core tests, 1,537 Android tests, and 79 Python/catalog tests with zero failures or skips. Physical-device ergonomics/accessibility and lawful production Home activation remain open; provider feeds remain blocked pending explicit rights.
