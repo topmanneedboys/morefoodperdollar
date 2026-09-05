@@ -35,10 +35,13 @@ class CompareHereCameraBoundaryTest {
         assertTrue(source.contains("setMultiChoiceItems"))
         assertTrue(source.contains("photoReviewDialog"))
         assertTrue(source.contains("CompareHerePhotoDraft.append"))
+        assertTrue(source.contains("CompareHerePhotoRetryPolicy"))
+        assertTrue(source.contains("retryPhotoButton"))
         assertTrue(source.contains("cleanupCameraCaptureFile"))
         assertTrue(source.contains("ACCESSIBILITY_LIVE_REGION_POLITE"))
         assertTrue(layout.contains("capturePhotoButton"))
         assertTrue(layout.contains("importPhotoButton"))
+        assertTrue(layout.contains("retryPhotoButton"))
         assertFalse(onCreateBody.contains("cameraPermissionLauncher.launch"))
 
         assertFalse(source.contains("getExternalStorage"))
@@ -79,6 +82,7 @@ class CompareHereCameraBoundaryTest {
         assertTrue(source.contains("selectedCandidates"))
         assertTrue(strings.contains("untrusted OCR suggestion"))
         assertTrue(strings.contains("Nothing is added until you choose Add selected"))
+        assertTrue(strings.contains("Try another photo"))
     }
 
     private fun source(name: String): File =

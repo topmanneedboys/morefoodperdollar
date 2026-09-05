@@ -55,6 +55,7 @@ class ComparisonActivity : AppCompatActivity() {
     private lateinit var importPhotoButton: Button
     private lateinit var capturePhotoButton: Button
     private lateinit var photoImportStatus: TextView
+    private lateinit var retryPhotoButton: Button
     private lateinit var compareBarcodeButton: Button
     private lateinit var compareBarcodeStatus: TextView
     private lateinit var privateMemoryStatus: TextView
@@ -89,6 +90,7 @@ class ComparisonActivity : AppCompatActivity() {
     private var photoImportClosed = false
     private var photoReviewDialog: AlertDialog? = null
     private var photoReviewRequestId = 0L
+    private var lastPhotoCaptureKind: CompareHerePhotoCaptureKind? = null
     private var cameraCaptureRequestId = 0L
     private var cameraCaptureUri: Uri? = null
     private var cameraCaptureFile: File? = null
@@ -120,6 +122,15 @@ class ComparisonActivity : AppCompatActivity() {
         capturePhotoButton = findViewById(R.id.capturePhotoButton)
         photoImportStatus = findViewById(R.id.photoImportStatus)
         photoImportStatus.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        retryPhotoButton = findViewById(R.id.retryPhotoButton)
+        retryPhotoButton.contentDescription = getString(R.string.compare_photo_retry_description)
+        retryPhotoButton.setOnClickListener {
+            val kind = lastPhotoCaptureKind ?: return@setOnClickListener
+            when (kind) {
+                CompareHerePhotoCaptureKind.CAMERA -> beginCameraCapture()
+                CompareHerePhotoCaptureKind.IMPORT -> beginPhotoImport()
+            }
+        }
         compareBarcodeButton = findViewById(R.id.compareBarcodeButton)
         compareBarcodeStatus = findViewById(R.id.compareBarcodeStatus)
         compareBarcodeStatus.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
@@ -516,6 +527,8 @@ class ComparisonActivity : AppCompatActivity() {
         }
 
         photoImportInFlight = true
+        lastPhotoCaptureKind = CompareHerePhotoCaptureKind.IMPORT
+        hidePhotoRetry()
         photoRequestId += 1
         syncPhotoActionButtons()
         photoImportStatus.text = getString(R.string.compare_photo_processing)
@@ -544,6 +557,8 @@ class ComparisonActivity : AppCompatActivity() {
         }
 
         photoImportInFlight = true
+        lastPhotoCaptureKind = CompareHerePhotoCaptureKind.CAMERA
+        hidePhotoRetry()
         photoRequestId += 1
         cameraCaptureRequestId = photoRequestId
         syncPhotoActionButtons()
@@ -558,7 +573,7 @@ class ComparisonActivity : AppCompatActivity() {
             try {
                 cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
             } catch (_: Exception) {
-                finishPhotoRequest(R.string.compare_camera_error)
+                finishPhotoRequest(R.string.compare_camera_error, offerRetry = true)
             }
         }
     }
@@ -573,7 +588,7 @@ class ComparisonActivity : AppCompatActivity() {
         }
 
         if (!granted) {
-            finishPhotoRequest(R.string.compare_camera_permission_denied)
+            finishPhotoRequest(R.string.compare_camera_permission_denied, offerRetry = true)
             return
         }
 
@@ -606,7 +621,7 @@ class ComparisonActivity : AppCompatActivity() {
             cameraCaptureLauncher.launch(uri)
         } catch (_: Exception) {
             cleanupCameraCaptureFile()
-            finishPhotoRequest(R.string.compare_camera_error)
+            finishPhotoRequest(R.string.compare_camera_error, offerRetry = true)
         }
     }
 
@@ -706,6 +721,7 @@ class ComparisonActivity : AppCompatActivity() {
 
         if (error != null) {
             photoImportStatus.text = getString(R.string.compare_photo_error)
+            showPhotoRetryIfEligible(recognizedBlocks.size, error)
             return
         }
 
@@ -717,6 +733,7 @@ class ComparisonActivity : AppCompatActivity() {
 
         if (review.candidates.isEmpty()) {
             photoImportStatus.text = getString(R.string.compare_photo_no_matches)
+            showPhotoRetryIfEligible(recognizedBlocks.size, null)
             return
         }
 
@@ -835,6 +852,7 @@ class ComparisonActivity : AppCompatActivity() {
                         review.skippedCount + result.skippedCount
                     )
                 photoImportStatus.visibility = View.VISIBLE
+                hidePhotoRetry()
                 outcomeCommitted = true
                 dialog.dismiss()
             }
@@ -853,9 +871,41 @@ class ComparisonActivity : AppCompatActivity() {
     }
 
     private fun finishPhotoRequest(@StringRes statusRes: Int) {
+        finishPhotoRequest(statusRes, offerRetry = false)
+    }
+
+    private fun finishPhotoRequest(
+        @StringRes statusRes: Int,
+        offerRetry: Boolean
+    ) {
         photoImportInFlight = false
         syncPhotoActionButtons()
         photoImportStatus.text = getString(statusRes)
+        if (offerRetry) {
+            showPhotoRetryIfEligible(recognizedCount = 0, error = IllegalStateException("photo"))
+        }
+    }
+
+    private fun showPhotoRetryIfEligible(recognizedCount: Int, error: Throwable?) {
+        if (
+            !CompareHerePhotoRetryPolicy.shouldOfferRetry(
+                captureKind = lastPhotoCaptureKind,
+                recognizedCount = recognizedCount,
+                error = error
+            )
+        ) {
+            hidePhotoRetry()
+            return
+        }
+
+        retryPhotoButton.visibility = View.VISIBLE
+        retryPhotoButton.isEnabled = !photoImportClosed
+    }
+
+    private fun hidePhotoRetry() {
+        if (!::retryPhotoButton.isInitialized) return
+        retryPhotoButton.visibility = View.GONE
+        retryPhotoButton.isEnabled = false
     }
 
     private fun syncPhotoActionButtons() {
@@ -873,6 +923,10 @@ class ComparisonActivity : AppCompatActivity() {
         }
         if (::compareBarcodeButton.isInitialized) {
             compareBarcodeButton.isEnabled = enabled
+        }
+        if (::retryPhotoButton.isInitialized) {
+            retryPhotoButton.isEnabled =
+                retryPhotoButton.visibility == View.VISIBLE && enabled
         }
     }
 
@@ -1293,6 +1347,7 @@ class ComparisonActivity : AppCompatActivity() {
 
     private fun clearComparison() {
         clearBarcodeStatus()
+        hidePhotoRetry()
         hidePrivateMemoryStatus()
         activityState = CompareHereManualActivitySessionReducer.clear()
         syncLikeForLikeConfirmation()
