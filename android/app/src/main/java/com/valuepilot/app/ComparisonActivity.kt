@@ -797,9 +797,13 @@ class ComparisonActivity : AppCompatActivity() {
         }
 
         val selected = BooleanArray(review.candidates.size) { true }
+        val presentations =
+            review.candidates.map(
+                CompareHerePhotoSuggestionPresentationFactory::forCandidate
+            )
         var outcomeCommitted = false
         lateinit var dialog: AlertDialog
-        dialog =
+        val builder =
             AlertDialog.Builder(this)
                 .setTitle(R.string.compare_photo_review_title)
                 .setMessage(
@@ -809,7 +813,7 @@ class ComparisonActivity : AppCompatActivity() {
                     )
                 )
                 .setMultiChoiceItems(
-                    review.candidates.map(::photoSuggestionLabel).toTypedArray(),
+                    presentations.map { it.displayLabel }.toTypedArray(),
                     selected
                 ) { _, which, checked ->
                     if (which in selected.indices) {
@@ -818,7 +822,12 @@ class ComparisonActivity : AppCompatActivity() {
                 }
                 .setNegativeButton(R.string.cancel, null)
                 .setPositiveButton(R.string.compare_photo_add_selected, null)
-                .create()
+
+        if (presentations.any { it.editorPrefill != null }) {
+            builder.setNeutralButton(R.string.compare_photo_add_with_details, null)
+        }
+
+        dialog = builder.create()
 
         photoReviewDialog = dialog
         photoReviewRequestId = requestId
@@ -838,7 +847,7 @@ class ComparisonActivity : AppCompatActivity() {
             }
         }
         dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            fun commitSelection(useDetectedDetails: Boolean) {
                 if (
                     photoImportClosed ||
                         requestId != photoRequestId ||
@@ -848,17 +857,25 @@ class ComparisonActivity : AppCompatActivity() {
                         isDestroyed
                 ) {
                     dialog.dismiss()
-                    return@setOnClickListener
+                    return
                 }
 
                 val selectedCandidates =
-                    review.candidates.filterIndexed { index, _ -> selected[index] }
+                    review.candidates.mapIndexedNotNull { index, rawCandidate ->
+                        if (!selected[index]) {
+                            null
+                        } else if (useDetectedDetails) {
+                            presentations[index].editorPrefill ?: rawCandidate
+                        } else {
+                            rawCandidate
+                        }
+                    }
                 if (selectedCandidates.isEmpty()) {
                     outcomeCommitted = true
                     photoImportStatus.text = getString(R.string.compare_photo_none_selected)
                     photoImportStatus.visibility = View.VISIBLE
                     dialog.dismiss()
-                    return@setOnClickListener
+                    return
                 }
 
                 val result =
@@ -871,7 +888,7 @@ class ComparisonActivity : AppCompatActivity() {
                     photoImportStatus.text = getString(R.string.compare_photo_no_matches)
                     photoImportStatus.visibility = View.VISIBLE
                     dialog.dismiss()
-                    return@setOnClickListener
+                    return
                 }
 
                 renderProductInputs(result.blocks)
@@ -883,24 +900,33 @@ class ComparisonActivity : AppCompatActivity() {
                 saveDraftToPreferences()
                 photoImportStatus.text =
                     getString(
-                        R.string.compare_photo_added,
+                        if (useDetectedDetails) {
+                            R.string.compare_photo_added_with_details
+                        } else {
+                            R.string.compare_photo_added
+                        },
                         result.addedCount,
-                        review.skippedCount + result.skippedCount
+                        result.skippedCount
                     )
                 photoImportStatus.visibility = View.VISIBLE
                 hidePhotoRetry()
                 outcomeCommitted = true
                 dialog.dismiss()
             }
+
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                commitSelection(useDetectedDetails = false)
+            }
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.let { button ->
+                button.contentDescription =
+                    getString(R.string.compare_photo_add_with_details_description)
+                button.setOnClickListener {
+                    commitSelection(useDetectedDetails = true)
+                }
+            }
         }
         syncPhotoActionButtons()
         dialog.show()
-    }
-
-    private fun photoSuggestionLabel(value: String): String {
-        return CompareHerePhotoSuggestionPresentationFactory
-            .forCandidate(value)
-            .displayLabel
     }
 
     private fun finishPhotoRequest(@StringRes statusRes: Int) {

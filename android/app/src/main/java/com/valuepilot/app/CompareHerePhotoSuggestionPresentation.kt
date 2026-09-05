@@ -5,13 +5,15 @@ package com.valuepilot.app
  *
  * The deterministic parser is reused only to explain what the current text might contain. The
  * returned values never become comparison observations and never bypass the editable-entry,
- * like-for-like, currency, quantity, or price checks. Every label remains explicitly unconfirmed.
+ * like-for-like, currency, quantity, or price checks. [editorPrefill] is an optional ordinary-text
+ * draft offered only after an explicit shopper action; every label and draft remains unconfirmed.
  */
 internal data class CompareHerePhotoSuggestionPresentation(
     val displayLabel: String,
     val nameSuggestion: String?,
     val priceSignal: String?,
     val quantitySignal: String?,
+    val editorPrefill: String?,
     val reviewNotice: String
 ) {
     init {
@@ -20,6 +22,12 @@ internal data class CompareHerePhotoSuggestionPresentation(
         require(nameSuggestion == null || nameSuggestion.length <= MAX_NAME_CHARS)
         require(priceSignal == null || priceSignal.length <= MAX_PRICE_SIGNAL_CHARS)
         require(quantitySignal == null || quantitySignal.length <= MAX_QUANTITY_SIGNAL_CHARS)
+        require(
+            editorPrefill == null ||
+                editorPrefill.length <= CompareHereManualProductDraft.MAX_BLOCK_CHARS
+        )
+        require(editorPrefill == null || editorPrefill.isNotBlank())
+        require(editorPrefill == null || editorPrefill.none { it.isISOControl() && it !in "\r\n\t" })
         require(reviewNotice.isNotBlank())
         require(reviewNotice.startsWith(REVIEW_PREFIX))
     }
@@ -61,6 +69,18 @@ internal object CompareHerePhotoSuggestionPresentationFactory {
                 }
             }
 
+        val exactPrice =
+            prices
+                .singleOrNull()
+                ?.takeIf { concreteCurrency != null }
+        val editorPrefill =
+            buildEditorPrefill(
+                name = nameSuggestion,
+                price = exactPrice,
+                quantity = exactQuantity,
+                promotion = exactPrice?.let { ValueEngine.promotion(normalized, it.amount) }
+            )
+
         val reviewReasons = mutableListOf<String>()
         if (nameSuggestion == null) reviewReasons += "product name"
         if (prices.size != 1 || concreteCurrency == null) {
@@ -92,8 +112,47 @@ internal object CompareHerePhotoSuggestionPresentationFactory {
             nameSuggestion = nameSuggestion,
             priceSignal = priceSignal,
             quantitySignal = quantitySignal,
+            editorPrefill = editorPrefill,
             reviewNotice = reviewNotice
         )
+    }
+
+    /**
+     * Builds an explicitly user-selected editable draft only from a complete, unambiguous set
+     * of parser signals. The result is still ordinary text: the exact Compare Here adapter must
+     * validate it after the shopper reviews it. Unsupported promotion shapes intentionally stay
+     * on the raw-OCR path so a prefill cannot erase price-affecting conditions.
+     */
+    private fun buildEditorPrefill(
+        name: String?,
+        price: ValueEngine.Price?,
+        quantity: Quantity?,
+        promotion: Promotion?
+    ): String? {
+        if (name == null || price == null || quantity == null) return null
+
+        val promotionText =
+            when (promotion?.type) {
+                null, "none" -> null
+                "percent-off-shown", "free-delivery" ->
+                    promotion.label.takeIf(String::isNotBlank)?.let(::safeDisplaySource)
+                // The parser's exact BOGO grammar accepts words, while its display label uses
+                // numerals. Keep the canonical input form that the existing adapter can replay.
+                "bogo" -> "Buy one get one free"
+                else -> return null
+            }
+
+        return listOfNotNull(
+                name,
+                safeDisplaySource(price.raw),
+                safeDisplaySource(quantity.display),
+                promotionText
+            )
+            .joinToString("\n")
+            .takeIf {
+                it.isNotBlank() &&
+                    it.length <= CompareHereManualProductDraft.MAX_BLOCK_CHARS
+            }
     }
 
     private fun priceSignal(
@@ -111,6 +170,7 @@ internal object CompareHerePhotoSuggestionPresentationFactory {
     }
 
     private fun isExactQuantity(quantity: Quantity): Boolean =
+        quantity.kind != Quantity.Kind.PIZZA_AREA_SQIN &&
         quantity.confidence >= 0.9 &&
             !quantity.display.contains(" avg", ignoreCase = true)
 
