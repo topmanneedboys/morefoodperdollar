@@ -554,6 +554,10 @@ class GoodPriceActivity : AppCompatActivity() {
             if (isFinishing || isDestroyed) return@post
             productInput.requestFocus()
             productInput.setSelection(productInput.text?.length ?: 0)
+            // Barcode identity is only an editable name suggestion. Re-open the keyboard so the
+            // shopper can immediately enter the required package quantity and observed price.
+            val manager = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+            manager?.showSoftInput(productInput, InputMethodManager.SHOW_IMPLICIT)
         }
     }
 

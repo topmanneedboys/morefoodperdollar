@@ -24,6 +24,7 @@ class CompareHereBarcodeBoundaryTest {
             "productInputs::getOrNull",
             "input.requestFocus()",
             "input.setSelection(input.text?.length ?: 0)",
+            "manager?.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)",
             "barcodeLookupExecutor.shutdownNow",
             "barcodeLookupRequestId",
             "barcodeLookupClosed",
@@ -61,6 +62,22 @@ class CompareHereBarcodeBoundaryTest {
                 useNameHandler.indexOf("focusProductInput(result.addedIndex)")
         )
         assertTrue(source.contains("if (isFinishing || isDestroyed) return@post"))
+    }
+
+    @Test
+    fun `barcode identity handoff reopens the keyboard after focusing the editable block`() {
+        val source = source("ComparisonActivity.kt").readText()
+        val focus =
+            source
+                .substringAfter("private fun focusProductInput(index: Int?)")
+                .substringBefore("private fun finishBarcodeRequest")
+
+        assertTrue(focus.indexOf("input.requestFocus()") >= 0)
+        assertTrue(focus.indexOf("input.setSelection") > focus.indexOf("input.requestFocus()"))
+        assertTrue(
+            focus.indexOf("manager?.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)") >
+                focus.indexOf("input.setSelection")
+        )
     }
 
     @Test

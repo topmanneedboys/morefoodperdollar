@@ -33,6 +33,7 @@ class CompareHereCameraBoundaryTest {
         assertTrue(source.contains("CompareHerePhotoDraft.review"))
         assertTrue(source.contains("result.firstAddedIndex"))
         assertTrue(source.contains("focusProductInput(firstAddedIndex)"))
+        assertTrue(source.contains("manager?.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)"))
         assertTrue(source.contains("CompareHerePhotoSuggestionPresentationFactory"))
         assertTrue(source.contains("editorPrefill"))
         assertTrue(source.contains("compare_photo_add_with_details"))

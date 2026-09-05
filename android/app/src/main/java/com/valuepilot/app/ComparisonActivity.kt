@@ -536,6 +536,11 @@ class ComparisonActivity : AppCompatActivity() {
             if (isFinishing || isDestroyed) return@post
             input.requestFocus()
             input.setSelection(input.text?.length ?: 0)
+            // OCR/barcode handoffs leave the shopper at the exact editable block that still
+            // needs package quantity and price. Re-open the on-device keyboard so the next
+            // aisle-side action does not require a second tap; this changes navigation only.
+            val manager = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+            manager?.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)
         }
     }
 

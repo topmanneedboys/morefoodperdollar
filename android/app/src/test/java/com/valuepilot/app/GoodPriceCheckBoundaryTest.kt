@@ -74,7 +74,8 @@ class GoodPriceCheckBoundaryTest {
             "focusProductInput()",
             "private fun focusProductInput()",
             "productInput.requestFocus()",
-            "productInput.setSelection(productInput.text?.length ?: 0)"
+            "productInput.setSelection(productInput.text?.length ?: 0)",
+            "manager?.showSoftInput(productInput, InputMethodManager.SHOW_IMPLICIT)"
         ).forEach { required -> assertTrue(source.contains(required)) }
         listOf(
             "HttpURLConnection",
@@ -101,6 +102,25 @@ class GoodPriceCheckBoundaryTest {
                 useNameHandler.indexOf("focusProductInput()")
         )
         assertTrue(source.contains("if (isFinishing || isDestroyed) return@post"))
+    }
+
+    @Test
+    fun `good price barcode handoff reopens the keyboard after focusing the product field`() {
+        val source = source("GoodPriceActivity.kt").readText()
+        val focus =
+            source
+                .substringAfter("private fun focusProductInput()")
+                .substringBefore("private fun clearBarcodeStatus")
+
+        assertTrue(focus.indexOf("productInput.requestFocus()") >= 0)
+        assertTrue(
+            focus.indexOf("productInput.setSelection") >
+                focus.indexOf("productInput.requestFocus()")
+        )
+        assertTrue(
+            focus.indexOf("manager?.showSoftInput(productInput, InputMethodManager.SHOW_IMPLICIT)") >
+                focus.indexOf("productInput.setSelection")
+        )
     }
 
     @Test
