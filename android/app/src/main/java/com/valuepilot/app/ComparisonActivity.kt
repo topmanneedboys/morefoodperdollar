@@ -230,6 +230,10 @@ class ComparisonActivity : AppCompatActivity() {
                 addProductInput("")
                 onProductsChanged()
                 updateAddProductButton()
+                // Adding a product is an explicit shopper action. Move directly to the new
+                // editable block so the next aisle-side entry does not require another tap;
+                // this changes navigation only and leaves exact parsing and validation below.
+                focusProductInput(productInputs.lastIndex)
             }
         }
 
