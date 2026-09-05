@@ -67,6 +67,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val extraStopChoiceOwnerControls = mutableListOf<View>()
     private val goodPriceOwnerControls = mutableListOf<View>()
     private val privateMemoryReviewOwnerControls = mutableListOf<View>()
+    private val privateMemoryExportOwnerControls = mutableListOf<View>()
     private val shopAgainOwnerControls = mutableListOf<View>()
 
     private var hasRenderedState = false
@@ -173,6 +174,14 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                     value != null && hasRenderedState && control.visibility == VISIBLE
             }
         }
+    var onExportPrivateMemory: (() -> Unit)? = null
+        set(value) {
+            field = value
+            privateMemoryExportOwnerControls.forEach { control ->
+                control.isEnabled =
+                    value != null && hasRenderedState && control.visibility == VISIBLE
+            }
+        }
     var onShopAgain: (() -> Unit)? = null
         set(value) {
             field = value
@@ -273,6 +282,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val sampleNotice = line("", 13f, "#374151")
     private val goodPriceActionButton = goodPriceButton()
     private val privateMemoryReviewActionButton = privateMemoryReviewButton()
+    private val privateMemoryExportActionButton = privateMemoryExportButton()
     private val compareActionButton = compareButton()
     private val noCoverageSummary = line("", 13f, "#92400E", true).apply {
         accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
@@ -294,6 +304,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         addView(sampleCard())
         addView(privateMemorySummary)
         addView(privateMemoryReviewActionButton)
+        addView(privateMemoryExportActionButton)
         addView(privateMemoryNotice)
         addView(itemsHeading)
         addView(itemsContainer)
@@ -312,6 +323,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         unknownCard.visibility = GONE
         extraStopSettingsCard.visibility = GONE
         privateMemoryReviewActionButton.visibility = GONE
+        privateMemoryExportActionButton.visibility = GONE
         shopAgainActionButton.visibility = GONE
 
         input.addTextChangedListener(
@@ -366,7 +378,8 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         renderPrivateMemory(
             status = state.privateMemoryStatus,
             summary = state.privateMemorySummary,
-            reviewActionVisible = state.privateMemoryReviewActionVisible
+            reviewActionVisible = state.privateMemoryReviewActionVisible,
+            exportActionVisible = state.privateMemoryExportActionVisible
         )
         sampleNotice.text = state.sampleNotice
         goodPriceOwnerControls.forEach { control ->
@@ -424,7 +437,8 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private fun renderPrivateMemory(
         status: PracticalShoppingHomePrivateMemoryStatus,
         summary: String?,
-        reviewActionVisible: Boolean
+        reviewActionVisible: Boolean,
+        exportActionVisible: Boolean
     ) {
         if (status == PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE) {
             privateMemorySummary.text = ""
@@ -433,6 +447,8 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                 if (reviewActionVisible) VISIBLE else GONE
             privateMemoryReviewActionButton.isEnabled =
                 reviewActionVisible && onReviewPrivateMemory != null && hasRenderedState
+            privateMemoryExportActionButton.visibility = GONE
+            privateMemoryExportActionButton.isEnabled = false
             privateMemoryNotice.text = context.getString(R.string.home_private_memory_unavailable)
             privateMemoryNotice.visibility = VISIBLE
         } else {
@@ -441,6 +457,9 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
             privateMemoryReviewActionButton.visibility = if (reviewActionVisible) VISIBLE else GONE
             privateMemoryReviewActionButton.isEnabled =
                 reviewActionVisible && onReviewPrivateMemory != null && hasRenderedState
+            privateMemoryExportActionButton.visibility = if (exportActionVisible) VISIBLE else GONE
+            privateMemoryExportActionButton.isEnabled =
+                exportActionVisible && onExportPrivateMemory != null && hasRenderedState
             privateMemoryNotice.text = ""
             privateMemoryNotice.visibility = GONE
         }
@@ -848,6 +867,24 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         // Keep the owner-driven history route inert until its callback is attached.
         isEnabled = false
         setOnClickListener { onReviewPrivateMemory?.invoke() }
+    }
+
+    private fun privateMemoryExportButton(): MaterialButton = MaterialButton(context).apply {
+        privateMemoryExportOwnerControls += this
+        text = context.getString(R.string.home_private_memory_export)
+        contentDescription =
+            context.getString(R.string.home_private_memory_export_description)
+        isAllCaps = false
+        textSize = 14f
+        cornerRadius = dp(16)
+        strokeWidth = dp(1)
+        strokeColor = ColorStateList.valueOf(Color.parseColor("#D1D5DB"))
+        setTextColor(Color.parseColor("#374151"))
+        backgroundTintList = ColorStateList.valueOf(Color.WHITE)
+        layoutParams = fullWidth(dp(50), 4)
+        // Keep the owner-driven export route inert until its callback is attached.
+        isEnabled = false
+        setOnClickListener { onExportPrivateMemory?.invoke() }
     }
 
     private fun heading(value: String): TextView = line(value, 13f, "#374151", true, 18)

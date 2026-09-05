@@ -262,7 +262,9 @@ class MainActivityHomeLifecycleBoundaryTest {
 
         listOf(
             "homeExperience.onReviewPrivateMemory = { reviewPrivatePriceHistory() }",
+            "homeExperience.onExportPrivateMemory = { exportPrivatePriceHistory() }",
             "homeExperience.onReviewPrivateMemory = null",
+            "homeExperience.onExportPrivateMemory = null",
             "private fun openComparison()",
             "Intent(this, ComparisonActivity::class.java)",
             "private fun reviewPrivatePriceHistory()",
@@ -317,6 +319,39 @@ class MainActivityHomeLifecycleBoundaryTest {
         ).forEach { forbidden ->
             assertTrue(
                 "Private-history deletion must not add shopping/network authority: $forbidden",
+                !source.contains(forbidden)
+            )
+        }
+    }
+
+    @Test
+    fun homePrivateMemoryExportIsExplicitPreviewedAndRecheckedLocally() {
+        val source = source().readText()
+
+        listOf(
+            "private fun exportPrivatePriceHistory()",
+            "PracticalShoppingPrivatePriceHistoryExport.from(homePrivateMemoryState)",
+            "home_private_memory_export_title",
+            "home_private_memory_export_body",
+            "home_private_memory_export_send",
+            "homePrivateMemoryStore.load()",
+            "Intent(Intent.ACTION_SEND)",
+            "Intent.EXTRA_TEXT",
+            "home_private_memory_export_subject",
+            "ActivityNotFoundException",
+            "showPrivatePriceHistoryExportError"
+        ).forEach { required ->
+            assertTrue("Expected explicit private-history export boundary: $required", source.contains(required))
+        }
+
+        listOf(
+            "PracticalShoppingPlanner",
+            "Money.parse",
+            "AuthorizedOfferSnapshot",
+            "HttpURLConnection"
+        ).forEach { forbidden ->
+            assertTrue(
+                "Private-history export must not add shopping/network authority: $forbidden",
                 !source.contains(forbidden)
             )
         }

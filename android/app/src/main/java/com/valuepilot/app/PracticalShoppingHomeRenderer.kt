@@ -134,6 +134,8 @@ data class PracticalShoppingHomeRenderState(
     val privateMemorySummary: String? = null,
     /** Whether Home may expose the contextual route into the private history screen. */
     val privateMemoryReviewActionVisible: Boolean = false,
+    /** Whether Home may expose the explicit user-requested export of private history. */
+    val privateMemoryExportActionVisible: Boolean = false,
     val privateMemoryStatus: PracticalShoppingHomePrivateMemoryStatus =
         PracticalShoppingHomePrivateMemoryStatus.AVAILABLE,
     /**
@@ -158,6 +160,12 @@ data class PracticalShoppingHomeRenderState(
                 privateMemoryStatus == PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE ||
                 (privateMemoryStatus == PracticalShoppingHomePrivateMemoryStatus.AVAILABLE &&
                     privateMemorySummary != null)
+        )
+        require(
+            !privateMemoryExportActionVisible ||
+                (privateMemoryStatus == PracticalShoppingHomePrivateMemoryStatus.AVAILABLE &&
+                    privateMemorySummary != null &&
+                    privateMemoryReviewActionVisible)
         )
     }
 }
@@ -330,6 +338,9 @@ object PracticalShoppingHomeRenderer {
             // or history-derived facts are exposed on Home.
             privateMemoryReviewActionVisible =
                 privateMemoryStatus == PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE ||
+                    privateMemorySummary != null,
+            privateMemoryExportActionVisible =
+                privateMemoryStatus == PracticalShoppingHomePrivateMemoryStatus.AVAILABLE &&
                     privateMemorySummary != null,
             privateMemoryStatus = privateMemoryStatus,
             noCoverageSummary = noCoverageSummary(source),

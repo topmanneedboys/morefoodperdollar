@@ -9,6 +9,7 @@ import com.valuepilot.core.NormalizedQuantity
 import com.valuepilot.core.RateUnit
 import com.valuepilot.core.UnitRate
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -46,6 +47,7 @@ class PracticalShoppingHomePersonalHistoryTest {
                     )
             )
         assertTrue(rendered.privateMemoryReviewActionVisible)
+        assertTrue(rendered.privateMemoryExportActionVisible)
         assertTrue(!summary.contains("CAD"))
         assertTrue(!summary.contains("6.00"))
     }
@@ -63,6 +65,13 @@ class PracticalShoppingHomePersonalHistoryTest {
                 requestDetails = null,
                 privateMemory = CompareHerePrivatePriceMemoryState.empty()
             ).privateMemoryReviewActionVisible
+        )
+        assertTrue(
+            !PracticalShoppingHomeRenderer.render(
+                LocalSamplePracticalShoppingDemo.initialModel().ui,
+                requestDetails = null,
+                privateMemory = CompareHerePrivatePriceMemoryState.empty()
+            ).privateMemoryExportActionVisible
         )
     }
 
@@ -313,6 +322,7 @@ class PracticalShoppingHomePersonalHistoryTest {
         )
         assertNull(rendered.privateMemorySummary)
         assertTrue(rendered.privateMemoryReviewActionVisible)
+        assertFalse(rendered.privateMemoryExportActionVisible)
         assertEquals(listOf(null, null), rendered.items.map { it.personalHistoryNotice })
     }
 

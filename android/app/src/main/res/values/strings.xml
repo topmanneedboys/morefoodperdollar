@@ -187,6 +187,16 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="home_private_memory_review">Review private price history</string>
     <string name="home_stay">Stay on Home</string>
     <string name="home_private_memory_review_description">Open Scan &amp; compare prices to review or clear private comparison history on this device.</string>
+    <string name="home_private_memory_export">Export private history</string>
+    <string name="home_private_memory_export_description">Export your exact private comparison observations from this device. This does not add live prices or recommendations.</string>
+    <string name="home_private_memory_export_title">Export private price history?</string>
+    <string name="home_private_memory_export_body">This copy includes product names, prices, package quantities, dates and source labels from this device. Send it only to a place you trust. It is historical personal context, not live retailer data or availability.</string>
+    <string name="home_private_memory_export_send">Share export</string>
+    <string name="home_private_memory_export_subject">ValuePilot private price history</string>
+    <string name="home_private_memory_export_empty">There are no private observations to export yet. Compare a product first; nothing was changed.</string>
+    <string name="home_private_memory_export_too_large">This private history is too large to share in one copy. Clear or review it from this device; nothing was changed.</string>
+    <string name="home_private_memory_export_unavailable">No sharing app is available. Your private history was not changed.</string>
+    <string name="home_private_memory_export_error_title">Private history was not exported</string>
     <string name="home_private_memory_unavailable">Private comparison history is unavailable. Open Scan &amp; compare prices to review or clear it; no live prices or recommendations are affected.</string>
     <string name="home_private_memory_clear">Clear private history</string>
     <string name="home_private_memory_clear_title">Clear private price history?</string>
