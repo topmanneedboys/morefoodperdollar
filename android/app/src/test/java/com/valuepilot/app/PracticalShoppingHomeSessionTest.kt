@@ -1,6 +1,7 @@
 package com.valuepilot.app
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -123,5 +124,41 @@ class PracticalShoppingHomeSessionTest {
             restored.ui.extraStopMinimumSavingsChoice
         )
         assertEquals("Save 2.50 CAD", restored.ui.result?.secondStop?.savingsText)
+    }
+
+    @Test
+    fun shopAgainReplaysOnlyTheCompletedListAndPreservesItsTypedDetails() {
+        val state =
+            PracticalShoppingHomeSession.submit(
+                PracticalShoppingHomeSession.initialState(),
+                "eggs milk"
+            )
+        val replayed = PracticalShoppingHomeSession.shopAgain(state)
+
+        assertEquals(LocalSamplePracticalShoppingDemo.Status.RESULT, replayed.model.ui.status)
+        assertEquals("eggs milk", replayed.model.ui.query)
+        assertEquals(state.model.ui.items, replayed.model.ui.items)
+        assertEquals(state.model.ui.result, replayed.model.ui.result)
+        assertEquals(state.requestDetails, replayed.requestDetails)
+    }
+
+    @Test
+    fun `shop again is a no-op before a completed result`() {
+        val idle = PracticalShoppingHomeSession.initialState()
+        val draft =
+            PracticalShoppingHomeSession.queryChanged(
+                idle,
+                "eggs milk"
+            )
+
+        assertSame(idle, PracticalShoppingHomeSession.shopAgain(idle))
+        assertSame(draft, PracticalShoppingHomeSession.shopAgain(draft))
+
+        val refinement =
+            PracticalShoppingHomeSession.submit(
+                idle,
+                "chicken eggs"
+            )
+        assertSame(refinement, PracticalShoppingHomeSession.shopAgain(refinement))
     }
 }

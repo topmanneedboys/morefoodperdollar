@@ -334,6 +334,7 @@ class MainActivity : AppCompatActivity() {
             homeExperience.onCompare = null
             homeExperience.onReviewPrivateMemory = null
             homeExperience.onGoodPrice = null
+            homeExperience.onShopAgain = null
         }
         if (::basketExperience.isInitialized) {
             basketExperience.onAction = null
@@ -485,6 +486,10 @@ class MainActivity : AppCompatActivity() {
         homeExperience.onCompare = { openComparison() }
         homeExperience.onReviewPrivateMemory = { reviewPrivatePriceHistory() }
         homeExperience.onGoodPrice = { openGoodPriceCheck() }
+        homeExperience.onShopAgain = {
+            homeSessionState = PracticalShoppingHomeSession.shopAgain(homeSessionState)
+            renderHome()
+        }
         rememberConfirmedChoiceAndroidSession =
             PracticalShoppingRememberConfirmedChoiceAndroidSession.create(
                 context = this,

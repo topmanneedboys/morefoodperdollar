@@ -62,6 +62,17 @@ object PracticalShoppingHomeSession {
         return reconcileDetails(submitted, changed.requestDetails)
     }
 
+    /** Re-runs only an already-completed list through the existing deterministic Home controller. */
+    fun shopAgain(state: State): State {
+        if (
+            state.model.ui.status != LocalSamplePracticalShoppingDemo.Status.RESULT ||
+                state.model.ui.query.isBlank()
+        ) {
+            return state
+        }
+        return submit(state, state.model.ui.query)
+    }
+
     fun removeItem(state: State, itemKey: ShoppingItemKey): State {
         val next = removeItem(state.model, itemKey)
         return reconcileDetails(next, state.requestDetails)

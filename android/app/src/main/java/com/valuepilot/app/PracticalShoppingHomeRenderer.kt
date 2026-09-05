@@ -140,7 +140,9 @@ data class PracticalShoppingHomeRenderState(
      * Renderer-only aggregate for a no-coverage result. A projected primary plan already
      * carries its own exact coverage text, so this remains null whenever one exists.
      */
-    val noCoverageSummary: String? = null
+    val noCoverageSummary: String? = null,
+    /** Whether the completed list can be sent through the existing Home session again. */
+    val shopAgainVisible: Boolean = false
 ) {
     init {
         require(queryCharacterLimit > 0)
@@ -150,6 +152,7 @@ data class PracticalShoppingHomeRenderState(
         require(sampleNotice.isNotBlank())
         require(privateMemorySummary == null || privateMemorySummary.isNotBlank())
         require(noCoverageSummary == null || noCoverageSummary.isNotBlank())
+        require(!shopAgainVisible || result != null)
         require(
             !privateMemoryReviewActionVisible ||
                 privateMemoryStatus == PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE ||
@@ -329,7 +332,11 @@ object PracticalShoppingHomeRenderer {
                 privateMemoryStatus == PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE ||
                     privateMemorySummary != null,
             privateMemoryStatus = privateMemoryStatus,
-            noCoverageSummary = noCoverageSummary(source)
+            noCoverageSummary = noCoverageSummary(source),
+            shopAgainVisible =
+                source.status == LocalSamplePracticalShoppingDemo.Status.RESULT &&
+                    source.result != null &&
+                    source.items.isNotEmpty()
         )
     }
 

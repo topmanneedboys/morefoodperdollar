@@ -67,6 +67,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val extraStopChoiceOwnerControls = mutableListOf<View>()
     private val goodPriceOwnerControls = mutableListOf<View>()
     private val privateMemoryReviewOwnerControls = mutableListOf<View>()
+    private val shopAgainOwnerControls = mutableListOf<View>()
 
     private var hasRenderedState = false
     private var lastRenderedSubmitEnabled = false
@@ -172,6 +173,14 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                     value != null && hasRenderedState && control.visibility == VISIBLE
             }
         }
+    var onShopAgain: (() -> Unit)? = null
+        set(value) {
+            field = value
+            shopAgainOwnerControls.forEach { control ->
+                control.isEnabled =
+                    value != null && hasRenderedState && control.visibility == VISIBLE
+            }
+        }
 
     private var suppressInputCallback = false
     private var extraStopSettingsExpanded = false
@@ -252,6 +261,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val extraStopSettingsBody = column()
     private val extraStopSettingsCard =
         card("#F9FAFB", "#E5E7EB", 8, extraStopSettingsBody)
+    private val shopAgainActionButton = shopAgainButton()
     private val privateMemorySummary = line("", 13f, "#6B7280").apply {
         accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         visibility = GONE
@@ -291,6 +301,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         addView(unknownCard)
         addView(noCoverageSummary)
         addView(resultContainer)
+        addView(shopAgainActionButton)
         addView(extraStopSettingsButton)
         addView(extraStopSettingsCard)
         addView(goodPriceActionButton)
@@ -301,6 +312,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         unknownCard.visibility = GONE
         extraStopSettingsCard.visibility = GONE
         privateMemoryReviewActionButton.visibility = GONE
+        shopAgainActionButton.visibility = GONE
 
         input.addTextChangedListener(
             object : TextWatcher {
@@ -349,6 +361,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         renderUnknown(state.unknownItems)
         renderNoCoverageSummary(state.noCoverageSummary)
         resultContainer.render(state.result, state.sampleNotice)
+        renderShopAgain(state.shopAgainVisible)
         renderExtraStopSettings(state.extraStopSettings)
         renderPrivateMemory(
             status = state.privateMemoryStatus,
@@ -444,6 +457,12 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private fun renderNoCoverageSummary(summary: String?) {
         noCoverageSummary.text = summary.orEmpty()
         noCoverageSummary.visibility = if (summary == null) GONE else VISIBLE
+    }
+
+    private fun renderShopAgain(visible: Boolean) {
+        shopAgainActionButton.visibility = if (visible) VISIBLE else GONE
+        shopAgainActionButton.isEnabled =
+            visible && onShopAgain != null && hasRenderedState
     }
 
     private fun itemRow(item: PracticalShoppingHomeItemRenderState): View =
@@ -778,6 +797,24 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         // Keep the owner-driven comparison route inert until its callback is attached.
         isEnabled = false
         setOnClickListener { onCompare?.invoke() }
+    }
+
+    private fun shopAgainButton(): MaterialButton = MaterialButton(context).apply {
+        shopAgainOwnerControls += this
+        text = context.getString(R.string.home_shop_again)
+        contentDescription = context.getString(R.string.home_shop_again_description)
+        isAllCaps = false
+        textSize = 14f
+        cornerRadius = dp(16)
+        strokeWidth = dp(1)
+        strokeColor = ColorStateList.valueOf(Color.parseColor("#D1D5DB"))
+        setTextColor(Color.parseColor("#374151"))
+        backgroundTintList = ColorStateList.valueOf(Color.WHITE)
+        layoutParams = fullWidth(dp(50), 12)
+        // Keep this repeat-use action inert until the owner attaches and a
+        // completed immutable result is rendered.
+        isEnabled = false
+        setOnClickListener { onShopAgain?.invoke() }
     }
 
     private fun goodPriceButton(): MaterialButton = MaterialButton(context).apply {

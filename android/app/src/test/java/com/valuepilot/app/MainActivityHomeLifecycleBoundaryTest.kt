@@ -25,6 +25,7 @@ class MainActivityHomeLifecycleBoundaryTest {
             "homeExperience.onCompare = null",
             "homeExperience.onReviewPrivateMemory = null",
             "homeExperience.onGoodPrice = null",
+            "homeExperience.onShopAgain = null",
             "if (::rememberConfirmedChoiceAndroidSession.isInitialized)",
             "rememberConfirmedChoiceAndroidSession.close()",
             "if (::basketExperience.isInitialized)",
@@ -200,6 +201,8 @@ class MainActivityHomeLifecycleBoundaryTest {
 
         listOf(
             "homeExperience.onGoodPrice = { openGoodPriceCheck() }",
+            "homeExperience.onShopAgain = {",
+            "PracticalShoppingHomeSession.shopAgain(homeSessionState)",
             "private fun openGoodPriceCheck()",
             "Intent(this, GoodPriceActivity::class.java)",
             "dismissHomeItemDetailsDialog()"

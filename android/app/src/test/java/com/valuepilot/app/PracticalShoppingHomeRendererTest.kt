@@ -20,6 +20,7 @@ class PracticalShoppingHomeRendererTest {
         assertEquals("", rendered.query)
         assertEquals(240, rendered.queryCharacterLimit)
         assertFalse(rendered.submitEnabled)
+        assertFalse(rendered.shopAgainVisible)
         assertEquals(PracticalShoppingHomeMessageTone.NEUTRAL, rendered.messageTone)
         assertTrue(rendered.items.isEmpty())
         assertNull(rendered.refinement)
@@ -154,6 +155,7 @@ class PracticalShoppingHomeRendererTest {
 
         assertSame(sourceResult, rendered.result)
         assertTrue(rendered.extraStopSettings.visible)
+        assertTrue(rendered.shopAgainVisible)
         assertEquals("Your best practical shop", rendered.result?.headline)
         assertEquals("Example Grocer East", rendered.result?.primary?.storeName)
         assertEquals("Basket 18.77 CAD", rendered.result?.primary?.basketCostText)
@@ -182,6 +184,7 @@ class PracticalShoppingHomeRendererTest {
 
         assertSame(sourceResult, rendered.result)
         assertTrue(rendered.extraStopSettings.visible)
+        assertTrue(rendered.shopAgainVisible)
         assertEquals("Known subtotal 4.49 CAD", rendered.result?.primary?.basketCostText)
         assertEquals("Missing price: Coffee", rendered.result?.primary?.missingItemsText)
         assertEquals(listOf("Sample Market North", null), rendered.items.map { it.storeAssignment })
@@ -281,6 +284,7 @@ class PracticalShoppingHomeRendererTest {
         )
         assertEquals("0 of 1 item priced yet.", rendered.noCoverageSummary)
         assertFalse(rendered.extraStopSettings.visible)
+        assertTrue(rendered.shopAgainVisible)
         assertTrue(rendered.items.single().observedPriceActionVisible)
     }
 
@@ -397,6 +401,7 @@ class PracticalShoppingHomeRendererTest {
         assertEquals(240, rendered.queryCharacterLimit)
         assertEquals(rendered.queryCharacterLimit + 1, rendered.query.length)
         assertFalse(rendered.submitEnabled)
+        assertFalse(rendered.shopAgainVisible)
         assertFalse(rendered.extraStopSettings.visible)
         assertEquals(PracticalShoppingHomeMessageTone.ERROR, rendered.messageTone)
         assertTrue(rendered.items.isEmpty())
