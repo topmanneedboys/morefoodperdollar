@@ -2,6 +2,12 @@
 
 ## Latest promoted consumer boundary
 
+- Promoted code commit: `42f86e7dbd6a1e03a694c85032f30f21b1ab752e` (`Let saved products reopen Good Price`)
+- Candidate workflow: **33957008185** — success
+- Promoted workflow/provenance: **33957294707** — success
+
+Saved product rows now have a typed `Check price` handoff into the existing Good Price Activity. It carries only a bounded display label as an untrusted prefill; exact package quantity, currency, observed price and the existing evaluator/private-memory rules remain required downstream. The saved identity is not treated as a comparison fact, current offer, store, stock or availability claim, and busy Saved lifecycle states suppress the action. This repeat-use navigation path adds no Compare Here parser/ranking/evidence authority, Android networking or provider economics.
+
 - Promoted code commit: `37cc19cb72cb231831dfecef8fd5eb0c0e5bca2b` (`Add review gate for OCR comparison suggestions`)
 - Candidate workflow: **33955298400** — success
 - Promoted workflow/provenance: **33955607275** — success
