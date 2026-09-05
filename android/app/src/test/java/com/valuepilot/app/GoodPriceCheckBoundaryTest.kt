@@ -96,6 +96,22 @@ class GoodPriceCheckBoundaryTest {
     }
 
     @Test
+    fun `good price invalidates projected personal context when memory changes on resume`() {
+        val source = source("GoodPriceActivity.kt").readText()
+        val onResume =
+            source.substringAfter("override fun onResume").substringBefore("override fun onDestroy")
+
+        listOf(
+            "val previousMemory = privateMemory",
+            "val previousIssue = privateMemoryLoadIssue",
+            "privateMemory = loadPrivateMemory()",
+            "previousMemory != privateMemory || previousIssue != privateMemoryLoadIssue",
+            "renderIdle()",
+            "showMemoryUnavailable()"
+        ).forEach { required -> assertTrue(onResume.contains(required)) }
+    }
+
+    @Test
     fun `good price activity is not exported`() {
         val manifest = manifest().readText()
         val activityStart = manifest.indexOf("android:name=\".GoodPriceActivity\"")

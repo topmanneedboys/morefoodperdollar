@@ -61,6 +61,7 @@ class ComparisonActivity : AppCompatActivity() {
     private lateinit var privateMemoryStatus: TextView
     private lateinit var clearPrivateMemoryButton: Button
     private lateinit var privateMemoryStore: CompareHerePrivatePriceMemoryStore
+    private var privateMemoryStateWhenStatusRendered: CompareHerePrivatePriceMemoryState? = null
 
     private val productInputs = mutableListOf<EditText>()
     private val productInputRows = mutableListOf<ProductInputRow>()
@@ -145,6 +146,7 @@ class ComparisonActivity : AppCompatActivity() {
         clearPrivateMemoryButton.setOnClickListener {
             val result = privateMemoryStore.clear()
             if (result.accepted) {
+                privateMemoryStateWhenStatusRendered = CompareHerePrivatePriceMemoryState.empty()
                 hidePrivateMemoryStatus()
             } else {
                 privateMemoryStatus.text = getString(R.string.compare_memory_clear_error)
@@ -264,6 +266,17 @@ class ComparisonActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         renderScannerStatus()
+        val expected = privateMemoryStateWhenStatusRendered
+        if (expected != null && privateMemoryStatus.visibility == View.VISIBLE) {
+            val loaded = privateMemoryStore.load()
+            if (!loaded.accepted || loaded.state != expected) {
+                // Home or another ValuePilot route may have changed device-only history while
+                // this screen was paused. Do not leave a stale personal-memory message visible.
+                privateMemoryStateWhenStatusRendered =
+                    loaded.state ?: CompareHerePrivatePriceMemoryState.empty()
+                hidePrivateMemoryStatus()
+            }
+        }
     }
 
     override fun onPause() {
@@ -1462,6 +1475,7 @@ class ComparisonActivity : AppCompatActivity() {
         capture: CompareHerePrivatePriceMemoryCapture?
     ) {
         if (capture == null) {
+            privateMemoryStateWhenStatusRendered = null
             hidePrivateMemoryStatus()
             return
         }
@@ -1487,6 +1501,7 @@ class ComparisonActivity : AppCompatActivity() {
 
         val result = privateMemoryStore.append(capture)
         if (result.accepted) {
+            privateMemoryStateWhenStatusRendered = requireNotNull(result.state)
             val savedText = getString(R.string.compare_memory_saved, capture.entries.size)
             val summaries =
                 capture.entries

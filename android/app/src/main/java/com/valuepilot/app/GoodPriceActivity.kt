@@ -171,8 +171,17 @@ class GoodPriceActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        val previousMemory = privateMemory
+        val previousIssue = privateMemoryLoadIssue
         privateMemory = loadPrivateMemory()
-        if (privateMemoryLoadIssue != null) showMemoryUnavailable()
+        if (previousMemory != privateMemory || previousIssue != privateMemoryLoadIssue) {
+            // Home or Compare Here may have changed device-only history while this Activity was
+            // paused. Any displayed answer may contain the old personal context, so fail closed
+            // and keep the shopper's typed draft ready for an explicit fresh check.
+            renderIdle()
+        } else if (privateMemoryLoadIssue != null) {
+            showMemoryUnavailable()
+        }
     }
 
     override fun onDestroy() {
