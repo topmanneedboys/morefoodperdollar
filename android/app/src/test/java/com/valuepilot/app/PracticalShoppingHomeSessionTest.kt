@@ -123,7 +123,7 @@ class PracticalShoppingHomeSessionTest {
             LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.ONE_CAD,
             restored.ui.extraStopMinimumSavingsChoice
         )
-        assertEquals("Save 2.50 CAD", restored.ui.result?.secondStop?.savingsText)
+        assertEquals("Could save 2.50 CAD", restored.ui.result?.secondStop?.savingsText)
     }
 
     @Test

@@ -205,7 +205,7 @@ class PracticalShoppingUiProjectorTest {
         assertEquals("OPTIONAL EXTRA STOP", second.badge)
         assertEquals("Example Grocer", second.storeName)
         assertEquals("Combined basket 52.50 CAD", second.combinedBasketCostText)
-        assertEquals("Save 17.50 CAD", second.savingsText)
+        assertEquals("Could save 17.50 CAD", second.savingsText)
         assertEquals("Adds 4 min · 1.2 km", second.additionalTravelText)
         assertEquals("Price freshness: 3 fresh · 0 stale · 0 unknown", second.evidenceText)
         assertEquals("Buy at Sample Market: Eggs", second.baseItemsText)

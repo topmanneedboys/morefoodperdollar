@@ -295,7 +295,7 @@ class LocalSamplePracticalShoppingDemoTest {
             "Then buy at Example Grocer East: Milk, Bread, Basmati rice, Chicken breast",
             secondStop.addedItemsText
         )
-        assertEquals("Save 2.50 CAD", secondStop.savingsText)
+        assertEquals("Could save 2.50 CAD", secondStop.savingsText)
         assertEquals("Combined basket 43.04 CAD", secondStop.combinedBasketCostText)
 
         model =

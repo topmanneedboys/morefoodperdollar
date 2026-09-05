@@ -209,7 +209,10 @@ object PracticalShoppingUiProjector {
                         ),
                     combinedBasketCostText =
                         "Combined basket ${formatMoney(candidate.knownCombinedBasketCost)}",
-                    savingsText = "Save ${formatMoney(savings)}",
+                    // This is a projected alternative, not a confirmed purchase outcome.
+                    // Keep the wording explicit so the shopper cannot mistake a plan
+                    // estimate for money already saved.
+                    savingsText = "Could save ${formatMoney(savings)}",
                     additionalTravelText =
                         "Adds ${formatTravel(candidate.additionalTravel)}",
                     evidenceText = formatHomeEvidence(candidate.evidence)

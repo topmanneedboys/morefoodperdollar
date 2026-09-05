@@ -79,14 +79,14 @@ class PracticalShoppingPlanResultPresentationTest {
                 baseItemsText = "Buy at Sample Market: Eggs",
                 addedItemsText = "Then buy at Example Grocer: Milk",
                 combinedBasketCostText = "Combined basket 20.00 CAD",
-                savingsText = "Save 3.00 CAD",
+                savingsText = "Could save 3.00 CAD",
                 additionalTravelText = "Adds 4 min · 2 km",
                 evidenceText = "Price freshness: 2 fresh · 0 stale · 0 unknown"
             )
 
         assertEquals(
             "OPTIONAL EXTRA STOP. Store: Example Grocer. Buy at Sample Market: Eggs. " +
-                "Then buy at Example Grocer: Milk. Combined basket 20.00 CAD. Save 3.00 CAD. " +
+                "Then buy at Example Grocer: Milk. Combined basket 20.00 CAD. Could save 3.00 CAD. " +
                 "Adds 4 min · 2 km. Price freshness: 2 fresh · 0 stale · 0 unknown.",
             practicalShoppingSecondStopCardContentDescription(state)
         )
@@ -111,13 +111,13 @@ class PracticalShoppingPlanResultPresentationTest {
                 baseItemsText = "Buy at Sample Market: Eggs",
                 addedItemsText = "Then buy at Example Grocer: Milk",
                 combinedBasketCostText = "Combined basket 20.00 CAD",
-                savingsText = "Save 3.00 CAD",
+                savingsText = "Could save 3.00 CAD",
                 additionalTravelText = "Adds 4 min · 2 km",
                 evidenceText = "Price freshness: 2 fresh · 0 stale · 0 unknown"
             )
         assertEquals(
             "OPTIONAL EXTRA STOP. Store: Example Grocer. Buy at Sample Market: Eggs. " +
-                "Then buy at Example Grocer: Milk. Combined basket 20.00 CAD. Save 3.00 CAD. " +
+                "Then buy at Example Grocer: Milk. Combined basket 20.00 CAD. Could save 3.00 CAD. " +
                 "Adds 4 min · 2 km. Price freshness: 2 fresh · 0 stale · 0 unknown. " +
                 "Fictional sample data only — not live retailer prices or availability.",
             practicalShoppingSecondStopCardContentDescription(secondStop, notice)
@@ -137,7 +137,7 @@ class PracticalShoppingPlanResultPresentationTest {
                     baseItemsText = "Buy at Sample Market: Eggs",
                     addedItemsText = "Then buy at Example Grocer: Milk",
                     combinedBasketCostText = "Combined basket 20.00 CAD",
-                    savingsText = "Save 3.00 CAD",
+                    savingsText = "Could save 3.00 CAD",
                     additionalTravelText = "Adds 4 min · 2 km",
                     evidenceText = "Price freshness: 2 fresh · 0 stale · 0 unknown"
                 ),
