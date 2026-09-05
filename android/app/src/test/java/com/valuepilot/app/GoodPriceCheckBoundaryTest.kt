@@ -70,7 +70,6 @@ class GoodPriceCheckBoundaryTest {
             "EXTRA_PRODUCT_NAME",
             "GoodPriceActivityPrefill",
             ".sanitize(intent.getStringExtra(EXTRA_PRODUCT_NAME))",
-            "savedInstanceState == null",
             "productInput.setText(value)"
         ).forEach { required -> assertTrue(source.contains(required)) }
         listOf(
@@ -81,6 +80,22 @@ class GoodPriceCheckBoundaryTest {
             "RankingEngine",
             "INTERNET"
         ).forEach { forbidden -> assertFalse(source.contains(forbidden)) }
+    }
+
+    @Test
+    fun `good price preserves the bounded typed draft across recreation`() {
+        val source = source("GoodPriceActivity.kt").readText()
+        val saveState =
+            source
+                .substringAfter("override fun onSaveInstanceState")
+                .substringBefore("private fun runCheck")
+
+        assertTrue(source.contains("STATE_PRODUCT_INPUT"))
+        assertTrue(source.contains("savedInstanceState?.containsKey(STATE_PRODUCT_INPUT) == true"))
+        assertTrue(source.contains("productInput.setText(restoredInput)"))
+        assertTrue(saveState.contains("productInput.text?.toString().orEmpty()"))
+        assertTrue(source.contains("} else {"))
+        assertTrue(source.contains("GoodPriceActivityPrefill"))
     }
 
     @Test

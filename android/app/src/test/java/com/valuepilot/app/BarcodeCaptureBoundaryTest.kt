@@ -54,6 +54,8 @@ class BarcodeCaptureBoundaryTest {
             "GoodPriceBarcodeIdentityPresentation",
             "barcodeLookupExecutor",
             "barcodeLookupRequestId",
+            "barcodeCaptureInFlight",
+            "good_price_barcode_cancelled",
             "good_price_barcode_used"
         ).forEach { required -> assertTrue(source.contains(required)) }
         assertTrue(layout.contains("goodPriceBarcodeButton"))
@@ -68,6 +70,29 @@ class BarcodeCaptureBoundaryTest {
             "current offer",
             "live inventory"
         ).forEach { forbidden -> assertFalse(source.contains(forbidden)) }
+    }
+
+    @Test
+    fun `good price barcode capture reports cancellation and blocks duplicate launches`() {
+        val source = source("GoodPriceActivity.kt").readText()
+        val callback =
+            source
+                .substringAfter("registerForActivityResult(ActivityResultContracts.StartActivityForResult())")
+                .substringBefore("override fun onCreate")
+
+        assertTrue(callback.contains("!barcodeCaptureInFlight"))
+        assertTrue(callback.contains("barcodeCaptureInFlight = false"))
+        assertTrue(callback.contains("barcodeStatus.text = getString(R.string.good_price_barcode_cancelled)"))
+        assertTrue(source.contains("if (barcodeLookupClosed || barcodeCaptureInFlight) return"))
+        assertTrue(source.contains("barcodeButton.isEnabled = false"))
+        assertTrue(source.contains("barcodeButton.isEnabled = true"))
+    }
+
+    @Test
+    fun `good price barcode cancellation copy preserves the draft boundary`() {
+        val strings = file("src/main/res/values/strings.xml").readText()
+        assertTrue(strings.contains("name=\"good_price_barcode_cancelled\""))
+        assertTrue(strings.contains("price-check draft is unchanged"))
     }
 
     private fun source(name: String): File =

@@ -43,11 +43,21 @@ class GoodPriceActivity : AppCompatActivity() {
     private val barcodeLookupExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private var barcodeLookupRequestId = 0L
     private var barcodeLookupClosed = false
+    private var barcodeCaptureInFlight = false
     private var barcodeDialog: AlertDialog? = null
     private var shareCard: GoodPriceShareCard? = null
     private val barcodeCaptureLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode != RESULT_OK) return@registerForActivityResult
+            if (barcodeLookupClosed || !barcodeCaptureInFlight) {
+                return@registerForActivityResult
+            }
+            barcodeCaptureInFlight = false
+            barcodeButton.isEnabled = true
+            if (result.resultCode != RESULT_OK) {
+                barcodeStatus.text = getString(R.string.good_price_barcode_cancelled)
+                barcodeStatus.visibility = View.VISIBLE
+                return@registerForActivityResult
+            }
             val gtin = result.data?.getStringExtra(BarcodeCaptureActivity.EXTRA_GTIN)
             if (gtin.isNullOrBlank()) {
                 barcodeStatus.text = getString(R.string.good_price_barcode_unavailable)
@@ -139,7 +149,13 @@ class GoodPriceActivity : AppCompatActivity() {
             }
         }
 
-        if (savedInstanceState == null) {
+        if (savedInstanceState?.containsKey(STATE_PRODUCT_INPUT) == true) {
+            restoring = true
+            val restoredInput = savedInstanceState.getString(STATE_PRODUCT_INPUT).orEmpty()
+            productInput.setText(restoredInput)
+            productInput.setSelection(productInput.text?.length ?: 0)
+            restoring = false
+        } else {
             GoodPriceActivityPrefill
                 .sanitize(intent.getStringExtra(EXTRA_PRODUCT_NAME))
                 ?.let { value ->
@@ -186,6 +202,7 @@ class GoodPriceActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         barcodeLookupClosed = true
+        barcodeCaptureInFlight = false
         barcodeLookupRequestId += 1L
         barcodeDialog?.dismiss()
         barcodeDialog = null
@@ -197,6 +214,10 @@ class GoodPriceActivity : AppCompatActivity() {
         outState.putString(
             STATE_PRICE_SELECTION,
             CompareHerePriceSelectionPersistence.encode(priceSelection)
+        )
+        outState.putString(
+            STATE_PRODUCT_INPUT,
+            productInput.text?.toString().orEmpty()
         )
         super.onSaveInstanceState(outState)
     }
@@ -317,10 +338,16 @@ class GoodPriceActivity : AppCompatActivity() {
     }
 
     private fun beginBarcodeCapture() {
-        if (barcodeLookupClosed) return
+        if (barcodeLookupClosed || barcodeCaptureInFlight) return
+        barcodeCaptureInFlight = true
+        barcodeButton.isEnabled = false
+        barcodeStatus.text = getString(R.string.good_price_barcode_processing)
+        barcodeStatus.visibility = View.VISIBLE
         try {
             barcodeCaptureLauncher.launch(Intent(this, BarcodeCaptureActivity::class.java))
         } catch (_: Exception) {
+            barcodeCaptureInFlight = false
+            barcodeButton.isEnabled = true
             barcodeStatus.text = getString(R.string.good_price_barcode_unavailable)
             barcodeStatus.visibility = View.VISIBLE
         }
@@ -328,7 +355,11 @@ class GoodPriceActivity : AppCompatActivity() {
 
     private fun beginBarcodeIdentityLookup(gtin: String) {
         val trimmed = gtin.trim()
-        if (barcodeLookupClosed || trimmed.isBlank()) return
+        if (barcodeLookupClosed || trimmed.isBlank()) {
+            barcodeCaptureInFlight = false
+            barcodeButton.isEnabled = !barcodeLookupClosed
+            return
+        }
 
         val requestId = barcodeLookupRequestId + 1L
         barcodeLookupRequestId = requestId
@@ -458,7 +489,7 @@ class GoodPriceActivity : AppCompatActivity() {
         barcodeDialog = null
         barcodeStatus.text = getString(R.string.good_price_barcode_ready)
         barcodeStatus.visibility = View.VISIBLE
-        barcodeButton.isEnabled = !barcodeLookupClosed
+        barcodeButton.isEnabled = !barcodeLookupClosed && !barcodeCaptureInFlight
     }
 
     private fun loadPrivateMemory(): CompareHerePrivatePriceMemoryState {
@@ -483,6 +514,7 @@ class GoodPriceActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_PRODUCT_NAME = "com.valuepilot.app.extra.PRODUCT_NAME"
         private const val STATE_PRICE_SELECTION = "good_price.price_selection"
+        private const val STATE_PRODUCT_INPUT = "good_price.product_input"
         private const val OFFLINE_CATALOG_MAX_AGE_MILLIS = 8L * 24L * 60L * 60L * 1_000L
     }
 }

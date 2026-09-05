@@ -222,6 +222,7 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="good_price_barcode_action">Scan a package barcode</string>
     <string name="good_price_barcode_ready">A barcode can suggest the product name offline. You still enter the package quantity and price you personally see.</string>
     <string name="good_price_barcode_processing">Looking up that identity in the bundled offline catalog…</string>
+    <string name="good_price_barcode_cancelled">Barcode capture cancelled. Your price-check draft is unchanged.</string>
     <string name="good_price_barcode_unavailable">The offline identity catalog is unavailable. Enter the product name, package quantity and observed price manually.</string>
     <string name="good_price_barcode_no_match">Barcode %1$s is valid, but this offline identity snapshot has no match. Enter the product name, package quantity and observed price manually.</string>
     <string name="good_price_barcode_match_title">Identity suggestion from barcode</string>
