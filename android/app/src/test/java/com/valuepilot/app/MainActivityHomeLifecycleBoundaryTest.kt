@@ -24,6 +24,8 @@ class MainActivityHomeLifecycleBoundaryTest {
             "homeExperience.onAddObservedPrice = null",
             "homeExperience.onCompare = null",
             "homeExperience.onReviewPrivateMemory = null",
+            "homeExperience.onExportPrivateMemory = null",
+            "homeExperience.onForgetPrivateMemory = null",
             "homeExperience.onGoodPrice = null",
             "homeExperience.onShopAgain = null",
             "if (::rememberConfirmedChoiceAndroidSession.isInitialized)",
@@ -263,6 +265,7 @@ class MainActivityHomeLifecycleBoundaryTest {
         listOf(
             "homeExperience.onReviewPrivateMemory = { reviewPrivatePriceHistory() }",
             "homeExperience.onExportPrivateMemory = { exportPrivatePriceHistory() }",
+            "homeExperience.onForgetPrivateMemory = { forgetPrivatePriceHistoryObservation() }",
             "homeExperience.onReviewPrivateMemory = null",
             "homeExperience.onExportPrivateMemory = null",
             "private fun openComparison()",
@@ -352,6 +355,43 @@ class MainActivityHomeLifecycleBoundaryTest {
         ).forEach { forbidden ->
             assertTrue(
                 "Private-history export must not add shopping/network authority: $forbidden",
+                !source.contains(forbidden)
+            )
+        }
+    }
+
+    @Test
+    fun homePrivateMemoryForgetUsesFingerprintConfirmationAndLocalRecheck() {
+        val source = source().readText()
+
+        listOf(
+            "private var privatePriceHistoryForgetDialog: AlertDialog? = null",
+            "private fun forgetPrivatePriceHistoryObservation()",
+            "PracticalShoppingPrivatePriceHistoryForgetPresentation.from(homePrivateMemoryState)",
+            "setSingleChoiceItems(choices, -1)",
+            "selectedObservationId",
+            "home_private_memory_forget_confirm",
+            "homePrivateMemoryStore.load()",
+            "latestState.entries.none { it.observationId == observationId }",
+            "homePrivateMemoryStore.remove(observationId)",
+            "home_private_memory_forget_not_found",
+            "home_private_memory_forget_failed",
+            "home_private_memory_forget_empty"
+        ).forEach { required ->
+            assertTrue(
+                "Expected exact, confirmed private-history removal boundary: $required",
+                source.contains(required)
+            )
+        }
+
+        listOf(
+            "PracticalShoppingPlanner",
+            "Money.parse",
+            "AuthorizedOfferSnapshot",
+            "HttpURLConnection"
+        ).forEach { forbidden ->
+            assertTrue(
+                "Private-history removal must not add shopping/network authority: $forbidden",
                 !source.contains(forbidden)
             )
         }

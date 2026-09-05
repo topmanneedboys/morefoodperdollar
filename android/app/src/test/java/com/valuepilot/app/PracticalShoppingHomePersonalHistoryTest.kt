@@ -48,6 +48,7 @@ class PracticalShoppingHomePersonalHistoryTest {
             )
         assertTrue(rendered.privateMemoryReviewActionVisible)
         assertTrue(rendered.privateMemoryExportActionVisible)
+        assertTrue(rendered.privateMemoryForgetActionVisible)
         assertTrue(!summary.contains("CAD"))
         assertTrue(!summary.contains("6.00"))
     }
@@ -72,6 +73,13 @@ class PracticalShoppingHomePersonalHistoryTest {
                 requestDetails = null,
                 privateMemory = CompareHerePrivatePriceMemoryState.empty()
             ).privateMemoryExportActionVisible
+        )
+        assertTrue(
+            !PracticalShoppingHomeRenderer.render(
+                LocalSamplePracticalShoppingDemo.initialModel().ui,
+                requestDetails = null,
+                privateMemory = CompareHerePrivatePriceMemoryState.empty()
+            ).privateMemoryForgetActionVisible
         )
     }
 
@@ -323,6 +331,7 @@ class PracticalShoppingHomePersonalHistoryTest {
         assertNull(rendered.privateMemorySummary)
         assertTrue(rendered.privateMemoryReviewActionVisible)
         assertFalse(rendered.privateMemoryExportActionVisible)
+        assertFalse(rendered.privateMemoryForgetActionVisible)
         assertEquals(listOf(null, null), rendered.items.map { it.personalHistoryNotice })
     }
 

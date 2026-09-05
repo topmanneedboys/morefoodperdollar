@@ -136,6 +136,8 @@ data class PracticalShoppingHomeRenderState(
     val privateMemoryReviewActionVisible: Boolean = false,
     /** Whether Home may expose the explicit user-requested export of private history. */
     val privateMemoryExportActionVisible: Boolean = false,
+    /** Whether Home may expose the explicit user-requested removal of one private observation. */
+    val privateMemoryForgetActionVisible: Boolean = false,
     val privateMemoryStatus: PracticalShoppingHomePrivateMemoryStatus =
         PracticalShoppingHomePrivateMemoryStatus.AVAILABLE,
     /**
@@ -163,6 +165,12 @@ data class PracticalShoppingHomeRenderState(
         )
         require(
             !privateMemoryExportActionVisible ||
+                (privateMemoryStatus == PracticalShoppingHomePrivateMemoryStatus.AVAILABLE &&
+                    privateMemorySummary != null &&
+                    privateMemoryReviewActionVisible)
+        )
+        require(
+            !privateMemoryForgetActionVisible ||
                 (privateMemoryStatus == PracticalShoppingHomePrivateMemoryStatus.AVAILABLE &&
                     privateMemorySummary != null &&
                     privateMemoryReviewActionVisible)
@@ -340,6 +348,9 @@ object PracticalShoppingHomeRenderer {
                 privateMemoryStatus == PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE ||
                     privateMemorySummary != null,
             privateMemoryExportActionVisible =
+                privateMemoryStatus == PracticalShoppingHomePrivateMemoryStatus.AVAILABLE &&
+                    privateMemorySummary != null,
+            privateMemoryForgetActionVisible =
                 privateMemoryStatus == PracticalShoppingHomePrivateMemoryStatus.AVAILABLE &&
                     privateMemorySummary != null,
             privateMemoryStatus = privateMemoryStatus,

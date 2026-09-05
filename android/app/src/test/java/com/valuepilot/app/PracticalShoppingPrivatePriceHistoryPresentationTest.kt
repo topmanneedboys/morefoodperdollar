@@ -140,6 +140,59 @@ class PracticalShoppingPrivatePriceHistoryPresentationTest {
         assertEquals("Product 40", presentation.rows.first().displayName)
     }
 
+    @Test
+    fun `forget choices are newest first and carry exact fingerprints`() {
+        val state =
+            CompareHerePrivatePriceMemoryState(
+                entries =
+                    listOf(
+                        entry(id = "old", name = "Old Milk", priceMinor = 500, observedAt = 1L),
+                        entry(id = "new", name = "New Milk", priceMinor = 600, observedAt = 2L)
+                    )
+            )
+
+        val presentation =
+            requireNotNull(PracticalShoppingPrivatePriceHistoryForgetPresentation.from(state))
+
+        assertEquals(2, presentation.choices.size)
+        assertEquals(0, presentation.omittedCount)
+        assertEquals(
+            state.entries.single { it.displayName == "New Milk" }.observationId,
+            presentation.choices.first().observationId
+        )
+        assertTrue(presentation.choices.first().label.contains("New Milk"))
+        assertTrue(presentation.choices.first().label.contains("6.00 CAD"))
+        assertTrue(presentation.message.contains("does not change any live price"))
+    }
+
+    @Test
+    fun `forget choices stay bounded and empty history has no destructive action`() {
+        val entries =
+            (1..40).map { index ->
+                entry(
+                    id = "forget-$index",
+                    name = "Product $index",
+                    priceMinor = 100L + index,
+                    observedAt = index.toLong()
+                )
+            }
+        val presentation =
+            requireNotNull(
+                PracticalShoppingPrivatePriceHistoryForgetPresentation.from(
+                    CompareHerePrivatePriceMemoryState(entries)
+                )
+            )
+
+        assertEquals(PracticalShoppingPrivatePriceHistoryForgetPresentation.visibleChoiceLimit, presentation.choices.size)
+        assertEquals(8, presentation.omittedCount)
+        assertTrue(presentation.message.contains("older observations remain"))
+        assertTrue(
+            PracticalShoppingPrivatePriceHistoryForgetPresentation.from(
+                CompareHerePrivatePriceMemoryState.empty()
+            ) == null
+        )
+    }
+
     private fun entry(
         id: String,
         name: String,

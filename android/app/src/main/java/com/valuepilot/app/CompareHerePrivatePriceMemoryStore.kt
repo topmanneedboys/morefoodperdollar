@@ -16,7 +16,8 @@ internal enum class CompareHerePrivatePriceMemoryStoreIssue {
     STORED_DATA_INVALID,
     ENCODE_REJECTED,
     WRITE_FAILED,
-    DELETE_FAILED
+    DELETE_FAILED,
+    ENTRY_NOT_FOUND
 }
 
 internal data class CompareHerePrivatePriceMemoryLoadResult(
@@ -51,6 +52,7 @@ internal data class CompareHerePrivatePriceMemoryMutationResult(
 internal interface CompareHerePrivatePriceMemoryStore {
     fun load(): CompareHerePrivatePriceMemoryLoadResult
     fun append(capture: CompareHerePrivatePriceMemoryCapture): CompareHerePrivatePriceMemoryMutationResult
+    fun remove(observationId: String): CompareHerePrivatePriceMemoryMutationResult
     fun clear(): CompareHerePrivatePriceMemoryMutationResult
 }
 
@@ -207,6 +209,39 @@ internal class CompareHerePrivatePriceMemoryAndroidStore internal constructor(
                 capture = capture
             )
         return replace(next)
+    }
+
+    @Synchronized
+    override fun remove(
+        observationId: String
+    ): CompareHerePrivatePriceMemoryMutationResult {
+        if (!observationId.matches(Regex("[0-9a-f]{64}"))) {
+            return CompareHerePrivatePriceMemoryMutationResult(
+                state = null,
+                issue = CompareHerePrivatePriceMemoryStoreIssue.ENTRY_NOT_FOUND
+            )
+        }
+
+        val loaded = load()
+        if (!loaded.accepted) {
+            return CompareHerePrivatePriceMemoryMutationResult(
+                state = null,
+                issue = requireNotNull(loaded.issue),
+                codecIssue = loaded.codecIssue
+            )
+        }
+        val current = requireNotNull(loaded.state)
+        if (current.entries.none { it.observationId == observationId }) {
+            return CompareHerePrivatePriceMemoryMutationResult(
+                state = null,
+                issue = CompareHerePrivatePriceMemoryStoreIssue.ENTRY_NOT_FOUND
+            )
+        }
+        return replace(
+            CompareHerePrivatePriceMemoryState(
+                current.entries.filterNot { it.observationId == observationId }
+            )
+        )
     }
 
     @Synchronized

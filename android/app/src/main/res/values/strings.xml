@@ -197,6 +197,13 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="home_private_memory_export_too_large">This private history is too large to share in one copy. Clear or review it from this device; nothing was changed.</string>
     <string name="home_private_memory_export_unavailable">No sharing app is available. Your private history was not changed.</string>
     <string name="home_private_memory_export_error_title">Private history was not exported</string>
+    <string name="home_private_memory_forget">Forget one observation</string>
+    <string name="home_private_memory_forget_description">Choose one exact private comparison observation to remove from this device. This does not change live prices or plans.</string>
+    <string name="home_private_memory_forget_confirm">Forget selected</string>
+    <string name="home_private_memory_forget_empty">There are no private observations to forget yet. Nothing was changed.</string>
+    <string name="home_private_memory_forget_not_found">That observation is no longer present. Your history was not changed.</string>
+    <string name="home_private_memory_forget_failed">The selected observation could not be removed. Review the local history and try again; nothing was treated as a live price.</string>
+    <string name="home_private_memory_forget_error_title">Private observation was not removed</string>
     <string name="home_private_memory_unavailable">Private comparison history is unavailable. Open Scan &amp; compare prices to review or clear it; no live prices or recommendations are affected.</string>
     <string name="home_private_memory_clear">Clear private history</string>
     <string name="home_private_memory_clear_title">Clear private price history?</string>

@@ -223,6 +223,39 @@ class CompareHerePrivatePriceMemoryTest {
         assertEquals(0, store.load().state!!.entries.size)
     }
 
+    @Test
+    fun `local store removes only the requested fingerprint`() {
+        val storage = FakeMemoryStorage()
+        val store = CompareHerePrivatePriceMemoryAndroidStore(storage)
+        val success =
+            CompareHereManualComparisonService.compare(
+                comparisonIntentKey = CompareHereComparisonIntentKey("intent:remove"),
+                priceSelection = CompareHerePriceSelection.CURRENT,
+                observations = capture(
+                    "Small Milk\nCA$4.00\n500 g",
+                    "Large Milk\nCA$7.00\n1 kg"
+                )
+            ) as CompareHereManualComparisonResult.Success
+        val capture = requireNotNull(CompareHerePrivatePriceMemoryAssembler.from(success, 11L))
+        assertTrue(store.append(capture).accepted)
+        val target = capture.entries.first().observationId
+        val retained = capture.entries.single { it.observationId != target }
+
+        val removed = store.remove(target)
+
+        assertTrue(removed.accepted)
+        assertEquals(listOf(retained), requireNotNull(removed.state).entries)
+        assertEquals(listOf(retained), requireNotNull(store.load().state).entries)
+        assertEquals(
+            CompareHerePrivatePriceMemoryStoreIssue.ENTRY_NOT_FOUND,
+            store.remove(target).issue
+        )
+        assertEquals(
+            CompareHerePrivatePriceMemoryStoreIssue.ENTRY_NOT_FOUND,
+            store.remove("not-an-observation").issue
+        )
+    }
+
     private fun capture(vararg blocks: String): List<ProductObservation> {
         val result =
             ManualProductObservationAdapter.captureBlocks(

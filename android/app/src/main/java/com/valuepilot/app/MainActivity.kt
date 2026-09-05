@@ -147,6 +147,7 @@ class MainActivity : AppCompatActivity() {
     private var privatePriceHistoryDialog: AlertDialog? = null
     private var privatePriceHistoryClearDialog: AlertDialog? = null
     private var privatePriceHistoryExportDialog: AlertDialog? = null
+    private var privatePriceHistoryForgetDialog: AlertDialog? = null
     private var offlineCatalogLookup: Future<*>? = null
     private var offlineCatalogRequestId = 0L
     private var searchIdentityDialog: AlertDialog? = null
@@ -322,6 +323,8 @@ class MainActivity : AppCompatActivity() {
         privatePriceHistoryDialog = null
         privatePriceHistoryClearDialog?.dismiss()
         privatePriceHistoryClearDialog = null
+        privatePriceHistoryForgetDialog?.dismiss()
+        privatePriceHistoryForgetDialog = null
         privatePriceHistoryExportDialog?.dismiss()
         privatePriceHistoryExportDialog = null
         if (::homeExperience.isInitialized) {
@@ -338,6 +341,7 @@ class MainActivity : AppCompatActivity() {
             homeExperience.onCompare = null
             homeExperience.onReviewPrivateMemory = null
             homeExperience.onExportPrivateMemory = null
+            homeExperience.onForgetPrivateMemory = null
             homeExperience.onGoodPrice = null
             homeExperience.onShopAgain = null
         }
@@ -491,6 +495,7 @@ class MainActivity : AppCompatActivity() {
         homeExperience.onCompare = { openComparison() }
         homeExperience.onReviewPrivateMemory = { reviewPrivatePriceHistory() }
         homeExperience.onExportPrivateMemory = { exportPrivatePriceHistory() }
+        homeExperience.onForgetPrivateMemory = { forgetPrivatePriceHistoryObservation() }
         homeExperience.onGoodPrice = { openGoodPriceCheck() }
         homeExperience.onShopAgain = {
             homeSessionState = PracticalShoppingHomeSession.shopAgain(homeSessionState)
@@ -556,6 +561,8 @@ class MainActivity : AppCompatActivity() {
         privatePriceHistoryClearDialog = null
         privatePriceHistoryExportDialog?.dismiss()
         privatePriceHistoryExportDialog = null
+        privatePriceHistoryForgetDialog?.dismiss()
+        privatePriceHistoryForgetDialog = null
         if (
             ::homeExperience.isInitialized &&
                 shellState.route != AppRoute.COMPARE
@@ -1677,6 +1684,8 @@ class MainActivity : AppCompatActivity() {
 
         privatePriceHistoryExportDialog?.dismiss()
         privatePriceHistoryExportDialog = null
+        privatePriceHistoryForgetDialog?.dismiss()
+        privatePriceHistoryForgetDialog = null
         privatePriceHistoryClearDialog?.dismiss()
         privatePriceHistoryClearDialog = null
         privatePriceHistoryDialog?.dismiss()
@@ -1722,6 +1731,8 @@ class MainActivity : AppCompatActivity() {
         privatePriceHistoryDialog = null
         privatePriceHistoryClearDialog?.dismiss()
         privatePriceHistoryClearDialog = null
+        privatePriceHistoryForgetDialog?.dismiss()
+        privatePriceHistoryForgetDialog = null
 
         val dialog =
             AlertDialog.Builder(this)
@@ -1783,6 +1794,116 @@ class MainActivity : AppCompatActivity() {
         }
         privatePriceHistoryExportDialog = dialog
         dialog.show()
+    }
+
+    /**
+     * Opens a bounded exact-observation picker. The picker carries fingerprints rather than list
+     * positions, and the selected id is re-checked against the atomic store before deletion.
+     */
+    private fun forgetPrivatePriceHistoryObservation() {
+        if (homePrivateMemoryLoadIssue != null) {
+            openComparison()
+            return
+        }
+
+        val presentation =
+            PracticalShoppingPrivatePriceHistoryForgetPresentation.from(homePrivateMemoryState)
+        if (presentation == null) {
+            AlertDialog.Builder(this)
+                .setTitle(R.string.home_private_memory_forget_error_title)
+                .setMessage(R.string.home_private_memory_forget_empty)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+            return
+        }
+
+        privatePriceHistoryDialog?.dismiss()
+        privatePriceHistoryDialog = null
+        privatePriceHistoryClearDialog?.dismiss()
+        privatePriceHistoryClearDialog = null
+        privatePriceHistoryExportDialog?.dismiss()
+        privatePriceHistoryExportDialog = null
+
+        var selectedObservationId: String? = null
+        val choices = presentation.choices.map { choice -> choice.label }.toTypedArray()
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(presentation.title)
+                .setMessage(presentation.message)
+                .setSingleChoiceItems(choices, -1) { _, which ->
+                    selectedObservationId = presentation.choices.getOrNull(which)?.observationId
+                    privatePriceHistoryForgetDialog
+                        ?.getButton(AlertDialog.BUTTON_POSITIVE)
+                        ?.isEnabled = selectedObservationId != null
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.home_private_memory_forget_confirm, null)
+                .create()
+        dialog.setOnDismissListener {
+            if (privatePriceHistoryForgetDialog === dialog) {
+                privatePriceHistoryForgetDialog = null
+            }
+        }
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val observationId = selectedObservationId ?: return@setOnClickListener
+                val loaded = homePrivateMemoryStore.load()
+                val latestState = loaded.state
+                if (!loaded.accepted || latestState == null) {
+                    dialog.dismiss()
+                    refreshHomePrivateMemory()
+                    showPrivatePriceHistoryForgetError(loaded.issue)
+                    return@setOnClickListener
+                }
+                if (latestState.entries.none { it.observationId == observationId }) {
+                    dialog.dismiss()
+                    refreshHomePrivateMemory()
+                    showPrivatePriceHistoryForgetError(
+                        CompareHerePrivatePriceMemoryStoreIssue.ENTRY_NOT_FOUND
+                    )
+                    return@setOnClickListener
+                }
+
+                val result = homePrivateMemoryStore.remove(observationId)
+                if (!result.accepted) {
+                    dialog.dismiss()
+                    refreshHomePrivateMemory()
+                    showPrivatePriceHistoryForgetError(result.issue)
+                    return@setOnClickListener
+                }
+
+                dialog.dismiss()
+                homePrivateMemoryState = requireNotNull(result.state)
+                homePrivateMemoryLoadIssue = null
+                renderHome()
+            }
+        }
+        privatePriceHistoryForgetDialog = dialog
+        dialog.show()
+    }
+
+    private fun showPrivatePriceHistoryForgetError(
+        issue: CompareHerePrivatePriceMemoryStoreIssue?
+    ) {
+        val messageRes =
+            when (issue) {
+                CompareHerePrivatePriceMemoryStoreIssue.ENTRY_NOT_FOUND ->
+                    R.string.home_private_memory_forget_not_found
+
+                CompareHerePrivatePriceMemoryStoreIssue.READ_FAILED,
+                CompareHerePrivatePriceMemoryStoreIssue.STORED_DATA_TOO_LARGE,
+                CompareHerePrivatePriceMemoryStoreIssue.STORED_DATA_INVALID,
+                CompareHerePrivatePriceMemoryStoreIssue.ENCODE_REJECTED,
+                CompareHerePrivatePriceMemoryStoreIssue.WRITE_FAILED,
+                CompareHerePrivatePriceMemoryStoreIssue.DELETE_FAILED,
+                null -> R.string.home_private_memory_forget_failed
+            }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.home_private_memory_forget_error_title)
+            .setMessage(messageRes)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
     }
 
     private fun showPrivatePriceHistoryExportError(
@@ -1847,6 +1968,8 @@ class MainActivity : AppCompatActivity() {
         homePrivateMemoryLoadIssue = null
         privatePriceHistoryDialog?.dismiss()
         privatePriceHistoryDialog = null
+        privatePriceHistoryForgetDialog?.dismiss()
+        privatePriceHistoryForgetDialog = null
         if (::homeExperience.isInitialized && shellState.route != AppRoute.COMPARE) {
             renderHome()
         }
