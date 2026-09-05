@@ -37,6 +37,10 @@ class CompareHereCameraBoundaryTest {
         assertTrue(source.contains("CompareHerePhotoDraft.append"))
         assertTrue(source.contains("CompareHerePhotoRetryPolicy"))
         assertTrue(source.contains("CompareHerePhotoRetryOutcome.PERMISSION_DENIED"))
+        assertTrue(source.contains("CompareHerePhotoRequestPolicy"))
+        assertTrue(source.contains("cancelPhotoRequest"))
+        assertTrue(source.contains("cancelPhotoRequestForDraftChange"))
+        assertTrue(source.contains("cancelPhotoButton"))
         assertTrue(source.contains("retryPhotoButton"))
         assertTrue(source.contains("cleanupCameraCaptureFile"))
         assertTrue(source.contains("ACCESSIBILITY_LIVE_REGION_POLITE"))
@@ -47,6 +51,7 @@ class CompareHereCameraBoundaryTest {
         )
         assertTrue(layout.contains("capturePhotoButton"))
         assertTrue(layout.contains("importPhotoButton"))
+        assertTrue(layout.contains("cancelPhotoButton"))
         assertTrue(layout.contains("retryPhotoButton"))
         assertFalse(onCreateBody.contains("cameraPermissionLauncher.launch"))
 
@@ -94,6 +99,23 @@ class CompareHereCameraBoundaryTest {
         assertTrue(strings.contains("untrusted OCR suggestion"))
         assertTrue(strings.contains("Nothing is added until you choose Add selected"))
         assertTrue(strings.contains("Try another photo"))
+        assertTrue(strings.contains("Cancel photo reading"))
+        assertTrue(strings.contains("No photo suggestions were added"))
+    }
+
+    @Test
+    fun `draft transitions invalidate photo callbacks before idle rendering`() {
+        val source = source("ComparisonActivity.kt").readSourceText()
+        val productsChanged =
+            source.substringAfter("private fun onProductsChanged()")
+                .substringBefore("private fun syncLikeForLikeConfirmation")
+        val clearComparison =
+            source.substringAfter("private fun clearComparison()")
+                .substringBefore("/**\n     * Applies one intentionally shared text")
+
+        assertTrue(productsChanged.contains("cancelPhotoRequestForDraftChange()"))
+        assertTrue(clearComparison.contains("cancelPhotoRequestForDraftChange()"))
+        assertTrue(source.contains("CompareHerePhotoRequestPolicy.accepts"))
     }
 
     private fun source(name: String): File =

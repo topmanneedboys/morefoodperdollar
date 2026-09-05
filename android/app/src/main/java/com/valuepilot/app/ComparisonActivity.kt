@@ -55,6 +55,7 @@ class ComparisonActivity : AppCompatActivity() {
     private lateinit var importPhotoButton: Button
     private lateinit var capturePhotoButton: Button
     private lateinit var photoImportStatus: TextView
+    private lateinit var cancelPhotoButton: Button
     private lateinit var retryPhotoButton: Button
     private lateinit var compareBarcodeButton: Button
     private lateinit var compareBarcodeStatus: TextView
@@ -127,6 +128,12 @@ class ComparisonActivity : AppCompatActivity() {
         capturePhotoButton = findViewById(R.id.capturePhotoButton)
         photoImportStatus = findViewById(R.id.photoImportStatus)
         photoImportStatus.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        cancelPhotoButton = findViewById(R.id.cancelPhotoButton)
+        cancelPhotoButton.contentDescription =
+            getString(R.string.compare_photo_cancel_description)
+        cancelPhotoButton.setOnClickListener {
+            cancelPhotoRequest()
+        }
         retryPhotoButton = findViewById(R.id.retryPhotoButton)
         retryPhotoButton.contentDescription = getString(R.string.compare_photo_retry_description)
         retryPhotoButton.setOnClickListener {
@@ -290,11 +297,7 @@ class ComparisonActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         photoImportClosed = true
-        photoRequestId += 1
-        photoReviewRequestId += 1L
-        photoReviewDialog?.dismiss()
-        photoReviewDialog = null
-        cleanupCameraCaptureFile()
+        invalidatePhotoRequest()
         photoExecutor.shutdownNow()
         barcodeLookupClosed = true
         barcodeLookupRequestId += 1L
@@ -547,10 +550,9 @@ class ComparisonActivity : AppCompatActivity() {
             return
         }
 
-        photoImportInFlight = true
         lastPhotoCaptureKind = CompareHerePhotoCaptureKind.IMPORT
         hidePhotoRetry()
-        photoRequestId += 1
+        beginPhotoRequest()
         syncPhotoActionButtons()
         photoImportStatus.text = getString(R.string.compare_photo_processing)
         try {
@@ -578,10 +580,9 @@ class ComparisonActivity : AppCompatActivity() {
             return
         }
 
-        photoImportInFlight = true
         lastPhotoCaptureKind = CompareHerePhotoCaptureKind.CAMERA
         hidePhotoRetry()
-        photoRequestId += 1
+        beginPhotoRequest()
         cameraCaptureRequestId = photoRequestId
         syncPhotoActionButtons()
 
@@ -738,11 +739,15 @@ class ComparisonActivity : AppCompatActivity() {
         error: Throwable?
     ) {
         if (
-            photoImportClosed ||
-            requestId != photoRequestId ||
-            !photoImportInFlight ||
-            isFinishing ||
-            isDestroyed
+            !CompareHerePhotoRequestPolicy.accepts(
+                callbackRequestId = requestId,
+                current =
+                    CompareHerePhotoRequestState(
+                        requestId = photoRequestId,
+                        inFlight = photoImportInFlight
+                    ),
+                closed = photoImportClosed || isFinishing || isDestroyed
+            )
         ) {
             return
         }
@@ -915,6 +920,64 @@ class ComparisonActivity : AppCompatActivity() {
         showPhotoRetryIfEligible(retryOutcome)
     }
 
+    private fun beginPhotoRequest() {
+        val next =
+            CompareHerePhotoRequestPolicy.begin(
+                CompareHerePhotoRequestState(
+                    requestId = photoRequestId,
+                    inFlight = photoImportInFlight
+                )
+            )
+        photoRequestId = next.requestId
+        photoImportInFlight = next.inFlight
+    }
+
+    /**
+     * Invalidates the current photo generation before a draft/lifecycle transition can expose a
+     * result from the old draft. This does not cancel OCR work internally; its callback is simply
+     * rejected and any temporary camera file is removed.
+     */
+    private fun invalidatePhotoRequest() {
+        val next =
+            CompareHerePhotoRequestPolicy.invalidate(
+                CompareHerePhotoRequestState(
+                    requestId = photoRequestId,
+                    inFlight = photoImportInFlight
+                )
+            )
+        photoRequestId = next.requestId
+        photoImportInFlight = next.inFlight
+        photoReviewRequestId = 0L
+        photoReviewDialog?.dismiss()
+        photoReviewDialog = null
+        cameraCaptureRequestId = 0L
+        cleanupCameraCaptureFile()
+        lastPhotoCaptureKind = null
+        hidePhotoRetry()
+        syncPhotoActionButtons()
+    }
+
+    private fun cancelPhotoRequest() {
+        if (photoImportClosed || !photoImportInFlight) return
+        invalidatePhotoRequest()
+        photoImportStatus.text = getString(R.string.compare_photo_cancelled_by_user)
+        photoImportStatus.visibility = View.VISIBLE
+    }
+
+    private fun cancelPhotoRequestForDraftChange() {
+        if (
+            !photoImportInFlight &&
+                photoReviewDialog == null &&
+                cameraCaptureFile == null
+        ) {
+            return
+        }
+
+        invalidatePhotoRequest()
+        photoImportStatus.text = getString(R.string.compare_photo_draft_changed)
+        photoImportStatus.visibility = View.VISIBLE
+    }
+
     private fun showPhotoRetryIfEligible(outcome: CompareHerePhotoRetryOutcome?) {
         if (
             !CompareHerePhotoRetryPolicy.shouldOfferRetry(
@@ -948,6 +1011,15 @@ class ComparisonActivity : AppCompatActivity() {
         }
         if (::capturePhotoButton.isInitialized) {
             capturePhotoButton.isEnabled = enabled
+        }
+        if (::cancelPhotoButton.isInitialized) {
+            cancelPhotoButton.visibility =
+                if (photoImportInFlight && !photoImportClosed && photoReviewDialog == null) {
+                    View.VISIBLE
+                } else {
+                    View.GONE
+                }
+            cancelPhotoButton.isEnabled = photoImportInFlight && !photoImportClosed
         }
         if (::compareBarcodeButton.isInitialized) {
             compareBarcodeButton.isEnabled = enabled
@@ -1245,6 +1317,7 @@ class ComparisonActivity : AppCompatActivity() {
     }
 
     private fun onProductsChanged() {
+        cancelPhotoRequestForDraftChange()
         clearBarcodeStatus()
         activityState =
             CompareHereManualActivitySessionReducer.productsChanged(activityState)
@@ -1374,6 +1447,7 @@ class ComparisonActivity : AppCompatActivity() {
     }
 
     private fun clearComparison() {
+        cancelPhotoRequestForDraftChange()
         clearBarcodeStatus()
         hidePhotoRetry()
         hidePrivateMemoryStatus()

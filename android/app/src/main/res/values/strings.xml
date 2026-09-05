@@ -13,6 +13,10 @@
     <string name="compare_photo_ready">Take or choose a shelf-label or product photo. OCR only proposes text; review every entry before comparing.</string>
     <string name="compare_photo_processing">Reading the photo on this device…</string>
     <string name="compare_photo_cancelled">Photo import cancelled. Your existing entries are unchanged.</string>
+    <string name="compare_photo_cancel">Cancel photo reading</string>
+    <string name="compare_photo_cancel_description">Stop the in-progress on-device photo read without adding any suggestions.</string>
+    <string name="compare_photo_cancelled_by_user">Photo reading cancelled. Your current comparison entries are unchanged.</string>
+    <string name="compare_photo_draft_changed">Photo reading stopped because the comparison draft changed. No photo suggestions were added.</string>
     <string name="compare_photo_no_matches">No new price-tag text was found. Your existing entries are unchanged.</string>
     <string name="compare_photo_error">That photo could not be read on this device. Your existing entries are unchanged.</string>
     <string name="compare_photo_added">Added %1$d photo suggestion(s). %2$d snippet(s) were skipped; review the entries and confirm like-for-like before comparing.</string>

@@ -83,6 +83,15 @@
             android:textSize="12sp" />
 
         <Button
+            android:id="@+id/cancelPhotoButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/compare_photo_cancel"
+            android:textAllCaps="false"
+            android:visibility="gone" />
+
+        <Button
             android:id="@+id/retryPhotoButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
