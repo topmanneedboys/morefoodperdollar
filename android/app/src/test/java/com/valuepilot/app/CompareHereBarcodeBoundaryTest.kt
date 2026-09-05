@@ -19,6 +19,11 @@ class CompareHereBarcodeBoundaryTest {
             "BundledOfflineCatalog.discoverSupportedRegions",
             "GoodPriceBarcodeIdentityPresentation",
             "CompareHereBarcodeDraft.apply",
+            "focusProductInput(result.addedIndex)",
+            "private fun focusProductInput(index: Int?)",
+            "productInputs::getOrNull",
+            "input.requestFocus()",
+            "input.setSelection(input.text?.length ?: 0)",
             "barcodeLookupExecutor.shutdownNow",
             "barcodeLookupRequestId",
             "barcodeLookupClosed",
@@ -39,6 +44,23 @@ class CompareHereBarcodeBoundaryTest {
             "getExternalStorage",
             "MediaStore"
         ).forEach { forbidden -> assertFalse(source.contains(forbidden)) }
+    }
+
+    @Test
+    fun `barcode identity handoff focuses only the populated exact-entry block`() {
+        val source = source("ComparisonActivity.kt").readText()
+        val useNameHandler =
+            source
+                .substringAfter("CompareHereBarcodeDraft.apply(")
+                .substringBefore("dialog.show()")
+
+        assertTrue(useNameHandler.contains("dialog.dismiss()"))
+        assertTrue(useNameHandler.contains("focusProductInput(result.addedIndex)"))
+        assertTrue(
+            useNameHandler.indexOf("dialog.dismiss()") <
+                useNameHandler.indexOf("focusProductInput(result.addedIndex)")
+        )
+        assertTrue(source.contains("if (isFinishing || isDestroyed) return@post"))
     }
 
     @Test

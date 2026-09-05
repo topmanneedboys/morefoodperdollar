@@ -514,9 +514,22 @@ class GoodPriceActivity : AppCompatActivity() {
                 barcodeStatus.visibility = View.VISIBLE
                 renderIdle()
                 dialog.dismiss()
+                focusProductInput()
             }
         }
         dialog.show()
+    }
+
+    /**
+     * Keep the barcode identity handoff honest while removing an unnecessary navigation step. The
+     * field is focused only; exact package quantity and observed price remain manual inputs.
+     */
+    private fun focusProductInput() {
+        productInput.post {
+            if (isFinishing || isDestroyed) return@post
+            productInput.requestFocus()
+            productInput.setSelection(productInput.text?.length ?: 0)
+        }
     }
 
     private fun clearBarcodeStatus() {

@@ -518,9 +518,24 @@ class ComparisonActivity : AppCompatActivity() {
                     )
                 compareBarcodeStatus.visibility = View.VISIBLE
                 dialog.dismiss()
+                focusProductInput(result.addedIndex)
             }
         }
         dialog.show()
+    }
+
+    /**
+     * Put the cursor in the exact-entry block that barcode identity populated. This is only a
+     * navigation affordance: the shopper must still enter and review package quantity and price
+     * before the comparison coordinator can produce an answer.
+     */
+    private fun focusProductInput(index: Int?) {
+        val input = index?.let(productInputs::getOrNull) ?: return
+        input.post {
+            if (isFinishing || isDestroyed) return@post
+            input.requestFocus()
+            input.setSelection(input.text?.length ?: 0)
+        }
     }
 
     private fun finishBarcodeRequest(@StringRes statusRes: Int, vararg formatArgs: Any) {

@@ -70,7 +70,11 @@ class GoodPriceCheckBoundaryTest {
             "EXTRA_PRODUCT_NAME",
             "GoodPriceActivityPrefill",
             ".sanitize(intent.getStringExtra(EXTRA_PRODUCT_NAME))",
-            "productInput.setText(value)"
+            "productInput.setText(value)",
+            "focusProductInput()",
+            "private fun focusProductInput()",
+            "productInput.requestFocus()",
+            "productInput.setSelection(productInput.text?.length ?: 0)"
         ).forEach { required -> assertTrue(source.contains(required)) }
         listOf(
             "HttpURLConnection",
@@ -80,6 +84,23 @@ class GoodPriceCheckBoundaryTest {
             "RankingEngine",
             "INTERNET"
         ).forEach { forbidden -> assertFalse(source.contains(forbidden)) }
+    }
+
+    @Test
+    fun `good price barcode handoff focuses the manual exact-entry field`() {
+        val source = source("GoodPriceActivity.kt").readText()
+        val useNameHandler =
+            source
+                .substringAfter("productInput.setText(option.displayName)")
+                .substringBefore("dialog.show()")
+
+        assertTrue(useNameHandler.contains("dialog.dismiss()"))
+        assertTrue(useNameHandler.contains("focusProductInput()"))
+        assertTrue(
+            useNameHandler.indexOf("dialog.dismiss()") <
+                useNameHandler.indexOf("focusProductInput()")
+        )
+        assertTrue(source.contains("if (isFinishing || isDestroyed) return@post"))
     }
 
     @Test
