@@ -77,6 +77,27 @@ class ShareToValuePilotBoundaryTest {
     }
 
     @Test
+    fun `shared text handoff focuses the populated editable block and reopens the keyboard`() {
+        val source = source("ComparisonActivity.kt").readText()
+        val handoff =
+            source
+                .substringAfter("CompareHereSharedTextDraft.apply(")
+                .substringBefore("private fun showSharedTextImportFailure")
+
+        assertTrue(handoff.contains("onProductsChanged()"))
+        assertTrue(handoff.contains("focusProductInput(result.addedIndex)"))
+        assertTrue(
+            handoff.indexOf("onProductsChanged()") <
+                handoff.indexOf("focusProductInput(result.addedIndex)")
+        )
+        assertTrue(
+            source.contains(
+                "manager?.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)"
+            )
+        )
+    }
+
+    @Test
     fun `layout and strings disclose untrusted review before comparison`() {
         val layout = layout().readText()
         val strings = strings().readText()

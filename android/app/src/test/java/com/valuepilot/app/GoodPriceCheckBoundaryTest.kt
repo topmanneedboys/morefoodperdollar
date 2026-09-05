@@ -124,6 +124,57 @@ class GoodPriceCheckBoundaryTest {
     }
 
     @Test
+    fun `good price intent prefill focuses the editable field after the idle projection`() {
+        val source = source("GoodPriceActivity.kt").readText()
+        val prefillHandoff =
+            source
+                .substringAfter("GoodPriceActivityPrefill")
+                .substringBefore("override fun onResume")
+
+        assertTrue(prefillHandoff.contains("prefilledFromIntent = true"))
+        assertTrue(prefillHandoff.contains("if (prefilledFromIntent)"))
+        assertTrue(
+            prefillHandoff.indexOf("renderIdle()") <
+                prefillHandoff.indexOf("if (prefilledFromIntent)")
+        )
+        assertTrue(
+            prefillHandoff.indexOf("focusProductInput()") >
+                prefillHandoff.indexOf("if (prefilledFromIntent)")
+        )
+        assertTrue(
+            source.contains(
+                "manager?.showSoftInput(productInput, InputMethodManager.SHOW_IMPLICIT)"
+            )
+        )
+    }
+
+    @Test
+    fun `good price barcode selection labels replacement when an existing draft would be lost`() {
+        val source = source("GoodPriceActivity.kt").readText()
+        val strings = strings().readText()
+        val choiceDialog =
+            source
+                .substringAfter("private fun showBarcodeIdentityChoices")
+                .substringBefore("private fun focusProductInput")
+
+        assertTrue(choiceDialog.contains("val hasExistingDraft = productInput.text?.toString()?.isNotBlank() == true"))
+        assertTrue(choiceDialog.contains("R.string.good_price_barcode_replace_draft"))
+        assertTrue(choiceDialog.contains("R.string.good_price_barcode_replace_message"))
+        assertTrue(choiceDialog.contains("R.string.good_price_barcode_replace_warning"))
+        assertTrue(choiceDialog.contains("R.string.good_price_barcode_replace_description"))
+        assertTrue(
+            choiceDialog.indexOf("productInput.setText(option.displayName)") >
+                choiceDialog.indexOf("button.setOnClickListener")
+        )
+        listOf(
+            "name=\"good_price_barcode_replace_draft\"",
+            "name=\"good_price_barcode_replace_message\"",
+            "name=\"good_price_barcode_replace_warning\"",
+            "name=\"good_price_barcode_replace_description\""
+        ).forEach { required -> assertTrue(strings.contains(required)) }
+    }
+
+    @Test
     fun `good price preserves the bounded typed draft across recreation`() {
         val source = source("GoodPriceActivity.kt").readText()
         val saveState =

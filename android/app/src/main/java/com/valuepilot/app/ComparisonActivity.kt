@@ -1566,6 +1566,10 @@ class ComparisonActivity : AppCompatActivity() {
         renderProductInputs(result.blocks)
         restoringDraft = false
         onProductsChanged()
+        // Shared text is an intentional handoff into the same editable, untrusted draft as
+        // barcode/OCR suggestions. Focus its populated block and reopen the keyboard so the
+        // shopper can review it and continue entering exact package and price facts immediately.
+        focusProductInput(result.addedIndex)
         return null
     }
 

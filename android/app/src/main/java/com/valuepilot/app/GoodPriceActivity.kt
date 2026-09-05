@@ -165,6 +165,7 @@ class GoodPriceActivity : AppCompatActivity() {
             }
         }
 
+        var prefilledFromIntent = false
         if (savedInstanceState?.containsKey(STATE_PRODUCT_INPUT) == true) {
             restoring = true
             val restoredInput = savedInstanceState.getString(STATE_PRODUCT_INPUT).orEmpty()
@@ -182,6 +183,7 @@ class GoodPriceActivity : AppCompatActivity() {
                     productInput.setText(value)
                     productInput.setSelection(value.length)
                     restoring = false
+                    prefilledFromIntent = true
                 }
         }
 
@@ -218,6 +220,13 @@ class GoodPriceActivity : AppCompatActivity() {
             )
         } else {
             renderIdle()
+        }
+
+        // Home/Saved handoffs provide only an untrusted product-name draft. Focus it and reopen
+        // the keyboard after the initial idle projection so the shopper can continue with the
+        // required exact package quantity and observed price without another tap.
+        if (prefilledFromIntent) {
+            focusProductInput()
         }
     }
 
@@ -484,27 +493,50 @@ class GoodPriceActivity : AppCompatActivity() {
         }
 
         var selectedIndex = if (presentation.options.size == 1) 0 else -1
+        val hasExistingDraft = productInput.text?.toString()?.isNotBlank() == true
         lateinit var dialog: AlertDialog
         val builder =
             AlertDialog.Builder(this)
                 .setTitle(R.string.good_price_barcode_match_title)
                 .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(R.string.good_price_barcode_use_name, null)
+                .setPositiveButton(
+                    if (hasExistingDraft) {
+                        R.string.good_price_barcode_replace_draft
+                    } else {
+                        R.string.good_price_barcode_use_name
+                    },
+                    null
+                )
 
         if (presentation.options.size == 1) {
             builder.setMessage(
-                getString(
-                    R.string.good_price_barcode_match_message,
-                    presentation.options.single().label
-                )
+                if (hasExistingDraft) {
+                    getString(
+                        R.string.good_price_barcode_replace_message,
+                        presentation.options.single().label
+                    )
+                } else {
+                    getString(
+                        R.string.good_price_barcode_match_message,
+                        presentation.options.single().label
+                    )
+                }
             )
         } else {
             builder
                 .setMessage(
-                    getString(
-                        R.string.good_price_barcode_multiple_message,
-                        presentation.gtin
-                    )
+                    buildString {
+                        append(
+                            getString(
+                                R.string.good_price_barcode_multiple_message,
+                                presentation.gtin
+                            )
+                        )
+                        if (hasExistingDraft) {
+                            append("\n\n")
+                            append(getString(R.string.good_price_barcode_replace_warning))
+                        }
+                    }
                 )
                 .setSingleChoiceItems(
                     presentation.options.map { it.label }.toTypedArray(),
@@ -522,7 +554,14 @@ class GoodPriceActivity : AppCompatActivity() {
         }
         dialog.setOnShowListener {
             val button = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-            button.contentDescription = getString(R.string.good_price_barcode_use_name_description)
+            button.contentDescription =
+                getString(
+                    if (hasExistingDraft) {
+                        R.string.good_price_barcode_replace_description
+                    } else {
+                        R.string.good_price_barcode_use_name_description
+                    }
+                )
             button.isEnabled = selectedIndex >= 0
             button.setOnClickListener {
                 val option = presentation.options.getOrNull(selectedIndex) ?: return@setOnClickListener
