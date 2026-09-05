@@ -2,6 +2,12 @@
 
 ## Latest promoted consumer boundary
 
+- Promoted code commit: `9c164ecd2566f26e9805cbcfce1356090cdf9ad6` (`Make photo retry outcomes explicit`)
+- Candidate workflow: **33960585727** — success
+- Promoted workflow/provenance: **33960929862** — success
+
+Photo recovery now classifies terminal outcomes explicitly. OCR failures, no usable suggestions and recoverable picker/camera creation failures offer `Try another photo`; permission denial, cancellation and unavailable camera hardware do not offer a retry that would repeat an impossible action. The policy remains presentation-only, preserves existing draft entries and adds no parsing, exact money/quantity, evidence, ranking, planner, offer, store, availability, persistence or network authority. Candidate Linux verification passed 402 shared-core tests and 1,501 Android tests with zero failures, lint/build/privacy/single-signer/release-bundle and browser/Firefox checks; local Python/catalog verification passed 79 tests. Physical-device camera/OCR ergonomics and lawful production Home activation remain open.
+
 - Promoted code commit: `58c8732f1fe5dcb1a450fb9c0d28aa743f5dfb56` (`Add retry action for failed comparison photos`)
 - Candidate workflow: **33959540807** — success
 - Promoted workflow/provenance: **33959812269** — success
