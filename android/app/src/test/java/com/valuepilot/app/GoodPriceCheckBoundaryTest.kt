@@ -99,6 +99,32 @@ class GoodPriceCheckBoundaryTest {
     }
 
     @Test
+    fun `good price restores an evaluated answer without persisting it again`() {
+        val source = source("GoodPriceActivity.kt").readText()
+        val saveState =
+            source
+                .substringAfter("override fun onSaveInstanceState")
+                .substringBefore("private fun runCheck")
+        val runCheck =
+            source
+                .substringAfter("private fun runCheck")
+                .substringBefore("private fun renderIdle")
+
+        listOf(
+            "STATE_CHECK_OBSERVED_AT",
+            "lastCheckObservedAtEpochMillis",
+            "it.containsKey(STATE_CHECK_OBSERVED_AT)",
+            "observedAtEpochMillis = restoredCheckObservedAt",
+            "persist = false"
+        ).forEach { required -> assertTrue(source.contains(required)) }
+        assertTrue(saveState.contains("outState.putLong(STATE_CHECK_OBSERVED_AT, observedAt)"))
+        assertTrue(runCheck.contains("persist: Boolean = true"))
+        assertTrue(runCheck.contains("if (!persist)"))
+        assertTrue(runCheck.contains("memoryStore.append(capture)"))
+        assertTrue(source.contains("lastCheckObservedAtEpochMillis = null"))
+    }
+
+    @Test
     fun `good price private memory outcomes use a polite live region`() {
         val source = source("GoodPriceActivity.kt").readText()
 

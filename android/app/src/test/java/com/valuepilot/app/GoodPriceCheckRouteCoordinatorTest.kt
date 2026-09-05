@@ -78,6 +78,28 @@ class GoodPriceCheckRouteCoordinatorTest {
     }
 
     @Test
+    fun `replaying the same exact observation excludes itself from restored history`() {
+        val first = check("Whole Milk\nCA$6.49\n4 L", observedAt = 100L)
+        val history =
+            CompareHerePrivatePriceMemoryStateManager.append(
+                CompareHerePrivatePriceMemoryState.empty(),
+                requireNotNull(first.privateMemoryCapture)
+            )
+
+        val replay =
+            GoodPriceCheckRouteCoordinator.checkBlock(
+                rawBlock = "Whole Milk\nCA$6.49\n4 L",
+                observedAtEpochMillis = 100L,
+                priceSelection = CompareHerePriceSelection.CURRENT,
+                privateMemory = history
+            )
+
+        val result = requireNotNull(replay.state.result)
+        assertEquals("Not enough history yet", result.answerTitle)
+        assertNull(result.historyText)
+    }
+
+    @Test
     fun `a higher repeat quantifies the personal rate increase`() {
         val first = check("Whole Milk\nCA$6.49\n4 L", observedAt = 100L)
         val history =

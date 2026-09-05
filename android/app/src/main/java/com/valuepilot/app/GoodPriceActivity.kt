@@ -46,6 +46,7 @@ class GoodPriceActivity : AppCompatActivity() {
     private var barcodeCaptureInFlight = false
     private var barcodeDialog: AlertDialog? = null
     private var shareCard: GoodPriceShareCard? = null
+    private var lastCheckObservedAtEpochMillis: Long? = null
     private val barcodeCaptureLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (barcodeLookupClosed || !barcodeCaptureInFlight) {
@@ -182,7 +183,27 @@ class GoodPriceActivity : AppCompatActivity() {
             }
         )
         restoring = false
-        renderIdle()
+
+        val restoredCheckObservedAt =
+            savedInstanceState
+                ?.takeIf { it.containsKey(STATE_CHECK_OBSERVED_AT) }
+                ?.getLong(STATE_CHECK_OBSERVED_AT)
+                ?.takeIf { it >= 0L }
+        if (
+            restoredCheckObservedAt != null &&
+                privateMemoryLoadIssue == null &&
+                productInput.text?.toString()?.isNotBlank() == true
+        ) {
+            // Re-evaluate the exact immutable check without appending a second memory entry.
+            // The coordinator's observation fingerprint excludes the same observation from its
+            // own history, so the restored answer remains deterministic and honest.
+            runCheck(
+                observedAtEpochMillis = restoredCheckObservedAt,
+                persist = false
+            )
+        } else {
+            renderIdle()
+        }
     }
 
     override fun onResume() {
@@ -219,21 +240,35 @@ class GoodPriceActivity : AppCompatActivity() {
             STATE_PRODUCT_INPUT,
             productInput.text?.toString().orEmpty()
         )
+        lastCheckObservedAtEpochMillis?.let { observedAt ->
+            outState.putLong(STATE_CHECK_OBSERVED_AT, observedAt)
+        } ?: outState.remove(STATE_CHECK_OBSERVED_AT)
         super.onSaveInstanceState(outState)
     }
 
-    private fun runCheck() {
+    private fun runCheck(
+        observedAtEpochMillis: Long = System.currentTimeMillis(),
+        persist: Boolean = true
+    ) {
         val evaluation =
             GoodPriceCheckRouteCoordinator.checkBlock(
                 rawBlock = productInput.text?.toString().orEmpty(),
-                observedAtEpochMillis = System.currentTimeMillis(),
+                observedAtEpochMillis = observedAtEpochMillis,
                 priceSelection = priceSelection,
                 privateMemory = privateMemory
             )
+        lastCheckObservedAtEpochMillis =
+            observedAtEpochMillis.takeIf {
+                evaluation.state.status == GoodPriceCheckRouteStatus.EVALUATED
+            }
         presenter.render(evaluation.state)
         renderShareCard(evaluation.state.shareCard)
 
         val capture = evaluation.privateMemoryCapture
+        if (!persist) {
+            if (privateMemoryLoadIssue == null) hideMemoryStatus() else showMemoryUnavailable()
+            return
+        }
         if (capture == null) {
             if (privateMemoryLoadIssue == null) hideMemoryStatus() else showMemoryUnavailable()
             return
@@ -267,6 +302,7 @@ class GoodPriceActivity : AppCompatActivity() {
     }
 
     private fun renderIdle() {
+        lastCheckObservedAtEpochMillis = null
         if (privateMemoryLoadIssue == null) hideMemoryStatus() else showMemoryUnavailable()
         renderShareCard(null)
         checkButton.isEnabled = productInput.text?.toString()?.isNotBlank() == true
@@ -515,6 +551,7 @@ class GoodPriceActivity : AppCompatActivity() {
         const val EXTRA_PRODUCT_NAME = "com.valuepilot.app.extra.PRODUCT_NAME"
         private const val STATE_PRICE_SELECTION = "good_price.price_selection"
         private const val STATE_PRODUCT_INPUT = "good_price.product_input"
+        private const val STATE_CHECK_OBSERVED_AT = "good_price.check_observed_at"
         private const val OFFLINE_CATALOG_MAX_AGE_MILLIS = 8L * 24L * 60L * 60L * 1_000L
     }
 }
