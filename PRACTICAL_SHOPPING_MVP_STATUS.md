@@ -1,12 +1,14 @@
 # ValuePilot Practical Shopping MVP Status
 
-Updated: 2026-09-04
+Updated: 2026-09-05
 
 Branch: `work/valuepilot-android-milestone`
 
 Purpose: newest durable product/engineering checkpoint for the Practical Shopping MVP. Newer repository evidence overrides this file.
 
 ## Latest verified engineering head
+
+The latest candidate code milestone is `0e1ffaaf24352ad9652631d84d081cd67db4699d` (`Clarify missing Home item price breakdowns`), verified by candidate workflow **33952630205** for that exact SHA. Home, Basket and the inactive production Home surface now expose the distinction between an exact per-item breakdown and a covered subtotal without optional line detail: exact values remain exact, while the latter says `Included in the basket total — exact item price not shown.` No planner/projector, money, evidence, offer, store/availability, ranking, networking, persistence or provider-economics authority changed, and missing/stale/conflicting/unknown states remain explicit. A test-only newline normalization helper preserves whole-file source-boundary assertions across Windows/Linux; the local full Android run now passes without the prior 18 newline-sensitive failures. Candidate Linux verification passed 402 shared-core tests and 1,485 Android tests with zero failures, lint/build/privacy/single-signer/release-bundle, browser/Firefox (30 tests), and Python/catalog gates; physical-device ergonomics and lawful production Home activation remain separate.
 
 The latest candidate code milestone is `8025eb6e753d505dc75c19630683fd8f3afc2c29` (`Harden production Home UI handoff`), verified by candidate workflow **33933221103** for that exact SHA. The production Home host still retains the exact projection internally for generation identity, but its renderer now receives only a separate demo-free `PracticalShoppingProductionHomeUiState`. The new UI boundary reuses the existing `PracticalShoppingUiState`, adds bounded per-item store/price rows, preserves explicit partial/no-coverage unknowns, and fails closed for missing or unsafe display metadata and malformed assignments. An inactive-by-default production surface reuses the existing plan-result renderer; the visible Home remains the fictional/sample controller until lawful current-offer/private-evidence inputs and a separate activation coordinator exist. Candidate Linux verification passed 402 shared-core tests and 1,482 Android tests with zero failures, lint/build/privacy/single-signer/release-bundle and browser/Firefox checks; the local Windows run retains the known 18 line-ending-sensitive boundary failures, physical-device ergonomics remain unverified, and production Home activation remains separate.
 

@@ -1,12 +1,14 @@
 # Current state
 
-Updated: 2026-09-04
+Updated: 2026-09-05
 
 Branch: `work/valuepilot-android-milestone`
 
 Android version: 101.1.0 (10101)
 
 ## Current verified engineering head
+
+The latest candidate code milestone is `0e1ffaaf24352ad9652631d84d081cd67db4699d` (`Clarify missing Home item price breakdowns`), verified by candidate workflow **33952630205** for that exact SHA. Home, Basket and the inactive production Home surface now distinguish an exact per-item breakdown from a covered subtotal whose optional line-item detail was not supplied: the former shows the exact included amount, while the latter says `Included in the basket total — exact item price not shown.` Missing, stale, conflicting and unknown price states remain separate and no price is invented; the planner and shared projector remain the only decision authorities. Basket’s check-off accessibility summary carries the same disclosure. The test-only source-boundary helper normalizes CRLF/CR to LF at the fixture edge, preserving complete assertions and making the full Windows run deterministic. Candidate Linux verification passed 402 shared-core tests and 1,485 Android tests with zero failures, lint/build, APK privacy and single-signer checks, browser/Firefox (30 tests) and the release bundle; physical-device ergonomics and lawful production Home activation remain open.
 
 The latest candidate code milestone is `8025eb6e753d505dc75c19630683fd8f3afc2c29` (`Harden production Home UI handoff`), verified by candidate workflow **33933221103** for that exact SHA. The production Home host now retains its exact internal projection for generation identity but hands the renderer only a separate, demo-free `PracticalShoppingProductionHomeUiState`; a presentation projector maps the existing `PracticalShoppingUiState` into bounded per-item rows with exact included prices where supplied and an explicit unknown-price notice for uncovered items. Missing/unsafe display metadata and malformed assignment keys fail closed, while valid partial and no-coverage plans remain visible and honest. A new production Home surface is inactive by default and reuses the existing plan-card renderer; the visible Home remains the clearly labelled fictional controller until lawful current-offer/private-evidence inputs and a separate activation coordinator exist. Candidate Linux verification passed 402 shared-core tests and 1,482 Android tests with zero failures, browser/Firefox checks, lint/build, release-bundle, APK privacy and single-signer checks; the local Windows run retains the known 18 line-ending-sensitive boundary failures, while physical-device ergonomics and production Home activation remain open.
 

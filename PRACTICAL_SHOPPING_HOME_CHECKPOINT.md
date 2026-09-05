@@ -1,12 +1,16 @@
 # ValuePilot Practical Shopping Checkpoint
 
-Updated: 2026-09-04
+Updated: 2026-09-05
 
 Branch: `work/valuepilot-android-milestone`
 
 This checkpoint records the verified Practical Shopping Home slice plus the provider-neutral production evidence-to-decision path after the first execution-complexity hardening. Newer repository evidence overrides this file.
 
 ## Latest verified engineering head
+
+`0e1ffaaf24352ad9652631d84d081cd67db4699d` — `Clarify missing Home item price breakdowns`
+
+Candidate workflow **33952630205** passed for the exact SHA, including shared-core/Android tests, lint/build, browser/Firefox, release-bundle, APK privacy and single-signer checks. Home and Basket now make the optional breakdown boundary explicit: a covered item with an exact line value still shows `Included in plan: X CAD`, while a covered subtotal without that optional detail shows `Included in the basket total — exact item price not shown.` The inactive production Home projector and surface carry the same notice, and Basket’s check-off accessibility description does too. No planner, shared projector, money, evidence, offer, store/availability, ranking, network, persistence or provider-economics authority changed; missing/stale/conflicting/unknown states remain honest and the fictional visible Home stays separate. A test-only newline normalizer keeps complete source-boundary assertions stable across Windows and Linux; the full local Windows Android suite is now green. Physical-device ergonomics and lawful production Home activation remain open.
 
 `8025eb6e753d505dc75c19630683fd8f3afc2c29` — `Harden production Home UI handoff`
 
