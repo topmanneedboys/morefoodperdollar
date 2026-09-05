@@ -8,6 +8,10 @@ This checkpoint records the verified Practical Shopping Home slice plus the prov
 
 ## Latest verified engineering head
 
+`d6a0b25ef3e20a7c533cb98fb083c910e734b641` — `Improve Good Price result accessibility`
+
+Candidate workflow **33962568132** passed for the exact SHA, and milestone provenance workflow **33962826152** verified the promoted ref and release artifact lineage. The Good Price answer card and optional private-history card now provide coherent one-node accessibility summaries while hiding decorative child labels from assistive technology. The summary only formats already-projected exact facts and personal context; it adds no planner, evaluator, memory, evidence, offer, store/availability, ranking, persistence or Android networking authority. Candidate Linux verification passed 402 shared-core tests and 1,503 Android tests with zero failures, lint/build/privacy/single-signer/release-bundle and browser/Firefox checks; local Python/catalog verification passed 79 tests. Physical-device camera/OCR ergonomics and lawful production Home activation remain open.
+
 `44767d3a89c5fe79e3916c09ef91a589e42230dc` — `Invalidate Good Price result after memory clear`
 
 Candidate workflow **33961384703** passed for the exact SHA, and milestone provenance workflow **33961699432** verified the promoted ref and release artifact lineage. Good Price now clears its projected result/share action after the existing private-memory store accepts deletion, so erased personal context cannot remain visible or shareable. A failed deletion remains an explicit error. This is a reversible presentation/lifecycle correction with no planner, parser, money/quantity, evidence, offer, store/availability, ranking, persistence or network authority change. Candidate Linux verification passed 402 shared-core tests and 1,502 Android tests with zero failures, lint/build/privacy/single-signer/release-bundle and browser/Firefox checks; local Python/catalog verification passed 79 tests. Physical-device camera/OCR ergonomics and lawful production Home activation remain open.

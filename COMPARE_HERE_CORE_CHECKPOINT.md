@@ -2,6 +2,12 @@
 
 ## Latest promoted consumer boundary
 
+- Promoted code commit: `d6a0b25ef3e20a7c533cb98fb083c910e734b641` (`Improve Good Price result accessibility`)
+- Candidate workflow: **33962568132** — success
+- Promoted workflow/provenance: **33962826152** — success
+
+Good Price’s exact answer card and optional personal-history card now each expose a coherent accessibility summary, while decorative child labels are hidden from assistive technology to prevent repeated announcements. This renderer-only formatting reuses already-projected facts and adds no parser, exact money/quantity, evaluator, memory, evidence, ranking, planner, offer, store, availability, persistence or network authority.
+
 - Promoted code commit: `44767d3a89c5fe79e3916c09ef91a589e42230dc` (`Invalidate Good Price result after memory clear`)
 - Candidate workflow: **33961384703** — success
 - Promoted workflow/provenance: **33961699432** — success
