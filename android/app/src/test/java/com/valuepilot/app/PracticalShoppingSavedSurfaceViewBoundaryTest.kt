@@ -13,6 +13,8 @@ class PracticalShoppingSavedSurfaceViewBoundaryTest {
         val source = source().readText()
 
         assertTrue(source.contains("actionDescription = row.actionDescription"))
+        assertTrue(source.contains("secondaryAction = row.secondaryAction"))
+        assertTrue(source.contains("secondaryActionDescription = row.secondaryActionDescription"))
         assertTrue(source.contains("contentDescription = requireNotNull(actionDescription)"))
         assertTrue(source.contains("this.contentDescription = contentDescription"))
         assertFalse(source.contains("Remove saved product"))

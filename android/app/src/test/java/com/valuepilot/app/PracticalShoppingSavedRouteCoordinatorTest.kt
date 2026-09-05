@@ -78,6 +78,27 @@ class PracticalShoppingSavedRouteCoordinatorTest {
     }
 
     @Test
+    fun `check price action is navigation only and never mutates the Saved session`() {
+        val factory = RecordingSessionFactory()
+        val coordinator = PracticalShoppingSavedRouteCoordinator(factory::create)
+        val action =
+            PracticalShoppingSavedSurfaceAction.CheckProductPrice(
+                itemKey = ShoppingItemKey("eggs"),
+                displayName = "Free-range eggs"
+            )
+
+        coordinator.onSurfaceAction(action)
+        assertEquals(0, factory.createCalls)
+
+        coordinator.onRouteVisibilityChanged(true)
+        coordinator.onSurfaceAction(action)
+
+        assertEquals(1, factory.createCalls)
+        assertTrue(factory.session.actions.isEmpty())
+        assertEquals(1, factory.session.refreshCalls)
+    }
+
+    @Test
     fun `close releases current session and permanently ignores later route and surface events`() {
         val factory = RecordingSessionFactory()
         val coordinator = PracticalShoppingSavedRouteCoordinator(factory::create)

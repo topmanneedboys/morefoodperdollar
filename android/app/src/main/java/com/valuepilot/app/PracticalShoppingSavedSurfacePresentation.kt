@@ -1,5 +1,7 @@
 package com.valuepilot.app
 
+import com.valuepilot.core.ShoppingItemKey
+
 /**
  * UI-only modes for the physical Saved surface.
  *
@@ -16,9 +18,28 @@ enum class PracticalShoppingSavedSurfaceMode {
     ERROR
 }
 
+private const val MAX_SAVED_SURFACE_ACTION_DISPLAY_NAME_LENGTH = 160
+
 /** Typed actions that a replaceable Saved surface may emit. */
 sealed interface PracticalShoppingSavedSurfaceAction {
     data object Refresh : PracticalShoppingSavedSurfaceAction
+
+    /**
+     * Starts the existing Good Price workflow with a bounded display-only name prefill.
+     *
+     * The label is not product identity or evidence. Good Price still requires an exact
+     * package quantity and an observed price before it can answer or remember anything.
+     */
+    data class CheckProductPrice(
+        val itemKey: ShoppingItemKey,
+        val displayName: String
+    ) : PracticalShoppingSavedSurfaceAction {
+        init {
+            require(displayName.isNotBlank())
+            require(displayName.length <= MAX_SAVED_SURFACE_ACTION_DISPLAY_NAME_LENGTH)
+            require(displayName.none { character -> Character.isISOControl(character.code) })
+        }
+    }
 
     data class Preference(
         val action: PracticalShoppingSavedExactPreferenceUiAction
@@ -30,7 +51,10 @@ data class PracticalShoppingSavedSurfaceProductRow(
     val supportingText: String,
     val action: PracticalShoppingSavedSurfaceAction.Preference?,
     val actionLabel: String?,
-    val actionDescription: String?
+    val actionDescription: String?,
+    val secondaryAction: PracticalShoppingSavedSurfaceAction.CheckProductPrice? = null,
+    val secondaryActionLabel: String? = null,
+    val secondaryActionDescription: String? = null
 ) {
     init {
         require(title.isNotBlank())
@@ -39,6 +63,10 @@ data class PracticalShoppingSavedSurfaceProductRow(
         require((action != null) == (actionDescription != null))
         require(actionLabel == null || actionLabel.isNotBlank())
         require(actionDescription == null || actionDescription.isNotBlank())
+        require((secondaryAction != null) == (secondaryActionLabel != null))
+        require((secondaryAction != null) == (secondaryActionDescription != null))
+        require(secondaryActionLabel == null || secondaryActionLabel.isNotBlank())
+        require(secondaryActionDescription == null || secondaryActionDescription.isNotBlank())
     }
 }
 
@@ -243,6 +271,22 @@ object PracticalShoppingSavedSurfaceProjector {
                     actionDescription =
                         if (interactionsEnabled) {
                             "Remove saved product ${row.title}"
+                        } else {
+                            null
+                        },
+                    secondaryAction =
+                        if (interactionsEnabled) {
+                            PracticalShoppingSavedSurfaceAction.CheckProductPrice(
+                                itemKey = row.action.itemKey,
+                                displayName = row.title
+                            )
+                        } else {
+                            null
+                        },
+                    secondaryActionLabel = if (interactionsEnabled) "Check price" else null,
+                    secondaryActionDescription =
+                        if (interactionsEnabled) {
+                            "Check a price for ${row.title}; package quantity and price are still required"
                         } else {
                             null
                         }

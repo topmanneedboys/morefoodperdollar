@@ -77,12 +77,22 @@ class PracticalShoppingSavedSurfaceUiReadyStateTest {
 
         assertEquals("Products", ready.productSectionTitle)
         assertEquals("Remove", ready.productRows.single().actionLabel)
+        assertEquals("Check price", ready.productRows.single().secondaryActionLabel)
+        assertEquals(
+            PracticalShoppingSavedSurfaceAction.CheckProductPrice(
+                itemKey = ShoppingItemKey("opaque-item-key-123456"),
+                displayName = "Free-range eggs"
+            ),
+            ready.productRows.single().secondaryAction
+        )
         assertEquals("Refresh", ready.refreshActionLabel)
         assertEquals("Clear all", ready.clearAllActionLabel)
 
         assertEquals("Products", busy.productSectionTitle)
         assertNull(busy.productRows.single().action)
         assertNull(busy.productRows.single().actionLabel)
+        assertNull(busy.productRows.single().secondaryAction)
+        assertNull(busy.productRows.single().secondaryActionLabel)
         assertNull(busy.refreshActionLabel)
         assertNull(busy.clearAllActionLabel)
     }

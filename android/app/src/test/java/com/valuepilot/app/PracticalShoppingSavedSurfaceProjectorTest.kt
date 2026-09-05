@@ -6,6 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -17,6 +18,27 @@ class PracticalShoppingSavedSurfaceProjectorTest {
         PracticalShoppingSavedExactPreferenceUiAction.DeleteProduct(itemKey)
     private val deleteStore =
         PracticalShoppingSavedExactPreferenceUiAction.DeleteStore(storeKey)
+
+    @Test
+    fun `check price action keeps the saved key typed and rejects unsafe display labels`() {
+        val action =
+            PracticalShoppingSavedSurfaceAction.CheckProductPrice(
+                itemKey = itemKey,
+                displayName = "Free-range eggs"
+            )
+
+        assertEquals(itemKey, action.itemKey)
+        assertEquals("Free-range eggs", action.displayName)
+        assertThrows(IllegalArgumentException::class.java) {
+            PracticalShoppingSavedSurfaceAction.CheckProductPrice(itemKey, " ")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            PracticalShoppingSavedSurfaceAction.CheckProductPrice(itemKey, "unsafe\u0000name")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            PracticalShoppingSavedSurfaceAction.CheckProductPrice(itemKey, "x".repeat(161))
+        }
+    }
 
     @Test
     fun `idle surface is explicit and offers refresh without content`() {
@@ -98,6 +120,18 @@ class PracticalShoppingSavedSurfaceProjectorTest {
         assertEquals(
             "Remove saved product Free-range eggs",
             surface.productRows.single().actionDescription
+        )
+        assertEquals(
+            PracticalShoppingSavedSurfaceAction.CheckProductPrice(
+                itemKey = itemKey,
+                displayName = "Free-range eggs"
+            ),
+            surface.productRows.single().secondaryAction
+        )
+        assertEquals("Check price", surface.productRows.single().secondaryActionLabel)
+        assertEquals(
+            "Check a price for Free-range eggs; package quantity and price are still required",
+            surface.productRows.single().secondaryActionDescription
         )
         assertEquals(
             "Remove saved store Neighbourhood Market",
@@ -197,6 +231,9 @@ class PracticalShoppingSavedSurfaceProjectorTest {
         assertEquals("Free-range eggs", surface.productRows.single().title)
         assertNull(surface.productRows.single().action)
         assertNull(surface.productRows.single().actionDescription)
+        assertNull(surface.productRows.single().secondaryAction)
+        assertNull(surface.productRows.single().secondaryActionLabel)
+        assertNull(surface.productRows.single().secondaryActionDescription)
         assertNull(surface.storeRows.single().action)
         assertNull(surface.storeRows.single().actionDescription)
         assertNull(surface.clearAllAction)

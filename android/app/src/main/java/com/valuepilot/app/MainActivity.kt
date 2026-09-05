@@ -1309,7 +1309,14 @@ class MainActivity : AppCompatActivity() {
                 }
             )
 
-        savedExperience.onAction = savedRouteCoordinator::onSurfaceAction
+        savedExperience.onAction = { action ->
+            when (action) {
+                is PracticalShoppingSavedSurfaceAction.CheckProductPrice ->
+                    openGoodPriceForSavedProduct(action.displayName)
+
+                else -> savedRouteCoordinator.onSurfaceAction(action)
+            }
+        }
         savedStapleLaunchExperience.onAction = { action ->
             when (action) {
                 PracticalShoppingSavedStapleLaunchAction.OpenStapleWatchSetup ->
@@ -1758,6 +1765,20 @@ class MainActivity : AppCompatActivity() {
             Intent(this, GoodPriceActivity::class.java).putExtra(
                 GoodPriceActivity.EXTRA_PRODUCT_NAME,
                 item.name
+            )
+        )
+    }
+
+    /**
+     * Reuses a saved display label as an untrusted Good Price prefill. The saved identity itself
+     * remains in the Saved lifecycle; Good Price still requires fresh user-entered evidence.
+     */
+    private fun openGoodPriceForSavedProduct(displayName: String) {
+        val safeName = GoodPriceActivityPrefill.sanitize(displayName) ?: return
+        startActivity(
+            Intent(this, GoodPriceActivity::class.java).putExtra(
+                GoodPriceActivity.EXTRA_PRODUCT_NAME,
+                safeName
             )
         )
     }

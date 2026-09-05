@@ -45,6 +45,11 @@ internal class PracticalShoppingSavedRouteCoordinator(
 
         when (action) {
             PracticalShoppingSavedSurfaceAction.Refresh -> ensureSession().refresh()
+            is PracticalShoppingSavedSurfaceAction.CheckProductPrice ->
+                // Navigation is owned by the Activity shell. A replaceable Saved host may
+                // consume this typed convenience action without touching the persistence
+                // session or manufacturing any price evidence.
+                Unit
             is PracticalShoppingSavedSurfaceAction.Preference ->
                 session?.selectAction(action.action)
         }

@@ -148,7 +148,10 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
             supportingText = row.supportingText,
             action = row.action,
             actionLabel = row.actionLabel,
-            actionDescription = row.actionDescription
+            actionDescription = row.actionDescription,
+            secondaryAction = row.secondaryAction,
+            secondaryActionLabel = row.secondaryActionLabel,
+            secondaryActionDescription = row.secondaryActionDescription
         )
 
     private fun storeCard(row: PracticalShoppingSavedSurfaceStoreRow): View =
@@ -157,7 +160,10 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
             supportingText = row.supportingText,
             action = row.action,
             actionLabel = row.actionLabel,
-            actionDescription = row.actionDescription
+            actionDescription = row.actionDescription,
+            secondaryAction = null,
+            secondaryActionLabel = null,
+            secondaryActionDescription = null
         )
 
     private fun preferenceCard(
@@ -165,7 +171,10 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
         supportingText: String,
         action: PracticalShoppingSavedSurfaceAction.Preference?,
         actionLabel: String?,
-        actionDescription: String?
+        actionDescription: String?,
+        secondaryAction: PracticalShoppingSavedSurfaceAction.CheckProductPrice?,
+        secondaryActionLabel: String?,
+        secondaryActionDescription: String?
     ): View {
         val card =
             MaterialCardView(context).apply {
@@ -202,6 +211,17 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
                 topPadding = 5
             )
         )
+        secondaryAction?.let { typedAction ->
+            body.addView(
+                actionButton(
+                    label = requireNotNull(secondaryActionLabel),
+                    action = typedAction,
+                    destructive = false,
+                    compact = true,
+                    contentDescription = requireNotNull(secondaryActionDescription)
+                )
+            )
+        }
         action?.let { typedAction ->
             body.addView(
                 actionButton(
