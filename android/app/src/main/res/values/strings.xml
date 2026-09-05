@@ -23,7 +23,7 @@
     <string name="compare_photo_retry">Try another photo</string>
     <string name="compare_photo_retry_description">Try the same photo method again after the last photo could not provide a usable OCR suggestion.</string>
     <string name="compare_photo_review_title">Review photo suggestions</string>
-    <string name="compare_photo_review_body">ValuePilot found %1$d untrusted OCR suggestion(s). Select the price-tag text that belongs in your comparison, then review the package size and price in the editable entries. Nothing is added until you choose Add selected.</string>
+    <string name="compare_photo_review_body">ValuePilot found %1$d untrusted OCR suggestion(s). Each row may show parser signals for a name, price text, or package size; these are not confirmed facts. Select the price-tag text that belongs in your comparison, then review the product name, package size, price, and currency in the editable entries. Nothing is added until you choose Add selected.</string>
     <string name="compare_photo_add_selected">Add selected</string>
     <string name="compare_photo_none_selected">No photo suggestions selected. Your existing entries are unchanged.</string>
     <string name="compare_camera_permission_needed">Camera access is needed only to take this photo. Nothing is sent online.</string>

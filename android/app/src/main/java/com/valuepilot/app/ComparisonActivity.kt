@@ -898,12 +898,9 @@ class ComparisonActivity : AppCompatActivity() {
     }
 
     private fun photoSuggestionLabel(value: String): String {
-        val collapsed = value.replace(Regex("\\s+"), " ").trim()
-        if (collapsed.length <= MAX_PHOTO_REVIEW_LABEL_CHARS) return collapsed
-        return collapsed
-            .take(MAX_PHOTO_REVIEW_LABEL_CHARS - 1)
-            .trimEnd()
-            .plus("…")
+        return CompareHerePhotoSuggestionPresentationFactory
+            .forCandidate(value)
+            .displayLabel
     }
 
     private fun finishPhotoRequest(@StringRes statusRes: Int) {
@@ -1929,9 +1926,6 @@ class ComparisonActivity : AppCompatActivity() {
 
         private const val MAX_PHOTO_DIMENSION =
             2_048
-
-        private const val MAX_PHOTO_REVIEW_LABEL_CHARS =
-            320
 
         private const val CAMERA_CACHE_DIRECTORY =
             "camera"
