@@ -122,6 +122,9 @@ class PracticalShoppingProductionHomeSurfaceView @JvmOverloads constructor(
                 )
             )
         }
+        item.plannedPriceNotice?.let { notice ->
+            body.addView(textLine(notice, 13f, "#6B7280", topPadding = 6))
+        }
         item.coverageNotice?.let { notice ->
             body.addView(textLine(notice, 13f, "#92400E", bold = true, topPadding = 6))
         }
@@ -139,6 +142,7 @@ class PracticalShoppingProductionHomeSurfaceView @JvmOverloads constructor(
                 item.plannedPriceText?.let { price ->
                     context.getString(R.string.production_home_included_price, price)
                 },
+                item.plannedPriceNotice,
                 item.coverageNotice
             )
             .joinToString(". ") { value -> value.trim().trimEnd('.', '!', '?') } + "."

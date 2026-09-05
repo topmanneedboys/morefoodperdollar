@@ -222,6 +222,7 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "item.requestDetailsActionLabel",
             "item.storeAssignment",
             "item.plannedPriceText?.let",
+            "item.plannedPriceNotice?.let",
             "item.priceCoverageNotice",
             "line(\"Buy at ${'$'}store\"",
             "line(\"Included in plan: ${'$'}price\"",

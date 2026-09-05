@@ -10,7 +10,7 @@ class StapleWatchSurfaceViewBoundaryTest {
 
     @Test
     fun physicalViewConsumesConsumerStateOnly() {
-        val source = source("StapleWatchSurfaceView.kt").readText()
+        val source = source("StapleWatchSurfaceView.kt").readSourceText()
 
         assertTrue(source.contains("StapleWatchSurfaceRenderer"))
         assertTrue(source.contains("render(state: StapleWatchUiState)"))
@@ -30,7 +30,7 @@ class StapleWatchSurfaceViewBoundaryTest {
 
     @Test
     fun physicalViewStartsHiddenRendersVisibleAndClearsAllConsumerState() {
-        val source = source("StapleWatchSurfaceView.kt").readText()
+        val source = source("StapleWatchSurfaceView.kt").readSourceText()
 
         assertTrue(source.contains("isSaveEnabled = false\n        visibility = GONE"))
         assertTrue(source.contains("override fun render(state: StapleWatchUiState)"))
@@ -68,7 +68,7 @@ class StapleWatchSurfaceViewBoundaryTest {
 
     @Test
     fun physicalViewAnnouncesStatusAndKeepsWatchAuthorityOutsideTheView() {
-        val source = source("StapleWatchSurfaceView.kt").readText()
+        val source = source("StapleWatchSurfaceView.kt").readSourceText()
 
         assertTrue(source.contains("accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"))
         assertTrue(source.contains("contentDescription = stapleWatchSwitchCardContentDescription(candidate)"))
@@ -91,7 +91,7 @@ class StapleWatchSurfaceViewBoundaryTest {
 
     @Test
     fun `projected Watch warning is also a polite live region`() {
-        val source = source("StapleWatchSurfaceView.kt").readText()
+        val source = source("StapleWatchSurfaceView.kt").readSourceText()
         val noticeStart = source.indexOf("private val notice =")
         val noticeEnd = source.indexOf("\n\n    init {", noticeStart)
 

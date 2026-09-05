@@ -9,7 +9,7 @@ class UserObservedPriceConfirmationDraftSurfaceViewTest {
 
     @Test
     fun `physical renderer starts inactive and mechanically renders projected copy`() {
-        val source = source().readText()
+        val source = source().readSourceText()
 
         listOf(
             "internal class UserObservedPriceConfirmationDraftSurfaceView",
@@ -36,7 +36,7 @@ class UserObservedPriceConfirmationDraftSurfaceViewTest {
 
     @Test
     fun `physical renderer does not interpret draft completeness or missing field semantics`() {
-        val source = source().readText()
+        val source = source().readSourceText()
 
         assertFalse(
             "Draft surface must not inspect status",
@@ -60,7 +60,7 @@ class UserObservedPriceConfirmationDraftSurfaceViewTest {
 
     @Test
     fun `physical renderer owns no editing action proof storage validation or ranking authority`() {
-        val source = source().readText()
+        val source = source().readSourceText()
 
         listOf(
             "android.widget.Button",
@@ -105,8 +105,8 @@ class UserObservedPriceConfirmationDraftSurfaceViewTest {
     @Test
     fun `physical renderer is attached only through the real confirmation route that owns visibility`() {
         val className = "UserObservedPriceConfirmationDraftSurfaceView"
-        val layout = appFile("app/src/main/res/layout/activity_shell.xml").readText()
-        val activity = appFile("app/src/main/java/com/valuepilot/app/MainActivity.kt").readText()
+        val layout = appFile("app/src/main/res/layout/activity_shell.xml").readSourceText()
+        val activity = appFile("app/src/main/java/com/valuepilot/app/MainActivity.kt").readSourceText()
 
         assertTrue("Shell must now contain the passive draft surface", layout.contains(className))
         assertTrue(

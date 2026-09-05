@@ -113,6 +113,55 @@ class PracticalShoppingProductionHomeUiProjectorTest {
     }
 
     @Test
+    fun coveredResultWithoutOptionalBreakdownStatesThatTheSubtotalIncludesTheItem() {
+        val item = ShoppingItemKey("production-home-breakdownless-item")
+        val store = store("production-home-breakdownless-store")
+        val price = priceCase("production-home-breakdownless", store)
+        val request =
+            orchestrationRequest(
+                shoppingRequest = ShoppingRequest(listOf(item)),
+                store = store,
+                priceBindings =
+                    listOf(
+                        PracticalShoppingProductionPriceBinding(
+                            itemKey = item,
+                            productKey = price.productKey,
+                            storeKey = store.storeKey,
+                            currentPriceRequestId = price.request.requestId
+                        )
+                    ),
+                priceRequests = listOf(price.request)
+            )
+        val projection = projection(request, listOf(price))
+        val originalResult = requireNotNull(projection.result)
+        val resultWithoutBreakdown =
+            originalResult.copy(
+                state =
+                    originalResult.state.copy(
+                        itemStoreAssignments =
+                            originalResult.state.itemStoreAssignments.map { assignment ->
+                                assignment.copy(priceText = null)
+                            }
+                    )
+            )
+
+        val uiState =
+            PracticalShoppingProductionHomeUiProjector.project(
+                request = request,
+                projection = projection.copy(result = resultWithoutBreakdown),
+                itemDisplayNames = mapOf(item to "Milk")
+            )
+
+        val row = uiState.items.single()
+        assertNull(row.plannedPriceText)
+        assertEquals(
+            PracticalShoppingProductionHomeUiProjector.ITEM_PRICE_BREAKDOWN_NOTICE,
+            row.plannedPriceNotice
+        )
+        assertNull(row.coverageNotice)
+    }
+
+    @Test
     fun validNoCoverageStaysReadyAndMakesEveryUnknownItemVisible() {
         val firstItem = ShoppingItemKey("production-home-no-price-eggs")
         val secondItem = ShoppingItemKey("production-home-no-price-milk")

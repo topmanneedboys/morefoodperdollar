@@ -32,9 +32,15 @@ internal fun practicalShoppingBasketCollectionActionDescription(
 ): String {
     val state = if (collected) "not collected" else "collected"
     val store = item.storeAssignment?.let { "Buy at $it. " }.orEmpty()
+    val price =
+        (
+            item.plannedPriceText?.let { "Included in plan: $it. " }
+                ?: item.plannedPriceNotice?.let { "$it " }
+        ).orEmpty()
     val notice = item.requestDetailsNotice?.let { " $it" }.orEmpty()
     return "Mark ${item.name} (${item.detail}) as $state. " +
         store +
+        price +
         "${item.requestDetailsSummary}.$notice"
 }
 
@@ -290,6 +296,12 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     ) {
         item.storeAssignment?.let { store ->
             container.addView(line("Buy at $store", 12f, "#374151", topPadding = 2))
+        }
+        item.plannedPriceText?.let { price ->
+            container.addView(line("Included in plan: $price", 12f, "#374151", topPadding = 2))
+        }
+        item.plannedPriceNotice?.let { notice ->
+            container.addView(line(notice, 12f, "#6B7280", topPadding = 2))
         }
         if (collectionEnabled && item.storeAssignment == null) {
             container.addView(

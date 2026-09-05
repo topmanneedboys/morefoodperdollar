@@ -296,4 +296,47 @@ class PracticalShoppingBasketRendererTest {
             practicalShoppingBasketCollectionActionDescription(item, collected = false)
         )
     }
+
+    @Test
+    fun collectionActionDescriptionIncludesAnExactPlannedItemPriceWhenAvailable() {
+        val item =
+            PracticalShoppingHomeItemRenderState(
+                key = ShoppingItemKey("sample-eggs-priced"),
+                name = "Eggs",
+                detail = "12 pack",
+                requestDetailsSummary = "No extra preferences",
+                requestDetailsNotice = null,
+                requestDetailsActionLabel = "Add details",
+                storeAssignment = "Sample Market",
+                plannedPriceText = "2.00 CAD"
+            )
+
+        assertEquals(
+            "Mark Eggs (12 pack) as collected. Buy at Sample Market. " +
+                "Included in plan: 2.00 CAD. No extra preferences.",
+            practicalShoppingBasketCollectionActionDescription(item, collected = false)
+        )
+    }
+
+    @Test
+    fun collectionActionDescriptionKeepsMissingItemBreakdownExplicit() {
+        val item =
+            PracticalShoppingHomeItemRenderState(
+                key = ShoppingItemKey("sample-eggs-breakdownless"),
+                name = "Eggs",
+                detail = "12 pack",
+                requestDetailsSummary = "No extra preferences",
+                requestDetailsNotice = null,
+                requestDetailsActionLabel = "Add details",
+                storeAssignment = "Sample Market",
+                plannedPriceNotice = PracticalShoppingHomeRenderer.ITEM_PRICE_BREAKDOWN_NOTICE
+            )
+
+        assertEquals(
+            "Mark Eggs (12 pack) as collected. Buy at Sample Market. " +
+                "Included in the basket total — exact item price not shown. " +
+                "No extra preferences.",
+            practicalShoppingBasketCollectionActionDescription(item, collected = false)
+        )
+    }
 }

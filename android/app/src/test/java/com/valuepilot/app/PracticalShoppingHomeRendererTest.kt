@@ -193,6 +193,7 @@ class PracticalShoppingHomeRendererTest {
             listOf(null, "No usable price yet — not included in this plan."),
             rendered.items.map { it.priceCoverageNotice }
         )
+        assertEquals(listOf(null, null), rendered.items.map { it.plannedPriceNotice })
         assertEquals(
             listOf(false, true),
             rendered.items.map { it.observedPriceActionVisible }
@@ -226,6 +227,39 @@ class PracticalShoppingHomeRendererTest {
         assertNull(rendered.extraStopSettings.notice)
         assertTrue(rendered.items.all { it.priceCoverageNotice == null })
         assertTrue(rendered.items.all { it.plannedPriceText != null })
+        assertTrue(rendered.items.none { it.observedPriceActionVisible })
+    }
+
+    @Test
+    fun coveredItemsWithoutOptionalBreakdownAreMarkedAsIncludedButNotIndividuallyPriced() {
+        val model =
+            PracticalShoppingHomeSession.submit(
+                LocalSamplePracticalShoppingDemo.initialModel(),
+                "eggs milk"
+            )
+        val sourceResult = requireNotNull(model.ui.result)
+        val withoutBreakdown =
+            sourceResult.copy(
+                itemStoreAssignments =
+                    sourceResult.itemStoreAssignments.map { assignment ->
+                        assignment.copy(priceText = null)
+                    }
+            )
+
+        val rendered =
+            PracticalShoppingHomeRenderer.render(
+                model.ui.copy(result = withoutBreakdown)
+            )
+
+        assertEquals(listOf(null, null), rendered.items.map { it.plannedPriceText })
+        assertEquals(
+            listOf(
+                PracticalShoppingHomeRenderer.ITEM_PRICE_BREAKDOWN_NOTICE,
+                PracticalShoppingHomeRenderer.ITEM_PRICE_BREAKDOWN_NOTICE
+            ),
+            rendered.items.map { it.plannedPriceNotice }
+        )
+        assertEquals(listOf(null, null), rendered.items.map { it.priceCoverageNotice })
         assertTrue(rendered.items.none { it.observedPriceActionVisible })
     }
 

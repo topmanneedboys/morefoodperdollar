@@ -9,7 +9,7 @@ class UserObservedPriceConfirmationDraftPriceInputSurfaceViewTest {
 
     @Test
     fun `physical price editor starts inactive and delegates raw text through exact adapter`() {
-        val source = source().readText()
+        val source = source().readSourceText()
 
         listOf(
             "class UserObservedPriceConfirmationDraftPriceInputSurfaceView",
@@ -37,7 +37,7 @@ class UserObservedPriceConfirmationDraftPriceInputSurfaceViewTest {
 
     @Test
     fun `physical price editor owns no money parsing store inference proof metadata or factual authority`() {
-        val source = source().readText()
+        val source = source().readSourceText()
 
         listOf(
             "Currency.getInstance",
@@ -71,8 +71,8 @@ class UserObservedPriceConfirmationDraftPriceInputSurfaceViewTest {
 
     @Test
     fun `shell binds editor only to exact confirmation route and clears raw text when route leaves`() {
-        val activity = appFile("app/src/main/java/com/valuepilot/app/MainActivity.kt").readText()
-        val layout = appFile("app/src/main/res/layout/activity_shell.xml").readText()
+        val activity = appFile("app/src/main/java/com/valuepilot/app/MainActivity.kt").readSourceText()
+        val layout = appFile("app/src/main/res/layout/activity_shell.xml").readSourceText()
 
         assertTrue(
             activity.contains("private lateinit var observedPriceConfirmationDraftPriceInputExperience:") &&

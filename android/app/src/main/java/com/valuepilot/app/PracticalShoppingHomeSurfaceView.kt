@@ -486,6 +486,9 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
             item.plannedPriceText?.let { price ->
                 addView(line("Included in plan: $price", 12f, "#374151", topPadding = 2))
             }
+            item.plannedPriceNotice?.let { notice ->
+                addView(line(notice, 12f, "#6B7280", topPadding = 2))
+            }
             item.priceCoverageNotice?.let { notice ->
                 addView(line(notice, 12f, "#92400E", topPadding = 2))
             }

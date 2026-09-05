@@ -84,7 +84,7 @@ class JamiesonRakutenPublishedCatalogRowTest {
 
     @Test
     fun `android schema is mechanically aligned with offline qualifier primary fields`() {
-        val qualifier = repositoryFile("tools/qualify_rakuten_product_catalog.py").readText()
+        val qualifier = repositoryFile("tools/qualify_rakuten_product_catalog.py").readSourceText()
         val startMarker = "PRIMARY_FIELDS = ["
         val start = qualifier.indexOf(startMarker)
         val end = qualifier.indexOf("]\n\nREQUIRED_PRIMARY_FIELDS", startIndex = start)
@@ -219,7 +219,7 @@ class JamiesonRakutenPublishedCatalogRowTest {
 
     @Test
     fun `source boundary fixes qualifier positions and owns no offer freshness or side effect authority`() {
-        val source = source("JamiesonRakutenPublishedCatalogRow.kt").readText()
+        val source = source("JamiesonRakutenPublishedCatalogRow.kt").readSourceText()
 
         listOf(
             "PRIMARY_FIELD_COUNT = 28",

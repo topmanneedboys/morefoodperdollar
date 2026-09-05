@@ -9,7 +9,7 @@ class UserObservedPriceSavedShellIntegrationBoundaryTest {
 
     @Test
     fun `saved lifecycle composes observed price launcher selection typed result passive draft and explicit draft inputs`() {
-        val source = activitySource().readText()
+        val source = activitySource().readSourceText()
         val configureSaved = configureSavedBlock(source)
 
         assertTrue(source.contains("private lateinit var savedObservedPriceLaunchExperience: PracticalShoppingSavedObservedPriceLaunchView"))
@@ -83,7 +83,7 @@ class UserObservedPriceSavedShellIntegrationBoundaryTest {
 
     @Test
     fun `shell routes draft inputs and explicit confirmation only through narrow boundaries without direct authority`() {
-        val configureSaved = configureSavedBlock(activitySource().readText())
+        val configureSaved = configureSavedBlock(activitySource().readSourceText())
 
         assertTrue(configureSaved.contains("savedObservedPriceLaunchExperience.onAction = { action ->"))
         assertTrue(
@@ -145,7 +145,7 @@ class UserObservedPriceSavedShellIntegrationBoundaryTest {
 
     @Test
     fun `selection rerender clears stale handoff result before rendering current immutable selection state`() {
-        val configureSaved = configureSavedBlock(activitySource().readText())
+        val configureSaved = configureSavedBlock(activitySource().readSourceText())
         val rendererBlock =
             configureSaved
                 .substringAfter("val observedPriceSelectionRenderer =")
@@ -160,7 +160,7 @@ class UserObservedPriceSavedShellIntegrationBoundaryTest {
 
     @Test
     fun `exact shell route owns observed price selection result draft and explicit input visibility`() {
-        val source = activitySource().readText()
+        val source = activitySource().readSourceText()
 
         assertTrue(
             source.contains(
@@ -231,7 +231,7 @@ class UserObservedPriceSavedShellIntegrationBoundaryTest {
 
     @Test
     fun `activity teardown closes observed price surface result selection inputs and confirmation draft owners`() {
-        val source = activitySource().readText()
+        val source = activitySource().readSourceText()
 
         assertTrue(source.contains("savedObservedPriceLaunchExperience.onAction = null"))
         assertTrue(source.contains("observedPriceConfirmationDraftPriceInputExperience.onCommit = null"))
@@ -246,7 +246,7 @@ class UserObservedPriceSavedShellIntegrationBoundaryTest {
 
     @Test
     fun `shell layout contains replaceable observed price surfaces hidden by default`() {
-        val layout = layoutSource().readText()
+        val layout = layoutSource().readSourceText()
 
         assertTrue(layout.contains("<com.valuepilot.app.PracticalShoppingSavedObservedPriceLaunchView"))
         assertTrue(layout.contains("android:id=\"@+id/savedObservedPriceLaunchExperience\""))

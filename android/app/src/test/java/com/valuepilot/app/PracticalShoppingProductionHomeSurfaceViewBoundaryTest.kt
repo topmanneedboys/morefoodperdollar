@@ -24,6 +24,7 @@ class PracticalShoppingProductionHomeSurfaceViewBoundaryTest {
         val source = source().readText()
 
         assertTrue(source.contains("item.coverageNotice"))
+        assertTrue(source.contains("item.plannedPriceNotice?.let"))
         assertTrue(source.contains("production_home_store_assignment"))
         assertTrue(source.contains("production_home_included_price"))
         assertFalse(source.contains("knownBasketCost"))

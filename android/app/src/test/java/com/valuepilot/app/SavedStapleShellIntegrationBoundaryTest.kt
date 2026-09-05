@@ -9,7 +9,7 @@ class SavedStapleShellIntegrationBoundaryTest {
 
     @Test
     fun `main activity composes saved lifecycle through staple setup and policy without business authority`() {
-        val source = activitySource().readText()
+        val source = activitySource().readSourceText()
 
         assertTrue(source.contains("PracticalShoppingSavedStapleLaunchPresenter"))
         assertTrue(source.contains("StapleWatchSavedSetupCompositionCoordinator"))
@@ -43,7 +43,7 @@ class SavedStapleShellIntegrationBoundaryTest {
 
     @Test
     fun `completed staple evidence preserves metadata pairing and fans out to foreground input before policy setup`() {
-        val source = activitySource().readText()
+        val source = activitySource().readSourceText()
 
         assertTrue(
             source.contains(
@@ -104,7 +104,7 @@ class SavedStapleShellIntegrationBoundaryTest {
 
     @Test
     fun `policy availability maps through typed shell adapter and policy handoff targets foreground input host`() {
-        val source = activitySource().readText()
+        val source = activitySource().readSourceText()
 
         assertTrue(
             source.contains(
@@ -134,7 +134,7 @@ class SavedStapleShellIntegrationBoundaryTest {
 
     @Test
     fun `foreground result surface is bound and route gated without output authority in shell`() {
-        val source = activitySource().readText()
+        val source = activitySource().readSourceText()
 
         assertTrue(source.contains("private lateinit var stapleWatchResultExperience: StapleWatchSurfaceView"))
         assertTrue(
@@ -175,7 +175,7 @@ class SavedStapleShellIntegrationBoundaryTest {
 
     @Test
     fun `validated saved snapshot still fans out only to setup and display metadata composition`() {
-        val source = activitySource().readText()
+        val source = activitySource().readSourceText()
 
         assertTrue(
             source.contains(
@@ -194,7 +194,7 @@ class SavedStapleShellIntegrationBoundaryTest {
 
     @Test
     fun `saved setup and policy physical visibility is owned by exact shell routes`() {
-        val source = activitySource().readText()
+        val source = activitySource().readSourceText()
 
         assertTrue(
             source.contains(
@@ -235,7 +235,7 @@ class SavedStapleShellIntegrationBoundaryTest {
 
     @Test
     fun `android back traverses policy then setup through shell reducer`() {
-        val source = activitySource().readText()
+        val source = activitySource().readSourceText()
 
         assertTrue(source.contains("onBackPressedDispatcher.addCallback("))
         assertTrue(source.contains("shellState.route == AppRoute.STAPLE_WATCH_SETUP"))
@@ -245,7 +245,7 @@ class SavedStapleShellIntegrationBoundaryTest {
 
     @Test
     fun `activity teardown disconnects saved setup and policy physical actions`() {
-        val source = activitySource().readText()
+        val source = activitySource().readSourceText()
 
         assertTrue(source.contains("savedExperience.onAction = null"))
         assertTrue(source.contains("savedStapleLaunchExperience.onAction = null"))
@@ -263,7 +263,7 @@ class SavedStapleShellIntegrationBoundaryTest {
 
     @Test
     fun `shell layout contains replaceable saved setup policy and result surfaces hidden by default`() {
-        val layout = layoutSource().readText()
+        val layout = layoutSource().readSourceText()
 
         assertTrue(layout.contains("<com.valuepilot.app.PracticalShoppingSavedStapleLaunchView"))
         assertTrue(layout.contains("android:id=\"@+id/savedStapleLaunchExperience\""))
@@ -300,7 +300,7 @@ class SavedStapleShellIntegrationBoundaryTest {
         val strings = File(
             File(System.getProperty("user.dir")),
             "src/main/res/values/strings.xml"
-        ).readText()
+        ).readSourceText()
 
         assertTrue(strings.contains("Manage saved choices."))
         assertTrue(

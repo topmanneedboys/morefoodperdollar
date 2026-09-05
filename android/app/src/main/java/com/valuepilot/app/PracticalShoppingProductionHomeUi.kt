@@ -18,6 +18,7 @@ data class PracticalShoppingProductionHomeItemUiState(
     val name: String,
     val storeAssignment: String? = null,
     val plannedPriceText: String? = null,
+    val plannedPriceNotice: String? = null,
     val coverageNotice: String? = null
 ) {
     init {
@@ -31,6 +32,15 @@ data class PracticalShoppingProductionHomeItemUiState(
         require(plannedPriceText == null || plannedPriceText.isNotBlank())
         require(plannedPriceText == null || plannedPriceText.length <= MAX_PRODUCTION_HOME_DISPLAY_CHARS)
         require(plannedPriceText == null || plannedPriceText.none { character -> character.isISOControl() })
+        require(plannedPriceNotice == null || plannedPriceNotice.isNotBlank())
+        require(plannedPriceNotice == null || plannedPriceNotice.length <= MAX_PRODUCTION_HOME_DISPLAY_CHARS)
+        require(plannedPriceNotice == null || plannedPriceNotice.none { character -> character.isISOControl() })
+        require(plannedPriceText == null || plannedPriceNotice == null) {
+            "An item cannot expose an exact price and a missing-breakdown notice together"
+        }
+        require(plannedPriceNotice == null || storeAssignment != null) {
+            "A missing-breakdown notice requires a planned store assignment"
+        }
         require(coverageNotice == null || coverageNotice.isNotBlank())
         require(coverageNotice == null || coverageNotice.length <= MAX_PRODUCTION_HOME_DISPLAY_CHARS)
         require(coverageNotice == null || coverageNotice.none { character -> character.isISOControl() })
@@ -40,7 +50,8 @@ data class PracticalShoppingProductionHomeItemUiState(
     override fun toString(): String =
         "PracticalShoppingProductionHomeItemUiState(" +
             "name=$name, storeAssignment=$storeAssignment, " +
-            "plannedPriceText=$plannedPriceText, coverageNotice=$coverageNotice)"
+            "plannedPriceText=$plannedPriceText, plannedPriceNotice=$plannedPriceNotice, " +
+            "coverageNotice=$coverageNotice)"
 }
 
 /**
@@ -77,6 +88,9 @@ object PracticalShoppingProductionHomeUiProjector {
 
     const val UNKNOWN_PRICE_NOTICE =
         "No usable price yet — not included in this plan."
+
+    const val ITEM_PRICE_BREAKDOWN_NOTICE =
+        PracticalShoppingHomeRenderer.ITEM_PRICE_BREAKDOWN_NOTICE
 
     fun project(
         request: PracticalShoppingProductionOrchestrationRequest,
@@ -155,6 +169,12 @@ object PracticalShoppingProductionHomeUiProjector {
                     name = names.getValue(itemKey),
                     storeAssignment = safeStore,
                     plannedPriceText = safePrice,
+                    plannedPriceNotice =
+                        if (assignment != null && safePrice == null) {
+                            ITEM_PRICE_BREAKDOWN_NOTICE
+                        } else {
+                            null
+                        },
                     coverageNotice =
                         if (assignment == null) UNKNOWN_PRICE_NOTICE else null
                 )

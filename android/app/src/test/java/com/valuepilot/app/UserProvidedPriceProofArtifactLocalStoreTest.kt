@@ -249,7 +249,7 @@ class UserProvidedPriceProofArtifactLocalStoreTest {
 
     @Test
     fun `artifact retention is private bounded storage only with no factual authority`() {
-        val source = source("UserProvidedPriceProofArtifactLocalStore.kt").readText()
+        val source = source("UserProvidedPriceProofArtifactLocalStore.kt").readSourceText()
 
         listOf(
             "context.noBackupFilesDir",

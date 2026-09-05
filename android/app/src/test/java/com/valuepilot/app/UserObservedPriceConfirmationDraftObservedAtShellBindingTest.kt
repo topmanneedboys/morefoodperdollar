@@ -9,7 +9,7 @@ class UserObservedPriceConfirmationDraftObservedAtShellBindingTest {
 
     @Test
     fun `shell mechanically binds explicit observed time surface to route coordinator`() {
-        val source = source("MainActivity.kt").readText()
+        val source = source("MainActivity.kt").readSourceText()
 
         listOf(
             "private lateinit var observedPriceConfirmationDraftObservedAtInputExperience:",
@@ -29,7 +29,7 @@ class UserObservedPriceConfirmationDraftObservedAtShellBindingTest {
 
     @Test
     fun `observed time surface is visible only on exact draft route and raw text clears on exit`() {
-        val source = source("MainActivity.kt").readText()
+        val source = source("MainActivity.kt").readSourceText()
         val renderShell =
             source.substring(
                 source.indexOf("private fun renderShell(state: AppShellState)"),
@@ -63,7 +63,7 @@ class UserObservedPriceConfirmationDraftObservedAtShellBindingTest {
 
     @Test
     fun `shell composition owns no observed time parsing clock identity or evidence authority`() {
-        val source = source("MainActivity.kt").readText()
+        val source = source("MainActivity.kt").readSourceText()
         val configureSaved =
             source.substring(
                 source.indexOf("private fun configureSavedUi()"),
@@ -98,7 +98,7 @@ class UserObservedPriceConfirmationDraftObservedAtShellBindingTest {
 
     @Test
     fun `layout hosts one hidden observed time input between price and proof reference`() {
-        val layout = layout().readText()
+        val layout = layout().readSourceText()
         val price = layout.indexOf("UserObservedPriceConfirmationDraftPriceInputSurfaceView")
         val observedAt = layout.indexOf("UserObservedPriceConfirmationDraftObservedAtInputSurfaceView")
         val proofReference = layout.indexOf("UserObservedPriceConfirmationDraftProofReferenceInputSurfaceView")

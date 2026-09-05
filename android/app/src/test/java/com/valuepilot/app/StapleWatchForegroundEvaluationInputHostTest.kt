@@ -149,7 +149,7 @@ class StapleWatchForegroundEvaluationInputHostTest {
 
     @Test
     fun hostOwnsOnlyForegroundInputSessionSequencing() {
-        val source = source("StapleWatchForegroundEvaluationInputHost.kt").readText()
+        val source = source("StapleWatchForegroundEvaluationInputHost.kt").readSourceText()
 
         assertTrue(
             source.contains(

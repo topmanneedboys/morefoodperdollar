@@ -9,7 +9,7 @@ class UserObservedPriceConfirmationDraftProofContentSelectionSurfaceViewTest {
 
     @Test
     fun `physical surface renders status only and emits explicit select request`() {
-        val source = source().readText()
+        val source = source().readSourceText()
 
         listOf(
             "class UserObservedPriceConfirmationDraftProofContentSelectionSurfaceView",
@@ -51,8 +51,8 @@ class UserObservedPriceConfirmationDraftProofContentSelectionSurfaceViewTest {
 
     @Test
     fun `shell composes picker transient owner and action invalidation only on exact confirmation route`() {
-        val activity = appFile("app/src/main/java/com/valuepilot/app/MainActivity.kt").readText()
-        val layout = appFile("app/src/main/res/layout/activity_shell.xml").readText()
+        val activity = appFile("app/src/main/java/com/valuepilot/app/MainActivity.kt").readSourceText()
+        val layout = appFile("app/src/main/res/layout/activity_shell.xml").readSourceText()
         val configureSaved =
             activity
                 .substringAfter("private fun configureSavedUi() {")

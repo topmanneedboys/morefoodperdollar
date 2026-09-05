@@ -39,6 +39,8 @@ data class PracticalShoppingHomeItemRenderState(
     val storeAssignment: String? = null,
     /** Exact price included for this item when the projected plan supplied a breakdown. */
     val plannedPriceText: String? = null,
+    /** Explicitly distinguishes a covered item from an unavailable line-item breakdown. */
+    val plannedPriceNotice: String? = null,
     val priceCoverageNotice: String? = null,
     val personalHistoryNotice: String? = null,
     /** Whether the missing-price handoff into the local observed-price flow is shown. */
@@ -52,6 +54,13 @@ data class PracticalShoppingHomeItemRenderState(
         require(detail.isNotBlank())
         require(storeAssignment == null || storeAssignment.isNotBlank())
         require(plannedPriceText == null || plannedPriceText.isNotBlank())
+        require(plannedPriceNotice == null || plannedPriceNotice.isNotBlank())
+        require(plannedPriceText == null || plannedPriceNotice == null) {
+            "An item cannot expose an exact price and a missing-breakdown notice together"
+        }
+        require(plannedPriceNotice == null || storeAssignment != null) {
+            "A missing-breakdown notice requires a planned store assignment"
+        }
         require(priceCoverageNotice == null || priceCoverageNotice.isNotBlank())
         require(personalHistoryNotice == null || personalHistoryNotice.isNotBlank())
         require(!observedPriceActionVisible || priceCoverageNotice != null) {
@@ -152,6 +161,14 @@ data class PracticalShoppingHomeRenderState(
 
 object PracticalShoppingHomeRenderer {
 
+    /**
+     * The shared planner may carry an authoritative subtotal without an optional
+     * line-item breakdown. Keep that distinction visible instead of making a
+     * covered item look like it has an exact displayed price.
+     */
+    const val ITEM_PRICE_BREAKDOWN_NOTICE =
+        "Included in the basket total — exact item price not shown."
+
     fun render(source: LocalSamplePracticalShoppingDemo.UiState): PracticalShoppingHomeRenderState =
         render(source, requestDetails = null, privateMemory = null)
 
@@ -223,6 +240,14 @@ object PracticalShoppingHomeRenderer {
                         detail = item.detail,
                         storeAssignment = storeAssignment,
                         plannedPriceText = itemStoreAssignment?.priceText,
+                        plannedPriceNotice =
+                            if (itemStoreAssignment != null &&
+                                itemStoreAssignment.priceText == null
+                            ) {
+                                ITEM_PRICE_BREAKDOWN_NOTICE
+                            } else {
+                                null
+                            },
                         priceCoverageNotice =
                             if (source.result != null && storeAssignment == null) {
                                 "No usable price yet — not included in this plan."
