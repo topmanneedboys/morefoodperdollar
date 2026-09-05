@@ -2,11 +2,12 @@ package com.valuepilot.app
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
-import android.os.Bundle
 import android.graphics.Color
+import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
+import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.RadioGroup
@@ -93,6 +94,19 @@ class GoodPriceActivity : AppCompatActivity() {
         memoryStore = CompareHerePrivatePriceMemoryAndroidStore(this)
 
         privateMemory = loadPrivateMemory()
+
+        // Keep the multiline editor, but make the keyboard's Done action follow the same
+        // explicit button gate. The existing exact coordinator still decides whether a result
+        // can be produced; this only removes a trip to a button below the editor.
+        productInput.imeOptions = EditorInfo.IME_ACTION_DONE
+        productInput.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE && checkButton.isEnabled) {
+                runCheck()
+                true
+            } else {
+                false
+            }
+        }
 
         barcodeButton.setOnClickListener { beginBarcodeCapture() }
 

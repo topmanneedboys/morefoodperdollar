@@ -158,6 +158,23 @@ class GoodPriceCheckBoundaryTest {
     }
 
     @Test
+    fun `good price keyboard done uses the same visible check gate`() {
+        val source = source("GoodPriceActivity.kt").readText()
+        val listener =
+            source
+                .substringAfter("productInput.setOnEditorActionListener")
+                .substringBefore("barcodeButton.setOnClickListener")
+
+        assertTrue(source.contains("productInput.imeOptions = EditorInfo.IME_ACTION_DONE"))
+        assertTrue(listener.contains("actionId == EditorInfo.IME_ACTION_DONE"))
+        assertTrue(listener.contains("checkButton.isEnabled"))
+        assertTrue(listener.contains("runCheck()"))
+        assertTrue(listener.contains("true"))
+        assertTrue(listener.indexOf("checkButton.isEnabled") < listener.indexOf("runCheck()"))
+        assertTrue(listener.indexOf("runCheck()") < listener.indexOf("true"))
+    }
+
+    @Test
     fun `good price invalidates projected personal context when memory changes on resume`() {
         val source = source("GoodPriceActivity.kt").readText()
         val onResume =
