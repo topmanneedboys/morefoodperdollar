@@ -412,7 +412,7 @@ Do not connect this path to real retailer networking or route provider data thro
 
 The identified raw-evaluation complexity issue is now hardened, Home has an honest action for collecting a missing personal price, and the provider-neutral **exact product/store/quantity/price handoff contract** is implemented by `PracticalShoppingProductionAssembler` and the production orchestration path. The latest slice adds the demo-free production Home UI state and inactive renderer boundary around that path.
 
-Next engineering slice: continue the consumer-first Scan & Compare journey with the next deterministic private-memory/convenience gap and available device ergonomics before activating production Home or adding provider plumbing. Keep the visible Home sample planning separate until concrete local evidence and travel inputs exist; unknown prices remain unknown, one-store-first stays explicit, and Views remain limited to immutable rendering and typed actions.
+The currently identified unblocked Home presentation gaps are implemented through the promoted result-reveal slice. The next meaningful gate is physical-device validation of Home scroll, keyboard, camera/OCR and accessibility behavior; continue only with another direct local consumer benefit after that. Keep the visible Home sample planning separate until concrete local evidence and travel inputs exist; unknown prices remain unknown, one-store-first stays explicit, and Views remain limited to immutable rendering and typed actions. Do not activate production Home or add provider plumbing without explicit lawful rights.
 
 That contract should carry only already-established facts and raw evidence inputs:
 
