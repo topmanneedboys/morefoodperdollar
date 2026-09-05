@@ -2,6 +2,12 @@
 
 ## Latest promoted consumer boundary
 
+- Promoted code commit: `37cc19cb72cb231831dfecef8fd5eb0c0e5bca2b` (`Add review gate for OCR comparison suggestions`)
+- Candidate workflow: **33955298400** — success
+- Promoted workflow/provenance: **33955607275** — success
+
+Scan & Compare’s camera/photo OCR route now stops at a bounded, clearly labelled untrusted review. Raw snippets are filtered for blank/control/overlong/duplicate text and the 32-entry capacity before display; the shopper explicitly selects which suggestions to add, and only then does the existing editable draft helper insert them. Nothing is parsed, ranked, persisted or remembered by OCR itself. The existing exact parser, package/price/currency rules, like-for-like confirmation, comparison evaluator and private-memory capture remain authoritative; cancel/dismiss, stale lifecycle callbacks, unsafe snippets and capacity overflow leave existing entries unchanged.
+
 - Promoted code commit: `ba1effcc34e0acefecedd2e4aed7dfc534324d59` (`Add review-first price photo import to Compare Here`)
 - Candidate workflow: **33840519086** — success
 - Promoted workflow/provenance: **33840982046** — success
