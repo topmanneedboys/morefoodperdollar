@@ -108,7 +108,38 @@ object BundledOfflineCatalog {
         maximumSnapshotAgeMillis: Long,
         lastKnownGoodGeneratedAtEpochMillis: Long? = null,
         maxResults: Int = OfflineCatalogDiscoveryRequest.MAX_RESULTS
-    ): OfflineCatalogDiscoveryResult {
+    ): OfflineCatalogDiscoveryResult =
+        loadSupportedRegions(
+            context = context,
+            evaluatedAtEpochMillis = evaluatedAtEpochMillis,
+            maximumSnapshotAgeMillis = maximumSnapshotAgeMillis,
+            lastKnownGoodGeneratedAtEpochMillis = lastKnownGoodGeneratedAtEpochMillis
+        ).index.discover(rawQuery, canonicalizer, maxResults)
+
+    /**
+     * Creates a process-local, Activity-owned identity lookup session. The
+     * session caches only the merged index after this same loader has admitted
+     * every supported region; the direct function above remains available for
+     * one-shot callers and tests.
+     */
+    internal fun createDiscoverySession(context: Context): BundledOfflineCatalogDiscoverySession {
+        val applicationContext = context.applicationContext
+        return BundledOfflineCatalogDiscoverySession { evaluatedAt, maximumAge, lastKnownGood ->
+            loadSupportedRegions(
+                context = applicationContext,
+                evaluatedAtEpochMillis = evaluatedAt,
+                maximumSnapshotAgeMillis = maximumAge,
+                lastKnownGoodGeneratedAtEpochMillis = lastKnownGood
+            )
+        }
+    }
+
+    private fun loadSupportedRegions(
+        context: Context,
+        evaluatedAtEpochMillis: Long,
+        maximumSnapshotAgeMillis: Long,
+        lastKnownGoodGeneratedAtEpochMillis: Long?
+    ): BundledOfflineCatalogLoadedIndex {
         val snapshots =
             BundledOfflineCatalogRegion.values().map { region ->
                 load(
@@ -124,9 +155,13 @@ object BundledOfflineCatalog {
                 }
             }
 
-        return OfflineCatalogDiscoveryIndex
-            .buildAcrossSnapshots(snapshots.map { it.products })
-            .discover(rawQuery, canonicalizer, maxResults)
+        return BundledOfflineCatalogLoadedIndex(
+            index =
+                OfflineCatalogDiscoveryIndex
+                    .buildAcrossSnapshots(snapshots.map { it.products }),
+            earliestGeneratedAtEpochMillis =
+                snapshots.minOf { it.manifest.generatedAtEpochMillis }
+        )
     }
 
     private fun ByteArray.toStringUtf8(): String =

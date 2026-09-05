@@ -19,7 +19,7 @@ class MainActivitySearchIdentityBoundaryTest {
             "dismissSearchIdentityDialog()\n        suppressSearchInputCallback = true",
             "private fun submitSearch() {\n        dismissSearchIdentityDialog()",
             "private fun showSearchIdentityMatches()",
-            "BundledOfflineCatalog.discoverSupportedRegions(",
+            "offlineCatalogDiscoverySession.discover(",
             "PracticalShoppingSearchIdentityPresentation.from(",
             "showSearchIdentityResult(",
             "openComparisonWithSharedText(match.displayName)",

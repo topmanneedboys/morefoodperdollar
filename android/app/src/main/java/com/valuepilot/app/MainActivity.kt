@@ -63,6 +63,7 @@ class MainActivity : AppCompatActivity() {
     private val searchProvider: ProductSearchProvider = LocalSampleProductSearchProvider
     private val searchExecutor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
+    private lateinit var offlineCatalogDiscoverySession: BundledOfflineCatalogDiscoverySession
 
     private lateinit var shellRoot: View
     private lateinit var bottomNavArea: View
@@ -162,6 +163,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_shell)
+        offlineCatalogDiscoverySession =
+            BundledOfflineCatalog.createDiscoverySession(applicationContext)
 
         shellRoot = findViewById(R.id.shellRoot)
         bottomNavArea = findViewById(R.id.bottomNavArea)
@@ -383,6 +386,9 @@ class MainActivity : AppCompatActivity() {
         }
         if (::rememberConfirmedChoiceAndroidSession.isInitialized) {
             rememberConfirmedChoiceAndroidSession.close()
+        }
+        if (::offlineCatalogDiscoverySession.isInitialized) {
+            offlineCatalogDiscoverySession.close()
         }
         searchExecutor.shutdownNow()
         mainHandler.removeCallbacksAndMessages(null)
@@ -635,13 +641,12 @@ class MainActivity : AppCompatActivity() {
         offlineCatalogLookup = searchExecutor.submit {
             val lookup =
                 try {
-                    val discoveryResult = BundledOfflineCatalog.discoverSupportedRegions(
-                            context = applicationContext,
-                            rawQuery = query,
-                            canonicalizer = JvmTextCanonicalizer,
-                            evaluatedAtEpochMillis = System.currentTimeMillis(),
-                            maximumSnapshotAgeMillis = OFFLINE_CATALOG_MAX_AGE_MILLIS
-                        )
+                    val discoveryResult = offlineCatalogDiscoverySession.discover(
+                        rawQuery = query,
+                        canonicalizer = JvmTextCanonicalizer,
+                        evaluatedAtEpochMillis = System.currentTimeMillis(),
+                        maximumSnapshotAgeMillis = OFFLINE_CATALOG_MAX_AGE_MILLIS
+                    )
                     OfflineCatalogLookup(
                         discoveryResult = discoveryResult,
                         presentation =
@@ -1504,8 +1509,7 @@ class MainActivity : AppCompatActivity() {
                     PracticalShoppingSearchIdentityPresentation.from(
                         query = query,
                         result =
-                            BundledOfflineCatalog.discoverSupportedRegions(
-                                context = applicationContext,
+                            offlineCatalogDiscoverySession.discover(
                                 rawQuery = query,
                                 canonicalizer = JvmTextCanonicalizer,
                                 evaluatedAtEpochMillis = System.currentTimeMillis(),

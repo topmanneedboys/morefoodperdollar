@@ -32,6 +32,8 @@ class MainActivityHomeLifecycleBoundaryTest {
             "dismissHomeShareDialog()",
             "if (::rememberConfirmedChoiceAndroidSession.isInitialized)",
             "rememberConfirmedChoiceAndroidSession.close()",
+            "if (::offlineCatalogDiscoverySession.isInitialized)",
+            "offlineCatalogDiscoverySession.close()",
             "if (::basketExperience.isInitialized)",
             "basketExperience.onAction = null"
         ).forEach { required ->
@@ -72,7 +74,7 @@ class MainActivityHomeLifecycleBoundaryTest {
             "offlineCatalogLookup?.cancel(true)",
             "offlineCatalogLookup = searchExecutor.submit",
             "cancelOfflineCatalogLookup()",
-            "BundledOfflineCatalog.discoverSupportedRegions(",
+            "offlineCatalogDiscoverySession.discover(",
             "rawQuery = query",
             "canonicalizer = JvmTextCanonicalizer",
             "PracticalShoppingHomeOfflineCatalogPresentation.from(",
@@ -114,8 +116,8 @@ class MainActivityHomeLifecycleBoundaryTest {
         )
 
         assertTrue(
-            "Home should expose every supported metro snapshot through one bounded lookup",
-            source.contains("BundledOfflineCatalog.discoverSupportedRegions(")
+            "Home should expose every supported metro snapshot through one bounded lookup session",
+            source.contains("BundledOfflineCatalog.createDiscoverySession(applicationContext)")
         )
         assertTrue(
             "Home must not silently pin offline discovery to the GTA snapshot",
