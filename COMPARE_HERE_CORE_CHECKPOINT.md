@@ -2,6 +2,18 @@
 
 ## Latest promoted consumer boundary
 
+- Promoted code commit: `60bd0358bc03a50c5180fea1e29a1ee3e65597cd` (`Invalidate stale private memory on resume`)
+- Candidate workflow: **33964012615** — success
+- Promoted workflow/provenance: **33964271194** — success
+
+Good Price now reloads device-only private memory on resume and returns to its explicit idle projection when the memory state or load issue changes, clearing any result/share card that could retain stale personal context. Compare Here records the state behind its visible private-memory message and hides it when a paused screen detects changed or unreadable storage. These fail-closed lifecycle guards add no parser, exact money/quantity, evidence, offer, store/availability, ranking, planner, persistence or Android networking authority.
+
+- Promoted code commit: `d981fdcd81aa8101c3006f82b8b92744f3fd12ee` (`Announce private memory outcomes accessibly`)
+- Candidate workflow: **33963348099** — success
+- Promoted workflow/provenance: **33963622041** — success
+
+Good Price and Compare Here private-memory status feedback now uses polite accessibility live regions. Saved, unavailable and clear-failure outcomes are announced without changing the exact comparison route, private-memory store, evidence semantics or any ranking/planner authority.
+
 - Promoted code commit: `d6a0b25ef3e20a7c533cb98fb083c910e734b641` (`Improve Good Price result accessibility`)
 - Candidate workflow: **33962568132** — success
 - Promoted workflow/provenance: **33962826152** — success
