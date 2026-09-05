@@ -40,6 +40,24 @@ class CompareHereManualKeyboardBoundaryTest {
         assertTrue(!focus.contains("Money.parse"))
     }
 
+    @Test
+    fun eachDynamicProductEditorIsAssociatedWithItsVisibleProductLabel() {
+        val source = source().readText()
+        val inputBlock =
+            source
+                .substringAfter("val input = EditText(this).apply")
+                .substringBefore("val removeButton = Button(this).apply")
+
+        assertTrue(inputBlock.contains("id = View.generateViewId()"))
+        assertTrue(source.contains("label.labelFor = input.id"))
+        assertTrue(
+            source.indexOf("label.labelFor = input.id") >
+                source.indexOf("val input = EditText(this).apply")
+        )
+        assertTrue(!inputBlock.contains("Money.parse"))
+        assertTrue(!inputBlock.contains("PracticalShoppingPlanner"))
+    }
+
     private fun source(): File {
         val workingDirectory =
             requireNotNull(System.getProperty("user.dir")) {

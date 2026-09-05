@@ -1212,6 +1212,10 @@ class ComparisonActivity : AppCompatActivity() {
         }
 
         val input = EditText(this).apply {
+            // Give each runtime-created editor a stable-for-this-view ID so its visible
+            // "Product N" label can be associated with it for TalkBack without persisting or
+            // exposing any product identity.
+            id = View.generateViewId()
             hint = getString(R.string.product_input_hint)
             gravity = Gravity.TOP or Gravity.START
             minLines = 4
@@ -1244,6 +1248,7 @@ class ComparisonActivity : AppCompatActivity() {
             background = null
             setText(initialText)
         }
+        label.labelFor = input.id
 
         val removeButton = Button(this).apply {
             text = getString(R.string.remove_product)
