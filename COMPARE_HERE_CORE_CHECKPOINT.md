@@ -2,6 +2,12 @@
 
 ## Latest promoted consumer boundary
 
+- Promoted code commit: `06c37ae4e3c2834bb01dc73d7b85f7e6815c9cd0` (`Preserve Home refinements when shopping again`)
+- Candidate workflow: **33974689463** — success
+- Promoted code/provenance workflow: **33975020123** — success
+
+Home's `Shop again` action now replays its already-completed session model through the existing deterministic reducer, preserving explicit refinements such as a selected chicken cut instead of resetting the unchanged query into a new draft. Typed request details remain reconciled against stable replayed item keys. This adjacent Home-session correction does not change Compare Here parsing, exact money/quantity, evidence, offer, store, availability, ranking, persistence, provider or Android networking authority.
+
 - Promoted code commit: `cfd4ba6663978dcc2f73447f218b0b4df643c568` (`Prefill complete OCR comparison drafts`)
 - Candidate workflow: **33973764156** — success
 - Promoted code/provenance workflow: **33974081700** — success
