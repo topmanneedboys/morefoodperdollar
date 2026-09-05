@@ -2,6 +2,12 @@
 
 ## Latest promoted consumer boundary
 
+- Promoted code commit: `cfd4ba6663978dcc2f73447f218b0b4df643c568` (`Prefill complete OCR comparison drafts`)
+- Candidate workflow: **33973764156** — success
+- Promoted code/provenance workflow: **33974081700** — success
+
+Scan & compare photo review now offers an explicit optional `Add with detected details` action for a row whose bounded parser signals contain one concrete ISO-currency price, an exact non-derived package quantity, a usable name and a promotion shape the exact route can replay. It copies only an ordinary editable draft; multiple/ambiguous prices, unclear currency, estimated/derived quantities and unsupported promotions remain raw OCR. The dialog and status keep the `Review only`/unconfirmed boundary visible, and the existing exact quantity/currency/price, promotion and like-for-like gates remain authoritative. A parser-replayability regression keeps supported promotion terms intact, while the displayed skipped-snippet count is corrected to avoid double-counting. This focused consumer-friction slice adds no OCR, product, offer, store, availability, planner, ranking, persistence, provider or Android networking authority.
+
 - Promoted code commit: `55b1ac9c411444b5285fdcf6dc9740f3f8848cce` (`Explain OCR signals during photo review`)
 - Candidate workflow: **33972120095** — success
 - Promoted code/provenance workflow: **33972485006** — success
