@@ -141,6 +141,9 @@ class MainActivity : AppCompatActivity() {
     private var homeItemDetailsPackageInput: TextInputEditText? = null
     private var homeItemDetailsBrandInput: TextInputEditText? = null
     private var homeItemDetailsExactProduct: CheckBox? = null
+    private var homeRenderState: PracticalShoppingHomeRenderState? = null
+    private var homeShareCard: PracticalShoppingHomeShareCard? = null
+    private var homeShareDialog: AlertDialog? = null
     private var offlineCatalogDialog: AlertDialog? = null
     private var pendingExactProductLabel: String? = null
     private var dataStatusDialog: AlertDialog? = null
@@ -312,6 +315,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         dismissHomeItemDetailsDialog()
+        dismissHomeShareDialog()
         cancelOfflineCatalogLookup()
         offlineCatalogDialog?.dismiss()
         offlineCatalogDialog = null
@@ -344,6 +348,7 @@ class MainActivity : AppCompatActivity() {
             homeExperience.onForgetPrivateMemory = null
             homeExperience.onGoodPrice = null
             homeExperience.onShopAgain = null
+            homeExperience.onSharePlan = null
         }
         if (::basketExperience.isInitialized) {
             basketExperience.onAction = null
@@ -501,6 +506,7 @@ class MainActivity : AppCompatActivity() {
             homeSessionState = PracticalShoppingHomeSession.shopAgain(homeSessionState)
             renderHome()
         }
+        homeExperience.onSharePlan = { shareHomePlan() }
         rememberConfirmedChoiceAndroidSession =
             PracticalShoppingRememberConfirmedChoiceAndroidSession.create(
                 context = this,
@@ -523,6 +529,10 @@ class MainActivity : AppCompatActivity() {
                         PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE
                     }
             )
+        // A render invalidates any pending share preview. This prevents a dialog opened for an
+        // earlier list/result from sending text after the Home projection has changed.
+        dismissHomeShareDialog()
+        homeRenderState = homeState
         if (
             homeItemDetailsDialog?.isShowing == true &&
                 practicalShoppingHomeItemDetailsDialogShouldDismiss(
@@ -537,6 +547,12 @@ class MainActivity : AppCompatActivity() {
         }
         homeExperience.render(homeState)
         basketExperience.render(PracticalShoppingBasketRenderer.render(homeState))
+    }
+
+    private fun dismissHomeShareDialog() {
+        homeShareDialog?.dismiss()
+        homeShareDialog = null
+        homeShareCard = null
     }
 
     /**
@@ -2034,6 +2050,65 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
+     * Previews and explicitly shares a bounded summary of the current projected Home plan.
+     * The pure projector formats existing UI facts only; it never re-ranks, reads private item
+     * history, or turns the fictional demo into a live retailer claim.
+     */
+    private fun shareHomePlan() {
+        val state = homeRenderState ?: return
+        val result = state.result ?: return
+        if (result.primary == null) return
+        val card =
+            PracticalShoppingHomeShareCardProjector.project(result, state.sampleNotice)
+                ?: return
+
+        dismissHomeShareDialog()
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(R.string.home_share_plan_title)
+                .setMessage(card.preview)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.home_share_plan_send, null)
+                .create()
+        dialog.setOnDismissListener {
+            if (homeShareDialog === dialog) {
+                homeShareDialog = null
+                homeShareCard = null
+            }
+        }
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val currentCard = homeShareCard ?: return@setOnClickListener
+                val sendIntent =
+                    Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_SUBJECT, currentCard.title)
+                        putExtra(Intent.EXTRA_TEXT, currentCard.text)
+                    }
+                try {
+                    startActivity(
+                        Intent.createChooser(
+                            sendIntent,
+                            getString(R.string.home_share_plan)
+                        )
+                    )
+                    dialog.dismiss()
+                } catch (_: ActivityNotFoundException) {
+                    dialog.dismiss()
+                    AlertDialog.Builder(this)
+                        .setTitle(R.string.home_share_plan_title)
+                        .setMessage(R.string.home_share_plan_unavailable)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
+                }
+            }
+        }
+        homeShareCard = card
+        homeShareDialog = dialog
+        dialog.show()
+    }
+
+    /**
      * Starts the existing local observed-price flow for one unresolved Home item.
      * The name is an untrusted prefill only; Good Price still requires the shopper
      * to enter an exact package quantity and observed price before remembering it.
@@ -2073,6 +2148,7 @@ class MainActivity : AppCompatActivity() {
     private fun renderShell(state: AppShellState) {
         if (state.route != AppRoute.HOME) {
             dismissHomeItemDetailsDialog()
+            dismissHomeShareDialog()
             cancelOfflineCatalogLookup()
             offlineCatalogDialog?.dismiss()
         }

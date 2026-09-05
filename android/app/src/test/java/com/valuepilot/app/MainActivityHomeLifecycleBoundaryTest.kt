@@ -28,6 +28,8 @@ class MainActivityHomeLifecycleBoundaryTest {
             "homeExperience.onForgetPrivateMemory = null",
             "homeExperience.onGoodPrice = null",
             "homeExperience.onShopAgain = null",
+            "homeExperience.onSharePlan = null",
+            "dismissHomeShareDialog()",
             "if (::rememberConfirmedChoiceAndroidSession.isInitialized)",
             "rememberConfirmedChoiceAndroidSession.close()",
             "if (::basketExperience.isInitialized)",
@@ -224,6 +226,46 @@ class MainActivityHomeLifecycleBoundaryTest {
         ).forEach { forbidden ->
             assertTrue(
                 "MainActivity must not own good-price business/network authority: $forbidden",
+                !source.contains(forbidden)
+            )
+        }
+    }
+
+    @Test
+    fun homeShareActionUsesAStaleSafePreviewAndExplicitChooser() {
+        val source = source().readText()
+
+        listOf(
+            "private var homeRenderState: PracticalShoppingHomeRenderState? = null",
+            "private var homeShareCard: PracticalShoppingHomeShareCard? = null",
+            "private var homeShareDialog: AlertDialog? = null",
+            "homeExperience.onSharePlan = { shareHomePlan() }",
+            "private fun shareHomePlan()",
+            "PracticalShoppingHomeShareCardProjector.project(result, state.sampleNotice)",
+            "home_share_plan_title",
+            "home_share_plan_send",
+            "Intent(Intent.ACTION_SEND)",
+            "Intent.EXTRA_SUBJECT",
+            "Intent.EXTRA_TEXT",
+            "Intent.createChooser(",
+            "ActivityNotFoundException",
+            "home_share_plan_unavailable",
+            "private fun dismissHomeShareDialog()",
+            "homeShareDialog?.dismiss()",
+            "homeShareCard = null",
+            "dismissHomeShareDialog()\n        homeRenderState = homeState"
+        ).forEach { required ->
+            assertTrue("Expected safe Home share-plan lifecycle binding: $required", source.contains(required))
+        }
+
+        listOf(
+            "PracticalShoppingPlanner",
+            "Money.parse",
+            "HttpURLConnection",
+            "AuthorizedOfferSnapshot"
+        ).forEach { forbidden ->
+            assertTrue(
+                "Home share-plan action must not add shopping or network authority: $forbidden",
                 !source.contains(forbidden)
             )
         }

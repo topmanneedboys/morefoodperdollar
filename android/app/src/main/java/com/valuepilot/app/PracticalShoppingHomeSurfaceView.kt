@@ -70,6 +70,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val privateMemoryExportOwnerControls = mutableListOf<View>()
     private val privateMemoryForgetOwnerControls = mutableListOf<View>()
     private val shopAgainOwnerControls = mutableListOf<View>()
+    private val sharePlanOwnerControls = mutableListOf<View>()
 
     private var hasRenderedState = false
     private var lastRenderedSubmitEnabled = false
@@ -199,6 +200,14 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                     value != null && hasRenderedState && control.visibility == VISIBLE
             }
         }
+    var onSharePlan: (() -> Unit)? = null
+        set(value) {
+            field = value
+            sharePlanOwnerControls.forEach { control ->
+                control.isEnabled =
+                    value != null && hasRenderedState && control.visibility == VISIBLE
+            }
+        }
 
     private var suppressInputCallback = false
     private var extraStopSettingsExpanded = false
@@ -280,6 +289,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val extraStopSettingsCard =
         card("#F9FAFB", "#E5E7EB", 8, extraStopSettingsBody)
     private val shopAgainActionButton = shopAgainButton()
+    private val sharePlanActionButton = sharePlanButton()
     private val privateMemorySummary = line("", 13f, "#6B7280").apply {
         accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         visibility = GONE
@@ -324,6 +334,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         addView(noCoverageSummary)
         addView(resultContainer)
         addView(shopAgainActionButton)
+        addView(sharePlanActionButton)
         addView(extraStopSettingsButton)
         addView(extraStopSettingsCard)
         addView(goodPriceActionButton)
@@ -337,6 +348,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         privateMemoryExportActionButton.visibility = GONE
         privateMemoryForgetActionButton.visibility = GONE
         shopAgainActionButton.visibility = GONE
+        sharePlanActionButton.visibility = GONE
 
         input.addTextChangedListener(
             object : TextWatcher {
@@ -386,6 +398,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         renderNoCoverageSummary(state.noCoverageSummary)
         resultContainer.render(state.result, state.sampleNotice)
         renderShopAgain(state.shopAgainVisible)
+        renderSharePlan(state.result?.primary != null)
         renderExtraStopSettings(state.extraStopSettings)
         renderPrivateMemory(
             status = state.privateMemoryStatus,
@@ -501,6 +514,12 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         shopAgainActionButton.visibility = if (visible) VISIBLE else GONE
         shopAgainActionButton.isEnabled =
             visible && onShopAgain != null && hasRenderedState
+    }
+
+    private fun renderSharePlan(visible: Boolean) {
+        sharePlanActionButton.visibility = if (visible) VISIBLE else GONE
+        sharePlanActionButton.isEnabled =
+            visible && onSharePlan != null && hasRenderedState
     }
 
     private fun itemRow(item: PracticalShoppingHomeItemRenderState): View =
@@ -853,6 +872,23 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         // completed immutable result is rendered.
         isEnabled = false
         setOnClickListener { onShopAgain?.invoke() }
+    }
+
+    private fun sharePlanButton(): MaterialButton = MaterialButton(context).apply {
+        sharePlanOwnerControls += this
+        text = context.getString(R.string.home_share_plan)
+        contentDescription = context.getString(R.string.home_share_plan_description)
+        isAllCaps = false
+        textSize = 14f
+        cornerRadius = dp(16)
+        strokeWidth = dp(1)
+        strokeColor = ColorStateList.valueOf(Color.parseColor("#D1D5DB"))
+        setTextColor(Color.parseColor("#374151"))
+        backgroundTintList = ColorStateList.valueOf(Color.WHITE)
+        layoutParams = fullWidth(dp(50), 8)
+        // Sharing is an explicit owner-driven action over an already-projected result.
+        isEnabled = false
+        setOnClickListener { onSharePlan?.invoke() }
     }
 
     private fun goodPriceButton(): MaterialButton = MaterialButton(context).apply {

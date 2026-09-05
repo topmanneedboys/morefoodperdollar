@@ -184,6 +184,11 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="home_good_price_secondary">Is this a good price?</string>
     <string name="home_shop_again">Shop again</string>
     <string name="home_shop_again_description">Plan this same list again using the offline fictional demo data; this is not a live retailer plan.</string>
+    <string name="home_share_plan">Share this plan</string>
+    <string name="home_share_plan_description">Share a privacy-safe summary of this projected shopping plan. It includes no item names or private price history.</string>
+    <string name="home_share_plan_title">Review shopping-plan share</string>
+    <string name="home_share_plan_send">Share</string>
+    <string name="home_share_plan_unavailable">No sharing app is available. Your Home plan is unchanged.</string>
     <string name="home_private_memory_review">Review private price history</string>
     <string name="home_stay">Stay on Home</string>
     <string name="home_private_memory_review_description">Open Scan &amp; compare prices to review or clear private comparison history on this device.</string>

@@ -398,6 +398,34 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
         }
     }
 
+    @Test
+    fun sharePlanIsAnOwnerDrivenProjectedResultAction() {
+        val source = source().readText()
+
+        listOf(
+            "private val sharePlanOwnerControls = mutableListOf<View>()",
+            "var onSharePlan: (() -> Unit)? = null",
+            "private val sharePlanActionButton",
+            "renderSharePlan(state.result?.primary != null)",
+            "sharePlanActionButton.visibility = if (visible) VISIBLE else GONE",
+            "visible && onSharePlan != null && hasRenderedState",
+            "R.string.home_share_plan",
+            "R.string.home_share_plan_description",
+            "sharePlanOwnerControls += this",
+            "onSharePlan?.invoke()"
+        ).forEach { required ->
+            assertTrue("Expected bounded Home share-plan action binding $required", source.contains(required))
+        }
+
+        listOf(
+            "PracticalShoppingPlanner",
+            "PracticalShoppingUiProjector",
+            "Money.parse"
+        ).forEach { forbidden ->
+            assertFalse("Home share action must not own shopping or item-detail authority through $forbidden", source.contains(forbidden))
+        }
+    }
+
     private fun source(): File {
         val workingDirectory =
             requireNotNull(System.getProperty("user.dir")) {
