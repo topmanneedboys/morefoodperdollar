@@ -183,7 +183,7 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="home_compare_secondary">Scan &amp; compare prices</string>
     <string name="home_good_price_secondary">Is this a good price?</string>
     <string name="home_shop_again">Shop again</string>
-    <string name="home_shop_again_description">Plan this same shopping list again using the current available evidence.</string>
+    <string name="home_shop_again_description">Plan this same list again using the offline fictional demo data; this is not a live retailer plan.</string>
     <string name="home_private_memory_review">Review private price history</string>
     <string name="home_stay">Stay on Home</string>
     <string name="home_private_memory_review_description">Open Scan &amp; compare prices to review or clear private comparison history on this device.</string>
