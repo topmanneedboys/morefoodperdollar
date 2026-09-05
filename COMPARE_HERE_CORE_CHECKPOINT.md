@@ -2,6 +2,12 @@
 
 ## Latest promoted consumer boundary
 
+- Promoted code commit: `8c0f4e843b0c1cce266f17fcceda19f278b5711a` (`Preserve Good Price capture draft safely`)
+- Candidate workflow: **33966599555** — success
+- Promoted workflow/provenance: **33966897180** — success
+
+The adjacent Good Price capture boundary now restores its bounded typed product draft through activity recreation, preserves a new intent prefill when no recreation state exists, prevents duplicate barcode capture launches, and reports cancellation explicitly. This remains separate from Compare Here’s review-first photo/scanner authority and changes no parser, exact money/quantity, evidence, offer, store/availability, planner, ranking, persistence or Android networking behavior.
+
 - Promoted code commit: `9432604ca89572233e64b8268a0673ed35c6c0ce` (`Announce scanner availability accessibly`)
 - Candidate workflow: **33964877138** — success
 - Promoted workflow/provenance: **33965190171** — success

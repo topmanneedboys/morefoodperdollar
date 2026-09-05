@@ -8,6 +8,10 @@ This checkpoint records the verified Practical Shopping Home slice plus the prov
 
 ## Latest verified engineering head
 
+`8c0f4e843b0c1cce266f17fcceda19f278b5711a` — `Preserve Good Price capture draft safely`
+
+Candidate workflow **33966599555** passed for the exact SHA, and milestone provenance workflow **33966897180** verified the promoted ref and release artifact lineage. Good Price now keeps a bounded typed product draft through Android activity recreation, while intent prefill remains authoritative for a new launch. Its existing barcode capture route now prevents duplicate launches, disables capture while work is active, and surfaces cancellation as an explicit local outcome. This is a renderer/orchestration-only reliability slice: no parser, exact money/quantity, evidence, offer, store/availability, planner, ranking, persistence, provider, or Android networking authority changed. Candidate Linux verification passed 402 shared-core tests and 1,508 Android tests with zero failures, lint/build/privacy/single-signer/release-bundle and browser/Firefox checks; local Python/catalog verification passed 79 tests. Physical-device camera/OCR ergonomics and lawful production Home activation remain open.
+
 `9432604ca89572233e64b8268a0673ed35c6c0ce` — `Announce scanner availability accessibly`
 
 Candidate workflow **33964877138** passed for the exact SHA, and milestone provenance workflow **33965190171** verified the promoted ref and release artifact lineage. Compare Here’s existing optional scanner status now announces availability changes through a polite accessibility live region when the screen resumes. This renderer-only correction adds no parser, exact money/quantity, evidence, offer, store/availability, planner, ranking, persistence or Android networking authority. Candidate Linux verification passed 402 shared-core tests and 1,505 Android tests with zero failures, lint/build/privacy/single-signer/release-bundle and browser/Firefox checks; local Python/catalog verification passed 79 tests. Physical-device camera/OCR ergonomics and lawful production Home activation remain open.
