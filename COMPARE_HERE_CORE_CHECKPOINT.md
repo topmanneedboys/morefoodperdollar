@@ -2,6 +2,12 @@
 
 ## Latest promoted consumer boundary
 
+- Promoted code commit: `a231f0ecc962737f815dc2bfa9fe894037dd2bf9` (`Cancel stale Compare Here photo work`)
+- Candidate workflow: **33969229838** — success
+- Promoted workflow/provenance: **33969555817** — success
+
+Scan & Compare now exposes an explicit `Cancel photo reading` action while bounded on-device OCR is active. Draft edits, clear actions and teardown invalidate the photo generation, reject late callbacks, clean temporary camera files and preserve the current editor entries; no stale suggestions can be added. The cancellation and invalidation gate is lifecycle/ergonomics-only and adds no parser, exact money/quantity, evidence, offer, store/availability, planner, ranking, persistence, provider or Android networking authority.
+
 - Promoted code commit: `9318a70d5b6a9a31ba0d4377efdfebd676ccf749` (`Restore Good Price results after recreation`)
 - Candidate workflow: **33967685757** — success
 - Promoted workflow/provenance: **33967990673** — success
