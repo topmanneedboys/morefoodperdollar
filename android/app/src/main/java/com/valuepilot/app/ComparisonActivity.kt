@@ -87,6 +87,8 @@ class ComparisonActivity : AppCompatActivity() {
     private var photoRequestId = 0L
     private var photoImportInFlight = false
     private var photoImportClosed = false
+    private var photoReviewDialog: AlertDialog? = null
+    private var photoReviewRequestId = 0L
     private var cameraCaptureRequestId = 0L
     private var cameraCaptureUri: Uri? = null
     private var cameraCaptureFile: File? = null
@@ -257,6 +259,9 @@ class ComparisonActivity : AppCompatActivity() {
     override fun onDestroy() {
         photoImportClosed = true
         photoRequestId += 1
+        photoReviewRequestId += 1L
+        photoReviewDialog?.dismiss()
+        photoReviewDialog = null
         cleanupCameraCaptureFile()
         photoExecutor.shutdownNow()
         barcodeLookupClosed = true
@@ -295,7 +300,12 @@ class ComparisonActivity : AppCompatActivity() {
     }
 
     private fun beginBarcodeCapture() {
-        if (barcodeLookupClosed || barcodeLookupInFlight || photoImportInFlight) {
+        if (
+            barcodeLookupClosed ||
+                barcodeLookupInFlight ||
+                photoImportInFlight ||
+                photoReviewDialog != null
+        ) {
             return
         }
 
@@ -496,7 +506,12 @@ class ComparisonActivity : AppCompatActivity() {
     }
 
     private fun beginPhotoImport() {
-        if (photoImportClosed || photoImportInFlight || barcodeLookupInFlight) {
+        if (
+            photoImportClosed ||
+                photoImportInFlight ||
+                barcodeLookupInFlight ||
+                photoReviewDialog != null
+        ) {
             return
         }
 
@@ -514,7 +529,12 @@ class ComparisonActivity : AppCompatActivity() {
     }
 
     private fun beginCameraCapture() {
-        if (photoImportClosed || photoImportInFlight || barcodeLookupInFlight) {
+        if (
+            photoImportClosed ||
+                photoImportInFlight ||
+                barcodeLookupInFlight ||
+                photoReviewDialog != null
+        ) {
             return
         }
 
@@ -689,30 +709,147 @@ class ComparisonActivity : AppCompatActivity() {
             return
         }
 
-        val result =
-            CompareHerePhotoDraft.append(
+        val review =
+            CompareHerePhotoDraft.review(
                 existingBlocks = currentProductBlocks(),
                 recognizedBlocks = recognizedBlocks
             )
 
-        if (result.addedCount == 0) {
+        if (review.candidates.isEmpty()) {
             photoImportStatus.text = getString(R.string.compare_photo_no_matches)
             return
         }
 
-        renderProductInputs(result.blocks)
-        activityState =
-            CompareHereManualActivitySessionReducer.productsChanged(activityState)
-        syncLikeForLikeConfirmation()
-        syncPriceSelection()
-        renderIdleScreen()
-        saveDraftToPreferences()
-        photoImportStatus.text =
-            getString(
-                R.string.compare_photo_added,
-                result.addedCount,
-                result.skippedCount
-            )
+        showPhotoReviewDialog(
+            requestId = requestId,
+            review = review
+        )
+    }
+
+    /**
+     * Keeps OCR in a proposal-only state until the shopper explicitly selects what to add. The
+     * selected values still go through the existing bounded draft helper and exact route.
+     */
+    private fun showPhotoReviewDialog(
+        requestId: Long,
+        review: CompareHerePhotoDraftReview
+    ) {
+        if (
+            photoImportClosed ||
+                requestId != photoRequestId ||
+                isFinishing ||
+                isDestroyed
+        ) {
+            return
+        }
+
+        val selected = BooleanArray(review.candidates.size) { true }
+        var outcomeCommitted = false
+        lateinit var dialog: AlertDialog
+        dialog =
+            AlertDialog.Builder(this)
+                .setTitle(R.string.compare_photo_review_title)
+                .setMessage(
+                    getString(
+                        R.string.compare_photo_review_body,
+                        review.candidates.size
+                    )
+                )
+                .setMultiChoiceItems(
+                    review.candidates.map(::photoSuggestionLabel).toTypedArray(),
+                    selected
+                ) { _, which, checked ->
+                    if (which in selected.indices) {
+                        selected[which] = checked
+                    }
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.compare_photo_add_selected, null)
+                .create()
+
+        photoReviewDialog = dialog
+        photoReviewRequestId = requestId
+        dialog.setOnDismissListener {
+            if (
+                !outcomeCommitted &&
+                    !photoImportClosed &&
+                    requestId == photoRequestId
+            ) {
+                photoImportStatus.text = getString(R.string.compare_photo_cancelled)
+                photoImportStatus.visibility = View.VISIBLE
+            }
+            if (photoReviewDialog === dialog) {
+                photoReviewDialog = null
+                photoReviewRequestId = 0L
+                syncPhotoActionButtons()
+            }
+        }
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                if (
+                    photoImportClosed ||
+                        requestId != photoRequestId ||
+                        photoReviewRequestId != requestId ||
+                        photoReviewDialog !== dialog ||
+                        isFinishing ||
+                        isDestroyed
+                ) {
+                    dialog.dismiss()
+                    return@setOnClickListener
+                }
+
+                val selectedCandidates =
+                    review.candidates.filterIndexed { index, _ -> selected[index] }
+                if (selectedCandidates.isEmpty()) {
+                    outcomeCommitted = true
+                    photoImportStatus.text = getString(R.string.compare_photo_none_selected)
+                    photoImportStatus.visibility = View.VISIBLE
+                    dialog.dismiss()
+                    return@setOnClickListener
+                }
+
+                val result =
+                    CompareHerePhotoDraft.append(
+                        existingBlocks = currentProductBlocks(),
+                        recognizedBlocks = selectedCandidates
+                    )
+                if (result.addedCount == 0) {
+                    outcomeCommitted = true
+                    photoImportStatus.text = getString(R.string.compare_photo_no_matches)
+                    photoImportStatus.visibility = View.VISIBLE
+                    dialog.dismiss()
+                    return@setOnClickListener
+                }
+
+                renderProductInputs(result.blocks)
+                activityState =
+                    CompareHereManualActivitySessionReducer.productsChanged(activityState)
+                syncLikeForLikeConfirmation()
+                syncPriceSelection()
+                renderIdleScreen()
+                saveDraftToPreferences()
+                photoImportStatus.text =
+                    getString(
+                        R.string.compare_photo_added,
+                        result.addedCount,
+                        review.skippedCount + result.skippedCount
+                    )
+                photoImportStatus.visibility = View.VISIBLE
+                outcomeCommitted = true
+                dialog.dismiss()
+            }
+        }
+        syncPhotoActionButtons()
+        dialog.show()
+    }
+
+    private fun photoSuggestionLabel(value: String): String {
+        val collapsed = value.replace(Regex("\\s+"), " ").trim()
+        if (collapsed.length <= MAX_PHOTO_REVIEW_LABEL_CHARS) return collapsed
+        return collapsed
+            .take(MAX_PHOTO_REVIEW_LABEL_CHARS - 1)
+            .trimEnd()
+            .plus("…")
     }
 
     private fun finishPhotoRequest(@StringRes statusRes: Int) {
@@ -725,6 +862,7 @@ class ComparisonActivity : AppCompatActivity() {
         val enabled =
             !photoImportInFlight &&
                 !barcodeLookupInFlight &&
+                photoReviewDialog == null &&
                 !photoImportClosed &&
                 !barcodeLookupClosed
         if (::importPhotoButton.isInitialized) {
@@ -1632,6 +1770,9 @@ class ComparisonActivity : AppCompatActivity() {
 
         private const val MAX_PHOTO_DIMENSION =
             2_048
+
+        private const val MAX_PHOTO_REVIEW_LABEL_CHARS =
+            320
 
         private const val CAMERA_CACHE_DIRECTORY =
             "camera"

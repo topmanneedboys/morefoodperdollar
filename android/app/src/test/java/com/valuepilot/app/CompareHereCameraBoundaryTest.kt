@@ -30,6 +30,10 @@ class CompareHereCameraBoundaryTest {
         assertTrue(source.contains("isDestroyed"))
         assertTrue(source.contains("decodeBoundedPhoto"))
         assertTrue(source.contains("OcrScanner.scan"))
+        assertTrue(source.contains("CompareHerePhotoDraft.review"))
+        assertTrue(source.contains("showPhotoReviewDialog"))
+        assertTrue(source.contains("setMultiChoiceItems"))
+        assertTrue(source.contains("photoReviewDialog"))
         assertTrue(source.contains("CompareHerePhotoDraft.append"))
         assertTrue(source.contains("cleanupCameraCaptureFile"))
         assertTrue(source.contains("ACCESSIBILITY_LIVE_REGION_POLITE"))
@@ -62,6 +66,19 @@ class CompareHereCameraBoundaryTest {
         assertTrue(paths.contains("path=\"camera/\""))
         assertFalse(paths.contains("external-path"))
         assertFalse(paths.contains("root-path"))
+    }
+
+    @Test
+    fun ocr_suggestions_are_reviewed_before_they_can_change_the_draft() {
+        val source = source("ComparisonActivity.kt").readText()
+        val strings = file("src/main/res/values/strings.xml").readText()
+
+        assertTrue(source.contains("CompareHerePhotoDraft.review"))
+        assertTrue(source.contains("compare_photo_review_title"))
+        assertTrue(source.contains("compare_photo_add_selected"))
+        assertTrue(source.contains("selectedCandidates"))
+        assertTrue(strings.contains("untrusted OCR suggestion"))
+        assertTrue(strings.contains("Nothing is added until you choose Add selected"))
     }
 
     private fun source(name: String): File =

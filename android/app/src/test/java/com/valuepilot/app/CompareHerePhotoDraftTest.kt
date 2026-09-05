@@ -5,6 +5,62 @@ import org.junit.Test
 
 class CompareHerePhotoDraftTest {
     @Test
+    fun reviewReturnsOnlySafeNewCandidatesBeforeAnyDraftMutation() {
+        val existing = listOf("Milk\nCA$6.49", "")
+
+        val review =
+            CompareHerePhotoDraft.review(
+                existingBlocks = existing,
+                recognizedBlocks =
+                    listOf(
+                        " milk  CA$6.49 ",
+                        "Eggs\nCA$4.99",
+                        "Bread\nCA$3.49"
+                    )
+            )
+
+        assertEquals(
+            listOf("Eggs\nCA$4.99", "Bread\nCA$3.49"),
+            review.candidates
+        )
+        assertEquals(1, review.skippedCount)
+        assertEquals(existing, listOf("Milk\nCA$6.49", ""))
+    }
+
+    @Test
+    fun reviewIsBoundedAndDeterministicBeforeTheShopperSelectsSuggestions() {
+        val recognized =
+            List(CompareHereManualInputAdapter.MAX_OBSERVATIONS + 3) { index ->
+                "Product $index CA$${index + 1}.00"
+            }
+
+        val first = CompareHerePhotoDraft.review(listOf("", ""), recognized)
+        val second = CompareHerePhotoDraft.review(listOf("", ""), recognized)
+
+        assertEquals(first, second)
+        assertEquals(CompareHereManualInputAdapter.MAX_OBSERVATIONS, first.candidates.size)
+        assertEquals(3, first.skippedCount)
+    }
+
+    @Test
+    fun reviewBoundsAnOversizedExistingDraftLikeTheEditorBoundary() {
+        val existing =
+            List(CompareHereManualInputAdapter.MAX_OBSERVATIONS + 2) { index ->
+                "Existing $index CA$${index + 1}.00"
+            }
+
+        val review =
+            CompareHerePhotoDraft.review(
+                existingBlocks = existing,
+                recognizedBlocks = listOf("New product CA$9.99")
+            )
+
+        assertEquals(emptyList<String>(), review.candidates)
+        assertEquals(1, review.skippedCount)
+        assertEquals(CompareHereManualInputAdapter.MAX_OBSERVATIONS + 2, existing.size)
+    }
+
+    @Test
     fun fillsExistingEmptySlotsBeforeAppendingAndPreservesTypedBlocks() {
         val result =
             CompareHerePhotoDraft.append(

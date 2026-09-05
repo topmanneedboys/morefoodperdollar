@@ -16,6 +16,10 @@
     <string name="compare_photo_no_matches">No new price-tag text was found. Your existing entries are unchanged.</string>
     <string name="compare_photo_error">That photo could not be read on this device. Your existing entries are unchanged.</string>
     <string name="compare_photo_added">Added %1$d photo suggestion(s). %2$d snippet(s) were skipped; review the entries and confirm like-for-like before comparing.</string>
+    <string name="compare_photo_review_title">Review photo suggestions</string>
+    <string name="compare_photo_review_body">ValuePilot found %1$d untrusted OCR suggestion(s). Select the price-tag text that belongs in your comparison, then review the package size and price in the editable entries. Nothing is added until you choose Add selected.</string>
+    <string name="compare_photo_add_selected">Add selected</string>
+    <string name="compare_photo_none_selected">No photo suggestions selected. Your existing entries are unchanged.</string>
     <string name="compare_camera_permission_needed">Camera access is needed only to take this photo. Nothing is sent online.</string>
     <string name="compare_camera_permission_denied">Camera access was not granted. Your existing entries are unchanged; you can import a photo instead.</string>
     <string name="compare_camera_unavailable">This device has no available camera. Your existing entries are unchanged; you can import a photo instead.</string>
