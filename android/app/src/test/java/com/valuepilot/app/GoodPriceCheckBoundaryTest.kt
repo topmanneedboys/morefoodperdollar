@@ -40,6 +40,12 @@ class GoodPriceCheckBoundaryTest {
         assertTrue(source.contains("GoodPriceCheckScreenContent.Result"))
         assertTrue(source.contains("accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"))
         listOf(
+            "goodPriceAnswerCardContentDescription(state)",
+            "importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES",
+            "View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS",
+            "contentDescription = history"
+        ).forEach { required -> assertTrue(source.contains(required)) }
+        listOf(
             "GoodPriceCheckRouteCoordinator",
             "CompareHereManualComparisonService",
             "CompareHerePriceMemoryEvaluator",

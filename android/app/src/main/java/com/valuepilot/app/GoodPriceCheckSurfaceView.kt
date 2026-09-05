@@ -66,8 +66,15 @@ internal class GoodPriceCheckSurfaceView @JvmOverloads constructor(
                 stroke = answerStroke(state.answerTone),
                 topMargin = 14
             ).apply {
+                // Expose the complete projected answer as one coherent node. The visible child
+                // labels are decorative for assistive technology so the same facts are not
+                // announced repeatedly or in an ambiguous order.
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+                contentDescription = goodPriceAnswerCardContentDescription(state)
                 addView(
                     column().apply {
+                        importantForAccessibility =
+                            View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
                         addView(line(state.answerTitle, 19f, "#111827", true))
                         addView(
                             line(
@@ -95,7 +102,15 @@ internal class GoodPriceCheckSurfaceView @JvmOverloads constructor(
         state.historyText?.let { history ->
             resultContainer.addView(
                 card("#F9FAFB", "#E5E7EB", 10).apply {
-                    addView(column().apply { addView(line(history, 13f, "#374151")) })
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+                    contentDescription = history
+                    addView(
+                        column().apply {
+                            importantForAccessibility =
+                                View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+                            addView(line(history, 13f, "#374151"))
+                        }
+                    )
                 }
             )
         }
@@ -157,3 +172,21 @@ internal class GoodPriceCheckSurfaceView @JvmOverloads constructor(
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 }
+
+/**
+ * Builds the one-node accessibility summary for the exact projected answer card.
+ *
+ * This is formatting only. The supplied fields have already been validated and formatted by
+ * the Good Price coordinator; no price, quantity, history, or recommendation is inferred here.
+ */
+internal fun goodPriceAnswerCardContentDescription(state: GoodPriceCheckUiState): String =
+    listOf(
+            state.priceModeText,
+            state.answerTitle,
+            state.productName,
+            state.priceText,
+            state.quantityText,
+            state.unitRateText,
+            state.answerGuidance
+        )
+        .joinToString(". ") { value -> value.trim().trimEnd('.', '!', '?') } + "."
