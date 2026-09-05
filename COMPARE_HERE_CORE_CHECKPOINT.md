@@ -2,6 +2,12 @@
 
 ## Latest promoted consumer boundary
 
+- Promoted code commit: `55b1ac9c411444b5285fdcf6dc9740f3f8848cce` (`Explain OCR signals during photo review`)
+- Candidate workflow: **33972120095** — success
+- Promoted code/provenance workflow: **33972485006** — success
+
+The Scan & compare photo-review dialog now shows bounded parser signals for a possible product name, price text and package size next to each raw OCR suggestion, under an explicit `Review only` notice. Multiple prices, ambiguous currency and estimated or missing quantities remain visible as review requirements. The selected raw OCR block is still the only value appended, and the existing editable-entry, exact quantity/currency/price and like-for-like gates remain authoritative. This presentation-only friction correction adds no OCR, product, offer, store, availability, planner, ranking, persistence, provider or Android networking authority.
+
 - Promoted code commit: `8499e8ad2b566947d6bd6af70d8ab24b47cbf5c2` (`Open Home catalog identities in Compare Here`)
 - Candidate workflow: **33970594096** — success
 - Promoted workflow/provenance: **33970918134** — success
