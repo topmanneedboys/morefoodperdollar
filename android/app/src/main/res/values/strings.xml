@@ -140,6 +140,7 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="home_quick_add_title">Try a sample item</string>
     <string name="home_quick_add_description">Add %1$s to this offline fictional sample list</string>
     <string name="home_plan_action">Plan my shop</string>
+    <string name="home_fast_actions_title">Quick answers</string>
     <string name="home_items_title">On your list</string>
     <string name="home_remove_item">Remove</string>
     <string name="home_remove_item_description">Remove %1$s from this list</string>

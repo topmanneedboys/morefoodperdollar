@@ -264,6 +264,14 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         layoutParams = fullWidth(dp(54), 12)
     }
 
+    // Keep the two high-frequency, first-session questions beside the primary
+    // Home action. They are still owner-driven navigation controls; this
+    // heading only makes their purpose discoverable before a long result is
+    // rendered below the list.
+    private val fastActionsHeading = line("", 13f, "#374151", true).apply {
+        setPadding(dp(2), dp(14), dp(2), 0)
+    }
+
     private val quickAddHeading = line("", 13f, "#374151", true).apply {
         setPadding(dp(2), dp(12), dp(2), 0)
         visibility = GONE
@@ -347,6 +355,9 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         addView(quickAddHeading)
         addView(quickAddGroup)
         addView(submitButton)
+        addView(fastActionsHeading)
+        addView(compareActionButton)
+        addView(goodPriceActionButton)
         addView(message)
         addView(sampleCard())
         addView(privateMemorySummary)
@@ -364,8 +375,6 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         addView(sharePlanActionButton)
         addView(extraStopSettingsButton)
         addView(extraStopSettingsCard)
-        addView(goodPriceActionButton)
-        addView(compareActionButton)
 
         itemsHeading.visibility = GONE
         refinementCard.visibility = GONE
@@ -423,6 +432,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         renderItems(state.items)
         renderRefinement(state.refinement)
         renderQuickAdd(state.quickAddVisible, state.quickAddChoices)
+        fastActionsHeading.text = context.getString(R.string.home_fast_actions_title)
         renderUnknown(state.unknownItems)
         renderNoCoverageSummary(state.noCoverageSummary)
         resultContainer.render(state.result, state.sampleNotice)
