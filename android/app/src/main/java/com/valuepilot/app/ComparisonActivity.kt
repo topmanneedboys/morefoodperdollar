@@ -449,7 +449,23 @@ class ComparisonActivity : AppCompatActivity() {
             return
         }
 
-        var selectedIndex = if (presentation.options.size == 1) 0 else -1
+        // A single exact-GTIN identity is still only an editable name suggestion, but asking the
+        // shopper to confirm an unambiguous name before placing it into an empty slot adds a
+        // redundant tap. The existing draft helper keeps every non-empty entry untouched, while
+        // the exact quantity, currency, price and evidence gates remain downstream.
+        if (presentation.options.size == 1) {
+            val addedIndex =
+                applyBarcodeIdentitySuggestion(
+                    option = presentation.options.single(),
+                    gtin = presentation.gtin
+                )
+            if (addedIndex != null) {
+                focusProductInput(addedIndex)
+            }
+            return
+        }
+
+        var selectedIndex = -1
         var outcomeCommitted = false
         lateinit var dialog: AlertDialog
         val builder =
@@ -458,29 +474,20 @@ class ComparisonActivity : AppCompatActivity() {
                 .setNegativeButton(R.string.cancel, null)
                 .setPositiveButton(R.string.compare_barcode_use_name, null)
 
-        if (presentation.options.size == 1) {
-            builder.setMessage(
+        builder
+            .setMessage(
                 getString(
-                    R.string.compare_barcode_match_message,
-                    presentation.options.single().label
+                    R.string.compare_barcode_multiple_message,
+                    presentation.gtin
                 )
             )
-        } else {
-            builder
-                .setMessage(
-                    getString(
-                        R.string.compare_barcode_multiple_message,
-                        presentation.gtin
-                    )
-                )
-                .setSingleChoiceItems(
-                    presentation.options.map { it.label }.toTypedArray(),
-                    -1
-                ) { _, which ->
-                    selectedIndex = which
-                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
-                }
-        }
+            .setSingleChoiceItems(
+                presentation.options.map { it.label }.toTypedArray(),
+                -1
+            ) { _, which ->
+                selectedIndex = which
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
+            }
 
         dialog = builder.create()
         barcodeDialog = dialog
@@ -509,48 +516,67 @@ class ComparisonActivity : AppCompatActivity() {
             button.setOnClickListener {
                 val option = presentation.options.getOrNull(selectedIndex)
                     ?: return@setOnClickListener
-                val result =
-                    CompareHereBarcodeDraft.apply(
-                        existingBlocks = currentProductBlocks(),
-                        displayName = option.displayName
+                val addedIndex =
+                    applyBarcodeIdentitySuggestion(
+                        option = option,
+                        gtin = presentation.gtin
                     )
-                if (!result.added) {
-                    compareBarcodeStatus.text =
-                        getString(
-                            when (result.issue) {
-                                CompareHereBarcodeDraftIssue.IDENTITY_TOO_LONG ->
-                                    R.string.compare_barcode_identity_too_long
-                                CompareHereBarcodeDraftIssue.NO_EMPTY_SLOT ->
-                                    R.string.compare_barcode_no_empty_slot
-                                else -> R.string.compare_barcode_unavailable
-                            }
-                        )
-                    compareBarcodeStatus.visibility = View.VISIBLE
+                if (addedIndex == null) {
                     outcomeCommitted = true
                     dialog.dismiss()
                     return@setOnClickListener
                 }
-
-                renderProductInputs(result.blocks)
-                activityState =
-                    CompareHereManualActivitySessionReducer.productsChanged(activityState)
-                syncLikeForLikeConfirmation()
-                syncPriceSelection()
-                renderIdleScreen()
-                saveDraftToPreferences()
-                compareBarcodeStatus.text =
-                    getString(
-                        R.string.compare_barcode_used,
-                        option.label,
-                        presentation.gtin
-                    )
-                compareBarcodeStatus.visibility = View.VISIBLE
                 outcomeCommitted = true
                 dialog.dismiss()
-                focusProductInput(result.addedIndex)
+                focusProductInput(addedIndex)
             }
         }
         dialog.show()
+    }
+
+    /**
+     * Inserts only the identity label returned by the offline barcode rail. The returned editor
+     * index lets the caller focus the exact editable slot after any dialog has been dismissed.
+     */
+    private fun applyBarcodeIdentitySuggestion(
+        option: GoodPriceBarcodeIdentityPresentation.Option,
+        gtin: String
+    ): Int? {
+        val result =
+            CompareHereBarcodeDraft.apply(
+                existingBlocks = currentProductBlocks(),
+                displayName = option.displayName
+            )
+        if (!result.added) {
+            finishBarcodeRequest(
+                when (result.issue) {
+                    CompareHereBarcodeDraftIssue.IDENTITY_TOO_LONG ->
+                        R.string.compare_barcode_identity_too_long
+                    CompareHereBarcodeDraftIssue.NO_EMPTY_SLOT ->
+                        R.string.compare_barcode_no_empty_slot
+                    else -> R.string.compare_barcode_unavailable
+                }
+            )
+            return null
+        }
+
+        renderProductInputs(result.blocks)
+        activityState =
+            CompareHereManualActivitySessionReducer.productsChanged(activityState)
+        syncLikeForLikeConfirmation()
+        syncPriceSelection()
+        renderIdleScreen()
+        saveDraftToPreferences()
+        barcodeLookupInFlight = false
+        syncPhotoActionButtons()
+        compareBarcodeStatus.text =
+            getString(
+                R.string.compare_barcode_used,
+                option.label,
+                gtin
+            )
+        compareBarcodeStatus.visibility = View.VISIBLE
+        return result.addedIndex
     }
 
     /**

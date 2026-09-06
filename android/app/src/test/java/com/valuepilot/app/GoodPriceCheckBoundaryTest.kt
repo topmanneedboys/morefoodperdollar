@@ -96,9 +96,10 @@ class GoodPriceCheckBoundaryTest {
         val source = source("GoodPriceActivity.kt").readText()
         val useNameHandler =
             source
-                .substringAfter("productInput.setText(option.displayName)")
+                .substringAfter("button.setOnClickListener {")
                 .substringBefore("dialog.show()")
 
+        assertTrue(useNameHandler.contains("applyBarcodeIdentitySuggestion"))
         assertTrue(useNameHandler.contains("dialog.dismiss()"))
         assertTrue(useNameHandler.contains("focusProductInput()"))
         assertTrue(
@@ -176,6 +177,23 @@ class GoodPriceCheckBoundaryTest {
             "name=\"good_price_barcode_replace_warning\"",
             "name=\"good_price_barcode_replace_description\""
         ).forEach { required -> assertTrue(strings.contains(required)) }
+    }
+
+    @Test
+    fun `good price auto-prefills one exact barcode identity only for an empty draft`() {
+        val source = source("GoodPriceActivity.kt").readText()
+        val barcodeFlow =
+            source
+                .substringAfter("private fun showBarcodeIdentityChoices")
+                .substringBefore("private fun focusProductInput")
+
+        listOf(
+            "presentation.options.size == 1 && !hasExistingDraft",
+            "applyBarcodeIdentitySuggestion(",
+            "focusProductInput()",
+            "var selectedIndex = if (presentation.options.size == 1) 0 else -1"
+        ).forEach { required -> assertTrue(barcodeFlow.contains(required)) }
+        assertTrue(barcodeFlow.contains("good_price_barcode_replace_message"))
     }
 
     @Test

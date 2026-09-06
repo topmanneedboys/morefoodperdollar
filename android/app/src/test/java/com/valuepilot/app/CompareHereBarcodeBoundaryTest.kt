@@ -55,16 +55,34 @@ class CompareHereBarcodeBoundaryTest {
         val source = source("ComparisonActivity.kt").readText()
         val useNameHandler =
             source
-                .substringAfter("CompareHereBarcodeDraft.apply(")
+                .substringAfter("button.setOnClickListener {")
                 .substringBefore("dialog.show()")
 
+        assertTrue(useNameHandler.contains("applyBarcodeIdentitySuggestion"))
         assertTrue(useNameHandler.contains("dialog.dismiss()"))
-        assertTrue(useNameHandler.contains("focusProductInput(result.addedIndex)"))
+        assertTrue(useNameHandler.contains("focusProductInput(addedIndex)"))
         assertTrue(
             useNameHandler.indexOf("dialog.dismiss()") <
-                useNameHandler.indexOf("focusProductInput(result.addedIndex)")
+                useNameHandler.indexOf("focusProductInput(addedIndex)")
         )
         assertTrue(source.contains("if (isFinishing || isDestroyed) return@post"))
+    }
+
+    @Test
+    fun `one exact barcode identity is inserted without a redundant choice dialog`() {
+        val source = source("ComparisonActivity.kt").readText()
+        val singleIdentityPath =
+            source
+                .substringAfter("if (presentation.options.size == 1)")
+                .substringBefore("var selectedIndex = -1")
+
+        listOf(
+            "presentation.options.single()",
+            "applyBarcodeIdentitySuggestion",
+            "focusProductInput(addedIndex)"
+        ).forEach { required -> assertTrue(singleIdentityPath.contains(required)) }
+        assertTrue(source.contains("var selectedIndex = -1"))
+        assertTrue(source.contains("compare_barcode_multiple_message"))
     }
 
     @Test

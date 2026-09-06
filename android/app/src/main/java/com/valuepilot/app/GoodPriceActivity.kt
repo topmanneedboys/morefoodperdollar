@@ -498,8 +498,21 @@ class GoodPriceActivity : AppCompatActivity() {
             return
         }
 
-        var selectedIndex = if (presentation.options.size == 1) 0 else -1
         val hasExistingDraft = productInput.text?.toString()?.isNotBlank() == true
+
+        // A single exact-GTIN identity is still only an editable name suggestion. When the
+        // field is empty, showing a confirmation dialog before inserting that one safe-to-edit
+        // value adds a redundant tap; any existing draft remains protected by the dialog below.
+        if (presentation.options.size == 1 && !hasExistingDraft) {
+            applyBarcodeIdentitySuggestion(
+                option = presentation.options.single(),
+                gtin = presentation.gtin
+            )
+            focusProductInput()
+            return
+        }
+
+        var selectedIndex = if (presentation.options.size == 1) 0 else -1
         var outcomeCommitted = false
         lateinit var dialog: AlertDialog
         val builder =
@@ -580,24 +593,35 @@ class GoodPriceActivity : AppCompatActivity() {
             button.isEnabled = selectedIndex >= 0
             button.setOnClickListener {
                 val option = presentation.options.getOrNull(selectedIndex) ?: return@setOnClickListener
-                restoring = true
-                productInput.setText(option.displayName)
-                productInput.setSelection(productInput.text?.length ?: 0)
-                restoring = false
-                barcodeStatus.text =
-                    getString(
-                        R.string.good_price_barcode_used,
-                        option.label,
-                        presentation.gtin
-                    )
-                barcodeStatus.visibility = View.VISIBLE
-                renderIdle()
+                applyBarcodeIdentitySuggestion(
+                    option = option,
+                    gtin = presentation.gtin
+                )
                 outcomeCommitted = true
                 dialog.dismiss()
                 focusProductInput()
             }
         }
         dialog.show()
+    }
+
+    /** Inserts only an editable identity name; exact package and price facts remain manual. */
+    private fun applyBarcodeIdentitySuggestion(
+        option: GoodPriceBarcodeIdentityPresentation.Option,
+        gtin: String
+    ) {
+        restoring = true
+        productInput.setText(option.displayName)
+        productInput.setSelection(productInput.text?.length ?: 0)
+        restoring = false
+        barcodeStatus.text =
+            getString(
+                R.string.good_price_barcode_used,
+                option.label,
+                gtin
+            )
+        barcodeStatus.visibility = View.VISIBLE
+        renderIdle()
     }
 
     /**
