@@ -44,14 +44,7 @@ class ShareToValuePilotActivity : AppCompatActivity() {
             runCatching {
                 intent?.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
             }.getOrNull()
-        val rawImageUri =
-            runCatching {
-                when (val value = intent?.extras?.get(Intent.EXTRA_STREAM)) {
-                    is Uri -> value.toString()
-                    is String -> value
-                    else -> null
-                }
-            }.getOrNull()
+        val rawImageUri = ShareToValuePilotIntentInput.rawImageUri(intent)
         uiState =
             if (rawImageUri != null) {
                 ShareToValuePilotUiProjector.projectImage(rawImageUri)

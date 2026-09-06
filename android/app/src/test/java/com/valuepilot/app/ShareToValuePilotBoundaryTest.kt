@@ -13,7 +13,7 @@ class ShareToValuePilotBoundaryTest {
 
         listOf(
             "Intent.EXTRA_TEXT",
-            "Intent.EXTRA_STREAM",
+            "ShareToValuePilotIntentInput.rawImageUri(intent)",
             "ShareToValuePilotUiProjector.project(rawText)",
             "ShareToValuePilotUiProjector.projectImage(rawImageUri)",
             "ComparisonActivity.EXTRA_SHARED_TEXT",
@@ -23,6 +23,16 @@ class ShareToValuePilotBoundaryTest {
             "finish()"
         ).forEach { required ->
             assertTrue("Expected Share-to-ValuePilot boundary: $required", source.contains(required))
+        }
+
+        val imageInputSource = source("ShareToValuePilotIntentInput.kt").readText()
+        listOf(
+            "Intent.EXTRA_STREAM",
+            "intent?.clipData",
+            "chooseSingleUri(",
+            "clipItemCount != 1"
+        ).forEach { required ->
+            assertTrue("Expected bounded image intent extraction: $required", imageInputSource.contains(required))
         }
 
         listOf(
