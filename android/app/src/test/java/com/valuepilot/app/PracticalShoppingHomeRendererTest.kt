@@ -273,7 +273,7 @@ class PracticalShoppingHomeRendererTest {
             rendered.items.map { it.plannedPriceNotice }
         )
         assertEquals(listOf(null, null), rendered.items.map { it.priceCoverageNotice })
-        assertTrue(rendered.items.none { it.observedPriceActionVisible })
+        assertTrue(rendered.items.all { it.observedPriceActionVisible })
     }
 
     @Test

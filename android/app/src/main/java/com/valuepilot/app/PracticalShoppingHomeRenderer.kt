@@ -43,7 +43,7 @@ data class PracticalShoppingHomeItemRenderState(
     val plannedPriceNotice: String? = null,
     val priceCoverageNotice: String? = null,
     val personalHistoryNotice: String? = null,
-    /** Whether the missing-price handoff into the local observed-price flow is shown. */
+    /** Whether a missing price or line-item breakdown can open the local observed-price flow. */
     val observedPriceActionVisible: Boolean = false,
     /** Whether an explicit offline identity choice can be saved for this item. */
     val exactProductActionVisible: Boolean = false
@@ -63,8 +63,12 @@ data class PracticalShoppingHomeItemRenderState(
         }
         require(priceCoverageNotice == null || priceCoverageNotice.isNotBlank())
         require(personalHistoryNotice == null || personalHistoryNotice.isNotBlank())
-        require(!observedPriceActionVisible || priceCoverageNotice != null) {
-            "Observed-price action requires an explicit missing-price notice"
+        require(
+            !observedPriceActionVisible ||
+                priceCoverageNotice != null ||
+                plannedPriceNotice != null
+        ) {
+            "Observed-price action requires an explicit missing-price or missing-breakdown notice"
         }
         require(requestDetailsSummary.isNotBlank())
         require(requestDetailsNotice == null || requestDetailsNotice.isNotBlank())
@@ -294,11 +298,12 @@ object PracticalShoppingHomeRenderer {
                                     itemQuantity = item.quantity
                                 )
                             },
-                        // A missing price is an actionable evidence gap. The action only opens
-                        // the existing local Good Price flow; it never turns the sample plan into
-                        // a live offer or changes the already-projected result.
+                        // A missing item price or omitted line-item breakdown is an actionable
+                        // evidence gap. The action only opens the existing local Good Price flow;
+                        // it never turns the sample plan into a live offer or changes the already-
+                        // projected result.
                         observedPriceActionVisible =
-                            source.result != null && storeAssignment == null,
+                            source.result != null && itemStoreAssignment?.priceText == null,
                         exactProductActionVisible = true,
                         requestDetailsSummary =
                             PracticalShoppingHomeItemDetailsPresentation.summary(itemDetails),
