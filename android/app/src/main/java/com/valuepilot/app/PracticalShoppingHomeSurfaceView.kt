@@ -829,6 +829,12 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                         Chip(context).apply {
                             chickenChoiceOwnerControls += this
                             text = option.label
+                            contentDescription =
+                                context.getString(
+                                    R.string.home_chicken_choice_description,
+                                    option.label,
+                                    state.prompt
+                                )
                             isCheckable = false
                             isEnabled = onChickenChoice != null
                             setOnClickListener {
@@ -906,6 +912,11 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                         Chip(context).apply {
                             extraStopChoiceOwnerControls += this
                             text = option.label
+                            contentDescription =
+                                context.getString(
+                                    R.string.home_extra_stop_choice_description,
+                                    option.label
+                                )
                             isCheckable = true
                             isChecked = option.selected
                             isEnabled = onExtraStopMinimumSavingsChoice != null

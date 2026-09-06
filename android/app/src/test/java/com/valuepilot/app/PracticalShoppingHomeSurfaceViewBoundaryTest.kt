@@ -254,6 +254,40 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
     }
 
     @Test
+    fun choiceChipsGiveTalkBackTheQuestionTheyAnswer() {
+        val source = source().readText()
+        val strings =
+            File(
+                requireNotNull(System.getProperty("user.dir")),
+                "src/main/res/values/strings.xml"
+            ).readText()
+
+        listOf(
+            "R.string.home_chicken_choice_description",
+            "option.label",
+            "state.prompt",
+            "R.string.home_extra_stop_choice_description",
+            "isCheckable = true",
+            "isChecked = option.selected"
+        ).forEach { required ->
+            assertTrue("Expected contextual choice accessibility binding $required", source.contains(required))
+        }
+        listOf(
+            "<string name=\"home_chicken_choice_description\">Choose %1\$s for %2\$s</string>",
+            "<string name=\"home_extra_stop_choice_description\">Set the extra-stop minimum savings to %1\$s</string>"
+        ).forEach { required ->
+            assertTrue("Expected localized choice accessibility copy $required", strings.contains(required))
+        }
+        listOf(
+            "PracticalShoppingPlanner",
+            "Money.parse",
+            "PracticalShoppingUiProjector"
+        ).forEach { forbidden ->
+            assertFalse("Choice descriptions must not add shopping authority through $forbidden", source.contains(forbidden))
+        }
+    }
+
+    @Test
     fun explicitResultRevealUsesOnlyTheLatestBoundedProjection() {
         val source = source().readText()
 

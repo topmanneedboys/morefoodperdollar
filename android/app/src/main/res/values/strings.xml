@@ -139,6 +139,8 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="home_list_hint">Try: chicken eggs milk</string>
     <string name="home_quick_add_title">Try a sample item</string>
     <string name="home_quick_add_description">Add %1$s to this offline fictional sample list</string>
+    <string name="home_chicken_choice_description">Choose %1$s for %2$s</string>
+    <string name="home_extra_stop_choice_description">Set the extra-stop minimum savings to %1$s</string>
     <string name="home_plan_action">Plan my shop</string>
     <string name="home_fast_actions_title">Quick answers</string>
     <string name="home_items_title">On your list</string>
