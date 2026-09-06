@@ -261,8 +261,7 @@ internal object GoodPriceCheckRouteCoordinator {
                 answerGuidance = answerGuidance,
                 answerTone = tone,
                 historyText = historyText,
-                disclosure =
-                    "Not live store pricing. Personal history matches exact package quantity, currency, price basis, and promotion terms."
+                disclosure = disclosureFor(insight.assessment)
             )
 
         return GoodPriceCheckRouteEvaluation(
@@ -286,7 +285,7 @@ internal object GoodPriceCheckRouteCoordinator {
             CompareHerePriceMemoryAssessment.NO_MATCHING_HISTORY ->
                 Triple(
                     "Not enough evidence yet to know whether this is unusually good.",
-                    "ValuePilot will remember this exact package on this device.",
+                    "No matching personal history is available for this exact package yet.",
                     GoodPriceCheckAnswerTone.NEUTRAL
                 )
 
@@ -349,6 +348,13 @@ internal object GoodPriceCheckRouteCoordinator {
                     ),
                     GoodPriceCheckAnswerTone.CAUTION
                 )
+        }
+
+    private fun disclosureFor(assessment: CompareHerePriceMemoryAssessment): String =
+        if (assessment == CompareHerePriceMemoryAssessment.NO_MATCHING_HISTORY) {
+            "Not live store pricing. No matching personal history yet; this answer uses this exact price only."
+        } else {
+            "Not live store pricing. Personal history matches exact package quantity, currency, price basis, and promotion terms."
         }
 
     private fun lowerRateGuidance(

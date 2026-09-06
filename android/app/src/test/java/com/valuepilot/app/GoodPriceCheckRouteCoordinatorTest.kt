@@ -35,12 +35,16 @@ class GoodPriceCheckRouteCoordinatorTest {
             result.answerTitle
         )
         assertEquals(
-            "ValuePilot will remember this exact package on this device.",
+            "No matching personal history is available for this exact package yet.",
             result.answerGuidance
         )
         assertEquals(GoodPriceCheckAnswerTone.NEUTRAL, result.answerTone)
         assertNull(result.historyText)
-        assertTrue(result.disclosure.contains("Not live store pricing"))
+        assertEquals(
+            "Not live store pricing. No matching personal history yet; this answer uses this exact price only.",
+            result.disclosure
+        )
+        assertFalse(result.disclosure.contains("history matches"))
         val shareCard = requireNotNull(evaluation.state.shareCard)
         assertTrue(shareCard.text.contains("1.6225 CAD/L"))
         assertFalse(shareCard.text.contains("Whole Milk"))
@@ -75,6 +79,7 @@ class GoodPriceCheckRouteCoordinatorTest {
         assertEquals("Below your last remembered price", result.answerTitle)
         assertEquals(GoodPriceCheckAnswerTone.POSITIVE, result.answerTone)
         assertTrue(result.answerGuidance.contains("about 13.4% lower per unit"))
+        assertTrue(result.disclosure.contains("Personal history matches exact package quantity"))
         assertTrue(result.historyText.orEmpty().contains("Personal history: 2 observations"))
         assertTrue(result.historyText.orEmpty().contains("lowest 1.6225 CAD/L"))
         assertEquals(
