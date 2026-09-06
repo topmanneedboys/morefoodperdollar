@@ -35,6 +35,7 @@ internal data class PracticalShoppingPrivatePriceHistoryRow(
     val lowestPriceText: String,
     val latestUnitRateText: String,
     val rangeText: String,
+    val recentMovementText: String?,
     val packageText: String,
     val priceBasisText: String,
     val latestObservedText: String,
@@ -54,6 +55,7 @@ internal data class PracticalShoppingPrivatePriceHistoryRow(
             latestObservedText,
             sourceText
         ).forEach { require(it.isNotBlank()) }
+        require(recentMovementText == null || recentMovementText.isNotBlank())
         require(promotionText == null || promotionText.isNotBlank())
     }
 
@@ -67,6 +69,10 @@ internal data class PracticalShoppingPrivatePriceHistoryRow(
         append(latestUnitRateText)
         append("\nRange: ")
         append(rangeText)
+        recentMovementText?.let {
+            append("\n")
+            append(it)
+        }
         append("\nPackage: ")
         append(packageText)
         append(" · ")
@@ -174,7 +180,14 @@ internal data class PracticalShoppingPrivatePriceHistoryPresentation(
         private fun toRow(
             entries: List<CompareHerePrivatePriceMemoryEntry>
         ): PracticalShoppingPrivatePriceHistoryRow {
-            val latest = latestEntry(entries)
+            val orderedByObserved =
+                entries.sortedWith(
+                    compareByDescending<CompareHerePrivatePriceMemoryEntry> {
+                        it.observedAtEpochMillis
+                    }.thenBy { it.observationId }
+                )
+            val latest = orderedByObserved.first()
+            val previous = orderedByObserved.getOrNull(1)
             val lowest =
                 entries.minWith(
                     compareBy<CompareHerePrivatePriceMemoryEntry> {
@@ -205,12 +218,29 @@ internal data class PracticalShoppingPrivatePriceHistoryPresentation(
                 latestUnitRateText = formatCompareHereRate(latest.rate),
                 rangeText =
                     "${formatCompareHereRate(lowest.rate)}–${formatCompareHereRate(highest.rate)}",
+                recentMovementText = recentMovementText(latest, previous),
                 packageText = formatCompareHereQuantity(latest.quantity),
                 priceBasisText = priceBasisLabel(latest.priceSelection),
                 latestObservedText = formatPrivateObservationDate(latest.observedAtEpochMillis),
                 sourceText = sources,
                 promotionText = latest.promotionLabel?.let { "Promotion: $it" }
             )
+        }
+
+        private fun recentMovementText(
+            latest: CompareHerePrivatePriceMemoryEntry,
+            previous: CompareHerePrivatePriceMemoryEntry?
+        ): String? {
+            previous ?: return null
+            return when {
+                latest.rate.currencyMicrosPerUnit < previous.rate.currencyMicrosPerUnit ->
+                    "Down from previous ${formatCompareHereRate(previous.rate)}"
+
+                latest.rate.currencyMicrosPerUnit > previous.rate.currencyMicrosPerUnit ->
+                    "Up from previous ${formatCompareHereRate(previous.rate)}"
+
+                else -> "Same as previous observation"
+            }
         }
 
         private fun latestEntry(

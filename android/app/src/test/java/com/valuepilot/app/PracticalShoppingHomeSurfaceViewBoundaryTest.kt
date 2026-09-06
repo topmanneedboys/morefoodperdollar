@@ -418,6 +418,8 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "home_private_memory_highlights_body",
             "home_private_memory_highlight_prices",
             "home_private_memory_highlight_detail",
+            "home_private_memory_highlight_movement",
+            "highlight.recentMovementText?.let",
             "privateMemoryHighlightsBody.removeAllViews()",
             "privateMemoryHighlightsCard.visibility = GONE",
             "renderPrivateMemory(",

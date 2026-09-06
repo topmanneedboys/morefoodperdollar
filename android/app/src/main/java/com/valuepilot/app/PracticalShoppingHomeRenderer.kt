@@ -42,6 +42,7 @@ data class PracticalShoppingHomePrivateMemoryHighlight(
     val lowestPriceText: String,
     val latestUnitRateText: String,
     val rangeText: String,
+    val recentMovementText: String?,
     val observationCount: Int,
     val latestObservedText: String
 ) {
@@ -54,6 +55,7 @@ data class PracticalShoppingHomePrivateMemoryHighlight(
             rangeText,
             latestObservedText
         ).forEach { require(it.isNotBlank()) }
+        require(recentMovementText == null || recentMovementText.isNotBlank())
         require(observationCount > 0)
     }
 }
@@ -291,6 +293,7 @@ object PracticalShoppingHomeRenderer {
                                 lowestPriceText = row.lowestPriceText,
                                 latestUnitRateText = row.latestUnitRateText,
                                 rangeText = row.rangeText,
+                                recentMovementText = row.recentMovementText,
                                 observationCount = row.observationCount,
                                 latestObservedText = row.latestObservedText
                             )

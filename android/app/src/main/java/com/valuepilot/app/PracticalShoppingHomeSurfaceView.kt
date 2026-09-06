@@ -628,6 +628,19 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                     topPadding = 2
                 )
             )
+            highlight.recentMovementText?.let { movement ->
+                privateMemoryHighlightsBody.addView(
+                    line(
+                        context.getString(
+                            R.string.home_private_memory_highlight_movement,
+                            movement
+                        ),
+                        12f,
+                        "#1D4ED8",
+                        topPadding = 2
+                    )
+                )
+            }
         }
         privateMemoryHighlightsCard.visibility = VISIBLE
     }

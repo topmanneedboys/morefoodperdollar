@@ -368,6 +368,7 @@ class PracticalShoppingHomePersonalHistoryTest {
         assertEquals("5.79 CAD", milk.latestPriceText)
         assertEquals("5.79 CAD", milk.lowestPriceText)
         assertEquals(2, milk.observationCount)
+        assertEquals("Down from previous 6 CAD/L", milk.recentMovementText)
         assertTrue(milk.rangeText.contains("5 CAD/L"))
         assertTrue(rendered.privateMemorySummary.orEmpty().contains("not live store pricing"))
     }

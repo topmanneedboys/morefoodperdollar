@@ -71,6 +71,7 @@ class PracticalShoppingPrivatePriceHistoryPresentationTest {
         assertTrue(row.latestUnitRateText.contains("6.49 CAD/item"))
         assertTrue(row.rangeText.contains("5.79 CAD/item"))
         assertTrue(row.rangeText.contains("6.49 CAD/item"))
+        assertEquals("Up from previous 5.79 CAD/item", row.recentMovementText)
         assertTrue(row.packageText.contains("1 items"))
         assertEquals("Current price", row.priceBasisText)
         assertTrue(row.latestObservedText.contains("UTC"))
@@ -114,6 +115,35 @@ class PracticalShoppingPrivatePriceHistoryPresentationTest {
         assertTrue(presentation.rows.any { it.priceBasisText == "Current price" })
         assertTrue(presentation.rows.any { it.priceBasisText == "Member price" })
         assertTrue(presentation.rows.all { it.promotionText == "Promotion: 2 for 1" })
+        assertTrue(presentation.rows.all { it.recentMovementText == null })
+    }
+
+    @Test
+    fun `recent movement is deterministic for down and unchanged rates`() {
+        val down =
+            PracticalShoppingPrivatePriceHistoryPresentation.from(
+                CompareHerePrivatePriceMemoryState(
+                    entries =
+                        listOf(
+                            entry(id = "old-down", name = "Rice", priceMinor = 700, observedAt = 1L),
+                            entry(id = "new-down", name = "Rice", priceMinor = 600, observedAt = 2L)
+                        )
+                )
+            ).rows.single()
+        val same =
+            PracticalShoppingPrivatePriceHistoryPresentation.from(
+                CompareHerePrivatePriceMemoryState(
+                    entries =
+                        listOf(
+                            entry(id = "old-same", name = "Beans", priceMinor = 500, observedAt = 1L),
+                            entry(id = "new-same", name = "Beans", priceMinor = 500, observedAt = 2L)
+                        )
+                )
+            ).rows.single()
+
+        assertEquals("Down from previous 7 CAD/item", down.recentMovementText)
+        assertEquals("Same as previous observation", same.recentMovementText)
+        assertTrue(down.asText().contains("Down from previous"))
     }
 
     @Test
