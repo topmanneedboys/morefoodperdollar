@@ -185,13 +185,15 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
         val heading = source.indexOf("addView(fastActionsHeading)")
         val compare = source.indexOf("addView(compareActionButton)")
         val goodPrice = source.indexOf("addView(goodPriceActionButton)")
+        val quickAdd = source.indexOf("addView(quickAddHeading)")
         val message = source.indexOf("addView(message)")
 
         assertTrue("Plan action must be present", submit >= 0)
         assertTrue("Quick-answer heading must follow Plan", heading > submit)
         assertTrue("Scan action must follow the quick-answer heading", compare > heading)
         assertTrue("Good-price action must follow Scan", goodPrice > compare)
-        assertTrue("Planner content must follow first-session actions", message > goodPrice)
+        assertTrue("Demo shortcuts must follow the first-session actions", quickAdd > goodPrice)
+        assertTrue("Planner content must follow first-session actions", message > quickAdd)
         assertTrue(source.contains("R.string.home_fast_actions_title"))
     }
 

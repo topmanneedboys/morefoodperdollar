@@ -352,12 +352,16 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         extraStopOwnerControls += extraStopSettingsButton
 
         addView(inputLayout)
-        addView(quickAddHeading)
-        addView(quickAddGroup)
         addView(submitButton)
         addView(fastActionsHeading)
         addView(compareActionButton)
         addView(goodPriceActionButton)
+        // Keep fictional demo shortcuts below the real first-value actions. A blank Home should
+        // lead with Plan my shop and the two owner-driven questions; the shortcuts remain a
+        // bounded, clearly disclosed way to explore the offline sample without competing with
+        // the product's primary actions.
+        addView(quickAddHeading)
+        addView(quickAddGroup)
         addView(message)
         addView(sampleCard())
         addView(privateMemorySummary)
