@@ -44,7 +44,10 @@ class CompareHereBarcodeDraftTest {
 
     @Test
     fun `full draft does not replace existing entries`() {
-        val existing = listOf("Milk", "Eggs")
+        val existing =
+            List(CompareHereManualInputAdapter.MAX_OBSERVATIONS) { index ->
+                "Product $index"
+            }
 
         val result =
             CompareHereBarcodeDraft.apply(
@@ -55,6 +58,21 @@ class CompareHereBarcodeDraftTest {
         assertFalse(result.added)
         assertEquals(CompareHereBarcodeDraftIssue.NO_EMPTY_SLOT, result.issue)
         assertEquals(existing, result.blocks)
+    }
+
+    @Test
+    fun `filled draft appends identity into the next bounded slot`() {
+        val existing = listOf("Milk", "Eggs")
+
+        val result =
+            CompareHereBarcodeDraft.apply(
+                existingBlocks = existing,
+                displayName = "Rice"
+            )
+
+        assertTrue(result.added)
+        assertEquals(2, result.addedIndex)
+        assertEquals(listOf("Milk", "Eggs", "Rice"), result.blocks)
     }
 
     @Test

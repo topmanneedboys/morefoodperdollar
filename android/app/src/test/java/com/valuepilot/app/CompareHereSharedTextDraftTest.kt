@@ -41,7 +41,10 @@ class CompareHereSharedTextDraftTest {
 
     @Test
     fun `full draft does not replace existing shared comparison entries`() {
-        val existing = listOf("Milk", "Eggs")
+        val existing =
+            List(CompareHereManualInputAdapter.MAX_OBSERVATIONS) { index ->
+                "Product $index"
+            }
 
         val result =
             CompareHereSharedTextDraft.apply(
@@ -52,6 +55,21 @@ class CompareHereSharedTextDraftTest {
         assertFalse(result.added)
         assertEquals(CompareHereSharedTextDraftIssue.NO_EMPTY_SLOT, result.issue)
         assertEquals(existing, result.blocks)
+    }
+
+    @Test
+    fun `filled draft appends shared text into the next bounded slot`() {
+        val existing = listOf("Milk", "Eggs")
+
+        val result =
+            CompareHereSharedTextDraft.apply(
+                existingBlocks = existing,
+                sharedText = "Rice"
+            )
+
+        assertTrue(result.added)
+        assertEquals(2, result.addedIndex)
+        assertEquals(listOf("Milk", "Eggs", "Rice"), result.blocks)
     }
 
     @Test

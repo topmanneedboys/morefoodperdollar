@@ -3,9 +3,10 @@ package com.valuepilot.app
 /**
  * Deterministic identity-only insertion for the Compare Here editor.
  *
- * A barcode identity suggestion may fill one empty editor slot, but it must never replace a
- * shopper's existing entry or smuggle package, price, store, availability or ranking facts into
- * the comparison request. The shopper still completes and reviews the whole product entry.
+ * A barcode identity suggestion may fill one empty editor slot or append one bounded slot when
+ * the visible entries are full, but it must never replace a shopper's existing entry or smuggle
+ * package, price, store, availability or ranking facts into the comparison request. The shopper
+ * still completes and reviews the whole product entry.
  */
 internal enum class CompareHereBarcodeDraftIssue {
     BLANK_IDENTITY,
@@ -44,15 +45,27 @@ internal object CompareHereBarcodeDraft {
             return rejected(existingBlocks, CompareHereBarcodeDraftIssue.IDENTITY_TOO_LONG)
         }
 
-        val targetIndex = existingBlocks.indexOfFirst { it.isBlank() }
+        val emptyIndex = existingBlocks.indexOfFirst { it.isBlank() }
+        val targetIndex =
+            when {
+                emptyIndex >= 0 -> emptyIndex
+                existingBlocks.size < CompareHereManualInputAdapter.MAX_OBSERVATIONS ->
+                    existingBlocks.size
+                else -> -1
+            }
         if (targetIndex < 0) {
             return rejected(existingBlocks, CompareHereBarcodeDraftIssue.NO_EMPTY_SLOT)
         }
 
         return CompareHereBarcodeDraftResult(
-            blocks = existingBlocks.mapIndexed { index, value ->
-                if (index == targetIndex) normalizedName else value
-            },
+            blocks =
+                if (targetIndex == existingBlocks.size) {
+                    existingBlocks + normalizedName
+                } else {
+                    existingBlocks.mapIndexed { index, value ->
+                        if (index == targetIndex) normalizedName else value
+                    }
+                },
             addedIndex = targetIndex,
             issue = null
         )

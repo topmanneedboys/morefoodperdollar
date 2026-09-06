@@ -3,9 +3,10 @@ package com.valuepilot.app
 /**
  * Deterministic insertion for text intentionally shared into Compare Here.
  *
- * Shared content remains raw, user-provided text. This helper only places one bounded value in
- * the earliest empty editor slot; it does not parse, infer, overwrite, or establish any product,
- * quantity, price, store, availability, promotion, or ranking fact.
+ * Shared content remains raw, user-provided text. This helper places one bounded value in the
+ * earliest empty editor slot or appends one bounded slot when capacity remains; it does not
+ * parse, infer, overwrite, or establish any product, quantity, price, store, availability,
+ * promotion, or ranking fact.
  */
 internal enum class CompareHereSharedTextDraftIssue {
     BLANK_TEXT,
@@ -44,15 +45,27 @@ internal object CompareHereSharedTextDraft {
             return rejected(existingBlocks, CompareHereSharedTextDraftIssue.TEXT_TOO_LONG)
         }
 
-        val targetIndex = existingBlocks.indexOfFirst { it.isBlank() }
+        val emptyIndex = existingBlocks.indexOfFirst { it.isBlank() }
+        val targetIndex =
+            when {
+                emptyIndex >= 0 -> emptyIndex
+                existingBlocks.size < CompareHereManualInputAdapter.MAX_OBSERVATIONS ->
+                    existingBlocks.size
+                else -> -1
+            }
         if (targetIndex < 0) {
             return rejected(existingBlocks, CompareHereSharedTextDraftIssue.NO_EMPTY_SLOT)
         }
 
         return CompareHereSharedTextDraftResult(
-            blocks = existingBlocks.mapIndexed { index, value ->
-                if (index == targetIndex) normalizedText else value
-            },
+            blocks =
+                if (targetIndex == existingBlocks.size) {
+                    existingBlocks + normalizedText
+                } else {
+                    existingBlocks.mapIndexed { index, value ->
+                        if (index == targetIndex) normalizedText else value
+                    }
+                },
             addedIndex = targetIndex,
             issue = null
         )
