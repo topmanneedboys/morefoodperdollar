@@ -23,7 +23,9 @@ run is claimed until the checklist below is executed and its evidence is recorde
 
 - **First value:** launch with no network. Confirm the primary actions are understandable, no
   account/location/contribution prompt appears, and the user can reach Scan & Compare or Good Price
-  within roughly one minute.
+  within roughly one minute. On Home, verify `Quick answers` and both actions appear directly below
+  `Plan my shop` before the longer sample/list/result content; each action must remain inert rather
+  than navigate if its owner is detached.
 - **Manual Compare Here:** enter two exact observations (name, package quantity, ISO currency and
   price), select current/member basis as appropriate, confirm like-for-like, and verify unit math
   and unknown/error copy are readable. Change one field and confirm the old result is cleared.
