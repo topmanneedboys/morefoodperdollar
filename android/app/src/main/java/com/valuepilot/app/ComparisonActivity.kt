@@ -64,6 +64,7 @@ class ComparisonActivity : AppCompatActivity() {
     private lateinit var clearPrivateMemoryButton: Button
     private lateinit var privateMemoryStore: CompareHerePrivatePriceMemoryStore
     private var privateMemoryStateWhenStatusRendered: CompareHerePrivatePriceMemoryState? = null
+    private lateinit var offlineCatalogDiscoverySession: BundledOfflineCatalogDiscoverySession
 
     private val productInputs = mutableListOf<EditText>()
     private val productInputRows = mutableListOf<ProductInputRow>()
@@ -107,6 +108,8 @@ class ComparisonActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        offlineCatalogDiscoverySession =
+            BundledOfflineCatalog.createDiscoverySession(applicationContext)
 
         installSystemBarInsets()
 
@@ -311,6 +314,9 @@ class ComparisonActivity : AppCompatActivity() {
         sharedTextDialog?.dismiss()
         sharedTextDialog = null
         barcodeLookupExecutor.shutdownNow()
+        if (::offlineCatalogDiscoverySession.isInitialized) {
+            offlineCatalogDiscoverySession.close()
+        }
         super.onDestroy()
     }
 
@@ -393,8 +399,7 @@ class ComparisonActivity : AppCompatActivity() {
                         GoodPriceBarcodeIdentityPresentation.from(
                             gtin = trimmed,
                             result =
-                                BundledOfflineCatalog.discoverSupportedRegions(
-                                    context = applicationContext,
+                                offlineCatalogDiscoverySession.discover(
                                     rawQuery = trimmed,
                                     canonicalizer = JvmTextCanonicalizer,
                                     evaluatedAtEpochMillis = System.currentTimeMillis(),

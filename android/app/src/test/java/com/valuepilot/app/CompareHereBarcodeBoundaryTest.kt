@@ -16,7 +16,8 @@ class CompareHereBarcodeBoundaryTest {
             "compareBarcodeButton.setOnClickListener",
             "ActivityResultContracts.StartActivityForResult",
             "BarcodeCaptureActivity.EXTRA_GTIN",
-            "BundledOfflineCatalog.discoverSupportedRegions",
+            "BundledOfflineCatalog.createDiscoverySession(applicationContext)",
+            "offlineCatalogDiscoverySession.discover(",
             "GoodPriceBarcodeIdentityPresentation",
             "CompareHereBarcodeDraft.apply",
             "focusProductInput(result.addedIndex)",
@@ -28,6 +29,8 @@ class CompareHereBarcodeBoundaryTest {
             "barcodeLookupExecutor.shutdownNow",
             "barcodeLookupRequestId",
             "barcodeLookupClosed",
+            "if (::offlineCatalogDiscoverySession.isInitialized)",
+            "offlineCatalogDiscoverySession.close()",
             "ACCESSIBILITY_LIVE_REGION_POLITE"
         ).forEach { required -> assertTrue(source.contains(required)) }
 

@@ -50,11 +50,14 @@ class BarcodeCaptureBoundaryTest {
 
         listOf(
             "BarcodeCaptureActivity.EXTRA_GTIN",
-            "BundledOfflineCatalog.discoverSupportedRegions",
+            "BundledOfflineCatalog.createDiscoverySession(applicationContext)",
+            "offlineCatalogDiscoverySession.discover(",
             "GoodPriceBarcodeIdentityPresentation",
             "barcodeLookupExecutor",
             "barcodeLookupRequestId",
             "barcodeCaptureInFlight",
+            "if (::offlineCatalogDiscoverySession.isInitialized)",
+            "offlineCatalogDiscoverySession.close()",
             "good_price_barcode_cancelled",
             "good_price_barcode_used"
         ).forEach { required -> assertTrue(source.contains(required)) }

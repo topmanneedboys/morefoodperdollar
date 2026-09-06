@@ -49,6 +49,7 @@ class GoodPriceActivity : AppCompatActivity() {
     private var barcodeDialog: AlertDialog? = null
     private var shareCard: GoodPriceShareCard? = null
     private var lastCheckObservedAtEpochMillis: Long? = null
+    private lateinit var offlineCatalogDiscoverySession: BundledOfflineCatalogDiscoverySession
     private val barcodeCaptureLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (barcodeLookupClosed || !barcodeCaptureInFlight) {
@@ -73,6 +74,8 @@ class GoodPriceActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_good_price)
+        offlineCatalogDiscoverySession =
+            BundledOfflineCatalog.createDiscoverySession(applicationContext)
 
         productInput = findViewById(R.id.goodPriceInput)
         priceSelectionGroup = findViewById(R.id.goodPriceSelectionGroup)
@@ -252,6 +255,9 @@ class GoodPriceActivity : AppCompatActivity() {
         barcodeDialog?.dismiss()
         barcodeDialog = null
         barcodeLookupExecutor.shutdownNow()
+        if (::offlineCatalogDiscoverySession.isInitialized) {
+            offlineCatalogDiscoverySession.close()
+        }
         super.onDestroy()
     }
 
@@ -446,8 +452,7 @@ class GoodPriceActivity : AppCompatActivity() {
                         GoodPriceBarcodeIdentityPresentation.from(
                             gtin = trimmed,
                             result =
-                                BundledOfflineCatalog.discoverSupportedRegions(
-                                    context = applicationContext,
+                                offlineCatalogDiscoverySession.discover(
                                     rawQuery = trimmed,
                                     canonicalizer = JvmTextCanonicalizer,
                                     evaluatedAtEpochMillis = System.currentTimeMillis(),
