@@ -4,6 +4,20 @@ Updated: 2026-09-06
 
 ## Current verification status
 
+The latest promoted code tree at `32184ca0782dc7f82ac7583364edee6660b79236` has passed candidate
+workflow **34047828847** (Android job **101525964170**, browser job **101525964196**, release-bundle
+job **101526604524**) and milestone provenance workflow **34048136063** (job **101526778010**).
+With an empty Compare Here slot or blank Good Price field, one exact offline barcode identity now
+flows directly into the existing editable name field without a redundant choice dialog; exact
+quantity, currency, price, promotion and evidence remain manual and unconfirmed. Multiple matches
+and replacement/data-loss cases retain explicit confirmation. Local verification passed 402
+shared-core tests, 1,591 Android tests, 80 Python/catalog tests and 30 browser tests, plus lint,
+debug/release assembly, APK privacy, single-signer, signed offline-catalog and store-directory
+checks. Physical-device barcode/camera/accessibility/latency validation and lawful production Home
+activation remain open; provider/current-offer activation remains blocked pending explicit rights.
+The preceding promoted Good Price tree at `7229879d9fe1df9bec6d4b2d5dd25e360c8242f2` remains in
+history with candidate workflow **34046055514** and milestone provenance workflow **34046391345**.
+
 The latest promoted code tree at `7229879d9fe1df9bec6d4b2d5dd25e360c8242f2` has passed candidate
 workflow **34046055514** (Android job **101521179647**, browser job **101521179493**, release-bundle
 job **101521994885**) and milestone provenance workflow **34046391345** (job **101522085801**).
