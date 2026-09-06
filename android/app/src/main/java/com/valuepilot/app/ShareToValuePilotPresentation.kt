@@ -46,7 +46,8 @@ internal enum class ShareToValuePilotStatus {
     READY,
     EMPTY,
     TOO_LARGE,
-    UNSUPPORTED_IMAGE
+    UNSUPPORTED_IMAGE,
+    MULTIPLE_IMAGES
 }
 
 internal data class ShareToValuePilotUiState(
@@ -117,4 +118,11 @@ internal object ShareToValuePilotUiProjector {
                 )
         }
     }
+
+    fun projectMultipleImages(): ShareToValuePilotUiState =
+        ShareToValuePilotUiState(
+            status = ShareToValuePilotStatus.MULTIPLE_IMAGES,
+            sharedText = null,
+            openComparisonEnabled = false
+        )
 }

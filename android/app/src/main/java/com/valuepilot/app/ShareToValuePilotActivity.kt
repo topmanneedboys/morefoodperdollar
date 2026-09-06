@@ -44,12 +44,17 @@ class ShareToValuePilotActivity : AppCompatActivity() {
             runCatching {
                 intent?.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
             }.getOrNull()
-        val rawImageUri = ShareToValuePilotIntentInput.rawImageUri(intent)
+        val imageInput = ShareToValuePilotIntentInput.resolve(intent)
+        val rawImageUri = imageInput.uri
         uiState =
-            if (rawImageUri != null) {
-                ShareToValuePilotUiProjector.projectImage(rawImageUri)
-            } else {
-                ShareToValuePilotUiProjector.project(rawText)
+            when {
+                rawImageUri != null ->
+                    ShareToValuePilotUiProjector.projectImage(rawImageUri)
+                imageInput.issue == ShareToValuePilotIntentInput.Issue.MULTIPLE_ITEMS &&
+                    rawText.isNullOrBlank() ->
+                    ShareToValuePilotUiProjector.projectMultipleImages()
+                else ->
+                    ShareToValuePilotUiProjector.project(rawText)
             }
         render(uiState)
 
@@ -124,6 +129,14 @@ class ShareToValuePilotActivity : AppCompatActivity() {
             ShareToValuePilotStatus.UNSUPPORTED_IMAGE -> {
                 title.setText(R.string.share_to_valuepilot_image_unsupported_title)
                 guidance.setText(R.string.share_to_valuepilot_image_unsupported_guidance)
+                previewLabel.visibility = View.GONE
+                preview.visibility = View.GONE
+                preview.text = ""
+            }
+
+            ShareToValuePilotStatus.MULTIPLE_IMAGES -> {
+                title.setText(R.string.share_to_valuepilot_multiple_images_title)
+                guidance.setText(R.string.share_to_valuepilot_multiple_images_guidance)
                 previewLabel.visibility = View.GONE
                 preview.visibility = View.GONE
                 preview.text = ""

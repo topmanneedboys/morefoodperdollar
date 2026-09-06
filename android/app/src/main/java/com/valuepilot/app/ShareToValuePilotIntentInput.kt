@@ -15,7 +15,20 @@ import android.net.Uri
  * before the existing local OCR route receives it.
  */
 internal object ShareToValuePilotIntentInput {
-    fun rawImageUri(intent: Intent?): String? {
+    internal enum class Issue {
+        MULTIPLE_ITEMS
+    }
+
+    internal data class Result(
+        val uri: String? = null,
+        val issue: Issue? = null
+    ) {
+        init {
+            require(uri == null || issue == null)
+        }
+    }
+
+    fun resolve(intent: Intent?): Result {
         val extraUri =
             runCatching {
                 when (val value = intent?.extras?.get(Intent.EXTRA_STREAM)) {
@@ -25,13 +38,39 @@ internal object ShareToValuePilotIntentInput {
                 }
             }.getOrNull()
         val clipData = intent?.clipData
-        return chooseSingleUri(
-            extraUri = extraUri,
-            clipItemCount = clipData?.itemCount ?: 0,
-            clipUri = clipData?.let { data ->
+        val clipItemCount = clipData?.itemCount ?: 0
+        val clipUri =
+            clipData?.let { data ->
                 if (data.itemCount == 1) data.getItemAt(0).uri?.toString() else null
             }
+        return resolveSelection(
+            extraUri = extraUri,
+            clipItemCount = clipItemCount,
+            clipUri = clipUri
         )
+    }
+
+    /** Compatibility accessor for callers that only need the accepted URI. */
+    fun rawImageUri(intent: Intent?): String? = resolve(intent).uri
+
+    /** Pure selection rule, including the safe explanation for a rejected multi-item share. */
+    internal fun resolveSelection(
+        extraUri: String?,
+        clipItemCount: Int,
+        clipUri: String?
+    ): Result {
+        val uri =
+            chooseSingleUri(
+                extraUri = extraUri,
+                clipItemCount = clipItemCount,
+                clipUri = clipUri
+            )
+        return when {
+            uri != null -> Result(uri = uri)
+            extraUri.isNullOrBlank() && clipItemCount > 1 ->
+                Result(issue = Issue.MULTIPLE_ITEMS)
+            else -> Result()
+        }
     }
 
     /** Pure selection rule kept separate so deterministic tests do not depend on Android stubs. */

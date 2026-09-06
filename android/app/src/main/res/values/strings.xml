@@ -245,6 +245,8 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="share_to_valuepilot_too_large_guidance">ValuePilot accepts up to %1$d characters from a share. Open Scan &amp; compare and enter a smaller selection instead. Nothing was sent online.</string>
     <string name="share_to_valuepilot_image_unsupported_title">Shared image cannot be opened</string>
     <string name="share_to_valuepilot_image_unsupported_guidance">This app can only receive an image through a temporary content share. Try sharing the image again, or use Import photo inside Scan &amp; compare. Nothing was sent online.</string>
+    <string name="share_to_valuepilot_multiple_images_title">Choose one image</string>
+    <string name="share_to_valuepilot_multiple_images_guidance">ValuePilot reviews one shared image at a time so you can check each suggestion. Share a single screenshot or photo, or use Import photo inside Scan &amp; compare. Nothing was sent online.</string>
     <string name="compare_shared_image_invalid">The shared image could not be opened. Use Import photo to choose it again. Nothing was sent online.</string>
     <string name="compare_shared_text_empty_body">The shared content was empty, so your comparison draft was unchanged.</string>
     <string name="compare_shared_text_no_empty_slot_title">Shared text was not added</string>

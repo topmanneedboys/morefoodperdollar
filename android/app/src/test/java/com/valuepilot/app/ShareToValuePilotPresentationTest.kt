@@ -69,4 +69,14 @@ class ShareToValuePilotPresentationTest {
         assertEquals(null, state.sharedImageUri)
         assertFalse(state.openComparisonEnabled)
     }
+
+    @Test
+    fun `multiple shared images explain the one-image boundary`() {
+        val state = ShareToValuePilotUiProjector.projectMultipleImages()
+
+        assertEquals(ShareToValuePilotStatus.MULTIPLE_IMAGES, state.status)
+        assertEquals(null, state.sharedText)
+        assertEquals(null, state.sharedImageUri)
+        assertFalse(state.openComparisonEnabled)
+    }
 }

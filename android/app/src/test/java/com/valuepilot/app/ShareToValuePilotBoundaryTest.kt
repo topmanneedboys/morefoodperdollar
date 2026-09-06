@@ -13,9 +13,10 @@ class ShareToValuePilotBoundaryTest {
 
         listOf(
             "Intent.EXTRA_TEXT",
-            "ShareToValuePilotIntentInput.rawImageUri(intent)",
+            "ShareToValuePilotIntentInput.resolve(intent)",
             "ShareToValuePilotUiProjector.project(rawText)",
             "ShareToValuePilotUiProjector.projectImage(rawImageUri)",
+            "ShareToValuePilotUiProjector.projectMultipleImages()",
             "ComparisonActivity.EXTRA_SHARED_TEXT",
             "ComparisonActivity.EXTRA_SHARED_IMAGE_URI",
             "FLAG_GRANT_READ_URI_PERMISSION",
@@ -29,6 +30,7 @@ class ShareToValuePilotBoundaryTest {
         listOf(
             "Intent.EXTRA_STREAM",
             "intent?.clipData",
+            "resolveSelection(",
             "chooseSingleUri(",
             "clipItemCount != 1"
         ).forEach { required ->
@@ -125,6 +127,7 @@ class ShareToValuePilotBoundaryTest {
         assertTrue(strings.contains("name=\"share_to_valuepilot_ready_guidance\""))
         assertTrue(strings.contains("name=\"share_to_valuepilot_image_ready_guidance\""))
         assertTrue(strings.contains("name=\"share_to_valuepilot_image_unsupported_guidance\""))
+        assertTrue(strings.contains("name=\"share_to_valuepilot_multiple_images_guidance\""))
         assertTrue(strings.contains("name=\"share_to_valuepilot_too_large_guidance\""))
         assertTrue(strings.contains("name=\"compare_shared_text_no_empty_slot_body\""))
     }
