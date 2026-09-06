@@ -59,7 +59,9 @@ class StapleWatchSurfaceViewBoundaryTest {
             )
 
         assertEquals(
-            "ECONOMIC SWITCH CANDIDATE. Store: Example Grocer. Could save 19.00 CAD. " +
+            "ECONOMIC SWITCH CANDIDATE. Candidate store: Example Grocer. " +
+                "Candidate store only — product availability is not confirmed. " +
+                "Could save 19.00 CAD. " +
                 "Adds 5 min · 2 km. Alternative evidence: 2 fresh · 1 stale · 0 unknown. " +
                 "Worth checking before your next shop.",
             stapleWatchSwitchCardContentDescription(candidate)
@@ -72,6 +74,8 @@ class StapleWatchSurfaceViewBoundaryTest {
 
         assertTrue(source.contains("accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"))
         assertTrue(source.contains("contentDescription = stapleWatchSwitchCardContentDescription(candidate)"))
+        assertTrue(source.contains("valuePilotCandidateStoreLabel(candidate.storeName)"))
+        assertTrue(source.contains("VALUEPILOT_STORE_AVAILABILITY_NOTICE"))
         assertTrue(
             source.contains(
                 "importantForAccessibility =\n                        View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS"

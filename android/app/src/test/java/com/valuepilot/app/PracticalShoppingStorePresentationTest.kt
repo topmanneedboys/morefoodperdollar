@@ -19,6 +19,15 @@ class PracticalShoppingStorePresentationTest {
             practicalShoppingPlannedStoreAccessibility("Sample Market")
         )
         assertTrue(PRACTICAL_SHOPPING_PLANNED_STORE_NOTICE.contains("not confirmed"))
+        assertEquals(
+            "Candidate store: Example Grocer",
+            valuePilotCandidateStoreLabel("Example Grocer")
+        )
+        assertEquals(
+            "Candidate store: Example Grocer. Candidate store only — " +
+                "product availability is not confirmed.",
+            valuePilotCandidateStoreAccessibility("Example Grocer")
+        )
     }
 
     @Test
@@ -28,6 +37,12 @@ class PracticalShoppingStorePresentationTest {
         }
         assertThrows(IllegalArgumentException::class.java) {
             practicalShoppingPlannedStoreLabel("Sample\u0000Market")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            valuePilotCandidateStoreLabel("Example\u0000Grocer")
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            valuePilotCandidateStoreLabel("x".repeat(161))
         }
     }
 }

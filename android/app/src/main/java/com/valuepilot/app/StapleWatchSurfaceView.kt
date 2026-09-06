@@ -97,7 +97,23 @@ class StapleWatchSurfaceView @JvmOverloads constructor(
                     importantForAccessibility =
                         View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
                     addView(line(candidate.badge, 11f, "#047857", true))
-                    addView(line(candidate.storeName, 18f, "#111827", true, 5))
+                    addView(
+                        line(
+                            valuePilotCandidateStoreLabel(candidate.storeName),
+                            18f,
+                            "#111827",
+                            true,
+                            5
+                        )
+                    )
+                    addView(
+                        line(
+                            "Candidate store only — $VALUEPILOT_STORE_AVAILABILITY_NOTICE",
+                            12f,
+                            "#6B7280",
+                            topPadding = 4
+                        )
+                    )
                     addView(line(candidate.savingsText, 17f, "#047857", true, 7))
                     addView(line(candidate.additionalTravelText, 14f, "#374151", topPadding = 5))
                     addView(line(candidate.alternativeEvidenceText, 13f, "#6B7280", topPadding = 5))
@@ -163,7 +179,7 @@ internal fun stapleWatchSwitchCardContentDescription(
 ): String =
     listOf(
         candidate.badge,
-        "Store: ${candidate.storeName}",
+        valuePilotCandidateStoreAccessibility(candidate.storeName),
         candidate.savingsText,
         candidate.additionalTravelText,
         candidate.alternativeEvidenceText,
