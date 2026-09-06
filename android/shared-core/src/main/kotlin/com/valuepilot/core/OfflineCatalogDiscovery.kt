@@ -53,13 +53,28 @@ data class OfflineCatalogProduct(
     val canonicalGtin: String?
         get() = sourceIdentity.gtin?.let(GtinValidation::canonicalOrNull)
 
+    /**
+     * Search metadata is immutable for the lifetime of a catalog record. Cache it once so a
+     * repeated 30,000-record name search does not rebuild the same field list and token set for
+     * every candidate. These fields remain identity/search hints only.
+     */
+    private val searchableFieldsCache: List<String> =
+        buildList {
+            add(canonicalSearchName)
+            canonicalSearchBrand?.let(::add)
+            addAll(canonicalSearchAliases)
+        }
+
     val searchableFields: List<String>
-        get() =
-            buildList {
-                add(canonicalSearchName)
-                canonicalSearchBrand?.let(::add)
-                addAll(canonicalSearchAliases)
-            }
+        get() = searchableFieldsCache
+
+    internal val searchableTokens: Set<String> =
+        searchableFieldsCache
+            .asSequence()
+            .flatMap { field -> field.split(' ').asSequence() }
+            .toSet()
+
+    internal val canonicalNameTokens: Set<String> = canonicalSearchName.split(' ').toSet()
 
     fun identitySuggestion(
         itemKey: ShoppingItemKey,
@@ -199,12 +214,13 @@ object OfflineCatalogDiscoveryEngine {
                 .toList()
         }
 
+        val queryTokenSet = queryTokens.toSet()
         return products
             .mapNotNull { product -> match(product, normalizedQuery, queryTokens) }
             .sortedWith(
                 compareBy<OfflineCatalogDiscoveryMatch>(
                     { it.kind.ordinal },
-                    { extraTokenCount(it.product, queryTokens) },
+                    { extraTokenCount(it.product, queryTokenSet) },
                     { it.product.canonicalSearchName },
                     { it.product.recordId }
                 )
@@ -220,8 +236,7 @@ object OfflineCatalogDiscoveryEngine {
             return OfflineCatalogDiscoveryMatch(product, OfflineCatalogMatchKind.EXACT_NAME)
         }
 
-        val fields = product.searchableFields
-        val fieldTokens = fields.flatMap { it.split(' ') }.toSet()
+        val fieldTokens = product.searchableTokens
         if (queryTokens.all(fieldTokens::contains)) {
             return OfflineCatalogDiscoveryMatch(product, OfflineCatalogMatchKind.TOKEN_MATCH)
         }
@@ -288,10 +303,9 @@ object OfflineCatalogDiscoveryEngine {
 
     private fun extraTokenCount(
         product: OfflineCatalogProduct,
-        queryTokens: List<String>
+        queryTokens: Set<String>
     ): Int {
-        val productTokens = product.canonicalSearchName.split(' ').filter(String::isNotBlank).toSet()
-        return (productTokens - queryTokens.toSet()).size
+        return (product.canonicalNameTokens - queryTokens).size
     }
 
     private const val MIN_PREFIX_TOKEN_LENGTH = 3

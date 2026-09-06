@@ -171,6 +171,25 @@ class OfflineCatalogDiscoveryTest {
     }
 
     @Test
+    fun `indexed text search stays deterministic across a thirty thousand record snapshot`() {
+        val exact = product("z-whole-milk", "whole milk")
+        val broad = product("a-whole-milk", "whole milk chocolate")
+        val unrelated = (0 until 29_998).map { index ->
+            product("other-$index", "other product $index")
+        }
+        val index = OfflineCatalogDiscoveryIndex.build(unrelated + broad + exact)
+
+        val first = index.discover("WHOLE MILK", canonicalizer)
+        val second = index.discover("whole milk", canonicalizer)
+
+        assertEquals(30_000, first.evaluatedCandidateCount)
+        assertEquals(listOf("z-whole-milk", "a-whole-milk"), first.matches.map { it.product.recordId })
+        assertEquals(listOf(OfflineCatalogMatchKind.EXACT_NAME, OfflineCatalogMatchKind.TOKEN_MATCH),
+            first.matches.map { it.kind })
+        assertEquals(first, second)
+    }
+
+    @Test
     fun `index rejects duplicate records and overlarge snapshots`() {
         try {
             OfflineCatalogDiscoveryIndex.build(listOf(product("same", "milk"), product("same", "milk")))
