@@ -1,16 +1,28 @@
 # Known Issues
 
-Updated: 2026-08-21
+Updated: 2026-09-06
+
+## Current verification status
+
+The old local-toolchain blockers described below are historical baseline notes, not the current
+build state. The promoted tree at `dc9811ee92d054fe5033e7af073b313f1d145370` has passed the
+candidate workflow **34042210768** (Android job **101510898036**, browser job **101510897877**,
+release-bundle job **101511704903**) and milestone provenance workflow **34042551442** (job
+**101511807873**). Local verification also passes 402 shared-core tests, 1,586 Android tests, 80
+Python/catalog tests and 30 browser tests, plus lint, debug/release assembly, APK privacy,
+single-signer, signed offline-catalog and store-directory checks. The remaining milestone issue is
+physical-device validation on the Motorola Edge 2025; provider/current-offer activation remains
+blocked pending explicit lawful rights.
 
 ## Crash evidence
 
 - The latest Motorola crash is not root-caused: the repository contains no AndroidRuntime, ANR, tombstone, or bugreport evidence. Confirmed lifecycle/concurrency risks and the exact next-run capture commands are in `CRASH_ROOT_CAUSE.md`.
 - The legacy overlay still owns domain results/filter/ranking presentation decisions. New immutable state/intents/contracts exist, but full migration is intentionally incomplete in Session 1.
 - Android Live Accessibility/overlay/OCR behavior is experimental and is no longer the permanent product foundation.
-- Session 1 source changes are not yet build-verified. Gradle distribution retrieval failed with `Network is unreachable`; browser integration/Firefox validation require missing npm dependencies. Restore the documented JDK 17/API 36/Gradle/npm toolchain, then rerun every checkpoint command before device installation.
-- The Session 2 `shared-core` Gradle wiring and Kotlin tests are likewise uncompiled locally. Its source is statically platform-neutral, but only a successful pinned-toolchain build may promote it to build-verified.
+- Historical baseline (superseded): Session 1 source changes were not yet build-verified when Gradle distribution retrieval failed with `Network is unreachable` and browser integration/Firefox validation lacked npm dependencies. The pinned JDK 17/API 36/Gradle/npm toolchain and current hosted/local gates now pass; retain this note only for incident history.
+- Historical baseline (superseded): Session 2 `shared-core` Gradle wiring and Kotlin tests were once uncompiled locally. The platform-neutral source is now covered by the promoted shared-core and Android verification gates above.
 - Legacy `ValueEngine`, session detection, relevance, repository, and application-state code remain in the app module because they still depend on app-local parsed models, JVM canonicalization/display formatting, `Double` calculations, or Android-backed model loading. See `PLATFORM_DEPENDENCY_MAP.md`; do not copy them wholesale into shared core.
-- Session 3 removed hidden session clocks, global model calls from `ValueEngine`, and locale-formatted identity keys, but these Kotlin changes remain uncompiled locally. Legacy promotion/budget/ranking money still uses `Double`; convert only behind golden compatibility tests.
+- Session 3 removed hidden session clocks, global model calls from `ValueEngine`, and locale-formatted identity keys; those Kotlin changes are now build-verified by the current gates. Legacy promotion/budget/ranking money still uses `Double`; convert only behind golden compatibility tests.
 
 ## Milestone blockers
 
