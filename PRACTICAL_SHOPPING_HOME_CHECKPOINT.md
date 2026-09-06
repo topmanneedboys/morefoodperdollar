@@ -1,12 +1,16 @@
 # ValuePilot Practical Shopping Checkpoint
 
-Updated: 2026-09-05
+Updated: 2026-09-06
 
 Branch: `work/valuepilot-android-milestone`
 
 This checkpoint records the verified Practical Shopping Home slice plus the provider-neutral production evidence-to-decision path after the first execution-complexity hardening. Newer repository evidence overrides this file.
 
 ## Latest verified engineering head
+
+`f755d6db916ecab5e9bf920a5ba41007b0a23bcc` — `Reuse offline catalog for barcode identity lookups`
+
+Candidate workflow **34000381235** passed for the exact SHA, and milestone provenance workflow **34000674093** verified the promoted ref and exact release artifact lineage. Comparison and Good Price barcode identity lookups now reuse one Activity-scoped bounded merged index after the first signed GTA/Metro Vancouver catalog load. Reuse rechecks freshness and rollback limits, and teardown closes the session; request-id/lifecycle guards still reject late callbacks. Only the bounded identity index and generation metadata are cached. Barcode output remains an untrusted identity suggestion and cannot establish package quantity, currency, price, store, stock, availability, evidence or ranking. No planner/projector, product, offer, store, persistence, networking, account, tracking, demo-data or provider-economics authority changed. Local verification passed 402 shared-core tests, 1,563 Android tests and 79 Python/catalog tests with zero failures or skips; browser verification passed 30 tests with Firefox lint clean. Signed 30,000-record GTA and Metro Vancouver identity snapshots and the signed 6,093-record GTA/GVA store directory verified locally. Candidate Android privacy, one-signer, lint/build and release-bundle checks passed. Physical-device keyboard/accessibility ergonomics and lawful production Home activation remain open; provider feeds remain blocked pending explicit rights.
 
 `9f142bc2c2c692a71605182eb2efe2f8ad495187` — `Cover thirty-thousand catalog cache bound`
 

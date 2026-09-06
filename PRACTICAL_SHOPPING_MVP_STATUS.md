@@ -1,12 +1,14 @@
 # ValuePilot Practical Shopping MVP Status
 
-Updated: 2026-09-05
+Updated: 2026-09-06
 
 Branch: `work/valuepilot-android-milestone`
 
 Purpose: newest durable product/engineering checkpoint for the Practical Shopping MVP. Newer repository evidence overrides this file.
 
 ## Latest verified engineering head
+
+The latest promoted code slice is `f755d6db916ecab5e9bf920a5ba41007b0a23bcc` (`Reuse offline catalog for barcode identity lookups`). Candidate workflow **34000381235** passed for the exact SHA, and milestone provenance workflow **34000674093** verified the promoted ref and exact release artifact lineage. Comparison and Good Price barcode identity lookups now reuse one Activity-scoped bounded merged index after the first signed GTA/Metro Vancouver catalog load. Reuse rechecks freshness and rollback limits, and teardown closes the session; request-id/lifecycle guards reject late callbacks. Only the bounded identity index and generation metadata are cached. Barcode output stays an untrusted identity suggestion and cannot establish package quantity, currency, price, store, stock, availability, evidence or ranking. No planner/projector, product, offer, store, persistence, networking, account, tracking, demo-data or provider-economics authority changed. Local verification passed 402 shared-core tests, 1,563 Android tests and 79 Python/catalog tests with zero failures or skips; browser verification passed 30 tests with Firefox lint clean. Signed offline catalogs and store directory verified locally, and candidate Android lint/build, APK privacy, single-signer and release-bundle checks passed. Physical-device keyboard/accessibility ergonomics and lawful production Home activation remain open; provider feeds remain blocked pending explicit rights.
 
 The latest promoted code slice is `9f142bc2c2c692a71605182eb2efe2f8ad495187` (`Cover thirty-thousand catalog cache bound`). Candidate workflow **33999251567** passed for the exact SHA, and milestone provenance workflow **33999546339** verified the promoted ref and exact release artifact lineage. Home and Search now reuse one Activity-scoped, bounded merged identity index after the first signed two-metro catalog load. Cache reuse rechecks caller-supplied freshness and rollback limits, discards expired/future/older generations, and releases on Activity teardown. It caches no source text, query results, prices, stock, availability or ranking facts; the existing signed identity-only loader still owns admission and complete-region coverage. Local verification passed 402 shared-core tests, 1,563 Android tests and 79 Python/catalog tests with zero failures or skips; browser verification passed 30 tests with Firefox lint clean. Signed offline catalogs and store directory verified locally, and candidate Android lint/build, APK privacy, single-signer and release-bundle checks passed. Physical-device keyboard/accessibility ergonomics and lawful production Home activation remain open; provider feeds remain blocked pending explicit rights.
 
