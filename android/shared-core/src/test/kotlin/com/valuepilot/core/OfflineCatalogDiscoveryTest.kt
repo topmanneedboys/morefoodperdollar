@@ -153,6 +153,24 @@ class OfflineCatalogDiscoveryTest {
     }
 
     @Test
+    fun `indexed barcode collisions stay deterministic across a thirty thousand record snapshot`() {
+        val first = product("z-milk-upc", "whole milk", gtin = "036000291452")
+        val second = product("a-milk-upc", "whole milk alternate", gtin = "00036000291452")
+        val unrelated = (0 until 29_998).map { index ->
+            product("other-$index", "other product $index")
+        }
+
+        val result =
+            OfflineCatalogDiscoveryIndex
+                .build(unrelated + first + second)
+                .discover("00036000291452", canonicalizer)
+
+        assertEquals(30_000, result.evaluatedCandidateCount)
+        assertEquals(listOf("a-milk-upc", "z-milk-upc"), result.matches.map { it.product.recordId })
+        assertTrue(result.matches.all { it.kind == OfflineCatalogMatchKind.EXACT_GTIN })
+    }
+
+    @Test
     fun `index rejects duplicate records and overlarge snapshots`() {
         try {
             OfflineCatalogDiscoveryIndex.build(listOf(product("same", "milk"), product("same", "milk")))

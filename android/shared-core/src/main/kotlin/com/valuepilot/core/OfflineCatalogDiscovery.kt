@@ -312,6 +312,24 @@ class OfflineCatalogDiscoveryIndex private constructor(
 ) {
     private val products = products.toList()
 
+    /**
+     * Barcode lookups are a high-frequency path for the 30,000-record bundled index. Keep the
+     * canonical GTIN work at index construction instead of re-canonicalizing every product for
+     * every scan. Collisions remain possible in an identity snapshot, so each bucket is sorted by
+     * record id exactly like the previous full scan.
+     */
+    private val canonicalGtinIndex: Map<String, List<OfflineCatalogProduct>> =
+        this.products
+            .asSequence()
+            .mapNotNull { product ->
+                product.canonicalGtin?.let { canonicalGtin -> canonicalGtin to product }
+            }
+            .groupBy(
+                keySelector = { (canonicalGtin, _) -> canonicalGtin },
+                valueTransform = { (_, product) -> product }
+            )
+            .mapValues { (_, matches) -> matches.sortedBy { it.recordId } }
+
     init {
         require(this.products.size <= MAX_INDEX_PRODUCTS) {
             "Offline catalog index exceeds the bounded product limit"
@@ -335,15 +353,28 @@ class OfflineCatalogDiscoveryIndex private constructor(
             )
         val normalizedQuery = canonicalizer.search(request.rawQuery)
         require(normalizedQuery.isNotBlank())
-        val queryTokens = normalizedQuery.split(' ').filter(String::isNotBlank).distinct()
+        val queryGtin = normalizedQuery.takeIf { it.all(Char::isDigit) }
+            ?.let(GtinValidation::canonicalOrNull)
         val boundedMatches =
-            OfflineCatalogDiscoveryEngine
-                .matchingCandidates(
-                    products = products,
-                    normalizedQuery = normalizedQuery,
-                    queryTokens = queryTokens
-                )
-                .take(OfflineCatalogDiscoveryRequest.MAX_CANDIDATES)
+            if (queryGtin != null) {
+                canonicalGtinIndex[queryGtin]
+                    .orEmpty()
+                    .asSequence()
+                    .take(OfflineCatalogDiscoveryRequest.MAX_CANDIDATES)
+                    .map { product ->
+                        OfflineCatalogDiscoveryMatch(product, OfflineCatalogMatchKind.EXACT_GTIN)
+                    }
+                    .toList()
+            } else {
+                val queryTokens = normalizedQuery.split(' ').filter(String::isNotBlank).distinct()
+                OfflineCatalogDiscoveryEngine
+                    .matchingCandidates(
+                        products = products,
+                        normalizedQuery = normalizedQuery,
+                        queryTokens = queryTokens
+                    )
+                    .take(OfflineCatalogDiscoveryRequest.MAX_CANDIDATES)
+            }
 
         return OfflineCatalogDiscoveryResult(
             normalizedQuery = normalizedQuery,
