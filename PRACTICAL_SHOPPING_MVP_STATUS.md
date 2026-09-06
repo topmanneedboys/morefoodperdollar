@@ -12,6 +12,8 @@ The authoritative promoted code head is `477413d05aa0da1ac510daeac3116a847841f94
 
 ### Superseded keyboard checkpoint
 
+The paragraph below is retained for historical audit; its older workflow and head references are superseded by the authoritative head above.
+
 The authoritative promoted code head is `f49b045b5556cfb10a1f1c75e9e085f9c93240cb` (`Match Compare Here keyboard actions to editor position`). Candidate workflow **34016385875** passed for the exact SHA, including Android privacy/single-signer checks and release-bundle job **101441496340**; milestone workflow **34016685294** and provenance **101441561524** verified the promoted ref and exact candidate artifact lineage. Compare Here's dynamically-created product editors advertise `Next` for intermediate blocks and `Done` only for the final block, with the affordance re-synchronized after add/remove operations. This is presentation/accessibility-only: no route, parser, exact money/quantity, evidence, private-memory, planner, projector, product, offer, store, availability, ranking, persistence, networking, account, tracking, demo-data or provider-economics authority changed. Search sample-evidence rows retain their fictional-data disclosure, and Home/Basket/plan-result/share and Watch store-status wording remain unchanged. Local verification passed 402 shared-core tests, 1,580 Android tests, 80 Python/catalog tests and 30 browser tests with zero failures or skips; Android lint/build/privacy/single-signer, signed offline catalogs/store directory and candidate release-bundle checks passed. Physical-device keyboard/accessibility behavior and lawful production Home activation remain open; provider feeds remain blocked pending explicit rights.
 
 ## Earlier promoted checkpoints
