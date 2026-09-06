@@ -1,5 +1,7 @@
 package com.valuepilot.core
 
+import java.util.PriorityQueue
+
 /**
  * A product record used only for offline catalog discovery.
  *
@@ -215,16 +217,31 @@ object OfflineCatalogDiscoveryEngine {
         }
 
         val queryTokenSet = queryTokens.toSet()
-        return products
-            .mapNotNull { product -> match(product, normalizedQuery, queryTokens) }
-            .sortedWith(
-                compareBy<OfflineCatalogDiscoveryMatch>(
-                    { it.kind.ordinal },
-                    { extraTokenCount(it.product, queryTokenSet) },
-                    { it.product.canonicalSearchName },
-                    { it.product.recordId }
-                )
+        val ordering =
+            compareBy<OfflineCatalogDiscoveryMatch>(
+                { it.kind.ordinal },
+                { extraTokenCount(it.product, queryTokenSet) },
+                { it.product.canonicalSearchName },
+                { it.product.recordId }
             )
+        // The caller can never consume more than the bounded candidate prefix. Retain only the
+        // best prefix while scanning, then sort that small prefix for the same deterministic
+        // order as the previous full collection/sort path.
+        val boundedMatches =
+            PriorityQueue<OfflineCatalogDiscoveryMatch>(
+                OfflineCatalogDiscoveryRequest.MAX_CANDIDATES + 1,
+                ordering.reversed()
+            )
+        for (product in products) {
+            val candidate = match(product, normalizedQuery, queryTokens) ?: continue
+            if (boundedMatches.size < OfflineCatalogDiscoveryRequest.MAX_CANDIDATES) {
+                boundedMatches.add(candidate)
+            } else if (ordering.compare(candidate, boundedMatches.peek()) < 0) {
+                boundedMatches.poll()
+                boundedMatches.add(candidate)
+            }
+        }
+        return boundedMatches.toList().sortedWith(ordering)
     }
 
     private fun match(

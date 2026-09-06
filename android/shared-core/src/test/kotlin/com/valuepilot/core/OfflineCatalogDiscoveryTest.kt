@@ -190,6 +190,28 @@ class OfflineCatalogDiscoveryTest {
     }
 
     @Test
+    fun `indexed text search keeps only the deterministic bounded candidate prefix`() {
+        val products = (0 until 30_000).map { index ->
+            val suffix = index.toString().padStart(5, '0')
+            product("whole-milk-$suffix", "whole milk $suffix")
+        }
+        val index = OfflineCatalogDiscoveryIndex.build(products.asReversed())
+
+        val first = index.discover("whole milk", canonicalizer)
+        val second = index.discover("whole milk", canonicalizer)
+
+        assertEquals(30_000, first.evaluatedCandidateCount)
+        assertEquals(OfflineCatalogDiscoveryRequest.MAX_RESULTS, first.matches.size)
+        assertEquals(
+            (0 until OfflineCatalogDiscoveryRequest.MAX_RESULTS)
+                .map { index -> "whole-milk-${index.toString().padStart(5, '0')}" },
+            first.matches.map { it.product.recordId }
+        )
+        assertTrue(first.matches.all { it.kind == OfflineCatalogMatchKind.TOKEN_MATCH })
+        assertEquals(first, second)
+    }
+
+    @Test
     fun `index rejects duplicate records and overlarge snapshots`() {
         try {
             OfflineCatalogDiscoveryIndex.build(listOf(product("same", "milk"), product("same", "milk")))
