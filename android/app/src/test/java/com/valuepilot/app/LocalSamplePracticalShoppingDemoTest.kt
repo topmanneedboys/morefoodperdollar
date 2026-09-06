@@ -288,11 +288,11 @@ class LocalSamplePracticalShoppingDemoTest {
         )
         assertEquals("Example Grocer East", secondStop.storeName)
         assertEquals(
-            "Buy at Sample Market West: Bananas, Eggs",
+            "Planned stop at Sample Market West: Bananas, Eggs",
             secondStop.baseItemsText
         )
         assertEquals(
-            "Then buy at Example Grocer East: Milk, Bread, Basmati rice, Chicken breast",
+            "Then planned stop at Example Grocer East: Milk, Bread, Basmati rice, Chicken breast",
             secondStop.addedItemsText
         )
         assertEquals("Could save 2.50 CAD", secondStop.savingsText)

@@ -322,7 +322,8 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "item.plannedPriceText?.let",
             "item.plannedPriceNotice?.let",
             "item.priceCoverageNotice",
-            "line(\"Buy at ${'$'}store\"",
+            "practicalShoppingPlannedStoreLabel(store)",
+            "PRACTICAL_SHOPPING_PLANNED_STORE_NOTICE",
             "line(\"Included in plan: ${'$'}price\"",
             "onEditItemDetails?.invoke(item.key)"
         ).forEach { required ->

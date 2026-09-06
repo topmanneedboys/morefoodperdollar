@@ -208,8 +208,8 @@ class PracticalShoppingUiProjectorTest {
         assertEquals("Could save 17.50 CAD", second.savingsText)
         assertEquals("Adds 4 min · 1.2 km", second.additionalTravelText)
         assertEquals("Price freshness: 3 fresh · 0 stale · 0 unknown", second.evidenceText)
-        assertEquals("Buy at Sample Market: Eggs", second.baseItemsText)
-        assertEquals("Then buy at Example Grocer: Milk, Chicken", second.addedItemsText)
+        assertEquals("Planned stop at Sample Market: Eggs", second.baseItemsText)
+        assertEquals("Then planned stop at Example Grocer: Milk, Chicken", second.addedItemsText)
         assertNull(projection.state.secondaryMessage)
         assertEquals(secondKey, projection.addedStoreKey)
         assertFalse(projection.state.toString().contains(secondKey.value))
@@ -402,8 +402,8 @@ class PracticalShoppingUiProjectorTest {
             ).state.secondStop
         )
 
-        assertEquals("Buy at Sample Market: none", second.baseItemsText)
-        assertEquals("Then buy at Example Grocer: Eggs, Milk, Chicken", second.addedItemsText)
+        assertEquals("Planned stop at Sample Market: none", second.baseItemsText)
+        assertEquals("Then planned stop at Example Grocer: Eggs, Milk, Chicken", second.addedItemsText)
     }
 
     @Test

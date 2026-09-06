@@ -197,13 +197,13 @@ object PracticalShoppingUiProjector {
                     storeName = addedStoreName,
                     baseItemsText =
                         itemsText(
-                            prefix = "Buy at $baseStoreName",
+                            prefix = "Planned stop at $baseStoreName",
                             itemKeys = baseItemKeys,
                             itemDisplayNames = itemDisplayNames
                         ),
                     addedItemsText =
                         itemsText(
-                            prefix = "Then buy at $addedStoreName",
+                            prefix = "Then planned stop at $addedStoreName",
                             itemKeys = addedItemKeys,
                             itemDisplayNames = itemDisplayNames
                         ),

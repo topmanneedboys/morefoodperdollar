@@ -25,7 +25,8 @@ class PracticalShoppingProductionHomeSurfaceViewBoundaryTest {
 
         assertTrue(source.contains("item.coverageNotice"))
         assertTrue(source.contains("item.plannedPriceNotice?.let"))
-        assertTrue(source.contains("production_home_store_assignment"))
+        assertTrue(source.contains("practicalShoppingPlannedStoreLabel(store)"))
+        assertTrue(source.contains("PRACTICAL_SHOPPING_PLANNED_STORE_NOTICE"))
         assertTrue(source.contains("production_home_included_price"))
         assertFalse(source.contains("knownBasketCost"))
         assertFalse(source.contains("Money.parse"))

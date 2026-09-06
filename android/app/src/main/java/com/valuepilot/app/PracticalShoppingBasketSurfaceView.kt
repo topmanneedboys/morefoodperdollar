@@ -31,7 +31,9 @@ internal fun practicalShoppingBasketCollectionActionDescription(
     collected: Boolean
 ): String {
     val state = if (collected) "not collected" else "collected"
-    val store = item.storeAssignment?.let { "Buy at $it. " }.orEmpty()
+    val store = item.storeAssignment?.let {
+        practicalShoppingPlannedStoreAccessibility(it) + " "
+    }.orEmpty()
     val price =
         (
             item.plannedPriceText?.let { "Included in plan: $it. " }
@@ -295,7 +297,22 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         collectionEnabled: Boolean
     ) {
         item.storeAssignment?.let { store ->
-            container.addView(line("Buy at $store", 12f, "#374151", topPadding = 2))
+            container.addView(
+                line(
+                    practicalShoppingPlannedStoreLabel(store),
+                    12f,
+                    "#374151",
+                    topPadding = 2
+                )
+            )
+            container.addView(
+                line(
+                    PRACTICAL_SHOPPING_PLANNED_STORE_NOTICE,
+                    12f,
+                    "#6B7280",
+                    topPadding = 2
+                )
+            )
         }
         item.plannedPriceText?.let { price ->
             container.addView(line("Included in plan: $price", 12f, "#374151", topPadding = 2))

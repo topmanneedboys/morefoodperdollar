@@ -222,7 +222,7 @@ This build does not include an authorized current-offer feed. No flyer content i
 
     <string name="production_home_items_title">Your shopping list</string>
     <string name="production_home_unavailable_title">Shopping plan unavailable</string>
-    <string name="production_home_store_assignment">Buy at %1$s</string>
+    <string name="production_home_store_assignment">Planned store: %1$s</string>
     <string name="production_home_included_price">Included in plan: %1$s</string>
 
     <string name="share_to_valuepilot_ready_title">Review shared content</string>

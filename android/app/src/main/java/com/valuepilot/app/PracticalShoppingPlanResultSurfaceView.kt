@@ -54,7 +54,7 @@ internal fun practicalShoppingPrimaryCardContentDescription(
     return accessibilitySummary(
         listOfNotNull(
             state.badge,
-            "Store: ${state.storeName}",
+            practicalShoppingPlannedStoreAccessibility(state.storeName),
             state.basketCostText,
             state.coverageText,
             state.missingItemsText,
@@ -76,7 +76,7 @@ internal fun practicalShoppingSecondStopCardContentDescription(
     return accessibilitySummary(
         listOfNotNull(
             state.badge,
-            "Store: ${state.storeName}",
+            practicalShoppingPlannedStoreAccessibility(state.storeName),
             state.baseItemsText,
             state.addedItemsText,
             state.combinedBasketCostText,
@@ -160,7 +160,23 @@ class PracticalShoppingPlanResultSurfaceView @JvmOverloads constructor(
                             )
                         )
                     }
-                    addView(line(state.storeName, 22f, "#111827", true, 6))
+                    addView(
+                        line(
+                            practicalShoppingPlannedStoreLabel(state.storeName),
+                            22f,
+                            "#111827",
+                            true,
+                            6
+                        )
+                    )
+                    addView(
+                        line(
+                            PRACTICAL_SHOPPING_PLANNED_STORE_NOTICE,
+                            12f,
+                            "#6B7280",
+                            topPadding = 4
+                        )
+                    )
                     addView(line(state.basketCostText, 18f, "#111827", true, 8))
                     addView(
                         line(
@@ -212,7 +228,23 @@ class PracticalShoppingPlanResultSurfaceView @JvmOverloads constructor(
                             )
                         )
                     }
-                    addView(line(state.storeName, 18f, "#111827", true, 6))
+                    addView(
+                        line(
+                            practicalShoppingPlannedStoreLabel(state.storeName),
+                            18f,
+                            "#111827",
+                            true,
+                            6
+                        )
+                    )
+                    addView(
+                        line(
+                            PRACTICAL_SHOPPING_PLANNED_STORE_NOTICE,
+                            12f,
+                            "#6B7280",
+                            topPadding = 4
+                        )
+                    )
                     addView(line(state.baseItemsText, 13f, "#374151", topPadding = 8))
                     addView(line(state.addedItemsText, 13f, "#374151", topPadding = 4))
                     addView(line(state.savingsText, 17f, "#047857", true, 7))

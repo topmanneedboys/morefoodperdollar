@@ -292,7 +292,8 @@ class PracticalShoppingBasketRendererTest {
             )
 
         assertEquals(
-            "Mark Eggs (12 pack) as collected. Buy at Sample Market. No extra preferences.",
+            "Mark Eggs (12 pack) as collected. Planned store: Sample Market. " +
+                "Planned stop only — product availability is not confirmed. No extra preferences.",
             practicalShoppingBasketCollectionActionDescription(item, collected = false)
         )
     }
@@ -312,7 +313,8 @@ class PracticalShoppingBasketRendererTest {
             )
 
         assertEquals(
-            "Mark Eggs (12 pack) as collected. Buy at Sample Market. " +
+            "Mark Eggs (12 pack) as collected. Planned store: Sample Market. " +
+                "Planned stop only — product availability is not confirmed. " +
                 "Included in plan: 2.00 CAD. No extra preferences.",
             practicalShoppingBasketCollectionActionDescription(item, collected = false)
         )
@@ -333,7 +335,8 @@ class PracticalShoppingBasketRendererTest {
             )
 
         assertEquals(
-            "Mark Eggs (12 pack) as collected. Buy at Sample Market. " +
+            "Mark Eggs (12 pack) as collected. Planned store: Sample Market. " +
+                "Planned stop only — product availability is not confirmed. " +
                 "Included in the basket total — exact item price not shown. " +
                 "No extra preferences.",
             practicalShoppingBasketCollectionActionDescription(item, collected = false)

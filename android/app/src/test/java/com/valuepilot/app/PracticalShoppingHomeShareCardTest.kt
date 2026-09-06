@@ -67,7 +67,7 @@ class PracticalShoppingHomeShareCardTest {
 
         assertNotNull(card)
         val text = requireNotNull(card).text
-        assertTrue(text.contains("Optional second stop at Example Grocer East"))
+        assertTrue(text.contains("Optional planned stop at Example Grocer East"))
         assertTrue(text.contains("Could save 2.50 CAD"))
         assertTrue(text.contains(secondStop.additionalTravelText))
         assertTrue(text.contains(secondStop.evidenceText))

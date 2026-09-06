@@ -71,15 +71,16 @@ internal object PracticalShoppingHomeShareCardProjector {
         if (state.secondStop != null && secondStopFacts == null) return null
 
         val primaryLine =
-            "${primaryFacts[0]} at ${primaryFacts[1]}. " +
+            "${primaryFacts[0]}. Planned stop at ${primaryFacts[1]}. " +
                 primaryFacts.drop(2).joinToString(". ") + "."
         val secondStopLine =
             secondStopFacts?.let { facts ->
-                " Optional second stop at ${facts[0]}. ${facts[1]}. " +
+                " Optional planned stop at ${facts[0]}. ${facts[1]}. " +
                     "${facts[2]}. ${facts[3]}."
             }.orEmpty()
         val disclosure =
-            "${safeSampleNotice} This summary contains no item names or private price history."
+            "${safeSampleNotice} $PRACTICAL_SHOPPING_PLANNED_STORE_NOTICE " +
+                "This summary contains no item names or private price history."
         val text =
             "ValuePilot shopping plan: $primaryLine$secondStopLine $disclosure"
         val preview =

@@ -104,10 +104,18 @@ class PracticalShoppingProductionHomeSurfaceView @JvmOverloads constructor(
         item.storeAssignment?.let { store ->
             body.addView(
                 textLine(
-                    context.getString(R.string.production_home_store_assignment, store),
+                    practicalShoppingPlannedStoreLabel(store),
                     13f,
                     "#374151",
                     topPadding = 6
+                )
+            )
+            body.addView(
+                textLine(
+                    PRACTICAL_SHOPPING_PLANNED_STORE_NOTICE,
+                    12f,
+                    "#6B7280",
+                    topPadding = 4
                 )
             )
         }
@@ -137,7 +145,7 @@ class PracticalShoppingProductionHomeSurfaceView @JvmOverloads constructor(
         listOfNotNull(
                 item.name,
                 item.storeAssignment?.let { store ->
-                    context.getString(R.string.production_home_store_assignment, store)
+                    practicalShoppingPlannedStoreAccessibility(store)
                 },
                 item.plannedPriceText?.let { price ->
                     context.getString(R.string.production_home_included_price, price)

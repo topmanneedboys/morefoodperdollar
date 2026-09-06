@@ -42,7 +42,8 @@ class PracticalShoppingPlanResultPresentationTest {
         assertEquals("#FDE68A", style.strokeColor)
         assertEquals("#92400E", style.accentColor)
         assertEquals(
-            "BEST ONE-STORE OPTION. Store: Sample Market. Basket 10.00 CAD. " +
+            "BEST ONE-STORE OPTION. Planned store: Sample Market. " +
+                "Planned stop only — product availability is not confirmed. Basket 10.00 CAD. " +
                 "2 of 2 items priced. 3 min · 1 km. Price freshness: 1 fresh · 1 aging · 0 stale · 0 unknown. " +
                 "Lowest known complete basket among the one-store options compared. " +
                 "Some price evidence is not fully fresh. Verify before buying.",
@@ -53,7 +54,8 @@ class PracticalShoppingPlanResultPresentationTest {
     @Test
     fun primaryCardAccessibilitySummaryIncludesEveryProjectedStateAndNotice() {
         assertEquals(
-            "BEST ONE-STORE OPTION. Store: Sample Market. Basket 10.00 CAD. " +
+            "BEST ONE-STORE OPTION. Planned store: Sample Market. " +
+                "Planned stop only — product availability is not confirmed. Basket 10.00 CAD. " +
                 "2 of 2 items priced. 3 min · 1 km. Price freshness: 2 fresh · 0 stale · 0 unknown. " +
                 "Lowest known complete basket among the one-store options compared.",
             practicalShoppingPrimaryCardContentDescription(primary(null))
@@ -61,7 +63,8 @@ class PracticalShoppingPlanResultPresentationTest {
 
         val incomplete = primary("Missing price: Coffee")
         assertEquals(
-            "BEST COVERAGE FOUND. Store: Sample Market. Known subtotal 10.00 CAD. " +
+            "BEST COVERAGE FOUND. Planned store: Sample Market. " +
+                "Planned stop only — product availability is not confirmed. Known subtotal 10.00 CAD. " +
                 "1 of 2 items priced. Missing price: Coffee. 3 min · 1 km. " +
                 "Price freshness: 2 fresh · 0 stale · 0 unknown. " +
                 "No complete basket is priced yet; this option covers the most requested items. " +
@@ -76,8 +79,8 @@ class PracticalShoppingPlanResultPresentationTest {
             PracticalShoppingSecondStopUiState(
                 badge = "OPTIONAL EXTRA STOP",
                 storeName = "Example Grocer",
-                baseItemsText = "Buy at Sample Market: Eggs",
-                addedItemsText = "Then buy at Example Grocer: Milk",
+                baseItemsText = "Planned stop at Sample Market: Eggs",
+                addedItemsText = "Then planned stop at Example Grocer: Milk",
                 combinedBasketCostText = "Combined basket 20.00 CAD",
                 savingsText = "Could save 3.00 CAD",
                 additionalTravelText = "Adds 4 min · 2 km",
@@ -85,8 +88,10 @@ class PracticalShoppingPlanResultPresentationTest {
             )
 
         assertEquals(
-            "OPTIONAL EXTRA STOP. Store: Example Grocer. Buy at Sample Market: Eggs. " +
-                "Then buy at Example Grocer: Milk. Combined basket 20.00 CAD. Could save 3.00 CAD. " +
+            "OPTIONAL EXTRA STOP. Planned store: Example Grocer. " +
+                "Planned stop only — product availability is not confirmed. " +
+                "Planned stop at Sample Market: Eggs. Then planned stop at Example Grocer: Milk. " +
+                "Combined basket 20.00 CAD. Could save 3.00 CAD. " +
                 "Adds 4 min · 2 km. Price freshness: 2 fresh · 0 stale · 0 unknown.",
             practicalShoppingSecondStopCardContentDescription(state)
         )
@@ -97,7 +102,8 @@ class PracticalShoppingPlanResultPresentationTest {
         val notice = "Fictional sample data only — not live retailer prices or availability."
 
         assertEquals(
-            "BEST ONE-STORE OPTION. Store: Sample Market. Basket 10.00 CAD. " +
+            "BEST ONE-STORE OPTION. Planned store: Sample Market. " +
+                "Planned stop only — product availability is not confirmed. Basket 10.00 CAD. " +
                 "2 of 2 items priced. 3 min · 1 km. Price freshness: 2 fresh · 0 stale · 0 unknown. " +
                 "Lowest known complete basket among the one-store options compared. " +
                 "Fictional sample data only — not live retailer prices or availability.",
@@ -108,16 +114,18 @@ class PracticalShoppingPlanResultPresentationTest {
             PracticalShoppingSecondStopUiState(
                 badge = "OPTIONAL EXTRA STOP",
                 storeName = "Example Grocer",
-                baseItemsText = "Buy at Sample Market: Eggs",
-                addedItemsText = "Then buy at Example Grocer: Milk",
+                baseItemsText = "Planned stop at Sample Market: Eggs",
+                addedItemsText = "Then planned stop at Example Grocer: Milk",
                 combinedBasketCostText = "Combined basket 20.00 CAD",
                 savingsText = "Could save 3.00 CAD",
                 additionalTravelText = "Adds 4 min · 2 km",
                 evidenceText = "Price freshness: 2 fresh · 0 stale · 0 unknown"
             )
         assertEquals(
-            "OPTIONAL EXTRA STOP. Store: Example Grocer. Buy at Sample Market: Eggs. " +
-                "Then buy at Example Grocer: Milk. Combined basket 20.00 CAD. Could save 3.00 CAD. " +
+            "OPTIONAL EXTRA STOP. Planned store: Example Grocer. " +
+                "Planned stop only — product availability is not confirmed. " +
+                "Planned stop at Sample Market: Eggs. Then planned stop at Example Grocer: Milk. " +
+                "Combined basket 20.00 CAD. Could save 3.00 CAD. " +
                 "Adds 4 min · 2 km. Price freshness: 2 fresh · 0 stale · 0 unknown. " +
                 "Fictional sample data only — not live retailer prices or availability.",
             practicalShoppingSecondStopCardContentDescription(secondStop, notice)
@@ -134,8 +142,8 @@ class PracticalShoppingPlanResultPresentationTest {
                 PracticalShoppingSecondStopUiState(
                     badge = "OPTIONAL EXTRA STOP",
                     storeName = "Example Grocer",
-                    baseItemsText = "Buy at Sample Market: Eggs",
-                    addedItemsText = "Then buy at Example Grocer: Milk",
+                    baseItemsText = "Planned stop at Sample Market: Eggs",
+                    addedItemsText = "Then planned stop at Example Grocer: Milk",
                     combinedBasketCostText = "Combined basket 20.00 CAD",
                     savingsText = "Could save 3.00 CAD",
                     additionalTravelText = "Adds 4 min · 2 km",

@@ -654,7 +654,22 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                 )
             }
             item.storeAssignment?.let { store ->
-                addView(line("Buy at $store", 12f, "#374151", topPadding = 2))
+                addView(
+                    line(
+                        practicalShoppingPlannedStoreLabel(store),
+                        12f,
+                        "#374151",
+                        topPadding = 2
+                    )
+                )
+                addView(
+                    line(
+                        PRACTICAL_SHOPPING_PLANNED_STORE_NOTICE,
+                        12f,
+                        "#6B7280",
+                        topPadding = 2
+                    )
+                )
             }
             item.plannedPriceText?.let { price ->
                 addView(line("Included in plan: $price", 12f, "#374151", topPadding = 2))
