@@ -4,9 +4,14 @@ Updated: 2026-09-06
 
 ## Current verification status
 
-The latest promoted code tree at `a441190602a2968033c85c9d0d324294b2394499` has passed candidate
-workflow **34044501200** (Android job **101517028979**, browser job **101517029114**, release-bundle
-job **101517762235**) and milestone provenance workflow **34044815415** (job **101517879027**).
+The latest promoted code tree at `7229879d9fe1df9bec6d4b2d5dd25e360c8242f2` has passed candidate
+workflow **34046055514** (Android job **101521179647**, browser job **101521179493**, release-bundle
+job **101521994885**) and milestone provenance workflow **34046391345** (job **101522085801**).
+When no exact personal history matches a Good Price check, its result now states that no matching
+history is available and its disclosure uses only the exact entered price; it no longer promises a
+save before storage success is known. The preceding promoted Scan & Compare tree at
+`a441190602a2968033c85c9d0d324294b2394499` remains in history with its candidate workflow
+**34044501200** and milestone provenance workflow **34044815415**.
 The old local-toolchain blockers described below are historical baseline notes, not the current
 build state. The preceding promoted documentation tree at `dc9811ee92d054fe5033e7af073b313f1d145370` had passed the
 candidate workflow **34042210768** (Android job **101510898036**, browser job **101510897877**,
