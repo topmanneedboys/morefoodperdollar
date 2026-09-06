@@ -207,9 +207,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--snapshot", required=True, type=Path)
     parser.add_argument("--public-key", type=Path)
     parser.add_argument("--require-signature", action="store_true")
+    parser.add_argument(
+        "--source-root",
+        type=Path,
+        help=(
+            "directory containing <dataset-namespace>.jsonl source files; "
+            "use this when multiple snapshot manifests share one source root"
+        ),
+    )
     args = parser.parse_args(argv)
     try:
-        result = verify_snapshot(args.snapshot, public_key=args.public_key, require_signature=args.require_signature)
+        result = verify_snapshot(
+            args.snapshot,
+            public_key=args.public_key,
+            require_signature=args.require_signature,
+            source_root=args.source_root,
+        )
     except (SnapshotBuildError, OSError) as exc:
         print(f"snapshot verification failed: {exc}", file=sys.stderr)
         return 2

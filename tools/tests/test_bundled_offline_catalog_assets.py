@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 import hashlib
+import io
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 
-from tools.verify_offline_catalog_snapshot import verify_snapshot
+from tools.verify_offline_catalog_snapshot import main, verify_snapshot
 
 
 class BundledOfflineCatalogAssetTest(unittest.TestCase):
@@ -55,6 +57,25 @@ class BundledOfflineCatalogAssetTest(unittest.TestCase):
             self.assertTrue(forbidden.isdisjoint(row))
             self.assertEqual("open-food-facts", row["providerId"])
             self.assertEqual("off-ca", row["datasetNamespaceId"])
+
+    def test_cli_accepts_shared_source_root_for_bundled_snapshot(self):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            exit_code = main(
+                [
+                    "--snapshot",
+                    str(self.assets / "ca-gta"),
+                    "--public-key",
+                    str(self.assets / "public-key.pem"),
+                    "--require-signature",
+                    "--source-root",
+                    str(self.assets / "sources"),
+                ]
+            )
+        self.assertEqual(0, exit_code)
+        result = json.loads(output.getvalue())
+        self.assertEqual(30_000, result["records"])
+        self.assertEqual("VERIFIED", result["signatureState"])
 
 
 if __name__ == "__main__":
