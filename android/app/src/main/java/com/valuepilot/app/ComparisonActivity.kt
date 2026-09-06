@@ -549,20 +549,27 @@ class ComparisonActivity : AppCompatActivity() {
 
     /**
      * Put the cursor in the exact-entry block that barcode identity populated. This is only a
-     * navigation affordance: the shopper must still enter and review package quantity and price
-     * before the comparison coordinator can produce an answer.
+     * navigation affordance: the shopper may still need to enter or review package quantity and
+     * price before the comparison coordinator can produce an answer.
      */
     private fun focusProductInput(index: Int?) {
+        focusProductInput(index, showKeyboard = true)
+    }
+
+    private fun focusProductInput(index: Int?, showKeyboard: Boolean) {
         val input = index?.let(productInputs::getOrNull) ?: return
         input.post {
             if (isFinishing || isDestroyed) return@post
             input.requestFocus()
             input.setSelection(input.text?.length ?: 0)
             // OCR/barcode handoffs leave the shopper at the exact editable block that still
-            // needs package quantity and price. Re-open the on-device keyboard so the next
-            // aisle-side action does not require a second tap; this changes navigation only.
-            val manager = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
-            manager?.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)
+            // needs package quantity and price. Re-open the on-device keyboard when the handoff
+            // still needs immediate editing; a complete detected-details OCR handoff only needs
+            // visual review, so keeping controls visible is the lower-friction path.
+            if (showKeyboard) {
+                val manager = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+                manager?.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)
+            }
         }
     }
 
@@ -974,7 +981,15 @@ class ComparisonActivity : AppCompatActivity() {
                 hidePhotoRetry()
                 outcomeCommitted = true
                 dialog.dismiss()
-                focusProductInput(firstAddedIndex)
+                focusProductInput(
+                    firstAddedIndex,
+                    showKeyboard =
+                        CompareHerePhotoReviewActionPolicy.shouldOpenKeyboardAfterCommit(
+                            presentations = presentations,
+                            selected = selected,
+                            useDetectedDetails = useDetectedDetails
+                        )
+                )
             }
 
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {

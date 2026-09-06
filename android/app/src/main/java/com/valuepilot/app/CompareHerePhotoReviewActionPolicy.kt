@@ -16,4 +16,20 @@ internal object CompareHerePhotoReviewActionPolicy {
     fun hasDetectedDetailsAlternative(
         presentations: List<CompareHerePhotoSuggestionPresentation>
     ): Boolean = presentations.any { it.editorPrefill != null }
+
+    /**
+     * A complete detected-details commit only needs visual review before the shopper chooses the
+     * existing comparison action, so opening the keyboard would cover useful controls. Raw or
+     * mixed commits still need immediate editing and keep the existing keyboard affordance.
+     */
+    fun shouldOpenKeyboardAfterCommit(
+        presentations: List<CompareHerePhotoSuggestionPresentation>,
+        selected: BooleanArray,
+        useDetectedDetails: Boolean
+    ): Boolean {
+        if (!useDetectedDetails || presentations.size != selected.size) return true
+        return presentations.indices.any { index ->
+            selected[index] && presentations[index].editorPrefill == null
+        }
+    }
 }

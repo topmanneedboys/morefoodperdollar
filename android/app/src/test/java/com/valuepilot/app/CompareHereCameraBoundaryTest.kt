@@ -33,13 +33,14 @@ class CompareHereCameraBoundaryTest {
         assertTrue(source.contains("OcrScanner.scan"))
         assertTrue(source.contains("CompareHerePhotoDraft.review"))
         assertTrue(source.contains("result.firstAddedIndex"))
-        assertTrue(source.contains("focusProductInput(firstAddedIndex)"))
+        assertTrue(source.contains("focusProductInput("))
         assertTrue(source.contains("manager?.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)"))
         assertTrue(source.contains("CompareHerePhotoSuggestionPresentationFactory"))
         assertTrue(scanner.contains("CompareHerePhotoTextHints.containsPriceLikeText"))
         assertTrue(source.contains("editorPrefill"))
         assertTrue(source.contains("CompareHerePhotoReviewActionPolicy.primaryUsesDetectedDetails"))
         assertTrue(source.contains("CompareHerePhotoReviewActionPolicy.hasDetectedDetailsAlternative"))
+        assertTrue(source.contains("CompareHerePhotoReviewActionPolicy.shouldOpenKeyboardAfterCommit"))
         assertTrue(source.contains("compare_photo_add_with_details"))
         assertTrue(source.contains("compare_photo_add_selected_description"))
         assertTrue(source.contains("BUTTON_NEUTRAL"))
@@ -143,10 +144,12 @@ class CompareHereCameraBoundaryTest {
 
         assertTrue(commitSelection.contains("val firstAddedIndex = result.firstAddedIndex"))
         assertTrue(commitSelection.contains("dialog.dismiss()"))
-        assertTrue(commitSelection.contains("focusProductInput(firstAddedIndex)"))
+        assertTrue(commitSelection.contains("focusProductInput("))
+        assertTrue(commitSelection.contains("showKeyboard ="))
+        assertTrue(commitSelection.contains("shouldOpenKeyboardAfterCommit"))
         assertTrue(
             commitSelection.indexOf("dialog.dismiss()") <
-                commitSelection.indexOf("focusProductInput(firstAddedIndex)")
+                commitSelection.indexOf("focusProductInput(")
         )
     }
 

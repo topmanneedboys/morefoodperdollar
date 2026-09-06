@@ -48,6 +48,36 @@ class CompareHerePhotoSuggestionPresentationTest {
                 )
             )
         )
+
+        val completeSelection = BooleanArray(complete.size) { true }
+        assertFalse(
+            CompareHerePhotoReviewActionPolicy.shouldOpenKeyboardAfterCommit(
+                presentations = complete,
+                selected = completeSelection,
+                useDetectedDetails = true
+            )
+        )
+        assertTrue(
+            CompareHerePhotoReviewActionPolicy.shouldOpenKeyboardAfterCommit(
+                presentations = complete,
+                selected = completeSelection,
+                useDetectedDetails = false
+            )
+        )
+        assertTrue(
+            CompareHerePhotoReviewActionPolicy.shouldOpenKeyboardAfterCommit(
+                presentations = mixed,
+                selected = BooleanArray(mixed.size) { true },
+                useDetectedDetails = true
+            )
+        )
+        assertTrue(
+            CompareHerePhotoReviewActionPolicy.shouldOpenKeyboardAfterCommit(
+                presentations = complete,
+                selected = booleanArrayOf(true),
+                useDetectedDetails = true
+            )
+        )
     }
 
     @Test
