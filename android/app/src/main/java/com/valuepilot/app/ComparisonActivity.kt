@@ -1337,6 +1337,12 @@ class ComparisonActivity : AppCompatActivity() {
         productInputRows += ProductInputRow(card, label, removeButton)
         productInputsContainer.addView(card)
 
+        // The visible keyboard action mirrors the already-existing navigation
+        // contract: intermediate product editors advance to the next block,
+        // while the final block submits through the same enabled comparison
+        // gate. Re-sync after every add so the previous final editor does not
+        // keep advertising Done once another block exists.
+        syncProductEditorImeActions()
         updateAddProductButton()
         updateRemoveProductButtons()
     }
@@ -1370,7 +1376,25 @@ class ComparisonActivity : AppCompatActivity() {
             row.removeButton.contentDescription =
                 getString(R.string.remove_product_description, index + 1)
         }
+        syncProductEditorImeActions()
         updateRemoveProductButtons()
+    }
+
+    /**
+     * Keeps the software-keyboard affordance aligned with the existing
+     * editor-action behavior without moving any comparison authority into the
+     * dynamically-created views.
+     */
+    private fun syncProductEditorImeActions() {
+        val finalIndex = productInputs.lastIndex
+        productInputs.forEachIndexed { index, editor ->
+            editor.imeOptions =
+                if (index == finalIndex) {
+                    EditorInfo.IME_ACTION_DONE
+                } else {
+                    EditorInfo.IME_ACTION_NEXT
+                }
+        }
     }
 
     private fun updateRemoveProductButtons() {

@@ -71,6 +71,33 @@ class CompareHereManualKeyboardBoundaryTest {
     }
 
     @Test
+    fun keyboardActionLabelTracksTheFinalProductEditorAfterAddAndRemove() {
+        val source = source().readText()
+
+        listOf(
+            "syncProductEditorImeActions()",
+            "val finalIndex = productInputs.lastIndex",
+            "if (index == finalIndex)",
+            "EditorInfo.IME_ACTION_DONE",
+            "EditorInfo.IME_ACTION_NEXT",
+            "refreshProductInputRows()",
+            "productInputs += input"
+        ).forEach { required ->
+            assertTrue("Expected dynamic keyboard action binding $required", source.contains(required))
+        }
+
+        val syncStart = source.indexOf("private fun syncProductEditorImeActions()")
+        assertTrue("Expected keyboard action synchronizer", syncStart >= 0)
+        val syncEnd = source.indexOf("private fun updateRemoveProductButtons", syncStart)
+        assertTrue("Expected bounded keyboard action synchronizer", syncEnd > syncStart)
+        val sync = source.substring(syncStart, syncEnd)
+        assertTrue(sync.indexOf("EditorInfo.IME_ACTION_DONE") < sync.indexOf("EditorInfo.IME_ACTION_NEXT"))
+        assertTrue(!sync.contains("CompareHereManualRouteCoordinator"))
+        assertTrue(!sync.contains("Money.parse"))
+        assertTrue(!sync.contains("PracticalShoppingPlanner"))
+    }
+
+    @Test
     fun eachDynamicProductEditorIsAssociatedWithItsVisibleProductLabel() {
         val source = source().readText()
         val inputBlock =
