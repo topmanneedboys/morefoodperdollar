@@ -4,6 +4,22 @@ Updated: 2026-09-06
 
 ## Current verification status
 
+The latest promoted code tree at `e9f4d92f6956afcb0ad88657662b783870ccb66b` has passed candidate
+workflow **34049215506** (Android job **101529681106**, browser job **101529681273**, release-bundle
+job **101530391192**) and milestone provenance workflow **34049547297** (job **101530550909**).
+The immutable bounded offline catalog index now precomputes canonical GTIN buckets once, avoiding a
+full 30,000-record re-canonicalization on each barcode lookup while preserving deterministic
+record-id collision ordering, candidate/result bounds, evaluated counts and the existing text
+matcher. This remains identity-only; it adds no price, package quantity, store, availability,
+evidence, planner, ranking, persistence, networking, demo-data or provider-economics authority.
+Local verification passed 403 shared-core tests, 1,591 Android tests, 80 Python/catalog tests and
+30 browser tests with zero failures or skips, plus lint, debug/release assembly, APK privacy,
+single-signer, signed offline-catalog and store-directory checks. Physical-device
+barcode/camera/accessibility/latency validation and lawful production Home activation remain open;
+provider/current-offer activation remains blocked pending explicit rights. The preceding promoted
+barcode handoff tree at `32184ca0782dc7f82ac7583364edee6660b79236` remains in history with candidate
+workflow **34047828847** and milestone provenance workflow **34048136063**.
+
 The latest promoted code tree at `32184ca0782dc7f82ac7583364edee6660b79236` has passed candidate
 workflow **34047828847** (Android job **101525964170**, browser job **101525964196**, release-bundle
 job **101526604524**) and milestone provenance workflow **34048136063** (job **101526778010**).
