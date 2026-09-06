@@ -235,6 +235,35 @@ class MainActivityHomeLifecycleBoundaryTest {
     }
 
     @Test
+    fun homeReceivesOnlyValidatedSavedProductDisplayContext() {
+        val source = source().readText()
+
+        listOf(
+            "private var homeSavedExactProductContext: PracticalShoppingHomeSavedExactProductContext? = null",
+            "savedExactProductContext = homeSavedExactProductContext",
+            "PracticalShoppingHomeSavedExactProductContext.fromSnapshot(snapshot)",
+            "state.status !in setOf(",
+            "PracticalShoppingSavedLifecycleStatus.READY",
+            "PracticalShoppingSavedLifecycleStatus.DEGRADED",
+            "homeSavedExactProductContext = null"
+        ).forEach { required ->
+            assertTrue("Expected validated Saved context handoff: $required", source.contains(required))
+        }
+
+        listOf(
+            "PracticalShoppingPlanner",
+            "Money.parse",
+            "HttpURLConnection",
+            "AuthorizedOfferSnapshot"
+        ).forEach { forbidden ->
+            assertTrue(
+                "Saved product context must not add shopping or network authority: $forbidden",
+                !source.contains(forbidden)
+            )
+        }
+    }
+
+    @Test
     fun homeQuickAddActionRoutesThroughTheBoundedSessionOwner() {
         val source = source().readText()
 

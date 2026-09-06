@@ -382,8 +382,11 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
         listOf(
             "var onChooseExactProduct: ((ShoppingItemKey) -> Unit)? = null",
             "item.exactProductActionVisible",
+            "item.savedExactProductNotice",
             "R.string.home_choose_exact_product",
             "R.string.home_choose_exact_product_description",
+            "R.string.home_change_exact_product",
+            "R.string.home_change_exact_product_description",
             "onChooseExactProduct?.invoke(item.key)",
             "ownerControls = exactProductOwnerControls"
         ).forEach { required ->

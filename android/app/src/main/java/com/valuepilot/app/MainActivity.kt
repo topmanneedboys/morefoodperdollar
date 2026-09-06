@@ -143,10 +143,12 @@ class MainActivity : AppCompatActivity() {
     private var homeItemDetailsBrandInput: TextInputEditText? = null
     private var homeItemDetailsExactProduct: CheckBox? = null
     private var homeRenderState: PracticalShoppingHomeRenderState? = null
+    private var homeSavedExactProductContext: PracticalShoppingHomeSavedExactProductContext? = null
     private var homeShareCard: PracticalShoppingHomeShareCard? = null
     private var homeShareDialog: AlertDialog? = null
     private var offlineCatalogDialog: AlertDialog? = null
     private var pendingExactProductLabel: String? = null
+    private var pendingExactProductItemKey: ShoppingItemKey? = null
     private var dataStatusDialog: AlertDialog? = null
     private var privatePriceHistoryDialog: AlertDialog? = null
     private var privatePriceHistoryClearDialog: AlertDialog? = null
@@ -323,6 +325,7 @@ class MainActivity : AppCompatActivity() {
         offlineCatalogDialog?.dismiss()
         offlineCatalogDialog = null
         pendingExactProductLabel = null
+        pendingExactProductItemKey = null
         dismissSearchIdentityDialog()
         dataStatusDialog?.dismiss()
         dataStatusDialog = null
@@ -538,7 +541,8 @@ class MainActivity : AppCompatActivity() {
                         PracticalShoppingHomePrivateMemoryStatus.AVAILABLE
                     } else {
                         PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE
-                    }
+                    },
+                savedExactProductContext = homeSavedExactProductContext
             )
         // A render invalidates any pending share preview. This prevents a dialog opened for an
         // earlier list/result from sending text after the Home projection has changed.
@@ -896,6 +900,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         pendingExactProductLabel = displayName
+        pendingExactProductItemKey = itemKey
         resultDialog.setMessage(getString(R.string.home_offline_catalog_save_progress))
         resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
     }
@@ -904,7 +909,9 @@ class MainActivity : AppCompatActivity() {
         completion: PracticalShoppingRememberConfirmedChoiceCompletion
     ) {
         val label = pendingExactProductLabel
+        val itemKey = pendingExactProductItemKey
         pendingExactProductLabel = null
+        pendingExactProductItemKey = null
         val dialog = offlineCatalogDialog
         offlineCatalogDialog = null
         dialog?.dismiss()
@@ -915,6 +922,31 @@ class MainActivity : AppCompatActivity() {
         when (outcome) {
             is PracticalShoppingRememberConfirmedChoiceExecutionOutcome.Completed -> {
                 val result = outcome.result
+                if (result.exactSaved && itemKey != null) {
+                    val currentContext =
+                        homeSavedExactProductContext
+                            ?: PracticalShoppingHomeSavedExactProductContext()
+                    homeSavedExactProductContext =
+                        if (result.fullyLabeled && label != null) {
+                            val preference = result.exactResult.state?.productFor(itemKey)
+                            currentContext.withNamedProduct(
+                                itemKey = itemKey,
+                                displayName = label,
+                                forbiddenIdentifiers =
+                                    listOfNotNull(
+                                        preference?.providerId?.value,
+                                        preference?.sourceIdentity?.providerItemId,
+                                        preference?.sourceIdentity?.sku,
+                                        preference?.sourceIdentity?.gtin,
+                                        preference?.dataset?.id
+                                    )
+                            )
+                                ?: currentContext.withUnresolvedProduct(itemKey)
+                        } else {
+                            currentContext.withUnresolvedProduct(itemKey)
+                        }
+                    if (shellState.route == AppRoute.HOME) renderHome()
+                }
                 if (result.exactSaved) {
                     title = R.string.home_offline_catalog_saved_title
                     message =
@@ -1373,12 +1405,26 @@ class MainActivity : AppCompatActivity() {
 
         val savedRenderer =
             PracticalShoppingSavedLifecycleRenderer { state ->
+                if (
+                    state.status !in setOf(
+                        PracticalShoppingSavedLifecycleStatus.READY,
+                        PracticalShoppingSavedLifecycleStatus.DEGRADED
+                    )
+                ) {
+                    // A Saved refresh/mutation is authoritative for whether a choice still
+                    // exists. Do not leave old identity context visible while it is unresolved.
+                    homeSavedExactProductContext = null
+                    if (shellState.route == AppRoute.HOME) renderHome()
+                }
                 savedPresenter.render(state)
                 stapleLaunchPresenter.render(state)
                 observedPriceLaunchPresenter.render(state)
             }
         val savedSnapshotObserver =
             PracticalShoppingSavedValidatedSnapshotObserver { snapshot ->
+                homeSavedExactProductContext =
+                    PracticalShoppingHomeSavedExactProductContext.fromSnapshot(snapshot)
+                if (shellState.route == AppRoute.HOME) renderHome()
                 observedPriceSavedSelectionCoordinator.onSnapshot(snapshot)
                 stapleWatchSetupCoordinator.onSnapshot(snapshot)
                 stapleWatchSavedDisplayMetadataCompositionCoordinator.onSnapshot(snapshot)

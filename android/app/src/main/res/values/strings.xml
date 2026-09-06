@@ -160,6 +160,8 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="home_item_details_save">Save preferences</string>
     <string name="home_choose_exact_product">Choose exact product</string>
     <string name="home_choose_exact_product_description">Choose and save the exact catalog identity you mean for %1$s. This does not add a current price, stock or availability claim or change the fictional sample plan.</string>
+    <string name="home_change_exact_product">Change exact product</string>
+    <string name="home_change_exact_product_description">Change the saved exact catalog identity for %1$s. This does not add a current price, stock or availability claim or change the fictional sample plan.</string>
     <string name="home_item_observed_price_action">Add observed price</string>
     <string name="home_item_observed_price_action_description">Enter the price and package quantity you see for %1$s. This stays private and does not change the sample plan.</string>
     <string name="home_refinement_title">ONE QUICK QUESTION</string>

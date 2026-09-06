@@ -46,7 +46,9 @@ data class PracticalShoppingHomeItemRenderState(
     /** Whether a missing price or line-item breakdown can open the local observed-price flow. */
     val observedPriceActionVisible: Boolean = false,
     /** Whether an explicit offline identity choice can be saved for this item. */
-    val exactProductActionVisible: Boolean = false
+    val exactProductActionVisible: Boolean = false,
+    /** Read-only Saved context; never a planner, price or availability input. */
+    val savedExactProductNotice: String? = null
 ) {
     init {
         require(key.value.isNotBlank())
@@ -63,6 +65,7 @@ data class PracticalShoppingHomeItemRenderState(
         }
         require(priceCoverageNotice == null || priceCoverageNotice.isNotBlank())
         require(personalHistoryNotice == null || personalHistoryNotice.isNotBlank())
+        require(savedExactProductNotice == null || savedExactProductNotice.isNotBlank())
         require(
             !observedPriceActionVisible ||
                 priceCoverageNotice != null ||
@@ -213,7 +216,8 @@ object PracticalShoppingHomeRenderer {
         requestDetails: ShoppingRequestDetails?,
         privateMemory: CompareHerePrivatePriceMemoryState? = null,
         privateMemoryStatus: PracticalShoppingHomePrivateMemoryStatus =
-            PracticalShoppingHomePrivateMemoryStatus.AVAILABLE
+            PracticalShoppingHomePrivateMemoryStatus.AVAILABLE,
+        savedExactProductContext: PracticalShoppingHomeSavedExactProductContext? = null
     ): PracticalShoppingHomeRenderState {
         // A failed read is not permission to display stale or caller-provided history. Keep the
         // status visible while suppressing every history-derived row notice until recovery.
@@ -305,6 +309,8 @@ object PracticalShoppingHomeRenderer {
                         observedPriceActionVisible =
                             source.result != null && itemStoreAssignment?.priceText == null,
                         exactProductActionVisible = true,
+                        savedExactProductNotice =
+                            savedExactProductContext?.noticeFor(item.key),
                         requestDetailsSummary =
                             PracticalShoppingHomeItemDetailsPresentation.summary(itemDetails),
                         requestDetailsNotice =

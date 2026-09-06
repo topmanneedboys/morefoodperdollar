@@ -642,16 +642,30 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                 addView(
                     detailButton(
                         onDetails = { onChooseExactProduct?.invoke(item.key) },
-                        label = context.getString(R.string.home_choose_exact_product),
+                        label =
+                            context.getString(
+                                if (item.savedExactProductNotice == null) {
+                                    R.string.home_choose_exact_product
+                                } else {
+                                    R.string.home_change_exact_product
+                                }
+                            ),
                         description =
                             context.getString(
-                                R.string.home_choose_exact_product_description,
+                                if (item.savedExactProductNotice == null) {
+                                    R.string.home_choose_exact_product_description
+                                } else {
+                                    R.string.home_change_exact_product_description
+                                },
                                 item.name
                             ),
                         enabled = onChooseExactProduct != null,
                         ownerControls = exactProductOwnerControls
                     )
                 )
+            }
+            item.savedExactProductNotice?.let { notice ->
+                addView(line(notice, 12f, "#374151", topPadding = 2))
             }
             item.storeAssignment?.let { store ->
                 addView(
