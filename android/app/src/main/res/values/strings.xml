@@ -199,6 +199,10 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="home_share_plan_send">Share</string>
     <string name="home_share_plan_unavailable">No sharing app is available. Your Home plan is unchanged.</string>
     <string name="home_private_memory_review">Review private price history</string>
+    <string name="home_private_memory_highlights_title">Your remembered prices</string>
+    <string name="home_private_memory_highlights_body">Personal history on this device — not live store pricing.</string>
+    <string name="home_private_memory_highlight_prices">Last: %1$s (%2$s) · Low: %3$s</string>
+    <string name="home_private_memory_highlight_detail">%1$s · Unit-rate range: %2$s · Last observed %3$s</string>
     <string name="home_stay">Stay on Home</string>
     <string name="home_private_memory_review_description">Open Scan &amp; compare prices to review or clear private comparison history on this device.</string>
     <string name="home_private_memory_export">Export private history</string>

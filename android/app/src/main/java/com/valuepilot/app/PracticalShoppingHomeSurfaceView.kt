@@ -327,6 +327,11 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         visibility = GONE
     }
+    private val privateMemoryHighlightsBody = column()
+    private val privateMemoryHighlightsCard =
+        card("#EFF6FF", "#BFDBFE", 8, privateMemoryHighlightsBody).apply {
+            visibility = GONE
+        }
     private val privateMemoryNotice = line("", 13f, "#92400E").apply {
         accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         visibility = GONE
@@ -365,6 +370,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         addView(message)
         addView(sampleCard())
         addView(privateMemorySummary)
+        addView(privateMemoryHighlightsCard)
         addView(privateMemoryReviewActionButton)
         addView(privateMemoryExportActionButton)
         addView(privateMemoryForgetActionButton)
@@ -447,6 +453,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         renderPrivateMemory(
             status = state.privateMemoryStatus,
             summary = state.privateMemorySummary,
+            highlights = state.privateMemoryHighlights,
             reviewActionVisible = state.privateMemoryReviewActionVisible,
             exportActionVisible = state.privateMemoryExportActionVisible,
             forgetActionVisible = state.privateMemoryForgetActionVisible
@@ -528,6 +535,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private fun renderPrivateMemory(
         status: PracticalShoppingHomePrivateMemoryStatus,
         summary: String?,
+        highlights: List<PracticalShoppingHomePrivateMemoryHighlight>,
         reviewActionVisible: Boolean,
         exportActionVisible: Boolean,
         forgetActionVisible: Boolean
@@ -535,6 +543,8 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         if (status == PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE) {
             privateMemorySummary.text = ""
             privateMemorySummary.visibility = GONE
+            privateMemoryHighlightsBody.removeAllViews()
+            privateMemoryHighlightsCard.visibility = GONE
             privateMemoryReviewActionButton.visibility =
                 if (reviewActionVisible) VISIBLE else GONE
             privateMemoryReviewActionButton.isEnabled =
@@ -548,6 +558,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         } else {
             privateMemorySummary.text = summary.orEmpty()
             privateMemorySummary.visibility = if (summary == null) GONE else VISIBLE
+            renderPrivateMemoryHighlights(highlights)
             privateMemoryReviewActionButton.visibility = if (reviewActionVisible) VISIBLE else GONE
             privateMemoryReviewActionButton.isEnabled =
                 reviewActionVisible && onReviewPrivateMemory != null && hasRenderedState
@@ -560,6 +571,65 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
             privateMemoryNotice.text = ""
             privateMemoryNotice.visibility = GONE
         }
+    }
+
+    private fun renderPrivateMemoryHighlights(
+        highlights: List<PracticalShoppingHomePrivateMemoryHighlight>
+    ) {
+        privateMemoryHighlightsBody.removeAllViews()
+        if (highlights.isEmpty()) {
+            privateMemoryHighlightsCard.visibility = GONE
+            return
+        }
+
+        privateMemoryHighlightsBody.addView(
+            line(context.getString(R.string.home_private_memory_highlights_title), 14f, "#1D4ED8", true)
+        )
+        privateMemoryHighlightsBody.addView(
+            line(context.getString(R.string.home_private_memory_highlights_body), 12f, "#374151", topPadding = 4)
+        )
+        highlights.forEachIndexed { index, highlight ->
+            privateMemoryHighlightsBody.addView(
+                line(
+                    highlight.displayName,
+                    15f,
+                    "#111827",
+                    true,
+                    topPadding = if (index == 0) 10 else 12
+                )
+            )
+            privateMemoryHighlightsBody.addView(
+                line(
+                    context.getString(
+                        R.string.home_private_memory_highlight_prices,
+                        highlight.latestPriceText,
+                        highlight.latestUnitRateText,
+                        highlight.lowestPriceText
+                    ),
+                    13f,
+                    "#374151",
+                    topPadding = 3
+                )
+            )
+            privateMemoryHighlightsBody.addView(
+                line(
+                    context.getString(
+                        R.string.home_private_memory_highlight_detail,
+                        if (highlight.observationCount == 1) {
+                            "1 observation"
+                        } else {
+                            "${highlight.observationCount} observations"
+                        },
+                        highlight.rangeText,
+                        highlight.latestObservedText
+                    ),
+                    12f,
+                    "#6B7280",
+                    topPadding = 2
+                )
+            )
+        }
+        privateMemoryHighlightsCard.visibility = VISIBLE
     }
 
     private fun renderItems(items: List<PracticalShoppingHomeItemRenderState>) {

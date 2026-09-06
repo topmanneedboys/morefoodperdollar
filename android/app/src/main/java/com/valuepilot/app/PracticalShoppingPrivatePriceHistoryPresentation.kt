@@ -32,6 +32,7 @@ internal data class PracticalShoppingPrivatePriceHistoryRow(
     val displayName: String,
     val observationCount: Int,
     val latestPriceText: String,
+    val lowestPriceText: String,
     val latestUnitRateText: String,
     val rangeText: String,
     val packageText: String,
@@ -45,6 +46,7 @@ internal data class PracticalShoppingPrivatePriceHistoryRow(
         require(observationCount > 0)
         listOf(
             latestPriceText,
+            lowestPriceText,
             latestUnitRateText,
             rangeText,
             packageText,
@@ -59,6 +61,8 @@ internal data class PracticalShoppingPrivatePriceHistoryRow(
         append(displayName)
         append("\nLatest: ")
         append(latestPriceText)
+        append("\nLowest observed: ")
+        append(lowestPriceText)
         append(" · ")
         append(latestUnitRateText)
         append("\nRange: ")
@@ -197,6 +201,7 @@ internal data class PracticalShoppingPrivatePriceHistoryPresentation(
                 displayName = latest.displayName,
                 observationCount = entries.size,
                 latestPriceText = formatCompareHereMoney(latest.price),
+                lowestPriceText = formatCompareHereMoney(lowest.price),
                 latestUnitRateText = formatCompareHereRate(latest.rate),
                 rangeText =
                     "${formatCompareHereRate(lowest.rate)}–${formatCompareHereRate(highest.rate)}",

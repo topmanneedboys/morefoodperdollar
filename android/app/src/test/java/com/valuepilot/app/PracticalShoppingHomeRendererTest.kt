@@ -36,6 +36,7 @@ class PracticalShoppingHomeRendererTest {
             rendered.privateMemoryStatus
         )
         assertNull(rendered.privateMemorySummary)
+        assertTrue(rendered.privateMemoryHighlights.isEmpty())
         assertFalse(rendered.privateMemoryReviewActionVisible)
         assertFalse(rendered.privateMemoryExportActionVisible)
         assertFalse(rendered.privateMemoryForgetActionVisible)

@@ -335,6 +335,74 @@ class PracticalShoppingHomePersonalHistoryTest {
         assertEquals(listOf(null, null), rendered.items.map { it.personalHistoryNotice })
     }
 
+    @Test
+    fun `home makes bounded private history tangible without changing the sample plan`() {
+        val model =
+            PracticalShoppingHomeSession.submit(
+                PracticalShoppingHomeSession.initialState(),
+                "eggs milk"
+            )
+        val sourceResult = requireNotNull(model.model.ui.result)
+        val quantity = NormalizedQuantity(4_000_000_000L, BaseUnit.MILLILITRE)
+        val rendered =
+            PracticalShoppingHomeRenderer.render(
+                source = model.model.ui,
+                requestDetails = null,
+                privateMemory =
+                    CompareHerePrivatePriceMemoryState(
+                        listOf(
+                            entry("Milk", 649L, 6L, observedAt = 10L, quantity = quantity),
+                            entry("Milk", 579L, 5L, observedAt = 20L, quantity = quantity),
+                            entry("Eggs", 499L, 4L, observedAt = 30L)
+                        )
+                    )
+            )
+
+        assertSame(sourceResult, rendered.result)
+        assertEquals(listOf("Eggs", "Milk"), rendered.privateMemoryHighlights.map { it.displayName })
+        val eggs = rendered.privateMemoryHighlights.first()
+        assertEquals("4.99 CAD", eggs.latestPriceText)
+        assertEquals("4.99 CAD", eggs.lowestPriceText)
+        assertEquals(1, eggs.observationCount)
+        val milk = rendered.privateMemoryHighlights.last()
+        assertEquals("5.79 CAD", milk.latestPriceText)
+        assertEquals("5.79 CAD", milk.lowestPriceText)
+        assertEquals(2, milk.observationCount)
+        assertTrue(milk.rangeText.contains("5 CAD/L"))
+        assertTrue(rendered.privateMemorySummary.orEmpty().contains("not live store pricing"))
+    }
+
+    @Test
+    fun `home history highlights are capped and unreadable history exposes none`() {
+        val entries =
+            (1..8).map { index ->
+                entry(
+                    name = "Product $index",
+                    priceMinor = index.toLong(),
+                    rateMicros = index.toLong(),
+                    observedAt = index.toLong()
+                )
+            }
+        val source = LocalSamplePracticalShoppingDemo.initialModel().ui
+        val available =
+            PracticalShoppingHomeRenderer.render(
+                source,
+                requestDetails = null,
+                privateMemory = CompareHerePrivatePriceMemoryState(entries)
+            )
+        val unavailable =
+            PracticalShoppingHomeRenderer.render(
+                source,
+                requestDetails = null,
+                privateMemory = CompareHerePrivatePriceMemoryState(entries),
+                privateMemoryStatus = PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE
+            )
+
+        assertEquals(3, available.privateMemoryHighlights.size)
+        assertTrue(unavailable.privateMemoryHighlights.isEmpty())
+        assertNull(unavailable.privateMemorySummary)
+    }
+
     private fun entry(
         name: String,
         priceMinor: Long,

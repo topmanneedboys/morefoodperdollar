@@ -67,6 +67,7 @@ class PracticalShoppingPrivatePriceHistoryPresentationTest {
         assertEquals("Whole Milk", row.displayName)
         assertEquals(3, row.observationCount)
         assertTrue(row.latestPriceText.contains("6.49"))
+        assertTrue(row.lowestPriceText.contains("5.79"))
         assertTrue(row.latestUnitRateText.contains("6.49 CAD/item"))
         assertTrue(row.rangeText.contains("5.79 CAD/item"))
         assertTrue(row.rangeText.contains("6.49 CAD/item"))

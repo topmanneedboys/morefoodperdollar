@@ -29,6 +29,35 @@ enum class PracticalShoppingHomePrivateMemoryStatus {
     UNAVAILABLE
 }
 
+private const val MAX_HOME_PRIVATE_MEMORY_HIGHLIGHTS = 3
+
+/**
+ * Small, read-only price-memory row shown on Home when the shopper has already
+ * earned useful history through an explicit comparison. Every value is copied
+ * from the bounded private-history presentation; Home does not recalculate it.
+ */
+data class PracticalShoppingHomePrivateMemoryHighlight(
+    val displayName: String,
+    val latestPriceText: String,
+    val lowestPriceText: String,
+    val latestUnitRateText: String,
+    val rangeText: String,
+    val observationCount: Int,
+    val latestObservedText: String
+) {
+    init {
+        listOf(
+            displayName,
+            latestPriceText,
+            lowestPriceText,
+            latestUnitRateText,
+            rangeText,
+            latestObservedText
+        ).forEach { require(it.isNotBlank()) }
+        require(observationCount > 0)
+    }
+}
+
 data class PracticalShoppingHomeItemRenderState(
     val key: ShoppingItemKey,
     val name: String,
@@ -158,6 +187,8 @@ data class PracticalShoppingHomeRenderState(
     val privateMemoryForgetActionVisible: Boolean = false,
     val privateMemoryStatus: PracticalShoppingHomePrivateMemoryStatus =
         PracticalShoppingHomePrivateMemoryStatus.AVAILABLE,
+    /** Bounded read-only proof that automatic private memory has become useful. */
+    val privateMemoryHighlights: List<PracticalShoppingHomePrivateMemoryHighlight> = emptyList(),
     /**
      * Renderer-only aggregate for a no-coverage result. A projected primary plan already
      * carries its own exact coverage text, so this remains null whenever one exists.
@@ -175,6 +206,14 @@ data class PracticalShoppingHomeRenderState(
         require(quickAddChoices.map { it.choice }.distinct().size == quickAddChoices.size)
         require(sampleNotice.isNotBlank())
         require(privateMemorySummary == null || privateMemorySummary.isNotBlank())
+        require(privateMemoryHighlights.size <= MAX_HOME_PRIVATE_MEMORY_HIGHLIGHTS)
+        require(
+            privateMemoryHighlights.isEmpty() ||
+                (privateMemoryStatus == PracticalShoppingHomePrivateMemoryStatus.AVAILABLE &&
+                    privateMemorySummary != null)
+        ) {
+            "Private price highlights require readable private history"
+        }
         require(noCoverageSummary == null || noCoverageSummary.isNotBlank())
         require(!shopAgainVisible || result != null)
         require(
@@ -238,6 +277,26 @@ object PracticalShoppingHomeRenderer {
                     requestedItemNames = source.items.map { item -> item.name }
                 )
             }
+        val privateMemoryHighlights =
+            usablePrivateMemory
+                ?.let { memory ->
+                    PracticalShoppingPrivatePriceHistoryPresentation
+                        .from(memory)
+                        .rows
+                        .take(MAX_HOME_PRIVATE_MEMORY_HIGHLIGHTS)
+                        .map { row ->
+                            PracticalShoppingHomePrivateMemoryHighlight(
+                                displayName = row.displayName,
+                                latestPriceText = row.latestPriceText,
+                                lowestPriceText = row.lowestPriceText,
+                                latestUnitRateText = row.latestUnitRateText,
+                                rangeText = row.rangeText,
+                                observationCount = row.observationCount,
+                                latestObservedText = row.latestObservedText
+                            )
+                        }
+                }
+                .orEmpty()
         val extraStopSettingsNotice =
             source.result?.primary
                 ?.missingItemsText
@@ -388,6 +447,7 @@ object PracticalShoppingHomeRenderer {
                 privateMemoryStatus == PracticalShoppingHomePrivateMemoryStatus.AVAILABLE &&
                     privateMemorySummary != null,
             privateMemoryStatus = privateMemoryStatus,
+            privateMemoryHighlights = privateMemoryHighlights,
             noCoverageSummary = noCoverageSummary(source),
             shopAgainVisible =
                 source.status == LocalSamplePracticalShoppingDemo.Status.RESULT &&
