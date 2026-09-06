@@ -59,6 +59,19 @@ class CompareHerePhotoSuggestionPresentationTest {
     }
 
     @Test
+    fun bareDecimalShelfPriceIsShownAsAnUnconfirmedCurrencylessSignal() {
+        val presentation =
+            CompareHerePhotoSuggestionPresentationFactory.forCandidate(
+                "Cereal\n500 g\n4.99"
+            )
+
+        assertEquals("4.99 — currency needs review", presentation.priceSignal)
+        assertEquals(null, presentation.editorPrefill)
+        assertTrue(presentation.reviewNotice.contains("current price and currency"))
+        assertTrue(presentation.displayLabel.contains("price text: 4.99 — currency needs review"))
+    }
+
+    @Test
     fun estimatedQuantityIsShownButCannotLookExact() {
         val presentation =
             CompareHerePhotoSuggestionPresentationFactory.forCandidate(

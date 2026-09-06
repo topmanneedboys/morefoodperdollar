@@ -9,6 +9,7 @@ class CompareHereCameraBoundaryTest {
     @Test
     fun cameraCaptureIsUserInitiatedAndReusesBoundedOnDevicePhotoRoute() {
         val source = source("ComparisonActivity.kt").readText()
+        val scanner = source("OcrScanner.kt").readText()
         val layout = file("src/main/res/layout/activity_main.xml").readText()
         val onCreateBody =
             source.substringAfter("override fun onCreate").substringBefore("override fun onResume")
@@ -35,6 +36,7 @@ class CompareHereCameraBoundaryTest {
         assertTrue(source.contains("focusProductInput(firstAddedIndex)"))
         assertTrue(source.contains("manager?.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)"))
         assertTrue(source.contains("CompareHerePhotoSuggestionPresentationFactory"))
+        assertTrue(scanner.contains("CompareHerePhotoTextHints.containsPriceLikeText"))
         assertTrue(source.contains("editorPrefill"))
         assertTrue(source.contains("compare_photo_add_with_details"))
         assertTrue(source.contains("BUTTON_NEUTRAL"))

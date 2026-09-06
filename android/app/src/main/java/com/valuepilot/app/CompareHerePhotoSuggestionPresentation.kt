@@ -57,7 +57,11 @@ internal object CompareHerePhotoSuggestionPresentationFactory {
             safeDisplaySource(ValueEngine.name(normalized))
                 .takeIf { it.isNotBlank() && !it.equals("Unnamed item", ignoreCase = true) }
                 ?.take(120)
-        val priceSignal = priceSignal(prices, concreteCurrency)
+        val priceSignal =
+            priceSignal(prices, concreteCurrency)
+                ?: CompareHerePhotoTextHints.bareDecimalPriceText(normalized)?.let {
+                    "$it — currency needs review"
+                }
         val quantity = ValueEngine.quantity(normalized)
         val exactQuantity = quantity?.takeIf(::isExactQuantity)
         val quantitySignal =
