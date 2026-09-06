@@ -73,4 +73,48 @@ class CompareHerePhotoRequestPolicyTest {
         assertEquals(1L, next.requestId)
         assertTrue(next.inFlight)
     }
+
+    @Test
+    fun `a cancelled worker remains the only active worker until its callback releases it`() {
+        val first =
+            requireNotNull(
+                CompareHerePhotoRecognitionPolicy.begin(
+                    previous = CompareHerePhotoRecognitionState(),
+                    requestId = 1L
+                )
+            )
+
+        assertEquals(null, CompareHerePhotoRecognitionPolicy.begin(first, requestId = 2L))
+
+        val released =
+            CompareHerePhotoRecognitionPolicy.complete(
+                previous = first,
+                callbackRequestId = 1L
+            )
+        assertEquals(null, released.activeRequestId)
+        assertEquals(
+            2L,
+            CompareHerePhotoRecognitionPolicy.begin(released, requestId = 2L)
+                ?.activeRequestId
+        )
+    }
+
+    @Test
+    fun `stale completion cannot release a different active worker`() {
+        val active =
+            requireNotNull(
+                CompareHerePhotoRecognitionPolicy.begin(
+                    previous = CompareHerePhotoRecognitionState(),
+                    requestId = 8L
+                )
+            )
+
+        val unchanged =
+            CompareHerePhotoRecognitionPolicy.complete(
+                previous = active,
+                callbackRequestId = 7L
+            )
+
+        assertEquals(8L, unchanged.activeRequestId)
+    }
 }

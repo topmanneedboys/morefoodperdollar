@@ -93,6 +93,9 @@ class ComparisonActivity : AppCompatActivity() {
     private var photoRequestId = 0L
     private var photoImportInFlight = false
     private var photoImportClosed = false
+    /** Tracks the ML Kit task after the executor has returned; cancellation invalidates it but
+     * does not pretend its resources were released until its callback arrives. */
+    private var photoRecognitionState = CompareHerePhotoRecognitionState()
     private var photoReviewDialog: AlertDialog? = null
     private var photoReviewRequestId = 0L
     private var lastPhotoCaptureKind: CompareHerePhotoCaptureKind? = null
@@ -307,6 +310,7 @@ class ComparisonActivity : AppCompatActivity() {
     override fun onDestroy() {
         photoImportClosed = true
         invalidatePhotoRequest()
+        photoRecognitionState = CompareHerePhotoRecognitionState()
         photoExecutor.shutdownNow()
         barcodeLookupClosed = true
         barcodeLookupRequestId += 1L
@@ -742,6 +746,24 @@ class ComparisonActivity : AppCompatActivity() {
             return
         }
 
+        val recognitionState =
+            CompareHerePhotoRecognitionPolicy.begin(
+                previous = photoRecognitionState,
+                requestId = requestId
+            )
+        if (recognitionState == null) {
+            cleanupFile?.let { deleteCameraCaptureFile(it) }
+            // This is a defensive race guard. The visible capture actions remain disabled while
+            // the prior ML Kit task finishes, so a second worker cannot be queued or run in
+            // parallel with it.
+            finishPhotoRequest(
+                R.string.compare_photo_error,
+                retryOutcome = CompareHerePhotoRetryOutcome.OCR_FAILURE
+            )
+            return
+        }
+        photoRecognitionState = recognitionState
+
         try {
             photoExecutor.execute {
                 val bitmap = decodeBoundedPhoto(uri)
@@ -768,6 +790,12 @@ class ComparisonActivity : AppCompatActivity() {
                 }
             }
         } catch (error: Throwable) {
+            photoRecognitionState =
+                CompareHerePhotoRecognitionPolicy.complete(
+                    previous = photoRecognitionState,
+                    callbackRequestId = requestId
+                )
+            syncPhotoActionButtons()
             cleanupFile?.let { deleteCameraCaptureFile(it) }
             postPhotoImportResult(requestId, emptyList(), error)
         }
@@ -779,6 +807,14 @@ class ComparisonActivity : AppCompatActivity() {
         error: Throwable?
     ) {
         runOnUiThread {
+            photoRecognitionState =
+                CompareHerePhotoRecognitionPolicy.complete(
+                    previous = photoRecognitionState,
+                    callbackRequestId = requestId
+                )
+            // A user cancellation may have invalidated the request while ML Kit was still
+            // finishing. Release the capture/retry controls only after that worker is gone.
+            syncPhotoActionButtons()
             applyPhotoImportResult(requestId, recognizedBlocks, error)
         }
     }
@@ -1109,6 +1145,7 @@ class ComparisonActivity : AppCompatActivity() {
     private fun syncPhotoActionButtons() {
         val enabled =
             !photoImportInFlight &&
+                photoRecognitionState.activeRequestId == null &&
                 !barcodeLookupInFlight &&
                 photoReviewDialog == null &&
                 !photoImportClosed &&
