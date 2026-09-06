@@ -25,6 +25,22 @@ The pipeline performs these bounded steps:
    complete release as `lastKnownGoodGeneration`; an interrupted run can leave
    an orphaned generation record, but it cannot expose a mixed regional release.
 
+The standalone verifier can also validate the APK's shared-source layout. The
+GTA and Metro Vancouver manifests intentionally reference the one
+`offline_catalog/sources/off-ca.jsonl` payload, so pass that directory with
+`--source-root` when verifying either bundled manifest:
+
+```powershell
+python -m tools.verify_offline_catalog_snapshot `
+  --snapshot android\app\src\main\assets\offline_catalog\ca-gta `
+  --public-key android\app\src\main\assets\offline_catalog\public-key.pem `
+  --require-signature `
+  --source-root android\app\src\main\assets\offline_catalog\sources
+```
+
+Without `--source-root`, the verifier retains the standalone snapshot default
+of looking for a `sources/` directory inside the snapshot itself.
+
 Example (all dates are explicit and must describe the supplied export):
 
 ```powershell
