@@ -4,25 +4,7 @@ Updated: 2026-09-06
 
 ## Current verification status
 
-The latest promoted code tree at `d8681daea0de046bc24314dd7895aee0467ebc29` has passed candidate
-workflow **34054460543** (Android job **101543655715**, browser job **101543655612**, release-bundle
-job **101544529852**) and milestone provenance workflow **34054815462** (job **101544703003**).
-The production Home refresh host now retains a bounded, display-free request identity and requires
-that identity, the projected result and renderer-ready state all match before treating a
-same-generation replay as a duplicate. Different no-coverage store scopes or display states now
-fail closed as generation conflicts instead of silently reusing stale Home content; deterministic
-regression tests cover both cases. This handoff-only safety slice adds no price, package quantity,
-store, availability, evidence, planner, ranking, persistence, networking, demo-data or
-provider-economics authority. Local verification passed 405 shared-core tests, 1,591 Android tests,
-80 Python/catalog tests and 30 browser tests with zero failures or skips, plus lint, debug/release
-assembly, APK privacy, single-signer, signed offline-catalog and store-directory checks. The
-candidate release artifact digest was
-`sha256:dac250096d8b28331d7f783a92b355cc09ec3f720ed8dc33ba2a4d55f3f5f7a0`; the provenance-copy
-digest was `sha256:e20b85b4b15a514bc29ad10c42958849ecfbe2edc04b4fba9d7b97513a814610`. Physical-device
-barcode/camera/accessibility/latency validation and lawful production Home activation remain open;
-provider/current-offer activation remains blocked pending explicit rights. The preceding promoted
-bounded-catalog tree at `88addb8be0eef615655c3c070e13ee05687d8f79` remains in history with candidate
-workflow **34052030346** and milestone provenance workflow **34052459113**.
+The latest Practical Shopping Home consumer slice is candidate SHA `7f4126932713f6844363cf81d9f907d8089cb18f` (`Surface saved exact product context on Home`). Candidate workflow **34056970343** passed (Android job **101550525392**, browser job **101550525445**, release-bundle job **101551302449**) and recorded release artifact digest `sha256:94584924bd5347846efddf3360ca7a8f3729e8a516a4321d395f29354908ef41`. Home now composes a safe, read-only notice from the existing validated Saved exact-product projector after a private exact choice succeeds; an unavailable label is shown as unresolved without exposing a technical identity. The action becomes `Change exact product`, but the notice explicitly says the choice is not applied to the fictional sample plan and is not a current price, stock, availability, evidence, planner, ranking, persistence, networking, demo-data or provider-economics input. Home clears this context while Saved is unresolved and rebinds it only from a validated snapshot. Local verification passed 405 shared-core tests, 1,591 Android tests, 80 Python/catalog tests and 30 browser tests with zero failures or skips, plus lint, debug/release assembly, APK privacy, single-signer, signed offline-catalog and store-directory checks. Promotion remains gated by milestone provenance. Physical-device barcode/camera/accessibility/latency validation and lawful production Home activation remain open; provider/current-offer activation remains blocked pending explicit rights. The preceding promoted generation-safety tree at `d8681daea0de046bc24314dd7895aee0467ebc29` remains in history with candidate workflow **34054460543** and milestone provenance workflow **34054815462**.
 
 The latest promoted code tree at `32184ca0782dc7f82ac7583364edee6660b79236` has passed candidate
 workflow **34047828847** (Android job **101525964170**, browser job **101525964196**, release-bundle
