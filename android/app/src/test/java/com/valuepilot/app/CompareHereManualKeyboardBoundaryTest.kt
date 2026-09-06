@@ -41,6 +41,36 @@ class CompareHereManualKeyboardBoundaryTest {
     }
 
     @Test
+    fun keyboardDoneAdvancesEntriesAndUsesOnlyTheVisibleCompareGate() {
+        val source = source().readText()
+        val editorAction =
+            source
+                .substringAfter("input.imeOptions = EditorInfo.IME_ACTION_DONE")
+                .substringBefore("label.labelFor = input.id")
+
+        assertTrue(source.contains("import android.view.inputmethod.EditorInfo"))
+        assertTrue(editorAction.contains("input.setOnEditorActionListener"))
+        assertTrue(editorAction.contains("EditorInfo.IME_ACTION_DONE"))
+        assertTrue(editorAction.contains("EditorInfo.IME_ACTION_NEXT"))
+        assertTrue(editorAction.contains("val currentIndex = productInputs.indexOf(input)"))
+        assertTrue(editorAction.contains("val nextIndex = currentIndex + 1"))
+        assertTrue(editorAction.contains("focusProductInput(nextIndex)"))
+        assertTrue(editorAction.contains("else if (compareButton.isEnabled)"))
+        assertTrue(editorAction.contains("runComparison("))
+        assertTrue(editorAction.contains("persist = true"))
+        assertTrue(
+            editorAction.indexOf("focusProductInput(nextIndex)") <
+                editorAction.indexOf("else if (compareButton.isEnabled)")
+        )
+        assertTrue(
+            editorAction.indexOf("compareButton.isEnabled") <
+                editorAction.indexOf("runComparison(")
+        )
+        assertTrue(!editorAction.contains("Money.parse"))
+        assertTrue(!editorAction.contains("CompareHereManualInputAdapter"))
+    }
+
+    @Test
     fun eachDynamicProductEditorIsAssociatedWithItsVisibleProductLabel() {
         val source = source().readText()
         val inputBlock =

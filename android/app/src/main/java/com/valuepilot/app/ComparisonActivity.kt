@@ -21,6 +21,7 @@ import android.text.TextWatcher
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
+import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.CheckBox
@@ -1252,6 +1253,41 @@ class ComparisonActivity : AppCompatActivity() {
             )
             background = null
             setText(initialText)
+        }
+        // Keep the multiline editor, but make the keyboard's Done action follow the same
+        // visible comparison gate. While another product box exists it advances there; on the
+        // final box it runs the exact comparison only when the existing button is enabled.
+        // This is navigation only: parsing, confirmation, evidence checks and ranking remain in
+        // the existing route coordinator.
+        input.imeOptions = EditorInfo.IME_ACTION_DONE
+        input.setOnEditorActionListener { _, actionId, _ ->
+            if (
+                actionId != EditorInfo.IME_ACTION_DONE &&
+                    actionId != EditorInfo.IME_ACTION_NEXT
+            ) {
+                return@setOnEditorActionListener false
+            }
+
+            val currentIndex = productInputs.indexOf(input)
+            if (currentIndex < 0) {
+                return@setOnEditorActionListener false
+            }
+
+            val nextIndex = currentIndex + 1
+            if (nextIndex < productInputs.size) {
+                focusProductInput(nextIndex)
+                true
+            } else if (compareButton.isEnabled) {
+                runComparison(
+                    blocks = currentProductBlocks(),
+                    observedAtEpochMillis = System.currentTimeMillis(),
+                    priceSelection = activityState.priceSelection,
+                    persist = true
+                )
+                true
+            } else {
+                false
+            }
         }
         label.labelFor = input.id
 
