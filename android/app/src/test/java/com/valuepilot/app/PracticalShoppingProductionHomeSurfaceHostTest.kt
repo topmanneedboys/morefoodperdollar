@@ -188,6 +188,99 @@ class PracticalShoppingProductionHomeSurfaceHostTest {
     }
 
     @Test
+    fun sameGenerationWithDifferentNoCoverageRequestIsRejectedAsConflict() {
+        val item = ShoppingItemKey("host-no-coverage-item")
+        val firstRequest = request(item, "host-no-coverage-first-store")
+        val secondRequest = request(item, "host-no-coverage-second-store")
+        val rendered = mutableListOf<PracticalShoppingProductionHomeUiState?>()
+        val host = PracticalShoppingProductionHomeSurfaceHost { state -> rendered += state }
+        val lifecycleRegistry = ProductionDatasetLifecycleRegistry()
+        val dispositionRegistry = ProductionDatasetDispositionRegistry()
+        val itemNames = mapOf(item to "Same item")
+
+        assertEquals(
+            PracticalShoppingProductionHomeRefreshDisposition.APPLIED,
+            host.evaluateAndApply(
+                generation = 9L,
+                request = firstRequest,
+                lifecycleRegistry = lifecycleRegistry,
+                dispositionRegistry = dispositionRegistry,
+                storeDisplayNames =
+                    mapOf(
+                        ShoppingStoreKey("host-no-coverage-first-store") to "Same market"
+                    ),
+                itemDisplayNames = itemNames
+            )
+        )
+        assertEquals("Not enough price coverage yet", rendered.single()?.result?.headline)
+
+        // Both requests intentionally produce the same no-coverage projection.
+        // The declared store scope is still part of the request identity, so a
+        // same-generation replacement must fail closed instead of being treated
+        // as an idempotent replay.
+        assertEquals(
+            PracticalShoppingProductionHomeRefreshDisposition.GENERATION_CONFLICT,
+            host.evaluateAndApply(
+                generation = 9L,
+                request = secondRequest,
+                lifecycleRegistry = lifecycleRegistry,
+                dispositionRegistry = dispositionRegistry,
+                storeDisplayNames =
+                    mapOf(
+                        ShoppingStoreKey("host-no-coverage-second-store") to "Same market"
+                    ),
+                itemDisplayNames = itemNames
+            )
+        )
+        assertEquals(1, rendered.size)
+        assertEquals(
+            ShoppingItemKey("host-no-coverage-item"),
+            rendered.single()?.items?.single()?.itemKey
+        )
+    }
+
+    @Test
+    fun sameGenerationWithDifferentNoCoverageDisplayStateIsRejectedAsConflict() {
+        val item = ShoppingItemKey("host-no-coverage-label-item")
+        val request = request(item, "host-no-coverage-label-store")
+        val rendered = mutableListOf<PracticalShoppingProductionHomeUiState?>()
+        val host = PracticalShoppingProductionHomeSurfaceHost { state -> rendered += state }
+        val lifecycleRegistry = ProductionDatasetLifecycleRegistry()
+        val dispositionRegistry = ProductionDatasetDispositionRegistry()
+        val storeNames =
+            mapOf(ShoppingStoreKey("host-no-coverage-label-store") to "Same market")
+
+        assertEquals(
+            PracticalShoppingProductionHomeRefreshDisposition.APPLIED,
+            host.evaluateAndApply(
+                generation = 10L,
+                request = request,
+                lifecycleRegistry = lifecycleRegistry,
+                dispositionRegistry = dispositionRegistry,
+                storeDisplayNames = storeNames,
+                itemDisplayNames = mapOf(item to "First label")
+            )
+        )
+
+        // The production projection does not contain a missing item's display
+        // label, but the renderer state does. A changed label at the same
+        // generation must not be silently dropped as a duplicate.
+        assertEquals(
+            PracticalShoppingProductionHomeRefreshDisposition.GENERATION_CONFLICT,
+            host.evaluateAndApply(
+                generation = 10L,
+                request = request,
+                lifecycleRegistry = lifecycleRegistry,
+                dispositionRegistry = dispositionRegistry,
+                storeDisplayNames = storeNames,
+                itemDisplayNames = mapOf(item to "Second label")
+            )
+        )
+        assertEquals(1, rendered.size)
+        assertEquals("First label", rendered.single()?.items?.single()?.name)
+    }
+
+    @Test
     fun rendererFailureDoesNotConsumeTheGeneration() {
         var shouldFail = true
         var rendered: PracticalShoppingProductionHomeUiState? = null

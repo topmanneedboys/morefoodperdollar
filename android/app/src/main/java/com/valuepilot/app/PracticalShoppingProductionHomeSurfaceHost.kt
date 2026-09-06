@@ -1,11 +1,99 @@
 package com.valuepilot.app
 
+import com.valuepilot.core.EvidenceAcceptancePolicy
+import com.valuepilot.core.PracticalShoppingPolicy
 import com.valuepilot.core.PracticalShoppingProductionOrchestrationRequest
 import com.valuepilot.core.PracticalShoppingProductionOrchestrator
 import com.valuepilot.core.ProductionDatasetDispositionRegistry
 import com.valuepilot.core.ProductionDatasetLifecycleRegistry
 import com.valuepilot.core.ShoppingItemKey
+import com.valuepilot.core.ProductionProductKeyScope
 import com.valuepilot.core.ShoppingStoreKey
+
+/**
+ * Stable, display-free identity for one production Home request.
+ *
+ * The production projection can legitimately be equal for different requests
+ * when no price is usable (for example, two different declared stores both
+ * produce a no-coverage decision). Keeping only the projection would make a
+ * same-generation replay look idempotent when it is actually ambiguous. This
+ * identity contains request structure and policy inputs, but no raw provider
+ * evidence or display text.
+ */
+internal data class PracticalShoppingProductionHomeRequestIdentity(
+    val itemKeys: List<String>,
+    val stores: List<StoreIdentity>,
+    val storePairs: List<StorePairIdentity>,
+    val priceBindings: List<PriceBindingIdentity>,
+    val priceRequestIds: List<String>,
+    val evaluatedAtEpochMillis: Long,
+    val acceptancePolicy: EvidenceAcceptancePolicy,
+    val planningPolicy: PracticalShoppingPolicy
+)
+
+internal data class StoreIdentity(
+    val storeKey: String,
+    val merchantKey: String,
+    val locationKey: String?,
+    val commerceChannelKey: String,
+    val distanceMetres: Long,
+    val travelTimeSeconds: Long
+)
+
+internal data class StorePairIdentity(
+    val baseStoreKey: String,
+    val addedStoreKey: String,
+    val distanceMetres: Long,
+    val travelTimeSeconds: Long
+)
+
+internal data class PriceBindingIdentity(
+    val itemKey: String,
+    val productKey: String,
+    val productKeyScope: ProductionProductKeyScope,
+    val storeKey: String,
+    val currentPriceRequestId: String
+)
+
+private fun PracticalShoppingProductionOrchestrationRequest.homeRequestIdentity():
+    PracticalShoppingProductionHomeRequestIdentity =
+    PracticalShoppingProductionHomeRequestIdentity(
+        itemKeys = shoppingRequest.itemKeys.map { itemKey -> itemKey.value },
+        stores =
+            stores.map { store ->
+                StoreIdentity(
+                    storeKey = store.storeKey.value,
+                    merchantKey = store.merchantKey,
+                    locationKey = store.locationKey,
+                    commerceChannelKey = store.commerceChannelKey,
+                    distanceMetres = store.travelFromUser.distanceMetres,
+                    travelTimeSeconds = store.travelFromUser.travelTimeSeconds
+                )
+            },
+        storePairs =
+            storePairs.map { pair ->
+                StorePairIdentity(
+                    baseStoreKey = pair.baseStoreKey.value,
+                    addedStoreKey = pair.addedStoreKey.value,
+                    distanceMetres = pair.additionalTravel.distanceMetres,
+                    travelTimeSeconds = pair.additionalTravel.travelTimeSeconds
+                )
+            },
+        priceBindings =
+            priceBindings.map { binding ->
+                PriceBindingIdentity(
+                    itemKey = binding.itemKey.value,
+                    productKey = binding.productKey.value,
+                    productKeyScope = binding.productKey.scope,
+                    storeKey = binding.storeKey.value,
+                    currentPriceRequestId = binding.currentPriceRequestId
+                )
+            },
+        priceRequestIds = priceRequests.map { priceRequest -> priceRequest.requestId },
+        evaluatedAtEpochMillis = evaluatedAtEpochMillis,
+        acceptancePolicy = acceptancePolicy,
+        planningPolicy = planningPolicy
+    )
 
 /**
  * Immutable ordering state for a future production Home refresh.
@@ -18,7 +106,8 @@ import com.valuepilot.core.ShoppingStoreKey
 internal data class PracticalShoppingProductionHomeRefreshState(
     val latestGeneration: Long? = null,
     val projection: PracticalShoppingProductionHomeProjection? = null,
-    val uiState: PracticalShoppingProductionHomeUiState? = null
+    val uiState: PracticalShoppingProductionHomeUiState? = null,
+    val requestIdentity: PracticalShoppingProductionHomeRequestIdentity? = null
 ) {
     init {
         latestGeneration?.let { require(it >= 0L) }
@@ -27,6 +116,9 @@ internal data class PracticalShoppingProductionHomeRefreshState(
         }
         require((projection == null) == (uiState == null)) {
             "A production Home projection and UI state must be applied together"
+        }
+        require((projection == null) == (requestIdentity == null)) {
+            "A production Home projection requires its request identity"
         }
     }
 }
@@ -79,6 +171,8 @@ class PracticalShoppingProductionHomeSurfaceHost(
             return PracticalShoppingProductionHomeRefreshDisposition.STALE
         }
 
+        val incomingRequestIdentity = request.homeRequestIdentity()
+
         val orchestrationResult =
             PracticalShoppingProductionOrchestrator.evaluate(
                 request = request,
@@ -100,7 +194,11 @@ class PracticalShoppingProductionHomeSurfaceHost(
             )
 
         if (currentGeneration == generation) {
-            return if (refreshState.projection == incomingProjection) {
+            return if (
+                refreshState.requestIdentity == incomingRequestIdentity &&
+                    refreshState.projection == incomingProjection &&
+                    refreshState.uiState == incomingState
+            ) {
                 PracticalShoppingProductionHomeRefreshDisposition.DUPLICATE
             } else {
                 PracticalShoppingProductionHomeRefreshDisposition.GENERATION_CONFLICT
@@ -112,7 +210,8 @@ class PracticalShoppingProductionHomeSurfaceHost(
             PracticalShoppingProductionHomeRefreshState(
                 latestGeneration = generation,
                 projection = incomingProjection,
-                uiState = incomingState
+                uiState = incomingState,
+                requestIdentity = incomingRequestIdentity
             )
         return PracticalShoppingProductionHomeRefreshDisposition.APPLIED
     }
@@ -137,7 +236,8 @@ class PracticalShoppingProductionHomeSurfaceHost(
             PracticalShoppingProductionHomeRefreshState(
                 latestGeneration = generation,
                 projection = null,
-                uiState = null
+                uiState = null,
+                requestIdentity = null
             )
         return PracticalShoppingProductionHomeRefreshDisposition.APPLIED
     }
