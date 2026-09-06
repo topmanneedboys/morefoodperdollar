@@ -297,6 +297,7 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="search_quick_pizza">pizza</string>
     <string name="search_sample_badge">BUILT-IN SAMPLE CATALOG</string>
     <string name="search_sample_notice">Use this to test how ValuePilot makes a buying decision. Every price and source shown here is fictional sample data, not a live store offer.</string>
+    <string name="search_sample_result_notice">Fictional sample data only — not live retailer prices or availability.</string>
     <string name="search_identity_action">Find product identity offline</string>
     <string name="search_identity_action_description">Search the signed offline product-identity catalog. No current price, stock or availability is claimed.</string>
     <string name="search_identity_dialog_title">Offline product identities for “%1$s”</string>

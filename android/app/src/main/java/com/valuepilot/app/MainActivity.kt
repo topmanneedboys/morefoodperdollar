@@ -2353,6 +2353,18 @@ class MainActivity : AppCompatActivity() {
             setPadding(0, dp(3), 0, 0)
         }
 
+        val sampleNotice =
+            if (row.sampleEvidence) {
+                TextView(this).apply {
+                    text = getString(R.string.search_sample_result_notice)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                    setTextColor(Color.parseColor("#92400E"))
+                    setPadding(0, dp(6), 0, 0)
+                }
+            } else {
+                null
+            }
+
         val notice =
             row.evidenceNotice
                 ?.takeIf {
@@ -2390,6 +2402,7 @@ class MainActivity : AppCompatActivity() {
         body.addView(price)
         body.addView(metric)
         body.addView(exactness)
+        sampleNotice?.let(body::addView)
         notice?.let(body::addView)
         body.addView(source)
         card.addView(body)
@@ -2406,7 +2419,7 @@ class MainActivity : AppCompatActivity() {
     private fun searchResultContentDescription(row: UniversalSearchRow): String {
         val sampleNotice =
             if (row.sampleEvidence) {
-                "Fictional sample data only — not live retailer prices or availability"
+                getString(R.string.search_sample_result_notice)
             } else {
                 null
             }

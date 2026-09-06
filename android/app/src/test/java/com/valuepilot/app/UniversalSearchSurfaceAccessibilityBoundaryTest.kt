@@ -22,7 +22,14 @@ class UniversalSearchSurfaceAccessibilityBoundaryTest {
         assertTrue(activity.contains("importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES"))
         assertTrue(activity.contains("contentDescription = searchResultContentDescription(row)"))
         assertTrue(activity.contains("row.sampleEvidence"))
-        assertTrue(activity.contains("Fictional sample data only — not live retailer prices or availability"))
+        assertTrue(activity.contains("R.string.search_sample_result_notice"))
+        assertTrue(activity.contains("sampleNotice?.let(body::addView)"))
+        val strings = moduleFile("src/main/res/values/strings.xml").readText()
+        assertTrue(
+            strings.contains(
+                "<string name=\"search_sample_result_notice\">Fictional sample data only — not live retailer prices or availability.</string>"
+            )
+        )
         assertTrue(
             activity.contains(
                 "importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS"
