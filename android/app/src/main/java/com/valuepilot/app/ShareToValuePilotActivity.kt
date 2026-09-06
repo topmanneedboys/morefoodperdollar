@@ -1,6 +1,8 @@
 package com.valuepilot.app
 
+import android.content.ClipData
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
@@ -10,10 +12,10 @@ import androidx.appcompat.app.AppCompatActivity
 /**
  * Explicit Android share-target review surface.
  *
- * The activity accepts only bounded text intentionally shared by another app. It displays that
- * text as untrusted input and forwards it to the existing Compare Here editor only after the
- * shopper taps the action. It performs no parsing, network access, product matching, ranking,
- * persistence, or evidence promotion.
+ * The activity accepts only bounded text or a content URI intentionally shared by another app.
+ * Text remains visible as untrusted input; an image is handed to the existing on-device OCR
+ * review path only after the shopper taps the action. It performs no parsing, network access,
+ * product matching, ranking, persistence, or evidence promotion.
  */
 class ShareToValuePilotActivity : AppCompatActivity() {
     private lateinit var title: TextView
@@ -42,17 +44,46 @@ class ShareToValuePilotActivity : AppCompatActivity() {
             runCatching {
                 intent?.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
             }.getOrNull()
-        uiState = ShareToValuePilotUiProjector.project(rawText)
+        val rawImageUri =
+            runCatching {
+                when (val value = intent?.extras?.get(Intent.EXTRA_STREAM)) {
+                    is Uri -> value.toString()
+                    is String -> value
+                    else -> null
+                }
+            }.getOrNull()
+        uiState =
+            if (rawImageUri != null) {
+                ShareToValuePilotUiProjector.projectImage(rawImageUri)
+            } else {
+                ShareToValuePilotUiProjector.project(rawText)
+            }
         render(uiState)
 
         openComparisonButton.setOnClickListener {
-            val sharedText = uiState.sharedText ?: return@setOnClickListener
-            startActivity(
-                Intent(this, ComparisonActivity::class.java).putExtra(
-                    ComparisonActivity.EXTRA_SHARED_TEXT,
-                    sharedText
-                )
-            )
+            val handoff = Intent(this, ComparisonActivity::class.java)
+            when {
+                uiState.sharedText != null ->
+                    handoff.putExtra(
+                        ComparisonActivity.EXTRA_SHARED_TEXT,
+                        uiState.sharedText
+                    )
+
+                uiState.sharedImageUri != null -> {
+                    val uri = runCatching { Uri.parse(uiState.sharedImageUri) }.getOrNull()
+                        ?: return@setOnClickListener
+                    handoff.putExtra(
+                        ComparisonActivity.EXTRA_SHARED_IMAGE_URI,
+                        uiState.sharedImageUri
+                    )
+                    handoff.data = uri
+                    handoff.clipData = ClipData.newRawUri("ValuePilot shared image", uri)
+                    handoff.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+
+                else -> return@setOnClickListener
+            }
+            startActivity(handoff)
             finish()
         }
         findViewById<Button>(R.id.shareToValuePilotCancel).setOnClickListener {
@@ -63,11 +94,19 @@ class ShareToValuePilotActivity : AppCompatActivity() {
     private fun render(state: ShareToValuePilotUiState) {
         when (state.status) {
             ShareToValuePilotStatus.READY -> {
-                title.setText(R.string.share_to_valuepilot_ready_title)
-                guidance.setText(R.string.share_to_valuepilot_ready_guidance)
+                if (state.sharedImageUri != null) {
+                    title.setText(R.string.share_to_valuepilot_image_ready_title)
+                    guidance.setText(R.string.share_to_valuepilot_image_ready_guidance)
+                    previewLabel.setText(R.string.share_to_valuepilot_image_preview_label)
+                    preview.text = getString(R.string.share_to_valuepilot_image_preview)
+                } else {
+                    title.setText(R.string.share_to_valuepilot_ready_title)
+                    guidance.setText(R.string.share_to_valuepilot_ready_guidance)
+                    previewLabel.setText(R.string.share_to_valuepilot_preview_label)
+                    preview.text = requireNotNull(state.sharedText)
+                }
                 previewLabel.visibility = View.VISIBLE
                 preview.visibility = View.VISIBLE
-                preview.text = requireNotNull(state.sharedText)
             }
 
             ShareToValuePilotStatus.EMPTY -> {
@@ -84,6 +123,14 @@ class ShareToValuePilotActivity : AppCompatActivity() {
                     R.string.share_to_valuepilot_too_large_guidance,
                     ShareToValuePilotInput.MAX_CHARS
                 )
+                previewLabel.visibility = View.GONE
+                preview.visibility = View.GONE
+                preview.text = ""
+            }
+
+            ShareToValuePilotStatus.UNSUPPORTED_IMAGE -> {
+                title.setText(R.string.share_to_valuepilot_image_unsupported_title)
+                guidance.setText(R.string.share_to_valuepilot_image_unsupported_guidance)
                 previewLabel.visibility = View.GONE
                 preview.visibility = View.GONE
                 preview.text = ""

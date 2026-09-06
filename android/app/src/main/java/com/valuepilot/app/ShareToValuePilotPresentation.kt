@@ -45,16 +45,19 @@ internal object ShareToValuePilotInput {
 internal enum class ShareToValuePilotStatus {
     READY,
     EMPTY,
-    TOO_LARGE
+    TOO_LARGE,
+    UNSUPPORTED_IMAGE
 }
 
 internal data class ShareToValuePilotUiState(
     val status: ShareToValuePilotStatus,
     val sharedText: String?,
-    val openComparisonEnabled: Boolean
+    val openComparisonEnabled: Boolean,
+    val sharedImageUri: String? = null
 ) {
     init {
-        require((status == ShareToValuePilotStatus.READY) == (sharedText != null))
+        require((status == ShareToValuePilotStatus.READY) == (sharedText != null || sharedImageUri != null))
+        require(sharedText == null || sharedImageUri == null)
         require(openComparisonEnabled == (status == ShareToValuePilotStatus.READY))
     }
 }
@@ -80,6 +83,35 @@ internal object ShareToValuePilotUiProjector {
             ShareToValuePilotInputIssue.TOO_LONG ->
                 ShareToValuePilotUiState(
                     status = ShareToValuePilotStatus.TOO_LARGE,
+                    sharedText = null,
+                    openComparisonEnabled = false
+                )
+        }
+    }
+
+    fun projectImage(rawUri: String?): ShareToValuePilotUiState {
+        val input = ShareToValuePilotImageInput.validate(rawUri)
+        return when (input.issue) {
+            null ->
+                ShareToValuePilotUiState(
+                    status = ShareToValuePilotStatus.READY,
+                    sharedText = null,
+                    sharedImageUri = requireNotNull(input.uri),
+                    openComparisonEnabled = true
+                )
+
+            ShareToValuePilotImageInputIssue.TOO_LONG ->
+                ShareToValuePilotUiState(
+                    status = ShareToValuePilotStatus.TOO_LARGE,
+                    sharedText = null,
+                    openComparisonEnabled = false
+                )
+
+            ShareToValuePilotImageInputIssue.EMPTY,
+            ShareToValuePilotImageInputIssue.UNSUPPORTED_SCHEME,
+            ShareToValuePilotImageInputIssue.CONTROL_CHARACTER ->
+                ShareToValuePilotUiState(
+                    status = ShareToValuePilotStatus.UNSUPPORTED_IMAGE,
                     sharedText = null,
                     openComparisonEnabled = false
                 )

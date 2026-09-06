@@ -48,4 +48,25 @@ class ShareToValuePilotPresentationTest {
         assertTrue(result.accepted)
         assertEquals(text, result.text)
     }
+
+    @Test
+    fun `shared content image stays review only and enables explicit OCR handoff`() {
+        val state =
+            ShareToValuePilotUiProjector.projectImage("content://photos/42")
+
+        assertEquals(ShareToValuePilotStatus.READY, state.status)
+        assertEquals(null, state.sharedText)
+        assertEquals("content://photos/42", state.sharedImageUri)
+        assertTrue(state.openComparisonEnabled)
+    }
+
+    @Test
+    fun `unsupported shared image stays unavailable without leaking the uri`() {
+        val state = ShareToValuePilotUiProjector.projectImage("file:///secret/photo.jpg")
+
+        assertEquals(ShareToValuePilotStatus.UNSUPPORTED_IMAGE, state.status)
+        assertEquals(null, state.sharedText)
+        assertEquals(null, state.sharedImageUri)
+        assertFalse(state.openComparisonEnabled)
+    }
 }

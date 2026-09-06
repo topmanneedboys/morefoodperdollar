@@ -235,10 +235,17 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="share_to_valuepilot_ready_guidance">This came from another app. ValuePilot treats it as untrusted text; review and edit it in Scan &amp; compare before comparing. Nothing is sent online.</string>
     <string name="share_to_valuepilot_preview_label">Shared text preview</string>
     <string name="share_to_valuepilot_open_comparison">Open in Scan &amp; compare</string>
+    <string name="share_to_valuepilot_image_ready_title">Review shared image</string>
+    <string name="share_to_valuepilot_image_ready_guidance">This image came from another app. ValuePilot reads it only on this device and shows suggestions for your review in Scan &amp; compare. It is not a price, product or store fact until you confirm the editable fields. Nothing is sent online.</string>
+    <string name="share_to_valuepilot_image_preview_label">Shared image</string>
+    <string name="share_to_valuepilot_image_preview">Ready for local photo reading after you open Scan &amp; compare.</string>
     <string name="share_to_valuepilot_empty_title">Nothing was shared</string>
     <string name="share_to_valuepilot_empty_guidance">Share product text from another app, or return and use Scan &amp; compare directly. No data was sent online.</string>
     <string name="share_to_valuepilot_too_large_title">Shared content is too large</string>
     <string name="share_to_valuepilot_too_large_guidance">ValuePilot accepts up to %1$d characters from a share. Open Scan &amp; compare and enter a smaller selection instead. Nothing was sent online.</string>
+    <string name="share_to_valuepilot_image_unsupported_title">Shared image cannot be opened</string>
+    <string name="share_to_valuepilot_image_unsupported_guidance">This app can only receive an image through a temporary content share. Try sharing the image again, or use Import photo inside Scan &amp; compare. Nothing was sent online.</string>
+    <string name="compare_shared_image_invalid">The shared image could not be opened. Use Import photo to choose it again. Nothing was sent online.</string>
     <string name="compare_shared_text_empty_body">The shared content was empty, so your comparison draft was unchanged.</string>
     <string name="compare_shared_text_no_empty_slot_title">Shared text was not added</string>
     <string name="compare_shared_text_no_empty_slot_body">Your existing comparison entries were kept. Remove an entry or leave an empty slot, then share the text again.</string>

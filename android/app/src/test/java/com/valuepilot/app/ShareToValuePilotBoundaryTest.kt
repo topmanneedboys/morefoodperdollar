@@ -8,14 +8,17 @@ import java.io.File
 class ShareToValuePilotBoundaryTest {
 
     @Test
-    fun `share activity reviews untrusted text before explicit Compare handoff`() {
+    fun `share activity reviews text or image before explicit Compare handoff`() {
         val source = source("ShareToValuePilotActivity.kt").readText()
 
         listOf(
             "Intent.EXTRA_TEXT",
+            "Intent.EXTRA_STREAM",
             "ShareToValuePilotUiProjector.project(rawText)",
-            "val sharedText = uiState.sharedText ?: return@setOnClickListener",
+            "ShareToValuePilotUiProjector.projectImage(rawImageUri)",
             "ComparisonActivity.EXTRA_SHARED_TEXT",
+            "ComparisonActivity.EXTRA_SHARED_IMAGE_URI",
+            "FLAG_GRANT_READ_URI_PERMISSION",
             "startActivity(",
             "finish()"
         ).forEach { required ->
@@ -36,7 +39,7 @@ class ShareToValuePilotBoundaryTest {
     }
 
     @Test
-    fun `manifest exposes only an intentional text share target`() {
+    fun `manifest exposes only intentional text and image share targets`() {
         val manifest = manifest().readText()
         val activityStart = manifest.indexOf("android:name=\".ShareToValuePilotActivity\"")
         assertTrue(activityStart >= 0)
@@ -48,6 +51,7 @@ class ShareToValuePilotBoundaryTest {
         assertTrue(block.contains("android.intent.action.SEND"))
         assertTrue(block.contains("android.intent.category.DEFAULT"))
         assertTrue(block.contains("android:mimeType=\"text/plain\""))
+        assertTrue(block.contains("android:mimeType=\"image/*\""))
         assertFalse(block.contains("android.intent.action.VIEW"))
     }
 
@@ -57,8 +61,12 @@ class ShareToValuePilotBoundaryTest {
 
         listOf(
             "const val EXTRA_SHARED_TEXT",
+            "const val EXTRA_SHARED_IMAGE_URI",
             "applySharedTextIfPresent(savedInstanceState)",
+            "applySharedImageIfPresent(savedInstanceState)",
             "CompareHereSharedTextDraft.apply(",
+            "ShareToValuePilotImageInput.validate(rawUri)",
+            "onPhotoSelected(uri, cleanupFile = null)",
             "if (!result.added) return result.issue",
             "renderProductInputs(result.blocks)",
             "showSharedTextImportFailure"
@@ -105,6 +113,8 @@ class ShareToValuePilotBoundaryTest {
         assertTrue(layout.contains("@+id/shareToValuePilotPreview"))
         assertTrue(layout.contains("@string/share_to_valuepilot_open_comparison"))
         assertTrue(strings.contains("name=\"share_to_valuepilot_ready_guidance\""))
+        assertTrue(strings.contains("name=\"share_to_valuepilot_image_ready_guidance\""))
+        assertTrue(strings.contains("name=\"share_to_valuepilot_image_unsupported_guidance\""))
         assertTrue(strings.contains("name=\"share_to_valuepilot_too_large_guidance\""))
         assertTrue(strings.contains("name=\"compare_shared_text_no_empty_slot_body\""))
     }

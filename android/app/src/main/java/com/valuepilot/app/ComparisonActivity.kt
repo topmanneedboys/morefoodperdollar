@@ -109,6 +109,7 @@ class ComparisonActivity : AppCompatActivity() {
     private var barcodeDialog: AlertDialog? = null
     private var sharedTextDialog: AlertDialog? = null
     private var shareCard: CompareHereShareCard? = null
+    private var sharedImageImportStarted = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -199,6 +200,7 @@ class ComparisonActivity : AppCompatActivity() {
 
         renderProductInputs(draft.blocks)
         val sharedTextImportIssue = applySharedTextIfPresent(savedInstanceState)
+        val sharedImageImportIssue = applySharedImageIfPresent(savedInstanceState)
         syncLikeForLikeConfirmation()
         syncPriceSelection()
 
@@ -285,6 +287,10 @@ class ComparisonActivity : AppCompatActivity() {
         }
 
         sharedTextImportIssue?.let(::showSharedTextImportFailure)
+        if (sharedImageImportIssue) {
+            photoImportStatus.text = getString(R.string.compare_shared_image_invalid)
+            photoImportStatus.visibility = View.VISIBLE
+        }
     }
 
     override fun onResume() {
@@ -348,6 +354,7 @@ class ComparisonActivity : AppCompatActivity() {
             STATE_PRICE_SELECTION,
             CompareHerePriceSelectionPersistence.encode(activityState.priceSelection)
         )
+        outState.putBoolean(STATE_SHARED_IMAGE_STARTED, sharedImageImportStarted)
 
         super.onSaveInstanceState(outState)
     }
@@ -1810,6 +1817,55 @@ class ComparisonActivity : AppCompatActivity() {
         return null
     }
 
+    /**
+     * Starts the existing local OCR pipeline for an explicitly shared content URI. The URI is
+     * only a transient input handoff; no image is persisted, uploaded, parsed into exact facts or
+     * accepted without the same bounded review dialog used by Import photo.
+     */
+    private fun applySharedImageIfPresent(savedInstanceState: Bundle?): Boolean {
+        if (savedInstanceState?.getBoolean(STATE_SHARED_IMAGE_STARTED, false) == true) {
+            sharedImageImportStarted = true
+            return false
+        }
+
+        val rawUri =
+            runCatching {
+                intent?.getStringExtra(EXTRA_SHARED_IMAGE_URI)
+            }.getOrNull()
+                ?: return false
+        val input = ShareToValuePilotImageInput.validate(rawUri)
+        val uri = input.uri ?: return true
+
+        sharedImageImportStarted = true
+        beginSharedPhotoImport(uri)
+        return false
+    }
+
+    private fun beginSharedPhotoImport(rawUri: String) {
+        if (
+            photoImportClosed ||
+                photoImportInFlight ||
+                barcodeLookupInFlight ||
+                photoReviewDialog != null
+        ) {
+            return
+        }
+
+        val uri = runCatching { Uri.parse(rawUri) }.getOrNull()
+        if (uri == null || ShareToValuePilotImageInput.schemeOf(rawUri) != "content") {
+            photoImportStatus.text = getString(R.string.compare_shared_image_invalid)
+            photoImportStatus.visibility = View.VISIBLE
+            return
+        }
+
+        lastPhotoCaptureKind = CompareHerePhotoCaptureKind.IMPORT
+        hidePhotoRetry()
+        beginPhotoRequest()
+        syncPhotoActionButtons()
+        photoImportStatus.text = getString(R.string.compare_photo_processing)
+        onPhotoSelected(uri, cleanupFile = null)
+    }
+
     private fun showSharedTextImportFailure(
         issue: CompareHereSharedTextDraftIssue
     ) {
@@ -2206,6 +2262,9 @@ class ComparisonActivity : AppCompatActivity() {
         const val EXTRA_SHARED_TEXT =
             "com.valuepilot.app.extra.SHARED_TEXT"
 
+        const val EXTRA_SHARED_IMAGE_URI =
+            "com.valuepilot.app.extra.SHARED_IMAGE_URI"
+
         private const val PREFS_NAME =
             "standalone_comparison_draft"
 
@@ -2256,6 +2315,9 @@ class ComparisonActivity : AppCompatActivity() {
 
         private const val STATE_PRICE_SELECTION =
             "standalone.price_selection"
+
+        private const val STATE_SHARED_IMAGE_STARTED =
+            "standalone.shared_image_started"
     }
 
     /** Adds the URI grants that the stock TakePicture contract intentionally leaves to callers. */
