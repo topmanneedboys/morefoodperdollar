@@ -4,8 +4,11 @@ Updated: 2026-09-06
 
 ## Current verification status
 
+The latest promoted code tree at `a441190602a2968033c85c9d0d324294b2394499` has passed candidate
+workflow **34044501200** (Android job **101517028979**, browser job **101517029114**, release-bundle
+job **101517762235**) and milestone provenance workflow **34044815415** (job **101517879027**).
 The old local-toolchain blockers described below are historical baseline notes, not the current
-build state. The promoted tree at `dc9811ee92d054fe5033e7af073b313f1d145370` has passed the
+build state. The preceding promoted documentation tree at `dc9811ee92d054fe5033e7af073b313f1d145370` had passed the
 candidate workflow **34042210768** (Android job **101510898036**, browser job **101510897877**,
 release-bundle job **101511704903**) and milestone provenance workflow **34042551442** (job
 **101511807873**). Local verification also passes 402 shared-core tests, 1,586 Android tests, 80
