@@ -475,7 +475,7 @@ class GoodPriceActivity : AppCompatActivity() {
                         barcodeStatus.text = getString(R.string.good_price_barcode_unavailable)
                         return@runOnUiThread
                     }
-                    showBarcodeIdentityChoices(presentation)
+                    showBarcodeIdentityChoices(presentation, requestId)
                 }
             }
         } catch (_: Throwable) {
@@ -485,7 +485,8 @@ class GoodPriceActivity : AppCompatActivity() {
     }
 
     private fun showBarcodeIdentityChoices(
-        presentation: GoodPriceBarcodeIdentityPresentation
+        presentation: GoodPriceBarcodeIdentityPresentation,
+        dialogRequestId: Long
     ) {
         if (presentation.options.isEmpty()) {
             barcodeStatus.text =
@@ -499,6 +500,7 @@ class GoodPriceActivity : AppCompatActivity() {
 
         var selectedIndex = if (presentation.options.size == 1) 0 else -1
         val hasExistingDraft = productInput.text?.toString()?.isNotBlank() == true
+        var outcomeCommitted = false
         lateinit var dialog: AlertDialog
         val builder =
             AlertDialog.Builder(this)
@@ -555,6 +557,14 @@ class GoodPriceActivity : AppCompatActivity() {
         dialog = builder.create()
         barcodeDialog = dialog
         dialog.setOnDismissListener {
+            if (
+                !outcomeCommitted &&
+                    !barcodeLookupClosed &&
+                    dialogRequestId == barcodeLookupRequestId
+            ) {
+                barcodeStatus.text = getString(R.string.good_price_barcode_cancelled)
+                barcodeStatus.visibility = View.VISIBLE
+            }
             if (barcodeDialog === dialog) barcodeDialog = null
         }
         dialog.setOnShowListener {
@@ -582,6 +592,7 @@ class GoodPriceActivity : AppCompatActivity() {
                     )
                 barcodeStatus.visibility = View.VISIBLE
                 renderIdle()
+                outcomeCommitted = true
                 dialog.dismiss()
                 focusProductInput()
             }

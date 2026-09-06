@@ -179,6 +179,27 @@ class GoodPriceCheckBoundaryTest {
     }
 
     @Test
+    fun `cancelling good price barcode identity choices clears the processing status`() {
+        val source = source("GoodPriceActivity.kt").readText()
+        val choiceDialog =
+            source
+                .substringAfter("private fun showBarcodeIdentityChoices")
+                .substringBefore("private fun focusProductInput")
+
+        listOf(
+            "var outcomeCommitted = false",
+            "!outcomeCommitted",
+            "!barcodeLookupClosed",
+            "dialogRequestId == barcodeLookupRequestId",
+            "R.string.good_price_barcode_cancelled"
+        ).forEach { required -> assertTrue(choiceDialog.contains(required)) }
+        assertTrue(
+            choiceDialog.indexOf("outcomeCommitted = true") <
+                choiceDialog.indexOf("dialog.dismiss()")
+        )
+    }
+
+    @Test
     fun `good price preserves the bounded typed draft across recreation`() {
         val source = source("GoodPriceActivity.kt").readText()
         val saveState =

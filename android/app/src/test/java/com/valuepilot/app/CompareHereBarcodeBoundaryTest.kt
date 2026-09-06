@@ -95,6 +95,28 @@ class CompareHereBarcodeBoundaryTest {
         ).forEach { required -> assertTrue(strings.contains(required)) }
     }
 
+    @Test
+    fun `cancelling barcode identity choices clears the processing status`() {
+        val source = source("ComparisonActivity.kt").readText()
+        val choiceDialog =
+            source
+                .substringAfter("private fun showBarcodeIdentityChoices")
+                .substringBefore("private fun focusProductInput")
+
+        listOf(
+            "var outcomeCommitted = false",
+            "!outcomeCommitted",
+            "!barcodeLookupClosed",
+            "dialogRequestId == barcodeLookupRequestId",
+            "R.string.compare_barcode_cancelled",
+            "barcodeLookupInFlight = false"
+        ).forEach { required -> assertTrue(choiceDialog.contains(required)) }
+        assertTrue(
+            choiceDialog.indexOf("outcomeCommitted = true") <
+                choiceDialog.indexOf("dialog.dismiss()")
+        )
+    }
+
     private fun source(name: String): File =
         file("src/main/java/com/valuepilot/app/$name").also {
             assertTrue("Missing source $name at ${it.absolutePath}", it.isFile)

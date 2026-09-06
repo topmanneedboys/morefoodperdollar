@@ -423,7 +423,7 @@ class ComparisonActivity : AppCompatActivity() {
                         finishBarcodeRequest(R.string.compare_barcode_unavailable)
                         return@runOnUiThread
                     }
-                    showBarcodeIdentityChoices(presentation)
+                    showBarcodeIdentityChoices(presentation, requestId)
                 }
             }
         } catch (_: Throwable) {
@@ -432,7 +432,8 @@ class ComparisonActivity : AppCompatActivity() {
     }
 
     private fun showBarcodeIdentityChoices(
-        presentation: GoodPriceBarcodeIdentityPresentation
+        presentation: GoodPriceBarcodeIdentityPresentation,
+        dialogRequestId: Long
     ) {
         if (presentation.options.isEmpty()) {
             finishBarcodeRequest(
@@ -443,6 +444,7 @@ class ComparisonActivity : AppCompatActivity() {
         }
 
         var selectedIndex = if (presentation.options.size == 1) 0 else -1
+        var outcomeCommitted = false
         lateinit var dialog: AlertDialog
         val builder =
             AlertDialog.Builder(this)
@@ -482,6 +484,14 @@ class ComparisonActivity : AppCompatActivity() {
             }
             if (barcodeLookupInFlight) {
                 barcodeLookupInFlight = false
+                if (
+                    !outcomeCommitted &&
+                        !barcodeLookupClosed &&
+                        dialogRequestId == barcodeLookupRequestId
+                ) {
+                    compareBarcodeStatus.text = getString(R.string.compare_barcode_cancelled)
+                    compareBarcodeStatus.visibility = View.VISIBLE
+                }
                 syncPhotoActionButtons()
             }
         }
@@ -510,6 +520,7 @@ class ComparisonActivity : AppCompatActivity() {
                             }
                         )
                     compareBarcodeStatus.visibility = View.VISIBLE
+                    outcomeCommitted = true
                     dialog.dismiss()
                     return@setOnClickListener
                 }
@@ -528,6 +539,7 @@ class ComparisonActivity : AppCompatActivity() {
                         presentation.gtin
                     )
                 compareBarcodeStatus.visibility = View.VISIBLE
+                outcomeCommitted = true
                 dialog.dismiss()
                 focusProductInput(result.addedIndex)
             }
