@@ -39,7 +39,10 @@ run is claimed until the checklist below is executed and its evidence is recorde
   is insufficient instead of guessing.
 - **Home and repeat use:** verify the visible sample remains unmistakably demo-only, partial/no-
   coverage totals remain different from complete totals, and `Shop again` preserves a prior explicit
-  refinement. Verify private-memory/history copy says device-only and not live store pricing.
+  refinement. From a blank idle list, activate each `Try a sample item` chip and confirm it appends
+  only the labelled text, repeated choices do not duplicate, the row hides after list entry, and
+  normal editing/submit still works. Verify private-memory/history copy says device-only and not
+  live store pricing.
 - **Saved and deletion:** confirm identity/history actions do not imply stock or current offers;
   clear private history and verify any dependent result/share card disappears.
 

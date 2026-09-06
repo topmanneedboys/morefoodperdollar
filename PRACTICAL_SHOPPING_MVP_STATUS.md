@@ -697,9 +697,9 @@ Company-by-company approvals are supplementary and should not block launch.
 
 Do **not** jump directly to real retailer data or networking.
 
-The fictional fixture/controller and visible Home consumer path are complete and verified at the latest head. The newest Home slice makes missing-price rows actionable through a bounded, local Good Price handoff while preserving the sample/demo boundary, and the production path now has a demo-free UI-state/renderer seam that does not activate the visible Home. The requirements below remain preservation criteria for that boundary; the next production step is a separate coordinator that supplies only explicitly established product, store, private-price and travel facts.
+The fictional fixture/controller and visible Home consumer path are complete and verified at the latest head. The newest Home slices add clearly labelled fictional offline quick-add text shortcuts and make missing-price rows actionable through a bounded, local Good Price handoff while preserving the sample/demo boundary. The production path also has a demo-free UI-state/renderer seam that does not activate the visible Home. The requirements below remain preservation criteria for that boundary; the next production step is a separate coordinator that supplies only explicitly established product, store, private-price and travel facts.
 
-Next engineering slice: validate the combined private-history ownership controls on a physical device (review, export and individual forget) and continue only with another direct consumer benefit that stays local and fail-closed. No lawful current-offer/provider dependency is available for Home activation; do not infer live offers from the identity catalog or location directory, and do not route this through the fictional controller.
+Next engineering slice: validate the combined private-history ownership controls and the new Home quick-add row on a physical device (review, export, individual forget, scroll, keyboard and accessibility) and continue only with another direct consumer benefit that stays local and fail-closed. No lawful current-offer/provider dependency is available for Home activation; do not infer live offers from the identity catalog or location directory, and do not route this through the fictional controller.
 
 Requirements:
 
