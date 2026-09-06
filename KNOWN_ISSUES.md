@@ -4,23 +4,24 @@ Updated: 2026-09-06
 
 ## Current verification status
 
-The latest promoted code tree at `ca4b406129dc349e9abd20850df51afeeab5b69e` has passed candidate
-workflow **34050652764** (Android job **101533543104**, browser job **101533542957**, release-bundle
-job **101534371803**) and milestone provenance workflow **34051003706** (job **101534498827**).
+The latest promoted code tree at `88addb8be0eef615655c3c070e13ee05687d8f79` has passed candidate
+workflow **34052030346** (Android job **101537239030**, browser job **101537238850**, release-bundle
+job **101538040583**) and milestone provenance workflow **34052459113** (job **101538386492**).
 The immutable bounded offline catalog index now caches canonical searchable fields/tokens once per
-identity and computes the normalized query-token set once per lookup, avoiding repeated metadata
-allocation during 30,000-record name, brand and alias searches while preserving existing match
-kinds, ordering, indexed barcode lookup, candidate/result bounds and evaluated counts. This remains
+identity, computes the normalized query-token set once per lookup, and retains only the deterministic
+best 200 candidate prefix during each 30,000-record scan before producing the existing 24-result page.
+This preserves existing match kinds, ordering, indexed barcode lookup, candidate/result bounds and
+evaluated counts while avoiding a full match allocation and sort for broad queries. This remains
 identity-only; it adds no price, package quantity, store, availability, evidence, planner, ranking,
-persistence, networking, demo-data or provider-economics authority. Local verification passed 404
+persistence, networking, demo-data or provider-economics authority. Local verification passed 405
 shared-core tests, 1,591 Android tests, 80 Python/catalog tests and 30 browser tests with zero
 failures or skips, plus lint, debug/release assembly, APK privacy, single-signer, signed
 offline-catalog and store-directory checks. The candidate release artifact digest was
-`sha256:53a9f8608340b880ca5e952c74893fd982ab621b35a8e56182a668975ed8ed44`. Physical-device
+`sha256:f31c32fbd6ab6490d92fbeb40bd3321e9934ecbe5cf85acb9ccf93e03de425db`. Physical-device
 barcode/camera/accessibility/latency validation and lawful production Home activation remain open;
 provider/current-offer activation remains blocked pending explicit rights. The preceding promoted
-barcode-index tree at `e9f4d92f6956afcb0ad88657662b783870ccb66b` remains in history with candidate
-workflow **34049215506** and milestone provenance workflow **34049547297**.
+text-cache tree at `ca4b406129dc349e9abd20850df51afeeab5b69e` remains in history with candidate
+workflow **34050652764** and milestone provenance workflow **34051003706**.
 
 The latest promoted code tree at `32184ca0782dc7f82ac7583364edee6660b79236` has passed candidate
 workflow **34047828847** (Android job **101525964170**, browser job **101525964196**, release-bundle
