@@ -109,7 +109,8 @@ class ComparisonActivity : AppCompatActivity() {
     private var barcodeDialog: AlertDialog? = null
     private var sharedTextDialog: AlertDialog? = null
     private var shareCard: CompareHereShareCard? = null
-    private var sharedImageImportStarted = false
+    /** Transient URI retained only while a shared-image OCR request is still in flight. */
+    private var pendingSharedImageUri: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -354,7 +355,13 @@ class ComparisonActivity : AppCompatActivity() {
             STATE_PRICE_SELECTION,
             CompareHerePriceSelectionPersistence.encode(activityState.priceSelection)
         )
-        outState.putBoolean(STATE_SHARED_IMAGE_STARTED, sharedImageImportStarted)
+        if (photoImportInFlight) {
+            pendingSharedImageUri?.let { uri ->
+                outState.putString(STATE_SHARED_IMAGE_URI, uri)
+            }
+        } else {
+            outState.remove(STATE_SHARED_IMAGE_URI)
+        }
 
         super.onSaveInstanceState(outState)
     }
@@ -842,6 +849,9 @@ class ComparisonActivity : AppCompatActivity() {
         error: Throwable?
     ) {
         runOnUiThread {
+            // A callback means the transient shared URI has finished its only local read. Do not
+            // retain it across a later recreation or any unrelated draft transition.
+            pendingSharedImageUri = null
             val stopCompletion =
                 CompareHerePhotoStopPolicy.complete(
                     pending = pendingPhotoStop,
@@ -1104,6 +1114,7 @@ class ComparisonActivity : AppCompatActivity() {
         @StringRes statusRes: Int,
         retryOutcome: CompareHerePhotoRetryOutcome?
     ) {
+        pendingSharedImageUri = null
         photoImportInFlight = false
         syncPhotoActionButtons()
         photoImportStatus.text = getString(statusRes)
@@ -1137,6 +1148,7 @@ class ComparisonActivity : AppCompatActivity() {
             )
         photoRequestId = next.requestId
         photoImportInFlight = next.inFlight
+        pendingSharedImageUri = null
         photoReviewRequestId = 0L
         photoReviewDialog?.dismiss()
         photoReviewDialog = null
@@ -1823,20 +1835,19 @@ class ComparisonActivity : AppCompatActivity() {
      * accepted without the same bounded review dialog used by Import photo.
      */
     private fun applySharedImageIfPresent(savedInstanceState: Bundle?): Boolean {
-        if (savedInstanceState?.getBoolean(STATE_SHARED_IMAGE_STARTED, false) == true) {
-            sharedImageImportStarted = true
-            return false
-        }
-
         val rawUri =
-            runCatching {
-                intent?.getStringExtra(EXTRA_SHARED_IMAGE_URI)
-            }.getOrNull()
+            savedInstanceState?.getString(STATE_SHARED_IMAGE_URI)
+                ?: if (savedInstanceState == null) {
+                    runCatching {
+                        intent?.getStringExtra(EXTRA_SHARED_IMAGE_URI)
+                    }.getOrNull()
+                } else {
+                    null
+                }
                 ?: return false
         val input = ShareToValuePilotImageInput.validate(rawUri)
         val uri = input.uri ?: return true
 
-        sharedImageImportStarted = true
         beginSharedPhotoImport(uri)
         return false
     }
@@ -1859,6 +1870,7 @@ class ComparisonActivity : AppCompatActivity() {
         }
 
         lastPhotoCaptureKind = CompareHerePhotoCaptureKind.IMPORT
+        pendingSharedImageUri = rawUri
         hidePhotoRetry()
         beginPhotoRequest()
         syncPhotoActionButtons()
@@ -2316,8 +2328,8 @@ class ComparisonActivity : AppCompatActivity() {
         private const val STATE_PRICE_SELECTION =
             "standalone.price_selection"
 
-        private const val STATE_SHARED_IMAGE_STARTED =
-            "standalone.shared_image_started"
+        private const val STATE_SHARED_IMAGE_URI =
+            "standalone.shared_image_uri"
     }
 
     /** Adds the URI grants that the stock TakePicture contract intentionally leaves to callers. */
