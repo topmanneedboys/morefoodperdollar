@@ -8,6 +8,49 @@ import org.junit.Test
 
 class CompareHerePhotoSuggestionPresentationTest {
     @Test
+    fun completeRows_make_detected_details_the_primary_explicit_action() {
+        val complete =
+            listOf(
+                CompareHerePhotoSuggestionPresentationFactory.forCandidate(
+                    "Honeycrisp apples\n3 lb\nCA$5.99"
+                ),
+                CompareHerePhotoSuggestionPresentationFactory.forCandidate(
+                    "Cereal\n500 g\nCA$4.99\nBOGO"
+                )
+            )
+        val mixed =
+            complete +
+                CompareHerePhotoSuggestionPresentationFactory.forCandidate(
+                    "Eggs $4.99"
+                )
+
+        assertTrue(
+            CompareHerePhotoReviewActionPolicy.primaryUsesDetectedDetails(complete)
+        )
+        assertTrue(
+            CompareHerePhotoReviewActionPolicy.hasDetectedDetailsAlternative(complete)
+        )
+        assertFalse(
+            CompareHerePhotoReviewActionPolicy.primaryUsesDetectedDetails(mixed)
+        )
+        assertTrue(
+            CompareHerePhotoReviewActionPolicy.hasDetectedDetailsAlternative(mixed)
+        )
+        assertFalse(
+            CompareHerePhotoReviewActionPolicy.primaryUsesDetectedDetails(emptyList())
+        )
+        assertFalse(
+            CompareHerePhotoReviewActionPolicy.hasDetectedDetailsAlternative(
+                listOf(
+                    CompareHerePhotoSuggestionPresentationFactory.forCandidate(
+                        "Eggs $4.99"
+                    )
+                )
+            )
+        )
+    }
+
+    @Test
     fun exactSignalsAreShownAsReviewOnlyWithoutChangingTheRawFacts() {
         val presentation =
             CompareHerePhotoSuggestionPresentationFactory.forCandidate(

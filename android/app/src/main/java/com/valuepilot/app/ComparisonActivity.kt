@@ -844,6 +844,10 @@ class ComparisonActivity : AppCompatActivity() {
             review.candidates.map(
                 CompareHerePhotoSuggestionPresentationFactory::forCandidate
             )
+        val primaryUsesDetectedDetails =
+            CompareHerePhotoReviewActionPolicy.primaryUsesDetectedDetails(presentations)
+        val hasDetectedDetailsAlternative =
+            CompareHerePhotoReviewActionPolicy.hasDetectedDetailsAlternative(presentations)
         var outcomeCommitted = false
         lateinit var dialog: AlertDialog
         val builder =
@@ -864,10 +868,24 @@ class ComparisonActivity : AppCompatActivity() {
                     }
                 }
                 .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(R.string.compare_photo_add_selected, null)
+                .setPositiveButton(
+                    if (primaryUsesDetectedDetails) {
+                        R.string.compare_photo_add_with_details
+                    } else {
+                        R.string.compare_photo_add_selected
+                    },
+                    null
+                )
 
-        if (presentations.any { it.editorPrefill != null }) {
-            builder.setNeutralButton(R.string.compare_photo_add_with_details, null)
+        if (hasDetectedDetailsAlternative) {
+            builder.setNeutralButton(
+                if (primaryUsesDetectedDetails) {
+                    R.string.compare_photo_add_selected
+                } else {
+                    R.string.compare_photo_add_with_details
+                },
+                null
+            )
         }
 
         dialog = builder.create()
@@ -960,13 +978,19 @@ class ComparisonActivity : AppCompatActivity() {
             }
 
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                commitSelection(useDetectedDetails = false)
+                commitSelection(useDetectedDetails = primaryUsesDetectedDetails)
             }
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.let { button ->
                 button.contentDescription =
-                    getString(R.string.compare_photo_add_with_details_description)
+                    getString(
+                        if (primaryUsesDetectedDetails) {
+                            R.string.compare_photo_add_selected_description
+                        } else {
+                            R.string.compare_photo_add_with_details_description
+                        }
+                    )
                 button.setOnClickListener {
-                    commitSelection(useDetectedDetails = true)
+                    commitSelection(useDetectedDetails = !primaryUsesDetectedDetails)
                 }
             }
         }
