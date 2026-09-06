@@ -14,6 +14,7 @@ class MainActivityHomeLifecycleBoundaryTest {
             "if (::homeExperience.isInitialized)",
             "homeExperience.onQueryChanged = null",
             "homeExperience.onSubmit = null",
+            "homeExperience.onQuickAdd = null",
             "homeExperience.onRemoveItem = null",
             "homeExperience.onRemoveUnknownItem = null",
             "homeExperience.onFindOfflineCatalogMatch = null",
@@ -228,6 +229,31 @@ class MainActivityHomeLifecycleBoundaryTest {
         ).forEach { forbidden ->
             assertTrue(
                 "MainActivity must not own good-price business/network authority: $forbidden",
+                !source.contains(forbidden)
+            )
+        }
+    }
+
+    @Test
+    fun homeQuickAddActionRoutesThroughTheBoundedSessionOwner() {
+        val source = source().readText()
+
+        listOf(
+            "homeExperience.onQuickAdd = { choice ->",
+            "PracticalShoppingHomeSession.addQuickItem(homeSessionState, choice)",
+            "renderHome()"
+        ).forEach { required ->
+            assertTrue("Expected Home quick-add session binding: $required", source.contains(required))
+        }
+
+        listOf(
+            "PracticalShoppingPlanner",
+            "Money.parse",
+            "HttpURLConnection",
+            "AuthorizedOfferSnapshot"
+        ).forEach { forbidden ->
+            assertTrue(
+                "Home quick-add must not own shopping/network authority: $forbidden",
                 !source.contains(forbidden)
             )
         }

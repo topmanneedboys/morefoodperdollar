@@ -21,6 +21,11 @@ class PracticalShoppingHomeRendererTest {
         assertEquals(240, rendered.queryCharacterLimit)
         assertFalse(rendered.submitEnabled)
         assertFalse(rendered.shopAgainVisible)
+        assertTrue(rendered.quickAddVisible)
+        assertEquals(
+            listOf("Eggs", "Milk", "Bananas", "Bread", "Chicken"),
+            rendered.quickAddChoices.map { it.label }
+        )
         assertEquals(PracticalShoppingHomeMessageTone.NEUTRAL, rendered.messageTone)
         assertTrue(rendered.items.isEmpty())
         assertNull(rendered.refinement)
@@ -87,6 +92,7 @@ class PracticalShoppingHomeRendererTest {
         )
         assertNull(rendered.result)
         assertFalse(rendered.extraStopSettings.visible)
+        assertFalse(rendered.quickAddVisible)
     }
 
     @Test
@@ -156,6 +162,7 @@ class PracticalShoppingHomeRendererTest {
         val rendered = PracticalShoppingHomeRenderer.render(model.ui)
 
         assertSame(sourceResult, rendered.result)
+        assertFalse(rendered.quickAddVisible)
         assertTrue(rendered.extraStopSettings.visible)
         assertTrue(rendered.shopAgainVisible)
         assertEquals("Your best practical shop", rendered.result?.headline)
@@ -185,6 +192,7 @@ class PracticalShoppingHomeRendererTest {
         val rendered = PracticalShoppingHomeRenderer.render(model.ui)
 
         assertSame(sourceResult, rendered.result)
+        assertFalse(rendered.quickAddVisible)
         assertTrue(rendered.extraStopSettings.visible)
         assertTrue(rendered.shopAgainVisible)
         assertEquals("Known subtotal 4.49 CAD", rendered.result?.primary?.basketCostText)

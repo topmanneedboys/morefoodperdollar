@@ -61,6 +61,7 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
         listOf(
             "private val queryOwnerControls = mutableListOf<View>()",
             "private val submitOwnerControls = mutableListOf<View>()",
+            "private val quickAddOwnerControls = mutableListOf<View>()",
             "private val itemRemovalOwnerControls = mutableListOf<View>()",
             "private val unknownRemovalOwnerControls = mutableListOf<View>()",
             "private val offlineCatalogOwnerControls = mutableListOf<View>()",
@@ -77,10 +78,17 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "private var hasRenderedState = false",
             "submitOwnerControls.forEach { control ->",
             "control.isEnabled = value != null && lastRenderedSubmitEnabled",
+            "control.isEnabled = value != null && lastRenderedQuickAddVisible",
             "control.isEnabled = value != null && hasRenderedState",
             "queryOwnerControls += inputLayout",
             "queryOwnerControls += input",
             "submitOwnerControls += submitButton",
+            "var onQuickAdd: ((PracticalShoppingHomeQuickAdd) -> Unit)? = null",
+            "renderQuickAdd(state.quickAddVisible, state.quickAddChoices)",
+            "quickAddGroup.removeAllViews()",
+            "R.string.home_quick_add_description",
+            "onQuickAdd?.invoke(option.choice)",
+            "quickAddOwnerControls += this",
             "goodPriceOwnerControls += this",
             "shopAgainOwnerControls += this",
             "privateMemoryExportOwnerControls += this",
@@ -91,6 +99,7 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "itemDetailsOwnerControls.clear()",
             "observedPriceOwnerControls.clear()",
             "chickenChoiceOwnerControls.clear()",
+            "quickAddOwnerControls.clear()",
             "extraStopChoiceOwnerControls.clear()",
             "hasRenderedState = true",
             "removeOwnerControls = itemRemovalOwnerControls",
@@ -137,6 +146,34 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "PracticalShoppingPlanner"
         ).forEach { forbidden ->
             assertFalse("Home View must not own catalog or planner authority through $forbidden", source.contains(forbidden))
+        }
+    }
+
+    @Test
+    fun quickAddIsAViewOnlyTypedActionAndStaysOutOfShoppingAuthority() {
+        val source = source().readText()
+
+        listOf(
+            "private val quickAddHeading = line(\"\", 13f, \"#374151\", true)",
+            "private val quickAddGroup = ChipGroup(context)",
+            "addView(quickAddHeading)",
+            "addView(quickAddGroup)",
+            "lastRenderedQuickAddVisible = visible",
+            "quickAddHeading.visibility = if (visible) VISIBLE else GONE",
+            "quickAddGroup.visibility = if (visible) VISIBLE else GONE",
+            "setOnClickListener {",
+            "onQuickAdd?.invoke(option.choice)"
+        ).forEach { required ->
+            assertTrue("Expected bounded Home quick-add binding $required", source.contains(required))
+        }
+
+        listOf(
+            "PracticalShoppingPlanner",
+            "PracticalShoppingUiProjector",
+            "Money.parse",
+            "OfflineCatalogDiscoveryEngine"
+        ).forEach { forbidden ->
+            assertFalse("Quick-add View must not own shopping authority through $forbidden", source.contains(forbidden))
         }
     }
 

@@ -137,6 +137,8 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="home_body">Type your grocery list in plain language. ValuePilot asks only when something genuinely needs clarification.</string>
     <string name="home_footnote">Search stays separate for item-by-item value. Direct product comparison remains available as a secondary tool.</string>
     <string name="home_list_hint">Try: chicken eggs milk</string>
+    <string name="home_quick_add_title">Try a sample item</string>
+    <string name="home_quick_add_description">Add %1$s to this offline fictional sample list</string>
     <string name="home_plan_action">Plan my shop</string>
     <string name="home_items_title">On your list</string>
     <string name="home_remove_item">Remove</string>

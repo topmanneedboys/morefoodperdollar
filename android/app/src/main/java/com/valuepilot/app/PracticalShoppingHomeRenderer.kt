@@ -101,6 +101,15 @@ data class PracticalShoppingHomeExtraStopSavingsChoiceRenderState(
     }
 }
 
+data class PracticalShoppingHomeQuickAddRenderState(
+    val choice: PracticalShoppingHomeQuickAdd,
+    val label: String
+) {
+    init {
+        require(label.isNotBlank())
+    }
+}
+
 data class PracticalShoppingHomeExtraStopSettingsRenderState(
     val visible: Boolean,
     val summary: String,
@@ -127,6 +136,8 @@ data class PracticalShoppingHomeRenderState(
     val messageTone: PracticalShoppingHomeMessageTone,
     val items: List<PracticalShoppingHomeItemRenderState>,
     val refinement: PracticalShoppingHomeRefinementRenderState?,
+    val quickAddVisible: Boolean,
+    val quickAddChoices: List<PracticalShoppingHomeQuickAddRenderState>,
     val unknownItems: List<String>,
     val result: PracticalShoppingUiState?,
     val extraStopSettings: PracticalShoppingHomeExtraStopSettingsRenderState,
@@ -153,6 +164,8 @@ data class PracticalShoppingHomeRenderState(
         require(query.length <= queryCharacterLimit + 1)
         require(message == null || message.isNotBlank())
         require(unknownItems.none(String::isBlank))
+        require(quickAddChoices.isNotEmpty())
+        require(quickAddChoices.map { it.choice }.distinct().size == quickAddChoices.size)
         require(sampleNotice.isNotBlank())
         require(privateMemorySummary == null || privateMemorySummary.isNotBlank())
         require(noCoverageSummary == null || noCoverageSummary.isNotBlank())
@@ -307,7 +320,17 @@ object PracticalShoppingHomeRenderer {
                                     choice = choice,
                                     label = choice.label
                                 )
-                            }
+                        }
+                    )
+                },
+            quickAddVisible =
+                source.status == LocalSamplePracticalShoppingDemo.Status.IDLE &&
+                    source.query.isBlank(),
+            quickAddChoices =
+                PracticalShoppingHomeQuickAddPolicy.choices.map { choice ->
+                    PracticalShoppingHomeQuickAddRenderState(
+                        choice = choice,
+                        label = choice.label
                     )
                 },
             unknownItems = source.unknownItems.toList(),

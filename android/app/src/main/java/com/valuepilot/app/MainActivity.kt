@@ -337,6 +337,7 @@ class MainActivity : AppCompatActivity() {
         if (::homeExperience.isInitialized) {
             homeExperience.onQueryChanged = null
             homeExperience.onSubmit = null
+            homeExperience.onQuickAdd = null
             homeExperience.onRemoveItem = null
             homeExperience.onRemoveUnknownItem = null
             homeExperience.onFindOfflineCatalogMatch = null
@@ -465,6 +466,10 @@ class MainActivity : AppCompatActivity() {
         homeExperience.onSubmit = { rawQuery ->
             homeSessionState = PracticalShoppingHomeSession.submit(homeSessionState, rawQuery)
             renderHome(revealResult = true)
+        }
+        homeExperience.onQuickAdd = { choice ->
+            homeSessionState = PracticalShoppingHomeSession.addQuickItem(homeSessionState, choice)
+            renderHome()
         }
         homeExperience.onRemoveItem = { itemKey ->
             homeSessionState = PracticalShoppingHomeSession.removeItem(homeSessionState, itemKey)

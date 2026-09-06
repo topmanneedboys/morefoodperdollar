@@ -58,6 +58,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
 
     private val queryOwnerControls = mutableListOf<View>()
     private val submitOwnerControls = mutableListOf<View>()
+    private val quickAddOwnerControls = mutableListOf<View>()
     private val itemRemovalOwnerControls = mutableListOf<View>()
     private val unknownRemovalOwnerControls = mutableListOf<View>()
     private val offlineCatalogOwnerControls = mutableListOf<View>()
@@ -76,6 +77,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
 
     private var hasRenderedState = false
     private var lastRenderedSubmitEnabled = false
+    private var lastRenderedQuickAddVisible = false
     private var projectedResultVisible = false
 
     var onQueryChanged: ((String) -> Unit)? = null
@@ -90,6 +92,13 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
             field = value
             submitOwnerControls.forEach { control ->
                 control.isEnabled = value != null && lastRenderedSubmitEnabled
+            }
+        }
+    var onQuickAdd: ((PracticalShoppingHomeQuickAdd) -> Unit)? = null
+        set(value) {
+            field = value
+            quickAddOwnerControls.forEach { control ->
+                control.isEnabled = value != null && lastRenderedQuickAddVisible
             }
         }
     var onRemoveItem: ((ShoppingItemKey) -> Unit)? = null
@@ -255,6 +264,19 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         layoutParams = fullWidth(dp(54), 12)
     }
 
+    private val quickAddHeading = line("", 13f, "#374151", true).apply {
+        setPadding(dp(2), dp(12), dp(2), 0)
+        visibility = GONE
+    }
+
+    private val quickAddGroup = ChipGroup(context).apply {
+        isSingleLine = false
+        setChipSpacingHorizontal(dp(8))
+        setChipSpacingVertical(dp(6))
+        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 4)
+        visibility = GONE
+    }
+
     private val message = line("", 14f, "#6B7280").apply {
         setPadding(dp(2), dp(14), dp(2), 0)
         // Refinement and validation feedback changes after user actions. Let
@@ -322,6 +344,8 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         extraStopOwnerControls += extraStopSettingsButton
 
         addView(inputLayout)
+        addView(quickAddHeading)
+        addView(quickAddGroup)
         addView(submitButton)
         addView(message)
         addView(sampleCard())
@@ -381,6 +405,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         exactProductOwnerControls.clear()
         observedPriceOwnerControls.clear()
         chickenChoiceOwnerControls.clear()
+        quickAddOwnerControls.clear()
         extraStopChoiceOwnerControls.clear()
         hasRenderedState = true
 
@@ -397,6 +422,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         renderMessage(state)
         renderItems(state.items)
         renderRefinement(state.refinement)
+        renderQuickAdd(state.quickAddVisible, state.quickAddChoices)
         renderUnknown(state.unknownItems)
         renderNoCoverageSummary(state.noCoverageSummary)
         resultContainer.render(state.result, state.sampleNotice)
@@ -527,6 +553,38 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         itemsHeading.visibility = if (items.isEmpty()) GONE else VISIBLE
         items.forEach { item ->
             itemsContainer.addView(itemRow(item))
+        }
+    }
+
+    private fun renderQuickAdd(
+        visible: Boolean,
+        choices: List<PracticalShoppingHomeQuickAddRenderState>
+    ) {
+        lastRenderedQuickAddVisible = visible
+        quickAddHeading.text = context.getString(R.string.home_quick_add_title)
+        quickAddHeading.visibility = if (visible) VISIBLE else GONE
+        quickAddGroup.removeAllViews()
+        quickAddGroup.visibility = if (visible) VISIBLE else GONE
+        if (!visible) return
+
+        choices.forEach { option ->
+            quickAddGroup.addView(
+                Chip(context).apply {
+                    quickAddOwnerControls += this
+                    text = option.label
+                    contentDescription =
+                        context.getString(
+                            R.string.home_quick_add_description,
+                            option.label
+                        )
+                    isCheckable = false
+                    isEnabled = onQuickAdd != null
+                    setOnClickListener {
+                        onQuickAdd?.invoke(option.choice)
+                        hideKeyboard()
+                    }
+                }
+            )
         }
     }
 

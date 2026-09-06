@@ -51,6 +51,20 @@ object PracticalShoppingHomeSession {
                 )
         )
 
+    /** Adds one bounded Home shortcut through the same query reducer as typed input. */
+    fun addQuickItem(
+        state: State,
+        choice: PracticalShoppingHomeQuickAdd
+    ): State {
+        val nextQuery =
+            PracticalShoppingHomeQuickAddPolicy.appendToQuery(
+                rawQuery = state.model.ui.query,
+                choice = choice
+            ) ?: return state
+        if (nextQuery == state.model.ui.query) return state
+        return queryChanged(state, nextQuery)
+    }
+
     /** Submits a list and reconciles details only against the resulting stable item keys. */
     fun submit(state: State, rawQuery: String): State {
         val changed = queryChanged(state, rawQuery)
