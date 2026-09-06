@@ -117,4 +117,64 @@ class CompareHerePhotoRequestPolicyTest {
 
         assertEquals(8L, unchanged.activeRequestId)
     }
+
+    @Test
+    fun `stop reason is tracked only for an active recognition worker`() {
+        assertEquals(
+            null,
+            CompareHerePhotoStopPolicy.begin(
+                recognition = CompareHerePhotoRecognitionState(),
+                reason = CompareHerePhotoStopReason.USER_CANCELLED
+            )
+        )
+
+        val active =
+            CompareHerePhotoRecognitionState(activeRequestId = 11L)
+        assertEquals(
+            CompareHerePhotoStopState(
+                requestId = 11L,
+                reason = CompareHerePhotoStopReason.DRAFT_CHANGED
+            ),
+            CompareHerePhotoStopPolicy.begin(
+                recognition = active,
+                reason = CompareHerePhotoStopReason.DRAFT_CHANGED
+            )
+        )
+    }
+
+    @Test
+    fun `matching stop completion emits the reason and clears the pending state`() {
+        val pending =
+            CompareHerePhotoStopState(
+                requestId = 4L,
+                reason = CompareHerePhotoStopReason.USER_CANCELLED
+            )
+
+        val completion =
+            CompareHerePhotoStopPolicy.complete(
+                pending = pending,
+                callbackRequestId = 4L
+            )
+
+        assertEquals(null, completion.pending)
+        assertEquals(CompareHerePhotoStopReason.USER_CANCELLED, completion.completedReason)
+    }
+
+    @Test
+    fun `stale stop completion keeps the pending reason for its active worker`() {
+        val pending =
+            CompareHerePhotoStopState(
+                requestId = 9L,
+                reason = CompareHerePhotoStopReason.DRAFT_CHANGED
+            )
+
+        val completion =
+            CompareHerePhotoStopPolicy.complete(
+                pending = pending,
+                callbackRequestId = 8L
+            )
+
+        assertEquals(pending, completion.pending)
+        assertEquals(null, completion.completedReason)
+    }
 }

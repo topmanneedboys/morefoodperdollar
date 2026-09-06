@@ -96,6 +96,7 @@ class ComparisonActivity : AppCompatActivity() {
     /** Tracks the ML Kit task after the executor has returned; cancellation invalidates it but
      * does not pretend its resources were released until its callback arrives. */
     private var photoRecognitionState = CompareHerePhotoRecognitionState()
+    private var pendingPhotoStop: CompareHerePhotoStopState? = null
     private var photoReviewDialog: AlertDialog? = null
     private var photoReviewRequestId = 0L
     private var lastPhotoCaptureKind: CompareHerePhotoCaptureKind? = null
@@ -311,6 +312,7 @@ class ComparisonActivity : AppCompatActivity() {
         photoImportClosed = true
         invalidatePhotoRequest()
         photoRecognitionState = CompareHerePhotoRecognitionState()
+        pendingPhotoStop = null
         photoExecutor.shutdownNow()
         barcodeLookupClosed = true
         barcodeLookupRequestId += 1L
@@ -807,11 +809,23 @@ class ComparisonActivity : AppCompatActivity() {
         error: Throwable?
     ) {
         runOnUiThread {
+            val stopCompletion =
+                CompareHerePhotoStopPolicy.complete(
+                    pending = pendingPhotoStop,
+                    callbackRequestId = requestId
+                )
+            pendingPhotoStop = stopCompletion.pending
             photoRecognitionState =
                 CompareHerePhotoRecognitionPolicy.complete(
                     previous = photoRecognitionState,
                     callbackRequestId = requestId
                 )
+            stopCompletion.completedReason?.let { reason ->
+                if (!photoImportClosed && !isFinishing && !isDestroyed) {
+                    photoImportStatus.text = getString(photoStopStatusRes(reason))
+                    photoImportStatus.visibility = View.VISIBLE
+                }
+            }
             // A user cancellation may have invalidated the request while ML Kit was still
             // finishing. Release the capture/retry controls only after that worker is gone.
             syncPhotoActionButtons()
@@ -1102,8 +1116,21 @@ class ComparisonActivity : AppCompatActivity() {
 
     private fun cancelPhotoRequest() {
         if (photoImportClosed || !photoImportInFlight) return
+        val stop =
+            CompareHerePhotoStopPolicy.begin(
+                recognition = photoRecognitionState,
+                reason = CompareHerePhotoStopReason.USER_CANCELLED
+            )
+        pendingPhotoStop = stop
         invalidatePhotoRequest()
-        photoImportStatus.text = getString(R.string.compare_photo_cancelled_by_user)
+        photoImportStatus.text =
+            getString(
+                if (stop == null) {
+                    R.string.compare_photo_cancelled_by_user
+                } else {
+                    R.string.compare_photo_stopping
+                }
+            )
         photoImportStatus.visibility = View.VISIBLE
     }
 
@@ -1116,10 +1143,32 @@ class ComparisonActivity : AppCompatActivity() {
             return
         }
 
+        val stop =
+            CompareHerePhotoStopPolicy.begin(
+                recognition = photoRecognitionState,
+                reason = CompareHerePhotoStopReason.DRAFT_CHANGED
+            )
+        pendingPhotoStop = stop
         invalidatePhotoRequest()
-        photoImportStatus.text = getString(R.string.compare_photo_draft_changed)
+        photoImportStatus.text =
+            getString(
+                if (stop == null) {
+                    R.string.compare_photo_draft_changed
+                } else {
+                    R.string.compare_photo_stopping
+                }
+            )
         photoImportStatus.visibility = View.VISIBLE
     }
+
+    @StringRes
+    private fun photoStopStatusRes(reason: CompareHerePhotoStopReason): Int =
+        when (reason) {
+            CompareHerePhotoStopReason.USER_CANCELLED ->
+                R.string.compare_photo_cancelled_by_user
+            CompareHerePhotoStopReason.DRAFT_CHANGED ->
+                R.string.compare_photo_draft_changed
+        }
 
     private fun showPhotoRetryIfEligible(outcome: CompareHerePhotoRetryOutcome?) {
         if (

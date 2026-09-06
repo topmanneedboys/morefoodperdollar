@@ -15,6 +15,7 @@
     <string name="compare_photo_cancelled">Photo import cancelled. Your existing entries are unchanged.</string>
     <string name="compare_photo_cancel">Cancel photo reading</string>
     <string name="compare_photo_cancel_description">Stop the in-progress on-device photo read without adding any suggestions.</string>
+    <string name="compare_photo_stopping">Stopping photo reading… No suggestions will be added.</string>
     <string name="compare_photo_cancelled_by_user">Photo reading cancelled. Your current comparison entries are unchanged.</string>
     <string name="compare_photo_draft_changed">Photo reading stopped because the comparison draft changed. No photo suggestions were added.</string>
     <string name="compare_photo_no_matches">No new price-tag text was found. Your existing entries are unchanged.</string>
