@@ -25,15 +25,23 @@ data class CompareHereManualRouteState(
     val guidance: String,
     val comparisonState: CompareHereUiState? = null,
     val rejectedProductCount: Int = 0,
+    /** Bounded, position-based repair guidance for products rejected before exact comparison. */
+    val rejectedProductGuidance: List<String> = emptyList(),
     /** Optional generic share card for a complete, fully labelled comparison only. */
     val shareCard: CompareHereShareCard? = null
 ) {
     init {
         require(rejectedProductCount >= 0)
+        require(rejectedProductGuidance.size <= CompareHereManualInputAdapter.MAX_OBSERVATIONS)
+        require(rejectedProductGuidance.all { it.isNotBlank() })
         require((comparisonState != null) == (status == CompareHereManualRouteStatus.EVALUATED))
         require(
             (rejectedProductCount > 0) ==
                 (status == CompareHereManualRouteStatus.PRODUCTS_REJECTED)
+        )
+        require(
+            status == CompareHereManualRouteStatus.PRODUCTS_REJECTED ||
+                rejectedProductGuidance.isEmpty()
         )
         require(shareCard == null || status == CompareHereManualRouteStatus.EVALUATED)
         require(shareCard == null || comparisonState != null)
@@ -162,7 +170,12 @@ object CompareHereManualRouteCoordinator {
             is CompareHereManualComparisonResult.RejectedObservations ->
                 CompareHereManualRouteEvaluation(
                     rejectedProducts(
-                        comparison.issues.map { it.observationId }.distinct().size
+                        count = comparison.issues.map { it.observationId }.distinct().size,
+                        guidance =
+                            CompareHereManualIssuePresentation.forIssues(
+                                issues = comparison.issues,
+                                observations = observations
+                            )
                     )
                 )
         }
@@ -195,12 +208,16 @@ object CompareHereManualRouteCoordinator {
                 "Compare up to ${CompareHereManualInputAdapter.MAX_OBSERVATIONS} products at a time."
         )
 
-    private fun rejectedProducts(count: Int): CompareHereManualRouteState =
+    private fun rejectedProducts(
+        count: Int,
+        guidance: List<String> = emptyList()
+    ): CompareHereManualRouteState =
         CompareHereManualRouteState(
             status = CompareHereManualRouteStatus.PRODUCTS_REJECTED,
             title = "Some products need clearer information",
             guidance =
                 "Check currency, promotion, price, and package details, then try again.",
-            rejectedProductCount = count.coerceAtLeast(1)
+            rejectedProductCount = count.coerceAtLeast(1),
+            rejectedProductGuidance = guidance
         )
 }

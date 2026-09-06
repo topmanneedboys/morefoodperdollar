@@ -16,7 +16,12 @@ class CompareHereManualScreenPresenterTest {
                 status = CompareHereManualRouteStatus.PRODUCTS_REJECTED,
                 title = "Some products need clearer information",
                 guidance = "Check currency, promotion, price, and package details, then try again.",
-                rejectedProductCount = 2
+                rejectedProductCount = 2,
+                rejectedProductGuidance =
+                    listOf(
+                        "Product 1: use one concrete currency such as CA$ or US$.",
+                        "Product 2: check the price, currency, and package details."
+                    )
             )
         var rendered: CompareHereManualScreenContent? = null
         val presenter =
@@ -30,7 +35,8 @@ class CompareHereManualScreenPresenterTest {
             CompareHereManualScreenContent.Message(
                 title = routeState.title,
                 guidance = routeState.guidance,
-                rejectedProductCount = 2
+                rejectedProductCount = 2,
+                rejectedProductGuidance = routeState.rejectedProductGuidance
             ),
             rendered
         )
@@ -84,7 +90,7 @@ class CompareHereManualScreenPresenterTest {
     private fun allContentStrings(content: CompareHereManualScreenContent): List<String> =
         when (content) {
             is CompareHereManualScreenContent.Message ->
-                listOf(content.title, content.guidance)
+                listOf(content.title, content.guidance) + content.rejectedProductGuidance
             is CompareHereManualScreenContent.Comparison ->
                 buildList {
                     val state = content.state

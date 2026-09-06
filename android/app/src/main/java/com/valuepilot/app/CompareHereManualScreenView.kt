@@ -31,6 +31,10 @@ class CompareHereManualScreenView @JvmOverloads constructor(
     private val messageTitle = textView(18f, "#111827", true)
     private val messageGuidance = textView(14f, "#4B5563", false, topPadding = 5)
     private val rejectedCount = textView(13f, "#92400E", true, topPadding = 7)
+    private val rejectedGuidanceContainer = LinearLayout(context).apply {
+        orientation = VERTICAL
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+    }
     private val comparisonSurface = CompareHereSurfaceView(context)
 
     init {
@@ -40,12 +44,14 @@ class CompareHereManualScreenView @JvmOverloads constructor(
         messageContainer.addView(messageTitle)
         messageContainer.addView(messageGuidance)
         messageContainer.addView(rejectedCount)
+        messageContainer.addView(rejectedGuidanceContainer)
         addView(messageContainer)
         addView(comparisonSurface)
 
         messageContainer.visibility = GONE
         comparisonSurface.visibility = GONE
         rejectedCount.visibility = GONE
+        rejectedGuidanceContainer.visibility = GONE
     }
 
     override fun render(content: CompareHereManualScreenContent) {
@@ -73,6 +79,22 @@ class CompareHereManualScreenView @JvmOverloads constructor(
             rejectedCount.text = ""
             rejectedCount.visibility = GONE
         }
+
+        rejectedGuidanceContainer.removeAllViews()
+        content.rejectedProductGuidance.forEach { guidance ->
+            rejectedGuidanceContainer.addView(
+                textView(
+                    13f,
+                    "#92400E",
+                    false,
+                    topPadding = 4
+                ).apply {
+                    text = "• $guidance"
+                }
+            )
+        }
+        rejectedGuidanceContainer.visibility =
+            if (content.rejectedProductGuidance.isEmpty()) View.GONE else View.VISIBLE
     }
 
     private fun renderComparison(state: CompareHereUiState) {
@@ -81,6 +103,8 @@ class CompareHereManualScreenView @JvmOverloads constructor(
         rejectedCount.visibility = GONE
         comparisonSurface.visibility = VISIBLE
         comparisonSurface.render(state)
+        rejectedGuidanceContainer.removeAllViews()
+        rejectedGuidanceContainer.visibility = GONE
     }
 
     private fun textView(

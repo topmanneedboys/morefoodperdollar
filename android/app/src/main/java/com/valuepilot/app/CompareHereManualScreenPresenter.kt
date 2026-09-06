@@ -4,12 +4,15 @@ sealed interface CompareHereManualScreenContent {
     data class Message(
         val title: String,
         val guidance: String,
-        val rejectedProductCount: Int = 0
+        val rejectedProductCount: Int = 0,
+        val rejectedProductGuidance: List<String> = emptyList()
     ) : CompareHereManualScreenContent {
         init {
             require(title.isNotBlank())
             require(guidance.isNotBlank())
             require(rejectedProductCount >= 0)
+            require(rejectedProductGuidance.size <= CompareHereManualInputAdapter.MAX_OBSERVATIONS)
+            require(rejectedProductGuidance.all { it.isNotBlank() })
         }
     }
 
@@ -39,7 +42,8 @@ class CompareHereManualScreenPresenter(
                 ?: CompareHereManualScreenContent.Message(
                     title = routeState.title,
                     guidance = routeState.guidance,
-                    rejectedProductCount = routeState.rejectedProductCount
+                    rejectedProductCount = routeState.rejectedProductCount,
+                    rejectedProductGuidance = routeState.rejectedProductGuidance
                 )
         renderer.render(content)
     }

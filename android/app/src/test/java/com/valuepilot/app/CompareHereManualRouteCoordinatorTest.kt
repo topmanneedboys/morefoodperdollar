@@ -156,6 +156,10 @@ class CompareHereManualRouteCoordinatorTest {
 
         assertEquals(CompareHereManualRouteStatus.PRODUCTS_REJECTED, state.status)
         assertEquals(1, state.rejectedProductCount)
+        assertEquals(
+            listOf("Product 3: use one concrete currency such as CA$ or US$."),
+            state.rejectedProductGuidance
+        )
         assertNull(state.comparisonState)
         assertTrue(allConsumerStrings(state).none { it.contains("manual-") })
         assertTrue(allConsumerStrings(state).none { it.contains("Ambiguous Milk") })
@@ -209,6 +213,7 @@ class CompareHereManualRouteCoordinatorTest {
         buildList {
             add(state.title)
             add(state.guidance)
+            addAll(state.rejectedProductGuidance)
             state.comparisonState?.let { comparison ->
                 add(comparison.headline)
                 add(comparison.priceModeText)
