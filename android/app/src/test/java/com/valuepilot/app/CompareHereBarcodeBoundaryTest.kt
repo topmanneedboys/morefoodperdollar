@@ -109,7 +109,10 @@ class CompareHereBarcodeBoundaryTest {
             "compare_barcode_match_message",
             "does not prove package quantity, price, store, stock or availability",
             "compare_barcode_used",
-            "did not confirm a live offer"
+            "did not confirm a live offer",
+            "next available comparison entry",
+            "while the comparison limit has room",
+            "reached its 32-entry limit"
         ).forEach { required -> assertTrue(strings.contains(required)) }
     }
 

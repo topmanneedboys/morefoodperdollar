@@ -133,7 +133,7 @@ class CompareHereCameraBoundaryTest {
                 .substringBefore("private fun syncLikeForLikeConfirmation")
         val clearComparison =
             source.substringAfter("private fun clearComparison()")
-                .substringBefore("/**\n     * Applies one intentionally shared text")
+                .substringBefore("/**\n     * Applies one intentionally shared text value")
 
         assertTrue(productsChanged.contains("cancelPhotoRequestForDraftChange()"))
         assertTrue(clearComparison.contains("cancelPhotoRequestForDraftChange()"))

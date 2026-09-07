@@ -1786,9 +1786,10 @@ class ComparisonActivity : AppCompatActivity() {
     }
 
     /**
-     * Applies one intentionally shared text value to the earliest empty Compare Here slot. The
-     * source remains raw and reviewable; this never replaces an existing entry or parses it in the
-     * lifecycle owner. Instance-state restoration wins so rotation cannot apply the share twice.
+     * Applies one intentionally shared text value to the earliest empty Compare Here slot, or
+     * appends one bounded slot when the visible entries have capacity. The source remains raw and
+     * reviewable; this never replaces an existing entry or parses it in the lifecycle owner.
+     * Instance-state restoration wins so rotation cannot apply the share twice.
      */
     private fun applySharedTextIfPresent(
         savedInstanceState: Bundle?

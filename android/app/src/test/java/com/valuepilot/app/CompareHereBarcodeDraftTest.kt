@@ -76,6 +76,25 @@ class CompareHereBarcodeDraftTest {
     }
 
     @Test
+    fun `filled draft uses the final bounded slot before rejecting`() {
+        val existing =
+            List(CompareHereManualInputAdapter.MAX_OBSERVATIONS - 1) { index ->
+                "Product $index"
+            }
+
+        val result =
+            CompareHereBarcodeDraft.apply(
+                existingBlocks = existing,
+                displayName = "Rice"
+            )
+
+        assertTrue(result.added)
+        assertEquals(CompareHereManualInputAdapter.MAX_OBSERVATIONS - 1, result.addedIndex)
+        assertEquals(CompareHereManualInputAdapter.MAX_OBSERVATIONS, result.blocks.size)
+        assertEquals("Rice", result.blocks.last())
+    }
+
+    @Test
     fun `blank identity is rejected without changing the draft`() {
         val existing = listOf("Milk", "")
 

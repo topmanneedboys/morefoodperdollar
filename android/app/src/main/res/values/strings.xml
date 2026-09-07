@@ -46,9 +46,9 @@
     <string name="compare_barcode_match_message">%1$s\n\nThis offline catalog supplies identity text only. It does not prove package quantity, price, store, stock or availability. Use this name, then add and review the package quantity and price you see.</string>
     <string name="compare_barcode_multiple_message">Barcode %1$s has more than one identity name in the bundled snapshot. Choose the name you mean; package quantity, price, store, stock and availability still need your own evidence.</string>
     <string name="compare_barcode_use_name">Use this name</string>
-    <string name="compare_barcode_use_name_description">Use the selected offline identity name in an empty comparison entry. This does not confirm a price or availability.</string>
+    <string name="compare_barcode_use_name_description">Use the selected offline identity name in the next available comparison entry. ValuePilot fills a blank entry or adds one while the comparison limit has room; this does not confirm a price or availability.</string>
     <string name="compare_barcode_used">Identity suggestion added: %1$s (barcode %2$s). Add the package quantity and observed price; this barcode lookup did not confirm a live offer.</string>
-    <string name="compare_barcode_no_empty_slot">Every comparison entry already has text. Add an empty product entry, then scan again; existing entries were not replaced.</string>
+    <string name="compare_barcode_no_empty_slot">This comparison has reached its 32-entry limit. Remove one entry before scanning again; existing entries were not replaced.</string>
     <string name="compare_barcode_identity_too_long">That identity name is too long for a comparison entry. Existing entries were not changed.</string>
 
     <string name="product_number">Product %1$d</string>
