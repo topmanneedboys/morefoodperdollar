@@ -6,23 +6,33 @@ on:
     paths:
       - 'tools/qualify_merchant_feed.py'
       - 'tools/qualify_argentina_sepa.py'
+      - 'tools/build_argentina_sepa_regional_snapshot.py'
+      - 'tools/verify_argentina_sepa_regional_snapshot.py'
+      - 'tools/argentina_sepa_search.py'
+      - 'tools/audit_argentina_sepa_search.py'
       - 'tools/qualify_rakuten_product_catalog.py'
       - 'tools/measure_rakuten_off_quantity_coverage.py'
       - 'tools/measure_rakuten_off_quantity_coverage_v2.py'
       - 'tools/open_facts_barcode.py'
       - 'tools/run_rakuten_off_quantity_coverage.py'
       - 'tools/tests/test_qualify_*.py'
+      - 'tools/tests/test_argentina_sepa_*.py'
       - '.github/workflows/test-merchant-feed-qualification.yml'
   pull_request:
     paths:
       - 'tools/qualify_merchant_feed.py'
       - 'tools/qualify_argentina_sepa.py'
+      - 'tools/build_argentina_sepa_regional_snapshot.py'
+      - 'tools/verify_argentina_sepa_regional_snapshot.py'
+      - 'tools/argentina_sepa_search.py'
+      - 'tools/audit_argentina_sepa_search.py'
       - 'tools/qualify_rakuten_product_catalog.py'
       - 'tools/measure_rakuten_off_quantity_coverage.py'
       - 'tools/measure_rakuten_off_quantity_coverage_v2.py'
       - 'tools/open_facts_barcode.py'
       - 'tools/run_rakuten_off_quantity_coverage.py'
       - 'tools/tests/test_qualify_*.py'
+      - 'tools/tests/test_argentina_sepa_*.py'
       - '.github/workflows/test-merchant-feed-qualification.yml'
 
 permissions:
@@ -47,11 +57,15 @@ jobs:
           python -m py_compile
           tools/qualify_merchant_feed.py
           tools/qualify_argentina_sepa.py
+          tools/build_argentina_sepa_regional_snapshot.py
+          tools/verify_argentina_sepa_regional_snapshot.py
+          tools/argentina_sepa_search.py
+          tools/audit_argentina_sepa_search.py
           tools/qualify_rakuten_product_catalog.py
           tools/measure_rakuten_off_quantity_coverage.py
           tools/measure_rakuten_off_quantity_coverage_v2.py
           tools/open_facts_barcode.py
           tools/run_rakuten_off_quantity_coverage.py
 
-      - name: Run qualification harness tests
-        run: python -m unittest discover -s tools/tests -p 'test_qualify_*.py' -v
+      - name: Run offline qualification and regional tests
+        run: python -m unittest discover -s tools/tests -p 'test_*.py' -v

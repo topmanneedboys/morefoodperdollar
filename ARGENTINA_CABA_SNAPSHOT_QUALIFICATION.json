@@ -1,0 +1,325 @@
+{
+  "exactProductComparisonReadiness": {
+    "auditedRelevantProducts": 125,
+    "auditedRelevantWithExactCrossRetailerGtin": 73,
+    "auditedRelevantWithValidGtin": 125,
+    "auditedRelevantWithoutExactCrossRetailerGtin": 51,
+    "fuzzyMatchingUsed": false
+  },
+  "productionUiAuthorized": false,
+  "regionalSnapshot": {
+    "counts": {
+      "exactCrossRetailerGtins": 15086,
+      "inputAcceptedObservations": 14209151,
+      "offers": 3926600,
+      "productEvidenceRecords": 87469,
+      "promotions": 658900,
+      "selectedAcceptedObservations": 3926600,
+      "stores": 973,
+      "validGtins": 59563
+    },
+    "files": {
+      "offers.jsonl.gz": {
+        "bytes": 226039574,
+        "recordCount": 3926600,
+        "sha256": "d85be05d716049d8d7fb7ec9f57e8a1e73204f6e39fc4464e619d72dfafc5656",
+        "uncompressedBytes": 2403522781
+      },
+      "products.jsonl.gz": {
+        "bytes": 2169747,
+        "recordCount": 87469,
+        "sha256": "3729c50798e187c4a9a00f863cb7b23a14d043eae1dfdd1c21e0881f6b6430fe",
+        "uncompressedBytes": 27308122
+      },
+      "promotions.jsonl.gz": {
+        "bytes": 37001328,
+        "recordCount": 658900,
+        "sha256": "7bc679c012db45739b8c003be8e48bced09fd691e755ab7563a2757e31af92e0",
+        "uncompressedBytes": 273837297
+      },
+      "release.json": {
+        "bytes": 1511,
+        "recordCount": 1,
+        "sha256": "870e9b5114956853dbd1399064c9e3a22538207cfa16b0aea71058dd087dae1b",
+        "uncompressedBytes": 1511
+      },
+      "stores.jsonl.gz": {
+        "bytes": 38105,
+        "recordCount": 973,
+        "sha256": "de38f7c8e2715cca07a2ba734cc5c7b4d65ba7a3ed187e710c2bfb795ebf26ad",
+        "uncompressedBytes": 354550
+      }
+    },
+    "manifestSha256": "993fab6dbfb576feab58bb574d0c6be117610aa39d84fcd0ffae68b8c0cff7f6",
+    "performance": {
+      "elapsedSeconds": 1257.568363,
+      "memoryBounded": true,
+      "note": "Elapsed time is the local full-run measurement. Working-set value is a sampled Windows process value, not a claimed RSS maximum.",
+      "peakRssBytes": null,
+      "peakWorkingSetSampleBytes": 66818048,
+      "scratchDiskBytes": 2638827520
+    },
+    "rawArtifactCommitted": false,
+    "regionId": "ar-caba",
+    "regionSelector": {
+      "matching": "EXACT_NORMALIZED_SOURCE_FIELD",
+      "provinceCode": "AR-C"
+    },
+    "size": {
+      "bytesPerOfferUncompressed": "688.897331",
+      "compactCompressedBytes": 265250265,
+      "compactUncompressedBytes": 2705024261,
+      "compactionRatio": "8.200033",
+      "inputAcceptedGzipBytes": 1079326703,
+      "inputNormalizedUncompressedBytes": 22181289398
+    },
+    "status": "GO"
+  },
+  "reportSchemaVersion": "argentina-caba-snapshot-qualification-v1",
+  "searchAudit": {
+    "fixtureSha256": "881da2da4b2ad05cec42f6542ad1f2b292960474059a6b35e69ee6879863bb25",
+    "hardNegativeFixtureRows": 75,
+    "insufficientAuditedPositives": [],
+    "knownFalsePositiveRegressionClasses": [
+      "pan-in-unrelated-name",
+      "condimento-para-arroz",
+      "fideos-con-huevo",
+      "gaseosa-sin-azucar",
+      "pasta-rellena-de-queso",
+      "yogur-con-cereal"
+    ],
+    "overallPrecisionAt5": "1.0000",
+    "queries": [
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "aceite",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "agua",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "arroz",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "at\u00fan",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "az\u00facar",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "caf\u00e9",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "cereal",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "detergente",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "fideos",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "galletitas",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "gaseosa",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "harina",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "huevos",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "jab\u00f3n",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "leche",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "manteca",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "pan",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "pa\u00f1ales",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "papel higi\u00e9nico",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "pasta dental",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "pollo",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "queso",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "shampoo",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "t\u00e9",
+        "topK": 5
+      },
+      {
+        "auditedPositives": 5,
+        "falsePositives": [],
+        "hits": 5,
+        "precisionAt5": "1.0000",
+        "query": "yogur",
+        "topK": 5
+      }
+    ],
+    "queryCount": 25,
+    "recallClaimed": false,
+    "schemaVersion": "argentina-sepa-spanish-search-v1",
+    "status": "GO",
+    "unreviewedTopK": [],
+    "worstQuery": {
+      "precisionAt5": "1.0000",
+      "query": "aceite"
+    }
+  },
+  "source": {
+    "acceptedObservationsRows": 14209151,
+    "acceptedObservationsSha256": "a5554d60a383acb83cf9f573a0e5f5db834c830a7a92e7db5051b09320e2da8d",
+    "attribution": "Precios Claros - Base SEPA; source: datos.produccion.gob.ar",
+    "license": "Creative Commons Attribution 4.0",
+    "outerBytes": 325522188,
+    "outerSha256": "e6c08be6a36e5e5b90e6eb0b6f54a07c8bccded929fab2a28ad7f000ed08b305",
+    "provider": "ARGENTINA_SEPA_PRECIOS_CLAROS",
+    "qualificationManifestSha256": "49c88fb9fc9b745788562bf292352649692196e3c0f68a01737ddc779850eda3",
+    "qualificationPolicyVersion": "argentina-sepa-policy-v1",
+    "qualificationSchemaVersion": "argentina-sepa-normalized-observation-v1",
+    "releaseDate": "2026-09-06"
+  },
+  "unresolvedLimitations": [
+    "SEPA publication is price evidence only; availability remains UNKNOWN.",
+    "Delivery, pickup, fees, ETA, inventory, and routing are not provided.",
+    "Coordinates are preserved only when trusted; no geocoding or driving distance is performed.",
+    "The search result is a finite 25-query precision audit, not a recall or universal category-classifier claim.",
+    "No basket optimizer or Android UI integration is authorized by this checkpoint.",
+    "The full CABA artifact and national source remain local ignored provider data."
+  ]
+}
