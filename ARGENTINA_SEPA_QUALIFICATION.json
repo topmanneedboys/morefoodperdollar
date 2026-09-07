@@ -1,0 +1,94 @@
+{
+  "status": "BLOCKED_OFFICIAL_SOURCE_UNRETRIEVABLE",
+  "recommendation": "NO-GO_FOR_PRODUCTION_QUALIFICATION / BLOCKED_BY_ACCESS",
+  "evaluatedAt": "2026-09-07T02:34:00Z",
+  "baseline": "3c7b9cab9c2de693f983cf1c8e3365f386845e26",
+  "scope": "Current official Argentine SEPA / Precios Claros retail release qualification only; no integration.",
+  "officialSources": [
+    {
+      "name": "Argentina Precios SEPA landing page",
+      "url": "https://www.argentina.gob.ar/economia/industria-y-comercio/defensadelconsumidor/precios-sepa"
+    },
+    {
+      "name": "Official production dataset page",
+      "url": "https://datos.produccion.gob.ar/dataset/sepa-precios"
+    },
+    {
+      "name": "Precios Claros official data site",
+      "url": "https://www.preciosclaros.gob.ar/index.html"
+    },
+    {
+      "name": "Resolution 678/2020 Annex II technical specification",
+      "url": "https://www.argentina.gob.ar/normativa/345335_res678-2_pdf/archivo"
+    }
+  ],
+  "retrievalAttempts": [
+    {
+      "url": "https://datos.produccion.gob.ar/api/3/action/package_show?id=sepa-precios",
+      "method": "GET",
+      "status": 403,
+      "barrier": "BunkerWeb",
+      "requestId": "4aa9a3137cd54a7e94dc3be3e193577b",
+      "observedAt": "2026-09-07T02:32:24Z"
+    },
+    {
+      "url": "https://datos.produccion.gob.ar/dataset/sepa-precios",
+      "method": "GET",
+      "status": 403,
+      "barrier": "BunkerWeb"
+    },
+    {
+      "url": "https://datos.produccion.gob.ar/dataset/sepa-precios/resource/9dc06241-cc83-44f4-8e25-c9b1636b8bc8/download",
+      "method": "GET",
+      "status": 403,
+      "barrier": "BunkerWeb",
+      "note": "Search-indexed example UUID only; not accepted as current-release evidence."
+    },
+    {
+      "url": "https://datos.produccion.gob.ar/dataset/sepa-precios",
+      "method": "GET",
+      "surface": "in-app browser",
+      "status": 403,
+      "barrier": "BunkerWeb",
+      "requestId": "e9ea8898870d53fba5b615f514840235",
+      "observedAt": "2026-09-07T02:33:39Z"
+    }
+  ],
+  "downloadedFiles": [],
+  "measurements": {
+    "currentRelease": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE",
+    "schema": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE",
+    "scale": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE",
+    "identity": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE",
+    "quantity": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE",
+    "price": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE",
+    "freshness": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE",
+    "geography": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE",
+    "sampleAudit": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE",
+    "basketFeasibility": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE",
+    "storage": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE",
+    "deliveryPickup": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE"
+  },
+  "sourceContextNotQualification": {
+    "officialPageFacts": [
+      "Daily point-of-sale price information supplied by merchants",
+      "More than 70,000 products described on the official site",
+      "Retail list price and up to two promotions; some promotions may be targeted"
+    ],
+    "indexedPortalMetadata": [
+      "Daily ZIP resources",
+      "Approximately 12 million daily records",
+      "Creative Commons Attribution 4.0 metadata claim"
+    ]
+  },
+  "rights": {
+    "status": "UNRESOLVED",
+    "issue": "Dataset portal metadata is indexed as CC BY 4.0 while official Precios Claros terms state government content is CC BY 2.5 Argentina and reserve merchant marks/images/logos.",
+    "requiredBeforeImport": [
+      "Exact release licence and attribution",
+      "Caching and retention",
+      "Indexing, display, comparison, mobile, geography, and commercial rights"
+    ]
+  },
+  "nextGate": "Retrieve the exact current official ZIP and release metadata through ordinary authorized access, then rerun the full deterministic qualifier. Do not use a mirror or bypass the access barrier."
+}
