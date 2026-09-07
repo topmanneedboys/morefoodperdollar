@@ -167,6 +167,23 @@ def _safe_relative(value: Any, label: str) -> Path:
     return path
 
 
+def _coerce_path(value: Path | str) -> Path:
+    """Accept native paths plus Windows separators when running on POSIX.
+
+    CI exercises the same consumer with Windows-shaped path strings.  A
+    separator-normalized alternative is used only when the native spelling
+    does not exist, so an existing path is never redirected implicitly.
+    """
+
+    raw = os.fspath(value)
+    path = Path(raw)
+    if isinstance(raw, str) and os.sep != "\\" and "\\" in raw and not path.exists():
+        normalized = Path(raw.replace("\\", "/"))
+        if normalized.exists():
+            return normalized
+    return path
+
+
 def _verify_plain_descriptor(root: Path, descriptor: Mapping[str, Any], expected_path: str, label: str) -> Path:
     _require(descriptor.get("path") == expected_path, f"{label} path is invalid")
     value = descriptor.get("bytes")
@@ -268,7 +285,7 @@ def load_region_contract(
 ) -> RegionContract:
     """Verify bootstrap/metadata and return descriptors for one exact region."""
 
-    root = Path(snapshot_root).resolve()
+    root = _coerce_path(snapshot_root).resolve()
     bootstrap_path = root / BOOTSTRAP_FILE
     bootstrap = _read_canonical_json(bootstrap_path, BOOTSTRAP_FILE)
     _require(bootstrap.get("artifactSchemaVersion") == QUERY_SELECTIVE_SCHEMA_VERSION and bootstrap.get("policyVersion") == QUERY_SELECTIVE_POLICY_VERSION and bootstrap.get("compatibilityVersion") == QUERY_SELECTIVE_COMPATIBILITY_VERSION, "bootstrap version is invalid")
@@ -613,7 +630,7 @@ def query_structured_request(
 
 
 def _national_region_entry(national_root: Path, region_id: str) -> tuple[dict[str, Any], RegionSpec]:
-    index = _read_canonical_json(Path(national_root) / "index.json", "national index")
+    index = _read_canonical_json(_coerce_path(national_root) / "index.json", "national index")
     spec = _region_spec(region_id)
     entry = next((item for item in index.get("regions", []) if isinstance(item, dict) and item.get("regionId") == region_id), None)
     _require(isinstance(entry, dict), f"national index lacks region {region_id}")
@@ -625,7 +642,7 @@ def _open_national_shard(national_root: Path, region_id: str) -> tuple[sqlite3.C
     index, _ = _national_region_entry(national_root, region_id)
     entry = next(item for item in index["regions"] if item["regionId"] == region_id)
     descriptor = entry["shard"]
-    path = Path(national_root) / descriptor["path"]
+    path = _coerce_path(national_root) / descriptor["path"]
     _require(path.is_file() and path.stat().st_size == descriptor["bytes"] and _sha256_file(path) == descriptor["sha256"], "national shard descriptor is invalid")
     directory: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory(prefix="argentina-query-reference-")
     raw = Path(directory.name) / "shard.sqlite"
