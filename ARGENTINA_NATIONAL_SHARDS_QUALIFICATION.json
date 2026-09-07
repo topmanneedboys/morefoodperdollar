@@ -1,0 +1,123 @@
+{
+  "reportSchemaVersion": "argentina-national-shards-qualification-v1",
+  "productionUiAuthorized": false,
+  "source": {
+    "provider": "ARGENTINA_SEPA_PRECIOS_CLAROS",
+    "releaseDate": "2026-09-06",
+    "outerSha256": "e6c08be6a36e5e5b90e6eb0b6f54a07c8bccded929fab2a28ad7f000ed08b305",
+    "outerBytes": 325522188,
+    "acceptedObservationsSha256": "a5554d60a383acb83cf9f573a0e5f5db834c830a7a92e7db5051b09320e2da8d",
+    "acceptedObservationsRows": 14209151,
+    "qualificationManifestSha256": "49c88fb9fc9b745788562bf292352649692196e3c0f68a01737ddc779850eda3",
+    "license": "Creative Commons Attribution 4.0",
+    "attribution": "Precios Claros - Base SEPA; source: datos.produccion.gob.ar",
+    "rawProviderDataCommitted": false
+  },
+  "contract": {
+    "artifactSchemaVersion": "argentina-sepa-national-index-v1",
+    "mobileShardSchemaVersion": "argentina-sepa-mobile-shard-v1",
+    "policyVersion": "argentina-sepa-national-policy-v1",
+    "mobilePolicyVersion": "argentina-sepa-mobile-policy-v1",
+    "compatibilityVersion": "argentina-sepa-mobile-contract-v1",
+    "format": "gzip-compressed indexed SQLite per exact ISO province code",
+    "distribution": "verify then atomically activate; retain last-known-good",
+    "androidNetworking": "NOT_AUTHORIZED",
+    "deltaSupport": "NOT_MEASURED_SINGLE_RELEASE"
+  },
+  "regions": [
+    {"regionId":"ar-a","displayName":"Salta","provinceCode":"AR-A","offers":317335,"stores":46,"productEvidenceRecords":63675,"validGtins":44108,"exactCrossRetailerGtins":10412,"promotions":40393,"uncompressedBytes":57237504,"compressedBytes":10434582,"bytesPerOfferCompressed":"32.881913","shardSha256":"db0cdc2bf2097d2ff5db773fcf028f150ed7d2656c9ae99c8f60394d6f1a22bc"},
+    {"regionId":"ar-b","displayName":"Buenos Aires","provinceCode":"AR-B","offers":5136849,"stores":859,"productEvidenceRecords":116065,"validGtins":69444,"exactCrossRetailerGtins":18310,"promotions":706926,"uncompressedBytes":592154624,"compressedBytes":119694357,"bytesPerOfferCompressed":"23.301124","shardSha256":"0ab2de8f4ca47bc470d91ead295ffc09b3b54589f685275baaa3aca7c63ae146"},
+    {"regionId":"ar-caba","displayName":"Ciudad Autónoma de Buenos Aires","provinceCode":"AR-C","offers":3926600,"stores":973,"productEvidenceRecords":87469,"validGtins":59563,"exactCrossRetailerGtins":15086,"promotions":658900,"uncompressedBytes":459247616,"compressedBytes":93949219,"bytesPerOfferCompressed":"23.926353","shardSha256":"320e3cab7a70ff37313f3ecb0ae60cbb328469f5f0e1c9aed2877c99f3e4181a"},
+    {"regionId":"ar-d","displayName":"San Luis","provinceCode":"AR-D","offers":97000,"stores":7,"productEvidenceRecords":53202,"validGtins":42239,"exactCrossRetailerGtins":8794,"promotions":1649,"uncompressedBytes":27926528,"compressedBytes":5003070,"bytesPerOfferCompressed":"51.578041","shardSha256":"15b8c631db77a9a5e0ccb97e883f260623b5c94d11a48f7140632ed27bd88b2f"},
+    {"regionId":"ar-e","displayName":"Entre Ríos","provinceCode":"AR-E","offers":477224,"stores":85,"productEvidenceRecords":74685,"validGtins":51870,"exactCrossRetailerGtins":12795,"promotions":101725,"uncompressedBytes":82579456,"compressedBytes":15479030,"bytesPerOfferCompressed":"32.435565","shardSha256":"d0d437eee810ade18629bbc8c19ece8a7b7d825ab5be5cd3cd86e28482c017a8"},
+    {"regionId":"ar-f","displayName":"La Rioja","provinceCode":"AR-F","offers":46908,"stores":4,"productEvidenceRecords":42700,"validGtins":35167,"exactCrossRetailerGtins":5929,"promotions":395,"uncompressedBytes":19202048,"compressedBytes":3180703,"bytesPerOfferCompressed":"67.807261","shardSha256":"bdff173e5dd054fb07058786d222e816619f24ff519548f1e4d1dea7b5a0eb9d"},
+    {"regionId":"ar-g","displayName":"Santiago del Estero","provinceCode":"AR-G","offers":76868,"stores":6,"productEvidenceRecords":41163,"validGtins":33641,"exactCrossRetailerGtins":5911,"promotions":2062,"uncompressedBytes":20975616,"compressedBytes":3502561,"bytesPerOfferCompressed":"45.565918","shardSha256":"7f5553548664c88cdd2f50d0f7e7e0e2ba121425822b31e4e977fe03b76691ac"},
+    {"regionId":"ar-h","displayName":"Chaco","provinceCode":"AR-H","offers":62326,"stores":5,"productEvidenceRecords":56018,"validGtins":41972,"exactCrossRetailerGtins":9112,"promotions":3218,"uncompressedBytes":26230784,"compressedBytes":4554836,"bytesPerOfferCompressed":"73.080833","shardSha256":"492999433b82a2c9d6b9b6a7662b7469217d26213b34c4ff85913236730f55a2"},
+    {"regionId":"ar-j","displayName":"San Juan","provinceCode":"AR-J","offers":166280,"stores":20,"productEvidenceRecords":56689,"validGtins":40216,"exactCrossRetailerGtins":8877,"promotions":11931,"uncompressedBytes":36786176,"compressedBytes":6400622,"bytesPerOfferCompressed":"38.493036","shardSha256":"df960781d76bbeb81274d0b77d7fcfa89197d7190e770ad3147bc3e4347971d4"},
+    {"regionId":"ar-k","displayName":"Catamarca","provinceCode":"AR-K","offers":76377,"stores":8,"productEvidenceRecords":49657,"validGtins":39464,"exactCrossRetailerGtins":8055,"promotions":1266,"uncompressedBytes":24834048,"compressedBytes":4424974,"bytesPerOfferCompressed":"57.935949","shardSha256":"a29e1395a6523100d3c9fcbceaa6b5ada404ea22ea317db20a2e5b1713dfc609"},
+    {"regionId":"ar-l","displayName":"La Pampa","provinceCode":"AR-L","offers":148914,"stores":14,"productEvidenceRecords":48090,"validGtins":37799,"exactCrossRetailerGtins":7649,"promotions":2714,"uncompressedBytes":30486528,"compressedBytes":5650093,"bytesPerOfferCompressed":"37.941987","shardSha256":"3660d381f6a75e48693d2fd12fbe2865730f3762e062a41f4cdf488a90a1c6ad"},
+    {"regionId":"ar-m","displayName":"Mendoza","provinceCode":"AR-M","offers":461594,"stores":70,"productEvidenceRecords":74216,"validGtins":52451,"exactCrossRetailerGtins":13251,"promotions":6603,"uncompressedBytes":68132864,"compressedBytes":13473989,"bytesPerOfferCompressed":"29.190130","shardSha256":"a0fc1b3e8df77b6d5c7f07030424c7303ed481db7c0c0f0f3c80af7b947f8a09"},
+    {"regionId":"ar-n","displayName":"Misiones","provinceCode":"AR-N","offers":82206,"stores":10,"productEvidenceRecords":37971,"validGtins":33760,"exactCrossRetailerGtins":3999,"promotions":2147,"uncompressedBytes":19906560,"compressedBytes":3248264,"bytesPerOfferCompressed":"39.513709","shardSha256":"55d5e1ecf1ed92c788f9d73a88924099d1899c3ac0756623bb8d3702f053f8a4"},
+    {"regionId":"ar-p","displayName":"Formosa","provinceCode":"AR-P","offers":107884,"stores":5,"productEvidenceRecords":44245,"validGtins":38647,"exactCrossRetailerGtins":5598,"promotions":1597,"uncompressedBytes":24608768,"compressedBytes":4577255,"bytesPerOfferCompressed":"42.427561","shardSha256":"33ca1e00533c4f0332fc5375f5ee654009e945597f8ee71d8724543750961941"},
+    {"regionId":"ar-q","displayName":"Neuquén","provinceCode":"AR-Q","offers":381163,"stores":60,"productEvidenceRecords":82777,"validGtins":51548,"exactCrossRetailerGtins":14089,"promotions":15090,"uncompressedBytes":67268608,"compressedBytes":13067772,"bytesPerOfferCompressed":"34.283947","shardSha256":"f3fb6df533df3c3c8e612791f53618aa42a5f72191949d41cf2672018ccec287"},
+    {"regionId":"ar-r","displayName":"Río Negro","provinceCode":"AR-R","offers":424692,"stores":63,"productEvidenceRecords":64766,"validGtins":43543,"exactCrossRetailerGtins":10844,"promotions":14311,"uncompressedBytes":62967808,"compressedBytes":12238131,"bytesPerOfferCompressed":"28.816486","shardSha256":"dea135b29dda16957b7e68b511bf10161b6c82750c8d10f1545c9ef862bff27c"},
+    {"regionId":"ar-s","displayName":"Santa Fe","provinceCode":"AR-S","offers":310683,"stores":45,"productEvidenceRecords":86697,"validGtins":55110,"exactCrossRetailerGtins":14581,"promotions":24693,"uncompressedBytes":62074880,"compressedBytes":11807381,"bytesPerOfferCompressed":"38.004593","shardSha256":"38a39f09ed7b763a6f9c1fa98e6cb81cac9d48f41b54f1590930b642614b3194"},
+    {"regionId":"ar-t","displayName":"Tucumán","provinceCode":"AR-T","offers":256671,"stores":23,"productEvidenceRecords":62129,"validGtins":44772,"exactCrossRetailerGtins":10589,"promotions":6517,"uncompressedBytes":45547520,"compressedBytes":8466245,"bytesPerOfferCompressed":"32.984813","shardSha256":"f8ff563b9d86c1d5298e5cba7f2f25f3edb943e6799a4e9eae2ce0a57a5bfee4"},
+    {"regionId":"ar-u","displayName":"Chubut","provinceCode":"AR-U","offers":361877,"stores":45,"productEvidenceRecords":68712,"validGtins":46616,"exactCrossRetailerGtins":11727,"promotions":11054,"uncompressedBytes":58159104,"compressedBytes":11403864,"bytesPerOfferCompressed":"31.513094","shardSha256":"5e21d45b4ee6a86498aa5e90d4a893ce36c94be25a045cbc1a6d7dabb82b3ccd"},
+    {"regionId":"ar-v","displayName":"Tierra del Fuego, Antártida e Islas del Atlántico Sur","provinceCode":"AR-V","offers":96836,"stores":14,"productEvidenceRecords":23929,"validGtins":19635,"exactCrossRetailerGtins":4294,"promotions":4932,"uncompressedBytes":17362944,"compressedBytes":3747769,"bytesPerOfferCompressed":"38.702229","shardSha256":"e9143a3afca88760e7d01281c902c9431813f977ff11379bdca4cb19009c9d49"},
+    {"regionId":"ar-w","displayName":"Corrientes","provinceCode":"AR-W","offers":196376,"stores":24,"productEvidenceRecords":65412,"validGtins":46992,"exactCrossRetailerGtins":10610,"promotions":27162,"uncompressedBytes":44167168,"compressedBytes":7883992,"bytesPerOfferCompressed":"40.147431","shardSha256":"f8a3734e931d5c076783db5b25f01da14ac835a10af4c3d64089861c17ff980b"},
+    {"regionId":"ar-x","displayName":"Córdoba","provinceCode":"AR-X","offers":670005,"stores":115,"productEvidenceRecords":83918,"validGtins":55145,"exactCrossRetailerGtins":13782,"promotions":23635,"uncompressedBytes":91750400,"compressedBytes":18121306,"bytesPerOfferCompressed":"27.046524","shardSha256":"0d341af2c61b4393bf4a11ea3b3241f80ea8cd246c44a644aaf5b350f476a6e5"},
+    {"regionId":"ar-y","displayName":"Jujuy","provinceCode":"AR-Y","offers":69765,"stores":6,"productEvidenceRecords":34358,"validGtins":31440,"exactCrossRetailerGtins":2724,"promotions":0,"uncompressedBytes":17600512,"compressedBytes":3013884,"bytesPerOfferCompressed":"43.200516","shardSha256":"c165994ddf2ebbabb147ea02570f98bd45678b4931c96ee7d0592dec7d0f630e"},
+    {"regionId":"ar-z","displayName":"Santa Cruz","provinceCode":"AR-Z","offers":187564,"stores":30,"productEvidenceRecords":29176,"validGtins":24433,"exactCrossRetailerGtins":4743,"promotions":8342,"uncompressedBytes":27791360,"compressedBytes":5867164,"bytesPerOfferCompressed":"31.280864","shardSha256":"41efedc9347fc66e632b3042ead3738f6dcba6fac51c6b8088f04dea44bd8e82"}
+  ],
+  "unpublishedProvinceEvidence": [
+    {"classification":"NONSTANDARD","value":"Buenos Aires","rows":2177},
+    {"classification":"UNKNOWN","value":null,"rows":66977}
+  ],
+  "totals": {
+    "inputAcceptedObservations": 14209151,
+    "selectedAcceptedObservations": 14139997,
+    "unpublishedProvinceRows": 69154,
+    "offers": 14139997,
+    "stores": 2537,
+    "productEvidenceRecords": 1447719,
+    "validGtins": 76177,
+    "exactCrossRetailerGtins": 19614,
+    "promotions": 1677262,
+    "compressedBytes": 389191063,
+    "uncompressedBytes": 1984999424
+  },
+  "cabaBeforeAfter": {
+    "oldCompressedBytes": 265250265,
+    "newCompressedBytes": 93949219,
+    "reductionBytes": 171301046,
+    "reductionPercent": "64.580914",
+    "sizeFactorOldOverNew": "2.823337"
+  },
+  "performance": {
+    "buildElapsedSecondsApprox": 2976,
+    "verificationElapsedSeconds": 177.406542,
+    "peakWorkingSetSampleBytes": 1679618048,
+    "scratchMeasurement": "Visible temporary SQLite pages peaked at approximately 1.6 GiB; the accepted input remained a separate ignored local input.",
+    "searchPreserved": true,
+    "searchQueriesCompared": 25,
+    "oldCabaSearchSeconds": 22.864497,
+    "mobileCabaSearchSecondsOpenConnection": 31.482375,
+    "offersByProductMilliseconds": 0.574230,
+    "offersByStoreMilliseconds": 10.560662,
+    "querySamples": 200
+  },
+  "auditCardinalityFix": {
+    "auditedRelevantProductEvidenceIdentities": 125,
+    "auditedRelevantIdentitiesCarryingValidGtin": 125,
+    "distinctValidGtinsRepresentedByAuditedRelevantIdentities": 124,
+    "distinctGtinsWithExactCrossRetailerAvailability": 73,
+    "distinctGtinsWithoutExactCrossRetailerAvailability": 51,
+    "identityAndDistinctGtinCardinalitiesKeptSeparate": true
+  },
+  "verification": {
+    "status": "GO",
+    "indexSha256": "8449a879442e5437e2f644af8a7aa447576f6435240424ed3c3ddabc815ba46a",
+    "atomicCompletion": true,
+    "foreignKeysChecked": true,
+    "deterministicTinyFixtureTests": true
+  },
+  "safety": {
+    "availability": "UNKNOWN",
+    "deliveryPickup": "NOT_PROVIDED",
+    "distance": "TRUSTED_COORDINATES_ONLY_NO_ROUTING",
+    "androidNetworking": "NOT_AUTHORIZED",
+    "rawProviderDataCommitted": false,
+    "rawOrGeneratedNationalDataInAndroidAssets": false,
+    "images": "OUT_OF_SCOPE",
+    "fuzzyMatching": false
+  },
+  "unresolvedLimitations": [
+    "Province values that are UNKNOWN or nonstandard remain explicitly unpublished; no locality/name inference was used.",
+    "SEPA publication is price evidence only; it does not establish live inventory, pickup, delivery, fees, ETA, or routing.",
+    "The mobile search projection preserves the existing finite 25-query logical results but is not a recall or universal category claim.",
+    "Only one release was qualified; delta-transfer performance was not measured.",
+    "National artifacts and accepted observations remain local ignored provider data; only code, tests, manifests, and this report are eligible for Git.",
+    "productionUiAuthorized remains false until a separate consumer-integration milestone."
+  ]
+}

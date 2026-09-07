@@ -61,10 +61,11 @@ This is a finite precision audit. It makes no recall, completeness, or universal
 
 ## Exact product-comparison readiness
 
-- Audited relevant product identities: **125**
-- With a valid GTIN: **125**
-- With the same valid GTIN in at least two commerce IDs inside CABA: **73**
-- Without an exact cross-retailer match: **51**
+- Audited relevant product-evidence identities: **125**
+- Relevant identities carrying a valid GTIN: **125**
+- Distinct valid GTINs represented by those identities: **124**
+- Distinct GTINs with the same value in at least two commerce IDs inside CABA: **73**
+- Distinct GTINs without an exact cross-retailer match: **51**
 
 This is exact evidence only; no fuzzy matching is used.
 

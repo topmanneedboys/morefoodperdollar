@@ -8,7 +8,10 @@ on:
       - 'tools/qualify_argentina_sepa.py'
       - 'tools/build_argentina_sepa_regional_snapshot.py'
       - 'tools/verify_argentina_sepa_regional_snapshot.py'
+      - 'tools/build_argentina_sepa_national_shards.py'
+      - 'tools/verify_argentina_sepa_national_shards.py'
       - 'tools/argentina_sepa_search.py'
+      - 'tools/argentina_sepa_mobile_search.py'
       - 'tools/audit_argentina_sepa_search.py'
       - 'tools/qualify_rakuten_product_catalog.py'
       - 'tools/measure_rakuten_off_quantity_coverage.py'
@@ -24,7 +27,10 @@ on:
       - 'tools/qualify_argentina_sepa.py'
       - 'tools/build_argentina_sepa_regional_snapshot.py'
       - 'tools/verify_argentina_sepa_regional_snapshot.py'
+      - 'tools/build_argentina_sepa_national_shards.py'
+      - 'tools/verify_argentina_sepa_national_shards.py'
       - 'tools/argentina_sepa_search.py'
+      - 'tools/argentina_sepa_mobile_search.py'
       - 'tools/audit_argentina_sepa_search.py'
       - 'tools/qualify_rakuten_product_catalog.py'
       - 'tools/measure_rakuten_off_quantity_coverage.py'
@@ -59,7 +65,10 @@ jobs:
           tools/qualify_argentina_sepa.py
           tools/build_argentina_sepa_regional_snapshot.py
           tools/verify_argentina_sepa_regional_snapshot.py
+          tools/build_argentina_sepa_national_shards.py
+          tools/verify_argentina_sepa_national_shards.py
           tools/argentina_sepa_search.py
+          tools/argentina_sepa_mobile_search.py
           tools/audit_argentina_sepa_search.py
           tools/qualify_rakuten_product_catalog.py
           tools/measure_rakuten_off_quantity_coverage.py

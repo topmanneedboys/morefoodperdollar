@@ -31,9 +31,6 @@ QUALIFIED_POLICY_VERSION = "argentina-sepa-policy-v1"
 REGIONAL_SCHEMA_VERSION = "argentina-sepa-regional-snapshot-v1"
 REGIONAL_POLICY_VERSION = "argentina-sepa-regional-policy-v1"
 PROVIDER_ID = "ARGENTINA_SEPA_PRECIOS_CLAROS"
-REGION_ID = "ar-caba"
-REGION_DISPLAY_NAME = "Ciudad Autónoma de Buenos Aires"
-REGION_PROVINCE_CODE = "AR-C"
 RELEASE_DATE = "2026-09-06"
 EXPECTED_OUTER_SHA256 = "e6c08be6a36e5e5b90e6eb0b6f54a07c8bccded929fab2a28ad7f000ed08b305"
 EXPECTED_OUTER_BYTES = 325522188
@@ -46,6 +43,64 @@ _DECIMAL_CHARS = frozenset("0123456789+-.eE")
 
 class RegionalSnapshotError(ValueError):
     """An input or generated regional artifact failed a deterministic gate."""
+
+
+@dataclass(frozen=True)
+class RegionSpec:
+    """One exact, publishable Argentina province selector."""
+
+    region_id: str
+    display_name: str
+    province_code: str
+
+
+# ISO 3166-2 Argentina province codes. A source value is publishable only
+# when it is an exact code in this registry; locality/name text is never used
+# to guess a region.
+ARGENTINA_REGIONS: tuple[RegionSpec, ...] = (
+    RegionSpec("ar-a", "Salta", "AR-A"),
+    RegionSpec("ar-b", "Buenos Aires", "AR-B"),
+    RegionSpec("ar-caba", "Ciudad Autónoma de Buenos Aires", "AR-C"),
+    RegionSpec("ar-d", "San Luis", "AR-D"),
+    RegionSpec("ar-e", "Entre Ríos", "AR-E"),
+    RegionSpec("ar-f", "La Rioja", "AR-F"),
+    RegionSpec("ar-g", "Santiago del Estero", "AR-G"),
+    RegionSpec("ar-h", "Chaco", "AR-H"),
+    RegionSpec("ar-j", "San Juan", "AR-J"),
+    RegionSpec("ar-k", "Catamarca", "AR-K"),
+    RegionSpec("ar-l", "La Pampa", "AR-L"),
+    RegionSpec("ar-m", "Mendoza", "AR-M"),
+    RegionSpec("ar-n", "Misiones", "AR-N"),
+    RegionSpec("ar-p", "Formosa", "AR-P"),
+    RegionSpec("ar-q", "Neuquén", "AR-Q"),
+    RegionSpec("ar-r", "Río Negro", "AR-R"),
+    RegionSpec("ar-s", "Santa Fe", "AR-S"),
+    RegionSpec("ar-t", "Tucumán", "AR-T"),
+    RegionSpec("ar-u", "Chubut", "AR-U"),
+    RegionSpec("ar-v", "Tierra del Fuego, Antártida e Islas del Atlántico Sur", "AR-V"),
+    RegionSpec("ar-w", "Corrientes", "AR-W"),
+    RegionSpec("ar-x", "Córdoba", "AR-X"),
+    RegionSpec("ar-y", "Jujuy", "AR-Y"),
+    RegionSpec("ar-z", "Santa Cruz", "AR-Z"),
+)
+REGIONS_BY_PROVINCE: dict[str, RegionSpec] = {
+    region.province_code: region for region in ARGENTINA_REGIONS
+}
+CABA_REGION = REGIONS_BY_PROVINCE["AR-C"]
+
+# Backwards-compatible defaults for the already-qualified CABA CLI/tests.
+REGION_ID = CABA_REGION.region_id
+REGION_DISPLAY_NAME = CABA_REGION.display_name
+REGION_PROVINCE_CODE = CABA_REGION.province_code
+
+
+def region_for_province(province_code: str) -> RegionSpec:
+    """Resolve one exact registered province code; never infer from names."""
+
+    region = REGIONS_BY_PROVINCE.get(province_code)
+    if region is None:
+        raise RegionalSnapshotError(f"Unsupported Argentina province code: {province_code}")
+    return region
 
 
 def _require(condition: bool, message: str) -> None:
@@ -400,7 +455,11 @@ def _product_fields(product: Mapping[str, Any], quantity: Any, quantity_status: 
     return fields
 
 
-def _validate_row(row: Mapping[str, Any], source: SourceProof) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], list[dict[str, Any]]]:
+def _validate_row(
+    row: Mapping[str, Any],
+    source: SourceProof,
+    region: RegionSpec = CABA_REGION,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], list[dict[str, Any]]]:
     _require(row.get("schema_version") == QUALIFIED_SCHEMA_VERSION, "Accepted row schema mismatch")
     _require(row.get("provider") == PROVIDER_ID, "Accepted row provider mismatch")
     source_data = row.get("source")
@@ -411,7 +470,7 @@ def _validate_row(row: Mapping[str, Any], source: SourceProof) -> tuple[dict[str
     _require(source_data.get("outer_sha256") == source.outer_sha256, "Accepted row outer source mismatch")
     _require(source_data.get("release_date") == source.release_date, "Accepted row release mismatch")
     _require(row.get("quantity_status") in {"KNOWN", "UNKNOWN"}, "Accepted row quantity status is invalid")
-    _require(store.get("province") == REGION_PROVINCE_CODE, "Non-CABA row reached regional selector")
+    _require(store.get("province") == region.province_code, "Row reached the wrong regional selector")
     _validate_store_evidence(store)
     commerce_id = _text(source_data.get("commerce_id"), "source.commerce_id", max_length=64)
     banner_id = _text(source_data.get("banner_id"), "source.banner_id", max_length=64)
@@ -684,11 +743,17 @@ def _write_promotion_records(connection: sqlite3.Connection, path: Path) -> dict
     return descriptor
 
 
-def _write_release(path: Path, proof: SourceProof, generated_at: str, package_hashes: list[str]) -> dict[str, Any]:
+def _write_release(
+    path: Path,
+    proof: SourceProof,
+    generated_at: str,
+    package_hashes: list[str],
+    region: RegionSpec = CABA_REGION,
+) -> dict[str, Any]:
     release = {
         "artifactSchemaVersion": REGIONAL_SCHEMA_VERSION,
         "policyVersion": REGIONAL_POLICY_VERSION,
-        "region": {"id": REGION_ID, "displayName": REGION_DISPLAY_NAME, "selector": {"field": "store.province", "operator": "EXACT", "value": REGION_PROVINCE_CODE}},
+        "region": {"id": region.region_id, "displayName": region.display_name, "selector": {"field": "store.province", "operator": "EXACT", "value": region.province_code}},
         "source": {
             "provider": PROVIDER_ID,
             "releaseDate": proof.release_date,
@@ -730,8 +795,9 @@ def build_regional_snapshot(
     expected_outer_bytes: int = EXPECTED_OUTER_BYTES,
     expected_release_date: str = RELEASE_DATE,
     qualification_report_path: Path | None = None,
+    region: RegionSpec = CABA_REGION,
 ) -> dict[str, Any]:
-    """Build one complete CABA artifact and return its manifest."""
+    """Build one complete exact-province artifact and return its manifest."""
 
     generated_at = _canonical_timestamp(generated_at, "generated_at")
     proof = verify_qualified_source(
@@ -775,13 +841,13 @@ def build_regional_snapshot(
                 if not isinstance(raw, dict):
                     raise RegionalSnapshotError(f"Accepted source line {line_number} is not an object")
                 store = raw.get("store")
-                if not isinstance(store, dict) or store.get("province") != REGION_PROVINCE_CODE:
+                if not isinstance(store, dict) or store.get("province") != region.province_code:
                     continue
                 try:
-                    store_record, product_record, offer_record, promotions = _validate_row(raw, proof)
+                    store_record, product_record, offer_record, promotions = _validate_row(raw, proof, region)
                     _insert_row(connection, store_record, product_record, offer_record, promotions)
                 except (RegionalSnapshotError, TypeError, ValueError) as exc:
-                    raise RegionalSnapshotError(f"CABA row {line_number} failed validation: {exc}") from exc
+                    raise RegionalSnapshotError(f"{region.region_id} row {line_number} failed validation: {exc}") from exc
                 selected_rows += 1
                 package_hashes.add(offer_record["package_sha256"])
                 if selected_rows % 10_000 == 0:
@@ -789,7 +855,7 @@ def build_regional_snapshot(
         connection.commit()
         _require(input_rows == proof.accepted_rows, f"Accepted row count mismatch: read {input_rows}, manifest {proof.accepted_rows}")
         file_descriptors: dict[str, Any] = {}
-        file_descriptors["release.json"] = _write_release(partial / "release.json", proof, generated_at, sorted(package_hashes))
+        file_descriptors["release.json"] = _write_release(partial / "release.json", proof, generated_at, sorted(package_hashes), region)
         file_descriptors["stores.jsonl.gz"] = _write_store_records(connection, partial / "stores.jsonl.gz")
         product_descriptor, product_count, valid_gtin_count = _write_product_records(connection, partial / "products.jsonl.gz")
         file_descriptors["products.jsonl.gz"] = product_descriptor
@@ -811,7 +877,7 @@ def build_regional_snapshot(
             "policyVersion": REGIONAL_POLICY_VERSION,
             "atomicCompletion": True,
             "completionState": "COMPLETE",
-            "region": {"id": REGION_ID, "displayName": REGION_DISPLAY_NAME, "selector": {"field": "store.province", "operator": "EXACT", "value": REGION_PROVINCE_CODE}},
+            "region": {"id": region.region_id, "displayName": region.display_name, "selector": {"field": "store.province", "operator": "EXACT", "value": region.province_code}},
             "generatedAt": generated_at,
             "source": {
                 "provider": PROVIDER_ID,
@@ -829,7 +895,7 @@ def build_regional_snapshot(
                 "attribution": proof.attribution,
                 "rawProviderDataCommitted": False,
             },
-            "regionSelector": {"provinceCode": REGION_PROVINCE_CODE, "matching": "EXACT_NORMALIZED_SOURCE_FIELD"},
+            "regionSelector": {"provinceCode": region.province_code, "matching": "EXACT_NORMALIZED_SOURCE_FIELD"},
             "counts": {
                 "inputAcceptedObservations": input_rows,
                 "selectedAcceptedObservations": selected_rows,
@@ -904,8 +970,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--expected-outer-sha256", default=EXPECTED_OUTER_SHA256)
     parser.add_argument("--expected-outer-bytes", default=EXPECTED_OUTER_BYTES, type=int)
     parser.add_argument("--expected-release-date", default=RELEASE_DATE)
+    parser.add_argument(
+        "--province-code",
+        default=REGION_PROVINCE_CODE,
+        help="Exact registered Argentina province code (default: AR-C)",
+    )
     args = parser.parse_args(argv)
     try:
+        region = region_for_province(args.province_code)
         manifest = build_regional_snapshot(
             args.accepted,
             args.source_manifest,
@@ -915,11 +987,12 @@ def main(argv: list[str] | None = None) -> int:
             expected_outer_bytes=args.expected_outer_bytes,
             expected_release_date=args.expected_release_date,
             qualification_report_path=args.qualification_report,
+            region=region,
         )
     except (RegionalSnapshotError, OSError, sqlite3.Error) as exc:
         print(f"regional snapshot build failed: {exc}", file=__import__("sys").stderr)
         return 2
-    print(json.dumps({"regionId": REGION_ID, "offers": manifest["counts"]["offers"], "path": str(args.output_dir)}, sort_keys=True))
+    print(json.dumps({"regionId": region.region_id, "offers": manifest["counts"]["offers"], "path": str(args.output_dir)}, sort_keys=True))
     return 0
 
 

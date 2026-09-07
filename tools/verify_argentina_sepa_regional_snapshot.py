@@ -21,8 +21,11 @@ try:
         EXPECTED_OUTER_BYTES,
         QUALIFIED_POLICY_VERSION,
         QUALIFIED_SCHEMA_VERSION,
+        CABA_REGION,
+        RegionSpec,
         REGION_ID,
         REGION_PROVINCE_CODE,
+        region_for_province,
         REGIONAL_POLICY_VERSION,
         REGIONAL_SCHEMA_VERSION,
         RegionalSnapshotError,
@@ -40,8 +43,11 @@ except ModuleNotFoundError:  # direct ``python tools/verify_...py`` invocation
         EXPECTED_OUTER_BYTES,
         QUALIFIED_POLICY_VERSION,
         QUALIFIED_SCHEMA_VERSION,
+        CABA_REGION,
+        RegionSpec,
         REGION_ID,
         REGION_PROVINCE_CODE,
+        region_for_province,
         REGIONAL_POLICY_VERSION,
         REGIONAL_SCHEMA_VERSION,
         RegionalSnapshotError,
@@ -127,14 +133,14 @@ def _iter_records(path: Path, descriptor: Mapping[str, Any], label: str) -> Iter
     _require(uncompressed_hash.hexdigest() == descriptor["uncompressedSha256"], f"{label} uncompressed hash mismatch")
 
 
-def _validate_store(record: Mapping[str, Any], line: int) -> None:
+def _validate_store(record: Mapping[str, Any], line: int, region: RegionSpec) -> None:
     required = {
         "storeKey", "commerceId", "bannerId", "storeId", "name", "type", "address",
         "locality", "province", "latitude", "longitude", "geoStatus", "metadataStatus",
     }
     _require(set(record) <= required | {"metadataVariants"} and required <= set(record), f"stores line {line} schema is invalid")
     _require(record["storeKey"] == f"ar-sepa-store:{record['commerceId']}:{record['bannerId']}:{record['storeId']}", f"stores line {line} key is invalid")
-    _require(record["province"] == REGION_PROVINCE_CODE, f"stores line {line} is outside exact AR-C selector")
+    _require(record["province"] == region.province_code, f"stores line {line} is outside the exact regional selector")
     _require(record["geoStatus"] in {"VALID", "GEO_INCOMPLETE", "GEO_CONFLICTING"}, f"stores line {line} geo status is invalid")
     address = record["address"]
     _require(isinstance(address, dict) and set(address) == {"street", "number", "postalCode"}, f"stores line {line} address is invalid")
@@ -178,7 +184,7 @@ def _validate_product(record: Mapping[str, Any], line: int) -> None:
         _validate_money(quantity["value"], f"products line {line} quantity", nullable=False)
 
 
-def _validate_offer(record: Mapping[str, Any], line: int) -> None:
+def _validate_offer(record: Mapping[str, Any], line: int, expected_release_date: str) -> None:
     required = {
         "offerKey", "storeKey", "productEvidenceKey", "listPrice", "referencePrice", "releaseDate",
         "providerUpdateTime", "freshnessStatus", "packageProvenanceSha256", "sourceRow", "availability",
@@ -187,7 +193,7 @@ def _validate_offer(record: Mapping[str, Any], line: int) -> None:
     price = record["listPrice"]
     _require(isinstance(price, dict) and set(price) == {"amount", "currency"} and price["currency"] == CURRENCY, f"offers line {line} money schema is invalid")
     _validate_money(price["amount"], f"offers line {line} list price")
-    _require(record["releaseDate"] == "2026-09-06" and record["freshnessStatus"] == "FRESH", f"offers line {line} freshness is invalid")
+    _require(record["releaseDate"] == expected_release_date and record["freshnessStatus"] == "FRESH", f"offers line {line} freshness is invalid")
     _require(record["availability"] == AVAILABILITY, f"offers line {line} availability is not UNKNOWN")
     _require(isinstance(record["sourceRow"], int) and record["sourceRow"] > 0, f"offers line {line} source row is invalid")
     _require(isinstance(record["packageProvenanceSha256"], str) and len(record["packageProvenanceSha256"]) == 64 and all(char in "0123456789abcdef" for char in record["packageProvenanceSha256"]), f"offers line {line} package provenance is invalid")
@@ -214,15 +220,23 @@ def _validate_promotion(record: Mapping[str, Any], line: int) -> None:
         _validate_money(price["amount"], f"promotions line {line} price")
 
 
-def verify_snapshot(snapshot_dir: Path, *, expected_outer_sha256: str = EXPECTED_OUTER_SHA256, expected_outer_bytes: int = EXPECTED_OUTER_BYTES, expected_release_date: str = "2026-09-06") -> dict[str, Any]:
+def verify_snapshot(
+    snapshot_dir: Path,
+    *,
+    expected_outer_sha256: str = EXPECTED_OUTER_SHA256,
+    expected_outer_bytes: int = EXPECTED_OUTER_BYTES,
+    expected_release_date: str = "2026-09-06",
+    region: RegionSpec = CABA_REGION,
+) -> dict[str, Any]:
     snapshot_dir = snapshot_dir.resolve()
     _require(snapshot_dir.is_dir(), f"Missing snapshot directory: {snapshot_dir}")
     manifest = _read_canonical_json(snapshot_dir / "manifest.json", "manifest.json")
     _require(manifest.get("artifactSchemaVersion") == REGIONAL_SCHEMA_VERSION, "Regional schema version is invalid")
     _require(manifest.get("policyVersion") == REGIONAL_POLICY_VERSION, "Regional policy version is invalid")
     _require(manifest.get("atomicCompletion") is True and manifest.get("completionState") == "COMPLETE", "Regional artifact is incomplete")
-    _require(manifest.get("region") == {"id": REGION_ID, "displayName": "Ciudad Autónoma de Buenos Aires", "selector": {"field": "store.province", "operator": "EXACT", "value": REGION_PROVINCE_CODE}}, "Region selector is not exact AR-C")
-    _require(manifest.get("regionSelector") == {"matching": "EXACT_NORMALIZED_SOURCE_FIELD", "provinceCode": REGION_PROVINCE_CODE}, "Region selector metadata is invalid")
+    expected_region = {"id": region.region_id, "displayName": region.display_name, "selector": {"field": "store.province", "operator": "EXACT", "value": region.province_code}}
+    _require(manifest.get("region") == expected_region, "Region selector is not the requested exact province")
+    _require(manifest.get("regionSelector") == {"matching": "EXACT_NORMALIZED_SOURCE_FIELD", "provinceCode": region.province_code}, "Region selector metadata is invalid")
     _require(manifest.get("generatedAt") and isinstance(manifest["generatedAt"], str), "Generated timestamp is missing")
     _require(manifest["generatedAt"] == _canonical_timestamp(manifest["generatedAt"], "manifest.generatedAt"), "Generated timestamp is not canonical")
     source = manifest.get("source")
@@ -261,7 +275,7 @@ def verify_snapshot(snapshot_dir: Path, *, expected_outer_sha256: str = EXPECTED
     previous_store = previous_product = previous_offer = previous_promotion = None
     try:
         for _, _, record in _iter_records(snapshot_dir / "stores.jsonl.gz", files["stores.jsonl.gz"], "stores"):
-            _validate_store(record, store_count + 1)
+            _validate_store(record, store_count + 1, region)
             key = record["storeKey"]
             _require(previous_store is None or key > previous_store, "Stores are not stably ordered or are duplicated")
             previous_store = key
@@ -275,7 +289,7 @@ def verify_snapshot(snapshot_dir: Path, *, expected_outer_sha256: str = EXPECTED
             _require(db.execute("INSERT OR IGNORE INTO products(k,commerce,gtin) VALUES(?,?,?)", (key, record["commerceId"], record["gtin"])).rowcount == 1, f"Duplicate product key: {key}")
             product_count += 1
         for _, _, record in _iter_records(snapshot_dir / "offers.jsonl.gz", files["offers.jsonl.gz"], "offers"):
-            _validate_offer(record, offer_count + 1)
+            _validate_offer(record, offer_count + 1, expected_release_date)
             _require(db.execute("SELECT 1 FROM stores WHERE k=?", (record["storeKey"],)).fetchone() is not None, f"Offer references missing store: {record['storeKey']}")
             _require(db.execute("SELECT 1 FROM products WHERE k=?", (record["productEvidenceKey"],)).fetchone() is not None, f"Offer references missing product: {record['productEvidenceKey']}")
             key = record["offerKey"]
@@ -310,7 +324,7 @@ def verify_snapshot(snapshot_dir: Path, *, expected_outer_sha256: str = EXPECTED
     _require(size.get("inputAcceptedGzipBytes") == source.get("acceptedObservationsBytes"), "Manifest input size is invalid")
     _require(size.get("inputNormalizedUncompressedBytes") is None or (isinstance(size.get("inputNormalizedUncompressedBytes"), int) and size["inputNormalizedUncompressedBytes"] > 0), "Manifest normalized input size is invalid")
     _require(size.get("bytesPerOfferUncompressed") == format(Decimal(size["compactUncompressedBytes"]) / Decimal(max(offer_count, 1)), ".6f"), "Manifest bytes-per-offer metric is invalid")
-    result = {"regionId": REGION_ID, "stores": store_count, "products": product_count, "offers": offer_count, "promotions": promotion_count, "manifestSha256": manifest_hash}
+    result = {"regionId": region.region_id, "stores": store_count, "products": product_count, "offers": offer_count, "promotions": promotion_count, "manifestSha256": manifest_hash}
     db.close()
     return result
 
@@ -319,10 +333,18 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--snapshot", required=True, type=Path)
     parser.add_argument("--expected-outer-sha256", default=EXPECTED_OUTER_SHA256)
+    parser.add_argument("--expected-outer-bytes", default=EXPECTED_OUTER_BYTES, type=int)
     parser.add_argument("--expected-release-date", default="2026-09-06")
+    parser.add_argument("--province-code", default=REGION_PROVINCE_CODE)
     args = parser.parse_args(argv)
     try:
-        result = verify_snapshot(args.snapshot, expected_outer_sha256=args.expected_outer_sha256, expected_release_date=args.expected_release_date)
+        result = verify_snapshot(
+            args.snapshot,
+            expected_outer_sha256=args.expected_outer_sha256,
+            expected_outer_bytes=args.expected_outer_bytes,
+            expected_release_date=args.expected_release_date,
+            region=region_for_province(args.province_code),
+        )
     except (RegionalSnapshotError, OSError, sqlite3.Error, InvalidOperation, json.JSONDecodeError) as exc:
         print(f"regional snapshot verification failed: {exc}", file=__import__("sys").stderr)
         return 2

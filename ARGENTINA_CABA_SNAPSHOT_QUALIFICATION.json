@@ -1,9 +1,10 @@
 {
   "exactProductComparisonReadiness": {
-    "auditedRelevantProducts": 125,
-    "auditedRelevantWithExactCrossRetailerGtin": 73,
-    "auditedRelevantWithValidGtin": 125,
-    "auditedRelevantWithoutExactCrossRetailerGtin": 51,
+    "auditedRelevantProductEvidenceIdentities": 125,
+    "auditedRelevantIdentitiesCarryingValidGtin": 125,
+    "distinctValidGtinsRepresentedByAuditedRelevantIdentities": 124,
+    "distinctGtinsWithExactCrossRetailerAvailability": 73,
+    "distinctGtinsWithoutExactCrossRetailerAvailability": 51,
     "fuzzyMatchingUsed": false
   },
   "productionUiAuthorized": false,
@@ -77,7 +78,7 @@
   },
   "reportSchemaVersion": "argentina-caba-snapshot-qualification-v1",
   "searchAudit": {
-    "fixtureSha256": "881da2da4b2ad05cec42f6542ad1f2b292960474059a6b35e69ee6879863bb25",
+    "fixtureSha256": "658b9b032209384c3e2e7b59da197e3a085c50e627ca962663e22127fa22d4fa",
     "hardNegativeFixtureRows": 75,
     "insufficientAuditedPositives": [],
     "knownFalsePositiveRegressionClasses": [

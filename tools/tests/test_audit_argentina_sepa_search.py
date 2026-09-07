@@ -42,8 +42,38 @@ class ArgentinaSepaSearchAuditTest(unittest.TestCase):
             result = audit_search(products, fixture)
             self.assertEqual(result["status"], "SEARCH_NOT_YET_QUALIFIED")
             self.assertEqual(result["queryCount"], 1)
-            self.assertEqual(result["auditedRelevantWithExactCrossRetailerGtin"], 1)
+            self.assertEqual(result["auditedRelevantProductEvidenceIdentities"], 1)
+            self.assertEqual(result["auditedRelevantIdentitiesCarryingValidGtin"], 1)
+            self.assertEqual(result["distinctValidGtinsRepresentedByAuditedRelevantIdentities"], 1)
+            self.assertEqual(result["distinctGtinsWithExactCrossRetailerAvailability"], 1)
+            self.assertEqual(result["distinctGtinsWithoutExactCrossRetailerAvailability"], 0)
             self.assertEqual(result["unreviewedTopK"], [{"name": "LECHE ENTERA", "productEvidenceKey": "ar-sepa-product:2:7790070318398", "query": "leche"}])
+
+    def test_identity_and_distinct_gtin_metrics_do_not_mix_cardinalities(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            products = root / "products.jsonl.gz"
+            fixture = root / "fixture.json"
+            self._write_products(products)
+            # Two relevant product-evidence identities carry one shared GTIN;
+            # the audit must report both identities but one distinct GTIN.
+            fixture_data = {
+                "schemaVersion": "argentina-sepa-search-audit-fixture-v1",
+                "regionId": "ar-caba",
+                "source": {"provider": "ARGENTINA_SEPA_PRECIOS_CLAROS", "releaseDate": "2026-09-06", "outerSha256": "e6c08be6a36e5e5b90e6eb0b6f54a07c8bccded929fab2a28ad7f000ed08b305"},
+                "queries": [{"query": "leche", "candidates": [
+                    {"productEvidenceKey": "ar-sepa-product:1:7790070318398", "name": "LECHE ENTERA", "brand": "FIXTURE", "gtin": "7790070318398", "relevant": True, "rationale": "Exact fixture milk."},
+                    {"productEvidenceKey": "ar-sepa-product:2:7790070318398", "name": "LECHE ENTERA", "brand": "FIXTURE", "gtin": "7790070318398", "relevant": True, "rationale": "Same exact GTIN at another commerce."},
+                    {"productEvidenceKey": "ar-sepa-product:1:12345", "name": "CHOCOLATE CON LECHE", "brand": "FIXTURE", "gtin": None, "relevant": False, "rationale": "Confection wording."},
+                ]}],
+            }
+            fixture.write_text(json.dumps(fixture_data, ensure_ascii=False, sort_keys=True), encoding="utf-8")
+            result = audit_search(products, fixture)
+            self.assertEqual(result["auditedRelevantProductEvidenceIdentities"], 2)
+            self.assertEqual(result["auditedRelevantIdentitiesCarryingValidGtin"], 2)
+            self.assertEqual(result["distinctValidGtinsRepresentedByAuditedRelevantIdentities"], 1)
+            self.assertEqual(result["distinctGtinsWithExactCrossRetailerAvailability"], 1)
+            self.assertEqual(result["distinctGtinsWithoutExactCrossRetailerAvailability"], 0)
 
     def test_fixture_must_match_source_product_identity(self):
         with tempfile.TemporaryDirectory() as temp:

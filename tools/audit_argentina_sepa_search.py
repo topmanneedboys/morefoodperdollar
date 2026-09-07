@@ -127,19 +127,32 @@ def audit_search(products_path: Path, fixture_path: Path) -> dict[str, Any]:
         "yogur-con-cereal",
     ]
     audited_relevant_keys = {row["productEvidenceKey"] for row in rows if row["relevant"]}
-    audited_gtin_by_key = {row["productEvidenceKey"]: row.get("gtin") for row in rows if row["relevant"] and isinstance(row.get("gtin"), str) and _valid_gtin(row["gtin"])}
-    result["auditedRelevantProducts"] = len(audited_relevant_keys)
-    result["auditedRelevantWithValidGtin"] = len(audited_gtin_by_key)
+    # Product-evidence identity and GTIN are deliberately separate metrics.
+    # The source product table is authoritative for the GTIN; the fixture's
+    # optional GTIN field was already checked against it above.
+    audited_relevant_gtins = {
+        products_by_key[key].get("gtin")
+        for key in audited_relevant_keys
+        if isinstance(products_by_key[key].get("gtin"), str)
+        and _valid_gtin(products_by_key[key]["gtin"])
+    }
     gtin_commerce: dict[str, set[str]] = {}
     for product in products:
         gtin = product.get("gtin")
         commerce = product.get("commerceId")
         if isinstance(gtin, str) and gtin and isinstance(commerce, str):
             gtin_commerce.setdefault(gtin, set()).add(commerce)
-    audited_gtins = set(audited_gtin_by_key.values())
-    exact = sorted(gtin for gtin in audited_gtins if len(gtin_commerce.get(gtin, set())) >= 2)
-    result["auditedRelevantWithExactCrossRetailerGtin"] = len(exact)
-    result["auditedRelevantWithoutExactCrossRetailerGtin"] = len(audited_gtins) - len(exact)
+    exact = sorted(gtin for gtin in audited_relevant_gtins if len(gtin_commerce.get(gtin, set())) >= 2)
+    result["auditedRelevantProductEvidenceIdentities"] = len(audited_relevant_keys)
+    result["auditedRelevantIdentitiesCarryingValidGtin"] = sum(
+        1
+        for key in audited_relevant_keys
+        if isinstance(products_by_key[key].get("gtin"), str)
+        and _valid_gtin(products_by_key[key]["gtin"])
+    )
+    result["distinctValidGtinsRepresentedByAuditedRelevantIdentities"] = len(audited_relevant_gtins)
+    result["distinctGtinsWithExactCrossRetailerAvailability"] = len(exact)
+    result["distinctGtinsWithoutExactCrossRetailerAvailability"] = len(audited_relevant_gtins) - len(exact)
     result["exactCrossRetailerGtins"] = exact
     result["fixtureSha256"] = __import__("hashlib").sha256(fixture_path.read_bytes()).hexdigest()
     return result
@@ -153,8 +166,11 @@ def _markdown(result: Mapping[str, Any]) -> str:
         "",
         f"Queries audited: **{result['queryCount']}**",
         f"Overall precision@5: **{result['overallPrecisionAt5']}**",
-        f"Audited relevant products: **{result['auditedRelevantProducts']}**",
-        f"Relevant products with exact cross-retailer GTIN: **{result['auditedRelevantWithExactCrossRetailerGtin']}**",
+        f"Audited relevant product-evidence identities: **{result['auditedRelevantProductEvidenceIdentities']}**",
+        f"Relevant identities carrying valid GTIN: **{result['auditedRelevantIdentitiesCarryingValidGtin']}**",
+        f"Distinct valid GTINs represented: **{result['distinctValidGtinsRepresentedByAuditedRelevantIdentities']}**",
+        f"Distinct GTINs with exact cross-retailer availability: **{result['distinctGtinsWithExactCrossRetailerAvailability']}**",
+        f"Distinct GTINs without exact cross-retailer availability: **{result['distinctGtinsWithoutExactCrossRetailerAvailability']}**",
         "",
         "This finite fixture measures precision only; it makes no recall or universal-category claim.",
         "",
