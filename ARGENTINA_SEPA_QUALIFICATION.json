@@ -1,94 +1,1090 @@
 {
-  "status": "BLOCKED_OFFICIAL_SOURCE_UNRETRIEVABLE",
-  "recommendation": "NO-GO_FOR_PRODUCTION_QUALIFICATION / BLOCKED_BY_ACCESS",
-  "evaluatedAt": "2026-09-07T02:34:00Z",
-  "baseline": "3c7b9cab9c2de693f983cf1c8e3365f386845e26",
-  "scope": "Current official Argentine SEPA / Precios Claros retail release qualification only; no integration.",
-  "officialSources": [
-    {
-      "name": "Argentina Precios SEPA landing page",
-      "url": "https://www.argentina.gob.ar/economia/industria-y-comercio/defensadelconsumidor/precios-sepa"
-    },
-    {
-      "name": "Official production dataset page",
-      "url": "https://datos.produccion.gob.ar/dataset/sepa-precios"
-    },
-    {
-      "name": "Precios Claros official data site",
-      "url": "https://www.preciosclaros.gob.ar/index.html"
-    },
-    {
-      "name": "Resolution 678/2020 Annex II technical specification",
-      "url": "https://www.argentina.gob.ar/normativa/345335_res678-2_pdf/archivo"
-    }
-  ],
-  "retrievalAttempts": [
-    {
-      "url": "https://datos.produccion.gob.ar/api/3/action/package_show?id=sepa-precios",
-      "method": "GET",
-      "status": 403,
-      "barrier": "BunkerWeb",
-      "requestId": "4aa9a3137cd54a7e94dc3be3e193577b",
-      "observedAt": "2026-09-07T02:32:24Z"
-    },
-    {
-      "url": "https://datos.produccion.gob.ar/dataset/sepa-precios",
-      "method": "GET",
-      "status": 403,
-      "barrier": "BunkerWeb"
-    },
-    {
-      "url": "https://datos.produccion.gob.ar/dataset/sepa-precios/resource/9dc06241-cc83-44f4-8e25-c9b1636b8bc8/download",
-      "method": "GET",
-      "status": 403,
-      "barrier": "BunkerWeb",
-      "note": "Search-indexed example UUID only; not accepted as current-release evidence."
-    },
-    {
-      "url": "https://datos.produccion.gob.ar/dataset/sepa-precios",
-      "method": "GET",
-      "surface": "in-app browser",
-      "status": 403,
-      "barrier": "BunkerWeb",
-      "requestId": "e9ea8898870d53fba5b615f514840235",
-      "observedAt": "2026-09-07T02:33:39Z"
-    }
-  ],
-  "downloadedFiles": [],
-  "measurements": {
-    "currentRelease": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE",
-    "schema": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE",
-    "scale": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE",
-    "identity": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE",
-    "quantity": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE",
-    "price": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE",
-    "freshness": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE",
-    "geography": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE",
-    "sampleAudit": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE",
-    "basketFeasibility": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE",
-    "storage": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE",
-    "deliveryPickup": "NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE"
-  },
-  "sourceContextNotQualification": {
-    "officialPageFacts": [
-      "Daily point-of-sale price information supplied by merchants",
-      "More than 70,000 products described on the official site",
-      "Retail list price and up to two promotions; some promotions may be targeted"
+  "basket_feasibility": {
+    "categories": [
+      "milk",
+      "eggs",
+      "bread",
+      "rice",
+      "pasta",
+      "cooking oil",
+      "chicken/meat",
+      "fruit/vegetables",
+      "canned goods",
+      "beverages",
+      "cleaning/basic household"
     ],
-    "indexedPortalMetadata": [
-      "Daily ZIP resources",
-      "Approximately 12 million daily records",
-      "Creative Commons Attribution 4.0 metadata claim"
+    "category_or_substitute_comparison": "NOT_MEASURED",
+    "exact_product_comparison": "NOT_MEASURED",
+    "reason": "No structured category field; keyword-only semantic selection is explicitly disallowed for a launch claim.",
+    "scenario_count": 25,
+    "status": "NOT_YET_QUALIFIED"
+  },
+  "blockers": [
+    "No row-level product observation timestamp is present; freshness is package-level provenance only.",
+    "Availability is UNKNOWN; SEPA price publication does not prove stock, pickup, or delivery.",
+    "Semantic 25-basket coverage is not qualified because the schema has no category field and keyword-only matching is unsafe.",
+    "Retailer marks, logos, images, and any rights beyond the catalog licence remain outside this ingestion and require separate confirmation."
+  ],
+  "delivery_pickup": {
+    "delivery": "NOT_PROVIDED",
+    "delivery_fee": "NOT_PROVIDED",
+    "delivery_slot": "NOT_PROVIDED",
+    "eta": "NOT_PROVIDED",
+    "fulfilment_hours": "NOT_PROVIDED",
+    "minimum_order": "NOT_PROVIDED",
+    "online_orderability": "NOT_PROVIDED",
+    "pickup": "NOT_PROVIDED",
+    "pickup_readiness": "NOT_PROVIDED",
+    "service_area": "NOT_PROVIDED",
+    "service_fee": "NOT_PROVIDED",
+    "v1_boundary": "IN_STORE_ONLY"
+  },
+  "diagnostics": {
+    "counts": {
+      "accepted_current_price_rows": 14209151,
+      "apparent_ean_flag_rows": 14139588,
+      "conflicting_gtin_identity_scopes": 20308,
+      "conflicting_product_id_scopes": 20308,
+      "duplicate_gtin_rows": 14194619,
+      "duplicate_provider_product_id_rows": 14234578,
+      "fresh_provider_update_rows": 26,
+      "gtin_valid_rows": 14272803,
+      "invalid_required_price_rows": 56,
+      "missing_provider_update_rows": 0,
+      "positive_list_price_rows": 14313193,
+      "price_over_ars_10000000_rows": 9,
+      "price_under_ars_10_rows": 8024,
+      "product_id_present_rows": 14313249,
+      "promotion_bearing_rows": 1640544,
+      "quantity_explicit_rows": 14313249,
+      "quantity_invalid_value_rows": 1752,
+      "quantity_missing_evidence_rows": 0,
+      "quantity_numeric_structured_rows": 14311497,
+      "quantity_parseable_rows": 13915328,
+      "quantity_unknown_rows": 397921,
+      "quantity_unknown_unit_rows": 396169,
+      "quarantine_EMPTY_PROVIDER_PACKAGE": 1,
+      "quarantine_GEO_OUT_OF_BOUNDS": 2846,
+      "quarantine_INVALID_REQUIRED_PRICE": 56,
+      "quarantine_MALFORMED_ROW": 28,
+      "quarantine_PRICE_PLAUSIBILITY_REVIEW": 7960,
+      "quarantine_STALE_PROVIDER_PACKAGE": 19272,
+      "quarantine_UNKNOWN_STORE_REFERENCE": 73964,
+      "retailer_specific_only_rows": 40446,
+      "rows_scanned": 14313249,
+      "unit_value_ready_rows": 13812758,
+      "unknown_store_reference_rows": 73964,
+      "zero_or_negative_price_rows": 56
+    },
+    "package_status_counts": {
+      "EMPTY_PROVIDER_PACKAGE": 1,
+      "VALID": 14
+    },
+    "warnings": {}
+  },
+  "freshness": {
+    "age_buckets": {
+      "0_to_2_days": 3,
+      "future_or_same_release_day": 10,
+      "over_30_days": 1
+    },
+    "package_status_counts": {
+      "FRESH": 13,
+      "STALE": 1
+    },
+    "packages": [
+      {
+        "accepted_rows": 3577982,
+        "age_days_from_release_start": "-0.48",
+        "bytes": 132490336,
+        "commerce_rows": 4,
+        "diagnostics": {
+          "MALFORMED_STORE_ROW": 1
+        },
+        "freshness_status": "FRESH",
+        "inner_uncompressed_bytes": 405833724,
+        "malformed_rows": 2,
+        "name": "2026-09-06/sepa_2_comercio-sepa-10_2026-09-06_01-05-07.zip",
+        "package_update_time": "2026-09-06T11:30:02+00:00",
+        "product_rows": 3580969,
+        "quarantined_rows": 2987,
+        "sha256": "116433d1f8db9a54fd2e9ba0151eacecf5bd2c520af26207e31ad579d5920c05",
+        "status": "VALID",
+        "store_rows": 730
+      },
+      {
+        "accepted_rows": 1291973,
+        "age_days_from_release_start": "-0.34",
+        "bytes": 7099999,
+        "commerce_rows": 3,
+        "diagnostics": {
+          "MALFORMED_STORE_ROW": 1
+        },
+        "freshness_status": "FRESH",
+        "inner_uncompressed_bytes": 150562897,
+        "malformed_rows": 2,
+        "name": "2026-09-06/sepa_1_comercio-sepa-9_2026-09-06_09-05-10.zip",
+        "package_update_time": "2026-09-06T08:03:13+00:00",
+        "product_rows": 1292036,
+        "quarantined_rows": 63,
+        "sha256": "eed8b19b01c51e511262ff9172f54edb576aa59d166dc99368b995fd4e424e17",
+        "status": "VALID",
+        "store_rows": 256
+      },
+      {
+        "accepted_rows": 1051326,
+        "age_days_from_release_start": "-0.17",
+        "bytes": 8654316,
+        "commerce_rows": 1,
+        "diagnostics": {
+          "MALFORMED_STORE_ROW": 1
+        },
+        "freshness_status": "FRESH",
+        "inner_uncompressed_bytes": 114458118,
+        "malformed_rows": 2,
+        "name": "2026-09-06/sepa_1_comercio-sepa-12_2026-09-06_09-05-10.zip",
+        "package_update_time": "2026-09-06T04:09:29+00:00",
+        "product_rows": 1051350,
+        "quarantined_rows": 24,
+        "sha256": "d770627ab014362377f3d81a16f40894579b81e0eaa1687a28936f2effe671cd",
+        "status": "VALID",
+        "store_rows": 122
+      },
+      {
+        "accepted_rows": 75467,
+        "age_days_from_release_start": "0.67",
+        "bytes": 1819586,
+        "commerce_rows": 1,
+        "diagnostics": {
+          "MALFORMED_STORE_ROW": 1
+        },
+        "freshness_status": "FRESH",
+        "inner_uncompressed_bytes": 6998929,
+        "malformed_rows": 2,
+        "name": "2026-09-06/sepa_1_comercio-sepa-21_2026-09-06_09-05-10.zip",
+        "package_update_time": "2026-09-05T08:00:54+00:00",
+        "product_rows": 75470,
+        "quarantined_rows": 3,
+        "sha256": "2c25f151041d91fe732696a822a195ae93517a29ce6384a0bdc4a0c6a846caba",
+        "status": "VALID",
+        "store_rows": 28
+      },
+      {
+        "accepted_rows": 0,
+        "age_days_from_release_start": null,
+        "bytes": 0,
+        "commerce_rows": 0,
+        "diagnostics": {},
+        "freshness_status": "UNKNOWN",
+        "inner_uncompressed_bytes": 0,
+        "malformed_rows": 0,
+        "name": "2026-09-06/sepa_2_comercio-sepa-36_2026-09-06_01-05-07.zip",
+        "package_update_time": null,
+        "product_rows": 0,
+        "quarantined_rows": 1,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "status": "EMPTY_PROVIDER_PACKAGE",
+        "store_rows": 0
+      },
+      {
+        "accepted_rows": 19012,
+        "age_days_from_release_start": "-0.50",
+        "bytes": 100091,
+        "commerce_rows": 1,
+        "diagnostics": {
+          "MALFORMED_STORE_ROW": 1
+        },
+        "freshness_status": "FRESH",
+        "inner_uncompressed_bytes": 2156267,
+        "malformed_rows": 2,
+        "name": "2026-09-06/sepa_2_comercio-sepa-5_2026-09-06_01-05-07.zip",
+        "package_update_time": "2026-09-06T12:00:02+00:00",
+        "product_rows": 19126,
+        "quarantined_rows": 114,
+        "sha256": "2ec95fff667fb2f7e8e5f8d96e228459171e85303d240f48fd19dc9049bf22e5",
+        "status": "VALID",
+        "store_rows": 7
+      },
+      {
+        "accepted_rows": 719,
+        "age_days_from_release_start": "-0.52",
+        "bytes": 504856,
+        "commerce_rows": 2,
+        "diagnostics": {
+          "MALFORMED_STORE_ROW": 106
+        },
+        "freshness_status": "FRESH",
+        "inner_uncompressed_bytes": 1867650,
+        "malformed_rows": 2,
+        "name": "2026-09-06/sepa_2_comercio-sepa-6_2026-09-06_01-05-07.zip",
+        "package_update_time": "2026-09-06T12:30:00+00:00",
+        "product_rows": 18696,
+        "quarantined_rows": 17977,
+        "sha256": "b07c826790715507a9fca8512d5fbac1d5454ff49a241eae5d4293ae01fc2406",
+        "status": "VALID",
+        "store_rows": 1
+      },
+      {
+        "accepted_rows": 480185,
+        "age_days_from_release_start": "-0.29",
+        "bytes": 11332100,
+        "commerce_rows": 1,
+        "diagnostics": {
+          "MALFORMED_STORE_ROW": 1
+        },
+        "freshness_status": "FRESH",
+        "inner_uncompressed_bytes": 47548021,
+        "malformed_rows": 2,
+        "name": "2026-09-06/sepa_1_comercio-sepa-13_2026-09-06_09-05-10.zip",
+        "package_update_time": "2026-09-06T07:00:07+00:00",
+        "product_rows": 480187,
+        "quarantined_rows": 2,
+        "sha256": "b08c5da440221a12080d1886a5b14be8fcb977edc372bc95fc8da8acc14810a2",
+        "status": "VALID",
+        "store_rows": 96
+      },
+      {
+        "accepted_rows": 6275,
+        "age_days_from_release_start": "-0.29",
+        "bytes": 44456,
+        "commerce_rows": 1,
+        "diagnostics": {
+          "MALFORMED_STORE_ROW": 1
+        },
+        "freshness_status": "FRESH",
+        "inner_uncompressed_bytes": 589319,
+        "malformed_rows": 2,
+        "name": "2026-09-06/sepa_1_comercio-sepa-23_2026-09-06_09-05-10.zip",
+        "package_update_time": "2026-09-06T07:00:00+00:00",
+        "product_rows": 6278,
+        "quarantined_rows": 3,
+        "sha256": "40ffda3fe1bddad557c481535891c33808c2fb5851d50d71b09666fc947caa7b",
+        "status": "VALID",
+        "store_rows": 55
+      },
+      {
+        "accepted_rows": 9043,
+        "age_days_from_release_start": "0.21",
+        "bytes": 74161,
+        "commerce_rows": 1,
+        "diagnostics": {
+          "MALFORMED_STORE_ROW": 1
+        },
+        "freshness_status": "FRESH",
+        "inner_uncompressed_bytes": 952441,
+        "malformed_rows": 2,
+        "name": "2026-09-06/sepa_1_comercio-sepa-3_2026-09-06_09-05-10.zip",
+        "package_update_time": "2026-09-05T19:00:02+00:00",
+        "product_rows": 9057,
+        "quarantined_rows": 14,
+        "sha256": "c5e1c30b78517ffb84b516fa16c1df4523e12d88b74ab2cd5c80cf8c0ecfe6fd",
+        "status": "VALID",
+        "store_rows": 41
+      },
+      {
+        "accepted_rows": 0,
+        "age_days_from_release_start": "451.00",
+        "bytes": 494841,
+        "commerce_rows": 1,
+        "diagnostics": {
+          "MALFORMED_STORE_ROW": 2
+        },
+        "freshness_status": "STALE",
+        "inner_uncompressed_bytes": 2026627,
+        "malformed_rows": 2,
+        "name": "2026-09-06/sepa_1_comercio-sepa-47_2026-09-06_09-05-10.zip",
+        "package_update_time": "2025-06-12T00:00:01+00:00",
+        "product_rows": 19274,
+        "quarantined_rows": 19274,
+        "sha256": "0689eaa97db048e441da0cce4aaf5766c24f672c3f5b9292362893a351b732a2",
+        "status": "VALID",
+        "store_rows": 3
+      },
+      {
+        "accepted_rows": 4157133,
+        "age_days_from_release_start": "-0.30",
+        "bytes": 94551712,
+        "commerce_rows": 1,
+        "diagnostics": {
+          "MALFORMED_STORE_ROW": 1
+        },
+        "freshness_status": "FRESH",
+        "inner_uncompressed_bytes": 519702200,
+        "malformed_rows": 2,
+        "name": "2026-09-06/sepa_1_comercio-sepa-15_2026-09-06_09-05-10.zip",
+        "package_update_time": "2026-09-06T07:05:35+00:00",
+        "product_rows": 4161028,
+        "quarantined_rows": 3895,
+        "sha256": "d2d3e79eec4e813f43b39b64a9ea99a8046190c3f9a9661cc60f13a2d5945ed8",
+        "status": "VALID",
+        "store_rows": 980
+      },
+      {
+        "accepted_rows": 2541540,
+        "age_days_from_release_start": "-0.35",
+        "bytes": 45397151,
+        "commerce_rows": 5,
+        "diagnostics": {
+          "MALFORMED_STORE_ROW": 1
+        },
+        "freshness_status": "FRESH",
+        "inner_uncompressed_bytes": 233490300,
+        "malformed_rows": 2,
+        "name": "2026-09-06/sepa_2_comercio-sepa-11_2026-09-06_01-05-07.zip",
+        "package_update_time": "2026-09-06T08:19:53+00:00",
+        "product_rows": 2601305,
+        "quarantined_rows": 59765,
+        "sha256": "3789cbb423510cf724a8c41396d0de65a0d95df6764a68071cf04168dc9c1e29",
+        "status": "VALID",
+        "store_rows": 91
+      },
+      {
+        "accepted_rows": 998238,
+        "age_days_from_release_start": "-0.29",
+        "bytes": 22947779,
+        "commerce_rows": 3,
+        "diagnostics": {
+          "MALFORMED_STORE_ROW": 1
+        },
+        "freshness_status": "FRESH",
+        "inner_uncompressed_bytes": 119251828,
+        "malformed_rows": 2,
+        "name": "2026-09-06/sepa_2_comercio-sepa-2_2026-09-06_01-05-07.zip",
+        "package_update_time": "2026-09-06T07:00:13+00:00",
+        "product_rows": 998240,
+        "quarantined_rows": 2,
+        "sha256": "e227217b5c4495afc5c69b56fa100635557302fd8a43822d1fc6afdd565771ee",
+        "status": "VALID",
+        "store_rows": 184
+      },
+      {
+        "accepted_rows": 258,
+        "age_days_from_release_start": "0.21",
+        "bytes": 6984,
+        "commerce_rows": 1,
+        "diagnostics": {
+          "MALFORMED_STORE_ROW": 1
+        },
+        "freshness_status": "FRESH",
+        "inner_uncompressed_bytes": 28290,
+        "malformed_rows": 2,
+        "name": "2026-09-06/sepa_1_comercio-sepa-4_2026-09-06_09-05-10.zip",
+        "package_update_time": "2026-09-05T19:00:03+00:00",
+        "product_rows": 261,
+        "quarantined_rows": 3,
+        "sha256": "25fe4803a9a942024fa506fb546c9fc9a744858747c4c7a7e4d36dc5ea6a1080",
+        "status": "VALID",
+        "store_rows": 1
+      }
+    ],
+    "policy": "package-level latest explicit commerce/footer timestamp; no hidden wall clock",
+    "provider_update_timestamp_coverage": "26 commerce metadata rows with parseable update timestamps; 0 without",
+    "release_date": "2026-09-06",
+    "row_level_observation_time_present": false,
+    "stale_after_days": 2,
+    "stale_package_count": 1,
+    "stale_package_product_rows": 19274
+  },
+  "geography": {
+    "address_coverage": {
+      "store_rows": 2595,
+      "stores_with_address": 2595
+    },
+    "beyond_buenos_aires_evidence": [
+      "AR-A",
+      "AR-B",
+      "AR-C",
+      "AR-D",
+      "AR-E",
+      "AR-F",
+      "AR-G",
+      "AR-H",
+      "AR-J",
+      "AR-K",
+      "AR-L",
+      "AR-M",
+      "AR-N",
+      "AR-P",
+      "AR-Q",
+      "AR-R",
+      "AR-S",
+      "AR-T",
+      "AR-U",
+      "AR-V",
+      "AR-W",
+      "AR-X",
+      "AR-Y",
+      "AR-Z",
+      "Buenos Aires"
+    ],
+    "coordinate_bounds_policy": {
+      "latitude_max": "-21",
+      "latitude_min": "-56",
+      "longitude_max": "-52",
+      "longitude_min": "-74"
+    },
+    "locality_count": 493,
+    "province_count": 25,
+    "store_geo_status_counts": {
+      "GEO_OUT_OF_BOUNDS": 1,
+      "VALID": 2594
+    },
+    "stores_per_province": {
+      "AR-A": 46,
+      "AR-B": 872,
+      "AR-C": 980,
+      "AR-D": 7,
+      "AR-E": 85,
+      "AR-F": 4,
+      "AR-G": 6,
+      "AR-H": 5,
+      "AR-J": 20,
+      "AR-K": 8,
+      "AR-L": 14,
+      "AR-M": 71,
+      "AR-N": 10,
+      "AR-P": 5,
+      "AR-Q": 60,
+      "AR-R": 63,
+      "AR-S": 45,
+      "AR-T": 23,
+      "AR-U": 45,
+      "AR-V": 14,
+      "AR-W": 24,
+      "AR-X": 115,
+      "AR-Y": 6,
+      "AR-Z": 30,
+      "Buenos Aires": 1,
+      "UNKNOWN": 36
+    },
+    "top_localities": [
+      {
+        "locality": "CAPITAL FEDERAL",
+        "stores": 448
+      },
+      {
+        "locality": "BUENOS AIRES",
+        "stores": 425
+      },
+      {
+        "locality": "Ciudad Autónoma de Buenos Aires",
+        "stores": 370
+      },
+      {
+        "locality": "Córdoba",
+        "stores": 67
+      },
+      {
+        "locality": "ENTRE RIOS",
+        "stores": 66
+      },
+      {
+        "locality": "CIUDAD AUTONOMA BUENOS AIRES",
+        "stores": 42
+      },
+      {
+        "locality": "Mendoza",
+        "stores": 41
+      },
+      {
+        "locality": "SALTA",
+        "stores": 38
+      },
+      {
+        "locality": "CORDOBA",
+        "stores": 31
+      },
+      {
+        "locality": "Mar Del Plata",
+        "stores": 23
+      },
+      {
+        "locality": "Ciudad Autonoma de Buenos Aires (901)",
+        "stores": 21
+      },
+      {
+        "locality": "CORRIENTES",
+        "stores": 17
+      },
+      {
+        "locality": "Capital Federal",
+        "stores": 17
+      },
+      {
+        "locality": "Comodoro Rivadavia",
+        "stores": 16
+      },
+      {
+        "locality": "Neuquen",
+        "stores": 15
+      },
+      {
+        "locality": "Rosario",
+        "stores": 15
+      },
+      {
+        "locality": "MAR DEL PLATA",
+        "stores": 13
+      },
+      {
+        "locality": "Rio Gallegos",
+        "stores": 11
+      },
+      {
+        "locality": "Bahía Blanca",
+        "stores": 10
+      },
+      {
+        "locality": "MENDOZA",
+        "stores": 10
+      }
     ]
   },
+  "identity": {
+    "apparent_ean_flag_rows": 14139588,
+    "checksum_valid_unique_gtins": 78184,
+    "conflicting_gtin_identity_scopes": 20308,
+    "conflicting_product_id_scopes": 20308,
+    "duplicate_gtin_rows": 14194619,
+    "duplicate_provider_product_id_rows": 14234578,
+    "fuzzy_matching": "NOT_USED",
+    "gtin_valid_row_percent": "99.72%",
+    "gtin_valid_rows": 14272803,
+    "product_id_present_rows": 14313249,
+    "retailer_specific_only_rows": 40446,
+    "valid_gtins_in_multiple_commerce_ids": 20399
+  },
+  "next_milestone": "After rights/attribution confirmation and a small manually reviewed semantic basket set, build a separate provider-edge Argentina adapter; keep Android offline and keep delivery/pickup as later adapters.",
+  "policy_version": "argentina-sepa-policy-v1",
+  "preliminary_cross_check": {
+    "expected_from_preliminary_pass": {
+      "checksum_valid_unique_gtins": 78184,
+      "nested_packages": 15,
+      "nested_uncompressed_bytes_approx": "~1.495 GiB",
+      "outer_bytes": 325522188,
+      "price_over_ars_10000000_rows": 9,
+      "price_under_ars_10_rows": 8024,
+      "product_price_rows": 14313249,
+      "promotion_rows": 1640544,
+      "quantity_numeric_rows": 14311497,
+      "rows_with_checksum_valid_gtin": 14272803,
+      "stale_package_age_days_approx": "~452",
+      "store_rows": 2620,
+      "unique_provider_product_ids": 78671,
+      "unknown_store_reference_rows": 55989,
+      "valid_coordinate_store_rows": 2594,
+      "valid_gtins_in_at_least_two_commerces": 20399,
+      "valid_nonempty_nested_packages": 14,
+      "zero_or_negative_list_price_rows": 56
+    },
+    "notes": [
+      "The 25-row store-count difference is deterministic: the source has 25 short eight-field continuation rows in commerce 6; this adapter requires all store fields and quarantines all 120 short/footer store records rather than treating them as stores.",
+      "The 17,975-row unknown-store difference is entirely the same commerce-6 package: its split store rows leave those product references without an exact store key, so this adapter quarantines them instead of dropping the package silently.",
+      "The preliminary quantity number is a positive numeric quantity-plus-unit count (14,311,497). This adapter's canonical mass/volume/count policy recognizes 13,915,328 rows; 396,169 explicit rows use noncanonical units (for example KGM, CU, CMQ, M2) and remain UNKNOWN, while 1,752 rows have non-positive/malformed quantity values.",
+      "The stale package is exactly 451.00 days old after converting its explicit 2025-06-11T21:00:01-03:00 timestamp to UTC; the preliminary value was an approximate local-date figure (~452 days)."
+    ],
+    "observed_by_this_adapter": {
+      "checksum_valid_unique_gtins": 78184,
+      "nested_packages": 15,
+      "nested_uncompressed_bytes": 1605466611,
+      "outer_bytes": 325522188,
+      "price_over_ars_10000000_rows": 9,
+      "price_under_ars_10_rows": 8024,
+      "product_price_rows": 14313249,
+      "promotion_rows": 1640544,
+      "quantity_canonical_rows": 13915328,
+      "quantity_numeric_rows": 14311497,
+      "rows_with_checksum_valid_gtin": 14272803,
+      "stale_package_age_days": "451.00",
+      "store_rows": 2595,
+      "unique_provider_product_ids": 78671,
+      "unknown_store_reference_rows": 73964,
+      "valid_coordinate_store_rows": 2594,
+      "valid_gtins_in_at_least_two_commerces": 20399,
+      "valid_nonempty_nested_packages": 14,
+      "zero_or_negative_list_price_rows": 56
+    },
+    "status": "RECONCILED_WITH_DEFINITIONAL_DIFFERENCES"
+  },
+  "price_quality": {
+    "conflicting_store_product_scopes": 0,
+    "currency": "ARS",
+    "currency_basis": "release/source scope supplied by milestone; no per-row currency column",
+    "currency_field_present": false,
+    "duplicate_store_product_extra_rows": 56,
+    "duplicate_store_product_scopes": 56,
+    "invalid_required_price_rows": 56,
+    "malformed_price_rows": 0,
+    "positive_list_price_rows": 14313193,
+    "price_over_ars_10000000_rows": 9,
+    "price_under_ars_10_rows": 8024,
+    "promotion_bearing_rows": 1640544,
+    "promotion_eligibility": "UNKNOWN unless shopper conditions are separately established",
+    "unique_store_product_scopes": 14313193,
+    "zero_or_negative_price_rows": 56
+  },
+  "production_authorized": false,
+  "quantity_unit_value": {
+    "package_text_field": "NOT_PROVIDED_AS_SEPARATE_FIELD",
+    "quantity_explicit_rows": 14313249,
+    "quantity_invalid_value_rows": 1752,
+    "quantity_missing_evidence_rows": 0,
+    "quantity_numeric_structured_rows": 14311497,
+    "quantity_parseable_row_percent": "97.22%",
+    "quantity_parseable_rows": 13915328,
+    "quantity_semantics": "explicit structured presentation quantity only; unknown remains unknown",
+    "quantity_unknown_rows": 397921,
+    "quantity_unknown_unit_rows": 396169,
+    "structured_quantity_fields": [
+      "productos_cantidad_presentacion",
+      "productos_unidad_medida_presentacion"
+    ],
+    "unit_value_ready_rows": 13812758
+  },
+  "recommendation": "CONDITIONAL_GO_OFFLINE_ADAPTER_ONLY",
+  "report_schema_version": "argentina-sepa-qualification-report-v2",
   "rights": {
-    "status": "UNRESOLVED",
-    "issue": "Dataset portal metadata is indexed as CC BY 4.0 while official Precios Claros terms state government content is CC BY 2.5 Argentina and reserve merchant marks/images/logos.",
-    "requiredBeforeImport": [
-      "Exact release licence and attribution",
-      "Caching and retention",
-      "Indexing, display, comparison, mobile, geography, and commercial rights"
+    "attribution": "Precios Claros - Base SEPA; source: datos.produccion.gob.ar",
+    "clearly_granted_for_dataset": "catalog attribution licence as recorded by the official national catalog",
+    "dataset_license": "Creative Commons Attribution 4.0",
+    "legal_opinion": false,
+    "not_addressed_or_separate": [
+      "retailer logos, product images, and trademarks",
+      "merchant-specific commercial display terms beyond the dataset licence",
+      "retention/caching terms not stated in this engineering report"
+    ],
+    "source_link": "https://datos.produccion.gob.ar/dataset/sepa-precios"
+  },
+  "sample_audit": {
+    "failure_counts": {
+      "coordinates": 6,
+      "freshness": 4,
+      "store_linkage": 6
+    },
+    "locality_count": 97,
+    "note": "Sample audit is observational and does not manually repair or promote rows.",
+    "promotion_bearing": 20,
+    "province_count": 25,
+    "provinces": [
+      "AR-A",
+      "AR-B",
+      "AR-C",
+      "AR-D",
+      "AR-E",
+      "AR-F",
+      "AR-G",
+      "AR-H",
+      "AR-J",
+      "AR-K",
+      "AR-L",
+      "AR-M",
+      "AR-N",
+      "AR-P",
+      "AR-Q",
+      "AR-R",
+      "AR-S",
+      "AR-T",
+      "AR-U",
+      "AR-V",
+      "AR-W",
+      "AR-X",
+      "AR-Y",
+      "AR-Z",
+      "Buenos Aires"
+    ],
+    "quantity_known": 206,
+    "quantity_unknown": 5,
+    "retailer_ids": [
+      "10",
+      "11",
+      "12",
+      "13",
+      "15",
+      "2",
+      "21",
+      "23",
+      "3",
+      "4",
+      "47",
+      "5",
+      "6",
+      "9"
+    ],
+    "sample_size": 211,
+    "selection": "stable SHA-256 rank over nested-package SHA-256 and CSV line; bounded sample",
+    "status": "MEASURED",
+    "target_minimum": 100,
+    "valid_gtin": 210
+  },
+  "scale": {
+    "cities_top_by_store_count": [
+      {
+        "locality": "CAPITAL FEDERAL",
+        "stores": 448
+      },
+      {
+        "locality": "BUENOS AIRES",
+        "stores": 425
+      },
+      {
+        "locality": "Ciudad Autónoma de Buenos Aires",
+        "stores": 370
+      },
+      {
+        "locality": "Córdoba",
+        "stores": 67
+      },
+      {
+        "locality": "ENTRE RIOS",
+        "stores": 66
+      },
+      {
+        "locality": "CIUDAD AUTONOMA BUENOS AIRES",
+        "stores": 42
+      },
+      {
+        "locality": "Mendoza",
+        "stores": 41
+      },
+      {
+        "locality": "SALTA",
+        "stores": 38
+      },
+      {
+        "locality": "CORDOBA",
+        "stores": 31
+      },
+      {
+        "locality": "Mar Del Plata",
+        "stores": 23
+      },
+      {
+        "locality": "Ciudad Autonoma de Buenos Aires (901)",
+        "stores": 21
+      },
+      {
+        "locality": "CORRIENTES",
+        "stores": 17
+      },
+      {
+        "locality": "Capital Federal",
+        "stores": 17
+      },
+      {
+        "locality": "Comodoro Rivadavia",
+        "stores": 16
+      },
+      {
+        "locality": "Neuquen",
+        "stores": 15
+      },
+      {
+        "locality": "Rosario",
+        "stores": 15
+      },
+      {
+        "locality": "MAR DEL PLATA",
+        "stores": 13
+      },
+      {
+        "locality": "Rio Gallegos",
+        "stores": 11
+      },
+      {
+        "locality": "Bahía Blanca",
+        "stores": 10
+      },
+      {
+        "locality": "MENDOZA",
+        "stores": 10
+      }
+    ],
+    "coordinate_incomplete_store_rows": 0,
+    "coordinate_invalid_store_rows": 0,
+    "coordinate_out_of_bounds_store_rows": 1,
+    "coordinate_valid_store_rows": 2594,
+    "coverage_beyond_buenos_aires": true,
+    "distinct_banner_keys": 26,
+    "distinct_commerce_ids": 14,
+    "distinct_localities": 493,
+    "distinct_provider_product_ids": 78671,
+    "distinct_provinces": 25,
+    "distinct_store_keys": 2595,
+    "rows_scanned": 14313249,
+    "store_rows": 2595,
+    "stores_per_province": {
+      "AR-A": 46,
+      "AR-B": 872,
+      "AR-C": 980,
+      "AR-D": 7,
+      "AR-E": 85,
+      "AR-F": 4,
+      "AR-G": 6,
+      "AR-H": 5,
+      "AR-J": 20,
+      "AR-K": 8,
+      "AR-L": 14,
+      "AR-M": 71,
+      "AR-N": 10,
+      "AR-P": 5,
+      "AR-Q": 60,
+      "AR-R": 63,
+      "AR-S": 45,
+      "AR-T": 23,
+      "AR-U": 45,
+      "AR-V": 14,
+      "AR-W": 24,
+      "AR-X": 115,
+      "AR-Y": 6,
+      "AR-Z": 30,
+      "Buenos Aires": 1,
+      "UNKNOWN": 36
+    },
+    "stores_with_address": 2595
+  },
+  "schema": {
+    "commerce_fields": [
+      "id_comercio",
+      "id_bandera",
+      "comercio_cuit",
+      "comercio_razon_social",
+      "comercio_bandera_nombre",
+      "comercio_bandera_url",
+      "comercio_ultima_actualizacion",
+      "comercio_version_sepa"
+    ],
+    "delimiter": "|",
+    "encoding": "UTF-8 with BOM accepted; replacement characters diagnosed, not repaired",
+    "not_provided": [
+      "row-level observation timestamp",
+      "currency field in productos.csv",
+      "inventory/stock",
+      "online orderability",
+      "pickup readiness",
+      "delivery, fee, ETA, service area, slot, or fulfilment hours",
+      "structured product category"
+    ],
+    "outer_structure": "daily outer ZIP containing nested retailer ZIP packages",
+    "product_fields": [
+      "id_comercio",
+      "id_bandera",
+      "id_sucursal",
+      "id_producto",
+      "productos_ean (flag, not barcode value)",
+      "productos_descripcion",
+      "productos_cantidad_presentacion",
+      "productos_unidad_medida_presentacion",
+      "productos_marca",
+      "productos_precio_lista",
+      "productos_precio_referencia",
+      "productos_cantidad_referencia",
+      "productos_unidad_medida_referencia",
+      "productos_precio_unitario_promo1",
+      "productos_leyenda_promo1",
+      "productos_precio_unitario_promo2",
+      "productos_leyenda_promo2"
+    ],
+    "required_files": [
+      "comercio.csv",
+      "sucursales.csv",
+      "productos.csv"
+    ],
+    "store_fields": [
+      "id_comercio",
+      "id_bandera",
+      "id_sucursal",
+      "sucursales_nombre",
+      "sucursales_tipo",
+      "sucursales_calle",
+      "sucursales_numero",
+      "sucursales_latitud",
+      "sucursales_longitud",
+      "sucursales_codigo_postal",
+      "sucursales_localidad",
+      "sucursales_provincia"
     ]
   },
-  "nextGate": "Retrieve the exact current official ZIP and release metadata through ordinary authorized access, then rerun the full deterministic qualifier. Do not use a mirror or bypass the access barrier."
+  "schema_version": "argentina-sepa-normalized-observation-v1",
+  "source": {
+    "attribution": "Precios Claros - Base SEPA; source: datos.produccion.gob.ar",
+    "bytes": 325522188,
+    "dataset_url": "https://datos.produccion.gob.ar/dataset/sepa-precios",
+    "file_name": "sepa_domingo(1).zip",
+    "host": "https://datos.produccion.gob.ar",
+    "label": "Argentina SEPA / Precios Claros",
+    "landing_url": "https://www.argentina.gob.ar/economia/industria-y-comercio/defensadelconsumidor/precios-sepa",
+    "license": "Creative Commons Attribution 4.0",
+    "national_catalog_url": "https://datos.gob.ar",
+    "nested_retailer_zip_count": 15,
+    "nested_uncompressed_bytes": 1605466611,
+    "nested_zero_byte_count": 1,
+    "outer_zip_entries": 16,
+    "provider": "ARGENTINA_SEPA_PRECIOS_CLAROS",
+    "raw_data_committed": false,
+    "raw_data_downloaded_locally": true,
+    "release_date": "2026-09-06",
+    "sha256": "e6c08be6a36e5e5b90e6eb0b6f54a07c8bccded929fab2a28ad7f000ed08b305"
+  },
+  "status": "CONDITIONAL_GO_OFFLINE_ADAPTER_ONLY",
+  "storage": {
+    "android_asset_policy": "FULL NATIONAL RAW DATA MUST NOT SHIP TO ANDROID",
+    "manifest": {
+      "bytes": 1048,
+      "file_name": "manifest.json",
+      "sha256": "49c88fb9fc9b745788562bf292352649692196e3c0f68a01737ddc779850eda3"
+    },
+    "manifest_sha256_file": {
+      "bytes": 80,
+      "file_name": "manifest.sha256",
+      "sha256": "2ecb9d07e0bc853e783fd43e8d067996eee644c587230f52d9da197785a14be4"
+    },
+    "nested_uncompressed_bytes": 1605466611,
+    "normalized_files": {
+      "accepted-observations.ndjson.gz": {
+        "bytes": 1079326703,
+        "file_name": "accepted-observations.ndjson.gz",
+        "sha256": "a5554d60a383acb83cf9f573a0e5f5db834c830a7a92e7db5051b09320e2da8d"
+      },
+      "quarantine.ndjson.gz": {
+        "bytes": 1039712,
+        "file_name": "quarantine.ndjson.gz",
+        "sha256": "f49528461b062dbeb91e8b93d089e53a5c4d57ece86df73e2c36ed3e23c0f1bf"
+      }
+    },
+    "normalized_uncompressed_bytes": 22181289398,
+    "raw_download_bytes": 325522188,
+    "recommendation": "backend/tooling-side immutable regional snapshots; keep Android offline",
+    "regional_estimates": {
+      "AR-A": {
+        "accepted_rows": 317335,
+        "national_share_estimate": "2.23%",
+        "normalized_uncompressed_bytes": 495531040
+      },
+      "AR-B": {
+        "accepted_rows": 5136849,
+        "national_share_estimate": "36.15%",
+        "normalized_uncompressed_bytes": 8016238736
+      },
+      "AR-C": {
+        "accepted_rows": 3926600,
+        "national_share_estimate": "27.63%",
+        "normalized_uncompressed_bytes": 6202954092
+      },
+      "AR-D": {
+        "accepted_rows": 97000,
+        "national_share_estimate": "0.68%",
+        "normalized_uncompressed_bytes": 150096207
+      },
+      "AR-E": {
+        "accepted_rows": 477224,
+        "national_share_estimate": "3.36%",
+        "normalized_uncompressed_bytes": 752284524
+      },
+      "AR-F": {
+        "accepted_rows": 46908,
+        "national_share_estimate": "0.33%",
+        "normalized_uncompressed_bytes": 71632279
+      },
+      "AR-G": {
+        "accepted_rows": 76868,
+        "national_share_estimate": "0.54%",
+        "normalized_uncompressed_bytes": 119737948
+      },
+      "AR-H": {
+        "accepted_rows": 62326,
+        "national_share_estimate": "0.44%",
+        "normalized_uncompressed_bytes": 96169178
+      },
+      "AR-J": {
+        "accepted_rows": 166280,
+        "national_share_estimate": "1.17%",
+        "normalized_uncompressed_bytes": 258747954
+      },
+      "AR-K": {
+        "accepted_rows": 76377,
+        "national_share_estimate": "0.54%",
+        "normalized_uncompressed_bytes": 119568606
+      },
+      "AR-L": {
+        "accepted_rows": 148914,
+        "national_share_estimate": "1.05%",
+        "normalized_uncompressed_bytes": 228656762
+      },
+      "AR-M": {
+        "accepted_rows": 461594,
+        "national_share_estimate": "3.25%",
+        "normalized_uncompressed_bytes": 711991416
+      },
+      "AR-N": {
+        "accepted_rows": 82206,
+        "national_share_estimate": "0.58%",
+        "normalized_uncompressed_bytes": 125895466
+      },
+      "AR-P": {
+        "accepted_rows": 107884,
+        "national_share_estimate": "0.76%",
+        "normalized_uncompressed_bytes": 165045845
+      },
+      "AR-Q": {
+        "accepted_rows": 381163,
+        "national_share_estimate": "2.68%",
+        "normalized_uncompressed_bytes": 585226753
+      },
+      "AR-R": {
+        "accepted_rows": 424692,
+        "national_share_estimate": "2.99%",
+        "normalized_uncompressed_bytes": 650381491
+      },
+      "AR-S": {
+        "accepted_rows": 310683,
+        "national_share_estimate": "2.19%",
+        "normalized_uncompressed_bytes": 478501011
+      },
+      "AR-T": {
+        "accepted_rows": 256671,
+        "national_share_estimate": "1.81%",
+        "normalized_uncompressed_bytes": 398950883
+      },
+      "AR-U": {
+        "accepted_rows": 361877,
+        "national_share_estimate": "2.55%",
+        "normalized_uncompressed_bytes": 557060590
+      },
+      "AR-V": {
+        "accepted_rows": 96836,
+        "national_share_estimate": "0.68%",
+        "normalized_uncompressed_bytes": 148379867
+      },
+      "AR-W": {
+        "accepted_rows": 196376,
+        "national_share_estimate": "1.38%",
+        "normalized_uncompressed_bytes": 306192513
+      },
+      "AR-X": {
+        "accepted_rows": 670005,
+        "national_share_estimate": "4.72%",
+        "normalized_uncompressed_bytes": 1038314650
+      },
+      "AR-Y": {
+        "accepted_rows": 69765,
+        "national_share_estimate": "0.49%",
+        "normalized_uncompressed_bytes": 107003858
+      },
+      "AR-Z": {
+        "accepted_rows": 187564,
+        "national_share_estimate": "1.32%",
+        "normalized_uncompressed_bytes": 287801973
+      },
+      "Buenos Aires": {
+        "accepted_rows": 2177,
+        "national_share_estimate": "0.02%",
+        "normalized_uncompressed_bytes": 3416134
+      },
+      "UNKNOWN": {
+        "accepted_rows": 66977,
+        "national_share_estimate": "0.47%",
+        "normalized_uncompressed_bytes": 105509622
+      }
+    }
+  }
 }

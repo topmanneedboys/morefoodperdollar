@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - 'tools/qualify_merchant_feed.py'
+      - 'tools/qualify_argentina_sepa.py'
       - 'tools/qualify_rakuten_product_catalog.py'
       - 'tools/measure_rakuten_off_quantity_coverage.py'
       - 'tools/measure_rakuten_off_quantity_coverage_v2.py'
@@ -15,6 +16,7 @@ on:
   pull_request:
     paths:
       - 'tools/qualify_merchant_feed.py'
+      - 'tools/qualify_argentina_sepa.py'
       - 'tools/qualify_rakuten_product_catalog.py'
       - 'tools/measure_rakuten_off_quantity_coverage.py'
       - 'tools/measure_rakuten_off_quantity_coverage_v2.py'
@@ -44,6 +46,7 @@ jobs:
         run: >-
           python -m py_compile
           tools/qualify_merchant_feed.py
+          tools/qualify_argentina_sepa.py
           tools/qualify_rakuten_product_catalog.py
           tools/measure_rakuten_off_quantity_coverage.py
           tools/measure_rakuten_off_quantity_coverage_v2.py

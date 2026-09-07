@@ -1,120 +1,94 @@
 # Argentina SEPA / Precios Claros qualification
 
-Status: `BLOCKED_OFFICIAL_SOURCE_UNRETRIEVABLE`
+Status: `CONDITIONAL_GO_OFFLINE_ADAPTER_ONLY`
 
-Evaluated at: `2026-09-07T02:34:00Z`
+Recommendation: **CONDITIONAL_GO_OFFLINE_ADAPTER_ONLY**
 
-Baseline: `3c7b9cab9c2de693f983cf1c8e3365f386845e26`
+This report qualifies one exact official release for offline/provider-edge normalization only. It does not add Android networking or authorize production display/ranking.
 
-Scope: qualify one current, official Argentine SEPA / Precios Claros retail
-release for a possible future ValuePilot data adapter. This is a source
-qualification checkpoint, not an Argentina integration and not a claim that
-ValuePilot has current Argentine prices.
+## Exact source
 
-## Decision
+- Release date: **2026-09-06**
+- File: **sepa_domingo(1).zip**
+- Bytes: **325,522,188**
+- SHA-256: `e6c08be6a36e5e5b90e6eb0b6f54a07c8bccded929fab2a28ad7f000ed08b305`
+- Dataset: [https://datos.produccion.gob.ar/dataset/sepa-precios](https://datos.produccion.gob.ar/dataset/sepa-precios)
+- Licence recorded from the national catalog: **Creative Commons Attribution 4.0**
+- Attribution: **Precios Claros - Base SEPA; source: datos.produccion.gob.ar**
 
-**No production qualification is possible in this environment.** The official
-dataset portal and its resource host returned a BunkerWeb HTTP 403 for the
-dataset page, the API endpoint, and direct resource URLs. The same response
-was reproduced in the in-app browser. Because the milestone requires the
-actual current official release, this report intentionally does not substitute
-a mirror, an unofficial export, a search-indexed historical resource, or a
-reverse-engineered/bypassed access path.
+## Actual structure
 
-Recommendation: `NO-GO_FOR_PRODUCTION_QUALIFICATION / BLOCKED_BY_ACCESS`.
-This is an access block, not a finding that SEPA is inherently unsuitable.
+The outer ZIP contained **15** nested retailer packages (1 zero-byte). Each valid package was required to contain `comercio.csv`, `sucursales.csv`, and a streamed `productos.csv`.
+Expanded nested member sizes total **1,605,466,611 bytes**; the national product table was never loaded into memory.
 
-## Official source chain reviewed
+## Preliminary cross-check
 
-- [Argentina Precios SEPA landing page](https://www.argentina.gob.ar/economia/industria-y-comercio/defensadelconsumidor/precios-sepa)
-  links the official open SEPA database and the retail/wholesale dataset.
-- [Official production dataset page](https://datos.produccion.gob.ar/dataset/sepa-precios)
-  is the required source for the current daily release.
-- [Precios Claros official data site](https://www.preciosclaros.gob.ar/index.html)
-  describes the public SEPA presentation and its data/rights terms.
-- [Resolution 678/2020 Annex II technical specification](https://www.argentina.gob.ar/normativa/345335_res678-2_pdf/archivo)
-  is the official technical-specification reference. It was not treated as a
-  substitute for inspecting the current ZIP's actual schema.
+The independent preliminary figures reconcile to this run where the definitions are identical. The remaining differences are intentional and documented:
 
-The official page describes SEPA as daily, point-of-sale price information
-supplied by large retail/wholesale merchants, covering more than 70,000
-products. It describes a retail list price and up to two promotions, including
-promotions that may be limited to a loyalty, bank, student, or senior group.
-Those are page-level source facts only; they are not row-level evidence for a
-ValuePilot offer.
+- Store rows: preliminary **2,620** vs strict full-field rows **2,595**; 25 short eight-field continuation rows in commerce 6 (among 120 malformed/footer rows) are not treated as stores.
+- Unknown-store product rows: preliminary **55,989** vs **73,964**; the additional 17,975 are the product references from that same malformed commerce-6 store table and are explicitly quarantined.
+- Quantity: preliminary positive numeric quantity+unit rows **14,311,497** vs **14,311,497**; canonical mass/volume/count rows are **13,915,328**, with **396,169** noncanonical units and **1,752** invalid/non-positive values kept UNKNOWN.
+- Stale age: the stale package is **451.00** days using its explicit UTC-normalized timestamp; the preliminary **~452** was an approximate local-date value.
 
-Search-indexed portal metadata also describes weekday ZIP resources, daily
-updates, approximately 12 million records, and a Creative Commons Attribution
-4.0 dataset licence. The metadata page could not be retrieved directly in
-this environment, so these indexed values are recorded only as context and
-are **not** accepted as current-release qualification measurements.
+## Scale
 
-## Retrieval evidence
+- Product-price rows scanned: **14,313,249**
+- Distinct provider product IDs: **78,671**
+- Commerce IDs / banner keys: **14 / 26**
+- Store keys / localities / provinces: **2,595 / 493 / 25**
+- Store rows with valid coordinates: **2,594**; incomplete: **0**; invalid/out-of-bounds: **1**
 
-No raw file was downloaded and no bytes were parsed.
+## Identity and quantity readiness
 
-| Attempt | Result | Evidence |
-| --- | --- | --- |
-| `https://datos.produccion.gob.ar/api/3/action/package_show?id=sepa-precios` | HTTP 403 | BunkerWeb response, request ID `4aa9a3137cd54a7e94dc3be3e193577b`, `2026-09-07 02:32:24 UTC` |
-| `https://datos.produccion.gob.ar/dataset/sepa-precios` via direct HTTP | HTTP 403 | Same BunkerWeb barrier and client address; no HTML dataset payload |
-| Direct resource download for indexed UUID `9dc06241-cc83-44f4-8e25-c9b1636b8bc8` | HTTP 403 | Tried `/download`, `/download/sepa.zip`, and `/archivo/<uuid>`; indexed UUID is not treated as current |
-| Dataset page in the in-app browser | HTTP 403 | BunkerWeb response, request ID `e9ea8898870d53fba5b615f514840235`, `2026-09-07 02:33:39 UTC` |
+- Checksum-valid GTIN rows / unique GTINs: **14,272,803 / 78,184** (99.72%)
+- Valid GTINs appearing across at least two commerce IDs: **20,399**
+- Retailer-specific-only rows: **40,446**; fuzzy matching: **NOT_USED**
+- Conflicting product-ID / GTIN identity scopes: **20,308 / 20,308**
+- Explicit quantity/unit rows: **14,313,249**; canonical mass/volume/count rows: **13,915,328** (97.22%); unknown quantity: **397,921**
+- Unit-value-ready rows: **13,812,758**; quantity is never inferred from title text.
 
-The response body identified BunkerWeb as the access barrier and said access
-was forbidden. No CAPTCHA, authentication, or security bypass was attempted.
+## Price, promotions, and freshness
 
-## Qualification measurements
+- Positive list-price rows: **14,313,193**; invalid required price: **56**
+- Plausibility signals preserved/quarantined: under ARS 10 = **8,024**, over ARS 10,000,000 = **9**
+- Promotion-bearing rows: **1,640,544**; promotion eligibility remains **UNKNOWN** unless separately established.
+- Package freshness policy: **2 days**, using explicit release date and package-level latest timestamp; stale packages: **1**.
+- Row-level observation timestamp: **not provided**; package update coverage: **26 commerce metadata rows with parseable update timestamps; 0 without**.
 
-All measurements below are `NOT_MEASURED_OFFICIAL_DATA_UNAVAILABLE` by design:
+## Geography
 
-- current release identity, resource hash, byte size, and schema;
-- row count, merchant count, store count, product/identity count, and
-  duplicate/conflict rates;
-- barcode/GTIN coverage and deterministic identity joins;
-- package quantity coverage, unit parsing, and quantity conflicts;
-- positive price, currency, promotion-condition, and exact-money coverage;
-- observation/freshness distribution and expiry behavior;
-- province/city/store geography and store identity completeness;
-- 100+ row human-reviewed sample audit;
-- 25-basket feasibility scenarios and eligible single-store coverage;
-- compressed/uncompressed storage estimates and lookup/load benchmarks;
-- delivery, pickup, shipping, minimum-order, or store-fulfilment semantics.
+- Province count: **25**; locality count: **493**.
+- Coverage beyond Buenos Aires is evidenced by the represented provinces: AR-A, AR-B, AR-C, AR-D, AR-E, AR-F, AR-G, AR-H, AR-J, AR-K, AR-L, AR-M, AR-N, AR-P, AR-Q, AR-R, AR-S, AR-T, AR-U, AR-V, AR-W, AR-X, AR-Y, AR-Z, Buenos Aires.
+- Missing coordinates remain geo-incomplete; no coordinates were invented or geocoded.
 
-The official website's general description cannot establish any of those
-row-level or basket-level properties. In particular, the indexed “12 million
-daily prices” statement must not be presented as ValuePilot coverage.
+## Deterministic sample audit
 
-## Rights and attribution gate
+- Status: **MEASURED**, sample size **211** (minimum 100).
+- Sample spans **25** provinces, **97** localities, and **14** commerce IDs.
+- Failure counts: `{"coordinates": 6, "freshness": 4, "store_linkage": 6}`.
 
-The official dataset portal metadata is indexed as CC BY 4.0. Separately, the
-official Precios Claros website terms state that government content is made
-available under CC BY 2.5 Argentina, while product/store trademarks, images,
-and logos remain the property of their respective holders; the site also says
-the records are supplied by merchants and published as received. This licence
-description discrepancy is unresolved because the authoritative dataset page
-was inaccessible. Before any import, obtain and record the exact licence,
-attribution, caching, retention, indexing, display, comparison, mobile,
-geography, and commercial permissions for the specific release. No product
-images, logos, or trademarks would be imported by this checkpoint.
+## Basket feasibility
 
-## What was deliberately not done
+The 25-scenario semantic basket test is **NOT_YET_QUALIFIED**. SEPA has no structured category field, and keyword-only matches previously produced false positives. No basket launch claim is made here.
 
-- No mirror, GitHub copy, unofficial API, or search-result resource was used.
-- No scraping, reverse engineering, rate-limit evasion, CAPTCHA handling, or
-  BunkerWeb bypass was attempted.
-- No Android networking, Argentina UI, localization, delivery logic, account,
-  backend, or production adapter was added.
-- No current-price, availability, stock, promotion, or ranking claim was
-  created.
-- No raw provider data, credentials, or restricted files were committed.
+## Storage and delivery boundary
 
-## Exact follow-up gate
+- Raw outer ZIP: **325,522,188 bytes**; nested uncompressed members: **1,605,466,611 bytes**.
+- Normalized output is local/provider-edge only: **22,181,289,398 uncompressed bytes** before gzip.
+- The full national raw dataset must not ship in Android assets; regional immutable snapshots remain a later delivery decision.
+- Delivery/pickup fields are **IN_STORE_ONLY** only: orderability, pickup, delivery, fees, ETA, slots, and fulfilment hours are NOT PROVIDED.
 
-When the official host is ordinarily reachable, or when the user supplies the
-official ZIP and its release metadata directly, rerun this checkpoint against
-that exact release. Preserve the raw file outside Git, hash it, inspect the
-actual `comercio.csv`, `sucursales.csv`, and `productos.csv` (or the schema
-specified by the current official release), then run deterministic identity,
-quantity, price, freshness, geography, sample-audit, basket, storage, and
-rights gates. Only a complete green result may recommend a separate future
-integration milestone.
+## Rights and recommendation
+
+The source licence is recorded as **Creative Commons Attribution 4.0** with attribution and source link. Retailer marks, product images, and trademarks are separate/unaddressed and are not ingested. This is not a legal opinion.
+
+Conditional GO is limited to offline/provider-edge normalization and a future separate adapter review. Production integration still requires the documented freshness, rights, semantic basket, and evidence gates; availability remains UNKNOWN.
+
+### Explicit blockers
+
+- No row-level product observation timestamp is present; freshness is package-level provenance only.
+- Availability is UNKNOWN; SEPA price publication does not prove stock, pickup, or delivery.
+- Semantic 25-basket coverage is not qualified because the schema has no category field and keyword-only matching is unsafe.
+- Retailer marks, logos, images, and any rights beyond the catalog licence remain outside this ingestion and require separate confirmation.
+
+Next milestone: After rights/attribution confirmation and a small manually reviewed semantic basket set, build a separate provider-edge Argentina adapter; keep Android offline and keep delivery/pickup as later adapters.
