@@ -21,6 +21,9 @@ on:
       - 'tools/argentina_sepa_micro_partition.py'
       - 'tools/measure_argentina_sepa_micro_partition_mobile.py'
       - 'tools/audit_argentina_sepa_search.py'
+      - 'tools/shopping_intelligence_engine.py'
+      - 'tools/argentina_shopping_intelligence.py'
+      - 'tools/measure_argentina_shopping_intelligence.py'
       - 'tools/qualify_rakuten_product_catalog.py'
       - 'tools/measure_rakuten_off_quantity_coverage.py'
       - 'tools/measure_rakuten_off_quantity_coverage_v2.py'
@@ -28,6 +31,8 @@ on:
       - 'tools/run_rakuten_off_quantity_coverage.py'
       - 'tools/tests/test_qualify_*.py'
       - 'tools/tests/test_argentina_sepa_*.py'
+      - 'tools/tests/test_shopping_intelligence_engine.py'
+      - 'tools/tests/test_argentina_shopping_intelligence.py'
       - '.github/workflows/test-merchant-feed-qualification.yml'
   pull_request:
     paths:
@@ -48,6 +53,9 @@ on:
       - 'tools/argentina_sepa_micro_partition.py'
       - 'tools/measure_argentina_sepa_micro_partition_mobile.py'
       - 'tools/audit_argentina_sepa_search.py'
+      - 'tools/shopping_intelligence_engine.py'
+      - 'tools/argentina_shopping_intelligence.py'
+      - 'tools/measure_argentina_shopping_intelligence.py'
       - 'tools/qualify_rakuten_product_catalog.py'
       - 'tools/measure_rakuten_off_quantity_coverage.py'
       - 'tools/measure_rakuten_off_quantity_coverage_v2.py'
@@ -55,6 +63,8 @@ on:
       - 'tools/run_rakuten_off_quantity_coverage.py'
       - 'tools/tests/test_qualify_*.py'
       - 'tools/tests/test_argentina_sepa_*.py'
+      - 'tools/tests/test_shopping_intelligence_engine.py'
+      - 'tools/tests/test_argentina_shopping_intelligence.py'
       - '.github/workflows/test-merchant-feed-qualification.yml'
 
 permissions:
@@ -94,6 +104,9 @@ jobs:
           tools/argentina_sepa_micro_partition.py
           tools/measure_argentina_sepa_micro_partition_mobile.py
           tools/audit_argentina_sepa_search.py
+          tools/shopping_intelligence_engine.py
+          tools/argentina_shopping_intelligence.py
+          tools/measure_argentina_shopping_intelligence.py
           tools/qualify_rakuten_product_catalog.py
           tools/measure_rakuten_off_quantity_coverage.py
           tools/measure_rakuten_off_quantity_coverage_v2.py
