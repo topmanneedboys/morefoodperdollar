@@ -1,10 +1,24 @@
 # Current state
 
-Updated: 2026-09-07
+Updated: 2026-09-08
 
 Branch: `work/valuepilot-android-milestone`
 
 Android version: 101.1.0 (10101)
+
+## Argentina backend qualification report checkpoint
+
+The existing Argentina Milestone 5 winner remains **128 logical partitions /
+32 physical packs** for mobile/offline distribution. Its completed source-wide
+equivalence, all-alternative verification and payload-gate evidence were
+reused; no national ZIP verifier or immutable-root rebuild was repeated merely
+for diagnostics. The Milestone 7 backend report now records the bounded
+per-request measurements, the explicitly `NOT_REMEASURED` dense cases, and
+the exact green CI evidence at code SHA
+`72b75d14306a880de9077aea4684b493a9eef4be`. The backend's separate 1024/32
+server profile remains unchanged, Android remains offline with no provider
+artifacts or network permissions, and no new consumer milestone is authorized
+by this documentation checkpoint.
 
 ## Current verified engineering head
 
