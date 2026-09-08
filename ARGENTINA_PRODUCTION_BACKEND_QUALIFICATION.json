@@ -109,12 +109,17 @@
   "freeFirstDeployment": {"storageCandidate": "Cloudflare R2 Standard via S3-compatible API", "computeCandidate": "Google Cloud Run request-based billing", "provisioned": false, "costClaim": "none; free tiers are allowances and must be measured"},
   "offlineProCompatibility": {"implemented": false, "mobile128x32Preserved": true, "future": ["offline province download", "verified updates", "Pro entitlement"]},
   "qualification": {
-    "BACKEND_CODE_QUALIFIED": false,
+    "BACKEND_CODE_QUALIFIED": true,
     "LIVE_CLOUD_DEPLOYMENT_VERIFIED": false,
     "ANDROID_NETWORKING_AUTHORIZED": false,
     "PRODUCTION_ANDROID_UI_AUTHORIZED": false,
     "AUTOMATED_OFFICIAL_ACQUISITION_PROVEN": false,
-    "candidateCiRunIds": null,
-    "tests": {"backendDeterministic": 10, "existingPython": 163, "android": "local green; exact candidate CI pending", "browser": "local green; exact candidate CI pending"}
+    "candidateCiRunIds": {
+      "backend": 34204096115,
+      "androidBrowserRelease": 34204096188
+    },
+    "promotedHead": "72b75d14306a880de9077aea4684b493a9eef4be",
+    "promotedBranch": "work/valuepilot-android-milestone",
+    "tests": {"backendDeterministic": 10, "existingPython": 163, "android": "exact promoted-HEAD CI green; run 34204096188", "browser": "exact promoted-HEAD CI green; run 34204096188"}
   }
 }

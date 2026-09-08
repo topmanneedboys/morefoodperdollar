@@ -1,6 +1,6 @@
 # Argentina production backend foundation v1
 
-Status: `IMPLEMENTED_PENDING_EXACT_SHA_CI`
+Status: `QUALIFIED_FOR_BACKEND_DISTRIBUTION_ONLY`
 
 This milestone adds a portable, read-only backend boundary over the already
 qualified Argentina release. It does not acquire data, add Android networking,
@@ -61,3 +61,19 @@ The complete machine-readable record is in
 [ARGENTINA_PRODUCTION_BACKEND_QUALIFICATION.json](ARGENTINA_PRODUCTION_BACKEND_QUALIFICATION.json);
 the bounded diagnostics were generated from the local qualified root and the
 root itself is local and ignored.
+
+## Exact-HEAD verification and promotion
+
+The implementation was verified at the promoted HEAD
+`72b75d14306a880de9077aea4684b493a9eef4be` without rerunning the national
+SEPA verifier. The existing completed Milestone 5 equivalence and all-
+alternative evidence were reused; dense diagnostics remain explicitly
+`NOT_REMEASURED` above where another source-wide pass would have been required.
+
+- Backend/tooling CI: [run 34204096115](https://github.com/topmanneedboys/morefoodperdollar/actions/runs/34204096115) — green.
+- Android/browser/release CI: [run 34204096188](https://github.com/topmanneedboys/morefoodperdollar/actions/runs/34204096188) — green.
+- Promoted branch: `work/valuepilot-android-milestone` at the same exact SHA.
+
+This report records the already-proven 128 logical partition / 32 physical
+pack mobile winner as preserved. No new data design or Android networking was
+introduced by the report finalization.
