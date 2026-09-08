@@ -15,13 +15,17 @@ from backend.release import ReleaseHandle
 try:
     from tools.argentina_sepa_micro_partition import MicroPartitionQueryError, MicroQueryPlan, _load_stores, load_micro_region_contract
     from tools.argentina_sepa_query import _offer_result, _search_candidates, straight_line_distance_km
+    from tools.argentina_sepa_query import _iter_gzip_records
     from tools.argentina_shopping_intelligence import evaluate_argentina_provider_result
+    from tools.consumer_input_intelligence import CatalogIndex, ConsumerInputInterpreter, InputIntelligenceError
     from tools.shopping_intelligence_engine import ShoppingIntelligenceError, ShoppingRequest
     from tools.verify_argentina_sepa_micro_partition_mobile import decode_member_bytes
 except ModuleNotFoundError:  # pragma: no cover - direct module invocation
     from argentina_sepa_micro_partition import MicroPartitionQueryError, MicroQueryPlan, _load_stores, load_micro_region_contract
     from argentina_sepa_query import _offer_result, _search_candidates, straight_line_distance_km
+    from argentina_sepa_query import _iter_gzip_records
     from argentina_shopping_intelligence import evaluate_argentina_provider_result
+    from consumer_input_intelligence import CatalogIndex, ConsumerInputInterpreter, InputIntelligenceError
     from shopping_intelligence_engine import ShoppingIntelligenceError, ShoppingRequest
     from verify_argentina_sepa_micro_partition_mobile import decode_member_bytes
 
@@ -32,6 +36,7 @@ MAX_BACKEND_RADIUS_KM = Decimal("50")
 MAX_ITEMS = 10
 MAX_CANDIDATES = 100_000
 MAX_OFFERS = 100_000
+MAX_INPUT_VOCABULARY_RECORDS = 100_000
 
 
 class BackendQueryError(ValueError):
@@ -145,6 +150,7 @@ class ArgentinaBackendReader:
         # Search indexes are immutable for a pinned release. Cache bounded
         # top-k results so warm service calls do not rescan the same gzip.
         self._search_cache: dict[tuple[str, str, int], tuple[Mapping[str, Any], ...]] = {}
+        self._input_catalog_cache: dict[tuple[str, ...], CatalogIndex] = {}
 
     def _search(self, contract: Any, query: str, *, product_limit: int = 5) -> tuple[Mapping[str, Any], ...]:
         cache_key = (contract.region.region_id, query, product_limit)
@@ -187,6 +193,53 @@ class ArgentinaBackendReader:
                 "packBytes": pack["bytes"],
             })
         return MicroQueryPlan(contract.region.region_id, tuple(queries), tuple(candidates), selected, tuple(slices), contract.bootstrap_bytes, contract.manifest_bytes, contract.search_descriptor["bytes"], contract.store_descriptor["bytes"], sum(int(value["byteLength"]) for value in slices), sum(int(value["uncompressedBytes"]) for value in slices), tuple(sorted({value["packId"] for value in slices})), 4 + len({value["packId"] for value in slices}))
+
+    def input_catalog(self, region_ids: Sequence[str] | None = None) -> CatalogIndex:
+        """Build/cache a bounded vocabulary from qualified search indexes.
+
+        Search indexes are already immutable release artifacts.  This reads
+        only their product identity records; it never reads the national ZIP
+        or offer partitions and never turns an identity into price/stock.
+        """
+
+        if region_ids is None:
+            bootstrap = self.router.contract("ar-caba").bootstrap
+            values = [entry.get("regionId") for entry in bootstrap.get("regions", []) if isinstance(entry, Mapping) and isinstance(entry.get("regionId"), str)]
+            selected = tuple(sorted(values))
+        else:
+            selected = tuple(sorted({value for value in region_ids if isinstance(value, str)}))
+        cache_key = ("__all__",) if region_ids is None else selected
+        cached = self._input_catalog_cache.get(cache_key)
+        if cached is not None:
+            return cached
+        records: list[Mapping[str, Any]] = []
+        seen: set[str] = set()
+        for region_id in selected:
+            contract = self.router.contract(region_id)
+            path = contract.root / contract.search_descriptor["path"]
+            for raw in _iter_gzip_records(path, contract.search_descriptor, f"{region_id} input vocabulary"):
+                key = raw.get("productEvidenceKey")
+                if not isinstance(key, str) or key in seen:
+                    continue
+                seen.add(key)
+                records.append(raw)
+                if len(records) >= MAX_INPUT_VOCABULARY_RECORDS:
+                    break
+            if len(records) >= MAX_INPUT_VOCABULARY_RECORDS:
+                break
+        try:
+            catalog = CatalogIndex.from_records(records, max_records=MAX_INPUT_VOCABULARY_RECORDS)
+        except InputIntelligenceError as exc:
+            raise BackendQueryError(str(exc)) from exc
+        self._input_catalog_cache[cache_key] = catalog
+        return catalog
+
+    def interpret_text(self, text: str, *, require_quantities: bool = False, region_ids: Sequence[str] | None = None) -> dict[str, Any]:
+        try:
+            interpreter = ConsumerInputInterpreter(self.input_catalog(region_ids))
+            return interpreter.interpret(text, require_quantities=require_quantities)
+        except InputIntelligenceError as exc:
+            raise BackendQueryError(str(exc)) from exc
 
     def _member(self, region_id: str, partition: Mapping[str, Any], metrics: RequestMetrics) -> list[dict[str, Any]]:
         key = f"{self.release.release_id}:{region_id}:{partition['partitionId']}:{partition['sha256']}"

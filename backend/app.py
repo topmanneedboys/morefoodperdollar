@@ -36,6 +36,17 @@ def create_app(service: BackendService | None = None):
         radiusKm: StrictStr
         query: StrictStr = Field(min_length=1, max_length=96)
 
+    class InterpretRequest(BaseModel):
+        model_config = ConfigDict(extra="forbid")
+        text: StrictStr = Field(min_length=1, max_length=4096)
+
+    class ShopTextRequest(BaseModel):
+        model_config = ConfigDict(extra="forbid")
+        latitude: StrictStr
+        longitude: StrictStr
+        radiusKm: StrictStr
+        text: StrictStr = Field(min_length=1, max_length=4096)
+
     app = FastAPI(title="ValuePilot Argentina Backend", version="valuepilot-argentina-backend-v1", docs_url=None, redoc_url=None, openapi_url=None)
     runtime_service = service or BackendService(os.environ.get("VALUEPILOT_RELEASE_ROOT", "local-provider-data/argentina-backend-release"))
 
@@ -79,6 +90,27 @@ def create_app(service: BackendService | None = None):
         except Exception as exc:  # noqa: BLE001 - public boundary is fail-closed
             from fastapi import HTTPException
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/v1/interpret")
+    async def interpret(payload: InterpretRequest, request: Request):
+        try:
+            return runtime_service.interpret(payload.model_dump(exclude_none=True), correlation_id=correlation(request))
+        except ResponseLimitError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=413)
+        except Exception as exc:  # noqa: BLE001 - public boundary is fail-closed
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/v1/shop-text")
+    async def shop_text(payload: ShopTextRequest, request: Request):
+        try:
+            return runtime_service.shop_text(payload.model_dump(exclude_none=True), correlation_id=correlation(request))
+        except ResponseLimitError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=413)
+        except Exception as exc:  # noqa: BLE001 - public boundary is fail-closed
+            from fastapi import HTTPException
+            status_code = 503 if str(exc) == "CURRENT_PRICE_EVIDENCE_UNAVAILABLE" else 400
+            raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
     @app.post("/v1/shop")
     async def shop(payload: ShopRequest, request: Request):

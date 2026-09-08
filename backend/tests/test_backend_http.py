@@ -24,6 +24,12 @@ class FakeService:
     def shop(self, payload, *, correlation_id=None):
         return {"requestId": correlation_id or "fixture", "result": {"decision": {"bestSensibleChoice": {"selectedPlan": None}}}}
 
+    def interpret(self, payload, *, correlation_id=None):
+        return {"requestId": correlation_id or "fixture", "input": {"originalText": payload["text"], "safeRequestReady": False}}
+
+    def shop_text(self, payload, *, correlation_id=None):
+        return {"requestId": correlation_id or "fixture", "input": {"originalText": payload["text"]}, "result": None}
+
 
 class BackendHttpTests(unittest.TestCase):
     def setUp(self):
@@ -47,6 +53,16 @@ class BackendHttpTests(unittest.TestCase):
         response = self.client.post("/v1/search", json=payload, headers={"x-request-id": "test-request"})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["requestId"], "test-request")
+
+    def test_consumer_input_endpoints_are_bounded_and_fail_closed(self):
+        response = self.client.post("/v1/interpret", json={"text": "arroz 1kg"}, headers={"x-request-id": "interpret-request"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["requestId"], "interpret-request")
+        response = self.client.post("/v1/shop-text", json={"latitude": "-34", "longitude": "-58", "radiusKm": "5", "text": "arroz 1kg"})
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["result"])
+        response = self.client.post("/v1/interpret", json={"text": "x", "unexpected": 1})
+        self.assertEqual(response.status_code, 422)
 
 
 if __name__ == "__main__":
