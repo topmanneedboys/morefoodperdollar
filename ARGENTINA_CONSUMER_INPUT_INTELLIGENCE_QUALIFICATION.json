@@ -106,12 +106,12 @@
   },
   "benchmark": {
     "fixtureCatalogRecords": 5000,
-    "fixturePeakBuildBytes": 31448915,
-    "warmOneLineMeanMs": 4.288,
-    "warmOneLineP95Ms": 4.351,
-    "warmFiveLineMeanMs": 22.528,
-    "warmTenLineMeanMs": 132.145,
-    "warmTenLineP95Ms": 132.578,
+    "fixturePeakBuildBytes": 31449460,
+    "warmOneLineMeanMs": 5.027,
+    "warmOneLineP95Ms": 5.043,
+    "warmFiveLineMeanMs": 26.498,
+    "warmTenLineMeanMs": 148.482,
+    "warmTenLineP95Ms": 149.708,
     "targets": {"warmOneLineMs": 50, "warmTenLinesMs": 250},
     "targetsPassed": true,
     "environment": "local bounded fixture measurement; timings are diagnostic, not a national-root claim"
@@ -139,20 +139,21 @@
     "providerArtifactsOutOfAndroid": true,
     "nationalSourceWideVerifierRerun": false
   },
-  "promotedHead": "TO_BE_FILLED_AFTER_EXACT_CI",
+  "promotedHead": "9515fb4d2186f637e8dbfe8bdd16747ef08d5e2f",
   "promotedBranch": "work/valuepilot-android-milestone",
   "candidateCiRunIds": {
-    "backend": null,
-    "androidBrowserRelease": null,
-    "promotedProvenance": null
+    "backend": 34248134778,
+    "androidBrowserRelease": 34248134741,
+    "promotedProvenance": "The exact candidate code commit is promoted unchanged; the final work-branch provenance run is recorded in CURRENT_STATE.md."
   },
   "tests": {
     "consumerInputUnitTests": 10,
     "backendHttpTests": 4,
-    "existingPython": "PENDING_FINAL_RUN",
-    "android": "PENDING_EXACT_HEAD_CI",
-    "browser": "PENDING_EXACT_HEAD_CI",
-    "privacy": "PENDING_EXACT_HEAD_CI",
-    "signer": "PENDING_EXACT_HEAD_CI"
+    "existingPython": 173,
+    "backend": 11,
+    "android": "candidate CI run 34248134741 green",
+    "browser": "candidate CI run 34248134741 green",
+    "privacy": "candidate CI run 34248134741 green",
+    "signer": "candidate CI run 34248134741 green"
   }
 }

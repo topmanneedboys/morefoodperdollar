@@ -505,6 +505,28 @@ The Practical Shopping MVP fixture/controller, one-store planner/projector, Home
 
 The currently identified unblocked Home presentation gaps are implemented through the promoted result-reveal and quick-add slices. The next meaningful gate is physical-device validation of Home quick-add/scroll/keyboard, camera/OCR and accessibility behavior; after that, only another direct local consumer benefit should be added. Keep any production assembly behind explicitly selected identities, signed location-directory rows, private observed-price evidence and travel facts; do not infer live offers from identity or location data, and do not activate production Home or add provider plumbing without explicit lawful rights. Keep the following acceptance constraints active:
 
+## Argentina consumer input intelligence V1 checkpoint (2026-09-08)
+
+The bounded provider-neutral consumer input layer is implemented on the
+candidate code commit `9515fb4d2186f637e8dbfe8bdd16747ef08d5e2f`. It adds
+deterministic Spanish/English normalization, quantities, aliases, brands,
+bounded typo correction, product-form safety and clarification gates above the
+existing M6/M7 engine. The backend exposes `/v1/interpret` and `/v1/shop-text`
+without changing Android networking or shipping provider data to the APK.
+
+The 3,000-case frozen mutation fixture, high-risk substitution checks,
+catalog/search benchmark and exact backend contracts passed. Warm 5,000-record
+fixture timings were 5.027 ms for one line and 148.482 ms for ten lines. The
+completed M5/M6/M7 verification evidence and 128 logical / 32 physical mobile
+winner were reused; no national ZIP verifier or source-wide diagnostics rerun
+was performed.
+
+Candidate CI is green: backend run `34248134778`; Android/browser/release,
+privacy and signer run `34248134741`. The next action is only fast-forwarding
+this already-proven code to `work/valuepilot-android-milestone`, verifying the
+promoted exact-head workflow, and then stopping. No further milestone is
+authorized by this checkpoint.
+
 1. Inspect current Home/Search/Basket/Saved shell and immutable UI-state boundaries before changing them.
 2. Reuse existing exact money/quantity/value components; never duplicate arithmetic.
 3. Preserve one-store-first and explicit second-stop savings/travel rules; never hide inconvenience in a score.

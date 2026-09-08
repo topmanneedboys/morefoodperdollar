@@ -54,9 +54,9 @@ the existing reader and M6 engine only after all lines are safe and complete.
   precision-at-5 of 1.0.
 - Clarification-code accuracy is 3/3 and unsafe automatic substitutions are 0
   across 11 high-risk trap cases.
-- A 5,000-record bounded fixture measured warm mean latency of 4.288 ms for a
-  one-line request and 132.145 ms for ten lines (p95 132.578 ms); both targets
-  (50 ms and 250 ms) passed. Peak index-build allocation was 31,448,915 bytes.
+- A 5,000-record bounded fixture measured warm mean latency of 5.027 ms for a
+  one-line request and 148.482 ms for ten lines (p95 149.708 ms); both targets
+  (50 ms and 250 ms) passed. Peak index-build allocation was 31,449,460 bytes.
 - The SQLite FTS5 trigram capability is probed, but runtime behavior remains the
   provider-neutral deterministic index and does not depend on the optional
   capability.
@@ -82,5 +82,6 @@ existing Python suite, Android tests/lint/build/privacy/signer checks, browser
 checks, exact candidate-head CI and promoted-head provenance CI are green. No
 national source-wide verifier is part of this milestone.
 
-The final candidate and promoted SHAs and CI run IDs are recorded in the JSON
-report and in the completion checkpoint once exact-head verification finishes.
+Candidate commit `9515fb4d2186f637e8dbfe8bdd16747ef08d5e2f` passed backend CI
+`34248134778` and Android/browser/release/privacy/signer CI `34248134741`.
+Promotion provenance is recorded after the fast-forward promotion checkpoint.
