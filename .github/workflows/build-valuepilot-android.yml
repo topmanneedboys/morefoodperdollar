@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - 'android/**'
+      - 'backend/**'
       - 'browser-extension/**'
       - 'tools/build_offline_catalog_snapshot.py'
       - 'tools/verify_offline_catalog_snapshot.py'
@@ -60,6 +61,7 @@ on:
   pull_request:
     paths:
       - 'android/**'
+      - 'backend/**'
       - 'browser-extension/**'
       - 'tools/build_offline_catalog_snapshot.py'
       - 'tools/verify_offline_catalog_snapshot.py'

@@ -1,0 +1,120 @@
+{
+  "schemaVersion": "valuepilot-argentina-production-backend-qualification-v1",
+  "startingSha": "1b2c64be6fdb2f00d08f14b27418510cde4333d7",
+  "candidateBranch": "candidate/argentina-production-backend-v1",
+  "architecture": {
+    "objectStorage": "provider-neutral ObjectStore",
+    "release": "immutable generation + active pointer; request pins release",
+    "router": "exact published store province + straight-line Haversine",
+    "regionalReader": "manifest-derived exact byte ranges + verified gzip members",
+    "adapter": "existing tools.argentina_shopping_intelligence",
+    "engine": "existing tools.shopping_intelligence_engine",
+    "androidNetworking": "NOT_AUTHORIZED"
+  },
+  "serverDataProfile": {
+    "mobileOfflineProfile": {"logicalPartitions": 128, "physicalPacks": 32, "status": "PRESERVED_M5_WINNER"},
+    "backendProfile": {"logicalPartitions": 1024, "physicalPacks": 32, "status": "SELECTED_FOR_SERVER_COLD_AND_WARM_PATH"},
+    "selectionReason": "The already-verified 1024 root reduced the bounded CABA/BA cold path from 15.7s to 7.8s and warm path from 142ms to 30ms, with exact decision equality; no national verifier was rerun.",
+    "equivalence": {"boundaryRequest": "PASS", "evidence": "M5 first completed all-alternative verification plus direct 128/1024 M6 decision comparison", "sourceRowsDropped": false}
+  },
+  "source": {
+    "provider": "ARGENTINA_SEPA_PRECIOS_CLAROS",
+    "releaseDate": "2026-09-06",
+    "outerSha256": "e6c08be6a36e5e5b90e6eb0b6f54a07c8bccded929fab2a28ad7f000ed08b305",
+    "license": "Creative Commons Attribution 4.0",
+    "attribution": "Precios Claros - Base SEPA; source: datos.produccion.gob.ar",
+    "rawProviderDataCommitted": false,
+    "automatedAcquisition": "NOT_PROVEN"
+  },
+  "nationalStoreRouter": {
+    "publishedStores": 2537,
+    "publishedRegions": 24,
+    "unpublishedProvinceObservations": 69154,
+    "unmappedNonstandardBuenosAiresObservations": 2177,
+    "routingEvidence": "exact store province code only; no locality inference"
+  },
+  "crossRegion": {
+    "cabaBuenosAires": {
+      "status": "PASS",
+      "latitude": "-34.610359",
+      "longitude": "-58.516538",
+      "radiusKm": "2",
+      "regionsQueried": ["ar-b", "ar-caba"],
+      "maxReturnedDistanceKm": "0.704189",
+      "outsideRadiusExcluded": true,
+      "exactHaversine": true,
+      "productEvidenceMergedByExactKey": true,
+      "m6DecisionUnchanged": true
+    },
+    "additionalBoundary": "NOT_OBSERVED_IN_BOUNDED_SAMPLE"
+  },
+  "storageContract": {
+    "localFilesystem": true,
+    "s3Compatible": true,
+    "headGetRangeExists": true,
+    "immutablePut": true,
+    "conditionalPointerUpdate": true,
+    "runtimeArbitraryPaths": false,
+    "rangeVerification": "compressed length/hash then exact gzip member and uncompressed hash"
+  },
+  "publication": {
+    "publisher": "operator-controlled SafePublisher",
+    "order": "validate -> immutable generation -> verify -> active pointer last",
+    "partialGenerationVisible": false,
+    "sameContentIdempotent": true,
+    "s3Cas": "single-writer contract documented; no false portable CAS claim"
+  },
+  "freshness": {
+    "clock": "injectable; production America/Argentina/Buenos_Aires",
+    "policyDays": 7,
+    "staleBehavior": "CURRENT_PRICE_EVIDENCE_UNAVAILABLE",
+    "lastKnownGood": "served only while explicitly fresh"
+  },
+  "http": {
+    "contractVersion": "valuepilot-argentina-backend-http-v1",
+    "endpoints": ["GET /healthz", "GET /readyz", "GET /v1/status", "POST /v1/search", "POST /v1/shop"],
+    "maxJsonRequestBytes": 16384,
+    "maxLines": 10,
+    "maxRadiusKm": 50,
+    "unknownFields": "rejected",
+    "customerResponseNormalBytes": 131072,
+    "customerResponseHardBytes": 524288,
+    "sampleResponseBytes": 10666,
+    "responseInternalPaths": "packs, source rows, object names, and raw provider payloads removed"
+  },
+  "performance": {
+    "measurement": "bounded direct reader over existing root; no source-wide verifier",
+    "regions": {
+      "CABA": {"oneItemColdMs": 7717.15, "oneItemWarmMs": 28.94, "coldBytes": 933100, "coldRangeReads": 10, "coldDecompressedBytes": 29758184},
+      "Buenos Aires": {"oneItemColdMs": 4695.766, "oneItemWarmMs": 19.001, "coldBytes": 513738, "coldRangeReads": 5, "coldDecompressedBytes": 16269396},
+      "Córdoba": {"oneItemColdMs": 3221.345, "oneItemWarmMs": 11.367, "coldBytes": 89322, "coldRangeReads": 5, "coldDecompressedBytes": 2542102},
+      "Jujuy": {"oneItemColdMs": 3348.329, "oneItemWarmMs": 10.76, "coldBytes": 38019, "coldRangeReads": 10, "coldDecompressedBytes": 791599}
+    },
+    "dense5And10": {"status": "NOT_REMEASURED", "reason": "existing M5/M6 selected-slice diagnostics reused; bounded instruction forbids repeating expensive correctness work merely for reporting"},
+    "targets": {"warm10Ms": 750, "cold10Ms": 5000, "result": "not claimed for unremeasured dense requests; one-item CABA cold remains above 5s"}
+  },
+  "cache": {
+    "maxBytes": 134217728,
+    "key": "release + region + member + compressed hash",
+    "verifyBeforeActivate": true,
+    "singleFlight": true,
+    "failedLoadWakesWaiters": true,
+    "warmSample": {"hits": 10, "misses": 0, "bytesRead": 0}
+  },
+  "concurrency": {"workers": [1, 2, 4, 8], "sampleRequests": 8, "status": "PASS_NO_LEAKAGE_OBSERVED", "warmLatencyMs": {"min": 76.478, "median": 119.408, "max": 178.527}},
+  "twoStore": {"status": "NOT_OBSERVED_IN_BOUNDED_SAMPLE", "radiiKm": [2, 5, 10, 25, 50], "note": "No fabricated source-backed example; deterministic M6 tests remain the algorithm proof."},
+  "privacy": {"requestDataTransient": true, "logs": "correlation id, release, result class, status, timing, bytes, regions, error only", "piiInLogs": false},
+  "security": {"bodyBounded": true, "strictDecimalStrings": true, "finiteCoordinates": true, "pathTraversalRejected": true, "manifestDerivedStorageKeys": true, "runtimeReadOnly": true, "docsDisabled": true, "corsDisabled": true},
+  "container": {"dockerfile": "backend/Dockerfile", "nonRoot": true, "singleProcess": true, "dataAndSecretsInImage": false, "healthz": true, "readiness": true},
+  "freeFirstDeployment": {"storageCandidate": "Cloudflare R2 Standard via S3-compatible API", "computeCandidate": "Google Cloud Run request-based billing", "provisioned": false, "costClaim": "none; free tiers are allowances and must be measured"},
+  "offlineProCompatibility": {"implemented": false, "mobile128x32Preserved": true, "future": ["offline province download", "verified updates", "Pro entitlement"]},
+  "qualification": {
+    "BACKEND_CODE_QUALIFIED": false,
+    "LIVE_CLOUD_DEPLOYMENT_VERIFIED": false,
+    "ANDROID_NETWORKING_AUTHORIZED": false,
+    "PRODUCTION_ANDROID_UI_AUTHORIZED": false,
+    "AUTOMATED_OFFICIAL_ACQUISITION_PROVEN": false,
+    "candidateCiRunIds": null,
+    "tests": {"backendDeterministic": 10, "existingPython": 163, "android": "local green; exact candidate CI pending", "browser": "local green; exact candidate CI pending"}
+  }
+}
