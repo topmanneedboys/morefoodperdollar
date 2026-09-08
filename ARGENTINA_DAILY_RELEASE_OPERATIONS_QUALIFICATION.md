@@ -5,6 +5,7 @@ Status: **qualified and activated locally**. The Tuesday release is active in th
 ## Exact release evidence
 
 - Starting repository SHA: `6ea860f50444da14485d3fe49ba2168003041e23`
+- Candidate/promoted release SHA: `a125f34a19d92de42402518f4639ecf88122b9f6`
 - Previous official release: 2026-09-06, SHA-256 `e6c08be6a36e5e5b90e6eb0b6f54a07c8bccded929fab2a28ad7f000ed08b305`
 - New operator-supplied release: `sepa_martes.zip`, 2026-09-08, 325,118,492 bytes, SHA-256 `aeef3399fa20e751e80cda46cbb3a38349e378b51832ecffe1f779b986479815`
 - Internal dated ZIP evidence and CRC checks passed. It contains 17 nested retailer packages; one explicit zero-byte package is quarantined as `EMPTY_PROVIDER_PACKAGE`.
@@ -47,4 +48,5 @@ Bounded cross-release requests for CABA, Buenos Aires, Córdoba, and Jujuy cover
 - Backend suite: 11 tests passed.
 - Android shared-core/app tests, `lintDebug`, `assembleDebug`, offline-permission check, and single-signer APK check passed.
 - Browser extension: 30 tests and Firefox `web-ext lint` passed.
-- Candidate and promoted SHAs plus exact CI run IDs are recorded in the final handoff after exact-head CI; no promotion is considered complete before those checks are green.
+- Candidate exact-head CI: tools `34279088470`, backend/container `34279088487`, Android/browser/release `34279088478` — all passed.
+- Promoted exact-head CI: tools `34279613576`, backend/container `34279613666`, Android/browser/release `34279613467` — all passed.

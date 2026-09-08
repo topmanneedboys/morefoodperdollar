@@ -3,8 +3,8 @@
   "milestone": "M9",
   "status": "QUALIFIED_AND_ACTIVATED",
   "startSha": "6ea860f50444da14485d3fe49ba2168003041e23",
-  "candidateSha": "PENDING_COMMIT",
-  "promotedSha": "PENDING_PROMOTION",
+  "candidateSha": "a125f34a19d92de42402518f4639ecf88122b9f6",
+  "promotedSha": "a125f34a19d92de42402518f4639ecf88122b9f6",
   "oldRelease": {
     "date": "2026-09-06",
     "sha256": "e6c08be6a36e5e5b90e6eb0b6f54a07c8bccded929fab2a28ad7f000ed08b305",
@@ -243,11 +243,13 @@
     "backend": "11 tests PASS",
     "android": "shared-core/app tests, lintDebug, assembleDebug, privacy, signer PASS",
     "browser": "30 tests, Firefox web-ext lint PASS",
-    "ciRunIds": []
+    "ciRunIds": [34279613576, 34279613666, 34279613467]
   },
   "ci": {
-    "status": "PENDING_EXACT_HEAD_CI",
-    "runIds": [],
-    "promotedHeadVerified": false
+    "status": "PASS_EXACT_HEAD_CI",
+    "candidateRunIds": [34279088470, 34279088487, 34279088478],
+    "runIds": [34279613576, 34279613666, 34279613467],
+    "promotedHead": "a125f34a19d92de42402518f4639ecf88122b9f6",
+    "promotedHeadVerified": true
   }
 }
