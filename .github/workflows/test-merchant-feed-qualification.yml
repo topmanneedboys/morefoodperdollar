@@ -24,6 +24,10 @@ on:
       - 'tools/shopping_intelligence_engine.py'
       - 'tools/argentina_shopping_intelligence.py'
       - 'tools/measure_argentina_shopping_intelligence.py'
+      - 'tools/argentina_daily_release.py'
+      - 'tools/build_argentina_daily_release.py'
+      - 'tools/fixtures/argentina_daily_release/**'
+      - 'tools/tests/test_argentina_daily_release_operations.py'
       - 'tools/qualify_rakuten_product_catalog.py'
       - 'tools/measure_rakuten_off_quantity_coverage.py'
       - 'tools/measure_rakuten_off_quantity_coverage_v2.py'
@@ -56,6 +60,10 @@ on:
       - 'tools/shopping_intelligence_engine.py'
       - 'tools/argentina_shopping_intelligence.py'
       - 'tools/measure_argentina_shopping_intelligence.py'
+      - 'tools/argentina_daily_release.py'
+      - 'tools/build_argentina_daily_release.py'
+      - 'tools/fixtures/argentina_daily_release/**'
+      - 'tools/tests/test_argentina_daily_release_operations.py'
       - 'tools/qualify_rakuten_product_catalog.py'
       - 'tools/measure_rakuten_off_quantity_coverage.py'
       - 'tools/measure_rakuten_off_quantity_coverage_v2.py'
@@ -107,6 +115,8 @@ jobs:
           tools/shopping_intelligence_engine.py
           tools/argentina_shopping_intelligence.py
           tools/measure_argentina_shopping_intelligence.py
+          tools/argentina_daily_release.py
+          tools/build_argentina_daily_release.py
           tools/qualify_rakuten_product_catalog.py
           tools/measure_rakuten_off_quantity_coverage.py
           tools/measure_rakuten_off_quantity_coverage_v2.py

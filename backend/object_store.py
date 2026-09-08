@@ -37,6 +37,7 @@ class ObjectStore(Protocol):
     def get_range(self, key: str, offset: int, length: int) -> bytes: ...
     def exists(self, key: str) -> bool: ...
     def put_immutable(self, key: str, data: bytes, *, sha256: str | None = None) -> ObjectMetadata: ...
+    def put_immutable_file(self, key: str, source: Path | str, *, sha256: str | None = None) -> ObjectMetadata: ...
     def compare_and_swap(self, key: str, data: bytes, *, expected_etag: str | None) -> ObjectMetadata: ...
 
 
@@ -55,6 +56,14 @@ def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 class LocalFilesystemObjectStore:
     """Small deterministic object store for local qualification and tests."""
 
@@ -71,8 +80,8 @@ class LocalFilesystemObjectStore:
         return path
 
     def _metadata(self, key: str, path: Path) -> ObjectMetadata:
-        data = path.read_bytes()
-        return ObjectMetadata(key, len(data), _sha256(data), _sha256(data), ())
+        digest = _sha256_file(path)
+        return ObjectMetadata(key, path.stat().st_size, digest, digest, ())
 
     def head(self, key: str) -> ObjectMetadata:
         path = self._path(key)
@@ -135,6 +144,39 @@ class LocalFilesystemObjectStore:
             finally:
                 temporary.unlink(missing_ok=True)
         return ObjectMetadata(key, len(data), digest, digest, ())
+
+    def put_immutable_file(self, key: str, source: Path | str, *, sha256: str | None = None) -> ObjectMetadata:
+        """Publish one immutable file without loading it into memory."""
+
+        key = validate_key(key)
+        source_path = Path(source)
+        try:
+            size = source_path.stat().st_size
+            digest = _sha256_file(source_path)
+        except OSError as exc:
+            raise ObjectStoreError("object source is unavailable") from exc
+        if sha256 is not None and digest != sha256:
+            raise ObjectStoreError("object hash mismatch")
+        path = self._path(key)
+        with self._lock:
+            if path.exists():
+                existing = self._metadata(key, path)
+                if existing.size != size or existing.sha256 != digest:
+                    raise ObjectStoreError("immutable object differs")
+                return existing
+            path.parent.mkdir(parents=True, exist_ok=True)
+            fd, temporary_name = tempfile.mkstemp(prefix=".partial-", dir=str(path.parent))
+            temporary = Path(temporary_name)
+            try:
+                with os.fdopen(fd, "wb") as target, source_path.open("rb") as source_handle:
+                    for chunk in iter(lambda: source_handle.read(1024 * 1024), b""):
+                        target.write(chunk)
+                    target.flush()
+                    os.fsync(target.fileno())
+                os.replace(temporary, path)
+            finally:
+                temporary.unlink(missing_ok=True)
+        return ObjectMetadata(key, size, digest, digest, ())
 
     def compare_and_swap(self, key: str, data: bytes, *, expected_etag: str | None) -> ObjectMetadata:
         path = self._path(key)
@@ -214,6 +256,32 @@ class S3CompatibleObjectStore:
                 raise ObjectStoreError("immutable object differs")
             return self.head(key)
         self.client.put_object(Bucket=self.bucket, Key=key, Body=data, Metadata={"sha256": digest})
+        return self.head(key)
+
+    def put_immutable_file(self, key: str, source: Path | str, *, sha256: str | None = None) -> ObjectMetadata:
+        """Publish one immutable file through the provider-neutral S3 contract."""
+
+        key = validate_key(key)
+        source_path = Path(source)
+        try:
+            size = source_path.stat().st_size
+            digest = _sha256_file(source_path)
+        except OSError as exc:
+            raise ObjectStoreError("object source is unavailable") from exc
+        if sha256 is not None and digest != sha256:
+            raise ObjectStoreError("object hash mismatch")
+        if self.exists(key):
+            existing = self.head(key)
+            if existing.size != size or (existing.sha256 and existing.sha256 != digest):
+                raise ObjectStoreError("immutable object differs")
+            if existing.sha256 is None and _sha256(self.get(key)) != digest:
+                raise ObjectStoreError("immutable object differs")
+            return existing
+        try:
+            with source_path.open("rb") as handle:
+                self.client.put_object(Bucket=self.bucket, Key=key, Body=handle, Metadata={"sha256": digest})
+        except Exception as exc:  # noqa: BLE001 - normalize provider errors
+            raise ObjectStoreError("object upload failed") from exc
         return self.head(key)
 
     def compare_and_swap(self, key: str, data: bytes, *, expected_etag: str | None) -> ObjectMetadata:

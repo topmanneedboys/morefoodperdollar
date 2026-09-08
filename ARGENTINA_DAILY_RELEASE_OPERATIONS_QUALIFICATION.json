@@ -1,0 +1,253 @@
+{
+  "schemaVersion": "valuepilot-argentina-daily-release-qualification-v1",
+  "milestone": "M9",
+  "status": "QUALIFIED_AND_ACTIVATED",
+  "startSha": "6ea860f50444da14485d3fe49ba2168003041e23",
+  "candidateSha": "PENDING_COMMIT",
+  "promotedSha": "PENDING_PROMOTION",
+  "oldRelease": {
+    "date": "2026-09-06",
+    "sha256": "e6c08be6a36e5e5b90e6eb0b6f54a07c8bccded929fab2a28ad7f000ed08b305",
+    "backendProfile": "1024/32",
+    "backendCounts": {
+      "publishableRegions": 24,
+      "stores": 2537,
+      "productEvidenceRecords": 1447719,
+      "offers": 14139997,
+      "promotions": 1677262
+    }
+  },
+  "newRelease": {
+    "date": "2026-09-08",
+    "filename": "sepa_martes.zip",
+    "bytes": 325118492,
+    "sha256": "aeef3399fa20e751e80cda46cbb3a38349e378b51832ecffe1f779b986479815",
+    "releaseEvidence": "outer ZIP internal dated package paths",
+    "provider": "ARGENTINA_SEPA_PRECIOS_CLAROS",
+    "sourceHost": "https://datos.produccion.gob.ar",
+    "attribution": "Precios Claros - Base SEPA",
+    "license": "Creative Commons Attribution 4.0",
+    "operatorAcquiredAt": "2026-09-08T17:06:58Z",
+    "nestedPackages": 17,
+    "zeroBytePackages": 1,
+    "zeroBytePackageStatus": "EMPTY_PROVIDER_PACKAGE",
+    "nestedPackageHashEvidence": {
+      "source": "M1 qualification report",
+      "reportSha256": "5b476213bd50c825c8aeca28fe2c5fe5e65c579448b869f5916593b503882ef9",
+      "crcValidated": true
+    }
+  },
+  "secondOfficialReleaseProven": true,
+  "schemaDrift": {
+    "classification": "NO_DECLARED_DRIFT",
+    "added": [],
+    "removed": [],
+    "details": []
+  },
+  "qualification": {
+    "status": "CONDITIONAL_GO_OFFLINE_ADAPTER_ONLY",
+    "rowsScanned": 14560394,
+    "acceptedCurrentPriceRows": 14456334,
+    "quarantineRows": 104060,
+    "stores": 2988,
+    "validCoordinateStores": 2987,
+    "providerProductIds": 81100,
+    "checksumValidUniqueGtins": 80443,
+    "gtinValidRows": 14520130,
+    "commerceIds": 16,
+    "bannerKeys": 29,
+    "provinces": 25,
+    "promotionRows": 883096,
+    "quantityUnknownRows": 477318,
+    "quantityParseableRows": 14083076,
+    "unitValueReadyRows": 13980564,
+    "invalidRequiredPriceRows": 56,
+    "lowPriceRows": 7952,
+    "highPriceRows": 9,
+    "stalePackageCount": 1,
+    "stalePackageProductRows": 19274,
+    "quarantineByReason": {
+      "EMPTY_PROVIDER_PACKAGE": 1,
+      "GEO_OUT_OF_BOUNDS": 2816,
+      "INVALID_REQUIRED_PRICE": 56,
+      "MALFORMED_ROW": 32,
+      "PRICE_PLAUSIBILITY_REVIEW": 7890,
+      "STALE_PROVIDER_PACKAGE": 19272,
+      "UNKNOWN_STORE_REFERENCE": 74026
+    },
+    "rawProviderDataPublished": false,
+    "availability": "UNKNOWN",
+    "promotionEligibility": "UNKNOWN unless shopper conditions are separately established"
+  },
+  "deltas": {
+    "stores": {"old": 2537, "new": 2909, "delta": 372},
+    "products": {"old": 1447719, "new": 1480719, "delta": 33000},
+    "gtins": {"old": 78184, "new": 80443, "delta": 2259},
+    "offers": {"old": 14139997, "new": 14387849, "delta": 247852},
+    "promotions": {"old": 1677262, "new": 886017, "delta": -791245},
+    "provinces": {"old": 25, "new": 25, "delta": 0},
+    "providers": {"old": 14, "new": 16, "delta": 2},
+    "banners": {"old": 26, "new": 29, "delta": 3},
+    "unknownQuantity": {"old": 397921, "new": 477318, "delta": 79397},
+    "quarantine": {"old": 104098, "new": 104060, "delta": -38},
+    "status": "MEASURED_AGAINST_COMMITTED_2026-09-06_REPORT"
+  },
+  "backendProfile": {
+    "online": {"logicalPartitions": 1024, "physicalPacks": 32},
+    "mobilePreserved": {"logicalPartitions": 128, "physicalPacks": 32},
+    "publishableRegions": 24,
+    "stores": 2909,
+    "productEvidenceRecords": 1480719,
+    "offers": 14387849,
+    "promotions": 886017,
+    "nationalIndexSha256": "353ae5848813f61c54620a2a75b28c35658ca6f0ba116816b35e12e9ef7abf10",
+    "bootstrapSha256": "133a7181e7a1fd8dcee3a1b72668fa75bae7095d3f0108ec7d6084cd5e23ea21",
+    "inputVocabularySha256": "7362824f15c9a23bbd48df28d26c96977325ebcfe43ed080eb592047f729c230",
+    "equivalence": "Existing M5/M7 contract and exact shared-core authority preserved"
+  },
+  "contentAddressed": {
+    "objectPrefix": "objects/sha256/<sha256>",
+    "manifestReferencesObjects": true,
+    "previousObjectCount": 896,
+    "newObjectCount": 898,
+    "unchangedObjectCount": 1,
+    "changedObjectCount": 0,
+    "removedReferences": 895,
+    "previousReleaseBytes": 487762842,
+    "newLogicalBytes": 476238519,
+    "reusedBytes": 129,
+    "newBytes": 476238390,
+    "deduplicationPercent": 0.000027,
+    "uniqueContentAddressedBytesAfter": 964001232,
+    "physicalPackDecision": "A: retain verified 1024 logical / 32 physical backend boundary"
+  },
+  "storageEconomics": {
+    "activeReleaseBytes": 476238519,
+    "previousReleaseBytes": 487762842,
+    "uniqueContentAddressedBytes": 964001232,
+    "newDailyBytesRequired": 476238390,
+    "objectCountAfterActivation": 1793,
+    "publicationOperations": {
+      "objectPutCalls": 898,
+      "newObjectWrites": 897,
+      "existingObjectChecks": 1,
+      "manifestWrites": 2,
+      "manifestObjectVerificationReads": 898,
+      "activePointerWrites": 1
+    },
+    "scratch": {
+      "observedCandidateTreeBytes": 2861662528,
+      "peakMemory": "NOT_MEASURED",
+      "peakScratch": "observed post-run candidate tree; no destructive cleanup performed"
+    }
+  },
+  "timings": {
+    "fullNewOfficialRun": {
+      "DISCOVERED": 1.428,
+      "STRUCTURALLY_VALIDATED": 0.814,
+      "QUALIFIED": 4247958.451,
+      "NORMALIZED": 23.866,
+      "BACKEND_BUILT": 5337907.066,
+      "INDEXED": 15021.817,
+      "VERIFIED": 365.872,
+      "totalMs": 9607194.555,
+      "wallClockMinutes": 160.1199
+    },
+    "resumedDiagnosticRunMs": 11716.9,
+    "resumedStages": ["DISCOVERED", "STRUCTURALLY_VALIDATED", "QUALIFIED", "NORMALIZED", "BACKEND_BUILT", "INDEXED", "VERIFIED"],
+    "sourceWideWorkRerun": false
+  },
+  "resumability": {
+    "stageManifests": true,
+    "identityInputs": ["source SHA", "policy/schema versions", "tool identity", "upstream artifact hashes", "configuration"],
+    "atomicTemporaryStages": true,
+    "activePointerWrittenLast": true
+  },
+  "activation": {
+    "activeBefore": "argentina-sepa-2026-09-06-e6c08be6a36e5e5b9",
+    "activeAfter": "argentina-sepa-2026-09-08-aeef3399fa20e751",
+    "lastKnownGoodPreserved": true,
+    "manifestCompletionState": "COMPLETE"
+  },
+  "rollback": {
+    "implemented": true,
+    "tested": true,
+    "rolledBackTo": "argentina-sepa-2026-09-06-e6c08be6a36e5e5b9",
+    "restoredTo": "argentina-sepa-2026-09-08-aeef3399fa20e751",
+    "auditWritten": true,
+    "verifiedBeforePointer": true
+  },
+  "failureInjection": {
+    "implemented": true,
+    "tested": true,
+    "cases": [
+      "publication failure before first object",
+      "corrupt reused object",
+      "schema drift",
+      "crash after qualification and stage resume",
+      "active pointer last",
+      "single-writer concurrency"
+    ],
+    "realPublicationFailureExitCode": 15,
+    "previousActivePreserved": true
+  },
+  "crossReleaseRegression": {
+    "status": "PASS",
+    "requests": 8,
+    "regions": ["CABA", "Buenos Aires", "Córdoba", "Jujuy"],
+    "queries": ["arroz", "leche", "manteca", "Coca-Cola", "Sprite"],
+    "releaseProvenanceNeverMixed": true,
+    "availabilityRemainedUnknown": true,
+    "oldTimingsMs": [26604.945, 35332.656, 23709.473, 9438.197],
+    "newTimingsMs": [26995.576, 35259.196, 23940.206, 9842.697]
+  },
+  "m6Regression": {
+    "status": "PASS",
+    "exactDecimalMath": true,
+    "oldAndNewTotalArs": "1940.00",
+    "releaseProvenancePinned": true,
+    "availability": "UNKNOWN"
+  },
+  "m7Regression": {
+    "status": "PASS",
+    "oldReleasePinned": "2026-09-06",
+    "newReleasePinned": "2026-09-08",
+    "profile": "1024/32",
+    "noReleaseMixing": true
+  },
+  "m8Regression": {
+    "status": "PASS",
+    "oldInputIdentityCount": 83327,
+    "newInputIdentityCount": 66449,
+    "exactKeyIntersection": 63111,
+    "addedInputIdentities": 3338,
+    "removedInputIdentities": 20216,
+    "semanticSafetyPreserved": true,
+    "auditedInputs": ["tomate", "tomte", "puré de tomate", "pasta de tomate", "salsa de tomate", "aroz", "sprit", "coka cola", "buter"],
+    "changedOutcomesRemainExplicit": true
+  },
+  "flags": {
+    "dailyReleasePipelineQualified": true,
+    "secondOfficialReleaseProven": true,
+    "automatedOfficialAcquisitionProven": false,
+    "liveCloudDeploymentVerified": false,
+    "androidNetworkingAuthorized": false,
+    "productionAndroidUiAuthorized": false,
+    "rawNationalDataCommitted": false,
+    "availabilityClaimedInStock": false
+  },
+  "testCounts": {
+    "m9FocusedTests": 8,
+    "m6M7M8RealCrossReleaseRequests": 8,
+    "fullPython": "181 tests PASS",
+    "backend": "11 tests PASS",
+    "android": "shared-core/app tests, lintDebug, assembleDebug, privacy, signer PASS",
+    "browser": "30 tests, Firefox web-ext lint PASS",
+    "ciRunIds": []
+  },
+  "ci": {
+    "status": "PENDING_EXACT_HEAD_CI",
+    "runIds": [],
+    "promotedHeadVerified": false
+  }
+}
