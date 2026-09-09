@@ -10,6 +10,7 @@ turn historical metadata into price history.
 ## Verified boundary
 
 - Starting repository SHA: `a887983b8825fd3790eafe4750ca6a043b2c5862`.
+- Candidate implementation SHA: `08a65cbf22677a6267c6e30eb91155279e8da5f9`.
 - M9 Sunday (`2026-09-06`) and Tuesday (`2026-09-08`, `sepa_martes.zip`)
   source hashes, complete manifests, object references, rollback evidence, and
   the 128 logical / 32 physical mobile-safe design were reused.
@@ -63,6 +64,6 @@ reported the bounded result deterministically.
   deployed and no cost/traffic claim was invented.
 
 The machine-readable evidence is in
-`ARGENTINA_PRODUCTION_STORAGE_RETENTION_QUALIFICATION.json`. Final test and
-exact-head CI identifiers are filled after the candidate and promoted branches
-complete their normal verification gates.
+`ARGENTINA_PRODUCTION_STORAGE_RETENTION_QUALIFICATION.json`. Candidate
+exact-head CI passed with runs `34301505678`, `34301505671`, and `34301505673`.
+The promoted branch SHA is recorded in the final handoff after promotion.

@@ -3,7 +3,7 @@
   "milestone": "M10",
   "status": "QUALIFIED_OFFLINE_RETENTION_ONLY",
   "startingSha": "a887983b8825fd3790eafe4750ca6a043b2c5862",
-  "candidateSha": null,
+  "candidateSha": "08a65cbf22677a6267c6e30eb91155279e8da5f9",
   "promotedSha": null,
   "scope": {
     "storageLifecycleOnly": true,
@@ -148,7 +148,11 @@
     "backendTests": "11 tests PASS",
     "androidTests": "shared-core/app tests, lintDebug, assembleDebug, privacy, signer PASS",
     "browserTests": "30 tests PASS, Firefox web-ext lint PASS",
-    "ci": "PENDING_CANDIDATE_AND_PROMOTED_HEAD_RUNS"
+    "ci": {
+      "status": "PASS_EXACT_HEAD_CI",
+      "candidateHead": "08a65cbf22677a6267c6e30eb91155279e8da5f9",
+      "candidateRunIds": [34301505678, 34301505671, 34301505673]
+    }
   },
   "flags": {
     "storageRetentionQualified": true,
