@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -68,6 +71,24 @@ def _workspace(root: Path) -> tuple[str, str]:
 
 
 class ObjectStorePublisherTests(unittest.TestCase):
+    def test_cli_dry_run_needs_no_publisher_configuration(self):
+        with tempfile.TemporaryDirectory() as workspace_dir:
+            workspace = Path(workspace_dir)
+            release_id, _ = _workspace(workspace)
+            environment = os.environ.copy()
+            for name in ("VALUEPILOT_PUBLISH_BUCKET", "VALUEPILOT_PUBLISH_ENDPOINT_URL", "VALUEPILOT_PUBLISH_REGION", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN"):
+                environment.pop(name, None)
+            result = subprocess.run(
+                [sys.executable, "-m", "tools.argentina_object_store_publisher", str(workspace), "--release-id", release_id, "--active-release-id", release_id],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=environment,
+            )
+            output = json.loads(result.stdout)
+            self.assertFalse(output["applied"])
+            self.assertEqual(output["remoteWriteCount"], 0)
+
     def test_dry_run_is_write_free_and_apply_is_pointer_last(self):
         with tempfile.TemporaryDirectory() as workspace_dir, tempfile.TemporaryDirectory() as object_dir:
             workspace = Path(workspace_dir)

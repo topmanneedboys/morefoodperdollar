@@ -63,7 +63,7 @@ def _verify_remote(store: ObjectStore, key: str, *, expected_sha256: str, expect
 class ObjectStoreReleasePublisher:
     """Publish with objects -> manifests -> control -> pointer-last ordering."""
 
-    def __init__(self, store: ObjectStore):
+    def __init__(self, store: ObjectStore | None = None):
         self.store = store
 
     @staticmethod
@@ -149,7 +149,9 @@ class ObjectStoreReleasePublisher:
         plan = self._plan(root, ids, active_id)
         order = ["immutable_objects", "verify_objects", "manifests", "verify_manifests", "control_metadata", "active_pointer_last"]
         if not apply:
-            return {**plan, "applied": False, "order": order}
+            return {**plan, "applied": False, "order": order, "remoteWriteCount": 0, "remoteDeleteCount": 0}
+        if self.store is None:
+            raise ObjectStorePublicationError("publisher object store is required for --apply")
 
         for item in plan["objects"]:
             try:
@@ -190,7 +192,8 @@ class ObjectStoreReleasePublisher:
             _verify_remote(self.store, "control/active.json", expected_sha256=hashlib.sha256(pointer_raw).hexdigest(), expected_bytes=len(pointer_raw))
         except (ObjectStoreError, ValueError, TypeError) as exc:
             raise ObjectStorePublicationError("active pointer publication failed") from exc
-        return {**plan, "applied": True, "activePointer": active_id, "order": order}
+        remote_writes = len(plan["objects"]) + (2 * len(plan["releaseIds"])) + len(plan["control"]) + 1
+        return {**plan, "applied": True, "activePointer": active_id, "order": order, "remoteWriteCount": remote_writes, "remoteDeleteCount": 0}
 
 
 def _main() -> int:
@@ -200,10 +203,12 @@ def _main() -> int:
     parser.add_argument("--active-release-id")
     parser.add_argument("--apply", action="store_true", help="perform writes; default is a deterministic dry-run")
     args = parser.parse_args()
-    bucket = os.environ.get("VALUEPILOT_PUBLISH_BUCKET", "").strip()
-    if not bucket:
-        raise SystemExit("VALUEPILOT_PUBLISH_BUCKET is required")
-    store = S3CompatibleObjectStore(bucket=bucket, endpoint_url=os.environ.get("VALUEPILOT_PUBLISH_ENDPOINT_URL") or None, region_name=os.environ.get("VALUEPILOT_PUBLISH_REGION") or None)
+    store = None
+    if args.apply:
+        bucket = os.environ.get("VALUEPILOT_PUBLISH_BUCKET", "").strip()
+        if not bucket:
+            raise SystemExit("VALUEPILOT_PUBLISH_BUCKET is required for --apply")
+        store = S3CompatibleObjectStore(bucket=bucket, endpoint_url=os.environ.get("VALUEPILOT_PUBLISH_ENDPOINT_URL") or None, region_name=os.environ.get("VALUEPILOT_PUBLISH_REGION") or None)
     result = ObjectStoreReleasePublisher(store).publish(args.workspace, release_ids=args.release_ids, active_release_id=args.active_release_id, apply=args.apply)
     print(json.dumps({key: value for key, value in result.items() if key not in {"objects", "control"}}, sort_keys=True, separators=(",", ":")))
     return 0
