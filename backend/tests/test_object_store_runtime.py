@@ -6,10 +6,21 @@ import tempfile
 import unittest
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import patch
 
 from backend.artifacts import ReleaseArtifactError
 from backend.clock import ARGENTINA_ZONE, FrozenClock
-from backend.object_store import LocalFilesystemObjectStore, ObjectStoreError, ReadOnlyObjectStore, S3CompatibleObjectStore
+from backend.object_store import (
+    LocalFilesystemObjectStore,
+    ObjectStoreError,
+    ReadOnlyObjectStore,
+    S3CompatibleObjectStore,
+    S3_CLIENT_TOTAL_MAX_ATTEMPTS,
+    S3_UPLOAD_MAX_ATTEMPTS,
+    S3_UPLOAD_MAX_CONCURRENCY,
+    S3_UPLOAD_MULTIPART_CHUNKSIZE_BYTES,
+    S3_UPLOAD_MULTIPART_THRESHOLD_BYTES,
+)
 from backend.release import ReleaseManager
 
 
@@ -40,6 +51,41 @@ class ReadOnlyS3:
         return {"Body": _Body(data)}
 
 
+class UploadS3:
+    def __init__(self, *, fail_uploads: int = 0, commit_before_failure: bool = False):
+        self.items: dict[str, bytes] = {}
+        self.metadata: dict[str, dict[str, str]] = {}
+        self.upload_calls: list[dict[str, object]] = []
+        self.fail_uploads = fail_uploads
+        self.commit_before_failure = commit_before_failure
+
+    def head_object(self, *, Bucket: str, Key: str):
+        if Key not in self.items:
+            raise KeyError(Key)
+        data = self.items[Key]
+        digest = hashlib.sha256(data).hexdigest()
+        return {"ContentLength": len(data), "ETag": digest, "Metadata": self.metadata.get(Key, {})}
+
+    def get_object(self, *, Bucket: str, Key: str, Range: str | None = None):
+        data = self.items[Key]
+        if Range:
+            left, right = Range.removeprefix("bytes=").split("-")
+            data = data[int(left) : int(right) + 1]
+        return {"Body": _Body(data)}
+
+    def upload_file(self, Filename: str, Bucket: str, Key: str, *, ExtraArgs, Config):
+        self.upload_calls.append({"Filename": Filename, "Key": Key, "ExtraArgs": ExtraArgs, "Config": Config})
+        data = Path(Filename).read_bytes()
+        if self.fail_uploads:
+            self.fail_uploads -= 1
+            if self.commit_before_failure:
+                self.items[Key] = data
+                self.metadata[Key] = dict(ExtraArgs["Metadata"])
+            raise ConnectionResetError(10054, "connection reset")
+        self.items[Key] = data
+        self.metadata[Key] = dict(ExtraArgs["Metadata"])
+
+
 def _put_release(items: dict[str, bytes], release_id: str, marker: bytes) -> None:
     digest = hashlib.sha256(marker).hexdigest()
     manifest = {
@@ -61,6 +107,89 @@ def _pointer(release_id: str) -> bytes:
 
 
 class ObjectStoreRuntimeTests(unittest.TestCase):
+    def test_s3_client_uses_bounded_standard_retries(self):
+        with patch("boto3.client") as client_factory:
+            S3CompatibleObjectStore(bucket="test", endpoint_url="https://example.invalid", region_name="auto")
+        config = client_factory.call_args.kwargs["config"]
+        self.assertEqual(config.retries, {"mode": "standard", "total_max_attempts": S3_CLIENT_TOTAL_MAX_ATTEMPTS})
+        self.assertEqual(config.max_pool_connections, S3_UPLOAD_MAX_CONCURRENCY)
+
+    def test_s3_file_upload_uses_managed_transfer_and_preserves_sha_metadata(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "payload.bin"
+            source.write_bytes(b"managed-transfer")
+            digest = hashlib.sha256(source.read_bytes()).hexdigest()
+            client = UploadS3()
+            store = S3CompatibleObjectStore(bucket="test", client=client)
+            result = store.put_immutable_file("objects/payload", source, sha256=digest)
+            self.assertEqual(result.sha256, digest)
+            self.assertEqual(client.metadata["objects/payload"], {"sha256": digest})
+            call = client.upload_calls[0]
+            config = call["Config"]
+            self.assertEqual(config.multipart_threshold, S3_UPLOAD_MULTIPART_THRESHOLD_BYTES)
+            self.assertEqual(config.multipart_chunksize, S3_UPLOAD_MULTIPART_CHUNKSIZE_BYTES)
+            self.assertEqual(config.max_concurrency, S3_UPLOAD_MAX_CONCURRENCY)
+
+    def test_s3_file_upload_retries_transient_reset_and_is_resumable(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "payload.bin"
+            source.write_bytes(b"retryable-transfer")
+            digest = hashlib.sha256(source.read_bytes()).hexdigest()
+            client = UploadS3(fail_uploads=1)
+            store = S3CompatibleObjectStore(bucket="test", client=client)
+            with patch("backend.object_store.time.sleep") as sleep:
+                result = store.put_immutable_file("objects/payload", source, sha256=digest)
+            self.assertEqual(result.sha256, digest)
+            self.assertEqual(len(client.upload_calls), 2)
+            sleep.assert_called_once()
+
+    def test_s3_file_upload_verifies_committed_object_after_ambiguous_reset(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "payload.bin"
+            source.write_bytes(b"committed-before-reset")
+            digest = hashlib.sha256(source.read_bytes()).hexdigest()
+            client = UploadS3(fail_uploads=1, commit_before_failure=True)
+            store = S3CompatibleObjectStore(bucket="test", client=client)
+            with patch("backend.object_store.time.sleep") as sleep:
+                result = store.put_immutable_file("objects/payload", source, sha256=digest)
+            self.assertEqual(result.sha256, digest)
+            self.assertEqual(len(client.upload_calls), 1)
+            sleep.assert_not_called()
+
+    def test_s3_existing_verified_object_is_skipped_and_mismatch_fails_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "payload.bin"
+            source.write_bytes(b"expected")
+            digest = hashlib.sha256(source.read_bytes()).hexdigest()
+            client = UploadS3()
+            client.items["objects/payload"] = source.read_bytes()
+            client.metadata["objects/payload"] = {"sha256": digest}
+            store = S3CompatibleObjectStore(bucket="test", client=client)
+            store.put_immutable_file("objects/payload", source, sha256=digest)
+            self.assertEqual(client.upload_calls, [])
+
+            client.items["objects/payload"] = b"different"
+            with self.assertRaises(ObjectStoreError):
+                store.put_immutable_file("objects/payload", source, sha256=digest)
+            self.assertEqual(client.upload_calls, [])
+
+    def test_partial_publication_never_advances_pointer_and_resumes(self):
+        # The release publisher test exercises pointer ordering.  This runtime
+        # fixture specifically proves the object-store half: an interrupted
+        # upload leaves no committed object, then a later call safely resumes.
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "payload.bin"
+            source.write_bytes(b"resume-me")
+            digest = hashlib.sha256(source.read_bytes()).hexdigest()
+            client = UploadS3(fail_uploads=S3_UPLOAD_MAX_ATTEMPTS)
+            store = S3CompatibleObjectStore(bucket="test", client=client)
+            with patch("backend.object_store.time.sleep"):
+                with self.assertRaises(ObjectStoreError):
+                    store.put_immutable_file("objects/payload", source, sha256=digest)
+            self.assertNotIn("objects/payload", client.items)
+            client.fail_uploads = 0
+            result = store.put_immutable_file("objects/payload", source, sha256=digest)
+            self.assertEqual(result.sha256, digest)
     def test_s3_runtime_reads_pin_one_generation_and_need_no_write_capability(self):
         client = ReadOnlyS3()
         _put_release(client.items, "r1", b"generation-one")

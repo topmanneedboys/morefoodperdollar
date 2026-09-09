@@ -9,8 +9,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from backend.object_store import LocalFilesystemObjectStore
-from tools.argentina_object_store_publisher import ObjectStoreReleasePublisher
+from backend.object_store import LocalFilesystemObjectStore, ObjectStoreError
+from tools.argentina_object_store_publisher import ObjectStorePublicationError, ObjectStoreReleasePublisher
 
 
 class RecordingStore:
@@ -45,6 +45,20 @@ class RecordingStore:
     def compare_and_swap(self, key, data, *, expected_etag=None):
         self.calls.append(f"cas:{key}")
         return self.delegate.compare_and_swap(key, data, expected_etag=expected_etag)
+
+
+class FailOnceStore(RecordingStore):
+    def __init__(self, root: Path, fail_key: str):
+        super().__init__(root)
+        self.fail_key = fail_key
+        self.failed = False
+
+    def put_immutable_file(self, key, source, *, sha256=None):
+        if key == self.fail_key and not self.failed:
+            self.failed = True
+            self.calls.append(f"put_file_failed:{key}")
+            raise ObjectStoreError("simulated interrupted publication")
+        return super().put_immutable_file(key, source, sha256=sha256)
 
 
 def _workspace(root: Path) -> tuple[str, str]:
@@ -105,6 +119,37 @@ class ObjectStorePublisherTests(unittest.TestCase):
             self.assertEqual(store.delegate.get("control/active.json"), json.dumps({"lastKnownGoodReleaseId": release_id, "previousReleaseId": None, "releaseId": release_id, "schemaVersion": "valuepilot-active-release-v1"}, sort_keys=True, separators=(",", ":")).encode())
             self.assertTrue(store.calls.index("cas:control/active.json") > store.calls.index("put:releases/" + release_id + "/manifest.json"))
             self.assertTrue(store.calls.index("cas:control/active.json") > store.calls.index("put:control/rollback-test.json"))
+
+    def test_interrupted_publication_does_not_advance_pointer_and_resumes(self):
+        with tempfile.TemporaryDirectory() as workspace_dir, tempfile.TemporaryDirectory() as object_dir:
+            workspace = Path(workspace_dir)
+            release_id, first_digest = _workspace(workspace)
+            second_payload = b"second-qualified-object"
+            second_digest = hashlib.sha256(second_payload).hexdigest()
+            (workspace / "objects" / "sha256" / second_digest).write_bytes(second_payload)
+            manifest_path = workspace / "releases" / release_id / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["objects"].append({"path": "zz-second.bin", "sha256": second_digest, "bytes": len(second_payload)})
+            manifest_raw = json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode()
+            manifest_path.write_bytes(manifest_raw)
+            (manifest_path.parent / "manifest.sha256").write_text(
+                f"{hashlib.sha256(manifest_raw).hexdigest()}  manifest.json\n", encoding="ascii"
+            )
+
+            fail_key = f"objects/sha256/{second_digest}"
+            store = FailOnceStore(Path(object_dir), fail_key)
+            publisher = ObjectStoreReleasePublisher(store)
+            with self.assertRaises(ObjectStorePublicationError):
+                publisher.publish(workspace, release_ids=[release_id], active_release_id=release_id, apply=True)
+            self.assertTrue(store.delegate.exists(f"objects/sha256/{first_digest}"))
+            self.assertFalse(store.delegate.exists(fail_key))
+            self.assertFalse(store.delegate.exists("control/active.json"))
+            self.assertFalse(store.delegate.exists(f"releases/{release_id}/manifest.json"))
+
+            result = publisher.publish(workspace, release_ids=[release_id], active_release_id=release_id, apply=True)
+            self.assertTrue(result["applied"])
+            self.assertTrue(store.delegate.exists(fail_key))
+            self.assertEqual(json.loads(store.delegate.get("control/active.json"))["releaseId"], release_id)
 
 
 if __name__ == "__main__":

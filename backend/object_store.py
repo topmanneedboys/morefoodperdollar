@@ -13,6 +13,7 @@ import hashlib
 import os
 import tempfile
 import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping, Protocol
@@ -62,6 +63,18 @@ def _sha256_file(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+# Managed S3 transfers use a multipart upload above this threshold.  The
+# values are deliberately bounded: a single publisher uploads one object at a
+# time, and four 16 MiB parts keep the transfer memory-bounded while avoiding
+# the fragile single-request path that failed for the first R2 publication.
+S3_UPLOAD_MULTIPART_THRESHOLD_BYTES = 16 * 1024 * 1024
+S3_UPLOAD_MULTIPART_CHUNKSIZE_BYTES = 16 * 1024 * 1024
+S3_UPLOAD_MAX_CONCURRENCY = 4
+S3_UPLOAD_MAX_ATTEMPTS = 3
+S3_UPLOAD_RETRY_BACKOFF_SECONDS = 0.25
+S3_CLIENT_TOTAL_MAX_ATTEMPTS = 5
 
 
 class LocalFilesystemObjectStore:
@@ -204,10 +217,59 @@ class S3CompatibleObjectStore:
         if client is None:
             try:
                 import boto3  # type: ignore
+                from botocore.config import Config  # type: ignore
             except ImportError as exc:  # pragma: no cover - exercised in deployments
                 raise ObjectStoreError("boto3 is required for S3-compatible storage") from exc
-            client = boto3.client("s3", endpoint_url=endpoint_url, region_name=region_name)
+            client = boto3.client(
+                "s3",
+                endpoint_url=endpoint_url,
+                region_name=region_name,
+                config=Config(
+                    connect_timeout=20,
+                    read_timeout=120,
+                    max_pool_connections=S3_UPLOAD_MAX_CONCURRENCY,
+                    retries={"mode": "standard", "total_max_attempts": S3_CLIENT_TOTAL_MAX_ATTEMPTS},
+                ),
+            )
         self.client = client
+
+    @staticmethod
+    def _transfer_config() -> Any:
+        try:
+            from boto3.s3.transfer import TransferConfig  # type: ignore
+        except ImportError as exc:  # pragma: no cover - exercised in deployments
+            raise ObjectStoreError("boto3 is required for managed S3 transfers") from exc
+        return TransferConfig(
+            multipart_threshold=S3_UPLOAD_MULTIPART_THRESHOLD_BYTES,
+            multipart_chunksize=S3_UPLOAD_MULTIPART_CHUNKSIZE_BYTES,
+            max_concurrency=S3_UPLOAD_MAX_CONCURRENCY,
+            use_threads=True,
+        )
+
+    @staticmethod
+    def _is_transient_upload_error(error: BaseException) -> bool:
+        if isinstance(error, (ConnectionError, TimeoutError)):
+            return True
+        # Keep the adapter import-light for local-only use while recognizing
+        # the botocore transport exceptions used by real S3-compatible clients.
+        return error.__class__.__name__ in {
+            "ConnectionClosedError",
+            "ConnectTimeoutError",
+            "EndpointConnectionError",
+            "ReadTimeoutError",
+            "RetriesExceededError",
+            "S3UploadFailedError",
+        }
+
+    def _verified_existing_file(self, key: str, *, size: int, digest: str) -> ObjectMetadata | None:
+        if not self.exists(key):
+            return None
+        existing = self.head(key)
+        if existing.size != size or (existing.sha256 and existing.sha256 != digest):
+            raise ObjectStoreError("immutable object differs")
+        if existing.sha256 is None and _sha256(self.get(key)) != digest:
+            raise ObjectStoreError("immutable object differs")
+        return existing
 
     def head(self, key: str) -> ObjectMetadata:
         key = validate_key(key)
@@ -270,19 +332,46 @@ class S3CompatibleObjectStore:
             raise ObjectStoreError("object source is unavailable") from exc
         if sha256 is not None and digest != sha256:
             raise ObjectStoreError("object hash mismatch")
-        if self.exists(key):
-            existing = self.head(key)
-            if existing.size != size or (existing.sha256 and existing.sha256 != digest):
-                raise ObjectStoreError("immutable object differs")
-            if existing.sha256 is None and _sha256(self.get(key)) != digest:
-                raise ObjectStoreError("immutable object differs")
+        existing = self._verified_existing_file(key, size=size, digest=digest)
+        if existing is not None:
             return existing
-        try:
-            with source_path.open("rb") as handle:
-                self.client.put_object(Bucket=self.bucket, Key=key, Body=handle, Metadata={"sha256": digest})
-        except Exception as exc:  # noqa: BLE001 - normalize provider errors
-            raise ObjectStoreError("object upload failed") from exc
-        return self.head(key)
+
+        # upload_file is boto3's managed file transfer.  It selects a regular
+        # PUT below the threshold and multipart upload above it, retries failed
+        # requests through the configured client, and does not expose an
+        # incomplete multipart upload as a committed object.
+        transfer_config = self._transfer_config()
+        upload_error: BaseException | None = None
+        for attempt in range(S3_UPLOAD_MAX_ATTEMPTS):
+            try:
+                self.client.upload_file(
+                    str(source_path),
+                    self.bucket,
+                    key,
+                    ExtraArgs={"Metadata": {"sha256": digest}},
+                    Config=transfer_config,
+                )
+            except Exception as exc:  # noqa: BLE001 - normalize provider errors
+                upload_error = exc
+                # A connection can fail after the provider has committed the
+                # complete object.  Verify before deciding whether a retry is
+                # safe; a visible mismatch is immutable and fails closed.
+                existing = self._verified_existing_file(key, size=size, digest=digest)
+                if existing is not None:
+                    return existing
+                if not self._is_transient_upload_error(exc) or attempt + 1 >= S3_UPLOAD_MAX_ATTEMPTS:
+                    raise ObjectStoreError("object upload failed") from exc
+                time.sleep(S3_UPLOAD_RETRY_BACKOFF_SECONDS * (2**attempt))
+                continue
+
+            try:
+                return self._verified_existing_file(key, size=size, digest=digest) or self.head(key)
+            except ObjectStoreError as exc:
+                raise ObjectStoreError("uploaded object verification failed") from exc
+
+        # The loop either returns or raises.  Keep a defensive failure for
+        # static analyzers and future changes that alter the loop bounds.
+        raise ObjectStoreError("object upload failed") from upload_error
 
     def compare_and_swap(self, key: str, data: bytes, *, expected_etag: str | None) -> ObjectMetadata:
         key = validate_key(key)

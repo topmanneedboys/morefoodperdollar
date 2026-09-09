@@ -48,6 +48,18 @@ The publisher uses `VALUEPILOT_PUBLISH_BUCKET`, optional
 operator's separate write credential. It never runs in the backend container;
 `--apply` is required for writes and the active pointer is written last.
 
+File-backed immutable uploads use boto3's managed `upload_file` transfer. Files
+at or above the bounded 16 MiB threshold use 16 MiB multipart parts with at
+most four concurrent transfers; the client uses standard botocore retries with
+five total attempts and the adapter permits at most three bounded
+connection-reset retries. Each retry first verifies whether the complete
+immutable object became visible, so an ambiguous success is not overwritten.
+Existing objects are skipped only after exact size/SHA-256 verification;
+mismatches fail closed. No delete-on-failure behavior is used. Incomplete
+publication leaves manifests, control metadata and `control/active.json`
+untouched, so a later run can safely resume already verified objects before
+publishing the pointer last.
+
 Availability is always `UNKNOWN` for SEPA prices. A stale release fails closed
 with `CURRENT_PRICE_EVIDENCE_UNAVAILABLE`; it is never presented as today's
 price. The existing 128/32 mobile contract remains intact for a future optional
