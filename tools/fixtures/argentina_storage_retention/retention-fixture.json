@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "valuepilot-argentina-storage-retention-fixture-v1",
+  "fixtureOnly": true,
+  "releaseCount": 4,
+  "sharedObjectCount": 1,
+  "uniqueObjectCountPerRelease": 1,
+  "activeRelease": "fixture-day-04",
+  "previousRelease": "fixture-day-03",
+  "operatorPinScenario": "fixture-day-01",
+  "failedActivationScenario": true,
+  "partialDeletionRecoveryScenario": true,
+  "budgetPressureScenario": true,
+  "noNationalSourceIncluded": true
+}

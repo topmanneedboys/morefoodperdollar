@@ -1,0 +1,163 @@
+{
+  "schemaVersion": "valuepilot-argentina-production-storage-retention-qualification-v1",
+  "milestone": "M10",
+  "status": "QUALIFIED_OFFLINE_RETENTION_ONLY",
+  "startingSha": "a887983b8825fd3790eafe4750ca6a043b2c5862",
+  "candidateSha": null,
+  "promotedSha": null,
+  "scope": {
+    "storageLifecycleOnly": true,
+    "androidNetworkingChanged": false,
+    "androidNetworkingAuthorized": false,
+    "productionAndroidUiChanged": false,
+    "nationalSourceRequalification": false,
+    "liveCloudDeployment": false,
+    "priceHistoryImplemented": false,
+    "rawNationalDataCommitted": false
+  },
+  "m9SourceEvidence": {
+    "status": "REUSED_VERIFIED_IMMUTABLE_ARTIFACTS",
+    "sourceWideVerificationRerun": false,
+    "reason": "M9 already verified the Sunday and Tuesday releases, exact hashes, manifests, object references, rollback, and backend profile. M10 verifies retention behavior over those built roots only.",
+    "officialSourceFamily": "Precios Claros - Base SEPA",
+    "sourceHost": "https://datos.produccion.gob.ar",
+    "attribution": "Precios Claros - Base SEPA",
+    "license": "Creative Commons Attribution 4.0",
+    "releases": [
+      {
+        "date": "2026-09-06",
+        "releaseId": "argentina-sepa-2026-09-06-e6c08be6a36e5e5b9",
+        "sourceSha256": "e6c08be6a36e5e5b90e6eb0b6f54a07c8bccded929fab2a28ad7f000ed08b305",
+        "sourceBytes": 325522188,
+        "logicalReleaseBytes": 487762842
+      },
+      {
+        "date": "2026-09-08",
+        "filename": "sepa_martes.zip",
+        "releaseId": "argentina-sepa-2026-09-08-aeef3399fa20e751",
+        "sourceSha256": "aeef3399fa20e751e80cda46cbb3a38349e378b51832ecffe1f779b986479815",
+        "sourceBytes": 325118492,
+        "logicalReleaseBytes": 476238519
+      }
+    ],
+    "priorBackendProfile": {
+      "onlineLogicalPartitions": 1024,
+      "physicalPacks": 32,
+      "mobileLogicalPartitions": 128,
+      "equivalence": "REUSED_FROM_M9_VERIFIED_ARTIFACTS"
+    }
+  },
+  "retentionPolicy": {
+    "policyVersion": "argentina-storage-retention-policy-v1",
+    "defaultCompleteVerifiedReleaseCount": 7,
+    "allowedCompleteVerifiedReleaseRange": [2, 14],
+    "minimumSafeCompleteReleases": 2,
+    "defaultGraceHours": 24,
+    "optionalBudgetExampleBytes": 8589934592,
+    "dryRunDefault": true,
+    "applyRequiresExplicitOperatorFlag": true
+  },
+  "lifecycle": {
+    "states": ["ACTIVE", "ROLLBACK_PROTECTED", "RETAINED", "GC_ELIGIBLE", "GC_COMPLETED"],
+    "roots": ["active", "previous", "lastKnownGood", "retentionWindow", "operatorPins", "graceProtected"],
+    "minimumReleaseSafetyRule": "Never remove the last two complete verified releases.",
+    "historicalRecord": "Metadata-only with dataPresent=false; never interpreted as live price history.",
+    "ledger": "Append-only hash-chained release lifecycle events."
+  },
+  "realWorkspaceDryRun": {
+    "status": "DRY_RUN_COMPLETE",
+    "workspace": "F:\\ValuePilot-M9-20260908\\workspace",
+    "evaluationAt": "2026-09-08T19:00:00Z",
+    "retentionCount": 7,
+    "graceSeconds": 86400,
+    "budgetBytes": 8589934592,
+    "activeReleaseId": "argentina-sepa-2026-09-08-aeef3399fa20e751",
+    "previousReleaseId": "argentina-sepa-2026-09-06-e6c08be6a36e5e5b9",
+    "protectedReleaseIds": [
+      "argentina-sepa-2026-09-06-e6c08be6a36e5e5b9",
+      "argentina-sepa-2026-09-08-aeef3399fa20e751"
+    ],
+    "objectCount": 1793,
+    "reachableObjectCount": 1793,
+    "unreachableObjectCount": 0,
+    "wouldDeleteObjectCount": 0,
+    "wouldDeleteBytes": 0,
+    "accounting": {
+      "contentBytes": 964001232,
+      "manifestBytes": 332952,
+      "controlBytes": 477,
+      "metadataLedgerBytes": 0,
+      "temporaryEligibleBytes": 0,
+      "protectedBytes": 964001232,
+      "storageBeforeBytes": 964334661,
+      "projectedPostGcBytes": 964334661
+    },
+    "budgetStatus": "WITHIN_BUDGET",
+    "activePointerUnchanged": true,
+    "objectListingUnchanged": true,
+    "releaseMetadataUnchanged": true,
+    "applyPerformed": false
+  },
+  "fixtureSimulation": {
+    "status": "PASS",
+    "days": 30,
+    "retentionCount": 7,
+    "graceSeconds": 86400,
+    "maxFullReleaseCount": 9,
+    "maxRetainedReleaseBound": 9,
+    "finalFullReleaseCount": 8,
+    "maxStorageBytes": 51502,
+    "finalStorageBytes": 51502,
+    "allObjectsUniqueAndSharedCases": true,
+    "growingAndShrinkingReleaseSizes": true,
+    "boundedByRetentionGraceAndExplicitPin": true,
+    "budgetPressureFailClosed": true,
+    "events": ["operator_pin", "failed_activation_preserved_pointer", "operator_unpin", "rollback"]
+  },
+  "safetyQualification": {
+    "deterministicRepeatRun": true,
+    "sharedObjectProtection": true,
+    "partialDeletionRecovery": true,
+    "rollbackRejectsMetadataOnly": true,
+    "activePointerNeverRewrittenByGc": true,
+    "singleWriterConcurrency": true,
+    "unknownObjectReferenceFailsClosed": true,
+    "minimumTwoReleaseRule": true,
+    "exactStorageAccounting": true,
+    "noPriceHistoryClaim": true,
+    "noAvailabilityClaim": true
+  },
+  "cloudReadiness": {
+    "status": "READY_FOR_SEPARATE_DESIGN_ONLY",
+    "recommendedFirstCandidate": "Cloudflare R2 Standard",
+    "deploymentPerformed": false,
+    "trafficOrCostEstimateInvented": false,
+    "reusedM9PublicationShape": {
+      "newObjectWrites": 897,
+      "existingObjectChecks": 1,
+      "manifestWrites": 2,
+      "manifestVerificationReads": 898,
+      "activePointerWrites": 1
+    },
+    "nextBoundary": "A separately authorized cloud backend milestone must define credentials, lifecycle rules, egress, retention, and cost tests before deployment."
+  },
+  "testCounts": {
+    "m10FocusedTests": 16,
+    "m9FocusedTests": 8,
+    "fullToolsTests": "197 tests PASS",
+    "backendTests": "11 tests PASS",
+    "androidTests": "shared-core/app tests, lintDebug, assembleDebug, privacy, signer PASS",
+    "browserTests": "30 tests PASS, Firefox web-ext lint PASS",
+    "ci": "PENDING_CANDIDATE_AND_PROMOTED_HEAD_RUNS"
+  },
+  "flags": {
+    "storageRetentionQualified": true,
+    "gcQualified": true,
+    "rollingStorageBounded": true,
+    "priceHistoryImplemented": false,
+    "liveCloudDeploymentVerified": false,
+    "automatedOfficialAcquisitionProven": false,
+    "androidNetworkingAuthorized": false,
+    "productionAndroidUiAuthorized": false
+  }
+}
