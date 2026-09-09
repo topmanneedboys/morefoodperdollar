@@ -29,7 +29,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct module invocation
     from shopping_intelligence_engine import ShoppingIntelligenceError, ShoppingRequest
     from verify_argentina_sepa_micro_partition_mobile import decode_member_bytes
 
-from .object_store import LocalFilesystemObjectStore, ObjectStoreError
+from .artifacts import FilesystemReleaseArtifactStore, ManifestReleaseArtifactStore, ReleaseArtifactError, ReleaseArtifactStore
 
 
 MAX_BACKEND_RADIUS_KM = Decimal("50")
@@ -98,15 +98,86 @@ class RegionSelection:
 class NationalStoreRouter:
     """Route by exact published store province and Haversine distance only."""
 
-    def __init__(self, root: Path | str):
-        self.root = Path(root).resolve()
+    def __init__(self, root: Path | str | None, *, artifacts: ReleaseArtifactStore):
+        self.root = Path(root).resolve() if root is not None else None
+        self.artifacts = artifacts
         self._contracts: dict[str, Any] = {}
         self._stores: dict[str, dict[str, Mapping[str, Any]]] = {}
+
+    def _materialize_remote_contract(self, region_id: str) -> Any:
+        if not isinstance(self.artifacts, ManifestReleaseArtifactStore):
+            raise BackendQueryError("remote release artifact adapter is invalid")
+        cache_root = self.artifacts.cache_root / "micro-1024"
+        try:
+            bootstrap_path = self.artifacts.materialize("micro-1024/bootstrap.json")
+            self.artifacts.materialize("micro-1024/bootstrap.sha256")
+            self.artifacts.materialize("micro-1024/integrity.json")
+            bootstrap = json.loads(bootstrap_path.read_bytes())
+        except (ReleaseArtifactError, OSError, ValueError) as exc:
+            raise BackendQueryError("remote release bootstrap is unavailable") from exc
+        if not isinstance(bootstrap, Mapping):
+            raise BackendQueryError("remote release bootstrap is invalid")
+        source = bootstrap.get("source")
+        if not isinstance(source, Mapping):
+            raise BackendQueryError("remote release source metadata is invalid")
+        entry = next((item for item in bootstrap.get("regions", []) if isinstance(item, Mapping) and item.get("regionId") == region_id), None)
+        if not isinstance(entry, Mapping):
+            raise BackendQueryError("remote release region is unavailable")
+        region_manifest_descriptor = entry.get("manifest")
+        if not isinstance(region_manifest_descriptor, Mapping) or not isinstance(region_manifest_descriptor.get("path"), str):
+            raise BackendQueryError("remote region manifest descriptor is invalid")
+        def artifact_path(value: str) -> str:
+            return value if value.startswith("micro-1024/") else f"micro-1024/{value}"
+        try:
+            region_manifest_path = self.artifacts.materialize(artifact_path(region_manifest_descriptor["path"]))
+            self.artifacts.materialize(artifact_path(f"regions/{region_id}/manifest.sha256"))
+            region_manifest = json.loads(region_manifest_path.read_bytes())
+        except (ReleaseArtifactError, OSError, ValueError) as exc:
+            raise BackendQueryError("remote region manifest is unavailable") from exc
+        if not isinstance(region_manifest, Mapping):
+            raise BackendQueryError("remote region manifest is invalid")
+        files = region_manifest.get("files")
+        if not isinstance(files, Mapping):
+            raise BackendQueryError("remote region file descriptors are invalid")
+        descriptors = [files.get("searchIndex"), files.get("storeIndex")]
+        packs = files.get("offerPacks")
+        if not isinstance(packs, list):
+            raise BackendQueryError("remote region pack descriptors are invalid")
+        descriptors.extend(packs)
+        try:
+            for descriptor in descriptors:
+                if not isinstance(descriptor, Mapping) or not isinstance(descriptor.get("path"), str):
+                    raise BackendQueryError("remote region artifact descriptor is invalid")
+                logical_path = artifact_path(descriptor["path"])
+                self.artifacts.materialize(logical_path, sparse=logical_path.endswith(".bin"))
+            expected_outer = source.get("outerSha256")
+            expected_bytes = source.get("outerBytes")
+            expected_date = source.get("releaseDate")
+            expected_accepted = source.get("acceptedObservationsSha256")
+            expected_national = source.get("nationalIndexSha256")
+            if not all(isinstance(value, str) for value in (expected_outer, expected_date, expected_accepted, expected_national)) or not isinstance(expected_bytes, int):
+                raise BackendQueryError("remote release source evidence is incomplete")
+            return load_micro_region_contract(
+                cache_root,
+                region_id,
+                expected_outer_sha256=expected_outer,
+                expected_outer_bytes=expected_bytes,
+                expected_release_date=expected_date,
+                expected_accepted_sha256=expected_accepted,
+                expected_national_index_sha256=expected_national,
+            )
+        except (ReleaseArtifactError, OSError, ValueError, MicroPartitionQueryError) as exc:
+            raise BackendQueryError("remote region contract failed verification") from exc
 
     def contract(self, region_id: str) -> Any:
         contract = self._contracts.get(region_id)
         if contract is None:
-            contract = load_micro_region_contract(self.root, region_id)
+            if self.artifacts.remote:
+                contract = self._materialize_remote_contract(region_id)
+            else:
+                if self.root is None:
+                    raise BackendQueryError("local release root is unavailable")
+                contract = load_micro_region_contract(self.root, region_id)
             self._contracts[region_id] = contract
         return contract
 
@@ -144,8 +215,8 @@ class ArgentinaBackendReader:
     def __init__(self, release: ReleaseHandle, *, cache: VerifiedEvidenceCache[list[dict[str, Any]]] | None = None):
         self.release = release
         self.root = release.root
-        self.store = LocalFilesystemObjectStore(self.root)
-        self.router = NationalStoreRouter(self.root)
+        self.artifacts = release.artifacts
+        self.router = NationalStoreRouter(self.root, artifacts=self.artifacts)
         self.cache = cache or VerifiedEvidenceCache()
         # Search indexes are immutable for a pinned release. Cache bounded
         # top-k results so warm service calls do not rescan the same gzip.
@@ -249,7 +320,7 @@ class ArgentinaBackendReader:
             metrics.object_reads += 1
             metrics.range_reads += 1
             range_started = time.perf_counter()
-            data = self.store.get_range(partition["path"], int(partition["byteOffset"]), int(partition["byteLength"]))
+            data = self.artifacts.read_range(partition["path"], int(partition["byteOffset"]), int(partition["byteLength"]))
             metrics.range_reads_ms += (time.perf_counter() - range_started) * 1000
             metrics.bytes_read += len(data)
             records = decode_member_bytes(data, partition, f"{region_id}/{partition['partitionId']}")

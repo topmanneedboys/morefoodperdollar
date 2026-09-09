@@ -297,4 +297,32 @@ class S3CompatibleObjectStore:
         return self.head(key)
 
 
-__all__ = ["LocalFilesystemObjectStore", "ObjectMetadata", "ObjectStore", "ObjectStoreError", "S3CompatibleObjectStore", "validate_key"]
+class ReadOnlyObjectStore:
+    """Capability-reduced view for the request-serving runtime."""
+
+    def __init__(self, store: ObjectStore):
+        self._store = store
+
+    def head(self, key: str) -> ObjectMetadata:
+        return self._store.head(key)
+
+    def get(self, key: str) -> bytes:
+        return self._store.get(key)
+
+    def get_range(self, key: str, offset: int, length: int) -> bytes:
+        return self._store.get_range(key, offset, length)
+
+    def exists(self, key: str) -> bool:
+        return self._store.exists(key)
+
+    def put_immutable(self, key: str, data: bytes, *, sha256: str | None = None) -> ObjectMetadata:
+        raise ObjectStoreError("runtime object store is read-only")
+
+    def put_immutable_file(self, key: str, source: Path | str, *, sha256: str | None = None) -> ObjectMetadata:
+        raise ObjectStoreError("runtime object store is read-only")
+
+    def compare_and_swap(self, key: str, data: bytes, *, expected_etag: str | None) -> ObjectMetadata:
+        raise ObjectStoreError("runtime object store is read-only")
+
+
+__all__ = ["LocalFilesystemObjectStore", "ObjectMetadata", "ObjectStore", "ObjectStoreError", "ReadOnlyObjectStore", "S3CompatibleObjectStore", "validate_key"]

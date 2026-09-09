@@ -15,6 +15,13 @@ $env:VALUEPILOT_RELEASE_ROOT = 'F:\valuepilot-m5-alternatives\micro-1024'
 python -m backend
 ```
 
+The container can instead use the provider-neutral S3-compatible release
+store.  Set `VALUEPILOT_RELEASE_STORE=s3`, `VALUEPILOT_RELEASE_BUCKET`, and
+optionally `VALUEPILOT_RELEASE_ENDPOINT_URL` and
+`VALUEPILOT_RELEASE_REGION`.  boto3's standard credential chain supplies the
+runtime credential; the process only calls HEAD/GET/range GET.  Do not set the
+publisher credential in the runtime.
+
 The service has no acquisition job. It never contacts `datos.produccion.gob.ar`
 and does not bypass WAFs, use proxies, or infer missing source facts.
 
@@ -33,6 +40,13 @@ request resolves and pins one generation before routing. Publication uploads
 and verifies the generation before changing the pointer; the local publisher
 uses a single-writer lock where a portable object-store compare-and-swap is not
 available.
+
+An operator can dry-run or explicitly apply a qualified local M9/M10
+content-addressed workspace with `tools/argentina_object_store_publisher.py`.
+The publisher uses `VALUEPILOT_PUBLISH_BUCKET`, optional
+`VALUEPILOT_PUBLISH_ENDPOINT_URL`/`VALUEPILOT_PUBLISH_REGION`, and the
+operator's separate write credential. It never runs in the backend container;
+`--apply` is required for writes and the active pointer is written last.
 
 Availability is always `UNKNOWN` for SEPA prices. A stale release fails closed
 with `CURRENT_PRICE_EVIDENCE_UNAVAILABLE`; it is never presented as today's

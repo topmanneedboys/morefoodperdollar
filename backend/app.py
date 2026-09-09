@@ -4,7 +4,34 @@ import os
 import uuid
 from typing import Any
 
+from .object_store import ObjectStoreError, ReadOnlyObjectStore, S3CompatibleObjectStore
+from .release import ReleaseManager
 from .service import BackendService, MAX_REQUEST_BYTES, ResponseLimitError
+
+
+def _runtime_service() -> BackendService:
+    """Build a local or read-only object-store backed service from config.
+
+    boto3 receives credentials through its normal provider chain.  No
+    credential value is read, logged, or embedded in the application.
+    """
+
+    backend = os.environ.get("VALUEPILOT_RELEASE_STORE", "local").strip().lower()
+    if backend == "local":
+        root = os.environ.get("VALUEPILOT_RELEASE_ROOT", "local-provider-data/argentina-backend-release")
+        return BackendService(root)
+    if backend not in {"s3", "s3-compatible"}:
+        raise RuntimeError("VALUEPILOT_RELEASE_STORE must be local or s3")
+    bucket = os.environ.get("VALUEPILOT_RELEASE_BUCKET", "").strip()
+    if not bucket:
+        raise RuntimeError("VALUEPILOT_RELEASE_BUCKET is required for object-store runtime")
+    endpoint = os.environ.get("VALUEPILOT_RELEASE_ENDPOINT_URL") or None
+    region = os.environ.get("VALUEPILOT_RELEASE_REGION") or None
+    try:
+        store = S3CompatibleObjectStore(bucket=bucket, endpoint_url=endpoint, region_name=region)
+    except ObjectStoreError as exc:
+        raise RuntimeError("object-store runtime is unavailable") from exc
+    return BackendService("", release_manager=ReleaseManager(object_store=ReadOnlyObjectStore(store)))
 
 
 def create_app(service: BackendService | None = None):
@@ -48,7 +75,7 @@ def create_app(service: BackendService | None = None):
         text: StrictStr = Field(min_length=1, max_length=4096)
 
     app = FastAPI(title="ValuePilot Argentina Backend", version="valuepilot-argentina-backend-v1", docs_url=None, redoc_url=None, openapi_url=None)
-    runtime_service = service or BackendService(os.environ.get("VALUEPILOT_RELEASE_ROOT", "local-provider-data/argentina-backend-release"))
+    runtime_service = service or _runtime_service()
 
     @app.middleware("http")
     async def bounded_body(request: Request, call_next):

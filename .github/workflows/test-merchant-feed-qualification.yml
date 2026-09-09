@@ -28,10 +28,12 @@ on:
       - 'tools/build_argentina_daily_release.py'
       - 'tools/argentina_storage_retention.py'
       - 'tools/manage_argentina_storage_retention.py'
+      - 'tools/argentina_object_store_publisher.py'
       - 'tools/fixtures/argentina_daily_release/**'
       - 'tools/fixtures/argentina_storage_retention/**'
       - 'tools/tests/test_argentina_daily_release_operations.py'
       - 'tools/tests/test_argentina_storage_retention.py'
+      - 'tools/tests/test_argentina_object_store_publisher.py'
       - 'ARGENTINA_PRODUCTION_STORAGE_RETENTION_QUALIFICATION.*'
       - 'tools/qualify_rakuten_product_catalog.py'
       - 'tools/measure_rakuten_off_quantity_coverage.py'
@@ -69,10 +71,12 @@ on:
       - 'tools/build_argentina_daily_release.py'
       - 'tools/argentina_storage_retention.py'
       - 'tools/manage_argentina_storage_retention.py'
+      - 'tools/argentina_object_store_publisher.py'
       - 'tools/fixtures/argentina_daily_release/**'
       - 'tools/fixtures/argentina_storage_retention/**'
       - 'tools/tests/test_argentina_daily_release_operations.py'
       - 'tools/tests/test_argentina_storage_retention.py'
+      - 'tools/tests/test_argentina_object_store_publisher.py'
       - 'ARGENTINA_PRODUCTION_STORAGE_RETENTION_QUALIFICATION.*'
       - 'tools/qualify_rakuten_product_catalog.py'
       - 'tools/measure_rakuten_off_quantity_coverage.py'
@@ -129,6 +133,7 @@ jobs:
           tools/build_argentina_daily_release.py
           tools/argentina_storage_retention.py
           tools/manage_argentina_storage_retention.py
+          tools/argentina_object_store_publisher.py
           tools/qualify_rakuten_product_catalog.py
           tools/measure_rakuten_off_quantity_coverage.py
           tools/measure_rakuten_off_quantity_coverage_v2.py
