@@ -121,6 +121,19 @@ class MicroRegionContract:
 
 
 @dataclass(frozen=True)
+class MicroRegionRouting:
+    """Verified routing-only view over a region's published metadata."""
+
+    root: Path
+    region: RegionSpec
+    bootstrap: Mapping[str, Any]
+    manifest: Mapping[str, Any]
+    store_descriptor: Mapping[str, Any]
+    bootstrap_bytes: int
+    manifest_bytes: int
+
+
+@dataclass(frozen=True)
 class MicroQueryPlan:
     region_id: str
     product_queries: tuple[str, ...]
@@ -251,6 +264,65 @@ def load_micro_region_contract(
         _require(descriptor.get("byteOffset") + descriptor.get("byteLength") <= pack_map[descriptor["packId"]]["bytes"], f"{region_id}/{partition_id} range exceeds pack")
         partition_map[partition_id] = descriptor
     return MicroRegionContract(root, spec, bootstrap, manifest, search_descriptor, store_descriptor, pack_map, partition_map, bootstrap_path.stat().st_size, manifest_path.stat().st_size)
+
+
+def load_micro_region_routing(
+    root: Path,
+    region_id: str,
+    *,
+    expected_outer_sha256: str = EXPECTED_OUTER_SHA256,
+    expected_outer_bytes: int = EXPECTED_OUTER_BYTES,
+    expected_release_date: str = RELEASE_DATE,
+    expected_accepted_sha256: str | None = EXPECTED_ACCEPTED_SHA256,
+    expected_national_index_sha256: str | None = EXPECTED_NATIONAL_INDEX_SHA256,
+) -> MicroRegionRouting:
+    """Verify only bootstrap/manifest/store metadata needed for geography.
+
+    Search indexes, offer packs and logical partition descriptors are left
+    untouched; a caller can load the full contract only after routing selects
+    this region.
+    """
+
+    root = _coerce_path(root).resolve()
+    bootstrap_path = root / BOOTSTRAP_FILE
+    bootstrap = _read_canonical_json(bootstrap_path, BOOTSTRAP_FILE)
+    _require(bootstrap.get("artifactSchemaVersion") == MICRO_PARTITION_SCHEMA_VERSION and bootstrap.get("policyVersion") == MICRO_PARTITION_POLICY_VERSION and bootstrap.get("compatibilityVersion") == MICRO_PARTITION_COMPATIBILITY_VERSION and bootstrap.get("atomicCompletion") is True and bootstrap.get("completionState") == "COMPLETE" and bootstrap.get("productionUiAuthorized") is False, "bootstrap version/completion/authorization is invalid")
+    _require(bootstrap.get("generatedAt") == _canonical_timestamp(bootstrap.get("generatedAt"), "bootstrap.generatedAt"), "bootstrap timestamp is invalid")
+    bootstrap_hash = _sha256_file(bootstrap_path)
+    _require((root / "bootstrap.sha256").read_text(encoding="ascii") == f"{bootstrap_hash}  {BOOTSTRAP_FILE}\n", "bootstrap checksum is invalid")
+    integrity = _read_canonical_json(root / "integrity.json", "integrity.json")
+    _require(integrity.get("bootstrapSha256") == bootstrap_hash and integrity.get("atomicCompletion") is True and integrity.get("schemaVersion") == MICRO_PARTITION_SCHEMA_VERSION, "root integrity metadata is invalid")
+    source = bootstrap.get("source")
+    _require(isinstance(source, dict) and source.get("provider") == "ARGENTINA_SEPA_PRECIOS_CLAROS" and source.get("releaseDate") == expected_release_date and source.get("outerSha256") == expected_outer_sha256 and source.get("outerBytes") == expected_outer_bytes and source.get("license") == "Creative Commons Attribution 4.0" and source.get("rawProviderDataCommitted") is False, "bootstrap source provenance is invalid")
+    if expected_accepted_sha256 is not None:
+        _require(source.get("acceptedObservationsSha256") == expected_accepted_sha256, "accepted source hash is not the qualified release")
+    if expected_national_index_sha256 is not None:
+        _require(source.get("nationalIndexSha256") == expected_national_index_sha256, "national index hash is not the qualified release")
+    boundaries = {"currency": CURRENCY, "availability": AVAILABILITY, "deliveryPickup": DELIVERY_PICKUP, "distance": "STRAIGHT_LINE_HAVERSINE_ONLY", "androidNetworking": "NOT_AUTHORIZED", "rawProviderDataCommitted": False}
+    _require(bootstrap.get("boundaries") == boundaries, "bootstrap boundaries are invalid")
+    partitioning = bootstrap.get("partitioning")
+    _require(isinstance(partitioning, dict) and partitioning.get("algorithm") == MICRO_PARTITION_ALGORITHM and partitioning.get("key") == "productEvidenceKey" and partitioning.get("physicalPackAlgorithm") == PHYSICAL_PACK_ALGORITHM and partitioning.get("memberCompression") == MEMBER_COMPRESSION and partitioning.get("rangeUnit") == "BYTES", "bootstrap partitioning is invalid")
+    logical_count = partitioning.get("logicalPartitionCount")
+    pack_count = partitioning.get("physicalPackCount")
+    _require(isinstance(logical_count, int) and isinstance(pack_count, int) and logical_count >= pack_count > 0 and logical_count & (logical_count - 1) == 0 and 128 <= logical_count <= 1024, "bootstrap partition counts are invalid")
+    spec = next((item for item in ARGENTINA_REGIONS if item.region_id == region_id), None)
+    _require(spec is not None, f"unknown Argentina region: {region_id}")
+    entry = next((item for item in bootstrap.get("regions", []) if isinstance(item, dict) and item.get("regionId") == region_id), None)
+    _require(isinstance(entry, dict) and entry.get("provinceCode") == spec.province_code and entry.get("displayName") == spec.display_name and entry.get("selector") == {"field": "store.province", "operator": "EXACT", "value": spec.province_code}, f"bootstrap region {region_id} is invalid")
+    manifest_descriptor = entry.get("manifest")
+    _require(isinstance(manifest_descriptor, dict), f"{region_id} manifest descriptor is missing")
+    manifest_path = _verify_descriptor(root, manifest_descriptor, f"regions/{region_id}/{REGION_MANIFEST_FILE}", f"{region_id} manifest")
+    manifest = _read_canonical_json(manifest_path, f"{region_id} manifest")
+    _require(manifest.get("artifactSchemaVersion") == MICRO_PARTITION_SCHEMA_VERSION and manifest.get("policyVersion") == MICRO_PARTITION_POLICY_VERSION and manifest.get("compatibilityVersion") == MICRO_PARTITION_COMPATIBILITY_VERSION and manifest.get("atomicCompletion") is True and manifest.get("completionState") == "COMPLETE" and manifest.get("generatedAt") == bootstrap["generatedAt"] and manifest.get("source") == source and manifest.get("region") == {"id": region_id, "displayName": spec.display_name, "selector": {"field": "store.province", "operator": "EXACT", "value": spec.province_code}} and manifest.get("boundaries") == {"currency": CURRENCY, "availability": AVAILABILITY, "deliveryPickup": DELIVERY_PICKUP, "distance": "STRAIGHT_LINE_HAVERSINE_ONLY", "rawProviderDataCommitted": False}, f"{region_id} manifest metadata is invalid")
+    _require((manifest_path.with_name("manifest.sha256")).read_text(encoding="ascii") == f"{_sha256_file(manifest_path)}  manifest.json\n", f"{region_id} manifest checksum is invalid")
+    manifest_partitioning = manifest.get("partitioning")
+    _require(isinstance(manifest_partitioning, dict) and manifest_partitioning.get("logicalPartitionCount") == logical_count and manifest_partitioning.get("physicalPackCount") == pack_count, f"{region_id} partition counts differ from bootstrap")
+    files = manifest.get("files")
+    _require(isinstance(files, dict) and set(files) == {"searchIndex", "storeIndex", "offerPacks", "logicalPartitions"}, f"{region_id} file set is invalid")
+    store_descriptor = files.get("storeIndex")
+    _require(isinstance(store_descriptor, Mapping), f"{region_id} store descriptor is invalid")
+    _verify_descriptor(root, store_descriptor, f"regions/{region_id}/{STORE_INDEX_FILE}", f"{region_id} store index", compressed=True)
+    return MicroRegionRouting(root, spec, bootstrap, manifest, store_descriptor, bootstrap_path.stat().st_size, manifest_path.stat().st_size)
 
 
 def _read_member(contract: MicroRegionContract, partition_id: str) -> list[dict[str, Any]]:
@@ -410,4 +482,4 @@ def query_micro_structured_request(root: Path, region_id: str, *, latitude: str 
     return {"regionId": region_id, "latitude": f"{lat:.6f}", "longitude": f"{lon:.6f}", "radiusKm": f"{radius:.6f}", "distanceSemantics": "STRAIGHT_LINE_HAVERSINE", "availability": AVAILABILITY, "deliveryPickup": DELIVERY_PICKUP, "items": per_item, "queryPlan": plan.as_dict()}
 
 
-__all__ = ["MicroPartitionQueryError", "MicroQueryPlan", "MicroRegionContract", "activate_cached_member", "load_micro_region_contract", "plan_micro_query", "query_micro_nearby", "query_micro_structured_request", "required_slices"]
+__all__ = ["MicroPartitionQueryError", "MicroQueryPlan", "MicroRegionContract", "MicroRegionRouting", "activate_cached_member", "load_micro_region_contract", "load_micro_region_routing", "plan_micro_query", "query_micro_nearby", "query_micro_structured_request", "required_slices"]

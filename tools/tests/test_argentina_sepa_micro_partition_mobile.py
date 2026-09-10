@@ -13,6 +13,7 @@ from tools.argentina_sepa_micro_partition import (
     _read_member,
     activate_cached_member,
     load_micro_region_contract,
+    load_micro_region_routing,
     plan_micro_query,
     query_micro_nearby,
     query_micro_structured_request,
@@ -96,6 +97,18 @@ class ArgentinaSepaMicroPartitionMobileTest(unittest.TestCase):
         self.assertEqual(bootstrap["boundaries"]["availability"], "UNKNOWN")
         self.assertEqual(bootstrap["boundaries"]["androidNetworking"], "NOT_AUTHORIZED")
         self.assertEqual(bootstrap["source"]["license"], "Creative Commons Attribution 4.0")
+
+    def test_routing_loader_only_requires_store_index_and_fails_closed_when_corrupt(self):
+        routing = load_micro_region_routing(self.micro, "ar-caba", **PROVENANCE)
+        self.assertEqual(routing.region.region_id, "ar-caba")
+        self.assertTrue(routing.store_descriptor["path"].endswith("store-index.jsonl.gz"))
+
+        broken = Path(self.tempdir.name) / "routing-broken"
+        shutil.copytree(self.micro, broken)
+        store_path = broken / "regions" / "ar-caba" / "store-index.jsonl.gz"
+        store_path.write_bytes(b"corrupt")
+        with self.assertRaises(MicroPartitionQueryError):
+            load_micro_region_routing(broken, "ar-caba", **PROVENANCE)
 
     def test_repeat_build_is_byte_identical(self):
         repeat = Path(self.tempdir.name) / "repeat"

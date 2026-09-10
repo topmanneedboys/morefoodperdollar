@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import threading
 import time
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -13,7 +14,7 @@ from backend.cache import VerifiedEvidenceCache
 from backend.release import ReleaseHandle
 
 try:
-    from tools.argentina_sepa_micro_partition import MicroPartitionQueryError, MicroQueryPlan, _load_stores, load_micro_region_contract
+    from tools.argentina_sepa_micro_partition import MicroPartitionQueryError, MicroQueryPlan, _load_stores, load_micro_region_contract, load_micro_region_routing
     from tools.argentina_sepa_query import _offer_result, _search_candidates, straight_line_distance_km
     from tools.argentina_sepa_query import _iter_gzip_records
     from tools.argentina_shopping_intelligence import evaluate_argentina_provider_result
@@ -21,7 +22,7 @@ try:
     from tools.shopping_intelligence_engine import ShoppingIntelligenceError, ShoppingRequest
     from tools.verify_argentina_sepa_micro_partition_mobile import decode_member_bytes
 except ModuleNotFoundError:  # pragma: no cover - direct module invocation
-    from argentina_sepa_micro_partition import MicroPartitionQueryError, MicroQueryPlan, _load_stores, load_micro_region_contract
+    from argentina_sepa_micro_partition import MicroPartitionQueryError, MicroQueryPlan, _load_stores, load_micro_region_contract, load_micro_region_routing
     from argentina_sepa_query import _offer_result, _search_candidates, straight_line_distance_km
     from argentina_sepa_query import _iter_gzip_records
     from argentina_shopping_intelligence import evaluate_argentina_provider_result
@@ -103,36 +104,63 @@ class NationalStoreRouter:
         self.artifacts = artifacts
         self._contracts: dict[str, Any] = {}
         self._stores: dict[str, dict[str, Mapping[str, Any]]] = {}
+        self._routing_stores: dict[str, dict[str, Mapping[str, Any]]] = {}
+        self._routing_bootstrap: Mapping[str, Any] | None = None
+        self._lock = threading.RLock()
 
-    def _materialize_remote_contract(self, region_id: str) -> Any:
+    @staticmethod
+    def _artifact_path(value: Any) -> str:
+        if not isinstance(value, str) or not value:
+            raise BackendQueryError("remote artifact path is invalid")
+        return value if value.startswith("micro-1024/") else f"micro-1024/{value}"
+
+    def _remote_bootstrap(self) -> tuple[Path, Mapping[str, Any]]:
         if not isinstance(self.artifacts, ManifestReleaseArtifactStore):
             raise BackendQueryError("remote release artifact adapter is invalid")
-        cache_root = self.artifacts.cache_root / "micro-1024"
-        try:
-            bootstrap_path = self.artifacts.materialize("micro-1024/bootstrap.json")
-            self.artifacts.materialize("micro-1024/bootstrap.sha256")
-            self.artifacts.materialize("micro-1024/integrity.json")
-            bootstrap = json.loads(bootstrap_path.read_bytes())
-        except (ReleaseArtifactError, OSError, ValueError) as exc:
-            raise BackendQueryError("remote release bootstrap is unavailable") from exc
-        if not isinstance(bootstrap, Mapping):
-            raise BackendQueryError("remote release bootstrap is invalid")
+        with self._lock:
+            if self._routing_bootstrap is not None:
+                return self.artifacts.cache_root / "micro-1024", self._routing_bootstrap
+            try:
+                bootstrap_path = self.artifacts.materialize("micro-1024/bootstrap.json")
+                self.artifacts.materialize("micro-1024/bootstrap.sha256")
+                self.artifacts.materialize("micro-1024/integrity.json")
+                bootstrap = json.loads(bootstrap_path.read_bytes())
+            except (ReleaseArtifactError, OSError, ValueError) as exc:
+                raise BackendQueryError("remote release bootstrap is unavailable") from exc
+            if not isinstance(bootstrap, Mapping):
+                raise BackendQueryError("remote release bootstrap is invalid")
+            regions = bootstrap.get("regions")
+            if not isinstance(regions, list) or not regions:
+                raise BackendQueryError("remote release region metadata is invalid")
+            seen: set[str] = set()
+            for entry in regions:
+                if not isinstance(entry, Mapping) or not isinstance(entry.get("regionId"), str) or entry["regionId"] in seen:
+                    raise BackendQueryError("remote release region metadata is invalid")
+                seen.add(entry["regionId"])
+            self._routing_bootstrap = bootstrap
+            return self.artifacts.cache_root / "micro-1024", bootstrap
+
+    @staticmethod
+    def _remote_region_entry(bootstrap: Mapping[str, Any], region_id: str) -> Mapping[str, Any]:
+        for entry in bootstrap.get("regions", []):
+            if isinstance(entry, Mapping) and entry.get("regionId") == region_id:
+                return entry
+        raise BackendQueryError("remote release region is unavailable")
+
+    def _materialize_remote_contract(self, region_id: str) -> Any:
+        cache_root, bootstrap = self._remote_bootstrap()
         source = bootstrap.get("source")
         if not isinstance(source, Mapping):
             raise BackendQueryError("remote release source metadata is invalid")
-        entry = next((item for item in bootstrap.get("regions", []) if isinstance(item, Mapping) and item.get("regionId") == region_id), None)
-        if not isinstance(entry, Mapping):
-            raise BackendQueryError("remote release region is unavailable")
+        entry = self._remote_region_entry(bootstrap, region_id)
         region_manifest_descriptor = entry.get("manifest")
-        if not isinstance(region_manifest_descriptor, Mapping) or not isinstance(region_manifest_descriptor.get("path"), str):
+        if not isinstance(region_manifest_descriptor, Mapping):
             raise BackendQueryError("remote region manifest descriptor is invalid")
-        def artifact_path(value: str) -> str:
-            return value if value.startswith("micro-1024/") else f"micro-1024/{value}"
         try:
-            region_manifest_path = self.artifacts.materialize(artifact_path(region_manifest_descriptor["path"]))
-            self.artifacts.materialize(artifact_path(f"regions/{region_id}/manifest.sha256"))
+            region_manifest_path = self.artifacts.materialize(self._artifact_path(region_manifest_descriptor.get("path")))
+            self.artifacts.materialize(self._artifact_path(f"regions/{region_id}/manifest.sha256"))
             region_manifest = json.loads(region_manifest_path.read_bytes())
-        except (ReleaseArtifactError, OSError, ValueError) as exc:
+        except (ReleaseArtifactError, OSError, ValueError, BackendQueryError) as exc:
             raise BackendQueryError("remote region manifest is unavailable") from exc
         if not isinstance(region_manifest, Mapping):
             raise BackendQueryError("remote region manifest is invalid")
@@ -146,9 +174,9 @@ class NationalStoreRouter:
         descriptors.extend(packs)
         try:
             for descriptor in descriptors:
-                if not isinstance(descriptor, Mapping) or not isinstance(descriptor.get("path"), str):
+                if not isinstance(descriptor, Mapping):
                     raise BackendQueryError("remote region artifact descriptor is invalid")
-                logical_path = artifact_path(descriptor["path"])
+                logical_path = self._artifact_path(descriptor.get("path"))
                 self.artifacts.materialize(logical_path, sparse=logical_path.endswith(".bin"))
             expected_outer = source.get("outerSha256")
             expected_bytes = source.get("outerBytes")
@@ -166,39 +194,99 @@ class NationalStoreRouter:
                 expected_accepted_sha256=expected_accepted,
                 expected_national_index_sha256=expected_national,
             )
-        except (ReleaseArtifactError, OSError, ValueError, MicroPartitionQueryError) as exc:
+        except (ReleaseArtifactError, OSError, ValueError, MicroPartitionQueryError, BackendQueryError) as exc:
             raise BackendQueryError("remote region contract failed verification") from exc
 
+    def _materialize_remote_routing(self, region_id: str) -> dict[str, Mapping[str, Any]]:
+        cache_root, bootstrap = self._remote_bootstrap()
+        source = bootstrap.get("source")
+        if not isinstance(source, Mapping):
+            raise BackendQueryError("remote release source metadata is invalid")
+        entry = self._remote_region_entry(bootstrap, region_id)
+        manifest_descriptor = entry.get("manifest")
+        if not isinstance(manifest_descriptor, Mapping):
+            raise BackendQueryError("remote region manifest descriptor is invalid")
+        try:
+            manifest_path = self.artifacts.materialize(self._artifact_path(manifest_descriptor.get("path")))
+            self.artifacts.materialize(self._artifact_path(f"regions/{region_id}/manifest.sha256"))
+            manifest = json.loads(manifest_path.read_bytes())
+            if not isinstance(manifest, Mapping) or not isinstance(manifest.get("files"), Mapping):
+                raise BackendQueryError("remote region file descriptors are invalid")
+            store_descriptor = manifest["files"].get("storeIndex")
+            if not isinstance(store_descriptor, Mapping):
+                raise BackendQueryError("remote region store descriptor is invalid")
+            self.artifacts.materialize(self._artifact_path(store_descriptor.get("path")))
+            expected_outer = source.get("outerSha256")
+            expected_bytes = source.get("outerBytes")
+            expected_date = source.get("releaseDate")
+            expected_accepted = source.get("acceptedObservationsSha256")
+            expected_national = source.get("nationalIndexSha256")
+            if not all(isinstance(value, str) for value in (expected_outer, expected_date, expected_accepted, expected_national)) or not isinstance(expected_bytes, int):
+                raise BackendQueryError("remote release source evidence is incomplete")
+            routing = load_micro_region_routing(
+                cache_root,
+                region_id,
+                expected_outer_sha256=expected_outer,
+                expected_outer_bytes=expected_bytes,
+                expected_release_date=expected_date,
+                expected_accepted_sha256=expected_accepted,
+                expected_national_index_sha256=expected_national,
+            )
+            return _load_stores(routing)
+        except (ReleaseArtifactError, OSError, ValueError, MicroPartitionQueryError, BackendQueryError) as exc:
+            raise BackendQueryError("remote region routing failed verification") from exc
+
     def contract(self, region_id: str) -> Any:
-        contract = self._contracts.get(region_id)
-        if contract is None:
-            if self.artifacts.remote:
-                contract = self._materialize_remote_contract(region_id)
-            else:
-                if self.root is None:
-                    raise BackendQueryError("local release root is unavailable")
-                contract = load_micro_region_contract(self.root, region_id)
-            self._contracts[region_id] = contract
-        return contract
+        with self._lock:
+            contract = self._contracts.get(region_id)
+            if contract is None:
+                if self.artifacts.remote:
+                    contract = self._materialize_remote_contract(region_id)
+                else:
+                    if self.root is None:
+                        raise BackendQueryError("local release root is unavailable")
+                    contract = load_micro_region_contract(self.root, region_id)
+                self._contracts[region_id] = contract
+            return contract
 
     def stores(self, region_id: str) -> dict[str, Mapping[str, Any]]:
-        stores = self._stores.get(region_id)
-        if stores is None:
-            stores = _load_stores(self.contract(region_id))
-            self._stores[region_id] = stores
-        return stores
+        with self._lock:
+            stores = self._stores.get(region_id)
+            if stores is None:
+                stores = _load_stores(self.contract(region_id))
+                self._stores[region_id] = stores
+            return stores
+
+    def routing_stores(self, region_id: str) -> dict[str, Mapping[str, Any]]:
+        """Load only store geography until a region wins exact routing."""
+
+        if not self.artifacts.remote:
+            return self.stores(region_id)
+        with self._lock:
+            stores = self._routing_stores.get(region_id)
+            if stores is None:
+                stores = self._materialize_remote_routing(region_id)
+                self._routing_stores[region_id] = stores
+            return stores
 
     def route(self, *, latitude: Decimal, longitude: Decimal, radius_km: Decimal) -> tuple[RegionSelection, ...]:
         if radius_km < 0 or radius_km > MAX_BACKEND_RADIUS_KM:
             raise BackendQueryError("radiusKm must be between 0 and 50 km")
         regions = []
-        bootstrap = self.contract("ar-caba").bootstrap
-        for entry in bootstrap.get("regions", []):
-            region_id = entry.get("regionId") if isinstance(entry, Mapping) else None
-            if not isinstance(region_id, str):
-                continue
+        if self.artifacts.remote:
+            _, bootstrap = self._remote_bootstrap()
+        else:
+            bootstrap = self.contract("ar-caba").bootstrap
+        entries = bootstrap.get("regions") if isinstance(bootstrap, Mapping) else None
+        if not isinstance(entries, list) or not entries:
+            raise BackendQueryError("release region metadata is invalid")
+        for entry in entries:
+            if not isinstance(entry, Mapping) or not isinstance(entry.get("regionId"), str):
+                raise BackendQueryError("release region metadata is invalid")
+            region_id = entry["regionId"]
             selected: list[str] = []
-            for store_key, store in self.stores(region_id).items():
+            stores = self.routing_stores(region_id) if self.artifacts.remote else self.stores(region_id)
+            for store_key, store in stores.items():
                 if store.get("geoStatus") != "VALID":
                     continue
                 distance = straight_line_distance_km(latitude, longitude, store["latitude"], store["longitude"])
