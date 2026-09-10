@@ -27,6 +27,7 @@ class RecordingRemoteArtifacts(ManifestReleaseArtifactStore):
 
     def __init__(self, root: Path, region_ids: tuple[str, ...]):
         self.cache_root = root
+        self.manifest = {"objects": []}
         self.calls: list[tuple[str, bool]] = []
         self._calls_lock = threading.Lock()
         self.delay_seconds = 0.0

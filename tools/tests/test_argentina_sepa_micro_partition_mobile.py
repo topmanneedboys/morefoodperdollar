@@ -110,6 +110,21 @@ class ArgentinaSepaMicroPartitionMobileTest(unittest.TestCase):
         with self.assertRaises(MicroPartitionQueryError):
             load_micro_region_routing(broken, "ar-caba", **PROVENANCE)
 
+    def test_full_contract_validates_pack_descriptors_without_touching_pack_files(self):
+        deferred = Path(self.tempdir.name) / "deferred-packs"
+        shutil.copytree(self.micro, deferred)
+        for pack in (deferred / "regions" / "ar-caba" / "packs").glob("pack*.bin"):
+            pack.unlink()
+        contract = load_micro_region_contract(
+            deferred,
+            "ar-caba",
+            verify_companion_files=False,
+            verify_pack_files=False,
+            **PROVENANCE,
+        )
+        self.assertEqual(len(contract.pack_descriptors), 8)
+        self.assertEqual(len(contract.partition_descriptors), 128)
+
     def test_repeat_build_is_byte_identical(self):
         repeat = Path(self.tempdir.name) / "repeat"
         build_micro_partition_mobile(

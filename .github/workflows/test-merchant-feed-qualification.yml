@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   push:
     paths:
+      - 'tools/argentina_national_routing.py'
+      - 'tools/build_argentina_national_routing_artifact.py'
+      - 'tools/tests/test_argentina_national_routing.py'
       - 'tools/qualify_merchant_feed.py'
       - 'tools/qualify_argentina_sepa.py'
       - 'tools/build_argentina_sepa_regional_snapshot.py'
@@ -47,6 +50,9 @@ on:
       - '.github/workflows/test-merchant-feed-qualification.yml'
   pull_request:
     paths:
+      - 'tools/argentina_national_routing.py'
+      - 'tools/build_argentina_national_routing_artifact.py'
+      - 'tools/tests/test_argentina_national_routing.py'
       - 'tools/qualify_merchant_feed.py'
       - 'tools/qualify_argentina_sepa.py'
       - 'tools/build_argentina_sepa_regional_snapshot.py'

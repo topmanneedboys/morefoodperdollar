@@ -1,8 +1,25 @@
 # Current state
 
-Updated: 2026-09-08
+Updated: 2026-09-10
 
-Branch: `work/valuepilot-android-milestone`
+## M11 national routing candidate (unpromoted)
+
+The final cold-path architecture pass is implemented on
+`candidate/argentina-live-cloud-backend-v1` from verified head
+`2bd1d0061b1a92f025f37deb2f08616da4da7270`. Derived Sunday and Tuesday
+`-routing-v1` publication workspaces were produced locally from the existing
+qualified content-addressed evidence only; the official SEPA ZIPs were not
+redownloaded or reparsed and no R2/Cloud Run operation was performed. The
+candidate backend now streams one national routing artifact, defers all
+physical offer packs until exact query ranges are selected, verifies complete
+objects into atomic temporary files, and keeps old manifests on the bounded
+24-region compatibility path. The deterministic access-shape report and
+operator publication sequence are in `docs/ARGENTINA_M11_ROUTING_RELEASES.md`.
+
+This candidate is not a promoted Android milestone and does not authorize
+Android networking or live provider acquisition.
+
+Branch: `candidate/argentina-live-cloud-backend-v1` (M11 candidate; prior Android promotion remains recorded below)
 
 Android version: 101.1.0 (10101)
 

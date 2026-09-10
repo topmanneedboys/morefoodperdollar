@@ -6,6 +6,9 @@ on:
     paths:
       - 'android/**'
       - 'backend/**'
+      - 'tools/argentina_national_routing.py'
+      - 'tools/build_argentina_national_routing_artifact.py'
+      - 'tools/tests/test_argentina_national_routing.py'
       - 'browser-extension/**'
       - 'tools/build_offline_catalog_snapshot.py'
       - 'tools/verify_offline_catalog_snapshot.py'
@@ -78,6 +81,9 @@ on:
     paths:
       - 'android/**'
       - 'backend/**'
+      - 'tools/argentina_national_routing.py'
+      - 'tools/build_argentina_national_routing_artifact.py'
+      - 'tools/tests/test_argentina_national_routing.py'
       - 'browser-extension/**'
       - 'tools/build_offline_catalog_snapshot.py'
       - 'tools/verify_offline_catalog_snapshot.py'

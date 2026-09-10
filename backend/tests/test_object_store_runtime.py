@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
-from backend.artifacts import ReleaseArtifactError
+from backend.artifacts import ManifestReleaseArtifactStore, ReleaseArtifactError
 from backend.clock import ARGENTINA_ZONE, FrozenClock
 from backend.object_store import (
     LocalFilesystemObjectStore,
@@ -28,8 +28,11 @@ class _Body:
     def __init__(self, data: bytes):
         self.data = data
 
-    def read(self) -> bytes:
-        return self.data
+    def read(self, amount: int | None = None) -> bytes:
+        if amount is None:
+            return self.data
+        value, self.data = self.data[:amount], self.data[amount:]
+        return value
 
 
 class ReadOnlyS3:
@@ -84,6 +87,12 @@ class UploadS3:
             raise ConnectionResetError(10054, "connection reset")
         self.items[Key] = data
         self.metadata[Key] = dict(ExtraArgs["Metadata"])
+
+
+class InterruptingObjectStore(LocalFilesystemObjectStore):
+    def stream(self, key: str, *, chunk_size: int = 1024 * 1024):
+        yield b"partial"
+        raise ObjectStoreError("injected stream interruption")
 
 
 def _put_release(items: dict[str, bytes], release_id: str, marker: bytes) -> None:
@@ -227,6 +236,43 @@ class ObjectStoreRuntimeTests(unittest.TestCase):
         client.items[f"objects/sha256/{digest}"] = b"ver"
         with self.assertRaises(ReleaseArtifactError):
             handle.artifacts.read_range("micro-1024/test.bin", 0, 3)
+
+    def test_stream_materialization_is_bounded_atomic_and_cleans_failed_temporary_files(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            object_root = root / "objects"
+            store = LocalFilesystemObjectStore(object_root)
+            expected = b"verified-stream-payload"
+            digest = hashlib.sha256(expected).hexdigest()
+            manifest = {
+                "objects": [{"path": "micro-1024/payload.bin", "sha256": digest, "bytes": len(expected)}]
+            }
+            store.put_immutable(f"objects/sha256/{digest}", expected)
+            cache = root / "cache"
+            artifacts = ManifestReleaseArtifactStore(store, manifest, release_id="r1", cache_root=cache)
+            target = artifacts.materialize("micro-1024/payload.bin")
+            self.assertEqual(target.read_bytes(), expected)
+            self.assertFalse(list(cache.rglob(".*.partial-*")))
+
+            # Extra bytes, a wrong digest, and a transport interruption never
+            # replace the verified target or leave an authoritative partial.
+            bad_digest = hashlib.sha256(b"bad").hexdigest()
+            bad_manifest = {"objects": [{"path": "micro-1024/bad.bin", "sha256": bad_digest, "bytes": 2}]}
+            store.put_immutable(f"objects/sha256/{bad_digest}", b"too-long")
+            bad_artifacts = ManifestReleaseArtifactStore(store, bad_manifest, release_id="r2", cache_root=cache)
+            with self.assertRaises(ReleaseArtifactError):
+                bad_artifacts.materialize("micro-1024/bad.bin")
+            self.assertFalse((cache / "micro-1024" / "bad.bin").exists())
+            self.assertFalse(list((cache / "micro-1024").glob(".bad.bin.*")))
+
+            interrupted_store = InterruptingObjectStore(object_root)
+            interrupted_cache = root / "interrupt-cache"
+            interrupted_artifacts = ManifestReleaseArtifactStore(interrupted_store, manifest, release_id="r3", cache_root=interrupted_cache)
+            with self.assertRaises(ReleaseArtifactError):
+                interrupted_artifacts.materialize("micro-1024/payload.bin")
+            self.assertEqual(target.read_bytes(), expected)
+            self.assertFalse((interrupted_cache / "micro-1024" / "payload.bin").exists())
+            self.assertFalse(list((interrupted_cache / "micro-1024").glob(".payload.bin.*")))
 
     def test_local_content_addressed_workspace_uses_same_manifest_view(self):
         with tempfile.TemporaryDirectory() as directory:

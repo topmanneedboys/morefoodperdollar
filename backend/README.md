@@ -25,6 +25,15 @@ publisher credential in the runtime.
 The service has no acquisition job. It never contacts `datos.produccion.gob.ar`
 and does not bypass WAFs, use proxies, or infer missing source facts.
 
+The M11 release contract adds one compact
+`micro-1024/national-routing.jsonl.gz` object per derived release. A cold
+remote request streams and verifies that object once, keeps only compact valid
+geography in memory, and then materializes search/store metadata only for
+regions selected by exact Haversine distance. Physical offer packs remain
+manifest-validated descriptors until a query identifies the exact member
+range. See `docs/ARGENTINA_M11_ROUTING_RELEASES.md` for the operator-only
+derivation, publication, rollback, and integrity sequence.
+
 ## Free-first deployment blueprint
 
 The documented first deployment candidate is Cloudflare R2 Standard through the
@@ -64,3 +73,10 @@ Availability is always `UNKNOWN` for SEPA prices. A stale release fails closed
 with `CURRENT_PRICE_EVIDENCE_UNAVAILABLE`; it is never presented as today's
 price. The existing 128/32 mobile contract remains intact for a future optional
 offline feature and is not replaced by the server profile.
+
+For complete remote objects, the pinned release manifest's SHA-256 and byte
+count are verified directly while streaming to an atomic temporary file. The
+runtime therefore does not make redundant remote reads of textual
+`bootstrap.sha256` or regional `manifest.sha256` companions; local/offline
+qualification continues to verify them, and range reads retain independent
+object metadata and returned-range checks.

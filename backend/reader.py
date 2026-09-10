@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import threading
 import time
+from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -15,6 +16,7 @@ from backend.cache import VerifiedEvidenceCache
 from backend.release import ReleaseHandle
 
 try:
+    from tools.argentina_national_routing import RoutingPoint, load_national_routing
     from tools.argentina_sepa_micro_partition import ARGENTINA_REGIONS, MicroPartitionQueryError, MicroQueryPlan, _load_stores, load_micro_region_contract, load_micro_region_routing
     from tools.argentina_sepa_query import _offer_result, _search_candidates, straight_line_distance_km
     from tools.argentina_sepa_query import _iter_gzip_records
@@ -23,6 +25,7 @@ try:
     from tools.shopping_intelligence_engine import ShoppingIntelligenceError, ShoppingRequest
     from tools.verify_argentina_sepa_micro_partition_mobile import decode_member_bytes
 except ModuleNotFoundError:  # pragma: no cover - direct module invocation
+    from argentina_national_routing import RoutingPoint, load_national_routing
     from argentina_sepa_micro_partition import ARGENTINA_REGIONS, MicroPartitionQueryError, MicroQueryPlan, _load_stores, load_micro_region_contract, load_micro_region_routing
     from argentina_sepa_query import _offer_result, _search_candidates, straight_line_distance_km
     from argentina_sepa_query import _iter_gzip_records
@@ -40,6 +43,8 @@ MAX_CANDIDATES = 100_000
 MAX_OFFERS = 100_000
 MAX_INPUT_VOCABULARY_RECORDS = 100_000
 MAX_REMOTE_ROUTING_CONCURRENCY = 4
+MAX_SEARCH_CACHE_ENTRIES = 512
+MAX_INPUT_CATALOG_CACHE_ENTRIES = 8
 
 
 class BackendQueryError(ValueError):
@@ -107,7 +112,9 @@ class NationalStoreRouter:
         self._contracts: dict[str, Any] = {}
         self._stores: dict[str, dict[str, Mapping[str, Any]]] = {}
         self._routing_stores: dict[str, dict[str, Mapping[str, Any]]] = {}
+        self._routing_points: dict[str, tuple[RoutingPoint, ...]] = {}
         self._routing_bootstrap: Mapping[str, Any] | None = None
+        self._routing_mode: str | None = None
         self._lock = threading.RLock()
         # Routing initialization is a separate state machine from the data
         # caches.  Its lock protects only state transitions; no network or
@@ -150,7 +157,6 @@ class NationalStoreRouter:
         try:
             try:
                 bootstrap_path = self.artifacts.materialize("micro-1024/bootstrap.json")
-                self.artifacts.materialize("micro-1024/bootstrap.sha256")
                 self.artifacts.materialize("micro-1024/integrity.json")
                 bootstrap = json.loads(bootstrap_path.read_bytes())
             except (ReleaseArtifactError, OSError, ValueError) as exc:
@@ -198,7 +204,6 @@ class NationalStoreRouter:
             raise BackendQueryError("remote region manifest descriptor is invalid")
         try:
             region_manifest_path = self.artifacts.materialize(self._artifact_path(region_manifest_descriptor.get("path")))
-            self.artifacts.materialize(self._artifact_path(f"regions/{region_id}/manifest.sha256"))
             region_manifest = json.loads(region_manifest_path.read_bytes())
         except (ReleaseArtifactError, OSError, ValueError, BackendQueryError) as exc:
             raise BackendQueryError("remote region manifest is unavailable") from exc
@@ -211,7 +216,6 @@ class NationalStoreRouter:
         packs = files.get("offerPacks")
         if not isinstance(packs, list):
             raise BackendQueryError("remote region pack descriptors are invalid")
-        descriptors.extend(packs)
         try:
             for descriptor in descriptors:
                 if not isinstance(descriptor, Mapping):
@@ -223,7 +227,13 @@ class NationalStoreRouter:
             expected_date = source.get("releaseDate")
             expected_accepted = source.get("acceptedObservationsSha256")
             expected_national = source.get("nationalIndexSha256")
-            if not all(isinstance(value, str) for value in (expected_outer, expected_date, expected_accepted, expected_national)) or not isinstance(expected_bytes, int):
+            if (
+                not isinstance(expected_outer, str)
+                or not isinstance(expected_date, str)
+                or not isinstance(expected_bytes, int)
+                or (expected_accepted is not None and not isinstance(expected_accepted, str))
+                or (expected_national is not None and not isinstance(expected_national, str))
+            ):
                 raise BackendQueryError("remote release source evidence is incomplete")
             return load_micro_region_contract(
                 cache_root,
@@ -233,6 +243,8 @@ class NationalStoreRouter:
                 expected_release_date=expected_date,
                 expected_accepted_sha256=expected_accepted,
                 expected_national_index_sha256=expected_national,
+                verify_companion_files=False,
+                verify_pack_files=False,
             )
         except (ReleaseArtifactError, OSError, ValueError, MicroPartitionQueryError, BackendQueryError) as exc:
             raise BackendQueryError("remote region contract failed verification") from exc
@@ -248,7 +260,6 @@ class NationalStoreRouter:
             raise BackendQueryError("remote region manifest descriptor is invalid")
         try:
             manifest_path = self.artifacts.materialize(self._artifact_path(manifest_descriptor.get("path")))
-            self.artifacts.materialize(self._artifact_path(f"regions/{region_id}/manifest.sha256"))
             manifest = json.loads(manifest_path.read_bytes())
             if not isinstance(manifest, Mapping) or not isinstance(manifest.get("files"), Mapping):
                 raise BackendQueryError("remote region file descriptors are invalid")
@@ -261,7 +272,13 @@ class NationalStoreRouter:
             expected_date = source.get("releaseDate")
             expected_accepted = source.get("acceptedObservationsSha256")
             expected_national = source.get("nationalIndexSha256")
-            if not all(isinstance(value, str) for value in (expected_outer, expected_date, expected_accepted, expected_national)) or not isinstance(expected_bytes, int):
+            if (
+                not isinstance(expected_outer, str)
+                or not isinstance(expected_date, str)
+                or not isinstance(expected_bytes, int)
+                or (expected_accepted is not None and not isinstance(expected_accepted, str))
+                or (expected_national is not None and not isinstance(expected_national, str))
+            ):
                 raise BackendQueryError("remote release source evidence is incomplete")
             routing = load_micro_region_routing(
                 cache_root,
@@ -271,10 +288,31 @@ class NationalStoreRouter:
                 expected_release_date=expected_date,
                 expected_accepted_sha256=expected_accepted,
                 expected_national_index_sha256=expected_national,
+                verify_companion_files=False,
             )
             return _load_stores(routing)
         except (ReleaseArtifactError, OSError, ValueError, MicroPartitionQueryError, BackendQueryError) as exc:
             raise BackendQueryError("remote region routing failed verification") from exc
+
+    def _remote_routing_descriptor(self) -> Mapping[str, Any] | None:
+        if not isinstance(self.artifacts, ManifestReleaseArtifactStore):
+            raise BackendQueryError("remote release artifact adapter is invalid")
+        candidate = self.artifacts.manifest.get("routingArtifact")
+        if candidate is None:
+            return None
+        if not isinstance(candidate, Mapping):
+            raise BackendQueryError("remote national routing metadata is invalid")
+        expected_regions = sorted(spec.region_id for spec in ARGENTINA_REGIONS)
+        if candidate.get("schemaVersion") != "valuepilot-national-routing-v1" or candidate.get("path") != "micro-1024/national-routing.jsonl.gz" or candidate.get("regions") != expected_regions:
+            raise BackendQueryError("remote national routing metadata is invalid")
+        path = candidate.get("path")
+        if not self.artifacts.has(path):
+            raise BackendQueryError("remote national routing artifact is missing")
+        objects = self.artifacts.manifest.get("objects")
+        matching = [item for item in objects if isinstance(item, Mapping) and item.get("path") == path] if isinstance(objects, list) else []
+        if len(matching) != 1 or any(matching[0].get(name) != candidate.get(name) for name in ("sha256", "bytes")):
+            raise BackendQueryError("remote national routing descriptor is not pinned")
+        return candidate
 
     def _ensure_remote_routing(self) -> Mapping[str, Any]:
         """Initialize every region's store directory once, in bounded parallel.
@@ -309,20 +347,34 @@ class NationalStoreRouter:
 
         assert flight is not None
         try:
-            _, bootstrap = self._remote_bootstrap()
-            entries = bootstrap.get("regions")
-            if not isinstance(entries, list) or not entries:
-                raise BackendQueryError("remote release region metadata is invalid")
-            region_ids: tuple[str, ...] = tuple(sorted(entry["regionId"] for entry in entries if isinstance(entry, Mapping) and isinstance(entry.get("regionId"), str)))
-            expected_region_ids = frozenset(spec.region_id for spec in ARGENTINA_REGIONS)
-            if len(region_ids) != len(entries) or len(set(region_ids)) != len(region_ids) or frozenset(region_ids) != expected_region_ids:
-                raise BackendQueryError("remote release region metadata is incomplete or invalid")
+            national_descriptor = self._remote_routing_descriptor()
+            if national_descriptor is not None:
+                # Keep the verified release bootstrap available for selected
+                # contract validation and region metadata.  The routing
+                # object replaces only the national geography load; it does
+                # not replace the release's source/provenance contract with a
+                # synthetic bootstrap.
+                _, bootstrap = self._remote_bootstrap()
+                routing_path = self._artifact_path(national_descriptor["path"])
+                self.artifacts.materialize(routing_path)
+                staged_points = load_national_routing(self.artifacts.cache_root, national_descriptor, expected_region_ids=frozenset(spec.region_id for spec in ARGENTINA_REGIONS))
+                staged = None
+            else:
+                _, bootstrap = self._remote_bootstrap()
+                entries = bootstrap.get("regions")
+                if not isinstance(entries, list) or not entries:
+                    raise BackendQueryError("remote release region metadata is invalid")
+                region_ids: tuple[str, ...] = tuple(sorted(entry["regionId"] for entry in entries if isinstance(entry, Mapping) and isinstance(entry.get("regionId"), str)))
+                expected_region_ids = frozenset(spec.region_id for spec in ARGENTINA_REGIONS)
+                if len(region_ids) != len(entries) or len(set(region_ids)) != len(region_ids) or frozenset(region_ids) != expected_region_ids:
+                    raise BackendQueryError("remote release region metadata is incomplete or invalid")
 
-            # Futures are collected in sorted region order so completion timing
-            # cannot change the cache's observable iteration order.
-            with ThreadPoolExecutor(max_workers=MAX_REMOTE_ROUTING_CONCURRENCY, thread_name_prefix="valuepilot-routing") as executor:
-                futures = {region_id: executor.submit(self._materialize_remote_routing, region_id) for region_id in region_ids}
-                staged = {region_id: futures[region_id].result() for region_id in region_ids}
+                # Futures are collected in sorted region order so completion timing
+                # cannot change the cache's observable iteration order.
+                with ThreadPoolExecutor(max_workers=MAX_REMOTE_ROUTING_CONCURRENCY, thread_name_prefix="valuepilot-routing") as executor:
+                    futures = {region_id: executor.submit(self._materialize_remote_routing, region_id) for region_id in region_ids}
+                    staged = {region_id: futures[region_id].result() for region_id in region_ids}
+                staged_points = None
         except Exception as exc:  # noqa: BLE001 - routing must fail closed
             message = str(exc) if isinstance(exc, BackendQueryError) else "remote routing initialization failed"
             with self._routing_state_lock:
@@ -336,8 +388,15 @@ class NationalStoreRouter:
         # Commit only after every worker completed successfully.  This lock is
         # held for a bounded in-memory assignment, never for remote I/O.
         with self._lock:
-            self._routing_stores = staged
+            if staged_points is not None:
+                self._routing_points = staged_points
+                self._routing_stores = {}
+            else:
+                self._routing_stores = staged or {}
+                self._routing_points = {}
         with self._routing_state_lock:
+            self._routing_bootstrap = bootstrap
+            self._routing_mode = "national" if staged_points is not None else "regional"
             self._routing_initialized = True
             self._routing_inflight = None
             flight.set()
@@ -370,6 +429,8 @@ class NationalStoreRouter:
         if not self.artifacts.remote:
             return self.stores(region_id)
         self._ensure_remote_routing()
+        if self._routing_mode == "national":
+            raise BackendQueryError("compact national routing does not expose full store metadata")
         with self._lock:
             stores = self._routing_stores.get(region_id)
         if stores is None:
@@ -392,13 +453,20 @@ class NationalStoreRouter:
                 raise BackendQueryError("release region metadata is invalid")
             region_id = entry["regionId"]
             selected: list[str] = []
-            stores = self.routing_stores(region_id) if self.artifacts.remote else self.stores(region_id)
-            for store_key, store in stores.items():
-                if store.get("geoStatus") != "VALID":
-                    continue
-                distance = straight_line_distance_km(latitude, longitude, store["latitude"], store["longitude"])
-                if distance <= float(radius_km) + 1e-9:
-                    selected.append(store_key)
+            if self.artifacts.remote and self._routing_mode == "national":
+                points = self._routing_points.get(region_id, ())
+                for point in points:
+                    distance = straight_line_distance_km(latitude, longitude, point.latitude, point.longitude)
+                    if distance <= float(radius_km) + 1e-9:
+                        selected.append(point.store_key)
+            else:
+                stores = self.routing_stores(region_id) if self.artifacts.remote else self.stores(region_id)
+                for store_key, store in stores.items():
+                    if store.get("geoStatus") != "VALID":
+                        continue
+                    distance = straight_line_distance_km(latitude, longitude, store["latitude"], store["longitude"])
+                    if distance <= float(radius_km) + 1e-9:
+                        selected.append(store_key)
             if selected:
                 regions.append(RegionSelection(region_id, tuple(sorted(selected))))
         return tuple(sorted(regions, key=lambda item: item.region_id))
@@ -415,8 +483,8 @@ class ArgentinaBackendReader:
         self.cache = cache or VerifiedEvidenceCache()
         # Search indexes are immutable for a pinned release. Cache bounded
         # top-k results so warm service calls do not rescan the same gzip.
-        self._search_cache: dict[tuple[str, str, int], tuple[Mapping[str, Any], ...]] = {}
-        self._input_catalog_cache: dict[tuple[str, ...], CatalogIndex] = {}
+        self._search_cache: OrderedDict[tuple[str, str, int], tuple[Mapping[str, Any], ...]] = OrderedDict()
+        self._input_catalog_cache: OrderedDict[tuple[str, ...], CatalogIndex] = OrderedDict()
 
     def _search(self, contract: Any, query: str, *, product_limit: int = 5) -> tuple[Mapping[str, Any], ...]:
         cache_key = (contract.region.region_id, query, product_limit)
@@ -424,7 +492,11 @@ class ArgentinaBackendReader:
         if value is None:
             value, _ = _search_candidates(contract, query, product_limit=product_limit, max_candidates=MAX_CANDIDATES)
             value = tuple(value)
+            if len(self._search_cache) >= MAX_SEARCH_CACHE_ENTRIES:
+                self._search_cache.popitem(last=False)
             self._search_cache[cache_key] = value
+        else:
+            self._search_cache.move_to_end(cache_key)
         return value
 
     def _plan(self, contract: Any, queries: Sequence[str], *, product_limit: int = 5) -> MicroQueryPlan:
@@ -477,6 +549,7 @@ class ArgentinaBackendReader:
         cache_key = ("__all__",) if region_ids is None else selected
         cached = self._input_catalog_cache.get(cache_key)
         if cached is not None:
+            self._input_catalog_cache.move_to_end(cache_key)
             return cached
         records: list[Mapping[str, Any]] = []
         seen: set[str] = set()
@@ -497,6 +570,8 @@ class ArgentinaBackendReader:
             catalog = CatalogIndex.from_records(records, max_records=MAX_INPUT_VOCABULARY_RECORDS)
         except InputIntelligenceError as exc:
             raise BackendQueryError(str(exc)) from exc
+        if len(self._input_catalog_cache) >= MAX_INPUT_CATALOG_CACHE_ENTRIES:
+            self._input_catalog_cache.popitem(last=False)
         self._input_catalog_cache[cache_key] = catalog
         return catalog
 
@@ -613,4 +688,4 @@ class ArgentinaBackendReader:
         return decision, metrics
 
 
-__all__ = ["ArgentinaBackendReader", "BackendQueryError", "CurrentPriceEvidenceUnavailable", "MAX_BACKEND_RADIUS_KM", "MAX_REMOTE_ROUTING_CONCURRENCY", "NationalStoreRouter", "RequestMetrics", "RegionSelection"]
+__all__ = ["ArgentinaBackendReader", "BackendQueryError", "CurrentPriceEvidenceUnavailable", "MAX_BACKEND_RADIUS_KM", "MAX_INPUT_CATALOG_CACHE_ENTRIES", "MAX_REMOTE_ROUTING_CONCURRENCY", "MAX_SEARCH_CACHE_ENTRIES", "NationalStoreRouter", "RequestMetrics", "RegionSelection"]

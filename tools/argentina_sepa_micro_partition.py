@@ -177,7 +177,7 @@ class MicroQueryPlan:
         }
 
 
-def _verify_descriptor(root: Path, descriptor: Mapping[str, Any], expected_path: str, label: str, *, compressed: bool = False, verify_hash: bool = True) -> Path:
+def _verify_descriptor(root: Path, descriptor: Mapping[str, Any], expected_path: str, label: str, *, compressed: bool = False, verify_hash: bool = True, verify_file: bool = True) -> Path:
     _require(descriptor.get("path") == expected_path, f"{label} path is invalid")
     _require(isinstance(descriptor.get("bytes"), int) and descriptor["bytes"] >= 0, f"{label} byte count is invalid")
     digest = descriptor.get("sha256")
@@ -189,8 +189,9 @@ def _verify_descriptor(root: Path, descriptor: Mapping[str, Any], expected_path:
         uncompressed_hash = descriptor.get("uncompressedSha256")
         _require(isinstance(uncompressed_hash, str) and len(uncompressed_hash) == 64 and uncompressed_hash == uncompressed_hash.lower() and all(char in "0123456789abcdef" for char in uncompressed_hash), f"{label} uncompressed hash is invalid")
     path = root / _safe_relative(expected_path, label)
-    _require(path.is_file() and path.stat().st_size == descriptor["bytes"], f"{label} is missing or has the wrong byte count")
-    if verify_hash:
+    if verify_file:
+        _require(path.is_file() and path.stat().st_size == descriptor["bytes"], f"{label} is missing or has the wrong byte count")
+    if verify_file and verify_hash:
         _require(_sha256_file(path) == digest, f"{label} hash mismatch")
     return path
 
@@ -204,6 +205,8 @@ def load_micro_region_contract(
     expected_release_date: str = RELEASE_DATE,
     expected_accepted_sha256: str | None = EXPECTED_ACCEPTED_SHA256,
     expected_national_index_sha256: str | None = EXPECTED_NATIONAL_INDEX_SHA256,
+    verify_companion_files: bool = True,
+    verify_pack_files: bool = True,
 ) -> MicroRegionContract:
     root = _coerce_path(root).resolve()
     bootstrap_path = root / BOOTSTRAP_FILE
@@ -211,7 +214,8 @@ def load_micro_region_contract(
     _require(bootstrap.get("artifactSchemaVersion") == MICRO_PARTITION_SCHEMA_VERSION and bootstrap.get("policyVersion") == MICRO_PARTITION_POLICY_VERSION and bootstrap.get("compatibilityVersion") == MICRO_PARTITION_COMPATIBILITY_VERSION and bootstrap.get("atomicCompletion") is True and bootstrap.get("completionState") == "COMPLETE" and bootstrap.get("productionUiAuthorized") is False, "bootstrap version/completion/authorization is invalid")
     _require(bootstrap.get("generatedAt") == _canonical_timestamp(bootstrap.get("generatedAt"), "bootstrap.generatedAt"), "bootstrap timestamp is invalid")
     bootstrap_hash = _sha256_file(bootstrap_path)
-    _require((root / "bootstrap.sha256").read_text(encoding="ascii") == f"{bootstrap_hash}  {BOOTSTRAP_FILE}\n", "bootstrap checksum is invalid")
+    if verify_companion_files:
+        _require((root / "bootstrap.sha256").read_text(encoding="ascii") == f"{bootstrap_hash}  {BOOTSTRAP_FILE}\n", "bootstrap checksum is invalid")
     integrity = _read_canonical_json(root / "integrity.json", "integrity.json")
     _require(integrity.get("bootstrapSha256") == bootstrap_hash and integrity.get("atomicCompletion") is True and integrity.get("schemaVersion") == MICRO_PARTITION_SCHEMA_VERSION, "root integrity metadata is invalid")
     source = bootstrap.get("source")
@@ -236,7 +240,8 @@ def load_micro_region_contract(
     manifest_path = _verify_descriptor(root, manifest_descriptor, f"regions/{region_id}/{REGION_MANIFEST_FILE}", f"{region_id} manifest")
     manifest = _read_canonical_json(manifest_path, f"{region_id} manifest")
     _require(manifest.get("artifactSchemaVersion") == MICRO_PARTITION_SCHEMA_VERSION and manifest.get("policyVersion") == MICRO_PARTITION_POLICY_VERSION and manifest.get("compatibilityVersion") == MICRO_PARTITION_COMPATIBILITY_VERSION and manifest.get("atomicCompletion") is True and manifest.get("completionState") == "COMPLETE" and manifest.get("generatedAt") == bootstrap["generatedAt"] and manifest.get("source") == source and manifest.get("region") == {"id": region_id, "displayName": spec.display_name, "selector": {"field": "store.province", "operator": "EXACT", "value": spec.province_code}} and manifest.get("boundaries") == {"currency": CURRENCY, "availability": AVAILABILITY, "deliveryPickup": DELIVERY_PICKUP, "distance": "STRAIGHT_LINE_HAVERSINE_ONLY", "rawProviderDataCommitted": False}, f"{region_id} manifest metadata is invalid")
-    _require((manifest_path.with_name("manifest.sha256")).read_text(encoding="ascii") == f"{_sha256_file(manifest_path)}  manifest.json\n", f"{region_id} manifest checksum is invalid")
+    if verify_companion_files:
+        _require((manifest_path.with_name("manifest.sha256")).read_text(encoding="ascii") == f"{_sha256_file(manifest_path)}  manifest.json\n", f"{region_id} manifest checksum is invalid")
     _require(manifest.get("partitioning", {}).get("logicalPartitionCount") == logical_count and manifest.get("partitioning", {}).get("physicalPackCount") == pack_count, f"{region_id} partition counts differ from bootstrap")
     files = manifest.get("files")
     _require(isinstance(files, dict) and set(files) == {"searchIndex", "storeIndex", "offerPacks", "logicalPartitions"}, f"{region_id} file set is invalid")
@@ -252,7 +257,7 @@ def load_micro_region_contract(
         # A query verifies only the requested member range.  Whole-pack hashes
         # are checked by the full verifier/promotion gate, so selecting one
         # slice never requires reading surrounding bytes.
-        _verify_descriptor(root, pack, f"regions/{region_id}/{PACKS_DIR}/pack{number:03d}.bin", f"{region_id}/{pack['packId']}", verify_hash=False)
+        _verify_descriptor(root, pack, f"regions/{region_id}/{PACKS_DIR}/pack{number:03d}.bin", f"{region_id}/{pack['packId']}", verify_hash=False, verify_file=verify_pack_files)
         pack_map[pack["packId"]] = pack
     logicals = files["logicalPartitions"]
     _require(isinstance(logicals, list) and len(logicals) == logical_count, f"{region_id} logical partition list is incomplete")
@@ -275,6 +280,7 @@ def load_micro_region_routing(
     expected_release_date: str = RELEASE_DATE,
     expected_accepted_sha256: str | None = EXPECTED_ACCEPTED_SHA256,
     expected_national_index_sha256: str | None = EXPECTED_NATIONAL_INDEX_SHA256,
+    verify_companion_files: bool = True,
 ) -> MicroRegionRouting:
     """Verify only bootstrap/manifest/store metadata needed for geography.
 
@@ -289,7 +295,8 @@ def load_micro_region_routing(
     _require(bootstrap.get("artifactSchemaVersion") == MICRO_PARTITION_SCHEMA_VERSION and bootstrap.get("policyVersion") == MICRO_PARTITION_POLICY_VERSION and bootstrap.get("compatibilityVersion") == MICRO_PARTITION_COMPATIBILITY_VERSION and bootstrap.get("atomicCompletion") is True and bootstrap.get("completionState") == "COMPLETE" and bootstrap.get("productionUiAuthorized") is False, "bootstrap version/completion/authorization is invalid")
     _require(bootstrap.get("generatedAt") == _canonical_timestamp(bootstrap.get("generatedAt"), "bootstrap.generatedAt"), "bootstrap timestamp is invalid")
     bootstrap_hash = _sha256_file(bootstrap_path)
-    _require((root / "bootstrap.sha256").read_text(encoding="ascii") == f"{bootstrap_hash}  {BOOTSTRAP_FILE}\n", "bootstrap checksum is invalid")
+    if verify_companion_files:
+        _require((root / "bootstrap.sha256").read_text(encoding="ascii") == f"{bootstrap_hash}  {BOOTSTRAP_FILE}\n", "bootstrap checksum is invalid")
     integrity = _read_canonical_json(root / "integrity.json", "integrity.json")
     _require(integrity.get("bootstrapSha256") == bootstrap_hash and integrity.get("atomicCompletion") is True and integrity.get("schemaVersion") == MICRO_PARTITION_SCHEMA_VERSION, "root integrity metadata is invalid")
     source = bootstrap.get("source")
@@ -314,7 +321,8 @@ def load_micro_region_routing(
     manifest_path = _verify_descriptor(root, manifest_descriptor, f"regions/{region_id}/{REGION_MANIFEST_FILE}", f"{region_id} manifest")
     manifest = _read_canonical_json(manifest_path, f"{region_id} manifest")
     _require(manifest.get("artifactSchemaVersion") == MICRO_PARTITION_SCHEMA_VERSION and manifest.get("policyVersion") == MICRO_PARTITION_POLICY_VERSION and manifest.get("compatibilityVersion") == MICRO_PARTITION_COMPATIBILITY_VERSION and manifest.get("atomicCompletion") is True and manifest.get("completionState") == "COMPLETE" and manifest.get("generatedAt") == bootstrap["generatedAt"] and manifest.get("source") == source and manifest.get("region") == {"id": region_id, "displayName": spec.display_name, "selector": {"field": "store.province", "operator": "EXACT", "value": spec.province_code}} and manifest.get("boundaries") == {"currency": CURRENCY, "availability": AVAILABILITY, "deliveryPickup": DELIVERY_PICKUP, "distance": "STRAIGHT_LINE_HAVERSINE_ONLY", "rawProviderDataCommitted": False}, f"{region_id} manifest metadata is invalid")
-    _require((manifest_path.with_name("manifest.sha256")).read_text(encoding="ascii") == f"{_sha256_file(manifest_path)}  manifest.json\n", f"{region_id} manifest checksum is invalid")
+    if verify_companion_files:
+        _require((manifest_path.with_name("manifest.sha256")).read_text(encoding="ascii") == f"{_sha256_file(manifest_path)}  manifest.json\n", f"{region_id} manifest checksum is invalid")
     manifest_partitioning = manifest.get("partitioning")
     _require(isinstance(manifest_partitioning, dict) and manifest_partitioning.get("logicalPartitionCount") == logical_count and manifest_partitioning.get("physicalPackCount") == pack_count, f"{region_id} partition counts differ from bootstrap")
     files = manifest.get("files")

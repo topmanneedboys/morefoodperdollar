@@ -5,6 +5,9 @@ on:
   push:
     paths:
       - 'backend/**'
+      - 'tools/argentina_national_routing.py'
+      - 'tools/build_argentina_national_routing_artifact.py'
+      - 'tools/tests/test_argentina_national_routing.py'
       - 'tools/measure_argentina_production_backend.py'
       - 'tools/consumer_input_intelligence.py'
       - 'tools/build_argentina_input_vocabulary.py'
@@ -21,6 +24,9 @@ on:
   pull_request:
     paths:
       - 'backend/**'
+      - 'tools/argentina_national_routing.py'
+      - 'tools/build_argentina_national_routing_artifact.py'
+      - 'tools/tests/test_argentina_national_routing.py'
       - 'tools/measure_argentina_production_backend.py'
       - 'tools/consumer_input_intelligence.py'
       - 'tools/build_argentina_input_vocabulary.py'

@@ -14,9 +14,9 @@ import re
 import tempfile
 import threading
 from pathlib import Path
-from typing import Any, Mapping, Protocol
+from typing import Any, Iterator, Mapping, Protocol
 
-from .object_store import LocalFilesystemObjectStore, ObjectMetadata, ObjectStore, ObjectStoreError, validate_key
+from .object_store import OBJECT_STREAM_CHUNK_BYTES, LocalFilesystemObjectStore, ObjectMetadata, ObjectStore, ObjectStoreError, validate_key
 
 
 class ReleaseArtifactError(RuntimeError):
@@ -30,6 +30,8 @@ class ReleaseArtifactStore(Protocol):
 
     def read(self, path: str, *, expected_sha256: str | None = None, expected_bytes: int | None = None) -> bytes: ...
 
+    def stream(self, path: str, *, chunk_size: int = OBJECT_STREAM_CHUNK_BYTES) -> Iterator[bytes]: ...
+
     def read_range(self, path: str, offset: int, length: int) -> bytes: ...
 
 
@@ -38,6 +40,14 @@ _HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 
 def _digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def _verify_bytes(data: bytes, *, expected_sha256: str | None, expected_bytes: int | None, label: str) -> bytes:
@@ -85,6 +95,13 @@ class FilesystemReleaseArtifactStore:
             raise ReleaseArtifactError("release artifact is unavailable") from exc
         return _verify_bytes(data, expected_sha256=expected_sha256, expected_bytes=expected_bytes, label=key)
 
+    def stream(self, path: str, *, chunk_size: int = OBJECT_STREAM_CHUNK_BYTES) -> Iterator[bytes]:
+        key = self._key(path)
+        try:
+            yield from self._store.stream(key, chunk_size=chunk_size)
+        except ObjectStoreError as exc:
+            raise ReleaseArtifactError("release artifact stream is unavailable") from exc
+
     def read_range(self, path: str, offset: int, length: int) -> bytes:
         key = self._key(path)
         try:
@@ -114,6 +131,7 @@ class ManifestReleaseArtifactStore:
     def __init__(self, store: ObjectStore, manifest: Mapping[str, Any], *, release_id: str, cache_root: Path | str | None = None):
         self.store = store
         self.release_id = release_id
+        self.manifest = manifest
         self.cache_root = Path(cache_root).resolve() if cache_root is not None else Path(tempfile.mkdtemp(prefix=f"valuepilot-release-{release_id}-")).resolve()
         self._descriptors: dict[str, tuple[str, int]] = {}
         self._relative_prefixes: tuple[str, ...] = ()
@@ -158,6 +176,17 @@ class ManifestReleaseArtifactStore:
                     return self._descriptors[candidate]
             raise ReleaseArtifactError("release artifact is not in the pinned manifest")
 
+    def has(self, path: str) -> bool:
+        """Return whether a logical path is pinned by this immutable manifest."""
+
+        try:
+            self._descriptor(path)
+        except ReleaseArtifactError as exc:
+            if str(exc) == "release artifact is not in the pinned manifest":
+                return False
+            raise
+        return True
+
     @staticmethod
     def _object_key(digest: str) -> str:
         return f"objects/sha256/{digest}"
@@ -181,10 +210,19 @@ class ManifestReleaseArtifactStore:
             already_verified = digest in self._verified_objects
         if not already_verified:
             try:
-                data = self.store.get(key)
+                count = 0
+                digest_state = hashlib.sha256()
+                for data in self.store.stream(key, chunk_size=OBJECT_STREAM_CHUNK_BYTES):
+                    if not isinstance(data, bytes):
+                        raise ObjectStoreError("object stream returned non-bytes")
+                    count += len(data)
+                    if count > expected_bytes:
+                        raise ReleaseArtifactError(f"{path} object is oversized")
+                    digest_state.update(data)
             except ObjectStoreError as exc:
                 raise ReleaseArtifactError(f"{path} object verification read failed") from exc
-            _verify_bytes(data, expected_sha256=digest, expected_bytes=expected_bytes, label=path)
+            if count != expected_bytes or digest_state.hexdigest() != digest:
+                raise ReleaseArtifactError(f"{path} object hash or byte count mismatch")
             with self._lock:
                 self._verified_objects.add(digest)
         return metadata
@@ -195,12 +233,47 @@ class ManifestReleaseArtifactStore:
             raise ReleaseArtifactError("release artifact hash disagrees with manifest")
         if expected_bytes is not None and expected_bytes != size:
             raise ReleaseArtifactError("release artifact size disagrees with manifest")
-        self._verify_remote_metadata(path, digest, size)
+        chunks: list[bytes] = []
+        count = 0
+        digest_state = hashlib.sha256()
         try:
-            data = self.store.get(self._object_key(digest))
+            for data in self.store.stream(self._object_key(digest), chunk_size=OBJECT_STREAM_CHUNK_BYTES):
+                if not isinstance(data, bytes):
+                    raise ReleaseArtifactError(f"{path} stream returned non-bytes")
+                count += len(data)
+                if count > size:
+                    raise ReleaseArtifactError(f"{path} object is oversized")
+                digest_state.update(data)
+                chunks.append(data)
         except ObjectStoreError as exc:
             raise ReleaseArtifactError("release artifact read failed") from exc
-        return _verify_bytes(data, expected_sha256=digest, expected_bytes=size, label=path)
+        if count != size or digest_state.hexdigest() != digest:
+            raise ReleaseArtifactError(f"{path} hash or byte count mismatch")
+        with self._lock:
+            self._verified_objects.add(digest)
+        return b"".join(chunks)
+
+    def stream(self, path: str, *, chunk_size: int = OBJECT_STREAM_CHUNK_BYTES) -> Iterator[bytes]:
+        digest, size = self._descriptor(path)
+        if not isinstance(chunk_size, int) or not 1 <= chunk_size <= 16 * 1024 * 1024:
+            raise ReleaseArtifactError("release artifact stream chunk size is invalid")
+        count = 0
+        digest_state = hashlib.sha256()
+        try:
+            for data in self.store.stream(self._object_key(digest), chunk_size=chunk_size):
+                if not isinstance(data, bytes):
+                    raise ReleaseArtifactError(f"{path} stream returned non-bytes")
+                count += len(data)
+                if count > size:
+                    raise ReleaseArtifactError(f"{path} object is oversized")
+                digest_state.update(data)
+                yield data
+        except ObjectStoreError as exc:
+            raise ReleaseArtifactError("release artifact stream failed") from exc
+        if count != size or digest_state.hexdigest() != digest:
+            raise ReleaseArtifactError(f"{path} hash or byte count mismatch")
+        with self._lock:
+            self._verified_objects.add(digest)
 
     def read_range(self, path: str, offset: int, length: int) -> bytes:
         digest, size = self._descriptor(path)
@@ -227,9 +300,36 @@ class ManifestReleaseArtifactStore:
                 with target.open("wb") as handle:
                     handle.truncate(size)
             return target
-        data = self.read(path, expected_sha256=digest, expected_bytes=size)
-        if not target.is_file() or target.stat().st_size != len(data) or _digest(target.read_bytes()) != digest:
-            _atomic_write(target, data)
+        if target.is_file() and target.stat().st_size == size and _sha256_file(target) == digest:
+            with self._lock:
+                self._verified_objects.add(digest)
+            return target
+        target.parent.mkdir(parents=True, exist_ok=True)
+        fd, temporary_name = tempfile.mkstemp(prefix=f".{target.name}.", dir=str(target.parent))
+        temporary = Path(temporary_name)
+        count = 0
+        digest_state = hashlib.sha256()
+        try:
+            with os.fdopen(fd, "wb") as handle:
+                for data in self.store.stream(self._object_key(digest), chunk_size=OBJECT_STREAM_CHUNK_BYTES):
+                    if not isinstance(data, bytes):
+                        raise ReleaseArtifactError(f"{path} stream returned non-bytes")
+                    count += len(data)
+                    if count > size:
+                        raise ReleaseArtifactError(f"{path} object is oversized")
+                    digest_state.update(data)
+                    handle.write(data)
+                if count != size or digest_state.hexdigest() != digest:
+                    raise ReleaseArtifactError(f"{path} hash or byte count mismatch")
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, target)
+        except ObjectStoreError as exc:
+            raise ReleaseArtifactError(f"{path} stream failed") from exc
+        finally:
+            temporary.unlink(missing_ok=True)
+        with self._lock:
+            self._verified_objects.add(digest)
         return target
 
 

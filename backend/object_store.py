@@ -16,7 +16,7 @@ import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, Protocol
+from typing import Any, Iterator, Mapping, Protocol
 
 
 class ObjectStoreError(RuntimeError):
@@ -35,6 +35,7 @@ class ObjectMetadata:
 class ObjectStore(Protocol):
     def head(self, key: str) -> ObjectMetadata: ...
     def get(self, key: str) -> bytes: ...
+    def stream(self, key: str, *, chunk_size: int = 1024 * 1024) -> Iterator[bytes]: ...
     def get_range(self, key: str, offset: int, length: int) -> bytes: ...
     def exists(self, key: str) -> bool: ...
     def put_immutable(self, key: str, data: bytes, *, sha256: str | None = None) -> ObjectMetadata: ...
@@ -75,6 +76,7 @@ S3_UPLOAD_MAX_CONCURRENCY = 4
 S3_UPLOAD_MAX_ATTEMPTS = 3
 S3_UPLOAD_RETRY_BACKOFF_SECONDS = 0.25
 S3_CLIENT_TOTAL_MAX_ATTEMPTS = 5
+OBJECT_STREAM_CHUNK_BYTES = 1024 * 1024
 
 
 class LocalFilesystemObjectStore:
@@ -114,6 +116,21 @@ class LocalFilesystemObjectStore:
         if not path.is_file():
             raise ObjectStoreError("object does not exist")
         return data
+
+    def stream(self, key: str, *, chunk_size: int = OBJECT_STREAM_CHUNK_BYTES) -> Iterator[bytes]:
+        key = validate_key(key)
+        if not isinstance(chunk_size, int) or not 1 <= chunk_size <= 16 * 1024 * 1024:
+            raise ObjectStoreError("stream chunk size is invalid")
+        path = self._path(key)
+        try:
+            with path.open("rb") as handle:
+                while True:
+                    data = handle.read(chunk_size)
+                    if not data:
+                        return
+                    yield data
+        except OSError as exc:
+            raise ObjectStoreError("object stream failed") from exc
 
     def get_range(self, key: str, offset: int, length: int) -> bytes:
         if not isinstance(offset, int) or not isinstance(length, int) or offset < 0 or length < 0:
@@ -289,6 +306,27 @@ class S3CompatibleObjectStore:
         except Exception as exc:  # noqa: BLE001
             raise ObjectStoreError("object read failed") from exc
 
+    def stream(self, key: str, *, chunk_size: int = OBJECT_STREAM_CHUNK_BYTES) -> Iterator[bytes]:
+        key = validate_key(key)
+        if not isinstance(chunk_size, int) or not 1 <= chunk_size <= 16 * 1024 * 1024:
+            raise ObjectStoreError("stream chunk size is invalid")
+        body = None
+        try:
+            body = self.client.get_object(Bucket=self.bucket, Key=key)["Body"]
+            while True:
+                data = body.read(chunk_size)
+                if not data:
+                    return
+                if not isinstance(data, bytes):
+                    data = bytes(data)
+                yield data
+        except Exception as exc:  # noqa: BLE001
+            raise ObjectStoreError("object stream failed") from exc
+        finally:
+            close = getattr(body, "close", None)
+            if callable(close):
+                close()
+
     def get_range(self, key: str, offset: int, length: int) -> bytes:
         key = validate_key(key)
         if not isinstance(offset, int) or not isinstance(length, int) or offset < 0 or length < 0:
@@ -398,6 +436,9 @@ class ReadOnlyObjectStore:
     def get(self, key: str) -> bytes:
         return self._store.get(key)
 
+    def stream(self, key: str, *, chunk_size: int = OBJECT_STREAM_CHUNK_BYTES) -> Iterator[bytes]:
+        return self._store.stream(key, chunk_size=chunk_size)
+
     def get_range(self, key: str, offset: int, length: int) -> bytes:
         return self._store.get_range(key, offset, length)
 
@@ -414,4 +455,4 @@ class ReadOnlyObjectStore:
         raise ObjectStoreError("runtime object store is read-only")
 
 
-__all__ = ["LocalFilesystemObjectStore", "ObjectMetadata", "ObjectStore", "ObjectStoreError", "ReadOnlyObjectStore", "S3CompatibleObjectStore", "validate_key"]
+__all__ = ["LocalFilesystemObjectStore", "OBJECT_STREAM_CHUNK_BYTES", "ObjectMetadata", "ObjectStore", "ObjectStoreError", "ReadOnlyObjectStore", "S3CompatibleObjectStore", "validate_key"]
