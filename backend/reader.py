@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
@@ -14,7 +15,7 @@ from backend.cache import VerifiedEvidenceCache
 from backend.release import ReleaseHandle
 
 try:
-    from tools.argentina_sepa_micro_partition import MicroPartitionQueryError, MicroQueryPlan, _load_stores, load_micro_region_contract, load_micro_region_routing
+    from tools.argentina_sepa_micro_partition import ARGENTINA_REGIONS, MicroPartitionQueryError, MicroQueryPlan, _load_stores, load_micro_region_contract, load_micro_region_routing
     from tools.argentina_sepa_query import _offer_result, _search_candidates, straight_line_distance_km
     from tools.argentina_sepa_query import _iter_gzip_records
     from tools.argentina_shopping_intelligence import evaluate_argentina_provider_result
@@ -22,7 +23,7 @@ try:
     from tools.shopping_intelligence_engine import ShoppingIntelligenceError, ShoppingRequest
     from tools.verify_argentina_sepa_micro_partition_mobile import decode_member_bytes
 except ModuleNotFoundError:  # pragma: no cover - direct module invocation
-    from argentina_sepa_micro_partition import MicroPartitionQueryError, MicroQueryPlan, _load_stores, load_micro_region_contract, load_micro_region_routing
+    from argentina_sepa_micro_partition import ARGENTINA_REGIONS, MicroPartitionQueryError, MicroQueryPlan, _load_stores, load_micro_region_contract, load_micro_region_routing
     from argentina_sepa_query import _offer_result, _search_candidates, straight_line_distance_km
     from argentina_sepa_query import _iter_gzip_records
     from argentina_shopping_intelligence import evaluate_argentina_provider_result
@@ -38,6 +39,7 @@ MAX_ITEMS = 10
 MAX_CANDIDATES = 100_000
 MAX_OFFERS = 100_000
 MAX_INPUT_VOCABULARY_RECORDS = 100_000
+MAX_REMOTE_ROUTING_CONCURRENCY = 4
 
 
 class BackendQueryError(ValueError):
@@ -107,6 +109,15 @@ class NationalStoreRouter:
         self._routing_stores: dict[str, dict[str, Mapping[str, Any]]] = {}
         self._routing_bootstrap: Mapping[str, Any] | None = None
         self._lock = threading.RLock()
+        # Routing initialization is a separate state machine from the data
+        # caches.  Its lock protects only state transitions; no network or
+        # filesystem operation may run while it is held.
+        self._routing_state_lock = threading.Lock()
+        self._bootstrap_inflight: threading.Event | None = None
+        self._bootstrap_error: str | None = None
+        self._routing_inflight: threading.Event | None = None
+        self._routing_initialized = False
+        self._routing_error: str | None = None
 
     @staticmethod
     def _artifact_path(value: Any) -> str:
@@ -117,9 +128,26 @@ class NationalStoreRouter:
     def _remote_bootstrap(self) -> tuple[Path, Mapping[str, Any]]:
         if not isinstance(self.artifacts, ManifestReleaseArtifactStore):
             raise BackendQueryError("remote release artifact adapter is invalid")
-        with self._lock:
+        with self._routing_state_lock:
             if self._routing_bootstrap is not None:
                 return self.artifacts.cache_root / "micro-1024", self._routing_bootstrap
+            if self._bootstrap_error is not None:
+                raise BackendQueryError(self._bootstrap_error)
+            flight = self._bootstrap_inflight
+            owner = flight is None
+            if owner:
+                flight = threading.Event()
+                self._bootstrap_inflight = flight
+        if not owner:
+            flight.wait()
+            with self._routing_state_lock:
+                if self._routing_bootstrap is not None:
+                    return self.artifacts.cache_root / "micro-1024", self._routing_bootstrap
+                message = self._bootstrap_error or "remote release bootstrap is unavailable"
+            raise BackendQueryError(message)
+
+        assert flight is not None
+        try:
             try:
                 bootstrap_path = self.artifacts.materialize("micro-1024/bootstrap.json")
                 self.artifacts.materialize("micro-1024/bootstrap.sha256")
@@ -137,8 +165,20 @@ class NationalStoreRouter:
                 if not isinstance(entry, Mapping) or not isinstance(entry.get("regionId"), str) or entry["regionId"] in seen:
                     raise BackendQueryError("remote release region metadata is invalid")
                 seen.add(entry["regionId"])
+        except Exception as exc:  # noqa: BLE001 - all remote bootstrap failures fail closed
+            message = str(exc) if isinstance(exc, BackendQueryError) else "remote release bootstrap is unavailable"
+            with self._routing_state_lock:
+                self._bootstrap_error = message
+                self._bootstrap_inflight = None
+                flight.set()
+            if isinstance(exc, BackendQueryError):
+                raise
+            raise BackendQueryError(message) from exc
+        with self._routing_state_lock:
             self._routing_bootstrap = bootstrap
-            return self.artifacts.cache_root / "micro-1024", bootstrap
+            self._bootstrap_inflight = None
+            flight.set()
+        return self.artifacts.cache_root / "micro-1024", bootstrap
 
     @staticmethod
     def _remote_region_entry(bootstrap: Mapping[str, Any], region_id: str) -> Mapping[str, Any]:
@@ -236,6 +276,73 @@ class NationalStoreRouter:
         except (ReleaseArtifactError, OSError, ValueError, MicroPartitionQueryError, BackendQueryError) as exc:
             raise BackendQueryError("remote region routing failed verification") from exc
 
+    def _ensure_remote_routing(self) -> Mapping[str, Any]:
+        """Initialize every region's store directory once, in bounded parallel.
+
+        The staged dictionary is never exposed until every region has passed
+        verification.  Concurrent callers wait on the same event rather than
+        starting another national fetch.
+        """
+
+        if not self.artifacts.remote:
+            raise BackendQueryError("remote routing is unavailable for local artifacts")
+        with self._routing_state_lock:
+            if self._routing_initialized:
+                bootstrap = self._routing_bootstrap
+                if bootstrap is None:
+                    raise BackendQueryError("remote routing state is invalid")
+                return bootstrap
+            if self._routing_error is not None:
+                raise BackendQueryError(self._routing_error)
+            flight = self._routing_inflight
+            owner = flight is None
+            if owner:
+                flight = threading.Event()
+                self._routing_inflight = flight
+        if not owner:
+            flight.wait()
+            with self._routing_state_lock:
+                if self._routing_initialized and self._routing_bootstrap is not None:
+                    return self._routing_bootstrap
+                message = self._routing_error or "remote routing initialization failed"
+            raise BackendQueryError(message)
+
+        assert flight is not None
+        try:
+            _, bootstrap = self._remote_bootstrap()
+            entries = bootstrap.get("regions")
+            if not isinstance(entries, list) or not entries:
+                raise BackendQueryError("remote release region metadata is invalid")
+            region_ids: tuple[str, ...] = tuple(sorted(entry["regionId"] for entry in entries if isinstance(entry, Mapping) and isinstance(entry.get("regionId"), str)))
+            expected_region_ids = frozenset(spec.region_id for spec in ARGENTINA_REGIONS)
+            if len(region_ids) != len(entries) or len(set(region_ids)) != len(region_ids) or frozenset(region_ids) != expected_region_ids:
+                raise BackendQueryError("remote release region metadata is incomplete or invalid")
+
+            # Futures are collected in sorted region order so completion timing
+            # cannot change the cache's observable iteration order.
+            with ThreadPoolExecutor(max_workers=MAX_REMOTE_ROUTING_CONCURRENCY, thread_name_prefix="valuepilot-routing") as executor:
+                futures = {region_id: executor.submit(self._materialize_remote_routing, region_id) for region_id in region_ids}
+                staged = {region_id: futures[region_id].result() for region_id in region_ids}
+        except Exception as exc:  # noqa: BLE001 - routing must fail closed
+            message = str(exc) if isinstance(exc, BackendQueryError) else "remote routing initialization failed"
+            with self._routing_state_lock:
+                self._routing_error = message
+                self._routing_inflight = None
+                flight.set()
+            if isinstance(exc, BackendQueryError):
+                raise
+            raise BackendQueryError(message) from exc
+
+        # Commit only after every worker completed successfully.  This lock is
+        # held for a bounded in-memory assignment, never for remote I/O.
+        with self._lock:
+            self._routing_stores = staged
+        with self._routing_state_lock:
+            self._routing_initialized = True
+            self._routing_inflight = None
+            flight.set()
+        return bootstrap
+
     def contract(self, region_id: str) -> Any:
         with self._lock:
             contract = self._contracts.get(region_id)
@@ -262,19 +369,19 @@ class NationalStoreRouter:
 
         if not self.artifacts.remote:
             return self.stores(region_id)
+        self._ensure_remote_routing()
         with self._lock:
             stores = self._routing_stores.get(region_id)
-            if stores is None:
-                stores = self._materialize_remote_routing(region_id)
-                self._routing_stores[region_id] = stores
-            return stores
+        if stores is None:
+            raise BackendQueryError("remote routing region is unavailable")
+        return stores
 
     def route(self, *, latitude: Decimal, longitude: Decimal, radius_km: Decimal) -> tuple[RegionSelection, ...]:
         if radius_km < 0 or radius_km > MAX_BACKEND_RADIUS_KM:
             raise BackendQueryError("radiusKm must be between 0 and 50 km")
         regions = []
         if self.artifacts.remote:
-            _, bootstrap = self._remote_bootstrap()
+            bootstrap = self._ensure_remote_routing()
         else:
             bootstrap = self.contract("ar-caba").bootstrap
         entries = bootstrap.get("regions") if isinstance(bootstrap, Mapping) else None
@@ -506,4 +613,4 @@ class ArgentinaBackendReader:
         return decision, metrics
 
 
-__all__ = ["ArgentinaBackendReader", "BackendQueryError", "CurrentPriceEvidenceUnavailable", "MAX_BACKEND_RADIUS_KM", "NationalStoreRouter", "RequestMetrics", "RegionSelection"]
+__all__ = ["ArgentinaBackendReader", "BackendQueryError", "CurrentPriceEvidenceUnavailable", "MAX_BACKEND_RADIUS_KM", "MAX_REMOTE_ROUTING_CONCURRENCY", "NationalStoreRouter", "RequestMetrics", "RegionSelection"]
