@@ -81,7 +81,7 @@ fn read_varint(data: &[u8], cursor: &mut usize) -> Result<u32, String> {
 
 #[pyfunction]
 fn encode_postings_u32(py: Python<'_>, raw_little_endian_u32: &[u8]) -> PyResult<Py<PyBytes>> {
-    if !raw_little_endian_u32.len().is_multiple_of(4) {
+    if raw_little_endian_u32.len() & 3 != 0 {
         return Err(value_error("postings u32 input is not aligned"));
     }
     let mut output = Vec::with_capacity(raw_little_endian_u32.len());
