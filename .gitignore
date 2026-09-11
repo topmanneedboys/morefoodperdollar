@@ -19,3 +19,7 @@ local-feed-reports/
 # from the ignored qualified root; keep only the checked-in qualification
 # summary/report in Git.
 backend/measurement-*.json
+
+# Native SearchPack build products are reproducible and must not be committed.
+native/searchpack/target/
+native/searchpack/wheels/

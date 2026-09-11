@@ -31,6 +31,11 @@ from typing import Any, Iterable, Iterator, Mapping, Sequence
 SCHEMA_VERSION = "valuepilot-argentina-consumer-input-intelligence-v1"
 VOCABULARY_SCHEMA_VERSION = "valuepilot-argentina-input-vocabulary-v1"
 POLICY_VERSION = "valuepilot-argentina-input-policy-v1"
+# This version pins the exact lexical feature vocabulary shared by the
+# bounded compatibility scan and immutable SearchPack releases.  A SearchPack
+# built with another policy is not safe to query because changing aliases,
+# prefixes, or trigram boundaries changes candidate membership.
+LEXICAL_FEATURE_POLICY_VERSION = "valuepilot-argentina-lexical-features-v1"
 MAX_RAW_TEXT = 4096
 MAX_LINE_LENGTH = 256
 MAX_LINES = 10
@@ -262,6 +267,17 @@ def _phrase_features(phrases: Iterable[str]) -> set[tuple[str, str]]:
             for trigram in _interior_trigrams(token):
                 features.add(("trigram", trigram))
     return features
+
+
+def canonical_feature_keys(phrases: Iterable[str]) -> tuple[str, ...]:
+    """Return the stable, provider-neutral SearchPack feature-key encoding.
+
+    The tuple form is deliberately derived from ``_phrase_features`` rather
+    than reimplementing tokenization.  Python therefore remains the semantic
+    authority; the native kernel only stores and retrieves these opaque keys.
+    """
+
+    return tuple(sorted(f"{kind}:{value}" for kind, value in _phrase_features(phrases)))
 
 
 def _mapping_phrases(value: Mapping[str, Any]) -> tuple[str, ...]:
@@ -850,9 +866,20 @@ class CatalogIndex:
 
         return frozenset(_phrase_features(_intent_phrases(intent, self.data)))
 
+    def intent_feature_keys(self, intent: ParsedIntent) -> tuple[str, ...]:
+        """Return the canonical SearchPack keys for one parsed intent."""
+
+        return canonical_feature_keys(_intent_phrases(intent, self.data))
+
     @staticmethod
     def record_features(record: CatalogRecord) -> frozenset[tuple[str, str]]:
         return frozenset(_phrase_features((record.name, *record.aliases, record.brand or "")))
+
+    @staticmethod
+    def record_feature_keys(record: CatalogRecord) -> tuple[str, ...]:
+        """Return the canonical SearchPack keys for one catalog identity."""
+
+        return canonical_feature_keys((record.name, *record.aliases, record.brand or ""))
 
     def record_matches_intent(
         self,
@@ -1316,10 +1343,15 @@ def apply_candidate_horizon_guard(result: Mapping[str, Any], saturated_line_ids:
             suggestions = line.get("suggestions", [])
             if not isinstance(suggestions, list):
                 suggestions = []
-            if line.get("resolution") in {RESOLVED_EXACT, RESOLVED_ALIAS, RESOLVED_SAFE_CORRECTION}:
-                line["resolution"] = NEEDS_CLARIFICATION
-                line["correction"] = None
-                line["structuredLine"] = None
+            # A saturated posting proves that the bounded candidate set is
+            # incomplete, regardless of whether the pre-guard result happened
+            # to be a match or had already been unresolved.  Always fail closed
+            # to an explicit clarification and never expose a product selected
+            # from the partial horizon as if it were an exact recognition.
+            line["resolution"] = NEEDS_CLARIFICATION
+            line["correction"] = None
+            line["structuredLine"] = None
+            line["recognizedProduct"] = None
             line["clarification"] = {
                 "code": CANDIDATE_HORIZON_REACHED,
                 "message": "Too many plausible catalog matches were found to choose safely.",
@@ -1369,6 +1401,7 @@ __all__ = [
     "CANDIDATE_HORIZON_REACHED",
     "CatalogIndex",
     "CatalogRecord",
+    "LEXICAL_FEATURE_POLICY_VERSION",
     "ConsumerInputInterpreter",
     "DIMENSION_MISMATCH",
     "InputIntelligenceError",
@@ -1387,6 +1420,7 @@ __all__ = [
     "SCHEMA_VERSION",
     "apply_candidate_horizon_guard",
     "build_vocabulary",
+    "canonical_feature_keys",
     "normalize_text",
     "parse_intent",
     "parse_quantity",

@@ -1,0 +1,15 @@
+[build-system]
+requires = ["maturin>=1.9,<2"]
+build-backend = "maturin"
+
+[project]
+name = "valuepilot-searchpack-native"
+version = "0.1.0"
+description = "Bounded immutable SearchPack primitives for ValuePilot"
+requires-python = ">=3.8"
+
+[tool.maturin]
+bindings = "pyo3"
+manifest-path = "Cargo.toml"
+module-name = "searchpack_native"
+features = ["pyo3/extension-module"]

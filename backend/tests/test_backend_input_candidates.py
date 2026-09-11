@@ -10,6 +10,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from backend.artifacts import ManifestReleaseArtifactStore
+from backend.object_store import LocalFilesystemObjectStore
 from backend.reader import (
     ArgentinaBackendReader,
     MAX_INPUT_CANDIDATE_UNION,
@@ -21,8 +23,12 @@ from tools.consumer_input_intelligence import (
     CatalogRecord,
     ConsumerInputInterpreter,
     NEEDS_CLARIFICATION,
+    apply_candidate_horizon_guard,
     parse_intent,
 )
+from tools.argentina_searchpack import SearchPackManager
+from tools.build_argentina_searchpack import derive_searchpack_workspace
+from tools.tests.test_argentina_searchpack import _fixture_workspace, _new_output
 import tools.argentina_sepa_query as sepa_query
 from tools.tests.test_consumer_input_intelligence import fixture_records
 
@@ -70,6 +76,51 @@ def _reader_for_records(root: Path, records: list[dict[str, object]]) -> Argenti
 
 
 class BackendInputCandidateTests(unittest.TestCase):
+    def test_searchpack_path_never_opens_regional_corpus(self) -> None:
+        records = fixture_records()
+        source, release_id = _fixture_workspace(records)
+        output = _new_output("valuepilot-backend-searchpack-")
+        derive_searchpack_workspace(source, output, [release_id])
+        manifest = json.loads((output / "releases" / "release-search-v1" / "manifest.json").read_bytes())
+        artifacts = ManifestReleaseArtifactStore(LocalFilesystemObjectStore(output), manifest, release_id="release-search-v1")
+        reader = _reader_for_records(Path(tempfile.mkdtemp(prefix="valuepilot-searchpack-reader-")), records)
+        reader._searchpack_declared = True
+        reader._searchpack_error = None
+        reader._searchpack = SearchPackManager(artifacts, manifest)
+        with patch("backend.reader._iter_gzip_records", side_effect=AssertionError("SearchPack must not scan the corpus")):
+            result = reader.interpret_text("arroz 1kg", require_quantities=True, region_ids=("ar-caba",))
+            candidates = reader._search_many(reader.router.contract("ar-caba"), ("arroz",))
+        self.assertEqual(result["diagnostics"]["scannedSearchRecords"], 0)
+        self.assertTrue(result["diagnostics"]["searchPackEnabled"])
+        self.assertEqual(len(candidates[0]), 1)
+
+    def test_searchpack_saturation_is_an_explicit_clarification(self) -> None:
+        records = [
+            {
+                "productEvidenceKey": f"arroz-{index:04d}",
+                "name": f"Arroz Marca {index:04d} 1 kg",
+                "brand": None,
+                "canonicalSearchAliases": [],
+            }
+            for index in range(257)
+        ]
+        source, release_id = _fixture_workspace(records)
+        output = _new_output("valuepilot-backend-searchpack-saturation-")
+        derive_searchpack_workspace(source, output, [release_id])
+        manifest = json.loads((output / "releases" / "release-search-v1" / "manifest.json").read_bytes())
+        artifacts = ManifestReleaseArtifactStore(LocalFilesystemObjectStore(output), manifest, release_id="release-search-v1")
+        reader = _reader_for_records(Path(tempfile.mkdtemp(prefix="valuepilot-searchpack-saturation-reader-")), records)
+        reader._searchpack_declared = True
+        reader._searchpack_error = None
+        reader._searchpack = SearchPackManager(artifacts, manifest)
+        with patch("backend.reader._iter_gzip_records", side_effect=AssertionError("SearchPack must not scan the corpus")):
+            result = reader.interpret_text("arroz", region_ids=("ar-caba",))
+        line = result["lines"][0]
+        self.assertEqual(line["resolution"], NEEDS_CLARIFICATION)
+        self.assertIsNone(line["recognizedProduct"])
+        self.assertEqual(line["clarification"]["code"], CANDIDATE_HORIZON_REACHED)
+        self.assertEqual(result["diagnostics"]["searchPackCorpusScanned"], 0)
+
     def test_raw_mapping_gate_matches_shared_catalog_policy(self) -> None:
         records = fixture_records() + [
             {
@@ -147,6 +198,31 @@ class BackendInputCandidateTests(unittest.TestCase):
             preparation = reader._prepare_input_candidates("arroz", ("ar-caba",))
             self.assertLessEqual(preparation.retained_candidates, MAX_INPUT_CANDIDATE_UNION)
             self.assertLessEqual(len(preparation.catalog.records), 256)
+
+    def test_saturated_unresolved_line_still_requires_clarification(self) -> None:
+        guarded = apply_candidate_horizon_guard(
+            {
+                "lines": [
+                    {
+                        "lineId": "item-1",
+                        "resolution": "NO_SAFE_MATCH",
+                        "recognizedProduct": None,
+                        "correction": None,
+                        "structuredLine": None,
+                        "suggestions": [],
+                    }
+                ],
+                "clarifications": [],
+                "safeRequestReady": False,
+                "structuredItems": [],
+            },
+            ("item-1",),
+            candidate_bound=256,
+        )
+        line = guarded["lines"][0]
+        self.assertEqual(line["resolution"], NEEDS_CLARIFICATION)
+        self.assertIsNone(line["recognizedProduct"])
+        self.assertEqual(line["clarification"]["code"], CANDIDATE_HORIZON_REACHED)
 
     def test_large_irrelevant_growth_is_not_retained_in_catalog_index(self) -> None:
         records = [

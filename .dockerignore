@@ -8,3 +8,5 @@ backend/measurement-*.json
 *.pyc
 *.zip
 *.apk
+native/searchpack/target
+native/searchpack/wheels

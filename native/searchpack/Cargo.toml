@@ -1,0 +1,16 @@
+[package]
+name = "valuepilot-searchpack-native"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+publish = false
+
+[lib]
+name = "searchpack_native"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+fst = "0.4.7"
+pyo3 = { version = "0.23.5", features = ["extension-module", "abi3-py38"] }
+sha2 = "0.10.9"
+zstd = "0.13.3"

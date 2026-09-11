@@ -20,6 +20,7 @@ try:
     from tools.argentina_sepa_micro_partition import ARGENTINA_REGIONS, MicroPartitionQueryError, MicroQueryPlan, _load_stores, load_micro_region_contract, load_micro_region_routing
     from tools.argentina_sepa_query import MAX_SEARCH_SCAN_RECORDS, _offer_result, _search_candidates_many, straight_line_distance_km
     from tools.argentina_sepa_query import _iter_gzip_records
+    from tools.argentina_searchpack import SearchPackError, SearchPackManager, SearchPackStats
     from tools.argentina_shopping_intelligence import evaluate_argentina_provider_result
     from tools.consumer_input_intelligence import (
         MAX_CANDIDATES as INPUT_MAX_CANDIDATES,
@@ -41,6 +42,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct module invocation
     from argentina_sepa_micro_partition import ARGENTINA_REGIONS, MicroPartitionQueryError, MicroQueryPlan, _load_stores, load_micro_region_contract, load_micro_region_routing
     from argentina_sepa_query import MAX_SEARCH_SCAN_RECORDS, _offer_result, _search_candidates_many, straight_line_distance_km
     from argentina_sepa_query import _iter_gzip_records
+    from argentina_searchpack import SearchPackError, SearchPackManager, SearchPackStats
     from argentina_shopping_intelligence import evaluate_argentina_provider_result
     from consumer_input_intelligence import (
         MAX_CANDIDATES as INPUT_MAX_CANDIDATES,
@@ -98,6 +100,16 @@ class RequestMetrics:
     physical_pack_bytes: int = 0
     cache_hits: int = 0
     cache_misses: int = 0
+    searchpack_feature_lookups: int = 0
+    searchpack_lexicon_reads: int = 0
+    searchpack_posting_reads: int = 0
+    searchpack_docstore_reads: int = 0
+    searchpack_bytes_read: int = 0
+    searchpack_records_returned: int = 0
+    searchpack_saturated_features: int = 0
+    searchpack_cache_hits: int = 0
+    searchpack_cache_misses: int = 0
+    searchpack_corpus_scanned: int = 0
     regions_queried: list[str] = field(default_factory=list)
 
     def as_dict(self) -> dict[str, Any]:
@@ -118,6 +130,16 @@ class RequestMetrics:
             "physicalPackBytes": self.physical_pack_bytes,
             "cacheHits": self.cache_hits,
             "cacheMisses": self.cache_misses,
+            "searchPackFeatureLookups": self.searchpack_feature_lookups,
+            "searchPackLexiconReads": self.searchpack_lexicon_reads,
+            "searchPackPostingReads": self.searchpack_posting_reads,
+            "searchPackDocstoreReads": self.searchpack_docstore_reads,
+            "searchPackBytesRead": self.searchpack_bytes_read,
+            "searchPackRecordsReturned": self.searchpack_records_returned,
+            "searchPackSaturatedFeatures": self.searchpack_saturated_features,
+            "searchPackCacheHits": self.searchpack_cache_hits,
+            "searchPackCacheMisses": self.searchpack_cache_misses,
+            "searchPackCorpusScanned": self.searchpack_corpus_scanned,
             "regionsQueried": list(self.regions_queried),
         }
 
@@ -173,6 +195,7 @@ class _InputCandidatePreparation:
     saturated_line_ids: tuple[str, ...]
     scanned_records: int
     retained_candidates: int
+    searchpack_stats: SearchPackStats | None = None
 
 
 class NationalStoreRouter:
@@ -560,13 +583,59 @@ class ArgentinaBackendReader:
         # replaces the old region-wide vocabulary cache, which retained up to
         # 100,000 unrelated identities per entry.
         self._input_candidate_cache: OrderedDict[tuple[str, str, tuple[str, ...] | None], _InputCandidatePreparation] = OrderedDict()
+        self._searchpack: SearchPackManager | None = None
+        self._searchpack_declared = False
+        self._searchpack_error: str | None = None
+        manifest = getattr(self.artifacts, "manifest", None)
+        if isinstance(manifest, Mapping) and manifest.get("searchPackArtifact") is not None:
+            self._searchpack_declared = True
+            try:
+                self._searchpack = SearchPackManager(self.artifacts, manifest)
+            except SearchPackError as exc:
+                self._searchpack_error = str(exc)
 
-    def _search_many(self, contract: Any, queries: Sequence[str], *, product_limit: int = 5) -> tuple[tuple[Mapping[str, Any], ...], ...]:
+    @staticmethod
+    def _merge_searchpack_metrics(metrics: RequestMetrics | None, stats: SearchPackStats) -> None:
+        if metrics is None:
+            return
+        metrics.searchpack_feature_lookups += stats.feature_lookups
+        metrics.searchpack_lexicon_reads += stats.lexicon_reads
+        metrics.searchpack_posting_reads += stats.posting_reads
+        metrics.searchpack_docstore_reads += stats.docstore_reads
+        metrics.searchpack_bytes_read += stats.bytes_read
+        metrics.searchpack_records_returned += stats.records_returned
+        metrics.searchpack_saturated_features += stats.saturated_features
+        metrics.searchpack_cache_hits += stats.cache_hits
+        metrics.searchpack_cache_misses += stats.cache_misses
+
+    def _searchpack_for_region(self, region_id: str) -> SearchPackManager | None:
+        if not getattr(self, "_searchpack_declared", False):
+            return None
+        if getattr(self, "_searchpack_error", None) is not None or getattr(self, "_searchpack", None) is None:
+            raise BackendQueryError(getattr(self, "_searchpack_error", None) or "SearchPack release is unavailable")
+        return self._searchpack
+
+    def _search_many(self, contract: Any, queries: Sequence[str], *, product_limit: int = 5, metrics: RequestMetrics | None = None) -> tuple[tuple[Mapping[str, Any], ...], ...]:
         """Resolve several product queries with one bounded score/recovery pair."""
 
         requested = tuple(dict.fromkeys(queries))
         if not requested:
             return ()
+        searchpack = self._searchpack_for_region(contract.region.region_id)
+        if searchpack is not None:
+            stats = SearchPackStats()
+            try:
+                packed = searchpack.region(contract.region.region_id).search_many(
+                    requested,
+                    product_limit=product_limit,
+                    candidate_bound=MAX_CANDIDATES,
+                    stats=stats,
+                )
+            except SearchPackError as exc:
+                raise BackendQueryError(f"SearchPack search failed for {contract.region.region_id}") from exc
+            self._merge_searchpack_metrics(metrics, stats)
+            values = {query: tuple(value) for query, value in zip(requested, packed)}
+            return tuple(values[query] for query in queries)
         values: dict[str, tuple[Mapping[str, Any], ...]] = {}
         misses: list[str] = []
         for query in requested:
@@ -591,12 +660,12 @@ class ArgentinaBackendReader:
     def _search(self, contract: Any, query: str, *, product_limit: int = 5) -> tuple[Mapping[str, Any], ...]:
         return self._search_many(contract, (query,), product_limit=product_limit)[0]
 
-    def _plan(self, contract: Any, queries: Sequence[str], *, product_limit: int = 5) -> MicroQueryPlan:
+    def _plan(self, contract: Any, queries: Sequence[str], *, product_limit: int = 5, metrics: RequestMetrics | None = None) -> MicroQueryPlan:
         candidates: list[Mapping[str, Any]] = []
         seen: set[str] = set()
         partitions: set[str] = set()
         start = time.perf_counter()
-        values_by_query = self._search_many(contract, queries, product_limit=product_limit)
+        values_by_query = self._search_many(contract, queries, product_limit=product_limit, metrics=metrics)
         for values in values_by_query:
             for value in values:
                 key = value["productEvidenceKey"]
@@ -634,8 +703,117 @@ class ArgentinaBackendReader:
             return tuple(sorted(set(values)))
         return tuple(sorted({value for value in region_ids if isinstance(value, str)}))
 
+    def _prepare_input_candidates_searchpack(self, text: str, region_ids: Sequence[str] | None) -> _InputCandidatePreparation:
+        """Build the same bounded CatalogIndex from immutable postings.
+
+        A posting with document frequency above the semantic horizon is a
+        proof of ambiguity, not permission to choose an arbitrary product.
+        Only non-saturated document IDs are materialized into the existing
+        Python interpreter.
+        """
+
+        scorer = CatalogIndex(())
+        try:
+            lines = split_shopping_lines(text, data=scorer.data)
+            intents = tuple(parse_intent(line, data=scorer.data) for line in lines)
+        except InputIntelligenceError as exc:
+            raise BackendQueryError(str(exc)) from exc
+        features = tuple(scorer.intent_features(intent) for intent in intents)
+        feature_keys = tuple(scorer.intent_feature_keys(intent) for intent in intents)
+        global_accumulators = [_CandidateAccumulator() for _ in intents]
+        regional_saturated = [False for _ in intents]
+        total_stats = SearchPackStats()
+
+        for region_id in self._input_region_ids(region_ids):
+            manager = self._searchpack_for_region(region_id)
+            assert manager is not None
+            try:
+                pack = manager.region(region_id)
+                lookups = [
+                    pack.lookup_features(keys, candidate_bound=INPUT_MAX_CANDIDATES, stats=total_stats)
+                    for keys in feature_keys
+                ]
+            except SearchPackError as exc:
+                raise BackendQueryError(f"SearchPack input lookup failed for {region_id}") from exc
+            regional_accumulators = [_CandidateAccumulator() for _ in intents]
+            for index, lookup in enumerate(lookups):
+                if lookup.saturated:
+                    regional_saturated[index] = True
+            requested_ids = tuple(sorted({doc_id for lookup in lookups if not lookup.saturated for doc_id in lookup.doc_ids}))
+            if len(requested_ids) > MAX_INPUT_CANDIDATE_UNION:
+                # This is a deterministic union saturation independent of
+                # posting order.  Do not fetch a partial arbitrary set.
+                for index, lookup in enumerate(lookups):
+                    if not lookup.saturated:
+                        regional_saturated[index] = True
+                continue
+            try:
+                raw_by_id = pack.get_records(requested_ids, stats=total_stats, max_records=MAX_INPUT_CANDIDATE_UNION)
+            except SearchPackError as exc:
+                raise BackendQueryError(f"SearchPack docstore lookup failed for {region_id}") from exc
+            for raw in raw_by_id.values():
+                try:
+                    matching_indices = scorer.raw_record_matches_intents(raw, features)
+                except InputIntelligenceError as exc:
+                    raise BackendQueryError(f"{region_id} input candidate record is invalid") from exc
+                if not matching_indices:
+                    continue
+                try:
+                    record = CatalogRecord.from_mapping(raw)
+                except InputIntelligenceError as exc:
+                    raise BackendQueryError(f"{region_id} input candidate record is invalid") from exc
+                for index in matching_indices:
+                    regional_accumulator = regional_accumulators[index]
+                    global_accumulator = global_accumulators[index]
+                    if regional_accumulator.saturated and global_accumulator.saturated:
+                        continue
+                    scored = scorer.score_record(record, intents[index])
+                    if not regional_accumulator.saturated:
+                        regional_accumulator.add(scored, raw)
+                    if not global_accumulator.saturated:
+                        global_accumulator.add(scored, raw)
+            for index, accumulator in enumerate(regional_accumulators):
+                regional_saturated[index] = regional_saturated[index] or accumulator.saturated
+
+        union: dict[str, Mapping[str, Any]] = {}
+        query_candidate_keys: dict[ParsedIntent, tuple[str, ...]] = {}
+        for intent, accumulator in zip(intents, global_accumulators):
+            ordered = accumulator.ordered()
+            for scored, raw in ordered:
+                union.setdefault(scored.record.product_evidence_key, raw)
+            query_candidate_keys[intent] = tuple(scored.record.product_evidence_key for scored, _ in ordered)
+        if len(union) > MAX_INPUT_CANDIDATE_UNION:
+            raise BackendQueryError("input candidate union bound exceeded")
+        try:
+            catalog = CatalogIndex.from_records(
+                union.values(),
+                data=scorer.data,
+                max_records=MAX_INPUT_CANDIDATE_UNION,
+                query_candidate_keys=query_candidate_keys,
+            )
+        except InputIntelligenceError as exc:
+            raise BackendQueryError(str(exc)) from exc
+        saturated = [
+            f"item-{index + 1}"
+            for index, accumulator in enumerate(global_accumulators)
+            if accumulator.saturated or regional_saturated[index]
+        ]
+        return _InputCandidatePreparation(
+            catalog=catalog,
+            intents=intents,
+            saturated_line_ids=tuple(sorted(set(saturated))),
+            scanned_records=0,
+            retained_candidates=len(union),
+            searchpack_stats=total_stats,
+        )
+
     def _prepare_input_candidates(self, text: str, region_ids: Sequence[str] | None) -> _InputCandidatePreparation:
         """Build a query-bounded CatalogIndex from streamed search evidence."""
+
+        selected_input_regions = self._input_region_ids(region_ids)
+        if getattr(self, "_searchpack_declared", False):
+            if not selected_input_regions or self._searchpack_for_region(selected_input_regions[0]) is not None:
+                return self._prepare_input_candidates_searchpack(text, region_ids)
 
         # An empty index owns the shared alias/normalization data and exposes
         # the same parser/scorer used by ConsumerInputInterpreter without
@@ -770,6 +948,19 @@ class ArgentinaBackendReader:
                 "scannedSearchRecords": preparation.scanned_records,
                 "candidateCacheHit": candidate_cache_hit,
             })
+            if preparation.searchpack_stats is not None:
+                stats = preparation.searchpack_stats
+                diagnostics.update({
+                    "searchPackEnabled": True,
+                    "searchPackFeatureLookups": stats.feature_lookups,
+                    "searchPackLexiconReads": stats.lexicon_reads,
+                    "searchPackPostingReads": stats.posting_reads,
+                    "searchPackDocstoreReads": stats.docstore_reads,
+                    "searchPackBytesRead": stats.bytes_read,
+                    "searchPackRecordsReturned": stats.records_returned,
+                    "searchPackSaturatedFeatures": stats.saturated_features,
+                    "searchPackCorpusScanned": 0,
+                })
             result["diagnostics"] = diagnostics
             return result
         except InputIntelligenceError as exc:
@@ -822,7 +1013,7 @@ class ArgentinaBackendReader:
         for selection in selections:
             contract = self.router.contract(selection.region_id)
             search_start = time.perf_counter()
-            plan = self._plan(contract, [line.query for line in normalized.lines])
+            plan = self._plan(contract, [line.query for line in normalized.lines], metrics=metrics)
             metrics.regional_search_ms += (time.perf_counter() - search_start) * 1000
             metrics.compressed_bytes += plan.compressed_bytes
             metrics.decompressed_bytes += plan.decompressed_bytes
@@ -845,7 +1036,7 @@ class ArgentinaBackendReader:
                     continue
                 offers.append(_offer_result(raw_offer, product, store, distance))
             by_query: dict[str, set[str]] = {}
-            candidate_values = self._search_many(contract, [line.query for line in normalized.lines], product_limit=5)
+            candidate_values = self._search_many(contract, [line.query for line in normalized.lines], product_limit=5, metrics=metrics)
             for line, candidates in zip(normalized.lines, candidate_values):
                 keys = {candidate["productEvidenceKey"] for candidate in candidates}
                 by_query[line.line_id] = keys

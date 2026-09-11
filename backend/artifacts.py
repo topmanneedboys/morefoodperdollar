@@ -136,6 +136,7 @@ class ManifestReleaseArtifactStore:
         self._descriptors: dict[str, tuple[str, int]] = {}
         self._relative_prefixes: tuple[str, ...] = ()
         self._verified_objects: set[str] = set()
+        self._metadata_verified: dict[str, ObjectMetadata] = {}
         self._lock = threading.RLock()
         objects = manifest.get("objects")
         if not isinstance(objects, list):
@@ -193,6 +194,12 @@ class ManifestReleaseArtifactStore:
 
     def _verify_remote_metadata(self, path: str, digest: str, expected_bytes: int) -> ObjectMetadata:
         key = self._object_key(digest)
+        with self._lock:
+            cached = self._metadata_verified.get(digest)
+        if cached is not None:
+            if cached.size != expected_bytes:
+                raise ReleaseArtifactError(f"{path} object byte count mismatch")
+            return cached
         try:
             metadata = self.store.head(key)
         except ObjectStoreError as exc:
@@ -205,6 +212,7 @@ class ManifestReleaseArtifactStore:
         if metadata.sha256 == digest:
             with self._lock:
                 self._verified_objects.add(digest)
+                self._metadata_verified[digest] = metadata
             return metadata
         with self._lock:
             already_verified = digest in self._verified_objects
@@ -225,6 +233,7 @@ class ManifestReleaseArtifactStore:
                 raise ReleaseArtifactError(f"{path} object hash or byte count mismatch")
             with self._lock:
                 self._verified_objects.add(digest)
+                self._metadata_verified[digest] = metadata
         return metadata
 
     def read(self, path: str, *, expected_sha256: str | None = None, expected_bytes: int | None = None) -> bytes:

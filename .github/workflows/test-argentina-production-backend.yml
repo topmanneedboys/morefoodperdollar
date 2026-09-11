@@ -19,6 +19,11 @@ on:
       - 'tools/fixtures/argentina_storage_retention/**'
       - 'tools/data/argentina_input_aliases.json'
       - 'tools/tests/test_consumer_input_intelligence.py'
+      - 'tools/argentina_searchpack.py'
+      - 'tools/build_argentina_searchpack.py'
+      - 'tools/measure_argentina_searchpack.py'
+      - 'tools/tests/test_argentina_searchpack.py'
+      - 'native/searchpack/**'
       - 'ARGENTINA_CONSUMER_INPUT_INTELLIGENCE_QUALIFICATION.*'
       - 'ARGENTINA_PRODUCTION_BACKEND_QUALIFICATION.*'
       - '.github/workflows/test-argentina-production-backend.yml'
@@ -39,6 +44,11 @@ on:
       - 'tools/fixtures/argentina_storage_retention/**'
       - 'tools/data/argentina_input_aliases.json'
       - 'tools/tests/test_consumer_input_intelligence.py'
+      - 'tools/argentina_searchpack.py'
+      - 'tools/build_argentina_searchpack.py'
+      - 'tools/measure_argentina_searchpack.py'
+      - 'tools/tests/test_argentina_searchpack.py'
+      - 'native/searchpack/**'
       - 'ARGENTINA_CONSUMER_INPUT_INTELLIGENCE_QUALIFICATION.*'
       - 'ARGENTINA_PRODUCTION_BACKEND_QUALIFICATION.*'
       - '.github/workflows/test-argentina-production-backend.yml'
@@ -62,9 +72,24 @@ jobs:
       - name: Install backend dependencies
         run: python -m pip install --disable-pip-version-check -r backend/requirements.txt
 
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.85.1
+          components: rustfmt, clippy
+
+      - name: Build and test native SearchPack kernel
+        run: |
+          cargo fmt --manifest-path native/searchpack/Cargo.toml -- --check
+          cargo clippy --manifest-path native/searchpack/Cargo.toml --all-targets -- -D warnings
+          cargo test --manifest-path native/searchpack/Cargo.toml
+          python -m pip install --disable-pip-version-check 'maturin>=1.9,<2'
+          maturin build --manifest-path native/searchpack/Cargo.toml --release --out native/searchpack/wheels
+          python -m pip install --disable-pip-version-check native/searchpack/wheels/*.whl
+
       - name: Compile backend and bounded diagnostics
         run: |
-          python -m py_compile backend/*.py tools/measure_argentina_production_backend.py tools/consumer_input_intelligence.py tools/build_argentina_input_vocabulary.py tools/measure_argentina_consumer_input_intelligence.py tools/argentina_storage_retention.py tools/manage_argentina_storage_retention.py
+          python -m py_compile backend/*.py tools/measure_argentina_production_backend.py tools/consumer_input_intelligence.py tools/argentina_searchpack.py tools/build_argentina_searchpack.py tools/measure_argentina_searchpack.py tools/build_argentina_input_vocabulary.py tools/measure_argentina_consumer_input_intelligence.py tools/argentina_storage_retention.py tools/manage_argentina_storage_retention.py
           python -m unittest discover -s backend/tests -p 'test_*.py' -v
 
       - name: Run existing offline Python regression
