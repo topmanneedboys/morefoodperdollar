@@ -18,19 +18,43 @@ from backend.release import ReleaseHandle
 try:
     from tools.argentina_national_routing import RoutingPoint, load_national_routing
     from tools.argentina_sepa_micro_partition import ARGENTINA_REGIONS, MicroPartitionQueryError, MicroQueryPlan, _load_stores, load_micro_region_contract, load_micro_region_routing
-    from tools.argentina_sepa_query import _offer_result, _search_candidates, straight_line_distance_km
+    from tools.argentina_sepa_query import MAX_SEARCH_SCAN_RECORDS, _offer_result, _search_candidates_many, straight_line_distance_km
     from tools.argentina_sepa_query import _iter_gzip_records
     from tools.argentina_shopping_intelligence import evaluate_argentina_provider_result
-    from tools.consumer_input_intelligence import CatalogIndex, ConsumerInputInterpreter, InputIntelligenceError
+    from tools.consumer_input_intelligence import (
+        MAX_CANDIDATES as INPUT_MAX_CANDIDATES,
+        MAX_LINES as INPUT_MAX_LINES,
+        CatalogIndex,
+        CatalogRecord,
+        ConsumerInputInterpreter,
+        InputIntelligenceError,
+        ParsedIntent,
+        apply_candidate_horizon_guard,
+        parse_intent,
+        normalize_text as input_normalize_text,
+        split_shopping_lines,
+    )
     from tools.shopping_intelligence_engine import ShoppingIntelligenceError, ShoppingRequest
     from tools.verify_argentina_sepa_micro_partition_mobile import decode_member_bytes
 except ModuleNotFoundError:  # pragma: no cover - direct module invocation
     from argentina_national_routing import RoutingPoint, load_national_routing
     from argentina_sepa_micro_partition import ARGENTINA_REGIONS, MicroPartitionQueryError, MicroQueryPlan, _load_stores, load_micro_region_contract, load_micro_region_routing
-    from argentina_sepa_query import _offer_result, _search_candidates, straight_line_distance_km
+    from argentina_sepa_query import MAX_SEARCH_SCAN_RECORDS, _offer_result, _search_candidates_many, straight_line_distance_km
     from argentina_sepa_query import _iter_gzip_records
     from argentina_shopping_intelligence import evaluate_argentina_provider_result
-    from consumer_input_intelligence import CatalogIndex, ConsumerInputInterpreter, InputIntelligenceError
+    from consumer_input_intelligence import (
+        MAX_CANDIDATES as INPUT_MAX_CANDIDATES,
+        MAX_LINES as INPUT_MAX_LINES,
+        CatalogIndex,
+        CatalogRecord,
+        ConsumerInputInterpreter,
+        InputIntelligenceError,
+        ParsedIntent,
+        apply_candidate_horizon_guard,
+        parse_intent,
+        normalize_text as input_normalize_text,
+        split_shopping_lines,
+    )
     from shopping_intelligence_engine import ShoppingIntelligenceError, ShoppingRequest
     from verify_argentina_sepa_micro_partition_mobile import decode_member_bytes
 
@@ -41,10 +65,11 @@ MAX_BACKEND_RADIUS_KM = Decimal("50")
 MAX_ITEMS = 10
 MAX_CANDIDATES = 100_000
 MAX_OFFERS = 100_000
-MAX_INPUT_VOCABULARY_RECORDS = 100_000
 MAX_REMOTE_ROUTING_CONCURRENCY = 4
 MAX_SEARCH_CACHE_ENTRIES = 512
-MAX_INPUT_CATALOG_CACHE_ENTRIES = 8
+MAX_INPUT_CANDIDATE_CACHE_ENTRIES = 8
+MAX_INPUT_CANDIDATE_UNION = INPUT_MAX_LINES * INPUT_MAX_CANDIDATES
+MAX_SMALL_CATALOG_FALLBACK_RECORDS = 2_048
 
 
 class BackendQueryError(ValueError):
@@ -101,6 +126,53 @@ class RequestMetrics:
 class RegionSelection:
     region_id: str
     store_keys: tuple[str, ...]
+
+
+@dataclass
+class _CandidateAccumulator:
+    """Retain only the deterministic top horizon for one shopper line."""
+
+    limit: int = INPUT_MAX_CANDIDATES
+    values: dict[str, tuple[Any, Mapping[str, Any]]] = field(default_factory=dict)
+    saturated: bool = False
+
+    @staticmethod
+    def _sort_key(scored: Any) -> tuple[Any, ...]:
+        return (
+            -int(scored.score),
+            -int(scored.similarity),
+            scored.record.product_evidence_key,
+            input_normalize_text(scored.record.name),
+        )
+
+    def add(self, scored: Any, raw: Mapping[str, Any]) -> None:
+        key = scored.record.product_evidence_key
+        if key not in self.values:
+            if len(self.values) >= self.limit:
+                # A non-retained plausible key means the candidate horizon is
+                # no longer a complete view of ambiguity.  The caller will
+                # fail closed rather than let a truncated set become exact.
+                self.saturated = True
+            self.values[key] = (scored, raw)
+        else:
+            previous, _ = self.values[key]
+            if self._sort_key(scored) < self._sort_key(previous):
+                self.values[key] = (scored, raw)
+        if len(self.values) > self.limit:
+            worst_key = max(self.values, key=lambda value: self._sort_key(self.values[value][0]))
+            del self.values[worst_key]
+
+    def ordered(self) -> tuple[tuple[Any, Mapping[str, Any]], ...]:
+        return tuple(sorted(self.values.values(), key=lambda value: self._sort_key(value[0])))
+
+
+@dataclass
+class _InputCandidatePreparation:
+    catalog: CatalogIndex
+    intents: tuple[ParsedIntent, ...]
+    saturated_line_ids: tuple[str, ...]
+    scanned_records: int
+    retained_candidates: int
 
 
 class NationalStoreRouter:
@@ -484,28 +556,48 @@ class ArgentinaBackendReader:
         # Search indexes are immutable for a pinned release. Cache bounded
         # top-k results so warm service calls do not rescan the same gzip.
         self._search_cache: OrderedDict[tuple[str, str, int], tuple[Mapping[str, Any], ...]] = OrderedDict()
-        self._input_catalog_cache: OrderedDict[tuple[str, ...], CatalogIndex] = OrderedDict()
+        # Only query-specific bounded CatalogIndex entries are cached.  This
+        # replaces the old region-wide vocabulary cache, which retained up to
+        # 100,000 unrelated identities per entry.
+        self._input_candidate_cache: OrderedDict[tuple[str, str, tuple[str, ...] | None], _InputCandidatePreparation] = OrderedDict()
+
+    def _search_many(self, contract: Any, queries: Sequence[str], *, product_limit: int = 5) -> tuple[tuple[Mapping[str, Any], ...], ...]:
+        """Resolve several product queries with one bounded score/recovery pair."""
+
+        requested = tuple(dict.fromkeys(queries))
+        if not requested:
+            return ()
+        values: dict[str, tuple[Mapping[str, Any], ...]] = {}
+        misses: list[str] = []
+        for query in requested:
+            cache_key = (contract.region.region_id, query, product_limit)
+            cached = self._search_cache.get(cache_key)
+            if cached is None:
+                misses.append(query)
+            else:
+                self._search_cache.move_to_end(cache_key)
+                values[query] = cached
+        if misses:
+            raw_by_query, _ = _search_candidates_many(contract, misses, product_limit=product_limit, max_candidates=MAX_CANDIDATES)
+            for query, raw in zip(misses, raw_by_query):
+                value = tuple(raw)
+                cache_key = (contract.region.region_id, query, product_limit)
+                if len(self._search_cache) >= MAX_SEARCH_CACHE_ENTRIES:
+                    self._search_cache.popitem(last=False)
+                self._search_cache[cache_key] = value
+                values[query] = value
+        return tuple(values[query] for query in queries)
 
     def _search(self, contract: Any, query: str, *, product_limit: int = 5) -> tuple[Mapping[str, Any], ...]:
-        cache_key = (contract.region.region_id, query, product_limit)
-        value = self._search_cache.get(cache_key)
-        if value is None:
-            value, _ = _search_candidates(contract, query, product_limit=product_limit, max_candidates=MAX_CANDIDATES)
-            value = tuple(value)
-            if len(self._search_cache) >= MAX_SEARCH_CACHE_ENTRIES:
-                self._search_cache.popitem(last=False)
-            self._search_cache[cache_key] = value
-        else:
-            self._search_cache.move_to_end(cache_key)
-        return value
+        return self._search_many(contract, (query,), product_limit=product_limit)[0]
 
     def _plan(self, contract: Any, queries: Sequence[str], *, product_limit: int = 5) -> MicroQueryPlan:
         candidates: list[Mapping[str, Any]] = []
         seen: set[str] = set()
         partitions: set[str] = set()
         start = time.perf_counter()
-        for query in queries:
-            values = self._search(contract, query, product_limit=product_limit)
+        values_by_query = self._search_many(contract, queries, product_limit=product_limit)
+        for values in values_by_query:
             for value in values:
                 key = value["productEvidenceKey"]
                 if key not in seen:
@@ -532,53 +624,150 @@ class ArgentinaBackendReader:
             })
         return MicroQueryPlan(contract.region.region_id, tuple(queries), tuple(candidates), selected, tuple(slices), contract.bootstrap_bytes, contract.manifest_bytes, contract.search_descriptor["bytes"], contract.store_descriptor["bytes"], sum(int(value["byteLength"]) for value in slices), sum(int(value["uncompressedBytes"]) for value in slices), tuple(sorted({value["packId"] for value in slices})), 4 + len({value["packId"] for value in slices}))
 
-    def input_catalog(self, region_ids: Sequence[str] | None = None) -> CatalogIndex:
-        """Build/cache a bounded vocabulary from qualified search indexes.
-
-        Search indexes are already immutable release artifacts.  This reads
-        only their product identity records; it never reads the national ZIP
-        or offer partitions and never turns an identity into price/stock.
-        """
-
+    def _input_region_ids(self, region_ids: Sequence[str] | None) -> tuple[str, ...]:
         if region_ids is None:
-            bootstrap = self.router.contract("ar-caba").bootstrap
+            if self.artifacts.remote:
+                bootstrap = self.router._remote_bootstrap()[1]
+            else:
+                bootstrap = self.router.contract("ar-caba").bootstrap
             values = [entry.get("regionId") for entry in bootstrap.get("regions", []) if isinstance(entry, Mapping) and isinstance(entry.get("regionId"), str)]
-            selected = tuple(sorted(values))
-        else:
-            selected = tuple(sorted({value for value in region_ids if isinstance(value, str)}))
-        cache_key = ("__all__",) if region_ids is None else selected
-        cached = self._input_catalog_cache.get(cache_key)
-        if cached is not None:
-            self._input_catalog_cache.move_to_end(cache_key)
-            return cached
-        records: list[Mapping[str, Any]] = []
-        seen: set[str] = set()
-        for region_id in selected:
-            contract = self.router.contract(region_id)
-            path = contract.root / contract.search_descriptor["path"]
-            for raw in _iter_gzip_records(path, contract.search_descriptor, f"{region_id} input vocabulary"):
-                key = raw.get("productEvidenceKey")
-                if not isinstance(key, str) or key in seen:
-                    continue
-                seen.add(key)
-                records.append(raw)
-                if len(records) >= MAX_INPUT_VOCABULARY_RECORDS:
-                    break
-            if len(records) >= MAX_INPUT_VOCABULARY_RECORDS:
-                break
+            return tuple(sorted(set(values)))
+        return tuple(sorted({value for value in region_ids if isinstance(value, str)}))
+
+    def _prepare_input_candidates(self, text: str, region_ids: Sequence[str] | None) -> _InputCandidatePreparation:
+        """Build a query-bounded CatalogIndex from streamed search evidence."""
+
+        # An empty index owns the shared alias/normalization data and exposes
+        # the same parser/scorer used by ConsumerInputInterpreter without
+        # retaining any provider records.
+        scorer = CatalogIndex(())
         try:
-            catalog = CatalogIndex.from_records(records, max_records=MAX_INPUT_VOCABULARY_RECORDS)
+            lines = split_shopping_lines(text, data=scorer.data)
+            intents = tuple(parse_intent(line, data=scorer.data) for line in lines)
         except InputIntelligenceError as exc:
             raise BackendQueryError(str(exc)) from exc
-        if len(self._input_catalog_cache) >= MAX_INPUT_CATALOG_CACHE_ENTRIES:
-            self._input_catalog_cache.popitem(last=False)
-        self._input_catalog_cache[cache_key] = catalog
-        return catalog
+        features = tuple(scorer.intent_features(intent) for intent in intents)
+        global_accumulators = [_CandidateAccumulator() for _ in intents]
+        regional_saturated = [False for _ in intents]
+        fallback: dict[str, Mapping[str, Any]] | None = {}
+        total_scanned = 0
+
+        for region_id in self._input_region_ids(region_ids):
+            contract = self.router.contract(region_id)
+            path = contract.root / contract.search_descriptor["path"]
+            regional_accumulators = [_CandidateAccumulator() for _ in intents]
+            region_scanned = 0
+            for raw in _iter_gzip_records(path, contract.search_descriptor, f"{region_id} input candidate index"):
+                region_scanned += 1
+                total_scanned += 1
+                if region_scanned > MAX_SEARCH_SCAN_RECORDS:
+                    raise BackendQueryError(f"{region_id} input candidate scan bound exceeded ({MAX_SEARCH_SCAN_RECORDS})")
+                try:
+                    record = CatalogRecord.from_mapping(raw)
+                except InputIntelligenceError as exc:
+                    raise BackendQueryError(f"{region_id} input candidate record is invalid") from exc
+                if fallback is not None:
+                    key = record.product_evidence_key
+                    if key not in fallback:
+                        fallback[key] = raw
+                        if len(fallback) > MAX_SMALL_CATALOG_FALLBACK_RECORDS:
+                            fallback = None
+                record_features = CatalogIndex.record_features(record)
+                for index, intent in enumerate(intents):
+                    if not features[index] or not scorer.record_matches_intent(record, intent, intent_features=features[index], record_features=record_features):
+                        continue
+                    regional_accumulator = regional_accumulators[index]
+                    global_accumulator = global_accumulators[index]
+                    if regional_accumulator.saturated and global_accumulator.saturated:
+                        continue
+                    scored = scorer.score_record(record, intent)
+                    if not regional_accumulator.saturated:
+                        regional_accumulator.add(scored, raw)
+                    if not global_accumulator.saturated:
+                        global_accumulator.add(scored, raw)
+            for index, accumulator in enumerate(regional_accumulators):
+                regional_saturated[index] = regional_saturated[index] or accumulator.saturated
+
+        # The original CatalogIndex deliberately falls back to comparing every
+        # record for a tiny catalog when no lexical key exists.  Preserve that
+        # typo/empty-key behavior only while the source is genuinely tiny; it
+        # is never a path for a national catalog.
+        if fallback is not None:
+            for index, intent in enumerate(intents):
+                if global_accumulators[index].values:
+                    continue
+                for raw in fallback.values():
+                    try:
+                        record = CatalogRecord.from_mapping(raw)
+                    except InputIntelligenceError as exc:
+                        raise BackendQueryError("input candidate record is invalid") from exc
+                    global_accumulators[index].add(scorer.score_record(record, intent), raw)
+
+        union: dict[str, Mapping[str, Any]] = {}
+        query_candidate_keys: dict[ParsedIntent, tuple[str, ...]] = {}
+        for intent, accumulator in zip(intents, global_accumulators):
+            ordered = accumulator.ordered()
+            for scored, raw in ordered:
+                union.setdefault(scored.record.product_evidence_key, raw)
+            query_candidate_keys[intent] = tuple(scored.record.product_evidence_key for scored, _ in ordered)
+        if len(union) > MAX_INPUT_CANDIDATE_UNION:
+            raise BackendQueryError("input candidate union bound exceeded")
+        try:
+            catalog = CatalogIndex.from_records(
+                union.values(),
+                data=scorer.data,
+                max_records=MAX_INPUT_CANDIDATE_UNION,
+                query_candidate_keys=query_candidate_keys,
+            )
+        except InputIntelligenceError as exc:
+            raise BackendQueryError(str(exc)) from exc
+        saturated = []
+        for index, accumulator in enumerate(global_accumulators):
+            # A regional horizon may omit an alternative even when deduplication
+            # makes the global union look smaller.  Either horizon therefore
+            # forces the same conservative interpretation guard.
+            if accumulator.saturated or regional_saturated[index]:
+                saturated.append(f"item-{index + 1}")
+        return _InputCandidatePreparation(
+            catalog=catalog,
+            intents=intents,
+            saturated_line_ids=tuple(sorted(set(saturated))),
+            scanned_records=total_scanned,
+            retained_candidates=len(union),
+        )
 
     def interpret_text(self, text: str, *, require_quantities: bool = False, region_ids: Sequence[str] | None = None) -> dict[str, Any]:
         try:
-            interpreter = ConsumerInputInterpreter(self.input_catalog(region_ids))
-            return interpreter.interpret(text, require_quantities=require_quantities)
+            selected = None if region_ids is None else tuple(sorted({value for value in region_ids if isinstance(value, str)}))
+            cache_key = (self.release.release_id, text, selected)
+            preparation = self._input_candidate_cache.get(cache_key)
+            candidate_cache_hit = preparation is not None
+            if preparation is None:
+                preparation = self._prepare_input_candidates(text, selected)
+                if len(self._input_candidate_cache) >= MAX_INPUT_CANDIDATE_CACHE_ENTRIES:
+                    self._input_candidate_cache.popitem(last=False)
+                self._input_candidate_cache[cache_key] = preparation
+            else:
+                self._input_candidate_cache.move_to_end(cache_key)
+            interpreter = ConsumerInputInterpreter(preparation.catalog)
+            result = interpreter.interpret(text, require_quantities=require_quantities)
+            if preparation.saturated_line_ids:
+                result = apply_candidate_horizon_guard(
+                    result,
+                    preparation.saturated_line_ids,
+                    candidate_bound=INPUT_MAX_CANDIDATES,
+                )
+            diagnostics = dict(result.get("diagnostics", {})) if isinstance(result.get("diagnostics"), Mapping) else {}
+            diagnostics.update({
+                "candidateSaturated": bool(preparation.saturated_line_ids),
+                "candidateBound": INPUT_MAX_CANDIDATES,
+                "candidateUnionBound": MAX_INPUT_CANDIDATE_UNION,
+                "retainedCandidateCount": preparation.retained_candidates,
+                "scannedSearchRecords": preparation.scanned_records,
+                "candidateCacheHit": candidate_cache_hit,
+            })
+            result["diagnostics"] = diagnostics
+            return result
         except InputIntelligenceError as exc:
             raise BackendQueryError(str(exc)) from exc
 
@@ -652,8 +841,8 @@ class ArgentinaBackendReader:
                     continue
                 offers.append(_offer_result(raw_offer, product, store, distance))
             by_query: dict[str, set[str]] = {}
-            for line in normalized.lines:
-                candidates = self._search(contract, line.query, product_limit=5)
+            candidate_values = self._search_many(contract, [line.query for line in normalized.lines], product_limit=5)
+            for line, candidates in zip(normalized.lines, candidate_values):
                 keys = {candidate["productEvidenceKey"] for candidate in candidates}
                 by_query[line.line_id] = keys
                 for candidate in candidates:
@@ -688,4 +877,4 @@ class ArgentinaBackendReader:
         return decision, metrics
 
 
-__all__ = ["ArgentinaBackendReader", "BackendQueryError", "CurrentPriceEvidenceUnavailable", "MAX_BACKEND_RADIUS_KM", "MAX_INPUT_CATALOG_CACHE_ENTRIES", "MAX_REMOTE_ROUTING_CONCURRENCY", "MAX_SEARCH_CACHE_ENTRIES", "NationalStoreRouter", "RequestMetrics", "RegionSelection"]
+__all__ = ["ArgentinaBackendReader", "BackendQueryError", "CurrentPriceEvidenceUnavailable", "MAX_BACKEND_RADIUS_KM", "MAX_INPUT_CANDIDATE_CACHE_ENTRIES", "MAX_INPUT_CANDIDATE_UNION", "MAX_REMOTE_ROUTING_CONCURRENCY", "MAX_SEARCH_CACHE_ENTRIES", "NationalStoreRouter", "RequestMetrics", "RegionSelection"]

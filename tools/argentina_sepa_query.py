@@ -248,19 +248,39 @@ def _bounded_chunked_search(
     final ordering is deterministic.
     """
 
+    return _bounded_chunked_search_many(products, (query,), limit=limit, max_candidates=max_candidates)[0]
+
+
+def _bounded_chunked_search_many(
+    products: Iterable[Mapping[str, Any]],
+    queries: Sequence[str],
+    *,
+    limit: int,
+    max_candidates: int,
+) -> tuple[tuple[SearchResult, ...], ...]:
+    """Search several queries in one bounded streaming pass.
+
+    Chunking and merge ordering deliberately share the single-query path.  A
+    caller may ask for ten shopper lines, but the gzip iterator is consumed
+    once and only each query's bounded top-k state survives between chunks.
+    """
+
     _require(isinstance(max_candidates, int) and 1 <= max_candidates <= MAX_CANDIDATES, "max_candidates is invalid")
     _require(isinstance(limit, int) and 1 <= limit <= MAX_RESULTS, "limit is invalid")
-    best: dict[str, SearchResult] = {}
+    unique_queries = tuple(dict.fromkeys(queries))
+    _require(all(isinstance(query, str) for query in unique_queries), "query must be a string")
+    best: dict[str, dict[str, SearchResult]] = {query: {} for query in unique_queries}
     scanned = 0
     chunk: list[Mapping[str, Any]] = []
 
     def consume(values: list[Mapping[str, Any]]) -> None:
         if not values:
             return
-        for result in search_products(values, query, limit=limit, max_candidates=len(values)):
-            previous = best.get(result.product_evidence_key)
-            if previous is None or (-result.score, result.product_evidence_key, result.name) < (-previous.score, previous.product_evidence_key, previous.name):
-                best[result.product_evidence_key] = result
+        for query in unique_queries:
+            for result in search_products(values, query, limit=limit, max_candidates=len(values)):
+                previous = best[query].get(result.product_evidence_key)
+                if previous is None or (-result.score, result.product_evidence_key, result.name) < (-previous.score, previous.product_evidence_key, previous.name):
+                    best[query][result.product_evidence_key] = result
 
     for product in products:
         scanned += 1
@@ -270,7 +290,10 @@ def _bounded_chunked_search(
             consume(chunk)
             chunk = []
     consume(chunk)
-    return tuple(sorted(best.values(), key=lambda result: (-result.score, result.product_evidence_key, result.name))[:limit])
+    return tuple(
+        tuple(sorted(best[query].values(), key=lambda result: (-result.score, result.product_evidence_key, result.name))[:limit])
+        for query in unique_queries
+    )
 
 
 def load_region_contract(
@@ -348,20 +371,50 @@ def load_region_contract(
     return RegionContract(root, region, bootstrap, manifest, search_descriptor, store_descriptor, partition_descriptors, bootstrap_path.stat().st_size, manifest_path.stat().st_size)
 
 
-def _search_candidates(contract: RegionContract, query: str, *, product_limit: int, max_candidates: int) -> tuple[tuple[Mapping[str, Any], ...], tuple[SearchResult, ...]]:
+def _search_candidates_many(
+    contract: RegionContract,
+    queries: Sequence[str],
+    *,
+    product_limit: int,
+    max_candidates: int,
+) -> tuple[tuple[tuple[Mapping[str, Any], ...], ...], tuple[tuple[SearchResult, ...], ...]]:
+    """Return raw records and scorer results for several queries.
+
+    The scorer pass and the bounded raw-record recovery pass each consume the
+    immutable search index once, independent of the number of requested
+    queries.  Raw records are retained only for the top-k keys.
+    """
+
     search_path = contract.root / _safe_relative(contract.search_descriptor["path"], "search index")
+    requested = tuple(dict.fromkeys(queries))
+    if not requested:
+        return (), ()
     try:
-        results = _bounded_chunked_search(_iter_gzip_records(search_path, contract.search_descriptor, "search index"), query, limit=product_limit, max_candidates=max_candidates)
+        results = _bounded_chunked_search_many(
+            _iter_gzip_records(search_path, contract.search_descriptor, "search index"),
+            requested,
+            limit=product_limit,
+            max_candidates=max_candidates,
+        )
     except (SearchError, ArgentinaSepaQueryError) as exc:
         raise ArgentinaSepaQueryError(str(exc)) from exc
-    keys = {result.product_evidence_key for result in results}
+    keys = {result.product_evidence_key for values in results for result in values}
     records: dict[str, Mapping[str, Any]] = {}
     if keys:
         for record in _iter_gzip_records(search_path, contract.search_descriptor, "search index"):
-            if record.get("productEvidenceKey") in keys:
-                records[record["productEvidenceKey"]] = record
-    ordered = tuple(records[result.product_evidence_key] for result in results if result.product_evidence_key in records)
-    return ordered, results
+            key = record.get("productEvidenceKey")
+            if key in keys:
+                records[key] = record
+    raw_by_query = tuple(
+        tuple(records[result.product_evidence_key] for result in values if result.product_evidence_key in records)
+        for values in results
+    )
+    return raw_by_query, results
+
+
+def _search_candidates(contract: RegionContract, query: str, *, product_limit: int, max_candidates: int) -> tuple[tuple[Mapping[str, Any], ...], tuple[SearchResult, ...]]:
+    raw, results = _search_candidates_many(contract, (query,), product_limit=product_limit, max_candidates=max_candidates)
+    return (raw[0] if raw else ()), (results[0] if results else ())
 
 
 def _validate_location(latitude: Any, longitude: Any, radius_km: Any) -> tuple[float, float, float]:
