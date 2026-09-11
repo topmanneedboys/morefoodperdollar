@@ -112,6 +112,7 @@ _FRACTION_CHARS = {"½": Decimal("0.5"), "¼": Decimal("0.25"), "¾": Decimal("0
 _NUMBER_RE = re.compile(r"(?<![A-Za-zÀ-ÿ])(?:\d+\s+\d+/\d+|\d+/\d+|\d+(?:[.,]\d+)?|[½¼¾])(?![A-Za-zÀ-ÿ/])", re.UNICODE)
 _UNIT_RE = re.compile(r"(?<![A-Za-zÀ-ÿ])(?:kg|kilos?|kilogramos?|g|gramos?|lb|lbs|pounds?|libras?|ml|mililitros?|cc|cm3|lt|litros?|l|count|units?|unidades?|each|ea)(?![A-Za-zÀ-ÿ])", re.IGNORECASE | re.UNICODE)
 _TOKEN_RE = re.compile(r"[a-z0-9]+", re.IGNORECASE)
+_RAW_TOKEN_RE = re.compile(r"[A-Za-z0-9]+")
 _SEPARATOR_RE = re.compile(r"[;,\n\r]+")
 _CONJUNCTION_RE = re.compile(r"\s+(?:and|y)\s+", re.IGNORECASE)
 _FILLER_JOIN_RE = re.compile(r"\s+", re.UNICODE)
@@ -261,6 +262,77 @@ def _phrase_features(phrases: Iterable[str]) -> set[tuple[str, str]]:
             for trigram in _interior_trigrams(token):
                 features.add(("trigram", trigram))
     return features
+
+
+def _mapping_phrases(value: Mapping[str, Any]) -> tuple[str, ...]:
+    """Validate the identity fields and return the same phrases as a record."""
+
+    key = value.get("productEvidenceKey")
+    name = value.get("name")
+    if not isinstance(key, str) or not key or len(key) > 256:
+        raise InputIntelligenceError("catalog productEvidenceKey is invalid")
+    if not isinstance(name, str) or not name.strip() or len(name) > 512:
+        raise InputIntelligenceError("catalog product name is invalid")
+    aliases = value.get("canonicalSearchAliases", value.get("aliases", ()))
+    if isinstance(aliases, str):
+        aliases = (aliases,)
+    if not isinstance(aliases, Sequence) or isinstance(aliases, (bytes, str)):
+        aliases = ()
+    normalized_aliases = tuple(str(item) for item in aliases if isinstance(item, str) and item.strip())[:8]
+    return (name.strip(), *normalized_aliases, value.get("brand") if isinstance(value.get("brand"), str) else "")
+
+
+def _phrases_match_features(phrases: Iterable[str], features: frozenset[tuple[str, str]]) -> bool:
+    """Probe the shared lexical feature policy without allocating a record."""
+
+    normalized_phrases: list[str] = []
+    tokens: set[str] = set()
+    for phrase in phrases:
+        normalized = normalize_text(phrase, max_length=512)
+        if not normalized:
+            continue
+        normalized_phrases.append(normalized)
+        tokens.update(normalized.split())
+    # Whole-token evidence is the common path for provider records.  Check it
+    # before the more expensive prefix/trigram probes so a national stream can
+    # discard unrelated rows without constructing every feature variant.
+    if any(("token", token) in features for token in tokens):
+        return True
+    for normalized in normalized_phrases:
+        if ("exact", normalized) in features or ("exact", "".join(normalized.split())) in features:
+            return True
+        for token in normalized.split():
+            for width in (2, 3, 4):
+                if len(token) >= width and ("prefix", token[:width]) in features:
+                    return True
+            for trigram in _interior_trigrams(token):
+                if ("trigram", trigram) in features:
+                    return True
+    return False
+
+
+def _raw_phrase_features(phrases: Iterable[str]) -> tuple[frozenset[tuple[str, str]], bool]:
+    """Build an ASCII fast-path feature set and report normalization risk."""
+
+    features: set[tuple[str, str]] = set()
+    needs_normalized_fallback = False
+    for phrase in phrases:
+        if not phrase.isascii():
+            needs_normalized_fallback = True
+        tokens = tuple(token.casefold() for token in _RAW_TOKEN_RE.findall(phrase))
+        if not tokens:
+            continue
+        normalized = " ".join(tokens)
+        features.add(("exact", normalized))
+        features.add(("exact", "".join(tokens)))
+        for token in tokens:
+            features.add(("token", token))
+            for width in (2, 3, 4):
+                if len(token) >= width:
+                    features.add(("prefix", token[:width]))
+            for trigram in _interior_trigrams(token):
+                features.add(("trigram", trigram))
+    return frozenset(features), needs_normalized_fallback
 
 
 def _levenshtein_ratio(left: str, right: str) -> int:
@@ -798,22 +870,33 @@ class CatalogIndex:
         # Streamed callers should not allocate a feature set for every record
         # in a national index.  Probe the same exact/joined/token/prefix/
         # trigram feature universe lazily and stop at the first hit.
-        for phrase in (record.name, *record.aliases, record.brand or ""):
-            normalized = normalize_text(phrase, max_length=512)
-            if not normalized:
-                continue
-            if ("exact", normalized) in left or ("exact", _joined_key(normalized)) in left:
-                return True
-            for token in normalized.split():
-                if ("token", token) in left:
-                    return True
-                for width in (2, 3, 4):
-                    if len(token) >= width and ("prefix", token[:width]) in left:
-                        return True
-                for trigram in _interior_trigrams(token):
-                    if ("trigram", trigram) in left:
-                        return True
-        return False
+        return _phrases_match_features((record.name, *record.aliases, record.brand or ""), left)
+
+    def raw_record_matches_intents(
+        self,
+        value: Mapping[str, Any],
+        intent_features: Sequence[frozenset[tuple[str, str]]],
+    ) -> tuple[int, ...]:
+        """Return matching intent positions before constructing a record.
+
+        Required identity fields are validated exactly as ``CatalogRecord``
+        would validate them.  All other record fields remain untouched until a
+        lexical match is found, keeping national streaming CPU and allocations
+        proportional to the query's plausible candidates.
+        """
+
+        phrases = _mapping_phrases(value)
+        raw_features, needs_normalized_fallback = _raw_phrase_features(phrases)
+        matches: list[int] = []
+        for index, features in enumerate(intent_features):
+            if raw_features & features:
+                matches.append(index)
+            elif needs_normalized_fallback and _phrases_match_features(phrases, features):
+                # Accented/compatibility text can normalize differently from
+                # the ASCII probe; retain the exact shared policy for those
+                # records instead of risking a false negative.
+                matches.append(index)
+        return tuple(matches)
 
     def score_record(self, record: CatalogRecord, intent: ParsedIntent) -> _ScoredCandidate:
         """Score one streamed record with the same rules as ``candidates``."""

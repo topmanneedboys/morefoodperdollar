@@ -18,8 +18,10 @@ import backend.reader as reader_module
 from tools.consumer_input_intelligence import (
     CANDIDATE_HORIZON_REACHED,
     CatalogIndex,
+    CatalogRecord,
     ConsumerInputInterpreter,
     NEEDS_CLARIFICATION,
+    parse_intent,
 )
 import tools.argentina_sepa_query as sepa_query
 from tools.tests.test_consumer_input_intelligence import fixture_records
@@ -68,6 +70,31 @@ def _reader_for_records(root: Path, records: list[dict[str, object]]) -> Argenti
 
 
 class BackendInputCandidateTests(unittest.TestCase):
+    def test_raw_mapping_gate_matches_shared_catalog_policy(self) -> None:
+        records = fixture_records() + [
+            {
+                "productEvidenceKey": "accented",
+                "name": "Puré de Tomate 500 g",
+                "brand": "Miércoles",
+                "canonicalSearchAliases": ["tomate triturado"],
+            },
+            {
+                "productEvidenceKey": "punctuated",
+                "name": "Coca-Cola Zero 2.25 L",
+                "brand": "Coca-Cola",
+                "canonicalSearchAliases": [],
+            },
+        ]
+        catalog = CatalogIndex.from_records(records)
+        queries = ("arroz 1kg", "aroz 1kg", "puré de tomate 500g", "coka cola 2.25l", "Miércoles")
+        intents = tuple(parse_intent(query, data=catalog.data) for query in queries)
+        features = tuple(catalog.intent_features(intent) for intent in intents)
+        for raw in records:
+            record = CatalogRecord.from_mapping(raw)
+            expected = tuple(index for index, intent in enumerate(intents) if catalog.record_matches_intent(record, intent, intent_features=features[index]))
+            actual = catalog.raw_record_matches_intents(raw, features)
+            self.assertEqual(actual, expected, raw["productEvidenceKey"])
+
     def test_bounded_path_matches_full_interpreter_for_qualified_input_corpus(self) -> None:
         records = fixture_records()
         full = ConsumerInputInterpreter(CatalogIndex.from_records(records))
@@ -141,12 +168,15 @@ class BackendInputCandidateTests(unittest.TestCase):
                 captured.append(len(materialized))
                 return original(materialized, **kwargs)
 
-            with patch("backend.reader.CatalogIndex.from_records", side_effect=capture):
+            with patch("backend.reader.CatalogIndex.from_records", side_effect=capture), patch(
+                "backend.reader.CatalogRecord.from_mapping", wraps=CatalogRecord.from_mapping
+            ) as from_mapping:
                 preparation = reader._prepare_input_candidates("arroz", ("ar-caba",))
             self.assertEqual(preparation.scanned_records, len(records))
             self.assertEqual(preparation.retained_candidates, 0)
             self.assertEqual(len(preparation.catalog.records), 0)
             self.assertEqual(captured, [0])
+            self.assertEqual(from_mapping.call_count, 0)
             self.assertLessEqual(preparation.retained_candidates, MAX_INPUT_CANDIDATE_UNION)
 
     def test_multi_query_search_consumes_one_score_and_one_recovery_pass(self) -> None:

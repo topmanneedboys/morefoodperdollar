@@ -663,19 +663,23 @@ class ArgentinaBackendReader:
                 if region_scanned > MAX_SEARCH_SCAN_RECORDS:
                     raise BackendQueryError(f"{region_id} input candidate scan bound exceeded ({MAX_SEARCH_SCAN_RECORDS})")
                 try:
-                    record = CatalogRecord.from_mapping(raw)
+                    matching_indices = scorer.raw_record_matches_intents(raw, features)
                 except InputIntelligenceError as exc:
                     raise BackendQueryError(f"{region_id} input candidate record is invalid") from exc
                 if fallback is not None:
-                    key = record.product_evidence_key
+                    key = raw.get("productEvidenceKey")
                     if key not in fallback:
                         fallback[key] = raw
                         if len(fallback) > MAX_SMALL_CATALOG_FALLBACK_RECORDS:
                             fallback = None
-                record_features = CatalogIndex.record_features(record)
-                for index, intent in enumerate(intents):
-                    if not features[index] or not scorer.record_matches_intent(record, intent, intent_features=features[index], record_features=record_features):
-                        continue
+                if not matching_indices:
+                    continue
+                try:
+                    record = CatalogRecord.from_mapping(raw)
+                except InputIntelligenceError as exc:
+                    raise BackendQueryError(f"{region_id} input candidate record is invalid") from exc
+                for index in matching_indices:
+                    intent = intents[index]
                     regional_accumulator = regional_accumulators[index]
                     global_accumulator = global_accumulators[index]
                     if regional_accumulator.saturated and global_accumulator.saturated:
