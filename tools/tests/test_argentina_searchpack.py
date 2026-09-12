@@ -6,6 +6,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from backend.artifacts import ManifestReleaseArtifactStore
 from backend.object_store import LocalFilesystemObjectStore
@@ -34,7 +35,16 @@ def _fixture_workspace(rows: list[dict[str, object]]) -> tuple[Path, str]:
     root = Path(tempfile.mkdtemp(prefix="valuepilot-searchpack-source-"))
     (root / "objects" / "sha256").mkdir(parents=True)
     (root / "releases" / "release").mkdir(parents=True)
-    uncompressed = b"".join(_canonical(row) for row in rows)
+    # SearchPack ranked results carry the physical partition identity that the
+    # backend planner consumes.  Keep the tiny source fixtures convenient by
+    # assigning a stable test-only identity when a case does not need to
+    # specify one explicitly.
+    normalized_rows = []
+    for index, row in enumerate(rows):
+        value = dict(row)
+        value.setdefault("partitionId", f"fixture-partition-{index:04d}")
+        normalized_rows.append(value)
+    uncompressed = b"".join(_canonical(row) for row in normalized_rows)
     compressed = gzip.compress(uncompressed, mtime=0)
     search_object = _put_object(root, compressed)
     regional_manifest_value = {
@@ -75,6 +85,44 @@ def _new_output(prefix: str) -> Path:
 
 
 class ArgentinaSearchPackTests(unittest.TestCase):
+    def test_search_many_preserves_materialized_partition_identity(self) -> None:
+        rows = [{
+            "productEvidenceKey": "arroz-key",
+            "name": "Arroz 1 kg",
+            "brand": None,
+            "canonicalSearchAliases": [],
+            "partitionId": "p-explicit",
+        }]
+        source, release_id = _fixture_workspace(rows)
+        output = _new_output("valuepilot-searchpack-partition-preservation-")
+        derive_searchpack_workspace(source, output, [release_id])
+
+        values = _manager(output).region("ar-caba").search_many(("arroz",))
+
+        self.assertEqual(values[0][0]["productEvidenceKey"], "arroz-key")
+        self.assertEqual(values[0][0]["partitionId"], "p-explicit")
+
+    def test_search_many_rejects_missing_or_invalid_partition_identity(self) -> None:
+        source, release_id = _fixture_workspace([{
+            "productEvidenceKey": "arroz-key",
+            "name": "Arroz 1 kg",
+            "brand": None,
+            "canonicalSearchAliases": [],
+        }])
+        output = _new_output("valuepilot-searchpack-partition-validation-")
+        derive_searchpack_workspace(source, output, [release_id])
+        region = _manager(output).region("ar-caba")
+
+        for label, record in (
+            ("missing", {"productEvidenceKey": "arroz-key", "name": "Arroz 1 kg"}),
+            ("empty", {"productEvidenceKey": "arroz-key", "name": "Arroz 1 kg", "partitionId": ""}),
+            ("non-string", {"productEvidenceKey": "arroz-key", "name": "Arroz 1 kg", "partitionId": 7}),
+        ):
+            with self.subTest(label=label):
+                with patch.object(region, "_rank_query", return_value=((100, 0, ("arroz",)),)), patch.object(region, "get_records", return_value={0: record}):
+                    with self.assertRaisesRegex(SearchPackError, "partition identity is invalid"):
+                        region.search_many(("arroz",))
+
     def test_reproducible_build_and_feature_key_lookup(self) -> None:
         rows = [
             {"productEvidenceKey": "z", "name": "Arroz 1 kg", "brand": "Marca", "canonicalSearchAliases": []},
@@ -178,7 +226,12 @@ class ArgentinaSearchPackTests(unittest.TestCase):
         queries = ("arroz", "huevos", "rice")
         actual = region.search_many(queries, product_limit=2, candidate_bound=100_000, stats=stats)
         expected = tuple(tuple(item.as_dict() for item in search_products(rows, query, limit=2, max_candidates=100_000)) for query in queries)
-        self.assertEqual(actual, expected)
+        actual_without_partition = tuple(
+            tuple({key: value for key, value in item.items() if key != "partitionId"} for item in values)
+            for values in actual
+        )
+        self.assertEqual(actual_without_partition, expected)
+        self.assertTrue(all(isinstance(item["partitionId"], str) and item["partitionId"] for values in actual for item in values))
         self.assertEqual(stats.ranked_records_materialized, 4)
         self.assertEqual(stats.records_returned, 4)
         self.assertLessEqual(stats.ranked_records_materialized, len(queries) * 2)

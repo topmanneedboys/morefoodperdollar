@@ -356,6 +356,105 @@ class SearchPackM11Tests(unittest.TestCase):
         self.assertEqual(len(values), 1)
         self.assertEqual(values[0][0]["productEvidenceKey"], "rice")
 
+    def test_plan_consumes_preserved_partition_identity(self) -> None:
+        reader, manager, _output, _manifest = _reader_with_pack([{
+            "productEvidenceKey": "rice",
+            "name": "Arroz Largo Fino 1 kg",
+            "brand": None,
+            "canonicalSearchAliases": [],
+            "partitionId": "p-rice",
+        }])
+        contract = reader.router.contract("ar-caba")
+        contract.partition_descriptors = {
+            "p-rice": {
+                "packId": "pack-rice",
+                "path": "pack-rice.bin",
+                "byteOffset": 0,
+                "byteLength": 1,
+                "bytes": 1,
+                "sha256": "0" * 64,
+                "uncompressedBytes": 1,
+                "uncompressedSha256": "1" * 64,
+                "recordCount": 1,
+            }
+        }
+        contract.pack_descriptors = {"pack-rice": {"bytes": 1}}
+        contract.bootstrap_bytes = 1
+        contract.manifest_bytes = 1
+        contract.search_descriptor = {"bytes": 1}
+        contract.store_descriptor = {"bytes": 1}
+
+        values = manager.region("ar-caba").search_many(("arroz",), product_limit=5, candidate_bound=100_000)
+        plan = reader._plan(contract, ("arroz",), values_by_query=values)
+
+        self.assertEqual(plan.partition_ids, ("p-rice",))
+        self.assertEqual(plan.slices[0]["partitionId"], "p-rice")
+        self.assertEqual(plan.product_candidates[0]["partitionId"], "p-rice")
+
+    def test_ten_line_shop_request_uses_searchpack_plan_without_key_error(self) -> None:
+        reader, manager, _output, _manifest = _reader_with_pack([{
+            "productEvidenceKey": "rice",
+            "name": "Arroz Largo Fino 1 kg",
+            "brand": None,
+            "canonicalSearchAliases": [],
+            "partitionId": "p-rice",
+        }])
+        reader.release = SimpleNamespace(release_id="fixture-release", freshness_status="FRESH", profile={"name": "fixture"})
+        contract = reader.router.contract("ar-caba")
+        contract.partition_descriptors = {
+            "p-rice": {
+                "packId": "pack-rice",
+                "path": "pack-rice.bin",
+                "byteOffset": 0,
+                "byteLength": 1,
+                "bytes": 1,
+                "sha256": "0" * 64,
+                "uncompressedBytes": 1,
+                "uncompressedSha256": "1" * 64,
+                "recordCount": 1,
+            }
+        }
+        contract.pack_descriptors = {"pack-rice": {"bytes": 1}}
+        contract.bootstrap_bytes = 1
+        contract.manifest_bytes = 1
+        contract.search_descriptor = {"bytes": 1}
+        contract.store_descriptor = {"bytes": 1}
+        reader.router = SimpleNamespace(
+            route=lambda **kwargs: (RegionSelection("ar-caba", ("store-1",)),),
+            contract=lambda _region_id: contract,
+            stores=lambda _region_id: {
+                "store-1": {
+                    "name": "Fixture Store",
+                    "type": "Supermercado",
+                    "address": {"street": "Calle Uno", "number": "1"},
+                    "locality": "CABA",
+                    "province": "AR-C",
+                    "latitude": "-34",
+                    "longitude": "-58",
+                    "geoStatus": "VALID",
+                }
+            },
+        )
+        service = BackendService("", release_manager=_StubReleaseManager())
+        service._reader = lambda _handle: reader
+        payload = {
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "items": [
+                {"lineId": f"item-{index}", "query": "arroz", "amount": "1", "unit": "count"}
+                for index in range(1, 11)
+            ],
+        }
+
+        with patch.object(reader, "_member", return_value=[]):
+            response = service.shop(payload, correlation_id="ten-line")
+
+        self.assertEqual(response["requestId"], "ten-line")
+        self.assertIsInstance(response["result"], dict)
+        self.assertEqual(response["regionsQueried"], ["ar-caba"])
+        self.assertEqual(response["evidenceSemantics"]["availability"], "UNKNOWN")
+
     def test_missing_exact_key_is_safe_for_one_region(self) -> None:
         reader, _manager, _output, _manifest = _reader_with_pack(fixture_records())
         values = reader._search_many(reader.router.contract("ar-caba"), ("anything",), trusted_product_keys=("missing",))

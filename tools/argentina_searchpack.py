@@ -1130,11 +1130,15 @@ class SearchPackRegion:
                 name = raw.get("name")
                 if not isinstance(key, str) or not key or not isinstance(name, str) or not name:
                     raise SearchPackError("ranked docstore identity is invalid")
+                partition_id = raw.get("partitionId")
+                if not isinstance(partition_id, str) or not partition_id:
+                    raise SearchPackError("ranked docstore partition identity is invalid")
                 query_values.append({
                     "productEvidenceKey": key,
                     "name": name,
                     "brand": raw.get("brand") if isinstance(raw.get("brand"), str) else None,
                     "gtin": raw.get("gtin") if isinstance(raw.get("gtin"), str) else None,
+                    "partitionId": partition_id,
                     "score": score,
                     "matchedTokens": list(matched),
                 })
