@@ -27,37 +27,50 @@ python -m tools.build_argentina_national_routing_artifact \
   --release-id argentina-sepa-2026-09-08-aeef3399fa20e751
 ```
 
-Review `ROUTING_RELEASE_PLAN.json`, then run the publisher in dry-run mode for
-both derived IDs. The dry run verifies every local immutable object and both
-manifest sidecars without contacting the object store:
+Review `ROUTING_RELEASE_PLAN.json`, then build a local publication plan for
+both derived IDs. `plan` validates every local immutable object and both
+manifest sidecars without contacting the object store or writing anything:
 
 ```text
-python -m tools.argentina_object_store_publisher \
+python -m tools.argentina_object_store_publisher plan \
   F:\ValuePilot-M11-routing-derived-YYYYMMDD\workspace \
   --release-id argentina-sepa-2026-09-06-e6c08be6a36e5e5b9-routing-v1 \
   --release-id argentina-sepa-2026-09-08-aeef3399fa20e751-routing-v1 \
   --active-release-id argentina-sepa-2026-09-08-aeef3399fa20e751-routing-v1
 ```
 
-After reviewing the dry-run output, an operator with separate write-only
-publication credentials may apply the same exact plan. Credentials stay out of
-the repository and out of the backend runtime:
+After reviewing the plan, an operator with separate publication credentials may
+stage the exact immutable releases. `stage` never writes or changes
+`control/active.json`:
 
 ```text
-python -m tools.argentina_object_store_publisher \
+python -m tools.argentina_object_store_publisher stage \
   F:\ValuePilot-M11-routing-derived-YYYYMMDD\workspace \
   --release-id argentina-sepa-2026-09-06-e6c08be6a36e5e5b9-routing-v1 \
   --release-id argentina-sepa-2026-09-08-aeef3399fa20e751-routing-v1 \
-  --active-release-id argentina-sepa-2026-09-08-aeef3399fa20e751-routing-v1 \
-  --apply
+  --active-release-id argentina-sepa-2026-09-08-aeef3399fa20e751-routing-v1
 ```
 
-The safe order is immutable objects, exact remote verification, release
-manifests, manifest verification, non-pointer control metadata, and the active
-pointer last. There are no delete operations. To roll back, rerun the same
-publisher against the already-derived workspace with the Sunday ID as
-`--active-release-id`; repeat with the Tuesday ID to restore the current
-release. No rebuild is needed.
+The staged release can be checked with a read-only runtime credential before
+activation:
+
+```text
+python -m tools.argentina_object_store_publisher verify \
+  argentina-sepa-2026-09-08-aeef3399fa20e751-routing-v1
+```
+
+Only the explicit activation operation can change the pointer, and it uses a
+compare-and-swap. There are no delete operations. To roll back, activate the
+already verified Sunday ID, then activate the Tuesday ID again; no rebuild or
+re-upload is needed:
+
+```text
+python -m tools.argentina_object_store_publisher activate \
+  argentina-sepa-2026-09-08-aeef3399fa20e751-routing-v1
+python -m tools.argentina_object_store_publisher activate \
+  argentina-sepa-2026-09-06-e6c08be6a36e5e5b9-routing-v1 \
+  --expected-current-release-id argentina-sepa-2026-09-08-aeef3399fa20e751-routing-v1
+```
 
 ## Runtime integrity boundary
 

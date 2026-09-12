@@ -50,12 +50,15 @@ and verifies the generation before changing the pointer; the local publisher
 uses a single-writer lock where a portable object-store compare-and-swap is not
 available.
 
-An operator can dry-run or explicitly apply a qualified local M9/M10
+An operator can plan, stage, verify, and activate a qualified local M9/M10
 content-addressed workspace with `tools/argentina_object_store_publisher.py`.
 The publisher uses `VALUEPILOT_PUBLISH_BUCKET`, optional
 `VALUEPILOT_PUBLISH_ENDPOINT_URL`/`VALUEPILOT_PUBLISH_REGION`, and the
-operator's separate write credential. It never runs in the backend container;
-`--apply` is required for writes and the active pointer is written last.
+operator's separate write credential for `stage`/`activate`. `verify` uses the
+read-only `VALUEPILOT_RELEASE_BUCKET` configuration (falling back to the
+publication bucket only when explicitly supplied). The publisher never runs in
+the backend container: `stage` publishes immutable objects/manifests only, and
+`activate` is the sole operation allowed to CAS `control/active.json`.
 
 File-backed immutable uploads use boto3's managed `upload_file` transfer. Files
 at or above the bounded 16 MiB threshold use 16 MiB multipart parts with at
