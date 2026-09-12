@@ -201,14 +201,17 @@ class BackendAccessShapeTests(unittest.TestCase):
         response = service.search(_caba_request("arroz"))
         self.assertEqual(response["releaseId"], ROUTING_RELEASE)
         self.assertEqual(response["regionsQueried"], ["ar-b", "ar-caba"])
-        self.assertIn(response["resolution"], {"RESOLVED_EXACT", "RESOLVED_ALIAS", "RESOLVED_SAFE_CORRECTION"})
+        self.assertEqual(response["resolution"], "DISCOVERY")
+        self.assertEqual(response["searchMode"], "DISCOVERY")
         self.assertTrue(response["matches"])
         counts = store.counts()
         self.assertEqual(counts["stream"], 9)
-        self.assertEqual(counts["range"], 1)
-        self.assertEqual(counts["head"], 1)
+        # Discovery uses the bounded index-native/compatibility scorer and
+        # does not materialize the old range-addressable shopper records.
+        self.assertEqual(counts["range"], 0)
+        self.assertEqual(counts["head"], 0)
         self.assertEqual(counts["get"], 3)
-        self.assertEqual(store.request_count, 14)
+        self.assertEqual(store.request_count, 12)
         self.assertEqual(store.streamed_bytes, 240159)
         self.assertTrue(all(not key.startswith("objects/sha256/") for operation, key in store.operations if operation == "get"))
         routing_paths = [path for paths in store.logical_by_digest.values() for path in paths if path.endswith("national-routing.jsonl.gz")]
@@ -221,9 +224,9 @@ class BackendAccessShapeTests(unittest.TestCase):
         self.assertTrue(streamed_store_paths <= selected_store_paths)
         self.assertTrue(all_store_paths - selected_store_paths)
         self.assertFalse(streamed_store_paths & (all_store_paths - selected_store_paths))
-        range_paths = {path for operation, key in store.operations if operation == "range" for path in store.logical_paths(key)}
-        self.assertTrue(range_paths)
-        self.assertTrue(all("/ar-caba/" in path for path in range_paths))
+        # Discovery returns identity candidates directly; no shopper-record
+        # range reads are needed at this boundary.
+        self.assertFalse(any(operation == "range" for operation, _key in store.operations))
         self.assertLessEqual(store.peak_buffered_bytes, OBJECT_STREAM_CHUNK_BYTES)
         self.assertEqual(store.peak_buffered_bytes, 112486)
 
@@ -282,10 +285,10 @@ class BackendAccessShapeTests(unittest.TestCase):
         new_counts = new_store.counts()
         self.assertGreaterEqual(old_counts["stream"], 50)
         self.assertEqual(new_counts["stream"], 9)
-        self.assertEqual(old_counts["range"], 1)
-        self.assertEqual(new_counts["range"], 1)
-        self.assertEqual(old_store.request_count, 57)
-        self.assertEqual(new_store.request_count, 14)
+        self.assertEqual(old_counts["range"], 0)
+        self.assertEqual(new_counts["range"], 0)
+        self.assertEqual(old_store.request_count, 55)
+        self.assertEqual(new_store.request_count, 12)
         self.assertEqual(old_store.streamed_bytes, 2703835)
         self.assertEqual(new_store.streamed_bytes, 240159)
         # The compatibility path intentionally uses four bounded workers, so
@@ -311,7 +314,8 @@ class BackendAccessShapeTests(unittest.TestCase):
             response = service.search(request)
             self.assertEqual(response["releaseId"], ROUTING_RELEASE)
             self.assertIn(expected_region, response["regionsQueried"])
-            self.assertIn(response["resolution"], {"RESOLVED_EXACT", "RESOLVED_ALIAS", "RESOLVED_SAFE_CORRECTION"})
+            self.assertEqual(response["resolution"], "DISCOVERY")
+            self.assertEqual(response["searchMode"], "DISCOVERY")
 
     def test_search_cache_has_a_fixed_entry_bound(self):
         service, _ = _service(self.new_workspace, self.logical_by_digest)

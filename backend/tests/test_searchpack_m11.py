@@ -49,6 +49,45 @@ def _reader_with_pack(rows: list[dict[str, object]]) -> tuple[ArgentinaBackendRe
     return reader, manager, output, manifest
 
 
+class _MultiRegionDiscoveryRouter:
+    def __init__(self, region_ids: tuple[str, ...]) -> None:
+        self.contract_calls: list[str] = []
+        self.region_ids = region_ids
+
+    def contract(self, region_id: str) -> object:
+        self.contract_calls.append(region_id)
+        if region_id not in self.region_ids:
+            raise AssertionError(region_id)
+        return SimpleNamespace(region=SimpleNamespace(region_id=region_id))
+
+
+class _FakeDiscoveryRegion:
+    def __init__(self, region_id: str, values: tuple[dict[str, object], ...], calls: list[str]) -> None:
+        self.region_id = region_id
+        self.values = values
+        self.calls = calls
+
+    def search_many(self, queries, *, product_limit: int, candidate_bound: int, stats: SearchPackStats):
+        self.calls.append(self.region_id)
+        self.asserted_query = tuple(queries)
+        self.asserted_limit = product_limit
+        self.asserted_bound = candidate_bound
+        del stats
+        return tuple(tuple(self.values[:product_limit]) for _query in queries)
+
+
+class _FakeDiscoveryManager:
+    def __init__(self, values_by_region: dict[str, tuple[dict[str, object], ...]]) -> None:
+        self.calls: list[str] = []
+        self.regions = {
+            region_id: _FakeDiscoveryRegion(region_id, values, self.calls)
+            for region_id, values in values_by_region.items()
+        }
+
+    def region(self, region_id: str) -> _FakeDiscoveryRegion:
+        return self.regions[region_id]
+
+
 class _StubReleaseManager:
     def __init__(self) -> None:
         self.handle = SimpleNamespace(release_id="fixture-release", release_date="2026-09-08", freshness_status="FRESH")
@@ -62,8 +101,11 @@ class _StubReader:
     def __init__(self) -> None:
         self.router = SimpleNamespace(route=lambda **kwargs: (RegionSelection("ar-caba", ("store-1",)),))
         self.trusted_calls: list[object] = []
+        self.discovery_calls: list[tuple[str, tuple[str, ...], int]] = []
+        self.interpret_calls: list[str] = []
 
     def interpret_text(self, text: str, *, require_quantities: bool = False, region_ids=None):
+        self.interpret_calls.append(text)
         del require_quantities, region_ids
         if "\n" in text:
             return {
@@ -81,8 +123,124 @@ class _StubReader:
         self.trusted_calls.append(trusted_product_keys)
         return {"providerItems": [], "plans": []}, SimpleNamespace(regions_queried=["ar-caba"])
 
+    def discover(self, query: str, *, region_ids, product_limit: int = 5):
+        selected = tuple(region_ids)
+        self.discovery_calls.append((query, selected, product_limit))
+        candidate = {
+            "productEvidenceKey": "key-1",
+            "name": query,
+            "brand": None,
+            "gtin": None,
+            "score": 100,
+            "matchedTokens": [query],
+        }
+        metrics = SimpleNamespace(
+            regions_queried=list(selected),
+            as_dict=lambda: {"regionsQueried": list(selected), "searchPackCorpusScanned": 0},
+        )
+        return (candidate,), metrics
+
 
 class SearchPackM11Tests(unittest.TestCase):
+    def test_discovery_handles_broad_and_specific_terms_without_identity_horizon(self) -> None:
+        rows = fixture_records() + [
+            {
+                "productEvidenceKey": "seven-up",
+                "name": "7UP Free PET X 1.5 L",
+                "brand": "7UP",
+                "canonicalSearchAliases": [],
+            }
+        ]
+        reader, _manager, _output, _manifest = _reader_with_pack(rows)
+        with patch("backend.reader._iter_gzip_records", side_effect=AssertionError("discovery must not scan the corpus")):
+            arroz, arroz_metrics = reader.discover("arroz", region_ids=("ar-caba",), product_limit=5)
+            coca, coca_metrics = reader.discover("Coca-Cola", region_ids=("ar-caba",), product_limit=5)
+            sprite, sprite_metrics = reader.discover("Sprite", region_ids=("ar-caba",), product_limit=5)
+            seven_up, seven_up_metrics = reader.discover("7UP FREE PET X 1.5L", region_ids=("ar-caba",), product_limit=5)
+
+        self.assertTrue(arroz)
+        self.assertEqual(arroz[0]["productEvidenceKey"], "rice")
+        self.assertNotIn("rice-seasoning", {item["productEvidenceKey"] for item in arroz})
+        self.assertEqual({item["productEvidenceKey"] for item in coca}, {"coca", "coca-zero"})
+        self.assertEqual(sprite[0]["productEvidenceKey"], "sprite")
+        self.assertEqual(seven_up[0]["productEvidenceKey"], "seven-up")
+        for metrics in (arroz_metrics, coca_metrics, sprite_metrics, seven_up_metrics):
+            self.assertEqual(metrics.searchpack_corpus_scanned, 0)
+            self.assertLessEqual(metrics.searchpack_ranked_records_materialized, 5)
+            self.assertEqual(metrics.regions_queried, ["ar-caba"])
+
+    def test_discovery_merges_regions_deduplicates_and_is_order_independent(self) -> None:
+        values_by_region = {
+            "ar-b": (
+                {"productEvidenceKey": "shared", "name": "Arroz Marca B", "brand": None, "gtin": None, "score": 100, "matchedTokens": ["arroz"]},
+                {"productEvidenceKey": "b-only", "name": "Arroz B", "brand": None, "gtin": None, "score": 80, "matchedTokens": ["arroz"]},
+            ),
+            "ar-caba": (
+                {"productEvidenceKey": "shared", "name": "Arroz Marca C", "brand": None, "gtin": None, "score": 120, "matchedTokens": ["arroz"]},
+                {"productEvidenceKey": "c-only", "name": "Arroz C", "brand": None, "gtin": None, "score": 90, "matchedTokens": ["arroz"]},
+            ),
+        }
+        manager = _FakeDiscoveryManager(values_by_region)
+        router = _MultiRegionDiscoveryRouter(tuple(sorted(values_by_region)))
+        reader = ArgentinaBackendReader.__new__(ArgentinaBackendReader)
+        reader.router = router
+        reader._searchpack_declared = True
+        reader._searchpack_error = None
+        reader._searchpack = manager
+        reader._discovery_cache = {}
+
+        first, first_metrics = reader.discover("arroz", region_ids=("ar-caba", "ar-b"), product_limit=3)
+        second, second_metrics = reader.discover("arroz", region_ids=("ar-b", "ar-caba"), product_limit=3)
+
+        self.assertEqual(first, second)
+        self.assertEqual([item["productEvidenceKey"] for item in first], ["shared", "c-only", "b-only"])
+        self.assertEqual(first[0]["name"], "Arroz Marca C")
+        self.assertEqual(first_metrics.regions_queried, ["ar-b", "ar-caba"])
+        self.assertEqual(second_metrics.regions_queried, ["ar-b", "ar-caba"])
+        self.assertEqual(router.contract_calls, [])
+        self.assertEqual(manager.calls, ["ar-b", "ar-caba", "ar-b", "ar-caba"])
+
+    def test_broad_discovery_is_not_limited_by_exact_identity_horizon(self) -> None:
+        rows = [
+            {
+                "productEvidenceKey": f"arroz-{index:03d}",
+                "name": f"Arroz Marca {index:03d} 1 kg",
+                "brand": None,
+                "canonicalSearchAliases": [],
+            }
+            for index in range(257)
+        ]
+        reader, _manager, _output, _manifest = _reader_with_pack(rows)
+        with patch("backend.reader._iter_gzip_records", side_effect=AssertionError("discovery must not scan the corpus")):
+            values, metrics = reader.discover("arroz", region_ids=("ar-caba",), product_limit=5)
+        self.assertEqual(len(values), 5)
+        self.assertEqual(values[0]["productEvidenceKey"], "arroz-000")
+        self.assertEqual(metrics.searchpack_saturated_features, 0)
+        self.assertEqual(metrics.searchpack_corpus_scanned, 0)
+        self.assertEqual(metrics.searchpack_ranked_candidates, 257)
+        self.assertEqual(metrics.searchpack_ranked_records_materialized, 5)
+
+    def test_discovery_can_be_restricted_to_routed_regions(self) -> None:
+        values_by_region = {
+            "ar-b": ({"productEvidenceKey": "b", "name": "Arroz B", "brand": None, "gtin": None, "score": 100, "matchedTokens": ["arroz"]},),
+            "ar-caba": ({"productEvidenceKey": "c", "name": "Arroz C", "brand": None, "gtin": None, "score": 100, "matchedTokens": ["arroz"]},),
+        }
+        manager = _FakeDiscoveryManager(values_by_region)
+        router = _MultiRegionDiscoveryRouter(tuple(sorted(values_by_region)))
+        reader = ArgentinaBackendReader.__new__(ArgentinaBackendReader)
+        reader.router = router
+        reader._searchpack_declared = True
+        reader._searchpack_error = None
+        reader._searchpack = manager
+        reader._discovery_cache = {}
+
+        values, metrics = reader.discover("arroz", region_ids=("ar-caba",), product_limit=5)
+
+        self.assertEqual([item["productEvidenceKey"] for item in values], ["c"])
+        self.assertEqual(metrics.regions_queried, ["ar-caba"])
+        self.assertEqual(router.contract_calls, [])
+        self.assertEqual(manager.calls, ["ar-caba"])
+
     def test_exact_key_path_skips_lexical_ranked_search(self) -> None:
         reader, manager, _output, _manifest = _reader_with_pack(fixture_records())
         contract = reader.router.contract("ar-caba")
@@ -107,17 +265,27 @@ class SearchPackM11Tests(unittest.TestCase):
         with self.assertRaises(SearchPackError):
             manager.region("ar-caba").lookup_product_key("rice")
 
-    def test_service_search_and_shop_text_preserve_internal_identity(self) -> None:
+    def test_service_shop_text_preserves_internal_identity(self) -> None:
         manager = _StubReleaseManager()
         reader = _StubReader()
         service = BackendService("", release_manager=manager)
         service._reader = lambda _handle: reader
-        search_payload = {"latitude": "-34", "longitude": "-58", "radiusKm": "5", "query": "arroz"}
-        service.search(search_payload)
-        self.assertEqual(reader.trusted_calls[-1], {"search-1": "key-1"})
         shop_payload = {"latitude": "-34", "longitude": "-58", "radiusKm": "5", "text": "arroz 1kg"}
         service.shop_text(shop_payload)
         self.assertEqual(reader.trusted_calls[-1], {"item-1": "key-1"})
+
+    def test_service_search_uses_discovery_without_interpreter(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+        response = service.search({"latitude": "-34", "longitude": "-58", "radiusKm": "5", "query": "arroz"})
+        self.assertEqual(response["searchMode"], "DISCOVERY")
+        self.assertEqual(response["resolution"], "DISCOVERY")
+        self.assertEqual(response["regionsQueried"], ["ar-caba"])
+        self.assertEqual(response["matches"][0]["productEvidenceKey"], "key-1")
+        self.assertEqual(reader.discovery_calls, [("arroz", ("ar-caba",), 5)])
+        self.assertEqual(reader.interpret_calls, [])
 
     def test_public_shop_mapping_cannot_inject_trusted_identity(self) -> None:
         manager = _StubReleaseManager()

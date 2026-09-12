@@ -222,47 +222,7 @@ class BackendService:
         handle = self.release_manager.pin(require_fresh=True)
         reader = self._reader(handle)
         regions = self._route_ids(reader, payload)
-        input_result = reader.interpret_text(query, require_quantities=False, region_ids=regions)
-        line = input_result.get("lines", [{}])[0] if input_result.get("lines") else {}
-        resolution = line.get("resolution")
-        recognized = line.get("recognizedProduct") or {}
-        if resolution not in {"RESOLVED_EXACT", "RESOLVED_ALIAS", "RESOLVED_SAFE_CORRECTION"} or not isinstance(recognized, Mapping) or not recognized.get("name"):
-            suggestions = line.get("suggestions", []) if isinstance(line, Mapping) else []
-            candidates = [{"lineId": "search-1", "query": query, "productCandidates": _strip_internal(suggestions)}]
-            response = {
-                "apiContractVersion": "valuepilot-argentina-backend-http-v1",
-                "requestId": request_id,
-                "releaseId": handle.release_id,
-                "releaseDate": handle.release_date,
-                "freshness": handle.freshness_status,
-                "regionsQueried": list(regions),
-                "query": query,
-                "originalQuery": query,
-                "interpretedQuery": recognized.get("name") if isinstance(recognized, Mapping) else None,
-                "resolution": resolution,
-                "correction": line.get("correction") if isinstance(line, Mapping) else None,
-                "matches": candidates,
-                "input": input_result,
-                "evidenceSemantics": {"availability": "UNKNOWN", "distance": "STRAIGHT_LINE_HAVERSINE_ONLY"},
-                "diagnostics": {"serviceMs": round((time.perf_counter() - started) * 1000, 3), "customerResponseBytes": 0},
-            }
-            response["diagnostics"]["customerResponseBytes"] = self._response_size(response)
-            return response
-        request = {"latitude": payload.get("latitude"), "longitude": payload.get("longitude"), "radiusKm": payload.get("radiusKm"), "items": [{"lineId": "search-1", "query": recognized["name"], "amount": "1", "unit": "count"}]}
-        trusted_key = recognized.get("productEvidenceKey") if isinstance(recognized.get("productEvidenceKey"), str) else None
-        if trusted_key:
-            raw_decision, metrics = reader.query(request, trusted_product_keys={"search-1": trusted_key})
-        else:
-            raw_decision, metrics = reader.query(request)
-        candidates = []
-        for item in raw_decision.get("providerItems", []):
-            if not isinstance(item, dict):
-                continue
-            candidates.append({
-                "lineId": item.get("lineId"),
-                "query": item.get("query"),
-                "productCandidates": _strip_internal(item.get("productCandidates", [])),
-            })
+        candidates, metrics = reader.discover(query, region_ids=regions, product_limit=5)
         response = {
             "apiContractVersion": "valuepilot-argentina-backend-http-v1",
             "requestId": request_id,
@@ -272,13 +232,25 @@ class BackendService:
             "regionsQueried": metrics.regions_queried,
             "query": query,
             "originalQuery": query,
-            "interpretedQuery": recognized.get("name"),
-            "resolution": resolution,
-            "correction": line.get("correction"),
-            "matches": candidates,
-            "input": input_result,
-            "evidenceSemantics": {"availability": "UNKNOWN", "distance": "STRAIGHT_LINE_HAVERSINE_ONLY"},
-            "diagnostics": {"serviceMs": round((time.perf_counter() - started) * 1000, 3), "customerResponseBytes": 0},
+            # This is a normalized display echo, not a resolved product name.
+            "interpretedQuery": query.strip(),
+            "resolution": "DISCOVERY",
+            "searchMode": "DISCOVERY",
+            # Kept for callers that consumed the earlier search envelope;
+            # discovery deliberately has no correction or interpreter object.
+            "correction": None,
+            "input": None,
+            "matches": [dict(value) for value in candidates],
+            "evidenceSemantics": {
+                "availability": "UNKNOWN",
+                "distance": "STRAIGHT_LINE_HAVERSINE_ONLY",
+                "pricePublicationIsNotInventory": True,
+            },
+            "diagnostics": {
+                **metrics.as_dict(),
+                "serviceMs": round((time.perf_counter() - started) * 1000, 3),
+                "customerResponseBytes": 0,
+            },
         }
         response["diagnostics"]["customerResponseBytes"] = self._response_size(response)
         return response

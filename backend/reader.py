@@ -18,7 +18,7 @@ from backend.release import ReleaseHandle
 try:
     from tools.argentina_national_routing import RoutingPoint, load_national_routing
     from tools.argentina_sepa_micro_partition import ARGENTINA_REGIONS, MicroPartitionQueryError, MicroQueryPlan, _load_stores, load_micro_region_contract, load_micro_region_routing
-    from tools.argentina_sepa_query import MAX_SEARCH_SCAN_RECORDS, _offer_result, _search_candidates_many, straight_line_distance_km
+    from tools.argentina_sepa_query import ArgentinaSepaQueryError, MAX_SEARCH_SCAN_RECORDS, _offer_result, _search_candidates_many, straight_line_distance_km
     from tools.argentina_sepa_query import _iter_gzip_records
     from tools.argentina_searchpack import SearchPackError, SearchPackManager, SearchPackStats
     from tools.argentina_shopping_intelligence import evaluate_argentina_provider_result
@@ -40,7 +40,7 @@ try:
 except ModuleNotFoundError:  # pragma: no cover - direct module invocation
     from argentina_national_routing import RoutingPoint, load_national_routing
     from argentina_sepa_micro_partition import ARGENTINA_REGIONS, MicroPartitionQueryError, MicroQueryPlan, _load_stores, load_micro_region_contract, load_micro_region_routing
-    from argentina_sepa_query import MAX_SEARCH_SCAN_RECORDS, _offer_result, _search_candidates_many, straight_line_distance_km
+    from argentina_sepa_query import ArgentinaSepaQueryError, MAX_SEARCH_SCAN_RECORDS, _offer_result, _search_candidates_many, straight_line_distance_km
     from argentina_sepa_query import _iter_gzip_records
     from argentina_searchpack import SearchPackError, SearchPackManager, SearchPackStats
     from argentina_shopping_intelligence import evaluate_argentina_provider_result
@@ -585,6 +585,10 @@ class ArgentinaBackendReader:
         # Search indexes are immutable for a pinned release. Cache bounded
         # top-k results so warm service calls do not rescan the same gzip.
         self._search_cache: OrderedDict[tuple[str, str, int], tuple[Mapping[str, Any], ...]] = OrderedDict()
+        # The pre-SearchPack compatibility path returns scored discovery
+        # identities rather than shopper records. Keep its warm cache separate
+        # so the existing shopping cache retains its original contract.
+        self._discovery_cache: OrderedDict[tuple[str, str, int], tuple[dict[str, Any], ...]] = OrderedDict()
         # Only query-specific bounded CatalogIndex entries are cached.  This
         # replaces the old region-wide vocabulary cache, which retained up to
         # 100,000 unrelated identities per entry.
@@ -692,6 +696,126 @@ class ArgentinaBackendReader:
 
     def _search(self, contract: Any, query: str, *, product_limit: int = 5) -> tuple[Mapping[str, Any], ...]:
         return self._search_many(contract, (query,), product_limit=product_limit)[0]
+
+    @staticmethod
+    def _discovery_candidate(value: Mapping[str, Any]) -> dict[str, Any]:
+        """Project one ranked identity into the public discovery shape."""
+
+        key = value.get("productEvidenceKey")
+        name = value.get("name")
+        score = value.get("score")
+        matched = value.get("matchedTokens")
+        if (
+            not isinstance(key, str)
+            or not key
+            or not isinstance(name, str)
+            or not name
+            or not isinstance(score, int)
+            or isinstance(score, bool)
+            or score < 0
+            or not isinstance(matched, (list, tuple))
+            or any(not isinstance(token, str) or not token for token in matched)
+        ):
+            raise BackendQueryError("discovery candidate is invalid")
+        return {
+            "productEvidenceKey": key,
+            "name": name,
+            "brand": value.get("brand") if isinstance(value.get("brand"), str) else None,
+            "gtin": value.get("gtin") if isinstance(value.get("gtin"), str) else None,
+            "score": score,
+            "matchedTokens": list(matched),
+        }
+
+    @staticmethod
+    def _discovery_sort_key(value: Mapping[str, Any]) -> tuple[Any, ...]:
+        return (
+            -int(value["score"]),
+            str(value["productEvidenceKey"]),
+            str(value["name"]),
+            str(value.get("brand") or ""),
+            str(value.get("gtin") or ""),
+            tuple(value.get("matchedTokens") or ()),
+        )
+
+    def discover(
+        self,
+        query: str,
+        *,
+        region_ids: Sequence[str],
+        product_limit: int = 5,
+    ) -> tuple[tuple[dict[str, Any], ...], RequestMetrics]:
+        """Return location-scoped product discovery without identity resolution.
+
+        The caller has already routed the request.  Each selected region uses
+        the SearchPack v2 index-native ranker with the normal 100,000-record
+        safety bound (never the 256-record exact-identity horizon).  A legacy
+        routing release is supported through its existing bounded scorer as a
+        compatibility path; SearchPack-enabled releases never open the
+        regional search corpus.
+        """
+
+        if not isinstance(query, str) or not query.strip() or len(query) > 96:
+            raise BackendQueryError("query must contain 1-96 characters")
+        if not isinstance(product_limit, int) or not 1 <= product_limit <= 5:
+            raise BackendQueryError("product limit is invalid")
+        selected = tuple(sorted({value for value in region_ids if isinstance(value, str) and value}))
+        metrics = RequestMetrics(regions_queried=list(selected))
+        started = time.perf_counter()
+        merged: dict[str, dict[str, Any]] = {}
+        for region_id in selected:
+            search_started = time.perf_counter()
+            searchpack = self._searchpack_for_region(region_id)
+            if searchpack is not None:
+                stats = SearchPackStats()
+                try:
+                    ranked = searchpack.region(region_id).search_many(
+                        (query,),
+                        product_limit=product_limit,
+                        candidate_bound=MAX_CANDIDATES,
+                        stats=stats,
+                    )
+                except SearchPackError as exc:
+                    raise BackendQueryError(f"SearchPack discovery failed for {region_id}") from exc
+                self._merge_searchpack_metrics(metrics, stats)
+                values = ranked[0] if ranked else ()
+            else:
+                contract = self.router.contract(region_id)
+                cache_key = (region_id, query, product_limit)
+                discovery_cache = getattr(self, "_discovery_cache", None)
+                if not isinstance(discovery_cache, OrderedDict):
+                    discovery_cache = OrderedDict(discovery_cache or {})
+                    self._discovery_cache = discovery_cache
+                cached = discovery_cache.get(cache_key)
+                if cached is not None:
+                    discovery_cache.move_to_end(cache_key)
+                    values = cached
+                else:
+                    try:
+                        _raw, scored = _search_candidates_many(
+                            contract,
+                            (query,),
+                            product_limit=product_limit,
+                            max_candidates=MAX_CANDIDATES,
+                        )
+                    except (ArgentinaSepaQueryError, ValueError, OSError) as exc:
+                        raise BackendQueryError(f"discovery search failed for {region_id}") from exc
+                    values = tuple(item.as_dict() for item in (scored[0] if scored else ()))
+                    if len(discovery_cache) >= MAX_SEARCH_CACHE_ENTRIES:
+                        discovery_cache.popitem(last=False)
+                    discovery_cache[cache_key] = values
+            metrics.regional_search_ms += (time.perf_counter() - search_started) * 1000
+            for value in values:
+                if not isinstance(value, Mapping):
+                    as_dict = getattr(value, "as_dict", None)
+                    value = as_dict() if callable(as_dict) else {}
+                candidate = self._discovery_candidate(value)
+                key = candidate["productEvidenceKey"]
+                previous = merged.get(key)
+                if previous is None or self._discovery_sort_key(candidate) < self._discovery_sort_key(previous):
+                    merged[key] = candidate
+        ordered = tuple(sorted(merged.values(), key=self._discovery_sort_key)[:product_limit])
+        metrics.total_ms = (time.perf_counter() - started) * 1000
+        return ordered, metrics
 
     def _plan(
         self,
