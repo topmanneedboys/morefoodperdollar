@@ -20,7 +20,7 @@ try:
     from tools.argentina_sepa_micro_partition import ARGENTINA_REGIONS, MicroPartitionQueryError, MicroQueryPlan, _load_stores, load_micro_region_contract, load_micro_region_routing
     from tools.argentina_sepa_query import ArgentinaSepaQueryError, MAX_SEARCH_SCAN_RECORDS, _offer_result, _search_candidates_many, straight_line_distance_km
     from tools.argentina_sepa_query import _iter_gzip_records
-    from tools.argentina_searchpack import SearchPackError, SearchPackManager, SearchPackStats
+    from tools.argentina_searchpack import SearchPackError, SearchPackLookup, SearchPackManager, SearchPackStats
     from tools.argentina_shopping_intelligence import evaluate_argentina_provider_result
     from tools.consumer_input_intelligence import (
         MAX_CANDIDATES as INPUT_MAX_CANDIDATES,
@@ -42,7 +42,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct module invocation
     from argentina_sepa_micro_partition import ARGENTINA_REGIONS, MicroPartitionQueryError, MicroQueryPlan, _load_stores, load_micro_region_contract, load_micro_region_routing
     from argentina_sepa_query import ArgentinaSepaQueryError, MAX_SEARCH_SCAN_RECORDS, _offer_result, _search_candidates_many, straight_line_distance_km
     from argentina_sepa_query import _iter_gzip_records
-    from argentina_searchpack import SearchPackError, SearchPackManager, SearchPackStats
+    from argentina_searchpack import SearchPackError, SearchPackLookup, SearchPackManager, SearchPackStats
     from argentina_shopping_intelligence import evaluate_argentina_provider_result
     from consumer_input_intelligence import (
         MAX_CANDIDATES as INPUT_MAX_CANDIDATES,
@@ -896,31 +896,62 @@ class ArgentinaBackendReader:
         features = tuple(scorer.intent_features(intent) for intent in intents)
         feature_keys = tuple(scorer.intent_feature_keys(intent) for intent in intents)
         global_accumulators = [_CandidateAccumulator() for _ in intents]
-        regional_saturated = [False for _ in intents]
+        # Saturation is a permanent, per-line fact for this request.  Once a
+        # region proves that a line has crossed the bounded identity horizon,
+        # later regions must not do any more feature, posting, or docstore
+        # work for that line.  Other unsaturated lines continue normally.
+        saturated_lines = [False for _ in intents]
         total_stats = SearchPackStats()
 
         for region_id in self._input_region_ids(region_ids):
+            active_indices = tuple(index for index, saturated in enumerate(saturated_lines) if not saturated)
+            if not active_indices:
+                break
             manager = self._searchpack_for_region(region_id)
             assert manager is not None
             try:
                 pack = manager.region(region_id)
-                lookups = [
-                    pack.lookup_features(keys, candidate_bound=INPUT_MAX_CANDIDATES, stats=total_stats)
-                    for keys in feature_keys
-                ]
+                # Preserve the original line alignment while omitting all
+                # lookups for lines already proven saturated elsewhere.
+                lookups: list[SearchPackLookup | None] = [None for _ in intents]
+                for index in active_indices:
+                    lookup = pack.lookup_features(
+                        feature_keys[index],
+                        candidate_bound=INPUT_MAX_CANDIDATES,
+                        stats=total_stats,
+                    )
+                    lookups[index] = lookup
+                    if lookup.saturated:
+                        saturated_lines[index] = True
             except SearchPackError as exc:
                 raise BackendQueryError(f"SearchPack input lookup failed for {region_id}") from exc
             regional_accumulators = [_CandidateAccumulator() for _ in intents]
-            for index, lookup in enumerate(lookups):
-                if lookup.saturated:
-                    regional_saturated[index] = True
-            requested_ids = tuple(sorted({doc_id for lookup in lookups if not lookup.saturated for doc_id in lookup.doc_ids}))
+            requested_ids = tuple(
+                sorted(
+                    {
+                        doc_id
+                        for index in active_indices
+                        for doc_id in (lookups[index].doc_ids if lookups[index] is not None and not lookups[index].saturated else ())
+                    }
+                )
+            )
             if len(requested_ids) > MAX_INPUT_CANDIDATE_UNION:
                 # This is a deterministic union saturation independent of
                 # posting order.  Do not fetch a partial arbitrary set.
-                for index, lookup in enumerate(lookups):
-                    if not lookup.saturated:
-                        regional_saturated[index] = True
+                for index in active_indices:
+                    lookup = lookups[index]
+                    if lookup is not None and not lookup.saturated:
+                        saturated_lines[index] = True
+                if all(saturated_lines):
+                    break
+                continue
+            if not requested_ids:
+                # All active lines either saturated in metadata or produced
+                # no candidate IDs.  Avoid even an empty docstore call; in
+                # particular, a saturated broad line must never materialize a
+                # record merely because another region is available.
+                if all(saturated_lines):
+                    break
                 continue
             try:
                 raw_by_id = pack.get_records(requested_ids, stats=total_stats, max_records=MAX_INPUT_CANDIDATE_UNION)
@@ -938,6 +969,11 @@ class ArgentinaBackendReader:
                 except InputIntelligenceError as exc:
                     raise BackendQueryError(f"{region_id} input candidate record is invalid") from exc
                 for index in matching_indices:
+                    if saturated_lines[index]:
+                        # A record fetched for another unsaturated line may
+                        # also lexically match a saturated line.  It must not
+                        # revive that line or trigger any further work.
+                        continue
                     regional_accumulator = regional_accumulators[index]
                     global_accumulator = global_accumulators[index]
                     if regional_accumulator.saturated and global_accumulator.saturated:
@@ -947,8 +983,12 @@ class ArgentinaBackendReader:
                         regional_accumulator.add(scored, raw)
                     if not global_accumulator.saturated:
                         global_accumulator.add(scored, raw)
-            for index, accumulator in enumerate(regional_accumulators):
-                regional_saturated[index] = regional_saturated[index] or accumulator.saturated
+            for index in active_indices:
+                accumulator = regional_accumulators[index]
+                if accumulator.saturated or global_accumulators[index].saturated:
+                    saturated_lines[index] = True
+            if all(saturated_lines):
+                break
 
         union: dict[str, Mapping[str, Any]] = {}
         query_candidate_keys: dict[ParsedIntent, tuple[str, ...]] = {}
@@ -968,11 +1008,7 @@ class ArgentinaBackendReader:
             )
         except InputIntelligenceError as exc:
             raise BackendQueryError(str(exc)) from exc
-        saturated = [
-            f"item-{index + 1}"
-            for index, accumulator in enumerate(global_accumulators)
-            if accumulator.saturated or regional_saturated[index]
-        ]
+        saturated = [f"item-{index + 1}" for index, value in enumerate(saturated_lines) if value or global_accumulators[index].saturated]
         return _InputCandidatePreparation(
             catalog=catalog,
             intents=intents,

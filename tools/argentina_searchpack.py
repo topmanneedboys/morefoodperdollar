@@ -380,6 +380,11 @@ class _ByteLRU:
             raise ValueError("cache bound must be positive")
         self.max_bytes = max_bytes
         self._items: OrderedDict[str, bytes] = OrderedDict()
+        # A range can be cached before its descriptor is verified by the
+        # generic reader.  Keep verification state alongside the same
+        # byte-bounded entries so callers that slice a cached block never
+        # mistake an unverified payload for an immutable, verified block.
+        self._verified: set[str] = set()
         self._bytes = 0
         self._lock = threading.RLock()
 
@@ -397,11 +402,28 @@ class _ByteLRU:
             previous = self._items.pop(key, None)
             if previous is not None:
                 self._bytes -= len(previous)
+            self._verified.discard(key)
             while self._bytes + len(value) > self.max_bytes and self._items:
-                _, old = self._items.popitem(last=False)
+                old_key, old = self._items.popitem(last=False)
                 self._bytes -= len(old)
+                self._verified.discard(old_key)
             self._items[key] = value
             self._bytes += len(value)
+
+    def get_verified(self, key: str) -> bytes | None:
+        """Return a cached payload only after its descriptor was verified."""
+
+        with self._lock:
+            value = self._items.get(key)
+            if value is None or key not in self._verified:
+                return None
+            self._items.move_to_end(key)
+            return value
+
+    def mark_verified(self, key: str) -> None:
+        with self._lock:
+            if key in self._items:
+                self._verified.add(key)
 
     @property
     def bytes(self) -> int:
@@ -416,6 +438,7 @@ class _ByteLRU:
     def clear(self) -> None:
         with self._lock:
             self._items.clear()
+            self._verified.clear()
             self._bytes = 0
 
 
@@ -468,8 +491,18 @@ class SearchPackRegion:
         self._validate_index_blocks(self.key_lexicon_blocks, "keyLexicon", key_blocks=True, expected_entries=doc_count)
         self._validate_index_blocks(self.docstore_blocks, "docstore", key_blocks=False, expected_entries=doc_count)
         self._validate_index_blocks(self.rank_lexicon_blocks, "rankLexicon", key_blocks=True, expected_entries=None)
-        self._validate_linear_blocks(self.rank_term_blocks, "rankTermDirectory", expected_bytes=int(self.files["rankTermDirectory"]["bytes"]))
-        self._validate_linear_blocks(self.rank_docstore_blocks, "rankChunkDirectory", expected_bytes=int(self.files["rankChunkDirectory"]["bytes"]))
+        self._validate_linear_blocks(
+            self.rank_term_blocks,
+            "rankTermDirectory",
+            expected_bytes=int(self.files["rankTermDirectory"]["bytes"]),
+            entry_size=_TERM_STRUCT.size,
+        )
+        self._validate_linear_blocks(
+            self.rank_docstore_blocks,
+            "rankChunkDirectory",
+            expected_bytes=int(self.files["rankChunkDirectory"]["bytes"]),
+            entry_size=_CHUNK_STRUCT.size,
+        )
         term_count = self.metadata.get("termCount")
         if not isinstance(term_count, int) or term_count < 0:
             raise SearchPackError("SearchPack term count is invalid")
@@ -563,7 +596,13 @@ class SearchPackRegion:
             raise SearchPackError(f"SearchPack {name} entry coverage is invalid")
 
     @staticmethod
-    def _validate_linear_blocks(blocks: Sequence[Mapping[str, Any]], name: str, *, expected_bytes: int) -> None:
+    def _validate_linear_blocks(
+        blocks: Sequence[Mapping[str, Any]],
+        name: str,
+        *,
+        expected_bytes: int,
+        entry_size: int | None = None,
+    ) -> None:
         """Validate auxiliary fixed-width directory ranges before lookup."""
 
         previous_end = 0
@@ -580,18 +619,23 @@ class SearchPackRegion:
                 or not isinstance(digest, str)
                 or len(digest) != 64
                 or any(char not in "0123456789abcdef" for char in digest)
+                or (entry_size is not None and (offset % entry_size != 0 or length % entry_size != 0))
             ):
                 raise SearchPackError(f"SearchPack {name} block range is invalid")
             previous_end = offset + length
         if previous_end != expected_bytes:
             raise SearchPackError(f"SearchPack {name} blocks do not cover the file")
 
+    def _cache_key(self, name: str, offset: int, length: int) -> str:
+        descriptor = self.files[name]
+        return f"{name}:{offset}:{length}:{descriptor['sha256']}"
+
     def _read(self, name: str, offset: int, length: int, stats: SearchPackStats, *, label: str) -> bytes:
         descriptor = self.files[name]
         total = int(descriptor["bytes"])
         if offset < 0 or length < 0 or offset + length > total or length > MAX_BLOCK_BYTES:
             raise SearchPackError(f"{label} range is invalid")
-        key = f"{name}:{offset}:{length}:{descriptor['sha256']}"
+        key = self._cache_key(name, offset, length)
         cached = self._cache.get(key)
         if cached is not None:
             stats.cache_hits += 1
@@ -638,7 +682,84 @@ class SearchPackRegion:
         if not isinstance(offset, int) or not isinstance(length, int):
             raise SearchPackError(f"{label} range is invalid")
         data = self._read(name, offset, length, stats, label=label)
-        return _verify_block(data, block, label)
+        verified = _verify_block(data, block, label)
+        self._cache.mark_verified(self._cache_key(name, offset, length))
+        return verified
+
+    @staticmethod
+    def _linear_block_index(
+        blocks: Sequence[Mapping[str, Any]],
+        offset: int,
+        length: int,
+        label: str,
+    ) -> int:
+        """Find the validated containing block for one fixed-width entry."""
+
+        if offset < 0 or length <= 0:
+            raise SearchPackError(f"{label} range is invalid")
+        low = 0
+        high = len(blocks)
+        end = offset + length
+        while low < high:
+            middle = (low + high) // 2
+            block = blocks[middle]
+            block_offset = block.get("offset")
+            block_length = block.get("length")
+            if not isinstance(block_offset, int) or not isinstance(block_length, int):
+                raise SearchPackError(f"{label} block range is invalid")
+            block_end = block_offset + block_length
+            if offset < block_offset:
+                high = middle
+            elif end > block_end:
+                low = middle + 1
+            else:
+                return middle
+        raise SearchPackError(f"{label} entry is outside declared blocks")
+
+    def _linear_entry(
+        self,
+        name: str,
+        blocks: Sequence[Mapping[str, Any]],
+        ordinal: int,
+        entry_struct: struct.Struct,
+        stats: SearchPackStats,
+        *,
+        label: str,
+    ) -> tuple[Any, ...]:
+        """Read and verify one fixed-width entry from its containing block.
+
+        The metadata block, rather than the individual entry, is the remote
+        range unit.  Once verified, all entries in that block are sliced
+        locally and reuse the global byte-bounded cache.
+        """
+
+        if not isinstance(ordinal, int) or ordinal < 0:
+            raise SearchPackError(f"{label} ordinal is invalid")
+        entry_size = entry_struct.size
+        offset = ordinal * entry_size
+        block_index = self._linear_block_index(blocks, offset, entry_size, label)
+        block = blocks[block_index]
+        block_offset = block.get("offset")
+        block_length = block.get("length")
+        if not isinstance(block_offset, int) or not isinstance(block_length, int):
+            raise SearchPackError(f"{label} block range is invalid")
+        cache_key = self._cache_key(name, block_offset, block_length)
+        data = self._cache.get_verified(cache_key)
+        if data is None:
+            # _read accounts for the remote-shaped range read and may return
+            # an unverified cached payload.  Verify the complete containing
+            # block before marking it reusable for subsequent entries.
+            data = self._read(name, block_offset, block_length, stats, label=label)
+            data = _verify_block(data, block, label)
+            self._cache.mark_verified(cache_key)
+        else:
+            # The block itself is already in the shared cache; no remote
+            # request or repeated full-block hash is necessary.
+            stats.cache_hits += 1
+        local_offset = offset - block_offset
+        if local_offset < 0 or local_offset + entry_size > len(data):
+            raise SearchPackError(f"{label} entry is outside block")
+        return tuple(entry_struct.unpack_from(data, local_offset))
 
     def _lookup_ordinal(self, key: str, blocks: Sequence[Mapping[str, Any]], name: str, stats: SearchPackStats, *, label: str) -> int | None:
         index = self._find_block(blocks, key, label)
@@ -655,16 +776,27 @@ class SearchPackRegion:
         cached = self._term_cache.get((name, ordinal))
         if cached is not None:
             return cached
-        descriptor = self.files[name]
-        offset = ordinal * _TERM_STRUCT.size
-        if offset + _TERM_STRUCT.size > int(descriptor["bytes"]):
-            raise SearchPackError(f"{label} ordinal exceeds directory")
-        data = self._read(name, offset, _TERM_STRUCT.size, stats, label=label)
-        if name == "termDirectory":
-            stats.term_directory_reads += 1
-        else:
+        if name == "rankTermDirectory":
+            value = self._linear_entry(
+                name,
+                self.rank_term_blocks,
+                ordinal,
+                _TERM_STRUCT,
+                stats,
+                label=label,
+            )
             stats.ranked_term_directory_reads += 1
-        value = _TERM_STRUCT.unpack(data)
+        else:
+            descriptor = self.files[name]
+            offset = ordinal * _TERM_STRUCT.size
+            if offset + _TERM_STRUCT.size > int(descriptor["bytes"]):
+                raise SearchPackError(f"{label} ordinal exceeds directory")
+            data = self._read(name, offset, _TERM_STRUCT.size, stats, label=label)
+            if name == "termDirectory":
+                stats.term_directory_reads += 1
+            else:
+                stats.ranked_term_directory_reads += 1
+            value = _TERM_STRUCT.unpack(data)
         if len(self._term_cache) >= MAX_TERM_CACHE_ENTRIES:
             self._term_cache.pop(next(iter(self._term_cache)))
         self._term_cache[(name, ordinal)] = value
@@ -831,12 +963,21 @@ class SearchPackRegion:
             if chunk in seen_chunks or len(seen_chunks) >= (chunk_count + 1):
                 raise SearchPackError("rank posting chunk chain is invalid")
             seen_chunks.add(chunk)
-            chunk_offset = chunk * _CHUNK_STRUCT.size
-            directory = self.files["rankChunkDirectory"]
-            if chunk_offset + _CHUNK_STRUCT.size > int(directory["bytes"]):
-                raise SearchPackError("rank posting chunk ordinal exceeds directory")
-            descriptor_data = self._read("rankChunkDirectory", chunk_offset, _CHUNK_STRUCT.size, stats, label="rank chunk directory")
-            next_chunk, posting_offset, posting_length, count, chunk_df = _CHUNK_STRUCT.unpack(descriptor_data)
+            try:
+                next_chunk, posting_offset, posting_length, count, chunk_df = self._linear_entry(
+                    "rankChunkDirectory",
+                    self.rank_docstore_blocks,
+                    int(chunk),
+                    _CHUNK_STRUCT,
+                    stats,
+                    label="rank chunk directory",
+                )
+            except SearchPackError as exc:
+                # Keep the public error wording stable for malformed ordinal
+                # chains while preserving the block-level validation cause.
+                if "outside declared blocks" in str(exc) or "ordinal is invalid" in str(exc):
+                    raise SearchPackError("rank posting chunk ordinal exceeds directory") from exc
+                raise
             if count == 0 or chunk_df != df or posting_length == 0:
                 raise SearchPackError("rank posting chunk metadata is invalid")
             posting = self._read("rankPostings", posting_offset, posting_length, stats, label="rank posting")

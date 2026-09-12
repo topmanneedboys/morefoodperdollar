@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import OrderedDict
 import json
 import tempfile
 import time
@@ -12,11 +13,12 @@ from backend.artifacts import ManifestReleaseArtifactStore
 from backend.object_store import LocalFilesystemObjectStore, ObjectMetadata
 from backend.reader import ArgentinaBackendReader, RegionSelection
 from backend.service import BackendService
-from tools.argentina_searchpack import SearchPackManager, SearchPackStats
+from tools.argentina_searchpack import SearchPackLookup, SearchPackManager, SearchPackStats, _CHUNK_STRUCT, _TERM_STRUCT
 from tools.argentina_searchpack import SearchPackError
 from tools.build_argentina_searchpack import SEARCHPACK_RELEASE_SUFFIX, derive_searchpack_workspace
 from tools.tests.test_argentina_searchpack import _fixture_workspace, _new_output
 from tools.tests.test_consumer_input_intelligence import fixture_records
+from tools.consumer_input_intelligence import NEEDS_CLARIFICATION
 
 
 class _FixtureRouter:
@@ -72,7 +74,8 @@ class _FakeDiscoveryRegion:
         self.asserted_query = tuple(queries)
         self.asserted_limit = product_limit
         self.asserted_bound = candidate_bound
-        del stats
+        stats.ranked_candidates += len(self.values)
+        stats.ranked_records_materialized += min(product_limit, len(self.values))
         return tuple(tuple(self.values[:product_limit]) for _query in queries)
 
 
@@ -85,6 +88,57 @@ class _FakeDiscoveryManager:
         }
 
     def region(self, region_id: str) -> _FakeDiscoveryRegion:
+        return self.regions[region_id]
+
+
+class _FakeInputRegion:
+    """Small SearchPack input double that records per-line work."""
+
+    def __init__(
+        self,
+        region_id: str,
+        records: dict[int, dict[str, object]],
+        *,
+        saturated_arroz: bool = False,
+        forbid_arroz: bool = False,
+    ) -> None:
+        self.region_id = region_id
+        self.records = records
+        self.saturated_arroz = saturated_arroz
+        self.forbid_arroz = forbid_arroz
+        self.lookup_calls: list[tuple[str, ...]] = []
+        self.get_records_calls: list[tuple[int, ...]] = []
+
+    def lookup_features(self, feature_keys, *, candidate_bound: int, stats: SearchPackStats):
+        del candidate_bound, stats
+        keys = tuple(feature_keys)
+        self.lookup_calls.append(keys)
+        has_arroz = "exact:arroz" in keys
+        has_leche = "exact:leche" in keys
+        if has_arroz:
+            if self.forbid_arroz:
+                raise AssertionError(f"saturated arroz line was queried in {self.region_id}")
+            if self.saturated_arroz:
+                return SearchPackLookup((), True, ("exact:arroz",), keys)
+            return SearchPackLookup((0,), False, (), keys)
+        if has_leche:
+            return SearchPackLookup((0,), False, (), keys)
+        return SearchPackLookup((), False, (), keys)
+
+    def get_records(self, doc_ids, *, stats: SearchPackStats, max_records: int):
+        del stats, max_records
+        requested = tuple(sorted(doc_ids))
+        self.get_records_calls.append(requested)
+        return {doc_id: self.records[doc_id] for doc_id in requested}
+
+
+class _FakeInputManager:
+    def __init__(self, regions: dict[str, _FakeInputRegion]) -> None:
+        self.regions = regions
+        self.region_calls: list[str] = []
+
+    def region(self, region_id: str) -> _FakeInputRegion:
+        self.region_calls.append(region_id)
         return self.regions[region_id]
 
 
@@ -142,6 +196,56 @@ class _StubReader:
 
 
 class SearchPackM11Tests(unittest.TestCase):
+    @staticmethod
+    def _input_reader(manager: _FakeInputManager) -> ArgentinaBackendReader:
+        reader = ArgentinaBackendReader.__new__(ArgentinaBackendReader)
+        reader.release = SimpleNamespace(release_id="fixture-release")
+        reader._searchpack_declared = True
+        reader._searchpack_error = None
+        reader._searchpack = manager
+        reader._input_candidate_cache = OrderedDict()
+        return reader
+
+    def test_broad_exact_interpretation_stops_after_first_region_saturation(self) -> None:
+        records = {0: fixture_records()[0]}
+        first = _FakeInputRegion("ar-a", records, saturated_arroz=True)
+        second = _FakeInputRegion("ar-b", records, forbid_arroz=True)
+        manager = _FakeInputManager({"ar-a": first, "ar-b": second})
+        reader = self._input_reader(manager)
+
+        result = reader.interpret_text("arroz", region_ids=("ar-a", "ar-b"))
+
+        self.assertEqual(result["lines"][0]["resolution"], NEEDS_CLARIFICATION)
+        self.assertIsNone(result["lines"][0]["recognizedProduct"])
+        self.assertEqual(manager.region_calls, ["ar-a"])
+        self.assertEqual(len(first.lookup_calls), 1)
+        self.assertEqual(first.get_records_calls, [])
+        self.assertEqual(second.lookup_calls, [])
+        self.assertEqual(second.get_records_calls, [])
+        self.assertEqual(result["diagnostics"]["searchPackCorpusScanned"], 0)
+        self.assertEqual(result["diagnostics"]["searchPackDocstoreReads"], 0)
+
+    def test_mixed_lines_skip_saturated_line_but_continue_unsaturated_line(self) -> None:
+        records = {0: fixture_records()[2]}
+        first = _FakeInputRegion("ar-a", records, saturated_arroz=True)
+        second = _FakeInputRegion("ar-b", records, forbid_arroz=True)
+        manager = _FakeInputManager({"ar-a": first, "ar-b": second})
+        reader = self._input_reader(manager)
+
+        result = reader.interpret_text("arroz\nleche", region_ids=("ar-a", "ar-b"))
+
+        self.assertEqual(result["lines"][0]["resolution"], NEEDS_CLARIFICATION)
+        self.assertIsNone(result["lines"][0]["recognizedProduct"])
+        self.assertEqual(result["lines"][1]["recognizedProduct"]["productEvidenceKey"], "milk")
+        self.assertEqual(manager.region_calls, ["ar-a", "ar-b"])
+        self.assertEqual(len(first.lookup_calls), 2)
+        self.assertEqual(len(second.lookup_calls), 1)
+        self.assertNotIn("exact:arroz", second.lookup_calls[0])
+        self.assertIn("exact:leche", second.lookup_calls[0])
+        self.assertEqual(first.get_records_calls, [(0,)])
+        self.assertEqual(second.get_records_calls, [(0,)])
+        self.assertEqual(result["diagnostics"]["searchPackCorpusScanned"], 0)
+
     def test_discovery_handles_broad_and_specific_terms_without_identity_horizon(self) -> None:
         rows = fixture_records() + [
             {
@@ -197,6 +301,8 @@ class SearchPackM11Tests(unittest.TestCase):
         self.assertEqual(first[0]["name"], "Arroz Marca C")
         self.assertEqual(first_metrics.regions_queried, ["ar-b", "ar-caba"])
         self.assertEqual(second_metrics.regions_queried, ["ar-b", "ar-caba"])
+        self.assertEqual(first_metrics.searchpack_corpus_scanned, 0)
+        self.assertLessEqual(first_metrics.searchpack_ranked_records_materialized, 5 * len(first_metrics.regions_queried))
         self.assertEqual(router.contract_calls, [])
         self.assertEqual(manager.calls, ["ar-b", "ar-caba", "ar-b", "ar-caba"])
 
@@ -308,6 +414,7 @@ class _LatencyStore:
         self.delegate = LocalFilesystemObjectStore(root)
         self.latency_seconds = latency_seconds
         self.operations: list[tuple[str, str]] = []
+        self.range_details: list[tuple[str, int, int]] = []
 
     def _delay(self, operation: str, key: str) -> None:
         self.operations.append((operation, key))
@@ -327,6 +434,7 @@ class _LatencyStore:
 
     def get_range(self, key: str, offset: int, length: int) -> bytes:
         self._delay("range", key)
+        self.range_details.append((key, offset, length))
         return self.delegate.get_range(key, offset, length)
 
     def exists(self, key: str) -> bool:
@@ -337,6 +445,45 @@ class _LatencyStore:
 
 
 class SearchPackRemoteLatencyTests(unittest.TestCase):
+    def test_rank_directory_reads_use_declared_blocks(self) -> None:
+        rows = [
+            {"productEvidenceKey": f"key-{index:04d}", "name": "7UP FREE PET X 1.5L", "brand": "7UP", "canonicalSearchAliases": []}
+            for index in range(1024)
+        ]
+        source, release_id = _fixture_workspace(rows)
+        output = _new_output("valuepilot-m11-rank-directory-blocks-")
+        derive_searchpack_workspace(source, output, [release_id])
+        derived_id = f"{release_id}{SEARCHPACK_RELEASE_SUFFIX}"
+        manifest = json.loads((output / "releases" / derived_id / "manifest.json").read_bytes())
+        store = _LatencyStore(output, 0)
+        artifacts = ManifestReleaseArtifactStore(store, manifest, release_id=derived_id)
+        manager = SearchPackManager(artifacts, manifest)
+        region = manager.region("ar-caba")
+        stats = SearchPackStats()
+
+        values = region.search_many(("7UP FREE PET X 1.5L",), product_limit=5, candidate_bound=100_000, stats=stats)[0]
+
+        def object_key(suffix: str) -> str:
+            descriptor = next(item for item in manifest["objects"] if item["path"].endswith(suffix))
+            return f"objects/sha256/{descriptor['sha256']}"
+
+        term_key = object_key("/rank-term-directory.bin")
+        chunk_key = object_key("/rank-chunk-directory.bin")
+        term_ranges = [(offset, length) for key, offset, length in store.range_details if key == term_key]
+        chunk_ranges = [(offset, length) for key, offset, length in store.range_details if key == chunk_key]
+        term_block = region.metadata["rankTermDirectoryBlocks"][0]
+        chunk_block = region.metadata["rankChunkDirectoryBlocks"][0]
+
+        self.assertEqual(len(values), 5)
+        self.assertEqual(values[0]["productEvidenceKey"], "key-0000")
+        self.assertEqual(stats.ranked_records_materialized, 5)
+        self.assertGreater(stats.ranked_term_directory_reads, 1)
+        self.assertGreater(stats.ranked_posting_reads, 1)
+        self.assertEqual(term_ranges, [(term_block["offset"], term_block["length"])])
+        self.assertEqual(chunk_ranges, [(chunk_block["offset"], chunk_block["length"])])
+        self.assertTrue(all(length > _TERM_STRUCT.size for _offset, length in term_ranges))
+        self.assertTrue(all(length > _CHUNK_STRUCT.size for _offset, length in chunk_ranges))
+
     def test_remote_latency_is_bounded_by_query_complexity_not_candidate_blocks(self) -> None:
         rows = [
             {"productEvidenceKey": f"key-{index:04d}", "name": "7UP FREE PET X 1.5L", "brand": "7UP", "canonicalSearchAliases": []}
