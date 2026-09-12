@@ -1,6 +1,30 @@
 # Current state
 
-Updated: 2026-09-10
+Updated: 2026-09-11
+
+## M11 SearchPack v2 candidate (unpromoted)
+
+The SearchPack v2 remote-I/O closure is implemented on
+`candidate/argentina-live-cloud-backend-v1` from required starting head
+`86459d22859668e88e60aea8e290086760953b7c`. It adds a trusted internal exact
+product-key path for already-qualified input, an index-native positional
+top-k ranker, metadata-only high-document-frequency saturation, and one
+64-MiB global SearchPack byte cache. The local Tuesday derived workspace was
+rebuilt only because the format changed; it uses the already-verified
+`sepa_martes.zip` evidence and is not a committed national dataset.
+
+The completed Tuesday measurements show exact six-query scorer parity with
+the exhaustive reference (zero mismatches). For `7UP FREE PET X 1.5L`, v2
+considers 21,720 posting candidates, materializes 5 records, and uses 5
+docstore reads in the local cold run; the prior immutable shape used 682
+docstore range reads. The 24-region stress run observed 6,254,408 cached bytes
+and 62,320,640-byte peak RSS, below the 64-MiB cache and 200-MiB process
+limits. Five- and ten-line diagnostics exercise only trusted exact identities;
+broad `arroz` input remains an explicit clarification state.
+
+This is still an unpromoted candidate. No R2 object, Cloud Run deployment,
+ACTIVE pointer, Sunday publication, Tuesday publication, or Android network
+permission changed.
 
 ## M11 national routing candidate (unpromoted)
 

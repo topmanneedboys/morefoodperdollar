@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build immutable SearchPack v1 objects from qualified regional indexes.
+"""Build immutable SearchPack v2 objects from qualified regional indexes.
 
 The input is an existing content-addressed routing workspace.  Only the
 already-qualified ``search-index.jsonl.gz`` objects are read; the official
@@ -32,15 +32,17 @@ from tools.argentina_searchpack import (
     SearchPackError,
     _canonical_json,
     _compress,
+    _encode_rank_postings,
     _encode_postings,
     build_fst,
     record_for_doc,
 )
+from tools.argentina_sepa_search import CONTEXT_EXCLUSIONS, _has_context_exclusion, normalize_spanish
 from tools.consumer_input_intelligence import CatalogRecord, LEXICAL_FEATURE_POLICY_VERSION, CatalogIndex
 
 
-SEARCHPACK_RELEASE_SUFFIX = "-search-v1"
-SEARCHPACK_ROOT = "micro-1024/searchpack-v1"
+SEARCHPACK_RELEASE_SUFFIX = "-search-v2"
+SEARCHPACK_ROOT = "micro-1024/searchpack-v2"
 _TERM_STRUCT = struct.Struct("<IIII")
 _CHUNK_STRUCT = struct.Struct("<IQIII")
 _U32_MAX = 0xFFFFFFFF
@@ -208,6 +210,141 @@ def _build_fst_blocks(path: Path, entries: Iterable[tuple[str, int]], *, block_e
     return tuple(blocks)
 
 
+def _normalized_tokens(value: str, *, max_length: int, label: str) -> tuple[str, ...]:
+    try:
+        normalized = normalize_spanish(value, max_length=max_length)
+    except Exception as exc:  # noqa: BLE001 - convert provider text errors to build errors
+        raise SearchPackBuildError(f"{label} cannot be normalized for ranking") from exc
+    return tuple(normalized.split())
+
+
+def _rank_feature_values(record: CatalogRecord) -> tuple[tuple[str, tuple[int, ...]], ...]:
+    """Derive fielded/positional evidence matching ``argentina_sepa_search``."""
+
+    name_tokens = _normalized_tokens(record.name, max_length=240, label="product name")
+    values: dict[str, tuple[int, ...]] = {}
+    positions_by_token: dict[str, list[int]] = {}
+    for position, token in enumerate(name_tokens):
+        positions_by_token.setdefault(token, []).append(position)
+    for token, positions in positions_by_token.items():
+        values[f"name:{token}"] = tuple(positions)
+    for alias in record.aliases:
+        for token in set(_normalized_tokens(alias, max_length=160, label="product alias")):
+            values.setdefault(f"alias:{token}", ())
+    if record.brand:
+        for token in set(_normalized_tokens(record.brand, max_length=160, label="product brand")):
+            values.setdefault(f"brand:{token}", ())
+    for query_token in CONTEXT_EXCLUSIONS:
+        if _has_context_exclusion((query_token,), name_tokens):
+            values[f"context:{query_token}"] = ()
+    return tuple(sorted(values.items()))
+
+
+def _whole_file_block(path: Path) -> dict[str, Any]:
+    size = path.stat().st_size
+    if size <= 0:
+        raise SearchPackBuildError(f"generated SearchPack file is empty: {path.name}")
+    return {"offset": 0, "length": size, "bytes": size, "sha256": _sha256_file(path)}
+
+
+def _build_rank_index(connection: sqlite3.Connection, staging: Path) -> dict[str, Any]:
+    """Build fielded ranking postings with bounded disk-backed iteration."""
+
+    rank_term_directory_path = staging / "rank-term-directory.bin"
+    rank_chunk_directory_path = staging / "rank-chunk-directory.bin"
+    rank_postings_path = staging / "rank-postings.bin"
+    rank_lexicon_path = staging / "rank-lexicon.bin"
+    rank_term_directory = rank_term_directory_path.open("w+b")
+    rank_chunk_directory = rank_chunk_directory_path.open("w+b")
+    rank_postings = rank_postings_path.open("wb")
+    rank_term_count = 0
+    try:
+        term_cursor = connection.execute("SELECT term FROM rank_features GROUP BY term ORDER BY term")
+        for term_ordinal, (term,) in enumerate(term_cursor):
+            term = str(term)
+            rank_term_count = term_ordinal + 1
+            term_pos = rank_term_directory.tell()
+            rank_term_directory.write(_TERM_STRUCT.pack(0, 0, 0, 0))
+            first_chunk = _U32_MAX
+            chunk_count = 0
+            df = 0
+            entries: list[tuple[int, tuple[int, ...]]] = []
+
+            def flush_chunk(chunk_values: Sequence[tuple[int, tuple[int, ...]]]) -> None:
+                nonlocal first_chunk, chunk_count, df
+                if not chunk_values:
+                    return
+                encoded = _encode_rank_postings(chunk_values)
+                chunk_index = rank_chunk_directory.tell() // _CHUNK_STRUCT.size
+                if chunk_index > _U32_MAX:
+                    raise SearchPackBuildError("SearchPack rank chunk directory exceeds u32")
+                if first_chunk == _U32_MAX:
+                    first_chunk = chunk_index
+                rank_chunk_directory.write(_CHUNK_STRUCT.pack(_U32_MAX, rank_postings.tell(), len(encoded), len(chunk_values), 0))
+                rank_postings.write(encoded)
+                chunk_count += 1
+                df += len(chunk_values)
+
+            rows = connection.execute(
+                "SELECT d.doc_id, f.positions FROM rank_features f JOIN documents d ON d.product_key=f.product_key WHERE f.term=? ORDER BY d.doc_id",
+                (term,),
+            )
+            for doc_id, positions_text in rows:
+                if not isinstance(doc_id, int) or doc_id < 0 or doc_id > _U32_MAX:
+                    raise SearchPackBuildError("SearchPack rank document ID is invalid")
+                if not isinstance(positions_text, str):
+                    raise SearchPackBuildError("SearchPack rank positions are invalid")
+                if positions_text:
+                    try:
+                        positions = tuple(int(value) for value in positions_text.split(","))
+                    except ValueError as exc:
+                        raise SearchPackBuildError("SearchPack rank positions are invalid") from exc
+                else:
+                    positions = ()
+                entries.append((doc_id, positions))
+                if len(entries) >= POSTINGS_BLOCK_MAX_IDS:
+                    flush_chunk(entries)
+                    entries = []
+            flush_chunk(entries)
+            if df <= 0 or first_chunk == _U32_MAX:
+                raise SearchPackBuildError("SearchPack rank term has no postings")
+            for index in range(first_chunk, first_chunk + chunk_count):
+                position = index * _CHUNK_STRUCT.size
+                rank_chunk_directory.seek(position)
+                next_chunk, posting_offset, posting_length, count, _ = _CHUNK_STRUCT.unpack(rank_chunk_directory.read(_CHUNK_STRUCT.size))
+                next_value = index + 1 if index + 1 < first_chunk + chunk_count else _U32_MAX
+                rank_chunk_directory.seek(position)
+                rank_chunk_directory.write(_CHUNK_STRUCT.pack(next_value, posting_offset, posting_length, count, df))
+            rank_term_directory.seek(term_pos)
+            rank_term_directory.write(_TERM_STRUCT.pack(first_chunk, chunk_count, df, 0))
+            rank_term_directory.seek(0, 2)
+        rank_term_directory.flush()
+        rank_chunk_directory.flush()
+        rank_postings.flush()
+    finally:
+        rank_term_directory.close()
+        rank_chunk_directory.close()
+        rank_postings.close()
+    if rank_term_count <= 0:
+        raise SearchPackBuildError("SearchPack ranking index is empty")
+    rank_lexicon_blocks = _build_fst_blocks(
+        rank_lexicon_path,
+        ((str(term), int(ordinal)) for ordinal, (term,) in enumerate(connection.execute("SELECT term FROM rank_features GROUP BY term ORDER BY term"))),
+    )
+    return {
+        "rankTermCount": rank_term_count,
+        "rankLexiconBlocks": rank_lexicon_blocks,
+        "rankTermDirectoryBlocks": (_whole_file_block(rank_term_directory_path),),
+        "rankChunkDirectoryBlocks": (_whole_file_block(rank_chunk_directory_path),),
+        "files": {
+            "rankLexicon": _file_descriptor(rank_lexicon_path, f"{SEARCHPACK_ROOT}/regions/{{region_id}}/rank-lexicon.bin"),
+            "rankTermDirectory": _file_descriptor(rank_term_directory_path, f"{SEARCHPACK_ROOT}/regions/{{region_id}}/rank-term-directory.bin"),
+            "rankChunkDirectory": _file_descriptor(rank_chunk_directory_path, f"{SEARCHPACK_ROOT}/regions/{{region_id}}/rank-chunk-directory.bin"),
+            "rankPostings": _file_descriptor(rank_postings_path, f"{SEARCHPACK_ROOT}/regions/{{region_id}}/rank-postings.bin"),
+        },
+    }
+
+
 class _FstBlockWriter:
     """Append sorted FST blocks without retaining the feature universe."""
 
@@ -261,6 +398,7 @@ def _build_region(source_workspace: Path, manifest: Mapping[str, Any], release_i
             connection.execute("PRAGMA temp_store=FILE")
             connection.execute("CREATE TABLE documents(product_key TEXT PRIMARY KEY, raw_json BLOB NOT NULL, doc_id INTEGER)")
             connection.execute("CREATE TABLE feature_docs(term TEXT NOT NULL, product_key TEXT NOT NULL, PRIMARY KEY(term, product_key)) WITHOUT ROWID")
+            connection.execute("CREATE TABLE rank_features(term TEXT NOT NULL, product_key TEXT NOT NULL, positions TEXT NOT NULL, PRIMARY KEY(term, product_key)) WITHOUT ROWID")
             total_records = 0
             feature_rows = 0
             for raw in _iter_source_records(source_path, descriptor, region_id):
@@ -276,6 +414,10 @@ def _build_region(source_workspace: Path, manifest: Mapping[str, Any], release_i
                     raise SearchPackBuildError(f"{region_id} contains duplicate productEvidenceKey {key}") from exc
                 features = CatalogIndex.record_feature_keys(record)
                 connection.executemany("INSERT OR IGNORE INTO feature_docs(term, product_key) VALUES (?, ?)", ((term, key) for term in features))
+                connection.executemany(
+                    "INSERT OR REPLACE INTO rank_features(term, product_key, positions) VALUES (?, ?, ?)",
+                    ((term, key, ",".join(str(position) for position in positions)) for term, positions in _rank_feature_values(record)),
+                )
                 total_records += 1
                 feature_rows += len(features)
                 if total_records % 10_000 == 0:
@@ -391,6 +533,7 @@ def _build_region(source_workspace: Path, manifest: Mapping[str, Any], release_i
                 lexicon_path,
                 ((str(term), int(ordinal)) for ordinal, (term,) in enumerate(connection.execute("SELECT term FROM feature_docs GROUP BY term ORDER BY term"))),
             )
+            rank_result = _build_rank_index(connection, staging)
             # Compression is constant for all blocks in this build; obtain it
             # from the last block's closure without retaining payloads.
             compression = compression if "compression" in locals() else "zlib"
@@ -405,6 +548,8 @@ def _build_region(source_workspace: Path, manifest: Mapping[str, Any], release_i
         "docstore": _file_descriptor(docstore_path, f"{SEARCHPACK_ROOT}/regions/{region_id}/docstore.bin"),
         "keyLexicon": _file_descriptor(key_lexicon_path, f"{SEARCHPACK_ROOT}/regions/{region_id}/key-lexicon.bin"),
     }
+    for name, rank_descriptor in rank_result["files"].items():
+        files[name] = {**rank_descriptor, "path": str(rank_descriptor["path"]).replace("{region_id}", region_id)}
     metadata = {
         "schemaVersion": SEARCHPACK_SCHEMA_VERSION,
         "formatVersion": SEARCHPACK_FORMAT_VERSION,
@@ -421,6 +566,7 @@ def _build_region(source_workspace: Path, manifest: Mapping[str, Any], release_i
         "documentCount": total_records,
         "termCount": term_ordinal,
         "featureRowCount": feature_rows,
+        "rankTermCount": rank_result["rankTermCount"],
         "docstoreCompression": compression,
         "docstoreBlockRecords": DOCSTORE_BLOCK_RECORDS,
         "postingsChunkMaxIds": POSTINGS_BLOCK_MAX_IDS,
@@ -428,6 +574,9 @@ def _build_region(source_workspace: Path, manifest: Mapping[str, Any], release_i
         "lexiconBlocks": list(lexicon_blocks),
         "keyLexiconBlocks": list(key_lexicon_blocks),
         "docstoreBlocks": docstore_blocks,
+        "rankLexiconBlocks": list(rank_result["rankLexiconBlocks"]),
+        "rankTermDirectoryBlocks": list(rank_result["rankTermDirectoryBlocks"]),
+        "rankChunkDirectoryBlocks": list(rank_result["rankChunkDirectoryBlocks"]),
     }
     metadata_path = staging / "metadata.json"
     metadata_path.write_bytes(_canonical_json(metadata))
@@ -519,7 +668,19 @@ def derive_searchpack_workspace(source_workspace: Path | str, output_workspace: 
                 # its final logical staging path avoids a second full copy.
                 generated_dir = partial / Path(*SEARCHPACK_ROOT.split("/")) / "regions" / region_id
                 generated_dir.mkdir(parents=True, exist_ok=True)
-                for file_name in ("metadata.json", "lexicon.bin", "term-directory.bin", "chunk-directory.bin", "postings.bin", "docstore.bin", "key-lexicon.bin"):
+                for file_name in (
+                    "metadata.json",
+                    "lexicon.bin",
+                    "term-directory.bin",
+                    "chunk-directory.bin",
+                    "postings.bin",
+                    "docstore.bin",
+                    "key-lexicon.bin",
+                    "rank-lexicon.bin",
+                    "rank-term-directory.bin",
+                    "rank-chunk-directory.bin",
+                    "rank-postings.bin",
+                ):
                     source_file = result["metadataPath"].parent / file_name
                     target_file = generated_dir / file_name
                     if source_file != target_file:

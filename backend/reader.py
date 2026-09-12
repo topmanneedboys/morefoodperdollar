@@ -110,6 +110,9 @@ class RequestMetrics:
     searchpack_cache_hits: int = 0
     searchpack_cache_misses: int = 0
     searchpack_corpus_scanned: int = 0
+    searchpack_ranked_candidates: int = 0
+    searchpack_ranked_records_materialized: int = 0
+    searchpack_ranked_queries: int = 0
     regions_queried: list[str] = field(default_factory=list)
 
     def as_dict(self) -> dict[str, Any]:
@@ -140,6 +143,9 @@ class RequestMetrics:
             "searchPackCacheHits": self.searchpack_cache_hits,
             "searchPackCacheMisses": self.searchpack_cache_misses,
             "searchPackCorpusScanned": self.searchpack_corpus_scanned,
+            "searchPackRankedCandidates": self.searchpack_ranked_candidates,
+            "searchPackRankedRecordsMaterialized": self.searchpack_ranked_records_materialized,
+            "searchPackRankedQueries": self.searchpack_ranked_queries,
             "regionsQueried": list(self.regions_queried),
         }
 
@@ -607,6 +613,9 @@ class ArgentinaBackendReader:
         metrics.searchpack_saturated_features += stats.saturated_features
         metrics.searchpack_cache_hits += stats.cache_hits
         metrics.searchpack_cache_misses += stats.cache_misses
+        metrics.searchpack_ranked_candidates += stats.ranked_candidates
+        metrics.searchpack_ranked_records_materialized += stats.ranked_records_materialized
+        metrics.searchpack_ranked_queries += stats.ranked_queries
 
     def _searchpack_for_region(self, region_id: str) -> SearchPackManager | None:
         if not getattr(self, "_searchpack_declared", False):
@@ -615,27 +624,51 @@ class ArgentinaBackendReader:
             raise BackendQueryError(getattr(self, "_searchpack_error", None) or "SearchPack release is unavailable")
         return self._searchpack
 
-    def _search_many(self, contract: Any, queries: Sequence[str], *, product_limit: int = 5, metrics: RequestMetrics | None = None) -> tuple[tuple[Mapping[str, Any], ...], ...]:
-        """Resolve several product queries with one bounded score/recovery pair."""
+    def _search_many(
+        self,
+        contract: Any,
+        queries: Sequence[str],
+        *,
+        product_limit: int = 5,
+        metrics: RequestMetrics | None = None,
+        trusted_product_keys: Sequence[str | None] | None = None,
+    ) -> tuple[tuple[Mapping[str, Any], ...], ...]:
+        """Resolve queries, using internal exact identities when supplied."""
 
-        requested = tuple(dict.fromkeys(queries))
-        if not requested:
+        if not queries:
             return ()
+        if trusted_product_keys is not None and len(trusted_product_keys) != len(queries):
+            raise BackendQueryError("trusted product identity alignment is invalid")
         searchpack = self._searchpack_for_region(contract.region.region_id)
         if searchpack is not None:
             stats = SearchPackStats()
             try:
-                packed = searchpack.region(contract.region.region_id).search_many(
-                    requested,
-                    product_limit=product_limit,
-                    candidate_bound=MAX_CANDIDATES,
-                    stats=stats,
-                )
+                region = searchpack.region(contract.region.region_id)
+                keys = trusted_product_keys or (None,) * len(queries)
+                lexical = tuple(dict.fromkeys(query for query, key in zip(queries, keys) if key is None))
+                ranked: dict[str, tuple[Mapping[str, Any], ...]] = {}
+                if lexical:
+                    packed = region.search_many(lexical, product_limit=product_limit, candidate_bound=MAX_CANDIDATES, stats=stats)
+                    ranked = {query: tuple(value) for query, value in zip(lexical, packed)}
+                values: list[tuple[Mapping[str, Any], ...]] = []
+                for query, product_key in zip(queries, keys):
+                    if product_key is None:
+                        values.append(ranked[query])
+                        continue
+                    if not isinstance(product_key, str) or not product_key:
+                        raise BackendQueryError("trusted product identity is invalid")
+                    record = region.lookup_product_key(product_key, stats=stats)
+                    values.append((dict(record),) if isinstance(record, Mapping) else ())
             except SearchPackError as exc:
                 raise BackendQueryError(f"SearchPack search failed for {contract.region.region_id}") from exc
             self._merge_searchpack_metrics(metrics, stats)
-            values = {query: tuple(value) for query, value in zip(requested, packed)}
-            return tuple(values[query] for query in queries)
+            return tuple(values)
+        if trusted_product_keys is not None and any(key is not None for key in trusted_product_keys):
+            # A pre-SearchPack release has no key lexicon.  Preserve the old
+            # bounded compatibility path; internal keys are never read from
+            # the public request mapping.
+            trusted_product_keys = None
+        requested = tuple(dict.fromkeys(queries))
         values: dict[str, tuple[Mapping[str, Any], ...]] = {}
         misses: list[str] = []
         for query in requested:
@@ -660,13 +693,31 @@ class ArgentinaBackendReader:
     def _search(self, contract: Any, query: str, *, product_limit: int = 5) -> tuple[Mapping[str, Any], ...]:
         return self._search_many(contract, (query,), product_limit=product_limit)[0]
 
-    def _plan(self, contract: Any, queries: Sequence[str], *, product_limit: int = 5, metrics: RequestMetrics | None = None) -> MicroQueryPlan:
+    def _plan(
+        self,
+        contract: Any,
+        queries: Sequence[str],
+        *,
+        product_limit: int = 5,
+        metrics: RequestMetrics | None = None,
+        trusted_product_keys: Sequence[str | None] | None = None,
+        values_by_query: Sequence[Sequence[Mapping[str, Any]]] | None = None,
+    ) -> MicroQueryPlan:
         candidates: list[Mapping[str, Any]] = []
         seen: set[str] = set()
         partitions: set[str] = set()
-        start = time.perf_counter()
-        values_by_query = self._search_many(contract, queries, product_limit=product_limit, metrics=metrics)
-        for values in values_by_query:
+        resolved_values = values_by_query
+        if resolved_values is None:
+            resolved_values = self._search_many(
+                contract,
+                queries,
+                product_limit=product_limit,
+                metrics=metrics,
+                trusted_product_keys=trusted_product_keys,
+            )
+        if len(resolved_values) != len(queries):
+            raise BackendQueryError("SearchPack query result alignment is invalid")
+        for values in resolved_values:
             for value in values:
                 key = value["productEvidenceKey"]
                 if key not in seen:
@@ -989,7 +1040,12 @@ class ArgentinaBackendReader:
             metrics.cache_misses += 1
         return value
 
-    def query(self, request: ShoppingRequest | Mapping[str, Any]) -> tuple[dict[str, Any], RequestMetrics]:
+    def query(
+        self,
+        request: ShoppingRequest | Mapping[str, Any],
+        *,
+        trusted_product_keys: Mapping[str, str] | None = None,
+    ) -> tuple[dict[str, Any], RequestMetrics]:
         started = time.perf_counter()
         try:
             normalized = request if isinstance(request, ShoppingRequest) else ShoppingRequest.from_mapping(request)
@@ -997,6 +1053,15 @@ class ArgentinaBackendReader:
             raise BackendQueryError(str(exc)) from exc
         if normalized.radius_km > MAX_BACKEND_RADIUS_KM:
             raise BackendQueryError("radiusKm must be between 0 and 50 km")
+        trusted_by_line: dict[str, str] = {}
+        if trusted_product_keys is not None:
+            if not isinstance(trusted_product_keys, Mapping):
+                raise BackendQueryError("trusted product identities are invalid")
+            line_ids = {line.line_id for line in normalized.lines}
+            for line_id, product_key in trusted_product_keys.items():
+                if line_id not in line_ids or not isinstance(product_key, str) or not product_key:
+                    raise BackendQueryError("trusted product identity is invalid")
+                trusted_by_line[line_id] = product_key
         metrics = RequestMetrics()
         active_start = time.perf_counter()
         # The caller pins the ReleaseHandle before constructing this reader.
@@ -1013,7 +1078,16 @@ class ArgentinaBackendReader:
         for selection in selections:
             contract = self.router.contract(selection.region_id)
             search_start = time.perf_counter()
-            plan = self._plan(contract, [line.query for line in normalized.lines], metrics=metrics)
+            queries = [line.query for line in normalized.lines]
+            aligned_trusted_keys = tuple(trusted_by_line.get(line.line_id) for line in normalized.lines)
+            candidate_values = self._search_many(
+                contract,
+                queries,
+                product_limit=5,
+                metrics=metrics,
+                trusted_product_keys=aligned_trusted_keys,
+            )
+            plan = self._plan(contract, queries, metrics=None, values_by_query=candidate_values)
             metrics.regional_search_ms += (time.perf_counter() - search_start) * 1000
             metrics.compressed_bytes += plan.compressed_bytes
             metrics.decompressed_bytes += plan.decompressed_bytes
@@ -1035,11 +1109,8 @@ class ArgentinaBackendReader:
                 if distance > float(normalized.radius_km) + 1e-9:
                     continue
                 offers.append(_offer_result(raw_offer, product, store, distance))
-            by_query: dict[str, set[str]] = {}
-            candidate_values = self._search_many(contract, [line.query for line in normalized.lines], product_limit=5, metrics=metrics)
             for line, candidates in zip(normalized.lines, candidate_values):
                 keys = {candidate["productEvidenceKey"] for candidate in candidates}
-                by_query[line.line_id] = keys
                 for candidate in candidates:
                     per_line[line.line_id]["candidates"].setdefault(candidate["productEvidenceKey"], candidate)
                 for offer in offers:

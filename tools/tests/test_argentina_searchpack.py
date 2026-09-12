@@ -15,7 +15,8 @@ from tools.argentina_searchpack import (
     SearchPackStats,
     SEARCHPACK_CANDIDATE_HORIZON,
 )
-from tools.build_argentina_searchpack import derive_searchpack_workspace
+from tools.build_argentina_searchpack import SEARCHPACK_RELEASE_SUFFIX, derive_searchpack_workspace
+from tools.argentina_sepa_search import search_products
 from tools.consumer_input_intelligence import CatalogIndex, parse_intent
 
 
@@ -62,8 +63,9 @@ def _fixture_workspace(rows: list[dict[str, object]]) -> tuple[Path, str]:
 
 
 def _manager(workspace: Path) -> SearchPackManager:
-    manifest = json.loads((workspace / "releases" / "release-search-v1" / "manifest.json").read_bytes())
-    artifacts = ManifestReleaseArtifactStore(LocalFilesystemObjectStore(workspace), manifest, release_id="release-search-v1")
+    release_id = f"release{SEARCHPACK_RELEASE_SUFFIX}"
+    manifest = json.loads((workspace / "releases" / release_id / "manifest.json").read_bytes())
+    artifacts = ManifestReleaseArtifactStore(LocalFilesystemObjectStore(workspace), manifest, release_id=release_id)
     return SearchPackManager(artifacts, manifest)
 
 
@@ -83,8 +85,9 @@ class ArgentinaSearchPackTests(unittest.TestCase):
         second = _new_output("valuepilot-searchpack-second-")
         derive_searchpack_workspace(source, first, [release_id])
         derive_searchpack_workspace(source, second, [release_id])
-        first_manifest = (first / "releases" / "release-search-v1" / "manifest.json").read_bytes()
-        second_manifest = (second / "releases" / "release-search-v1" / "manifest.json").read_bytes()
+        release_id = f"release{SEARCHPACK_RELEASE_SUFFIX}"
+        first_manifest = (first / "releases" / release_id / "manifest.json").read_bytes()
+        second_manifest = (second / "releases" / release_id / "manifest.json").read_bytes()
         self.assertEqual(first_manifest, second_manifest)
         manager = _manager(first)
         region = manager.region("ar-caba")
@@ -118,7 +121,8 @@ class ArgentinaSearchPackTests(unittest.TestCase):
         source, release_id = _fixture_workspace(rows)
         output = _new_output("valuepilot-searchpack-corrupt-")
         derive_searchpack_workspace(source, output, [release_id])
-        manifest_path = output / "releases" / "release-search-v1" / "manifest.json"
+        release_id = f"release{SEARCHPACK_RELEASE_SUFFIX}"
+        manifest_path = output / "releases" / release_id / "manifest.json"
         manifest = json.loads(manifest_path.read_bytes())
         postings = next(item for item in manifest["objects"] if item["path"].endswith("/postings.bin"))
         object_path = output / "objects" / "sha256" / postings["sha256"]
@@ -133,14 +137,15 @@ class ArgentinaSearchPackTests(unittest.TestCase):
         source, release_id = _fixture_workspace(rows)
         output = _new_output("valuepilot-searchpack-missing-")
         derive_searchpack_workspace(source, output, [release_id])
-        manifest_path = output / "releases" / "release-search-v1" / "manifest.json"
+        release_id = f"release{SEARCHPACK_RELEASE_SUFFIX}"
+        manifest_path = output / "releases" / release_id / "manifest.json"
         manifest = json.loads(manifest_path.read_bytes())
         manifest["searchPackArtifact"]["metadataSha256"]["ar-caba"] = "0" * 64
-        artifacts = ManifestReleaseArtifactStore(LocalFilesystemObjectStore(output), manifest, release_id="release-search-v1")
+        artifacts = ManifestReleaseArtifactStore(LocalFilesystemObjectStore(output), manifest, release_id=release_id)
         with self.assertRaises(SearchPackError):
             SearchPackManager(artifacts, manifest).region("ar-caba")
 
-    def test_search_many_uses_the_existing_ranker_on_retrieved_records(self) -> None:
+    def test_search_many_uses_index_native_ranker(self) -> None:
         rows = [
             {"productEvidenceKey": "a", "name": "Arroz Marca 1 kg", "brand": None, "canonicalSearchAliases": []},
             {"productEvidenceKey": "b", "name": "Leche Marca 1 l", "brand": None, "canonicalSearchAliases": []},
@@ -153,6 +158,62 @@ class ArgentinaSearchPackTests(unittest.TestCase):
         self.assertEqual(values[0][0]["productEvidenceKey"], "a")
         self.assertEqual(values[1][0]["productEvidenceKey"], "b")
         self.assertNotIn("c", {item["productEvidenceKey"] for item in values[0]})
+
+    def test_index_native_ranker_matches_exhaustive_score_and_materializes_top_k_only(self) -> None:
+        rows = [
+            {"productEvidenceKey": "a", "name": "Arroz Marca 1 kg", "brand": None, "canonicalSearchAliases": []},
+            {"productEvidenceKey": "b", "name": "Arroz Marca 2 kg", "brand": "Marca", "canonicalSearchAliases": ["rice"]},
+            {"productEvidenceKey": "c", "name": "Condimento para arroz", "brand": None, "canonicalSearchAliases": []},
+            {"productEvidenceKey": "d", "name": "Huevos Grandes 12", "brand": None, "canonicalSearchAliases": []},
+            {"productEvidenceKey": "e", "name": "Pasta de Huevo 500 g", "brand": None, "canonicalSearchAliases": []},
+        ]
+        source, release_id = _fixture_workspace(rows)
+        output = _new_output("valuepilot-searchpack-index-native-")
+        derive_searchpack_workspace(source, output, [release_id])
+        derived_id = f"{release_id}{SEARCHPACK_RELEASE_SUFFIX}"
+        manifest = json.loads((output / "releases" / derived_id / "manifest.json").read_bytes())
+        manager = SearchPackManager(ManifestReleaseArtifactStore(LocalFilesystemObjectStore(output), manifest, release_id=derived_id), manifest)
+        region = manager.region("ar-caba")
+        stats = SearchPackStats()
+        queries = ("arroz", "huevos", "rice")
+        actual = region.search_many(queries, product_limit=2, candidate_bound=100_000, stats=stats)
+        expected = tuple(tuple(item.as_dict() for item in search_products(rows, query, limit=2, max_candidates=100_000)) for query in queries)
+        self.assertEqual(actual, expected)
+        self.assertEqual(stats.ranked_records_materialized, 4)
+        self.assertEqual(stats.records_returned, 4)
+        self.assertLessEqual(stats.ranked_records_materialized, len(queries) * 2)
+        self.assertGreater(stats.ranked_candidates, stats.ranked_records_materialized)
+
+    def test_high_df_saturation_is_metadata_only(self) -> None:
+        rows = [
+            {"productEvidenceKey": f"key-{index:03d}", "name": f"Arroz Marca {index:03d} 1 kg", "brand": None, "canonicalSearchAliases": []}
+            for index in range(SEARCHPACK_CANDIDATE_HORIZON + 1)
+        ]
+        source, release_id = _fixture_workspace(rows)
+        output = _new_output("valuepilot-searchpack-metadata-saturation-")
+        derive_searchpack_workspace(source, output, [release_id])
+        manager = _manager(output)
+        stats = SearchPackStats()
+        catalog = CatalogIndex(())
+        lookup = manager.region("ar-caba").lookup_features(catalog.intent_feature_keys(parse_intent("arroz", data=catalog.data)), stats=stats)
+        self.assertTrue(lookup.saturated)
+        self.assertEqual(stats.posting_reads, 0)
+        self.assertEqual(stats.posting_bytes, 0)
+        self.assertEqual(stats.docstore_reads, 0)
+
+    def test_manager_cache_is_global_and_hard_bounded(self) -> None:
+        rows = [{"productEvidenceKey": "a", "name": "Arroz 1 kg", "brand": None, "canonicalSearchAliases": []}]
+        source, release_id = _fixture_workspace(rows)
+        output = _new_output("valuepilot-searchpack-global-cache-")
+        derive_searchpack_workspace(source, output, [release_id])
+        derived_id = f"{release_id}{SEARCHPACK_RELEASE_SUFFIX}"
+        manifest = json.loads((output / "releases" / derived_id / "manifest.json").read_bytes())
+        manager = SearchPackManager(ManifestReleaseArtifactStore(LocalFilesystemObjectStore(output), manifest, release_id=derived_id), manifest, cache_bytes=1024)
+        # Simulate 24 instantiated regions touching distinct immutable ranges.
+        for region_index in range(24):
+            manager._cache.put(f"region-{region_index}:object:{region_index}", bytes([region_index]) * 96)
+        self.assertLessEqual(manager.cache_usage_bytes, 1024)
+        self.assertLessEqual(manager.cache_usage_bytes, manager.cache_bytes)
 
 
 if __name__ == "__main__":

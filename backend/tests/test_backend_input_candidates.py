@@ -27,7 +27,7 @@ from tools.consumer_input_intelligence import (
     parse_intent,
 )
 from tools.argentina_searchpack import SearchPackManager
-from tools.build_argentina_searchpack import derive_searchpack_workspace
+from tools.build_argentina_searchpack import SEARCHPACK_RELEASE_SUFFIX, derive_searchpack_workspace
 from tools.tests.test_argentina_searchpack import _fixture_workspace, _new_output
 import tools.argentina_sepa_query as sepa_query
 from tools.tests.test_consumer_input_intelligence import fixture_records
@@ -81,8 +81,9 @@ class BackendInputCandidateTests(unittest.TestCase):
         source, release_id = _fixture_workspace(records)
         output = _new_output("valuepilot-backend-searchpack-")
         derive_searchpack_workspace(source, output, [release_id])
-        manifest = json.loads((output / "releases" / "release-search-v1" / "manifest.json").read_bytes())
-        artifacts = ManifestReleaseArtifactStore(LocalFilesystemObjectStore(output), manifest, release_id="release-search-v1")
+        release_id = f"{release_id}{SEARCHPACK_RELEASE_SUFFIX}"
+        manifest = json.loads((output / "releases" / release_id / "manifest.json").read_bytes())
+        artifacts = ManifestReleaseArtifactStore(LocalFilesystemObjectStore(output), manifest, release_id=release_id)
         reader = _reader_for_records(Path(tempfile.mkdtemp(prefix="valuepilot-searchpack-reader-")), records)
         reader._searchpack_declared = True
         reader._searchpack_error = None
@@ -107,8 +108,9 @@ class BackendInputCandidateTests(unittest.TestCase):
         source, release_id = _fixture_workspace(records)
         output = _new_output("valuepilot-backend-searchpack-saturation-")
         derive_searchpack_workspace(source, output, [release_id])
-        manifest = json.loads((output / "releases" / "release-search-v1" / "manifest.json").read_bytes())
-        artifacts = ManifestReleaseArtifactStore(LocalFilesystemObjectStore(output), manifest, release_id="release-search-v1")
+        release_id = f"{release_id}{SEARCHPACK_RELEASE_SUFFIX}"
+        manifest = json.loads((output / "releases" / release_id / "manifest.json").read_bytes())
+        artifacts = ManifestReleaseArtifactStore(LocalFilesystemObjectStore(output), manifest, release_id=release_id)
         reader = _reader_for_records(Path(tempfile.mkdtemp(prefix="valuepilot-searchpack-saturation-reader-")), records)
         reader._searchpack_declared = True
         reader._searchpack_error = None

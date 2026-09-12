@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Immutable, range-addressable SearchPack v1 runtime and format helpers.
+"""Immutable, range-addressable SearchPack v2 runtime and format helpers.
 
 SearchPack is deliberately a provider-neutral read model.  Python owns
 normalization and feature derivation; this module stores the resulting opaque
@@ -19,6 +19,7 @@ import hashlib
 import json
 import struct
 import tempfile
+import threading
 import zlib
 from collections import OrderedDict
 from dataclasses import dataclass, field
@@ -42,8 +43,8 @@ except ModuleNotFoundError:  # pragma: no cover - direct tool invocation
     from consumer_input_intelligence import CatalogIndex, CatalogRecord, LEXICAL_FEATURE_POLICY_VERSION, canonical_feature_keys, parse_intent
 
 
-SEARCHPACK_SCHEMA_VERSION = "valuepilot-argentina-searchpack-v1"
-SEARCHPACK_FORMAT_VERSION = 1
+SEARCHPACK_SCHEMA_VERSION = "valuepilot-argentina-searchpack-v2"
+SEARCHPACK_FORMAT_VERSION = 2
 POSTINGS_BLOCK_MAX_IDS = 65_536
 SEARCHPACK_CANDIDATE_HORIZON = 256
 SEARCHPACK_MAX_DOCS = 100_000
@@ -52,6 +53,7 @@ LEXICON_BLOCK_ENTRIES = 4_096
 MAX_METADATA_BYTES = 8 * 1024 * 1024
 MAX_BLOCK_BYTES = 8 * 1024 * 1024
 MAX_TERM_CACHE_ENTRIES = 8_192
+MAX_RANK_POSITION_COUNT = 512
 _U32_MAX = 0xFFFFFFFF
 _CHUNK_STRUCT = struct.Struct("<IQIII")
 _TERM_STRUCT = struct.Struct("<IIII")
@@ -203,6 +205,90 @@ def _decode_postings(data: bytes, max_count: int) -> tuple[int, ...]:
     return tuple(values)
 
 
+def _append_varint(output: bytearray, value: int) -> None:
+    if not isinstance(value, int) or value < 0 or value > _U32_MAX:
+        raise SearchPackError("rank posting varint value is invalid")
+    while value >= 0x80:
+        output.append((value & 0x7F) | 0x80)
+        value >>= 7
+    output.append(value)
+
+
+def _read_varint(data: bytes, cursor: int) -> tuple[int, int]:
+    value = 0
+    shift = 0
+    while True:
+        if cursor >= len(data) or shift > 28:
+            raise SearchPackError("rank posting varint is truncated or overlong")
+        byte = data[cursor]
+        cursor += 1
+        value |= (byte & 0x7F) << shift
+        if not byte & 0x80:
+            if value > _U32_MAX:
+                raise SearchPackError("rank posting varint overflows u32")
+            return value, cursor
+        shift += 7
+
+
+def _encode_rank_postings(entries: Sequence[tuple[int, Sequence[int]]]) -> bytes:
+    """Encode sorted document IDs with optional name-token positions.
+
+    Each entry is a delta-coded document ID followed by a bounded position
+    count and absolute, sorted positions.  Empty positions represent a
+    field-membership posting (alias, brand, or context exclusion).
+    """
+
+    if not entries:
+        raise SearchPackError("rank posting list is empty")
+    output = bytearray()
+    previous_doc = 0
+    for index, (doc_id, positions) in enumerate(entries):
+        if not isinstance(doc_id, int) or doc_id < 0 or doc_id > _U32_MAX:
+            raise SearchPackError("rank posting document ID is invalid")
+        if index and doc_id <= previous_doc:
+            raise SearchPackError("rank posting document IDs are not increasing")
+        values = tuple(positions)
+        if len(values) > MAX_RANK_POSITION_COUNT or any(not isinstance(value, int) or value < 0 or value > _U32_MAX for value in values):
+            raise SearchPackError("rank posting positions are invalid")
+        if any(left >= right for left, right in zip(values, values[1:])):
+            raise SearchPackError("rank posting positions are not increasing")
+        _append_varint(output, doc_id if index == 0 else doc_id - previous_doc)
+        _append_varint(output, len(values))
+        for position in values:
+            _append_varint(output, position)
+        previous_doc = doc_id
+    return bytes(output)
+
+
+def _decode_rank_postings(data: bytes, max_count: int) -> tuple[tuple[int, tuple[int, ...]], ...]:
+    if not data or max_count <= 0:
+        raise SearchPackError("rank posting payload is empty or unbounded")
+    values: list[tuple[int, tuple[int, ...]]] = []
+    cursor = 0
+    previous_doc = 0
+    while cursor < len(data):
+        if len(values) >= max_count:
+            raise SearchPackError("rank posting count exceeds bound")
+        delta, cursor = _read_varint(data, cursor)
+        doc_id = delta if not values else previous_doc + delta
+        if doc_id > _U32_MAX or (values and doc_id <= previous_doc):
+            raise SearchPackError("rank posting document IDs are invalid")
+        position_count, cursor = _read_varint(data, cursor)
+        if position_count > MAX_RANK_POSITION_COUNT:
+            raise SearchPackError("rank posting position count exceeds bound")
+        positions: list[int] = []
+        previous_position = -1
+        for _ in range(position_count):
+            position, cursor = _read_varint(data, cursor)
+            if position <= previous_position:
+                raise SearchPackError("rank posting positions are not increasing")
+            positions.append(position)
+            previous_position = position
+        values.append((doc_id, tuple(positions)))
+        previous_doc = doc_id
+    return tuple(values)
+
+
 def _compress(data: bytes) -> tuple[bytes, str]:
     if _native is not None:
         try:
@@ -271,6 +357,13 @@ class SearchPackStats:
     saturated_features: int = 0
     cache_hits: int = 0
     cache_misses: int = 0
+    ranked_candidates: int = 0
+    ranked_records_materialized: int = 0
+    ranked_queries: int = 0
+    ranked_lexicon_reads: int = 0
+    ranked_term_directory_reads: int = 0
+    ranked_posting_reads: int = 0
+    ranked_posting_bytes: int = 0
 
 
 @dataclass(frozen=True)
@@ -288,38 +381,48 @@ class _ByteLRU:
         self.max_bytes = max_bytes
         self._items: OrderedDict[str, bytes] = OrderedDict()
         self._bytes = 0
+        self._lock = threading.RLock()
 
     def get(self, key: str) -> bytes | None:
-        value = self._items.get(key)
-        if value is not None:
-            self._items.move_to_end(key)
-        return value
+        with self._lock:
+            value = self._items.get(key)
+            if value is not None:
+                self._items.move_to_end(key)
+            return value
 
     def put(self, key: str, value: bytes) -> None:
-        if len(value) > self.max_bytes:
-            return
-        previous = self._items.pop(key, None)
-        if previous is not None:
-            self._bytes -= len(previous)
-        while self._bytes + len(value) > self.max_bytes and self._items:
-            _, old = self._items.popitem(last=False)
-            self._bytes -= len(old)
-        self._items[key] = value
-        self._bytes += len(value)
+        with self._lock:
+            if len(value) > self.max_bytes:
+                return
+            previous = self._items.pop(key, None)
+            if previous is not None:
+                self._bytes -= len(previous)
+            while self._bytes + len(value) > self.max_bytes and self._items:
+                _, old = self._items.popitem(last=False)
+                self._bytes -= len(old)
+            self._items[key] = value
+            self._bytes += len(value)
 
     @property
     def bytes(self) -> int:
-        return self._bytes
+        with self._lock:
+            return self._bytes
 
     @property
     def entries(self) -> int:
-        return len(self._items)
+        with self._lock:
+            return len(self._items)
+
+    def clear(self) -> None:
+        with self._lock:
+            self._items.clear()
+            self._bytes = 0
 
 
 class SearchPackRegion:
     """Read one immutable regional SearchPack without corpus scans."""
 
-    def __init__(self, artifacts: Any, metadata: Mapping[str, Any], *, cache_bytes: int = 8 * 1024 * 1024):
+    def __init__(self, artifacts: Any, metadata: Mapping[str, Any], *, cache_bytes: int = 8 * 1024 * 1024, cache: _ByteLRU | None = None):
         self.artifacts = artifacts
         self.metadata = dict(metadata)
         self.region_id = self._require_str(self.metadata, "regionId")
@@ -340,15 +443,33 @@ class SearchPackRegion:
         if not isinstance(files, Mapping):
             raise SearchPackError("SearchPack files are missing")
         self.files = {str(key): self._descriptor(value, str(key)) for key, value in files.items()}
-        required = {"lexicon", "termDirectory", "chunkDirectory", "postings", "docstore", "keyLexicon"}
+        required = {
+            "lexicon",
+            "termDirectory",
+            "chunkDirectory",
+            "postings",
+            "docstore",
+            "keyLexicon",
+            "rankLexicon",
+            "rankTermDirectory",
+            "rankChunkDirectory",
+            "rankPostings",
+        }
         if set(self.files) != required:
             raise SearchPackError("SearchPack file set is invalid")
         self.lexicon_blocks = self._blocks(self.metadata.get("lexiconBlocks"), "lexiconBlocks")
         self.key_lexicon_blocks = self._blocks(self.metadata.get("keyLexiconBlocks"), "keyLexiconBlocks")
         self.docstore_blocks = self._blocks(self.metadata.get("docstoreBlocks"), "docstoreBlocks")
+        self.rank_lexicon_blocks = self._blocks(self.metadata.get("rankLexiconBlocks"), "rankLexiconBlocks")
+        self.rank_key_blocks = self.rank_lexicon_blocks
+        self.rank_term_blocks = self._blocks(self.metadata.get("rankTermDirectoryBlocks"), "rankTermDirectoryBlocks")
+        self.rank_docstore_blocks = self._blocks(self.metadata.get("rankChunkDirectoryBlocks"), "rankChunkDirectoryBlocks")
         self._validate_index_blocks(self.lexicon_blocks, "lexicon", key_blocks=True, expected_entries=None)
         self._validate_index_blocks(self.key_lexicon_blocks, "keyLexicon", key_blocks=True, expected_entries=doc_count)
         self._validate_index_blocks(self.docstore_blocks, "docstore", key_blocks=False, expected_entries=doc_count)
+        self._validate_index_blocks(self.rank_lexicon_blocks, "rankLexicon", key_blocks=True, expected_entries=None)
+        self._validate_linear_blocks(self.rank_term_blocks, "rankTermDirectory", expected_bytes=int(self.files["rankTermDirectory"]["bytes"]))
+        self._validate_linear_blocks(self.rank_docstore_blocks, "rankChunkDirectory", expected_bytes=int(self.files["rankChunkDirectory"]["bytes"]))
         term_count = self.metadata.get("termCount")
         if not isinstance(term_count, int) or term_count < 0:
             raise SearchPackError("SearchPack term count is invalid")
@@ -359,8 +480,16 @@ class SearchPackRegion:
             raise SearchPackError("SearchPack term directory length is invalid")
         if self.document_count and sum(int(block.get("recordCount", 0)) for block in self.docstore_blocks) != self.document_count:
             raise SearchPackError("SearchPack docstore coverage is invalid")
-        self._cache = _ByteLRU(cache_bytes)
-        self._term_cache: dict[int, tuple[int, int, int, int]] = {}
+        rank_term_count = self.metadata.get("rankTermCount")
+        if not isinstance(rank_term_count, int) or rank_term_count <= 0:
+            raise SearchPackError("SearchPack rank term count is invalid")
+        if int(self.files["rankTermDirectory"]["bytes"]) != rank_term_count * _TERM_STRUCT.size:
+            raise SearchPackError("SearchPack rank term directory length is invalid")
+        if sum(int(block.get("entryCount", 0)) for block in self.rank_lexicon_blocks) != rank_term_count:
+            raise SearchPackError("SearchPack rank lexicon entry coverage is invalid")
+        self.rank_term_count = rank_term_count
+        self._cache = cache or _ByteLRU(cache_bytes)
+        self._term_cache: dict[tuple[str, int], tuple[int, int, int, int]] = {}
 
     @staticmethod
     def _require_str(value: Mapping[str, Any], key: str) -> str:
@@ -433,6 +562,30 @@ class SearchPackRegion:
         if expected_entries is not None and covered_entries != expected_entries:
             raise SearchPackError(f"SearchPack {name} entry coverage is invalid")
 
+    @staticmethod
+    def _validate_linear_blocks(blocks: Sequence[Mapping[str, Any]], name: str, *, expected_bytes: int) -> None:
+        """Validate auxiliary fixed-width directory ranges before lookup."""
+
+        previous_end = 0
+        for block in blocks:
+            offset = block.get("offset")
+            length = block.get("length")
+            digest = block.get("sha256")
+            if (
+                not isinstance(offset, int)
+                or offset != previous_end
+                or not isinstance(length, int)
+                or length <= 0
+                or offset + length > expected_bytes
+                or not isinstance(digest, str)
+                or len(digest) != 64
+                or any(char not in "0123456789abcdef" for char in digest)
+            ):
+                raise SearchPackError(f"SearchPack {name} block range is invalid")
+            previous_end = offset + length
+        if previous_end != expected_bytes:
+            raise SearchPackError(f"SearchPack {name} blocks do not cover the file")
+
     def _read(self, name: str, offset: int, length: int, stats: SearchPackStats, *, label: str) -> bytes:
         descriptor = self.files[name]
         total = int(descriptor["bytes"])
@@ -494,23 +647,34 @@ class SearchPackRegion:
         data = self._load_block(name, blocks[index], stats, label=label)
         if name == "lexicon":
             stats.lexicon_reads += 1
+        elif name == "rankLexicon":
+            stats.ranked_lexicon_reads += 1
         return fst_lookup(data, key)
 
-    def _term(self, ordinal: int, stats: SearchPackStats) -> tuple[int, int, int, int]:
-        cached = self._term_cache.get(ordinal)
+    def _term_from(self, name: str, ordinal: int, stats: SearchPackStats, *, label: str) -> tuple[int, int, int, int]:
+        cached = self._term_cache.get((name, ordinal))
         if cached is not None:
             return cached
-        descriptor = self.files["termDirectory"]
+        descriptor = self.files[name]
         offset = ordinal * _TERM_STRUCT.size
         if offset + _TERM_STRUCT.size > int(descriptor["bytes"]):
-            raise SearchPackError("term ordinal exceeds directory")
-        data = self._read("termDirectory", offset, _TERM_STRUCT.size, stats, label="term directory")
-        stats.term_directory_reads += 1
+            raise SearchPackError(f"{label} ordinal exceeds directory")
+        data = self._read(name, offset, _TERM_STRUCT.size, stats, label=label)
+        if name == "termDirectory":
+            stats.term_directory_reads += 1
+        else:
+            stats.ranked_term_directory_reads += 1
         value = _TERM_STRUCT.unpack(data)
         if len(self._term_cache) >= MAX_TERM_CACHE_ENTRIES:
             self._term_cache.pop(next(iter(self._term_cache)))
-        self._term_cache[ordinal] = value
+        self._term_cache[(name, ordinal)] = value
         return value
+
+    def _term(self, ordinal: int, stats: SearchPackStats) -> tuple[int, int, int, int]:
+        return self._term_from("termDirectory", ordinal, stats, label="term directory")
+
+    def _rank_term(self, ordinal: int, stats: SearchPackStats) -> tuple[int, int, int, int]:
+        return self._term_from("rankTermDirectory", ordinal, stats, label="rank term directory")
 
     def lookup_features(self, feature_keys: Iterable[str], *, candidate_bound: int | None = SEARCHPACK_CANDIDATE_HORIZON, stats: SearchPackStats | None = None) -> SearchPackLookup:
         stats = stats or SearchPackStats()
@@ -524,6 +688,12 @@ class SearchPackRegion:
         doc_ids: set[int] = set()
         saturated: list[str] = []
         matched: list[str] = []
+        terms: list[tuple[str, int, int, int]] = []
+
+        # Phase 1 is metadata-only.  A single term whose declared document
+        # frequency exceeds the semantic horizon is already a proof that no
+        # deterministic bounded product choice is possible.  Do not fetch a
+        # posting range merely to discover that fact.
         for key in keys:
             stats.feature_lookups += 1
             ordinal = self._lookup_ordinal(key, self.lexicon_blocks, "lexicon", stats, label="lexicon")
@@ -536,7 +706,14 @@ class SearchPackRegion:
             if df > candidate_bound:
                 saturated.append(key)
                 stats.saturated_features += 1
-                continue
+            else:
+                terms.append((key, int(first_chunk), int(chunk_count), int(df)))
+        if saturated:
+            return SearchPackLookup((), True, tuple(sorted(set(saturated))), tuple(matched))
+
+        # Phase 2 reads postings only after every matched term has passed the
+        # metadata horizon guard.
+        for key, first_chunk, chunk_count, df in terms:
             chunk = first_chunk
             seen_chunks: set[int] = set()
             collected = 0
@@ -638,6 +815,142 @@ class SearchPackRegion:
         stats.records_returned += len(result)
         return result
 
+    def _rank_postings(self, key: str, *, stats: SearchPackStats) -> tuple[tuple[int, tuple[int, ...]], ...]:
+        """Read one fielded ranking posting list without touching docstore."""
+
+        ordinal = self._lookup_ordinal(key, self.rank_lexicon_blocks, "rankLexicon", stats, label="rank lexicon")
+        if ordinal is None:
+            return ()
+        first_chunk, chunk_count, df, _flags = self._rank_term(int(ordinal), stats)
+        if df <= 0 or chunk_count <= 0 or df > 0xFFFFFFFF or first_chunk > _U32_MAX:
+            raise SearchPackError("rank term directory entry is invalid")
+        values: list[tuple[int, tuple[int, ...]]] = []
+        chunk = first_chunk
+        seen_chunks: set[int] = set()
+        while chunk != _U32_MAX:
+            if chunk in seen_chunks or len(seen_chunks) >= (chunk_count + 1):
+                raise SearchPackError("rank posting chunk chain is invalid")
+            seen_chunks.add(chunk)
+            chunk_offset = chunk * _CHUNK_STRUCT.size
+            directory = self.files["rankChunkDirectory"]
+            if chunk_offset + _CHUNK_STRUCT.size > int(directory["bytes"]):
+                raise SearchPackError("rank posting chunk ordinal exceeds directory")
+            descriptor_data = self._read("rankChunkDirectory", chunk_offset, _CHUNK_STRUCT.size, stats, label="rank chunk directory")
+            next_chunk, posting_offset, posting_length, count, chunk_df = _CHUNK_STRUCT.unpack(descriptor_data)
+            if count == 0 or chunk_df != df or posting_length == 0:
+                raise SearchPackError("rank posting chunk metadata is invalid")
+            posting = self._read("rankPostings", posting_offset, posting_length, stats, label="rank posting")
+            stats.posting_reads += 1
+            stats.posting_bytes += len(posting)
+            stats.ranked_posting_reads += 1
+            stats.ranked_posting_bytes += len(posting)
+            decoded = _decode_rank_postings(posting, count)
+            if len(decoded) != count:
+                raise SearchPackError("rank posting count mismatch")
+            values.extend(decoded)
+            if len(values) > df:
+                raise SearchPackError("rank posting chain exceeds declared df")
+            chunk = next_chunk
+        if len(values) != df:
+            raise SearchPackError("rank posting chain does not match declared df")
+        return tuple(values)
+
+    def _rank_query(self, query: str, *, product_limit: int, candidate_bound: int, stats: SearchPackStats) -> tuple[tuple[int, int, tuple[str, ...]], ...]:
+        """Score fielded postings with the authoritative lexical semantics.
+
+        The ranking index carries name-token positions, alias/brand presence,
+        and precomputed context-exclusion postings.  Consequently this method
+        can score every plausible document ID while materializing no product
+        records; only the final top-k IDs are recovered from the docstore.
+        """
+
+        try:
+            from tools.argentina_sepa_search import CONTEXT_EXCLUSIONS, _variants, normalize_spanish
+        except ModuleNotFoundError:  # pragma: no cover - direct tool invocation
+            from argentina_sepa_search import CONTEXT_EXCLUSIONS, _variants, normalize_spanish
+        try:
+            normalized = normalize_spanish(query)
+        except Exception as exc:  # noqa: BLE001 - normalize provider errors
+            raise SearchPackError("rank query is invalid") from exc
+        query_tokens = tuple(normalized.split())
+        if not query_tokens:
+            return ()
+
+        loaded: dict[str, tuple[tuple[int, tuple[int, ...]], ...]] = {}
+
+        def postings(field: str, token: str) -> tuple[tuple[int, tuple[int, ...]], ...]:
+            key = f"{field}:{token}"
+            current = loaded.get(key)
+            if current is None:
+                current = self._rank_postings(key, stats=stats)
+                loaded[key] = current
+            return current
+
+        name_positions: dict[int, dict[str, frozenset[int]]] = {}
+        alias_docs_by_variant: dict[str, set[int]] = {}
+        for token in query_tokens:
+            for variant in _variants(token):
+                name_values = postings("name", variant)
+                for doc_id, positions in name_values:
+                    if not positions:
+                        raise SearchPackError("rank name posting lacks positions")
+                    name_positions.setdefault(doc_id, {})[variant] = frozenset(positions)
+                for doc_id, _positions in postings("alias", variant):
+                    alias_docs_by_variant.setdefault(variant, set()).add(doc_id)
+        candidate_count = len(name_positions)
+        stats.ranked_candidates += candidate_count
+        if candidate_count > candidate_bound:
+            raise SearchPackError(f"SearchPack ranked candidate bound exceeded ({candidate_bound})")
+
+        brand_docs_by_token: dict[str, set[int]] = {}
+        context_docs_by_token: dict[str, set[int]] = {}
+        for token in query_tokens:
+            for doc_id, _positions in postings("brand", token):
+                brand_docs_by_token.setdefault(token, set()).add(doc_id)
+            if token in CONTEXT_EXCLUSIONS:
+                for doc_id, _positions in postings("context", token):
+                    context_docs_by_token.setdefault(token, set()).add(doc_id)
+
+        ranked: list[tuple[int, int, tuple[str, ...]]] = []
+        for doc_id, token_positions in name_positions.items():
+            matched: list[str] = []
+            all_query_present = True
+            name_matches = 0
+            for token in query_tokens:
+                variants = _variants(token)
+                name_present = any(variant in token_positions for variant in variants)
+                alias_present = any(doc_id in alias_docs_by_variant.get(variant, ()) for variant in variants)
+                if name_present:
+                    name_matches += 1
+                if name_present or alias_present:
+                    matched.append(token)
+                else:
+                    all_query_present = False
+            if not matched or name_matches == 0:
+                continue
+            if any(doc_id in values for values in context_docs_by_token.values()):
+                continue
+            score = name_matches * 100
+            if all_query_present:
+                score += 80
+            phrase = tuple(_variants(token)[0] for token in query_tokens)
+            phrase_match = False
+            first_positions = token_positions.get(phrase[0], frozenset()) if phrase else frozenset()
+            for start in first_positions:
+                if all((start + offset) in token_positions.get(token, frozenset()) for offset, token in enumerate(phrase)):
+                    phrase_match = True
+                    break
+            if phrase_match:
+                score += 60
+            if len(query_tokens) == 1 and any(0 in token_positions.get(variant, frozenset()) for variant in _variants(query_tokens[0])):
+                score += 20
+            if any(doc_id in brand_docs_by_token.get(token, ()) for token in query_tokens):
+                score += 5
+            ranked.append((score, doc_id, tuple(sorted(set(matched)))))
+
+        ranked.sort(key=lambda item: (-item[0], item[1]))
+        return tuple(ranked[:product_limit])
+
     def lookup_product_key(self, product_key: str, *, stats: SearchPackStats | None = None) -> Mapping[str, Any] | None:
         stats = stats or SearchPackStats()
         if not isinstance(product_key, str) or not product_key:
@@ -651,32 +964,53 @@ class SearchPackRegion:
     def search_many(self, queries: Sequence[str], *, product_limit: int = 5, candidate_bound: int = SEARCHPACK_MAX_DOCS, stats: SearchPackStats | None = None) -> tuple[tuple[Mapping[str, Any], ...], ...]:
         if not isinstance(product_limit, int) or not 1 <= product_limit <= 5:
             raise SearchPackError("product limit is invalid")
+        if not isinstance(candidate_bound, int) or not 1 <= candidate_bound <= SEARCHPACK_MAX_DOCS:
+            raise SearchPackError("SearchPack ranked candidate bound is invalid")
         stats = stats or SearchPackStats()
-        scorer = CatalogIndex(())
         requested = tuple(dict.fromkeys(queries))
-        intents = tuple(parse_intent(query, data=scorer.data) for query in requested)
-        lookups = [self.lookup_features(scorer.intent_feature_keys(intent), candidate_bound=candidate_bound, stats=stats) for intent in intents]
-        if any(item.saturated for item in lookups):
-            raise SearchPackError("SearchPack candidate horizon is saturated")
-        all_ids = tuple(sorted({doc_id for item in lookups for doc_id in item.doc_ids}))
-        records = self.get_records(all_ids, stats=stats, max_records=candidate_bound) if all_ids else {}
-        from tools.argentina_sepa_search import search_products
-
+        hits_by_query: dict[str, tuple[tuple[int, int, tuple[str, ...]], ...]] = {}
+        all_ids: set[int] = set()
+        for query in requested:
+            stats.ranked_queries += 1
+            hits = self._rank_query(query, product_limit=product_limit, candidate_bound=candidate_bound, stats=stats)
+            hits_by_query[query] = hits
+            all_ids.update(item[1] for item in hits)
+        max_records = max(1, product_limit * len(requested))
+        records = self.get_records(tuple(sorted(all_ids)), stats=stats, max_records=max_records) if all_ids else {}
+        stats.ranked_records_materialized += len(records)
         values: list[tuple[Mapping[str, Any], ...]] = []
-        for lookup in lookups:
-            scoped = (records[doc_id] for doc_id in lookup.doc_ids if doc_id in records)
-            values.append(tuple(item.as_dict() for item in search_products(scoped, requested[len(values)], limit=product_limit, max_candidates=candidate_bound)))
+        for query in queries:
+            query_values: list[Mapping[str, Any]] = []
+            for score, doc_id, matched in hits_by_query[query]:
+                raw = records.get(doc_id)
+                if not isinstance(raw, Mapping):
+                    raise SearchPackError("ranked docstore record is missing")
+                key = raw.get("productEvidenceKey")
+                name = raw.get("name")
+                if not isinstance(key, str) or not key or not isinstance(name, str) or not name:
+                    raise SearchPackError("ranked docstore identity is invalid")
+                query_values.append({
+                    "productEvidenceKey": key,
+                    "name": name,
+                    "brand": raw.get("brand") if isinstance(raw.get("brand"), str) else None,
+                    "gtin": raw.get("gtin") if isinstance(raw.get("gtin"), str) else None,
+                    "score": score,
+                    "matchedTokens": list(matched),
+                })
+            values.append(tuple(query_values))
         return tuple(values)
 
 
 class SearchPackManager:
     """Validate and expose the per-region packs pinned by a release manifest."""
 
-    def __init__(self, artifacts: Any, manifest: Mapping[str, Any], *, cache_bytes: int = 8 * 1024 * 1024):
+    DEFAULT_GLOBAL_CACHE_BYTES = 64 * 1024 * 1024
+
+    def __init__(self, artifacts: Any, manifest: Mapping[str, Any], *, cache_bytes: int = DEFAULT_GLOBAL_CACHE_BYTES):
         self.artifacts = artifacts
         descriptor = manifest.get("searchPackArtifact") if isinstance(manifest, Mapping) else None
         if not isinstance(descriptor, Mapping):
-            raise SearchPackError("release does not declare SearchPack v1")
+            raise SearchPackError("release does not declare SearchPack v2")
         if descriptor.get("schemaVersion") != SEARCHPACK_SCHEMA_VERSION or descriptor.get("formatVersion") != SEARCHPACK_FORMAT_VERSION or descriptor.get("policyVersion") != LEXICAL_FEATURE_POLICY_VERSION:
             raise SearchPackError("release SearchPack declaration is incompatible")
         regions = descriptor.get("regions")
@@ -693,6 +1027,7 @@ class SearchPackManager:
         self.descriptor = dict(descriptor)
         self.region_ids = tuple(sorted(regions))
         self.cache_bytes = cache_bytes
+        self._cache = _ByteLRU(cache_bytes)
         self._regions: dict[str, SearchPackRegion] = {}
         self._metadata_cache: dict[str, Mapping[str, Any]] = {}
 
@@ -733,7 +1068,7 @@ class SearchPackManager:
         expected_source_hash = source_hashes.get(region_id) if isinstance(source_hashes, Mapping) else None
         if isinstance(expected_source_hash, str) and metadata.get("sourceSearchIndexSha256") != expected_source_hash:
             raise SearchPackError("SearchPack metadata source index is invalid")
-        region = SearchPackRegion(self.artifacts, metadata, cache_bytes=self.cache_bytes)
+        region = SearchPackRegion(self.artifacts, metadata, cache=self._cache)
         self._metadata_cache[region_id] = metadata
         self._regions[region_id] = region
         return region
@@ -743,6 +1078,12 @@ class SearchPackManager:
         if any(region_id not in self.region_ids for region_id in selected):
             raise SearchPackError("SearchPack region selection is invalid")
         return tuple(self.region(region_id) for region_id in selected)
+
+    @property
+    def cache_usage_bytes(self) -> int:
+        """Total bytes held by every instantiated region in this manager."""
+
+        return self._cache.bytes
 
 
 def record_for_doc(doc_id: int, record: Mapping[str, Any]) -> dict[str, Any]:

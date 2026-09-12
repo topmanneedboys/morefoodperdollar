@@ -54,6 +54,27 @@ class BackendService:
                 self._readers[key] = reader
             return reader
 
+    @staticmethod
+    def _trusted_keys_from_input(input_result: Mapping[str, Any]) -> dict[str, str] | None:
+        """Project only interpreter-qualified identities into the private edge."""
+
+        if input_result.get("safeRequestReady") is not True:
+            return None
+        lines = input_result.get("lines")
+        if not isinstance(lines, list):
+            return None
+        result: dict[str, str] = {}
+        for line in lines:
+            if not isinstance(line, Mapping):
+                return None
+            line_id = line.get("lineId")
+            recognized = line.get("recognizedProduct")
+            key = recognized.get("productEvidenceKey") if isinstance(recognized, Mapping) else None
+            if not isinstance(line_id, str) or not isinstance(key, str) or not key:
+                return None
+            result[line_id] = key
+        return result or None
+
     def _execute(self, payload: Mapping[str, Any], *, correlation_id: str | None = None):
         request_id = correlation_id or str(uuid.uuid4())
         handle = self.release_manager.pin(require_fresh=True)
@@ -185,7 +206,11 @@ class BackendService:
             response["diagnostics"]["customerResponseBytes"] = self._response_size(response)
             return response
         request = {"latitude": payload.get("latitude"), "longitude": payload.get("longitude"), "radiusKm": payload.get("radiusKm"), "items": input_result["structuredItems"]}
-        decision, metrics = reader.query(request)
+        trusted_keys = self._trusted_keys_from_input(input_result)
+        if trusted_keys:
+            decision, metrics = reader.query(request, trusted_product_keys=trusted_keys)
+        else:
+            decision, metrics = reader.query(request)
         return self._shop_response(request_id, handle, decision, metrics, started=started, input_result=input_result)
 
     def search(self, payload: Mapping[str, Any], *, correlation_id: str | None = None) -> dict[str, Any]:
@@ -224,7 +249,11 @@ class BackendService:
             response["diagnostics"]["customerResponseBytes"] = self._response_size(response)
             return response
         request = {"latitude": payload.get("latitude"), "longitude": payload.get("longitude"), "radiusKm": payload.get("radiusKm"), "items": [{"lineId": "search-1", "query": recognized["name"], "amount": "1", "unit": "count"}]}
-        raw_decision, metrics = reader.query(request)
+        trusted_key = recognized.get("productEvidenceKey") if isinstance(recognized.get("productEvidenceKey"), str) else None
+        if trusted_key:
+            raw_decision, metrics = reader.query(request, trusted_product_keys={"search-1": trusted_key})
+        else:
+            raw_decision, metrics = reader.query(request)
         candidates = []
         for item in raw_decision.get("providerItems", []):
             if not isinstance(item, dict):
