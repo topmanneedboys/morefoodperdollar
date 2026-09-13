@@ -26,6 +26,11 @@ class ReleaseArtifactError(RuntimeError):
 
 
 DEFAULT_FULL_OBJECT_CACHE_BYTES = 512 * 1024 * 1024
+# Whole-object verification is useful for the small control/index members,
+# but turning a single range read into a multi-megabyte download is counter-
+# productive for the regional offer packs.  Keep the total cache bound above
+# while using the safe verified range path for larger immutable objects.
+DEFAULT_FULL_OBJECT_CACHE_OBJECT_BYTES = 1 * 1024 * 1024
 
 
 @dataclass
@@ -256,6 +261,7 @@ class ManifestReleaseArtifactStore:
         cache_root: Path | str | None = None,
         full_object_cache: _FullObjectCache | None = None,
         full_object_cache_bytes: int | None = None,
+        full_object_cache_object_bytes: int | None = None,
     ):
         self.store = store
         self.release_id = release_id
@@ -266,6 +272,11 @@ class ManifestReleaseArtifactStore:
         self._verified_objects: set[str] = set()
         self._metadata_verified: dict[str, ObjectMetadata] = {}
         self._lock = threading.RLock()
+        if full_object_cache_object_bytes is not None and (
+            not isinstance(full_object_cache_object_bytes, int) or full_object_cache_object_bytes <= 0
+        ):
+            raise ValueError("full-object cache per-object bound must be positive")
+        self._full_object_cache_object_bytes = full_object_cache_object_bytes
         if full_object_cache is not None:
             self._full_object_cache: _FullObjectCache | None = full_object_cache
         else:
@@ -282,6 +293,8 @@ class ManifestReleaseArtifactStore:
                     if getattr(store, "supports_pointer_generation_cache", False)
                     else 0
                 )
+            if self._full_object_cache_object_bytes is None and getattr(store, "supports_pointer_generation_cache", False):
+                self._full_object_cache_object_bytes = DEFAULT_FULL_OBJECT_CACHE_OBJECT_BYTES
             self._full_object_cache = _FullObjectCache(full_object_cache_bytes) if full_object_cache_bytes > 0 else None
         objects = manifest.get("objects")
         if not isinstance(objects, list):
@@ -336,7 +349,9 @@ class ManifestReleaseArtifactStore:
     def cache_stats(self) -> dict[str, int]:
         """Return bounded verified full-object cache counters for diagnostics."""
 
-        return self._full_object_cache.stats() if self._full_object_cache is not None else {"maxBytes": 0, "bytes": 0, "entries": 0, "inflight": 0, "hits": 0, "misses": 0, "downloads": 0, "evictions": 0}
+        stats = self._full_object_cache.stats() if self._full_object_cache is not None else {"maxBytes": 0, "bytes": 0, "entries": 0, "inflight": 0, "hits": 0, "misses": 0, "downloads": 0, "evictions": 0}
+        stats["maxObjectBytes"] = self._full_object_cache_object_bytes or 0
+        return stats
 
     @staticmethod
     def _object_key(digest: str) -> str:
@@ -389,7 +404,9 @@ class ManifestReleaseArtifactStore:
     def _load_verified_full(self, path: str, digest: str, size: int) -> tuple[bytes | None, bool]:
         """Load and verify one whole immutable object when it fits the cache."""
 
-        if self._full_object_cache is None:
+        if self._full_object_cache is None or (
+            self._full_object_cache_object_bytes is not None and size > self._full_object_cache_object_bytes
+        ):
             return None, False
 
         def load() -> bytes:
@@ -547,4 +564,4 @@ class ManifestReleaseArtifactStore:
         return target
 
 
-__all__ = ["DEFAULT_FULL_OBJECT_CACHE_BYTES", "FilesystemReleaseArtifactStore", "ManifestReleaseArtifactStore", "ReleaseArtifactError", "ReleaseArtifactStore"]
+__all__ = ["DEFAULT_FULL_OBJECT_CACHE_BYTES", "DEFAULT_FULL_OBJECT_CACHE_OBJECT_BYTES", "FilesystemReleaseArtifactStore", "ManifestReleaseArtifactStore", "ReleaseArtifactError", "ReleaseArtifactStore"]
