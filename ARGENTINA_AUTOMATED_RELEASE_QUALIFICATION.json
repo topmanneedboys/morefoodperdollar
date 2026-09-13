@@ -5,7 +5,7 @@
   "updated": "2026-09-13",
   "branch": "candidate/argentina-automated-release-v1",
   "startingHead": "6ed1cab8300d1ed0ed12fef240194fa7edbb5901",
-  "implementationHead": "a43b484f83e5979183b9db28f895213537950f30",
+  "implementationHead": "8ca30d52a959865c39236dc0a67d2ba2fb92cd7b",
   "source": {
     "provider": "ARGENTINA_SEPA_PRECIOS_CLAROS",
     "dataset": "Precios Claros - Base SEPA",
@@ -35,6 +35,9 @@
     "distributedLease": "implemented",
     "stageVerifyCanary": "implemented",
     "transactionalActivationWithCasRollback": "implemented",
+    "operatorPromotionAdapter": "implemented",
+    "workerPromotionModes": ["SHADOW", "STAGE_CANARY", "AUTO_ACTIVATE"],
+    "windowsLocalObjectStoreContainment": "implemented",
     "cloudBuildWorkflowSchedulerTemplates": "template-only",
     "activePointerWritesInAutomatedWorker": 0,
     "productionActivation": "NOT_EXECUTED"
@@ -53,8 +56,8 @@
     "providerEconomicsAffectOrganicRanking": false
   },
   "verification": {
-    "toolsTests": {"tests": 273, "failures": 0, "errors": 0, "status": "PASS"},
-    "backendTests": {"tests": 80, "failures": 0, "errors": 0, "status": "PASS"},
+    "toolsTests": {"tests": 285, "failures": 0, "errors": 0, "status": "PASS"},
+    "backendTests": {"tests": 81, "failures": 0, "errors": 0, "status": "PASS"},
     "android": {
       "sharedCoreTests": 405,
       "appTests": 1619,
@@ -76,7 +79,7 @@
         "Test Argentina production backend",
         "Build ValuePilot v101 release"
       ],
-      "finalRunIds": {"merchant": 34788117384, "backend": 34788117307, "androidRelease": 34788117421},
+      "finalRunIds": {"merchant": 34790103706, "backend": 34790103703, "androidRelease": 34790103697},
       "productionPromotion": "NOT_EXECUTED"
     }
   },

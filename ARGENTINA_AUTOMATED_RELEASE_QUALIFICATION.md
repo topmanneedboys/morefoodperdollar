@@ -12,10 +12,10 @@ official source has not been independently acquired or proven.
 
 - Starting head: `6ed1cab8300d1ed0ed12fef240194fa7edbb5901`
 - Candidate branch: `candidate/argentina-automated-release-v1`
-- Implementation head: `a43b484f83e5979183b9db28f895213537950f30`
+- Implementation head: `8ca30d52a959865c39236dc0a67d2ba2fb92cd7b`
 - Scope: offline acquisition, archive, worker, immutable base-release and
-  routing/SearchPack candidate derivation, control-plane, staging and canary
-  tooling only.
+  routing/SearchPack candidate derivation, control-plane, staging, canary, and
+  explicit operator-controlled promotion adapter tooling only.
 
 ## Source truth
 
@@ -59,6 +59,11 @@ scrape, WAF bypass, or substituted ZIP is allowed.
 - Multi-store staging and verification for `us`, `sa`, and `r2`, a fixed
   `control/canary.json` path, and a transactional active-pointer coordinator
   with compare-and-swap, smoke gates, compensation, and rollback review.
+  Promotion is explicit and fail-closed: `SHADOW` is write-free,
+  `STAGE_CANARY` writes only canary state, and `AUTO_ACTIVATE` requires all
+  configured stores plus bounded HTTPS smoke checks. A Windows local
+  object-store containment race is fixed and covered by concurrent-write
+  regression tests.
 - Cloud Build, Workflows, and paused Scheduler templates with bounded four-hour
   worker/build timeouts. They are templates only; no cloud resource, secret,
   IAM grant, permanent schedule, or deployment was applied.
@@ -88,8 +93,8 @@ The final local checks for this candidate are green. The source-wide Tuesday
 verification is intentionally recorded as `NOT_REMEASURED` rather than
 repeated.
 
-- Full Python tools suite: **273 tests, 0 failures/errors, PASS**.
-- Backend suite: **80 tests, 0 failures/errors, PASS**.
+- Full Python tools suite: **285 tests, 0 failures/errors, PASS**.
+- Backend suite: **81 tests, 0 failures/errors, PASS**.
 - Android: **405 shared-core tests** and **1,619 app tests**, all passing;
   `lintDebug` and `assembleDebug` succeeded (58 actionable tasks).
 - APK privacy: **PASS**; only CAMERA and the app's non-exported receiver
@@ -99,9 +104,9 @@ repeated.
 - Browser: **30 tests, 0 failures/skips**, local model check and Firefox
   `web-ext lint` **PASS**.
 - Changed Python files: `py_compile` **PASS**; `git diff --check` **PASS**.
-- Exact-head GitHub Actions: merchant qualification **34788117384**, Argentina
-  backend **34788117307**, and Android/browser/release **34788117421** all passed
-  for implementation head `a43b484f83e5979183b9db28f895213537950f30`. No
+- Exact-head GitHub Actions: merchant qualification **34790103706**, Argentina
+  backend **34790103703**, and Android/browser/release **34790103697** all passed
+  for implementation head `8ca30d52a959865c39236dc0a67d2ba2fb92cd7b`. No
   production promotion occurs from this candidate.
 
 ## Explicit blocker and next safe action

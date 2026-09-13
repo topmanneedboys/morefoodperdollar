@@ -6,8 +6,33 @@ Updated: 2026-09-13
 
 Candidate branch: `candidate/argentina-automated-release-v1`.
 
+### Latest bounded implementation slice
+
+The latest code checkpoint is
+`8ca30d52a959865c39236dc0a67d2ba2fb92cd7b` (`Wire automated Argentina
+promotion modes`), built from the required starting head
+`6ed1cab8300d1ed0ed12fef240194fa7edbb5901`. It adds a bounded operator-side
+promotion adapter and worker integration with explicit `SHADOW`,
+`STAGE_CANARY`, and `AUTO_ACTIVATE` modes, HTTPS-only smoke gates, exact
+three-store configuration, and fail-closed summary handling. A Windows local
+object-store path-containment race was fixed and covered by concurrent-write
+tests. No production promotion or Android networking was added.
+
+The local `Downloads\\sepa_martes.zip` remains the already verified Tuesday
+2026-09-08 baseline, not a newer source. The requested expensive source-wide
+verification was not repeated; the immutable evidence was reused.
+
+Local verification for this code slice is green: 285 tools tests, 81 backend
+tests, 405 shared-core tests, 1,619 app tests, Android lint/debug build/privacy
+and one-signer checks, and 30 browser tests with Firefox lint. Exact-head
+GitHub Actions for the code checkpoint passed: merchant **34790103706**,
+backend **34790103703**, and Android/release **34790103697**. The pipeline
+status remains **AUTOMATED RELEASE PIPELINE: BLOCKED** because official
+production resource/download probes are HTTP 403 and no genuinely newer
+official source is proven. Raw data and active pointers remain unchanged.
+
 The implementation head is
-`a43b484f83e5979183b9db28f895213537950f30`, built from the required starting
+`8ca30d52a959865c39236dc0a67d2ba2fb92cd7b`, built from the required starting
 head `6ed1cab8300d1ed0ed12fef240194fa7edbb5901`. This bounded milestone adds
 offline/backend acquisition and source-contract gates, content-addressed raw
 archive reuse, bounded shadow-worker execution, immutable/CAS discovery state,
@@ -27,12 +52,9 @@ production resource/download probes returned HTTP 403, the closeout status is
 official source. Raw data remains uncommitted, active pointers are unchanged,
 and no cloud/IAM/scheduler deployment was applied.
 
-Local verification is green: 273 tools tests, 80 backend tests, 405 shared-core
-tests, 1,619 app tests, Android lint/debug build/privacy/one-signer, and 30
-browser tests plus Firefox lint. The final exact-head workflow IDs for this
-implementation are merchant **34788117384**, backend **34788117307**, and
-Android/release **34788117421**; all passed for the exact head. No production
-promotion is authorized here.
+The earlier local and CI counts below are retained as historical evidence for
+the superseded implementation head. No production promotion is authorized
+here.
 
 Branch: `work/valuepilot-android-milestone`
 

@@ -6,16 +6,16 @@ Updated: 2026-09-13
 
 The bounded offline/backend control plane is implemented on
 `candidate/argentina-automated-release-v1` at code SHA
-`a43b484f83e5979183b9db28f895213537950f30` from starting head
+`8ca30d52a959865c39236dc0a67d2ba2fb92cd7b` from starting head
 `6ed1cab8300d1ed0ed12fef240194fa7edbb5901`. The candidate adds strict official
 SEPA metadata/source validation, bounded streaming acquisition, private
 content-addressed archive reuse, discovery CAS state, a distributed lease,
 redacted execution summaries, complete immutable base-release publication,
 existing national-routing/SearchPack derivation with exact 24-region
-verification, multi-store stage/verify/canary preparation, and transactional
-compare-and-swap activation with compensation. Acquisition and the worker
-never write `control/active.json`; activation remains a separate explicit
-operator step.
+verification, and an operator-controlled promotion adapter with shadow,
+stage-canary, and transactional compare-and-swap activation modes. Acquisition
+and the worker never write `control/active.json` in shadow mode; activation
+remains a separate explicit operator step.
 
 The user's `Downloads\\sepa_martes.zip` is present and matches the already
 verified 2026-09-08 Tuesday baseline (325,118,492 bytes,
@@ -30,8 +30,9 @@ was applied, no production pointer changed, and Android remains offline.
 
 See `ARGENTINA_AUTOMATED_RELEASE_QUALIFICATION.md` and `.json` for the
 closeout record. Exact-head workflow IDs for this implementation are recorded
-there and in the final handoff. No production promotion is authorized by this
-candidate checkpoint.
+there and in the final handoff. The Windows local object-store containment
+regression is covered by deterministic concurrent-write tests. No production
+promotion is authorized by this candidate checkpoint.
 
 ## M11 SearchPack v2 candidate (unpromoted)
 
