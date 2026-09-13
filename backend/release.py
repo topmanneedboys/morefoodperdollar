@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import threading
 from dataclasses import dataclass, replace
@@ -18,6 +19,13 @@ class ReleaseError(RuntimeError):
     pass
 
 
+RELEASE_CHANNEL_ENV = "VALUEPILOT_RELEASE_CHANNEL"
+RELEASE_CHANNEL_POINTERS = {
+    "active": "control/active.json",
+    "canary": "control/canary.json",
+}
+
+
 @dataclass(frozen=True)
 class ReleaseHandle:
     release_id: str
@@ -31,7 +39,7 @@ class ReleaseHandle:
 class ReleaseManager:
     """Pins one active release for the full lifetime of a request."""
 
-    def __init__(self, root: Path | str | None = None, *, object_store: ObjectStore | None = None, clock: Clock | None = None, max_age_days: int = 7, profile: str | None = None):
+    def __init__(self, root: Path | str | None = None, *, object_store: ObjectStore | None = None, clock: Clock | None = None, max_age_days: int = 7, profile: str | None = None, channel: str | None = None):
         if (root is None) == (object_store is None):
             raise ValueError("exactly one release root or object store is required")
         self.root = Path(root).resolve() if root is not None else None
@@ -39,6 +47,11 @@ class ReleaseManager:
         self.clock = clock or SystemClock()
         self.max_age_days = max_age_days
         self.profile = profile
+        selected_channel = channel if channel is not None else os.environ.get(RELEASE_CHANNEL_ENV, "active")
+        if not isinstance(selected_channel, str) or selected_channel not in RELEASE_CHANNEL_POINTERS:
+            raise ReleaseError("VALUEPILOT_RELEASE_CHANNEL must be active or canary")
+        self.channel = selected_channel
+        self.pointer_key = RELEASE_CHANNEL_POINTERS[selected_channel]
         self._lock = threading.RLock()
         self._cached: ReleaseHandle | None = None
         self._cached_pointer_etag: str | None = None
@@ -67,8 +80,10 @@ class ReleaseManager:
         """
         if self.root is None:
             raise ReleaseError("local release root is unavailable")
-        pointer = self.root / "control" / "active.json"
+        pointer = self.root / self.pointer_key.replace("/", os.sep)
         if not pointer.exists():
+            if self.channel != "active":
+                raise ReleaseError("canary release pointer is unavailable")
             return self.root
         try:
             value = json.loads(pointer.read_text(encoding="utf-8"))
@@ -141,14 +156,15 @@ class ReleaseManager:
         status = freshness(release_date, clock=self.clock, max_age_days=self.max_age_days)
         return ReleaseHandle(release_id, release_date, root, {"logical": logical, "physical": physical, "name": profile_name}, status, artifacts)
 
-    def _store_handle(self, store: ObjectStore, *, root: Path | None) -> ReleaseHandle:
+    def _store_handle(self, store: ObjectStore, *, root: Path | None, pointer_key: str | None = None) -> ReleaseHandle:
+        selected_pointer = pointer_key or self.pointer_key
         try:
-            pointer = self._json_bytes(store.get("control/active.json"), "active release pointer", limit=64 * 1024)
+            pointer = self._json_bytes(store.get(selected_pointer), f"{self.channel} release pointer", limit=64 * 1024)
         except ObjectStoreError as exc:
-            raise ReleaseError("active release pointer is unavailable") from exc
+            raise ReleaseError(f"{self.channel} release pointer is unavailable") from exc
         return self._store_handle_from_pointer(store, pointer, root=root)
 
-    def _pin_store(self, store: ObjectStore, *, root: Path | None) -> ReleaseHandle:
+    def _pin_store(self, store: ObjectStore, *, root: Path | None, pointer_key: str | None = None) -> ReleaseHandle:
         """Probe one pointer generation, loading a release only when needed.
 
         The pointer HEAD is the cheap bounded freshness check on every pin.
@@ -160,13 +176,14 @@ class ReleaseManager:
         # the historic local/S3-shaped qualification access model so existing
         # structural diagnostics remain comparable; R2 is not the new runtime
         # path.
+        selected_pointer = pointer_key or self.pointer_key
         if not getattr(store, "supports_pointer_generation_cache", False):
-            return self._store_handle(store, root=root)
+            return self._store_handle(store, root=root, pointer_key=selected_pointer)
 
         try:
-            observed = store.head("control/active.json")
+            observed = store.head(selected_pointer)
         except ObjectStoreError as exc:
-            raise ReleaseError("active release pointer is unavailable") from exc
+            raise ReleaseError(f"{self.channel} release pointer is unavailable") from exc
         token = observed.etag or observed.sha256
         if not token:
             raise ReleaseError("active release pointer generation is unavailable")
@@ -177,11 +194,11 @@ class ReleaseManager:
 
         for _ in range(2):
             try:
-                before = store.head("control/active.json")
-                raw = store.get("control/active.json")
-                after = store.head("control/active.json")
+                before = store.head(selected_pointer)
+                raw = store.get(selected_pointer)
+                after = store.head(selected_pointer)
             except ObjectStoreError as exc:
-                raise ReleaseError("active release pointer is unavailable") from exc
+                raise ReleaseError(f"{self.channel} release pointer is unavailable") from exc
             before_token = before.etag or before.sha256
             after_token = after.etag or after.sha256
             if not before_token or before_token != after_token:
@@ -194,25 +211,25 @@ class ReleaseManager:
 
     def _handle(self) -> ReleaseHandle:
         if self.object_store is not None:
-            return self._pin_store(self.object_store, root=None)
+            return self._pin_store(self.object_store, root=None, pointer_key=self.pointer_key)
         if self.root is None:
             raise ReleaseError("release root is unavailable")
         # A local M9 content-addressed workspace follows the same pointer and
         # manifest contract as the remote store.  Keep the older direct
         # bootstrap root below for local qualification compatibility.
-        active_manifest = self.root / "control" / "active.json"
+        active_manifest = self.root / self.pointer_key.replace("/", os.sep)
         if active_manifest.is_file():
             try:
                 local_store = LocalFilesystemObjectStore(self.root)
-                active = self._json_bytes(local_store.get("control/active.json"), "active release pointer", limit=64 * 1024)
+                active = self._json_bytes(local_store.get(self.pointer_key), f"{self.channel} release pointer", limit=64 * 1024)
                 release_id = self._release_id(active.get("releaseId"))
                 if local_store.exists(f"releases/{release_id}/manifest.json"):
-                    return self._pin_store(local_store, root=None)
+                    return self._pin_store(local_store, root=None, pointer_key=self.pointer_key)
             except (ObjectStoreError, ReleaseError):
                 # Do not fall through when a pointer is present but malformed;
                 # the only compatible legacy case is a complete bootstrap
                 # generation, which _resolved_root validates explicitly.
-                if not (self.root / "releases").is_dir():
+                if self.channel != "active" or not (self.root / "releases").is_dir():
                     raise
         resolved_root = self._resolved_root()
         data = self._bootstrap(resolved_root)
@@ -235,7 +252,7 @@ class ReleaseManager:
     def status(self) -> dict[str, Any]:
         try:
             handle = self._handle()
-            return {"service": "ready", "releaseId": handle.release_id, "releaseDate": handle.release_date, "freshness": handle.freshness_status, "profile": dict(handle.profile)}
+            return {"service": "ready", "releaseId": handle.release_id, "releaseDate": handle.release_date, "freshness": handle.freshness_status, "profile": dict(handle.profile), "channel": self.channel, "pointerKey": self.pointer_key}
         except ReleaseError as exc:
             return {"service": "not_ready", "error": str(exc)}
 
@@ -271,4 +288,4 @@ class SafePublisher:
             return {"releaseId": release_id, "uploadedObjects": uploaded, "activePointer": active_key}
 
 
-__all__ = ["ReleaseError", "ReleaseHandle", "ReleaseManager", "SafePublisher"]
+__all__ = ["RELEASE_CHANNEL_ENV", "RELEASE_CHANNEL_POINTERS", "ReleaseError", "ReleaseHandle", "ReleaseManager", "SafePublisher"]

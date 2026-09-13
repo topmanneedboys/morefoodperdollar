@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "valuepilot-argentina-scheduler-template-v1",
+  "deploymentState": "DISABLED_UNTIL_CONTROLLED_ACTIVATION",
+  "schedule": "30 13,15,17 * * *",
+  "timeZone": "America/Argentina/Buenos_Aires",
+  "description": "Bounded metadata checks for the official Argentina SEPA release workflow; no build starts when metadata is unchanged.",
+  "httpTarget": {
+    "uri": "https://workflowexecutions.googleapis.com/v1/projects/REPLACE_PROJECT/locations/REPLACE_LOCATION/workflows/valuepilot-argentina-release/executions",
+    "httpMethod": "POST",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "oauthToken": {
+      "serviceAccountEmail": "REPLACE_WITH_SCHEDULER_INVOKER_SERVICE_ACCOUNT",
+      "scope": "https://www.googleapis.com/auth/cloud-platform"
+    },
+    "bodyTemplate": {
+      "argument": "{\"observedAt\":\"REPLACE_WITH_SCHEDULER_TIMESTAMP\",\"controlBucket\":\"REPLACE_WITH_CONTROL_BUCKET\",\"archiveBucket\":\"REPLACE_WITH_ARCHIVE_BUCKET\",\"sourceBucket\":\"REPLACE_WITH_IMMUTABLE_BUILD_SOURCE_BUCKET\",\"sourceObject\":\"REPLACE_WITH_IMMUTABLE_BUILD_SOURCE_OBJECT\",\"sourceGeneration\":\"REPLACE_WITH_SOURCE_GENERATION\",\"workerImage\":\"REPLACE_WITH_DIGEST_PINNED_WORKER_IMAGE\",\"builderSha\":\"REPLACE_WITH_BUILDER_SHA\",\"builderServiceAccount\":\"REPLACE_WITH_SCOPED_BUILDER_SERVICE_ACCOUNT\"}"
+    }
+  },
+  "activationPolicy": "manual_review_then_transactional_coordinator",
+  "notificationPolicy": "operator_selects_existing_approved_channel"
+}

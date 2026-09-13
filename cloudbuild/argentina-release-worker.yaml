@@ -1,0 +1,55 @@
+# ValuePilot official Argentina release worker.
+#
+# This file is an operator-supplied Cloud Build configuration.  The builder
+# image substitution must point at an approved, digest-pinned image that
+# contains the repository's pinned Python dependencies; no image or secret is
+# fetched from this file.  The worker performs acquisition, qualification,
+# deterministic build, and private archiving.  Publication/canary/activation
+# remains a separate explicitly authorized step.
+# The worker's shadow result must report activePointerWrites: 0.
+steps:
+  - id: acquire-qualify-and-build
+    name: '${_RELEASE_WORKER_IMAGE}'
+    entrypoint: python
+    args:
+      - '-m'
+      - tools.argentina_release_worker
+      - '--observed-at=${_OBSERVED_AT}'
+      - '--execution-id=${_EXECUTION_ID}'
+      - '--archive-bucket=${_ARCHIVE_BUCKET}'
+      - '--archive-project=${PROJECT_ID}'
+      - '--workspace=/workspace/valuepilot-release-workspace'
+      - '--output=/workspace/valuepilot-release-output'
+      - '--current-release-date=${_CURRENT_RELEASE_DATE}'
+      - '--current-source-sha256=${_CURRENT_SOURCE_SHA256}'
+    env:
+      - 'PYTHONUNBUFFERED=1'
+      - 'VALUEPILOT_SOURCE_ARCHIVE_KEY=${_SOURCE_ARCHIVE_KEY}'
+      - 'VALUEPILOT_SOURCE_ARCHIVE_SHA256=${_SOURCE_ARCHIVE_SHA256}'
+      - 'VALUEPILOT_UPSTREAM_CHANGED=${_UPSTREAM_CHANGED}'
+      - 'BUILDER_IMAGE=${_RELEASE_WORKER_IMAGE}'
+      - 'BUILDER_SHA=${_BUILDER_SHA}'
+    # The local qualified source-wide run was about 160 minutes; retain
+    # bounded four-hour headroom without changing the machine shape.
+    timeout: 14400s
+
+timeout: 14400s
+options:
+  # Cloud Build exposes e2-standard-2 as E2_STANDARD_2.  This is the smallest
+  # qualified shape for the filesystem-heavy release worker.
+  machineType: E2_STANDARD_2
+  diskSizeGb: '200'
+  logging: CLOUD_LOGGING_ONLY
+  requestedVerifyOption: VERIFIED
+substitutions:
+  _RELEASE_WORKER_IMAGE: 'REPLACE_WITH_DIGEST_PINNED_VALUEPILOT_WORKER_IMAGE'
+  _BUILDER_SHA: 'REPLACE_WITH_BUILDER_SOURCE_SHA'
+  _ARCHIVE_BUCKET: 'REPLACE_WITH_OPERATOR_ONLY_ARCHIVE_BUCKET'
+  _OBSERVED_AT: 'REQUIRED_RFC3339_TIMESTAMP'
+  _EXECUTION_ID: 'cloud-build-execution'
+  _CURRENT_RELEASE_DATE: ''
+  _CURRENT_SOURCE_SHA256: ''
+  _SOURCE_ARCHIVE_KEY: ''
+  _SOURCE_ARCHIVE_SHA256: ''
+  _UPSTREAM_CHANGED: 'false'
+serviceAccount: 'REPLACE_WITH_SCOPED_RELEASE_BUILDER_SERVICE_ACCOUNT'

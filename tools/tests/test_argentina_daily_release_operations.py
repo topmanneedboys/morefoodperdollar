@@ -11,6 +11,7 @@ from tools.argentina_daily_release import (
     ConcurrentPublisherError,
     DailyReleaseError,
     DailyReleaseOrchestrator,
+    SourceIdentity,
     SingleWriterLock,
     inspect_source,
 )
@@ -158,6 +159,25 @@ class ArgentinaDailyReleaseOperationsTests(unittest.TestCase):
         quarantine = (normalized / "quarantine.jsonl").read_text(encoding="utf-8")
         self.assertIn("INVALID_REQUIRED_PRICE", quarantine)
         self.assertIn("UNKNOWN_STORE_REFERENCE", quarantine)
+
+    def test_same_day_official_revision_requires_upstream_change_evidence(self) -> None:
+        source = SourceIdentity(
+            path=str(self.source),
+            filename="sepa_martes.zip",
+            source_kind="OFFICIAL_SEPA_ZIP",
+            bytes=1,
+            sha256="b" * 64,
+            release_date="2026-09-08",
+            release_evidence="test",
+            official=True,
+            nested_packages=(),
+        )
+        previous = {"source": {"releaseDate": "2026-09-08", "sha256": "a" * 64}}
+        strict = DailyReleaseOrchestrator(source_path=self.source, workspace=self.root / "strict", output=self.root / "strict-out")
+        with self.assertRaises(DailyReleaseError):
+            strict._source_gate(source, previous)
+        permitted = DailyReleaseOrchestrator(source_path=self.source, workspace=self.root / "permitted", output=self.root / "permitted-out", upstream_changed=True)
+        self.assertTrue(permitted._source_gate(source, previous))
 
 
 if __name__ == "__main__":

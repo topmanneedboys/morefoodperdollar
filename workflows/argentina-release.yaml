@@ -1,0 +1,216 @@
+# ValuePilot official Argentina release workflow.
+#
+# Cloud Scheduler invokes this workflow with the operator-owned bucket and
+# immutable Cloud Build source object supplied as runtime arguments.  The
+# national catalog is queried first; a stable metadata checksum returns
+# NO_CHANGE without starting Cloud Build.  The heavy worker owns exact source
+# validation, the distributed lease, private archive, and the existing
+# deterministic release builder.  This workflow never receives or stores raw
+# ZIP bytes and never changes a production pointer.
+main:
+  params: [args]
+  steps:
+    - init:
+        assign:
+          - project_id: ${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
+          - control_bucket: ${args.controlBucket}
+          - archive_bucket: ${args.archiveBucket}
+          - source_bucket: ${args.sourceBucket}
+          - source_object: ${args.sourceObject}
+          - source_generation: ${args.sourceGeneration}
+          - metadata_url: "https://datos.gob.ar/api/3/action/package_show?id=precios-claros-base-sepa"
+          - state_object: "control/workflow-discovery-state.json"
+          - execution_id: ${default(args.executionId, sys.get_env("GOOGLE_CLOUD_WORKFLOW_EXECUTION_ID"))}
+          - current_release_date: ${default(args.currentReleaseDate, "")}
+          - current_source_sha256: ${default(args.currentSourceSha256, "")}
+          - upstream_changed: ${default(args.upstreamChanged, false)}
+
+    - discover_catalog:
+        try:
+          call: http.get
+          args:
+            url: ${metadata_url}
+            timeout: 20
+            headers:
+              Accept: "application/json"
+              User-Agent: "ValuePilot-release-workflow/1"
+          result: catalog_response
+        retry: ${http.default_retry}
+        except:
+          as: discovery_error
+          steps:
+            - discovery_failed:
+                return:
+                  status: DISCOVERY_FAILED
+                  error: ${discovery_error}
+                  cloudBuildStarted: false
+
+    - validate_catalog:
+        switch:
+          - condition: ${catalog_response.code != 200}
+            return:
+              status: DISCOVERY_FAILED
+              httpStatus: ${catalog_response.code}
+              cloudBuildStarted: false
+          - condition: ${catalog_response.body.success != true}
+            return:
+              status: DISCOVERY_FAILED
+              reason: CATALOG_RESPONSE_NOT_SUCCESS
+              cloudBuildStarted: false
+          - condition: ${catalog_response.body.result.id != "0f495d54-4a5d-5fa3-a323-f6e97ce434cf"}
+            return:
+              status: SOURCE_CONTRACT_CHANGED
+              reason: DATASET_ID_CHANGED
+              cloudBuildStarted: false
+          - condition: ${catalog_response.body.result.name != "precios-claros-base-sepa"}
+            return:
+              status: SOURCE_CONTRACT_CHANGED
+              reason: DATASET_NAME_CHANGED
+              cloudBuildStarted: false
+          - condition: ${catalog_response.body.result.title != "Precios Claros - Base SEPA"}
+            return:
+              status: SOURCE_CONTRACT_CHANGED
+              reason: DATASET_TITLE_CHANGED
+              cloudBuildStarted: false
+          - condition: ${catalog_response.body.result.license_title != "Creative Commons Attribution 4.0"}
+            return:
+              status: SOURCE_CONTRACT_CHANGED
+              reason: DATASET_LICENSE_CHANGED
+              cloudBuildStarted: false
+
+    - checksum_catalog:
+        call: hash.compute_checksum
+        args:
+          data: ${json.encode(catalog_response.body)}
+          algorithm: SHA256
+        result: metadata_checksum
+
+    - read_previous_state:
+        try:
+          steps:
+            - get_state:
+                call: googleapis.storage.v1.objects.get
+                args:
+                  bucket: ${control_bucket}
+                  object: ${text.url_encode(state_object)}
+                  alt: media
+                result: previous_state_response
+            - decode_state:
+                assign:
+                  - previous_state: ${json.decode(text.decode(previous_state_response.body))}
+                  - previous_state_generation: ${previous_state_response.generation}
+        except:
+          as: state_error
+          steps:
+            - no_previous_state:
+                assign:
+                  - previous_state: {}
+                  - previous_state_generation: null
+
+    - no_change:
+        switch:
+          - condition: ${previous_state.metadataChecksum == metadata_checksum}
+            return:
+              status: NO_CHANGE
+              metadataChecksum: ${metadata_checksum}
+              cloudBuildStarted: false
+              activePointerWrites: 0
+
+    - start_release_build:
+        try:
+          call: googleapis.cloudbuild.v1.projects.builds.create
+          args:
+            projectId: ${project_id}
+            parent: ${"projects/" + project_id + "/locations/global"}
+            body:
+              source:
+                storageSource:
+                  bucket: ${source_bucket}
+                  object: ${source_object}
+                  generation: ${source_generation}
+              steps:
+                - name: ${args.workerImage}
+                  entrypoint: python
+                  args:
+                    - "-m"
+                    - tools.argentina_release_worker
+                    - "--observed-at=${args.observedAt}"
+                    - "--execution-id=${execution_id}"
+                    - "--archive-bucket=${archive_bucket}"
+                    - "--archive-project=${project_id}"
+                    - "--workspace=/workspace/valuepilot-release-workspace"
+                    - "--output=/workspace/valuepilot-release-output"
+                    - "--current-release-date=${current_release_date}"
+                    - "--current-source-sha256=${current_source_sha256}"
+                  env:
+                    - "PYTHONUNBUFFERED=1"
+                    - "BUILDER_IMAGE=${args.workerImage}"
+                    - "BUILDER_SHA=${args.builderSha}"
+                    - "VALUEPILOT_UPSTREAM_CHANGED=${string(upstream_changed)}"
+                    - "VALUEPILOT_SOURCE_ARCHIVE_KEY=${default(args.sourceArchiveKey, \"\")}"
+                    - "VALUEPILOT_SOURCE_ARCHIVE_SHA256=${default(args.sourceArchiveSha256, \"\")}"
+              options:
+                machineType: E2_STANDARD_2
+                diskSizeGb: "200"
+                logging: CLOUD_LOGGING_ONLY
+                requestedVerifyOption: VERIFIED
+              timeout: "14400s"
+              serviceAccount: ${args.builderServiceAccount}
+          # The connector waits for the long-running build operation and
+          # returns its operation metadata, including the final Build record.
+          connector_params:
+            timeout: 14400
+            polling_policy:
+              initial_delay: 5
+              multiplier: 1.5
+              max_delay: 60
+          result: release_build
+        except:
+          as: build_error
+          steps:
+            - build_start_failed:
+                return:
+                  status: BUILD_FAILED
+                  error: ${build_error}
+                  cloudBuildStarted: false
+                  activePointerWrites: 0
+
+    - validate_release_build:
+        switch:
+          - condition: ${release_build.metadata.build.status != "SUCCESS"}
+            return:
+              status: BUILD_FAILED
+              buildId: ${release_build.metadata.build.id}
+              buildStatus: ${release_build.metadata.build.status}
+              cloudBuildStarted: true
+              activePointerWrites: 0
+
+    - write_discovery_state:
+        try:
+          call: googleapis.storage.v1.objects.insert
+          args:
+            bucket: ${control_bucket}
+            name: ${text.url_encode(state_object)}
+            uploadType: media
+            ifGenerationMatch: ${default(previous_state_generation, "0")}
+            body: '${json.encode({"schemaVersion":"valuepilot-argentina-workflow-discovery-v1","metadataChecksum":metadata_checksum,"observedAt":args.observedAt,"datasetId":catalog_response.body.result.id,"buildId":release_build.metadata.build.id})}'
+          result: state_write
+        except:
+          as: state_write_error
+          steps:
+            - state_write_failed:
+                return:
+                  status: STATE_WRITE_FAILED
+                  buildId: ${release_build.id}
+                  error: ${state_write_error}
+                  cloudBuildStarted: true
+                  activePointerWrites: 0
+
+    - return_build:
+        return:
+          status: CANDIDATE_BUILT
+          buildId: ${release_build.metadata.build.id}
+          metadataChecksum: ${metadata_checksum}
+          cloudBuildStarted: true
+          activePointerWrites: 0
+          activation: NOT_EXECUTED

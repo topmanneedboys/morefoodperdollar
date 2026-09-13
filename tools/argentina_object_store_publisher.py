@@ -33,6 +33,7 @@ class ObjectStorePublicationError(RuntimeError):
 _HEX64 = re.compile(r"[0-9a-f]{64}\Z")
 _RELEASE_ID = re.compile(r"[A-Za-z0-9._-]{1,128}\Z")
 _ACTIVE_KEY = "control/active.json"
+_CANARY_KEY = "control/canary.json"
 _ACTIVE_SCHEMA_VERSION = "valuepilot-active-release-v1"
 _ROUTING_SCHEMA_VERSION = "valuepilot-national-routing-v1"
 _SEARCHPACK_SCHEMA_VERSION = "valuepilot-argentina-searchpack-v2"
@@ -403,7 +404,10 @@ class ObjectStoreReleasePublisher:
         except OSError as exc:
             raise ObjectStorePublicationError("control directory is unavailable") from exc
         for path in paths:
-            if not path.is_file() or path.name in {"active.json", "publisher.lock"}:
+            # Pointer files are mutable control-plane state.  They must never
+            # be copied into the immutable staging set; ACTIVE and CANARY are
+            # selected only through their dedicated CAS activation paths.
+            if not path.is_file() or path.name in {"active.json", "canary.json", "publisher.lock"}:
                 continue
             key = f"control/{path.name}"
             try:
@@ -945,52 +949,62 @@ class ObjectStoreReleasePublisher:
         }
 
     @staticmethod
-    def _read_active(store: ObjectStore) -> tuple[ObjectMetadata | None, dict[str, Any] | None]:
+    def _read_pointer(store: ObjectStore, key: str, *, label: str) -> tuple[ObjectMetadata | None, dict[str, Any] | None]:
+        if key not in {_ACTIVE_KEY, _CANARY_KEY}:
+            raise ObjectStorePublicationError("release pointer key is not trusted")
         try:
-            present = store.exists(_ACTIVE_KEY)
+            present = store.exists(key)
         except ObjectStoreError as exc:
-            raise ObjectStorePublicationError("active pointer is unavailable") from exc
+            raise ObjectStorePublicationError(f"{label} pointer is unavailable") from exc
         if not present:
             return None, None
         try:
-            metadata = store.head(_ACTIVE_KEY)
-            raw = store.get(_ACTIVE_KEY)
+            metadata = store.head(key)
+            raw = store.get(key)
             value = json.loads(raw)
         except (ObjectStoreError, UnicodeDecodeError, ValueError) as exc:
-            raise ObjectStorePublicationError("active pointer is invalid") from exc
+            raise ObjectStorePublicationError(f"{label} pointer is invalid") from exc
         if not isinstance(value, Mapping) or not _valid_release_id(value.get("releaseId")):
-            raise ObjectStorePublicationError("active pointer is invalid")
+            raise ObjectStorePublicationError(f"{label} pointer is invalid")
         return metadata, dict(value)
 
-    def activate(self, release_id: str, *, expected_current_release_id: str | None = None) -> dict[str, Any]:
-        """Verify and atomically select an already staged release."""
+    @staticmethod
+    def _read_active(store: ObjectStore) -> tuple[ObjectMetadata | None, dict[str, Any] | None]:
+        return ObjectStoreReleasePublisher._read_pointer(store, _ACTIVE_KEY, label="active")
 
+    def _activate_pointer(
+        self,
+        release_id: str,
+        *,
+        key: str,
+        label: str,
+        expected_current_release_id: str | None = None,
+    ) -> dict[str, Any]:
         if self.store is None:
             raise ObjectStorePublicationError("object store is required for activate")
+        if key not in {_ACTIVE_KEY, _CANARY_KEY}:
+            raise ObjectStorePublicationError("release pointer key is not trusted")
         if not _valid_release_id(release_id):
             raise ObjectStorePublicationError("release ID is invalid")
         if expected_current_release_id is not None and not _valid_release_id(expected_current_release_id):
-            raise ObjectStorePublicationError("expected active release ID is invalid")
-
-        # This is intentionally the first operation: activation can never
-        # move ACTIVE toward an incomplete or partially materialized release.
+            raise ObjectStorePublicationError(f"expected current {label} release ID is invalid")
         verification = self.verify(release_id)
-        current_metadata, current_pointer = self._read_active(self.store)
+        current_metadata, current_pointer = self._read_pointer(self.store, key, label=label)
         current_release_id = current_pointer.get("releaseId") if current_pointer else None
         if expected_current_release_id is not None and current_release_id != expected_current_release_id:
-            raise ObjectStorePublicationError("expected active release does not match current active release")
+            raise ObjectStorePublicationError(f"expected current {label} release does not match pointer")
         if current_release_id == release_id:
             return {
                 **verification,
-                "operation": "ACTIVATE",
-                "status": "ALREADY_ACTIVE",
+                "operation": "CANARY_ACTIVATE" if label == "canary" else "ACTIVATE",
+                "status": "ALREADY_ACTIVE" if label == "active" else "ALREADY_CANARY",
                 "previousReleaseId": current_release_id,
                 "activeReleaseId": release_id,
+                "pointerKey": key,
                 "activePointerChanged": False,
                 "activeWriteCount": 0,
                 "remoteWriteCount": 0,
             }
-
         pointer = {
             "lastKnownGoodReleaseId": release_id,
             "previousReleaseId": current_release_id,
@@ -999,24 +1013,39 @@ class ObjectStoreReleasePublisher:
         }
         pointer_raw = _canonical(pointer)
         try:
-            self.store.compare_and_swap(_ACTIVE_KEY, pointer_raw, expected_etag=current_metadata.etag if current_metadata else None)
-            _verify_remote(self.store, _ACTIVE_KEY, expected_sha256=_sha256_bytes(pointer_raw), expected_bytes=len(pointer_raw))
+            self.store.compare_and_swap(key, pointer_raw, expected_etag=current_metadata.etag if current_metadata else None)
+            _verify_remote(self.store, key, expected_sha256=_sha256_bytes(pointer_raw), expected_bytes=len(pointer_raw))
         except (ObjectStoreError, ObjectStorePublicationError) as exc:
-            # No fallback PUT exists.  A failed CAS leaves the prior pointer
-            # untouched in stores implementing the ObjectStore contract.
-            raise ObjectStorePublicationError("active pointer publication failed") from exc
+            raise ObjectStorePublicationError(f"{label} pointer publication failed") from exc
         return {
             **verification,
-            "operation": "ACTIVATE",
-            "status": "ACTIVE",
+            "operation": "CANARY_ACTIVATE" if label == "canary" else "ACTIVATE",
+            "status": "ACTIVE" if label == "active" else "CANARY",
             "previousReleaseId": current_release_id,
             "activeReleaseId": release_id,
-            "activePointerChanged": True,
-            "activeWriteCount": 1,
+            "pointerKey": key,
+            "activePointerChanged": label == "active",
+            "canaryPointerChanged": label == "canary",
+            "activeWriteCount": 1 if label == "active" else 0,
             "remoteWriteCount": 1,
             "remoteDeleteCount": 0,
             "deleteCount": 0,
         }
+
+    def activate(self, release_id: str, *, expected_current_release_id: str | None = None) -> dict[str, Any]:
+        """Verify and atomically select an already staged release."""
+        return self._activate_pointer(release_id, key=_ACTIVE_KEY, label="active", expected_current_release_id=expected_current_release_id)
+
+    def activate_canary(self, release_id: str, *, expected_current_release_id: str | None = None) -> dict[str, Any]:
+        """Select a staged release on the fixed canary pointer only.
+
+        This never writes ``control/active.json`` and therefore cannot change
+        normal production traffic.  The backend selects this pointer only when
+        ``VALUEPILOT_RELEASE_CHANNEL=canary`` is explicitly configured on a
+        zero-traffic canary revision.
+        """
+
+        return self._activate_pointer(release_id, key=_CANARY_KEY, label="canary", expected_current_release_id=expected_current_release_id)
 
     def publish(
         self,
@@ -1121,6 +1150,10 @@ def _main(argv: Sequence[str] | None = None) -> int:
     activate_parser.add_argument("release_id")
     activate_parser.add_argument("--expected-current-release-id")
 
+    canary_parser = subparsers.add_parser("activate-canary", help="verify then CAS one staged release into the fixed canary pointer")
+    canary_parser.add_argument("release_id")
+    canary_parser.add_argument("--expected-current-release-id")
+
     mirror_parser = subparsers.add_parser(
         "mirror-regional",
         help="stage and activate the same immutable release set in regional GCS mirrors",
@@ -1145,6 +1178,10 @@ def _main(argv: Sequence[str] | None = None) -> int:
             result = ObjectStoreReleasePublisher(_store_from_environment(write=False)).verify(args.release_id)
         elif args.operation == "activate":
             result = ObjectStoreReleasePublisher(_store_from_environment(write=True)).activate(
+                args.release_id, expected_current_release_id=args.expected_current_release_id
+            )
+        elif args.operation == "activate-canary":
+            result = ObjectStoreReleasePublisher(_store_from_environment(write=True)).activate_canary(
                 args.release_id, expected_current_release_id=args.expected_current_release_id
             )
         else:

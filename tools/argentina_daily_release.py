@@ -786,7 +786,7 @@ class DailyReleaseResult:
 class DailyReleaseOrchestrator:
     """Run one deterministic release candidate and optionally publish it."""
 
-    def __init__(self, *, source_path: Path, workspace: Path, output: Path, fixture: bool = False, previous_release: Path | None = None, activate: bool = False, dry_run: bool = True, allow_fixture_activation: bool = False, fail_after_stage: str | None = None, fail_publication_after: int | None = None, operator_acquired_at: str | None = None):
+    def __init__(self, *, source_path: Path, workspace: Path, output: Path, fixture: bool = False, previous_release: Path | None = None, activate: bool = False, dry_run: bool = True, allow_fixture_activation: bool = False, fail_after_stage: str | None = None, fail_publication_after: int | None = None, operator_acquired_at: str | None = None, upstream_changed: bool = False, acquisition_evidence: Mapping[str, Any] | None = None):
         self.source_path = Path(source_path).resolve()
         self.workspace = Path(workspace).resolve()
         self.output = Path(output).resolve()
@@ -798,6 +798,8 @@ class DailyReleaseOrchestrator:
         self.fail_after_stage = fail_after_stage
         self.fail_publication_after = fail_publication_after
         self.operator_acquired_at = operator_acquired_at
+        self.upstream_changed = bool(upstream_changed)
+        self.acquisition_evidence = dict(acquisition_evidence or {})
         self.stage_root = self.output / "stages"
         self.artifact_root = self.output / "artifacts"
         self.timings: dict[str, float] = {}
@@ -816,17 +818,33 @@ class DailyReleaseOrchestrator:
 
     def _source_gate(self, source: SourceIdentity, previous: Mapping[str, Any] | None) -> bool:
         old_date = str((previous or {}).get("source", {}).get("releaseDate") or BASELINE_RELEASE_DATE)
-        if source.official and (source.release_date <= old_date or source.sha256 == BASELINE_SOURCE_SHA256):
-            raise DailyReleaseError(f"source {source.release_date} is not newer than qualified reference {old_date}", code="SECOND_RELEASE_REQUIRED")
-        return source.official and source.release_date > old_date
+        old_sha = str((previous or {}).get("source", {}).get("sha256") or BASELINE_SOURCE_SHA256)
+        if not source.official:
+            return False
+        if source.release_date < old_date:
+            raise DailyReleaseError(f"source {source.release_date} is older than qualified reference {old_date}", code="SECOND_RELEASE_REQUIRED")
+        if source.release_date == old_date:
+            if source.sha256 == old_sha:
+                raise DailyReleaseError(f"source {source.release_date} has the same hash as the qualified reference", code="SECOND_RELEASE_REQUIRED")
+            if not self.upstream_changed:
+                raise DailyReleaseError("same-date source revision lacks upstream change evidence", code="SECOND_RELEASE_REQUIRED")
+            return True
+        if source.sha256 == BASELINE_SOURCE_SHA256:
+            raise DailyReleaseError("source hash is the qualified baseline", code="SECOND_RELEASE_REQUIRED")
+        return True
 
     def _identity(self, source: SourceIdentity, upstream: Mapping[str, str] | None = None) -> dict[str, Any]:
-        return _stage_identity(source, upstream=upstream, config={"fixture": self.fixture, "releaseDate": source.release_date, "mobileLogicalPartitions": MOBILE_LOGICAL_PARTITIONS, "backendLogicalPartitions": BACKEND_LOGICAL_PARTITIONS, "physicalPacks": PHYSICAL_PACKS, "staleAfterDays": STALE_AFTER_DAYS})
+        config = {"fixture": self.fixture, "releaseDate": source.release_date, "mobileLogicalPartitions": MOBILE_LOGICAL_PARTITIONS, "backendLogicalPartitions": BACKEND_LOGICAL_PARTITIONS, "physicalPacks": PHYSICAL_PACKS, "staleAfterDays": STALE_AFTER_DAYS, "upstreamChanged": self.upstream_changed}
+        if self.acquisition_evidence:
+            config["acquisitionEvidenceSha256"] = sha256_bytes(canonical_bytes(self.acquisition_evidence))
+        return _stage_identity(source, upstream=upstream, config=config)
 
     def _write_source_stage(self, root: Path, source: SourceIdentity) -> dict[str, Any]:
         _write_json(root / "source.json", source.as_dict())
+        if self.acquisition_evidence:
+            _write_json(root / "acquisition.json", self.acquisition_evidence)
         _write_json(root / "schema-drift.json", detect_schema_drift(source.schema))
-        return {"source": source.as_dict(), "schemaDrift": detect_schema_drift(source.schema)}
+        return {"source": source.as_dict(), "schemaDrift": detect_schema_drift(source.schema), "acquisitionEvidence": dict(self.acquisition_evidence) if self.acquisition_evidence else None}
 
     def _validate_structure(self, root: Path, source: SourceIdentity) -> dict[str, Any]:
         drift = detect_schema_drift(source.schema)
@@ -1191,6 +1209,8 @@ class DailyReleaseOrchestrator:
         old_backend_counts = self._previous_backend_counts(previous)
         new_release = source.as_dict()
         new_release["nestedPackages"] = self._nested_package_provenance(qualification_report, source)
+        previous_date = str((previous or {}).get("source", {}).get("releaseDate") or BASELINE_RELEASE_DATE)
+        same_day_revision = bool(source.official and self.upstream_changed and source.release_date == previous_date)
         def backend_delta(name: str) -> dict[str, Any]:
             return self._count_delta(old_backend_counts.get(name), new_backend_counts.get(name))
         def qualification_delta(name: str) -> dict[str, Any]:
@@ -1212,6 +1232,8 @@ class DailyReleaseOrchestrator:
             "oldRelease": {"date": (previous or {}).get("source", {}).get("releaseDate", BASELINE_RELEASE_DATE), "sha256": (previous or {}).get("source", {}).get("sha256", BASELINE_SOURCE_SHA256), "backendCounts": old_backend_counts, "qualification": old_qualification_metrics},
             "newRelease": new_release,
             "secondOfficialReleaseProven": second_official,
+            "sameDayRevisionProven": same_day_revision,
+            "acquisitionEvidence": dict(self.acquisition_evidence) if self.acquisition_evidence else None,
             "sourceStructure": {"nestedPackages": len(source.nested_packages), "zeroBytePackages": sum(1 for item in source.nested_packages if int(item.get("bytes", 0)) == 0), "sourceKind": source.source_kind, "outerZipCrcVerified": source.official, "nestedPackageHashesSource": "M1 qualification report" if qualification_report_sha else "NOT_AVAILABLE"},
             "schemaDrift": stage_meta.get("STRUCTURALLY_VALIDATED", {}).get("schemaDrift", {"classification": "NOT_MEASURED"}),
             "qualification": {"status": stage_meta.get("QUALIFIED", {}).get("status", qualification_report.get("status", "UNKNOWN")), "counts": qualification_metrics, "sourceReportSha256": qualification_report_sha, "rawProviderDataPublished": False},
@@ -1240,7 +1262,7 @@ class DailyReleaseOrchestrator:
             "m6Regression": "PENDING_BOUNDED_CROSS_RELEASE_RUN" if second_official else "PRESERVED_NOT_REMEASURED",
             "m7Regression": "PENDING_BOUNDED_CROSS_RELEASE_RUN" if second_official else "PRESERVED_NOT_REMEASURED",
             "m8Regression": "INDEX_REBUILT_FIXTURE" if self.fixture else "REBUILT_FROM_QUALIFIED_SEARCH_INDEX",
-            "automatedOfficialAcquisitionProven": False,
+            "automatedOfficialAcquisitionProven": bool(source.official and self.acquisition_evidence.get("automated") is True),
             "liveCloudDeploymentVerified": False,
             "androidNetworkingAuthorized": False,
             "productionAndroidUiAuthorized": False,
@@ -1317,11 +1339,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--publish", action="store_true")
     parser.add_argument("--audit-at", default="operator-unspecified")
     parser.add_argument("--operator-acquired-at")
+    parser.add_argument("--upstream-changed", action="store_true", help="allow a same-date revision only with recorded official upstream-change evidence")
+    parser.add_argument("--acquisition-evidence", type=Path, help="compact JSON acquisition evidence produced by the release worker")
     parser.add_argument("--fail-after-stage", choices=STAGES)
     parser.add_argument("--fail-publication-after", type=int, help="test-only publication failure injection; never use for normal activation")
     args = parser.parse_args(argv)
     try:
-        result = DailyReleaseOrchestrator(source_path=args.input, workspace=args.workspace, output=args.output, fixture=args.fixture, previous_release=args.previous_release, activate=args.activate, dry_run=not args.publish and not args.activate, operator_acquired_at=args.operator_acquired_at, fail_after_stage=args.fail_after_stage, fail_publication_after=args.fail_publication_after).run(audit_at=args.audit_at)
+        acquisition_evidence: Mapping[str, Any] | None = None
+        if args.acquisition_evidence is not None:
+            value = _read_json(args.acquisition_evidence)
+            if not isinstance(value, Mapping):
+                raise DailyReleaseError("acquisition evidence is not an object", code="INVALID_SOURCE")
+            acquisition_evidence = dict(value)
+        result = DailyReleaseOrchestrator(source_path=args.input, workspace=args.workspace, output=args.output, fixture=args.fixture, previous_release=args.previous_release, activate=args.activate, dry_run=not args.publish and not args.activate, operator_acquired_at=args.operator_acquired_at, fail_after_stage=args.fail_after_stage, fail_publication_after=args.fail_publication_after, upstream_changed=args.upstream_changed, acquisition_evidence=acquisition_evidence).run(audit_at=args.audit_at)
         _write_atomic(args.output / "release-report.md", markdown_report(result.report).encode("utf-8"))
         summary = {"source": result.source.as_dict(), "releaseId": result.release_id, "lastStage": result.last_stage, "secondOfficialReleaseProven": result.report["secondOfficialReleaseProven"], "qualification": result.report.get("qualification", {}).get("status"), "offers": result.report.get("backendProfile", {}).get("details", {}).get("counts", {}).get("offers"), "stores": result.report.get("backendProfile", {}).get("details", {}).get("counts", {}).get("stores"), "products": result.report.get("backendProfile", {}).get("details", {}).get("counts", {}).get("productEvidenceRecords"), "quarantine": result.report.get("qualification", {}).get("counts", {}).get("quarantineRows"), "backendBytes": result.report.get("contentAddressed", {}).get("dedup", {}).get("logicalBytes"), "reusedBytes": result.report.get("contentAddressed", {}).get("dedup", {}).get("reusedBytes"), "newBytes": result.report.get("contentAddressed", {}).get("dedup", {}).get("newBytes"), "dedupPercent": result.report.get("contentAddressed", {}).get("dedup", {}).get("deduplicationPercent"), "activeBefore": result.report.get("activation", {}).get("activeBefore"), "activeAfter": result.report.get("activation", {}).get("activeAfter"), "status": result.report["status"], "reusedStages": list(result.reused_stages), "report": str(args.output / "release-report.json")}
         print(json.dumps(summary, ensure_ascii=False, sort_keys=True))

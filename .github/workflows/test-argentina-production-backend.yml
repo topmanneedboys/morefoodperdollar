@@ -16,6 +16,19 @@ on:
       - 'tools/argentina_storage_retention.py'
       - 'tools/manage_argentina_storage_retention.py'
       - 'tools/argentina_object_store_publisher.py'
+      - 'tools/argentina_release_acquisition.py'
+      - 'tools/argentina_release_automation.py'
+      - 'tools/argentina_release_worker.py'
+      - 'tools/tests/test_argentina_release_acquisition.py'
+      - 'tools/tests/test_argentina_release_automation.py'
+      - 'tools/tests/test_argentina_release_worker.py'
+      - 'tools/tests/test_argentina_release_configs.py'
+      - 'ARGENTINA_AUTOMATED_RELEASE_SOURCE_CONTRACT.*'
+      - 'ARGENTINA_AUTOMATED_RELEASE_QUALIFICATION.*'
+      - 'cloudbuild/**'
+      - 'workflows/**'
+      - 'scheduler/**'
+      - 'docs/ARGENTINA_AUTOMATED_RELEASE_OPERATIONS.md'
       - 'tools/tests/test_argentina_object_store_publisher.py'
       - 'tools/tests/test_argentina_storage_retention.py'
       - 'tools/fixtures/argentina_storage_retention/**'
@@ -43,6 +56,19 @@ on:
       - 'tools/argentina_storage_retention.py'
       - 'tools/manage_argentina_storage_retention.py'
       - 'tools/argentina_object_store_publisher.py'
+      - 'tools/argentina_release_acquisition.py'
+      - 'tools/argentina_release_automation.py'
+      - 'tools/argentina_release_worker.py'
+      - 'tools/tests/test_argentina_release_acquisition.py'
+      - 'tools/tests/test_argentina_release_automation.py'
+      - 'tools/tests/test_argentina_release_worker.py'
+      - 'tools/tests/test_argentina_release_configs.py'
+      - 'ARGENTINA_AUTOMATED_RELEASE_SOURCE_CONTRACT.*'
+      - 'ARGENTINA_AUTOMATED_RELEASE_QUALIFICATION.*'
+      - 'cloudbuild/**'
+      - 'workflows/**'
+      - 'scheduler/**'
+      - 'docs/ARGENTINA_AUTOMATED_RELEASE_OPERATIONS.md'
       - 'tools/tests/test_argentina_object_store_publisher.py'
       - 'tools/tests/test_argentina_storage_retention.py'
       - 'tools/fixtures/argentina_storage_retention/**'
@@ -93,7 +119,7 @@ jobs:
 
       - name: Compile backend and bounded diagnostics
         run: |
-          python -m py_compile backend/*.py tools/measure_argentina_production_backend.py tools/consumer_input_intelligence.py tools/argentina_searchpack.py tools/build_argentina_searchpack.py tools/measure_argentina_searchpack.py tools/build_argentina_input_vocabulary.py tools/measure_argentina_consumer_input_intelligence.py tools/argentina_storage_retention.py tools/manage_argentina_storage_retention.py tools/argentina_object_store_publisher.py
+          python -m py_compile backend/*.py tools/measure_argentina_production_backend.py tools/consumer_input_intelligence.py tools/argentina_searchpack.py tools/build_argentina_searchpack.py tools/measure_argentina_searchpack.py tools/build_argentina_input_vocabulary.py tools/measure_argentina_consumer_input_intelligence.py tools/argentina_storage_retention.py tools/manage_argentina_storage_retention.py tools/argentina_object_store_publisher.py tools/argentina_release_acquisition.py tools/argentina_release_automation.py tools/argentina_release_worker.py
           python -m unittest discover -s backend/tests -p 'test_*.py' -v
 
       - name: Run existing offline Python regression
