@@ -14,7 +14,11 @@ unchanged checksum returns `NO_CHANGE` and starts no build. A changed
 checksum starts the worker, which validates the official production host,
 streams the ZIP, archives the exact bytes privately, acquires the distributed
 GCS lease, and delegates all SEPA parsing and artifact construction to the
-existing deterministic tooling. The worker has no activation capability.
+existing deterministic tooling. After the base release is complete, the
+worker derives the existing national-routing artifact and SearchPack v2 into a
+separate immutable candidate workspace. Repeated runs reuse a verified
+candidate; interrupted or mismatched workspaces fail closed. The worker has no
+activation capability.
 The Cloud Build connector waits for the long-running build operation (with a
 four-hour bound and bounded polling) and evaluates the final build record;
 queued/working states are never mistaken for a successful candidate.

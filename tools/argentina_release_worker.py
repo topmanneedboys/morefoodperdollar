@@ -3,8 +3,10 @@
 The worker is designed for Cloud Build (or a local operator shadow run).  It
 does only provider acquisition/control-plane work and then delegates source
 qualification and deterministic artifact generation to
-``DailyReleaseOrchestrator``.  It never writes a production pointer itself;
-staging, canary selection, and activation remain explicit publisher phases.
+``DailyReleaseOrchestrator``.  A verified base candidate is then passed to the
+existing routing and SearchPack builders; no second provider parse is done.
+It never writes a production pointer itself; staging, canary selection, and
+activation remain explicit publisher phases.
 """
 
 from __future__ import annotations
@@ -14,6 +16,7 @@ import datetime as _dt
 import json
 import os
 import re
+import shutil
 import sys
 import tempfile
 import uuid
@@ -21,8 +24,11 @@ from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
 try:
+    from backend.artifacts import ManifestReleaseArtifactStore, ReleaseArtifactError
     from backend.object_store import LocalFilesystemObjectStore, ObjectStore, ObjectStoreError
     from tools.argentina_daily_release import DailyReleaseError, DailyReleaseOrchestrator, inspect_source
+    from tools.argentina_object_store_publisher import ObjectStorePublicationError, ObjectStoreReleasePublisher
+    from tools.argentina_searchpack import SearchPackError, SearchPackManager
     from tools.argentina_release_acquisition import (
         AcquisitionCandidate,
         AcquisitionError,
@@ -37,11 +43,20 @@ try:
         select_latest_candidate,
     )
     from tools.argentina_release_automation import DistributedReleaseLease, LeaseHandle, write_execution_summary
+    from tools.build_argentina_sepa_national_shards import ARGENTINA_REGIONS
+    from tools.build_argentina_national_routing_artifact import NationalRoutingArtifactError, derive_release_workspace
+    from tools.build_argentina_searchpack import SEARCHPACK_RELEASE_SUFFIX, SearchPackBuildError, derive_searchpack_workspace
 except ModuleNotFoundError:  # direct invocation from tools/
+    from backend.artifacts import ManifestReleaseArtifactStore, ReleaseArtifactError
     from backend.object_store import LocalFilesystemObjectStore, ObjectStore, ObjectStoreError
     from argentina_daily_release import DailyReleaseError, DailyReleaseOrchestrator, inspect_source
+    from argentina_object_store_publisher import ObjectStorePublicationError, ObjectStoreReleasePublisher
+    from argentina_searchpack import SearchPackError, SearchPackManager
     from argentina_release_acquisition import AcquisitionCandidate, AcquisitionError, CATALOG_ENDPOINT, DiscoveryResult, PrivateSourceArchive, SourceDecision, canonical_bytes, classify_source, discover_metadata, download_candidate, select_latest_candidate
     from argentina_release_automation import DistributedReleaseLease, LeaseHandle, write_execution_summary
+    from build_argentina_sepa_national_shards import ARGENTINA_REGIONS
+    from build_argentina_national_routing_artifact import NationalRoutingArtifactError, derive_release_workspace
+    from build_argentina_searchpack import SEARCHPACK_RELEASE_SUFFIX, SearchPackBuildError, derive_searchpack_workspace
 
 
 WORKER_SCHEMA_VERSION = "valuepilot-argentina-release-worker-v1"
@@ -179,6 +194,166 @@ def _write_local_json(path: Path, value: Mapping[str, Any]) -> None:
         temporary.unlink(missing_ok=True)
 
 
+def _publication_plan_summary(plan: Mapping[str, Any]) -> dict[str, Any]:
+    """Return only deterministic, JSON-safe fields from a local plan.
+
+    ``ObjectStoreReleasePublisher.plan`` deliberately includes local source
+    ``Path`` objects for its write-capable caller.  Worker state is durable
+    control-plane evidence, so it must never serialize those implementation
+    objects or an unbounded copy of the plan.
+    """
+
+    manifests: list[dict[str, Any]] = []
+    raw_manifests = plan.get("manifests")
+    if isinstance(raw_manifests, Sequence) and not isinstance(raw_manifests, (str, bytes, bytearray)):
+        for value in raw_manifests:
+            if not isinstance(value, Mapping):
+                continue
+            release_id = value.get("releaseId")
+            digest = value.get("sha256")
+            size = value.get("bytes")
+            if isinstance(release_id, str) and isinstance(digest, str) and isinstance(size, int):
+                manifests.append({"releaseId": release_id, "sha256": digest, "bytes": size})
+    raw_release_ids = plan.get("releaseIds")
+    release_ids = list(raw_release_ids) if isinstance(raw_release_ids, Sequence) and not isinstance(raw_release_ids, (str, bytes, bytearray)) else []
+    return {
+        "schemaVersion": "valuepilot-release-publication-plan-summary-v1",
+        "status": plan.get("status"),
+        "releaseIds": release_ids,
+        "activeReleaseId": plan.get("activeReleaseId"),
+        "objectCount": plan.get("objectCount"),
+        "objectBytes": plan.get("objectBytes"),
+        "manifestCount": plan.get("manifestCount"),
+        "manifestBytes": plan.get("manifestBytes"),
+        "manifestChecksumBytes": plan.get("manifestChecksumBytes"),
+        "remoteWriteCount": plan.get("remoteWriteCount"),
+        "activePointerWrites": 0,
+        "manifests": manifests,
+    }
+
+
+def _validate_searchpack_workspace(
+    workspace: Path,
+    *,
+    base_release_id: str,
+    routing_release_id: str,
+    searchpack_release_id: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Verify one complete derived workspace without changing any pointer."""
+
+    if (workspace / "control" / "active.json").exists() or (workspace / "control" / "canary.json").exists():
+        raise WorkerError("derived SearchPack workspace contains a release pointer", code="SEARCHPACK_POINTER_PRESENT")
+    publisher = ObjectStoreReleasePublisher()
+    try:
+        plan = publisher.plan(workspace, release_ids=(searchpack_release_id,), active_release_id=None)
+        manifest_path = workspace / "releases" / searchpack_release_id / "manifest.json"
+        manifest = json.loads(manifest_path.read_bytes())
+    except (ObjectStorePublicationError, OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise WorkerError("derived SearchPack workspace failed immutable verification", code="SEARCHPACK_VERIFY_FAILED") from exc
+    if not isinstance(manifest, Mapping):
+        raise WorkerError("derived SearchPack manifest is invalid", code="SEARCHPACK_VERIFY_FAILED")
+    routing = manifest.get("routingArtifact")
+    searchpack = manifest.get("searchPackArtifact")
+    if not isinstance(routing, Mapping) or routing.get("sourceReleaseId") != base_release_id:
+        raise WorkerError("derived routing source identity is invalid", code="SEARCHPACK_VERIFY_FAILED")
+    if not isinstance(searchpack, Mapping) or searchpack.get("sourceReleaseId") != routing_release_id:
+        raise WorkerError("derived SearchPack source identity is invalid", code="SEARCHPACK_VERIFY_FAILED")
+    expected_regions = tuple(sorted(spec.region_id for spec in ARGENTINA_REGIONS))
+    for artifact_name, artifact in (("routing", routing), ("SearchPack", searchpack)):
+        regions = artifact.get("regions")
+        if not isinstance(regions, list) or tuple(regions) != expected_regions:
+            raise WorkerError(f"derived {artifact_name} region set is invalid", code="SEARCHPACK_VERIFY_FAILED")
+    try:
+        artifacts = ManifestReleaseArtifactStore(LocalFilesystemObjectStore(workspace), manifest, release_id=searchpack_release_id)
+        regions = SearchPackManager(artifacts, manifest).regions()
+    except (SearchPackError, ReleaseArtifactError, OSError, ValueError) as exc:
+        raise WorkerError("derived SearchPack regions failed validation", code="SEARCHPACK_VERIFY_FAILED") from exc
+    if len(regions) != len(expected_regions):
+        raise WorkerError("derived SearchPack has no regions", code="SEARCHPACK_VERIFY_FAILED")
+    return _publication_plan_summary(plan), {
+        "releaseId": searchpack_release_id,
+        "routingReleaseId": routing_release_id,
+        "baseReleaseId": base_release_id,
+        "regionCount": len(regions),
+        "activePointerWrites": 0,
+    }
+
+
+def prepare_searchpack_candidate(
+    base_workspace: Path | str,
+    base_release_id: str,
+    *,
+    output_workspace: Path | str,
+) -> dict[str, Any]:
+    """Derive and atomically verify the existing routing and SearchPack.
+
+    The helper consumes a complete content-addressed release only.  It never
+    opens the provider ZIP, writes ACTIVE/CANARY, or overwrites a previously
+    complete candidate.  A pre-existing sibling ``.partial`` directory is a
+    fail-closed signal for an interrupted build.
+    """
+
+    if not isinstance(base_release_id, str) or not re.fullmatch(r"[A-Za-z0-9._-]{1,128}", base_release_id):
+        raise WorkerError("base release ID is invalid", code="INVALID_STATE")
+    base = Path(base_workspace).resolve()
+    target = Path(output_workspace).resolve()
+    if base == target or base in target.parents or target in base.parents:
+        raise WorkerError("base and derived workspaces must be unrelated paths", code="INVALID_STATE")
+    routing_release_id = f"{base_release_id}-routing-v1"
+    searchpack_release_id = f"{routing_release_id}{SEARCHPACK_RELEASE_SUFFIX}"
+    if not (base / "releases" / base_release_id / "manifest.json").is_file():
+        raise WorkerError("base release manifest is unavailable", code="SEARCHPACK_INPUT_UNAVAILABLE")
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    if target.exists():
+        try:
+            plan_summary, details = _validate_searchpack_workspace(
+                target,
+                base_release_id=base_release_id,
+                routing_release_id=routing_release_id,
+                searchpack_release_id=searchpack_release_id,
+            )
+        except WorkerError as exc:
+            raise WorkerError("existing SearchPack candidate is not a complete immutable release", code="SEARCHPACK_REUSE_FAILED") from exc
+        return {"status": "REUSED", "workspace": str(target), "baseReleaseId": base_release_id, "routingReleaseId": routing_release_id, "searchPackReleaseId": searchpack_release_id, "routing": None, "searchPack": details, "publicationPlan": plan_summary, "activePointerWrites": 0}
+
+    partial = target.parent / f".{target.name}.partial"
+    if partial.exists():
+        raise WorkerError("interrupted SearchPack candidate requires operator review", code="SEARCHPACK_PARTIAL_PRESENT")
+    partial.mkdir()
+    routing_workspace = partial / "routing-workspace"
+    searchpack_workspace = partial / "searchpack-workspace"
+    try:
+        routing_plan = derive_release_workspace(base, routing_workspace, (base_release_id,))
+        routing_summary = _publication_plan_summary(
+            ObjectStoreReleasePublisher().plan(
+                routing_workspace,
+                release_ids=(routing_release_id,),
+                active_release_id=None,
+            )
+        )
+        if routing_plan.get("activeReleaseId") != routing_release_id:
+            raise WorkerError("derived routing release identity is invalid", code="SEARCHPACK_BUILD_FAILED")
+        searchpack_plan = derive_searchpack_workspace(routing_workspace, searchpack_workspace, (routing_release_id,))
+        searchpack_summary, details = _validate_searchpack_workspace(
+            searchpack_workspace,
+            base_release_id=base_release_id,
+            routing_release_id=routing_release_id,
+            searchpack_release_id=searchpack_release_id,
+        )
+        # The SearchPack contains hard-linked immutable objects, so the
+        # intermediate routing workspace can be removed before the atomic
+        # rename.  The final path itself is never replaced once visible.
+        shutil.rmtree(routing_workspace)
+        os.replace(searchpack_workspace, target)
+        shutil.rmtree(partial, ignore_errors=True)
+        return {"status": "BUILT", "workspace": str(target), "baseReleaseId": base_release_id, "routingReleaseId": routing_release_id, "searchPackReleaseId": searchpack_release_id, "routing": routing_summary, "searchPack": details, "publicationPlan": searchpack_summary, "derivedPlan": {"routing": {"schemaVersion": routing_plan.get("schemaVersion"), "releaseIds": routing_plan.get("releases", ()) and [value.get("derivedReleaseId") for value in routing_plan.get("releases", ()) if isinstance(value, Mapping)]}, "searchPack": {"schemaVersion": searchpack_plan.get("schemaVersion"), "releaseIds": searchpack_plan.get("releases", ()) and [value.get("derivedReleaseId") for value in searchpack_plan.get("releases", ()) if isinstance(value, Mapping)]}}, "activePointerWrites": 0}
+    except WorkerError:
+        raise
+    except (NationalRoutingArtifactError, SearchPackBuildError, SearchPackError, ObjectStorePublicationError, OSError, ValueError, TypeError) as exc:
+        raise WorkerError(f"SearchPack candidate build failed: {exc}", code="SEARCHPACK_BUILD_FAILED") from exc
+
+
 def run_shadow(
     *,
     discovery: DiscoveryResult,
@@ -286,9 +461,26 @@ def _continue_with_source(
     builder = {str(key): value for key, value in builder.items() if value is not None}
     acquisition_evidence = {"automated": True, "provider": candidate.provider, "datasetId": candidate.dataset_id, "resourceId": candidate.resource_id, "resourceName": candidate.resource_name, "officialUrl": candidate.official_url, "discoveryResponseSha256": candidate.discovery_response_sha256, "observedAt": candidate.observed_at, "acquiredAt": observed_at, "archiveKey": state.get("archive", {}).get("key") if isinstance(state.get("archive"), Mapping) else None, "builder": builder, "upstreamChangeEvidence": dict(upstream_change_evidence or {}) if same_day_proven else None}
     state["buildProvenance"] = builder
-    orchestrator = DailyReleaseOrchestrator(source_path=source_path, workspace=workspace, output=output, fixture=fixture, dry_run=True, upstream_changed=upstream_changed, acquisition_evidence=acquisition_evidence)
+    # The worker owns the immutable candidate build, while staging, canary,
+    # and activation remain separate publisher phases.  Publishing here is
+    # therefore safe: it writes only content-addressed objects and a COMPLETE
+    # manifest, never ACTIVE/CANARY.
+    orchestrator = DailyReleaseOrchestrator(source_path=source_path, workspace=workspace, output=output, fixture=fixture, dry_run=False, allow_fixture_activation=fixture, upstream_changed=upstream_changed, acquisition_evidence=acquisition_evidence)
     release = orchestrator.run(audit_at=observed_at)
-    state.update({"stage": "VERIFIED", "status": "CANDIDATE_VERIFIED", "releaseId": release.release_id, "releaseReport": str(output / "release-report.json"), "cloudBuildStarted": True, "activePointerWrites": 0})
+    searchpack: dict[str, Any]
+    final_release_id = release.release_id
+    final_workspace = workspace
+    if fixture:
+        searchpack = {"status": "NOT_APPLICABLE_FIXTURE", "baseReleaseId": release.release_id, "activePointerWrites": 0}
+    else:
+        searchpack = prepare_searchpack_candidate(
+            workspace,
+            release.release_id,
+            output_workspace=output / "searchpack-workspace",
+        )
+        final_release_id = str(searchpack["searchPackReleaseId"])
+        final_workspace = Path(str(searchpack["workspace"]))
+    state.update({"stage": "VERIFIED", "status": "CANDIDATE_VERIFIED", "baseReleaseId": release.release_id, "releaseId": final_release_id, "releaseWorkspace": str(final_workspace), "searchPack": searchpack, "releaseReport": str(output / "release-report.json"), "cloudBuildStarted": True, "activePointerWrites": 0})
     return state
 
 
@@ -392,4 +584,4 @@ if __name__ == "__main__":
     raise SystemExit(_main())
 
 
-__all__ = ["DISCOVERY_STATE_KEY", "WORKER_POLICY_VERSION", "WORKER_SCHEMA_VERSION", "WorkerError", "discovery_fingerprint", "record_discovery_state", "run_shadow"]
+__all__ = ["DISCOVERY_STATE_KEY", "WORKER_POLICY_VERSION", "WORKER_SCHEMA_VERSION", "WorkerError", "discovery_fingerprint", "prepare_searchpack_candidate", "record_discovery_state", "run_shadow"]
