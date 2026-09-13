@@ -1,0 +1,14 @@
+steps:
+  - id: build-backend-image
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --file=backend/Dockerfile
+      - --tag=${_IMAGE}
+      - .
+images:
+  - ${_IMAGE}
+options:
+  logging: CLOUD_LOGGING_ONLY
+substitutions:
+  _IMAGE: us-east4-docker.pkg.dev/valuepilot-argentina/valuepilot-backend/valuepilot-backend:local
