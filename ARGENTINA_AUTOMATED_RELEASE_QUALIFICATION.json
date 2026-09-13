@@ -69,7 +69,15 @@
     "browser": {"tests": 30, "failures": 0, "skipped": 0, "firefoxLint": "PASS", "status": "PASS"},
     "pythonCompile": "PASS",
     "diffCheck": "PASS",
-    "exactHeadCi": "PENDING_PUSH_AND_COMPLETION"
+    "exactHeadCi": {
+      "requiredWorkflowFamilies": [
+        "Test merchant feed qualification",
+        "Test Argentina production backend",
+        "Build ValuePilot v101 release"
+      ],
+      "finalRunIds": "recorded in the closeout response after the final report commit",
+      "productionPromotion": "NOT_EXECUTED"
+    }
   },
   "blocker": "Official production dataset/resource probes returned HTTP 403; no genuinely newer official ZIP is independently available/proven, so live automated acquisition and activation cannot be claimed."
 }

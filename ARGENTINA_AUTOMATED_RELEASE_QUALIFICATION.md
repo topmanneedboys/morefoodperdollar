@@ -96,8 +96,10 @@ repeated.
 - Browser: **30 tests, 0 failures/skips**, local model check and Firefox
   `web-ext lint` **PASS**.
 - Changed Python files: `py_compile` **PASS**; `git diff --check` **PASS**.
-- Exact-head GitHub Actions: run after the final report commit and recorded in
-  the final checkpoint; no production promotion occurs from this candidate.
+- Exact-head GitHub Actions: the required merchant, backend/container, Android,
+  browser, and release-bundle workflows are configured to run for this report
+  commit. Their final exact-SHA run IDs are recorded in the closeout response;
+  no production promotion occurs from this candidate.
 
 ## Explicit blocker and next safe action
 

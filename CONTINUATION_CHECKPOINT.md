@@ -25,9 +25,11 @@ production resource/download probes returned HTTP 403, the closeout status is
 official source. Raw data remains uncommitted, active pointers are unchanged,
 and no cloud/IAM/scheduler deployment was applied.
 
-The required final local and exact-head CI results will be appended to the
-automated qualification report before this checkpoint is considered complete.
-No subsequent milestone is authorized here.
+Local verification is green: 267 tools tests, 80 backend tests, 405 shared-core
+tests, 1,619 app tests, Android lint/debug build/privacy/one-signer, and 30
+browser tests plus Firefox lint. The final exact-head workflow IDs for this
+documentation commit are recorded in the closeout response after GitHub
+completion. No subsequent milestone is authorized here.
 
 Branch: `work/valuepilot-android-milestone`
 

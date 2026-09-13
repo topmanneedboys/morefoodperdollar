@@ -27,7 +27,9 @@ official source. No raw data was committed, no cloud deployment/IAM/schedule
 was applied, no production pointer changed, and Android remains offline.
 
 See `ARGENTINA_AUTOMATED_RELEASE_QUALIFICATION.md` and `.json` for the
-closeout record. No new milestone is authorized by this checkpoint.
+closeout record. The final exact-head workflow IDs are reported with the
+closeout because this documentation commit itself is the final CI input. No
+new milestone is authorized by this checkpoint.
 
 ## M11 SearchPack v2 candidate (unpromoted)
 
