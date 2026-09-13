@@ -5,7 +5,7 @@
   "updated": "2026-09-13",
   "branch": "candidate/argentina-automated-release-v1",
   "startingHead": "6ed1cab8300d1ed0ed12fef240194fa7edbb5901",
-  "implementationHead": "f8282fe605ae95a781a172e29e4bb30fc44da05a",
+  "implementationHead": "a43b484f83e5979183b9db28f895213537950f30",
   "source": {
     "provider": "ARGENTINA_SEPA_PRECIOS_CLAROS",
     "dataset": "Precios Claros - Base SEPA",
@@ -30,6 +30,7 @@
     "acquisition": "implemented",
     "privateContentAddressedArchive": "implemented",
     "boundedShadowWorker": "implemented",
+    "completeImmutableBaseReleaseAndSearchPackCandidate": "implemented",
     "immutableDiscoveryAndExecutionState": "implemented",
     "distributedLease": "implemented",
     "stageVerifyCanary": "implemented",
@@ -52,7 +53,7 @@
     "providerEconomicsAffectOrganicRanking": false
   },
   "verification": {
-    "toolsTests": {"tests": 267, "failures": 0, "errors": 0, "status": "PASS"},
+    "toolsTests": {"tests": 273, "failures": 0, "errors": 0, "status": "PASS"},
     "backendTests": {"tests": 80, "failures": 0, "errors": 0, "status": "PASS"},
     "android": {
       "sharedCoreTests": 405,
@@ -75,7 +76,7 @@
         "Test Argentina production backend",
         "Build ValuePilot v101 release"
       ],
-      "finalRunIds": "recorded in the closeout response after the final report commit",
+      "finalRunIds": {"merchant": 34788117384, "backend": 34788117307, "androidRelease": 34788117421},
       "productionPromotion": "NOT_EXECUTED"
     }
   },

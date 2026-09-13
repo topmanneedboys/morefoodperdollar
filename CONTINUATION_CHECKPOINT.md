@@ -7,13 +7,15 @@ Updated: 2026-09-13
 Candidate branch: `candidate/argentina-automated-release-v1`.
 
 The implementation head is
-`f8282fe605ae95a781a172e29e4bb30fc44da05a`, built from the required starting
+`a43b484f83e5979183b9db28f895213537950f30`, built from the required starting
 head `6ed1cab8300d1ed0ed12fef240194fa7edbb5901`. This bounded milestone adds
 offline/backend acquisition and source-contract gates, content-addressed raw
 archive reuse, bounded shadow-worker execution, immutable/CAS discovery state,
-lease and redacted summaries, multi-store stage/verify/canary preparation, and
-transactional active-pointer activation with compare-and-swap compensation.
-It does not connect Android, add networking, or activate production.
+lease and redacted summaries, complete base-release publication, existing
+national-routing/SearchPack derivation with exact 24-region verification,
+multi-store stage/verify/canary preparation, and transactional active-pointer
+activation with compare-and-swap compensation. It does not connect Android,
+add networking, or activate production.
 
 `Downloads\\sepa_martes.zip` is the already verified 2026-09-08 Tuesday source
 (325,118,492 bytes; SHA-256
@@ -25,11 +27,12 @@ production resource/download probes returned HTTP 403, the closeout status is
 official source. Raw data remains uncommitted, active pointers are unchanged,
 and no cloud/IAM/scheduler deployment was applied.
 
-Local verification is green: 267 tools tests, 80 backend tests, 405 shared-core
+Local verification is green: 273 tools tests, 80 backend tests, 405 shared-core
 tests, 1,619 app tests, Android lint/debug build/privacy/one-signer, and 30
 browser tests plus Firefox lint. The final exact-head workflow IDs for this
-documentation commit are recorded in the closeout response after GitHub
-completion. No subsequent milestone is authorized here.
+implementation are merchant **34788117384**, backend **34788117307**, and
+Android/release **34788117421**; all passed for the exact head. No production
+promotion is authorized here.
 
 Branch: `work/valuepilot-android-milestone`
 

@@ -12,9 +12,10 @@ official source has not been independently acquired or proven.
 
 - Starting head: `6ed1cab8300d1ed0ed12fef240194fa7edbb5901`
 - Candidate branch: `candidate/argentina-automated-release-v1`
-- Implementation head: `f8282fe605ae95a781a172e29e4bb30fc44da05a`
-- Scope: offline acquisition, archive, worker, control-plane, staging and
-  canary tooling only.
+- Implementation head: `a43b484f83e5979183b9db28f895213537950f30`
+- Scope: offline acquisition, archive, worker, immutable base-release and
+  routing/SearchPack candidate derivation, control-plane, staging and canary
+  tooling only.
 
 ## Source truth
 
@@ -50,7 +51,9 @@ scrape, WAF bypass, or substituted ZIP is allowed.
   restore, duplicate reuse, and no deletion or Git staging of raw data.
 - A bounded worker that records discovery fingerprints with immutable/CAS state,
   takes a distributed GCS-generation lease, writes redacted immutable execution
-  summaries, and never activates a production pointer.
+  summaries, publishes a complete immutable base release, derives and verifies
+  the existing routing/SearchPack workspace across all 24 regions, and never
+  activates a production pointer.
 - Reuse of the existing deterministic daily-release/SEPA parser and provider
   boundary; no SEPA parsing or retailer logic moved into shared core.
 - Multi-store staging and verification for `us`, `sa`, and `r2`, a fixed
@@ -85,7 +88,7 @@ The final local checks for this candidate are green. The source-wide Tuesday
 verification is intentionally recorded as `NOT_REMEASURED` rather than
 repeated.
 
-- Full Python tools suite: **267 tests, 0 failures/errors, PASS**.
+- Full Python tools suite: **273 tests, 0 failures/errors, PASS**.
 - Backend suite: **80 tests, 0 failures/errors, PASS**.
 - Android: **405 shared-core tests** and **1,619 app tests**, all passing;
   `lintDebug` and `assembleDebug` succeeded (58 actionable tasks).
@@ -96,10 +99,10 @@ repeated.
 - Browser: **30 tests, 0 failures/skips**, local model check and Firefox
   `web-ext lint` **PASS**.
 - Changed Python files: `py_compile` **PASS**; `git diff --check` **PASS**.
-- Exact-head GitHub Actions: the required merchant, backend/container, Android,
-  browser, and release-bundle workflows are configured to run for this report
-  commit. Their final exact-SHA run IDs are recorded in the closeout response;
-  no production promotion occurs from this candidate.
+- Exact-head GitHub Actions: merchant qualification **34788117384**, Argentina
+  backend **34788117307**, and Android/browser/release **34788117421** all passed
+  for implementation head `a43b484f83e5979183b9db28f895213537950f30`. No
+  production promotion occurs from this candidate.
 
 ## Explicit blocker and next safe action
 

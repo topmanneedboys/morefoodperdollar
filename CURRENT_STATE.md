@@ -6,14 +6,16 @@ Updated: 2026-09-13
 
 The bounded offline/backend control plane is implemented on
 `candidate/argentina-automated-release-v1` at code SHA
-`f8282fe605ae95a781a172e29e4bb30fc44da05a` from starting head
+`a43b484f83e5979183b9db28f895213537950f30` from starting head
 `6ed1cab8300d1ed0ed12fef240194fa7edbb5901`. The candidate adds strict official
 SEPA metadata/source validation, bounded streaming acquisition, private
 content-addressed archive reuse, discovery CAS state, a distributed lease,
-redacted execution summaries, multi-store stage/verify/canary preparation, and
-transactional compare-and-swap activation with compensation. Acquisition and
-the worker never write `control/active.json`; activation remains a separate
-explicit operator step.
+redacted execution summaries, complete immutable base-release publication,
+existing national-routing/SearchPack derivation with exact 24-region
+verification, multi-store stage/verify/canary preparation, and transactional
+compare-and-swap activation with compensation. Acquisition and the worker
+never write `control/active.json`; activation remains a separate explicit
+operator step.
 
 The user's `Downloads\\sepa_martes.zip` is present and matches the already
 verified 2026-09-08 Tuesday baseline (325,118,492 bytes,
@@ -27,9 +29,9 @@ official source. No raw data was committed, no cloud deployment/IAM/schedule
 was applied, no production pointer changed, and Android remains offline.
 
 See `ARGENTINA_AUTOMATED_RELEASE_QUALIFICATION.md` and `.json` for the
-closeout record. The final exact-head workflow IDs are reported with the
-closeout because this documentation commit itself is the final CI input. No
-new milestone is authorized by this checkpoint.
+closeout record. Exact-head workflow IDs for this implementation are recorded
+there and in the final handoff. No production promotion is authorized by this
+candidate checkpoint.
 
 ## M11 SearchPack v2 candidate (unpromoted)
 
