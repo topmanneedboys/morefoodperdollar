@@ -1,6 +1,33 @@
 # ValuePilot Continuation Checkpoint
 
-Updated: 2026-09-07
+Updated: 2026-09-13
+
+## Automated official Argentina release pipeline checkpoint
+
+Candidate branch: `candidate/argentina-automated-release-v1`.
+
+The implementation head is
+`f8282fe605ae95a781a172e29e4bb30fc44da05a`, built from the required starting
+head `6ed1cab8300d1ed0ed12fef240194fa7edbb5901`. This bounded milestone adds
+offline/backend acquisition and source-contract gates, content-addressed raw
+archive reuse, bounded shadow-worker execution, immutable/CAS discovery state,
+lease and redacted summaries, multi-store stage/verify/canary preparation, and
+transactional active-pointer activation with compare-and-swap compensation.
+It does not connect Android, add networking, or activate production.
+
+`Downloads\\sepa_martes.zip` is the already verified 2026-09-08 Tuesday source
+(325,118,492 bytes; SHA-256
+`aeef3399fa20e751e80cda46cbb3a38349e378b51832ecffe1f779b986479815`), not a
+new release beyond the immutable evidence already on record. The national
+verification pass was intentionally not repeated. Because the official
+production resource/download probes returned HTTP 403, the closeout status is
+**AUTOMATED RELEASE PIPELINE: BLOCKED** pending an accessible genuinely newer
+official source. Raw data remains uncommitted, active pointers are unchanged,
+and no cloud/IAM/scheduler deployment was applied.
+
+The required final local and exact-head CI results will be appended to the
+automated qualification report before this checkpoint is considered complete.
+No subsequent milestone is authorized here.
 
 Branch: `work/valuepilot-android-milestone`
 

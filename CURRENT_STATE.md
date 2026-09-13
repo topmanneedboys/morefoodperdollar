@@ -1,6 +1,33 @@
 # Current state
 
-Updated: 2026-09-11
+Updated: 2026-09-13
+
+## Automated official Argentina release pipeline candidate (unpromoted)
+
+The bounded offline/backend control plane is implemented on
+`candidate/argentina-automated-release-v1` at code SHA
+`f8282fe605ae95a781a172e29e4bb30fc44da05a` from starting head
+`6ed1cab8300d1ed0ed12fef240194fa7edbb5901`. The candidate adds strict official
+SEPA metadata/source validation, bounded streaming acquisition, private
+content-addressed archive reuse, discovery CAS state, a distributed lease,
+redacted execution summaries, multi-store stage/verify/canary preparation, and
+transactional compare-and-swap activation with compensation. Acquisition and
+the worker never write `control/active.json`; activation remains a separate
+explicit operator step.
+
+The user's `Downloads\\sepa_martes.zip` is present and matches the already
+verified 2026-09-08 Tuesday baseline (325,118,492 bytes,
+`aeef3399fa20e751e80cda46cbb3a38349e378b51832ecffe1f779b986479815`). It is
+not a newly acquired source for this milestone. The completed source-wide
+verification evidence was reused; no national ZIP reparse or immutable-root
+rebuild was repeated merely for diagnostics. Official production resource and
+download probes remain HTTP 403, so the pipeline status is
+**AUTOMATED RELEASE PIPELINE: BLOCKED** pending a genuinely newer accessible
+official source. No raw data was committed, no cloud deployment/IAM/schedule
+was applied, no production pointer changed, and Android remains offline.
+
+See `ARGENTINA_AUTOMATED_RELEASE_QUALIFICATION.md` and `.json` for the
+closeout record. No new milestone is authorized by this checkpoint.
 
 ## M11 SearchPack v2 candidate (unpromoted)
 

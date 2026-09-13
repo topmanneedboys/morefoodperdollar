@@ -1,0 +1,75 @@
+{
+  "schemaVersion": "valuepilot-argentina-automated-release-qualification-v1",
+  "milestone": "AUTOMATED_OFFICIAL_ARGENTINA_RELEASE_PIPELINE_V1",
+  "status": "AUTOMATED RELEASE PIPELINE: BLOCKED",
+  "updated": "2026-09-13",
+  "branch": "candidate/argentina-automated-release-v1",
+  "startingHead": "6ed1cab8300d1ed0ed12fef240194fa7edbb5901",
+  "implementationHead": "f8282fe605ae95a781a172e29e4bb30fc44da05a",
+  "source": {
+    "provider": "ARGENTINA_SEPA_PRECIOS_CLAROS",
+    "dataset": "Precios Claros - Base SEPA",
+    "license": "Creative Commons Attribution 4.0",
+    "catalogHost": "https://datos.gob.ar",
+    "officialHost": "https://datos.produccion.gob.ar",
+    "metadataHttpStatus": 200,
+    "productionDatasetPageHttpStatus": 403,
+    "productionResourceHttpStatus": 403,
+    "downloadAccessProven": false,
+    "disposition": "SHADOW_ONLY_WAITING_FOR_ACCESSIBLE_NEWER_OFFICIAL_SOURCE",
+    "localTuesdayBaseline": {
+      "filename": "sepa_martes.zip",
+      "releaseDate": "2026-09-08",
+      "bytes": 325118492,
+      "sha256": "aeef3399fa20e751e80cda46cbb3a38349e378b51832ecffe1f779b986479815",
+      "committed": false,
+      "meaning": "already-verified baseline; not a newly acquired source"
+    }
+  },
+  "pipeline": {
+    "acquisition": "implemented",
+    "privateContentAddressedArchive": "implemented",
+    "boundedShadowWorker": "implemented",
+    "immutableDiscoveryAndExecutionState": "implemented",
+    "distributedLease": "implemented",
+    "stageVerifyCanary": "implemented",
+    "transactionalActivationWithCasRollback": "implemented",
+    "cloudBuildWorkflowSchedulerTemplates": "template-only",
+    "activePointerWritesInAutomatedWorker": 0,
+    "productionActivation": "NOT_EXECUTED"
+  },
+  "diagnostics": {
+    "nationalSourceWideTuesdayVerification": "NOT_REMEASURED",
+    "nationalSourceWideRationale": "reused completed immutable verification evidence; no correctness rerun",
+    "newerOfficialSource": "NOT_PROVEN"
+  },
+  "safety": {
+    "rawProviderDataCommitted": false,
+    "rawProviderDataShippedToAndroid": false,
+    "androidNetworkingAdded": false,
+    "activePointersChanged": false,
+    "permanentCloudResourcesApplied": false,
+    "providerEconomicsAffectOrganicRanking": false
+  },
+  "verification": {
+    "toolsTests": {"tests": 267, "failures": 0, "errors": 0, "status": "PASS"},
+    "backendTests": {"tests": 80, "failures": 0, "errors": 0, "status": "PASS"},
+    "android": {
+      "sharedCoreTests": 405,
+      "appTests": 1619,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "lintDebug": "PASS",
+      "assembleDebug": "PASS",
+      "status": "PASS"
+    },
+    "apkPrivacy": {"internet": false, "accessNetworkState": false, "status": "PASS"},
+    "apkSignature": {"signers": 1, "status": "PASS"},
+    "browser": {"tests": 30, "failures": 0, "skipped": 0, "firefoxLint": "PASS", "status": "PASS"},
+    "pythonCompile": "PASS",
+    "diffCheck": "PASS",
+    "exactHeadCi": "PENDING_PUSH_AND_COMPLETION"
+  },
+  "blocker": "Official production dataset/resource probes returned HTTP 403; no genuinely newer official ZIP is independently available/proven, so live automated acquisition and activation cannot be claimed."
+}
