@@ -9,6 +9,6 @@ steps:
 images:
   - ${_IMAGE}
 options:
-  logging: CLOUD_LOGGING_ONLY
+  logging: GCS_ONLY
 substitutions:
   _IMAGE: us-east4-docker.pkg.dev/valuepilot-argentina/valuepilot-backend/valuepilot-backend:local
