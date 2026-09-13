@@ -39,6 +39,11 @@ class ArgentinaReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("state_error.code == 404", workflow)
         self.assertIn("CONTROL_STATE_UNAVAILABLE", workflow)
         self.assertNotIn("as: state_error\n          steps:\n            - no_previous_state", workflow)
+        self.assertIn("--promotion-mode=${promotion_mode}", workflow)
+        self.assertIn("read_worker_summary", workflow)
+        self.assertIn("WORKER_SUMMARY_IDENTITY_MISMATCH", workflow)
+        self.assertIn("PROMOTION_MODE", cloudbuild)
+        self.assertTrue((ROOT / "tools" / "argentina_release_promoter.py").is_file())
 
     def test_scheduler_template_is_paused_and_argentina_localized(self) -> None:
         value = json.loads((ROOT / "scheduler" / "argentina-release-job.example.json").read_text(encoding="utf-8"))

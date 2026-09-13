@@ -7,7 +7,8 @@ not add Android networking and it does not authorize a production activation.
 
 `Cloud Scheduler (America/Argentina/Buenos_Aires)` → `Google Workflows` →
 `Cloud Build (e2-standard-2 / E2_STANDARD_2)` → the existing
-`tools.argentina_release_worker` and `argentina_daily_release` pipeline.
+`tools.argentina_release_worker` and `argentina_daily_release` pipeline →
+the provider-neutral promotion controller.
 
 The workflow performs a bounded national-catalog metadata check first. An
 unchanged checksum returns `NO_CHANGE` and starts no build. A changed
@@ -17,8 +18,13 @@ GCS lease, and delegates all SEPA parsing and artifact construction to the
 existing deterministic tooling. After the base release is complete, the
 worker derives the existing national-routing artifact and SearchPack v2 into a
 separate immutable candidate workspace. Repeated runs reuse a verified
-candidate; interrupted or mismatched workspaces fail closed. The worker has no
-activation capability.
+candidate; interrupted or mismatched workspaces fail closed. The worker then
+runs the promotion controller in `SHADOW` by default. An operator may
+explicitly select `STAGE_CANARY` (all three destinations plus data-canary
+evidence) or `AUTO_ACTIVATE` (those requirements plus three HTTPS smoke
+endpoints and the expected current release). Missing or invalid inputs fail
+before a pointer write. The controller uses the existing publisher and CAS
+coordinator; no source parser or Android code is involved.
 The Cloud Build connector waits for the long-running build operation (with a
 four-hour bound and bounded polling) and evaluates the final build record;
 queued/working states are never mistaken for a successful candidate.
@@ -47,6 +53,14 @@ explicit RFC3339 observation time.
    compare-and-swap and stops.
 7. Enable Scheduler only after controlled activation succeeds. Until then,
    leave it disabled and report `SHADOW_ONLY_WAITING_FOR_ACCESSIBLE_NEWER_OFFICIAL_SOURCE`.
+
+The worker and standalone `tools.argentina_release_promoter` CLI accept the
+same three modes. `SHADOW` is write-free and does not construct remote clients.
+Local tests may use an explicit three-directory store root; production staging
+must name US, South America, and R2 destinations. The CLI rejects HTTP,
+credential-bearing, query-bearing, and literal private-address smoke URLs,
+bounds every response, and requires a matching candidate release in the JSON
+response.
 
 ## Data-canary gate
 

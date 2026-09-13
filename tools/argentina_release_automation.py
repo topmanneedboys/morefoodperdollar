@@ -42,6 +42,7 @@ _TOKEN = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
 ACTIVE_POINTER_KEY = "control/active.json"
 ACTIVE_POINTER_SCHEMA = "valuepilot-active-release-v1"
 ACTIVATION_PARTICIPANTS = ("us", "sa", "r2")
+RELEASE_MODES = ("SHADOW", "STAGE_CANARY", "AUTO_ACTIVATE")
 
 # The data-canary contract is deliberately small and provider-neutral.  A
 # deployment adapter supplies observations from the same backend image that
@@ -584,6 +585,88 @@ def stage_verify_and_canary(
     }
 
 
+def run_release_promotion(
+    workspace: str | Path,
+    *,
+    release_ids: Sequence[str],
+    candidate_release_id: str,
+    mode: str = "SHADOW",
+    stores: Mapping[str, ObjectStore] | None = None,
+    data_canary: Mapping[str, Any] | None = None,
+    expected_current_release_id: str | None = None,
+    smoke_checks: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Run the bounded stage/canary/activation control sequence.
+
+    ``SHADOW`` is write-free and is the default worker mode.  ``STAGE_CANARY``
+    stages immutable objects and selects only the fixed canary pointers.  The
+    explicitly opt-in ``AUTO_ACTIVATE`` mode additionally requires a matching
+    pre-activation release and one callable production smoke check for every
+    US, South America, and R2 participant.  The coordinator then performs the
+    existing CAS activation/compensation sequence; this function adds no data
+    parsing or pointer authority.
+    """
+
+    if mode not in RELEASE_MODES:
+        raise AutomationError("release mode is invalid", code="INVALID_CONTROL_STATE")
+    candidate = TransactionalActivationCoordinator._release(candidate_release_id, field="candidateReleaseId")
+    if isinstance(release_ids, (str, bytes, bytearray)) or not isinstance(release_ids, Sequence) or not release_ids or any(not isinstance(value, str) for value in release_ids) or len(set(release_ids)) != len(release_ids) or candidate not in release_ids:
+        raise AutomationError("release set is invalid", code="INVALID_CONTROL_STATE")
+    if mode == "SHADOW":
+        return {
+            "status": "SHADOW_ONLY",
+            "promotionMode": mode,
+            "candidateReleaseId": candidate,
+            "releaseIds": list(release_ids),
+            "activePointerWrites": 0,
+            "canaryPointerWrites": 0,
+            "activation": "NOT_EXECUTED",
+        }
+
+    if not isinstance(stores, Mapping) or set(stores) != set(ACTIVATION_PARTICIPANTS) or any(stores.get(name) is None for name in ACTIVATION_PARTICIPANTS):
+        raise AutomationError("promotion requires exactly us, sa, and r2 stores", code="INVALID_CONTROL_STATE")
+
+    # Validate activation-only inputs before staging so a misconfigured
+    # automatic run cannot leave even a canary pointer behind.
+    expected: str | None = None
+    if mode == "AUTO_ACTIVATE":
+        expected = TransactionalActivationCoordinator._release(expected_current_release_id, field="expectedCurrentReleaseId")
+        if not isinstance(smoke_checks, Mapping) or set(smoke_checks) != set(ACTIVATION_PARTICIPANTS) or any(not callable(smoke_checks.get(name)) for name in ACTIVATION_PARTICIPANTS):
+            raise AutomationError("automatic activation requires all production smoke checks", code="ACTIVATION_REVIEW_REQUIRED")
+
+    staged = stage_verify_and_canary(
+        workspace,
+        stores,
+        release_ids=tuple(release_ids),
+        candidate_release_id=candidate,
+        data_canary=data_canary,
+        require_data_canary=True,
+    )
+    if mode == "STAGE_CANARY":
+        return {
+            "status": "CANARY_READY",
+            "promotionMode": mode,
+            "candidateReleaseId": candidate,
+            "releaseIds": list(release_ids),
+            "staging": staged,
+            "activation": "NOT_EXECUTED",
+            "activePointerWrites": 0,
+            "canaryPointerWrites": sum(1 for value in staged.get("canary", {}).values() if isinstance(value, Mapping) and value.get("canaryPointerChanged")),
+        }
+
+    activation = TransactionalActivationCoordinator(stores, smoke_checks=smoke_checks).activate(candidate_release_id=candidate, expected_current_release_id=expected)
+    return {
+        "status": activation.get("status", "STOPPED"),
+        "promotionMode": mode,
+        "candidateReleaseId": candidate,
+        "releaseIds": list(release_ids),
+        "staging": staged,
+        "activation": activation,
+        "activePointerWrites": activation.get("pointerWrites", 0),
+        "canaryPointerWrites": sum(1 for value in staged.get("canary", {}).values() if isinstance(value, Mapping) and value.get("canaryPointerChanged")),
+    }
+
+
 @dataclass(frozen=True)
 class PointerSnapshot:
     """The exact pointer bytes and generation observed before activation."""
@@ -831,6 +914,7 @@ __all__ = [
     "ACTIVATION_PARTICIPANTS",
     "ACTIVE_POINTER_KEY",
     "ACTIVE_POINTER_SCHEMA",
+    "RELEASE_MODES",
     "DATA_CANARY_COLD_10_LINE_MAX_MS",
     "DATA_CANARY_LOCATIONS",
     "DATA_CANARY_POLICY_VERSION",
@@ -852,6 +936,7 @@ __all__ = [
     "discovery_decision",
     "evaluate_data_canary",
     "redact_secrets",
+    "run_release_promotion",
     "stage_verify_and_canary",
     "TransactionalActivationCoordinator",
     "write_execution_summary",

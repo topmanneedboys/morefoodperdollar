@@ -5,8 +5,10 @@
 # national catalog is queried first; a stable metadata checksum returns
 # NO_CHANGE without starting Cloud Build.  The heavy worker owns exact source
 # validation, the distributed lease, private archive, and the existing
-# deterministic release builder.  This workflow never receives or stores raw
-# ZIP bytes and never changes a production pointer.
+# deterministic release builder.  Promotion defaults to write-free SHADOW;
+# explicit staging/activation inputs are passed through to the worker, which
+# validates them before any canary or active pointer write.  This workflow
+# never receives or stores raw ZIP bytes.
 main:
   params: [args]
   steps:
@@ -24,6 +26,7 @@ main:
           - current_release_date: ${default(args.currentReleaseDate, "")}
           - current_source_sha256: ${default(args.currentSourceSha256, "")}
           - upstream_changed: ${default(args.upstreamChanged, false)}
+          - promotion_mode: ${default(args.promotionMode, "SHADOW")}
 
     - discover_catalog:
         try:
@@ -154,6 +157,19 @@ main:
                     - "--output=/workspace/valuepilot-release-output"
                     - "--current-release-date=${current_release_date}"
                     - "--current-source-sha256=${current_source_sha256}"
+                    - "--promotion-mode=${promotion_mode}"
+                    - "--promotion-data-canary=${default(args.promotionDataCanaryPath, "")}"
+                    - "--promotion-expected-current-release-id=${default(args.expectedCurrentReleaseId, "")}"
+                    - "--promotion-store-root=${default(args.promotionStoreRoot, "")}"
+                    - "--promotion-us-bucket=${default(args.promotionUsBucket, "")}"
+                    - "--promotion-sa-bucket=${default(args.promotionSaBucket, "")}"
+                    - "--promotion-r2-bucket=${default(args.promotionR2Bucket, "")}"
+                    - "--promotion-gcs-project=${default(args.promotionGcsProject, "")}"
+                    - "--promotion-r2-endpoint=${default(args.promotionR2Endpoint, "")}"
+                    - "--promotion-r2-region=${default(args.promotionR2Region, "")}"
+                    - "--promotion-us-smoke-url=${default(args.promotionUsSmokeUrl, "")}"
+                    - "--promotion-sa-smoke-url=${default(args.promotionSaSmokeUrl, "")}"
+                    - "--promotion-r2-smoke-url=${default(args.promotionR2SmokeUrl, "")}"
                   env:
                     - "PYTHONUNBUFFERED=1"
                     - "BUILDER_IMAGE=${args.workerImage}"
@@ -197,6 +213,50 @@ main:
               cloudBuildStarted: true
               activePointerWrites: 0
 
+    - read_worker_summary:
+        try:
+          call: googleapis.storage.v1.objects.get
+          args:
+            bucket: ${archive_bucket}
+            object: ${text.url_encode("control/executions/" + execution_id + ".json")}
+            alt: media
+          result: worker_summary_response
+        except:
+          as: worker_summary_error
+          steps:
+            - worker_summary_failed:
+                return:
+                  status: WORKER_SUMMARY_UNAVAILABLE
+                  buildId: ${release_build.metadata.build.id}
+                  error: ${worker_summary_error}
+                  cloudBuildStarted: true
+                  activePointerWrites: null
+
+    - decode_worker_summary:
+        try:
+          assign:
+            - worker_summary: ${json.decode(text.decode(worker_summary_response.body))}
+        except:
+          as: worker_summary_decode_error
+          steps:
+            - worker_summary_invalid:
+                return:
+                  status: WORKER_SUMMARY_INVALID
+                  buildId: ${release_build.metadata.build.id}
+                  error: ${worker_summary_decode_error}
+                  cloudBuildStarted: true
+                  activePointerWrites: null
+
+    - validate_worker_summary:
+        switch:
+          - condition: ${worker_summary.schemaVersion != "valuepilot-argentina-release-worker-v1" || worker_summary.policyVersion != "valuepilot-argentina-release-worker-policy-v1" || worker_summary.executionId != execution_id}
+            return:
+              status: WORKER_SUMMARY_INVALID
+              buildId: ${release_build.metadata.build.id}
+              reason: WORKER_SUMMARY_IDENTITY_MISMATCH
+              cloudBuildStarted: true
+              activePointerWrites: null
+
     - write_discovery_state:
         try:
           call: googleapis.storage.v1.objects.insert
@@ -213,16 +273,19 @@ main:
             - state_write_failed:
                 return:
                   status: STATE_WRITE_FAILED
-                  buildId: ${release_build.id}
+                  buildId: ${release_build.metadata.build.id}
                   error: ${state_write_error}
                   cloudBuildStarted: true
-                  activePointerWrites: 0
+                  activePointerWrites: ${default(worker_summary.activePointerWrites, null)}
+                  promotion: ${default(worker_summary.promotion, null)}
 
     - return_build:
         return:
-          status: CANDIDATE_BUILT
+          status: ${default(worker_summary.status, "WORKER_STATUS_MISSING")}
           buildId: ${release_build.metadata.build.id}
           metadataChecksum: ${metadata_checksum}
           cloudBuildStarted: true
-          activePointerWrites: 0
-          activation: NOT_EXECUTED
+          activePointerWrites: ${default(worker_summary.activePointerWrites, null)}
+          releaseId: ${default(worker_summary.releaseId, null)}
+          promotion: ${default(worker_summary.promotion, null)}
+          activation: ${default(worker_summary.activation, "NOT_EXECUTED")}

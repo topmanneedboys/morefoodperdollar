@@ -90,9 +90,25 @@ class LocalFilesystemObjectStore:
     def _path(self, key: str) -> Path:
         key = validate_key(key)
         path = (self.root / Path(*key.split("/"))).resolve()
-        if self.root not in path.parents:
+        # Windows may return an extended-length ``\\?\`` prefix for a path
+        # while another bounded writer is creating its parents.  Compare
+        # normalized case-insensitive paths rather than raw ``Path`` objects,
+        # while retaining resolve-based symlink containment.
+        def normalized(value: Path) -> str:
+            text = os.path.normpath(str(value))
+            if text.startswith("\\\\?\\"):
+                text = text[4:]
+            return os.path.normcase(text)
+
+        root_text = normalized(self.root)
+        path_text = normalized(path)
+        try:
+            contained = os.path.commonpath((root_text, path_text)) == root_text
+        except ValueError:
+            contained = False
+        if not contained:
             raise ObjectStoreError("object key escapes store root")
-        return path
+        return Path(path_text)
 
     def _metadata(self, key: str, path: Path) -> ObjectMetadata:
         digest = _sha256_file(path)

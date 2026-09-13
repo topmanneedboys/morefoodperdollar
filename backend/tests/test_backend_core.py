@@ -6,6 +6,7 @@ import tempfile
 import threading
 import time
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 
@@ -54,6 +55,14 @@ class BackendCoreTests(unittest.TestCase):
             self.assertRaises(ObjectStoreError, store.put_immutable, "releases/r1/member.gz", b"different")
             for key in ("../escape", "/absolute", "a\\b", "a//b"):
                 self.assertRaises(ObjectStoreError, validate_key, key)
+
+    def test_local_store_parallel_object_writes_keep_windows_root_containment(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = LocalFilesystemObjectStore(directory)
+            items = [(f"objects/sha256/{index:064x}", f"payload-{index}".encode()) for index in range(24)]
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                list(executor.map(lambda item: store.put_immutable(*item), items))
+            self.assertEqual([store.get(key) for key, _ in items], [value for _, value in items])
 
     def test_s3_range_and_immutable(self):
         fake = FakeS3()

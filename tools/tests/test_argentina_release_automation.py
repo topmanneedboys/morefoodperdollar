@@ -19,10 +19,12 @@ from tools.argentina_release_automation import (
     DATA_CANARY_SHOPPING_LINE_COUNTS,
     DistributedReleaseLease,
     LeaseOutcome,
+    RELEASE_MODES,
     TransactionalActivationCoordinator,
     anomaly_gate,
     discovery_decision,
     redact_secrets,
+    run_release_promotion,
     evaluate_data_canary,
     stage_verify_and_canary,
     write_execution_summary,
@@ -263,6 +265,66 @@ class ArgentinaReleaseAutomationTests(unittest.TestCase):
             stores = self._activation_stores(directory)
             with self.assertRaisesRegex(RuntimeError, "release set is invalid"):
                 stage_verify_and_canary(Path(directory), stores, release_ids=["a", "a"], candidate_release_id="a")
+
+    def test_run_release_promotion_shadow_mode_is_write_free(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="valuepilot-promotion-shadow-") as directory:
+            workspace, release_id = self._promotion_workspace(directory)
+            self.assertEqual(RELEASE_MODES, ("SHADOW", "STAGE_CANARY", "AUTO_ACTIVATE"))
+            result = run_release_promotion(workspace, release_ids=[release_id], candidate_release_id=release_id)
+            self.assertEqual(result["status"], "SHADOW_ONLY")
+            self.assertEqual(result["promotionMode"], "SHADOW")
+            self.assertEqual(result["activePointerWrites"], 0)
+            self.assertEqual(result["canaryPointerWrites"], 0)
+
+    def test_run_release_promotion_stage_canary_keeps_active_untouched(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="valuepilot-promotion-canary-") as directory:
+            workspace, release_id = self._promotion_workspace(directory)
+            stores = {participant: LocalFilesystemObjectStore(Path(directory) / participant) for participant in ACTIVATION_PARTICIPANTS}
+            result = run_release_promotion(workspace, release_ids=[release_id], candidate_release_id=release_id, mode="STAGE_CANARY", stores=stores, data_canary=self._data_canary_evidence(release_id))
+            self.assertEqual(result["status"], "CANARY_READY")
+            self.assertEqual(result["promotionMode"], "STAGE_CANARY")
+            self.assertEqual(result["activePointerWrites"], 0)
+            self.assertEqual(result["canaryPointerWrites"], len(ACTIVATION_PARTICIPANTS))
+            self.assertTrue(all(not store.exists("control/active.json") for store in stores.values()))
+            self.assertTrue(all(json.loads(store.get("control/canary.json"))["releaseId"] == release_id for store in stores.values()))
+
+    def test_run_release_promotion_requires_smoke_checks_before_auto_staging(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="valuepilot-promotion-config-") as directory:
+            workspace, release_id = self._promotion_workspace(directory)
+            stores = {participant: LocalFilesystemObjectStore(Path(directory) / participant) for participant in ACTIVATION_PARTICIPANTS}
+            for store in stores.values():
+                raw = _canonical({"releaseId": "old-release", "schemaVersion": "valuepilot-active-release-v1"})
+                store.put_immutable("control/active.json", raw)
+            with self.assertRaisesRegex(RuntimeError, "all production smoke checks"):
+                run_release_promotion(workspace, release_ids=[release_id], candidate_release_id=release_id, mode="AUTO_ACTIVATE", stores=stores, data_canary=self._data_canary_evidence(release_id), expected_current_release_id="old-release", smoke_checks={"us": lambda _: True})
+            self.assertTrue(all(not store.exists("control/canary.json") for store in stores.values()))
+            self.assertTrue(all(json.loads(store.get("control/active.json"))["releaseId"] == "old-release" for store in stores.values()))
+
+    def test_run_release_promotion_auto_activation_uses_transactional_smoke_path(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="valuepilot-promotion-active-") as directory:
+            workspace, release_id = self._promotion_workspace(directory)
+            stores = self._activation_stores(directory)
+            checks = {participant: (lambda _: {"status": "PASS"}) for participant in ACTIVATION_PARTICIPANTS}
+            result = run_release_promotion(workspace, release_ids=[release_id], candidate_release_id=release_id, mode="AUTO_ACTIVATE", stores=stores, data_canary=self._data_canary_evidence(release_id), expected_current_release_id="old-release", smoke_checks=checks)
+            self.assertEqual(result["status"], "ACTIVE")
+            self.assertEqual(result["activePointerWrites"], len(ACTIVATION_PARTICIPANTS))
+            self.assertTrue(all(json.loads(store.get("control/active.json"))["releaseId"] == release_id for store in stores.values()))
+
+    @staticmethod
+    def _promotion_workspace(directory: str, release_id: str = "new-release") -> tuple[Path, str]:
+        workspace = Path(directory) / "workspace"
+        payload = b"qualified-promotion-fixture-object"
+        digest = hashlib.sha256(payload).hexdigest()
+        object_path = workspace / "objects" / "sha256" / digest
+        object_path.parent.mkdir(parents=True, exist_ok=True)
+        object_path.write_bytes(payload)
+        release_dir = workspace / "releases" / release_id
+        release_dir.mkdir(parents=True, exist_ok=True)
+        manifest = {"schemaVersion": "valuepilot-argentina-daily-release-v1", "completionState": "COMPLETE", "releaseId": release_id, "source": {"releaseDate": "2026-09-09"}, "objects": [{"path": "fixture/object.bin", "sha256": digest, "bytes": len(payload)}]}
+        raw = _canonical(manifest)
+        (release_dir / "manifest.json").write_bytes(raw)
+        (release_dir / "manifest.sha256").write_bytes(f"{hashlib.sha256(raw).hexdigest()}  manifest.json\n".encode("ascii"))
+        return workspace, release_id
 
     @staticmethod
     def _activation_stores(directory: str, release_id: str = "old-release") -> dict[str, LocalFilesystemObjectStore]:

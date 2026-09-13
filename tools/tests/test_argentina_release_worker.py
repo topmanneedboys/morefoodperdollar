@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import gzip
+import io
 import json
 import tempfile
 import unittest
@@ -10,7 +12,16 @@ from pathlib import Path
 from backend.artifacts import ManifestReleaseArtifactStore
 from backend.object_store import LocalFilesystemObjectStore, ObjectStoreError
 from tools.argentina_release_acquisition import DiscoveryResult
-from tools.argentina_release_worker import WorkerError, prepare_searchpack_candidate, record_discovery_state, run_shadow
+from tools.argentina_release_automation import (
+    ACTIVATION_PARTICIPANTS,
+    DATA_CANARY_LOCATIONS,
+    DATA_CANARY_POLICY_VERSION,
+    DATA_CANARY_REGIONS,
+    DATA_CANARY_REQUESTS,
+    DATA_CANARY_SCHEMA_VERSION,
+    DATA_CANARY_SHOPPING_LINE_COUNTS,
+)
+from tools.argentina_release_worker import WorkerError, _main, prepare_searchpack_candidate, record_discovery_state, run_shadow
 from tools.argentina_searchpack import SearchPackManager
 from tools.build_argentina_sepa_national_shards import ARGENTINA_REGIONS
 
@@ -133,6 +144,95 @@ class ArgentinaReleaseWorkerTests(unittest.TestCase):
             self.assertEqual(result["activePointerWrites"], 0)
             self.assertEqual(result["buildProvenance"]["buildId"], "build-1")
             self.assertTrue((Path(directory) / "output" / "release-report.json").is_file())
+
+    @staticmethod
+    def _promotion_evidence(candidate: str) -> dict[str, object]:
+        def probe() -> dict[str, object]:
+            return {
+                "httpStatus": 200,
+                "releaseId": candidate,
+                "freshness": "FRESH",
+                "availability": "UNKNOWN",
+                "corpusScanned": 0,
+                "partitionIdentity": "worker-fixture-partition",
+                "partitionIdentityVerified": True,
+                "oom": False,
+                "restartCount": 0,
+                "runtimeR2Reads": 0,
+                "runtimeR2Writes": 0,
+                "malformedPrices": 0,
+            }
+
+        return {
+            "schemaVersion": DATA_CANARY_SCHEMA_VERSION,
+            "policyVersion": DATA_CANARY_POLICY_VERSION,
+            "candidateReleaseId": candidate,
+            "regions": {
+                region: {
+                    "readyz": probe(),
+                    "status": probe(),
+                    "requests": {name: probe() for name in DATA_CANARY_REQUESTS},
+                    "shopping": {str(count): probe() for count in DATA_CANARY_SHOPPING_LINE_COUNTS},
+                    "locations": {name: probe() for name in DATA_CANARY_LOCATIONS},
+                    "timings": {"cold10LineCount": 10, "cold10LineMs": 1, "warmSmokeP95Ms": 1, "warmSmokeSamples": 1},
+                }
+                for region in DATA_CANARY_REGIONS
+            },
+        }
+
+    def test_worker_command_path_can_stage_fixture_to_canary_without_active_write(self) -> None:
+        import tools.argentina_release_worker as worker_module
+
+        discovery = self._discovery()
+        source_hash = hashlib.sha256(SOURCE_FIXTURE.read_bytes()).hexdigest()
+        candidate = f"argentina-sepa-2026-09-08-{source_hash[:16]}"
+        with tempfile.TemporaryDirectory(prefix="valuepilot-worker-promotion-") as directory:
+            root = Path(directory)
+            evidence = root / "data-canary.json"
+            evidence.write_bytes(_canonical(self._promotion_evidence(candidate)))
+            original = worker_module.discover_metadata
+            worker_module.discover_metadata = lambda **_: discovery
+            try:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    status = _main(
+                        [
+                            "--metadata-endpoint",
+                            "https://metadata.example.test",
+                            "--observed-at",
+                            "2026-09-13T12:00:00Z",
+                            "--execution-id",
+                            "worker-promotion-fixture",
+                            "--archive-store",
+                            str(root / "archive"),
+                            "--source",
+                            str(SOURCE_FIXTURE),
+                            "--workspace",
+                            str(root / "workspace"),
+                            "--output",
+                            str(root / "output"),
+                            "--fixture",
+                            "--current-release-date",
+                            "2026-09-07",
+                            "--current-source-sha256",
+                            "a" * 64,
+                            "--promotion-mode",
+                            "STAGE_CANARY",
+                            "--promotion-data-canary",
+                            str(evidence),
+                            "--promotion-store-root",
+                            str(root / "stores"),
+                        ]
+                    )
+            finally:
+                worker_module.discover_metadata = original
+            self.assertEqual(status, 0)
+            summary = json.loads((root / "archive" / "control" / "executions" / "worker-promotion-fixture.json").read_bytes())
+            self.assertEqual(summary["status"], "CANARY_READY")
+            self.assertEqual(summary["promotionMode"], "STAGE_CANARY")
+            self.assertEqual(summary["activePointerWrites"], 0)
+            for participant in ACTIVATION_PARTICIPANTS:
+                self.assertFalse((root / "stores" / participant / "control" / "active.json").exists())
+                self.assertEqual(json.loads((root / "stores" / participant / "control" / "canary.json").read_bytes())["releaseId"], candidate)
 
     def test_searchpack_candidate_builds_all_regions_and_reuses_complete_output(self) -> None:
         with tempfile.TemporaryDirectory(prefix="valuepilot-worker-searchpack-") as directory:

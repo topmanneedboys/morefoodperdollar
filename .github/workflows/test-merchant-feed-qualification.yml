@@ -35,10 +35,12 @@ on:
       - 'tools/argentina_release_acquisition.py'
       - 'tools/argentina_release_automation.py'
       - 'tools/argentina_release_worker.py'
+      - 'tools/argentina_release_promoter.py'
       - 'tools/fixtures/argentina_release_acquisition/**'
       - 'tools/tests/test_argentina_release_acquisition.py'
       - 'tools/tests/test_argentina_release_automation.py'
       - 'tools/tests/test_argentina_release_worker.py'
+      - 'tools/tests/test_argentina_release_promoter.py'
       - 'tools/tests/test_argentina_release_configs.py'
       - 'ARGENTINA_AUTOMATED_RELEASE_SOURCE_CONTRACT.*'
       - 'ARGENTINA_AUTOMATED_RELEASE_QUALIFICATION.*'
@@ -95,10 +97,12 @@ on:
       - 'tools/argentina_release_acquisition.py'
       - 'tools/argentina_release_automation.py'
       - 'tools/argentina_release_worker.py'
+      - 'tools/argentina_release_promoter.py'
       - 'tools/fixtures/argentina_release_acquisition/**'
       - 'tools/tests/test_argentina_release_acquisition.py'
       - 'tools/tests/test_argentina_release_automation.py'
       - 'tools/tests/test_argentina_release_worker.py'
+      - 'tools/tests/test_argentina_release_promoter.py'
       - 'tools/tests/test_argentina_release_configs.py'
       - 'ARGENTINA_AUTOMATED_RELEASE_SOURCE_CONTRACT.*'
       - 'ARGENTINA_AUTOMATED_RELEASE_QUALIFICATION.*'
@@ -171,6 +175,7 @@ jobs:
           tools/argentina_release_acquisition.py
           tools/argentina_release_automation.py
           tools/argentina_release_worker.py
+          tools/argentina_release_promoter.py
           tools/qualify_rakuten_product_catalog.py
           tools/measure_rakuten_off_quantity_coverage.py
           tools/measure_rakuten_off_quantity_coverage_v2.py

@@ -42,7 +42,8 @@ try:
         download_candidate,
         select_latest_candidate,
     )
-    from tools.argentina_release_automation import DistributedReleaseLease, LeaseHandle, write_execution_summary
+    from tools.argentina_release_automation import AutomationError, DistributedReleaseLease, LeaseHandle, RELEASE_MODES, run_release_promotion, write_execution_summary
+    from tools.argentina_release_promoter import PromotionAdapterError, build_promotion_stores, build_smoke_checks, read_bounded_json
     from tools.build_argentina_sepa_national_shards import ARGENTINA_REGIONS
     from tools.build_argentina_national_routing_artifact import NationalRoutingArtifactError, derive_release_workspace
     from tools.build_argentina_searchpack import SEARCHPACK_RELEASE_SUFFIX, SearchPackBuildError, derive_searchpack_workspace
@@ -53,7 +54,8 @@ except ModuleNotFoundError:  # direct invocation from tools/
     from argentina_object_store_publisher import ObjectStorePublicationError, ObjectStoreReleasePublisher
     from argentina_searchpack import SearchPackError, SearchPackManager
     from argentina_release_acquisition import AcquisitionCandidate, AcquisitionError, CATALOG_ENDPOINT, DiscoveryResult, PrivateSourceArchive, SourceDecision, canonical_bytes, classify_source, discover_metadata, download_candidate, select_latest_candidate
-    from argentina_release_automation import DistributedReleaseLease, LeaseHandle, write_execution_summary
+    from argentina_release_automation import AutomationError, DistributedReleaseLease, LeaseHandle, RELEASE_MODES, run_release_promotion, write_execution_summary
+    from argentina_release_promoter import PromotionAdapterError, build_promotion_stores, build_smoke_checks, read_bounded_json
     from build_argentina_sepa_national_shards import ARGENTINA_REGIONS
     from build_argentina_national_routing_artifact import NationalRoutingArtifactError, derive_release_workspace
     from build_argentina_searchpack import SEARCHPACK_RELEASE_SUFFIX, SearchPackBuildError, derive_searchpack_workspace
@@ -64,6 +66,7 @@ WORKER_POLICY_VERSION = "valuepilot-argentina-release-worker-policy-v1"
 DISCOVERY_STATE_KEY = "control/discovery-state.json"
 MAX_DISCOVERY_STATE_BYTES = 64 * 1024
 MAX_UPSTREAM_EVIDENCE_BYTES = 32 * 1024
+MAX_PROMOTION_EVIDENCE_BYTES = 128 * 1024
 
 
 class WorkerError(RuntimeError):
@@ -192,6 +195,18 @@ def _write_local_json(path: Path, value: Mapping[str, Any]) -> None:
         os.replace(temporary, path)
     finally:
         temporary.unlink(missing_ok=True)
+
+
+def _optional_path(value: str) -> Path | None:
+    """Treat an omitted/empty workflow argument as absent, not repository ``.``."""
+
+    return Path(value) if isinstance(value, str) and value.strip() else None
+
+
+def _execution_summary_payload(state: Mapping[str, Any]) -> dict[str, Any]:
+    """Remove the envelope fields owned by ``write_execution_summary``."""
+
+    return {str(key): value for key, value in state.items() if key not in {"schemaVersion", "policyVersion", "executionId"}}
 
 
 def _publication_plan_summary(plan: Mapping[str, Any]) -> dict[str, Any]:
@@ -369,6 +384,11 @@ def run_shadow(
     upstream_changed: bool = False,
     build_evidence: Mapping[str, Any] | None = None,
     upstream_change_evidence: Mapping[str, Any] | None = None,
+    promotion_mode: str = "SHADOW",
+    promotion_stores: Mapping[str, ObjectStore] | None = None,
+    promotion_data_canary: Mapping[str, Any] | None = None,
+    promotion_expected_current_release_id: str | None = None,
+    promotion_smoke_checks: Mapping[str, Any] | None = None,
     opener: Callable[..., Any] | None = None,
     sleep_fn: Callable[[float], None] | None = None,
 ) -> dict[str, Any]:
@@ -382,6 +402,17 @@ def run_shadow(
     if build_evidence is not None:
         if not isinstance(build_evidence, Mapping) or len(canonical_bytes(dict(build_evidence))) > MAX_UPSTREAM_EVIDENCE_BYTES:
             raise WorkerError("build evidence is invalid or exceeds bound", code="INVALID_STATE")
+    if promotion_mode not in RELEASE_MODES:
+        raise WorkerError("promotion mode is invalid", code="INVALID_STATE")
+    if promotion_data_canary is not None:
+        if not isinstance(promotion_data_canary, Mapping):
+            raise WorkerError("promotion data-canary evidence is invalid", code="INVALID_STATE")
+        try:
+            evidence_bytes = len(canonical_bytes(dict(promotion_data_canary)))
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise WorkerError("promotion data-canary evidence is invalid", code="INVALID_STATE") from exc
+        if evidence_bytes > MAX_PROMOTION_EVIDENCE_BYTES:
+            raise WorkerError("promotion data-canary evidence exceeds bound", code="INVALID_STATE")
     candidate = select_latest_candidate(discovery.candidates)
     state: dict[str, Any] = {
         "schemaVersion": WORKER_SCHEMA_VERSION,
@@ -410,8 +441,8 @@ def run_shadow(
                 from time import sleep as sleep_fn
             with tempfile.TemporaryDirectory(prefix="valuepilot-sepa-worker-") as temporary:
                 downloaded = download_candidate(candidate, Path(temporary) / "source.zip", opener=opener, sleep_fn=sleep_fn)
-                return _continue_with_source(state, downloaded.path, candidate, current_release_date=current_release_date, current_source_sha256=current_source_sha256, archive_store=archive_store, workspace=workspace, output=output, fixture=fixture, upstream_changed=upstream_changed, observed_at=observed_at, build_evidence=build_evidence, upstream_change_evidence=upstream_change_evidence)
-        result = _continue_with_source(state, Path(source_path).resolve(), candidate, current_release_date=current_release_date, current_source_sha256=current_source_sha256, archive_store=archive_store, workspace=workspace, output=output, fixture=fixture, upstream_changed=upstream_changed, observed_at=observed_at, build_evidence=build_evidence, upstream_change_evidence=upstream_change_evidence)
+                return _continue_with_source(state, downloaded.path, candidate, current_release_date=current_release_date, current_source_sha256=current_source_sha256, archive_store=archive_store, workspace=workspace, output=output, fixture=fixture, upstream_changed=upstream_changed, observed_at=observed_at, build_evidence=build_evidence, upstream_change_evidence=upstream_change_evidence, promotion_mode=promotion_mode, promotion_stores=promotion_stores, promotion_data_canary=promotion_data_canary, promotion_expected_current_release_id=promotion_expected_current_release_id, promotion_smoke_checks=promotion_smoke_checks)
+        result = _continue_with_source(state, Path(source_path).resolve(), candidate, current_release_date=current_release_date, current_source_sha256=current_source_sha256, archive_store=archive_store, workspace=workspace, output=output, fixture=fixture, upstream_changed=upstream_changed, observed_at=observed_at, build_evidence=build_evidence, upstream_change_evidence=upstream_change_evidence, promotion_mode=promotion_mode, promotion_stores=promotion_stores, promotion_data_canary=promotion_data_canary, promotion_expected_current_release_id=promotion_expected_current_release_id, promotion_smoke_checks=promotion_smoke_checks)
         return result
     finally:
         if lease is not None and lease_manager is not None:
@@ -438,6 +469,11 @@ def _continue_with_source(
     observed_at: str,
     build_evidence: Mapping[str, Any] | None,
     upstream_change_evidence: Mapping[str, Any] | None,
+    promotion_mode: str,
+    promotion_stores: Mapping[str, ObjectStore] | None,
+    promotion_data_canary: Mapping[str, Any] | None,
+    promotion_expected_current_release_id: str | None,
+    promotion_smoke_checks: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     try:
         source = inspect_source(source_path, fixture=fixture)
@@ -480,7 +516,26 @@ def _continue_with_source(
         )
         final_release_id = str(searchpack["searchPackReleaseId"])
         final_workspace = Path(str(searchpack["workspace"]))
-    state.update({"stage": "VERIFIED", "status": "CANDIDATE_VERIFIED", "baseReleaseId": release.release_id, "releaseId": final_release_id, "releaseWorkspace": str(final_workspace), "searchPack": searchpack, "releaseReport": str(output / "release-report.json"), "cloudBuildStarted": True, "activePointerWrites": 0})
+    try:
+        promotion = run_release_promotion(
+            final_workspace,
+            release_ids=(final_release_id,),
+            candidate_release_id=final_release_id,
+            mode=promotion_mode,
+            stores=promotion_stores,
+            data_canary=promotion_data_canary,
+            expected_current_release_id=promotion_expected_current_release_id,
+            smoke_checks=promotion_smoke_checks,
+        )
+    except AutomationError as exc:
+        raise WorkerError(str(exc), code=exc.code) from exc
+    state.update({"stage": "VERIFIED", "status": "CANDIDATE_VERIFIED", "baseReleaseId": release.release_id, "releaseId": final_release_id, "releaseWorkspace": str(final_workspace), "searchPack": searchpack, "releaseReport": str(output / "release-report.json"), "promotion": promotion, "promotionMode": promotion_mode, "activation": promotion.get("activation", "NOT_EXECUTED"), "cloudBuildStarted": True, "activePointerWrites": int(promotion.get("activePointerWrites", 0) or 0)})
+    if promotion.get("status") == "CANARY_READY":
+        state.update({"stage": "CANARY_READY", "status": "CANARY_READY"})
+    elif promotion.get("status") == "ACTIVE":
+        state.update({"stage": "ACTIVE", "status": "ACTIVE"})
+    elif promotion.get("status") not in {"SHADOW_ONLY"}:
+        state.update({"stage": "PROMOTION_STOPPED", "status": "PROMOTION_STOPPED"})
     return state
 
 
@@ -506,10 +561,24 @@ def _main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--build-id")
     parser.add_argument("--builder-image")
     parser.add_argument("--builder-sha")
+    parser.add_argument("--promotion-mode", choices=RELEASE_MODES, default="SHADOW")
+    parser.add_argument("--promotion-data-canary", type=_optional_path)
+    parser.add_argument("--promotion-expected-current-release-id")
+    parser.add_argument("--promotion-store-root", type=_optional_path)
+    parser.add_argument("--promotion-us-bucket")
+    parser.add_argument("--promotion-sa-bucket")
+    parser.add_argument("--promotion-r2-bucket")
+    parser.add_argument("--promotion-gcs-project")
+    parser.add_argument("--promotion-r2-endpoint")
+    parser.add_argument("--promotion-r2-region")
+    parser.add_argument("--promotion-us-smoke-url")
+    parser.add_argument("--promotion-sa-smoke-url")
+    parser.add_argument("--promotion-r2-smoke-url")
     args = parser.parse_args(argv)
     execution_id = args.execution_id or f"worker-{uuid.uuid4().hex}"
     archive: ObjectStore | None = None
     stage = "DISCOVERY"
+    promotion_mode = args.promotion_mode
     try:
         discovery = discover_metadata(observed_at=args.observed_at, endpoint=args.metadata_endpoint or CATALOG_ENDPOINT)
         if args.archive_bucket:
@@ -521,6 +590,28 @@ def _main(argv: Sequence[str] | None = None) -> int:
         source_archive_key = args.source_archive_key or os.environ.get("VALUEPILOT_SOURCE_ARCHIVE_KEY") or None
         source_archive_sha256 = args.source_archive_sha256 or os.environ.get("VALUEPILOT_SOURCE_ARCHIVE_SHA256") or None
         upstream_changed = args.upstream_changed or os.environ.get("VALUEPILOT_UPSTREAM_CHANGED", "").casefold() == "true"
+        promotion_stores: Mapping[str, ObjectStore] | None = None
+        promotion_data_canary: Mapping[str, Any] | None = None
+        promotion_smoke_checks: Mapping[str, Any] | None = None
+        if promotion_mode != "SHADOW":
+            if args.promotion_data_canary is None:
+                raise WorkerError("promotion data-canary evidence is required", code="INVALID_STATE")
+            promotion_data_canary = read_bounded_json(args.promotion_data_canary, label="promotion data-canary evidence", maximum=MAX_PROMOTION_EVIDENCE_BYTES)
+            promotion_stores = build_promotion_stores(
+                local_root=args.promotion_store_root,
+                us_bucket=args.promotion_us_bucket or os.environ.get("VALUEPILOT_PROMOTION_US_BUCKET"),
+                sa_bucket=args.promotion_sa_bucket or os.environ.get("VALUEPILOT_PROMOTION_SA_BUCKET"),
+                r2_bucket=args.promotion_r2_bucket or os.environ.get("VALUEPILOT_PROMOTION_R2_BUCKET"),
+                gcs_project=args.promotion_gcs_project or os.environ.get("GOOGLE_CLOUD_PROJECT"),
+                r2_endpoint=args.promotion_r2_endpoint or os.environ.get("VALUEPILOT_PROMOTION_R2_ENDPOINT"),
+                r2_region=args.promotion_r2_region or os.environ.get("VALUEPILOT_PROMOTION_R2_REGION"),
+            )
+        if promotion_mode == "AUTO_ACTIVATE":
+            promotion_smoke_checks = build_smoke_checks(
+                us_url=args.promotion_us_smoke_url or os.environ.get("VALUEPILOT_PROMOTION_US_SMOKE_URL"),
+                sa_url=args.promotion_sa_smoke_url or os.environ.get("VALUEPILOT_PROMOTION_SA_SMOKE_URL"),
+                r2_url=args.promotion_r2_smoke_url or os.environ.get("VALUEPILOT_PROMOTION_R2_SMOKE_URL"),
+            )
         upstream_change_evidence: Mapping[str, Any] | None = None
         if args.upstream_change_evidence is not None:
             try:
@@ -551,23 +642,23 @@ def _main(argv: Sequence[str] | None = None) -> int:
                 with tempfile.TemporaryDirectory(prefix="valuepilot-sepa-restore-") as temporary:
                     restored = PrivateSourceArchive(archive).restore_file(source_archive_key, Path(temporary) / "source.zip", expected_sha256=source_archive_sha256)
                     stage = "SHADOW"
-                    state = run_shadow(discovery=discovery, current_release_date=args.current_release_date, current_source_sha256=args.current_source_sha256, execution_id=execution_id, observed_at=args.observed_at, source_path=restored, archive_store=archive, workspace=args.workspace, output=args.output, fixture=args.fixture, upstream_changed=upstream_changed, upstream_change_evidence=upstream_change_evidence, build_evidence=build_evidence)
+                    state = run_shadow(discovery=discovery, current_release_date=args.current_release_date, current_source_sha256=args.current_source_sha256, execution_id=execution_id, observed_at=args.observed_at, source_path=restored, archive_store=archive, workspace=args.workspace, output=args.output, fixture=args.fixture, upstream_changed=upstream_changed, upstream_change_evidence=upstream_change_evidence, build_evidence=build_evidence, promotion_mode=promotion_mode, promotion_stores=promotion_stores, promotion_data_canary=promotion_data_canary, promotion_expected_current_release_id=args.promotion_expected_current_release_id, promotion_smoke_checks=promotion_smoke_checks)
             else:
                 stage = "SHADOW"
-                state = run_shadow(discovery=discovery, current_release_date=args.current_release_date, current_source_sha256=args.current_source_sha256, execution_id=execution_id, observed_at=args.observed_at, source_path=args.source, archive_store=archive, workspace=args.workspace, output=args.output, fixture=args.fixture, upstream_changed=upstream_changed, upstream_change_evidence=upstream_change_evidence, build_evidence=build_evidence)
+                state = run_shadow(discovery=discovery, current_release_date=args.current_release_date, current_source_sha256=args.current_source_sha256, execution_id=execution_id, observed_at=args.observed_at, source_path=args.source, archive_store=archive, workspace=args.workspace, output=args.output, fixture=args.fixture, upstream_changed=upstream_changed, upstream_change_evidence=upstream_change_evidence, build_evidence=build_evidence, promotion_mode=promotion_mode, promotion_stores=promotion_stores, promotion_data_canary=promotion_data_canary, promotion_expected_current_release_id=args.promotion_expected_current_release_id, promotion_smoke_checks=promotion_smoke_checks)
             state["discovery"] = discovery_state
         stage = "SUMMARY"
-        write_execution_summary(archive, execution_id, state)
+        write_execution_summary(archive, execution_id, _execution_summary_payload(state))
         print(json.dumps(state, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
-        return 0
-    except (AcquisitionError, WorkerError, DailyReleaseError) as exc:
+        return 0 if state.get("status") in {"NO_CHANGE", "CANDIDATE_READY", "CANDIDATE_VERIFIED", "CANARY_READY", "ACTIVE", "ALREADY_RUNNING"} else 2
+    except (AcquisitionError, WorkerError, DailyReleaseError, AutomationError, PromotionAdapterError) as exc:
         if archive is not None:
             try:
                 write_execution_summary(
                     archive,
                     execution_id,
                     {
-                        "mode": "SHADOW",
+                        "mode": promotion_mode,
                         "stage": stage,
                         "status": "FAILED",
                         "error": getattr(exc, "code", "WORKER_FAILED"),
