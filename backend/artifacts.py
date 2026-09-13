@@ -273,7 +273,15 @@ class ManifestReleaseArtifactStore:
             # Keep local qualification and the legacy S3-shaped compatibility
             # path's range/read access shape unchanged unless a caller opts in.
             if full_object_cache_bytes is None:
-                full_object_cache_bytes = DEFAULT_FULL_OBJECT_CACHE_BYTES if store.__class__.__name__ == "GCSObjectStore" else 0
+                # Regional GCS is wrapped in ReadOnlyObjectStore by the
+                # runtime.  Capability-based detection keeps the bounded
+                # cache enabled through that safety wrapper while leaving
+                # local and legacy S3-shaped stores unchanged.
+                full_object_cache_bytes = (
+                    DEFAULT_FULL_OBJECT_CACHE_BYTES
+                    if getattr(store, "supports_pointer_generation_cache", False)
+                    else 0
+                )
             self._full_object_cache = _FullObjectCache(full_object_cache_bytes) if full_object_cache_bytes > 0 else None
         objects = manifest.get("objects")
         if not isinstance(objects, list):

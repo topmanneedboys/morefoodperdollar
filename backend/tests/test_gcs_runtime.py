@@ -246,6 +246,13 @@ class GCSRuntimeTests(unittest.TestCase):
         self.assertLessEqual(artifacts.cache_stats()["bytes"], 256)
         self.assertEqual(DEFAULT_FULL_OBJECT_CACHE_BYTES, 512 * 1024 * 1024)
 
+    def test_read_only_gcs_wrapper_enables_bounded_runtime_cache(self):
+        client = _FakeGCSClient()
+        manifest = _release(client, "r-cache", b"cached")
+        store = ReadOnlyObjectStore(GCSObjectStore(bucket="test", client=client))
+        artifacts = ManifestReleaseArtifactStore(store, manifest, release_id="r-cache")
+        self.assertEqual(artifacts.cache_stats()["maxBytes"], DEFAULT_FULL_OBJECT_CACHE_BYTES)
+
     def test_full_object_cache_skips_objects_over_bound_without_unverified_data(self):
         payload = b"large" * 10
         digest = hashlib.sha256(payload).hexdigest()
