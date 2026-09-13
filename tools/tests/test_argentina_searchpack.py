@@ -4,6 +4,8 @@ import gzip
 import hashlib
 import json
 import tempfile
+import threading
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -11,6 +13,7 @@ from unittest.mock import patch
 from backend.artifacts import ManifestReleaseArtifactStore
 from backend.object_store import LocalFilesystemObjectStore
 from tools.argentina_searchpack import (
+    MAX_RANK_WORKERS,
     SearchPackError,
     SearchPackManager,
     SearchPackStats,
@@ -77,6 +80,13 @@ def _manager(workspace: Path) -> SearchPackManager:
     manifest = json.loads((workspace / "releases" / release_id / "manifest.json").read_bytes())
     artifacts = ManifestReleaseArtifactStore(LocalFilesystemObjectStore(workspace), manifest, release_id=release_id)
     return SearchPackManager(artifacts, manifest)
+
+
+def _manager_for_rows(rows: list[dict[str, object]]) -> SearchPackManager:
+    source, release_id = _fixture_workspace(rows)
+    output = _new_output("valuepilot-searchpack-rank-parallel-")
+    derive_searchpack_workspace(source, output, [release_id])
+    return _manager(output)
 
 
 def _new_output(prefix: str) -> Path:
@@ -206,6 +216,110 @@ class ArgentinaSearchPackTests(unittest.TestCase):
         self.assertEqual(values[0][0]["productEvidenceKey"], "a")
         self.assertEqual(values[1][0]["productEvidenceKey"], "b")
         self.assertNotIn("c", {item["productEvidenceKey"] for item in values[0]})
+
+    def test_rank_query_parallelism_preserves_order_results_stats_and_single_materialization(self) -> None:
+        rows = [
+            {"productEvidenceKey": "arroz", "name": "Arroz Marca 1 kg", "brand": "Marca", "canonicalSearchAliases": [], "partitionId": "p-arroz"},
+            {"productEvidenceKey": "leche", "name": "Leche Marca 1 l", "brand": "Marca", "canonicalSearchAliases": [], "partitionId": "p-leche"},
+            {"productEvidenceKey": "manteca", "name": "Manteca Marca 500 g", "brand": "Marca", "canonicalSearchAliases": [], "partitionId": "p-manteca"},
+            {"productEvidenceKey": "coca", "name": "Coca Cola 1.5 l", "brand": "Coca", "canonicalSearchAliases": [], "partitionId": "p-coca"},
+            {"productEvidenceKey": "sprite", "name": "Sprite 1.5 l", "brand": "Sprite", "canonicalSearchAliases": [], "partitionId": "p-sprite"},
+            {"productEvidenceKey": "seven", "name": "7UP Free Pet 1.5 l", "brand": "7UP", "canonicalSearchAliases": [], "partitionId": "p-seven"},
+        ]
+        queries = ("arroz", "leche", "arroz", "manteca", "Coca-Cola", "Sprite", "7UP FREE PET X 1.5L")
+
+        sequential_manager = _manager_for_rows(rows)
+        sequential_stats = SearchPackStats()
+        with patch("tools.argentina_searchpack.MAX_RANK_WORKERS", 1):
+            sequential = sequential_manager.region("ar-caba").search_many(queries, product_limit=5, candidate_bound=100_000, stats=sequential_stats)
+
+        parallel_manager = _manager_for_rows(rows)
+        parallel_stats = SearchPackStats()
+        parallel_region = parallel_manager.region("ar-caba")
+        with patch.object(parallel_region, "get_records", wraps=parallel_region.get_records) as materialize:
+            with patch("tools.argentina_searchpack.MAX_RANK_WORKERS", MAX_RANK_WORKERS):
+                parallel = parallel_region.search_many(queries, product_limit=5, candidate_bound=100_000, stats=parallel_stats)
+
+        self.assertEqual(parallel, sequential)
+        self.assertEqual(parallel_stats, sequential_stats)
+        self.assertEqual(parallel_stats.ranked_queries, 6)
+        self.assertEqual(parallel[0], parallel[2])
+        self.assertEqual(parallel[-1][0]["productEvidenceKey"], "seven")
+        self.assertEqual(materialize.call_count, 1)
+        self.assertEqual(materialize.call_args.kwargs["max_records"], 5 * 6)
+        self.assertLessEqual(parallel_stats.ranked_records_materialized, 5 * 6)
+
+    def test_rank_query_parallelism_is_bounded_and_worker_failure_is_fail_closed(self) -> None:
+        rows = [
+            {"productEvidenceKey": f"key-{index}", "name": f"Producto {index} 1 kg", "brand": None, "canonicalSearchAliases": []}
+            for index in range(8)
+        ]
+        manager = _manager_for_rows(rows)
+        region = manager.region("ar-caba")
+        original = region._rank_query
+        lock = threading.Lock()
+        active = 0
+        maximum_active = 0
+
+        def rank(query: str, **kwargs):
+            nonlocal active, maximum_active
+            with lock:
+                active += 1
+                maximum_active = max(maximum_active, active)
+            try:
+                time.sleep(0.01)
+                return original(query, **kwargs)
+            finally:
+                with lock:
+                    active -= 1
+
+        queries = tuple(f"producto {index}" for index in range(8))
+        with patch.object(region, "_rank_query", side_effect=rank):
+            values = region.search_many(queries, product_limit=1, candidate_bound=100_000)
+        self.assertEqual(len(values), len(queries))
+        self.assertLessEqual(maximum_active, MAX_RANK_WORKERS)
+
+        failing_manager = _manager_for_rows(rows)
+        failing_region = failing_manager.region("ar-caba")
+        original_failing_rank = failing_region._rank_query
+
+        def fail_one(query: str, **kwargs):
+            if query == "producto 3":
+                raise SearchPackError("rank worker failed")
+            return original_failing_rank(query, **kwargs)
+
+        with patch.object(failing_region, "_rank_query", side_effect=fail_one), patch.object(failing_region, "get_records", wraps=failing_region.get_records) as get_records:
+            with self.assertRaisesRegex(SearchPackError, "rank worker failed"):
+                failing_region.search_many(queries, product_limit=1, candidate_bound=100_000)
+        self.assertFalse(get_records.called)
+
+    def test_rank_query_parallelism_preserves_corpus_scan_and_partition_identity(self) -> None:
+        rows = [
+            {"productEvidenceKey": "arroz-key", "name": "Arroz 1 kg", "brand": None, "canonicalSearchAliases": [], "partitionId": "p-arroz"},
+            {"productEvidenceKey": "seven-key", "name": "7UP FREE PET X 1.5L", "brand": "7UP", "canonicalSearchAliases": [], "partitionId": "p-seven"},
+        ]
+        manager = _manager_for_rows(rows)
+        region = manager.region("ar-caba")
+        values = region.search_many(("arroz", "7UP FREE PET X 1.5L"), product_limit=1, candidate_bound=100_000)
+        self.assertEqual([value[0]["partitionId"] for value in values], ["p-arroz", "p-seven"])
+
+    def test_rank_query_parallelism_does_not_hide_corrupt_rank_block(self) -> None:
+        rows = [
+            {"productEvidenceKey": "arroz-key", "name": "Arroz 1 kg", "brand": None, "canonicalSearchAliases": []},
+            {"productEvidenceKey": "leche-key", "name": "Leche 1 l", "brand": None, "canonicalSearchAliases": []},
+        ]
+        source, release_id = _fixture_workspace(rows)
+        output = _new_output("valuepilot-searchpack-rank-corrupt-")
+        derive_searchpack_workspace(source, output, [release_id])
+        derived_id = f"{release_id}{SEARCHPACK_RELEASE_SUFFIX}"
+        manifest = json.loads((output / "releases" / derived_id / "manifest.json").read_bytes())
+        rank_postings = next(item for item in manifest["objects"] if item["path"].endswith("/rank-postings.bin"))
+        object_path = output / "objects" / "sha256" / rank_postings["sha256"]
+        data = object_path.read_bytes()
+        object_path.write_bytes(bytes([data[0] ^ 1]) + data[1:])
+        manager = SearchPackManager(ManifestReleaseArtifactStore(LocalFilesystemObjectStore(output), manifest, release_id=derived_id), manifest)
+        with self.assertRaises(SearchPackError):
+            manager.region("ar-caba").search_many(("arroz", "leche"), product_limit=5, candidate_bound=100_000)
 
     def test_index_native_ranker_matches_exhaustive_score_and_materializes_top_k_only(self) -> None:
         rows = [

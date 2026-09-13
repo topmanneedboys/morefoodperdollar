@@ -22,6 +22,7 @@ import tempfile
 import threading
 import zlib
 from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
@@ -48,6 +49,7 @@ SEARCHPACK_FORMAT_VERSION = 2
 POSTINGS_BLOCK_MAX_IDS = 65_536
 SEARCHPACK_CANDIDATE_HORIZON = 256
 SEARCHPACK_MAX_DOCS = 100_000
+MAX_RANK_WORKERS = 4
 DOCSTORE_BLOCK_RECORDS = 128
 LEXICON_BLOCK_ENTRIES = 4_096
 MAX_METADATA_BYTES = 8 * 1024 * 1024
@@ -366,12 +368,30 @@ class SearchPackStats:
     ranked_posting_bytes: int = 0
 
 
+_SEARCHPACK_STAT_FIELDS = tuple(SearchPackStats.__dataclass_fields__)
+
+
+def _merge_searchpack_stats(target: SearchPackStats, source: SearchPackStats) -> None:
+    """Merge isolated worker counters in a stable field order."""
+
+    for name in _SEARCHPACK_STAT_FIELDS:
+        setattr(target, name, getattr(target, name) + getattr(source, name))
+
+
 @dataclass(frozen=True)
 class SearchPackLookup:
     doc_ids: tuple[int, ...]
     saturated: bool
     saturated_features: tuple[str, ...] = ()
     matched_features: tuple[str, ...] = ()
+
+
+class _InflightLoad:
+    """Single-flight state for one bounded immutable range read."""
+
+    def __init__(self) -> None:
+        self.event = threading.Event()
+        self.error: BaseException | None = None
 
 
 class _ByteLRU:
@@ -387,6 +407,30 @@ class _ByteLRU:
         self._verified: set[str] = set()
         self._bytes = 0
         self._lock = threading.RLock()
+        self._inflight: dict[str, _InflightLoad] = {}
+
+    def claim(self, key: str) -> tuple[bytes | None, _InflightLoad | None, bool]:
+        """Claim or join one read without duplicating remote I/O."""
+
+        with self._lock:
+            value = self._items.get(key)
+            if value is not None:
+                self._items.move_to_end(key)
+                return value, None, False
+            flight = self._inflight.get(key)
+            if flight is not None:
+                return None, flight, False
+            flight = _InflightLoad()
+            self._inflight[key] = flight
+            return None, flight, True
+
+    def finish(self, key: str, flight: _InflightLoad, *, error: BaseException | None = None) -> None:
+        with self._lock:
+            if self._inflight.get(key) is not flight:
+                return
+            flight.error = error
+            del self._inflight[key]
+            flight.event.set()
 
     def get(self, key: str) -> bytes | None:
         with self._lock:
@@ -523,6 +567,7 @@ class SearchPackRegion:
         self.rank_term_count = rank_term_count
         self._cache = cache or _ByteLRU(cache_bytes)
         self._term_cache: dict[tuple[str, int], tuple[int, int, int, int]] = {}
+        self._term_cache_lock = threading.RLock()
 
     @staticmethod
     def _require_str(value: Mapping[str, Any], key: str) -> str:
@@ -636,20 +681,36 @@ class SearchPackRegion:
         if offset < 0 or length < 0 or offset + length > total or length > MAX_BLOCK_BYTES:
             raise SearchPackError(f"{label} range is invalid")
         key = self._cache_key(name, offset, length)
-        cached = self._cache.get(key)
-        if cached is not None:
-            stats.cache_hits += 1
-            return cached
-        stats.cache_misses += 1
-        try:
-            data = self.artifacts.read_range(str(descriptor["path"]), offset, length)
-        except Exception as exc:  # noqa: BLE001 - normalize store-specific failures
-            raise SearchPackError(f"{label} range read failed") from exc
-        if not isinstance(data, bytes) or len(data) != length:
-            raise SearchPackError(f"{label} range is truncated")
-        stats.bytes_read += len(data)
-        self._cache.put(key, data)
-        return data
+        while True:
+            cached, flight, owner = self._cache.claim(key)
+            if cached is not None:
+                stats.cache_hits += 1
+                return cached
+            if not owner:
+                # Wait for the owner, then inspect the cache again so the
+                # ordinary hit/miss accounting remains identical to a
+                # sequential lookup.
+                flight.event.wait()
+                if flight.error is not None:
+                    raise flight.error
+                # A range larger than the bounded cache may have been
+                # intentionally declined by put(); retry as the next owner.
+                continue
+            stats.cache_misses += 1
+            try:
+                data = self.artifacts.read_range(str(descriptor["path"]), offset, length)
+                if not isinstance(data, bytes) or len(data) != length:
+                    raise SearchPackError(f"{label} range is truncated")
+                stats.bytes_read += len(data)
+                self._cache.put(key, data)
+            except BaseException as exc:  # noqa: BLE001 - wake waiters before failing closed
+                error = exc if isinstance(exc, SearchPackError) else SearchPackError(f"{label} range read failed")
+                self._cache.finish(key, flight, error=error)
+                if error is not exc:
+                    raise error from exc
+                raise
+            self._cache.finish(key, flight)
+            return data
 
     @staticmethod
     def _block_descriptor(blocks: Sequence[Mapping[str, Any]], ordinal: int, label: str) -> Mapping[str, Any]:
@@ -773,7 +834,9 @@ class SearchPackRegion:
         return fst_lookup(data, key)
 
     def _term_from(self, name: str, ordinal: int, stats: SearchPackStats, *, label: str) -> tuple[int, int, int, int]:
-        cached = self._term_cache.get((name, ordinal))
+        cache_key = (name, ordinal)
+        with self._term_cache_lock:
+            cached = self._term_cache.get(cache_key)
         if cached is not None:
             return cached
         if name == "rankTermDirectory":
@@ -797,9 +860,16 @@ class SearchPackRegion:
             else:
                 stats.ranked_term_directory_reads += 1
             value = _TERM_STRUCT.unpack(data)
-        if len(self._term_cache) >= MAX_TERM_CACHE_ENTRIES:
-            self._term_cache.pop(next(iter(self._term_cache)))
-        self._term_cache[(name, ordinal)] = value
+        with self._term_cache_lock:
+            # Another rank worker may have populated the same immutable term
+            # while this worker was reading it.  Reuse that value and retain
+            # deterministic cache contents without holding the lock over I/O.
+            cached = self._term_cache.get(cache_key)
+            if cached is not None:
+                return cached
+            if len(self._term_cache) >= MAX_TERM_CACHE_ENTRIES:
+                self._term_cache.pop(next(iter(self._term_cache)))
+            self._term_cache[cache_key] = value
         return value
 
     def _term(self, ordinal: int, stats: SearchPackStats) -> tuple[int, int, int, int]:
@@ -1111,11 +1181,43 @@ class SearchPackRegion:
         requested = tuple(dict.fromkeys(queries))
         hits_by_query: dict[str, tuple[tuple[int, int, tuple[str, ...]], ...]] = {}
         all_ids: set[int] = set()
+        if len(requested) <= 1:
+            for query in requested:
+                stats.ranked_queries += 1
+                hits = self._rank_query(query, product_limit=product_limit, candidate_bound=candidate_bound, stats=stats)
+                hits_by_query[query] = hits
+        else:
+            def rank_one(query: str) -> tuple[tuple[tuple[int, int, tuple[str, ...]], ...], SearchPackStats]:
+                worker_stats = SearchPackStats(ranked_queries=1)
+                hits = self._rank_query(query, product_limit=product_limit, candidate_bound=candidate_bound, stats=worker_stats)
+                return hits, worker_stats
+
+            workers = min(MAX_RANK_WORKERS, len(requested))
+            with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="valuepilot-rank") as executor:
+                # Keep only a worker-sized set of futures in flight.  The
+                # public SearchPack helper is bounded by the Android request
+                # today, but this prevents an accidental large direct caller
+                # from turning the executor queue into an unbounded cache.
+                futures = {index: executor.submit(rank_one, requested[index]) for index in range(workers)}
+                try:
+                    # Futures are consumed in requested order, not completion
+                    # order.  This makes merged diagnostics and query/result
+                    # alignment deterministic while preserving parallel I/O.
+                    next_index = workers
+                    for index, query in enumerate(requested):
+                        future = futures.pop(index)
+                        hits, worker_stats = future.result()
+                        _merge_searchpack_stats(stats, worker_stats)
+                        hits_by_query[query] = hits
+                        if next_index < len(requested):
+                            futures[next_index] = executor.submit(rank_one, requested[next_index])
+                            next_index += 1
+                except BaseException:
+                    for future in futures.values():
+                        future.cancel()
+                    raise
         for query in requested:
-            stats.ranked_queries += 1
-            hits = self._rank_query(query, product_limit=product_limit, candidate_bound=candidate_bound, stats=stats)
-            hits_by_query[query] = hits
-            all_ids.update(item[1] for item in hits)
+            all_ids.update(item[1] for item in hits_by_query[query])
         max_records = max(1, product_limit * len(requested))
         records = self.get_records(tuple(sorted(all_ids)), stats=stats, max_records=max_records) if all_ids else {}
         stats.ranked_records_materialized += len(records)
@@ -1243,6 +1345,7 @@ __all__ = [
     "DOCSTORE_BLOCK_RECORDS",
     "LEXICON_BLOCK_ENTRIES",
     "LEXICAL_FEATURE_POLICY_VERSION",
+    "MAX_RANK_WORKERS",
     "POSTINGS_BLOCK_MAX_IDS",
     "SEARCHPACK_CANDIDATE_HORIZON",
     "SEARCHPACK_FORMAT_VERSION",

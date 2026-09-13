@@ -17,7 +17,7 @@ from backend.object_store import LocalFilesystemObjectStore, ObjectMetadata
 from backend.cache import VerifiedEvidenceCache
 from backend.reader import ArgentinaBackendReader, MAX_OFFER_PARTITION_CONCURRENCY, RegionSelection, RequestMetrics
 from backend.service import BackendService
-from tools.argentina_searchpack import SearchPackLookup, SearchPackManager, SearchPackStats, _CHUNK_STRUCT, _TERM_STRUCT
+from tools.argentina_searchpack import MAX_RANK_WORKERS, SearchPackLookup, SearchPackManager, SearchPackStats, _CHUNK_STRUCT, _TERM_STRUCT
 from tools.argentina_searchpack import SearchPackError
 from tools.build_argentina_searchpack import SEARCHPACK_RELEASE_SUFFIX, derive_searchpack_workspace
 from tools.tests.test_argentina_searchpack import _fixture_workspace, _new_output
@@ -583,6 +583,52 @@ def _offer_partition_fixture(partition_count: int = 8, *, latency_seconds: float
 
 
 class SearchPackRemoteLatencyTests(unittest.TestCase):
+    def test_rank_query_parallel_load_preserves_results_reads_and_reduces_delayed_range_time(self) -> None:
+        rows = [
+            {"productEvidenceKey": "arroz", "name": "Arroz Marca 1 kg", "brand": "Marca", "canonicalSearchAliases": []},
+            {"productEvidenceKey": "leche", "name": "Leche Marca 1 l", "brand": "Marca", "canonicalSearchAliases": []},
+            {"productEvidenceKey": "manteca", "name": "Manteca Marca 500 g", "brand": "Marca", "canonicalSearchAliases": []},
+            {"productEvidenceKey": "coca", "name": "Coca Cola 1.5 l", "brand": "Coca", "canonicalSearchAliases": []},
+            {"productEvidenceKey": "sprite", "name": "Sprite 1.5 l", "brand": "Sprite", "canonicalSearchAliases": []},
+            {"productEvidenceKey": "seven", "name": "7UP Free Pet 1.5 l", "brand": "7UP", "canonicalSearchAliases": []},
+            {"productEvidenceKey": "detergente", "name": "Detergente Marca 500 ml", "brand": "Marca", "canonicalSearchAliases": []},
+            {"productEvidenceKey": "aceite", "name": "Aceite Girasol 1 l", "brand": "Marca", "canonicalSearchAliases": []},
+        ]
+        queries = ("arroz", "leche", "manteca", "Coca-Cola", "Sprite", "7UP FREE PET X 1.5L", "detergente", "aceite")
+
+        def build_case():
+            source, release_id = _fixture_workspace(rows)
+            output = _new_output("valuepilot-m11-rank-latency-")
+            derive_searchpack_workspace(source, output, [release_id])
+            derived_id = f"{release_id}{SEARCHPACK_RELEASE_SUFFIX}"
+            manifest = json.loads((output / "releases" / derived_id / "manifest.json").read_bytes())
+            store = _LatencyStore(output, 0.03)
+            manager = SearchPackManager(ManifestReleaseArtifactStore(store, manifest, release_id=derived_id), manifest)
+            return manager.region("ar-caba"), store
+
+        sequential_region, sequential_store = build_case()
+        sequential_stats = SearchPackStats()
+        started = time.perf_counter()
+        with patch("tools.argentina_searchpack.MAX_RANK_WORKERS", 1):
+            sequential = sequential_region.search_many(queries, product_limit=5, candidate_bound=100_000, stats=sequential_stats)
+        sequential_elapsed = time.perf_counter() - started
+
+        parallel_region, parallel_store = build_case()
+        parallel_stats = SearchPackStats()
+        started = time.perf_counter()
+        with patch("tools.argentina_searchpack.MAX_RANK_WORKERS", MAX_RANK_WORKERS):
+            parallel = parallel_region.search_many(queries, product_limit=5, candidate_bound=100_000, stats=parallel_stats)
+        parallel_elapsed = time.perf_counter() - started
+
+        self.assertEqual(parallel, sequential)
+        self.assertEqual(parallel_stats, sequential_stats)
+        self.assertEqual(parallel_store.count("range"), sequential_store.count("range"))
+        self.assertEqual(sorted(parallel_store.range_details), sorted(sequential_store.range_details))
+        self.assertEqual(parallel_stats.bytes_read, sequential_stats.bytes_read)
+        self.assertEqual(parallel_stats.ranked_records_materialized, 8)
+        self.assertLessEqual(parallel_stats.ranked_records_materialized, 5 * len(set(queries)))
+        self.assertLess(parallel_elapsed, sequential_elapsed * 0.85)
+
     def test_offer_partition_parallel_load_preserves_order_and_reduces_delayed_range_time(self) -> None:
         _root, sequential_reader, sequential_store, partitions = _offer_partition_fixture(latency_seconds=0.03)
         sequential_metrics = RequestMetrics()
