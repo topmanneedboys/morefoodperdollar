@@ -36,6 +36,9 @@ class ArgentinaReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("timeout: 14400", workflow)
         self.assertIn("control/workflow-discovery-state.json", workflow)
         self.assertIn("activePointerWrites: 0", workflow)
+        self.assertIn("state_error.code == 404", workflow)
+        self.assertIn("CONTROL_STATE_UNAVAILABLE", workflow)
+        self.assertNotIn("as: state_error\n          steps:\n            - no_previous_state", workflow)
 
     def test_scheduler_template_is_paused_and_argentina_localized(self) -> None:
         value = json.loads((ROOT / "scheduler" / "argentina-release-job.example.json").read_text(encoding="utf-8"))

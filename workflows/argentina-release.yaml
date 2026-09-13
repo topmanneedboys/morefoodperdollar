@@ -102,10 +102,22 @@ main:
         except:
           as: state_error
           steps:
-            - no_previous_state:
-                assign:
-                  - previous_state: {}
-                  - previous_state_generation: null
+            - classify_state_error:
+                switch:
+                  # A first run has no state object.  Only that explicit
+                  # not-found response may initialize an empty state.
+                  - condition: ${state_error.code == 404}
+                    assign:
+                      - previous_state: {}
+                      - previous_state_generation: null
+                  # Any outage, permission failure, malformed state, or
+                  # provider error is uncertainty and must stop before a
+                  # Cloud Build can be started.
+                  - condition: true
+                    return:
+                      status: CONTROL_STATE_UNAVAILABLE
+                      cloudBuildStarted: false
+                      activePointerWrites: 0
 
     - no_change:
         switch:
