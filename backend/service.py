@@ -14,6 +14,16 @@ from .reader import ArgentinaBackendReader, BackendQueryError, CurrentPriceEvide
 from .release import ReleaseError, ReleaseManager
 
 LOGGER = logging.getLogger("valuepilot.backend")
+# Uvicorn configures its own logger tree and leaves application loggers
+# without a handler.  Keep the bounded request diagnostics observable in
+# Cloud Run without changing the public response contract or relying on a
+# host-specific root-logger setup.
+if not LOGGER.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter("%(message)s"))
+    LOGGER.addHandler(_handler)
+    LOGGER.propagate = False
+LOGGER.setLevel(logging.INFO)
 MAX_REQUEST_BYTES = 16 * 1024
 NORMAL_RESPONSE_BYTES = 128 * 1024
 HARD_RESPONSE_BYTES = 512 * 1024
