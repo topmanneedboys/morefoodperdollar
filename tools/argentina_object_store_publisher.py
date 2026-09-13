@@ -19,10 +19,11 @@ import json
 import os
 import re
 import warnings
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from backend.object_store import ObjectMetadata, ObjectStore, ObjectStoreError, S3CompatibleObjectStore, validate_key
+from backend.object_store import GCSObjectStore, ObjectMetadata, ObjectStore, ObjectStoreError, S3CompatibleObjectStore, validate_key
 
 
 class ObjectStorePublicationError(RuntimeError):
@@ -37,6 +38,7 @@ _ROUTING_SCHEMA_VERSION = "valuepilot-national-routing-v1"
 _SEARCHPACK_SCHEMA_VERSION = "valuepilot-argentina-searchpack-v2"
 _SEARCHPACK_FORMAT_VERSION = 2
 _SEARCHPACK_POLICY_VERSION = "valuepilot-argentina-lexical-features-v1"
+MAX_MIRROR_UPLOAD_WORKERS = 4
 
 
 def _sha256_file(path: Path) -> str:
@@ -79,6 +81,41 @@ def _validate_nonnegative_int(value: Any, label: str) -> int:
     if not isinstance(value, int) or isinstance(value, bool) or value < 0:
         raise ObjectStorePublicationError(f"{label} is invalid")
     return value
+
+
+def _bounded_parallel(items: Sequence[Any], callback: Any, *, max_workers: int = MAX_MIRROR_UPLOAD_WORKERS) -> list[Any]:
+    """Apply a callback with a bounded in-flight window and stable results."""
+
+    if not items:
+        return []
+    workers = max(1, min(int(max_workers), len(items)))
+    results: list[Any] = [None] * len(items)
+    iterator = iter(enumerate(items))
+    errors: list[tuple[int, BaseException]] = []
+    with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="valuepilot-mirror") as executor:
+        pending: dict[Any, int] = {}
+        for _ in range(workers):
+            try:
+                index, item = next(iterator)
+            except StopIteration:
+                break
+            pending[executor.submit(callback, item)] = index
+        while pending:
+            done, _ = wait(tuple(pending), return_when=FIRST_COMPLETED)
+            for future in sorted(done, key=lambda value: pending[value]):
+                index = pending.pop(future)
+                try:
+                    results[index] = future.result()
+                except BaseException as exc:  # noqa: BLE001 - preserve deterministic first failure
+                    errors.append((index, exc))
+                try:
+                    next_index, next_item = next(iterator)
+                except StopIteration:
+                    continue
+                pending[executor.submit(callback, next_item)] = next_index
+    if errors:
+        raise min(errors, key=lambda value: value[0])[1]
+    return results
 
 
 def _canonical_manifest_checksum(manifest_raw: bytes, sidecar_raw: bytes) -> bytes:
@@ -218,6 +255,38 @@ def _verify_remote(store: ObjectStore, key: str, *, expected_sha256: str, expect
     if len(data) != expected_bytes or _sha256_bytes(data) != expected_sha256:
         raise ObjectStorePublicationError(f"published object hash mismatch: {key}")
     return metadata
+
+
+def _verify_inventory_entry(
+    store: ObjectStore,
+    inventory: Mapping[str, ObjectMetadata] | None,
+    key: str,
+    *,
+    expected_sha256: str,
+    expected_bytes: int,
+) -> ObjectMetadata:
+    """Verify one object using a listing entry, falling back to exact head/read."""
+
+    if inventory is not None:
+        metadata = inventory.get(key)
+        if metadata is not None and metadata.size == expected_bytes and metadata.sha256 == expected_sha256:
+            return metadata
+    return _verify_remote(store, key, expected_sha256=expected_sha256, expected_bytes=expected_bytes)
+
+
+def _destination_inventory(store: ObjectStore) -> dict[str, ObjectMetadata] | None:
+    """Use an optional provider listing to bound publication preflight calls."""
+
+    inventory = getattr(store, "inventory", None)
+    if not callable(inventory):
+        return None
+    try:
+        value = inventory(("objects/sha256/", "releases/", "control/"))
+    except ObjectStoreError as exc:
+        raise ObjectStorePublicationError("remote object inventory is unavailable") from exc
+    if not isinstance(value, Mapping):
+        raise ObjectStorePublicationError("remote object inventory is invalid")
+    return dict(value)
 
 
 class ObjectStoreReleasePublisher:
@@ -453,6 +522,346 @@ class ObjectStoreReleasePublisher:
         except ObjectStoreError as exc:
             raise ObjectStorePublicationError(f"{label} publication failed") from exc
 
+    @staticmethod
+    def _preflight_plan(store: ObjectStore, plan: Mapping[str, Any], root: Path) -> tuple[int, int, set[str]]:
+        """Check every existing immutable destination object before writing.
+
+        The local plan has already verified each source content-addressed file.
+        This pass deliberately does not read source bytes again: it only checks
+        destination objects that already exist and fails closed on a mismatch.
+        A destination can therefore be resumed after an interrupted upload
+        without exposing a partial ACTIVE pointer.
+        """
+
+        reused = 0
+        new = 0
+        missing: set[str] = set()
+        inventory = _destination_inventory(store)
+        for item in plan["objects"]:
+            present = inventory is not None and item["key"] in inventory
+            if inventory is None:
+                try:
+                    present = store.exists(item["key"])
+                except ObjectStoreError as exc:
+                    raise ObjectStorePublicationError("remote object inventory is unavailable") from exc
+            if present:
+                _verify_inventory_entry(
+                    store,
+                    inventory,
+                    item["key"],
+                    expected_sha256=item["sha256"],
+                    expected_bytes=item["bytes"],
+                )
+                reused += 1
+            else:
+                new += 1
+                missing.add(item["key"])
+
+        for manifest_info in plan["manifests"]:
+            release_id = manifest_info["releaseId"]
+            manifest_path, manifest_raw, _ = ObjectStoreReleasePublisher._manifest(root, release_id)
+            checksum_raw = _canonical_manifest_checksum(manifest_raw, manifest_path.with_name("manifest.sha256").read_bytes())
+            for key, payload in (
+                (f"releases/{release_id}/manifest.json", manifest_raw),
+                (f"releases/{release_id}/manifest.sha256", checksum_raw),
+            ):
+                present = inventory is not None and key in inventory
+                if inventory is None:
+                    present = store.exists(key)
+                if present:
+                    _verify_inventory_entry(
+                        store,
+                        inventory,
+                        key,
+                        expected_sha256=_sha256_bytes(payload),
+                        expected_bytes=len(payload),
+                    )
+        for item in plan["control"]:
+            present = inventory is not None and item["key"] in inventory
+            if inventory is None:
+                present = store.exists(item["key"])
+            if present:
+                _verify_inventory_entry(
+                    store,
+                    inventory,
+                    item["key"],
+                    expected_sha256=item["sha256"],
+                    expected_bytes=item["bytes"],
+                )
+        return new, reused, missing
+
+    def _stage_plan(self, store: ObjectStore, root: Path, release_ids: Sequence[str], plan: Mapping[str, Any]) -> dict[str, Any]:
+        """Stage one already-planned destination without changing ACTIVE."""
+
+        new_count, reused_count, missing = self._preflight_plan(store, plan, root)
+        _bounded_parallel(
+            [item for item in plan["objects"] if item["key"] in missing],
+            lambda item: self._put_file(store, item, label="immutable object"),
+        )
+
+        for release_id in release_ids:
+            manifest_path, manifest_raw, _ = self._manifest(root, release_id)
+            checksum_raw = _canonical_manifest_checksum(manifest_raw, manifest_path.with_name("manifest.sha256").read_bytes())
+            manifest_key = f"releases/{release_id}/manifest.json"
+            checksum_key = f"releases/{release_id}/manifest.sha256"
+            self._put_bytes(store, manifest_key, manifest_raw, label="manifest")
+            self._put_bytes(store, checksum_key, checksum_raw, label="manifest checksum")
+            _verify_remote(store, manifest_key, expected_sha256=_sha256_bytes(manifest_raw), expected_bytes=len(manifest_raw))
+            _verify_remote(store, checksum_key, expected_sha256=_sha256_bytes(checksum_raw), expected_bytes=len(checksum_raw))
+
+        for item in plan["control"]:
+            payload = item["source"].read_bytes()
+            self._put_bytes(store, item["key"], payload, label="control metadata")
+
+        expected: list[tuple[str, str, int]] = [
+            (item["key"], item["sha256"], item["bytes"]) for item in plan["objects"]
+        ]
+        for release_id in release_ids:
+            manifest_path, manifest_raw, _ = self._manifest(root, release_id)
+            checksum_raw = _canonical_manifest_checksum(manifest_raw, manifest_path.with_name("manifest.sha256").read_bytes())
+            expected.extend(
+                (
+                    (f"releases/{release_id}/manifest.json", _sha256_bytes(manifest_raw), len(manifest_raw)),
+                    (f"releases/{release_id}/manifest.sha256", _sha256_bytes(checksum_raw), len(checksum_raw)),
+                )
+            )
+        expected.extend((item["key"], item["sha256"], item["bytes"]) for item in plan["control"])
+        inventory = _destination_inventory(store)
+        if inventory is None:
+            _bounded_parallel(
+                expected,
+                lambda entry: _verify_remote(store, entry[0], expected_sha256=entry[1], expected_bytes=entry[2]),
+            )
+        else:
+            for key, digest, size in expected:
+                _verify_inventory_entry(store, inventory, key, expected_sha256=digest, expected_bytes=size)
+
+        return {
+            "status": "STAGED",
+            "releaseIds": list(release_ids),
+            "objectCount": plan["objectCount"],
+            "objectBytes": plan["objectBytes"],
+            "manifestCount": plan["manifestCount"],
+            "manifestBytes": plan["manifestBytes"],
+            "manifestChecksumBytes": plan["manifestChecksumBytes"],
+            "controlBytes": plan["controlBytes"],
+            "bytes": plan["bytes"],
+            "newImmutableObjectCount": new_count,
+            "reusedImmutableObjectCount": reused_count,
+            "remoteWriteCount": len(plan["objects"]) + (2 * len(plan["manifests"])) + len(plan["control"]),
+            "activeWriteCount": 0,
+            "activePointerChanged": False,
+            "deleteCount": 0,
+            "remoteDeleteCount": 0,
+        }
+
+    def stage_to_stores(
+        self,
+        workspace: Path | str,
+        stores: Mapping[str, ObjectStore],
+        *,
+        release_ids: Sequence[str] | None = None,
+        active_release_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Stage one immutable release set to multiple stores from one plan.
+
+        This is the publication fan-out used by regional mirrors.  It writes
+        no ACTIVE pointer in any destination; callers must verify all results
+        before a separate regional CAS activation.
+        """
+
+        if not isinstance(stores, Mapping) or not stores:
+            raise ObjectStorePublicationError("at least one destination store is required")
+        names = tuple(sorted(stores))
+        if any(not isinstance(name, str) or not name.strip() for name in names) or len(set(names)) != len(names):
+            raise ObjectStorePublicationError("destination store names are invalid")
+        root = Path(workspace).resolve()
+        ids = self._release_ids(root, release_ids)
+        plan = self._build_plan(root, ids, active_release_id, remote_store=None)
+        reports: dict[str, Any] = {}
+        for name in names:
+            store = stores[name]
+            if store is None:
+                raise ObjectStorePublicationError("destination store is invalid")
+            reports[name] = self._stage_plan(store, root, ids, plan)
+        return {
+            "operation": "STAGE_TO_STORES",
+            "status": "STAGED",
+            "releaseIds": list(ids),
+            "activeReleaseId": active_release_id,
+            "stores": reports,
+            "objectCount": plan["objectCount"],
+            "manifestCount": plan["manifestCount"],
+            "objectBytes": plan["objectBytes"],
+            "manifestBytes": plan["manifestBytes"],
+            "manifestChecksumBytes": plan["manifestChecksumBytes"],
+            "controlBytes": plan["controlBytes"],
+            "bytes": plan["bytes"],
+            "deleteCount": 0,
+            "remoteDeleteCount": 0,
+        }
+
+    def _activate_regional_pointer(
+        self,
+        store: ObjectStore,
+        *,
+        release_id: str,
+        rollback_release_id: str | None,
+    ) -> dict[str, Any]:
+        """CAS one regional ACTIVE pointer after all immutable data is staged."""
+
+        current_metadata, current_pointer = self._read_active(store)
+        current_release_id = current_pointer.get("releaseId") if current_pointer else None
+        previous = rollback_release_id if rollback_release_id is not None else current_release_id
+        pointer = {
+            "lastKnownGoodReleaseId": release_id,
+            "previousReleaseId": previous,
+            "releaseId": release_id,
+            "schemaVersion": _ACTIVE_SCHEMA_VERSION,
+        }
+        pointer_raw = _canonical(pointer)
+        if current_pointer == pointer:
+            return {
+                "status": "ALREADY_ACTIVE",
+                "activeReleaseId": release_id,
+                "previousReleaseId": previous,
+                "activePointerChanged": False,
+                "activeWriteCount": 0,
+                "remoteWriteCount": 0,
+                "deleteCount": 0,
+                "remoteDeleteCount": 0,
+            }
+        try:
+            metadata = store.compare_and_swap(
+                _ACTIVE_KEY,
+                pointer_raw,
+                expected_etag=current_metadata.etag if current_metadata else None,
+            )
+            if metadata.size != len(pointer_raw) or (metadata.sha256 is not None and metadata.sha256 != _sha256_bytes(pointer_raw)):
+                raise ObjectStorePublicationError("regional active pointer verification failed")
+            _verify_remote(store, _ACTIVE_KEY, expected_sha256=_sha256_bytes(pointer_raw), expected_bytes=len(pointer_raw))
+        except (ObjectStoreError, ObjectStorePublicationError) as exc:
+            raise ObjectStorePublicationError("regional active pointer publication failed") from exc
+        return {
+            "status": "ACTIVE",
+            "activeReleaseId": release_id,
+            "previousReleaseId": previous,
+            "activePointerChanged": True,
+            "activeWriteCount": 1,
+            "remoteWriteCount": 1,
+            "deleteCount": 0,
+            "remoteDeleteCount": 0,
+        }
+
+    def mirror_to_regional_stores(
+        self,
+        workspace: Path | str,
+        stores: Mapping[str, ObjectStore],
+        *,
+        release_ids: Sequence[str],
+        active_release_id: str,
+        rollback_release_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Stage and activate an identical release set in regional mirrors.
+
+        The operation is intentionally two-phase per destination: all
+        content-addressed objects, manifests, and control metadata are staged
+        and verified first; only then is that region's small ACTIVE pointer
+        changed with compare-and-swap.  A failure in one region leaves its
+        existing pointer intact and never deletes data from any region.
+        """
+
+        if not isinstance(active_release_id, str) or not _valid_release_id(active_release_id):
+            raise ObjectStorePublicationError("active release ID is invalid")
+        if rollback_release_id is not None and (not isinstance(rollback_release_id, str) or not _valid_release_id(rollback_release_id)):
+            raise ObjectStorePublicationError("rollback release ID is invalid")
+        if rollback_release_id == active_release_id:
+            raise ObjectStorePublicationError("rollback release must differ from active release")
+        ids = tuple(release_ids)
+        if active_release_id not in ids or (rollback_release_id is not None and rollback_release_id not in ids):
+            raise ObjectStorePublicationError("active and rollback releases must be in the publication set")
+
+        staged = self.stage_to_stores(
+            workspace,
+            stores,
+            release_ids=ids,
+            active_release_id=active_release_id,
+        )
+        activation: dict[str, Any] = {}
+        for name in sorted(stores):
+            # Verify every release's manifest/object set at the destination
+            # before touching its pointer.  Verification uses provider SHA
+            # metadata where available and otherwise hashes the exact bytes.
+            destination = stores[name]
+            release_reports = []
+            for release_id in ids:
+                release_reports.append(self.verify_on_store(destination, release_id))
+            pointer = self._activate_regional_pointer(
+                destination,
+                release_id=active_release_id,
+                rollback_release_id=rollback_release_id,
+            )
+            activation[name] = {"releases": release_reports, "pointer": pointer}
+
+        return {
+            "operation": "MIRROR_REGIONAL",
+            "status": "ACTIVE",
+            "releaseIds": list(ids),
+            "activeReleaseId": active_release_id,
+            "rollbackReleaseId": rollback_release_id,
+            "staging": staged,
+            "activation": activation,
+            "deleteCount": 0,
+            "remoteDeleteCount": 0,
+        }
+
+    def verify_on_store(self, store: ObjectStore, release_id: str) -> dict[str, Any]:
+        """Verify one complete release on an explicitly supplied destination."""
+
+        manifest_raw, checksum_raw, manifest = self._remote_manifest(store, release_id)
+        seen: set[str] = set()
+        expected: list[tuple[str, str, int]] = []
+        object_bytes = 0
+        for descriptor in sorted(manifest["objects"], key=lambda item: str(item["path"])):
+            digest = str(descriptor["sha256"])
+            if digest in seen:
+                continue
+            seen.add(digest)
+            size = int(descriptor["bytes"])
+            expected.append((f"objects/sha256/{digest}", digest, size))
+            object_bytes += size
+        expected.extend(
+            (
+                (f"releases/{release_id}/manifest.json", _sha256_bytes(manifest_raw), len(manifest_raw)),
+                (f"releases/{release_id}/manifest.sha256", _sha256_bytes(checksum_raw), len(checksum_raw)),
+            )
+        )
+        inventory = _destination_inventory(store)
+        if inventory is None:
+            _bounded_parallel(
+                expected,
+                lambda entry: _verify_remote(store, entry[0], expected_sha256=entry[1], expected_bytes=entry[2]),
+            )
+        else:
+            for key, digest, size in expected:
+                _verify_inventory_entry(store, inventory, key, expected_sha256=digest, expected_bytes=size)
+        return {
+            "operation": "VERIFY",
+            "status": "PASS",
+            "releaseId": release_id,
+            "objectCount": len(seen),
+            "manifestCount": 1,
+            "objectBytes": object_bytes,
+            "manifestBytes": len(manifest_raw),
+            "manifestChecksumBytes": len(checksum_raw),
+            "bytes": object_bytes + len(manifest_raw) + len(checksum_raw),
+            "deleteCount": 0,
+            "remoteDeleteCount": 0,
+            "remoteWriteCount": 0,
+            "activePointerChanged": False,
+            "activeWriteCount": 0,
+        }
+
     def stage(
         self,
         workspace: Path | str,
@@ -668,6 +1077,24 @@ def _store_from_environment(*, write: bool) -> S3CompatibleObjectStore:
     )
 
 
+def _gcs_store(bucket: str, *, project: str | None = None) -> GCSObjectStore:
+    try:
+        # The normal deployment uses the Cloud Run service account.  An
+        # operator may explicitly provide a short-lived gcloud access token
+        # for a local mirror run; it is never persisted in the repository.
+        token = os.environ.get("VALUEPILOT_GCS_ACCESS_TOKEN", "").strip()
+        if token:
+            try:
+                from google.oauth2.credentials import Credentials  # type: ignore
+
+                return GCSObjectStore(bucket=bucket, project=project, credentials=Credentials(token=token))
+            except ImportError as exc:
+                raise ObjectStorePublicationError("Google authentication support is unavailable") from exc
+        return GCSObjectStore(bucket=bucket, project=project)
+    except ObjectStoreError as exc:
+        raise ObjectStorePublicationError("GCS regional mirror is unavailable") from exc
+
+
 def _display_result(result: Mapping[str, Any]) -> None:
     filtered = {key: value for key, value in result.items() if key not in {"objects", "control"}}
     print(json.dumps(filtered, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str))
@@ -694,6 +1121,18 @@ def _main(argv: Sequence[str] | None = None) -> int:
     activate_parser.add_argument("release_id")
     activate_parser.add_argument("--expected-current-release-id")
 
+    mirror_parser = subparsers.add_parser(
+        "mirror-regional",
+        help="stage and activate the same immutable release set in regional GCS mirrors",
+    )
+    mirror_parser.add_argument("workspace", type=Path)
+    mirror_parser.add_argument("--release-id", action="append", dest="release_ids", required=True)
+    mirror_parser.add_argument("--active-release-id", required=True)
+    mirror_parser.add_argument("--rollback-release-id")
+    mirror_parser.add_argument("--us-bucket", required=True)
+    mirror_parser.add_argument("--sa-bucket", required=True)
+    mirror_parser.add_argument("--project", default=os.environ.get("GOOGLE_CLOUD_PROJECT"))
+
     args = parser.parse_args(argv)
     try:
         if args.operation == "plan":
@@ -704,9 +1143,21 @@ def _main(argv: Sequence[str] | None = None) -> int:
             )
         elif args.operation == "verify":
             result = ObjectStoreReleasePublisher(_store_from_environment(write=False)).verify(args.release_id)
-        else:
+        elif args.operation == "activate":
             result = ObjectStoreReleasePublisher(_store_from_environment(write=True)).activate(
                 args.release_id, expected_current_release_id=args.expected_current_release_id
+            )
+        else:
+            publisher = ObjectStoreReleasePublisher()
+            result = publisher.mirror_to_regional_stores(
+                args.workspace,
+                {
+                    "southamerica-east1": _gcs_store(args.sa_bucket, project=args.project),
+                    "us-east4": _gcs_store(args.us_bucket, project=args.project),
+                },
+                release_ids=args.release_ids,
+                active_release_id=args.active_release_id,
+                rollback_release_id=args.rollback_release_id,
             )
     except ObjectStorePublicationError as exc:
         print(f"release operation failed: {exc}", file=__import__("sys").stderr)

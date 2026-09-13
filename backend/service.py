@@ -102,6 +102,25 @@ class BackendService:
             raise ResponseLimitError(ResponseLimitError.code)
         return len(raw)
 
+    @staticmethod
+    def _emit_request_metrics(request_id: str, handle: Any, metrics: Any, *, started: float) -> None:
+        """Emit bounded server-side diagnostics without changing the API shape."""
+
+        reader_metrics = metrics.as_dict() if callable(getattr(metrics, "as_dict", None)) else {}
+        artifacts = getattr(handle, "artifacts", None)
+        cache_stats = artifacts.cache_stats() if callable(getattr(artifacts, "cache_stats", None)) else {}
+        store = getattr(artifacts, "store", None)
+        store_stats = store.stats_snapshot() if callable(getattr(store, "stats_snapshot", None)) else {}
+        payload = {
+            "requestId": request_id,
+            "releaseId": getattr(handle, "release_id", None),
+            "serviceMs": round((time.perf_counter() - started) * 1000, 3),
+            "reader": reader_metrics,
+            "artifactCache": cache_stats,
+            "objectStore": store_stats,
+        }
+        LOGGER.info("request_metrics=%s", json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
+
     def _shop_response(self, request_id: str, handle: Any, decision: Mapping[str, Any], metrics: Any, *, started: float, input_result: Mapping[str, Any] | None = None) -> dict[str, Any]:
         response: dict[str, Any] = {
             "apiContractVersion": "valuepilot-argentina-backend-http-v1",
@@ -122,6 +141,7 @@ class BackendService:
         if input_result is not None:
             response["input"] = dict(input_result)
         response["diagnostics"]["customerResponseBytes"] = self._response_size(response)
+        self._emit_request_metrics(request_id, handle, metrics, started=started)
         return response
 
     def health(self) -> dict[str, str]:
@@ -146,13 +166,14 @@ class BackendService:
     def shop(self, payload: Mapping[str, Any], *, correlation_id: str | None = None) -> dict[str, Any]:
         request_id = correlation_id or str(uuid.uuid4())
         started = time.perf_counter()
+        handle = None
         try:
             request_id, handle, decision, metrics = self._execute(payload, correlation_id=request_id)
         except CurrentPriceEvidenceUnavailable:
-            LOGGER.info("request=%s release=%s result=current_evidence_unavailable", request_id, handle.release_id)
+            LOGGER.info("request=%s release=%s result=current_evidence_unavailable", request_id, getattr(handle, "release_id", None))
             raise
         except BackendQueryError:
-            LOGGER.info("request=%s release=%s result=invalid_or_failed", request_id, handle.release_id)
+            LOGGER.info("request=%s release=%s result=invalid_or_failed", request_id, getattr(handle, "release_id", None))
             raise
         return self._shop_response(request_id, handle, decision, metrics, started=started)
 
@@ -253,6 +274,7 @@ class BackendService:
             },
         }
         response["diagnostics"]["customerResponseBytes"] = self._response_size(response)
+        self._emit_request_metrics(request_id, handle, metrics, started=started)
         return response
 
 

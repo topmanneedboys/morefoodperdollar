@@ -4,7 +4,7 @@ import os
 import uuid
 from typing import Any
 
-from .object_store import ObjectStoreError, ReadOnlyObjectStore, S3CompatibleObjectStore
+from .object_store import GCSObjectStore, ObjectStoreError, ReadOnlyObjectStore, S3CompatibleObjectStore
 from .release import ReleaseManager
 from .service import BackendService, MAX_REQUEST_BYTES, ResponseLimitError
 
@@ -20,8 +20,17 @@ def _runtime_service() -> BackendService:
     if backend == "local":
         root = os.environ.get("VALUEPILOT_RELEASE_ROOT", "local-provider-data/argentina-backend-release")
         return BackendService(root)
+    if backend == "gcs":
+        bucket = os.environ.get("VALUEPILOT_RELEASE_BUCKET", "").strip()
+        if not bucket:
+            raise RuntimeError("VALUEPILOT_RELEASE_BUCKET is required for GCS runtime")
+        try:
+            store = GCSObjectStore(bucket=bucket, project=os.environ.get("GOOGLE_CLOUD_PROJECT") or None)
+        except ObjectStoreError as exc:
+            raise RuntimeError("GCS object-store runtime is unavailable") from exc
+        return BackendService("", release_manager=ReleaseManager(object_store=ReadOnlyObjectStore(store)))
     if backend not in {"s3", "s3-compatible"}:
-        raise RuntimeError("VALUEPILOT_RELEASE_STORE must be local or s3")
+        raise RuntimeError("VALUEPILOT_RELEASE_STORE must be local, gcs, or s3")
     bucket = os.environ.get("VALUEPILOT_RELEASE_BUCKET", "").strip()
     if not bucket:
         raise RuntimeError("VALUEPILOT_RELEASE_BUCKET is required for object-store runtime")

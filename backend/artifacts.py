@@ -13,14 +13,133 @@ import os
 import re
 import tempfile
 import threading
+from collections import OrderedDict
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterator, Mapping, Protocol
+from typing import Any, Callable, Iterator, Mapping, Protocol
 
 from .object_store import OBJECT_STREAM_CHUNK_BYTES, LocalFilesystemObjectStore, ObjectMetadata, ObjectStore, ObjectStoreError, validate_key
 
 
 class ReleaseArtifactError(RuntimeError):
     """An immutable release artifact could not be verified or read."""
+
+
+DEFAULT_FULL_OBJECT_CACHE_BYTES = 512 * 1024 * 1024
+
+
+@dataclass
+class _FullObjectFlight:
+    size: int
+    event: threading.Event
+    error: BaseException | None = None
+
+
+class _FullObjectCache:
+    """Bounded, verified, single-flight cache for immutable release objects."""
+
+    def __init__(self, max_bytes: int):
+        if not isinstance(max_bytes, int) or max_bytes <= 0 or max_bytes > 1024 * 1024 * 1024:
+            raise ValueError("full-object cache bound must be between 1 byte and 1 GiB")
+        self.max_bytes = max_bytes
+        self._items: OrderedDict[str, bytes] = OrderedDict()
+        self._inflight: dict[str, _FullObjectFlight] = {}
+        self._bytes = 0
+        self._reserved = 0
+        self._hits = 0
+        self._misses = 0
+        self._downloads = 0
+        self._evictions = 0
+        self._condition = threading.Condition()
+
+    def _evict_for(self, required: int) -> None:
+        while self._bytes + self._reserved + required > self.max_bytes and self._items:
+            _, value = self._items.popitem(last=False)
+            self._bytes -= len(value)
+            self._evictions += 1
+
+    def get_or_load(self, digest: str, size: int, loader: Callable[[], bytes]) -> tuple[bytes | None, bool]:
+        """Return ``(bytes, hit)`` or ``(None, False)`` when not cacheable.
+
+        A digest is downloaded at most once concurrently.  Reservations count
+        in-flight full objects, so the configured cache budget also bounds
+        overlapping downloads.  If another object occupies the whole budget,
+        callers use the existing verified range/stream path instead of
+        blocking an unbounded queue.
+        """
+
+        if size > self.max_bytes:
+            return None, False
+        while True:
+            with self._condition:
+                current = self._items.get(digest)
+                if current is not None:
+                    self._items.move_to_end(digest)
+                    self._hits += 1
+                    return current, True
+                flight = self._inflight.get(digest)
+                if flight is None:
+                    self._evict_for(size)
+                    if self._bytes + self._reserved + size > self.max_bytes:
+                        return None, False
+                    flight = _FullObjectFlight(size=size, event=threading.Event())
+                    self._inflight[digest] = flight
+                    self._reserved += size
+                    self._misses += 1
+                    owner = True
+                else:
+                    event = flight.event
+                    owner = False
+            if owner:
+                assert flight is not None
+                try:
+                    data = loader()
+                    if not isinstance(data, bytes) or len(data) != size or hashlib.sha256(data).hexdigest() != digest:
+                        raise ReleaseArtifactError("full-object cache verification failed")
+                    with self._condition:
+                        self._reserved -= size
+                        self._items[digest] = data
+                        self._bytes += len(data)
+                        self._downloads += 1
+                        self._inflight.pop(digest, None)
+                        flight.event.set()
+                        self._condition.notify_all()
+                    return data, False
+                except BaseException as exc:
+                    with self._condition:
+                        self._reserved -= size
+                        flight.error = exc
+                        self._inflight.pop(digest, None)
+                        flight.event.set()
+                        self._condition.notify_all()
+                    raise
+            event.wait()
+            # A failed owner raises directly for all waiters; a successful
+            # owner loops once to observe the verified immutable bytes.
+            with self._condition:
+                if flight.error is not None:
+                    raise ReleaseArtifactError("full-object cache single-flight failed") from flight.error
+                if digest in self._items:
+                    continue
+                raise ReleaseArtifactError("full-object cache single-flight failed")
+
+    def stats(self) -> dict[str, int]:
+        with self._condition:
+            return {
+                "maxBytes": self.max_bytes,
+                "bytes": self._bytes,
+                "entries": len(self._items),
+                "inflight": len(self._inflight),
+                "hits": self._hits,
+                "misses": self._misses,
+                "downloads": self._downloads,
+                "evictions": self._evictions,
+            }
+
+    def clear(self) -> None:
+        with self._condition:
+            self._items.clear()
+            self._bytes = 0
 
 
 class ReleaseArtifactStore(Protocol):
@@ -128,7 +247,16 @@ class ManifestReleaseArtifactStore:
 
     remote = True
 
-    def __init__(self, store: ObjectStore, manifest: Mapping[str, Any], *, release_id: str, cache_root: Path | str | None = None):
+    def __init__(
+        self,
+        store: ObjectStore,
+        manifest: Mapping[str, Any],
+        *,
+        release_id: str,
+        cache_root: Path | str | None = None,
+        full_object_cache: _FullObjectCache | None = None,
+        full_object_cache_bytes: int | None = None,
+    ):
         self.store = store
         self.release_id = release_id
         self.manifest = manifest
@@ -138,6 +266,15 @@ class ManifestReleaseArtifactStore:
         self._verified_objects: set[str] = set()
         self._metadata_verified: dict[str, ObjectMetadata] = {}
         self._lock = threading.RLock()
+        if full_object_cache is not None:
+            self._full_object_cache: _FullObjectCache | None = full_object_cache
+        else:
+            # The whole-object cache is a regional GCS runtime optimization.
+            # Keep local qualification and the legacy S3-shaped compatibility
+            # path's range/read access shape unchanged unless a caller opts in.
+            if full_object_cache_bytes is None:
+                full_object_cache_bytes = DEFAULT_FULL_OBJECT_CACHE_BYTES if store.__class__.__name__ == "GCSObjectStore" else 0
+            self._full_object_cache = _FullObjectCache(full_object_cache_bytes) if full_object_cache_bytes > 0 else None
         objects = manifest.get("objects")
         if not isinstance(objects, list):
             raise ReleaseArtifactError("release manifest objects are invalid")
@@ -188,6 +325,11 @@ class ManifestReleaseArtifactStore:
             raise
         return True
 
+    def cache_stats(self) -> dict[str, int]:
+        """Return bounded verified full-object cache counters for diagnostics."""
+
+        return self._full_object_cache.stats() if self._full_object_cache is not None else {"maxBytes": 0, "bytes": 0, "entries": 0, "inflight": 0, "hits": 0, "misses": 0, "downloads": 0, "evictions": 0}
+
     @staticmethod
     def _object_key(digest: str) -> str:
         return f"objects/sha256/{digest}"
@@ -236,12 +378,49 @@ class ManifestReleaseArtifactStore:
                 self._metadata_verified[digest] = metadata
         return metadata
 
+    def _load_verified_full(self, path: str, digest: str, size: int) -> tuple[bytes | None, bool]:
+        """Load and verify one whole immutable object when it fits the cache."""
+
+        if self._full_object_cache is None:
+            return None, False
+
+        def load() -> bytes:
+            chunks: list[bytes] = []
+            count = 0
+            digest_state = hashlib.sha256()
+            try:
+                for data in self.store.stream(self._object_key(digest), chunk_size=OBJECT_STREAM_CHUNK_BYTES):
+                    if not isinstance(data, bytes):
+                        raise ReleaseArtifactError(f"{path} stream returned non-bytes")
+                    count += len(data)
+                    if count > size:
+                        raise ReleaseArtifactError(f"{path} object is oversized")
+                    digest_state.update(data)
+                    chunks.append(data)
+            except ObjectStoreError as exc:
+                raise ReleaseArtifactError(f"{path} object stream failed") from exc
+            if count != size or digest_state.hexdigest() != digest:
+                raise ReleaseArtifactError(f"{path} hash or byte count mismatch")
+            return b"".join(chunks)
+
+        try:
+            return self._full_object_cache.get_or_load(digest, size, load)
+        except ReleaseArtifactError:
+            raise
+        except BaseException as exc:  # noqa: BLE001 - normalize cache failures
+            raise ReleaseArtifactError(f"{path} full-object verification failed") from exc
+
     def read(self, path: str, *, expected_sha256: str | None = None, expected_bytes: int | None = None) -> bytes:
         digest, size = self._descriptor(path)
         if expected_sha256 is not None and expected_sha256 != digest:
             raise ReleaseArtifactError("release artifact hash disagrees with manifest")
         if expected_bytes is not None and expected_bytes != size:
             raise ReleaseArtifactError("release artifact size disagrees with manifest")
+        cached, _ = self._load_verified_full(path, digest, size)
+        if cached is not None:
+            with self._lock:
+                self._verified_objects.add(digest)
+            return cached
         chunks: list[bytes] = []
         count = 0
         digest_state = hashlib.sha256()
@@ -266,6 +445,11 @@ class ManifestReleaseArtifactStore:
         digest, size = self._descriptor(path)
         if not isinstance(chunk_size, int) or not 1 <= chunk_size <= 16 * 1024 * 1024:
             raise ReleaseArtifactError("release artifact stream chunk size is invalid")
+        cached, _ = self._load_verified_full(path, digest, size)
+        if cached is not None:
+            for offset in range(0, len(cached), chunk_size):
+                yield cached[offset : offset + chunk_size]
+            return
         count = 0
         digest_state = hashlib.sha256()
         try:
@@ -288,6 +472,9 @@ class ManifestReleaseArtifactStore:
         digest, size = self._descriptor(path)
         if not isinstance(offset, int) or not isinstance(length, int) or offset < 0 or length < 0 or offset + length > size:
             raise ReleaseArtifactError("release artifact range is invalid")
+        cached, _ = self._load_verified_full(path, digest, size)
+        if cached is not None:
+            return cached[offset : offset + length]
         self._verify_remote_metadata(path, digest, size)
         try:
             data = self.store.get_range(self._object_key(digest), offset, length)
@@ -308,6 +495,16 @@ class ManifestReleaseArtifactStore:
             if not target.is_file() or target.stat().st_size != size:
                 with target.open("wb") as handle:
                     handle.truncate(size)
+            return target
+        cached, _ = self._load_verified_full(path, digest, size)
+        if cached is not None:
+            if target.is_file() and target.stat().st_size == size and _sha256_file(target) == digest:
+                with self._lock:
+                    self._verified_objects.add(digest)
+                return target
+            _atomic_write(target, cached)
+            with self._lock:
+                self._verified_objects.add(digest)
             return target
         if target.is_file() and target.stat().st_size == size and _sha256_file(target) == digest:
             with self._lock:
@@ -342,4 +539,4 @@ class ManifestReleaseArtifactStore:
         return target
 
 
-__all__ = ["FilesystemReleaseArtifactStore", "ManifestReleaseArtifactStore", "ReleaseArtifactError", "ReleaseArtifactStore"]
+__all__ = ["DEFAULT_FULL_OBJECT_CACHE_BYTES", "FilesystemReleaseArtifactStore", "ManifestReleaseArtifactStore", "ReleaseArtifactError", "ReleaseArtifactStore"]

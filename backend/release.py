@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
@@ -41,6 +41,7 @@ class ReleaseManager:
         self.profile = profile
         self._lock = threading.RLock()
         self._cached: ReleaseHandle | None = None
+        self._cached_pointer_etag: str | None = None
 
     def _bootstrap(self, root: Path) -> dict[str, Any]:
         path = root / "bootstrap.json"
@@ -112,11 +113,7 @@ class ReleaseManager:
         if hashlib.sha256(raw).hexdigest() != expected.group(1):
             raise ReleaseError("release manifest checksum mismatch")
 
-    def _store_handle(self, store: ObjectStore, *, root: Path | None) -> ReleaseHandle:
-        try:
-            pointer = self._json_bytes(store.get("control/active.json"), "active release pointer", limit=64 * 1024)
-        except ObjectStoreError as exc:
-            raise ReleaseError("active release pointer is unavailable") from exc
+    def _store_handle_from_pointer(self, store: ObjectStore, pointer: Mapping[str, Any], *, root: Path | None) -> ReleaseHandle:
         release_id = self._release_id(pointer.get("releaseId"))
         manifest_key = f"releases/{release_id}/manifest.json"
         checksum_key = f"releases/{release_id}/manifest.sha256"
@@ -144,9 +141,60 @@ class ReleaseManager:
         status = freshness(release_date, clock=self.clock, max_age_days=self.max_age_days)
         return ReleaseHandle(release_id, release_date, root, {"logical": logical, "physical": physical, "name": profile_name}, status, artifacts)
 
+    def _store_handle(self, store: ObjectStore, *, root: Path | None) -> ReleaseHandle:
+        try:
+            pointer = self._json_bytes(store.get("control/active.json"), "active release pointer", limit=64 * 1024)
+        except ObjectStoreError as exc:
+            raise ReleaseError("active release pointer is unavailable") from exc
+        return self._store_handle_from_pointer(store, pointer, root=root)
+
+    def _pin_store(self, store: ObjectStore, *, root: Path | None) -> ReleaseHandle:
+        """Probe one pointer generation, loading a release only when needed.
+
+        The pointer HEAD is the cheap bounded freshness check on every pin.
+        A changed generation is read twice around the GET so a concurrent
+        activation cannot produce a handle whose release ID is not stable.
+        """
+
+        # The generation probe is a regional GCS runtime contract.  Preserve
+        # the historic local/S3-shaped qualification access model so existing
+        # structural diagnostics remain comparable; R2 is not the new runtime
+        # path.
+        if not getattr(store, "supports_pointer_generation_cache", False):
+            return self._store_handle(store, root=root)
+
+        try:
+            observed = store.head("control/active.json")
+        except ObjectStoreError as exc:
+            raise ReleaseError("active release pointer is unavailable") from exc
+        token = observed.etag or observed.sha256
+        if not token:
+            raise ReleaseError("active release pointer generation is unavailable")
+        cached = self._cached
+        if cached is not None and self._cached_pointer_etag == token:
+            current_status = freshness(cached.release_date, clock=self.clock, max_age_days=self.max_age_days)
+            return cached if current_status == cached.freshness_status else replace(cached, freshness_status=current_status)
+
+        for _ in range(2):
+            try:
+                before = store.head("control/active.json")
+                raw = store.get("control/active.json")
+                after = store.head("control/active.json")
+            except ObjectStoreError as exc:
+                raise ReleaseError("active release pointer is unavailable") from exc
+            before_token = before.etag or before.sha256
+            after_token = after.etag or after.sha256
+            if not before_token or before_token != after_token:
+                continue
+            pointer = self._json_bytes(raw, "active release pointer", limit=64 * 1024)
+            handle = self._store_handle_from_pointer(store, pointer, root=root)
+            self._cached_pointer_etag = after_token
+            return handle
+        raise ReleaseError("active release pointer changed during pin")
+
     def _handle(self) -> ReleaseHandle:
         if self.object_store is not None:
-            return self._store_handle(self.object_store, root=None)
+            return self._pin_store(self.object_store, root=None)
         if self.root is None:
             raise ReleaseError("release root is unavailable")
         # A local M9 content-addressed workspace follows the same pointer and
@@ -159,7 +207,7 @@ class ReleaseManager:
                 active = self._json_bytes(local_store.get("control/active.json"), "active release pointer", limit=64 * 1024)
                 release_id = self._release_id(active.get("releaseId"))
                 if local_store.exists(f"releases/{release_id}/manifest.json"):
-                    return self._store_handle(local_store, root=None)
+                    return self._pin_store(local_store, root=None)
             except (ObjectStoreError, ReleaseError):
                 # Do not fall through when a pointer is present but malformed;
                 # the only compatible legacy case is a complete bootstrap

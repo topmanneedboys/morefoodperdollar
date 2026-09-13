@@ -377,6 +377,73 @@ class ObjectStorePublisherTests(unittest.TestCase):
             self.assertTrue(store.delegate.exists(fail_key))
             self.assertEqual(json.loads(store.delegate.get("control/active.json"))["releaseId"], release_id)
 
+    def test_regional_mirror_stages_identical_objects_and_cas_activates_with_rollback(self):
+        with tempfile.TemporaryDirectory() as workspace_dir, tempfile.TemporaryDirectory() as us_dir, tempfile.TemporaryDirectory() as sa_dir:
+            workspace = Path(workspace_dir)
+            tuesday_id, sunday_id, _ = _two_release_workspace(workspace)
+            us = RecordingStore(Path(us_dir))
+            sa = RecordingStore(Path(sa_dir))
+            result = ObjectStoreReleasePublisher().mirror_to_regional_stores(
+                workspace,
+                {"us-east4": us, "southamerica-east1": sa},
+                release_ids=[tuesday_id, sunday_id],
+                active_release_id=tuesday_id,
+                rollback_release_id=sunday_id,
+            )
+            self.assertEqual(result["status"], "ACTIVE")
+            self.assertEqual(result["releaseIds"], [tuesday_id, sunday_id])
+            self.assertEqual(result["activation"]["us-east4"]["pointer"]["previousReleaseId"], sunday_id)
+            self.assertEqual(result["activation"]["southamerica-east1"]["pointer"]["previousReleaseId"], sunday_id)
+            self.assertEqual(json.loads(us.delegate.get("control/active.json"))["releaseId"], tuesday_id)
+            self.assertEqual(us.delegate.get("control/active.json"), sa.delegate.get("control/active.json"))
+
+            us_files = {
+                path.relative_to(us.delegate.root).as_posix(): path.read_bytes()
+                for path in us.delegate.root.rglob("*")
+                if path.is_file()
+            }
+            sa_files = {
+                path.relative_to(sa.delegate.root).as_posix(): path.read_bytes()
+                for path in sa.delegate.root.rglob("*")
+                if path.is_file()
+            }
+            self.assertEqual(us_files, sa_files)
+            self.assertEqual(result["activation"]["us-east4"]["releases"][0]["status"], "PASS")
+            self.assertEqual(result["activation"]["southamerica-east1"]["releases"][1]["status"], "PASS")
+            self.assertFalse(any(call.startswith("cas:") for call in us.calls if "objects/" in call))
+
+    def test_regional_mirror_is_resumable_and_pointer_only_changes_after_destination_verification(self):
+        with tempfile.TemporaryDirectory() as workspace_dir, tempfile.TemporaryDirectory() as us_dir, tempfile.TemporaryDirectory() as sa_dir:
+            workspace = Path(workspace_dir)
+            tuesday_id, sunday_id, shared_digest = _two_release_workspace(workspace)
+            us = RecordingStore(Path(us_dir))
+            sa = RecordingStore(Path(sa_dir))
+            publisher = ObjectStoreReleasePublisher()
+            publisher.mirror_to_regional_stores(
+                workspace,
+                {"us-east4": us, "southamerica-east1": sa},
+                release_ids=[tuesday_id, sunday_id],
+                active_release_id=tuesday_id,
+                rollback_release_id=sunday_id,
+            )
+            before = us.delegate.get("control/active.json")
+            us.calls.clear()
+            sa.calls.clear()
+
+            # A second identical run performs no pointer write and remains
+            # safe to resume after an interrupted operator invocation.
+            second = publisher.mirror_to_regional_stores(
+                workspace,
+                {"us-east4": us, "southamerica-east1": sa},
+                release_ids=[tuesday_id, sunday_id],
+                active_release_id=tuesday_id,
+                rollback_release_id=sunday_id,
+            )
+            self.assertEqual(second["activation"]["us-east4"]["pointer"]["status"], "ALREADY_ACTIVE")
+            self.assertEqual(us.delegate.get("control/active.json"), before)
+            self.assertFalse(any(call.startswith("cas:") for call in us.calls))
+            self.assertTrue(us.delegate.exists(f"objects/sha256/{shared_digest}"))
+
 
 if __name__ == "__main__":
     unittest.main()

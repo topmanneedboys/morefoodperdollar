@@ -424,11 +424,312 @@ class S3CompatibleObjectStore:
         return self.head(key)
 
 
+class GCSObjectStore:
+    """Direct Google Cloud Storage adapter for a regional runtime mirror.
+
+    The adapter deliberately uses the application client rather than FUSE or
+    a provider-specific filesystem.  Content-addressed objects are created
+    with ``if_generation_match=0`` and can never be silently replaced.  The
+    generation number is the compare-and-swap token for the small ACTIVE
+    pointer; it is kept separate from ValuePilot's manifest SHA-256 checks.
+    """
+
+    supports_pointer_generation_cache = True
+
+    def __init__(self, *, bucket: str, client: Any | None = None, project: str | None = None, credentials: Any | None = None):
+        if not isinstance(bucket, str) or not bucket.strip():
+            raise ObjectStoreError("GCS bucket is invalid")
+        self.bucket = bucket.strip()
+        if client is None:
+            try:
+                from google.cloud import storage  # type: ignore
+            except ImportError as exc:  # pragma: no cover - deployment dependency
+                raise ObjectStoreError("google-cloud-storage is required for GCS storage") from exc
+            try:
+                client = storage.Client(project=project, credentials=credentials)
+            except Exception as exc:  # noqa: BLE001 - normalize credential failures
+                raise ObjectStoreError("GCS client is unavailable") from exc
+        try:
+            self.client = client
+            self._bucket = client.bucket(self.bucket)
+        except Exception as exc:  # noqa: BLE001
+            raise ObjectStoreError("GCS bucket is unavailable") from exc
+        self._stats_lock = threading.Lock()
+        self._stats = {
+            "headRequests": 0,
+            "getRequests": 0,
+            "streamRequests": 0,
+            "rangeRequests": 0,
+            "existsRequests": 0,
+            "listRequests": 0,
+            "putRequests": 0,
+            "casRequests": 0,
+            "bytesRead": 0,
+            "bytesWritten": 0,
+        }
+
+    def _record(self, name: str, amount: int = 0) -> None:
+        with self._stats_lock:
+            if name in {"bytesRead", "bytesWritten"}:
+                self._stats[name] = self._stats.get(name, 0) + amount
+            else:
+                self._stats[name] = self._stats.get(name, 0) + 1
+                if amount:
+                    self._stats["bytesRead"] += amount
+
+    def stats_snapshot(self) -> dict[str, int]:
+        """Return cumulative provider-operation counters for diagnostics."""
+
+        with self._stats_lock:
+            return dict(self._stats)
+
+    def inventory(self, prefixes: tuple[str, ...] = ("objects/sha256/", "releases/", "control/")) -> dict[str, ObjectMetadata]:
+        """List bounded metadata for destination preflight/verification.
+
+        GCS listing is used only by operator-side publication diagnostics.  It
+        avoids one network existence request per content-addressed object while
+        retaining the application SHA-256 stored in object metadata.  Runtime
+        reads never call this method.
+        """
+
+        if not isinstance(prefixes, tuple) or any(not isinstance(prefix, str) for prefix in prefixes):
+            raise ObjectStoreError("GCS inventory prefixes are invalid")
+        result: dict[str, ObjectMetadata] = {}
+        for prefix in prefixes:
+            self._record("listRequests")
+            try:
+                blobs = self._bucket.list_blobs(prefix=prefix)
+                for blob in blobs:
+                    key = validate_key(str(getattr(blob, "name", "")))
+                    size = getattr(blob, "size", None)
+                    token = self._generation(blob)
+                    if not isinstance(size, int) or size < 0 or not token:
+                        # A partial listing entry is not proof of an object;
+                        # leave it out so the caller can fail closed via head.
+                        continue
+                    metadata = {str(k): str(v) for k, v in (getattr(blob, "metadata", None) or {}).items()}
+                    result[key] = ObjectMetadata(key, size, token, metadata.get("sha256"), metadata)
+            except Exception as exc:  # noqa: BLE001 - normalize provider errors
+                raise ObjectStoreError("GCS object inventory unavailable") from exc
+        return result
+
+    def _blob(self, key: str) -> Any:
+        return self._bucket.blob(validate_key(key))
+
+    @staticmethod
+    def _is_precondition_failure(error: BaseException) -> bool:
+        return error.__class__.__name__ in {
+            "BadRequest",
+            "Conflict",
+            "PreconditionFailed",
+            "PreconditionFailure",
+        } or "precondition" in str(error).lower()
+
+    @staticmethod
+    def _generation(blob: Any) -> str:
+        generation = getattr(blob, "generation", None)
+        if generation is not None:
+            return str(generation)
+        etag = getattr(blob, "etag", None)
+        return str(etag or "")
+
+    def head(self, key: str) -> ObjectMetadata:
+        key = validate_key(key)
+        self._record("headRequests")
+        blob = self._blob(key)
+        try:
+            blob.reload()
+        except Exception as exc:  # noqa: BLE001
+            raise ObjectStoreError("object metadata unavailable") from exc
+        size = getattr(blob, "size", None)
+        if not isinstance(size, int) or size < 0:
+            raise ObjectStoreError("object metadata unavailable")
+        metadata = {str(k): str(v) for k, v in (getattr(blob, "metadata", None) or {}).items()}
+        token = self._generation(blob)
+        if not token:
+            raise ObjectStoreError("object generation is unavailable")
+        return ObjectMetadata(key, size, token, metadata.get("sha256"), metadata)
+
+    def get(self, key: str) -> bytes:
+        key = validate_key(key)
+        self._record("getRequests")
+        try:
+            data = self._blob(key).download_as_bytes()
+        except Exception as exc:  # noqa: BLE001
+            raise ObjectStoreError("object read failed") from exc
+        if not isinstance(data, bytes):
+            data = bytes(data)
+        self._record("bytesRead", len(data))
+        return data
+
+    def stream(self, key: str, *, chunk_size: int = OBJECT_STREAM_CHUNK_BYTES) -> Iterator[bytes]:
+        key = validate_key(key)
+        if not isinstance(chunk_size, int) or not 1 <= chunk_size <= 16 * 1024 * 1024:
+            raise ObjectStoreError("stream chunk size is invalid")
+        self._record("streamRequests")
+        reader = None
+        try:
+            reader = self._blob(key).open("rb", chunk_size=chunk_size)
+            while True:
+                data = reader.read(chunk_size)
+                if not data:
+                    return
+                if not isinstance(data, bytes):
+                    data = bytes(data)
+                self._record("bytesRead", len(data))
+                yield data
+        except Exception as exc:  # noqa: BLE001
+            raise ObjectStoreError("object stream failed") from exc
+        finally:
+            close = getattr(reader, "close", None)
+            if callable(close):
+                close()
+
+    def get_range(self, key: str, offset: int, length: int) -> bytes:
+        key = validate_key(key)
+        if not isinstance(offset, int) or not isinstance(length, int) or offset < 0 or length < 0:
+            raise ObjectStoreError("range is invalid")
+        if length == 0:
+            return b""
+        self._record("rangeRequests")
+        try:
+            data = self._blob(key).download_as_bytes(start=offset, end=offset + length - 1)
+        except Exception as exc:  # noqa: BLE001
+            raise ObjectStoreError("range read failed") from exc
+        if not isinstance(data, bytes):
+            data = bytes(data)
+        if len(data) != length:
+            raise ObjectStoreError("range is truncated")
+        self._record("bytesRead", len(data))
+        return data
+
+    def exists(self, key: str) -> bool:
+        key = validate_key(key)
+        self._record("existsRequests")
+        try:
+            return bool(self._blob(key).exists())
+        except Exception as exc:  # noqa: BLE001
+            raise ObjectStoreError("object existence is unavailable") from exc
+
+    def _verified_existing(self, key: str, *, data: bytes, digest: str) -> ObjectMetadata | None:
+        if not self.exists(key):
+            return None
+        metadata = self.head(key)
+        if metadata.size != len(data) or (metadata.sha256 is not None and metadata.sha256 != digest):
+            raise ObjectStoreError("immutable object differs")
+        if metadata.sha256 is None and _sha256(self.get(key)) != digest:
+            raise ObjectStoreError("immutable object differs")
+        return metadata
+
+    def _verified_existing_file(self, key: str, *, size: int, digest: str) -> ObjectMetadata | None:
+        if not self.exists(key):
+            return None
+        metadata = self.head(key)
+        if metadata.size != size or (metadata.sha256 is not None and metadata.sha256 != digest):
+            raise ObjectStoreError("immutable object differs")
+        if metadata.sha256 is None:
+            state = hashlib.sha256()
+            try:
+                for chunk in self.stream(key):
+                    state.update(chunk)
+            except ObjectStoreError:
+                raise
+            if state.hexdigest() != digest:
+                raise ObjectStoreError("immutable object differs")
+        return metadata
+
+    def put_immutable(self, key: str, data: bytes, *, sha256: str | None = None) -> ObjectMetadata:
+        key = validate_key(key)
+        if not isinstance(data, bytes):
+            raise ObjectStoreError("object data must be bytes")
+        digest = _sha256(data)
+        if sha256 is not None and digest != sha256:
+            raise ObjectStoreError("object hash mismatch")
+        existing = self._verified_existing(key, data=data, digest=digest)
+        if existing is not None:
+            return existing
+        blob = self._blob(key)
+        self._record("putRequests")
+        try:
+            blob.metadata = {"sha256": digest}
+            blob.upload_from_string(data, if_generation_match=0)
+            self._record("bytesWritten", len(data))
+        except Exception as exc:  # noqa: BLE001
+            if self._is_precondition_failure(exc):
+                existing = self._verified_existing(key, data=data, digest=digest)
+                if existing is not None:
+                    return existing
+            raise ObjectStoreError("object upload failed") from exc
+        existing = self._verified_existing(key, data=data, digest=digest)
+        if existing is None:
+            raise ObjectStoreError("uploaded object disappeared")
+        return existing
+
+    def put_immutable_file(self, key: str, source: Path | str, *, sha256: str | None = None) -> ObjectMetadata:
+        key = validate_key(key)
+        source_path = Path(source)
+        try:
+            size = source_path.stat().st_size
+            digest = _sha256_file(source_path)
+        except OSError as exc:
+            raise ObjectStoreError("object source is unavailable") from exc
+        if sha256 is not None and digest != sha256:
+            raise ObjectStoreError("object hash mismatch")
+        blob = self._blob(key)
+        self._record("putRequests")
+        try:
+            blob.metadata = {"sha256": digest}
+            blob.upload_from_filename(str(source_path), if_generation_match=0)
+            self._record("bytesWritten", size)
+        except Exception as exc:  # noqa: BLE001
+            if self._is_precondition_failure(exc):
+                existing = self._verified_existing_file(key, size=size, digest=digest)
+                if existing is not None:
+                    return existing
+            raise ObjectStoreError("object upload failed") from exc
+        token = self._generation(blob)
+        if not token or getattr(blob, "size", None) != size:
+            try:
+                blob.reload()
+            except Exception as exc:  # noqa: BLE001
+                raise ObjectStoreError("uploaded object verification failed") from exc
+            token = self._generation(blob)
+        if not token or getattr(blob, "size", None) != size:
+            raise ObjectStoreError("uploaded object verification failed")
+        return ObjectMetadata(key, size, token, digest, {"sha256": digest})
+
+    def compare_and_swap(self, key: str, data: bytes, *, expected_etag: str | None) -> ObjectMetadata:
+        key = validate_key(key)
+        if not isinstance(data, bytes):
+            raise ObjectStoreError("object data must be bytes")
+        current = self.head(key) if self.exists(key) else None
+        actual = current.etag if current is not None else None
+        if actual != expected_etag:
+            raise ObjectStoreError("conditional pointer update failed")
+        if expected_etag is None:
+            generation_match = 0
+        else:
+            try:
+                generation_match = int(expected_etag)
+            except (TypeError, ValueError) as exc:
+                raise ObjectStoreError("GCS generation token is invalid") from exc
+        blob = self._blob(key)
+        self._record("casRequests")
+        try:
+            blob.metadata = {"sha256": _sha256(data)}
+            blob.upload_from_string(data, if_generation_match=generation_match)
+            self._record("bytesWritten", len(data))
+        except Exception as exc:  # noqa: BLE001
+            raise ObjectStoreError("conditional pointer update failed") from exc
+        return self.head(key)
+
+
 class ReadOnlyObjectStore:
     """Capability-reduced view for the request-serving runtime."""
 
     def __init__(self, store: ObjectStore):
         self._store = store
+        self.supports_pointer_generation_cache = bool(getattr(store, "supports_pointer_generation_cache", False))
 
     def head(self, key: str) -> ObjectMetadata:
         return self._store.head(key)
@@ -445,6 +746,10 @@ class ReadOnlyObjectStore:
     def exists(self, key: str) -> bool:
         return self._store.exists(key)
 
+    def stats_snapshot(self) -> dict[str, int]:
+        snapshot = getattr(self._store, "stats_snapshot", None)
+        return dict(snapshot()) if callable(snapshot) else {}
+
     def put_immutable(self, key: str, data: bytes, *, sha256: str | None = None) -> ObjectMetadata:
         raise ObjectStoreError("runtime object store is read-only")
 
@@ -455,4 +760,4 @@ class ReadOnlyObjectStore:
         raise ObjectStoreError("runtime object store is read-only")
 
 
-__all__ = ["LocalFilesystemObjectStore", "OBJECT_STREAM_CHUNK_BYTES", "ObjectMetadata", "ObjectStore", "ObjectStoreError", "ReadOnlyObjectStore", "S3CompatibleObjectStore", "validate_key"]
+__all__ = ["GCSObjectStore", "LocalFilesystemObjectStore", "OBJECT_STREAM_CHUNK_BYTES", "ObjectMetadata", "ObjectStore", "ObjectStoreError", "ReadOnlyObjectStore", "S3CompatibleObjectStore", "validate_key"]
