@@ -11,12 +11,19 @@ from backend.object_store import LocalFilesystemObjectStore
 from tools.argentina_release_acquisition import AcquisitionCandidate
 from tools.argentina_release_automation import (
     ACTIVATION_PARTICIPANTS,
+    DATA_CANARY_LOCATIONS,
+    DATA_CANARY_POLICY_VERSION,
+    DATA_CANARY_REGIONS,
+    DATA_CANARY_REQUESTS,
+    DATA_CANARY_SCHEMA_VERSION,
+    DATA_CANARY_SHOPPING_LINE_COUNTS,
     DistributedReleaseLease,
     LeaseOutcome,
     TransactionalActivationCoordinator,
     anomaly_gate,
     discovery_decision,
     redact_secrets,
+    evaluate_data_canary,
     stage_verify_and_canary,
     write_execution_summary,
 )
@@ -103,6 +110,107 @@ class ArgentinaReleaseAutomationTests(unittest.TestCase):
         self.assertIn("OFFERS_CATASTROPHIC_DROP", result["reasons"])
         self.assertIn("AVAILABILITY_SEMANTICS_CHANGED", result["reasons"])
 
+    @staticmethod
+    def _data_canary_evidence(candidate_release_id: str) -> dict[str, object]:
+        def probe() -> dict[str, object]:
+            return {
+                "httpStatus": 200,
+                "releaseId": candidate_release_id,
+                "freshness": "FRESH",
+                "availability": "UNKNOWN",
+                "corpusScanned": 0,
+                "partitionIdentity": "partition-0001",
+                "partitionIdentityVerified": True,
+                "oom": False,
+                "restartCount": 0,
+                "runtimeR2Reads": 0,
+                "runtimeR2Writes": 0,
+                "malformedPrices": 0,
+            }
+
+        return {
+            "schemaVersion": DATA_CANARY_SCHEMA_VERSION,
+            "policyVersion": DATA_CANARY_POLICY_VERSION,
+            "candidateReleaseId": candidate_release_id,
+            "regions": {
+                region: {
+                    "readyz": probe(),
+                    "status": probe(),
+                    "requests": {name: probe() for name in DATA_CANARY_REQUESTS},
+                    "shopping": {str(count): probe() for count in DATA_CANARY_SHOPPING_LINE_COUNTS},
+                    "locations": {name: probe() for name in DATA_CANARY_LOCATIONS},
+                    "timings": {
+                        "cold10LineCount": 10,
+                        "cold10LineMs": 125.5,
+                        "warmSmokeP95Ms": 240.0,
+                        "warmSmokeSamples": 8,
+                    },
+                }
+                for region in DATA_CANARY_REGIONS
+            },
+        }
+
+    def test_data_canary_requires_both_regions_and_passes_bounded_matrix(self) -> None:
+        candidate = "argentina-sepa-2026-09-09-canary"
+        result = evaluate_data_canary(candidate_release_id=candidate, evidence=self._data_canary_evidence(candidate))
+        self.assertEqual(result["status"], "PASS")
+        self.assertEqual(result["candidateReleaseId"], candidate)
+        self.assertEqual(set(result["regions"]), set(DATA_CANARY_REGIONS))
+        self.assertEqual(result["regions"]["us"]["cold10LineMs"], 125.5)
+        self.assertEqual(result["regions"]["sa"]["warmSmokeP95Ms"], 240.0)
+        self.assertEqual(result["reasons"], [])
+
+    def test_data_canary_fails_closed_on_semantic_or_performance_regression(self) -> None:
+        candidate = "argentina-sepa-2026-09-09-canary"
+        evidence = self._data_canary_evidence(candidate)
+        evidence["regions"]["sa"]["locations"].pop("Jujuy")
+        evidence["regions"]["us"]["status"]["availability"] = "IN_STOCK"
+        evidence["regions"]["us"]["timings"]["cold10LineMs"] = 10_001
+        evidence["regions"]["us"]["timings"]["warmSmokeP95Ms"] = 5_001
+        result = evaluate_data_canary(candidate_release_id=candidate, evidence=evidence)
+        self.assertEqual(result["status"], "REVIEW_REQUIRED")
+        self.assertIn("SA_LOCATION_MATRIX_INCOMPLETE", result["reasons"])
+        self.assertIn("US_STATUS_AVAILABILITY_CHANGED", result["reasons"])
+        self.assertIn("US_COLD_10_LINE_MS_OUT_OF_BOUNDS", result["reasons"])
+        self.assertIn("US_WARM_SMOKE_P95_MS_OUT_OF_BOUNDS", result["reasons"])
+        unverified = self._data_canary_evidence(candidate)
+        unverified["regions"]["us"]["readyz"]["partitionIdentityVerified"] = False
+        self.assertIn(
+            "US_READYZ_PARTITION_IDENTITY_UNVERIFIED",
+            evaluate_data_canary(candidate_release_id=candidate, evidence=unverified)["reasons"],
+        )
+
+    def test_required_data_canary_is_validated_before_any_staging_or_canary_write(self) -> None:
+        candidate = "argentina-sepa-2026-09-09-canary"
+        with tempfile.TemporaryDirectory(prefix="valuepilot-data-canary-required-") as directory:
+            stores = {participant: LocalFilesystemObjectStore(Path(directory) / participant) for participant in ACTIVATION_PARTICIPANTS}
+            with self.assertRaisesRegex(RuntimeError, "required data-canary evidence is missing"):
+                stage_verify_and_canary(
+                    Path(directory) / "workspace",
+                    stores,
+                    release_ids=[candidate],
+                    candidate_release_id=candidate,
+                    require_data_canary=True,
+                )
+            self.assertTrue(all(not store.exists("control/active.json") for store in stores.values()))
+            self.assertTrue(all(not store.exists("control/canary.json") for store in stores.values()))
+
+    def test_failed_data_canary_does_not_stage_or_select_canary(self) -> None:
+        candidate = "argentina-sepa-2026-09-09-canary"
+        evidence = self._data_canary_evidence(candidate)
+        evidence["regions"]["us"]["readyz"]["runtimeR2Reads"] = 1
+        with tempfile.TemporaryDirectory(prefix="valuepilot-data-canary-fail-") as directory:
+            stores = {participant: LocalFilesystemObjectStore(Path(directory) / participant) for participant in ACTIVATION_PARTICIPANTS}
+            with self.assertRaisesRegex(RuntimeError, "data-canary qualification failed"):
+                stage_verify_and_canary(
+                    Path(directory) / "workspace",
+                    stores,
+                    release_ids=[candidate],
+                    candidate_release_id=candidate,
+                    data_canary=evidence,
+                )
+            self.assertTrue(all(not store.exists("control/canary.json") for store in stores.values()))
+
     def test_stage_verify_and_canary_never_writes_active_pointers(self) -> None:
         with tempfile.TemporaryDirectory(prefix="valuepilot-canary-stage-") as directory:
             workspace = Path(directory) / "workspace"
@@ -130,10 +238,18 @@ class ArgentinaReleaseAutomationTests(unittest.TestCase):
             (control / "canary.json").write_bytes(b'{"releaseId":"old-canary"}')
             stores = {participant: LocalFilesystemObjectStore(Path(directory) / participant) for participant in ACTIVATION_PARTICIPANTS}
 
-            result = stage_verify_and_canary(workspace, stores, release_ids=[release_id], candidate_release_id=release_id)
+            result = stage_verify_and_canary(
+                workspace,
+                stores,
+                release_ids=[release_id],
+                candidate_release_id=release_id,
+                data_canary=self._data_canary_evidence(release_id),
+                require_data_canary=True,
+            )
 
             self.assertEqual(result["status"], "CANARY_READY")
             self.assertEqual(result["activePointerWrites"], 0)
+            self.assertEqual(result["dataCanary"]["status"], "PASS")
             self.assertTrue(all(report["remoteWriteCount"] == 4 for report in result["staging"]["stores"].values()))
             self.assertTrue(all(report["status"] == "STAGED" for report in result["staging"]["stores"].values()))
             self.assertTrue(all(reports[0]["status"] == "PASS" for reports in result["verification"].values()))

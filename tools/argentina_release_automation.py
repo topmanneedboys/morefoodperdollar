@@ -12,6 +12,7 @@ from __future__ import annotations
 import datetime as _dt
 import hashlib
 import json
+import math
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -41,6 +42,22 @@ _TOKEN = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
 ACTIVE_POINTER_KEY = "control/active.json"
 ACTIVE_POINTER_SCHEMA = "valuepilot-active-release-v1"
 ACTIVATION_PARTICIPANTS = ("us", "sa", "r2")
+
+# The data-canary contract is deliberately small and provider-neutral.  A
+# deployment adapter supplies observations from the same backend image that
+# would serve production; this module only validates the bounded evidence and
+# decides whether it is safe to proceed to immutable staging.  The limits are
+# explicit so a future operator can change the policy in a reviewed commit,
+# rather than smuggling a wall-clock or network assumption into activation.
+DATA_CANARY_SCHEMA_VERSION = "valuepilot-argentina-data-canary-v1"
+DATA_CANARY_POLICY_VERSION = "valuepilot-argentina-data-canary-policy-v1"
+DATA_CANARY_REGIONS = ("us", "sa")
+DATA_CANARY_REQUESTS = ("arrozDiscovery", "arrozInterpretation", "sevenUpSpecificSearch")
+DATA_CANARY_SHOPPING_LINE_COUNTS = (1, 5, 10)
+DATA_CANARY_LOCATIONS = ("CABA", "Buenos Aires Province", "Córdoba", "Jujuy")
+DATA_CANARY_COLD_10_LINE_MAX_MS = 10_000
+DATA_CANARY_WARM_SMOKE_MAX_MS = 5_000
+DATA_CANARY_MAX_EVIDENCE_BYTES = 128 * 1024
 
 
 class AutomationError(RuntimeError):
@@ -307,20 +324,209 @@ def anomaly_gate(*, current: Mapping[str, Any], candidate: Mapping[str, Any]) ->
     }
 
 
+def _canary_nonnegative_int(value: Any, *, label: str, reasons: list[str]) -> int | None:
+    """Validate a bounded integer counter without coercing unknown evidence."""
+
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        reasons.append(f"{label.upper()}_INVALID")
+        return None
+    return value
+
+
+def _canary_timing(value: Any, *, label: str, maximum: int, reasons: list[str]) -> float | None:
+    """Validate a finite non-negative millisecond measurement."""
+
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        reasons.append(f"{label.upper()}_INVALID")
+        return None
+    number = float(value)
+    if not math.isfinite(number) or number < 0 or number > maximum:
+        reasons.append(f"{label.upper()}_OUT_OF_BOUNDS")
+        return None
+    return number
+
+
+def _validate_canary_probe(
+    probe: Any,
+    *,
+    label: str,
+    candidate_release_id: str,
+    reasons: list[str],
+) -> None:
+    """Check one HTTP/data observation used by the release canary.
+
+    The caller must provide these fields even when an endpoint itself does not
+    expose every value.  The deployment-side probe is responsible for joining
+    the endpoint response with its immutable release/telemetry evidence; a
+    missing field therefore remains a fail-closed review condition.
+    """
+
+    if not isinstance(probe, Mapping):
+        reasons.append(f"{label.upper()}_INVALID")
+        return
+    if probe.get("httpStatus") != 200:
+        reasons.append(f"{label.upper()}_HTTP_FAILED")
+    if probe.get("releaseId") != candidate_release_id:
+        reasons.append(f"{label.upper()}_RELEASE_MISMATCH")
+    if probe.get("freshness") != "FRESH":
+        reasons.append(f"{label.upper()}_NOT_FRESH")
+    if probe.get("availability") != "UNKNOWN":
+        reasons.append(f"{label.upper()}_AVAILABILITY_CHANGED")
+    corpus = _canary_nonnegative_int(probe.get("corpusScanned"), label=f"{label}_corpus_scanned", reasons=reasons)
+    if corpus is not None and corpus != 0:
+        reasons.append(f"{label.upper()}_CORPUS_SCAN")
+    partition = probe.get("partitionIdentity")
+    if not isinstance(partition, str) or not partition or len(partition) > 256:
+        reasons.append(f"{label.upper()}_PARTITION_IDENTITY_INVALID")
+    if probe.get("partitionIdentityVerified") is not True:
+        reasons.append(f"{label.upper()}_PARTITION_IDENTITY_UNVERIFIED")
+    oom = probe.get("oom")
+    if oom is not False:
+        reasons.append(f"{label.upper()}_OOM_DETECTED")
+    restarts = _canary_nonnegative_int(probe.get("restartCount"), label=f"{label}_restart_count", reasons=reasons)
+    if restarts is not None and restarts != 0:
+        reasons.append(f"{label.upper()}_RESTART_DETECTED")
+    r2_reads = _canary_nonnegative_int(probe.get("runtimeR2Reads"), label=f"{label}_runtime_r2_reads", reasons=reasons)
+    if r2_reads is not None and r2_reads != 0:
+        reasons.append(f"{label.upper()}_RUNTIME_R2_READ")
+    r2_writes = _canary_nonnegative_int(probe.get("runtimeR2Writes"), label=f"{label}_runtime_r2_writes", reasons=reasons)
+    if r2_writes is not None and r2_writes != 0:
+        reasons.append(f"{label.upper()}_RUNTIME_R2_WRITE")
+    malformed = _canary_nonnegative_int(probe.get("malformedPrices"), label=f"{label}_malformed_prices", reasons=reasons)
+    if malformed is not None and malformed != 0:
+        reasons.append(f"{label.upper()}_MALFORMED_PRICE")
+
+
+def evaluate_data_canary(*, candidate_release_id: str, evidence: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate the bounded zero-traffic data-canary evidence contract.
+
+    This function performs no network or object-store operation.  It is the
+    single gate shared by shadow orchestration and later activation callers.
+    The evidence is intentionally summary-only: request bodies, credentials,
+    and product corpora are not accepted or emitted here.
+    """
+
+    candidate = TransactionalActivationCoordinator._release(candidate_release_id, field="candidateReleaseId")
+    if not isinstance(evidence, Mapping):
+        raise AutomationError("data-canary evidence is invalid", code="INVALID_CONTROL_STATE")
+    try:
+        evidence_bytes = len(canonical_bytes(dict(evidence)))
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise AutomationError("data-canary evidence is not serializable", code="INVALID_CONTROL_STATE") from exc
+    if evidence_bytes > DATA_CANARY_MAX_EVIDENCE_BYTES:
+        raise AutomationError("data-canary evidence exceeds bound", code="INVALID_CONTROL_STATE")
+
+    reasons: list[str] = []
+    if evidence.get("schemaVersion") != DATA_CANARY_SCHEMA_VERSION:
+        reasons.append("SCHEMA_VERSION_UNSUPPORTED")
+    if evidence.get("policyVersion") != DATA_CANARY_POLICY_VERSION:
+        reasons.append("POLICY_VERSION_UNSUPPORTED")
+    if evidence.get("candidateReleaseId") != candidate:
+        reasons.append("CANDIDATE_RELEASE_MISMATCH")
+    regions = evidence.get("regions")
+    if not isinstance(regions, Mapping) or set(regions) != set(DATA_CANARY_REGIONS):
+        reasons.append("REGION_MATRIX_INCOMPLETE")
+        regions = {}
+
+    region_reports: dict[str, Any] = {}
+    for region in DATA_CANARY_REGIONS:
+        value = regions.get(region)
+        region_reasons: list[str] = []
+        if not isinstance(value, Mapping):
+            region_reasons.append("REGION_EVIDENCE_INVALID")
+            value = {}
+        for endpoint in ("readyz", "status"):
+            _validate_canary_probe(value.get(endpoint), label=f"{region}_{endpoint}", candidate_release_id=candidate, reasons=region_reasons)
+
+        requests = value.get("requests")
+        if not isinstance(requests, Mapping) or set(requests) != set(DATA_CANARY_REQUESTS):
+            region_reasons.append("REQUEST_MATRIX_INCOMPLETE")
+            requests = {}
+        for request in DATA_CANARY_REQUESTS:
+            _validate_canary_probe(requests.get(request), label=f"{region}_{request}", candidate_release_id=candidate, reasons=region_reasons)
+
+        shopping = value.get("shopping")
+        expected_shopping = {str(count) for count in DATA_CANARY_SHOPPING_LINE_COUNTS}
+        if not isinstance(shopping, Mapping) or set(shopping) != expected_shopping:
+            region_reasons.append("SHOPPING_MATRIX_INCOMPLETE")
+            shopping = {}
+        for count in DATA_CANARY_SHOPPING_LINE_COUNTS:
+            _validate_canary_probe(shopping.get(str(count)), label=f"{region}_shopping_{count}", candidate_release_id=candidate, reasons=region_reasons)
+
+        locations = value.get("locations")
+        if not isinstance(locations, Mapping) or set(locations) != set(DATA_CANARY_LOCATIONS):
+            region_reasons.append("LOCATION_MATRIX_INCOMPLETE")
+            locations = {}
+        location_tokens = {
+            "CABA": "CABA",
+            "Buenos Aires Province": "BUENOS_AIRES_PROVINCE",
+            "Córdoba": "CORDOBA",
+            "Jujuy": "JUJUY",
+        }
+        for location in DATA_CANARY_LOCATIONS:
+            _validate_canary_probe(locations.get(location), label=f"{region}_location_{location_tokens[location]}", candidate_release_id=candidate, reasons=region_reasons)
+
+        timings = value.get("timings")
+        if not isinstance(timings, Mapping):
+            region_reasons.append("TIMINGS_INVALID")
+            timings = {}
+        cold_line_count = timings.get("cold10LineCount")
+        if cold_line_count != 10:
+            region_reasons.append("COLD_10_LINE_COUNT_INVALID")
+        cold_ms = _canary_timing(timings.get("cold10LineMs"), label=f"{region}_cold_10_line_ms", maximum=DATA_CANARY_COLD_10_LINE_MAX_MS, reasons=region_reasons)
+        warm_ms = _canary_timing(timings.get("warmSmokeP95Ms"), label=f"{region}_warm_smoke_p95_ms", maximum=DATA_CANARY_WARM_SMOKE_MAX_MS, reasons=region_reasons)
+        warm_samples = _canary_nonnegative_int(timings.get("warmSmokeSamples"), label=f"{region}_warm_smoke_samples", reasons=region_reasons)
+        if warm_samples is not None and not 1 <= warm_samples <= 100:
+            region_reasons.append("WARM_SMOKE_SAMPLES_OUT_OF_BOUNDS")
+
+        unique_reasons = sorted(set(region_reasons))
+        region_reports[region] = {
+            "status": "PASS" if not unique_reasons else "REVIEW_REQUIRED",
+            "reasons": unique_reasons,
+            "endpointCount": 2,
+            "requestCount": len(DATA_CANARY_REQUESTS),
+            "shoppingLineCounts": list(DATA_CANARY_SHOPPING_LINE_COUNTS),
+            "locationCount": len(DATA_CANARY_LOCATIONS),
+            "cold10LineMs": cold_ms,
+            "warmSmokeP95Ms": warm_ms,
+            "warmSmokeSamples": warm_samples,
+        }
+        region_prefix = f"{region.upper()}_"
+        reasons.extend(reason if reason.startswith(region_prefix) else f"{region_prefix}{reason}" for reason in unique_reasons)
+
+    unique_reasons = sorted(set(reasons))
+    return {
+        "schemaVersion": DATA_CANARY_SCHEMA_VERSION,
+        "policyVersion": DATA_CANARY_POLICY_VERSION,
+        "status": "PASS" if not unique_reasons else "REVIEW_REQUIRED",
+        "candidateReleaseId": candidate,
+        "regions": region_reports,
+        "reasons": unique_reasons,
+        "bounds": {
+            "cold10LineMaxMs": DATA_CANARY_COLD_10_LINE_MAX_MS,
+            "warmSmokeP95MaxMs": DATA_CANARY_WARM_SMOKE_MAX_MS,
+            "maxEvidenceBytes": DATA_CANARY_MAX_EVIDENCE_BYTES,
+        },
+    }
+
+
 def stage_verify_and_canary(
     workspace: str | Path,
     stores: Mapping[str, ObjectStore],
     *,
     release_ids: Sequence[str],
     candidate_release_id: str,
+    data_canary: Mapping[str, Any] | None = None,
+    require_data_canary: bool = True,
 ) -> dict[str, Any]:
     """Stage, verify, and select a candidate on fixed canary pointers.
 
     The existing :class:`ObjectStoreReleasePublisher` remains the authority
     for manifest/object validation and immutable publication.  This helper
     only provides the bounded three-destination control-plane sequence; it
-    never writes an ACTIVE pointer.  Production activation is a separate call
-    to :class:`TransactionalActivationCoordinator`.
+    never writes an ACTIVE pointer.  A validated data-canary report is required
+    by default before any destination write; production activation is a
+    separate call to :class:`TransactionalActivationCoordinator`.
     """
 
     if not isinstance(workspace, (str, Path)) or not str(workspace):
@@ -334,6 +540,22 @@ def stage_verify_and_canary(
     candidate = TransactionalActivationCoordinator._release(candidate_release_id, field="candidateReleaseId")
     if candidate not in release_ids:
         raise AutomationError("candidate release is not in publication set", code="INVALID_CONTROL_STATE")
+    if not isinstance(require_data_canary, bool):
+        raise AutomationError("data-canary requirement is invalid", code="INVALID_CONTROL_STATE")
+    if data_canary is None:
+        if require_data_canary:
+            raise AutomationError("required data-canary evidence is missing", code="CANARY_FAILED")
+        canary_evidence = {
+            "schemaVersion": DATA_CANARY_SCHEMA_VERSION,
+            "policyVersion": DATA_CANARY_POLICY_VERSION,
+            "status": "NOT_EXECUTED",
+            "candidateReleaseId": candidate,
+            "reasons": ["DATA_CANARY_NOT_EXECUTED"],
+        }
+    else:
+        canary_evidence = evaluate_data_canary(candidate_release_id=candidate, evidence=data_canary)
+        if canary_evidence["status"] != "PASS":
+            raise AutomationError("data-canary qualification failed", code="CANARY_FAILED")
     try:
         from tools.argentina_object_store_publisher import ObjectStoreReleasePublisher
     except ModuleNotFoundError:  # direct invocation from tools/
@@ -357,6 +579,7 @@ def stage_verify_and_canary(
         "staging": staged,
         "verification": verified,
         "canary": canary,
+        "dataCanary": canary_evidence,
         "activePointerWrites": 0,
     }
 
@@ -608,6 +831,14 @@ __all__ = [
     "ACTIVATION_PARTICIPANTS",
     "ACTIVE_POINTER_KEY",
     "ACTIVE_POINTER_SCHEMA",
+    "DATA_CANARY_COLD_10_LINE_MAX_MS",
+    "DATA_CANARY_LOCATIONS",
+    "DATA_CANARY_POLICY_VERSION",
+    "DATA_CANARY_REGIONS",
+    "DATA_CANARY_REQUESTS",
+    "DATA_CANARY_SCHEMA_VERSION",
+    "DATA_CANARY_SHOPPING_LINE_COUNTS",
+    "DATA_CANARY_WARM_SMOKE_MAX_MS",
     "DistributedReleaseLease",
     "EXECUTION_PREFIX",
     "LEASE_KEY",
@@ -619,6 +850,7 @@ __all__ = [
     "SCHEMA_VERSION",
     "anomaly_gate",
     "discovery_decision",
+    "evaluate_data_canary",
     "redact_secrets",
     "stage_verify_and_canary",
     "TransactionalActivationCoordinator",

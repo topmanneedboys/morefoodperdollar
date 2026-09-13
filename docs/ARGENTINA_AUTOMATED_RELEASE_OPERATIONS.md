@@ -44,6 +44,27 @@ explicit RFC3339 observation time.
 7. Enable Scheduler only after controlled activation succeeds. Until then,
    leave it disabled and report `SHADOW_ONLY_WAITING_FOR_ACCESSIBLE_NEWER_OFFICIAL_SOURCE`.
 
+## Data-canary gate
+
+Before an automatic stage is eligible for canary selection, the deployment
+adapter must submit the bounded `valuepilot-argentina-data-canary-v1` evidence
+contract to `evaluate_data_canary`. It must cover both `us` and `sa`, `/readyz`,
+`/v1/status`, the `arroz` discovery and interpretation checks, the specific
+`7UP` search, 1/5/10-line shopping requests, and CABA, Buenos Aires Province,
+Córdoba, and Jujuy location checks. Every observation must identify the
+candidate release, be HTTP 200 and `FRESH`, retain `availability: UNKNOWN`,
+report zero corpus scans, a non-empty partition identity, no OOM/restart, zero
+runtime R2 reads/writes, and zero malformed prices; the deployment adapter must
+explicitly mark the partition identity as verified. Both regions must also
+report a true 10-line cold measurement at or below 10,000 ms and a bounded warm
+smoke p95 at or below 5,000 ms. Missing, stale, conflicting, or out-of-bound
+evidence returns `REVIEW_REQUIRED` and must not stage or select a canary.
+
+The validator is offline and summary-only: it does not fetch endpoints, open a
+source ZIP, read a product corpus, or write an active pointer. A production
+deployment adapter remains responsible for obtaining the evidence from the
+same code image and zero-traffic canary revisions.
+
 ## Storage and retention
 
 - Raw ZIPs are never committed, shipped to Android, placed in SearchPack, or
