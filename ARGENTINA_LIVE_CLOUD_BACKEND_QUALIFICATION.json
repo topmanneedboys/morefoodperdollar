@@ -1,0 +1,303 @@
+{
+  "schemaVersion": "valuepilot-argentina-live-cloud-backend-qualification-v1",
+  "milestone": "M11",
+  "status": "M11_CLOSED",
+  "starting": {
+    "branch": "candidate/argentina-live-cloud-backend-v1",
+    "head": "9b125866fe6e4f8fe5d84d97c503aa053402c756",
+    "lastVerifiedImage": "sha256:4edd58767f19d59e9ab038b692f7feb4b32c5d2bde23741e6fd54bc85eec5c0a"
+  },
+  "implementation": {
+    "candidateBranch": "candidate/argentina-live-cloud-backend-v1",
+    "head": "4b9861d28e9d1dcd597df9ee1a75de1b82502c32",
+    "image": "us-east4-docker.pkg.dev/valuepilot-argentina/valuepilot-backend/valuepilot-backend@sha256:fb36dcf9c40d9af15ea9b8019601c7b0eb585bce1c23587006559f77b95e6707",
+    "cloudBuildId": "507dbda5-c1c9-424a-88bd-75dad4fde81d",
+    "cloudBuildStatus": "SUCCESS"
+  },
+  "source": {
+    "provider": "ARGENTINA_SEPA_PRECIOS_CLAROS",
+    "officialHost": "https://datos.produccion.gob.ar",
+    "catalog": "https://datos.gob.ar",
+    "dataset": "Precios Claros - Base SEPA",
+    "license": "Creative Commons Attribution 4.0",
+    "activeFilename": "sepa_martes.zip",
+    "activeReleaseDate": "2026-09-08",
+    "activeBytes": 325118492,
+    "activeSha256": "aeef3399fa20e751e80cda46cbb3a38349e378b51832ecffe1f779b986479815",
+    "rollbackReleaseDate": "2026-09-06",
+    "rollbackSha256": "e6c08be6a36e5e5b90e6eb0b6f54a07c8bccded929fab2a28ad7f000ed08b305",
+    "nationalVerifierRerun": false,
+    "priorImmutableEvidenceReused": true,
+    "rawProviderDataCommitted": false
+  },
+  "release": {
+    "activeReleaseId": "argentina-sepa-2026-09-08-aeef3399fa20e751-routing-v1-search-v2",
+    "previousReleaseId": "argentina-sepa-2026-09-06-e6c08be6a36e5e5b9-routing-v1-search-v2",
+    "activeManifestSha256": "ee928eaf56a35489572c8f40639b42e6cb56ba4baec0c7e853aebe92df705a8e",
+    "activeObjectCount": 1163,
+    "activeObjectBytes": 880538444,
+    "rollbackObjectCount": 1161,
+    "rollbackObjectBytes": 883894895,
+    "backendProfile": {
+      "logicalPartitions": 1024,
+      "physicalPacks": 32,
+      "mobileLogicalPartitionsPreserved": 128,
+      "mobilePhysicalPacksPreserved": 32
+    }
+  },
+  "storage": {
+    "controlPlane": {
+      "provider": "Cloudflare R2",
+      "role": "durable publication and source-of-truth copy",
+      "runtimeReads": 0,
+      "runtimeWrites": 0
+    },
+    "regionalMirrors": [
+      {
+        "region": "us-east4",
+        "bucket": "valuepilot-argentina-runtime-us-east4",
+        "location": "US-EAST4",
+        "storageClass": "STANDARD",
+        "uniformBucketLevelAccess": true,
+        "publicAccessPrevention": true,
+        "contentObjectCount": 2323,
+        "contentObjectBytes": 1764433210,
+        "manifestCount": 4,
+        "manifestBytes": 429676,
+        "activePointerBytes": 304,
+        "totalObjectCount": 2328,
+        "totalBytes": 1764863190
+      },
+      {
+        "region": "southamerica-east1",
+        "bucket": "valuepilot-argentina-runtime-southamerica-east1",
+        "location": "SOUTHAMERICA-EAST1",
+        "storageClass": "STANDARD",
+        "uniformBucketLevelAccess": true,
+        "publicAccessPrevention": true,
+        "contentObjectCount": 2323,
+        "contentObjectBytes": 1764433210,
+        "manifestCount": 4,
+        "manifestBytes": 429676,
+        "activePointerBytes": 304,
+        "totalObjectCount": 2328,
+        "totalBytes": 1764863190
+      }
+    ],
+    "requestWrites": {
+      "gcs": 0,
+      "r2": 0
+    },
+    "runtimeObjectPath": "regional GCS only; no R2 fallback"
+  },
+  "regionalInventory": [
+    {"region":"ar-a","offerBytes":11348131,"searchPackBytes":17507441,"storeIndexBytes":2792,"offerPackCount":32,"largestOfferPackBytes":276342},
+    {"region":"ar-b","offerBytes":116298375,"searchPackBytes":30830011,"storeIndexBytes":42646,"offerPackCount":32,"largestOfferPackBytes":3721225},
+    {"region":"ar-caba","offerBytes":87207865,"searchPackBytes":24208743,"storeIndexBytes":46558,"offerPackCount":32,"largestOfferPackBytes":2834083},
+    {"region":"ar-d","offerBytes":6492421,"searchPackBytes":15015268,"storeIndexBytes":1039,"offerPackCount":32,"largestOfferPackBytes":121905},
+    {"region":"ar-e","offerBytes":15528331,"searchPackBytes":21572587,"storeIndexBytes":4463,"offerPackCount":32,"largestOfferPackBytes":403592},
+    {"region":"ar-f","offerBytes":4407516,"searchPackBytes":11947099,"storeIndexBytes":490,"offerPackCount":32,"largestOfferPackBytes":71256},
+    {"region":"ar-g","offerBytes":4976763,"searchPackBytes":11520042,"storeIndexBytes":901,"offerPackCount":32,"largestOfferPackBytes":95693},
+    {"region":"ar-h","offerBytes":5946945,"searchPackBytes":15747833,"storeIndexBytes":904,"offerPackCount":32,"largestOfferPackBytes":103076},
+    {"region":"ar-j","offerBytes":7739579,"searchPackBytes":15186262,"storeIndexBytes":1293,"offerPackCount":32,"largestOfferPackBytes":166274},
+    {"region":"ar-k","offerBytes":5383657,"searchPackBytes":13646231,"storeIndexBytes":724,"offerPackCount":32,"largestOfferPackBytes":93452},
+    {"region":"ar-l","offerBytes":7995783,"searchPackBytes":14773757,"storeIndexBytes":1439,"offerPackCount":32,"largestOfferPackBytes":175087},
+    {"region":"ar-m","offerBytes":14488199,"searchPackBytes":20820081,"storeIndexBytes":3592,"offerPackCount":32,"largestOfferPackBytes":358834},
+    {"region":"ar-n","offerBytes":4914249,"searchPackBytes":10846187,"storeIndexBytes":998,"offerPackCount":32,"largestOfferPackBytes":101306},
+    {"region":"ar-p","offerBytes":5937637,"searchPackBytes":12556036,"storeIndexBytes":552,"offerPackCount":32,"largestOfferPackBytes":115702},
+    {"region":"ar-q","offerBytes":14114212,"searchPackBytes":22315000,"storeIndexBytes":3026,"offerPackCount":32,"largestOfferPackBytes":345259},
+    {"region":"ar-r","offerBytes":14165572,"searchPackBytes":17574516,"storeIndexBytes":3177,"offerPackCount":32,"largestOfferPackBytes":370515},
+    {"region":"ar-s","offerBytes":13246453,"searchPackBytes":25071902,"storeIndexBytes":2629,"offerPackCount":32,"largestOfferPackBytes":296381},
+    {"region":"ar-t","offerBytes":9896176,"searchPackBytes":17046643,"storeIndexBytes":1471,"offerPackCount":32,"largestOfferPackBytes":223444},
+    {"region":"ar-u","offerBytes":12945398,"searchPackBytes":18749405,"storeIndexBytes":2418,"offerPackCount":32,"largestOfferPackBytes":317691},
+    {"region":"ar-v","offerBytes":4843029,"searchPackBytes":7936315,"storeIndexBytes":828,"offerPackCount":32,"largestOfferPackBytes":100613},
+    {"region":"ar-w","offerBytes":9089044,"searchPackBytes":17633458,"storeIndexBytes":1514,"offerPackCount":32,"largestOfferPackBytes":198059},
+    {"region":"ar-x","offerBytes":20895666,"searchPackBytes":22608392,"storeIndexBytes":7927,"offerPackCount":32,"largestOfferPackBytes":559595},
+    {"region":"ar-y","offerBytes":4473952,"searchPackBytes":9703473,"storeIndexBytes":949,"offerPackCount":32,"largestOfferPackBytes":86797},
+    {"region":"ar-z","offerBytes":7118284,"searchPackBytes":9446195,"storeIndexBytes":1636,"offerPackCount":32,"largestOfferPackBytes":168929}
+  ],
+  "runtime": {
+    "activePointers": {
+      "us-east4": {
+        "releaseId": "argentina-sepa-2026-09-08-aeef3399fa20e751-routing-v1-search-v2",
+        "previousReleaseId": "argentina-sepa-2026-09-06-e6c08be6a36e5e5b9-routing-v1-search-v2",
+        "schemaVersion": "valuepilot-active-release-v1"
+      },
+      "southamerica-east1": {
+        "releaseId": "argentina-sepa-2026-09-08-aeef3399fa20e751-routing-v1-search-v2",
+        "previousReleaseId": "argentina-sepa-2026-09-06-e6c08be6a36e5e5b9-routing-v1-search-v2",
+        "schemaVersion": "valuepilot-active-release-v1"
+      }
+    },
+    "services": [
+      {
+        "region": "us-east4",
+        "service": "valuepilot-argentina-us-east4",
+        "revision": "valuepilot-argentina-us-east4-00038-deq",
+        "tag": "m11-4b-us-10",
+        "trafficPercent": 100,
+        "bucket": "valuepilot-argentina-runtime-us-east4",
+        "runtimeServiceAccount": "valuepilot-cloud-run-runtime@valuepilot-argentina.iam.gserviceaccount.com",
+        "imageDigest": "sha256:fb36dcf9c40d9af15ea9b8019601c7b0eb585bce1c23587006559f77b95e6707",
+        "cpu": 1,
+        "memory": "4Gi",
+        "concurrency": 1,
+        "timeoutSeconds": 30,
+        "minScale": 0,
+        "maxScale": 1,
+        "startupCpuBoost": true,
+        "environment": {
+          "VALUEPILOT_RELEASE_STORE": "gcs",
+          "VALUEPILOT_RELEASE_BUCKET": "valuepilot-argentina-runtime-us-east4",
+          "GOOGLE_CLOUD_PROJECT": "valuepilot-argentina"
+        },
+        "r2RuntimeConfigured": false
+      },
+      {
+        "region": "southamerica-east1",
+        "service": "valuepilot-argentina-sa-east1",
+        "revision": "valuepilot-argentina-sa-east1-00029-gef",
+        "tag": "m11-4b-sa-10",
+        "trafficPercent": 100,
+        "bucket": "valuepilot-argentina-runtime-southamerica-east1",
+        "runtimeServiceAccount": "valuepilot-cloud-run-runtime@valuepilot-argentina.iam.gserviceaccount.com",
+        "imageDigest": "sha256:fb36dcf9c40d9af15ea9b8019601c7b0eb585bce1c23587006559f77b95e6707",
+        "cpu": 1,
+        "memory": "4Gi",
+        "concurrency": 1,
+        "timeoutSeconds": 30,
+        "minScale": 0,
+        "maxScale": 1,
+        "startupCpuBoost": true,
+        "environment": {
+          "VALUEPILOT_RELEASE_STORE": "gcs",
+          "VALUEPILOT_RELEASE_BUCKET": "valuepilot-argentina-runtime-southamerica-east1",
+          "GOOGLE_CLOUD_PROJECT": "valuepilot-argentina"
+        },
+        "r2RuntimeConfigured": false
+      }
+    ],
+    "authentication": {
+      "unauthenticatedStatus": 403,
+      "authenticatedReadyzStatus": 200,
+      "authenticatedStatusEndpoint": 200,
+      "authenticatedShopStatus": 200,
+      "externalHealthz": "GFE_404_OBSERVED; /readyz is the production readiness probe"
+    }
+  },
+  "cold": [
+    {"region":"us-east4","revision":"valuepilot-argentina-us-east4-00038-deq","lines":1,"status":200,"externalWallMs":3987.6,"serviceMs":3652.055,"cloudRunRequestMs":3721.445322,"readerTotalMs":3261.14,"gcsBytesRead":14409736,"gcsHeadRequests":17,"gcsRangeRequests":17,"gcsStreamRequests":17,"readerObjectReads":10,"readerRangeReads":0,"compressedBytes":926441,"decompressedBytes":29200113,"corpusScans":0},
+    {"region":"us-east4","revision":"valuepilot-argentina-us-east4-00038-deq","lines":5,"status":200,"externalWallMs":5308.9,"serviceMs":4976.879,"cloudRunRequestMs":5039.506375,"readerTotalMs":4707.164,"gcsBytesRead":18300943,"gcsHeadRequests":51,"gcsRangeRequests":95,"gcsStreamRequests":17,"readerObjectReads":50,"readerRangeReads":0,"compressedBytes":4702724,"decompressedBytes":151646896,"corpusScans":0},
+    {"region":"us-east4","revision":"valuepilot-argentina-us-east4-00038-deq","lines":10,"status":200,"externalWallMs":8113.6,"serviceMs":7784.899,"cloudRunRequestMs":7839.360142,"readerTotalMs":7494.327,"gcsBytesRead":22913274,"gcsHeadRequests":62,"gcsRangeRequests":182,"gcsStreamRequests":17,"readerObjectReads":94,"readerRangeReads":0,"compressedBytes":9191830,"decompressedBytes":295446735,"corpusScans":0},
+    {"region":"southamerica-east1","revision":"valuepilot-argentina-sa-east1-00029-gef","lines":1,"status":200,"externalWallMs":4932.4,"serviceMs":4333.646,"cloudRunRequestMs":4406.215988,"readerTotalMs":3968.031,"gcsBytesRead":14409736,"gcsHeadRequests":17,"gcsRangeRequests":17,"gcsStreamRequests":17,"readerObjectReads":10,"readerRangeReads":0,"compressedBytes":926441,"decompressedBytes":29200113,"corpusScans":0},
+    {"region":"southamerica-east1","revision":"valuepilot-argentina-sa-east1-00029-gef","lines":5,"status":200,"externalWallMs":6030.2,"serviceMs":5579.702,"cloudRunRequestMs":5653.577759,"readerTotalMs":5222.483,"gcsBytesRead":18300943,"gcsHeadRequests":50,"gcsRangeRequests":95,"gcsStreamRequests":17,"readerObjectReads":50,"readerRangeReads":0,"compressedBytes":4702724,"decompressedBytes":151646896,"corpusScans":0},
+    {"region":"southamerica-east1","revision":"valuepilot-argentina-sa-east1-00029-gef","lines":10,"status":200,"externalWallMs":7807.8,"serviceMs":7221.418,"cloudRunRequestMs":7288.620641,"readerTotalMs":6875.07,"gcsBytesRead":22913274,"gcsHeadRequests":62,"gcsRangeRequests":182,"gcsStreamRequests":17,"readerObjectReads":94,"readerRangeReads":0,"compressedBytes":9191830,"decompressedBytes":295446735,"corpusScans":0}
+  ],
+  "warmP95": {
+    "sampleCountPerCell": 20,
+    "locations": ["CABA","Buenos Aires Province","Córdoba","Jujuy"],
+    "targetsMs": {"oneLine": 1000,"fiveLines": 2000,"tenLines":3000},
+    "regions": {
+      "us-east4": {
+        "CABA": {"one":{"serviceMs":168.551,"wallMs":280.240},"five":{"serviceMs":326.315,"wallMs":442.076},"ten":{"serviceMs":559.107,"wallMs":678.978}},
+        "Buenos Aires Province": {"one":{"serviceMs":134.799,"wallMs":263.665},"five":{"serviceMs":216.829,"wallMs":330.987},"ten":{"serviceMs":348.555,"wallMs":473.556}},
+        "Córdoba": {"one":{"serviceMs":85.745,"wallMs":206.573},"five":{"serviceMs":183.077,"wallMs":307.048},"ten":{"serviceMs":255.022,"wallMs":383.585}},
+        "Jujuy": {"one":{"serviceMs":98.110,"wallMs":238.299},"five":{"serviceMs":148.728,"wallMs":303.088},"ten":{"serviceMs":276.942,"wallMs":401.236}}
+      },
+      "southamerica-east1": {
+        "CABA": {"one":{"serviceMs":150.206,"wallMs":516.777},"five":{"serviceMs":282.218,"wallMs":732.785},"ten":{"serviceMs":477.139,"wallMs":871.152}},
+        "Buenos Aires Province": {"one":{"serviceMs":127.697,"wallMs":494.668},"five":{"serviceMs":195.346,"wallMs":558.404},"ten":{"serviceMs":317.001,"wallMs":685.391}},
+        "Córdoba": {"one":{"serviceMs":72.398,"wallMs":477.060},"five":{"serviceMs":161.942,"wallMs":502.650},"ten":{"serviceMs":231.718,"wallMs":618.164}},
+        "Jujuy": {"one":{"serviceMs":71.839,"wallMs":445.444},"five":{"serviceMs":161.540,"wallMs":505.886},"ten":{"serviceMs":257.237,"wallMs":623.801}}
+      }
+    },
+    "allSamplesStatus": "PASS_480_HTTP_200_FRESH_UNKNOWN"
+  },
+  "semanticSafety": {
+    "casesPerRegion": 8,
+    "regions": 2,
+    "locations": 4,
+    "totalCases": 64,
+    "resolution": "NEEDS_CLARIFICATION",
+    "code": "CANDIDATE_HORIZON_REACHED",
+    "decisionSkipped": "CLARIFICATION_REQUIRED",
+    "availability": "UNKNOWN",
+    "claim": "safe clarification; no typo correction claimed"
+  },
+  "concurrency": {
+    "clients": [1,2,4,8],
+    "usEast4ElapsedMs": [654.828,204.001,351.049,668.709],
+    "southAmericaEast1ElapsedMs": [683.542,540.774,485.456,829.240],
+    "allStatuses": [200],
+    "uniqueReleaseCount": 1,
+    "freshness": "FRESH",
+    "availability": "UNKNOWN"
+  },
+  "cache": {
+    "maxBytes": 536870912,
+    "maxObjectBytes": 1048576,
+    "largeObjectsUseVerifiedRangePath": true,
+    "representativeWarmInstance": {
+      "bytes": 32714442,
+      "downloads": 112,
+      "entries": 112,
+      "hits": 205,
+      "misses": 112,
+      "evictions": 0,
+      "inflight": 0
+    }
+  },
+  "memory": {
+    "containerLimitBytes": 4294967296,
+    "maximumSampledDistributionMeanBytes": 329973760,
+    "maximumSampledDistributionMeanMiB": 314.69,
+    "instantaneousPeakExposed": false,
+    "oom": false,
+    "unexpectedRestarts": false
+  },
+  "requestDiagnostics": {
+    "representativePostActivation": {
+      "gcsBytesRead": 64211474,
+      "gcsGetRequests": 3,
+      "gcsHeadRequests": 390,
+      "gcsRangeRequests": 679,
+      "gcsStreamRequests": 116,
+      "gcsPutRequests": 0,
+      "r2Reads": 0,
+      "r2Writes": 0,
+      "searchPackCorpusScanned": 0
+    }
+  },
+  "iam": {
+    "runtimeServiceAccount": "valuepilot-cloud-run-runtime@valuepilot-argentina.iam.gserviceaccount.com",
+    "runtimePermissions": "bucket-scoped roles/storage.objectViewer on both regional runtime buckets only",
+    "supportingChanges": [
+      "compute/build identity bucket-scoped objectViewer on pre-existing Cloud Build log bucket",
+      "Cloud Build identity repository-scoped Artifact Registry writer"
+    ],
+    "projectWideStorageWriterAdded": false
+  },
+  "privacyAndBoundaries": {
+    "androidNetworking": "NOT_AUTHORIZED",
+    "androidInternetPermission": false,
+    "androidAccessNetworkStatePermission": false,
+    "nationalZipInGit": false,
+    "fullNationalDatasetInAndroid": false,
+    "availability": "UNKNOWN",
+    "providerInfluencedOrganicRanking": false,
+    "logosImagesFlyerContentAdded": false
+  },
+  "qualification": {
+    "coldTargetBothRegionsUnder10Seconds": true,
+    "warmTargetsMet": true,
+    "authenticationVerified": true,
+    "freshnessVerified": true,
+    "safeUnknownVerified": true,
+    "corpusScansZero": true,
+    "failClosedAndRestartEvidenceReused": true,
+    "identicalImageDigestBothRegions": true,
+    "reportOnlyCloseout": true,
+    "fullM11Pass": true,
+    "m11Closed": true
+  }
+}
