@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from collections import OrderedDict
+import gzip
+import hashlib
 import json
 import tempfile
+import threading
 import time
 import unittest
 from pathlib import Path
@@ -11,7 +14,8 @@ from unittest.mock import patch
 
 from backend.artifacts import ManifestReleaseArtifactStore
 from backend.object_store import LocalFilesystemObjectStore, ObjectMetadata
-from backend.reader import ArgentinaBackendReader, RegionSelection
+from backend.cache import VerifiedEvidenceCache
+from backend.reader import ArgentinaBackendReader, MAX_OFFER_PARTITION_CONCURRENCY, RegionSelection, RequestMetrics
 from backend.service import BackendService
 from tools.argentina_searchpack import SearchPackLookup, SearchPackManager, SearchPackStats, _CHUNK_STRUCT, _TERM_STRUCT
 from tools.argentina_searchpack import SearchPackError
@@ -543,7 +547,122 @@ class _LatencyStore:
         return sum(name == operation for name, _key in self.operations)
 
 
+def _offer_partition_fixture(partition_count: int = 8, *, latency_seconds: float = 0.03):
+    """Build tiny real gzip/hash-verified offer members with delayed ranges."""
+
+    root = Path(tempfile.mkdtemp(prefix="valuepilot-m11-offer-partitions-"))
+    (root / "objects" / "sha256").mkdir(parents=True)
+    objects: list[dict[str, object]] = []
+    partitions: list[dict[str, object]] = []
+    for index in range(partition_count):
+        payload = (json.dumps({"offerId": index + 1}, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+        compressed = gzip.compress(payload, mtime=0)
+        digest = hashlib.sha256(compressed).hexdigest()
+        (root / "objects" / "sha256" / digest).write_bytes(compressed)
+        path = f"micro-1024/regions/ar-caba/offers/p{index:03d}.jsonl.gz"
+        objects.append({"path": path, "bytes": len(compressed), "sha256": digest})
+        partitions.append({
+            "partitionId": f"p{index:03d}",
+            "path": path,
+            "byteOffset": 0,
+            "byteLength": len(compressed),
+            "bytes": len(compressed),
+            "sha256": digest,
+            "uncompressedBytes": len(payload),
+            "uncompressedSha256": hashlib.sha256(payload).hexdigest(),
+            "recordCount": 1,
+        })
+    manifest = {"objects": objects}
+    store = _LatencyStore(root, latency_seconds)
+    artifacts = ManifestReleaseArtifactStore(store, manifest, release_id="offer-fixture")
+    reader = ArgentinaBackendReader.__new__(ArgentinaBackendReader)
+    reader.release = SimpleNamespace(release_id="offer-fixture")
+    reader.artifacts = artifacts
+    reader.cache = VerifiedEvidenceCache(max_bytes=1024 * 1024)
+    return root, reader, store, tuple(partitions)
+
+
 class SearchPackRemoteLatencyTests(unittest.TestCase):
+    def test_offer_partition_parallel_load_preserves_order_and_reduces_delayed_range_time(self) -> None:
+        _root, sequential_reader, sequential_store, partitions = _offer_partition_fixture(latency_seconds=0.03)
+        sequential_metrics = RequestMetrics()
+        started = time.perf_counter()
+        sequential = [sequential_reader._member("ar-caba", partition, sequential_metrics) for partition in partitions]
+        sequential_elapsed = time.perf_counter() - started
+
+        _root, optimized_reader, optimized_store, optimized_partitions = _offer_partition_fixture(latency_seconds=0.03)
+        optimized_metrics = RequestMetrics()
+        started = time.perf_counter()
+        optimized = optimized_reader._load_members("ar-caba", optimized_partitions, optimized_metrics)
+        optimized_elapsed = time.perf_counter() - started
+
+        self.assertEqual(optimized, sequential)
+        self.assertEqual(sequential_store.count("range"), len(partitions))
+        self.assertEqual(optimized_store.count("range"), len(partitions))
+        self.assertEqual(optimized_metrics.range_reads, sequential_metrics.range_reads)
+        self.assertEqual(optimized_metrics.object_reads, sequential_metrics.object_reads)
+        self.assertEqual(optimized_metrics.bytes_read, sequential_metrics.bytes_read)
+        self.assertLess(optimized_elapsed, sequential_elapsed * 0.75)
+
+    def test_offer_partition_parallelism_is_bounded_and_metrics_merge_in_partition_order(self) -> None:
+        reader = ArgentinaBackendReader.__new__(ArgentinaBackendReader)
+        partitions = tuple({"partitionId": f"p{index:03d}"} for index in range(9))
+        lock = threading.Lock()
+        active = 0
+        maximum_active = 0
+
+        def load(_region_id: str, partition: dict[str, object], metrics: RequestMetrics):
+            nonlocal active, maximum_active
+            with lock:
+                active += 1
+                maximum_active = max(maximum_active, active)
+            time.sleep(0.01)
+            with lock:
+                active -= 1
+            index = int(str(partition["partitionId"])[1:])
+            metrics.object_reads = 1
+            metrics.range_reads = 1
+            metrics.bytes_read = index + 1
+            metrics.range_reads_ms = 2.0
+            metrics.decode_ms = 3.0
+            metrics.cache_misses = 1
+            return [{"partitionId": partition["partitionId"], "order": index}]
+
+        with patch.object(reader, "_member", side_effect=load):
+            metrics = RequestMetrics()
+            values = reader._load_members("ar-caba", partitions, metrics)
+
+        self.assertLessEqual(maximum_active, MAX_OFFER_PARTITION_CONCURRENCY)
+        self.assertEqual([item[0]["partitionId"] for item in values], [item["partitionId"] for item in partitions])
+        self.assertEqual(metrics.object_reads, len(partitions))
+        self.assertEqual(metrics.range_reads, len(partitions))
+        self.assertEqual(metrics.bytes_read, sum(range(1, len(partitions) + 1)))
+        self.assertEqual(metrics.cache_misses, len(partitions))
+
+    def test_offer_partition_worker_failure_is_fail_closed(self) -> None:
+        reader = ArgentinaBackendReader.__new__(ArgentinaBackendReader)
+        partitions = tuple({"partitionId": f"p{index:03d}"} for index in range(6))
+
+        def load(_region_id: str, partition: dict[str, object], _metrics: RequestMetrics):
+            if partition["partitionId"] == "p002":
+                raise RuntimeError("immutable offer member failed")
+            return [{"partitionId": partition["partitionId"]}]
+
+        with patch.object(reader, "_member", side_effect=load):
+            with self.assertRaisesRegex(RuntimeError, "immutable offer member failed"):
+                reader._load_members("ar-caba", partitions, RequestMetrics())
+
+    def test_offer_partition_integrity_failure_is_not_hidden_by_parallel_loader(self) -> None:
+        root, reader, _store, partitions = _offer_partition_fixture(partition_count=2, latency_seconds=0)
+        descriptor = partitions[1]
+        digest = str(descriptor["sha256"])
+        object_path = root / "objects" / "sha256" / digest
+        data = object_path.read_bytes()
+        object_path.write_bytes(bytes([data[0] ^ 1]) + data[1:])
+
+        with self.assertRaisesRegex(Exception, r"hash.*mismatch"):
+            reader._load_members("ar-caba", partitions, RequestMetrics())
+
     def test_rank_directory_reads_use_declared_blocks(self) -> None:
         rows = [
             {"productEvidenceKey": f"key-{index:04d}", "name": "7UP FREE PET X 1.5L", "brand": "7UP", "canonicalSearchAliases": []}

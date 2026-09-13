@@ -68,6 +68,7 @@ MAX_ITEMS = 10
 MAX_CANDIDATES = 100_000
 MAX_OFFERS = 100_000
 MAX_REMOTE_ROUTING_CONCURRENCY = 4
+MAX_OFFER_PARTITION_CONCURRENCY = 4
 MAX_SEARCH_CACHE_ENTRIES = 512
 MAX_INPUT_CANDIDATE_CACHE_ENTRIES = 8
 MAX_INPUT_CANDIDATE_UNION = INPUT_MAX_LINES * INPUT_MAX_CANDIDATES
@@ -1200,6 +1201,58 @@ class ArgentinaBackendReader:
             metrics.cache_misses += 1
         return value
 
+    @staticmethod
+    def _merge_member_metrics(target: RequestMetrics, source: RequestMetrics) -> None:
+        """Merge one isolated offer-partition load into request diagnostics."""
+
+        target.object_reads += source.object_reads
+        target.range_reads += source.range_reads
+        target.bytes_read += source.bytes_read
+        target.range_reads_ms += source.range_reads_ms
+        target.decode_ms += source.decode_ms
+        target.cache_hits += source.cache_hits
+        target.cache_misses += source.cache_misses
+
+    def _load_members(
+        self,
+        region_id: str,
+        partitions: Sequence[Mapping[str, Any]],
+        metrics: RequestMetrics,
+    ) -> list[list[dict[str, Any]]]:
+        """Load required offer partitions with a bounded, deterministic fan-out.
+
+        Each worker owns its diagnostics object.  Results are collected in the
+        already-stable partition order, so completion timing cannot change the
+        evidence filtering or response ordering.  A worker failure propagates
+        through the whole operation; no partial response is returned.
+        """
+
+        ordered = tuple(partitions)
+        if not ordered:
+            return []
+        if len(ordered) == 1:
+            return [self._member(region_id, ordered[0], metrics)]
+
+        def load_one(partition: Mapping[str, Any]) -> tuple[list[dict[str, Any]], RequestMetrics]:
+            local_metrics = RequestMetrics()
+            records = self._member(region_id, partition, local_metrics)
+            return records, local_metrics
+
+        workers = min(MAX_OFFER_PARTITION_CONCURRENCY, len(ordered))
+        with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="valuepilot-offers") as executor:
+            futures = [executor.submit(load_one, partition) for partition in ordered]
+            loaded: list[list[dict[str, Any]]] = []
+            try:
+                for future in futures:
+                    records, local_metrics = future.result()
+                    self._merge_member_metrics(metrics, local_metrics)
+                    loaded.append(records)
+            except BaseException:
+                for future in futures:
+                    future.cancel()
+                raise
+        return loaded
+
     def query(
         self,
         request: ShoppingRequest | Mapping[str, Any],
@@ -1255,8 +1308,8 @@ class ArgentinaBackendReader:
             stores = self.router.stores(selection.region_id)
             products = {item["productEvidenceKey"]: item for item in plan.product_candidates}
             records: list[Mapping[str, Any]] = []
-            for partition in plan.slices:
-                records.extend(self._member(selection.region_id, partition, metrics))
+            for partition_records in self._load_members(selection.region_id, plan.slices, metrics):
+                records.extend(partition_records)
             offers = []
             for raw_offer in records:
                 product_key = raw_offer.get("productEvidenceKey")
@@ -1303,4 +1356,4 @@ class ArgentinaBackendReader:
         return decision, metrics
 
 
-__all__ = ["ArgentinaBackendReader", "BackendQueryError", "CurrentPriceEvidenceUnavailable", "MAX_BACKEND_RADIUS_KM", "MAX_INPUT_CANDIDATE_CACHE_ENTRIES", "MAX_INPUT_CANDIDATE_UNION", "MAX_REMOTE_ROUTING_CONCURRENCY", "MAX_SEARCH_CACHE_ENTRIES", "NationalStoreRouter", "RequestMetrics", "RegionSelection"]
+__all__ = ["ArgentinaBackendReader", "BackendQueryError", "CurrentPriceEvidenceUnavailable", "MAX_BACKEND_RADIUS_KM", "MAX_INPUT_CANDIDATE_CACHE_ENTRIES", "MAX_INPUT_CANDIDATE_UNION", "MAX_OFFER_PARTITION_CONCURRENCY", "MAX_REMOTE_ROUTING_CONCURRENCY", "MAX_SEARCH_CACHE_ENTRIES", "NationalStoreRouter", "RequestMetrics", "RegionSelection"]
