@@ -244,6 +244,21 @@ class ArgentinaSepaMicroPartitionMobileTest(unittest.TestCase):
         with self.assertRaises(MicroPartitionQueryError):
             _read_member(wrong_offset, partition_id)
 
+    def test_selective_member_decode_keeps_hash_and_record_count_proof(self):
+        contract = load_micro_region_contract(self.micro, "ar-caba", **PROVENANCE)
+        descriptor = next(item for item in contract.partition_descriptors.values() if item["recordCount"] > 0)
+        pack = contract.root / descriptor["path"]
+        data = pack.read_bytes()[descriptor["byteOffset"] : descriptor["byteOffset"] + descriptor["byteLength"]]
+        full = decode_member_bytes(data, descriptor)
+        self.assertTrue(full)
+        wanted = {full[0]["productEvidenceKey"]}
+        selected = decode_member_bytes(data, descriptor, wanted_product_keys=wanted)
+        self.assertEqual(selected, [full[0]])
+        self.assertEqual(
+            decode_member_bytes(data, descriptor, wanted_product_keys={"not-present"}),
+            [],
+        )
+
     def test_incomplete_candidate_is_removed_and_prior_root_is_not_overwritten(self):
         destination = Path(self.tempdir.name) / "interrupted"
         with patch("tools.build_argentina_sepa_micro_partition_mobile._write_region", side_effect=RuntimeError("injected interruption")):

@@ -555,7 +555,7 @@ def _offer_partition_fixture(partition_count: int = 8, *, latency_seconds: float
     objects: list[dict[str, object]] = []
     partitions: list[dict[str, object]] = []
     for index in range(partition_count):
-        payload = (json.dumps({"offerId": index + 1}, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+        payload = (json.dumps({"offerId": index + 1, "productEvidenceKey": f"product-{index}"}, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
         compressed = gzip.compress(payload, mtime=0)
         digest = hashlib.sha256(compressed).hexdigest()
         (root / "objects" / "sha256" / digest).write_bytes(compressed)
@@ -583,6 +583,18 @@ def _offer_partition_fixture(partition_count: int = 8, *, latency_seconds: float
 
 
 class SearchPackRemoteLatencyTests(unittest.TestCase):
+    def test_selective_offer_cache_entries_are_scoped_to_candidate_keys(self) -> None:
+        _root, reader, _store, partitions = _offer_partition_fixture(partition_count=1, latency_seconds=0)
+        partition = partitions[0]
+
+        first = reader._member("ar-caba", partition, RequestMetrics(), {"product-0"})
+        second = reader._member("ar-caba", partition, RequestMetrics(), {"product-1"})
+        repeat = reader._member("ar-caba", partition, RequestMetrics(), {"product-0"})
+
+        self.assertEqual([item["productEvidenceKey"] for item in first], ["product-0"])
+        self.assertEqual(second, [])
+        self.assertEqual(repeat, first)
+
     def test_rank_query_parallel_load_preserves_results_reads_and_reduces_delayed_range_time(self) -> None:
         rows = [
             {"productEvidenceKey": "arroz", "name": "Arroz Marca 1 kg", "brand": "Marca", "canonicalSearchAliases": []},

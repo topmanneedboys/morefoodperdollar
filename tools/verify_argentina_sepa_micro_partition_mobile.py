@@ -126,8 +126,21 @@ def _iter_jsonl_gzip(path: Path, descriptor: Mapping[str, Any], label: str):
     _require(total == descriptor["uncompressedBytes"] and count == descriptor["recordCount"] and digest.hexdigest() == descriptor["uncompressedSha256"], f"{label} uncompressed metadata mismatch")
 
 
-def decode_member_bytes(data: bytes, descriptor: Mapping[str, Any], label: str = "logical member") -> list[dict[str, Any]]:
-    """Verify exactly one gzip member and decode its canonical JSONL records."""
+def decode_member_bytes(
+    data: bytes,
+    descriptor: Mapping[str, Any],
+    label: str = "logical member",
+    *,
+    wanted_product_keys: set[str] | frozenset[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Verify one gzip member and decode only requested product records.
+
+    The complete compressed and uncompressed hashes, byte count, and record
+    count are always checked.  A query may provide its bounded candidate-key
+    set so unrelated JSONL rows do not need to be materialized and parsed;
+    selected rows still receive the exact canonical-JSON validation used by
+    the full verifier.  ``None`` retains the original all-record behavior.
+    """
 
     _require(isinstance(data, bytes), f"{label} bytes are invalid")
     for field in ("byteLength", "bytes", "recordCount", "uncompressedBytes"):
@@ -142,14 +155,37 @@ def decode_member_bytes(data: bytes, descriptor: Mapping[str, Any], label: str =
     _require(stream.eof and not stream.unused_data and not stream.unconsumed_tail, f"{label} is not exactly one independent gzip member")
     _require(len(payload) == descriptor["uncompressedBytes"] and hashlib.sha256(payload).hexdigest() == descriptor["uncompressedSha256"], f"{label} uncompressed hash mismatch")
     records: list[dict[str, Any]] = []
-    for line_number, line in enumerate(payload.splitlines(keepends=True), start=1):
+    line_number = 0
+    marker = b'"productEvidenceKey":"'
+    handle = io.BytesIO(payload)
+    while True:
+        line = handle.readline()
+        if not line:
+            break
+        line_number += 1
+        if wanted_product_keys is not None:
+            start = line.find(marker)
+            if start < 0:
+                continue
+            start += len(marker)
+            end = line.find(b'"', start)
+            if end < 0:
+                # Let the canonical parser below produce the deterministic
+                # malformed-row error for a line that claims a target key.
+                continue
+            try:
+                candidate_key = line[start:end].decode("utf-8")
+            except UnicodeDecodeError:
+                continue
+            if candidate_key not in wanted_product_keys:
+                continue
         try:
             value = json.loads(line)
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise MicroPartitionVerificationError(f"{label} line {line_number} is invalid JSON") from exc
         _require(isinstance(value, dict) and _canonical_json(value) == line, f"{label} line {line_number} is not canonical")
         records.append(value)
-    _require(len(records) == descriptor["recordCount"], f"{label} record count mismatch")
+    _require(line_number == descriptor["recordCount"], f"{label} record count mismatch")
     return records
 
 

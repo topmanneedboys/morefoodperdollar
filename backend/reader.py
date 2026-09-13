@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import threading
 import time
 from collections import OrderedDict
@@ -622,6 +623,17 @@ class ArgentinaBackendReader:
         metrics.searchpack_ranked_records_materialized += stats.ranked_records_materialized
         metrics.searchpack_ranked_queries += stats.ranked_queries
 
+    @staticmethod
+    def _merge_region_metrics(target: RequestMetrics, source: RequestMetrics) -> None:
+        """Merge one region's isolated counters in a deterministic order."""
+
+        for name in RequestMetrics.__dataclass_fields__:
+            if name in {"regions_queried", "total_ms"}:
+                continue
+            value = getattr(source, name)
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                setattr(target, name, getattr(target, name) + value)
+
     def _searchpack_for_region(self, region_id: str) -> SearchPackManager | None:
         if not getattr(self, "_searchpack_declared", False):
             return None
@@ -1178,8 +1190,20 @@ class ArgentinaBackendReader:
         except InputIntelligenceError as exc:
             raise BackendQueryError(str(exc)) from exc
 
-    def _member(self, region_id: str, partition: Mapping[str, Any], metrics: RequestMetrics) -> list[dict[str, Any]]:
+    def _member(
+        self,
+        region_id: str,
+        partition: Mapping[str, Any],
+        metrics: RequestMetrics,
+        wanted_product_keys: set[str] | frozenset[str] | None = None,
+    ) -> list[dict[str, Any]]:
         key = f"{self.release.release_id}:{region_id}:{partition['partitionId']}:{partition['sha256']}"
+        if wanted_product_keys is not None:
+            # Selective decoding returns only the requested candidates.  Keep
+            # that value separate from an all-record/other-selector entry so
+            # a warm query can never reuse an incomplete decoded subset.
+            selector = json.dumps(sorted(wanted_product_keys), ensure_ascii=False, separators=(",", ":"))
+            key += f":selector:{hashlib.sha256(selector.encode('utf-8')).hexdigest()}"
         started = time.perf_counter()
 
         def load() -> tuple[bytes, list[dict[str, Any]]]:
@@ -1189,7 +1213,12 @@ class ArgentinaBackendReader:
             data = self.artifacts.read_range(partition["path"], int(partition["byteOffset"]), int(partition["byteLength"]))
             metrics.range_reads_ms += (time.perf_counter() - range_started) * 1000
             metrics.bytes_read += len(data)
-            records = decode_member_bytes(data, partition, f"{region_id}/{partition['partitionId']}")
+            records = decode_member_bytes(
+                data,
+                partition,
+                f"{region_id}/{partition['partitionId']}",
+                wanted_product_keys=wanted_product_keys,
+            )
             return data, records
 
         value, hit = self.cache.get_or_load(key, load, expected_sha256=partition["sha256"], expected_bytes=int(partition["byteLength"]))
@@ -1218,6 +1247,7 @@ class ArgentinaBackendReader:
         region_id: str,
         partitions: Sequence[Mapping[str, Any]],
         metrics: RequestMetrics,
+        wanted_product_keys: set[str] | frozenset[str] | None = None,
     ) -> list[list[dict[str, Any]]]:
         """Load required offer partitions with a bounded, deterministic fan-out.
 
@@ -1231,11 +1261,16 @@ class ArgentinaBackendReader:
         if not ordered:
             return []
         if len(ordered) == 1:
-            return [self._member(region_id, ordered[0], metrics)]
+            if wanted_product_keys is None:
+                return [self._member(region_id, ordered[0], metrics)]
+            return [self._member(region_id, ordered[0], metrics, wanted_product_keys)]
 
         def load_one(partition: Mapping[str, Any]) -> tuple[list[dict[str, Any]], RequestMetrics]:
             local_metrics = RequestMetrics()
-            records = self._member(region_id, partition, local_metrics)
+            if wanted_product_keys is None:
+                records = self._member(region_id, partition, local_metrics)
+            else:
+                records = self._member(region_id, partition, local_metrics, wanted_product_keys)
             return records, local_metrics
 
         workers = min(MAX_OFFER_PARTITION_CONCURRENCY, len(ordered))
@@ -1287,9 +1322,14 @@ class ArgentinaBackendReader:
         metrics.routing_ms = (time.perf_counter() - route_start) * 1000
         metrics.regions_queried = [item.region_id for item in selections]
         per_line: dict[str, dict[str, dict[str, Any]]] = {line.line_id: {"candidates": {}, "offers": {}} for line in normalized.lines}
-        regional_plans: list[dict[str, Any]] = []
+        # Build each selected region's deterministic query plan first, then
+        # fetch its offer members in bounded parallel.  This overlaps the
+        # independent regional GCS/range work without changing candidate,
+        # evidence, or response ordering.
+        regional_work: list[tuple[RegionSelection, Any, tuple[tuple[Mapping[str, Any], ...], ...], MicroQueryPlan, dict[str, Mapping[str, Any]], RequestMetrics]] = []
         for selection in selections:
             contract = self.router.contract(selection.region_id)
+            region_metrics = RequestMetrics(regions_queried=[selection.region_id])
             search_start = time.perf_counter()
             queries = [line.query for line in normalized.lines]
             aligned_trusted_keys = tuple(trusted_by_line.get(line.line_id) for line in normalized.lines)
@@ -1297,19 +1337,37 @@ class ArgentinaBackendReader:
                 contract,
                 queries,
                 product_limit=5,
-                metrics=metrics,
+                metrics=region_metrics,
                 trusted_product_keys=aligned_trusted_keys,
             )
             plan = self._plan(contract, queries, metrics=None, values_by_query=candidate_values)
-            metrics.regional_search_ms += (time.perf_counter() - search_start) * 1000
-            metrics.compressed_bytes += plan.compressed_bytes
-            metrics.decompressed_bytes += plan.decompressed_bytes
-            metrics.physical_pack_bytes += plan.physical_pack_bytes
-            stores = self.router.stores(selection.region_id)
-            products = {item["productEvidenceKey"]: item for item in plan.product_candidates}
+            region_metrics.regional_search_ms += (time.perf_counter() - search_start) * 1000
+            region_metrics.compressed_bytes += plan.compressed_bytes
+            region_metrics.decompressed_bytes += plan.decompressed_bytes
+            region_metrics.physical_pack_bytes += plan.physical_pack_bytes
+            regional_work.append((selection, contract, candidate_values, plan, self.router.stores(selection.region_id), region_metrics))
+
+        def load_region(work: tuple[RegionSelection, Any, tuple[tuple[Mapping[str, Any], ...], ...], MicroQueryPlan, dict[str, Mapping[str, Any]], RequestMetrics]) -> list[Mapping[str, Any]]:
+            selection, _contract, _candidate_values, plan, _stores, region_metrics = work
+            wanted_product_keys = frozenset(value["productEvidenceKey"] for value in plan.product_candidates)
             records: list[Mapping[str, Any]] = []
-            for partition_records in self._load_members(selection.region_id, plan.slices, metrics):
+            for partition_records in self._load_members(selection.region_id, plan.slices, region_metrics, wanted_product_keys):
                 records.extend(partition_records)
+            return records
+
+        if len(regional_work) > 1:
+            workers = min(MAX_REMOTE_ROUTING_CONCURRENCY, len(regional_work))
+            with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="valuepilot-regions") as executor:
+                futures = [executor.submit(load_region, work) for work in regional_work]
+                loaded_records = [future.result() for future in futures]
+        else:
+            loaded_records = [load_region(work) for work in regional_work]
+
+        regional_plans: list[dict[str, Any]] = []
+        for work, records in zip(regional_work, loaded_records):
+            selection, _contract, candidate_values, plan, stores, region_metrics = work
+            self._merge_region_metrics(metrics, region_metrics)
+            products = {item["productEvidenceKey"]: item for item in plan.product_candidates}
             offers = []
             for raw_offer in records:
                 product_key = raw_offer.get("productEvidenceKey")
