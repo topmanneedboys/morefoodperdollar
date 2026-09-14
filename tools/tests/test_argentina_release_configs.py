@@ -84,6 +84,11 @@ class ArgentinaReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("body: ${discovery_state_bytes}", workflow)
         self.assertNotIn("body: '${json.encode({", workflow)
 
+    def test_google_workflow_handles_missing_discovery_state_key_safely(self) -> None:
+        workflow = (ROOT / "workflows" / "argentina-release.yaml").read_text(encoding="utf-8")
+        self.assertIn('map.get(previous_state, "metadataChecksum")', workflow)
+        self.assertNotIn("previous_state.metadataChecksum", workflow)
+
     def test_scheduler_template_is_paused_and_argentina_localized(self) -> None:
         value = json.loads((ROOT / "scheduler" / "argentina-release-job.example.json").read_text(encoding="utf-8"))
         self.assertEqual(value["deploymentState"], "DISABLED_UNTIL_CONTROLLED_ACTIVATION")
