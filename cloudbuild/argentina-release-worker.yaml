@@ -3,9 +3,12 @@
 # This file is an operator-supplied Cloud Build configuration.  The builder
 # image substitution must point at an approved, digest-pinned image that
 # contains the repository's pinned Python dependencies; no image or secret is
-# fetched from this file.  The worker performs acquisition, qualification,
-# deterministic build, and private archiving.  Publication/canary/activation
-# remains a separate explicitly authorized step.
+# fetched from this file.  The handoff entrypoint delegates the normal path to
+# the mature release worker unchanged.  When a verified source-archive key and
+# SHA are supplied, it first restores that exact ZIP and passes it to the
+# worker as an explicit local source so stale CKAN metadata cannot suppress a
+# real archived handoff.  Qualification, deterministic build, promotion, and
+# pointer rules remain owned by the existing release worker.
 # The worker's shadow result must report activePointerWrites: 0.
 steps:
   - id: acquire-qualify-and-build
@@ -13,7 +16,7 @@ steps:
     entrypoint: python
     args:
       - '-m'
-      - tools.argentina_release_worker
+      - tools.argentina_release_handoff_worker
       - '--observed-at=${_OBSERVED_AT}'
       - '--execution-id=${_EXECUTION_ID}'
       - '--archive-bucket=${_ARCHIVE_BUCKET}'
