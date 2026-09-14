@@ -142,7 +142,7 @@ main:
 
     - no_change:
         switch:
-          - condition: ${previous_state.metadataChecksum == metadata_checksum and source_archive_key == ""}
+          - condition: ${map.get(previous_state, "metadataChecksum") == metadata_checksum and source_archive_key == ""}
             return:
               status: NO_CHANGE
               metadataChecksum: ${metadata_checksum}
