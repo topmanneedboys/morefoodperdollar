@@ -155,13 +155,30 @@ jobs:
              ! grep -Eq '^[[:space:]]*\[Peer\][[:space:]]*$' "${WG_CONFIG}" || \
              ! grep -Eq '^[[:space:]]*Endpoint[[:space:]]*=[[:space:]]*[^[:space:]]+:[0-9]+[[:space:]]*$' "${WG_CONFIG}" || \
              ! grep -Eq '^[[:space:]]*AllowedIPs[[:space:]]*=.*0\.0\.0\.0/0([[:space:],]|$)' "${WG_CONFIG}"; then
-            echo "::error::Windscribe config is missing the required full-tunnel WireGuard contract."
+            echo "::error::Windscribe config is missing the required IPv4 full-tunnel WireGuard contract."
             exit 2
           fi
 
-          # Prevent an AAAA result from ever bypassing an IPv4-only full tunnel.
-          sudo sysctl -q -w net.ipv6.conf.all.disable_ipv6=1
-          sudo sysctl -q -w net.ipv6.conf.default.disable_ipv6=1
+          # Windscribe currently emits dual-stack configs. If an IPv6 tunnel
+          # address is present, require the IPv6 default route too. If the
+          # config is genuinely IPv4-only, disable IPv6 before bringing up the
+          # tunnel so AAAA traffic can never escape by the runner's normal path.
+          has_v6_address=0
+          has_v6_default=0
+          if grep -Eq '^[[:space:]]*Address[[:space:]]*=.*:' "${WG_CONFIG}"; then
+            has_v6_address=1
+          fi
+          if grep -Eq '^[[:space:]]*AllowedIPs[[:space:]]*=.*::/0([[:space:],]|$)' "${WG_CONFIG}"; then
+            has_v6_default=1
+          fi
+          if [[ "${has_v6_address}" != "${has_v6_default}" ]]; then
+            echo "::error::Windscribe IPv6 tunnel contract is incomplete; refusing any IPv6 bypass possibility."
+            exit 2
+          fi
+          if [[ "${has_v6_address}" == "0" ]]; then
+            sudo sysctl -q -w net.ipv6.conf.all.disable_ipv6=1
+            sudo sysctl -q -w net.ipv6.conf.default.disable_ipv6=1
+          fi
 
           tunnel_up=0
           cleanup_tunnel() {
