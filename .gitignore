@@ -15,6 +15,10 @@ __pycache__/
 local-provider-data/
 local-feed-reports/
 
+# GitHub OIDC auth action writes short-lived credential files into the workspace.
+# They must never be committed or packaged into build artifacts.
+gha-creds-*.json
+
 # Backend measurements may contain selected local evidence and are regenerated
 # from the ignored qualified root; keep only the checked-in qualification
 # summary/report in Git.
