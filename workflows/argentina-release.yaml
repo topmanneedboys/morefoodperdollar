@@ -2,10 +2,16 @@
 #
 # Cloud Scheduler invokes this workflow with the operator-owned bucket and
 # immutable Cloud Build source object supplied as runtime arguments.  The
-# national catalog is queried first; a stable metadata checksum returns
-# NO_CHANGE without starting Cloud Build.  The heavy worker owns exact source
-# validation, the distributed lease, private archive, and the existing
-# deterministic release builder.  Promotion defaults to write-free SHADOW;
+# national catalog is queried first.  A stable metadata checksum can return
+# NO_CHANGE only for the normal direct-acquisition path.  When an independently
+# verified source-archive key and SHA are supplied, the workflow must start the
+# build even if CKAN metadata is unchanged: the archive ZIP's internally proven
+# date/hash is the authoritative release evidence.
+#
+# The heavy worker owns exact source validation, the distributed lease, private
+# archive, and deterministic release builder.  The handoff entrypoint delegates
+# the normal path unchanged and materializes an explicit verified archive ZIP
+# before invoking the mature worker.  Promotion defaults to write-free SHADOW;
 # explicit staging/activation inputs are passed through to the worker, which
 # validates them before any canary or active pointer write.  This workflow
 # never receives or stores raw ZIP bytes.
@@ -25,8 +31,25 @@ main:
           - execution_id: ${default(args.executionId, sys.get_env("GOOGLE_CLOUD_WORKFLOW_EXECUTION_ID"))}
           - current_release_date: ${default(args.currentReleaseDate, "")}
           - current_source_sha256: ${default(args.currentSourceSha256, "")}
+          - source_archive_key: ${default(args.sourceArchiveKey, "")}
+          - source_archive_sha256: ${default(args.sourceArchiveSha256, "")}
           - upstream_changed: ${default(args.upstreamChanged, false)}
           - promotion_mode: ${default(args.promotionMode, "SHADOW")}
+
+    - validate_handoff:
+        switch:
+          - condition: ${(source_archive_key == "" && source_archive_sha256 != "") || (source_archive_key != "" && source_archive_sha256 == "")}
+            return:
+              status: INVALID_HANDOFF
+              reason: SOURCE_ARCHIVE_KEY_AND_SHA_REQUIRED_TOGETHER
+              cloudBuildStarted: false
+              activePointerWrites: 0
+          - condition: ${source_archive_key != "" && (current_release_date == "" || current_source_sha256 == "")}
+            return:
+              status: INVALID_HANDOFF
+              reason: CURRENT_TRUSTED_SOURCE_IDENTITY_REQUIRED
+              cloudBuildStarted: false
+              activePointerWrites: 0
 
     - discover_catalog:
         try:
@@ -124,7 +147,10 @@ main:
 
     - no_change:
         switch:
-          - condition: ${previous_state.metadataChecksum == metadata_checksum}
+          # CKAN metadata is only an optimization for the direct-acquisition
+          # path.  A verified archive handoff is stronger evidence and must be
+          # inspected by the worker even when this checksum is unchanged.
+          - condition: ${previous_state.metadataChecksum == metadata_checksum && source_archive_key == ""}
             return:
               status: NO_CHANGE
               metadataChecksum: ${metadata_checksum}
@@ -148,7 +174,7 @@ main:
                   entrypoint: python
                   args:
                     - "-m"
-                    - tools.argentina_release_worker
+                    - tools.argentina_release_handoff_worker
                     - "--observed-at=${args.observedAt}"
                     - "--execution-id=${execution_id}"
                     - "--archive-bucket=${archive_bucket}"
@@ -175,8 +201,8 @@ main:
                     - "BUILDER_IMAGE=${args.workerImage}"
                     - "BUILDER_SHA=${args.builderSha}"
                     - "VALUEPILOT_UPSTREAM_CHANGED=${string(upstream_changed)}"
-                    - "VALUEPILOT_SOURCE_ARCHIVE_KEY=${default(args.sourceArchiveKey, \"\")}"
-                    - "VALUEPILOT_SOURCE_ARCHIVE_SHA256=${default(args.sourceArchiveSha256, \"\")}"
+                    - "VALUEPILOT_SOURCE_ARCHIVE_KEY=${source_archive_key}"
+                    - "VALUEPILOT_SOURCE_ARCHIVE_SHA256=${source_archive_sha256}"
               options:
                 machineType: E2_STANDARD_2
                 diskSizeGb: "200"
