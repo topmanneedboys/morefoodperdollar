@@ -133,7 +133,8 @@ class BackendCoreTests(unittest.TestCase):
             (root / "control").mkdir()
             pointer = root / "control" / "active.json"
             pointer.write_text('{"releaseId":"r1","schemaVersion":"valuepilot-active-release-v1"}', encoding="utf-8")
-            manager = ReleaseManager(root, max_age_days=7)
+            clock = FrozenClock(datetime(2026, 9, 8, tzinfo=ARGENTINA_ZONE))
+            manager = ReleaseManager(root, clock=clock, max_age_days=7)
             pinned = manager.pin()
             pointer.write_text('{"releaseId":"r2","schemaVersion":"valuepilot-active-release-v1"}', encoding="utf-8")
             self.assertTrue(str(pinned.root).endswith("releases\\r1") or str(pinned.root).endswith("releases/r1"))
