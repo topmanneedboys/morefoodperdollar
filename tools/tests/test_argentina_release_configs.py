@@ -26,9 +26,12 @@ class ArgentinaReleaseConfigurationTests(unittest.TestCase):
         workflow = (ROOT / "workflows" / "argentina-release.yaml").read_text(encoding="utf-8")
         for text in (cloudbuild, workflow):
             self.assertIn("E2_STANDARD_2", text)
-            self.assertIn("tools.argentina_release_worker", text)
             self.assertIn("activePointerWrites", text)
             self.assertNotRegex(text, re.compile(r"(AKIA|BEGIN [A-Z ]*PRIVATE KEY|ghp_[A-Za-z0-9])"))
+        self.assertIn("tools.argentina_release_handoff_worker", cloudbuild)
+        self.assertIn("VALUEPILOT_SOURCE_ARCHIVE_KEY", cloudbuild)
+        self.assertIn("VALUEPILOT_SOURCE_ARCHIVE_SHA256", cloudbuild)
+        self.assertIn("tools.argentina_release_worker", workflow)
         self.assertIn("NO_CHANGE", workflow)
         self.assertIn("googleapis.cloudbuild.v1.projects.builds.create", workflow)
         self.assertIn("release_build.metadata.build.status", workflow)
@@ -44,6 +47,7 @@ class ArgentinaReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("WORKER_SUMMARY_IDENTITY_MISMATCH", workflow)
         self.assertIn("PROMOTION_MODE", cloudbuild)
         self.assertTrue((ROOT / "tools" / "argentina_release_promoter.py").is_file())
+        self.assertTrue((ROOT / "tools" / "argentina_release_handoff_worker.py").is_file())
 
     def test_scheduler_template_is_paused_and_argentina_localized(self) -> None:
         value = json.loads((ROOT / "scheduler" / "argentina-release-job.example.json").read_text(encoding="utf-8"))
