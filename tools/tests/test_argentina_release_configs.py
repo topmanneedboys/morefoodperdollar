@@ -131,6 +131,13 @@ class ArgentinaReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("worker_summary: ${json.decode(worker_summary_bytes)}", workflow)
         self.assertNotIn("worker_summary_response.body", workflow)
 
+    def test_google_workflow_uses_writable_worker_scratch_paths(self) -> None:
+        workflow = (ROOT / "workflows" / "argentina-release.yaml").read_text(encoding="utf-8")
+        self.assertIn("--workspace=/tmp/valuepilot-release-workspace", workflow)
+        self.assertIn("--output=/tmp/valuepilot-release-output", workflow)
+        self.assertNotIn("--workspace=/workspace/valuepilot-release-workspace", workflow)
+        self.assertNotIn("--output=/workspace/valuepilot-release-output", workflow)
+
     def test_scheduler_template_is_paused_and_argentina_localized(self) -> None:
         value = json.loads((ROOT / "scheduler" / "argentina-release-job.example.json").read_text(encoding="utf-8"))
         self.assertEqual(value["deploymentState"], "DISABLED_UNTIL_CONTROLLED_ACTIVATION")
