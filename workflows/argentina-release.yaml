@@ -109,22 +109,32 @@ main:
         args:
           data: ${json.encode(catalog_response.body)}
           algorithm: SHA256
-        result: metadata_checksum
+        result: metadata_checksum_bytes
+
+    - encode_catalog_checksum:
+        assign:
+          - metadata_checksum: ${base64.encode(metadata_checksum_bytes)}
 
     - read_previous_state:
         try:
           steps:
-            - get_state:
+            - get_state_metadata:
+                call: googleapis.storage.v1.objects.get
+                args:
+                  bucket: ${control_bucket}
+                  object: ${text.url_encode(state_object)}
+                result: previous_state_metadata
+            - get_state_media:
                 call: googleapis.storage.v1.objects.get
                 args:
                   bucket: ${control_bucket}
                   object: ${text.url_encode(state_object)}
                   alt: media
-                result: previous_state_response
+                result: previous_state_bytes
             - decode_state:
                 assign:
-                  - previous_state: ${json.decode(text.decode(previous_state_response.body))}
-                  - previous_state_generation: ${previous_state_response.generation}
+                  - previous_state: ${json.decode(previous_state_bytes)}
+                  - previous_state_generation: ${previous_state_metadata.generation}
         except:
           as: state_error
           steps:
@@ -236,7 +246,7 @@ main:
             bucket: ${archive_bucket}
             object: ${text.url_encode("control/executions/" + execution_id + ".json")}
             alt: media
-          result: worker_summary_response
+          result: worker_summary_bytes
         except:
           as: worker_summary_error
           steps:
@@ -251,7 +261,7 @@ main:
     - decode_worker_summary:
         try:
           assign:
-            - worker_summary: ${json.decode(text.decode(worker_summary_response.body))}
+            - worker_summary: ${json.decode(worker_summary_bytes)}
         except:
           as: worker_summary_decode_error
           steps:
