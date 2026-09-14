@@ -5,6 +5,7 @@ on:
   schedule:
     # Buenos Aires is UTC-3 year-round. These are 13:30, 15:30 and 17:30 ART.
     # Scheduled runs remain inert until ARGENTINA_AUTOMATED_ACQUISITION_ENABLED=true.
+    # Keep that variable false while promotionMode is hard-coded to SHADOW.
     - cron: '30 16,18,20 * * *'
 
 permissions:
@@ -19,7 +20,7 @@ jobs:
   acquire-and-shadow:
     if: github.event_name == 'workflow_dispatch' || vars.ARGENTINA_AUTOMATED_ACQUISITION_ENABLED == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    timeout-minutes: 350
     environment: argentina-production
 
     env:
@@ -137,7 +138,7 @@ jobs:
              ! grep -Eq '^\s*PrivateKey\s*=\s*[^[:space:]]+' "${WG_CONFIG}" || \
              ! grep -Eq '^\s*\[Peer\]\s*$' "${WG_CONFIG}" || \
              ! grep -Eq '^\s*Endpoint\s*=\s*[^[:space:]]+:[0-9]+\s*$' "${WG_CONFIG}" || \
-             ! grep -Eq '^\s*AllowedIPs\s*=.*(^|[[:space:],])0\.0\.0\.0/0([[:space:],]|$)' "${WG_CONFIG}"; then
+             ! grep -Eq '^\s*AllowedIPs\s*=.*0\.0\.0\.0/0([[:space:],]|$)' "${WG_CONFIG}"; then
             echo "::error::Windscribe config is missing the required full-tunnel WireGuard contract."
             exit 2
           fi
@@ -239,8 +240,8 @@ jobs:
           SOURCE_ARCHIVE_SHA256: ${{ steps.publish.outputs.archive_sha }}
         run: |
           set -euo pipefail
-          observed="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["observedAt"])' "${HANDOFF_REPORT}")"
-          execution_id="github-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          export OBSERVED_AT="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["observedAt"])' "${HANDOFF_REPORT}")"
+          export EXECUTION_ID="github-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           data="$(python - <<'PY'
           import json, os
           print(json.dumps({
@@ -263,13 +264,12 @@ jobs:
           }, separators=(",", ":")))
           PY
           )"
-          OBSERVED_AT="${observed}" EXECUTION_ID="${execution_id}" \
-            gcloud workflows run "${RELEASE_WORKFLOW_NAME}" \
-              --project "${GCP_PROJECT_ID}" \
-              --location "${RELEASE_WORKFLOW_LOCATION}" \
-              --call-log-level=log-errors-only \
-              --data "${data}" \
-              --format=json > "${RUNNER_TEMP}/valuepilot-workflow-result.json"
+          gcloud workflows run "${RELEASE_WORKFLOW_NAME}" \
+            --project "${GCP_PROJECT_ID}" \
+            --location "${RELEASE_WORKFLOW_LOCATION}" \
+            --call-log-level=log-errors-only \
+            --data "${data}" \
+            --format=json > "${RUNNER_TEMP}/valuepilot-workflow-result.json"
           cat "${RUNNER_TEMP}/valuepilot-workflow-result.json"
 
       - name: Assert no production activation from acquisition workflow
@@ -278,7 +278,7 @@ jobs:
         run: |
           set -euo pipefail
           python - <<'PY'
-          import json, os, sys
+          import json, os
           path = os.path.join(os.environ["RUNNER_TEMP"], "valuepilot-workflow-result.json")
           value = json.load(open(path, encoding="utf-8"))
           result = value.get("result")
