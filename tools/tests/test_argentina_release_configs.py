@@ -89,6 +89,35 @@ class ArgentinaReleaseConfigurationTests(unittest.TestCase):
         self.assertIn('map.get(previous_state, "metadataChecksum")', workflow)
         self.assertNotIn("previous_state.metadataChecksum", workflow)
 
+    def test_google_workflow_handles_omitted_optional_arguments_safely(self) -> None:
+        workflow = (ROOT / "workflows" / "argentina-release.yaml").read_text(encoding="utf-8")
+        self.assertNotIn("default(args.", workflow)
+        for name in (
+            "executionId",
+            "currentReleaseDate",
+            "currentSourceSha256",
+            "sourceArchiveKey",
+            "sourceArchiveSha256",
+            "upstreamChanged",
+            "promotionMode",
+            "promotionDataCanaryPath",
+            "expectedCurrentReleaseId",
+            "promotionStoreRoot",
+            "promotionUsBucket",
+            "promotionSaBucket",
+            "promotionR2Bucket",
+            "promotionGcsProject",
+            "promotionR2Endpoint",
+            "promotionR2Region",
+            "promotionUsSmokeUrl",
+            "promotionSaSmokeUrl",
+            "promotionR2SmokeUrl",
+        ):
+            self.assertIn(f'map.get(args, "{name}")', workflow)
+        self.assertNotIn("default(worker_summary.", workflow)
+        self.assertIn('map.get(worker_summary, "activePointerWrites")', workflow)
+        self.assertIn('map.get(worker_summary, "promotion")', workflow)
+
     def test_scheduler_template_is_paused_and_argentina_localized(self) -> None:
         value = json.loads((ROOT / "scheduler" / "argentina-release-job.example.json").read_text(encoding="utf-8"))
         self.assertEqual(value["deploymentState"], "DISABLED_UNTIL_CONTROLLED_ACTIVATION")
