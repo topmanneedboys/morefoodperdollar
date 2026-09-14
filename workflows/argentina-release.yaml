@@ -38,13 +38,13 @@ main:
 
     - validate_handoff:
         switch:
-          - condition: ${(source_archive_key == "" && source_archive_sha256 != "") || (source_archive_key != "" && source_archive_sha256 == "")}
+          - condition: ${(source_archive_key == "" and source_archive_sha256 != "") or (source_archive_key != "" and source_archive_sha256 == "")}
             return:
               status: INVALID_HANDOFF
               reason: SOURCE_ARCHIVE_KEY_AND_SHA_REQUIRED_TOGETHER
               cloudBuildStarted: false
               activePointerWrites: 0
-          - condition: ${source_archive_key != "" && (current_release_date == "" || current_source_sha256 == "")}
+          - condition: ${source_archive_key != "" and (current_release_date == "" or current_source_sha256 == "")}
             return:
               status: INVALID_HANDOFF
               reason: CURRENT_TRUSTED_SOURCE_IDENTITY_REQUIRED
@@ -150,7 +150,7 @@ main:
           # CKAN metadata is only an optimization for the direct-acquisition
           # path.  A verified archive handoff is stronger evidence and must be
           # inspected by the worker even when this checksum is unchanged.
-          - condition: ${previous_state.metadataChecksum == metadata_checksum && source_archive_key == ""}
+          - condition: ${previous_state.metadataChecksum == metadata_checksum and source_archive_key == ""}
             return:
               status: NO_CHANGE
               metadataChecksum: ${metadata_checksum}
@@ -275,7 +275,7 @@ main:
 
     - validate_worker_summary:
         switch:
-          - condition: ${worker_summary.schemaVersion != "valuepilot-argentina-release-worker-v1" || worker_summary.policyVersion != "valuepilot-argentina-release-worker-policy-v1" || worker_summary.executionId != execution_id}
+          - condition: ${worker_summary.schemaVersion != "valuepilot-argentina-release-worker-v1" or worker_summary.policyVersion != "valuepilot-argentina-release-worker-policy-v1" or worker_summary.executionId != execution_id}
             return:
               status: WORKER_SUMMARY_INVALID
               buildId: ${release_build.metadata.build.id}
