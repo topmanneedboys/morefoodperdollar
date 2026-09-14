@@ -118,6 +118,19 @@ class ArgentinaReleaseConfigurationTests(unittest.TestCase):
         self.assertIn('map.get(worker_summary, "activePointerWrites")', workflow)
         self.assertIn('map.get(worker_summary, "promotion")', workflow)
 
+    def test_google_workflow_uses_media_bytes_and_json_safe_checksum(self) -> None:
+        workflow = (ROOT / "workflows" / "argentina-release.yaml").read_text(encoding="utf-8")
+        self.assertIn("result: metadata_checksum_bytes", workflow)
+        self.assertIn("metadata_checksum: ${base64.encode(metadata_checksum_bytes)}", workflow)
+        self.assertIn("result: previous_state_metadata", workflow)
+        self.assertIn("result: previous_state_bytes", workflow)
+        self.assertIn("previous_state: ${json.decode(previous_state_bytes)}", workflow)
+        self.assertIn("previous_state_generation: ${previous_state_metadata.generation}", workflow)
+        self.assertNotIn("previous_state_response.body", workflow)
+        self.assertIn("result: worker_summary_bytes", workflow)
+        self.assertIn("worker_summary: ${json.decode(worker_summary_bytes)}", workflow)
+        self.assertNotIn("worker_summary_response.body", workflow)
+
     def test_scheduler_template_is_paused_and_argentina_localized(self) -> None:
         value = json.loads((ROOT / "scheduler" / "argentina-release-job.example.json").read_text(encoding="utf-8"))
         self.assertEqual(value["deploymentState"], "DISABLED_UNTIL_CONTROLLED_ACTIVATION")
