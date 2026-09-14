@@ -38,11 +38,6 @@ jobs:
       WORKER_IMAGE: ${{ vars.VALUEPILOT_ARGENTINA_WORKER_IMAGE }}
       BUILDER_SHA: ${{ vars.VALUEPILOT_ARGENTINA_BUILDER_SHA }}
       BUILDER_SERVICE_ACCOUNT: ${{ vars.VALUEPILOT_ARGENTINA_BUILDER_SERVICE_ACCOUNT }}
-      LOCAL_ARCHIVE: ${{ runner.temp }}/valuepilot-argentina-source-archive
-      HANDOFF_REPORT: ${{ runner.temp }}/valuepilot-argentina-handoff.json
-      PUBLISH_REPORT: ${{ runner.temp }}/valuepilot-argentina-publish.json
-      CURRENT_IDENTITY: ${{ runner.temp }}/valuepilot-argentina-current.json
-      WG_CONFIG: ${{ runner.temp }}/vpwg.conf
 
     steps:
       - name: Checkout exact repository revision
@@ -52,6 +47,18 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+
+      - name: Initialize bounded runner paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "LOCAL_ARCHIVE=${RUNNER_TEMP}/valuepilot-argentina-source-archive"
+            echo "HANDOFF_REPORT=${RUNNER_TEMP}/valuepilot-argentina-handoff.json"
+            echo "PUBLISH_REPORT=${RUNNER_TEMP}/valuepilot-argentina-publish.json"
+            echo "CURRENT_IDENTITY=${RUNNER_TEMP}/valuepilot-argentina-current.json"
+            echo "WG_CONFIG=${RUNNER_TEMP}/vpwg.conf"
+          } >> "${GITHUB_ENV}"
 
       - name: Validate deployment configuration
         shell: bash
