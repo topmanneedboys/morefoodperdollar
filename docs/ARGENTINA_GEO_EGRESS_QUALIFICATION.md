@@ -1,8 +1,8 @@
 # Argentina source egress qualification
 
-Status: **QUALIFICATION HARNESS ONLY — NO PRODUCTION CHANGE**
+Status: **ROUTE-DEPENDENT OFFICIAL SOURCE ACCESS PROVEN — UNATTENDED EGRESS NOT YET DEPLOYED**
 
-This bounded harness determines whether the existing official SEPA acquisition path behaves differently over two operator-selected network routes. It does not configure a VPN, use a proxy URL, use an alternate mirror, write an archive, build a release, stage a canary, or change `control/active.json`.
+This bounded qualification determines whether the existing official SEPA acquisition path behaves differently over operator-selected network routes. It does not configure a VPN, use a proxy URL, use an alternate mirror, stage a canary, or change `control/active.json`.
 
 The harness reuses ValuePilot's existing source controls:
 
@@ -18,32 +18,61 @@ The harness reuses ValuePilot's existing source controls:
 
 A route label such as `argentina-vpn` is operator-supplied context only. ValuePilot does not call an IP-geolocation service and does not claim that the label independently proves the network exit country.
 
-## Windows / PowerShell qualification
+## Measured qualification — 2026-09-14 UTC
 
-Run from the repository root. Reports should be written outside the repository.
+The exact ValuePilot acquisition path was executed twice from the same Windows host.
+
+Baseline route:
+
+- egress label: `canada-direct`;
+- discovery/catalog: succeeded;
+- official source host: `datos.produccion.gob.ar`;
+- download result: `HTTP_ERROR`, HTTP 403;
+- archive writes: `0`;
+- build started: `false`;
+- production state changed: `false`.
+
+Operator-selected Argentina VPN route:
+
+- egress label: `argentina-vpn`;
+- status: `PASS`;
+- stage: `VERIFIED_OFFICIAL_SOURCE`;
+- final host: `datos.produccion.gob.ar`;
+- downloaded bytes: `330069965`;
+- SHA-256: `5c8912521d6fe2d64e2f096b962acd47c18c247cce7787576ae04880d028b962`;
+- source kind: `OFFICIAL_SEPA_ZIP`;
+- internally proven source date: `2026-09-07`;
+- archive writes: `0`;
+- build started: `false`;
+- production state changed: `false`.
+
+Comparison conclusion:
+
+`CANDIDATE_ROUTE_SUCCEEDS_WHERE_BASELINE_403`
+
+This proves route-dependent access using the exact ValuePilot acquisition path. It deliberately does **not** claim that ValuePilot independently geolocated the exit IP.
+
+The successful qualification also exposed stale CKAN discovery hints: at observation time `2026-09-14T01:26:02Z`, the old selector chose `Lunes` and the ZIP internally proved `2026-09-07`, while the trusted active source was already `2026-09-08`. The candidate selector is therefore required to prefer the Argentina-local weekday endpoint before stale metadata hints. The ZIP's internally proven date/hash remains the only release/freshness authority, and older bytes remain fail-closed.
+
+## Windows / PowerShell qualification procedure
+
+Run from the repository root. Reports should be written outside the repository. For direct module execution on Windows, keep the repository root on `PYTHONPATH` and invoke the module with `python -m`.
 
 ### 1. Baseline route
 
 Disconnect the Argentina VPN first, then run:
 
 ```powershell
+$env:PYTHONPATH=(Get-Location).Path
 $Observed = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 $Baseline = Join-Path $env:TEMP 'valuepilot-sepa-baseline.json'
-python tools\qualify_argentina_geo_egress.py run `
+python -m tools.qualify_argentina_geo_egress run `
   --observed-at $Observed `
   --egress-label canada-direct `
   --output $Baseline
 ```
 
-A current HTTP 403 is an expected bounded failure and should produce a report with:
-
-- `status: FAILED`
-- `error: HTTP_ERROR`
-- a message containing `403`
-- `activePointerWrites: 0`
-- `archiveWrites: 0`
-- `buildStarted: false`
-- `productionStateChanged: false`
+A current HTTP 403 should produce a bounded failure with no archive/build/production write.
 
 ### 2. Candidate route
 
@@ -52,57 +81,49 @@ Connect the already-approved Argentina VPN/network route. Do not change ValuePil
 ```powershell
 $Observed = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
 $Candidate = Join-Path $env:TEMP 'valuepilot-sepa-argentina-route.json'
-python tools\qualify_argentina_geo_egress.py run `
+python -m tools.qualify_argentina_geo_egress run `
   --observed-at $Observed `
   --egress-label argentina-vpn `
   --output $Candidate
 ```
 
-This performs a complete bounded source download (currently roughly 325 MB), verifies its SHA-256 and official ZIP identity, and removes the temporary source after the qualification process exits.
-
-A success report must have:
-
-- `status: PASS`
-- `stage: VERIFIED_OFFICIAL_SOURCE`
-- final host `datos.produccion.gob.ar`
-- an internally proven release date
-- exact byte count and SHA-256
-- `activePointerWrites: 0`
-- `archiveWrites: 0`
-- `buildStarted: false`
-- `productionStateChanged: false`
+This performs a complete bounded source download, verifies its SHA-256 and official ZIP identity, and removes the temporary source after the qualification process exits.
 
 ### 3. Compare
 
 ```powershell
 $Comparison = Join-Path $env:TEMP 'valuepilot-sepa-route-comparison.json'
-python tools\qualify_argentina_geo_egress.py compare `
+python -m tools.qualify_argentina_geo_egress compare `
   --baseline $Baseline `
   --candidate $Candidate `
   --output $Comparison
 Get-Content $Comparison
 ```
 
-The strongest expected conclusion is:
-
-`CANDIDATE_ROUTE_SUCCEEDS_WHERE_BASELINE_403`
-
-That proves route-dependent access using the exact ValuePilot acquisition path. It deliberately does **not** claim that ValuePilot independently geolocated the exit IP.
-
 ## Automation boundary after qualification
 
-Do not add a generic HTTP proxy parameter to `argentina_release_acquisition.py`. The durable route should stay below the application networking layer so ValuePilot still connects directly to and validates the official source host.
+Do not add a generic HTTP proxy parameter to `argentina_release_acquisition.py`. The durable route stays below the application networking layer so ValuePilot continues connecting directly to and validating the official source host.
 
-Only after a successful comparison should an unattended egress adapter be selected. Prefer, in order:
+The safe automation split is:
 
-1. an operator-approved VPN client/protocol that can run unattended on a dedicated worker;
+1. a small acquisition runner with already-established approved Argentina egress reads the checksum-verified active release identity;
+2. it downloads the Argentina-local weekday ZIP through the normal official URL and verifies host/hash/ZIP/internal date;
+3. `NO_CHANGE` and `OLDER_REJECTED` stop without a build;
+4. a genuinely newer verified source is written to the existing content-addressed private source archive;
+5. the handoff contains the exact archive key/SHA, source date, observation timestamp, and current trusted source identity;
+6. Google Workflow/Cloud Build restores that exact archived ZIP through `argentina_release_handoff_worker` and runs the mature release worker;
+7. staging/canary/activation rules remain unchanged and `SHADOW` remains the default.
+
+The heavy release build must not be routed through the VPN. Only source acquisition needs the Argentina egress path.
+
+Unattended egress remains an external deployment choice. Prefer, in order:
+
+1. an operator-approved VPN client/protocol that can run unattended on a dedicated acquisition worker;
 2. a dedicated runner with already-established Argentina egress;
 3. a small Argentina-hosted acquisition worker if no safe unattended VPN mode exists.
-
-The acquisition runner may pass a verified ZIP into the existing automated release worker, but the existing source/date/hash, archive, release, canary, smoke, compare-and-swap, and rollback gates remain authoritative.
 
 Do not place VPN credentials in Git, command output, qualification JSON, release manifests, or routine logs. If a future GitHub Actions runner needs Google Cloud access, use GitHub OIDC / Google Workload Identity Federation rather than a long-lived service-account key.
 
 ## CI boundary
 
-CI tests this harness with deterministic fake discovery/download/inspection functions. CI does not contact the government source and does not need VPN credentials. A real geo-egress result is operator/network evidence and must never be fabricated from a passing fixture test.
+CI tests the selection, qualification, archive handoff, active-manifest identity lookup, archive restore entrypoint, and failure-closed behavior with deterministic fixtures. CI does not contact the government source and does not need VPN credentials. A real geo-egress result must never be fabricated from a passing fixture test.
