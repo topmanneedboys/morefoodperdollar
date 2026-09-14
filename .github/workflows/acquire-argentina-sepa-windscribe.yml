@@ -94,20 +94,14 @@ jobs:
       - name: Install bounded acquisition dependencies
         run: python -m pip install --disable-pip-version-check -r backend/requirements.txt
 
-      - id: gcp-auth
-        name: Authenticate to Google Cloud with GitHub OIDC
+      - id: gcp-auth-read
+        name: Authenticate read-only current-state lookup with GitHub OIDC
         uses: google-github-actions/auth@v3
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
           workload_identity_provider: ${{ env.WIF_PROVIDER }}
           service_account: ${{ env.RELEASE_SERVICE_ACCOUNT }}
           create_credentials_file: true
-
-      - name: Set up Google Cloud CLI
-        uses: google-github-actions/setup-gcloud@v3
-        with:
-          project_id: ${{ env.GCP_PROJECT_ID }}
-          version: '>= 520.0.0'
 
       - id: current
         name: Read checksum-verified current source identity
@@ -126,6 +120,21 @@ jobs:
           echo "active_release=${active_release}" >> "${GITHUB_OUTPUT}"
           echo "Current trusted source: ${release_date} (${source_sha:0:12}...)"
 
+      - name: Retire Google credential material before VPN phase
+        shell: bash
+        run: |
+          set -euo pipefail
+          credential_path="${GOOGLE_GHA_CREDS_PATH:-${GOOGLE_APPLICATION_CREDENTIALS:-}}"
+          if [[ -n "${credential_path}" && -f "${credential_path}" ]]; then
+            shred -u "${credential_path}" >/dev/null 2>&1 || rm -f "${credential_path}"
+          fi
+          rm -f gha-creds-*.json
+          {
+            echo 'GOOGLE_APPLICATION_CREDENTIALS='
+            echo 'CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE='
+            echo 'GOOGLE_GHA_CREDS_PATH='
+          } >> "${GITHUB_ENV}"
+
       - id: acquire
         name: Acquire and verify official SEPA through Windscribe Buenos Aires
         shell: bash
@@ -141,11 +150,11 @@ jobs:
 
           printf '%s' "${WINDSCRIBE_WIREGUARD_CONFIG_B64}" | base64 --decode > "${WG_CONFIG}"
           chmod 600 "${WG_CONFIG}"
-          if ! grep -Eq '^\s*\[Interface\]\s*$' "${WG_CONFIG}" || \
-             ! grep -Eq '^\s*PrivateKey\s*=\s*[^[:space:]]+' "${WG_CONFIG}" || \
-             ! grep -Eq '^\s*\[Peer\]\s*$' "${WG_CONFIG}" || \
-             ! grep -Eq '^\s*Endpoint\s*=\s*[^[:space:]]+:[0-9]+\s*$' "${WG_CONFIG}" || \
-             ! grep -Eq '^\s*AllowedIPs\s*=.*0\.0\.0\.0/0([[:space:],]|$)' "${WG_CONFIG}"; then
+          if ! grep -Eq '^[[:space:]]*\[Interface\][[:space:]]*$' "${WG_CONFIG}" || \
+             ! grep -Eq '^[[:space:]]*PrivateKey[[:space:]]*=[[:space:]]*[^[:space:]]+' "${WG_CONFIG}" || \
+             ! grep -Eq '^[[:space:]]*\[Peer\][[:space:]]*$' "${WG_CONFIG}" || \
+             ! grep -Eq '^[[:space:]]*Endpoint[[:space:]]*=[[:space:]]*[^[:space:]]+:[0-9]+[[:space:]]*$' "${WG_CONFIG}" || \
+             ! grep -Eq '^[[:space:]]*AllowedIPs[[:space:]]*=.*0\.0\.0\.0/0([[:space:],]|$)' "${WG_CONFIG}"; then
             echo "::error::Windscribe config is missing the required full-tunnel WireGuard contract."
             exit 2
           fi
@@ -219,6 +228,23 @@ jobs:
         run: |
           echo "Official source disposition: ${{ steps.acquire.outputs.status }}"
           echo "No archive publication, build, canary, or active pointer change will occur."
+
+      - id: gcp-auth-publish
+        name: Re-authenticate to Google Cloud after VPN teardown
+        if: steps.acquire.outputs.status == 'HANDOFF_READY'
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.RELEASE_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+
+      - name: Set up Google Cloud CLI after VPN teardown
+        if: steps.acquire.outputs.status == 'HANDOFF_READY'
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          version: '>= 520.0.0'
 
       - id: publish
         name: Publish exact verified source to private GCS archive
