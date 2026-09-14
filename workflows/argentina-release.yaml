@@ -202,12 +202,12 @@ main:
                 requestedVerifyOption: VERIFIED
               timeout: "14400s"
               serviceAccount: ${args.builderServiceAccount}
-          connector_params:
-            timeout: 14400
-            polling_policy:
-              initial_delay: 5
-              multiplier: 1.5
-              max_delay: 60
+            connector_params:
+              timeout: 14400
+              polling_policy:
+                initial_delay: 5
+                multiplier: 1.5
+                max_delay: 60
           result: release_build
         except:
           as: build_error
@@ -273,6 +273,16 @@ main:
               cloudBuildStarted: true
               activePointerWrites: null
 
+    - prepare_discovery_state:
+        assign:
+          - discovery_state:
+              schemaVersion: "valuepilot-argentina-workflow-discovery-v1"
+              metadataChecksum: ${metadata_checksum}
+              observedAt: ${args.observedAt}
+              datasetId: ${catalog_response.body.result.id}
+              buildId: ${release_build.metadata.build.id}
+          - discovery_state_bytes: ${json.encode(discovery_state)}
+
     - write_discovery_state:
         try:
           call: googleapis.storage.v1.objects.insert
@@ -281,7 +291,7 @@ main:
             name: ${text.url_encode(state_object)}
             uploadType: media
             ifGenerationMatch: ${default(previous_state_generation, "0")}
-            body: '${json.encode({"schemaVersion":"valuepilot-argentina-workflow-discovery-v1","metadataChecksum":metadata_checksum,"observedAt":args.observedAt,"datasetId":catalog_response.body.result.id,"buildId":release_build.metadata.build.id})}'
+            body: ${discovery_state_bytes}
           result: state_write
         except:
           as: state_write_error
