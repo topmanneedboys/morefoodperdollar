@@ -1,12 +1,53 @@
 # ValuePilot automated official Argentina release pipeline
 
-Status: **AUTOMATED RELEASE PIPELINE: BLOCKED**
+Status: **AUTOMATED RELEASE PIPELINE: BLOCKED FOR ZERO-TOUCH DEPLOYMENT**
+
+## 2026-09-14 superseding geo-egress addendum
+
+The original checkpoint below recorded official production ZIP access as HTTP
+403 and therefore described source access itself as the blocker. Later bounded
+real-network qualification refined that conclusion:
+
+- the exact ValuePilot acquisition path still returns HTTP 403 on the baseline
+  non-Argentina route;
+- an operator-selected Argentina VPN route successfully downloaded and verified
+  the official `datos.produccion.gob.ar` ZIP;
+- measured successful download: **330,069,965 bytes**;
+- SHA-256:
+  `5c8912521d6fe2d64e2f096b962acd47c18c247cce7787576ae04880d028b962`;
+- the ZIP was verified as `OFFICIAL_SEPA_ZIP` and internally proved source date
+  **2026-09-07**;
+- comparison result:
+  `CANDIDATE_ROUTE_SUCCEEDS_WHERE_BASELINE_403`;
+- no archive, build, canary, active pointer, Android, or production state was
+  changed by that qualification.
+
+Therefore **official source access is no longer the unresolved blocker in the
+abstract**. The remaining production blocker is establishing an approved,
+unattended Argentina-egress acquisition runner and deploying the orchestration
+around it. Scheduler and workflow templates remain non-production until that
+external egress is configured and shadow-qualified.
+
+That real run also exposed stale CKAN weekday hints. The newer candidate work
+therefore prefers the Argentina-local weekday endpoint and keeps ZIP-internal
+release date/hash authoritative. A bounded acquisition-handoff path now exists:
+Argentina-egress acquisition -> exact source verification -> active-source
+comparison -> content-addressed private archive -> verified archive restore ->
+existing release worker. Metadata-only `NO_CHANGE` cannot suppress an explicit
+verified archive handoff. `SHADOW` remains the safe default and the trusted
+active Tuesday release is unchanged.
+
+---
+
+The historical checkpoint below is retained for provenance. Statements that
+say source access itself is unresolved describe the earlier checkpoint and are
+superseded by the addendum above.
 
 This checkpoint implements and verifies the offline/backend-side control plane
 for one official Argentina SEPA release. It does not claim a live production
-activation. The exact blocker is source access: the official production
-resource/download probes returned HTTP 403 during qualification, so a newer
-official source has not been independently acquired or proven.
+activation. At that checkpoint, the official production resource/download
+probes returned HTTP 403, so a newer official source had not been independently
+acquired or proven.
 
 ## Checkpoint identity
 
@@ -39,9 +80,9 @@ source-wide verification and immutable-root rebuild were **NOT_REMEASURED**;
 the completed evidence was reused as requested.
 
 The catalog metadata endpoint was reachable (HTTP 200), but the production
-dataset/resource probes returned HTTP 403. The workflow therefore remains
-`SHADOW_ONLY_WAITING_FOR_ACCESSIBLE_NEWER_OFFICIAL_SOURCE`; no guessed mirror,
-scrape, WAF bypass, or substituted ZIP is allowed.
+dataset/resource probes returned HTTP 403. At that checkpoint, the workflow
+therefore remained `SHADOW_ONLY_WAITING_FOR_ACCESSIBLE_NEWER_OFFICIAL_SOURCE`;
+no guessed mirror, scrape, WAF bypass, or substituted ZIP was allowed.
 
 ## What is implemented
 
@@ -89,9 +130,9 @@ scrape, WAF bypass, or substituted ZIP is allowed.
 
 ## Verification record
 
-The final local checks for this candidate are green. The source-wide Tuesday
-verification is intentionally recorded as `NOT_REMEASURED` rather than
-repeated.
+The final local checks for the historical candidate were green. The source-wide
+Tuesday verification was intentionally recorded as `NOT_REMEASURED` rather
+than repeated.
 
 - Full Python tools suite: **285 tests, 0 failures/errors, PASS**.
 - Backend suite: **81 tests, 0 failures/errors, PASS**.
@@ -111,10 +152,13 @@ repeated.
 
 ## Explicit blocker and next safe action
 
-`AUTOMATED RELEASE PIPELINE: BLOCKED` is an access/evidence status, not a code
-failure. The safe next action is to run the same worker in shadow mode only when
-an independently accessible, genuinely newer official SEPA ZIP is supplied or
-its official resource becomes readable. Then repeat archive reuse, stage,
-verification, canary, human review, and only afterward consider transactional
-activation. Until that happens, the Tuesday baseline and all production
-rollback protections remain untouched.
+The current safe next action is no longer another manual source probe. It is to
+configure one unattended, approved Argentina-egress acquisition runner with
+least privilege, run the new handoff path in `SHADOW`, and prove that it can:
+read the trusted active source identity, acquire/verify the expected weekday
+ZIP, stop safely for no-change/older data, archive only a genuinely newer
+source, and hand that exact archive identity to the existing Google
+Workflow/Cloud Build worker. Only after that end-to-end shadow run is green
+should the permanent schedule or `AUTO_ACTIVATE` be considered. Until then, the
+trusted Tuesday baseline and all production rollback protections remain
+untouched.
