@@ -181,8 +181,8 @@ main:
                     - '${"--execution-id=" + execution_id}'
                     - '${"--archive-bucket=" + archive_bucket}'
                     - '${"--archive-project=" + project_id}'
-                    - "--workspace=/workspace/valuepilot-release-workspace"
-                    - "--output=/workspace/valuepilot-release-output"
+                    - "--workspace=/tmp/valuepilot-release-workspace"
+                    - "--output=/tmp/valuepilot-release-output"
                     - '${"--current-release-date=" + current_release_date}'
                     - '${"--current-source-sha256=" + current_source_sha256}'
                     - '${"--promotion-mode=" + promotion_mode}'
