@@ -15,7 +15,7 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
         self.assertIn("cron: '30 16,18,20 * * *'", text)
         self.assertIn("ARGENTINA_AUTOMATED_ACQUISITION_ENABLED", text)
         self.assertIn("id-token: write", text)
-        self.assertIn("google-github-actions/auth@v3", text)
+        self.assertGreaterEqual(text.count("google-github-actions/auth@v3"), 2)
         self.assertIn("workload_identity_provider", text)
         self.assertNotIn("credentials_json", text)
         self.assertNotIn("pull_request:", text)
@@ -30,6 +30,21 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
         self.assertIn("net.ipv6.conf.all.disable_ipv6=1", text)
         self.assertIn("tools.argentina_release_acquisition_handoff", text)
         self.assertIn("datos.produccion.gob.ar", (ROOT / "tools" / "argentina_release_acquisition.py").read_text(encoding="utf-8"))
+
+    def test_google_credentials_are_destroyed_for_vpn_phase_and_reissued_afterward(self) -> None:
+        text = WORKFLOW.read_text(encoding="utf-8")
+        read_auth = text.index("Authenticate read-only current-state lookup with GitHub OIDC")
+        retire = text.index("Retire Google credential material before VPN phase")
+        acquire = text.index("Acquire and verify official SEPA through Windscribe Buenos Aires")
+        reauth = text.index("Re-authenticate to Google Cloud after VPN teardown")
+        publish = text.index("Publish exact verified source to private GCS archive")
+        self.assertLess(read_auth, retire)
+        self.assertLess(retire, acquire)
+        self.assertLess(acquire, reauth)
+        self.assertLess(reauth, publish)
+        self.assertIn("shred -u", text)
+        self.assertIn("GOOGLE_APPLICATION_CREDENTIALS=", text)
+        self.assertIn("CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE=", text)
 
     def test_tunnel_is_down_before_durable_archive_publication(self) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")
