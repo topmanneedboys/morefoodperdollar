@@ -2,9 +2,9 @@
 
 The acquisition step is intentionally separate: it runs while the approved
 Argentina egress tunnel is up and writes only to a local content-addressed
-archive.  This publisher runs after that tunnel is down.  It revalidates the
+archive. This publisher runs after that tunnel is down. It revalidates the
 handoff report and local archive identity, then performs immutable object-store
-writes for the ZIP and its sidecar manifest.  It never builds a release, writes
+writes for the ZIP and its sidecar manifest. It never builds a release, writes
 canary state, or changes an active pointer.
 """
 
@@ -98,18 +98,16 @@ def _validated_archive(report: Mapping[str, Any]) -> tuple[str, str, str, int]:
         manifest_key = validate_key(manifest_key)
     except ObjectStoreError as exc:
         raise SourceHandoffPublishError("handoff archive key is invalid", code="INVALID_HANDOFF") from exc
-    if not key.startswith("source-archive/sha256/") or not key.endswith(".zip"):
-        raise SourceHandoffPublishError("handoff ZIP key is outside the private source archive", code="INVALID_HANDOFF")
-    if not manifest_key.startswith("source-archive/sha256/") or not manifest_key.endswith(".manifest.json"):
-        raise SourceHandoffPublishError("handoff manifest key is outside the private source archive", code="INVALID_HANDOFF")
+    expected_key = f"source-archive/sha256/{digest}.zip"
+    expected_manifest_key = f"source-archive/manifests/{digest}.json"
+    if key != expected_key or manifest_key != expected_manifest_key:
+        raise SourceHandoffPublishError("handoff archive is not content-addressed", code="INVALID_HANDOFF")
     if not isinstance(digest, str) or _SHA256.fullmatch(digest) is None:
         raise SourceHandoffPublishError("handoff source hash is invalid", code="INVALID_HANDOFF")
     if not isinstance(size, int) or isinstance(size, bool) or not 1 <= size <= MAX_SOURCE_BYTES:
         raise SourceHandoffPublishError("handoff source size is invalid", code="INVALID_HANDOFF")
     if handoff.get("sourceArchiveKey") != key or handoff.get("sourceArchiveSha256") != digest:
         raise SourceHandoffPublishError("handoff and archive identities differ", code="INVALID_HANDOFF")
-    if f"/{digest}.zip" not in key:
-        raise SourceHandoffPublishError("handoff content-addressed key does not match source hash", code="INVALID_HANDOFF")
     return key, manifest_key, digest, size
 
 
@@ -135,12 +133,18 @@ def publish_verified_handoff(
         raise SourceHandoffPublishError("local archive manifest is invalid", code="LOCAL_ARCHIVE_MISMATCH") from exc
     if not isinstance(manifest, dict):
         raise SourceHandoffPublishError("local archive manifest is invalid", code="LOCAL_ARCHIVE_MISMATCH")
-    if manifest.get("sha256") != digest or manifest.get("bytes") != size:
+    if (
+        manifest.get("sourceSha256") != digest
+        or manifest.get("bytes") != size
+        or manifest.get("archiveKey") != key
+        or manifest.get("rawProviderDataCommitted") is not False
+        or manifest.get("runtimePublicationAllowed") is not False
+    ):
         raise SourceHandoffPublishError("local archive manifest identity differs from handoff", code="LOCAL_ARCHIVE_MISMATCH")
 
     source_path: Path | None = None
     if isinstance(local_store, LocalFilesystemObjectStore):
-        source_path = local_store._path(key)  # bounded validated key; avoids loading ~330 MB into RAM
+        source_path = local_store._path(key)  # validated key; avoids loading ~330 MB into RAM
     try:
         if source_path is not None:
             published_source = destination_store.put_immutable_file(key, source_path, sha256=digest)
@@ -149,7 +153,7 @@ def publish_verified_handoff(
             if len(source_bytes) != size or _hash_bytes(source_bytes) != digest:
                 raise SourceHandoffPublishError("local archived ZIP identity differs from handoff", code="LOCAL_ARCHIVE_MISMATCH")
             published_source = destination_store.put_immutable(key, source_bytes, sha256=digest)
-        published_manifest = destination_store.put_immutable(manifest_key, manifest_raw, sha256=_hash_bytes(manifest_raw))
+        destination_store.put_immutable(manifest_key, manifest_raw, sha256=_hash_bytes(manifest_raw))
     except ObjectStoreError as exc:
         raise SourceHandoffPublishError("private archive publication failed", code="DESTINATION_ARCHIVE_FAILED") from exc
 
@@ -192,7 +196,14 @@ def _main(argv: Sequence[str] | None = None) -> int:
         print(json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
         return 0
     except SourceHandoffPublishError as exc:
-        error = {"schemaVersion": SCHEMA_VERSION, "status": "FAILED", "error": exc.code, "message": str(exc), "activePointerWrites": 0, "productionStateChanged": False}
+        error = {
+            "schemaVersion": SCHEMA_VERSION,
+            "status": "FAILED",
+            "error": exc.code,
+            "message": str(exc),
+            "activePointerWrites": 0,
+            "productionStateChanged": False,
+        }
         if args.output is not None:
             _write_json_atomic(args.output, error)
         print(json.dumps(error, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
