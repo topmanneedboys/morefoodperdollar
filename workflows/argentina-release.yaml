@@ -130,15 +130,10 @@ main:
           steps:
             - classify_state_error:
                 switch:
-                  # A first run has no state object.  Only that explicit
-                  # not-found response may initialize an empty state.
                   - condition: ${state_error.code == 404}
                     assign:
                       - previous_state: {}
                       - previous_state_generation: null
-                  # Any outage, permission failure, malformed state, or
-                  # provider error is uncertainty and must stop before a
-                  # Cloud Build can be started.
                   - condition: true
                     return:
                       status: CONTROL_STATE_UNAVAILABLE
@@ -147,9 +142,6 @@ main:
 
     - no_change:
         switch:
-          # CKAN metadata is only an optimization for the direct-acquisition
-          # path.  A verified archive handoff is stronger evidence and must be
-          # inspected by the worker even when this checksum is unchanged.
           - condition: ${previous_state.metadataChecksum == metadata_checksum and source_archive_key == ""}
             return:
               status: NO_CHANGE
@@ -175,34 +167,34 @@ main:
                   args:
                     - "-m"
                     - tools.argentina_release_handoff_worker
-                    - "--observed-at=${args.observedAt}"
-                    - "--execution-id=${execution_id}"
-                    - "--archive-bucket=${archive_bucket}"
-                    - "--archive-project=${project_id}"
+                    - '${"--observed-at=" + args.observedAt}'
+                    - '${"--execution-id=" + execution_id}'
+                    - '${"--archive-bucket=" + archive_bucket}'
+                    - '${"--archive-project=" + project_id}'
                     - "--workspace=/workspace/valuepilot-release-workspace"
                     - "--output=/workspace/valuepilot-release-output"
-                    - "--current-release-date=${current_release_date}"
-                    - "--current-source-sha256=${current_source_sha256}"
-                    - "--promotion-mode=${promotion_mode}"
-                    - "--promotion-data-canary=${default(args.promotionDataCanaryPath, "")}"
-                    - "--promotion-expected-current-release-id=${default(args.expectedCurrentReleaseId, "")}"
-                    - "--promotion-store-root=${default(args.promotionStoreRoot, "")}"
-                    - "--promotion-us-bucket=${default(args.promotionUsBucket, "")}"
-                    - "--promotion-sa-bucket=${default(args.promotionSaBucket, "")}"
-                    - "--promotion-r2-bucket=${default(args.promotionR2Bucket, "")}"
-                    - "--promotion-gcs-project=${default(args.promotionGcsProject, "")}"
-                    - "--promotion-r2-endpoint=${default(args.promotionR2Endpoint, "")}"
-                    - "--promotion-r2-region=${default(args.promotionR2Region, "")}"
-                    - "--promotion-us-smoke-url=${default(args.promotionUsSmokeUrl, "")}"
-                    - "--promotion-sa-smoke-url=${default(args.promotionSaSmokeUrl, "")}"
-                    - "--promotion-r2-smoke-url=${default(args.promotionR2SmokeUrl, "")}"
+                    - '${"--current-release-date=" + current_release_date}'
+                    - '${"--current-source-sha256=" + current_source_sha256}'
+                    - '${"--promotion-mode=" + promotion_mode}'
+                    - '${"--promotion-data-canary=" + default(args.promotionDataCanaryPath, "")}'
+                    - '${"--promotion-expected-current-release-id=" + default(args.expectedCurrentReleaseId, "")}'
+                    - '${"--promotion-store-root=" + default(args.promotionStoreRoot, "")}'
+                    - '${"--promotion-us-bucket=" + default(args.promotionUsBucket, "")}'
+                    - '${"--promotion-sa-bucket=" + default(args.promotionSaBucket, "")}'
+                    - '${"--promotion-r2-bucket=" + default(args.promotionR2Bucket, "")}'
+                    - '${"--promotion-gcs-project=" + default(args.promotionGcsProject, "")}'
+                    - '${"--promotion-r2-endpoint=" + default(args.promotionR2Endpoint, "")}'
+                    - '${"--promotion-r2-region=" + default(args.promotionR2Region, "")}'
+                    - '${"--promotion-us-smoke-url=" + default(args.promotionUsSmokeUrl, "")}'
+                    - '${"--promotion-sa-smoke-url=" + default(args.promotionSaSmokeUrl, "")}'
+                    - '${"--promotion-r2-smoke-url=" + default(args.promotionR2SmokeUrl, "")}'
                   env:
                     - "PYTHONUNBUFFERED=1"
-                    - "BUILDER_IMAGE=${args.workerImage}"
-                    - "BUILDER_SHA=${args.builderSha}"
-                    - "VALUEPILOT_UPSTREAM_CHANGED=${string(upstream_changed)}"
-                    - "VALUEPILOT_SOURCE_ARCHIVE_KEY=${source_archive_key}"
-                    - "VALUEPILOT_SOURCE_ARCHIVE_SHA256=${source_archive_sha256}"
+                    - '${"BUILDER_IMAGE=" + args.workerImage}'
+                    - '${"BUILDER_SHA=" + args.builderSha}'
+                    - '${"VALUEPILOT_UPSTREAM_CHANGED=" + string(upstream_changed)}'
+                    - '${"VALUEPILOT_SOURCE_ARCHIVE_KEY=" + source_archive_key}'
+                    - '${"VALUEPILOT_SOURCE_ARCHIVE_SHA256=" + source_archive_sha256}'
               options:
                 machineType: E2_STANDARD_2
                 diskSizeGb: "200"
@@ -210,8 +202,6 @@ main:
                 requestedVerifyOption: VERIFIED
               timeout: "14400s"
               serviceAccount: ${args.builderServiceAccount}
-          # The connector waits for the long-running build operation and
-          # returns its operation metadata, including the final Build record.
           connector_params:
             timeout: 14400
             polling_policy:
