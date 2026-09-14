@@ -34,8 +34,8 @@ class ArgentinaReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("source_archive_key == \"\"", workflow)
         self.assertIn("CURRENT_TRUSTED_SOURCE_IDENTITY_REQUIRED", workflow)
         self.assertIn("SOURCE_ARCHIVE_KEY_AND_SHA_REQUIRED_TOGETHER", workflow)
-        self.assertIn("VALUEPILOT_SOURCE_ARCHIVE_KEY=${source_archive_key}", workflow)
-        self.assertIn("VALUEPILOT_SOURCE_ARCHIVE_SHA256=${source_archive_sha256}", workflow)
+        self.assertIn('VALUEPILOT_SOURCE_ARCHIVE_KEY=\" + source_archive_key', workflow)
+        self.assertIn('VALUEPILOT_SOURCE_ARCHIVE_SHA256=\" + source_archive_sha256', workflow)
         self.assertIn(" and ", workflow)
         self.assertIn(" or ", workflow)
         self.assertNotIn("&&", workflow)
@@ -50,12 +50,20 @@ class ArgentinaReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("state_error.code == 404", workflow)
         self.assertIn("CONTROL_STATE_UNAVAILABLE", workflow)
         self.assertNotIn("as: state_error\n          steps:\n            - no_previous_state", workflow)
-        self.assertIn("--promotion-mode=${promotion_mode}", workflow)
+        self.assertIn('--promotion-mode=\" + promotion_mode', workflow)
         self.assertIn("read_worker_summary", workflow)
         self.assertIn("WORKER_SUMMARY_IDENTITY_MISMATCH", workflow)
         self.assertIn("PROMOTION_MODE", cloudbuild)
         self.assertTrue((ROOT / "tools" / "argentina_release_promoter.py").is_file())
         self.assertTrue((ROOT / "tools" / "argentina_release_handoff_worker.py").is_file())
+
+    def test_google_workflow_does_not_use_inline_string_interpolation(self) -> None:
+        workflow = (ROOT / "workflows" / "argentina-release.yaml").read_text(encoding="utf-8")
+        # Google Workflows does not support strings such as "hello-${world}".
+        self.assertNotRegex(workflow, re.compile(r"--[a-z0-9-]+=\$\{"))
+        self.assertNotRegex(workflow, re.compile(r"(?:BUILDER|VALUEPILOT)_[A-Z_]+=\$\{"))
+        self.assertIn('${"--observed-at=" + args.observedAt}', workflow)
+        self.assertIn('${"BUILDER_IMAGE=" + args.workerImage}', workflow)
 
     def test_scheduler_template_is_paused_and_argentina_localized(self) -> None:
         value = json.loads((ROOT / "scheduler" / "argentina-release-job.example.json").read_text(encoding="utf-8"))
