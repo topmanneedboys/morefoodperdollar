@@ -61,6 +61,20 @@ MAX_RESOURCES = 64
 MAX_RESOURCE_NAME_BYTES = 256
 MAX_DESCRIPTION_BYTES = 4096
 WEEKDAY_NAMES = frozenset({"lunes", "martes", "miercoles", "miércoles", "jueves", "viernes", "sabado", "sábado", "domingo"})
+# Argentina's current official civil time is UTC-3.  Candidate selection uses
+# this only to choose which weekday-labelled endpoint to try first.  It never
+# establishes release identity or freshness; the downloaded ZIP's internally
+# proven date and SHA-256 remain authoritative.
+ARGENTINA_UTC_OFFSET = _dt.timedelta(hours=-3)
+ARGENTINA_WEEKDAY_ALIASES = (
+    frozenset({"lunes"}),
+    frozenset({"martes"}),
+    frozenset({"miercoles", "miércoles"}),
+    frozenset({"jueves"}),
+    frozenset({"viernes"}),
+    frozenset({"sabado", "sábado"}),
+    frozenset({"domingo"}),
+)
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _DATE = re.compile(r"(?<!\d)(20\d{2}-\d{2}-\d{2})(?!\d)")
 
@@ -419,14 +433,32 @@ def discover_metadata(
 
 
 def select_latest_candidate(candidates: Sequence[AcquisitionCandidate]) -> AcquisitionCandidate:
-    """Select one deterministic resource using discovery hints only.
+    """Select the Argentina-local weekday resource before stale metadata hints.
 
-    The hint orders which resource to try; it never becomes the release date.
-    The downloaded ZIP's internally proven date and hash remain authoritative.
+    CKAN ``releaseDateHint`` and ``lastModified`` values are discovery evidence
+    only and can lag the rotating weekday ZIPs.  All candidates in one
+    discovery result must share the same explicit observation timestamp.  When
+    exactly one candidate matches the Argentina-local weekday, use it.  If the
+    expected weekday is absent, preserve the prior deterministic metadata-hint
+    fallback; the downloaded ZIP's internally proven date/hash and the later
+    source-classification gate still prevent an older release from promotion.
     """
 
     if not candidates:
         raise AcquisitionError("no acquisition candidates are available", code="NO_CANDIDATE")
+
+    observed_values = {_iso_timestamp(candidate.observed_at) for candidate in candidates}
+    if len(observed_values) != 1:
+        raise AcquisitionError("candidate observation timestamps differ", code="INVALID_METADATA")
+    observed_utc = _dt.datetime.fromisoformat(next(iter(observed_values)).replace("Z", "+00:00"))
+    argentina_local = observed_utc + ARGENTINA_UTC_OFFSET
+    expected_aliases = ARGENTINA_WEEKDAY_ALIASES[argentina_local.weekday()]
+    weekday_matches = [candidate for candidate in candidates if _normalise_name(candidate.resource_name) in expected_aliases]
+    if len(weekday_matches) == 1:
+        return weekday_matches[0]
+    if len(weekday_matches) > 1:
+        raise AcquisitionError("multiple candidates match the Argentina-local weekday", code="AMBIGUOUS_CANDIDATE")
+
     return max(candidates, key=lambda candidate: (candidate.release_date_hint or "", candidate.last_modified or "", candidate.resource_name.casefold(), candidate.resource_id))
 
 
