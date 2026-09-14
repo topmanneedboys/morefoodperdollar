@@ -24,6 +24,8 @@ on:
       - 'tools/argentina_release_promoter.py'
       - 'tools/qualify_argentina_geo_egress.py'
       - 'tools/qualify_aws_buenos_aires_egress.sh'
+      - 'tools/publish_argentina_source_handoff.py'
+      - 'tools/read_argentina_active_source_identity.py'
       - 'tools/tests/test_argentina_candidate_selection.py'
       - 'tools/tests/test_argentina_release_acquisition.py'
       - 'tools/tests/test_argentina_release_acquisition_handoff.py'
@@ -33,6 +35,8 @@ on:
       - 'tools/tests/test_argentina_release_promoter.py'
       - 'tools/tests/test_argentina_release_configs.py'
       - 'tools/tests/test_argentina_geo_egress_qualification.py'
+      - 'tools/tests/test_publish_argentina_source_handoff.py'
+      - 'tools/tests/test_argentina_windscribe_acquisition_workflow.py'
       - 'ARGENTINA_AUTOMATED_RELEASE_SOURCE_CONTRACT.*'
       - 'ARGENTINA_AUTOMATED_RELEASE_QUALIFICATION.*'
       - 'cloudbuild/**'
@@ -52,7 +56,9 @@ on:
       - 'native/searchpack/**'
       - 'ARGENTINA_CONSUMER_INPUT_INTELLIGENCE_QUALIFICATION.*'
       - 'ARGENTINA_PRODUCTION_BACKEND_QUALIFICATION.*'
+      - '.github/workflows/acquire-argentina-sepa-windscribe.yml'
       - '.github/workflows/test-argentina-production-backend.yml'
+      - '.gitignore'
   pull_request:
     paths:
       - 'backend/**'
@@ -75,6 +81,8 @@ on:
       - 'tools/argentina_release_promoter.py'
       - 'tools/qualify_argentina_geo_egress.py'
       - 'tools/qualify_aws_buenos_aires_egress.sh'
+      - 'tools/publish_argentina_source_handoff.py'
+      - 'tools/read_argentina_active_source_identity.py'
       - 'tools/tests/test_argentina_candidate_selection.py'
       - 'tools/tests/test_argentina_release_acquisition.py'
       - 'tools/tests/test_argentina_release_acquisition_handoff.py'
@@ -84,6 +92,8 @@ on:
       - 'tools/tests/test_argentina_release_promoter.py'
       - 'tools/tests/test_argentina_release_configs.py'
       - 'tools/tests/test_argentina_geo_egress_qualification.py'
+      - 'tools/tests/test_publish_argentina_source_handoff.py'
+      - 'tools/tests/test_argentina_windscribe_acquisition_workflow.py'
       - 'ARGENTINA_AUTOMATED_RELEASE_SOURCE_CONTRACT.*'
       - 'ARGENTINA_AUTOMATED_RELEASE_QUALIFICATION.*'
       - 'cloudbuild/**'
@@ -103,7 +113,9 @@ on:
       - 'native/searchpack/**'
       - 'ARGENTINA_CONSUMER_INPUT_INTELLIGENCE_QUALIFICATION.*'
       - 'ARGENTINA_PRODUCTION_BACKEND_QUALIFICATION.*'
+      - '.github/workflows/acquire-argentina-sepa-windscribe.yml'
       - '.github/workflows/test-argentina-production-backend.yml'
+      - '.gitignore'
 
 permissions:
   contents: read
@@ -142,7 +154,7 @@ jobs:
       - name: Compile backend and bounded diagnostics
         run: |
           bash -n tools/qualify_aws_buenos_aires_egress.sh
-          python -m py_compile backend/*.py tools/measure_argentina_production_backend.py tools/consumer_input_intelligence.py tools/argentina_searchpack.py tools/build_argentina_searchpack.py tools/measure_argentina_searchpack.py tools/build_argentina_input_vocabulary.py tools/measure_argentina_consumer_input_intelligence.py tools/argentina_storage_retention.py tools/manage_argentina_storage_retention.py tools/argentina_object_store_publisher.py tools/argentina_release_acquisition.py tools/argentina_release_acquisition_handoff.py tools/argentina_release_handoff_worker.py tools/argentina_release_automation.py tools/argentina_release_worker.py tools/argentina_release_promoter.py tools/qualify_argentina_geo_egress.py
+          python -m py_compile backend/*.py tools/measure_argentina_production_backend.py tools/consumer_input_intelligence.py tools/argentina_searchpack.py tools/build_argentina_searchpack.py tools/measure_argentina_searchpack.py tools/build_argentina_input_vocabulary.py tools/measure_argentina_consumer_input_intelligence.py tools/argentina_storage_retention.py tools/manage_argentina_storage_retention.py tools/argentina_object_store_publisher.py tools/argentina_release_acquisition.py tools/argentina_release_acquisition_handoff.py tools/argentina_release_handoff_worker.py tools/argentina_release_automation.py tools/argentina_release_worker.py tools/argentina_release_promoter.py tools/qualify_argentina_geo_egress.py tools/publish_argentina_source_handoff.py tools/read_argentina_active_source_identity.py
           python -m unittest discover -s backend/tests -p 'test_*.py' -v
 
       - name: Run existing offline Python regression
