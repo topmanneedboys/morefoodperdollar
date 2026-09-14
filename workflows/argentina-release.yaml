@@ -28,13 +28,13 @@ main:
           - source_generation: ${args.sourceGeneration}
           - metadata_url: "https://datos.gob.ar/api/3/action/package_show?id=precios-claros-base-sepa"
           - state_object: "control/workflow-discovery-state.json"
-          - execution_id: ${default(args.executionId, sys.get_env("GOOGLE_CLOUD_WORKFLOW_EXECUTION_ID"))}
-          - current_release_date: ${default(args.currentReleaseDate, "")}
-          - current_source_sha256: ${default(args.currentSourceSha256, "")}
-          - source_archive_key: ${default(args.sourceArchiveKey, "")}
-          - source_archive_sha256: ${default(args.sourceArchiveSha256, "")}
-          - upstream_changed: ${default(args.upstreamChanged, false)}
-          - promotion_mode: ${default(args.promotionMode, "SHADOW")}
+          - execution_id: ${default(map.get(args, "executionId"), sys.get_env("GOOGLE_CLOUD_WORKFLOW_EXECUTION_ID"))}
+          - current_release_date: ${default(map.get(args, "currentReleaseDate"), "")}
+          - current_source_sha256: ${default(map.get(args, "currentSourceSha256"), "")}
+          - source_archive_key: ${default(map.get(args, "sourceArchiveKey"), "")}
+          - source_archive_sha256: ${default(map.get(args, "sourceArchiveSha256"), "")}
+          - upstream_changed: ${default(map.get(args, "upstreamChanged"), false)}
+          - promotion_mode: ${default(map.get(args, "promotionMode"), "SHADOW")}
 
     - validate_handoff:
         switch:
@@ -176,18 +176,18 @@ main:
                     - '${"--current-release-date=" + current_release_date}'
                     - '${"--current-source-sha256=" + current_source_sha256}'
                     - '${"--promotion-mode=" + promotion_mode}'
-                    - '${"--promotion-data-canary=" + default(args.promotionDataCanaryPath, "")}'
-                    - '${"--promotion-expected-current-release-id=" + default(args.expectedCurrentReleaseId, "")}'
-                    - '${"--promotion-store-root=" + default(args.promotionStoreRoot, "")}'
-                    - '${"--promotion-us-bucket=" + default(args.promotionUsBucket, "")}'
-                    - '${"--promotion-sa-bucket=" + default(args.promotionSaBucket, "")}'
-                    - '${"--promotion-r2-bucket=" + default(args.promotionR2Bucket, "")}'
-                    - '${"--promotion-gcs-project=" + default(args.promotionGcsProject, "")}'
-                    - '${"--promotion-r2-endpoint=" + default(args.promotionR2Endpoint, "")}'
-                    - '${"--promotion-r2-region=" + default(args.promotionR2Region, "")}'
-                    - '${"--promotion-us-smoke-url=" + default(args.promotionUsSmokeUrl, "")}'
-                    - '${"--promotion-sa-smoke-url=" + default(args.promotionSaSmokeUrl, "")}'
-                    - '${"--promotion-r2-smoke-url=" + default(args.promotionR2SmokeUrl, "")}'
+                    - '${"--promotion-data-canary=" + default(map.get(args, "promotionDataCanaryPath"), "")}'
+                    - '${"--promotion-expected-current-release-id=" + default(map.get(args, "expectedCurrentReleaseId"), "")}'
+                    - '${"--promotion-store-root=" + default(map.get(args, "promotionStoreRoot"), "")}'
+                    - '${"--promotion-us-bucket=" + default(map.get(args, "promotionUsBucket"), "")}'
+                    - '${"--promotion-sa-bucket=" + default(map.get(args, "promotionSaBucket"), "")}'
+                    - '${"--promotion-r2-bucket=" + default(map.get(args, "promotionR2Bucket"), "")}'
+                    - '${"--promotion-gcs-project=" + default(map.get(args, "promotionGcsProject"), "")}'
+                    - '${"--promotion-r2-endpoint=" + default(map.get(args, "promotionR2Endpoint"), "")}'
+                    - '${"--promotion-r2-region=" + default(map.get(args, "promotionR2Region"), "")}'
+                    - '${"--promotion-us-smoke-url=" + default(map.get(args, "promotionUsSmokeUrl"), "")}'
+                    - '${"--promotion-sa-smoke-url=" + default(map.get(args, "promotionSaSmokeUrl"), "")}'
+                    - '${"--promotion-r2-smoke-url=" + default(map.get(args, "promotionR2SmokeUrl"), "")}'
                   env:
                     - "PYTHONUNBUFFERED=1"
                     - '${"BUILDER_IMAGE=" + args.workerImage}'
@@ -302,16 +302,16 @@ main:
                   buildId: ${release_build.metadata.build.id}
                   error: ${state_write_error}
                   cloudBuildStarted: true
-                  activePointerWrites: ${default(worker_summary.activePointerWrites, null)}
-                  promotion: ${default(worker_summary.promotion, null)}
+                  activePointerWrites: ${map.get(worker_summary, "activePointerWrites")}
+                  promotion: ${map.get(worker_summary, "promotion")}
 
     - return_build:
         return:
-          status: ${default(worker_summary.status, "WORKER_STATUS_MISSING")}
+          status: ${default(map.get(worker_summary, "status"), "WORKER_STATUS_MISSING")}
           buildId: ${release_build.metadata.build.id}
           metadataChecksum: ${metadata_checksum}
           cloudBuildStarted: true
-          activePointerWrites: ${default(worker_summary.activePointerWrites, null)}
-          releaseId: ${default(worker_summary.releaseId, null)}
-          promotion: ${default(worker_summary.promotion, null)}
-          activation: ${default(worker_summary.activation, "NOT_EXECUTED")}
+          activePointerWrites: ${map.get(worker_summary, "activePointerWrites")}
+          releaseId: ${map.get(worker_summary, "releaseId")}
+          promotion: ${map.get(worker_summary, "promotion")}
+          activation: ${default(map.get(worker_summary, "activation"), "NOT_EXECUTED")}
