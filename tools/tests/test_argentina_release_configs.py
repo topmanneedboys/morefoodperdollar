@@ -43,8 +43,6 @@ class ArgentinaReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("NO_CHANGE", workflow)
         self.assertIn("googleapis.cloudbuild.v1.projects.builds.create", workflow)
         self.assertIn("release_build.metadata.build.status", workflow)
-        self.assertIn("connector_params", workflow)
-        self.assertIn("timeout: 14400", workflow)
         self.assertIn("control/workflow-discovery-state.json", workflow)
         self.assertIn("activePointerWrites: 0", workflow)
         self.assertIn("state_error.code == 404", workflow)
@@ -64,6 +62,27 @@ class ArgentinaReleaseConfigurationTests(unittest.TestCase):
         self.assertNotRegex(workflow, re.compile(r"(?:BUILDER|VALUEPILOT)_[A-Z_]+=\$\{"))
         self.assertIn('${"--observed-at=" + args.observedAt}', workflow)
         self.assertIn('${"BUILDER_IMAGE=" + args.workerImage}', workflow)
+
+    def test_google_workflow_connector_params_are_inside_args(self) -> None:
+        workflow = (ROOT / "workflows" / "argentina-release.yaml").read_text(encoding="utf-8")
+        self.assertIn(
+            "              serviceAccount: ${args.builderServiceAccount}\n"
+            "            connector_params:\n"
+            "              timeout: 14400\n",
+            workflow,
+        )
+        self.assertNotIn(
+            "              serviceAccount: ${args.builderServiceAccount}\n"
+            "          connector_params:\n",
+            workflow,
+        )
+
+    def test_google_workflow_serializes_discovery_state_without_inline_map_expression(self) -> None:
+        workflow = (ROOT / "workflows" / "argentina-release.yaml").read_text(encoding="utf-8")
+        self.assertIn("- prepare_discovery_state:", workflow)
+        self.assertIn("discovery_state_bytes: ${json.encode(discovery_state)}", workflow)
+        self.assertIn("body: ${discovery_state_bytes}", workflow)
+        self.assertNotIn("body: '${json.encode({", workflow)
 
     def test_scheduler_template_is_paused_and_argentina_localized(self) -> None:
         value = json.loads((ROOT / "scheduler" / "argentina-release-job.example.json").read_text(encoding="utf-8"))
