@@ -12,6 +12,7 @@ on:
       - 'tools/argentina_acquisition_schedule_control.py'
       - 'tools/argentina_acquisition_schedule_control_v2.py'
       - 'tools/argentina_processed_source_guard.py'
+      - 'tools/argentina_processed_source_guard.py'
       - 'tools/argentina_daily_release.py'
       - 'tools/argentina_object_store_publisher.py'
       - 'tools/argentina_release_acquisition.py'
@@ -23,6 +24,7 @@ on:
       - 'tools/fixtures/argentina_release_acquisition/**'
       - 'tools/tests/test_argentina_acquisition_schedule_control.py'
       - 'tools/tests/test_argentina_acquisition_schedule_control_v2.py'
+      - 'tools/tests/test_argentina_processed_source_guard.py'
       - 'tools/tests/test_argentina_processed_source_guard.py'
       - 'tools/tests/test_argentina_release_acquisition.py'
       - 'tools/tests/test_argentina_release_acquisition_handoff.py'
@@ -61,6 +63,7 @@ jobs:
             tools/argentina_acquisition_schedule_control.py \
             tools/argentina_acquisition_schedule_control_v2.py \
             tools/argentina_processed_source_guard.py \
+            tools/argentina_processed_source_guard.py \
             tools/publish_argentina_source_handoff.py \
             tools/read_argentina_active_source_identity.py
 
@@ -71,6 +74,7 @@ jobs:
             tools.tests.test_argentina_release_acquisition_handoff \
             tools.tests.test_argentina_acquisition_schedule_control \
             tools.tests.test_argentina_acquisition_schedule_control_v2 \
+            tools.tests.test_argentina_processed_source_guard \
             tools.tests.test_argentina_processed_source_guard \
             tools.tests.test_publish_argentina_source_handoff \
             tools.tests.test_argentina_windscribe_acquisition_workflow
