@@ -1,0 +1,70 @@
+name: Test Argentina acquisition control
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/acquire-argentina-sepa-windscribe.yml'
+      - '.github/workflows/test-argentina-acquisition-control.yml'
+      - 'backend/object_store.py'
+      - 'backend/requirements.txt'
+      - 'tools/argentina_acquisition_schedule_control.py'
+      - 'tools/argentina_acquisition_schedule_control_v2.py'
+      - 'tools/argentina_daily_release.py'
+      - 'tools/argentina_object_store_publisher.py'
+      - 'tools/argentina_release_acquisition.py'
+      - 'tools/argentina_release_acquisition_handoff.py'
+      - 'tools/consumer_input_intelligence.py'
+      - 'tools/publish_argentina_source_handoff.py'
+      - 'tools/qualify_argentina_sepa.py'
+      - 'tools/read_argentina_active_source_identity.py'
+      - 'tools/tests/test_argentina_acquisition_schedule_control.py'
+      - 'tools/tests/test_argentina_acquisition_schedule_control_v2.py'
+      - 'tools/tests/test_argentina_release_acquisition.py'
+      - 'tools/tests/test_argentina_release_acquisition_handoff.py'
+      - 'tools/tests/test_argentina_windscribe_acquisition_workflow.py'
+      - 'tools/tests/test_publish_argentina_source_handoff.py'
+
+permissions:
+  contents: read
+
+jobs:
+  acquisition-control:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install bounded dependencies
+        run: python -m pip install --disable-pip-version-check -r backend/requirements.txt
+
+      - name: Compile acquisition boundary
+        run: |
+          python -m py_compile \
+            backend/object_store.py \
+            tools/consumer_input_intelligence.py \
+            tools/qualify_argentina_sepa.py \
+            tools/argentina_daily_release.py \
+            tools/argentina_object_store_publisher.py \
+            tools/argentina_release_acquisition.py \
+            tools/argentina_release_acquisition_handoff.py \
+            tools/argentina_acquisition_schedule_control.py \
+            tools/argentina_acquisition_schedule_control_v2.py \
+            tools/publish_argentina_source_handoff.py \
+            tools/read_argentina_active_source_identity.py
+
+      - name: Run focused acquisition regressions
+        run: |
+          python -m unittest \
+            tools.tests.test_argentina_release_acquisition \
+            tools.tests.test_argentina_release_acquisition_handoff \
+            tools.tests.test_argentina_acquisition_schedule_control \
+            tools.tests.test_argentina_acquisition_schedule_control_v2 \
+            tools.tests.test_publish_argentina_source_handoff \
+            tools.tests.test_argentina_windscribe_acquisition_workflow

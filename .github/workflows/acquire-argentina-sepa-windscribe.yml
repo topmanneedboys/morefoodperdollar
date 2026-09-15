@@ -2,11 +2,21 @@ name: Acquire Argentina SEPA through Windscribe
 
 on:
   workflow_dispatch:
+    inputs:
+      force_download:
+        description: Force one fresh provider ZIP check even when today's metadata fingerprint is already recorded
+        required: false
+        default: false
+        type: boolean
   schedule:
-    # Buenos Aires is UTC-3 year-round. These are 13:30, 15:30 and 17:30 ART.
+    # Buenos Aires is UTC-3 year-round. These are 13:30, 15:30 and 17:30 ART,
+    # Monday through Friday. 13:30 is the primary byte check, 15:30 reuses
+    # immutable evidence unless selected metadata changed, and 17:30 permits
+    # one bounded late byte recheck only when the primary result was stale.
     # Scheduled runs remain inert until ARGENTINA_AUTOMATED_ACQUISITION_ENABLED=true.
-    # Keep that variable false while promotionMode is hard-coded to SHADOW.
-    - cron: '30 16,18,20 * * *'
+    - cron: '30 16 * * 1-5'
+    - cron: '30 18 * * 1-5'
+    - cron: '30 20 * * 1-5'
 
 permissions:
   contents: read
@@ -20,7 +30,9 @@ jobs:
   acquire-and-shadow:
     if: github.event_name == 'workflow_dispatch' || vars.ARGENTINA_AUTOMATED_ACQUISITION_ENABLED == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    # The long deterministic release build now runs asynchronously in Google
+    # Cloud. This runner only performs bounded discovery/acquisition/handoff.
+    timeout-minutes: 120
     environment: argentina-production
 
     env:
@@ -56,6 +68,10 @@ jobs:
             echo "LOCAL_ARCHIVE=${RUNNER_TEMP}/valuepilot-argentina-source-archive"
             echo "HANDOFF_REPORT=${RUNNER_TEMP}/valuepilot-argentina-handoff.json"
             echo "PUBLISH_REPORT=${RUNNER_TEMP}/valuepilot-argentina-publish.json"
+            echo "PREFLIGHT_REPORT=${RUNNER_TEMP}/valuepilot-argentina-preflight.json"
+            echo "RESOLUTION_REPORT=${RUNNER_TEMP}/valuepilot-argentina-resolution.json"
+            echo "ATTEMPT_REPORT=${RUNNER_TEMP}/valuepilot-argentina-attempt.json"
+            echo "WORKFLOW_LAUNCH_REPORT=${RUNNER_TEMP}/valuepilot-argentina-workflow-launch.json"
             echo "CURRENT_IDENTITY=${RUNNER_TEMP}/valuepilot-argentina-current.json"
             echo "WG_CONFIG=${RUNNER_TEMP}/vpwg.conf"
           } >> "${GITHUB_ENV}"
@@ -95,13 +111,19 @@ jobs:
         run: python -m pip install --disable-pip-version-check -r backend/requirements.txt
 
       - id: gcp-auth-read
-        name: Authenticate read-only current-state lookup with GitHub OIDC
+        name: Authenticate current-state and private-archive lookup with GitHub OIDC
         uses: google-github-actions/auth@v3
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
           workload_identity_provider: ${{ env.WIF_PROVIDER }}
           service_account: ${{ env.RELEASE_SERVICE_ACCOUNT }}
           create_credentials_file: true
+
+      - name: Set up Google Cloud CLI for bounded workflow launch
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          version: '>= 520.0.0'
 
       - id: current
         name: Read checksum-verified current source identity
@@ -120,7 +142,57 @@ jobs:
           echo "active_release=${active_release}" >> "${GITHUB_OUTPUT}"
           echo "Current trusted source: ${release_date} (${source_sha:0:12}...)"
 
+      - id: preflight
+        name: Deduplicate today's acquisition before opening Argentina egress
+        shell: bash
+        env:
+          FORCE_DOWNLOAD: ${{ inputs.force_download || false }}
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE_CRON: ${{ github.event.schedule || '' }}
+        run: |
+          set -euo pipefail
+          observed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          check_phase="PRIMARY"
+          if [[ "${EVENT_NAME}" == "schedule" ]]; then
+            case "${SCHEDULE_CRON}" in
+              '30 16 * * 1-5') check_phase="PRIMARY" ;;
+              '30 18 * * 1-5') check_phase="METADATA_ONLY" ;;
+              '30 20 * * 1-5') check_phase="LATE_RECHECK" ;;
+              *) echo "::error::Unexpected Argentina acquisition schedule ${SCHEDULE_CRON}."; exit 2 ;;
+            esac
+          fi
+          args=(
+            preflight
+            --observed-at "${observed_at}"
+            --check-phase "${check_phase}"
+            --archive-bucket "${ARCHIVE_BUCKET}"
+            --archive-project "${GCP_PROJECT_ID}"
+            --output "${PREFLIGHT_REPORT}"
+          )
+          if [[ "${FORCE_DOWNLOAD}" == "true" ]]; then
+            args+=(--force-download)
+          fi
+          python -m tools.argentina_acquisition_schedule_control_v2 "${args[@]}"
+          status="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["status"])' "${PREFLIGHT_REPORT}")"
+          argentina_date="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["argentinaDate"])' "${PREFLIGHT_REPORT}")"
+          fingerprint="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["metadataFingerprint"])' "${PREFLIGHT_REPORT}")"
+          echo "status=${status}" >> "${GITHUB_OUTPUT}"
+          echo "observed_at=${observed_at}" >> "${GITHUB_OUTPUT}"
+          echo "argentina_date=${argentina_date}" >> "${GITHUB_OUTPUT}"
+          echo "metadata_fingerprint=${fingerprint}" >> "${GITHUB_OUTPUT}"
+          echo "check_phase=${check_phase}" >> "${GITHUB_OUTPUT}"
+          echo "Acquisition preflight: ${status} / ${check_phase} for ${argentina_date} (${fingerprint:0:12}...)"
+
+      - name: Reuse today's immutable acquisition evidence without VPN
+        if: steps.preflight.outputs.status != 'DOWNLOAD_REQUIRED'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp "${PREFLIGHT_REPORT}" "${RESOLUTION_REPORT}"
+          echo "Reused today's verified acquisition evidence; provider ZIP was not downloaded."
+
       - name: Retire Google credential material before VPN phase
+        if: steps.preflight.outputs.status == 'DOWNLOAD_REQUIRED'
         shell: bash
         run: |
           set -euo pipefail
@@ -137,11 +209,13 @@ jobs:
 
       - id: acquire
         name: Acquire and verify official SEPA through Windscribe Buenos Aires
+        if: steps.preflight.outputs.status == 'DOWNLOAD_REQUIRED'
         shell: bash
         env:
           WINDSCRIBE_WIREGUARD_CONFIG_B64: ${{ secrets.WINDSCRIBE_WIREGUARD_CONFIG_B64 }}
           CURRENT_RELEASE_DATE: ${{ steps.current.outputs.release_date }}
           CURRENT_SOURCE_SHA256: ${{ steps.current.outputs.source_sha }}
+          OBSERVED_AT: ${{ steps.preflight.outputs.observed_at }}
         run: |
           set -euo pipefail
           umask 077
@@ -155,13 +229,26 @@ jobs:
              ! grep -Eq '^[[:space:]]*\[Peer\][[:space:]]*$' "${WG_CONFIG}" || \
              ! grep -Eq '^[[:space:]]*Endpoint[[:space:]]*=[[:space:]]*[^[:space:]]+:[0-9]+[[:space:]]*$' "${WG_CONFIG}" || \
              ! grep -Eq '^[[:space:]]*AllowedIPs[[:space:]]*=.*0\.0\.0\.0/0([[:space:],]|$)' "${WG_CONFIG}"; then
-            echo "::error::Windscribe config is missing the required full-tunnel WireGuard contract."
+            echo "::error::Windscribe config is missing the required IPv4 full-tunnel WireGuard contract."
             exit 2
           fi
 
-          # Prevent an AAAA result from ever bypassing an IPv4-only full tunnel.
-          sudo sysctl -q -w net.ipv6.conf.all.disable_ipv6=1
-          sudo sysctl -q -w net.ipv6.conf.default.disable_ipv6=1
+          has_v6_address=0
+          has_v6_default=0
+          if grep -Eq '^[[:space:]]*Address[[:space:]]*=.*:' "${WG_CONFIG}"; then
+            has_v6_address=1
+          fi
+          if grep -Eq '^[[:space:]]*AllowedIPs[[:space:]]*=.*::/0([[:space:],]|$)' "${WG_CONFIG}"; then
+            has_v6_default=1
+          fi
+          if [[ "${has_v6_address}" != "${has_v6_default}" ]]; then
+            echo "::error::Windscribe IPv6 tunnel contract is incomplete; refusing any IPv6 bypass possibility."
+            exit 2
+          fi
+          if [[ "${has_v6_address}" == "0" ]]; then
+            sudo sysctl -q -w net.ipv6.conf.all.disable_ipv6=1
+            sudo sysctl -q -w net.ipv6.conf.default.disable_ipv6=1
+          fi
 
           tunnel_up=0
           cleanup_tunnel() {
@@ -176,7 +263,6 @@ jobs:
           sudo wg-quick up "${WG_CONFIG}" >/dev/null
           tunnel_up=1
 
-          # Force real traffic through the tunnel, then require an actual WireGuard handshake.
           curl --fail --silent --show-error --max-time 30 \
             -H 'Accept: application/json' \
             -H 'User-Agent: ValuePilot-release-worker/1' \
@@ -190,10 +276,9 @@ jobs:
             exit 2
           fi
 
-          observed="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           set +e
           python -m tools.argentina_release_acquisition_handoff \
-            --observed-at "${observed}" \
+            --observed-at "${OBSERVED_AT}" \
             --current-release-date "${CURRENT_RELEASE_DATE}" \
             --current-source-sha256 "${CURRENT_SOURCE_SHA256}" \
             --archive-store "${LOCAL_ARCHIVE}" \
@@ -201,7 +286,6 @@ jobs:
           rc=$?
           set -e
 
-          # Bring the Argentina route down before any durable cloud publication or orchestration.
           cleanup_tunnel
           tunnel_up=0
           trap - EXIT INT TERM
@@ -223,28 +307,15 @@ jobs:
           esac
           echo "Argentina acquisition disposition: ${status}"
 
-      - name: Stop cleanly when official source is unchanged or older
-        if: steps.acquire.outputs.status == 'NO_CHANGE' || steps.acquire.outputs.status == 'OLDER_REJECTED'
-        run: |
-          echo "Official source disposition: ${{ steps.acquire.outputs.status }}"
-          echo "No archive publication, build, canary, or active pointer change will occur."
-
       - id: gcp-auth-publish
         name: Re-authenticate to Google Cloud after VPN teardown
-        if: steps.acquire.outputs.status == 'HANDOFF_READY'
+        if: steps.preflight.outputs.status == 'DOWNLOAD_REQUIRED'
         uses: google-github-actions/auth@v3
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
           workload_identity_provider: ${{ env.WIF_PROVIDER }}
           service_account: ${{ env.RELEASE_SERVICE_ACCOUNT }}
           create_credentials_file: true
-
-      - name: Set up Google Cloud CLI after VPN teardown
-        if: steps.acquire.outputs.status == 'HANDOFF_READY'
-        uses: google-github-actions/setup-gcloud@v3
-        with:
-          project_id: ${{ env.GCP_PROJECT_ID }}
-          version: '>= 520.0.0'
 
       - id: publish
         name: Publish exact verified source to private GCS archive
@@ -263,21 +334,95 @@ jobs:
           echo "archive_key=${archive_key}" >> "${GITHUB_OUTPUT}"
           echo "archive_sha=${archive_sha}" >> "${GITHUB_OUTPUT}"
 
-      - name: Execute existing Google release workflow in SHADOW
-        if: steps.acquire.outputs.status == 'HANDOFF_READY'
+      - id: finalize
+        name: Record immutable daily acquisition evidence after VPN teardown
+        if: steps.preflight.outputs.status == 'DOWNLOAD_REQUIRED'
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(
+            finalize
+            --preflight "${PREFLIGHT_REPORT}"
+            --handoff "${HANDOFF_REPORT}"
+            --archive-bucket "${ARCHIVE_BUCKET}"
+            --archive-project "${GCP_PROJECT_ID}"
+            --output "${RESOLUTION_REPORT}"
+          )
+          if [[ "${{ steps.acquire.outputs.status }}" == "HANDOFF_READY" ]]; then
+            args+=(--publish "${PUBLISH_REPORT}")
+          fi
+          python -m tools.argentina_acquisition_schedule_control_v2 "${args[@]}"
+          status="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["status"])' "${RESOLUTION_REPORT}")"
+          echo "status=${status}" >> "${GITHUB_OUTPUT}"
+          echo "Daily acquisition resolution: ${status}"
+
+      - id: resolution
+        name: Read bounded source resolution
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -s "${RESOLUTION_REPORT}" ]]; then
+            echo "::error::Source resolution report is missing."
+            exit 2
+          fi
+          status="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["status"])' "${RESOLUTION_REPORT}")"
+          echo "status=${status}" >> "${GITHUB_OUTPUT}"
+          case "${status}" in
+            SOURCE_READY|CANDIDATE_PERSISTED|NO_BUILD_REQUIRED) ;;
+            *) echo "::error::Unexpected source resolution ${status}."; exit 2 ;;
+          esac
+          echo "Resolved acquisition state: ${status}"
+
+      - name: Stop cleanly when no build is required
+        if: steps.resolution.outputs.status == 'CANDIDATE_PERSISTED' || steps.resolution.outputs.status == 'NO_BUILD_REQUIRED'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Resolution: ${{ steps.resolution.outputs.status }}"
+          echo "No provider re-download, duplicate build, canary, or active pointer change is required."
+
+      - id: reserve
+        name: Reserve at most one heavy build attempt per candidate per Argentina day
+        if: steps.resolution.outputs.status == 'SOURCE_READY'
+        shell: bash
+        run: |
+          set -euo pipefail
+          reservation_id="github-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          python -m tools.argentina_acquisition_schedule_control reserve \
+            --resolution "${RESOLUTION_REPORT}" \
+            --reservation-id "${reservation_id}" \
+            --archive-bucket "${ARCHIVE_BUCKET}" \
+            --archive-project "${GCP_PROJECT_ID}" \
+            --output "${ATTEMPT_REPORT}"
+          status="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["status"])' "${ATTEMPT_REPORT}")"
+          echo "status=${status}" >> "${GITHUB_OUTPUT}"
+          echo "reservation_id=${reservation_id}" >> "${GITHUB_OUTPUT}"
+          echo "Build reservation: ${status}"
+
+      - name: Stop cleanly when today's build is already reserved or candidate appeared concurrently
+        if: steps.reserve.outputs.status == 'ALREADY_RESERVED' || steps.reserve.outputs.status == 'CANDIDATE_PERSISTED'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Build gate: ${{ steps.reserve.outputs.status }}"
+          echo "No duplicate heavy build will be started."
+
+      - id: launch
+        name: Start one asynchronous Google SHADOW release workflow
+        if: steps.reserve.outputs.status == 'RESERVED'
         shell: bash
         env:
           CURRENT_RELEASE_DATE: ${{ steps.current.outputs.release_date }}
           CURRENT_SOURCE_SHA256: ${{ steps.current.outputs.source_sha }}
-          SOURCE_ARCHIVE_KEY: ${{ steps.publish.outputs.archive_key }}
-          SOURCE_ARCHIVE_SHA256: ${{ steps.publish.outputs.archive_sha }}
+          OBSERVED_AT: ${{ steps.preflight.outputs.observed_at }}
+          EXECUTION_ID: ${{ steps.reserve.outputs.reservation_id }}
         run: |
           set -euo pipefail
-          export OBSERVED_AT="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["observedAt"])' "${HANDOFF_REPORT}")"
-          export EXECUTION_ID="github-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          export SOURCE_ARCHIVE_KEY="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["sourceArchiveKey"])' "${ATTEMPT_REPORT}")"
+          export SOURCE_ARCHIVE_SHA256="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["sourceArchiveSha256"])' "${ATTEMPT_REPORT}")"
           data="$(python - <<'PY'
           import json, os
-          print(json.dumps({
+          value = {
               "controlBucket": os.environ["CONTROL_BUCKET"],
               "archiveBucket": os.environ["ARCHIVE_BUCKET"],
               "sourceBucket": os.environ["BUILD_SOURCE_BUCKET"],
@@ -294,38 +439,52 @@ jobs:
               "sourceArchiveSha256": os.environ["SOURCE_ARCHIVE_SHA256"],
               "upstreamChanged": False,
               "promotionMode": "SHADOW",
-          }, separators=(",", ":")))
+          }
+          if value["promotionMode"] != "SHADOW":
+              raise SystemExit("automatic acquisition must remain SHADOW")
+          print(json.dumps(value, separators=(",", ":")))
           PY
           )"
-          gcloud workflows run "${RELEASE_WORKFLOW_NAME}" \
+          gcloud workflows execute "${RELEASE_WORKFLOW_NAME}" \
             --project "${GCP_PROJECT_ID}" \
             --location "${RELEASE_WORKFLOW_LOCATION}" \
             --call-log-level=log-errors-only \
             --data "${data}" \
-            --format=json > "${RUNNER_TEMP}/valuepilot-workflow-result.json"
-          cat "${RUNNER_TEMP}/valuepilot-workflow-result.json"
+            --format=json > "${WORKFLOW_LAUNCH_REPORT}"
+          workflow_execution="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["name"])' "${WORKFLOW_LAUNCH_REPORT}")"
+          workflow_state="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8")).get("state", ""))' "${WORKFLOW_LAUNCH_REPORT}")"
+          if [[ -z "${workflow_execution}" ]]; then
+            echo "::error::Google Workflow did not return an execution resource name."
+            exit 2
+          fi
+          echo "workflow_execution=${workflow_execution}" >> "${GITHUB_OUTPUT}"
+          echo "Google SHADOW workflow started asynchronously: ${workflow_execution} (${workflow_state})"
+          echo "The GitHub runner will not wait for the multi-hour Cloud Build."
 
-      - name: Assert no production activation from acquisition workflow
-        if: steps.acquire.outputs.status == 'HANDOFF_READY'
+      - name: Summarize bounded automatic acquisition decision
+        if: success()
         shell: bash
         run: |
           set -euo pipefail
-          python - <<'PY'
-          import json, os
-          path = os.path.join(os.environ["RUNNER_TEMP"], "valuepilot-workflow-result.json")
-          value = json.load(open(path, encoding="utf-8"))
-          result = value.get("result")
-          if isinstance(result, str):
-              try:
-                  result = json.loads(result)
-              except json.JSONDecodeError:
-                  result = None
-          if not isinstance(result, dict):
-              raise SystemExit("Google Workflow result is missing or not JSON")
-          if result.get("activePointerWrites") not in (0, None):
-              raise SystemExit("SHADOW acquisition unexpectedly wrote an active pointer")
-          promotion = result.get("promotion")
-          if isinstance(promotion, dict) and promotion.get("mode") not in (None, "SHADOW"):
-              raise SystemExit("SHADOW acquisition returned a non-shadow promotion mode")
-          print("SHADOW handoff completed without production activation.")
-          PY
+          {
+            echo "### Argentina acquisition control"
+            echo "- Argentina date: ${{ steps.preflight.outputs.argentina_date }}"
+            echo "- Check phase: ${{ steps.preflight.outputs.check_phase }}"
+            echo "- Preflight: ${{ steps.preflight.outputs.status }}"
+            echo "- Resolution: ${{ steps.resolution.outputs.status }}"
+            echo "- Build reservation: ${{ steps.reserve.outputs.status || 'NOT_REQUIRED' }}"
+            echo "- Promotion mode: SHADOW"
+            echo "- Active pointer writes by this GitHub workflow: 0"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Remove runner-local credential and raw-source material
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          credential_path="${GOOGLE_GHA_CREDS_PATH:-${GOOGLE_APPLICATION_CREDENTIALS:-}}"
+          if [[ -n "${credential_path}" && -f "${credential_path}" ]]; then
+            shred -u "${credential_path}" >/dev/null 2>&1 || rm -f "${credential_path}"
+          fi
+          rm -f gha-creds-*.json "${WG_CONFIG}" "${RUNNER_TEMP}/valuepilot-catalog-probe.json"
+          rm -rf "${LOCAL_ARCHIVE}"
