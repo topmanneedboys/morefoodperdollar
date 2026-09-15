@@ -68,7 +68,7 @@ class ArgentinaReleaseConfigurationTests(unittest.TestCase):
         self.assertIn(
             "              serviceAccount: ${args.builderServiceAccount}\n"
             "            connector_params:\n"
-            "              timeout: 14400\n",
+            "              timeout: 21600\n",
             workflow,
         )
         self.assertNotIn(
@@ -153,6 +153,18 @@ class ArgentinaReleaseConfigurationTests(unittest.TestCase):
         self.assertIn("--output=/tmp/valuepilot-release-output", cloudbuild)
         self.assertNotIn("--workspace=/workspace/valuepilot-release-workspace", cloudbuild)
         self.assertNotIn("--output=/workspace/valuepilot-release-output", cloudbuild)
+
+    def test_release_worker_summary_contract_and_timeout_headroom(self) -> None:
+        cloudbuild = (ROOT / "cloudbuild" / "argentina-release-worker.yaml").read_text(encoding="utf-8")
+        workflow = (ROOT / "workflows" / "argentina-release.yaml").read_text(encoding="utf-8")
+        self.assertEqual(cloudbuild.count("timeout: 21600s"), 2)
+        self.assertIn('timeout: "21600s"', workflow)
+        self.assertIn("timeout: 21600", workflow)
+        self.assertNotIn("timeout: 14400", workflow)
+        self.assertIn("valuepilot-argentina-automated-release-v1", workflow)
+        self.assertIn("valuepilot-argentina-automated-release-policy-v1", workflow)
+        self.assertNotIn("valuepilot-argentina-release-worker-v1", workflow)
+        self.assertNotIn("valuepilot-argentina-release-worker-policy-v1", workflow)
 
     def test_scheduler_template_is_paused_and_argentina_localized(self) -> None:
         value = json.loads((ROOT / "scheduler" / "argentina-release-job.example.json").read_text(encoding="utf-8"))
