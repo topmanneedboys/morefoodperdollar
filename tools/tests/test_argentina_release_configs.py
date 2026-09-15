@@ -184,11 +184,28 @@ class ArgentinaReleaseConfigurationTests(unittest.TestCase):
         self.assertNotIn("valuepilot-argentina-release-worker-v1", workflow)
         self.assertNotIn("valuepilot-argentina-release-worker-policy-v1", workflow)
 
+    def test_github_acquisition_is_weekday_only_deduped_and_async_shadow(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "acquire-argentina-sepa-windscribe.yml").read_text(encoding="utf-8")
+        for cron in ("30 16 * * 1-5", "30 18 * * 1-5", "30 20 * * 1-5"):
+            self.assertIn(f"cron: '{cron}'", workflow)
+        self.assertNotIn("30 16,18,20 * * *", workflow)
+        self.assertIn("ARGENTINA_AUTOMATED_ACQUISITION_ENABLED", workflow)
+        self.assertIn("cancel-in-progress: false", workflow)
+        self.assertIn("tools.argentina_acquisition_schedule_control", workflow)
+        self.assertIn("FIRST_BYTE_CHECK_FOR_METADATA_FINGERPRINT_TODAY", (ROOT / "tools" / "argentina_acquisition_schedule_control.py").read_text(encoding="utf-8"))
+        self.assertIn("one heavy build attempt per candidate per Argentina day", workflow)
+        self.assertIn('"promotionMode": "SHADOW"', workflow)
+        self.assertIn("gcloud workflows execute", workflow)
+        self.assertNotIn("gcloud workflows run", workflow)
+        self.assertIn("timeout-minutes: 120", workflow)
+        self.assertIn("Remove runner-local credential and raw-source material", workflow)
+        self.assertNotRegex(workflow, re.compile(r"(AKIA|BEGIN [A-Z ]*PRIVATE KEY|ghp_[A-Za-z0-9])"))
+
     def test_scheduler_template_is_paused_and_argentina_localized(self) -> None:
         value = json.loads((ROOT / "scheduler" / "argentina-release-job.example.json").read_text(encoding="utf-8"))
         self.assertEqual(value["deploymentState"], "DISABLED_UNTIL_CONTROLLED_ACTIVATION")
         self.assertEqual(value["timeZone"], "America/Argentina/Buenos_Aires")
-        self.assertEqual(value["schedule"], "30 13,15,17 * * *")
+        self.assertEqual(value["schedule"], "30 13,15,17 * * 1-5")
         self.assertIn("workflowexecutions.googleapis.com", value["httpTarget"]["uri"])
         serialized = json.dumps(value)
         self.assertIn("REPLACE_WITH_SCHEDULER_INVOKER_SERVICE_ACCOUNT", serialized)
