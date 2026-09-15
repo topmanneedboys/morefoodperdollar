@@ -53,11 +53,11 @@ steps:
       - 'VALUEPILOT_UPSTREAM_CHANGED=${_UPSTREAM_CHANGED}'
       - 'BUILDER_IMAGE=${_RELEASE_WORKER_IMAGE}'
       - 'BUILDER_SHA=${_BUILDER_SHA}'
-    # The local qualified source-wide run was about 160 minutes; retain
-    # bounded four-hour headroom without changing the machine shape.
-    timeout: 14400s
+    # The verified national SHADOW run took almost four hours; retain bounded
+    # six-hour headroom without changing the qualified machine shape.
+    timeout: 21600s
 
-timeout: 14400s
+timeout: 21600s
 options:
   # Cloud Build exposes e2-standard-2 as E2_STANDARD_2.  This is the smallest
   # qualified shape for the filesystem-heavy release worker.
