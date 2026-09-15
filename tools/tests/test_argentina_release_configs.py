@@ -138,6 +138,22 @@ class ArgentinaReleaseConfigurationTests(unittest.TestCase):
         self.assertNotIn("--workspace=/workspace/valuepilot-release-workspace", workflow)
         self.assertNotIn("--output=/workspace/valuepilot-release-output", workflow)
 
+    def test_release_worker_raises_nofile_soft_limit_before_python(self) -> None:
+        cloudbuild = (ROOT / "cloudbuild" / "argentina-release-worker.yaml").read_text(encoding="utf-8")
+        workflow = (ROOT / "workflows" / "argentina-release.yaml").read_text(encoding="utf-8")
+        for text in (cloudbuild, workflow):
+            self.assertIn("entrypoint: /bin/sh", text)
+            self.assertIn("ulimit -Sn 4096", text)
+            self.assertIn('if [ "$?" -ne 0 ]; then', text)
+            self.assertIn("exit 70", text)
+            self.assertIn('exec python "$@"', text)
+            self.assertIn("valuepilot-release-worker", text)
+
+        self.assertIn("--workspace=/tmp/valuepilot-release-workspace", cloudbuild)
+        self.assertIn("--output=/tmp/valuepilot-release-output", cloudbuild)
+        self.assertNotIn("--workspace=/workspace/valuepilot-release-workspace", cloudbuild)
+        self.assertNotIn("--output=/workspace/valuepilot-release-output", cloudbuild)
+
     def test_scheduler_template_is_paused_and_argentina_localized(self) -> None:
         value = json.loads((ROOT / "scheduler" / "argentina-release-job.example.json").read_text(encoding="utf-8"))
         self.assertEqual(value["deploymentState"], "DISABLED_UNTIL_CONTROLLED_ACTIVATION")
