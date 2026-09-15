@@ -25,6 +25,10 @@ from typing import Any, Mapping, Sequence
 
 from backend.object_store import GCSObjectStore, ObjectStore, ObjectStoreError
 from tools import argentina_acquisition_schedule_control as _base
+from tools.argentina_processed_source_guard import (
+    SUPPRESSION_REASON,
+    apply_processed_source_guard,
+)
 from tools.argentina_release_acquisition import (
     AcquisitionError,
     CATALOG_ENDPOINT,
@@ -92,6 +96,7 @@ def _resolve_at_key(
     observation_kind: str,
 ) -> dict[str, Any]:
     resolved = _base._resolve_observation(value, probe, store)
+    resolved = apply_processed_source_guard(resolved, store=store)
     return _decorate_resolution(
         resolved,
         key=key,
@@ -161,6 +166,12 @@ def preflight_observation(
         return primary_resolution
 
     if primary_resolution.get("status") in {"SOURCE_READY", "CANDIDATE_PERSISTED"}:
+        return primary_resolution
+
+    if (
+        primary_resolution.get("status") == "NO_BUILD_REQUIRED"
+        and primary_resolution.get("reason") == SUPPRESSION_REASON
+    ):
         return primary_resolution
 
     # Only a stale/no-change primary observation earns one late byte recheck.
