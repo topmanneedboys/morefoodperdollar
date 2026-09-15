@@ -10,8 +10,9 @@ on:
         type: boolean
   schedule:
     # Buenos Aires is UTC-3 year-round. These are 13:30, 15:30 and 17:30 ART,
-    # Monday through Friday. The first distinct metadata fingerprint each
-    # Argentina day downloads bytes once; later checks reuse immutable evidence.
+    # Monday through Friday. 13:30 is the primary byte check, 15:30 reuses
+    # immutable evidence unless selected metadata changed, and 17:30 permits
+    # one bounded late byte recheck only when the primary result was stale.
     # Scheduled runs remain inert until ARGENTINA_AUTOMATED_ACQUISITION_ENABLED=true.
     - cron: '30 16 * * 1-5'
     - cron: '30 18 * * 1-5'
@@ -146,12 +147,24 @@ jobs:
         shell: bash
         env:
           FORCE_DOWNLOAD: ${{ inputs.force_download || false }}
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE_CRON: ${{ github.event.schedule || '' }}
         run: |
           set -euo pipefail
           observed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          check_phase="PRIMARY"
+          if [[ "${EVENT_NAME}" == "schedule" ]]; then
+            case "${SCHEDULE_CRON}" in
+              '30 16 * * 1-5') check_phase="PRIMARY" ;;
+              '30 18 * * 1-5') check_phase="METADATA_ONLY" ;;
+              '30 20 * * 1-5') check_phase="LATE_RECHECK" ;;
+              *) echo "::error::Unexpected Argentina acquisition schedule ${SCHEDULE_CRON}."; exit 2 ;;
+            esac
+          fi
           args=(
             preflight
             --observed-at "${observed_at}"
+            --check-phase "${check_phase}"
             --archive-bucket "${ARCHIVE_BUCKET}"
             --archive-project "${GCP_PROJECT_ID}"
             --output "${PREFLIGHT_REPORT}"
@@ -159,7 +172,7 @@ jobs:
           if [[ "${FORCE_DOWNLOAD}" == "true" ]]; then
             args+=(--force-download)
           fi
-          python -m tools.argentina_acquisition_schedule_control "${args[@]}"
+          python -m tools.argentina_acquisition_schedule_control_v2 "${args[@]}"
           status="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["status"])' "${PREFLIGHT_REPORT}")"
           argentina_date="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["argentinaDate"])' "${PREFLIGHT_REPORT}")"
           fingerprint="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["metadataFingerprint"])' "${PREFLIGHT_REPORT}")"
@@ -167,7 +180,8 @@ jobs:
           echo "observed_at=${observed_at}" >> "${GITHUB_OUTPUT}"
           echo "argentina_date=${argentina_date}" >> "${GITHUB_OUTPUT}"
           echo "metadata_fingerprint=${fingerprint}" >> "${GITHUB_OUTPUT}"
-          echo "Acquisition preflight: ${status} for ${argentina_date} (${fingerprint:0:12}...)"
+          echo "check_phase=${check_phase}" >> "${GITHUB_OUTPUT}"
+          echo "Acquisition preflight: ${status} / ${check_phase} for ${argentina_date} (${fingerprint:0:12}...)"
 
       - name: Reuse today's immutable acquisition evidence without VPN
         if: steps.preflight.outputs.status != 'DOWNLOAD_REQUIRED'
@@ -337,7 +351,7 @@ jobs:
           if [[ "${{ steps.acquire.outputs.status }}" == "HANDOFF_READY" ]]; then
             args+=(--publish "${PUBLISH_REPORT}")
           fi
-          python -m tools.argentina_acquisition_schedule_control "${args[@]}"
+          python -m tools.argentina_acquisition_schedule_control_v2 "${args[@]}"
           status="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["status"])' "${RESOLUTION_REPORT}")"
           echo "status=${status}" >> "${GITHUB_OUTPUT}"
           echo "Daily acquisition resolution: ${status}"
@@ -455,6 +469,7 @@ jobs:
           {
             echo "### Argentina acquisition control"
             echo "- Argentina date: ${{ steps.preflight.outputs.argentina_date }}"
+            echo "- Check phase: ${{ steps.preflight.outputs.check_phase }}"
             echo "- Preflight: ${{ steps.preflight.outputs.status }}"
             echo "- Resolution: ${{ steps.resolution.outputs.status }}"
             echo "- Build reservation: ${{ steps.reserve.outputs.status || 'NOT_REQUIRED' }}"
