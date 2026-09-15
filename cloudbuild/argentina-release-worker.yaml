@@ -9,7 +9,10 @@
 # worker as an explicit local source so stale CKAN metadata cannot suppress a
 # real archived handoff.  Qualification, deterministic build, promotion, and
 # pointer rules remain owned by the existing release worker.
-# The worker's shadow result must report activePointerWrites: 0.
+# After a successful verified candidate build, the immutable candidate is also
+# staged into the private archive bucket.  That post-build archive stage never
+# writes ACTIVE or CANARY and prevents the expensive ephemeral workspace from
+# disappearing when Cloud Build exits.
 steps:
   - id: acquire-qualify-and-build
     name: '${_RELEASE_WORKER_IMAGE}'
@@ -21,7 +24,56 @@ steps:
         if [ "$?" -ne 0 ]; then
           exit 70
         fi
-        exec python "$@"
+        python "$@"
+        worker_rc=$?
+        if [ "$worker_rc" -ne 0 ]; then
+          exit "$worker_rc"
+        fi
+        python - <<'PY'
+        import hashlib
+        import json
+        import os
+        from pathlib import Path
+
+        from backend.object_store import GCSObjectStore
+        from tools.argentina_object_store_publisher import ObjectStoreReleasePublisher
+
+        bucket = os.environ["VALUEPILOT_CANDIDATE_ARCHIVE_BUCKET"]
+        project = os.environ["VALUEPILOT_CANDIDATE_ARCHIVE_PROJECT"]
+        execution_id = os.environ["VALUEPILOT_EXECUTION_ID"]
+        workspace = Path(os.environ["VALUEPILOT_CANDIDATE_WORKSPACE"]).resolve()
+        store = GCSObjectStore(bucket=bucket, project=project)
+        summary_key = f"control/executions/{execution_id}.json"
+        summary = json.loads(store.get(summary_key))
+        status = summary.get("status")
+        if status not in {"CANDIDATE_VERIFIED", "CANARY_READY", "ACTIVE"}:
+            print(json.dumps({"candidateArchive": "SKIPPED", "executionId": execution_id, "workerStatus": status}, sort_keys=True))
+            raise SystemExit(0)
+        release_id = summary.get("releaseId")
+        if not isinstance(release_id, str) or not release_id:
+            raise RuntimeError("verified candidate summary is missing releaseId")
+        if not workspace.is_dir():
+            raise RuntimeError("verified candidate workspace is unavailable")
+        publisher = ObjectStoreReleasePublisher(store)
+        staged = publisher.stage(workspace, release_ids=(release_id,), active_release_id=None)
+        verified = publisher.verify(release_id)
+        receipt = {
+            "schemaVersion": "valuepilot-argentina-candidate-archive-v1",
+            "executionId": execution_id,
+            "releaseId": release_id,
+            "status": "PERSISTED",
+            "objectCount": verified.get("objectCount"),
+            "objectBytes": verified.get("objectBytes"),
+            "bytes": verified.get("bytes"),
+            "newImmutableObjectCount": staged.get("newImmutableObjectCount"),
+            "reusedImmutableObjectCount": staged.get("reusedImmutableObjectCount"),
+            "activePointerWrites": 0,
+        }
+        payload = (json.dumps(receipt, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+        receipt_key = f"candidate-archive/receipts/{execution_id}.json"
+        store.put_immutable(receipt_key, payload, sha256=hashlib.sha256(payload).hexdigest())
+        print(json.dumps({"candidateArchive": receipt, "receiptKey": receipt_key}, ensure_ascii=False, sort_keys=True))
+        PY
       - valuepilot-release-worker
       - '-m'
       - tools.argentina_release_handoff_worker
@@ -51,6 +103,10 @@ steps:
       - 'VALUEPILOT_SOURCE_ARCHIVE_KEY=${_SOURCE_ARCHIVE_KEY}'
       - 'VALUEPILOT_SOURCE_ARCHIVE_SHA256=${_SOURCE_ARCHIVE_SHA256}'
       - 'VALUEPILOT_UPSTREAM_CHANGED=${_UPSTREAM_CHANGED}'
+      - 'VALUEPILOT_CANDIDATE_ARCHIVE_BUCKET=${_ARCHIVE_BUCKET}'
+      - 'VALUEPILOT_CANDIDATE_ARCHIVE_PROJECT=${PROJECT_ID}'
+      - 'VALUEPILOT_EXECUTION_ID=${_EXECUTION_ID}'
+      - 'VALUEPILOT_CANDIDATE_WORKSPACE=/tmp/valuepilot-release-output/searchpack-workspace'
       - 'BUILDER_IMAGE=${_RELEASE_WORKER_IMAGE}'
       - 'BUILDER_SHA=${_BUILDER_SHA}'
     # The verified national SHADOW run took almost four hours; retain bounded
