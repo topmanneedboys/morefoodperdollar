@@ -173,8 +173,16 @@ main:
                   generation: ${source_generation}
               steps:
                 - name: ${args.workerImage}
-                  entrypoint: python
+                  entrypoint: /bin/sh
                   args:
+                    - "-c"
+                    - |
+                      ulimit -Sn 4096
+                      if [ "$?" -ne 0 ]; then
+                        exit 70
+                      fi
+                      exec python "$@"
+                    - valuepilot-release-worker
                     - "-m"
                     - tools.argentina_release_handoff_worker
                     - '${"--observed-at=" + args.observedAt}'
