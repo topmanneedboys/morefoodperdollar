@@ -13,8 +13,11 @@
 # the normal path unchanged and materializes an explicit verified archive ZIP
 # before invoking the mature worker.  Promotion defaults to write-free SHADOW;
 # explicit staging/activation inputs are passed through to the worker, which
-# validates them before any canary or active pointer write.  This workflow
-# never receives or stores raw ZIP bytes.
+# validates them before any canary or active pointer write.  After a successful
+# verified candidate build, this Cloud Build step also stages that immutable
+# candidate into the private archive bucket so the expensive workspace is not
+# lost when the ephemeral builder exits.  The archive stage never writes an
+# ACTIVE or CANARY pointer.
 main:
   params: [args]
   steps:
@@ -181,7 +184,56 @@ main:
                       if [ "$?" -ne 0 ]; then
                         exit 70
                       fi
-                      exec python "$@"
+                      python "$@"
+                      worker_rc=$?
+                      if [ "$worker_rc" -ne 0 ]; then
+                        exit "$worker_rc"
+                      fi
+                      python - <<'PY'
+                      import hashlib
+                      import json
+                      import os
+                      from pathlib import Path
+
+                      from backend.object_store import GCSObjectStore
+                      from tools.argentina_object_store_publisher import ObjectStoreReleasePublisher
+
+                      bucket = os.environ["VALUEPILOT_CANDIDATE_ARCHIVE_BUCKET"]
+                      project = os.environ["VALUEPILOT_CANDIDATE_ARCHIVE_PROJECT"]
+                      execution_id = os.environ["VALUEPILOT_EXECUTION_ID"]
+                      workspace = Path(os.environ["VALUEPILOT_CANDIDATE_WORKSPACE"]).resolve()
+                      store = GCSObjectStore(bucket=bucket, project=project)
+                      summary_key = f"control/executions/{execution_id}.json"
+                      summary = json.loads(store.get(summary_key))
+                      status = summary.get("status")
+                      if status not in {"CANDIDATE_VERIFIED", "CANARY_READY", "ACTIVE"}:
+                          print(json.dumps({"candidateArchive": "SKIPPED", "executionId": execution_id, "workerStatus": status}, sort_keys=True))
+                          raise SystemExit(0)
+                      release_id = summary.get("releaseId")
+                      if not isinstance(release_id, str) or not release_id:
+                          raise RuntimeError("verified candidate summary is missing releaseId")
+                      if not workspace.is_dir():
+                          raise RuntimeError("verified candidate workspace is unavailable")
+                      publisher = ObjectStoreReleasePublisher(store)
+                      staged = publisher.stage(workspace, release_ids=(release_id,), active_release_id=None)
+                      verified = publisher.verify(release_id)
+                      receipt = {
+                          "schemaVersion": "valuepilot-argentina-candidate-archive-v1",
+                          "executionId": execution_id,
+                          "releaseId": release_id,
+                          "status": "PERSISTED",
+                          "objectCount": verified.get("objectCount"),
+                          "objectBytes": verified.get("objectBytes"),
+                          "bytes": verified.get("bytes"),
+                          "newImmutableObjectCount": staged.get("newImmutableObjectCount"),
+                          "reusedImmutableObjectCount": staged.get("reusedImmutableObjectCount"),
+                          "activePointerWrites": 0,
+                      }
+                      payload = (json.dumps(receipt, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+                      receipt_key = f"candidate-archive/receipts/{execution_id}.json"
+                      store.put_immutable(receipt_key, payload, sha256=hashlib.sha256(payload).hexdigest())
+                      print(json.dumps({"candidateArchive": receipt, "receiptKey": receipt_key}, ensure_ascii=False, sort_keys=True))
+                      PY
                     - valuepilot-release-worker
                     - "-m"
                     - tools.argentina_release_handoff_worker
@@ -213,6 +265,10 @@ main:
                     - '${"VALUEPILOT_UPSTREAM_CHANGED=" + string(upstream_changed)}'
                     - '${"VALUEPILOT_SOURCE_ARCHIVE_KEY=" + source_archive_key}'
                     - '${"VALUEPILOT_SOURCE_ARCHIVE_SHA256=" + source_archive_sha256}'
+                    - '${"VALUEPILOT_CANDIDATE_ARCHIVE_BUCKET=" + archive_bucket}'
+                    - '${"VALUEPILOT_CANDIDATE_ARCHIVE_PROJECT=" + project_id}'
+                    - '${"VALUEPILOT_EXECUTION_ID=" + execution_id}'
+                    - "VALUEPILOT_CANDIDATE_WORKSPACE=/tmp/valuepilot-release-output/searchpack-workspace"
               options:
                 machineType: E2_STANDARD_2
                 diskSizeGb: "200"
