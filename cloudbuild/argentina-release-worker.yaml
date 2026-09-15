@@ -13,16 +13,24 @@
 steps:
   - id: acquire-qualify-and-build
     name: '${_RELEASE_WORKER_IMAGE}'
-    entrypoint: python
+    entrypoint: /bin/sh
     args:
+      - '-c'
+      - |
+        ulimit -Sn 4096
+        if [ "$?" -ne 0 ]; then
+          exit 70
+        fi
+        exec python "$@"
+      - valuepilot-release-worker
       - '-m'
       - tools.argentina_release_handoff_worker
       - '--observed-at=${_OBSERVED_AT}'
       - '--execution-id=${_EXECUTION_ID}'
       - '--archive-bucket=${_ARCHIVE_BUCKET}'
       - '--archive-project=${PROJECT_ID}'
-      - '--workspace=/workspace/valuepilot-release-workspace'
-      - '--output=/workspace/valuepilot-release-output'
+      - '--workspace=/tmp/valuepilot-release-workspace'
+      - '--output=/tmp/valuepilot-release-output'
       - '--current-release-date=${_CURRENT_RELEASE_DATE}'
       - '--current-source-sha256=${_CURRENT_SOURCE_SHA256}'
       - '--promotion-mode=${_PROMOTION_MODE}'
