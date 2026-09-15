@@ -218,10 +218,10 @@ main:
                 diskSizeGb: "200"
                 logging: CLOUD_LOGGING_ONLY
                 requestedVerifyOption: VERIFIED
-              timeout: "14400s"
+              timeout: "21600s"
               serviceAccount: ${args.builderServiceAccount}
             connector_params:
-              timeout: 14400
+              timeout: 21600
               polling_policy:
                 initial_delay: 5
                 multiplier: 1.5
@@ -283,7 +283,7 @@ main:
 
     - validate_worker_summary:
         switch:
-          - condition: ${worker_summary.schemaVersion != "valuepilot-argentina-release-worker-v1" or worker_summary.policyVersion != "valuepilot-argentina-release-worker-policy-v1" or worker_summary.executionId != execution_id}
+          - condition: ${worker_summary.schemaVersion != "valuepilot-argentina-automated-release-v1" or worker_summary.policyVersion != "valuepilot-argentina-automated-release-policy-v1" or worker_summary.executionId != execution_id}
             return:
               status: WORKER_SUMMARY_INVALID
               buildId: ${release_build.metadata.build.id}
