@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/acquire-argentina-sepa-windscribe.yml'
       - '.github/workflows/test-argentina-acquisition-control.yml'
+      - 'ARGENTINA_AUTOMATED_RELEASE_SOURCE_CONTRACT.json'
       - 'backend/object_store.py'
       - 'backend/requirements.txt'
       - 'tools/argentina_acquisition_schedule_control.py'
@@ -18,6 +19,7 @@ on:
       - 'tools/publish_argentina_source_handoff.py'
       - 'tools/qualify_argentina_sepa.py'
       - 'tools/read_argentina_active_source_identity.py'
+      - 'tools/fixtures/argentina_release_acquisition/**'
       - 'tools/tests/test_argentina_acquisition_schedule_control.py'
       - 'tools/tests/test_argentina_acquisition_schedule_control_v2.py'
       - 'tools/tests/test_argentina_release_acquisition.py'
