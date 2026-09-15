@@ -146,13 +146,31 @@ class ArgentinaReleaseConfigurationTests(unittest.TestCase):
             self.assertIn("ulimit -Sn 4096", text)
             self.assertIn('if [ "$?" -ne 0 ]; then', text)
             self.assertIn("exit 70", text)
-            self.assertIn('exec python "$@"', text)
+            self.assertIn('python "$@"', text)
+            self.assertNotIn('exec python "$@"', text)
             self.assertIn("valuepilot-release-worker", text)
 
         self.assertIn("--workspace=/tmp/valuepilot-release-workspace", cloudbuild)
         self.assertIn("--output=/tmp/valuepilot-release-output", cloudbuild)
         self.assertNotIn("--workspace=/workspace/valuepilot-release-workspace", cloudbuild)
         self.assertNotIn("--output=/workspace/valuepilot-release-output", cloudbuild)
+
+    def test_verified_candidate_is_persisted_privately_without_pointer_selection(self) -> None:
+        cloudbuild = (ROOT / "cloudbuild" / "argentina-release-worker.yaml").read_text(encoding="utf-8")
+        workflow = (ROOT / "workflows" / "argentina-release.yaml").read_text(encoding="utf-8")
+        for text in (cloudbuild, workflow):
+            self.assertIn("VALUEPILOT_CANDIDATE_ARCHIVE_BUCKET", text)
+            self.assertIn("VALUEPILOT_CANDIDATE_ARCHIVE_PROJECT", text)
+            self.assertIn("VALUEPILOT_EXECUTION_ID", text)
+            self.assertIn("VALUEPILOT_CANDIDATE_WORKSPACE", text)
+            self.assertIn("ObjectStoreReleasePublisher(store)", text)
+            self.assertIn("publisher.stage(workspace, release_ids=(release_id,), active_release_id=None)", text)
+            self.assertIn("publisher.verify(release_id)", text)
+            self.assertIn("candidate-archive/receipts/", text)
+            self.assertIn('"activePointerWrites": 0', text)
+            self.assertIn('status not in {"CANDIDATE_VERIFIED", "CANARY_READY", "ACTIVE"}', text)
+            self.assertNotIn("publisher.activate(", text)
+            self.assertNotIn("publisher.activate_canary(", text)
 
     def test_release_worker_summary_contract_and_timeout_headroom(self) -> None:
         cloudbuild = (ROOT / "cloudbuild" / "argentina-release-worker.yaml").read_text(encoding="utf-8")
