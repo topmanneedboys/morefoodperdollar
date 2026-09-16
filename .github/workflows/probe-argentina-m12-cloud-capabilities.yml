@@ -114,13 +114,7 @@ jobs:
               "https://firebase.googleapis.com/v1beta1/projects/${GCP_PROJECT_ID}" || true)"
             echo "firebase_management_http=${http_code}" | tee -a "${report}"
             if [[ "${http_code}" == "200" ]]; then
-              python - <<'PY' "${RUNNER_TEMP}/firebase-project.json" | tee -a "${report}"
-import json, sys
-value = json.load(open(sys.argv[1], encoding='utf-8'))
-print('projectId=' + str(value.get('projectId', '')))
-print('displayName=' + str(value.get('displayName', '')))
-print('resourcesLocationId=' + str(value.get('resources', {}).get('locationId', '')))
-PY
+              python -c "import json,sys; v=json.load(open(sys.argv[1], encoding='utf-8')); print('projectId='+str(v.get('projectId',''))); print('displayName='+str(v.get('displayName',''))); print('resourcesLocationId='+str(v.get('resources',{}).get('locationId','')))" "${RUNNER_TEMP}/firebase-project.json" | tee -a "${report}"
             fi
           else
             echo 'firebase_management_http=NO_ACCESS_TOKEN' | tee -a "${report}"
