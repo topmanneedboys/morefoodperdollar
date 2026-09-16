@@ -120,6 +120,16 @@ class ConsumerEdgeTests(unittest.TestCase):
         self.assertEqual(response.json(), {"error": "GET_BODY_NOT_ALLOWED"})
         self.assertEqual(self.upstream.calls, [])
 
+    def test_pathological_content_length_is_rejected_without_edge_failure(self):
+        response = self.client.post(
+            "/v1/shop",
+            headers={**self.auth, "Content-Type": "application/json", "Content-Length": "9" * 5000},
+            content=b"{}",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {"error": "INVALID_REQUEST"})
+        self.assertEqual(self.upstream.calls, [])
+
     def test_malformed_duplicate_and_non_object_json_fail_closed(self):
         for body in (b"{", b'{"a":1,"a":2}', b"[]"):
             response = self.client.post("/v1/shop", headers={**self.auth, "Content-Type": "application/json"}, content=body)

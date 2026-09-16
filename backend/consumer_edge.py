@@ -333,7 +333,14 @@ async def _read_bounded_body(request: Any, *, config: EdgeConfig) -> bytes:
     if content_length is not None:
         if not content_length.isdigit():
             raise EdgeRequestError("content length is invalid")
-        if int(content_length) > config.max_request_bytes:
+        try:
+            declared_length = int(content_length)
+        except (ValueError, OverflowError) as exc:
+            # Python can reject an unusually long digit string before it can
+            # be converted to an integer; that is still an invalid header,
+            # never an edge failure or an implicit unlimited body.
+            raise EdgeRequestError("content length is invalid") from exc
+        if declared_length > config.max_request_bytes:
             raise EdgeRequestTooLarge("request body exceeds the edge limit")
     chunks: list[bytes] = []
     total = 0
