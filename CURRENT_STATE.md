@@ -6,6 +6,38 @@ Branch: `candidate/argentina-android-consumer-bridge-m12-v2`
 
 Android version: 101.1.0 (10101)
 
+## Current M12.2 public consumer-edge candidate
+
+The M12.2 server-side bridge is deployed as candidate code SHA
+`842f4b6b3825b98ea8599424206b3451561e6a83` (`Fail closed on partial M11 edge
+configuration`). Cloud Run service
+`valuepilot-argentina-consumer-edge` in `southamerica-east1` serves immutable
+image digest `sha256:274280c381b5c052a661b7606f1219ac71e29556669b36bee292d473b3290a7b`
+with scale-to-zero/max-one settings and the dedicated runtime identity
+`vp-arg-consumer-edge@valuepilot-argentina.iam.gserviceaccount.com`. That
+identity has exactly `roles/run.invoker` on the private
+`valuepilot-argentina-sa-east1` M11 service; M11 remains directly
+unauthenticated `403` and the US M11 service has no binding.
+
+The edge is public through Cloud Run's invoker-IAM-check disablement because
+the project organization policy rejects an `allUsers` member. App Check is
+still required inside the edge: HTTPS requests without or with an invalid
+token return `401`, and unknown routes return `404`. The edge's ADC/OIDC
+adapter, fixed route allow-list, strict bounds and partial-configuration
+fail-closed behavior are covered by 40 local backend tests and exact-head
+backend workflow **35062107407**. Cloud Build image build
+**232e7ce4-d53e-4a26-9b83-dd05495fc486** and the deployed revision are ready.
+
+End-to-end App Check/OIDC smoke remains blocked because
+`valuepilot-argentina` is not yet a Firebase project and the operator account
+cannot mint an impersonated test token under the project's organization
+policy. The canonical record is
+[ARGENTINA_CONSUMER_EDGE_M12_2_QUALIFICATION.md](ARGENTINA_CONSUMER_EDGE_M12_2_QUALIFICATION.md).
+The exact-head Android workflow **35062107472** also passed Android
+verification (**104684419403**), browser verification (**104684419537**) and
+release-bundle assembly (**104686868032**). No Android networking or M12.3
+work has started.
+
 ## Current M12.0 candidate checkpoint
 
 The current offline Argentina consumer-contract bridge candidate is
