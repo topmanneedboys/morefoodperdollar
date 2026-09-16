@@ -7,25 +7,31 @@ Branch: `candidate/argentina-android-consumer-bridge-m12-v2`
 ## Current M12.2 public consumer-edge checkpoint
 
 Code SHA `842f4b6b3825b98ea8599424206b3451561e6a83` adds the private M11
-Cloud Run OIDC adapter and rejects partial target configuration at startup.
-The candidate edge is deployed in `southamerica-east1` as
-`valuepilot-argentina-consumer-edge-00001-lzn`, serving image digest
+Cloud Run OIDC adapter and rejects partial target configuration at startup;
+the deployed edge/OIDC test boundary is now qualified. The edge is deployed
+in `southamerica-east1` as
+`valuepilot-argentina-consumer-edge-00003-8fq`, serving image digest
 `sha256:274280c381b5c052a661b7606f1219ac71e29556669b36bee292d473b3290a7b`
 with scale-to-zero/max-one settings. Its dedicated service account has only
 `roles/run.invoker` on `valuepilot-argentina-sa-east1`; direct unauthenticated
 M11 remains `403` and the US service remains unbound. The organization policy
 rejected an `allUsers` binding, so the edge uses Cloud Run's explicit
 invoker-IAM-check disablement while its application boundary still requires
-Firebase App Check.
+Firebase App Check. The active Firebase project is `valuepilot-argentina`;
+`ValuePilot Android` (`com.valuepilot.app`, App ID
+`1:17260882200:android:446eec76e5f1a175f2566d`) is registered with the current
+debug signer SHA-256 and is the deployed edge's explicit App ID allow-list.
 
 HTTPS smoke is `401` without/with invalid App Check and `404` for an unknown
-route. Local edge/backend tests (40) and backend workflow **35062107407** are
-green; Cloud Build **232e7ce4-d53e-4a26-9b83-dd05495fc486** and the revision
-are ready. The project is not yet a Firebase project, so a real App Check
-token and an end-to-end OIDC request remain unverified. The one manual
-boundary is adding Firebase to existing project `valuepilot-argentina` and
-accepting its Terms in Firebase Console. Do not start M12.3 or Android
-networking until that boundary is completed and separately qualified. See
+route. A temporary Firebase debug token was exchanged, used only in memory,
+and revoked; the valid-token edge `/v1/status` smoke returned `200` with the
+private M11 status payload, and private M11 logs show authenticated requests.
+Local edge/backend tests (40) and backend workflow **35062107407** are green;
+Cloud Build **232e7ce4-d53e-4a26-9b83-dd05495fc486** and revision
+`valuepilot-argentina-consumer-edge-00003-8fq` are ready. This qualifies the
+deployed server/test-attestation path only. Real-device Play Integrity and
+Android networking remain unqualified; do not start M12.3 until that later
+milestone is separately authorized. See
 [ARGENTINA_CONSUMER_EDGE_M12_2_QUALIFICATION.md](ARGENTINA_CONSUMER_EDGE_M12_2_QUALIFICATION.md).
 
 ## Current M12.1 consumer-edge boundary checkpoint

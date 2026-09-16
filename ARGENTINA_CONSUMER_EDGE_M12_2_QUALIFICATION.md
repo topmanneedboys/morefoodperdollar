@@ -1,12 +1,13 @@
 # Argentina consumer edge (M12.2)
 
-Status: `DEPLOYED_CANDIDATE_BLOCKED_PENDING_FIREBASE_APP_CHECK`
+Status: `QUALIFIED_FOR_DEPLOYED_EDGE_OIDC_TEST_ONLY`
 
 This checkpoint implements the server-side bridge from the public Argentina
 consumer edge to the already-qualified private M11 Cloud Run service. It is a
-candidate deployment and an auditable code/IAM checkpoint; it is not an
-end-to-end launch approval until a real Firebase App Check project/app is
-configured and exercised.
+candidate deployment and an auditable code/IAM checkpoint. The deployed
+server/test-attestation path is now exercised end to end. This is not a
+real-device Play Integrity or Android launch approval; Android remains offline
+until the separately authorized M12.3 milestone.
 
 ## What is included
 
@@ -40,7 +41,7 @@ Public edge service (Cloud Run, `southamerica-east1`):
 
 - service: `valuepilot-argentina-consumer-edge`
 - URL: `https://valuepilot-argentina-consumer-edge-m72bv57hrq-rj.a.run.app`
-- revision: `valuepilot-argentina-consumer-edge-00001-lzn`
+- revision: `valuepilot-argentina-consumer-edge-00003-8fq`
 - image: `us-east4-docker.pkg.dev/valuepilot-argentina/valuepilot-backend/valuepilot-consumer-edge@sha256:274280c381b5c052a661b7606f1219ac71e29556669b36bee292d473b3290a7b`
 - runtime service account: `vp-arg-consumer-edge@valuepilot-argentina.iam.gserviceaccount.com`
 - ingress: `all`; minimum instances `0`; maximum instances `1`; concurrency
@@ -50,7 +51,8 @@ The organization policy rejects an `allUsers` IAM member (`iam.allowedPolicyMemb
 The edge is therefore public through the Cloud Run `invoker-iam-disabled`
 service setting, while every admitted request still requires Firebase App
 Check in the application boundary. This setting was applied only to the edge;
-no M11 service was made public.
+no M11 service was made public. The service-level max-instance setting is `1`
+(scale-to-zero when idle).
 
 Private M11 target:
 
@@ -83,31 +85,42 @@ The following checks were run over HTTPS:
 | Edge `/v1/status` with an invalid App Check token | `401 {"error":"UNAUTHENTICATED"}` |
 | Edge unknown path | `404 {"error":"NOT_FOUND"}` |
 | Direct M11 `/v1/status` without identity | `403 Forbidden` |
+| Firebase debug App Check token exchange | `200`; token used only in-memory and then revoked |
+| Edge `/v1/status` with valid Firebase debug App Check | `200`; private M11 status body returned |
+| Authenticated edge → M11 request | `200` in private M11 request logs (`python-httpx/0.28.1`) |
 | Edge revision health/configuration | `Ready`; explicit M11 target variables present |
 
-The code and IAM shape prove the intended OIDC route, and the adapter has
-deterministic fake-transport coverage. A live OIDC request through the edge
-could not yet be exercised because the project is not registered as a
-Firebase project and the current operator account is not permitted to mint an
-impersonated test token. This is intentionally recorded as missing evidence,
-not treated as success.
+The valid-token request returned the exact M11 `/v1/status` payload, and the
+private service logged the corresponding authenticated `200` requests. This
+proves the deployed ADC/OIDC hop without exposing a Google identity token.
+The initial cold request was bounded and timed out once while the services
+warmed; subsequent bounded requests completed successfully. No retry or
+unauthenticated fallback was added.
 
 ## Firebase boundary
 
-`valuepilot-argentina` currently returns `404 Requested entity was not found`
-from the Firebase Management API, so no Firebase App Check app/token can be
-validly registered for this deployment yet. Adding Firebase to an existing
-Google Cloud project is an irreversible project action and requires accepting
-Firebase Terms in the Firebase Console. The one remaining manual task is:
+Firebase project status is `ACTIVE` for project `valuepilot-argentina`
+(number `17260882200`). The registered Android app is:
 
-> In Firebase Console, choose the existing Google Cloud project
-> `valuepilot-argentina`, select **Add Firebase**, accept the Firebase Terms
-> (Analytics is optional), and report when the project is added.
+- display name: `ValuePilot Android`
+- package/application ID: `com.valuepilot.app`
+- Firebase App ID: `1:17260882200:android:446eec76e5f1a175f2566d`
+- registered SHA-256 (current repository debug signer):
+  `0f31bb4d297d70d1d0830cecd74a2e26a08dd50a3337d00b2d5e33ba23240638`
 
-After that action, registering the Android app and Play Integrity App Check
-provider is a separate, explicit activation step. Until a real token is
-verified against the deployed edge and the edge's OIDC call is observed, this
-candidate must remain blocked.
+The Firebase App Check API is enabled. A temporary Firebase debug token was
+created and exchanged through the official API for the live smoke, then
+revoked; no debug secret or App Check token is in the repository. The edge now
+allow-lists the exact Firebase App ID above. No SHA-1 was needed for this
+milestone because the app does not use Google Sign-In or another SHA-1-only
+Firebase feature.
+
+This test uses the supported development/debug attestation path. It does not
+claim Play Integrity on a real device: the Android app still has no Firebase
+SDK, no HTTP client, no `INTERNET` or `ACCESS_NETWORK_STATE` permission, and
+M12.3 has not started. A future Play Integrity activation must use the actual
+release/Play signing SHA-256 when that separately authorized Android/network
+milestone begins.
 
 ## Verification and provenance
 

@@ -1,7 +1,7 @@
 {
-  "schemaVersion": "valuepilot-argentina-consumer-edge-qualification-v2",
+  "schemaVersion": "valuepilot-argentina-consumer-edge-qualification-v3",
   "milestone": "M12.2",
-  "status": "DEPLOYED_CANDIDATE_BLOCKED_PENDING_FIREBASE_APP_CHECK",
+  "status": "QUALIFIED_FOR_DEPLOYED_EDGE_OIDC_TEST_ONLY",
   "codeSha": "842f4b6b3825b98ea8599424206b3451561e6a83",
   "branch": "candidate/argentina-android-consumer-bridge-m12-v2",
   "contractVersion": "valuepilot-argentina-consumer-edge-v1",
@@ -19,9 +19,18 @@
     "tokensForwarded": false,
     "tokensLogged": false,
     "staticCredentials": false,
-    "firebaseProjectStatus": "NOT_A_FIREBASE_PROJECT",
-    "liveAppCheckTokenVerified": false,
-    "liveEdgeToM11OidcVerified": false
+    "firebaseProjectStatus": "ACTIVE",
+    "firebaseProjectNumber": "17260882200",
+    "firebaseAppCheckApiEnabled": true,
+    "firebaseAppCheckAppId": "1:17260882200:android:446eec76e5f1a175f2566d",
+    "firebaseAppCheckAppDisplayName": "ValuePilot Android",
+    "firebaseAppCheckAppPackageName": "com.valuepilot.app",
+    "firebaseAppCheckRegisteredSha256": "0f31bb4d297d70d1d0830cecd74a2e26a08dd50a3337d00b2d5e33ba23240638",
+    "firebaseAppCheckAppIdAllowList": true,
+    "liveAppCheckTokenVerified": true,
+    "liveAppCheckProvider": "firebase-debug-token-temporary",
+    "liveEdgeToM11OidcVerified": true,
+    "productionPlayIntegrityVerified": false
   },
   "upstream": {
     "type": "cloud_run_oidc",
@@ -33,6 +42,8 @@
     "m11Revision": "valuepilot-argentina-sa-east1-00029-gef",
     "m11ImageDigest": "sha256:fb36dcf9c40d9af15ea9b8019601c7b0eb585bce1c23587006559f77b95e6707",
     "directUnauthenticatedM11Status": 403,
+    "authenticatedM11Status": 200,
+    "authenticatedM11UserAgent": "python-httpx/0.28.1",
     "dedicatedServiceAccount": "vp-arg-consumer-edge@valuepilot-argentina.iam.gserviceaccount.com",
     "dedicatedBinding": "roles/run.invoker on service valuepilot-argentina-sa-east1",
     "projectLevelBinding": false,
@@ -45,7 +56,7 @@
     "region": "southamerica-east1",
     "service": "valuepilot-argentina-consumer-edge",
     "url": "https://valuepilot-argentina-consumer-edge-m72bv57hrq-rj.a.run.app",
-    "revision": "valuepilot-argentina-consumer-edge-00001-lzn",
+    "revision": "valuepilot-argentina-consumer-edge-00003-8fq",
     "image": "us-east4-docker.pkg.dev/valuepilot-argentina/valuepilot-backend/valuepilot-consumer-edge@sha256:274280c381b5c052a661b7606f1219ac71e29556669b36bee292d473b3290a7b",
     "imageDigest": "sha256:274280c381b5c052a661b7606f1219ac71e29556669b36bee292d473b3290a7b",
     "ingress": "all",
@@ -61,7 +72,10 @@
     "edgeNoAppCheckStatus": 401,
     "edgeInvalidAppCheckStatus": 401,
     "edgeUnknownPathStatus": 404,
-    "directM11UnauthenticatedStatus": 403
+    "directM11UnauthenticatedStatus": 403,
+    "edgeValidDebugAppCheckStatus": 200,
+    "edgeValidDebugAppCheckReturnedM11Status": 200,
+    "debugTokenCreatedAndRevoked": true
   },
   "verification": {
     "localBackendTests": 40,
@@ -75,11 +89,14 @@
     "androidNetworkingAuthorized": false,
     "internetPermission": false,
     "accessNetworkStatePermission": false,
-    "m123Started": false
+    "m123Started": false,
+    "productionPlayIntegrityQualified": false,
+    "androidClientNetworking": false
   },
   "manualBoundary": {
-    "required": true,
-    "action": "Add Firebase to existing Google Cloud project valuepilot-argentina in Firebase Console and accept Firebase Terms",
+    "required": false,
+    "action": "Firebase was added to the existing valuepilot-argentina project by the user",
+    "completed": true,
     "analyticsRequired": false
   },
   "references": {

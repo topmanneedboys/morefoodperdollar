@@ -26,8 +26,10 @@ Production configuration uses the Firebase Admin SDK for App Check and Google
 Application Default Credentials for the short-lived Cloud Run OIDC token;
 service-account keys and other reusable credentials must never be copied into
 the image or repository. Set
-`VALUEPILOT_FIREBASE_PROJECT_ID` and, when desired, the comma-separated
-`VALUEPILOT_FIREBASE_APP_IDS` allow-list. The App Check verifier validates the
-token with Firebase's current Admin SDK before any request reaches the
-upstream seam. A Firebase project/app is still required before a real App Check
-token can be exercised.
+`VALUEPILOT_FIREBASE_PROJECT_ID` and, preferably, the comma-separated
+`VALUEPILOT_FIREBASE_APP_IDS` allow-list. The deployed M12.2 edge is pinned to
+the registered `ValuePilot Android` App ID and its Firebase verifier was
+exercised with a temporary debug attestation. The App Check verifier validates
+the token with Firebase's current Admin SDK before any request reaches the
+upstream seam. Real-device Play Integrity and Android client networking remain
+outside this offline milestone and are not implied by the server smoke.
