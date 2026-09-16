@@ -8,7 +8,7 @@ class MainActivityHomeLifecycleBoundaryTest {
 
     @Test
     fun destroyingActivityReleasesHomeAndBasketOwners() {
-        val source = source().readText()
+        val source = source().readText().replace("\r\n", "\n").replace('\r', '\n')
 
         listOf(
             "if (::homeExperience.isInitialized)",
@@ -44,7 +44,7 @@ class MainActivityHomeLifecycleBoundaryTest {
 
     @Test
     fun homeDetailsDialogIsDismissedOutsideHomeAndOnActivityTeardown() {
-        val source = source().readText()
+        val source = source().readText().replace("\r\n", "\n").replace('\r', '\n')
 
         listOf(
             "private var homeItemDetailsDialog: AlertDialog? = null",
@@ -66,7 +66,7 @@ class MainActivityHomeLifecycleBoundaryTest {
 
     @Test
     fun offlineCatalogLookupIsBoundedToHomeAndIgnoresStaleCompletions() {
-        val source = source().readText()
+        val source = source().readText().replace("\r\n", "\n").replace('\r', '\n')
 
         listOf(
             "private fun showOfflineCatalogMatches(",
@@ -138,7 +138,7 @@ class MainActivityHomeLifecycleBoundaryTest {
 
     @Test
     fun homeDetailsDialogClosesWhenItsItemDisappearsFromTheLatestProjection() {
-        val source = source().readText()
+        val source = source().readText().replace("\r\n", "\n").replace('\r', '\n')
 
         listOf(
             "homeItemDetailsDialog?.isShowing == true",
@@ -153,7 +153,7 @@ class MainActivityHomeLifecycleBoundaryTest {
 
     @Test
     fun homeDetailsDraftRestoresOnlyThroughEphemeralActivityState() {
-        val source = source().readText()
+        val source = source().readText().replace("\r\n", "\n").replace('\r', '\n')
 
         listOf(
             "restoreHomeItemDetailsDialog(savedInstanceState)",
@@ -175,7 +175,7 @@ class MainActivityHomeLifecycleBoundaryTest {
 
     @Test
     fun homeRefreshesPrivateComparisonMemoryOnResumeWithoutOwningPlannerAuthority() {
-        val source = source().readText()
+        val source = source().readText().replace("\r\n", "\n").replace('\r', '\n')
 
         listOf(
             "homePrivateMemoryStore",
@@ -209,7 +209,7 @@ class MainActivityHomeLifecycleBoundaryTest {
 
     @Test
     fun homeGoodPriceActionOpensTheDedicatedLocalScreen() {
-        val source = source().readText()
+        val source = source().readText().replace("\r\n", "\n").replace('\r', '\n')
 
         listOf(
             "homeExperience.onGoodPrice = { openGoodPriceCheck() }",
@@ -236,7 +236,7 @@ class MainActivityHomeLifecycleBoundaryTest {
 
     @Test
     fun homeReceivesOnlyValidatedSavedProductDisplayContext() {
-        val source = source().readText()
+        val source = source().readText().replace("\r\n", "\n").replace('\r', '\n')
 
         listOf(
             "private var homeSavedExactProductContext: PracticalShoppingHomeSavedExactProductContext? = null",
@@ -265,7 +265,7 @@ class MainActivityHomeLifecycleBoundaryTest {
 
     @Test
     fun homeQuickAddActionRoutesThroughTheBoundedSessionOwner() {
-        val source = source().readText()
+        val source = source().readText().replace("\r\n", "\n").replace('\r', '\n')
 
         listOf(
             "homeExperience.onQuickAdd = { choice ->",
@@ -290,7 +290,7 @@ class MainActivityHomeLifecycleBoundaryTest {
 
     @Test
     fun explicitHomeResultActionsRevealAfterRenderingWithoutPassiveScrollJumps() {
-        val source = source().readText()
+        val source = source().readText().replace("\r\n", "\n").replace('\r', '\n')
 
         listOf(
             "private fun renderHome(revealResult: Boolean = false)",
@@ -340,7 +340,7 @@ class MainActivityHomeLifecycleBoundaryTest {
 
     @Test
     fun homeShareActionUsesAStaleSafePreviewAndExplicitChooser() {
-        val source = source().readText()
+        val source = source().readText().replace("\r\n", "\n").replace('\r', '\n')
 
         listOf(
             "private var homeRenderState: PracticalShoppingHomeRenderState? = null",
@@ -380,7 +380,7 @@ class MainActivityHomeLifecycleBoundaryTest {
 
     @Test
     fun missingHomePriceActionPrefillsOnlyAnUntrustedProductName() {
-        val source = source().readText()
+        val source = source().readText().replace("\r\n", "\n").replace('\r', '\n')
 
         listOf(
             "homeExperience.onAddObservedPrice = { itemKey ->",
@@ -409,7 +409,7 @@ class MainActivityHomeLifecycleBoundaryTest {
 
     @Test
     fun homePrivateMemoryReviewActionUsesTheLocalHistoryRoute() {
-        val source = source().readText()
+        val source = source().readText().replace("\r\n", "\n").replace('\r', '\n')
 
         listOf(
             "homeExperience.onReviewPrivateMemory = { reviewPrivatePriceHistory() }",
@@ -445,7 +445,7 @@ class MainActivityHomeLifecycleBoundaryTest {
 
     @Test
     fun homePrivateMemoryClearRequiresConfirmationAndOnlyResetsLocalContext() {
-        val source = source().readText()
+        val source = source().readText().replace("\r\n", "\n").replace('\r', '\n')
 
         listOf(
             "private var privatePriceHistoryClearDialog: AlertDialog? = null",
@@ -478,7 +478,7 @@ class MainActivityHomeLifecycleBoundaryTest {
 
     @Test
     fun homePrivateMemoryExportIsExplicitPreviewedAndRecheckedLocally() {
-        val source = source().readText()
+        val source = source().readText().replace("\r\n", "\n").replace('\r', '\n')
 
         listOf(
             "private fun exportPrivatePriceHistory()",
@@ -511,7 +511,7 @@ class MainActivityHomeLifecycleBoundaryTest {
 
     @Test
     fun homePrivateMemoryForgetUsesFingerprintConfirmationAndLocalRecheck() {
-        val source = source().readText()
+        val source = source().readText().replace("\r\n", "\n").replace('\r', '\n')
 
         listOf(
             "private var privatePriceHistoryForgetDialog: AlertDialog? = null",

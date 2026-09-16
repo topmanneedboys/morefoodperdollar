@@ -9,7 +9,7 @@ class MainActivitySearchIdentityBoundaryTest {
 
     @Test
     fun `search exposes a bounded signed identity lookup and review handoff`() {
-        val source = source().readText()
+        val source = source().readText().replace("\r\n", "\n").replace('\r', '\n')
         val layout = layoutSource().readText()
 
         listOf(
@@ -35,7 +35,7 @@ class MainActivitySearchIdentityBoundaryTest {
 
     @Test
     fun `search identity path does not become a price or network provider`() {
-        val source = source().readText()
+        val source = source().readText().replace("\r\n", "\n").replace('\r', '\n')
         val identityStart = source.indexOf("private fun showSearchIdentityMatches()")
         val identityEnd = source.indexOf("private fun executeSearch", identityStart)
         assertTrue(identityStart >= 0)

@@ -73,6 +73,7 @@ on:
       - 'CONTINUATION_CHECKPOINT.md'
       - 'PRACTICAL_SHOPPING_MVP_STATUS.md'
       - 'PRACTICAL_SHOPPING_HOME_CHECKPOINT.md'
+      - 'ARGENTINA_CONSUMER_CONTRACT_BRIDGE_OFFLINE_QUALIFICATION.*'
       - '.github/workflows/build-valuepilot-android.yml'
   pull_request:
     paths:
@@ -145,6 +146,7 @@ on:
       - 'CONTINUATION_CHECKPOINT.md'
       - 'PRACTICAL_SHOPPING_MVP_STATUS.md'
       - 'PRACTICAL_SHOPPING_HOME_CHECKPOINT.md'
+      - 'ARGENTINA_CONSUMER_CONTRACT_BRIDGE_OFFLINE_QUALIFICATION.*'
       - '.github/workflows/build-valuepilot-android.yml'
 
 permissions:
@@ -165,8 +167,6 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: '24'
-          cache: npm
-          cache-dependency-path: browser-extension/package-lock.json
 
       - name: Install browser dependencies
         working-directory: browser-extension
@@ -224,6 +224,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: '9.5.0'
+          cache-disabled: true
 
       - name: Test, lint, and build Android APK
         working-directory: android
@@ -348,12 +349,15 @@ jobs:
           sha256sum -c SHA256SUMS.txt
 
       - name: Upload verified release bundle
+        if: github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/candidate/') || startsWith(github.ref, 'refs/heads/work/valuepilot-'))
         uses: actions/upload-artifact@v6
         with:
           name: ValuePilot-v101-release
           path: release/
           if-no-files-found: error
-          retention-days: 90
+          # Candidate bundles are disposable inputs to the same-day promotion
+          # proof.  The promoted proof below remains the durable evidence.
+          retention-days: 3
 
   milestone-provenance-proof:
     if: github.event_name == 'push' && github.ref == 'refs/heads/work/valuepilot-android-milestone'
