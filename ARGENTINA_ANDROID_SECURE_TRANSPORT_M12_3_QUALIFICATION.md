@@ -17,7 +17,7 @@ account signup. M12.4/live Search remains out of scope.
 - Repository: `topmanneedboys/morefoodperdollar`
 - Branch: `candidate/argentina-android-consumer-bridge-m12-v2`
 - Starting head: `75fefc824730b57e71c68729fdc667894994b7b5`
-- M12.3 code head: recorded in the companion JSON after commit
+- M12.3 code head: `f0cd928` (`Implement M12.3 secure Android edge transport`)
 - Firebase project: `valuepilot-argentina` (ACTIVE, project number `17260882200`)
 - Android app: `ValuePilot Android`, package `com.valuepilot.app`
 - Firebase App ID: `1:17260882200:android:446eec76e5f1a175f2566d`
