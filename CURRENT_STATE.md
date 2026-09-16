@@ -40,7 +40,32 @@ The canonical record is
 The exact-head Android workflow **35062107472** also passed Android
 verification (**104684419403**), browser verification (**104684419537**) and
 release-bundle assembly (**104686868032**). Real-device Play Integrity and
-Android networking remain intentionally unqualified; M12.3 has not started.
+production Android networking remained intentionally unqualified at this
+M12.2 checkpoint; the separate M12.3 foundation is recorded below.
+
+## Current M12.3 secure Android networking foundation
+
+M12.3 is implemented on this candidate as a narrow Android edge-transport
+foundation. The authoritative Firebase Android configuration is checked in
+for `valuepilot-argentina` / `com.valuepilot.app`; Application startup installs
+Play Integrity in release builds and the Firebase debug provider only in
+debug/test builds. A bounded `HttpsURLConnection` adapter can call only the
+public `valuepilot-argentina-consumer-edge-m72bv57hrq-rj.a.run.app` service,
+obtains a cached-or-refreshed Firebase App Check token, and sends it only in
+`X-Firebase-AppCheck`. It has explicit request/response, connect/read/total
+timeout, cancellation, strict UTF-8, redirect, route, and typed HTTP/network
+error gates. No private M11 URL, credentials, token persistence/logging,
+cleartext fallback, background sync, or live Home/Search wiring was added.
+
+The manifest intentionally adds `INTERNET` for this future user-triggered
+edge route while continuing to remove `ACCESS_NETWORK_STATE`; release and
+debug provider selection is source-set isolated. Deterministic JVM tests cover
+headers, limits, timeout/cancellation, host/route allow-lists, typed status
+mapping, Firebase config provenance, and APK-boundary declarations. No
+physical device is connected and Play Console has no developer account/app
+linkage in the available session, so Play Integrity attestation and a live
+release APK request remain unqualified. See
+[ARGENTINA_ANDROID_SECURE_TRANSPORT_M12_3_QUALIFICATION.md](ARGENTINA_ANDROID_SECURE_TRANSPORT_M12_3_QUALIFICATION.md).
 
 ## Current M12.0 candidate checkpoint
 
@@ -582,9 +607,16 @@ GS1 Canada ECCnet inquiry was sent and acknowledged 2026-08-28; no substantive e
 
 ## Android privacy boundary
 
-At the latest verified engineering checkpoint Android still has no `INTERNET`, no `ACCESS_NETWORK_STATE`, no account requirement, no telemetry, no remote AI dependency and no ValuePilot server dependency. Provider research/networking remains outside Android.
+The paragraph below records the pre-M12.3 offline checkpoint. M12.3 is the
+separately authorized exception recorded above: Android now intentionally has
+`INTERNET` for a bounded, App-Check-protected public edge foundation, while
+`ACCESS_NETWORK_STATE` remains absent. The current Home/Search UI still has no
+live wiring or background sync, and the app still has no account, telemetry,
+remote AI dependency, private-backend access, or server credential.
 
-Do not silently change this boundary. Future networking/server additions require an explicit milestone with privacy/security/offline/failure-mode design.
+Do not silently expand this boundary. Any future live-surface or server change
+requires an explicit milestone with privacy, security, offline and failure-mode
+design.
 
 ## Immediate next work
 

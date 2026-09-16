@@ -30,9 +30,31 @@ Local edge/backend tests (40) and backend workflow **35062107407** are green;
 Cloud Build **232e7ce4-d53e-4a26-9b83-dd05495fc486** and revision
 `valuepilot-argentina-consumer-edge-00003-8fq` are ready. This qualifies the
 deployed server/test-attestation path only. Real-device Play Integrity and
-Android networking remain unqualified; do not start M12.3 until that later
-milestone is separately authorized. See
+production Android networking remained unqualified at this M12.2 checkpoint;
+the separately authorized M12.3 foundation is recorded below. See
 [ARGENTINA_CONSUMER_EDGE_M12_2_QUALIFICATION.md](ARGENTINA_CONSUMER_EDGE_M12_2_QUALIFICATION.md).
+
+## Current M12.3 secure Android networking foundation
+
+The current candidate contains a deliberately narrow Android HTTPS edge
+adapter. `ValuePilotApplication` initializes Firebase and installs Play
+Integrity only in release, while the debug source set alone installs the
+Firebase debug provider. The transport obtains a normal cached/refreshable App
+Check token and places it only in `X-Firebase-AppCheck`; it never sends a
+token in a URL, stores it, logs it, or contacts the private M11 origin. The
+public edge host and the five already-qualified `/v1/*` routes are
+allow-listed. Request/response bytes, connect/read/total time, redirects,
+strict UTF-8, cancellation, and typed network/HTTP failures are bounded and
+covered by deterministic offline tests.
+
+`INTERNET` is now intentional for the future user-triggered edge route;
+`ACCESS_NETWORK_STATE` remains removed and cleartext remains disabled. No
+Home/Search live wiring, background sync, provider data, or Android account
+state was added. Local debug/release compile and focused transport tests pass.
+There is no connected Android device and the signed-in Play Console session is
+at developer-account signup, so Play Console project linkage and real Play
+Integrity attestation are not yet qualified. The exact manual handoff is in
+[ARGENTINA_ANDROID_SECURE_TRANSPORT_M12_3_QUALIFICATION.md](ARGENTINA_ANDROID_SECURE_TRANSPORT_M12_3_QUALIFICATION.md).
 
 ## Current M12.1 consumer-edge boundary checkpoint
 

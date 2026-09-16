@@ -1,5 +1,6 @@
 plugins {
     id("com.android.application")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -35,6 +36,9 @@ dependencies {
     implementation("com.google.android.material:material:1.13.0")
     implementation("com.google.mlkit:text-recognition:16.0.1")
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
+    releaseImplementation("com.google.firebase:firebase-appcheck-playintegrity")
+    debugImplementation("com.google.firebase:firebase-appcheck-debug")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")

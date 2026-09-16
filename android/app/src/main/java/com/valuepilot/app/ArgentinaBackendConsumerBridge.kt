@@ -6,12 +6,11 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Provider-neutral transport boundary used by the M12.0 qualification seam.
+ * Provider-neutral transport boundary used by the M12 qualification seam.
  *
- * The production Android app deliberately has no implementation of this
- * interface yet. Tests and local previews use [InMemoryArgentinaBackendTransport]
- * so the contract can be exercised without HTTP, credentials or a network
- * permission.
+ * Tests and local previews use [InMemoryArgentinaBackendTransport]. The
+ * production HTTPS implementation lives in its own application-edge file so
+ * this parser remains provider-neutral and easy to exercise without a network.
  */
 internal data class ArgentinaBackendTransportResponse(
     val statusCode: Int,
@@ -96,7 +95,7 @@ internal data class ArgentinaBackendShopTextPresentation(
     val home: ArgentinaBackendHomeProjection?
 )
 
-/** The only Home state produced by the M12.0 bridge. */
+/** The only Home state produced by the offline consumer bridge. */
 internal data class ArgentinaBackendHomeProjection(
     val releaseId: String,
     val releaseDate: String,
@@ -112,8 +111,8 @@ internal data class ArgentinaBackendHomeProjection(
  * This class parses untrusted transport responses and performs only display
  * mapping. It never ranks stores, recomputes totals, resolves products, or
  * creates a live transport. The shared-core planner remains authoritative for
- * its own production path; M12.0 does not run it a second time for a backend
- * decision.
+ * its own production path; this bridge does not run it a second time for a
+ * backend decision.
  */
 internal class ArgentinaBackendConsumerBridge(
     private val transport: ArgentinaBackendTransport,
@@ -231,18 +230,30 @@ internal class ArgentinaBackendConsumerBridge(
         val response =
             try {
                 transport.execute(endpoint, requestBody)
+            } catch (error: ArgentinaBackendTransportException) {
+                return ArgentinaBackendBridgeResult.Failure(
+                    error.failureCode,
+                    error.safeMessage
+                )
             } catch (error: Exception) {
                 return ArgentinaBackendBridgeResult.Failure(
                     ArgentinaBackendContract.FailureCode.HTTP_ERROR,
-                    "backend transport failed: ${error.message ?: "unknown transport error"}"
+                    "backend transport failed"
                 )
             }
 
         if (response.statusCode != HTTP_OK) {
             val code =
                 when (response.statusCode) {
+                    HTTP_BAD_REQUEST -> ArgentinaBackendContract.FailureCode.HTTP_BAD_REQUEST
+                    HTTP_UNAUTHORIZED -> ArgentinaBackendContract.FailureCode.UNAUTHORIZED
+                    HTTP_FORBIDDEN -> ArgentinaBackendContract.FailureCode.FORBIDDEN
+                    HTTP_NOT_FOUND -> ArgentinaBackendContract.FailureCode.NOT_FOUND
+                    HTTP_REQUEST_TIMEOUT -> ArgentinaBackendContract.FailureCode.TIMEOUT
                     HTTP_REQUEST_TOO_LARGE -> ArgentinaBackendContract.FailureCode.RESPONSE_TOO_LARGE
+                    HTTP_TOO_MANY_REQUESTS -> ArgentinaBackendContract.FailureCode.RATE_LIMITED
                     HTTP_SERVICE_UNAVAILABLE -> ArgentinaBackendContract.FailureCode.CURRENT_PRICE_UNAVAILABLE
+                    in HTTP_SERVER_ERROR..HTTP_SERVER_ERROR_LAST -> ArgentinaBackendContract.FailureCode.SERVER_ERROR
                     else -> ArgentinaBackendContract.FailureCode.HTTP_ERROR
                 }
             return ArgentinaBackendBridgeResult.Failure(code, "backend returned HTTP ${response.statusCode}")
@@ -293,8 +304,16 @@ internal class ArgentinaBackendConsumerBridge(
         const val SHOP_ENDPOINT = "/v1/shop"
 
         private const val HTTP_OK = 200
+        private const val HTTP_BAD_REQUEST = 400
+        private const val HTTP_UNAUTHORIZED = 401
+        private const val HTTP_FORBIDDEN = 403
+        private const val HTTP_NOT_FOUND = 404
+        private const val HTTP_REQUEST_TIMEOUT = 408
         private const val HTTP_REQUEST_TOO_LARGE = 413
+        private const val HTTP_TOO_MANY_REQUESTS = 429
         private const val HTTP_SERVICE_UNAVAILABLE = 503
+        private const val HTTP_SERVER_ERROR = 500
+        private const val HTTP_SERVER_ERROR_LAST = 599
         private const val MAX_REQUEST_BYTES = 16 * 1024
     }
 }

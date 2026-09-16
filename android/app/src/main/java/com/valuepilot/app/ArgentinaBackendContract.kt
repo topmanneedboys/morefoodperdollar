@@ -13,10 +13,10 @@ import org.json.JSONTokener
 /**
  * The versioned, read-only contract emitted by the qualified Argentina backend.
  *
- * M12.0 deliberately stops at this boundary.  There is no HTTP client here and
- * no Android networking permission is needed.  The parser is strict because a
- * response is untrusted input: values that can change shopping meaning are
- * rejected rather than guessed.
+ * The parser is strict because a response is untrusted input: values that can
+ * change shopping meaning are rejected rather than guessed.  M12.3 keeps the
+ * network implementation outside this contract and only adds typed transport
+ * outcomes at the application boundary.
  */
 object ArgentinaBackendContract {
     const val API_VERSION = "valuepilot-argentina-backend-http-v1"
@@ -76,13 +76,27 @@ object ArgentinaBackendContract {
 
     enum class FailureCode {
         REQUEST_TOO_LARGE,
+        RESPONSE_TOO_LARGE,
+        APP_CHECK_UNAVAILABLE,
+        CONFIGURATION_INVALID,
+        ROUTE_REJECTED,
+        NO_CONNECTIVITY,
+        TLS_FAILURE,
+        TIMEOUT,
+        CANCELLED,
+        NETWORK_ERROR,
+        HTTP_BAD_REQUEST,
+        UNAUTHORIZED,
+        FORBIDDEN,
+        NOT_FOUND,
+        RATE_LIMITED,
+        SERVER_ERROR,
         HTTP_ERROR,
         CONTRACT_INVALID,
         UNSUPPORTED_VERSION,
         RELEASE_MISMATCH,
         STALE_RELEASE,
-        CURRENT_PRICE_UNAVAILABLE,
-        RESPONSE_TOO_LARGE
+        CURRENT_PRICE_UNAVAILABLE
     }
 
     class ContractException(

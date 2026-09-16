@@ -100,14 +100,14 @@
 
     <string name="accessibility_disclosure_title">Before enabling the optional scanner</string>
 
-    <string name="accessibility_disclosure_body">ValuePilot uses Android Accessibility access only for its optional live-capture feature. It can read product or menu text in the app currently on screen and show the floating comparison panel. Off-screen collection and OCR remain user initiated. Parsing, ranking, the compact classifier and OCR run locally. This build has no INTERNET permission and does not upload screen contents, account credentials or shopping data.</string>
+    <string name="accessibility_disclosure_body">ValuePilot uses Android Accessibility access only for its optional live-capture feature. It can read product or menu text in the app currently on screen and show the floating comparison panel. Off-screen collection and OCR remain user initiated. Parsing, ranking, the compact classifier and OCR run locally. The secure edge foundation is not used by this scanner and does not upload screen contents, account credentials or shopping data.</string>
 
     <string name="cancel">Cancel</string>
     <string name="continue_label">Continue</string>
 
     <string name="privacy">Privacy</string>
 
-    <string name="privacy_body">Standalone comparison, deterministic parsing and exact value evaluation run on-device. This build has no INTERNET permission and does not send your product text, screen contents, credentials or shopping data to a server.</string>
+    <string name="privacy_body">Standalone comparison, deterministic parsing and exact value evaluation run on-device. The app has a bounded HTTPS edge foundation for a later user-triggered route, but it does not send your product text, screen contents, credentials or shopping data to a server.</string>
 
     <string name="sources_licences">Sources &amp; licences</string>
     <string name="sources_licences_title">Sources &amp; licences</string>
@@ -122,7 +122,7 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="data_status">Data status</string>
     <string name="data_status_title">ValuePilot data status</string>
 
-    <string name="accessibility_description">Automatically reads newly visible product and menu labels in the active app so ValuePilot can compare exact unit value and clearly labeled local estimates. It scrolls only when you explicitly choose off-screen collection; this build has no internet permission.</string>
+    <string name="accessibility_description">Automatically reads newly visible product and menu labels in the active app so ValuePilot can compare exact unit value and clearly labeled local estimates. It scrolls only when you explicitly choose off-screen collection; the scanner remains local and does not use the secure edge foundation.</string>
 
     <string name="how_to_use">How to use</string>
     <string name="how_to_body">Use ValuePilot standalone comparison for normal product comparison. Accessibility capture, off-screen collection and OCR remain optional experimental tools.</string>

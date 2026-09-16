@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <!-- A bundled OCR dependency declares this transitively. Remove it from the final APK. -->
-    <uses-permission
-        android:name="android.permission.INTERNET"
-        tools:node="remove" />
+    <!-- M12.3 secure edge transport. No private backend, credentials, or cleartext fallback. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- No connectivity probe is needed; keep this permission absent from the final APK. -->
     <uses-permission
         android:name="android.permission.ACCESS_NETWORK_STATE"
         tools:node="remove" />
@@ -21,6 +20,7 @@
         android:icon="@drawable/vp_bubble"
         android:theme="@style/Theme.ValuePilot"
         android:usesCleartextTraffic="false"
+        android:name=".ValuePilotApplication"
         android:supportsRtl="true">
         <activity
             android:name=".ComparisonActivity"

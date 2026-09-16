@@ -22,6 +22,6 @@ aapt dump badging app/build/outputs/apk/debug/app-debug.apk
 aapt dump permissions app/build/outputs/apk/debug/app-debug.apk
 ```
 
-The merged app declares neither INTERNET nor ACCESS_NETWORK_STATE. `local_ai_model.json` is packaged in assets, and `com.google.mlkit:text-recognition` supplies the bundled recognizer rather than a downloadable Play Services model.
+M12.3 adds the INTERNET permission only for a bounded, HTTPS-only public-edge foundation protected by Firebase App Check. The app still omits ACCESS_NETWORK_STATE, has no cleartext fallback, never contacts the private backend, and does not start background syncing. `local_ai_model.json` is packaged in assets, and `com.google.mlkit:text-recognition` supplies the bundled recognizer rather than a downloadable Play Services model.
 
 Automated fixtures cover 20/60/100/160/250/500 products. Physical Motorola Edge 2025 validation remains required; see the root state and performance documents.

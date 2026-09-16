@@ -264,12 +264,14 @@ jobs:
           apk='android/app/build/outputs/apk/debug/app-debug.apk'
           test -s "$apk"
           permissions="$($ANDROID_HOME/build-tools/36.0.0/aapt dump permissions "$apk")"
-          for forbidden in android.permission.INTERNET android.permission.ACCESS_NETWORK_STATE; do
-            if grep -q "$forbidden" <<<"$permissions"; then
-              echo "Unexpected $forbidden permission in APK" >&2
-              exit 1
-            fi
-          done
+          if ! grep -q 'android.permission.INTERNET' <<<"$permissions"; then
+            echo 'Expected intentional INTERNET permission is missing from the APK' >&2
+            exit 1
+          fi
+          if grep -q 'android.permission.ACCESS_NETWORK_STATE' <<<"$permissions"; then
+            echo 'Unexpected ACCESS_NETWORK_STATE permission in APK' >&2
+            exit 1
+          fi
 
       - name: Verify APK signature and single signer
         run: |

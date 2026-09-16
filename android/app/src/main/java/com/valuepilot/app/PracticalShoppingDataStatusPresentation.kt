@@ -85,7 +85,7 @@ internal data class PracticalShoppingDataStatusPresentation(
                 flyers =
                     "Not included. No flyer content is copied or treated as a current offer.",
                 connectivity =
-                    "Offline core: this Android build has no INTERNET or ACCESS_NETWORK_STATE permission and does not fetch remote data.",
+                    "Offline-first core: the app has a bounded HTTPS edge foundation for a later user-triggered route, but no background sync or private-backend access. ACCESS_NETWORK_STATE remains absent.",
                 demoData =
                     "Home and Search planner examples are clearly fictional sample data, not local retailer results."
             )

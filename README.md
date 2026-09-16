@@ -6,6 +6,13 @@ ValuePilot is a private, local-first value ranker for groceries and restaurant m
 
 The existing Android app now has a search-scoped incremental pipeline, a virtualized consumer bottom sheet, clean offer/name parsing, and fail-closed exact-product reopening. It is designed and regression-tested for 20–500 collected products. Physical Motorola Edge 2025 validation is still required before the Android milestone is declared complete; see [`CURRENT_STATE.md`](CURRENT_STATE.md), [`PERFORMANCE_BUDGETS.md`](PERFORMANCE_BUDGETS.md), [`DEVICE_VALIDATION.md`](DEVICE_VALIDATION.md), and [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md).
 
+M12.3 adds a separate, bounded HTTPS transport foundation for the already
+qualified public Argentina consumer edge. Firebase App Check is installed
+with Play Integrity in release and a debug-only provider in debug builds; the
+transport is not wired to Home/Search, does not sync in the background, and
+never contacts the private M11 service. See
+[`ARGENTINA_ANDROID_SECURE_TRANSPORT_M12_3_QUALIFICATION.md`](ARGENTINA_ANDROID_SECURE_TRANSPORT_M12_3_QUALIFICATION.md).
+
 ## What changed in v101
 
 - A compact on-device semantic model classifies 19 food/menu categories without an account, API key, or network request.
@@ -14,7 +21,7 @@ The existing Android app now has a search-scoped incremental pipeline, a virtual
 - Promotion-aware budgets use the actual minimum checkout spend for BOGO-percent, buy-X-get-Y, and N-for-$X deals.
 - Expanded mass, volume, count, currency, thousands/decimal, promotion, name, and Unicode handling.
 - Safer browser DOM rendering and Android overlay/window isolation.
-- One release workflow tests both browser targets and Android, lints them, verifies the APK has no network permissions, and emits checksums.
+- One release workflow tests both browser targets and Android, lints them, verifies the APK's intentional network-permission boundary, and emits checksums.
 
 The model never invents grams or overrides known facts. Exact price, mass, volume, count, calories, pizza area, and promotion math remain authoritative; AI outputs are bounded relative estimates.
 
@@ -55,7 +62,10 @@ The provided APK is an installable debug build for Android 6.0+ (API 23). Screen
 5. Tap the single floating **VP** bubble to open the bottom sheet. Use **Rescan** when needed; filters, member-price settings, off-screen collection, and OCR are under **Filters**.
 6. Tap a result to reopen that exact product when ValuePilot can reacquire it confidently. Ambiguous or stale matches are never clicked.
 
-Android deliberately declares neither `android.permission.INTERNET` nor `android.permission.ACCESS_NETWORK_STATE`. The bundled ML Kit recognizer and compact classifier both run on the device.
+Android intentionally declares `android.permission.INTERNET` only for the
+bounded HTTPS edge foundation and removes `android.permission.ACCESS_NETWORK_STATE`.
+The bundled ML Kit recognizer and compact classifier both run on the device;
+the current consumer UI remains local and offline-first.
 
 ## Development and verification
 
@@ -78,9 +88,12 @@ The GitHub workflow runs JVM tests, Android lint, builds the APK, inspects its f
 
 ## Privacy and platform limits
 
-- No account, remote AI service, API key, analytics, or backend.
+- No account, remote AI service, analytics, or server credential. Firebase's
+  checked-in client configuration contains public app identifiers only.
 - Browser code makes no outbound requests.
-- Android has no INTERNET or ACCESS_NETWORK_STATE permission.
+- Android has no `ACCESS_NETWORK_STATE` permission and no cleartext fallback;
+  its bounded App-Check-protected edge foundation is not used by the current
+  Home/Search UI.
 - Settings stay in browser storage or Android SharedPreferences.
 - OCR and classification run locally.
 - Accessibility collection is automatic for newly visible cards. Off-screen list traversal and OCR remain explicit advanced actions.

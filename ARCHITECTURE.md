@@ -101,4 +101,12 @@ If accessibility text is incomplete, the user can request a screenshot from adva
 
 ## Privacy boundaries
 
-The browser has no network code. Android's merged manifest removes INTERNET and ACCESS_NETWORK_STATE. There is no account, API key, telemetry SDK, server, remote model, or cross-store backend. Settings are stored locally; only newly visible cards scan automatically, while off-screen traversal and OCR are user initiated.
+The browser has no network code. M12.3 adds a separate, HTTPS-only Android
+edge transport protected by Firebase App Check; it is not wired to Home/Search,
+does not contact private M11, and does not run background sync. The merged
+manifest intentionally includes INTERNET for that future user-triggered route
+but removes ACCESS_NETWORK_STATE and disables cleartext. There is no account,
+telemetry SDK, server credential, remote model, or cross-store backend in the
+Android client. Settings remain local; only newly visible cards scan
+automatically, while off-screen traversal, OCR, and any future edge request
+remain user initiated.

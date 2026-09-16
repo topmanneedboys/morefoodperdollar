@@ -27,7 +27,8 @@ class PracticalShoppingDataStatusPresentationTest {
         assertTrue(presentation.currentOffers.contains("0 authorized current-offer records"))
         assertTrue(presentation.storeDirectory.contains("Not included"))
         assertTrue(presentation.flyers.contains("Not included"))
-        assertTrue(presentation.connectivity.contains("no INTERNET"))
+        assertTrue(presentation.connectivity.contains("bounded HTTPS edge foundation"))
+        assertTrue(presentation.connectivity.contains("ACCESS_NETWORK_STATE remains absent"))
         assertTrue(presentation.demoData.contains("fictional"))
         assertTrue(presentation.message.contains("Unknown prices stay unknown"))
     }
