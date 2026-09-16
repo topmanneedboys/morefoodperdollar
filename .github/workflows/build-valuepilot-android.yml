@@ -6,6 +6,7 @@ on:
     paths:
       - 'android/**'
       - 'backend/**'
+      - 'consumer_edge/**'
       - 'browser-extension/**'
       - 'tools/build_offline_catalog_snapshot.py'
       - 'tools/verify_offline_catalog_snapshot.py'
@@ -79,6 +80,7 @@ on:
     paths:
       - 'android/**'
       - 'backend/**'
+      - 'consumer_edge/**'
       - 'browser-extension/**'
       - 'tools/build_offline_catalog_snapshot.py'
       - 'tools/verify_offline_catalog_snapshot.py'

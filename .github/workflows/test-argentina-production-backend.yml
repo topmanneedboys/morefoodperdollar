@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - 'backend/**'
+      - 'consumer_edge/**'
       - 'tools/measure_argentina_production_backend.py'
       - 'tools/consumer_input_intelligence.py'
       - 'tools/build_argentina_input_vocabulary.py'
@@ -16,11 +17,13 @@ on:
       - 'tools/data/argentina_input_aliases.json'
       - 'tools/tests/test_consumer_input_intelligence.py'
       - 'ARGENTINA_CONSUMER_INPUT_INTELLIGENCE_QUALIFICATION.*'
+      - 'ARGENTINA_CONSUMER_EDGE_M12_1_QUALIFICATION.*'
       - 'ARGENTINA_PRODUCTION_BACKEND_QUALIFICATION.*'
       - '.github/workflows/test-argentina-production-backend.yml'
   pull_request:
     paths:
       - 'backend/**'
+      - 'consumer_edge/**'
       - 'tools/measure_argentina_production_backend.py'
       - 'tools/consumer_input_intelligence.py'
       - 'tools/build_argentina_input_vocabulary.py'
@@ -32,6 +35,7 @@ on:
       - 'tools/data/argentina_input_aliases.json'
       - 'tools/tests/test_consumer_input_intelligence.py'
       - 'ARGENTINA_CONSUMER_INPUT_INTELLIGENCE_QUALIFICATION.*'
+      - 'ARGENTINA_CONSUMER_EDGE_M12_1_QUALIFICATION.*'
       - 'ARGENTINA_PRODUCTION_BACKEND_QUALIFICATION.*'
       - '.github/workflows/test-argentina-production-backend.yml'
 
@@ -41,7 +45,7 @@ permissions:
 jobs:
   test-and-container:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -56,7 +60,7 @@ jobs:
 
       - name: Compile backend and bounded diagnostics
         run: |
-          python -m py_compile backend/*.py tools/measure_argentina_production_backend.py tools/consumer_input_intelligence.py tools/build_argentina_input_vocabulary.py tools/measure_argentina_consumer_input_intelligence.py tools/argentina_storage_retention.py tools/manage_argentina_storage_retention.py
+          python -m py_compile backend/*.py consumer_edge/*.py tools/measure_argentina_production_backend.py tools/consumer_input_intelligence.py tools/build_argentina_input_vocabulary.py tools/measure_argentina_consumer_input_intelligence.py tools/argentina_storage_retention.py tools/manage_argentina_storage_retention.py
           python -m unittest discover -s backend/tests -p 'test_*.py' -v
 
       - name: Run existing offline Python regression
@@ -64,6 +68,9 @@ jobs:
 
       - name: Build container
         run: docker build --file backend/Dockerfile --tag valuepilot-backend:test .
+
+      - name: Build consumer-edge container
+        run: docker build --file consumer_edge/Dockerfile --tag valuepilot-consumer-edge:test .
 
       - name: Smoke test health boundary
         shell: bash
