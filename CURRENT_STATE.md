@@ -29,7 +29,7 @@ an offline contract-only candidate checkpoint.
 
 The free-first Actions storage audit removed 50,016,944,050 bytes of
 disposable artifacts and deleted all 12 rebuildable caches. The final listing
-after the candidate run contains eight live artifacts totaling 230,725,538
+after the candidate run contains eight live artifacts totaling 230,725,526
 bytes; preserved release/provenance evidence remains identified in
 [GITHUB_ACTIONS_STORAGE_POLICY.md](GITHUB_ACTIONS_STORAGE_POLICY.md). Candidate
 release bundles expire after three days, browser/Android hand-off parts after
