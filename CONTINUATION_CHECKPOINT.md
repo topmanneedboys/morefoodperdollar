@@ -1,8 +1,27 @@
 # ValuePilot Continuation Checkpoint
 
-Updated: 2026-09-07
+Updated: 2026-09-16
 
-Branch: `work/valuepilot-android-milestone`
+Branch: `candidate/argentina-android-consumer-bridge-m12-v2`
+
+## Current M12.1 consumer-edge boundary checkpoint
+
+The current M12.1 candidate is code SHA
+`5e829251cc43653e42a8583c2acd2cb2e9c18fb6` (`Harden consumer edge
+content-length handling`) on top of `d2d3d2c27e10114460bc46b932e2b4f174a32e8e`.
+The separate `consumer_edge` package admits only the five consumer routes,
+requires HTTPS/App Check, applies explicit bounded request/response JSON,
+concurrency, timeout and rate policies, sanitises upstream failures, and
+fails closed until M12.2 supplies a separately verified private M11
+upstream. It contains no shopping/ranking/provider/release logic, credentials,
+Android networking or provider data. Local verification passed 17 edge tests,
+27 backend tests, and 197 tooling tests; exact-head backend workflow
+**35058092106** passed. Exact-head Android workflow **35058092151** passed its
+browser verification (**104672396676**), Android test/lint/build/privacy/
+signing verification (**104672396323**), and release-bundle assembly
+(**104674454452**); its milestone provenance proof was correctly skipped on the
+candidate branch.
+See [ARGENTINA_CONSUMER_EDGE_M12_1_QUALIFICATION.md](ARGENTINA_CONSUMER_EDGE_M12_1_QUALIFICATION.md).
 
 ## Current verified engineering head
 

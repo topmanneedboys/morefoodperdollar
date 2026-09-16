@@ -35,6 +35,32 @@ bytes; preserved release/provenance evidence remains identified in
 release bundles expire after three days, browser/Android hand-off parts after
 one day, and no Rust `target` directory or national provider data is uploaded.
 
+## Current M12.1 consumer-edge boundary candidate
+
+The current M12.1 implementation candidate is code SHA
+`5e829251cc43653e42a8583c2acd2cb2e9c18fb6` (`Harden consumer edge
+content-length handling`), building on `d2d3d2c27e10114460bc46b932e2b4f174a32e8e`.
+It adds a separate Python/FastAPI edge package with
+the five consumer routes only, HTTPS/proxy-scheme enforcement, Firebase App
+Check verification, strict method/content/query/body/JSON/response bounds,
+bounded concurrency and rate limiting, safe correlation/security headers,
+sanitised upstream failures, and an injected upstream seam. The default
+composition has no M11 upstream and fails closed; M12.2 private invocation,
+IAM/OIDC, and production deployment are not claimed.
+
+The edge contains no shopping, ranking, provider, release, acquisition,
+Android, or credential authority. Android remains offline with no `INTERNET`
+or `ACCESS_NETWORK_STATE` permission. Deterministic local coverage is 17 edge
+tests plus the existing 11 backend tests; the existing 197 tooling tests also
+pass. The qualification record is
+[ARGENTINA_CONSUMER_EDGE_M12_1_QUALIFICATION.md](ARGENTINA_CONSUMER_EDGE_M12_1_QUALIFICATION.md).
+The exact-head backend workflow **35058092106** passed, including both
+container builds. Exact-head Android workflow **35058092151** also passed its
+browser verification (**104672396676**), Android test/lint/build/privacy/
+signing verification (**104672396323**), and release-bundle assembly
+(**104674454452**). The candidate remains edge-only; M12.2 private invocation
+and production deployment are not qualified.
+
 ## Argentina backend qualification report checkpoint
 
 The existing Argentina Milestone 5 winner remains **128 logical partitions /
