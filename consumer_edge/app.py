@@ -1,9 +1,9 @@
-"""Production composition for the M12.1 consumer edge.
+"""Production composition for the M12.2 consumer edge.
 
-The edge is intentionally not wired to M11 here.  M12.2 will add a separate
-server-side identity/upstream adapter after its IAM and private-ingress gates
-are verified.  Until then, an unconfigured edge fails closed with a generic
-upstream-unavailable response.
+The edge uses a separately qualified server-side identity/upstream adapter to
+reach private M11.  A completely unconfigured local composition retains the
+fail-closed seam used by tests and development; partial or malformed
+production configuration fails startup rather than silently degrading.
 """
 
 from __future__ import annotations
@@ -59,11 +59,18 @@ def create_app(
             raise RuntimeError("VALUEPILOT_FIREBASE_PROJECT_ID is required")
         verifier = FirebaseAdminAppCheckVerifier(project_id, allowed_app_ids=_app_ids())
     if upstream is None:
-        if all(os.environ.get(name, "") for name in (
+        target_names = (
             "VALUEPILOT_M11_BASE_URL",
             "VALUEPILOT_M11_AUDIENCE",
             "VALUEPILOT_M11_ALLOWED_HOSTS",
-        )):
+        )
+        present = tuple(bool(os.environ.get(name, "")) for name in target_names)
+        if any(present) and not all(present):
+            raise CloudRunConfigurationError(
+                "VALUEPILOT_M11_BASE_URL, VALUEPILOT_M11_AUDIENCE, and "
+                "VALUEPILOT_M11_ALLOWED_HOSTS must be supplied together"
+            )
+        if all(present):
             try:
                 upstream = create_cloud_run_upstream_from_env(
                     max_response_bytes=config.max_response_bytes,
@@ -71,8 +78,7 @@ def create_app(
                 )
             except CloudRunConfigurationError:
                 # A malformed target must stop startup rather than become an
-                # arbitrary outbound proxy.  A completely absent target keeps
-                # the local/default composition's existing fail-closed seam.
+                # arbitrary outbound proxy.
                 raise
         else:
             upstream = ConfigurationRequiredUpstream()

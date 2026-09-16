@@ -8,6 +8,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from backend.consumer_edge import EdgeUpstreamResponse, create_consumer_edge_app
+from consumer_edge.app import create_app
 from consumer_edge.cloud_run import (
     CloudRunAuthenticationError,
     CloudRunConfigurationError,
@@ -221,6 +222,16 @@ class CloudRunUpstreamTests(unittest.TestCase):
         ):
             upstream = create_cloud_run_upstream_from_env()
             self.assertEqual(upstream.target.base_url, f"https://{host}")
+
+    def test_edge_rejects_partial_private_target_configuration_at_startup(self):
+        with patch.dict(
+            os.environ,
+            {
+                "VALUEPILOT_M11_BASE_URL": "https://valuepilot-argentina-sa-east1-m72bv57hrq-rj.a.run.app",
+            },
+            clear=True,
+        ), self.assertRaises(CloudRunConfigurationError):
+            create_app(verifier=object())
 
     def test_edge_maps_oidc_failure_to_sanitized_unavailable_without_fallback(self):
         client = TestClient(
