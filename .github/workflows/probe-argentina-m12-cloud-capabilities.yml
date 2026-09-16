@@ -1,0 +1,137 @@
+name: Probe Argentina M12 cloud capabilities
+
+on:
+  push:
+    branches:
+      - candidate/argentina-m12-cloud-capability-probe
+    paths:
+      - '.github/workflows/probe-argentina-m12-cloud-capabilities.yml'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: argentina-production
+    env:
+      GCP_PROJECT_ID: ${{ vars.VALUEPILOT_GCP_PROJECT_ID }}
+      WIF_PROVIDER: ${{ vars.VALUEPILOT_GCP_WIF_PROVIDER }}
+      RELEASE_SERVICE_ACCOUNT: ${{ vars.VALUEPILOT_GCP_RELEASE_SERVICE_ACCOUNT }}
+    steps:
+      - name: Validate non-secret cloud identity configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in GCP_PROJECT_ID WIF_PROVIDER RELEASE_SERVICE_ACCOUNT; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Required production variable ${name} is not configured."
+              exit 2
+            fi
+          done
+          echo "Cloud project variables are configured."
+
+      - id: auth
+        name: Authenticate read-only probe with existing GitHub OIDC
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.RELEASE_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          version: '>= 520.0.0'
+
+      - name: Probe existing cloud resources without mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="${RUNNER_TEMP}/m12-cloud-capabilities.txt"
+          : > "${report}"
+
+          record() {
+            printf '\n===== %s =====\n' "$1" | tee -a "${report}"
+          }
+
+          record "ACTIVE_IDENTITY"
+          gcloud auth list --filter=status:ACTIVE --format='value(account)' 2>&1 | tee -a "${report}" || true
+
+          record "CLOUD_RUN_SERVICES"
+          gcloud run services list \
+            --project "${GCP_PROJECT_ID}" \
+            --platform managed \
+            --format='table[no-heading](region,metadata.name,status.url)' \
+            2>&1 | tee -a "${report}" || true
+
+          for spec in \
+            'us-east4:valuepilot-argentina-us-east4' \
+            'southamerica-east1:valuepilot-argentina-sa-east1'; do
+            region="${spec%%:*}"
+            service="${spec#*:}"
+
+            record "SERVICE_${region}_${service}"
+            gcloud run services describe "${service}" \
+              --project "${GCP_PROJECT_ID}" \
+              --region "${region}" \
+              --format='yaml(metadata.name,status.url,spec.template.spec.serviceAccountName,status.traffic)' \
+              2>&1 | tee -a "${report}" || true
+
+            record "IAM_${region}_${service}"
+            gcloud run services get-iam-policy "${service}" \
+              --project "${GCP_PROJECT_ID}" \
+              --region "${region}" \
+              --format='yaml(bindings)' \
+              2>&1 | tee -a "${report}" || true
+          done
+
+          record "RELEASE_SERVICE_ACCOUNT"
+          gcloud iam service-accounts describe "${RELEASE_SERVICE_ACCOUNT}" \
+            --project "${GCP_PROJECT_ID}" \
+            --format='yaml(email,disabled,oauth2ClientId)' \
+            2>&1 | tee -a "${report}" || true
+
+          record "RELEVANT_ENABLED_APIS"
+          gcloud services list \
+            --project "${GCP_PROJECT_ID}" \
+            --enabled \
+            --filter='config.name:(run.googleapis.com OR iam.googleapis.com OR iamcredentials.googleapis.com OR sts.googleapis.com OR firebase.googleapis.com OR firebaseappcheck.googleapis.com OR identitytoolkit.googleapis.com OR playintegrity.googleapis.com)' \
+            --format='value(config.name)' \
+            2>&1 | sort | tee -a "${report}" || true
+
+          record "FIREBASE_PROJECT_READ"
+          access_token="$(gcloud auth print-access-token 2>/dev/null || true)"
+          if [[ -n "${access_token}" ]]; then
+            http_code="$(curl --silent --show-error \
+              --output "${RUNNER_TEMP}/firebase-project.json" \
+              --write-out '%{http_code}' \
+              --header "Authorization: Bearer ${access_token}" \
+              "https://firebase.googleapis.com/v1beta1/projects/${GCP_PROJECT_ID}" || true)"
+            echo "firebase_management_http=${http_code}" | tee -a "${report}"
+            if [[ "${http_code}" == "200" ]]; then
+              python - <<'PY' "${RUNNER_TEMP}/firebase-project.json" | tee -a "${report}"
+import json, sys
+value = json.load(open(sys.argv[1], encoding='utf-8'))
+print('projectId=' + str(value.get('projectId', '')))
+print('displayName=' + str(value.get('displayName', '')))
+print('resourcesLocationId=' + str(value.get('resources', {}).get('locationId', '')))
+PY
+            fi
+          else
+            echo 'firebase_management_http=NO_ACCESS_TOKEN' | tee -a "${report}"
+          fi
+
+          {
+            echo '## Argentina M12 cloud capability probe'
+            echo
+            echo 'Read-only probe completed. No cloud resource, IAM binding, API, secret, Firebase app, or Cloud Run service was created or modified.'
+            echo
+            echo '```text'
+            cat "${report}"
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
