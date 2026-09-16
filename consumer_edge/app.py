@@ -19,6 +19,7 @@ from backend.consumer_edge import (
     FirebaseAdminAppCheckVerifier,
     create_consumer_edge_app,
 )
+from .cloud_run import CloudRunConfigurationError, create_cloud_run_upstream_from_env
 
 
 class ConfigurationRequiredUpstream:
@@ -58,7 +59,23 @@ def create_app(
             raise RuntimeError("VALUEPILOT_FIREBASE_PROJECT_ID is required")
         verifier = FirebaseAdminAppCheckVerifier(project_id, allowed_app_ids=_app_ids())
     if upstream is None:
-        upstream = ConfigurationRequiredUpstream()
+        if all(os.environ.get(name, "") for name in (
+            "VALUEPILOT_M11_BASE_URL",
+            "VALUEPILOT_M11_AUDIENCE",
+            "VALUEPILOT_M11_ALLOWED_HOSTS",
+        )):
+            try:
+                upstream = create_cloud_run_upstream_from_env(
+                    max_response_bytes=config.max_response_bytes,
+                    timeout_seconds=config.upstream_timeout_seconds,
+                )
+            except CloudRunConfigurationError:
+                # A malformed target must stop startup rather than become an
+                # arbitrary outbound proxy.  A completely absent target keeps
+                # the local/default composition's existing fail-closed seam.
+                raise
+        else:
+            upstream = ConfigurationRequiredUpstream()
     return create_consumer_edge_app(verifier=verifier, upstream=upstream, config=config)
 
 
