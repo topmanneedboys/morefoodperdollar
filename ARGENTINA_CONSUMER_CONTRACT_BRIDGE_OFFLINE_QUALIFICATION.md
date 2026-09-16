@@ -1,6 +1,6 @@
 # Argentina consumer contract bridge (M12.0)
 
-Status: `CANDIDATE_PENDING_VERIFICATION`
+Status: `QUALIFIED_FOR_OFFLINE_CONSUMER_CONTRACT_ONLY`
 
 This bounded milestone adds the offline Android boundary for the already
 qualified M11 Argentina backend contract. It does not activate Android
@@ -55,8 +55,15 @@ offer evidence, response bounds, release mismatch, and stale-generation
 ordering. Fixtures are generated in memory and require no network, credentials,
 or private release files.
 
-Qualification is complete only after the repository's full Android/shared-core
-tests, lint, debug/release builds, manifest/privacy/signer checks, Python
-discovery tests, browser checks, and exact-head GitHub Actions verification are
-green. M12.0 qualification does not mean live Android networking, cloud edge
-qualification, or production launch readiness.
+Qualification completed at candidate HEAD
+`48b1d747125d656b3cf0ec77603820c1390e7aae`. Local verification passed 405
+shared-core tests, 1,630 Android unit tests, 11 backend tests, 197 tooling
+tests, and 30 browser tests, with zero failures or skips; Android lint, debug
+and release assembly, APK privacy, and one-signer verification also passed.
+Exact-head GitHub Actions run [35053280023](https://github.com/topmanneedboys/morefoodperdollar/actions/runs/35053280023)
+passed Android job 104658056547 (including privacy/signature), browser job
+104658056705, and release-bundle job 104659354704. The initial run
+35053203937 failed before tests because the hosted SDK rejected the retired
+`tools` package; the workflow now requests only `platform-tools` and the fixed
+run is the qualification evidence. M12.0 qualification does not mean live
+Android networking, cloud edge qualification, or production launch readiness.

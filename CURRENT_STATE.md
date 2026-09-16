@@ -1,10 +1,39 @@
 # Current state
 
-Updated: 2026-09-08
+Updated: 2026-09-16
 
-Branch: `work/valuepilot-android-milestone`
+Branch: `candidate/argentina-android-consumer-bridge-m12-v2`
 
 Android version: 101.1.0 (10101)
+
+## Current M12.0 candidate checkpoint
+
+The current offline Argentina consumer-contract bridge candidate is
+`48b1d747125d656b3cf0ec77603820c1390e7aae` (`Fix Android SDK setup package
+list`). M12.0 adds a bounded, provider-neutral fake transport seam and strict
+parsers for the already-qualified M11 `/v1/status`, `/v1/search`,
+`/v1/interpret`, `/v1/shop-text`, and `/v1/shop` contracts. It maps only
+validated identity/input/decision evidence into the existing demo-free Home
+state; it does not rerun the shared planner, add Android networking, bundle
+SEPA data, claim inventory, or expose a two-store result as one store. The
+qualification report is
+[ARGENTINA_CONSUMER_CONTRACT_BRIDGE_OFFLINE_QUALIFICATION.md](ARGENTINA_CONSUMER_CONTRACT_BRIDGE_OFFLINE_QUALIFICATION.md).
+
+Local verification passed 405 shared-core tests, 1,630 Android unit tests, 11
+backend tests, 197 tooling tests, and 30 browser tests with zero failures or
+skips, plus Android lint, debug/release assembly, APK privacy and one-signer
+checks. Exact-head GitHub Actions run [35053280023](https://github.com/topmanneedboys/morefoodperdollar/actions/runs/35053280023)
+passed Android job 104658056547, browser job 104658056705, and release-bundle
+job 104659354704. The production milestone branch remains unchanged; this is
+an offline contract-only candidate checkpoint.
+
+The free-first Actions storage audit removed 50,016,944,050 bytes of
+disposable artifacts and deleted all 12 rebuildable caches. The final listing
+after the candidate run contains eight live artifacts totaling 230,725,538
+bytes; preserved release/provenance evidence remains identified in
+[GITHUB_ACTIONS_STORAGE_POLICY.md](GITHUB_ACTIONS_STORAGE_POLICY.md). Candidate
+release bundles expire after three days, browser/Android hand-off parts after
+one day, and no Rust `target` directory or national provider data is uploaded.
 
 ## Argentina backend qualification report checkpoint
 
