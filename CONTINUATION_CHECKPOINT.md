@@ -52,11 +52,12 @@ covered by deterministic offline tests.
 Home/Search live wiring, background sync, provider data, or Android account
 state was added. Local debug/release compile and focused transport tests pass.
 The Firebase project is active, Play Integrity is linked to it, the Play
-Internal release `10101` is active for the trusted tester list, and Firebase
+Internal release `10101` remains active for the trusted tester list, and Firebase
 App Check is registered with Play Integrity (PLAY_RECOGNIZED and LICENSED
-required; one-hour TTL). There is no connected Android device, so real Play
-Integrity attestation and a live release APK request are not yet qualified.
-The exact manual handoff is in
+required; one-hour TTL). The final local `10102 / 101.1.1` signed AAB is ready
+for the next Internal-testing upload. There is no connected Android device, so
+real Play Integrity attestation and a live release APK request are not yet
+qualified. The exact manual handoff is in
 [ARGENTINA_ANDROID_SECURE_TRANSPORT_M12_3_QUALIFICATION.md](ARGENTINA_ANDROID_SECURE_TRANSPORT_M12_3_QUALIFICATION.md).
 
 ## Current M12.1 consumer-edge boundary checkpoint

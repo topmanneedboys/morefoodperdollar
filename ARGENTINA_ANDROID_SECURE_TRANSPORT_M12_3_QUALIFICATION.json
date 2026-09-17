@@ -1,11 +1,11 @@
 {
-  "schemaVersion": "valuepilot-argentina-android-secure-transport-qualification-v2",
-  "status": "PLAY_INTERNAL_TESTING_READY_NOT_DEVICE_QUALIFIED",
+  "schemaVersion": "valuepilot-argentina-android-secure-transport-qualification-v3",
+  "status": "FINAL_PLAY_TEST_BUILD_READY_NOT_DEVICE_QUALIFIED",
   "updated": "2026-09-17",
   "repository": "topmanneedboys/morefoodperdollar",
   "branch": "candidate/argentina-android-consumer-bridge-m12-v2",
-  "checkpointHead": "756c7c815b5e404e72ccadc3d1f12840543f158c",
-  "codeHead": "f0cd928",
+  "checkpointHead": "5cf09af3a4703842978f0ee0f3c250a881f63575",
+  "codeHead": "5cf09af3a4703842978f0ee0f3c250a881f63575",
   "firebase": {
     "projectId": "valuepilot-argentina",
     "projectNumber": "17260882200",
@@ -62,7 +62,7 @@
     "edgeUnknownRoute": {"status": 404, "body": "NOT_FOUND"},
     "privateM11Direct": {"status": 403, "body": "Forbidden"},
     "validPlayBackedRequest": "NOT_REMEASURED_PHYSICAL_DEVICE_REQUIRED",
-    "fullRepositoryCi": "PENDING_DOC_CHECKPOINT"
+    "fullRepositoryCi": "PENDING_EXACT_HEAD_PUSH"
   },
   "play": {
     "app": "ValuePilot",
@@ -86,6 +86,21 @@
         "PLAY_RECOGNIZED": true,
         "MEETS_DEVICE_INTEGRITY": true
       }
+    }
+  },
+  "candidateBuild": {
+    "versionCode": 10102,
+    "versionName": "101.1.1",
+    "packageName": "com.valuepilot.app",
+    "unsignedAab": "android/app/build/outputs/bundle/release/app-release.aab",
+    "signedAab": "android/app/build/outputs/bundle/release/app-release-play-upload-signed-10102.aab",
+    "signedAabSha256": "3B9526F5A5F4AEB702E6FBA0D375E5C97CD0FDCE8FF5D7765459AB4AFADD2F3F",
+    "signedAabVerified": true,
+    "probe": {
+      "releaseBuildConfig": true,
+      "debugBuildConfig": false,
+      "oneStatusRequestPerProcess": true,
+      "safeLogOnly": true
     }
   },
   "security": {

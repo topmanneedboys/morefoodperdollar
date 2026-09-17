@@ -4,7 +4,7 @@ Updated: 2026-09-17
 
 Branch: `candidate/argentina-android-consumer-bridge-m12-v2`
 
-Android version: 101.1.0 (10101)
+Android version: 101.1.1 (10102 final M12.3 Play-test candidate)
 
 ## Current M12.2 public consumer-edge checkpoint
 
@@ -46,7 +46,10 @@ M12.2 checkpoint; the separate M12.3 foundation is recorded below.
 ## Current M12.3 secure Android networking foundation
 
 M12.3 is implemented on this candidate as a narrow Android edge-transport
-foundation. The authoritative Firebase Android configuration is checked in
+foundation, and the final local Play-test candidate is now version `10102`
+(`101.1.1`). Its release-only qualification probe makes exactly one bounded
+`/v1/status` request per process and logs only a safe status or typed failure;
+debug builds cannot enable it. The authoritative Firebase Android configuration is checked in
 for `valuepilot-argentina` / `com.valuepilot.app`; Application startup installs
 Play Integrity in release builds and the Firebase debug provider only in
 debug/test builds. A bounded `HttpsURLConnection` adapter can call only the
@@ -63,10 +66,11 @@ debug provider selection is source-set isolated. Deterministic JVM tests cover
 headers, limits, timeout/cancellation, host/route allow-lists, typed status
 mapping, Firebase config provenance, and APK-boundary declarations. The
 Firebase project is active, Play Integrity is linked to it, the Play Internal
-release `10101` is active for the trusted tester list, and Firebase App Check
+release `10101` remains active for the trusted tester list, Firebase App Check
 is registered with Play Integrity (PLAY_RECOGNIZED and LICENSED required; one
-hour TTL). No physical device is connected, so real Play attestation and a
-release APK request remain unqualified. See
+hour TTL). The signed 10102 AAB is ready for the next Internal-testing upload.
+No physical device is connected, so real Play attestation and a release APK
+request remain unqualified. See
 [ARGENTINA_ANDROID_SECURE_TRANSPORT_M12_3_QUALIFICATION.md](ARGENTINA_ANDROID_SECURE_TRANSPORT_M12_3_QUALIFICATION.md).
 
 ## Current M12.0 candidate checkpoint

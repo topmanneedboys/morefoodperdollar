@@ -4,21 +4,25 @@ Updated: 2026-09-17
 
 ## Qualification label
 
-`PLAY_INTERNAL_TESTING_READY_NOT_DEVICE_QUALIFIED`
+`FINAL_PLAY_TEST_BUILD_READY_NOT_DEVICE_QUALIFIED`
 
 This checkpoint qualifies the Android code-level secure-networking foundation,
-the accepted and active Google Play Internal testing release, the Firebase
-Play Integrity registration, and the deployed edge's negative security
-boundary. It does not qualify a real Play Integrity attestation or a valid
-Play-backed release request because no Android device is connected. M12.4/live
-Search remains out of scope.
+the final local 10102/1.1.1 Play-test candidate, the accepted and active
+Google Play Internal testing release, the Firebase Play Integrity
+registration, and the deployed edge's negative security boundary. It does
+not qualify a real Play Integrity attestation or a valid Play-backed release
+request because no Android device is connected. M12.4/live Search remains out
+of scope.
 
 ## Repository and Firebase identity
 
 - Repository: `topmanneedboys/morefoodperdollar`
 - Branch: `candidate/argentina-android-consumer-bridge-m12-v2`
-- Current checkpoint head: `756c7c815b5e404e72ccadc3d1f12840543f158c`
-- M12.3 code head: `f0cd928` (`Implement M12.3 secure Android edge transport`)
+- Current checkpoint head: `5cf09af3a4703842978f0ee0f3c250a881f63575`
+  (`Bound M12.3 qualification probe diagnostics`)
+- M12.3 implementation heads: `f0cd928` (transport foundation), `ea3cded`
+  (10102 qualification probe), and `5cf09af3a4703842978f0ee0f3c250a881f63575`
+  (bounded diagnostic hardening).
 - Firebase project: `valuepilot-argentina` (ACTIVE, project number `17260882200`)
 - Android app: `ValuePilot Android`, package `com.valuepilot.app`
 - Firebase App ID: `1:17260882200:android:446eec76e5f1a175f2566d`
@@ -37,6 +41,14 @@ Search remains out of scope.
 - Play artifact: `10101.aab`, API levels `23+`, target SDK `36`.
 - Internal tester list: `ValuePilot M12.3 Internal Trusted`, one account;
   opt-in URL: `https://play.google.com/apps/internaltest/4701231628553906260`.
+- Final local Play-test candidate: `10102 / 1.1.1`; unsigned source bundle
+  `android/app/build/outputs/bundle/release/app-release.aab` and separate
+  signed upload bundle
+  `android/app/build/outputs/bundle/release/app-release-play-upload-signed-10102.aab`.
+- Signed 10102 upload bundle SHA-256:
+  `3B9526F5A5F4AEB702E6FBA0D375E5C97CD0FDCE8FF5D7765459AB4AFADD2F3F`.
+- The signed 10102 bundle is ready for the next Internal-testing upload; it
+  has not been uploaded or promoted here.
 - Local upload certificate SHA-256: `A0:B6:5D:8A:5A:F9:44:9E:76:6F:05:39:6F:E1:78:20:D5:2F:26:7C:E9:D5:8A:B0:C2:F6:CD:E4:DC:B8:52:DA`.
 - Google Play app-signing certificate SHA-256 (read from Play's generated
   universal APK): `74:41:17:32:6B:67:E8:57:FD:24:BF:4D:AB:57:10:3A:CA:1A:89:56:44:67:55:5B:14:5D:F3:C2:8C:BE:31:82`.
@@ -110,16 +122,30 @@ returned `401`, an unknown edge route returned `404 {"error":"NOT_FOUND"}`,
 and direct private M11 `/v1/status` returned `403 Forbidden`. No valid Play
 token was manufactured or substituted.
 
+The final local release verification completed successfully: 405 shared-core
+tests and 1,652 Android unit tests passed with zero failures or skips; debug
+and release lint, debug/release APK assembly, and release AAB compilation
+passed. The release APK manifest reports package `com.valuepilot.app`,
+versionCode `10102`, versionName `101.1.1`, min API 23 and target SDK 36; it
+contains `INTERNET` and optional `CAMERA`, omits `ACCESS_NETWORK_STATE`, and
+keeps cleartext disabled. Release BuildConfig enables the probe while debug
+BuildConfig disables it. The signed AAB reports the preserved upload
+certificate above and `jarsigner` verification passed. The probe logs only a
+bounded `M12_3_STATUS=<100..599>` or typed failure code and has deterministic
+coverage for response-body, exception-detail and out-of-range-status secrecy.
+
 ## Remaining qualification boundary
 
-The remaining boundary is physical-device proof. `adb devices -l` currently
-shows no connected device, so there is no valid Play-backed App Check token or
-release transport `200` to record. The one consolidated user checkpoint is:
+The remaining boundary is Play upload plus physical-device proof. `adb devices
+-l` currently shows no connected device, so there is no valid Play-backed App
+Check token or release transport `200` to record. The one consolidated user
+checkpoint is:
 
-1. Open the opt-in URL above on the Google account used by Play Store.
-2. Join the internal test and install/update `ValuePilot` through Google Play.
-3. Launch the Play-installed app; connect/authorize USB only if device logs or
-   the final bounded transport smoke are wanted.
+1. Upload the signed 10102 AAB above to the existing Internal-testing track.
+2. Open the opt-in URL above on the Google account used by Play Store, accept
+   the invite, and install/update `ValuePilot` through Google Play.
+3. Launch the Play-installed app; connect/authorize USB so the final bounded
+   transport smoke can capture the safe probe result.
 
 After that checkpoint, verify the release provider obtains a real Play Integrity
 App Check token and that edge `/v1/status` returns `200`, while preserving the
