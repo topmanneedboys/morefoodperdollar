@@ -1,10 +1,10 @@
 {
-  "schemaVersion": "valuepilot-argentina-android-secure-transport-qualification-v1",
-  "status": "IMPLEMENTED_TESTED_NOT_PLAY_QUALIFIED",
-  "updated": "2026-09-16",
+  "schemaVersion": "valuepilot-argentina-android-secure-transport-qualification-v2",
+  "status": "PLAY_INTERNAL_TESTING_READY_NOT_DEVICE_QUALIFIED",
+  "updated": "2026-09-17",
   "repository": "topmanneedboys/morefoodperdollar",
   "branch": "candidate/argentina-android-consumer-bridge-m12-v2",
-  "startingHead": "75fefc824730b57e71c68729fdc667894994b7b5",
+  "checkpointHead": "756c7c815b5e404e72ccadc3d1f12840543f158c",
   "codeHead": "f0cd928",
   "firebase": {
     "projectId": "valuepilot-argentina",
@@ -12,10 +12,24 @@
     "androidAppId": "1:17260882200:android:446eec76e5f1a175f2566d",
     "packageName": "com.valuepilot.app",
     "appCheckApiEnabled": true,
-    "playIntegrityApiEnabled": false,
+    "playIntegrityApiEnabled": true,
     "productionProviderInstalledInReleaseSource": true,
     "debugProviderInstalledInDebugSource": true,
-    "debugTokenCommitted": false
+    "debugTokenCommitted": false,
+    "registeredSha256": [
+      "0f31bb4d297d70d1d0830cecd74a2e26a08dd50a3337d00b2d5e33ba23240638",
+      "744117326b67e857fd24bf4dab57103aca1a89564467555b145df3c28cbe3182"
+    ],
+    "appCheck": {
+      "registered": true,
+      "provider": "PLAY_INTEGRITY",
+      "ttlHours": 1,
+      "policy": {
+        "playRecognizedRequired": true,
+        "licensedRequired": true,
+        "minimumDeviceIntegrity": "NO_EXPLICIT_CHECK"
+      }
+    }
   },
   "android": {
     "internetPermission": true,
@@ -40,8 +54,53 @@
     "debugCompile": true,
     "releaseCompile": true,
     "physicalDeviceSmoke": false,
-    "playConsoleLinkage": false,
-    "fullRepositoryCi": "PENDING_EXACT_HEAD_RUN"
+    "playConsoleLinkage": true,
+    "internalReleaseActive": true,
+    "firebaseAppCheckRegistered": true,
+    "edgeNoAppCheck": {"status": 401, "body": "UNAUTHENTICATED"},
+    "edgeInvalidAppCheck": {"status": 401, "body": "UNAUTHENTICATED"},
+    "edgeUnknownRoute": {"status": 404, "body": "NOT_FOUND"},
+    "privateM11Direct": {"status": 403, "body": "Forbidden"},
+    "validPlayBackedRequest": "NOT_REMEASURED_PHYSICAL_DEVICE_REQUIRED",
+    "fullRepositoryCi": "PENDING_DOC_CHECKPOINT"
   },
-  "manualAction": "In Google Play Console, open or create the exact package com.valuepilot.app, then Release -> App integrity -> Play Integrity API -> Link Cloud project -> valuepilot-argentina."
+  "play": {
+    "app": "ValuePilot",
+    "packageName": "com.valuepilot.app",
+    "internalTrackId": "4701231628553906260",
+    "releaseName": "ValuePilot 101.1.0 M12.3 Internal",
+    "status": "AVAILABLE_TO_INTERNAL_TESTERS_ACTIVE_FULL_ROLLOUT",
+    "versionCode": 10101,
+    "versionName": "101.1.0",
+    "minApi": 23,
+    "targetSdk": 36,
+    "artifactId": "4860231208460438295",
+    "optInUrl": "https://play.google.com/apps/internaltest/4701231628553906260",
+    "uploadCertificateSha256": "A0:B6:5D:8A:5A:F9:44:9E:76:6F:05:39:6F:E1:78:20:D5:2F:26:7C:E9:D5:8A:B0:C2:F6:CD:E4:DC:B8:52:DA",
+    "appSigningCertificateSha256": "74:41:17:32:6B:67:E8:57:FD:24:BF:4D:AB:57:10:3A:CA:1A:89:56:44:67:55:5B:14:5D:F3:C2:8C:BE:31:82",
+    "integrityApi": {
+      "linkedProject": "valuepilot-argentina",
+      "projectNumber": "17260882200",
+      "responses": {
+        "LICENSED": true,
+        "PLAY_RECOGNIZED": true,
+        "MEETS_DEVICE_INTEGRITY": true
+      }
+    }
+  },
+  "security": {
+    "m11PrivateIam": true,
+    "staticCredentialsInClient": false,
+    "tokenLoggingOrPersistence": false,
+    "debugProviderInRelease": false,
+    "cleartextTraffic": false,
+    "accessNetworkState": false
+  },
+  "qualificationBoundary": {
+    "deviceModel": "Motorola Edge 2025",
+    "adbAttached": false,
+    "status": "WAITING_FOR_PLAY_INSTALLED_PHYSICAL_DEVICE",
+    "next": "Install through internal-test opt-in URL, then run real Play App Check smoke"
+  },
+  "m12_4": "NOT_STARTED"
 }

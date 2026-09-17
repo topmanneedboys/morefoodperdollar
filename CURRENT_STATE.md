@@ -1,6 +1,6 @@
 # Current state
 
-Updated: 2026-09-16
+Updated: 2026-09-17
 
 Branch: `candidate/argentina-android-consumer-bridge-m12-v2`
 
@@ -61,9 +61,11 @@ The manifest intentionally adds `INTERNET` for this future user-triggered
 edge route while continuing to remove `ACCESS_NETWORK_STATE`; release and
 debug provider selection is source-set isolated. Deterministic JVM tests cover
 headers, limits, timeout/cancellation, host/route allow-lists, typed status
-mapping, Firebase config provenance, and APK-boundary declarations. No
-physical device is connected and Play Console has no developer account/app
-linkage in the available session, so Play Integrity attestation and a live
+mapping, Firebase config provenance, and APK-boundary declarations. The
+Firebase project is active, Play Integrity is linked to it, the Play Internal
+release `10101` is active for the trusted tester list, and Firebase App Check
+is registered with Play Integrity (PLAY_RECOGNIZED and LICENSED required; one
+hour TTL). No physical device is connected, so real Play attestation and a
 release APK request remain unqualified. See
 [ARGENTINA_ANDROID_SECURE_TRANSPORT_M12_3_QUALIFICATION.md](ARGENTINA_ANDROID_SECURE_TRANSPORT_M12_3_QUALIFICATION.md).
 

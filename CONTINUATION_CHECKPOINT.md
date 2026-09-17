@@ -1,6 +1,6 @@
 # ValuePilot Continuation Checkpoint
 
-Updated: 2026-09-16
+Updated: 2026-09-17
 
 Branch: `candidate/argentina-android-consumer-bridge-m12-v2`
 
@@ -51,9 +51,12 @@ covered by deterministic offline tests.
 `ACCESS_NETWORK_STATE` remains removed and cleartext remains disabled. No
 Home/Search live wiring, background sync, provider data, or Android account
 state was added. Local debug/release compile and focused transport tests pass.
-There is no connected Android device and the signed-in Play Console session is
-at developer-account signup, so Play Console project linkage and real Play
-Integrity attestation are not yet qualified. The exact manual handoff is in
+The Firebase project is active, Play Integrity is linked to it, the Play
+Internal release `10101` is active for the trusted tester list, and Firebase
+App Check is registered with Play Integrity (PLAY_RECOGNIZED and LICENSED
+required; one-hour TTL). There is no connected Android device, so real Play
+Integrity attestation and a live release APK request are not yet qualified.
+The exact manual handoff is in
 [ARGENTINA_ANDROID_SECURE_TRANSPORT_M12_3_QUALIFICATION.md](ARGENTINA_ANDROID_SECURE_TRANSPORT_M12_3_QUALIFICATION.md).
 
 ## Current M12.1 consumer-edge boundary checkpoint
