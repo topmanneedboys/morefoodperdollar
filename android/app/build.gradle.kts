@@ -11,19 +11,24 @@ android {
         applicationId = "com.valuepilot.app"
         minSdk = 23
         targetSdk = 36
-        versionCode = 10101
-        versionName = "101.1.0"
+        versionCode = 10102
+        versionName = "101.1.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 
     buildTypes {
-        release {
+        getByName("debug") {
+            buildConfigField("boolean", "M12_3_QUALIFICATION_PROBE", "false")
+        }
+        getByName("release") {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            buildConfigField("boolean", "M12_3_QUALIFICATION_PROBE", "true")
         }
     }
 }
