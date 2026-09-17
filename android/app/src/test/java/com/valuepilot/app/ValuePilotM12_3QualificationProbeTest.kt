@@ -60,4 +60,21 @@ class ValuePilotM12_3QualificationProbeTest {
         assertEquals("M12_3_FAILURE=UNEXPECTED", line)
         assertFalse(line.contains("token-or-server-detail-must-not-be-logged"))
     }
+
+    @Test
+    fun `out of range status is reduced to a fixed safe code`() {
+        val line =
+            ValuePilotM12_3QualificationProbe.qualificationLogLine {
+                ArgentinaBackendTransport { _, _ ->
+                    ArgentinaBackendTransportResponse(
+                        statusCode = Int.MAX_VALUE,
+                        body = "response-body-must-not-be-logged"
+                    )
+                }
+            }
+
+        assertEquals("M12_3_FAILURE=UNEXPECTED", line)
+        assertFalse(line.contains("2147483647"))
+        assertFalse(line.contains("response-body-must-not-be-logged"))
+    }
 }

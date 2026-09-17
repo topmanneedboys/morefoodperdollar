@@ -48,7 +48,10 @@ internal object ValuePilotM12_3QualificationProbe {
                     ArgentinaBackendConsumerBridge.STATUS_ENDPOINT,
                     null
                 )
-            "M12_3_STATUS=${response.statusCode}"
+            response.statusCode
+                .takeIf { it in 100..599 }
+                ?.let { "M12_3_STATUS=$it" }
+                ?: "M12_3_FAILURE=UNEXPECTED"
         } catch (error: ArgentinaBackendTransportException) {
             "M12_3_FAILURE=${error.error.name}"
         } catch (_: Exception) {
