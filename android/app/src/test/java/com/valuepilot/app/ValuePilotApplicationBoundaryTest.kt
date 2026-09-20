@@ -13,7 +13,7 @@ class ValuePilotApplicationBoundaryTest {
         assertTrue(source.contains("ValuePilotFirebaseRuntime.initialize(this)"))
         assertFalse(source.contains("startIfEligible"))
         assertTrue(gradle.contains("versionCode = 10103"))
-        assertTrue(gradle.contains("versionName = \"101.1.2\""))
+        assertTrue(gradle.contains("versionName = \"1.1.2\""))
         assertTrue(gradle.contains("buildConfigField(\"boolean\", \"M12_3_QUALIFICATION_PROBE\", \"false\")"))
     }
 

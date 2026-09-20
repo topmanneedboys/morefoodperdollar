@@ -104,7 +104,7 @@ completed successfully and produced the ignored local unsigned artifact:
 `android/app/build/outputs/bundle/release/app-release.aab`
 
 The corresponding unsigned release APK reports package `com.valuepilot.app`,
-versionCode `10103`, versionName `101.1.2`, target SDK 36, and exactly the
+versionCode `10103`, versionName `1.1.2`, target SDK 36, and exactly the
 intentional `INTERNET` and optional `CAMERA` permissions. It has no
 `ACCESS_NETWORK_STATE` or location permission and has cleartext disabled. The
 candidate is not signed for Play here because the existing upload keystore and
