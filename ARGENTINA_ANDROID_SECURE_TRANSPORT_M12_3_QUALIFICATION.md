@@ -1,25 +1,23 @@
 # ValuePilot Argentina M12.3 — Android secure transport qualification
 
-Updated: 2026-09-17
+Updated: 2026-09-19
 
 ## Qualification label
 
-`FINAL_PLAY_TEST_BUILD_READY_NOT_DEVICE_QUALIFIED`
+`ARGENTINA_ANDROID_SECURE_TRANSPORT_M12_3_QUALIFIED`
 
-This checkpoint qualifies the Android code-level secure-networking foundation,
-the final local 10102/1.1.1 Play-test candidate, the accepted and active
-Google Play Internal testing release, the Firebase Play Integrity
-registration, and the deployed edge's negative security boundary. It does
-not qualify a real Play Integrity attestation or a valid Play-backed release
-request because no Android device is connected. M12.4/live Search remains out
-of scope.
+This checkpoint qualifies the real Google Play-installed 10102/1.1.1 Android
+release on a Motorola Edge 2025. Play Integrity requested a token for cloud
+project `17260882200`, Google Play completed `requestIntegrityToken`, and the
+release-only probe reached the public Consumer Edge with Firebase App Check
+and the existing authenticated private M11 path. M12.4 remains not started.
 
 ## Repository and Firebase identity
 
 - Repository: `topmanneedboys/morefoodperdollar`
 - Branch: `candidate/argentina-android-consumer-bridge-m12-v2`
-- Current checkpoint head: `5cf09af3a4703842978f0ee0f3c250a881f63575`
-  (`Bound M12.3 qualification probe diagnostics`)
+- Current checkpoint head before this documentation closure:
+  `1573a853baffa65260aa3c30b7989cae4a66dd63`
 - M12.3 implementation heads: `f0cd928` (transport foundation), `ea3cded`
   (10102 qualification probe), and `5cf09af3a4703842978f0ee0f3c250a881f63575`
   (bounded diagnostic hardening).
@@ -35,20 +33,21 @@ of scope.
 ## Play and Firebase live configuration
 
 - Play app: `ValuePilot`, package `com.valuepilot.app`.
-- Internal testing track: active, full rollout, one version code `10101`,
-  version name `101.1.0`; the release is named `ValuePilot 101.1.0 M12.3
-  Internal` and is available to internal testers.
-- Play artifact: `10101.aab`, API levels `23+`, target SDK `36`.
+- Internal testing qualification: version code `10102`, version name `101.1.1`,
+  installed by Google Play (`com.android.vending`) on the Motorola Edge 2025.
+- Historical previous internal release: `10101 / 1.1.0`; it is retained only
+  as historical context and is not the qualified M12.3 build.
 - Internal tester list: `ValuePilot M12.3 Internal Trusted`, one account;
   opt-in URL: `https://play.google.com/apps/internaltest/4701231628553906260`.
-- Final local Play-test candidate: `10102 / 1.1.1`; unsigned source bundle
+- Qualified Play-installed build: `10102 / 1.1.1`; unsigned source bundle
   `android/app/build/outputs/bundle/release/app-release.aab` and separate
   signed upload bundle
   `android/app/build/outputs/bundle/release/app-release-play-upload-signed-10102.aab`.
 - Signed 10102 upload bundle SHA-256:
   `3B9526F5A5F4AEB702E6FBA0D375E5C97CD0FDCE8FF5D7765459AB4AFADD2F3F`.
-- The signed 10102 bundle is ready for the next Internal-testing upload; it
-  has not been uploaded or promoted here.
+- The signed 10102 bundle is the Play-installed and qualified M12.3 build.
+- Installation provenance: `installerPackageName` and `initiatingPackageName`
+  were both `com.android.vending`.
 - Local upload certificate SHA-256: `A0:B6:5D:8A:5A:F9:44:9E:76:6F:05:39:6F:E1:78:20:D5:2F:26:7C:E9:D5:8A:B0:C2:F6:CD:E4:DC:B8:52:DA`.
 - Google Play app-signing certificate SHA-256 (read from Play's generated
   universal APK): `74:41:17:32:6B:67:E8:57:FD:24:BF:4D:AB:57:10:3A:CA:1A:89:56:44:67:55:5B:14:5D:F3:C2:8C:BE:31:82`.
@@ -134,21 +133,26 @@ certificate above and `jarsigner` verification passed. The probe logs only a
 bounded `M12_3_STATUS=<100..599>` or typed failure code and has deterministic
 coverage for response-body, exception-detail and out-of-range-status secrecy.
 
-## Remaining qualification boundary
+## Physical-device qualification evidence
 
-The remaining boundary is Play upload plus physical-device proof. `adb devices
--l` currently shows no connected device, so there is no valid Play-backed App
-Check token or release transport `200` to record. The one consolidated user
-checkpoint is:
+The first real Play-installed cold-process probe recorded:
 
-1. Upload the signed 10102 AAB above to the existing Internal-testing track.
-2. Open the opt-in URL above on the Google account used by Play Store, accept
-   the invite, and install/update `ValuePilot` through Google Play.
-3. Launch the Play-installed app; connect/authorize USB so the final bounded
-   transport smoke can capture the safe probe result.
+- Consumer Edge `GET /v1/status`: HTTP `504`, latency `8.578306877s`.
+- Private M11 `southamerica-east1` `GET /v1/status`: HTTP `200`, latency
+  `4.898859329s`.
 
-After that checkpoint, verify the release provider obtains a real Play Integrity
-App Check token and that edge `/v1/status` returns `200`, while preserving the
-negative `401`/`404`/`403` checks above. Until then the exact label above remains
-the truthful status. Do not mark `ARGENTINA_ANDROID_SECURE_TRANSPORT_M12_3_QUALIFIED`
-and do not start M12.4.
+The paired result proves App Check authentication passed and the request was
+forwarded through the public edge to private M11; the first bounded request
+hit the scale-to-zero/cold-upstream path. An immediate second cold-process
+probe succeeded and logged exactly:
+
+`ValuePilotM12_3: M12_3_STATUS=200`
+
+The preserved negative boundaries remain: missing or invalid App Check returns
+`401`, an unknown edge route returns `404`, and direct private M11 access
+returns `403`. No token, credential, authorization header, service identity or
+response body is logged.
+
+The 504 is a known reliability observation, not a security qualification
+failure. M12.4 must measure and harden this scale-to-zero/cold-upstream path
+before live Search is considered production-ready. M12.4 is **NOT_STARTED**.

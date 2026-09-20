@@ -1,10 +1,10 @@
 {
   "schemaVersion": "valuepilot-argentina-android-secure-transport-qualification-v3",
-  "status": "FINAL_PLAY_TEST_BUILD_READY_NOT_DEVICE_QUALIFIED",
-  "updated": "2026-09-17",
+  "status": "ARGENTINA_ANDROID_SECURE_TRANSPORT_M12_3_QUALIFIED",
+  "updated": "2026-09-19",
   "repository": "topmanneedboys/morefoodperdollar",
   "branch": "candidate/argentina-android-consumer-bridge-m12-v2",
-  "checkpointHead": "5cf09af3a4703842978f0ee0f3c250a881f63575",
+  "checkpointHead": "1573a853baffa65260aa3c30b7989cae4a66dd63",
   "codeHead": "5cf09af3a4703842978f0ee0f3c250a881f63575",
   "firebase": {
     "projectId": "valuepilot-argentina",
@@ -53,7 +53,7 @@
     "focusedTransportTests": true,
     "debugCompile": true,
     "releaseCompile": true,
-    "physicalDeviceSmoke": false,
+    "physicalDeviceSmoke": true,
     "playConsoleLinkage": true,
     "internalReleaseActive": true,
     "firebaseAppCheckRegistered": true,
@@ -61,21 +61,60 @@
     "edgeInvalidAppCheck": {"status": 401, "body": "UNAUTHENTICATED"},
     "edgeUnknownRoute": {"status": 404, "body": "NOT_FOUND"},
     "privateM11Direct": {"status": 403, "body": "Forbidden"},
-    "validPlayBackedRequest": "NOT_REMEASURED_PHYSICAL_DEVICE_REQUIRED",
-    "fullRepositoryCi": "PENDING_EXACT_HEAD_PUSH"
+    "validPlayBackedRequest": {
+      "method": "GET",
+      "path": "/v1/status",
+      "status": 200,
+      "probeLog": "M12_3_STATUS=200",
+      "playIntegrity": {
+        "cloudProjectNumber": "17260882200",
+        "requestIntegrityTokenSucceeded": true
+      }
+    },
+    "firstColdStartObservation": {
+      "consumerEdge": {
+        "method": "GET",
+        "path": "/v1/status",
+        "status": 504,
+        "latencySeconds": 8.578306877
+      },
+      "privateM11SouthamericaEast1": {
+        "method": "GET",
+        "path": "/v1/status",
+        "status": 200,
+        "latencySeconds": 4.898859329
+      },
+      "interpretation": "Authenticated forwarding reached private M11, but the bounded edge request timed out during upstream cold start; the immediate warm retry returned 200."
+    },
+    "fullRepositoryCi": {
+      "runId": 35257997035,
+      "headSha": "1573a853baffa65260aa3c30b7989cae4a66dd63",
+      "substantiveChecks": "PASS",
+      "artifactUploads": "FAILED_GITHUB_ACTIONS_STORAGE_QUOTA"
+    }
   },
   "play": {
     "app": "ValuePilot",
     "packageName": "com.valuepilot.app",
     "internalTrackId": "4701231628553906260",
-    "releaseName": "ValuePilot 101.1.0 M12.3 Internal",
-    "status": "AVAILABLE_TO_INTERNAL_TESTERS_ACTIVE_FULL_ROLLOUT",
-    "versionCode": 10101,
-    "versionName": "101.1.0",
+    "releaseName": "ValuePilot 101.1.1 M12.3 Internal",
+    "status": "QUALIFIED_INTERNAL_TEST_BUILD",
+    "versionCode": 10102,
+    "versionName": "101.1.1",
     "minApi": 23,
     "targetSdk": 36,
-    "artifactId": "4860231208460438295",
     "optInUrl": "https://play.google.com/apps/internaltest/4701231628553906260",
+    "installationProvenance": {
+      "installerPackageName": "com.android.vending",
+      "initiatingPackageName": "com.android.vending",
+      "deviceModel": "Motorola Edge 2025",
+      "playInstalled": true
+    },
+    "historicalPreviousInternalRelease": {
+      "versionCode": 10101,
+      "versionName": "101.1.0",
+      "label": "historical pre-qualification release"
+    },
     "uploadCertificateSha256": "A0:B6:5D:8A:5A:F9:44:9E:76:6F:05:39:6F:E1:78:20:D5:2F:26:7C:E9:D5:8A:B0:C2:F6:CD:E4:DC:B8:52:DA",
     "appSigningCertificateSha256": "74:41:17:32:6B:67:E8:57:FD:24:BF:4D:AB:57:10:3A:CA:1A:89:56:44:67:55:5B:14:5D:F3:C2:8C:BE:31:82",
     "integrityApi": {
@@ -113,9 +152,21 @@
   },
   "qualificationBoundary": {
     "deviceModel": "Motorola Edge 2025",
-    "adbAttached": false,
-    "status": "WAITING_FOR_PLAY_INSTALLED_PHYSICAL_DEVICE",
-    "next": "Install through internal-test opt-in URL, then run real Play App Check smoke"
+    "adbAttachedDuringQualification": true,
+    "status": "QUALIFIED",
+    "playInstallation": {
+      "installerPackageName": "com.android.vending",
+      "initiatingPackageName": "com.android.vending",
+      "packageName": "com.valuepilot.app",
+      "versionCode": 10102,
+      "versionName": "101.1.1"
+    },
+    "next": "Carry the cold-start timeout observation into M12.4 reliability work before considering live Search production-ready"
+  },
+  "reliabilityObservation": {
+    "coldStartCanExceedBoundedTimeout": true,
+    "warmRetrySucceeded": true,
+    "m12_4Requirement": "Measure and harden scale-to-zero/cold-upstream reliability before live Search is production-ready"
   },
   "m12_4": "NOT_STARTED"
 }

@@ -1,10 +1,10 @@
 # Current state
 
-Updated: 2026-09-17
+Updated: 2026-09-19
 
 Branch: `candidate/argentina-android-consumer-bridge-m12-v2`
 
-Android version: 101.1.1 (10102 final M12.3 Play-test candidate)
+Android version: 101.1.1 (10102 qualified M12.3 Play release)
 
 ## Current M12.2 public consumer-edge checkpoint
 
@@ -43,10 +43,10 @@ release-bundle assembly (**104686868032**). Real-device Play Integrity and
 production Android networking remained intentionally unqualified at this
 M12.2 checkpoint; the separate M12.3 foundation is recorded below.
 
-## Current M12.3 secure Android networking foundation
+## Current M12.3 qualified secure Android networking release
 
 M12.3 is implemented on this candidate as a narrow Android edge-transport
-foundation, and the final local Play-test candidate is now version `10102`
+foundation, and the qualified Play-installed release is version `10102`
 (`101.1.1`). Its release-only qualification probe makes exactly one bounded
 `/v1/status` request per process and logs only a safe status or typed failure;
 debug builds cannot enable it. The authoritative Firebase Android configuration is checked in
@@ -65,12 +65,16 @@ edge route while continuing to remove `ACCESS_NETWORK_STATE`; release and
 debug provider selection is source-set isolated. Deterministic JVM tests cover
 headers, limits, timeout/cancellation, host/route allow-lists, typed status
 mapping, Firebase config provenance, and APK-boundary declarations. The
-Firebase project is active, Play Integrity is linked to it, the Play Internal
-release `10101` remains active for the trusted tester list, Firebase App Check
-is registered with Play Integrity (PLAY_RECOGNIZED and LICENSED required; one
-hour TTL). The signed 10102 AAB is ready for the next Internal-testing upload.
-No physical device is connected, so real Play attestation and a release APK
-request remain unqualified. See
+Firebase project is active, Play Integrity is linked to it, and the qualified
+Play Internal release is `10102 / 1.1.1`; Firebase App Check is registered
+with Play Integrity (PLAY_RECOGNIZED and LICENSED required; one-hour TTL).
+The 10102 / 1.1.1 build is now the qualified Internal-testing
+release, installed by `com.android.vending` on a Motorola Edge 2025. Real Play
+Integrity token acquisition succeeded, and the immediate physical-device
+probe logged `M12_3_STATUS=200` through the public edge to private M11. The
+first attempt also recorded a bounded 504 cold-start timeout while private M11
+returned 200; this is a known M12.4 reliability requirement, not a security
+failure. See
 [ARGENTINA_ANDROID_SECURE_TRANSPORT_M12_3_QUALIFICATION.md](ARGENTINA_ANDROID_SECURE_TRANSPORT_M12_3_QUALIFICATION.md).
 
 ## Current M12.0 candidate checkpoint

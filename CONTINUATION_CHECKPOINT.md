@@ -1,6 +1,6 @@
 # ValuePilot Continuation Checkpoint
 
-Updated: 2026-09-17
+Updated: 2026-09-19
 
 Branch: `candidate/argentina-android-consumer-bridge-m12-v2`
 
@@ -34,7 +34,7 @@ production Android networking remained unqualified at this M12.2 checkpoint;
 the separately authorized M12.3 foundation is recorded below. See
 [ARGENTINA_CONSUMER_EDGE_M12_2_QUALIFICATION.md](ARGENTINA_CONSUMER_EDGE_M12_2_QUALIFICATION.md).
 
-## Current M12.3 secure Android networking foundation
+## Current M12.3 qualified secure Android networking release
 
 The current candidate contains a deliberately narrow Android HTTPS edge
 adapter. `ValuePilotApplication` initializes Firebase and installs Play
@@ -51,13 +51,15 @@ covered by deterministic offline tests.
 `ACCESS_NETWORK_STATE` remains removed and cleartext remains disabled. No
 Home/Search live wiring, background sync, provider data, or Android account
 state was added. Local debug/release compile and focused transport tests pass.
-The Firebase project is active, Play Integrity is linked to it, the Play
-Internal release `10101` remains active for the trusted tester list, and Firebase
+The Firebase project is active, Play Integrity is linked to it, and Firebase
 App Check is registered with Play Integrity (PLAY_RECOGNIZED and LICENSED
-required; one-hour TTL). The final local `10102 / 101.1.1` signed AAB is ready
-for the next Internal-testing upload. There is no connected Android device, so
-real Play Integrity attestation and a live release APK request are not yet
-qualified. The exact manual handoff is in
+required; one-hour TTL). The `10102 / 1.1.1` build is now the qualified
+Internal-testing release: Google Play installed it on a Motorola Edge 2025,
+completed `requestIntegrityToken` for project `17260882200`, and the immediate
+physical-device probe logged `M12_3_STATUS=200` through the public edge to
+private M11. The first attempt recorded a bounded 504 cold-start timeout while
+private M11 returned 200; carry that reliability requirement into M12.4 before
+live Search is production-ready. The exact evidence is in
 [ARGENTINA_ANDROID_SECURE_TRANSPORT_M12_3_QUALIFICATION.md](ARGENTINA_ANDROID_SECURE_TRANSPORT_M12_3_QUALIFICATION.md).
 
 ## Current M12.1 consumer-edge boundary checkpoint
