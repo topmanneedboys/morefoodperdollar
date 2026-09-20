@@ -33,7 +33,7 @@ _ROUTE_METHODS = {
 _CLOUD_RUN_HOST_RE = re.compile(r"[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.run\.app\Z")
 _REQUEST_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,95}\Z")
 _DEFAULT_MAX_TOKEN_BYTES = 8192
-_DEFAULT_TIMEOUT_SECONDS = 5.0
+_DEFAULT_TIMEOUT_SECONDS = 12.0
 _DEFAULT_TOKEN_FETCH_TIMEOUT_SECONDS = 4.0
 
 

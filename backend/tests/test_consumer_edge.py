@@ -55,6 +55,12 @@ class ConsumerEdgeTests(unittest.TestCase):
         )
         self.auth = {"X-Firebase-AppCheck": "valid-token"}
 
+    def test_default_timeout_budget_is_finite_and_cold_start_tolerant(self):
+        config = EdgeConfig()
+        self.assertEqual(config.upstream_timeout_seconds, 12.0)
+        self.assertGreater(config.upstream_timeout_seconds, config.queue_timeout_seconds)
+        self.assertLessEqual(config.upstream_timeout_seconds, 30.0)
+
     def test_plain_http_is_rejected_before_authentication(self):
         verifier = FakeVerifier()
         upstream = FakeUpstream()

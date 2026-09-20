@@ -81,7 +81,9 @@ class EdgeConfig:
     require_https: bool = True
     max_concurrent_requests: int = 16
     queue_timeout_seconds: float = 0.05
-    upstream_timeout_seconds: float = 5.0
+    # M12.4A budget: tolerate one measured Cloud Run cold start while keeping
+    # the edge request finite and below the public service deadline.
+    upstream_timeout_seconds: float = 12.0
     rate_limit_requests: int = 60
     rate_limit_window_seconds: float = 60.0
     rate_limit_keys: int = 1024

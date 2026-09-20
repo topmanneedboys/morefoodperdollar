@@ -96,7 +96,9 @@ object ArgentinaBackendContract {
         UNSUPPORTED_VERSION,
         RELEASE_MISMATCH,
         STALE_RELEASE,
-        CURRENT_PRICE_UNAVAILABLE
+        CURRENT_PRICE_UNAVAILABLE,
+        SEARCH_NOT_AUTHORIZED,
+        SEARCH_GEOGRAPHY_UNAVAILABLE
     }
 
     class ContractException(

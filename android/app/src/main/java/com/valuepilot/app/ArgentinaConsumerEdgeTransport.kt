@@ -187,8 +187,11 @@ internal data class ArgentinaConsumerEdgeClientConfig(
     val baseUrl: String = DEFAULT_EDGE_BASE_URL,
     val allowedHost: String = DEFAULT_EDGE_HOST,
     val connectTimeoutMillis: Int = 5_000,
-    val readTimeoutMillis: Int = 8_000,
-    val totalTimeoutMillis: Int = 15_000,
+    // The M12.3 cold-start probe took 8.58 s at the public edge. Keep a
+    // finite hierarchy that allows that one startup while preserving a hard
+    // mobile deadline and cancellation.
+    val readTimeoutMillis: Int = 15_000,
+    val totalTimeoutMillis: Int = 20_000,
     val maxRequestBytes: Int = MAX_REQUEST_BYTES,
     val maxResponseBytes: Int = ArgentinaBackendContract.MAX_RESPONSE_BYTES
 ) {
@@ -373,7 +376,7 @@ internal class ArgentinaConsumerEdgeTransport(
     ): ArgentinaBackendTransportResponse =
         execute(endpoint, requestBody, ArgentinaRequestCancellation())
 
-    internal fun execute(
+    override fun execute(
         endpoint: String,
         requestBody: String?,
         cancellation: ArgentinaRequestCancellation

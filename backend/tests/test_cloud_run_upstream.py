@@ -76,6 +76,9 @@ def target(**overrides) -> CloudRunTarget:
 
 
 class CloudRunUpstreamTests(unittest.TestCase):
+    def test_default_private_upstream_timeout_matches_edge_budget(self):
+        self.assertEqual(target().timeout_seconds, 12.0)
+
     def test_target_normalizes_exact_https_run_app_destination(self):
         value = target(base_url="https://VALUEPILOT-ARGENTINA-SA-EAST1-M72BV57HRQ-RJ.A.RUN.APP/")
         self.assertEqual(value.base_url, "https://valuepilot-argentina-sa-east1-m72bv57hrq-rj.a.run.app")

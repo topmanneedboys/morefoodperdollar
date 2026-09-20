@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "valuepilot-argentina-live-search-foundation-m12-4a-v1",
+  "qualification": "ARGENTINA_LIVE_SEARCH_FOUNDATION_M12_4A_READY_NOT_UI_QUALIFIED",
+  "branch": "candidate/argentina-live-search-m12-4",
+  "baseHead": "93f25a072881cb25db6bfc38517d4efc87523af9",
+  "visibleSearch": "NOT_WIRED",
+  "androidBundleUploaded": false,
+  "releaseStrategy": {
+    "statusHandshake": true,
+    "releaseIdSource": "STATUS_RESPONSE",
+    "releaseDateSource": "STATUS_RESPONSE",
+    "expectedReleasePin": true,
+    "hardcodedReleaseId": false,
+    "androidNetworkingAuthorizationRequired": true,
+    "mismatchAction": "CLEAR_PIN_AND_FAIL_CLOSED",
+    "automaticRetry": false
+  },
+  "geography": {
+    "contextRequired": true,
+    "deviceLocationInvented": false,
+    "missingContextFailure": "SEARCH_GEOGRAPHY_UNAVAILABLE",
+    "authoritativeUiContextAvailable": false
+  },
+  "timeoutBudget": {
+    "androidConnectMs": 5000,
+    "androidReadMs": 15000,
+    "androidTotalMs": 20000,
+    "edgeQueueSeconds": 0.05,
+    "edgeUpstreamSeconds": 12.0,
+    "cloudRunServiceSeconds": 20.0,
+    "cloudRunOidcTokenSeconds": 4.0
+  },
+  "deployment": {
+    "project": "valuepilot-argentina",
+    "service": "valuepilot-argentina-consumer-edge",
+    "region": "southamerica-east1",
+    "revision": "valuepilot-argentina-consumer-edge-00004-5lg",
+    "imageDigest": "sha256:315e37021aa7b1adf2f77eba88bc85f09984025ebac98e89612ff40168238581",
+    "trafficPercent": 100,
+    "minScale": 0,
+    "maxScale": 20,
+    "anonymousStatus": 401,
+    "invalidAppCheckStatus": 401,
+    "unknownRouteStatus": 404,
+    "playStatus": 200
+  },
+  "measurements": {
+    "historicalColdEdgeSeconds": 8.578306877,
+    "historicalColdEdgeStatus": 504,
+    "historicalPrivateM11Seconds": 4.898859329,
+    "currentWarmHostRestartMs": [1596, 1119, 1309],
+    "currentColdRemeasured": false,
+    "searchLiveRemeasured": false,
+    "searchLiveReason": "Visible Search and a new Android artifact are out of scope for M12.4A"
+  },
+  "identityOnly": {
+    "prices": false,
+    "packageQuantity": false,
+    "stock": false,
+    "availability": false,
+    "ranking": false,
+    "providerEconomics": false
+  },
+  "localVerification": {
+    "sharedCoreTests": 405,
+    "androidUnitTests": 1661,
+    "backendTests": 42,
+    "toolingTests": 197,
+    "browserTests": 30,
+    "failures": 0,
+    "skipped": 0,
+    "androidLint": "PASS_DEBUG_AND_RELEASE",
+    "androidAssembly": "PASS_DEBUG_AND_RELEASE",
+    "privacy": "PASS_INTERNET_ONLY_NO_ACCESS_NETWORK_STATE",
+    "signer": "PASS_SINGLE_DEBUG_SIGNER"
+  },
+  "nextMilestone": "M12.4B_REQUIRES_SEPARATE_AUTHORIZATION_AND_AUTHORITATIVE_GEOGRAPHY"
+}

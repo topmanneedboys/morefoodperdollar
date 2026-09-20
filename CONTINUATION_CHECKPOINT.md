@@ -2,7 +2,33 @@
 
 Updated: 2026-09-19
 
-Branch: `candidate/argentina-android-consumer-bridge-m12-v2`
+Branch: `candidate/argentina-live-search-m12-4`
+
+## Current M12.4A live Search foundation candidate
+
+M12.4A is a separate candidate branch,
+`candidate/argentina-live-search-m12-4`, based exactly on qualified M12.3
+head `93f25a072881cb25db6bfc38517d4efc87523af9`. It does not alter the
+qualified branch or start M12.4B. The new coordinator is not wired to visible
+Search: it only provides a bounded, testable application-edge seam that needs
+explicit geography, learns and pins the rolling release from `/v1/status`,
+projects identity-only candidates through the existing mapper, and rejects
+stale generations, stale releases, cancellation, malformed data, missing
+context and an unauthorized Android network gate. No price, quantity,
+inventory, ranking or provider-economics authority was added.
+
+The public edge/private OIDC timeout hierarchy is now finite and cold-start
+tolerant (12-second private upstream, 20-second Cloud Run service; Android
+15-second read and 20-second total). Revision
+`valuepilot-argentina-consumer-edge-00004-5lg` is serving 100% of traffic with
+the preserved service identity, Firebase configuration and scale-to-zero
+policy. Post-deploy checks are 401 without/with invalid App Check, 404 for an
+unknown route, and 200 from the real Play-installed M12.3 status probe. The
+existing 8.578-second cold 504 is retained as historical reference; Search
+timing is marked not remeasured because no visible Search/new Android artifact
+is allowed in this milestone. Full repository verification and exact-head
+promotion remain the final gates for this candidate. See
+[ARGENTINA_LIVE_SEARCH_FOUNDATION_M12_4A.md](ARGENTINA_LIVE_SEARCH_FOUNDATION_M12_4A.md).
 
 ## Current M12.2 public consumer-edge checkpoint
 

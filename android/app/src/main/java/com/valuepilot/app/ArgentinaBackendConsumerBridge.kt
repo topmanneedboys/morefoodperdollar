@@ -23,6 +23,16 @@ internal data class ArgentinaBackendTransportResponse(
 
 internal fun interface ArgentinaBackendTransport {
     fun execute(endpoint: String, requestBody: String?): ArgentinaBackendTransportResponse
+
+    /**
+     * Optional cancellation-aware path for a user-triggered live request.
+     * Existing deterministic transports keep the original one-method seam.
+     */
+    fun execute(
+        endpoint: String,
+        requestBody: String?,
+        cancellation: ArgentinaRequestCancellation
+    ): ArgentinaBackendTransportResponse = execute(endpoint, requestBody)
 }
 
 /** Deterministic fake transport for contract and presentation tests. */
@@ -116,29 +126,35 @@ internal data class ArgentinaBackendHomeProjection(
  */
 internal class ArgentinaBackendConsumerBridge(
     private val transport: ArgentinaBackendTransport,
-    private val expectedRelease: ArgentinaBackendContract.ExpectedRelease
+    private val expectedRelease: ArgentinaBackendContract.ExpectedRelease?
 ) {
 
-    fun status(): ArgentinaBackendBridgeResult<ArgentinaBackendContract.StatusResponse> =
+    fun status(
+        cancellation: ArgentinaRequestCancellation? = null
+    ): ArgentinaBackendBridgeResult<ArgentinaBackendContract.StatusResponse> =
         execute(
             endpoint = STATUS_ENDPOINT,
             requestBody = null,
+            cancellation = cancellation,
             parser = { body -> ArgentinaBackendContract.parseStatus(body, expectedRelease) }
         )
 
     fun search(
-        request: ArgentinaBackendContract.SearchRequest
+        request: ArgentinaBackendContract.SearchRequest,
+        cancellation: ArgentinaRequestCancellation? = null
     ): ArgentinaBackendBridgeResult<ArgentinaBackendContract.SearchResponse> =
         execute(
             endpoint = SEARCH_ENDPOINT,
             requestBody = ArgentinaBackendJson.searchRequest(request),
+            cancellation = cancellation,
             parser = { body -> ArgentinaBackendContract.parseSearch(body, expectedRelease) }
         )
 
     fun searchPresentation(
-        request: ArgentinaBackendContract.SearchRequest
+        request: ArgentinaBackendContract.SearchRequest,
+        cancellation: ArgentinaRequestCancellation? = null
     ): ArgentinaBackendBridgeResult<ArgentinaBackendSearchPresentation> =
-        mapResult(search(request)) { response ->
+        mapResult(search(request, cancellation)) { response ->
             ArgentinaBackendSearchPresentation(
                 response = response,
                 identity = ArgentinaBackendIdentityMapper.toPresentation(response)
@@ -218,6 +234,7 @@ internal class ArgentinaBackendConsumerBridge(
     private fun <T> execute(
         endpoint: String,
         requestBody: String?,
+        cancellation: ArgentinaRequestCancellation? = null,
         parser: (String) -> T
     ): ArgentinaBackendBridgeResult<T> {
         if (requestBody != null && requestBody.toByteArray(StandardCharsets.UTF_8).size > MAX_REQUEST_BYTES) {
@@ -229,7 +246,11 @@ internal class ArgentinaBackendConsumerBridge(
 
         val response =
             try {
-                transport.execute(endpoint, requestBody)
+                if (cancellation == null) {
+                    transport.execute(endpoint, requestBody)
+                } else {
+                    transport.execute(endpoint, requestBody, cancellation)
+                }
             } catch (error: ArgentinaBackendTransportException) {
                 return ArgentinaBackendBridgeResult.Failure(
                     error.failureCode,

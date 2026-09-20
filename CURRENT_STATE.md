@@ -2,9 +2,37 @@
 
 Updated: 2026-09-19
 
-Branch: `candidate/argentina-android-consumer-bridge-m12-v2`
+Branch: `candidate/argentina-live-search-m12-4`
 
 Android version: 101.1.1 (10102 qualified M12.3 Play release)
+
+## Current M12.4A live Search foundation candidate
+
+The bounded M12.4A candidate is on branch
+`candidate/argentina-live-search-m12-4`, starting from the qualified M12.3
+head `93f25a072881cb25db6bfc38517d4efc87523af9`. It adds an un-wired,
+identity-only `ArgentinaLiveSearchCoordinator` around the existing bridge and
+transport: explicit geography is required, rolling release identity is learned
+from a fresh `/v1/status` handshake and pinned into `/v1/search`, stale or
+superseded work is cancelled/rejected, and the executor has only one worker and
+one pending latest-generation slot. No Search UI, Android bundle upload,
+prices, package quantities, stock, availability, ranking, or provider
+economics were added. The coordinator also fails closed before `/v1/search`
+unless the status handshake explicitly sets `androidNetworkingAuthorized`.
+M12.4B remains out of scope.
+
+The public edge timeout budget is hardened to a 12-second private-upstream
+bound, Android 15-second read/20-second total bounds, and a 20-second Cloud Run
+service deadline. The existing service now runs revision
+`valuepilot-argentina-consumer-edge-00004-5lg` with image digest
+`sha256:315e37021aa7b1adf2f77eba88bc85f09984025ebac98e89612ff40168238581`;
+its Firebase App Check allow-list, OIDC destination, runtime identity and
+scale-to-zero/max-20 policy are preserved. Post-deploy checks remain 401 for
+missing/invalid App Check, 404 for an unknown route, and 200 through the real
+Play-installed M12.3 probe. The previous 8.578-second cold 504 is retained as
+the reference; current `/v1/search` timing is explicitly not remeasured because
+visible Search and a new Android artifact are not part of M12.4A. See
+[ARGENTINA_LIVE_SEARCH_FOUNDATION_M12_4A.md](ARGENTINA_LIVE_SEARCH_FOUNDATION_M12_4A.md).
 
 ## Current M12.2 public consumer-edge checkpoint
 
