@@ -8,7 +8,7 @@
   "android": {
     "applicationId": "com.valuepilot.app",
     "versionCode": 10103,
-    "versionName": "1.1.2",
+    "versionName": "101.1.2",
     "targetSdk": 36,
     "unsignedBundle": "android/app/build/outputs/bundle/release/app-release.aab",
     "internetPermission": true,
