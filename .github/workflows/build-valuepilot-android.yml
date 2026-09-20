@@ -75,6 +75,7 @@ on:
       - 'PRACTICAL_SHOPPING_MVP_STATUS.md'
       - 'PRACTICAL_SHOPPING_HOME_CHECKPOINT.md'
       - 'ARGENTINA_CONSUMER_CONTRACT_BRIDGE_OFFLINE_QUALIFICATION.*'
+      - 'ARGENTINA_LIVE_SEARCH_M12_4B.*'
       - '.github/workflows/build-valuepilot-android.yml'
   pull_request:
     paths:
@@ -149,6 +150,7 @@ on:
       - 'PRACTICAL_SHOPPING_MVP_STATUS.md'
       - 'PRACTICAL_SHOPPING_HOME_CHECKPOINT.md'
       - 'ARGENTINA_CONSUMER_CONTRACT_BRIDGE_OFFLINE_QUALIFICATION.*'
+      - 'ARGENTINA_LIVE_SEARCH_M12_4B.*'
       - '.github/workflows/build-valuepilot-android.yml'
 
 permissions:

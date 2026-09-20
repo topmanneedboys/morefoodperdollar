@@ -1,10 +1,46 @@
 # Current state
 
-Updated: 2026-09-19
+Updated: 2026-09-20
 
 Branch: `candidate/argentina-live-search-m12-4`
 
-Android version: 101.1.1 (10102 qualified M12.3 Play release)
+Android version: 101.1.2 (10103 M12.4B Play test build candidate)
+
+## Current M12.4B visible Argentina identity Search candidate
+
+M12.4B is implemented on `candidate/argentina-live-search-m12-4` at
+implementation commit `ccf7cca543ceac64e9a6437c07f00324dd95369a` and is
+recorded in
+[ARGENTINA_LIVE_SEARCH_M12_4B.md](ARGENTINA_LIVE_SEARCH_M12_4B.md).
+Search is now a visible, user-triggered identity-only surface backed by the
+existing bounded M12.4A coordinator/bridge/transport. It uses the explicit
+qualified launch area `Buenos Aires (CABA)` (25 km, source-labelled CABA
+snapshot), has deterministic idle/loading/results/no-match/unavailable,
+authorization, stale-release and timeout states, and hands a selected identity
+to the existing Compare route without adding price, quantity, stock,
+availability, promotion, delivery or ranking authority. MainActivity remains a
+thin renderer/action boundary; the old sample Search path and M12.3 startup
+probe are not in the visible path.
+
+The backend image for this candidate is deployed at private M11 revision
+`valuepilot-argentina-sa-east1-00029-gef` (digest
+`sha256:83aa126d01b34c5b284465a6ff4cd9334fc162710c0e9b33615383dcbdd7107d`)
+with the identity-search authorization gate enabled in configuration. The
+current active release is `argentina-sepa-2026-09-08-aeef3399fa20e751-routing-v1-search-v2`;
+on 2026-09-20 it is explicitly `STALE`, so the backend correctly reports
+`androidNetworkingAuthorized=false` and the Android surface remains
+fail-closed. `productionAndroidUiAuthorized` remains false. This is therefore
+Play-build-ready but **not device/live-search qualified** until a fresh,
+qualified release is activated. No M12.5 work has started.
+
+The public edge remains revision `valuepilot-argentina-consumer-edge-00004-5lg`
+with its existing Firebase App Check boundary and private OIDC destination.
+Missing/invalid App Check return 401, unknown routes return 404, and direct
+unauthenticated M11 returns 403; an authenticated private status request still
+returns the bounded status payload. Firebase project `valuepilot-argentina`
+is active and the registered Android app remains `com.valuepilot.app` /
+`ValuePilot Android`. See the canonical report for the exact cloud, build,
+privacy and remaining human-action evidence.
 
 ## Current M12.4A live Search foundation candidate
 

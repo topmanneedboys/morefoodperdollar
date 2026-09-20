@@ -1,8 +1,37 @@
 # ValuePilot Continuation Checkpoint
 
-Updated: 2026-09-19
+Updated: 2026-09-20
 
 Branch: `candidate/argentina-live-search-m12-4`
+
+## Current M12.4B visible Argentina identity Search candidate
+
+The bounded M12.4B implementation is complete in code at
+`ccf7cca543ceac64e9a6437c07f00324dd95369a` and is documented in
+[ARGENTINA_LIVE_SEARCH_M12_4B.md](ARGENTINA_LIVE_SEARCH_M12_4B.md). The visible
+Search surface now sends only explicit user queries through the existing
+M12.4A coordinator/bridge/transport, shows the qualified Buenos Aires (CABA)
+launch area, renders identity-only results, and hands a selected name to the
+existing Compare route. It has bounded cancellation/generation behavior and
+explicit safe states for loading, no matches, authorization unavailable,
+stale release, timeout and temporary failure. No sample Search provider,
+startup probe, location permission, new persistence authority, price/stock/
+availability/ranking authority or M12.5 work was added.
+
+Local verification is green: 402 shared-core tests, 1,668 Android unit tests,
+46 backend tests, 197 tooling tests and 30 browser tests, plus Android debug /
+release assemble, lint and release-bundle tasks. The unsigned `10103 / 1.1.2`
+release AAB has the expected package and privacy boundary. The current
+deployed release is stale (`2026-09-08` as evaluated on 2026-09-20), so the
+backend reports `androidNetworkingAuthorized=false` and the candidate is
+**PLAY_BUILD_READY_NOT_DEVICE_QUALIFIED**. A fresh qualified release must be
+activated before live Android Search can be authorized; the existing upload
+keystore is also required to produce the Play-upload-signed AAB. Do not bypass
+either gate. No M12.5 work has started.
+
+The public edge/OIDC/App Check evidence and exact cloud details are in the
+canonical M12.4B report below; the historical M12.4A and M12.3 sections remain
+unchanged for provenance.
 
 ## Current M12.4A live Search foundation candidate
 

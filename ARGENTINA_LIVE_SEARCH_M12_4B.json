@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "status": "ARGENTINA_LIVE_SEARCH_M12_4B_PLAY_BUILD_READY_NOT_DEVICE_QUALIFIED",
+  "updated": "2026-09-20",
+  "repository": "topmanneedboys/morefoodperdollar",
+  "branch": "candidate/argentina-live-search-m12-4",
+  "implementationCommit": "ccf7cca543ceac64e9a6437c07f00324dd95369a",
+  "android": {
+    "applicationId": "com.valuepilot.app",
+    "versionCode": 10103,
+    "versionName": "101.1.2",
+    "targetSdk": 36,
+    "unsignedBundle": "android/app/build/outputs/bundle/release/app-release.aab",
+    "internetPermission": true,
+    "accessNetworkStatePermission": false,
+    "locationPermission": false,
+    "cleartextTraffic": false,
+    "productionAndroidUiAuthorized": false
+  },
+  "launchArea": {
+    "id": "ar-caba-buenos-aires",
+    "label": "Buenos Aires (CABA)",
+    "latitude": "-34.605506",
+    "longitude": "-58.442562",
+    "radiusKm": "25",
+    "regionId": "ar-caba",
+    "provider": "ARGENTINA_SEPA_PRECIOS_CLAROS",
+    "releaseDate": "2026-09-06",
+    "manifestSha256": "49c88fb9fc9b745788562bf292352649692196e3c0f68a01737ddc779850eda3",
+    "storesSha256": "de38f7c8e2715cca07a2ba734cc5c7b4d65ba7a3ed187e710c2bfb795ebf26ad"
+  },
+  "firebase": {
+    "projectId": "valuepilot-argentina",
+    "projectNumber": "17260882200",
+    "androidAppNickname": "ValuePilot Android",
+    "androidAppId": "1:17260882200:android:446eec76e5f1a175f2566d",
+    "packageName": "com.valuepilot.app",
+    "appCheckProvider": "PLAY_INTEGRITY_RELEASE_DEBUG_PROVIDER_DEBUG_ONLY"
+  },
+  "cloud": {
+    "edgeRevision": "valuepilot-argentina-consumer-edge-00004-5lg",
+    "edgeImageDigest": "sha256:315e37021aa7b1adf2f77eba88bc85f09984025ebac98e89612ff40168238581",
+    "privateRevision": "valuepilot-argentina-sa-east1-00029-gef",
+    "privateImageDigest": "sha256:83aa126d01b34c5b284465a6ff4cd9334fc162710c0e9b33615383dcbdd7107d",
+    "activeReleaseId": "argentina-sepa-2026-09-08-aeef3399fa20e751-routing-v1-search-v2",
+    "activeReleaseDate": "2026-09-08",
+    "freshness": "STALE",
+    "backendCodeQualified": true,
+    "androidNetworkingAuthorized": false,
+    "productionAndroidUiAuthorized": false,
+    "edgeMaxScale": 20,
+    "privateInvokerBindingCount": 1,
+    "negativeSmoke": {
+      "missingAppCheck": 401,
+      "invalidAppCheck": 401,
+      "unknownRoute": 404,
+      "directPrivateM11Unauthenticated": 403,
+      "authenticatedPrivateStatus": 200
+    }
+  },
+  "verification": {
+    "sharedCoreTests": 402,
+    "androidUnitTests": 1668,
+    "backendTests": 46,
+    "toolingTests": 197,
+    "browserTests": 30,
+    "androidLint": "debug_and_release_green",
+    "androidBuild": "debug_release_bundle_green",
+    "deviceQualified": false,
+    "playUploaded": false
+  },
+  "remainingGates": [
+    "activate a fresh qualified release without relaxing stale policy",
+    "sign with the existing Play upload key",
+    "install through Play and perform explicit CABA live Search smoke"
+  ],
+  "nextMilestoneStarted": false
+}
