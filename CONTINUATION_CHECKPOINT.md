@@ -18,7 +18,7 @@ stale release, timeout and temporary failure. No sample Search provider,
 startup probe, location permission, new persistence authority, price/stock/
 availability/ranking authority or M12.5 work was added.
 
-Local verification is green: 402 shared-core tests, 1,668 Android unit tests,
+Local verification is green: 405 shared-core tests, 1,668 Android unit tests,
 46 backend tests, 197 tooling tests and 30 browser tests, plus Android debug /
 release assemble, lint and release-bundle tasks. The unsigned `10103 / 1.1.2`
 release AAB has the expected package and privacy boundary. The current

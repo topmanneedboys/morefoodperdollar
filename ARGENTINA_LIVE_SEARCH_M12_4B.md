@@ -117,7 +117,7 @@ key: the existing Play upload certificate must be used. The previously signed
 
 The following completed successfully on this candidate:
 
-- `:shared-core:test`: 402 tests.
+- `:shared-core:test`: 405 tests.
 - `:app:testDebugUnitTest`: 1,668 tests.
 - `:app:lintDebug` and `:app:lintRelease`.
 - `:app:assembleDebug`, `:app:assembleRelease` and `:app:bundleRelease`.

@@ -59,7 +59,7 @@
     }
   },
   "verification": {
-    "sharedCoreTests": 402,
+    "sharedCoreTests": 405,
     "androidUnitTests": 1668,
     "backendTests": 46,
     "toolingTests": 197,
