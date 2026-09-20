@@ -98,10 +98,14 @@ be activated before a real device can qualify live Search.
 
 ## Build and privacy evidence
 
-The candidate sets Android version `10103` / `1.1.2`. The release bundle task
+The candidate sets Android version `10103` / `101.1.2`. The release bundle task
 completed successfully and produced the ignored local unsigned artifact:
 
 `android/app/build/outputs/bundle/release/app-release.aab`
+
+Unsigned AAB SHA-256: `189ba1bc1545fbd00fc2da80818dbc250501b9c217a3dd5db156987de88193ed`.
+No signed 10103 AAB was produced because the existing Play upload keystore and
+credentials are not present in this workspace.
 
 The corresponding unsigned release APK reports package `com.valuepilot.app`,
 versionCode `10103`, versionName `101.1.2`, target SDK 36, and exactly the
