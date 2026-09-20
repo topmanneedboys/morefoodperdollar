@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit
  */
 internal enum class ArgentinaSearchContextSource {
     EXPLICIT_USER_CONTEXT,
+    QUALIFIED_LAUNCH_AREA,
     TEST_FIXTURE
 }
 
@@ -26,7 +27,8 @@ internal data class ArgentinaSearchContext(
     val source: ArgentinaSearchContextSource
 ) {
     init {
-        require(source != ArgentinaSearchContextSource.EXPLICIT_USER_CONTEXT || latitude.isNotBlank())
+        require(latitude.isNotBlank())
+        require(longitude.isNotBlank())
         ArgentinaBackendContract.SearchRequest(
             latitude = latitude,
             longitude = longitude,

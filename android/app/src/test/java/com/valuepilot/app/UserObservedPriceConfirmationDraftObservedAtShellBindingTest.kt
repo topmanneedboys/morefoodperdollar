@@ -33,7 +33,7 @@ class UserObservedPriceConfirmationDraftObservedAtShellBindingTest {
         val renderShell =
             source.substring(
                 source.indexOf("private fun renderShell(state: AppShellState)"),
-                source.indexOf("private fun renderSearch(state: UniversalSearchState)")
+                source.indexOf("private fun renderSearch(state: ArgentinaLiveSearchSurfaceState)")
             )
 
         assertTrue(

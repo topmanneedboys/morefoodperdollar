@@ -8,7 +8,7 @@ import java.io.File
 class UniversalSearchSurfaceAccessibilityBoundaryTest {
 
     @Test
-    fun `search status is a polite live region for async state changes`() {
+    fun `search status is a polite live region and identity cards are accessible`() {
         val activity = source("MainActivity.kt").readText()
         val layout = layoutSource().readText()
         val statusStart = layout.indexOf("android:id=\"@+id/searchStatus\"")
@@ -18,27 +18,15 @@ class UniversalSearchSurfaceAccessibilityBoundaryTest {
         assertTrue("Search status must be a complete TextView block", statusEnd > statusStart)
         val statusBlock = layout.substring(statusStart, statusEnd)
         assertTrue(statusBlock.contains("android:accessibilityLiveRegion=\"polite\""))
-        assertTrue(activity.contains("searchStatus.text = state.statusText"))
+        assertTrue(activity.contains("searchStatus.text = state.statusMessage"))
         assertTrue(activity.contains("importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES"))
-        assertTrue(activity.contains("contentDescription = searchResultContentDescription(row)"))
-        assertTrue(activity.contains("row.sampleEvidence"))
-        assertTrue(activity.contains("R.string.search_sample_result_notice"))
-        assertTrue(activity.contains("sampleNotice?.let(body::addView)"))
-        val strings = moduleFile("src/main/res/values/strings.xml").readText()
-        assertTrue(
-            strings.contains(
-                "<string name=\"search_sample_result_notice\">Fictional sample data only — not live retailer prices or availability.</string>"
-            )
-        )
-        assertTrue(
-            activity.contains(
-                "importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS"
-            )
-        )
+        assertTrue(activity.contains("contentDescription ="))
+        assertTrue(activity.contains("Argentina SEPA identity result"))
+        assertTrue(activity.contains("importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS"))
     }
 
     @Test
-    fun `search presentation keeps decision and network authority outside the status view`() {
+    fun `search presentation keeps decision and network authority outside the view`() {
         val activity = source("MainActivity.kt").readText()
 
         listOf(
@@ -48,17 +36,17 @@ class UniversalSearchSurfaceAccessibilityBoundaryTest {
             "RankingEngine",
             "HttpURLConnection",
             "android.permission.INTERNET",
-            "android.permission.ACCESS_NETWORK_STATE"
+            "android.permission.ACCESS_NETWORK_STATE",
+            "LocalSampleProductSearchProvider",
+            "UniversalSearchController"
         ).forEach { forbidden ->
-            assertFalse("Search status host must not gain authority through $forbidden", activity.contains(forbidden))
+            assertFalse("Search view must not gain authority through $forbidden", activity.contains(forbidden))
         }
     }
 
-    private fun source(name: String): File =
-        moduleFile("src/main/java/com/valuepilot/app/$name")
+    private fun source(name: String): File = moduleFile("src/main/java/com/valuepilot/app/$name")
 
-    private fun layoutSource(): File =
-        moduleFile("src/main/res/layout/activity_shell.xml")
+    private fun layoutSource(): File = moduleFile("src/main/res/layout/activity_shell.xml")
 
     private fun moduleFile(relativePath: String): File {
         var directory = File(System.getProperty("user.dir") ?: error("user.dir unavailable"))

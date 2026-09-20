@@ -58,12 +58,13 @@ class MainActivity : AppCompatActivity() {
     private var homePrivateMemoryState = CompareHerePrivatePriceMemoryState.empty()
     private var homePrivateMemoryLoadIssue: CompareHerePrivatePriceMemoryStoreIssue? = null
 
-    private val searchController = UniversalSearchController()
-    private var searchState = searchController.initialState()
-    private val searchProvider: ProductSearchProvider = LocalSampleProductSearchProvider
     private val searchExecutor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
     private lateinit var offlineCatalogDiscoverySession: BundledOfflineCatalogDiscoverySession
+    private lateinit var argentinaSearchHost: ArgentinaLiveSearchSurfaceHost
+    private var argentinaSearchSurfaceState: ArgentinaLiveSearchSurfaceState? = null
+    private val argentinaLaunchArea = ArgentinaQualifiedLaunchAreas.BuenosAiresCaba
+    private var searchQuery = ""
 
     private lateinit var shellRoot: View
     private lateinit var bottomNavArea: View
@@ -80,7 +81,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var searchExperience: View
     private lateinit var searchInput: TextInputEditText
     private lateinit var searchButton: MaterialButton
-    private lateinit var searchIdentityButton: MaterialButton
+    private lateinit var searchAreaLabel: TextView
     private lateinit var searchStatus: TextView
     private lateinit var searchProgress: ProgressBar
     private lateinit var searchResultsHeading: TextView
@@ -156,11 +157,8 @@ class MainActivity : AppCompatActivity() {
     private var privatePriceHistoryForgetDialog: AlertDialog? = null
     private var offlineCatalogLookup: Future<*>? = null
     private var offlineCatalogRequestId = 0L
-    private var searchIdentityDialog: AlertDialog? = null
-    private var searchIdentityLookup: Future<*>? = null
-    private var searchIdentityRequestId = 0L
     private var suppressSearchInputCallback = false
-    private var restoreSearchOnNextOpen = false
+    private var searchRouteActive = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -183,7 +181,7 @@ class MainActivity : AppCompatActivity() {
         searchExperience = findViewById(R.id.searchExperience)
         searchInput = findViewById(R.id.searchInput)
         searchButton = findViewById(R.id.searchButton)
-        searchIdentityButton = findViewById(R.id.searchIdentityButton)
+        searchAreaLabel = findViewById(R.id.searchAreaLabel)
         searchStatus = findViewById(R.id.searchStatus)
         searchProgress = findViewById(R.id.searchProgress)
         searchResultsHeading = findViewById(R.id.searchResultsHeading)
@@ -214,7 +212,11 @@ class MainActivity : AppCompatActivity() {
         shellState = restoreShellState(savedInstanceState)
         homeSessionState = restoreHomeState(savedInstanceState)
         refreshHomePrivateMemory()
-        searchState = restoreSearchState(savedInstanceState)
+        searchQuery = savedInstanceState?.getString(STATE_SEARCH_QUERY).orEmpty()
+        argentinaSearchHost = ArgentinaLiveSearchSurfaceHost.createProduction(
+            area = argentinaLaunchArea,
+            render = ::renderArgentinaSearchState
+        )
         configureHomeUi()
         configureBasketUi()
         configureSearchUi()
@@ -305,16 +307,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        outState.putString(STATE_SEARCH_QUERY, searchState.query)
-        outState.putBoolean(
-            STATE_SEARCH_WAS_SUBMITTED,
-            searchState.query.isNotBlank() &&
-                searchState.status !in setOf(
-                    UniversalSearchStatus.IDLE,
-                    UniversalSearchStatus.READY,
-                    UniversalSearchStatus.QUERY_TOO_LONG
-                )
-        )
+        outState.putString(STATE_SEARCH_QUERY, searchQuery)
         super.onSaveInstanceState(outState)
     }
 
@@ -326,7 +319,9 @@ class MainActivity : AppCompatActivity() {
         offlineCatalogDialog = null
         pendingExactProductLabel = null
         pendingExactProductItemKey = null
-        dismissSearchIdentityDialog()
+        if (::argentinaSearchHost.isInitialized) {
+            argentinaSearchHost.close()
+        }
         dataStatusDialog?.dismiss()
         dataStatusDialog = null
         privatePriceHistoryDialog?.dismiss()
@@ -1167,27 +1162,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun restoreSearchState(savedInstanceState: Bundle?): UniversalSearchState {
-        var restored = searchController.initialState()
-        val savedQuery = savedInstanceState?.getString(STATE_SEARCH_QUERY).orEmpty()
-
-        if (savedQuery.isNotBlank()) {
-            restored = searchController.reduce(
-                restored,
-                UniversalSearchIntent.QueryChanged(savedQuery)
-            ).state
-        }
-
-        restoreSearchOnNextOpen = savedInstanceState
-            ?.getBoolean(STATE_SEARCH_WAS_SUBMITTED, false)
-            ?: false
-
-        return restored
-    }
-
     private fun configureSearchUi() {
         suppressSearchInputCallback = true
-        searchInput.setText(searchState.query)
+        searchInput.setText(searchQuery)
         searchInput.setSelection(searchInput.text?.length ?: 0)
         suppressSearchInputCallback = false
 
@@ -1210,27 +1187,22 @@ class MainActivity : AppCompatActivity() {
                 override fun afterTextChanged(s: Editable?) {
                     if (suppressSearchInputCallback) return
 
-                    dismissSearchIdentityDialog()
-                    searchState = searchController.reduce(
-                        searchState,
-                        UniversalSearchIntent.QueryChanged(s?.toString().orEmpty())
-                    ).state
-                    renderSearch(searchState)
+                    searchQuery = s?.toString().orEmpty()
+                    argentinaSearchHost.queryChanged(searchQuery)
                 }
             }
         )
 
         searchInput.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                submitSearch()
+                submitArgentinaSearch()
                 true
             } else {
                 false
             }
         }
 
-        searchButton.setOnClickListener { submitSearch() }
-        searchIdentityButton.setOnClickListener { showSearchIdentityMatches() }
+        searchButton.setOnClickListener { submitArgentinaSearch() }
 
         quickSearchEntries().forEach { (chipId, query) ->
             configureQuickSearch(chipId, query)
@@ -1470,12 +1442,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun configureQuickSearch(chipId: Int, query: String) {
         findViewById<Chip>(chipId).setOnClickListener {
-            if (practicalShoppingSearchQuickEntryBlocked(searchState, query)) {
+            if (argentinaSearchSurfaceState?.mode == ArgentinaLiveSearchSurfaceMode.LOADING) {
                 hideKeyboard()
                 return@setOnClickListener
             }
             setSearchQuery(query)
-            submitSearch()
+            submitArgentinaSearch()
         }
     }
 
@@ -1489,198 +1461,26 @@ class MainActivity : AppCompatActivity() {
         )
 
     private fun setSearchQuery(query: String) {
-        dismissSearchIdentityDialog()
         suppressSearchInputCallback = true
         searchInput.setText(query)
         searchInput.setSelection(query.length)
         suppressSearchInputCallback = false
-
-        searchState = searchController.reduce(
-            searchState,
-            UniversalSearchIntent.QueryChanged(query)
-        ).state
-        renderSearch(searchState)
+        searchQuery = query
+        argentinaSearchHost.queryChanged(query)
     }
 
-    private fun submitSearch() {
-        dismissSearchIdentityDialog()
+    private fun submitArgentinaSearch() {
         val rawQuery = searchInput.text?.toString().orEmpty()
-
-        if (!practicalShoppingSearchSubmitEnabled(searchState, rawQuery)) {
+        if (rawQuery.trim().isBlank() ||
+            rawQuery.length > ArgentinaBackendContract.MAX_QUERY_CHARS ||
+            argentinaSearchSurfaceState?.mode == ArgentinaLiveSearchSurfaceMode.LOADING
+        ) {
             hideKeyboard()
             return
         }
-
-        searchState = searchController.reduce(
-            searchState,
-            UniversalSearchIntent.QueryChanged(rawQuery)
-        ).state
-
-        val transition = searchController.reduce(
-            searchState,
-            UniversalSearchIntent.Submit
-        )
-
-        searchState = transition.state
-        renderSearch(searchState)
+        searchQuery = rawQuery
         hideKeyboard()
-        transition.request?.let(::executeSearch)
-    }
-
-    /**
-     * Searches the signed, bundled identity rail without routing identity rows through the
-     * fictional price/ranking provider. The result is deliberately a reviewable dialog; only a
-     * selected display name can be handed to the existing Scan & compare draft route.
-     */
-    private fun showSearchIdentityMatches() {
-        val query = searchState.query.trim()
-        if (!practicalShoppingSearchIdentityEnabled(searchState, query)) return
-
-        dismissSearchIdentityDialog()
-        val requestId = Math.addExact(searchIdentityRequestId, 1L)
-        searchIdentityRequestId = requestId
-        val dialog =
-            AlertDialog.Builder(this)
-                .setTitle(getString(R.string.search_identity_dialog_title, query))
-                .setMessage(R.string.search_identity_loading)
-                .setNegativeButton(R.string.cancel, null)
-                .create()
-        searchIdentityDialog = dialog
-        dialog.setOnDismissListener {
-            if (searchIdentityDialog === dialog) {
-                searchIdentityDialog = null
-                cancelSearchIdentityLookup()
-            }
-        }
-        dialog.show()
-
-        searchIdentityLookup = searchExecutor.submit {
-            val presentation =
-                try {
-                    PracticalShoppingSearchIdentityPresentation.from(
-                        query = query,
-                        result =
-                            offlineCatalogDiscoverySession.discover(
-                                rawQuery = query,
-                                canonicalizer = JvmTextCanonicalizer,
-                                evaluatedAtEpochMillis = System.currentTimeMillis(),
-                                maximumSnapshotAgeMillis = OFFLINE_CATALOG_MAX_AGE_MILLIS
-                            )
-                    )
-                } catch (ignored: Exception) {
-                    null
-                }
-
-            mainHandler.post {
-                if (
-                    isFinishing ||
-                        isDestroyed ||
-                        requestId != searchIdentityRequestId ||
-                        searchIdentityDialog !== dialog ||
-                        !dialog.isShowing
-                ) {
-                    return@post
-                }
-                searchIdentityLookup = null
-                if (presentation == null) {
-                    dialog.setMessage(getString(R.string.search_identity_unavailable))
-                } else {
-                    showSearchIdentityResult(
-                        query = query,
-                        presentation = presentation,
-                        requestId = requestId
-                    )
-                }
-            }
-        }
-    }
-
-    private fun cancelSearchIdentityLookup() {
-        searchIdentityLookup?.cancel(true)
-        searchIdentityLookup = null
-    }
-
-    private fun dismissSearchIdentityDialog() {
-        cancelSearchIdentityLookup()
-        searchIdentityDialog?.dismiss()
-        searchIdentityDialog = null
-    }
-
-    /**
-     * Replaces the loading dialog with a bounded, explicit identity choice. A positive selection
-     * uses the existing untrusted text handoff so Scan & compare still owns all exact evidence
-     * entry and validation.
-     */
-    private fun showSearchIdentityResult(
-        query: String,
-        presentation: PracticalShoppingSearchIdentityPresentation,
-        requestId: Long
-    ) {
-        if (requestId != searchIdentityRequestId || searchIdentityDialog == null) return
-
-        searchIdentityDialog?.dismiss()
-        searchIdentityDialog = null
-
-        if (presentation.matches.isEmpty()) {
-            val dialog =
-                AlertDialog.Builder(this)
-                    .setTitle(getString(R.string.search_identity_dialog_title, query))
-                    .setMessage(presentation.message)
-                    .setNegativeButton(R.string.cancel, null)
-                    .create()
-            searchIdentityDialog = dialog
-            dialog.setOnDismissListener {
-                if (searchIdentityDialog === dialog) searchIdentityDialog = null
-            }
-            dialog.show()
-            return
-        }
-
-        var selectedIndex = -1
-        lateinit var resultDialog: AlertDialog
-        val labels =
-            presentation.matches
-                .map { match ->
-                    buildString {
-                        append(match.displayName)
-                        match.brand?.let { append(" · ").append(it) }
-                        append(" (").append(match.matchLabel).append(")")
-                    }
-                }
-                .toTypedArray()
-        val builder =
-            AlertDialog.Builder(this)
-                .setTitle(getString(R.string.search_identity_dialog_title, query))
-                .setMessage(
-                    presentation.summaryMessage +
-                        "\n\n" +
-                        getString(R.string.search_identity_select)
-                )
-                .setSingleChoiceItems(labels, -1) { _, which ->
-                    selectedIndex = which
-                    resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
-                }
-                .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(R.string.search_identity_open_compare, null)
-
-        resultDialog = builder.create()
-        searchIdentityDialog = resultDialog
-        resultDialog.setOnDismissListener {
-            if (searchIdentityDialog === resultDialog) searchIdentityDialog = null
-        }
-        resultDialog.setOnShowListener {
-            resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).apply {
-                isEnabled = false
-                contentDescription =
-                    getString(R.string.search_identity_open_compare_description)
-            }
-            resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val match = presentation.matches.getOrNull(selectedIndex) ?: return@setOnClickListener
-                resultDialog.dismiss()
-                openComparisonWithSharedText(match.displayName)
-            }
-        }
-        resultDialog.show()
+        argentinaSearchHost.submit(rawQuery)
     }
 
     private fun openComparisonWithSharedText(displayName: String) {
@@ -1696,30 +1496,6 @@ class MainActivity : AppCompatActivity() {
                 putExtra(ComparisonActivity.EXTRA_SHARED_TEXT, displayName)
             }
         )
-    }
-
-    private fun executeSearch(request: ProductSearchRequest) {
-        searchExecutor.execute {
-            val intent = try {
-                UniversalSearchIntent.ResultsReceived(
-                    batch =
-                        searchProvider.search(
-                            request
-                        ),
-                    evaluatedAtEpochMillis =
-                        System.currentTimeMillis()
-                )
-            } catch (ignored: Exception) {
-                UniversalSearchIntent.ProviderFailed(request.requestId)
-            }
-
-            mainHandler.post {
-                if (isFinishing || isDestroyed) return@post
-
-                searchState = searchController.reduce(searchState, intent).state
-                renderSearch(searchState)
-            }
-        }
     }
 
     private fun hideKeyboard() {
@@ -2210,9 +1986,12 @@ class MainActivity : AppCompatActivity() {
             cancelOfflineCatalogLookup()
             offlineCatalogDialog?.dismiss()
         }
-        if (state.route != AppRoute.SEARCH) {
-            dismissSearchIdentityDialog()
+        val searchVisible =
+            state.route == AppRoute.SEARCH && state.selectedPrimaryTab == AppPrimaryTab.SEARCH
+        if (!searchVisible && searchRouteActive) {
+            argentinaSearchHost.invalidateForRouteChange()
         }
+        searchRouteActive = searchVisible
         if (state.route == AppRoute.COMPARE) {
             savedExperience.onRouteVisibilityChanged(false)
             return
@@ -2233,16 +2012,10 @@ class MainActivity : AppCompatActivity() {
         basketExperience.visibility = if (basketVisible) View.VISIBLE else View.GONE
         if (basketVisible) renderHome()
 
-        val searchVisible = state.selectedPrimaryTab == AppPrimaryTab.SEARCH
         searchExperience.visibility = if (searchVisible) View.VISIBLE else View.GONE
 
         if (searchVisible) {
-            renderSearch(searchState)
-
-            if (restoreSearchOnNextOpen && searchState.query.isNotBlank()) {
-                restoreSearchOnNextOpen = false
-                searchInput.post { submitSearch() }
-            }
+            argentinaSearchSurfaceState?.let(::renderSearch)
         }
 
         val savedVisible = state.route == AppRoute.SAVED
@@ -2302,52 +2075,78 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun renderSearch(state: UniversalSearchState) {
-        searchStatus.text = state.statusText
+    private fun renderArgentinaSearchState(state: ArgentinaLiveSearchSurfaceState) {
+        val update = {
+            argentinaSearchSurfaceState = state
+            if (::searchStatus.isInitialized) renderSearch(state)
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) update() else mainHandler.post(update)
+    }
+
+    private fun renderSearch(state: ArgentinaLiveSearchSurfaceState) {
+        searchAreaLabel.text = getString(R.string.search_area_label, state.areaLabel)
+        searchStatus.text = state.statusMessage
         searchStatus.setTextColor(
-            when (state.status) {
-                UniversalSearchStatus.RESULTS -> Color.parseColor("#047857")
-                UniversalSearchStatus.QUERY_TOO_LONG,
-                UniversalSearchStatus.MIXED_CURRENCIES,
-                UniversalSearchStatus.PROVIDER_ERROR -> Color.parseColor("#B42318")
+            when (state.mode) {
+                ArgentinaLiveSearchSurfaceMode.RESULTS -> Color.parseColor("#374151")
+                ArgentinaLiveSearchSurfaceMode.AUTHORIZATION_UNAVAILABLE,
+                ArgentinaLiveSearchSurfaceMode.STALE_RELEASE,
+                ArgentinaLiveSearchSurfaceMode.TIMEOUT,
+                ArgentinaLiveSearchSurfaceMode.TEMPORARILY_UNAVAILABLE -> Color.parseColor("#B42318")
                 else -> Color.parseColor("#6B7280")
             }
         )
-
         searchProgress.visibility =
-            if (state.status == UniversalSearchStatus.LOADING) View.VISIBLE else View.GONE
+            if (state.mode == ArgentinaLiveSearchSurfaceMode.LOADING) View.VISIBLE else View.GONE
 
-        searchButton.isEnabled = practicalShoppingSearchSubmitEnabled(state)
-        searchIdentityButton.isEnabled = practicalShoppingSearchIdentityEnabled(state)
-        quickSearchEntries().forEach { (chipId, query) ->
+        searchButton.isEnabled =
+            state.mode != ArgentinaLiveSearchSurfaceMode.LOADING &&
+                searchQuery.trim().isNotBlank() &&
+                searchQuery.length <= ArgentinaBackendContract.MAX_QUERY_CHARS
+        quickSearchEntries().forEach { (chipId, _) ->
             findViewById<Chip>(chipId).isEnabled =
-                practicalShoppingSearchQuickEntryEnabled(state, query)
+                state.mode != ArgentinaLiveSearchSurfaceMode.LOADING
         }
 
         searchResultsContainer.removeAllViews()
+        val presentation = state.presentation
         searchResultsHeading.visibility =
-            if (state.results.isEmpty()) View.GONE else View.VISIBLE
+            if (state.mode == ArgentinaLiveSearchSurfaceMode.RESULTS &&
+                presentation != null && presentation.matches.isNotEmpty()
+            ) View.VISIBLE else View.GONE
 
-        state.results.forEach { row ->
-            searchResultsContainer.addView(createSearchResultView(row))
+        presentation?.matches?.forEach { match ->
+            searchResultsContainer.addView(createSearchResultView(match, state.caveat))
         }
     }
 
-    private fun createSearchResultView(row: UniversalSearchRow): View {
+    private fun createSearchResultView(
+        match: PracticalShoppingSearchIdentityPresentation.Match,
+        caveat: String
+    ): View {
         val card = MaterialCardView(this).apply {
             radius = dp(18).toFloat()
             cardElevation = 0f
-            setCardBackgroundColor(
-                Color.parseColor(if (row.best) "#ECFDF5" else "#FFFFFF")
-            )
-            strokeColor = Color.parseColor(if (row.best) "#A7F3D0" else "#E5E7EB")
+            setCardBackgroundColor(Color.WHITE)
+            strokeColor = Color.parseColor("#D1D5DB")
             strokeWidth = dp(1)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { topMargin = dp(12) }
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
-            contentDescription = searchResultContentDescription(row)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { openComparisonWithSharedText(match.displayName) }
+            contentDescription =
+                listOfNotNull(
+                    match.displayName,
+                    match.brand,
+                    match.matchLabel,
+                    "Argentina SEPA identity result",
+                    caveat,
+                    "Tap to review this name in Scan and compare"
+                ).joinToString(". ") { it.trim().trimEnd('.', '!', '?') } + "."
         }
 
         val body = LinearLayout(this).apply {
@@ -2359,127 +2158,50 @@ class MainActivity : AppCompatActivity() {
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         }
 
-        val rank = TextView(this).apply {
-            text = searchResultRankLabel(row)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setTextColor(Color.parseColor(if (row.best) "#047857" else "#6B7280"))
-            setTypeface(Typeface.DEFAULT, Typeface.BOLD)
-        }
-
         val name = TextView(this).apply {
-            text = row.name
+            text = match.displayName
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
             setTextColor(Color.parseColor("#111827"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             setPadding(0, dp(5), 0, 0)
         }
 
-        val price = TextView(this).apply {
-            text = listOfNotNull(
-                row.priceSummary,
-                row.quantity?.takeIf { it.isNotBlank() }
-            ).joinToString("  •  ")
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
-            setTextColor(Color.parseColor("#374151"))
-            setPadding(0, dp(7), 0, 0)
+        val brand = match.brand?.let { brandName ->
+            TextView(this).apply {
+                text = brandName
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                setTextColor(Color.parseColor("#374151"))
+                setPadding(0, dp(7), 0, 0)
+            }
         }
 
-        val metric = TextView(this).apply {
-            text = row.metricLabel
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-            setTextColor(Color.parseColor("#111827"))
-            setTypeface(Typeface.DEFAULT, Typeface.BOLD)
-            setPadding(0, dp(7), 0, 0)
-        }
-
-        val exactness = TextView(this).apply {
-            text = row.exactnessLabel
+        val matchLabel = TextView(this).apply {
+            text = getString(R.string.search_identity_match_label, match.matchLabel)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setTextColor(Color.parseColor("#6B7280"))
-            setPadding(0, dp(3), 0, 0)
+            setPadding(0, dp(8), 0, 0)
         }
 
-        val sampleNotice =
-            if (row.sampleEvidence) {
-                TextView(this).apply {
-                    text = getString(R.string.search_sample_result_notice)
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-                    setTextColor(Color.parseColor("#92400E"))
-                    setPadding(0, dp(6), 0, 0)
-                }
-            } else {
-                null
-            }
-
-        val notice =
-            row.evidenceNotice
-                ?.takeIf {
-                    it.isNotBlank()
-                }
-                ?.let { noticeText ->
-                    TextView(this).apply {
-                        text = noticeText
-                        setTextSize(
-                            TypedValue.COMPLEX_UNIT_SP,
-                            12f
-                        )
-                        setTextColor(
-                            Color.parseColor("#92400E")
-                        )
-                        setPadding(
-                            0,
-                            dp(5),
-                            0,
-                            0
-                        )
-                    }
-                }
-
         val source = TextView(this).apply {
-            text = row.sourceSummary
+            text = getString(R.string.search_identity_source)
             gravity = Gravity.START
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setTextColor(Color.parseColor("#6B7280"))
             setPadding(0, dp(9), 0, 0)
         }
 
-        body.addView(rank)
         body.addView(name)
-        body.addView(price)
-        body.addView(metric)
-        body.addView(exactness)
-        sampleNotice?.let(body::addView)
-        notice?.let(body::addView)
+        brand?.let(body::addView)
+        body.addView(matchLabel)
+        TextView(this).apply {
+            text = caveat
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextColor(Color.parseColor("#92400E"))
+            setPadding(0, dp(7), 0, 0)
+        }.also(body::addView)
         body.addView(source)
         card.addView(body)
         return card
-    }
-
-    private fun searchResultRankLabel(row: UniversalSearchRow): String =
-        when {
-            row.best -> getString(R.string.best_value_rank, row.rank)
-            row.rank != null -> getString(R.string.rank_number, row.rank)
-            else -> "REFERENCE ONLY"
-        }
-
-    private fun searchResultContentDescription(row: UniversalSearchRow): String {
-        val sampleNotice =
-            if (row.sampleEvidence) {
-                getString(R.string.search_sample_result_notice)
-            } else {
-                null
-            }
-        return listOfNotNull(
-            searchResultRankLabel(row),
-            row.name,
-            row.priceSummary,
-            row.quantity?.takeIf(String::isNotBlank),
-            row.metricLabel,
-            row.exactnessLabel,
-            row.evidenceNotice?.takeIf(String::isNotBlank),
-            row.sourceSummary,
-            sampleNotice
-        ).joinToString(". ") { it.trim().trimEnd('.', '!', '?') } + "."
     }
 
     private fun copyFor(tab: AppPrimaryTab): ScreenCopy =
@@ -2546,7 +2268,6 @@ class MainActivity : AppCompatActivity() {
         private const val STATE_HOME_DETAILS_BRAND = "app_shell.home_details_brand"
         private const val STATE_HOME_DETAILS_EXACT_PRODUCT = "app_shell.home_details_exact_product"
         private const val STATE_SEARCH_QUERY = "app_shell.search_query"
-        private const val STATE_SEARCH_WAS_SUBMITTED = "app_shell.search_was_submitted"
         private const val OFFLINE_CATALOG_MAX_AGE_MILLIS = 8L * 24L * 60L * 60L * 1_000L
     }
 }

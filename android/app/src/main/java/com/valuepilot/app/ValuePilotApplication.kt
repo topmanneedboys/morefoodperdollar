@@ -14,7 +14,6 @@ class ValuePilotApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         ValuePilotFirebaseRuntime.initialize(this)
-        ValuePilotM12_3QualificationProbe.startIfEligible()
     }
 }
 

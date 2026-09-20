@@ -8,59 +8,36 @@ import java.io.File
 class MainActivitySearchSubmissionBoundaryTest {
 
     @Test
-    fun keyboardSubmissionSharesTheVisibleReadinessGate() {
+    fun `keyboard button and quick entries share the live submission boundary`() {
         val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
-        val presentation =
-            source(
-                "src/main/java/com/valuepilot/app/PracticalShoppingSearchSurfacePresentation.kt"
-            ).readText()
-
-        assertTrue(
-            activity.contains(
-                "searchButton.isEnabled = practicalShoppingSearchSubmitEnabled(state)"
-            )
-        )
-        assertTrue(
-            activity.contains(
-                "if (!practicalShoppingSearchSubmitEnabled(searchState, rawQuery))"
-            )
-        )
-        assertTrue(
-            activity.contains(
-                "if (practicalShoppingSearchQuickEntryBlocked(searchState, query))"
-            )
-        )
-        assertTrue(
-            activity.contains(
-                "findViewById<Chip>(chipId).isEnabled ="
-            )
-        )
-        assertTrue(
-            activity.contains(
-                "practicalShoppingSearchQuickEntryEnabled(state, query)"
-            )
-        )
-        assertTrue(presentation.contains("UniversalSearchStatus.LOADING"))
-        assertTrue(presentation.contains("UniversalSearchStatus.QUERY_TOO_LONG"))
-        assertTrue(presentation.contains("state.query == rawQuery"))
-        assertTrue(
-            presentation.contains(
-                "!practicalShoppingSearchQuickEntryBlocked(state, rawQuery)"
-            )
-        )
+            .replace("\r\n", "\n")
 
         listOf(
-            "PracticalShoppingPlanner(",
-            "Money.parse",
-            "HttpURLConnection",
-            "ProductSearchProvider",
-            "System.currentTimeMillis"
-        ).forEach { forbidden ->
-            assertFalse(
-                "Search readiness presentation must not own $forbidden",
-                presentation.contains(forbidden)
-            )
+            "searchInput.setOnEditorActionListener",
+            "submitArgentinaSearch()",
+            "searchButton.setOnClickListener { submitArgentinaSearch() }",
+            "argentinaSearchHost.submit(rawQuery)",
+            "setSearchQuery(query)",
+            "argentinaSearchHost.queryChanged(query)"
+        ).forEach { required ->
+            assertTrue("Expected live Search boundary $required", activity.contains(required))
         }
+        assertFalse(activity.contains("submitSearch()"))
+        assertFalse(activity.contains("LocalSampleProductSearchProvider"))
+        assertFalse(activity.contains("UniversalSearchController"))
+    }
+
+    @Test
+    fun `surface host is user-triggered and has no startup submission`() {
+        val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
+            .replace("\r\n", "\n")
+        val host = source("src/main/java/com/valuepilot/app/ArgentinaLiveSearchSurface.kt").readText()
+
+        assertTrue(activity.contains("ArgentinaLiveSearchSurfaceHost.createProduction"))
+        assertTrue(activity.contains("argentinaSearchHost.invalidateForRouteChange()"))
+        assertFalse(activity.contains("searchInput.post { submit"))
+        assertTrue(host.contains("fun submit(rawQuery: String)"))
+        assertTrue(host.contains("coordinator.submit(rawQuery, area.context())"))
     }
 
     private fun source(relativePath: String): File {

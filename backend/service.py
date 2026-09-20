@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import time
 import uuid
 import threading
@@ -17,6 +18,32 @@ LOGGER = logging.getLogger("valuepilot.backend")
 MAX_REQUEST_BYTES = 16 * 1024
 NORMAL_RESPONSE_BYTES = 128 * 1024
 HARD_RESPONSE_BYTES = 512 * 1024
+
+ANDROID_NETWORKING_AUTHORIZED_ENV = "VALUEPILOT_ANDROID_NETWORKING_AUTHORIZED"
+ANDROID_NETWORKING_SCOPE_ENV = "VALUEPILOT_ANDROID_NETWORKING_SCOPE"
+ANDROID_NETWORKING_RELEASE_ID_ENV = "VALUEPILOT_ANDROID_NETWORKING_RELEASE_ID"
+ANDROID_NETWORKING_RELEASE_DATE_ENV = "VALUEPILOT_ANDROID_NETWORKING_RELEASE_DATE"
+ANDROID_NETWORKING_SCOPE = "identity-search"
+
+
+def _android_networking_authorized(status: Mapping[str, Any]) -> bool:
+    """Authorize only the explicitly deployed identity-search environment."""
+    if os.environ.get(ANDROID_NETWORKING_AUTHORIZED_ENV, "").strip().lower() != "true":
+        return False
+    if os.environ.get(ANDROID_NETWORKING_SCOPE_ENV, "") != ANDROID_NETWORKING_SCOPE:
+        return False
+    if status.get("service") != "ready" or status.get("freshness") != "FRESH":
+        return False
+    if status.get("backendCodeQualified") is not True:
+        return False
+    configured_release_id = os.environ.get(ANDROID_NETWORKING_RELEASE_ID_ENV, "").strip()
+    configured_release_date = os.environ.get(ANDROID_NETWORKING_RELEASE_DATE_ENV, "").strip()
+    return bool(
+        configured_release_id
+        and configured_release_date
+        and configured_release_id == status.get("releaseId")
+        and configured_release_date == status.get("releaseDate")
+    )
 
 
 def _strip_internal(value: Any) -> Any:
@@ -116,10 +143,13 @@ class BackendService:
             "apiContractVersion": "valuepilot-argentina-backend-http-v1",
             "backendCodeQualified": True,
             "liveCloudDeploymentVerified": False,
-            "androidNetworkingAuthorized": False,
             "productionAndroidUiAuthorized": False,
             "automatedOfficialAcquisitionProven": False,
         })
+        # This flag is deployment-controlled and scoped to the identity-only
+        # Search route. Missing, malformed or mismatched configuration remains
+        # fail-closed.
+        value["androidNetworkingAuthorized"] = _android_networking_authorized(value)
         return value
 
     def shop(self, payload: Mapping[str, Any], *, correlation_id: str | None = None) -> dict[str, Any]:

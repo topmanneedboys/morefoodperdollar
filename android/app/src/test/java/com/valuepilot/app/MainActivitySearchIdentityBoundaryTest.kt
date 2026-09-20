@@ -8,63 +8,55 @@ import java.io.File
 class MainActivitySearchIdentityBoundaryTest {
 
     @Test
-    fun `search exposes a bounded signed identity lookup and review handoff`() {
-        val source = source().readText().replace("\r\n", "\n").replace('\r', '\n')
-        val layout = layoutSource().readText()
+    fun `visible Search is Argentina identity-only and supports Compare handoff`() {
+        val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
+            .replace("\r\n", "\n")
+        val layout = source("src/main/res/layout/activity_shell.xml").readText()
 
         listOf(
-            "searchIdentityButton = findViewById(R.id.searchIdentityButton)",
-            "searchIdentityButton.setOnClickListener { showSearchIdentityMatches() }",
-            "searchIdentityButton.isEnabled = practicalShoppingSearchIdentityEnabled(state)",
-            "dismissSearchIdentityDialog()\n        suppressSearchInputCallback = true",
-            "private fun submitSearch() {\n        dismissSearchIdentityDialog()",
-            "private fun showSearchIdentityMatches()",
-            "offlineCatalogDiscoverySession.discover(",
-            "PracticalShoppingSearchIdentityPresentation.from(",
-            "showSearchIdentityResult(",
+            "ArgentinaLiveSearchSurfaceHost",
+            "ArgentinaQualifiedLaunchAreas.BuenosAiresCaba",
+            "searchAreaLabel",
+            "PracticalShoppingSearchIdentityPresentation.Match",
             "openComparisonWithSharedText(match.displayName)",
-            "ComparisonActivity.EXTRA_SHARED_TEXT",
-            "searchIdentityDialog?.dismiss()",
-            "cancelSearchIdentityLookup()"
+            "Argentina SEPA identity result"
         ).forEach { required ->
-            assertTrue("Expected Search identity boundary $required", source.contains(required))
+            assertTrue("Expected visible identity boundary $required", activity.contains(required))
         }
-        assertTrue(layout.contains("android:id=\"@+id/searchIdentityButton\""))
-        assertTrue(layout.contains("@string/search_identity_action_description"))
+        assertTrue(layout.contains("android:id=\"@+id/searchAreaLabel\""))
+        assertFalse(layout.contains("@+id/searchIdentityButton"))
+        assertFalse(activity.contains("LocalSampleProductSearchProvider"))
+        assertFalse(activity.contains("UniversalSearchController"))
+        assertFalse(activity.contains("row.priceSummary"))
+        assertFalse(activity.contains("row.metricLabel"))
+        assertFalse(activity.contains("row.best"))
     }
 
     @Test
-    fun `search identity path does not become a price or network provider`() {
-        val source = source().readText().replace("\r\n", "\n").replace('\r', '\n')
-        val identityStart = source.indexOf("private fun showSearchIdentityMatches()")
-        val identityEnd = source.indexOf("private fun executeSearch", identityStart)
-        assertTrue(identityStart >= 0)
-        assertTrue(identityEnd > identityStart)
-        val identityPath = source.substring(identityStart, identityEnd)
-
+    fun `identity cards do not expose price ranking or availability authority`() {
+        val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
+            .replace("\r\n", "\n")
+        val cardStart = activity.indexOf("private fun createSearchResultView(")
+        val cardEnd = activity.indexOf("private fun copyFor", cardStart)
+        assertTrue(cardStart >= 0)
+        assertTrue(cardEnd > cardStart)
+        val card = activity.substring(cardStart, cardEnd)
         listOf(
-            "ProductSearchProvider",
-            "UniversalSearchController",
-            "PracticalShoppingPlanner",
-            "Money.parse",
-            "HttpURLConnection",
-            "android.permission.INTERNET",
-            "ACCESS_NETWORK_STATE",
-            "currentPrice",
-            "availability"
+            "priceSummary",
+            "metricLabel",
+            "best_value",
+            "rank",
+            "inventory",
+            "availability",
+            "merchant availability"
         ).forEach { forbidden ->
-            assertFalse("Search identity path must not own $forbidden", identityPath.contains(forbidden))
+            assertFalse("Identity card must not own $forbidden", card.contains(forbidden, ignoreCase = true))
         }
-        assertTrue(identityPath.contains("maximumSnapshotAgeMillis = OFFLINE_CATALOG_MAX_AGE_MILLIS"))
-        assertTrue(identityPath.contains("isDestroyed"))
-        assertTrue(identityPath.contains("requestId != searchIdentityRequestId"))
+        assertTrue(card.contains("caveat"))
+        assertTrue(card.contains("openComparisonWithSharedText"))
     }
 
-    private fun source(): File = moduleFile("src/main/java/com/valuepilot/app/MainActivity.kt")
-
-    private fun layoutSource(): File = moduleFile("src/main/res/layout/activity_shell.xml")
-
-    private fun moduleFile(relativePath: String): File {
+    private fun source(relativePath: String): File {
         var directory = File(System.getProperty("user.dir") ?: error("user.dir unavailable"))
         repeat(8) {
             val candidate = File(directory, "app/$relativePath")

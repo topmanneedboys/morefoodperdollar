@@ -152,7 +152,16 @@
                     android:text="@string/search_action"
                     android:textAllCaps="false"
                     android:textSize="16sp"
-                    app:cornerRadius="16dp" />
+                     app:cornerRadius="16dp" />
+
+                <TextView
+                    android:id="@+id/searchAreaLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:textColor="#374151"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
 
                 <TextView
                     android:layout_width="match_parent"
@@ -219,10 +228,10 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    app:cardBackgroundColor="#F0FDF4"
+                    app:cardBackgroundColor="#F9FAFB"
                     app:cardCornerRadius="16dp"
                     app:cardElevation="0dp"
-                    app:strokeColor="#BBF7D0"
+                    app:strokeColor="#D1D5DB"
                     app:strokeWidth="1dp">
 
                     <LinearLayout
@@ -234,8 +243,8 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/search_sample_badge"
-                            android:textColor="#047857"
+                            android:text="@string/search_identity_badge"
+                            android:textColor="#374151"
                             android:textSize="11sp"
                             android:textStyle="bold" />
 
@@ -244,27 +253,13 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             android:lineSpacingExtra="2dp"
-                            android:text="@string/search_sample_notice"
+                            android:text="@string/search_identity_notice"
                             android:textColor="#374151"
                             android:textSize="13sp" />
 
                     </LinearLayout>
 
                 </com.google.android.material.card.MaterialCardView>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/searchIdentityButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="54dp"
-                    android:layout_marginTop="12dp"
-                    android:contentDescription="@string/search_identity_action_description"
-                    android:text="@string/search_identity_action"
-                    android:textAllCaps="false"
-                    android:textSize="15sp"
-                    app:backgroundTint="#FFFFFF"
-                    app:cornerRadius="16dp"
-                    app:strokeColor="#D1D5DB"
-                    app:strokeWidth="1dp" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
