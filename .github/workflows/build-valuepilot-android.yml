@@ -187,6 +187,7 @@ jobs:
           (cd browser-extension/dist/firefox && zip -X -q -r ../../../release-browser/ValuePilot-v101-firefox.zip .)
 
       - name: Upload verified browser parts
+        if: github.ref != 'refs/heads/candidate/argentina-live-search-m12-4'
         uses: actions/upload-artifact@v6
         with:
           name: ValuePilot-v101-browser-parts
@@ -291,6 +292,7 @@ jobs:
           cp android/app/build/outputs/apk/debug/app-debug.apk release-android/ValuePilot-v101.1-android.apk
 
       - name: Upload verified Android part
+        if: github.ref != 'refs/heads/candidate/argentina-live-search-m12-4'
         uses: actions/upload-artifact@v6
         with:
           name: ValuePilot-v101-android-part
@@ -299,7 +301,7 @@ jobs:
           retention-days: 1
 
   release-bundle:
-    if: github.event_name != 'push' || github.ref != 'refs/heads/work/valuepilot-android-milestone'
+    if: (github.event_name != 'push' || github.ref != 'refs/heads/work/valuepilot-android-milestone') && github.ref != 'refs/heads/candidate/argentina-live-search-m12-4'
     needs:
       - browser-verify
       - android-verify

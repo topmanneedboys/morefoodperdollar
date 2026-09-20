@@ -5,6 +5,14 @@
   "baseHead": "93f25a072881cb25db6bfc38517d4efc87523af9",
   "visibleSearch": "NOT_WIRED",
   "androidBundleUploaded": false,
+  "candidateCiStorageBoundary": {
+    "branch": "candidate/argentina-live-search-m12-4",
+    "browserAndAndroidVerificationStillRuns": true,
+    "disposablePartUploads": "SKIPPED_ON_CANDIDATE_ONLY",
+    "releaseBundleAssembly": "SKIPPED_ON_CANDIDATE_ONLY",
+    "reason": "GitHub Actions artifact quota was reported full; no new Android bundle is authorized for M12.4A",
+    "qualifiedReleaseArtifactsChanged": false
+  },
   "releaseStrategy": {
     "statusHandshake": true,
     "releaseIdSource": "STATUS_RESPONSE",

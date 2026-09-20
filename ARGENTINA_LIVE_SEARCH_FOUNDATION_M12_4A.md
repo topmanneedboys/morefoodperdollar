@@ -50,6 +50,18 @@ The existing bridge, strict contract parser, App Check transport, identity
 mapper, and refresh gate remain the authorities. No Search UI consumes this
 seam yet.
 
+### Candidate CI storage boundary
+
+On this candidate branch only, the Android/browser workflow still runs the
+full test, lint, build, privacy, and signer checks but skips uploading the
+disposable browser/APK parts and skips the release-bundle assembly. This is a
+narrow free-first safeguard after GitHub reported the account artifact quota
+full while attempting the first candidate upload. It does not delete or
+change qualified release/provenance artifacts, and it does not apply to the
+qualified `work/valuepilot-android-milestone` branch or ordinary release runs.
+The candidate has no new Android bundle authorization, so rebuilding those
+outputs is intentionally preferred over retaining another copy.
+
 ### Timeout budget
 
 The M12.3 device qualification observed an edge cold-start request at
@@ -134,8 +146,9 @@ The final local verification completed successfully:
 - `git diff --check` and the final working-tree review.
 
 The repository's exact-head GitHub workflows remain the final remote CI gate;
-this candidate does not alter the qualified M12.3 branch or the milestone
-provenance workflow.
+the candidate storage boundary above keeps that gate artifact-free while the
+account quota recalculates. This candidate does not alter the qualified M12.3
+branch or the milestone provenance workflow.
 
 ## Remaining boundary
 
