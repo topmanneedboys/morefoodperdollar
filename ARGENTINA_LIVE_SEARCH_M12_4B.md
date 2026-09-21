@@ -122,18 +122,22 @@ completed successfully and produced the ignored local unsigned artifact:
 `android/app/build/outputs/bundle/release/app-release.aab`
 
 Unsigned AAB SHA-256: `189ba1bc1545fbd00fc2da80818dbc250501b9c217a3dd5db156987de88193ed`.
-No signed 10103 AAB was produced because the existing Play upload keystore and
-credentials are not present in this workspace.
+The existing protected Play upload keystore was found locally and its
+certificate matches the known upload certificate. The current 10103 bundle was
+signed locally (without uploading it) as the ignored artifact
+`android/app/build/outputs/bundle/release/app-release-play-upload-signed-10103.aab`.
+It is `36,307,058` bytes with SHA-256
+`b195d6a6318db823a61f27035cc2b8c66adda392c2040a4b87d71e17b4cd3679`.
 
 The corresponding unsigned release APK reports package `com.valuepilot.app`,
 versionCode `10103`, versionName `101.1.2`, target SDK 36, and exactly the
 intentional `INTERNET` and optional `CAMERA` permissions. It has no
-`ACCESS_NETWORK_STATE` or location permission and has cleartext disabled. The
-candidate is not signed for Play here because the existing upload keystore and
-credentials are not present in this workspace. Do not generate a replacement
-key: the existing Play upload certificate must be used. The previously signed
-10102 artifact identifies that upload certificate as SHA-256
+`ACCESS_NETWORK_STATE` or location permission and has cleartext disabled.
+`jarsigner` verification passed for the signed bundle and its embedded signer
+certificate is the known upload certificate SHA-256
 `A0:B6:5D:8A:5A:F9:44:9E:76:6F:05:39:6F:E1:78:20:D5:2F:26:7C:E9:D5:8A:B0:C2:F6:CD:E4:DC:B8:52:DA`.
+Do not generate a replacement key. The signed artifact is not uploaded to
+Google Play by this checkpoint.
 
 ## Verification
 
@@ -157,6 +161,9 @@ The following completed successfully on this candidate:
   writes before promotion, and the candidate receipt/manifest; raw provider
   data remains outside Git. Both runtime-bucket mirrors have zero missing,
   size-mismatch or checksum-mismatch objects.
+- Local Play-upload signing for version `10103` passed with the existing
+  protected key; package/version and signer fingerprint were independently
+  checked. No Play upload was attempted.
 
 The normal exact-head GitHub workflows are the final remote gate after this
 checkpoint is pushed. This report does not claim a physical-device result,
@@ -164,10 +171,8 @@ Play upload or production Android UI qualification.
 
 ## Remaining bounded actions
 
-1. Provide the existing Play upload keystore/alias/password through the normal
-   protected release process, sign `app-release.aab`, and verify package,
-   version, signer and SHA-256 before uploading to the Play Console internal
-   track.
+1. Upload the already verified signed 10103 bundle through the normal protected
+   Play Console internal-track process; do not upload an unverified copy.
 2. Install that signed bundle through Google Play and perform the explicit
    CABA identity-search smoke. Only then can this status advance to device
    qualified.

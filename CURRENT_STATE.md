@@ -32,9 +32,13 @@ active release is
 2026-09-21 it is explicitly `FRESH`, and the backend reports
 `androidNetworkingAuthorized=true`. `productionAndroidUiAuthorized` remains
 false. This is therefore backend-ready and Play-build-ready but **not
-device/live-search qualified** until the existing Play upload key is used and
-the signed app passes the explicit physical-device smoke. No M12.5 work has
-started.
+device/live-search qualified** until the signed app passes the explicit
+physical-device smoke. The existing protected Play upload key was found and
+verified; the current 10103 / 101.1.2 AAB is signed locally but not uploaded:
+`android/app/build/outputs/bundle/release/app-release-play-upload-signed-10103.aab`
+(SHA-256
+`b195d6a6318db823a61f27035cc2b8c66adda392c2040a4b87d71e17b4cd3679`). No
+M12.5 work has started.
 
 The active release was independently verified from the official archived source
 SHA-256 `619498b8e3230298b8a91f3df05ee7fe44e190a8f909e0e103cf43867fec73ee`

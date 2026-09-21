@@ -28,7 +28,15 @@ revision, and the backend reports `FRESH` with
 `androidNetworkingAuthorized=true`. The candidate remains
 **PLAY_BUILD_READY_NOT_DEVICE_QUALIFIED** because the existing upload keystore
 is required for the signed Play artifact and a physical-device smoke is still
-pending. Do not bypass either gate. No M12.5 work has started.
+pending. The existing protected upload key has now been recovered and
+verified, and the current 10103 / 101.1.2 AAB is signed locally but not
+uploaded. Do not bypass the device gate. No M12.5 work has started.
+
+The signed local artifact is
+`android/app/build/outputs/bundle/release/app-release-play-upload-signed-10103.aab`
+with SHA-256
+`b195d6a6318db823a61f27035cc2b8c66adda392c2040a4b87d71e17b4cd3679`; it has
+not been uploaded to Google Play.
 
 The active immutable release id is
 `argentina-sepa-2026-09-18-619498b8e3230298-routing-v1-search-v2`. The
