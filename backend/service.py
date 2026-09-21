@@ -81,6 +81,27 @@ class BackendService:
                 self._readers[key] = reader
             return reader
 
+    @staticmethod
+    def _trusted_keys_from_input(input_result: Mapping[str, Any]) -> dict[str, str] | None:
+        """Project only interpreter-qualified identities into the private edge."""
+
+        if input_result.get("safeRequestReady") is not True:
+            return None
+        lines = input_result.get("lines")
+        if not isinstance(lines, list):
+            return None
+        result: dict[str, str] = {}
+        for line in lines:
+            if not isinstance(line, Mapping):
+                return None
+            line_id = line.get("lineId")
+            recognized = line.get("recognizedProduct")
+            key = recognized.get("productEvidenceKey") if isinstance(recognized, Mapping) else None
+            if not isinstance(line_id, str) or not isinstance(key, str) or not key:
+                return None
+            result[line_id] = key
+        return result or None
+
     def _execute(self, payload: Mapping[str, Any], *, correlation_id: str | None = None):
         request_id = correlation_id or str(uuid.uuid4())
         handle = self.release_manager.pin(require_fresh=True)
@@ -108,6 +129,25 @@ class BackendService:
             raise ResponseLimitError(ResponseLimitError.code)
         return len(raw)
 
+    @staticmethod
+    def _emit_request_metrics(request_id: str, handle: Any, metrics: Any, *, started: float) -> None:
+        """Emit bounded server-side diagnostics without changing the API shape."""
+
+        reader_metrics = metrics.as_dict() if callable(getattr(metrics, "as_dict", None)) else {}
+        artifacts = getattr(handle, "artifacts", None)
+        cache_stats = artifacts.cache_stats() if callable(getattr(artifacts, "cache_stats", None)) else {}
+        store = getattr(artifacts, "store", None)
+        store_stats = store.stats_snapshot() if callable(getattr(store, "stats_snapshot", None)) else {}
+        payload = {
+            "requestId": request_id,
+            "releaseId": getattr(handle, "release_id", None),
+            "serviceMs": round((time.perf_counter() - started) * 1000, 3),
+            "reader": reader_metrics,
+            "artifactCache": cache_stats,
+            "objectStore": store_stats,
+        }
+        LOGGER.info("request_metrics=%s", json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
+
     def _shop_response(self, request_id: str, handle: Any, decision: Mapping[str, Any], metrics: Any, *, started: float, input_result: Mapping[str, Any] | None = None) -> dict[str, Any]:
         response: dict[str, Any] = {
             "apiContractVersion": "valuepilot-argentina-backend-http-v1",
@@ -128,6 +168,7 @@ class BackendService:
         if input_result is not None:
             response["input"] = dict(input_result)
         response["diagnostics"]["customerResponseBytes"] = self._response_size(response)
+        self._emit_request_metrics(request_id, handle, metrics, started=started)
         return response
 
     def health(self) -> dict[str, str]:
@@ -146,22 +187,20 @@ class BackendService:
             "productionAndroidUiAuthorized": False,
             "automatedOfficialAcquisitionProven": False,
         })
-        # This flag is deployment-controlled and scoped to the identity-only
-        # Search route. Missing, malformed or mismatched configuration remains
-        # fail-closed.
         value["androidNetworkingAuthorized"] = _android_networking_authorized(value)
         return value
 
     def shop(self, payload: Mapping[str, Any], *, correlation_id: str | None = None) -> dict[str, Any]:
         request_id = correlation_id or str(uuid.uuid4())
         started = time.perf_counter()
+        handle = None
         try:
             request_id, handle, decision, metrics = self._execute(payload, correlation_id=request_id)
         except CurrentPriceEvidenceUnavailable:
-            LOGGER.info("request=%s release=%s result=current_evidence_unavailable", request_id, handle.release_id)
+            LOGGER.info("request=%s release=%s result=current_evidence_unavailable", request_id, getattr(handle, "release_id", None))
             raise
         except BackendQueryError:
-            LOGGER.info("request=%s release=%s result=invalid_or_failed", request_id, handle.release_id)
+            LOGGER.info("request=%s release=%s result=invalid_or_failed", request_id, getattr(handle, "release_id", None))
             raise
         return self._shop_response(request_id, handle, decision, metrics, started=started)
 
@@ -215,7 +254,11 @@ class BackendService:
             response["diagnostics"]["customerResponseBytes"] = self._response_size(response)
             return response
         request = {"latitude": payload.get("latitude"), "longitude": payload.get("longitude"), "radiusKm": payload.get("radiusKm"), "items": input_result["structuredItems"]}
-        decision, metrics = reader.query(request)
+        trusted_keys = self._trusted_keys_from_input(input_result)
+        if trusted_keys:
+            decision, metrics = reader.query(request, trusted_product_keys=trusted_keys)
+        else:
+            decision, metrics = reader.query(request)
         return self._shop_response(request_id, handle, decision, metrics, started=started, input_result=input_result)
 
     def search(self, payload: Mapping[str, Any], *, correlation_id: str | None = None) -> dict[str, Any]:
@@ -227,43 +270,7 @@ class BackendService:
         handle = self.release_manager.pin(require_fresh=True)
         reader = self._reader(handle)
         regions = self._route_ids(reader, payload)
-        input_result = reader.interpret_text(query, require_quantities=False, region_ids=regions)
-        line = input_result.get("lines", [{}])[0] if input_result.get("lines") else {}
-        resolution = line.get("resolution")
-        recognized = line.get("recognizedProduct") or {}
-        if resolution not in {"RESOLVED_EXACT", "RESOLVED_ALIAS", "RESOLVED_SAFE_CORRECTION"} or not isinstance(recognized, Mapping) or not recognized.get("name"):
-            suggestions = line.get("suggestions", []) if isinstance(line, Mapping) else []
-            candidates = [{"lineId": "search-1", "query": query, "productCandidates": _strip_internal(suggestions)}]
-            response = {
-                "apiContractVersion": "valuepilot-argentina-backend-http-v1",
-                "requestId": request_id,
-                "releaseId": handle.release_id,
-                "releaseDate": handle.release_date,
-                "freshness": handle.freshness_status,
-                "regionsQueried": list(regions),
-                "query": query,
-                "originalQuery": query,
-                "interpretedQuery": recognized.get("name") if isinstance(recognized, Mapping) else None,
-                "resolution": resolution,
-                "correction": line.get("correction") if isinstance(line, Mapping) else None,
-                "matches": candidates,
-                "input": input_result,
-                "evidenceSemantics": {"availability": "UNKNOWN", "distance": "STRAIGHT_LINE_HAVERSINE_ONLY"},
-                "diagnostics": {"serviceMs": round((time.perf_counter() - started) * 1000, 3), "customerResponseBytes": 0},
-            }
-            response["diagnostics"]["customerResponseBytes"] = self._response_size(response)
-            return response
-        request = {"latitude": payload.get("latitude"), "longitude": payload.get("longitude"), "radiusKm": payload.get("radiusKm"), "items": [{"lineId": "search-1", "query": recognized["name"], "amount": "1", "unit": "count"}]}
-        raw_decision, metrics = reader.query(request)
-        candidates = []
-        for item in raw_decision.get("providerItems", []):
-            if not isinstance(item, dict):
-                continue
-            candidates.append({
-                "lineId": item.get("lineId"),
-                "query": item.get("query"),
-                "productCandidates": _strip_internal(item.get("productCandidates", [])),
-            })
+        candidates, metrics = reader.discover(query, region_ids=regions, product_limit=5)
         response = {
             "apiContractVersion": "valuepilot-argentina-backend-http-v1",
             "requestId": request_id,
@@ -273,15 +280,28 @@ class BackendService:
             "regionsQueried": metrics.regions_queried,
             "query": query,
             "originalQuery": query,
-            "interpretedQuery": recognized.get("name"),
-            "resolution": resolution,
-            "correction": line.get("correction"),
-            "matches": candidates,
-            "input": input_result,
-            "evidenceSemantics": {"availability": "UNKNOWN", "distance": "STRAIGHT_LINE_HAVERSINE_ONLY"},
-            "diagnostics": {"serviceMs": round((time.perf_counter() - started) * 1000, 3), "customerResponseBytes": 0},
+            # This is a normalized display echo, not a resolved product name.
+            "interpretedQuery": query.strip(),
+            "resolution": "DISCOVERY",
+            "searchMode": "DISCOVERY",
+            # Kept for callers that consumed the earlier search envelope;
+            # discovery deliberately has no correction or interpreter object.
+            "correction": None,
+            "input": None,
+            "matches": [dict(value) for value in candidates],
+            "evidenceSemantics": {
+                "availability": "UNKNOWN",
+                "distance": "STRAIGHT_LINE_HAVERSINE_ONLY",
+                "pricePublicationIsNotInventory": True,
+            },
+            "diagnostics": {
+                **metrics.as_dict(),
+                "serviceMs": round((time.perf_counter() - started) * 1000, 3),
+                "customerResponseBytes": 0,
+            },
         }
         response["diagnostics"]["customerResponseBytes"] = self._response_size(response)
+        self._emit_request_metrics(request_id, handle, metrics, started=started)
         return response
 
 

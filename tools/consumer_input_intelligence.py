@@ -31,6 +31,11 @@ from typing import Any, Iterable, Iterator, Mapping, Sequence
 SCHEMA_VERSION = "valuepilot-argentina-consumer-input-intelligence-v1"
 VOCABULARY_SCHEMA_VERSION = "valuepilot-argentina-input-vocabulary-v1"
 POLICY_VERSION = "valuepilot-argentina-input-policy-v1"
+# This version pins the exact lexical feature vocabulary shared by the
+# bounded compatibility scan and immutable SearchPack releases.  A SearchPack
+# built with another policy is not safe to query because changing aliases,
+# prefixes, or trigram boundaries changes candidate membership.
+LEXICAL_FEATURE_POLICY_VERSION = "valuepilot-argentina-lexical-features-v1"
 MAX_RAW_TEXT = 4096
 MAX_LINE_LENGTH = 256
 MAX_LINES = 10
@@ -38,6 +43,7 @@ MAX_TOKENS_PER_LINE = 32
 MAX_CANDIDATES = 256
 MAX_FUZZY_COMPARISONS = 512
 MAX_SUGGESTIONS = 3
+CANDIDATE_HORIZON_REACHED = "CANDIDATE_HORIZON_REACHED"
 AMBIGUITY_GAP_SCORE = 70
 FUZZY_MIN_SIMILARITY = 780
 SHORT_MIN_SIMILARITY = 900
@@ -111,6 +117,7 @@ _FRACTION_CHARS = {"½": Decimal("0.5"), "¼": Decimal("0.25"), "¾": Decimal("0
 _NUMBER_RE = re.compile(r"(?<![A-Za-zÀ-ÿ])(?:\d+\s+\d+/\d+|\d+/\d+|\d+(?:[.,]\d+)?|[½¼¾])(?![A-Za-zÀ-ÿ/])", re.UNICODE)
 _UNIT_RE = re.compile(r"(?<![A-Za-zÀ-ÿ])(?:kg|kilos?|kilogramos?|g|gramos?|lb|lbs|pounds?|libras?|ml|mililitros?|cc|cm3|lt|litros?|l|count|units?|unidades?|each|ea)(?![A-Za-zÀ-ÿ])", re.IGNORECASE | re.UNICODE)
 _TOKEN_RE = re.compile(r"[a-z0-9]+", re.IGNORECASE)
+_RAW_TOKEN_RE = re.compile(r"[A-Za-z0-9]+")
 _SEPARATOR_RE = re.compile(r"[;,\n\r]+")
 _CONJUNCTION_RE = re.compile(r"\s+(?:and|y)\s+", re.IGNORECASE)
 _FILLER_JOIN_RE = re.compile(r"\s+", re.UNICODE)
@@ -205,6 +212,143 @@ def _trigrams(value: str) -> tuple[str, ...]:
     if len(compact) <= 3:
         return (compact,)
     return tuple(sorted({compact[index : index + 3] for index in range(len(compact) - 2)}))
+
+
+def _interior_trigrams(value: str) -> tuple[str, ...]:
+    """Return boundary-free trigrams used by the bounded candidate horizon."""
+
+    return tuple(sorted({value[index : index + 3] for index in range(max(0, len(value) - 2))}))
+
+
+def _intent_phrases(intent: "ParsedIntent", data: Mapping[str, Any]) -> tuple[str, ...]:
+    """Return the exact phrase universe used by catalog candidate lookup."""
+
+    phrases = [intent.normalized, " ".join(intent.search_tokens)]
+    if intent.brand:
+        phrases.extend((intent.brand, _joined_key(intent.brand)))
+    if intent.concept:
+        phrases.append(intent.concept)
+        aliases = data.get("aliases", {})
+        if isinstance(aliases, Mapping):
+            phrases.extend(str(alias) for alias, target in aliases.items() if target == intent.concept)
+    return tuple(dict.fromkeys(value for value in phrases if value))
+
+
+def _phrase_features(phrases: Iterable[str]) -> set[tuple[str, str]]:
+    """Build a small lexical feature set without retaining catalog records."""
+
+    features: set[tuple[str, str]] = set()
+    for phrase in phrases:
+        normalized = normalize_text(phrase, max_length=512)
+        if not normalized:
+            continue
+        features.add(("exact", normalized))
+        # ``normalized`` has already passed the length/character policy; use
+        # its whitespace tokens directly so the streamed path does not
+        # normalize the same catalog phrase three times per record.
+        features.add(("exact", "".join(normalized.split())))
+        for token in normalized.split():
+            features.add(("token", token))
+            # A one-character prefix is intentionally not part of the
+            # streaming horizon: on a national catalog it would make nearly
+            # every record sharing a common vowel look plausible and would
+            # saturate every ordinary query.  The shared index and streaming
+            # horizon therefore use the same narrower gate, with
+            # trigram/prefix-2 evidence preserving audited typo and
+            # joined-token cases.
+            for width in (2, 3, 4):
+                if len(token) >= width:
+                    features.add(("prefix", token[:width]))
+            # Boundary-padded trigrams make a short token such as ``de``
+            # overlap every word ending in ``e``.  The bounded horizon uses
+            # interior trigrams only; prefix-2 evidence still covers the
+            # audited one-edit/transpose cases without a national false-
+            # positive fan-out.
+            for trigram in _interior_trigrams(token):
+                features.add(("trigram", trigram))
+    return features
+
+
+def canonical_feature_keys(phrases: Iterable[str]) -> tuple[str, ...]:
+    """Return the stable, provider-neutral SearchPack feature-key encoding.
+
+    The tuple form is deliberately derived from ``_phrase_features`` rather
+    than reimplementing tokenization.  Python therefore remains the semantic
+    authority; the native kernel only stores and retrieves these opaque keys.
+    """
+
+    return tuple(sorted(f"{kind}:{value}" for kind, value in _phrase_features(phrases)))
+
+
+def _mapping_phrases(value: Mapping[str, Any]) -> tuple[str, ...]:
+    """Validate the identity fields and return the same phrases as a record."""
+
+    key = value.get("productEvidenceKey")
+    name = value.get("name")
+    if not isinstance(key, str) or not key or len(key) > 256:
+        raise InputIntelligenceError("catalog productEvidenceKey is invalid")
+    if not isinstance(name, str) or not name.strip() or len(name) > 512:
+        raise InputIntelligenceError("catalog product name is invalid")
+    aliases = value.get("canonicalSearchAliases", value.get("aliases", ()))
+    if isinstance(aliases, str):
+        aliases = (aliases,)
+    if not isinstance(aliases, Sequence) or isinstance(aliases, (bytes, str)):
+        aliases = ()
+    normalized_aliases = tuple(str(item) for item in aliases if isinstance(item, str) and item.strip())[:8]
+    return (name.strip(), *normalized_aliases, value.get("brand") if isinstance(value.get("brand"), str) else "")
+
+
+def _phrases_match_features(phrases: Iterable[str], features: frozenset[tuple[str, str]]) -> bool:
+    """Probe the shared lexical feature policy without allocating a record."""
+
+    normalized_phrases: list[str] = []
+    tokens: set[str] = set()
+    for phrase in phrases:
+        normalized = normalize_text(phrase, max_length=512)
+        if not normalized:
+            continue
+        normalized_phrases.append(normalized)
+        tokens.update(normalized.split())
+    # Whole-token evidence is the common path for provider records.  Check it
+    # before the more expensive prefix/trigram probes so a national stream can
+    # discard unrelated rows without constructing every feature variant.
+    if any(("token", token) in features for token in tokens):
+        return True
+    for normalized in normalized_phrases:
+        if ("exact", normalized) in features or ("exact", "".join(normalized.split())) in features:
+            return True
+        for token in normalized.split():
+            for width in (2, 3, 4):
+                if len(token) >= width and ("prefix", token[:width]) in features:
+                    return True
+            for trigram in _interior_trigrams(token):
+                if ("trigram", trigram) in features:
+                    return True
+    return False
+
+
+def _raw_phrase_features(phrases: Iterable[str]) -> tuple[frozenset[tuple[str, str]], bool]:
+    """Build an ASCII fast-path feature set and report normalization risk."""
+
+    features: set[tuple[str, str]] = set()
+    needs_normalized_fallback = False
+    for phrase in phrases:
+        if not phrase.isascii():
+            needs_normalized_fallback = True
+        tokens = tuple(token.casefold() for token in _RAW_TOKEN_RE.findall(phrase))
+        if not tokens:
+            continue
+        normalized = " ".join(tokens)
+        features.add(("exact", normalized))
+        features.add(("exact", "".join(tokens)))
+        for token in tokens:
+            features.add(("token", token))
+            for width in (2, 3, 4):
+                if len(token) >= width:
+                    features.add(("prefix", token[:width]))
+            for trigram in _interior_trigrams(token):
+                features.add(("trigram", trigram))
+    return frozenset(features), needs_normalized_fallback
 
 
 def _levenshtein_ratio(left: str, right: str) -> int:
@@ -571,6 +715,28 @@ def _split_lines(text: str, fillers: Sequence[str], known_phrases: Sequence[str]
     return pieces
 
 
+def split_shopping_lines(
+    text: str,
+    *,
+    data_path: Path | str | None = None,
+    data: Mapping[str, Any] | None = None,
+) -> tuple[str, ...]:
+    """Split shopper text using the interpreter's single shared policy."""
+
+    source = data if data is not None else _load_data(data_path)
+    fillers = source.get("fillers", [])
+    if not isinstance(fillers, Sequence) or isinstance(fillers, (str, bytes)):
+        fillers = ()
+    phrases: list[str] = []
+    brands = source.get("brands", {})
+    if isinstance(brands, Mapping):
+        phrases.extend(str(value) for value in brands.keys())
+    aliases = source.get("aliases", {})
+    if isinstance(aliases, Mapping):
+        phrases.extend(str(value) for value in aliases.keys())
+    return tuple(_split_lines(text, fillers, phrases))
+
+
 def _dimension_matches(expected: str | None, actual: str | None) -> bool:
     if expected is None or actual is None:
         return True
@@ -584,7 +750,14 @@ def _dimension_matches(expected: str | None, actual: str | None) -> bool:
 class CatalogIndex:
     """A bounded immutable vocabulary/index for qualified catalog records."""
 
-    def __init__(self, records: Sequence[CatalogRecord], *, data: Mapping[str, Any] | None = None, max_records: int = 100_000):
+    def __init__(
+        self,
+        records: Sequence[CatalogRecord],
+        *,
+        data: Mapping[str, Any] | None = None,
+        max_records: int = 100_000,
+        query_candidate_keys: Mapping[ParsedIntent, Sequence[str]] | None = None,
+    ):
         if len(records) > max_records:
             raise InputIntelligenceError(f"catalog vocabulary exceeds {max_records} records")
         unique: dict[str, CatalogRecord] = {}
@@ -595,6 +768,11 @@ class CatalogIndex:
         self.records: tuple[CatalogRecord, ...] = tuple(sorted(unique.values(), key=lambda item: (item.product_evidence_key, normalize_text(item.name))))
         self._by_key = {item.product_evidence_key: item for item in self.records}
         self.data = dict(data or _load_data())
+        self._query_candidate_keys = {
+            intent: tuple(key for key in values if isinstance(key, str))
+            for intent, values in (query_candidate_keys or {}).items()
+            if isinstance(intent, ParsedIntent)
+        }
         self._exact: dict[str, set[str]] = defaultdict(set)
         self._token: dict[str, set[str]] = defaultdict(set)
         self._prefix: dict[str, set[str]] = defaultdict(set)
@@ -611,20 +789,33 @@ class CatalogIndex:
                     self._exact[compact].add(record.product_evidence_key)
                     for token in _tokens(normalized):
                         self._token[token].add(record.product_evidence_key)
-                        for width in (1, 2, 3, 4):
+                        for width in (2, 3, 4):
                             if len(token) >= width:
                                 self._prefix[token[:width]].add(record.product_evidence_key)
-                    for trigram in _trigrams(normalized):
-                        self._trigram[trigram].add(record.product_evidence_key)
+                        for trigram in _interior_trigrams(token):
+                            self._trigram[trigram].add(record.product_evidence_key)
 
     @classmethod
-    def from_records(cls, records: Iterable[Mapping[str, Any] | CatalogRecord], *, data_path: Path | str | None = None, max_records: int = 100_000) -> "CatalogIndex":
+    def from_records(
+        cls,
+        records: Iterable[Mapping[str, Any] | CatalogRecord],
+        *,
+        data_path: Path | str | None = None,
+        max_records: int = 100_000,
+        data: Mapping[str, Any] | None = None,
+        query_candidate_keys: Mapping[ParsedIntent, Sequence[str]] | None = None,
+    ) -> "CatalogIndex":
         materialized: list[CatalogRecord] = []
         for item in records:
             materialized.append(item if isinstance(item, CatalogRecord) else CatalogRecord.from_mapping(item))
             if len(materialized) > max_records:
                 raise InputIntelligenceError(f"catalog vocabulary exceeds {max_records} records")
-        return cls(materialized, data=_load_data(data_path), max_records=max_records)
+        return cls(
+            materialized,
+            data=data if data is not None else _load_data(data_path),
+            max_records=max_records,
+            query_candidate_keys=query_candidate_keys,
+        )
 
     def as_manifest(self) -> dict[str, Any]:
         return {
@@ -644,6 +835,8 @@ class CatalogIndex:
         return self.records
 
     def _candidate_keys(self, intent: ParsedIntent) -> tuple[str, ...]:
+        if intent in self._query_candidate_keys:
+            return self._query_candidate_keys[intent]
         keys: set[str] = set()
         ordered: list[str] = []
 
@@ -653,29 +846,90 @@ class CatalogIndex:
                     keys.add(value)
                     ordered.append(value)
 
-        phrases = [intent.normalized, " ".join(intent.search_tokens)]
-        if intent.brand:
-            phrases.extend((intent.brand, _joined_key(intent.brand)))
-        if intent.concept:
-            phrases.append(intent.concept)
-            aliases = self.data.get("aliases", {})
-            if isinstance(aliases, Mapping):
-                phrases.extend(str(alias) for alias, target in aliases.items() if target == intent.concept)
-        for phrase in phrases:
+        for phrase in _intent_phrases(intent, self.data):
             normalized = normalize_text(phrase, max_length=512)
             add(self._exact.get(normalized, ()))
             add(self._exact.get(_joined_key(normalized), ()))
             for token in _tokens(normalized):
                 add(self._token.get(token, ()))
-                for width in (1, 2, 3, 4):
+                for width in (2, 3, 4):
                     if len(token) >= width:
                         add(self._prefix.get(token[:width], ()))
-                add(self._trigram.get(_trigrams(token)[0], ()))
-                for trigram in _trigrams(token):
+                for trigram in _interior_trigrams(token):
                     add(self._trigram.get(trigram, ()))
         if not keys and len(self.records) <= 2048:
             add(record.product_evidence_key for record in self.records)
         return tuple(ordered[:MAX_CANDIDATES])
+
+    def intent_features(self, intent: ParsedIntent) -> frozenset[tuple[str, str]]:
+        """Return the lexical features used to enter this intent's horizon."""
+
+        return frozenset(_phrase_features(_intent_phrases(intent, self.data)))
+
+    def intent_feature_keys(self, intent: ParsedIntent) -> tuple[str, ...]:
+        """Return the canonical SearchPack keys for one parsed intent."""
+
+        return canonical_feature_keys(_intent_phrases(intent, self.data))
+
+    @staticmethod
+    def record_features(record: CatalogRecord) -> frozenset[tuple[str, str]]:
+        return frozenset(_phrase_features((record.name, *record.aliases, record.brand or "")))
+
+    @staticmethod
+    def record_feature_keys(record: CatalogRecord) -> tuple[str, ...]:
+        """Return the canonical SearchPack keys for one catalog identity."""
+
+        return canonical_feature_keys((record.name, *record.aliases, record.brand or ""))
+
+    def record_matches_intent(
+        self,
+        record: CatalogRecord,
+        intent: ParsedIntent,
+        *,
+        intent_features: frozenset[tuple[str, str]] | None = None,
+        record_features: frozenset[tuple[str, str]] | None = None,
+    ) -> bool:
+        """Return whether a record can enter the normal candidate-key horizon."""
+
+        left = intent_features if intent_features is not None else self.intent_features(intent)
+        if record_features is not None:
+            return bool(left & record_features)
+        # Streamed callers should not allocate a feature set for every record
+        # in a national index.  Probe the same exact/joined/token/prefix/
+        # trigram feature universe lazily and stop at the first hit.
+        return _phrases_match_features((record.name, *record.aliases, record.brand or ""), left)
+
+    def raw_record_matches_intents(
+        self,
+        value: Mapping[str, Any],
+        intent_features: Sequence[frozenset[tuple[str, str]]],
+    ) -> tuple[int, ...]:
+        """Return matching intent positions before constructing a record.
+
+        Required identity fields are validated exactly as ``CatalogRecord``
+        would validate them.  All other record fields remain untouched until a
+        lexical match is found, keeping national streaming CPU and allocations
+        proportional to the query's plausible candidates.
+        """
+
+        phrases = _mapping_phrases(value)
+        raw_features, needs_normalized_fallback = _raw_phrase_features(phrases)
+        matches: list[int] = []
+        for index, features in enumerate(intent_features):
+            if raw_features & features:
+                matches.append(index)
+            elif needs_normalized_fallback and _phrases_match_features(phrases, features):
+                # Accented/compatibility text can normalize differently from
+                # the ASCII probe; retain the exact shared policy for those
+                # records instead of risking a false negative.
+                matches.append(index)
+        return tuple(matches)
+
+    def score_record(self, record: CatalogRecord, intent: ParsedIntent) -> _ScoredCandidate:
+        """Score one streamed record with the same rules as ``candidates``."""
+
+        score, similarity, safe, reason, exact, alias = self._score(record, intent)
+        return _ScoredCandidate(record, score, similarity, exact, alias, safe, reason)
 
     def _expected_dimension(self, intent: ParsedIntent) -> str | None:
         dimensions = self.data.get("dimensions", {})
@@ -818,8 +1072,13 @@ class CatalogIndex:
         return tuple(candidate.record for candidate in values[:limit])
 
 
-def parse_intent(text: str, *, data_path: Path | str | None = None) -> ParsedIntent:
-    data = _load_data(data_path)
+def parse_intent(
+    text: str,
+    *,
+    data_path: Path | str | None = None,
+    data: Mapping[str, Any] | None = None,
+) -> ParsedIntent:
+    data = data if data is not None else _load_data(data_path)
     fillers = data.get("fillers", [])
     if not isinstance(fillers, Sequence) or isinstance(fillers, (str, bytes)):
         fillers = []
@@ -932,7 +1191,7 @@ class ConsumerInputInterpreter:
             raise InputIntelligenceError(f"shopping line exceeds {MAX_LINE_LENGTH} characters")
         normalized = normalize_text(text, max_length=MAX_LINE_LENGTH)
         quantity = parse_quantity(text)
-        intent = parse_intent(text, data_path=self.data_path)
+        intent = parse_intent(text, data_path=self.data_path, data=self.catalog.data)
         candidates = self.catalog.candidates(intent)
         safe = tuple(candidate for candidate in candidates if candidate.safe)
         if not safe:
@@ -1049,12 +1308,7 @@ class ConsumerInputInterpreter:
 
     def interpret(self, text: str, *, require_quantities: bool = False) -> dict[str, Any]:
         started = time.perf_counter()
-        fillers = self.catalog.data.get("fillers", [])
-        phrases = list(self.catalog.data.get("brands", {}).keys()) if isinstance(self.catalog.data.get("brands"), Mapping) else []
-        aliases = self.catalog.data.get("aliases", {})
-        if isinstance(aliases, Mapping):
-            phrases.extend(str(value) for value in aliases.keys())
-        lines = _split_lines(text, fillers if isinstance(fillers, Sequence) else (), phrases)
+        lines = split_shopping_lines(text, data=self.catalog.data)
         resolved = tuple(self.resolve_line(value, line_id=f"item-{index}", require_quantity=require_quantities) for index, value in enumerate(lines, 1))
         clarifications = [line.as_dict()["clarification"] | {"lineId": line.line_id} for line in resolved if line.clarification]
         safe_lines = [line.structured_line for line in resolved if line.structured_line is not None]
@@ -1072,6 +1326,53 @@ class ConsumerInputInterpreter:
             "diagnostics": {"totalMs": round(elapsed, 3), "candidateCount": sum(line.candidates_examined for line in resolved), "bounded": True},
             "safety": {"unknownRemainsUnknown": True, "unsafeAutomaticSubstitutionAllowed": False, "universalLanguageUnderstandingClaimed": False},
         }
+
+
+def apply_candidate_horizon_guard(result: Mapping[str, Any], saturated_line_ids: Sequence[str], *, candidate_bound: int) -> dict[str, Any]:
+    """Downgrade only confidence that could depend on discarded candidates."""
+
+    saturated = frozenset(value for value in saturated_line_ids if isinstance(value, str))
+    if not saturated:
+        return dict(result)
+    lines: list[dict[str, Any]] = []
+    for raw_line in result.get("lines", ()):
+        if not isinstance(raw_line, Mapping):
+            continue
+        line = dict(raw_line)
+        if line.get("lineId") in saturated:
+            suggestions = line.get("suggestions", [])
+            if not isinstance(suggestions, list):
+                suggestions = []
+            # A saturated posting proves that the bounded candidate set is
+            # incomplete, regardless of whether the pre-guard result happened
+            # to be a match or had already been unresolved.  Always fail closed
+            # to an explicit clarification and never expose a product selected
+            # from the partial horizon as if it were an exact recognition.
+            line["resolution"] = NEEDS_CLARIFICATION
+            line["correction"] = None
+            line["structuredLine"] = None
+            line["recognizedProduct"] = None
+            line["clarification"] = {
+                "code": CANDIDATE_HORIZON_REACHED,
+                "message": "Too many plausible catalog matches were found to choose safely.",
+                "choices": suggestions[:MAX_SUGGESTIONS],
+                "recognizedProduct": line.get("recognizedProduct"),
+                "details": {"candidateBound": candidate_bound},
+            }
+        lines.append(line)
+    guarded = dict(result)
+    guarded["lines"] = lines
+    guarded["clarifications"] = [
+        dict(line["clarification"]) | {"lineId": line["lineId"]}
+        for line in lines
+        if isinstance(line.get("clarification"), Mapping) and isinstance(line.get("lineId"), str)
+    ]
+    guarded["safeRequestReady"] = False
+    guarded["structuredItems"] = []
+    diagnostics = dict(result.get("diagnostics", {})) if isinstance(result.get("diagnostics"), Mapping) else {}
+    diagnostics.update({"candidateSaturated": True, "saturatedLineIds": sorted(saturated), "candidateBound": candidate_bound})
+    guarded["diagnostics"] = diagnostics
+    return guarded
 
 
 def build_vocabulary(records: Iterable[Mapping[str, Any] | CatalogRecord], *, data_path: Path | str | None = None, max_records: int = 100_000) -> CatalogIndex:
@@ -1097,8 +1398,10 @@ def vocabulary_records_from_json_lines(lines: Iterable[str], *, max_records: int
 
 __all__ = [
     "AMBIGUOUS_PRODUCT",
+    "CANDIDATE_HORIZON_REACHED",
     "CatalogIndex",
     "CatalogRecord",
+    "LEXICAL_FEATURE_POLICY_VERSION",
     "ConsumerInputInterpreter",
     "DIMENSION_MISMATCH",
     "InputIntelligenceError",
@@ -1115,10 +1418,13 @@ __all__ = [
     "RESOLVED_SAFE_CORRECTION",
     "RESULT_STATES",
     "SCHEMA_VERSION",
+    "apply_candidate_horizon_guard",
     "build_vocabulary",
+    "canonical_feature_keys",
     "normalize_text",
     "parse_intent",
     "parse_quantity",
+    "split_shopping_lines",
     "sqlite_fts5_trigram_supported",
     "vocabulary_records_from_json_lines",
 ]

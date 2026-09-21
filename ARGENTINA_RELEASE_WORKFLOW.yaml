@@ -1,0 +1,453 @@
+# ValuePilot official Argentina release workflow.
+#
+# Cloud Scheduler invokes this workflow with the operator-owned bucket and
+# immutable Cloud Build source object supplied as runtime arguments.  The
+# national catalog is queried first.  A stable metadata checksum can return
+# NO_CHANGE only for the normal direct-acquisition path.  When an independently
+# verified source-archive key and SHA are supplied, the workflow must start the
+# build even if CKAN metadata is unchanged: the archive ZIP's internally proven
+# date/hash is the authoritative release evidence.
+#
+# The heavy worker owns exact source validation, the distributed lease, private
+# archive, and deterministic release builder.  The handoff entrypoint delegates
+# the normal path unchanged and materializes an explicit verified archive ZIP
+# before invoking the mature worker.  Promotion defaults to write-free SHADOW;
+# explicit staging/activation inputs are passed through to the worker, which
+# validates them before any canary or active pointer write.  After a successful
+# verified candidate build, this Cloud Build step also stages that immutable
+# candidate into the private archive bucket so the expensive workspace is not
+# lost when the ephemeral builder exits.  The archive stage never writes an
+# ACTIVE or CANARY pointer.
+main:
+  params: [args]
+  steps:
+    - init:
+        assign:
+          - project_id: ${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
+          - control_bucket: ${args.controlBucket}
+          - archive_bucket: ${args.archiveBucket}
+          - source_bucket: ${args.sourceBucket}
+          - source_object: ${args.sourceObject}
+          - source_generation: ${args.sourceGeneration}
+          - metadata_url: "https://datos.gob.ar/api/3/action/package_show?id=precios-claros-base-sepa"
+          - state_object: "control/workflow-discovery-state.json"
+          - execution_id: ${default(map.get(args, "executionId"), sys.get_env("GOOGLE_CLOUD_WORKFLOW_EXECUTION_ID"))}
+          - current_release_date: ${default(map.get(args, "currentReleaseDate"), "")}
+          - current_source_sha256: ${default(map.get(args, "currentSourceSha256"), "")}
+          - source_archive_key: ${default(map.get(args, "sourceArchiveKey"), "")}
+          - source_archive_sha256: ${default(map.get(args, "sourceArchiveSha256"), "")}
+          - upstream_changed: ${default(map.get(args, "upstreamChanged"), false)}
+          - promotion_mode: ${default(map.get(args, "promotionMode"), "SHADOW")}
+
+    - validate_handoff:
+        switch:
+          - condition: ${(source_archive_key == "" and source_archive_sha256 != "") or (source_archive_key != "" and source_archive_sha256 == "")}
+            return:
+              status: INVALID_HANDOFF
+              reason: SOURCE_ARCHIVE_KEY_AND_SHA_REQUIRED_TOGETHER
+              cloudBuildStarted: false
+              activePointerWrites: 0
+          - condition: ${source_archive_key != "" and (current_release_date == "" or current_source_sha256 == "")}
+            return:
+              status: INVALID_HANDOFF
+              reason: CURRENT_TRUSTED_SOURCE_IDENTITY_REQUIRED
+              cloudBuildStarted: false
+              activePointerWrites: 0
+
+    - discover_catalog:
+        try:
+          call: http.get
+          args:
+            url: ${metadata_url}
+            timeout: 20
+            headers:
+              Accept: "application/json"
+              User-Agent: "ValuePilot-release-workflow/1"
+          result: catalog_response
+        retry: ${http.default_retry}
+        except:
+          as: discovery_error
+          steps:
+            - discovery_failed:
+                return:
+                  status: DISCOVERY_FAILED
+                  error: ${discovery_error}
+                  cloudBuildStarted: false
+
+    - validate_catalog:
+        switch:
+          - condition: ${catalog_response.code != 200}
+            return:
+              status: DISCOVERY_FAILED
+              httpStatus: ${catalog_response.code}
+              cloudBuildStarted: false
+          - condition: ${catalog_response.body.success != true}
+            return:
+              status: DISCOVERY_FAILED
+              reason: CATALOG_RESPONSE_NOT_SUCCESS
+              cloudBuildStarted: false
+          - condition: ${catalog_response.body.result.id != "0f495d54-4a5d-5fa3-a323-f6e97ce434cf"}
+            return:
+              status: SOURCE_CONTRACT_CHANGED
+              reason: DATASET_ID_CHANGED
+              cloudBuildStarted: false
+          - condition: ${catalog_response.body.result.name != "precios-claros-base-sepa"}
+            return:
+              status: SOURCE_CONTRACT_CHANGED
+              reason: DATASET_NAME_CHANGED
+              cloudBuildStarted: false
+          - condition: ${catalog_response.body.result.title != "Precios Claros - Base SEPA"}
+            return:
+              status: SOURCE_CONTRACT_CHANGED
+              reason: DATASET_TITLE_CHANGED
+              cloudBuildStarted: false
+          - condition: ${catalog_response.body.result.license_title != "Creative Commons Attribution 4.0"}
+            return:
+              status: SOURCE_CONTRACT_CHANGED
+              reason: DATASET_LICENSE_CHANGED
+              cloudBuildStarted: false
+
+    - checksum_catalog:
+        call: hash.compute_checksum
+        args:
+          data: ${json.encode(catalog_response.body)}
+          algorithm: SHA256
+        result: metadata_checksum_bytes
+
+    - encode_catalog_checksum:
+        assign:
+          - metadata_checksum: ${base64.encode(metadata_checksum_bytes)}
+
+    - read_previous_state:
+        try:
+          steps:
+            - get_state_metadata:
+                call: googleapis.storage.v1.objects.get
+                args:
+                  bucket: ${control_bucket}
+                  object: ${text.url_encode(state_object)}
+                result: previous_state_metadata
+            - get_state_media:
+                call: googleapis.storage.v1.objects.get
+                args:
+                  bucket: ${control_bucket}
+                  object: ${text.url_encode(state_object)}
+                  alt: media
+                result: previous_state_bytes
+            - decode_state:
+                assign:
+                  - previous_state: ${json.decode(previous_state_bytes)}
+                  - previous_state_generation: ${previous_state_metadata.generation}
+        except:
+          as: state_error
+          steps:
+            - classify_state_error:
+                switch:
+                  - condition: ${state_error.code == 404}
+                    assign:
+                      - previous_state: {}
+                      - previous_state_generation: null
+                  - condition: true
+                    return:
+                      status: CONTROL_STATE_UNAVAILABLE
+                      cloudBuildStarted: false
+                      activePointerWrites: 0
+
+    - no_change:
+        switch:
+          - condition: ${map.get(previous_state, "metadataChecksum") == metadata_checksum and source_archive_key == ""}
+            return:
+              status: NO_CHANGE
+              metadataChecksum: ${metadata_checksum}
+              cloudBuildStarted: false
+              activePointerWrites: 0
+
+    # A verified source handoff already carries the immutable acquisition
+    # timestamp in its archive manifest.  Use that timestamp for the mature
+    # weekday-resource selector; using the time of a later retry can select a
+    # different stale weekday resource and make the same content-addressed
+    # archive look like a candidate conflict.
+    - prepare_worker_observed_at:
+        assign:
+          - worker_observed_at: ${args.observedAt}
+
+    - read_handoff_manifest:
+        switch:
+          - condition: ${source_archive_key == ""}
+            next: start_release_build
+        next: fetch_handoff_manifest
+
+    - fetch_handoff_manifest:
+        try:
+          call: googleapis.storage.v1.objects.get
+          args:
+            bucket: ${archive_bucket}
+            object: ${text.url_encode("source-archive/manifests/" + source_archive_sha256 + ".json")}
+            alt: media
+          result: source_archive_manifest_bytes
+        except:
+          as: handoff_manifest_error
+          steps:
+            - handoff_manifest_unavailable:
+                return:
+                  status: INVALID_HANDOFF
+                  reason: SOURCE_ARCHIVE_MANIFEST_UNAVAILABLE
+                  error: ${handoff_manifest_error}
+                  cloudBuildStarted: false
+                  activePointerWrites: 0
+
+    - decode_handoff_manifest:
+        try:
+          assign:
+            - source_archive_manifest: ${json.decode(source_archive_manifest_bytes)}
+        except:
+          as: handoff_manifest_decode_error
+          steps:
+            - handoff_manifest_invalid:
+                return:
+                  status: INVALID_HANDOFF
+                  reason: SOURCE_ARCHIVE_MANIFEST_INVALID
+                  error: ${handoff_manifest_decode_error}
+                  cloudBuildStarted: false
+                  activePointerWrites: 0
+
+    - validate_handoff_manifest:
+        switch:
+          - condition: ${map.get(source_archive_manifest, "sourceSha256") != source_archive_sha256 or map.get(source_archive_manifest, "archiveKey") != source_archive_key or map.get(source_archive_manifest, "rawProviderDataCommitted") != false or map.get(source_archive_manifest, "runtimePublicationAllowed") != false}
+            return:
+              status: INVALID_HANDOFF
+              reason: SOURCE_ARCHIVE_MANIFEST_IDENTITY_MISMATCH
+              cloudBuildStarted: false
+              activePointerWrites: 0
+
+    - use_handoff_acquisition_timestamp:
+        assign:
+          - worker_observed_at: ${default(map.get(source_archive_manifest, "acquiredAt"), args.observedAt)}
+
+    - start_release_build:
+        try:
+          call: googleapis.cloudbuild.v1.projects.builds.create
+          args:
+            projectId: ${project_id}
+            parent: ${"projects/" + project_id + "/locations/global"}
+            body:
+              source:
+                storageSource:
+                  bucket: ${source_bucket}
+                  object: ${source_object}
+                  generation: ${source_generation}
+              steps:
+                - name: ${args.workerImage}
+                  entrypoint: /bin/sh
+                  args:
+                    - "-c"
+                    - |
+                      ulimit -Sn 4096
+                      if [ "$?" -ne 0 ]; then
+                        exit 70
+                      fi
+                      python "$@"
+                      worker_rc=$?
+                      if [ "$worker_rc" -ne 0 ]; then
+                        exit "$worker_rc"
+                      fi
+                      python - <<'PY'
+                      import hashlib
+                      import json
+                      import os
+                      from pathlib import Path
+
+                      from backend.object_store import GCSObjectStore
+                      from tools.argentina_object_store_publisher import ObjectStoreReleasePublisher
+
+                      bucket = os.environ["VALUEPILOT_CANDIDATE_ARCHIVE_BUCKET"]
+                      project = os.environ["VALUEPILOT_CANDIDATE_ARCHIVE_PROJECT"]
+                      execution_id = os.environ["VALUEPILOT_EXECUTION_ID"]
+                      workspace = Path(os.environ["VALUEPILOT_CANDIDATE_WORKSPACE"]).resolve()
+                      store = GCSObjectStore(bucket=bucket, project=project)
+                      summary_key = f"control/executions/{execution_id}.json"
+                      summary = json.loads(store.get(summary_key))
+                      status = summary.get("status")
+                      if status not in {"CANDIDATE_VERIFIED", "CANARY_READY", "ACTIVE"}:
+                          print(json.dumps({"candidateArchive": "SKIPPED", "executionId": execution_id, "workerStatus": status}, sort_keys=True))
+                          raise SystemExit(0)
+                      release_id = summary.get("releaseId")
+                      if not isinstance(release_id, str) or not release_id:
+                          raise RuntimeError("verified candidate summary is missing releaseId")
+                      if not workspace.is_dir():
+                          raise RuntimeError("verified candidate workspace is unavailable")
+                      publisher = ObjectStoreReleasePublisher(store)
+                      staged = publisher.stage(workspace, release_ids=(release_id,), active_release_id=None)
+                      verified = publisher.verify(release_id)
+                      receipt = {
+                          "schemaVersion": "valuepilot-argentina-candidate-archive-v1",
+                          "executionId": execution_id,
+                          "releaseId": release_id,
+                          "status": "PERSISTED",
+                          "objectCount": verified.get("objectCount"),
+                          "objectBytes": verified.get("objectBytes"),
+                          "bytes": verified.get("bytes"),
+                          "newImmutableObjectCount": staged.get("newImmutableObjectCount"),
+                          "reusedImmutableObjectCount": staged.get("reusedImmutableObjectCount"),
+                          "activePointerWrites": 0,
+                      }
+                      payload = (json.dumps(receipt, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+                      receipt_key = f"candidate-archive/receipts/{execution_id}.json"
+                      store.put_immutable(receipt_key, payload, sha256=hashlib.sha256(payload).hexdigest())
+                      print(json.dumps({"candidateArchive": receipt, "receiptKey": receipt_key}, ensure_ascii=False, sort_keys=True))
+                      PY
+                    - valuepilot-release-worker
+                    - "-m"
+                    - tools.argentina_release_handoff_worker
+                    - '${"--observed-at=" + worker_observed_at}'
+                    - '${"--execution-id=" + execution_id}'
+                    - '${"--archive-bucket=" + archive_bucket}'
+                    - '${"--archive-project=" + project_id}'
+                    - "--workspace=/tmp/valuepilot-release-workspace"
+                    - "--output=/tmp/valuepilot-release-output"
+                    - '${"--current-release-date=" + current_release_date}'
+                    - '${"--current-source-sha256=" + current_source_sha256}'
+                    - '${"--promotion-mode=" + promotion_mode}'
+                    - '${"--promotion-data-canary=" + default(map.get(args, "promotionDataCanaryPath"), "")}'
+                    - '${"--promotion-expected-current-release-id=" + default(map.get(args, "expectedCurrentReleaseId"), "")}'
+                    - '${"--promotion-store-root=" + default(map.get(args, "promotionStoreRoot"), "")}'
+                    - '${"--promotion-us-bucket=" + default(map.get(args, "promotionUsBucket"), "")}'
+                    - '${"--promotion-sa-bucket=" + default(map.get(args, "promotionSaBucket"), "")}'
+                    - '${"--promotion-r2-bucket=" + default(map.get(args, "promotionR2Bucket"), "")}'
+                    - '${"--promotion-gcs-project=" + default(map.get(args, "promotionGcsProject"), "")}'
+                    - '${"--promotion-r2-endpoint=" + default(map.get(args, "promotionR2Endpoint"), "")}'
+                    - '${"--promotion-r2-region=" + default(map.get(args, "promotionR2Region"), "")}'
+                    - '${"--promotion-us-smoke-url=" + default(map.get(args, "promotionUsSmokeUrl"), "")}'
+                    - '${"--promotion-sa-smoke-url=" + default(map.get(args, "promotionSaSmokeUrl"), "")}'
+                    - '${"--promotion-r2-smoke-url=" + default(map.get(args, "promotionR2SmokeUrl"), "")}'
+                  env:
+                    - "PYTHONUNBUFFERED=1"
+                    - '${"BUILDER_IMAGE=" + args.workerImage}'
+                    - '${"BUILDER_SHA=" + args.builderSha}'
+                    - '${"VALUEPILOT_UPSTREAM_CHANGED=" + string(upstream_changed)}'
+                    - '${"VALUEPILOT_SOURCE_ARCHIVE_KEY=" + source_archive_key}'
+                    - '${"VALUEPILOT_SOURCE_ARCHIVE_SHA256=" + source_archive_sha256}'
+                    - '${"VALUEPILOT_CANDIDATE_ARCHIVE_BUCKET=" + archive_bucket}'
+                    - '${"VALUEPILOT_CANDIDATE_ARCHIVE_PROJECT=" + project_id}'
+                    - '${"VALUEPILOT_EXECUTION_ID=" + execution_id}'
+                    - "VALUEPILOT_CANDIDATE_WORKSPACE=/tmp/valuepilot-release-output/searchpack-workspace"
+              options:
+                machineType: E2_STANDARD_2
+                diskSizeGb: "200"
+                logging: CLOUD_LOGGING_ONLY
+                requestedVerifyOption: VERIFIED
+              timeout: "21600s"
+              serviceAccount: ${"projects/" + project_id + "/serviceAccounts/" + args.builderServiceAccount}
+            connector_params:
+              timeout: 21600
+              polling_policy:
+                initial_delay: 5
+                multiplier: 1.5
+                max_delay: 60
+          result: release_build
+        except:
+          as: build_error
+          steps:
+            - build_start_failed:
+                return:
+                  status: BUILD_FAILED
+                  error: ${build_error}
+                  cloudBuildStarted: false
+                  activePointerWrites: 0
+
+    - validate_release_build:
+        switch:
+          - condition: ${release_build.metadata.build.status != "SUCCESS"}
+            return:
+              status: BUILD_FAILED
+              buildId: ${release_build.metadata.build.id}
+              buildStatus: ${release_build.metadata.build.status}
+              cloudBuildStarted: true
+              activePointerWrites: 0
+
+    - read_worker_summary:
+        try:
+          call: googleapis.storage.v1.objects.get
+          args:
+            bucket: ${archive_bucket}
+            object: ${text.url_encode("control/executions/" + execution_id + ".json")}
+            alt: media
+          result: worker_summary_bytes
+        except:
+          as: worker_summary_error
+          steps:
+            - worker_summary_failed:
+                return:
+                  status: WORKER_SUMMARY_UNAVAILABLE
+                  buildId: ${release_build.metadata.build.id}
+                  error: ${worker_summary_error}
+                  cloudBuildStarted: true
+                  activePointerWrites: null
+
+    - decode_worker_summary:
+        try:
+          assign:
+            - worker_summary: ${json.decode(worker_summary_bytes)}
+        except:
+          as: worker_summary_decode_error
+          steps:
+            - worker_summary_invalid:
+                return:
+                  status: WORKER_SUMMARY_INVALID
+                  buildId: ${release_build.metadata.build.id}
+                  error: ${worker_summary_decode_error}
+                  cloudBuildStarted: true
+                  activePointerWrites: null
+
+    - validate_worker_summary:
+        switch:
+          - condition: ${worker_summary.schemaVersion != "valuepilot-argentina-automated-release-v1" or worker_summary.policyVersion != "valuepilot-argentina-automated-release-policy-v1" or worker_summary.executionId != execution_id}
+            return:
+              status: WORKER_SUMMARY_INVALID
+              buildId: ${release_build.metadata.build.id}
+              reason: WORKER_SUMMARY_IDENTITY_MISMATCH
+              cloudBuildStarted: true
+              activePointerWrites: null
+
+    - prepare_discovery_state:
+        assign:
+          - discovery_state:
+              schemaVersion: "valuepilot-argentina-workflow-discovery-v1"
+              metadataChecksum: ${metadata_checksum}
+              observedAt: ${args.observedAt}
+              datasetId: ${catalog_response.body.result.id}
+              buildId: ${release_build.metadata.build.id}
+          - discovery_state_bytes: ${json.encode(discovery_state)}
+
+    - write_discovery_state:
+        try:
+          call: googleapis.storage.v1.objects.insert
+          args:
+            bucket: ${control_bucket}
+            name: ${text.url_encode(state_object)}
+            uploadType: media
+            ifGenerationMatch: ${default(previous_state_generation, "0")}
+            body: ${discovery_state_bytes}
+          result: state_write
+        except:
+          as: state_write_error
+          steps:
+            - state_write_failed:
+                return:
+                  status: STATE_WRITE_FAILED
+                  buildId: ${release_build.metadata.build.id}
+                  error: ${state_write_error}
+                  cloudBuildStarted: true
+                  activePointerWrites: ${map.get(worker_summary, "activePointerWrites")}
+                  promotion: ${map.get(worker_summary, "promotion")}
+
+    - return_build:
+        return:
+          status: ${default(map.get(worker_summary, "status"), "WORKER_STATUS_MISSING")}
+          buildId: ${release_build.metadata.build.id}
+          metadataChecksum: ${metadata_checksum}
+          cloudBuildStarted: true
+          activePointerWrites: ${map.get(worker_summary, "activePointerWrites")}
+          releaseId: ${map.get(worker_summary, "releaseId")}
+          promotion: ${map.get(worker_summary, "promotion")}
+          activation: ${default(map.get(worker_summary, "activation"), "NOT_EXECUTED")}
