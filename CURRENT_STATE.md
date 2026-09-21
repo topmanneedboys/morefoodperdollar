@@ -1,6 +1,6 @@
 # Current state
 
-Updated: 2026-09-20
+Updated: 2026-09-21
 
 Branch: `candidate/argentina-live-search-m12-4`
 
@@ -9,7 +9,7 @@ Android version: 101.1.2 (10103 M12.4B Play test build candidate)
 ## Current M12.4B visible Argentina identity Search candidate
 
 M12.4B is implemented on `candidate/argentina-live-search-m12-4` at
-implementation commit `ccf7cca543ceac64e9a6437c07f00324dd95369a` and is
+implementation commit `4881750886a26de9e203e52d16963156719733cc` and is
 recorded in
 [ARGENTINA_LIVE_SEARCH_M12_4B.md](ARGENTINA_LIVE_SEARCH_M12_4B.md).
 Search is now a visible, user-triggered identity-only surface backed by the
@@ -22,16 +22,29 @@ availability, promotion, delivery or ranking authority. MainActivity remains a
 thin renderer/action boundary; the old sample Search path and M12.3 startup
 probe are not in the visible path.
 
-The backend image for this candidate is deployed at private M11 revision
-`valuepilot-argentina-sa-east1-00029-gef` (digest
-`sha256:83aa126d01b34c5b284465a6ff4cd9334fc162710c0e9b33615383dcbdd7107d`)
+The backend image for this candidate was built in Cloud Build
+`0f8e511d-6d24-4d4c-888a-296ccf2a5951` and is deployed at private M11
+revision `valuepilot-argentina-sa-east1-00037-nuj` (digest
+`sha256:5033e5bdd315c7954c8d1f4c0c6f7f9d034a6586819294beec31c3e4eada0eae`)
 with the identity-search authorization gate enabled in configuration. The
-current active release is `argentina-sepa-2026-09-08-aeef3399fa20e751-routing-v1-search-v2`;
-on 2026-09-20 it is explicitly `STALE`, so the backend correctly reports
-`androidNetworkingAuthorized=false` and the Android surface remains
-fail-closed. `productionAndroidUiAuthorized` remains false. This is therefore
-Play-build-ready but **not device/live-search qualified** until a fresh,
-qualified release is activated. No M12.5 work has started.
+active release is
+`argentina-sepa-2026-09-18-619498b8e3230298-routing-v1-search-v2`; on
+2026-09-21 it is explicitly `FRESH`, and the backend reports
+`androidNetworkingAuthorized=true`. `productionAndroidUiAuthorized` remains
+false. This is therefore backend-ready and Play-build-ready but **not
+device/live-search qualified** until the existing Play upload key is used and
+the signed app passes the explicit physical-device smoke. No M12.5 work has
+started.
+
+The active release was independently verified from the official archived source
+SHA-256 `619498b8e3230298b8a91f3df05ee7fe44e190a8f909e0e103cf43867fec73ee`
+(`335486139` bytes), mirrored to both runtime buckets, and promoted by CAS
+pointer updates. Its candidate manifest SHA-256 is
+`9a558cafcb5d5a162eb04330448612418f437eda7d1f5a3e5ba44e9202c415cf`; the
+manifest contains 1,163 immutable SearchPack objects and no raw provider data
+is committed. Authenticated `/readyz`, `/v1/status`, and a CABA `leche`
+`/v1/search` smoke passed on the promoted revision; availability remains
+`UNKNOWN` by design.
 
 The public edge remains revision `valuepilot-argentina-consumer-edge-00004-5lg`
 with its existing Firebase App Check boundary and private OIDC destination.

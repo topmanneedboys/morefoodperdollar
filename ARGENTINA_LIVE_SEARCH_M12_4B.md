@@ -2,10 +2,10 @@
 
 Status: `ARGENTINA_LIVE_SEARCH_M12_4B_PLAY_BUILD_READY_NOT_DEVICE_QUALIFIED`
 
-Updated: 2026-09-20  
+Updated: 2026-09-21
 Repository: `topmanneedboys/morefoodperdollar`  
 Branch: `candidate/argentina-live-search-m12-4`  
-Implementation commit: `ccf7cca543ceac64e9a6437c07f00324dd95369a`
+Implementation commit: `4881750886a26de9e203e52d16963156719733cc`
 
 ## Scope completed
 
@@ -69,32 +69,50 @@ is unchanged at revision `valuepilot-argentina-consumer-edge-00004-5lg`, with
 max scale 20 and image digest
 `sha256:315e37021aa7b1adf2f77eba88bc85f09984025ebac98e89612ff40168238581`.
 
-The M12.4B backend image is deployed to private M11 revision
-`valuepilot-argentina-sa-east1-00029-gef`, digest
-`sha256:83aa126d01b34c5b284465a6ff4cd9334fc162710c0e9b33615383dcbdd7107d`.
-Its explicit environment gate is scoped to `identity-search` and the pinned
-release id/date; it cannot authorize Android Search unless the release is
-fresh, backend-qualified and exactly matches those values.
+The M12.4B backend image was built from this exact commit in Cloud Build
+`0f8e511d-6d24-4d4c-888a-296ccf2a5951` and is pinned by digest
+`sha256:5033e5bdd315c7954c8d1f4c0c6f7f9d034a6586819294beec31c3e4eada0eae`.
+It is serving private M11 revision
+`valuepilot-argentina-sa-east1-00037-nuj` at 100% traffic, with tags
+`m124-gcs-auth` and `m11-4b-sa-10`. Its explicit environment gate is scoped
+to `identity-search` and the pinned release id/date; it authorizes Android
+Search only while the release is fresh, backend-qualified and exactly matches
+those values.
 
-## Current release gate
+## Current release gate and exact activated release
 
-The live status check on 2026-09-20 returned:
+The exact official release acquired from the user-provided archive was
+verified, mirrored to both regional runtime buckets, and activated by a
+compare-and-swap pointer update. The immutable release identity is:
+
+- release id: `argentina-sepa-2026-09-18-619498b8e3230298-routing-v1-search-v2`
+- release date: `2026-09-18`
+- official source SHA-256: `619498b8e3230298b8a91f3df05ee7fe44e190a8f909e0e103cf43867fec73ee`
+- official source bytes: `335486139`
+- candidate manifest SHA-256: `9a558cafcb5d5a162eb04330448612418f437eda7d1f5a3e5ba44e9202c415cf`
+- SearchPack objects: `1163` (`897007419` bytes); mobile profile `128/32`; backend profile `1024/32`
+- active pointer generations: southamerica-east1 `1789973690114545`, us-east4 `1789973692306062`
+- activation writes: one CAS update per runtime bucket; no rollback was required
+
+The live status check on 2026-09-21 returned:
 
 ```text
 service ready
-releaseId argentina-sepa-2026-09-08-aeef3399fa20e751-routing-v1-search-v2
-releaseDate 2026-09-08
-freshness STALE
+releaseId argentina-sepa-2026-09-18-619498b8e3230298-routing-v1-search-v2
+releaseDate 2026-09-18
+freshness FRESH
 backendCodeQualified true
-androidNetworkingAuthorized false
+androidNetworkingAuthorized true
 productionAndroidUiAuthorized false
 ```
 
-This is an intentional fail-closed result. The current active release is older
-than the configured freshness window, so the Android coordinator maps it to a
-stale/authorization-unavailable state. No date was extended, no source was
-invented, and no networking bypass was added. A newly qualified release must
-be activated before a real device can qualify live Search.
+This is the intended fail-closed boundary: the fresh release now permits the
+bounded `identity-search` backend gate, while
+`productionAndroidUiAuthorized` remains false until the signed Play artifact
+and explicit physical-device smoke are completed. No date was extended, no
+source was invented, and no networking bypass was added. Availability in the
+live search response remains `UNKNOWN`; SEPA price publication is not inventory
+evidence.
 
 ## Build and privacy evidence
 
@@ -130,21 +148,27 @@ The following completed successfully on this candidate:
 - Browser model/tests/Firefox lint: 30 tests, zero failures or skips.
 - Cloud negative boundary: missing App Check 401, invalid App Check 401,
   unknown route 404, direct private M11 403; authenticated private status 200.
+- Exact-head GCS image build `0f8e511d-6d24-4d4c-888a-296ccf2a5951` succeeded.
+- The new no-traffic revision returned authenticated `/readyz` 200 with the
+  exact release and `FRESH`, `/v1/status` 200 with
+  `androidNetworkingAuthorized=true`, and `/v1/search` 200 for the explicit
+  CABA `leche` query. The same checks passed after 100% traffic promotion.
+- The release workflow recorded `CANDIDATE_VERIFIED`, zero active-pointer
+  writes before promotion, and the candidate receipt/manifest; raw provider
+  data remains outside Git. Both runtime-bucket mirrors have zero missing,
+  size-mismatch or checksum-mismatch objects.
 
 The normal exact-head GitHub workflows are the final remote gate after this
 checkpoint is pushed. This report does not claim a physical-device result,
-Play upload, fresh-release activation or live Search qualification.
+Play upload or production Android UI qualification.
 
 ## Remaining bounded actions
 
-1. Activate a newly qualified, fresh Argentina release and confirm the status
-   gate changes to `androidNetworkingAuthorized=true`; do not relax the stale
-   policy.
-2. Provide the existing Play upload keystore/alias/password through the normal
+1. Provide the existing Play upload keystore/alias/password through the normal
    protected release process, sign `app-release.aab`, and verify package,
    version, signer and SHA-256 before uploading to the Play Console internal
    track.
-3. Install that signed bundle through Google Play and perform the explicit
+2. Install that signed bundle through Google Play and perform the explicit
    CABA identity-search smoke. Only then can this status advance to device
    qualified.
 

@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "status": "ARGENTINA_LIVE_SEARCH_M12_4B_PLAY_BUILD_READY_NOT_DEVICE_QUALIFIED",
-  "updated": "2026-09-20",
+  "updated": "2026-09-21",
   "repository": "topmanneedboys/morefoodperdollar",
   "branch": "candidate/argentina-live-search-m12-4",
-  "implementationCommit": "ccf7cca543ceac64e9a6437c07f00324dd95369a",
+  "implementationCommit": "4881750886a26de9e203e52d16963156719733cc",
   "android": {
     "applicationId": "com.valuepilot.app",
     "versionCode": 10103,
@@ -43,13 +43,25 @@
   "cloud": {
     "edgeRevision": "valuepilot-argentina-consumer-edge-00004-5lg",
     "edgeImageDigest": "sha256:315e37021aa7b1adf2f77eba88bc85f09984025ebac98e89612ff40168238581",
-    "privateRevision": "valuepilot-argentina-sa-east1-00029-gef",
-    "privateImageDigest": "sha256:83aa126d01b34c5b284465a6ff4cd9334fc162710c0e9b33615383dcbdd7107d",
-    "activeReleaseId": "argentina-sepa-2026-09-08-aeef3399fa20e751-routing-v1-search-v2",
-    "activeReleaseDate": "2026-09-08",
-    "freshness": "STALE",
+    "privateRevision": "valuepilot-argentina-sa-east1-00037-nuj",
+    "privateImageDigest": "sha256:5033e5bdd315c7954c8d1f4c0c6f7f9d034a6586819294beec31c3e4eada0eae",
+    "cloudBuildId": "0f8e511d-6d24-4d4c-888a-296ccf2a5951",
+    "activeReleaseId": "argentina-sepa-2026-09-18-619498b8e3230298-routing-v1-search-v2",
+    "activeReleaseDate": "2026-09-18",
+    "officialSourceSha256": "619498b8e3230298b8a91f3df05ee7fe44e190a8f909e0e103cf43867fec73ee",
+    "officialSourceBytes": 335486139,
+    "candidateManifestSha256": "9a558cafcb5d5a162eb04330448612418f437eda7d1f5a3e5ba44e9202c415cf",
+    "searchPackObjectCount": 1163,
+    "searchPackObjectBytes": 897007419,
+    "mobileProfile": "128/32",
+    "backendProfile": "1024/32",
+    "pointerGenerations": {
+      "southamerica-east1": "1789973690114545",
+      "us-east4": "1789973692306062"
+    },
+    "freshness": "FRESH",
     "backendCodeQualified": true,
-    "androidNetworkingAuthorized": false,
+    "androidNetworkingAuthorized": true,
     "productionAndroidUiAuthorized": false,
     "edgeMaxScale": 20,
     "privateInvokerBindingCount": 1,
@@ -70,10 +82,12 @@
     "androidLint": "debug_and_release_green",
     "androidBuild": "debug_release_bundle_green",
     "deviceQualified": false,
-    "playUploaded": false
+    "playUploaded": false,
+    "gcsImageBuild": "SUCCESS",
+    "liveBackendSmoke": "FRESH_READY_STATUS_AUTHORIZED_SEARCH_GREEN",
+    "mirrorAudit": "ZERO_MISSING_SIZE_OR_CHECKSUM_MISMATCHES"
   },
   "remainingGates": [
-    "activate a fresh qualified release without relaxing stale policy",
     "sign with the existing Play upload key",
     "install through Play and perform explicit CABA live Search smoke"
   ],

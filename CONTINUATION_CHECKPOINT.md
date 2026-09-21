@@ -1,13 +1,13 @@
 # ValuePilot Continuation Checkpoint
 
-Updated: 2026-09-20
+Updated: 2026-09-21
 
 Branch: `candidate/argentina-live-search-m12-4`
 
 ## Current M12.4B visible Argentina identity Search candidate
 
 The bounded M12.4B implementation is complete in code at
-`ccf7cca543ceac64e9a6437c07f00324dd95369a` and is documented in
+`4881750886a26de9e203e52d16963156719733cc` and is documented in
 [ARGENTINA_LIVE_SEARCH_M12_4B.md](ARGENTINA_LIVE_SEARCH_M12_4B.md). The visible
 Search surface now sends only explicit user queries through the existing
 M12.4A coordinator/bridge/transport, shows the qualified Buenos Aires (CABA)
@@ -21,13 +21,25 @@ availability/ranking authority or M12.5 work was added.
 Local verification is green: 405 shared-core tests, 1,668 Android unit tests,
 46 backend tests, 197 tooling tests and 30 browser tests, plus Android debug /
 release assemble, lint and release-bundle tasks. The unsigned `10103 / 1.1.2`
-release AAB has the expected package and privacy boundary. The current
-deployed release is stale (`2026-09-08` as evaluated on 2026-09-20), so the
-backend reports `androidNetworkingAuthorized=false` and the candidate is
-**PLAY_BUILD_READY_NOT_DEVICE_QUALIFIED**. A fresh qualified release must be
-activated before live Android Search can be authorized; the existing upload
-keystore is also required to produce the Play-upload-signed AAB. Do not bypass
-either gate. No M12.5 work has started.
+release AAB has the expected package and privacy boundary. The exact official
+2026-09-18 release is now mirrored and active; authenticated `/readyz`,
+`/v1/status`, and CABA `leche` identity search all passed on the promoted
+revision, and the backend reports `FRESH` with
+`androidNetworkingAuthorized=true`. The candidate remains
+**PLAY_BUILD_READY_NOT_DEVICE_QUALIFIED** because the existing upload keystore
+is required for the signed Play artifact and a physical-device smoke is still
+pending. Do not bypass either gate. No M12.5 work has started.
+
+The active immutable release id is
+`argentina-sepa-2026-09-18-619498b8e3230298-routing-v1-search-v2`. The
+official source SHA-256 is
+`619498b8e3230298b8a91f3df05ee7fe44e190a8f909e0e103cf43867fec73ee`
+(`335486139` bytes), the candidate manifest SHA-256 is
+`9a558cafcb5d5a162eb04330448612418f437eda7d1f5a3e5ba44e9202c415cf`, and
+the release contains 1,163 immutable SearchPack objects. Both runtime-bucket
+mirror audits have zero missing, size-mismatch or checksum-mismatch objects;
+the pointer update used CAS and required no rollback. Raw provider data is not
+in Git.
 
 The public edge/OIDC/App Check evidence and exact cloud details are in the
 canonical M12.4B report below; the historical M12.4A and M12.3 sections remain
