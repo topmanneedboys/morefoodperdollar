@@ -417,25 +417,23 @@ private object ArgentinaBackendIdentityMapper {
         response: ArgentinaBackendContract.SearchResponse
     ): PracticalShoppingSearchIdentityPresentation {
         val byKey = linkedMapOf<String, PracticalShoppingSearchIdentityPresentation.Match>()
-        response.matches.forEach { match ->
-            match.productCandidates.forEach { candidate ->
-                if (!byKey.containsKey(candidate.productEvidenceKey)) {
-                    byKey[candidate.productEvidenceKey] =
-                        PracticalShoppingSearchIdentityPresentation.Match(
-                            displayName = candidate.name,
-                            brand = candidate.brand,
-                            matchLabel =
-                                if (candidate.gtinStatus == "VALID") {
-                                    "exact barcode"
-                                } else {
-                                    "provider identity match"
-                                }
-                        )
-                }
+        response.identityCandidates.forEach { candidate ->
+            if (!byKey.containsKey(candidate.productEvidenceKey)) {
+                byKey[candidate.productEvidenceKey] =
+                    PracticalShoppingSearchIdentityPresentation.Match(
+                        displayName = candidate.name,
+                        brand = candidate.brand,
+                        matchLabel =
+                            if (candidate.gtinStatus == "VALID") {
+                                "exact barcode"
+                            } else {
+                                "provider identity match"
+                            }
+                    )
             }
         }
         val matches = byKey.values.take(24)
-        val evaluated = response.matches.sumOf { match -> match.productCandidates.size }
+        val evaluated = response.identityCandidates.size
         return PracticalShoppingSearchIdentityPresentation(
             query = response.originalQuery.trim(),
             matches = matches,

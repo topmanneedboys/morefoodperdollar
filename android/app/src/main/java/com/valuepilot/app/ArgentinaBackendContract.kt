@@ -230,6 +230,7 @@ object ArgentinaBackendContract {
         val resolution: SearchResolution?,
         val correction: Map<String, String>?,
         val matches: List<SearchMatch>,
+        val identityCandidates: List<ProductIdentity>,
         val input: InputResult?
     )
 
@@ -482,16 +483,51 @@ object ArgentinaBackendContract {
         val interpretedQuery = optionalString(root, "interpretedQuery", MAX_QUERY_CHARS)
         val resolution = optionalSearchResolution(root, "resolution")
         val correction = optionalStringMap(root, "correction", 8, 160)
-        val matches = parseSearchMatches(requiredArray(root, "matches"))
+        val rawMatches = requiredArray(root, "matches")
+
+        val matches: List<SearchMatch>
+        val identityCandidates: List<ProductIdentity>
+
+        if (resolution == SearchResolution.DISCOVERY) {
+            boundedArray(rawMatches, MAX_MATCHES, "matches")
+
+            val groupedDiscovery =
+                rawMatches.length() > 0 &&
+                    (rawMatches.get(0) as? JSONObject)?.has("productCandidates") == true
+
+            if (groupedDiscovery) {
+                matches = parseSearchMatches(rawMatches)
+                identityCandidates = matches.flatMap { it.productCandidates }
+            } else {
+                matches = emptyList()
+                identityCandidates = parseProductCandidates(rawMatches)
+            }
+        } else {
+            matches = parseSearchMatches(rawMatches)
+            identityCandidates = matches.flatMap { it.productCandidates }
+        }
+
         val input =
             if (!root.has("input") || root.isNull("input")) null
             else parseInput(requiredObject(root, "input"))
+
         if (resolution == SearchResolution.DISCOVERY) {
             if (input != null) invalid("discovery search input must be null")
         } else if (input == null) {
             invalid("non-discovery search requires input")
         }
-        return SearchResponse(common, query, originalQuery, interpretedQuery, resolution, correction, matches, input)
+
+        return SearchResponse(
+            common,
+            query,
+            originalQuery,
+            interpretedQuery,
+            resolution,
+            correction,
+            matches,
+            identityCandidates,
+            input
+        )
     }
 
     fun parseInterpret(
