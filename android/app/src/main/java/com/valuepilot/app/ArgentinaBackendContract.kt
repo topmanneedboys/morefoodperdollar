@@ -62,6 +62,15 @@ object ArgentinaBackendContract {
         NO_SAFE_MATCH
     }
 
+    enum class SearchResolution {
+        DISCOVERY,
+        RESOLVED_EXACT,
+        RESOLVED_ALIAS,
+        RESOLVED_SAFE_CORRECTION,
+        NEEDS_CLARIFICATION,
+        NO_SAFE_MATCH
+    }
+
     enum class ClarificationCode {
         PACKAGE_SIZE_REQUIRED,
         QUANTITY_REQUIRED,
@@ -218,10 +227,10 @@ object ArgentinaBackendContract {
         val query: String,
         val originalQuery: String,
         val interpretedQuery: String?,
-        val resolution: Resolution?,
+        val resolution: SearchResolution?,
         val correction: Map<String, String>?,
         val matches: List<SearchMatch>,
-        val input: InputResult
+        val input: InputResult?
     )
 
     data class InterpretResponse(
@@ -471,10 +480,17 @@ object ArgentinaBackendContract {
         val query = boundedQuery(requiredString(root, "query", MAX_QUERY_CHARS), "query")
         val originalQuery = boundedQuery(requiredString(root, "originalQuery", MAX_QUERY_CHARS), "originalQuery")
         val interpretedQuery = optionalString(root, "interpretedQuery", MAX_QUERY_CHARS)
-        val resolution = optionalResolution(root, "resolution")
+        val resolution = optionalSearchResolution(root, "resolution")
         val correction = optionalStringMap(root, "correction", 8, 160)
         val matches = parseSearchMatches(requiredArray(root, "matches"))
-        val input = parseInput(requiredObject(root, "input"))
+        val input =
+            if (!root.has("input") || root.isNull("input")) null
+            else parseInput(requiredObject(root, "input"))
+        if (resolution == SearchResolution.DISCOVERY) {
+            if (input != null) invalid("discovery search input must be null")
+        } else if (input == null) {
+            invalid("non-discovery search requires input")
+        }
         return SearchResponse(common, query, originalQuery, interpretedQuery, resolution, correction, matches, input)
     }
 
@@ -1021,6 +1037,13 @@ object ArgentinaBackendContract {
         if (value != Availability.UNKNOWN.name) invalid("availability must remain UNKNOWN")
         return Availability.UNKNOWN
     }
+
+    private fun optionalSearchResolution(root: JSONObject, name: String): SearchResolution? =
+        if (!root.has(name) || root.isNull(name)) null else try {
+            SearchResolution.valueOf(requiredString(root, name, 48))
+        } catch (error: IllegalArgumentException) {
+            invalid("unsupported search resolution value")
+        }
 
     private fun optionalResolution(root: JSONObject, name: String): Resolution? =
         if (!root.has(name) || root.isNull(name)) null else requiredResolution(root, name)

@@ -305,6 +305,32 @@ class ArgentinaBackendConsumerBridgeTest {
         assertNull(cleared.state.presentation)
     }
 
+    @Test
+    fun discoverySearchAcceptsNullInputFromLiveBackend() {
+        val body =
+            JSONObject(searchJson())
+                .put("interpretedQuery", "yerba")
+                .put("resolution", "DISCOVERY")
+                .put("input", JSONObject.NULL)
+                .toString()
+
+        val parsed = ArgentinaBackendContract.parseSearch(body, release)
+
+        assertEquals(ArgentinaBackendContract.SearchResolution.DISCOVERY, parsed.resolution)
+        assertNull(parsed.input)
+
+        val result =
+            ArgentinaBackendConsumerBridge(
+                InMemoryArgentinaBackendTransport(
+                    mapOf(
+                        ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT to response(200, body)
+                    )
+                ),
+                release
+            ).searchPresentation(searchRequest())
+
+        assertTrue(result is ArgentinaBackendBridgeResult.Success)
+    }
     private fun identityPresentation(query: String): PracticalShoppingSearchIdentityPresentation =
         PracticalShoppingSearchIdentityPresentation(
             query = query,
