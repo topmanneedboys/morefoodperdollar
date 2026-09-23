@@ -1,6 +1,6 @@
 # Current state
 
-Updated: 2026-09-23 12:15 UTC
+Updated: 2026-09-23 12:32 UTC
 
 Branch: `candidate/argentina-live-search-m12-4`
 
@@ -46,6 +46,34 @@ remains the 11:07 UTC check recorded below; this refresh did not reread the
 pointer. Observe the scheduled run's exact source SHA, bounded retry outcome,
 OIDC handoff, candidate/SHADOW state, and active/canary pointer writes before
 qualifying the end-to-end path.
+
+### Scheduled gate configuration check — 2026-09-23 12:32 UTC
+
+At this snapshot, candidate HEAD was the status-only commit
+`5b4f5988df3916a52c89b4cc1db809556b016e01`, matching the remote candidate
+ref. Its exact-head CI run `35859461711` succeeded: Android and browser jobs
+passed; candidate release/provenance jobs were skipped by branch guards.
+
+GitHub currently has repository variable
+`ARGENTINA_AUTOMATED_ACQUISITION_ENABLED=true` and an environment-scoped variable
+of the same name set to `false`. The workflow's scheduled-job condition is
+job-level and reads `vars.ARGENTINA_AUTOMATED_ACQUISITION_ENABLED`. GitHub
+documents that environment-level variables become available after the
+environment is declared by the runner; the Sep 22 scheduled runs nevertheless
+started the acquisition job with this environment variable already set to
+`false`. The environment value therefore is not acting as a schedule kill
+switch for this job. No GitHub setting was changed. Do not interpret the
+environment-level `false` as disabled acquisition; the repository-level
+`true` is presently allowing scheduled work. See [GitHub's variable-scope
+documentation](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-variables).
+
+At 12:29 UTC, the latest scheduled GitHub run was still Sep 22 run
+`35795809367`; no Sep 23 acquisition had run. The next primary check remains
+scheduled for 16:30 UTC. Read-only GCS checks at 12:28 UTC confirmed both
+regional `control/active.json` objects still name the Sep 18 release as active
+and last-known-good. Their generations remain
+`1789973690114545` (`southamerica-east1`) and `1789973692306062` (`us-east4`),
+last updated 2026-09-21; no pointer mutation occurred in the observed window.
 
 ### Candidate follow-up — Android Search HTTP 503 contract
 
