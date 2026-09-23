@@ -177,4 +177,6 @@ Play upload or production Android UI qualification.
    CABA identity-search smoke. Only then can this status advance to device
    qualified.
 
-No M12.5 work is authorized by this checkpoint.
+This M12.4B checkpoint did not authorize M12.5 work. M12.5 was later
+separately authorized; its current status is recorded in
+[CURRENT_STATE.md](CURRENT_STATE.md) and [CONTINUATION_CHECKPOINT.md](CONTINUATION_CHECKPOINT.md).

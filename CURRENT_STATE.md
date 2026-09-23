@@ -1,64 +1,89 @@
 # Current state
 
-Updated: 2026-09-22
+Updated: 2026-09-23
 
 Branch: `candidate/argentina-live-search-m12-4`
 
-Latest M12.5 implementation commit: `695040e43abdba1b0c37bb5d8a8ef08bfb748510`
+M12.4 candidate code HEAD: `2176ed8709c5b89ae4c529cfcfc186c982681e82`
 
-## M12.4 / M12.5 checkpoint update — 2026-09-22
+Latest M12.5 production integration on `main`:
+`03b4cee652e46f5739879b05fc59d691baa27b8f`
 
-Current candidate HEAD: `695040e43abdba1b0c37bb5d8a8ef08bfb748510`
-(`M12.5 pass verified metadata revision evidence to worker`), following
-`73e6e3c` (`M12.4 cover late-success and retry races`). The working tree was
-clean before this status update. These commits remain on the candidate branch;
-they do not change deployed services or the active release pointer.
+## M12.4 / M12.5 checkpoint update — 2026-09-23
 
-The protected local Play-signing path used for 10103 was recovered and reused
-for 10104 without asking for or displaying a password. The existing upload
-PKCS#12 keystore (`%USERPROFILE%\\.valuepilot-signing\\valuepilot-upload-keystore.p12`,
-alias `valuepilot-upload`) and its current-user DPAPI-protected credential file
-were used locally; the password was held only in memory during signing and was
-not added to source control or printed. The 10104 AAB signature verifies and
-has the same signer certificate fingerprint as 10103
+M12.4 remains **PARTIAL**: the Search candidate is code- and CI-ready, but the
+signed Play-installed Motorola Edge 2025 Search smoke has not been performed.
+No phone was attached during this checkpoint. The locally signed 10104 and
+10105 bundles have not been uploaded to Google Play.
+Candidate HEAD `2176ed8` passed Android tests, lint, builds, privacy checks and
+the single-signer check in run `35828919495`; release-bundle/provenance jobs
+were skipped by their branch guards.
+
+10104 was signed with the same protected local Play-signing mechanism used for
+10103. The current-user DPAPI credential was consumed locally without a
+password prompt or secret output. Its signature verifies against 10103's signer
+certificate fingerprint
 (`A0:B6:5D:8A:5A:F9:44:9E:76:6F:05:39:6F:E1:78:20:D5:2F:26:7C:E9:D5:8A:B0:C2:F6:CD:E4:DC:B8:52:DA`).
-The locally produced 10104 AAB SHA-256 is
+The 10104 AAB SHA-256 is
 `23633c008c21db9d6ca1a343d96c76f1dc1c5f06da19a32a3dd095476039d5bb`; it was
-not uploaded to Google Play. The later 10105 AAB was also verified locally
-with the same signer (SHA-256
+not uploaded to Google Play. The 10105 AAB was also verified locally with the
+same signer (SHA-256
 `c982a6ab8c46eeddee196289205d464f3827c85d8f4754d409fbcdf3af825f2e`); it too
 has not been uploaded. Physical-device M12.4 validation remains outstanding.
 
-M12.4 added deterministic coverage for a superseded request succeeding after a
-newer request succeeds, retrying the same query after a server error, and
-MainActivity saving only the Search query while recreating/closing the host.
-The request-generation, cancellation, stale-render, bounded-result, release-
-pinning, and existing safe-error behavior remain covered. No production Search
-behavior changed in these test-only additions.
+M12.5 is **PARTIAL — the production workflow definition is deployed and its
+fail-closed validation gates pass live smoke tests, but the next scheduled
+OIDC acquisition/recovery run has not yet qualified the end-to-end path**.
+M12.5 changes were integrated through PR #4 and PR #5. `main` is at
+`03b4cee652e46f5739879b05fc59d691baa27b8f`.
 
-M12.5 now passes verified metadata-change evidence as the pinned release
-worker's expected top-level mapping (not an envelope), bound to the discovery
-response digest and resource ID; absent prior evidence fails closed. The exact
-pinned worker in the immutable source archive was inspected read-only to
-confirm this interface. Local verification after these code changes passed
-299 tooling tests, 110 backend tests, 405 shared-core tests, and 1,678 Android
-unit tests, plus debug/release lint, assemble and release bundle tasks. Lint
-reported no issues. Workflow static checks passed; a separate YAML parser was
-not available locally. Exact-head GitHub CI remains a required promotion gate
-for the final pushed candidate.
+The deployed Google Workflow `valuepilot-argentina-release` in `us-east4` is
+ACTIVE at revision `000011-094`, with source SHA-256
+`b7d52f2876baeb88ae8766b88b239f89a7d2ece2a7915cc8e0481b2764258381`, matching
+the merged `main` source. Its existing service account
+`valuepilot-release-workflow@valuepilot-argentina.iam.gserviceaccount.com` and
+`LOG_ERRORS_ONLY` call logging were preserved. The first deployment attempt was
+rejected before revision creation because two expressions exceeded Google's
+400-character limit; PR #5 split them into equivalent bounded checks and added
+a regression test.
 
-Production remains deliberately unchanged. The Sep 22 shadow run
-`github-35776323661-1` persisted candidate
-`argentina-sepa-2026-09-22-eaefeae3d9f2885a-routing-v1-search-v2`, but its
-workflow recorded `STATE_WRITE_FAILED` after a GCS 412 state precondition
-conflict; its receipt is persisted, with zero active-pointer writes and
-activation not executed. The trusted active release remains the Sep 18 release
-listed below and is fresh under the seven-Argentina-calendar-day policy. The
-workflow on `origin/main` and deployed Google Workflow revision still predate
-this candidate's evidence integration. Do not claim M12.5 production
-qualification or start M12.6 until that integration is deployed and verified.
-The candidate branch is substantially divergent from `main`; no pull request
-exists, so do not merge the entire candidate branch as a narrow milestone.
+Two bounded live executions on revision `000011-094` returned the expected
+`INVALID_HANDOFF` reasons: mismatched archive key/hash, and missing verified
+metadata-change evidence. Both completed successfully before discovery or
+Cloud Build, reporting `cloudBuildStarted=false` and `activePointerWrites=0`.
+These prove deployment parsing and early fail-closed gates only; they are not
+evidence of a scheduled OIDC download, outage retry, or full candidate build.
+No such potentially expensive acquisition was manually triggered.
+
+The active release remains
+`argentina-sepa-2026-09-18-619498b8e3230298-routing-v1-search-v2`, fresh under
+the seven-Argentina-calendar-day policy on Sep 23. Both regional active pointer
+object generations remain unchanged at `1789973690114545` and
+`1789973692306062`; both still name Sep 18 as active and last-known-good. No
+canary pointer exists in either runtime bucket. The Sep 22 shadow candidate's
+earlier GCS 412 remains historical evidence with zero active/canary writes.
+
+Final M12.5 verification: 78 local tooling tests passed. Exact-head GitHub CI
+passed on PR #4 head `87d11bf8001558357585713016bd2f105314770d` (runs
+`35833958111`, `35833958234`, `35833964264`) and PR #5 head
+`d52b8946b1b17bdaee63e69a9f9573c7393e012b` (runs `35834966494`,
+`35834995735`, `35834966488`); both included Android unit tests/debug APK
+build and acquisition-control regressions. Cloud Workflows accepted the merged
+source, and both safe live gate executions succeeded. Routine CI now
+builds/verifies the debug APK but uploads it only for an explicit manual
+dispatch (3-day retention), avoiding normal push/PR APK artifacts.
+
+GitHub Actions storage audit: the account warning showed `0.47 GB / 0.50 GB`.
+This repository has two unexpired `ValuePilot-v101-provenance-proof` artifacts
+at 36.65 MiB each; they are preserved as release evidence. No Actions caches
+were present. One already-expired, disposable `github-pages` artifact about
+0.01 MiB was removed. The account-wide billing endpoint requires a GitHub
+authorization scope unavailable to this session, so the remaining account
+storage cannot be attributed to other repositories; the rejected APK upload
+did not report a reliable artifact size.
+The M12.4 candidate branch remains substantially divergent from `main`; no PR
+exists for that whole branch. Only the narrow M12.5 integration PRs were
+merged. Do not merge the entire M12.4 branch as a narrow milestone.
 
 Android version: 101.1.4 (10105 M12.4 Search candidate)
 
@@ -125,11 +150,11 @@ privacy and remaining human-action evidence.
 
 ## Current M12.5 Argentina acquisition reliability candidate
 
-Status: **PARTIAL — local implementation and regression gates are green; the
-production workflow/worker integration is not deployed or independently
-qualified.** Implementation commit: `68acf33` (`M12.5 harden Argentina
-acquisition recovery`), on this candidate branch. Do not treat this commit as
-active production configuration.
+Status: **PARTIAL — the production workflow integration is deployed and its
+fail-closed gates pass live smoke tests; end-to-end scheduled OIDC acquisition
+and outage-recovery behavior still needs one scheduled run.** The bounded
+implementation commit `68acf33` originated on this candidate branch; production
+integration was merged separately to `main` at `03b4cee`.
 
 The bounded implementation adds three-attempt metadata discovery with
 deterministic 0.5s / 1.0s retry delays for transient HTTP 408/425/429/500/502/
@@ -171,30 +196,26 @@ The currently trusted release remains
 age 4 of the 7 allowed days on Sep 22, therefore `FRESH`; no date was extended
 and no new source was promoted.
 
-Production deployment is intentionally withheld. The deployed Google Workflow
-`valuepilot-argentina-release` in `us-east4` is still revision
-`000010-bf5` (updated Sep 21), and its source differs from the local M12.5
-definition. Read-only inspection of the pinned Cloud Build source archive
-`gs://valuepilot-argentina_cloudbuild/valuepilot-release-source/96a9630799a3d900e48d240b24afbc72e6cf95ff.tar.gz`
-(generation `1789355757382369`; 3,358,665 bytes) confirmed that the archived
-source contains both `tools.argentina_release_handoff_worker` and
-`tools.argentina_release_worker`; these modules are absent from this candidate
-checkout. The handoff entrypoint restores the content-addressed source ZIP and
-delegates to the release worker. The archived release worker supports an
-`--upstream-change-evidence` input and requires that evidence to prove a
-same-day revision. The deployed workflow passes current source identity,
-archive identity, acquisition time, and the `VALUEPILOT_UPSTREAM_CHANGED`
-boolean, but does not pass that evidence input or an equivalent evidence
-payload. Therefore the archive handoff path is present, but transport of the
-new same-day proof is not qualified. The builder image is separately pinned;
-its source-to-image identity and a compatible workflow/worker deployment must
-be verified before deployment. Deploying before that integration is checked
-could waste a multi-hour candidate build or reject a legitimate same-day
-revision. No Cloud Workflow was deployed by this checkpoint.
+Production integration is now deployed. Google Workflow
+`valuepilot-argentina-release` in `us-east4` is ACTIVE at revision
+`000011-094`, updated Sep 23, with source SHA-256
+`b7d52f2876baeb88ae8766b88b239f89a7d2ece2a7915cc8e0481b2764258381`, matching
+the merged `main` source. The existing service account and `LOG_ERRORS_ONLY`
+call logging were preserved. Exact-source CI passed, including 78 local
+tooling regressions and a new expression-size guard; the actual Cloud Workflows
+service accepted the source after two over-limit expressions were split.
 
-The acquisition tooling is now included in a focused Python CI workflow, and
-the full Android/release workflow path filters watch these M12.5 files too.
-Local verification on this checkpoint: 73 focused acquisition/workflow tests,
+Live execution checks `fcde61a5-3160-4480-91fb-d42c4c1bed06` and
+`5f80333a-7f20-41ff-adfc-66058905f404` both succeeded on revision `000011-094`
+and returned the expected early `INVALID_HANDOFF` reason, `cloudBuildStarted`
+false, and zero active-pointer writes. They exercised the mismatched archive
+pair and missing same-day evidence gates, not source discovery, OIDC acquisition,
+retry handling, or a full build. No manually forced national build was run;
+the next scheduled acquisition is the remaining live qualification gate.
+
+At the initial M12.5 candidate checkpoint, the acquisition tooling was included
+in focused Python CI and the Android/release workflow path filters watched the
+M12.5 files. Local verification at that checkpoint: 73 focused acquisition/workflow tests,
 296 tooling tests, 110 backend tests, Python compilation, YAML parsing, and
 `git diff --check` all passed. The required Android shared-core/app unit-test,
 debug lint and debug build gate passed (most tasks were up-to-date); APK
@@ -210,8 +231,8 @@ HEAD `35cc732a2671bc3d0cb771a90f9af77d864e6bb7`:
   builds and health-boundary smoke.
 - `35822854003` merchant-feed qualification and regional tests.
 
-All four workflow runs concluded successfully. The later status-only commit does
-not change those tested source files.
+All four workflow runs concluded successfully for that earlier checkpoint; the
+later merged M12.5 integration is verified by the exact-head runs above.
 
 ## Current M12.4A live Search foundation candidate
 

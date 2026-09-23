@@ -1,18 +1,15 @@
 # ValuePilot Continuation Checkpoint
 
-Updated: 2026-09-22
+Updated: 2026-09-23
 
 Branch: `candidate/argentina-live-search-m12-4`
 
-## Latest continuation checkpoint — 2026-09-22
+## Latest continuation checkpoint — 2026-09-23
 
-Current candidate HEAD is `695040e43abdba1b0c37bb5d8a8ef08bfb748510`.
-M12.4's additional race/retry/lifecycle regression tests are in `73e6e3c`; M12.5's
-verified metadata-evidence handoff fix is in `695040e`. The worktree was clean
-before this documentation update. Local verification passed 299 tooling tests,
-110 backend tests, 405 shared-core tests and 1,678 Android unit tests; Android
-debug/release lint, assemble and bundle tasks passed. Exact-head GitHub CI is
-a required promotion gate for the final pushed candidate.
+M12.4 candidate code HEAD before this documentation update is
+`2176ed8709c5b89ae4c529cfcfc186c982681e82`. Its visible Search implementation
+remains **PARTIAL** until a signed Play-installed build passes the physical
+Motorola Edge 2025 smoke. No device was attached during this checkpoint.
 
 10104 was signed using the same existing protected local upload-keystore path
 as 10103. The protected credential was consumed locally without prompting for
@@ -22,16 +19,26 @@ fingerprint as 10103; its SHA-256 is
 10104 and subsequent 10105 bundles have not been uploaded to Play. The
 M12.4 physical-device gate is still outstanding.
 
-For M12.5, the evidence payload was corrected to match the pinned archived
-worker's top-level mapping contract and is bound to the metadata discovery
-response; missing prior proof fails closed. The immutable worker interface was
-inspected read-only. No cloud workflow was deployed and no production pointer
-was changed. The Sep 22 shadow candidate is persisted, but its workflow ended
-`STATE_WRITE_FAILED` after a GCS 412 state precondition conflict; activation
-was not executed and active-pointer writes are zero. The Sep 18 trusted release
-remains active and fresh. The deployed workflow/main-branch runner still lacks
-this candidate's evidence integration, so M12.5 is not production-qualified.
-Do not begin M12.6.
+M12.5 is **PARTIAL**: the acquisition recovery implementation is merged to
+`main` (PR #4), and the Cloud Workflows service-limit fix is merged as
+`03b4cee652e46f5739879b05fc59d691baa27b8f` (PR #5). Exact-head Android and
+acquisition-control checks passed; `python -m unittest discover -s tools/tests`
+passed 78 tests.
+
+The deployed Google Workflow `valuepilot-argentina-release` is ACTIVE at
+revision `000011-094` in `us-east4`. Its source SHA-256
+`b7d52f2876baeb88ae8766b88b239f89a7d2ece2a7915cc8e0481b2764258381` matches
+merged `main`; the prior service account and `LOG_ERRORS_ONLY` logging remain
+unchanged. Two live validation-only executions on that revision returned
+`INVALID_HANDOFF`, `cloudBuildStarted=false`, and zero active-pointer writes,
+covering archive-pair mismatch and missing same-day proof. No national build
+was triggered. The next scheduled OIDC acquisition/recovery run remains needed
+to qualify the end-to-end production path.
+
+Both runtime regions still point to
+`argentina-sepa-2026-09-18-619498b8e3230298-routing-v1-search-v2` as active and
+last-known-good. Pointer generations remain `1789973690114545` and
+`1789973692306062`; no canary pointer exists. Do not start M12.6.
 
 ## Current M12.4B visible Argentina identity Search candidate
 
@@ -45,7 +52,9 @@ existing Compare route. It has bounded cancellation/generation behavior and
 explicit safe states for loading, no matches, authorization unavailable,
 stale release, timeout and temporary failure. No sample Search provider,
 startup probe, location permission, new persistence authority, price/stock/
-availability/ranking authority or M12.5 work was added.
+availability/ranking authority or M12.5 work was added to that M12.4B change.
+This is historical scope context; M12.5 was separately authorized later and is
+tracked in the latest checkpoint above.
 
 Local verification is green: 405 shared-core tests, 1,668 Android unit tests,
 46 backend tests, 197 tooling tests and 30 browser tests, plus Android debug /
@@ -55,11 +64,12 @@ release AAB has the expected package and privacy boundary. The exact official
 `/v1/status`, and CABA `leche` identity search all passed on the promoted
 revision, and the backend reports `FRESH` with
 `androidNetworkingAuthorized=true`. The candidate remains
-**PLAY_BUILD_READY_NOT_DEVICE_QUALIFIED** because the existing upload keystore
-is required for the signed Play artifact and a physical-device smoke is still
-pending. The existing protected upload key has now been recovered and
-verified, and the current 10103 / 101.1.2 AAB is signed locally but not
-uploaded. Do not bypass the device gate. No M12.5 work has started.
+**PLAY_BUILD_READY_NOT_DEVICE_QUALIFIED** because the physical-device smoke is
+still pending. The protected upload key has been recovered and verified;
+10103, 10104, and 10105 bundles were signed locally, but none has been uploaded
+to Google Play. Do not bypass the device gate. The old “No M12.5 work has
+started” statement at the original M12.4 checkpoint is superseded by the
+separately authorized M12.5 work recorded above.
 
 The signed local artifact is
 `android/app/build/outputs/bundle/release/app-release-play-upload-signed-10103.aab`
