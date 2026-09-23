@@ -132,6 +132,17 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
         self.assertIn('"--upstream-change-evidence=/tmp/valuepilot-upstream-change-evidence.json"', text)
         self.assertIn("UNEXPECTED_METADATA_CHANGE_EVIDENCE", text)
 
+    def test_cloud_workflow_expressions_fit_service_limit(self) -> None:
+        text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+        over_limit = []
+        for line_number, line in enumerate(text.splitlines(), start=1):
+            if "${" not in line or "}" not in line:
+                continue
+            expression = line[line.index("${") + 2 : line.rfind("}")]
+            if len(expression) > 400:
+                over_limit.append((line_number, len(expression)))
+        self.assertEqual([], over_limit)
+
     def test_full_android_ci_triggers_for_acquisition_milestone_changes(self) -> None:
         text = BUILD_WORKFLOW.read_text(encoding="utf-8")
         paths = (
