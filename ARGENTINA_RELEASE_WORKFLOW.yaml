@@ -38,6 +38,12 @@ main:
           - source_archive_sha256: ${default(map.get(args, "sourceArchiveSha256"), "")}
           - upstream_changed: ${default(map.get(args, "upstreamChanged"), false)}
           - upstream_change_evidence: ${map.get(args, "upstreamChangeEvidence")}
+          - invalid_upstream_change_evidence_part_1: ${upstream_changed and (upstream_change_evidence == null or map.get(upstream_change_evidence, "changed") != true or map.get(upstream_change_evidence, "resourceId") == null or map.get(upstream_change_evidence, "resourceId") == "")}
+          - invalid_upstream_change_evidence_part_2: ${upstream_changed and (upstream_change_evidence == null or map.get(upstream_change_evidence, "previousDiscoveryResponseSha256") == null or map.get(upstream_change_evidence, "currentDiscoveryResponseSha256") == null)}
+          - invalid_upstream_change_evidence_part_3: ${upstream_changed and (upstream_change_evidence == null or map.get(upstream_change_evidence, "currentDiscoveryResponseSha256") != map.get(upstream_change_evidence, "catalogResponseSha256"))}
+          - invalid_upstream_change_evidence_part_4: ${upstream_changed and (upstream_change_evidence == null or map.get(upstream_change_evidence, "previousDiscoveryResponseSha256") == map.get(upstream_change_evidence, "currentDiscoveryResponseSha256"))}
+          - invalid_upstream_change_evidence_part_5: ${upstream_changed and (upstream_change_evidence == null or map.get(upstream_change_evidence, "previousMetadataFingerprint") == null or map.get(upstream_change_evidence, "currentMetadataFingerprint") == null or map.get(upstream_change_evidence, "previousMetadataFingerprint") == map.get(upstream_change_evidence, "currentMetadataFingerprint"))}
+          - invalid_upstream_change_evidence: ${invalid_upstream_change_evidence_part_1 or invalid_upstream_change_evidence_part_2 or invalid_upstream_change_evidence_part_3 or invalid_upstream_change_evidence_part_4 or invalid_upstream_change_evidence_part_5}
           - promotion_mode: ${default(map.get(args, "promotionMode"), "SHADOW")}
 
     - validate_handoff:
@@ -54,7 +60,7 @@ main:
               reason: CURRENT_TRUSTED_SOURCE_IDENTITY_REQUIRED
               cloudBuildStarted: false
               activePointerWrites: 0
-          - condition: ${upstream_changed and (upstream_change_evidence == null or map.get(upstream_change_evidence, "changed") != true or map.get(upstream_change_evidence, "resourceId") == null or map.get(upstream_change_evidence, "resourceId") == "" or map.get(upstream_change_evidence, "previousDiscoveryResponseSha256") == null or map.get(upstream_change_evidence, "currentDiscoveryResponseSha256") == null or map.get(upstream_change_evidence, "currentDiscoveryResponseSha256") != map.get(upstream_change_evidence, "catalogResponseSha256") or map.get(upstream_change_evidence, "previousDiscoveryResponseSha256") == map.get(upstream_change_evidence, "currentDiscoveryResponseSha256") or map.get(upstream_change_evidence, "previousMetadataFingerprint") == null or map.get(upstream_change_evidence, "currentMetadataFingerprint") == null or map.get(upstream_change_evidence, "previousMetadataFingerprint") == map.get(upstream_change_evidence, "currentMetadataFingerprint"))}
+          - condition: ${invalid_upstream_change_evidence}
             return:
               status: INVALID_HANDOFF
               reason: VERIFIED_METADATA_CHANGE_EVIDENCE_REQUIRED
@@ -524,6 +530,12 @@ main:
             - decode_conflicting_state:
                 assign:
                   - conflicting_state: ${json.decode(conflicting_state_bytes)}
+                  - conflicting_state_generation_matches: ${conflicting_state_metadata.generation == conflicting_state_confirmation.generation}
+                  - conflicting_state_release_id_matches: ${map.get(worker_summary, "releaseId") != null and map.get(conflicting_state, "candidateReleaseId") == map.get(worker_summary, "releaseId")}
+                  - conflicting_state_schema_and_checksum_match: ${map.get(conflicting_state, "schemaVersion") == "valuepilot-argentina-workflow-discovery-v1" and map.get(conflicting_state, "metadataChecksum") == metadata_checksum}
+                  - conflicting_state_dataset_matches: ${map.get(conflicting_state, "datasetId") == catalog_response.body.result.id}
+                  - conflicting_state_source_and_mode_match: ${map.get(conflicting_state, "sourceArchiveSha256") == source_archive_sha256 and map.get(conflicting_state, "promotionMode") == promotion_mode and map.get(conflicting_state, "upstreamChanged") == upstream_changed}
+                  - conflicting_state_is_exact_repeat: ${conflicting_state_generation_matches and conflicting_state_release_id_matches and conflicting_state_schema_and_checksum_match and conflicting_state_dataset_matches and conflicting_state_source_and_mode_match}
         except:
           as: conflicting_state_error
           steps:
@@ -538,7 +550,7 @@ main:
 
     - reconcile_state_conflict:
         switch:
-          - condition: ${conflicting_state_metadata.generation == conflicting_state_confirmation.generation and map.get(worker_summary, "releaseId") != null and map.get(conflicting_state, "schemaVersion") == "valuepilot-argentina-workflow-discovery-v1" and map.get(conflicting_state, "metadataChecksum") == metadata_checksum and map.get(conflicting_state, "datasetId") == catalog_response.body.result.id and map.get(conflicting_state, "candidateReleaseId") == map.get(worker_summary, "releaseId") and map.get(conflicting_state, "sourceArchiveSha256") == source_archive_sha256 and map.get(conflicting_state, "promotionMode") == promotion_mode and map.get(conflicting_state, "upstreamChanged") == upstream_changed}
+          - condition: ${conflicting_state_is_exact_repeat}
             return:
               status: ${default(map.get(worker_summary, "status"), "WORKER_STATUS_MISSING")}
               stateWriteStatus: ALREADY_RECORDED
