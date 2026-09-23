@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from dataclasses import replace
 from pathlib import Path
+from unittest.mock import patch
 
 from backend.object_store import LocalFilesystemObjectStore
 from tools.argentina_acquisition_schedule_control import candidate_release_id, metadata_fingerprint
+from tools import argentina_acquisition_schedule_control_v2 as schedule_control
 from tools.argentina_acquisition_schedule_control_v2 import (
     CHECK_PHASE_LATE_RECHECK,
     CHECK_PHASE_METADATA_ONLY,
@@ -406,6 +410,59 @@ class ArgentinaAcquisitionScheduleControlV2Tests(unittest.TestCase):
             self.assertEqual(result["canaryPointerWrites"], 0)
             self.assertEqual(result["sourceSubstitution"], 0)
             self.assertFalse(result["candidatePromotion"])
+
+    def test_preflight_cli_records_exhausted_metadata_502_as_handled_state(self) -> None:
+        error = AcquisitionError(
+            "official metadata unavailable",
+            code="UPSTREAM_TEMPORARILY_UNAVAILABLE",
+            http_status=502,
+            attempts=3,
+            cause_code="UPSTREAM_TRANSIENT_HTTP",
+        )
+        same_day_state = {
+            "status": "BUILD_RESERVED",
+            "candidateReleaseId": "argentina-sepa-2026-09-22-candidate",
+        }
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "preflight.json"
+            with (
+                patch.object(schedule_control, "_gcs_store", return_value=object()),
+                patch.object(schedule_control, "read_daily_state", return_value=same_day_state),
+                patch.object(schedule_control, "discover_metadata", side_effect=error),
+                redirect_stdout(io.StringIO()),
+            ):
+                exit_code = schedule_control._main(
+                    [
+                        "preflight",
+                        "--observed-at",
+                        "2026-09-23T16:30:00Z",
+                        "--current-release-id",
+                        "argentina-sepa-2026-09-18-active",
+                        "--current-release-date",
+                        "2026-09-18",
+                        "--current-source-sha256",
+                        "a" * 64,
+                        "--archive-bucket",
+                        "fixture-archive",
+                        "--output",
+                        str(output),
+                    ]
+                )
+
+            report = json.loads(output.read_text(encoding="utf-8"))
+
+        self.assertEqual(0, exit_code)
+        self.assertEqual("UPSTREAM_TEMPORARILY_UNAVAILABLE", report["status"])
+        self.assertEqual("UPSTREAM_TRANSIENT_HTTP", report["upstreamFailure"]["code"])
+        self.assertEqual(502, report["upstreamFailure"]["httpStatus"])
+        self.assertEqual(3, report["upstreamFailure"]["attempts"])
+        self.assertEqual("BUILD_RESERVED", report["sameDayState"]["status"])
+        self.assertTrue(report["activeReleaseUnchanged"])
+        self.assertEqual(0, report["activePointerWrites"])
+        self.assertEqual(0, report["canaryPointerWrites"])
+        self.assertEqual(0, report["sourceSubstitution"])
+        self.assertFalse(report["candidatePromotion"])
 
     def test_shadow_state_is_idempotent_and_success_cannot_be_downgraded(self) -> None:
         resolution = self._record_primary_no_change()
