@@ -150,6 +150,13 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertGreaterEqual(text.count(f"'{path}'"), 2)
 
+    def test_debug_apk_artifact_is_manual_only_and_short_lived(self) -> None:
+        text = BUILD_WORKFLOW.read_text(encoding="utf-8")
+        upload = text.index("      - name: Upload APK artifact")
+        upload_step = text[upload:]
+        self.assertIn("        if: github.event_name == 'workflow_dispatch'", upload_step)
+        self.assertIn("          retention-days: 3", upload_step)
+
     def test_runner_cleanup_removes_credentials_vpn_config_and_raw_source(self) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("Remove runner-local credential and raw-source material", text)
