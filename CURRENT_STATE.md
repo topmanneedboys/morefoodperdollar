@@ -4,21 +4,49 @@ Updated: 2026-09-23
 
 Branch: `candidate/argentina-live-search-m12-4`
 
-M12.4 candidate code HEAD: `2176ed8709c5b89ae4c529cfcfc186c982681e82`
+M12.4 candidate code HEAD: `12b42984f45ec9dd2141c676fd36b3b70d39dcbb`
 
 Latest M12.5 production integration on `main`:
 `84584173e27f94ef7d6c1329e59f1183cb8da243`
 
 ## M12.4 / M12.5 checkpoint update — 2026-09-23
 
-M12.4 remains **PARTIAL**: the Search candidate is code- and CI-ready, but the
-signed Play-installed Motorola Edge 2025 Search smoke has not been performed.
-No phone was attached during this checkpoint. The locally signed 10104 and
-10105 bundles have not been uploaded to Google Play.
-Candidate HEAD `2176ed8` passed Android tests, lint, builds, privacy checks and
-the single-signer check in run `35828919495`; release-bundle/provenance jobs
-were skipped by their branch guards. The preceding status/documentation branch
-HEAD `575f0989fd5bcb89c5471e087f442a39206dac03` passed exact-head Android and
+### Candidate follow-up — Android Search HTTP 503 contract
+
+Candidate code commit `12b42984f45ec9dd2141c676fd36b3b70d39dcbb` corrects the
+Edge-to-Android contract: HTTP 503 now maps to generic `SERVICE_UNAVAILABLE`,
+not the price-only `CURRENT_PRICE_UNAVAILABLE`, and Search presents the
+existing temporary-unavailability state. HTTP 502 remains a generic server
+error. Android version is now `101.1.5` / `10106`. Deterministic tests cover
+the 503 mapping, generic Search error, and 502 distinction. Two Android source
+boundary tests now use the existing newline-normalizing reader so their
+assertions are stable on Windows.
+
+Local Android validation passed on this code: shared-core tests, Android unit
+tests, debug/release lint, debug/release assembly, and release bundle assembly
+(`BUILD SUCCESSFUL`, 122 tasks). No Android device was attached. The broad
+candidate Python suite ran 299 tests: 282 passed, 14 skipped, one failed and
+two errored. The three failing outcomes are the pre-existing signed GTA and
+Metro Vancouver offline-catalog assets: both `manifest.json` files end in a
+CRLF, while the strict verifier requires canonical JSON bytes. Git's existing
+OpenSSL was added only to the test process PATH to resolve the separate local
+tool-discovery issue. No catalog bytes or signatures were changed; regenerating
+those signed assets is a separate release operation. The M12.5-focused tooling
+suite on its integration worktree passed all 80 tests. Exact-head GitHub CI for
+`12b42984f45ec9dd2141c676fd36b3b70d39dcbb` passed in run `35848056265`:
+Android job `107138891858` and browser job `107138892324` succeeded; milestone
+provenance and release-bundle jobs were skipped by their candidate-branch
+guards. Routine artifact uploads were also skipped.
+
+M12.4 remains **PARTIAL**: candidate code, local Android checks, and exact-head
+Android/browser CI are green, but the signed Play-installed Motorola Edge 2025
+Search smoke remains outstanding. No phone was attached during this
+checkpoint. The locally signed 10104 and 10105 bundles have not been uploaded
+to Google Play. Earlier candidate HEAD `2176ed8` passed Android tests, lint,
+builds, privacy checks and the single-signer check in run
+`35828919495`; release-bundle/provenance jobs were skipped by their branch
+guards. The preceding status/documentation branch HEAD
+`575f0989fd5bcb89c5471e087f442a39206dac03` passed exact-head Android and
 browser CI in run `35839211038`; release-bundle/provenance jobs were skipped
 by the same branch guards.
 
@@ -113,7 +141,7 @@ The M12.4 candidate branch remains substantially divergent from `main`; no PR
 exists for that whole branch. Only the narrow M12.5 integration PRs were
 merged. Do not merge the entire M12.4 branch as a narrow milestone.
 
-Android version: 101.1.4 (10105 M12.4 Search candidate)
+Android version: 101.1.5 (10106 M12.4 Search candidate)
 
 ## Current M12.4B visible Argentina identity Search candidate
 
