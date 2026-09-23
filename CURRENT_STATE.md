@@ -4,7 +4,61 @@ Updated: 2026-09-22
 
 Branch: `candidate/argentina-live-search-m12-4`
 
-Latest M12.5 implementation commit: `68acf3358988e29a040a6b387c2063a7034a420e`
+Latest M12.5 implementation commit: `695040e43abdba1b0c37bb5d8a8ef08bfb748510`
+
+## M12.4 / M12.5 checkpoint update — 2026-09-22
+
+Current candidate HEAD: `695040e43abdba1b0c37bb5d8a8ef08bfb748510`
+(`M12.5 pass verified metadata revision evidence to worker`), following
+`73e6e3c` (`M12.4 cover late-success and retry races`). The working tree was
+clean before this status update. These commits remain on the candidate branch;
+they do not change deployed services or the active release pointer.
+
+The protected local Play-signing path used for 10103 was recovered and reused
+for 10104 without asking for or displaying a password. The existing upload
+PKCS#12 keystore (`%USERPROFILE%\\.valuepilot-signing\\valuepilot-upload-keystore.p12`,
+alias `valuepilot-upload`) and its current-user DPAPI-protected credential file
+were used locally; the password was held only in memory during signing and was
+not added to source control or printed. The 10104 AAB signature verifies and
+has the same signer certificate fingerprint as 10103
+(`A0:B6:5D:8A:5A:F9:44:9E:76:6F:05:39:6F:E1:78:20:D5:2F:26:7C:E9:D5:8A:B0:C2:F6:CD:E4:DC:B8:52:DA`).
+The locally produced 10104 AAB SHA-256 is
+`23633c008c21db9d6ca1a343d96c76f1dc1c5f06da19a32a3dd095476039d5bb`; it was
+not uploaded to Google Play. The later 10105 AAB was also verified locally
+with the same signer (SHA-256
+`c982a6ab8c46eeddee196289205d464f3827c85d8f4754d409fbcdf3af825f2e`); it too
+has not been uploaded. Physical-device M12.4 validation remains outstanding.
+
+M12.4 added deterministic coverage for a superseded request succeeding after a
+newer request succeeds, retrying the same query after a server error, and
+MainActivity saving only the Search query while recreating/closing the host.
+The request-generation, cancellation, stale-render, bounded-result, release-
+pinning, and existing safe-error behavior remain covered. No production Search
+behavior changed in these test-only additions.
+
+M12.5 now passes verified metadata-change evidence as the pinned release
+worker's expected top-level mapping (not an envelope), bound to the discovery
+response digest and resource ID; absent prior evidence fails closed. The exact
+pinned worker in the immutable source archive was inspected read-only to
+confirm this interface. Local verification after these code changes passed
+299 tooling tests, 110 backend tests, 405 shared-core tests, and 1,678 Android
+unit tests, plus debug/release lint, assemble and release bundle tasks. Lint
+reported no issues. Workflow static checks passed; a separate YAML parser was
+not available locally. Exact-head GitHub CI remains a required promotion gate
+for the final pushed candidate.
+
+Production remains deliberately unchanged. The Sep 22 shadow run
+`github-35776323661-1` persisted candidate
+`argentina-sepa-2026-09-22-eaefeae3d9f2885a-routing-v1-search-v2`, but its
+workflow recorded `STATE_WRITE_FAILED` after a GCS 412 state precondition
+conflict; its receipt is persisted, with zero active-pointer writes and
+activation not executed. The trusted active release remains the Sep 18 release
+listed below and is fresh under the seven-Argentina-calendar-day policy. The
+workflow on `origin/main` and deployed Google Workflow revision still predate
+this candidate's evidence integration. Do not claim M12.5 production
+qualification or start M12.6 until that integration is deployed and verified.
+The candidate branch is substantially divergent from `main`; no pull request
+exists, so do not merge the entire candidate branch as a narrow milestone.
 
 Android version: 101.1.4 (10105 M12.4 Search candidate)
 

@@ -1,8 +1,37 @@
 # ValuePilot Continuation Checkpoint
 
-Updated: 2026-09-21
+Updated: 2026-09-22
 
 Branch: `candidate/argentina-live-search-m12-4`
+
+## Latest continuation checkpoint — 2026-09-22
+
+Current candidate HEAD is `695040e43abdba1b0c37bb5d8a8ef08bfb748510`.
+M12.4's additional race/retry/lifecycle regression tests are in `73e6e3c`; M12.5's
+verified metadata-evidence handoff fix is in `695040e`. The worktree was clean
+before this documentation update. Local verification passed 299 tooling tests,
+110 backend tests, 405 shared-core tests and 1,678 Android unit tests; Android
+debug/release lint, assemble and bundle tasks passed. Exact-head GitHub CI is
+a required promotion gate for the final pushed candidate.
+
+10104 was signed using the same existing protected local upload-keystore path
+as 10103. The protected credential was consumed locally without prompting for
+or printing a password. Its signature verifies against the same certificate
+fingerprint as 10103; its SHA-256 is
+`23633c008c21db9d6ca1a343d96c76f1dc1c5f06da19a32a3dd095476039d5bb`. The
+10104 and subsequent 10105 bundles have not been uploaded to Play. The
+M12.4 physical-device gate is still outstanding.
+
+For M12.5, the evidence payload was corrected to match the pinned archived
+worker's top-level mapping contract and is bound to the metadata discovery
+response; missing prior proof fails closed. The immutable worker interface was
+inspected read-only. No cloud workflow was deployed and no production pointer
+was changed. The Sep 22 shadow candidate is persisted, but its workflow ended
+`STATE_WRITE_FAILED` after a GCS 412 state precondition conflict; activation
+was not executed and active-pointer writes are zero. The Sep 18 trusted release
+remains active and fresh. The deployed workflow/main-branch runner still lacks
+this candidate's evidence integration, so M12.5 is not production-qualified.
+Do not begin M12.6.
 
 ## Current M12.4B visible Argentina identity Search candidate
 
