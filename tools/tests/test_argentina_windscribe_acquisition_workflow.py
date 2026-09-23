@@ -63,10 +63,17 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
             text.index("      - name: Explain temporary official metadata unavailability") :
             text.index("      - name: Reuse today's immutable acquisition evidence without VPN")
         ]
+        self.assertIn("steps.preflight.outputs.status == 'UPSTREAM_TEMPORARILY_UNAVAILABLE'", outage_report)
+        self.assertIn("steps.preflight.outputs.status == 'FRESHNESS_LIMIT_EXCEEDED'", outage_report)
+        self.assertIn("steps.preflight.outputs.status == 'ACTIVE_RELEASE_UNVERIFIED'", outage_report)
+        self.assertIn("Argentina acquisition blocked: active freshness is unsafe", outage_report)
+        self.assertIn("::error::Official metadata is unavailable and active-release freshness cannot safely cover it", outage_report)
         for diagnostic in (
             "Active release unchanged",
-            "Trusted release:",
+            "Active release identity:",
             "Freshness policy:",
+            "Same-day state/candidate:",
+            "Same-day reservation/SHADOW:",
             "Active/canary pointer writes:",
             "Source substitutions:",
         ):
