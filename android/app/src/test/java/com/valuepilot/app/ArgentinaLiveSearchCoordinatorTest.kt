@@ -385,7 +385,7 @@ class ArgentinaLiveSearchCoordinatorTest {
                     ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT -> {
                         searchAttempts += 1
                         if (searchAttempts == 1) {
-                            ArgentinaBackendTransportResponse(502, "")
+                            ArgentinaBackendTransportResponse(503, "{\"error\":\"UPSTREAM_UNAVAILABLE\"}")
                         } else {
                             val query = JSONObject(requireNotNull(requestBody)).getString("query")
                             ArgentinaBackendTransportResponse(200, searchJson(1, query = query))
@@ -402,7 +402,7 @@ class ArgentinaLiveSearchCoordinatorTest {
         executor.runNext()
         val failure = coordinator.state() as ArgentinaLiveSearchState.Unavailable
         assertEquals(failedGeneration, failure.generation)
-        assertEquals(ArgentinaBackendContract.FailureCode.SERVER_ERROR, failure.failure)
+        assertEquals(ArgentinaBackendContract.FailureCode.SERVICE_UNAVAILABLE, failure.failure)
 
         val retryGeneration = coordinator.submit("yerba", context)
         assertEquals(ArgentinaLiveSearchState.Loading(retryGeneration, "yerba"), coordinator.state())

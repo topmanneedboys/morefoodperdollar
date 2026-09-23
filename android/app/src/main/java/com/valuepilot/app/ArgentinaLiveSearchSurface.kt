@@ -110,6 +110,9 @@ internal object ArgentinaLiveSearchSurfacePresenter {
                 ArgentinaBackendContract.FailureCode.TIMEOUT ->
                     ArgentinaLiveSearchSurfaceMode.TIMEOUT to
                         "Search took too long. Try again."
+                ArgentinaBackendContract.FailureCode.SERVICE_UNAVAILABLE ->
+                    ArgentinaLiveSearchSurfaceMode.TEMPORARILY_UNAVAILABLE to
+                        "Live Search is temporarily unavailable. Try again."
                 else ->
                     ArgentinaLiveSearchSurfaceMode.TEMPORARILY_UNAVAILABLE to
                         "Live Search is temporarily unavailable. Try again."

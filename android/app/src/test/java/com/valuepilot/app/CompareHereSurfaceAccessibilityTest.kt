@@ -42,7 +42,7 @@ class CompareHereSurfaceAccessibilityTest {
 
     @Test
     fun surfaceAnnouncesStatusAndKeepsComparisonAuthorityOutsideTheView() {
-        val source = source().readText()
+        val source = source().readSourceText()
 
         assertTrue(source.contains("accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"))
         assertTrue(source.contains("contentDescription = compareHereExactCardContentDescription(row)"))
@@ -66,7 +66,7 @@ class CompareHereSurfaceAccessibilityTest {
 
     @Test
     fun manualReadinessMessagesAreAnnouncedAsOneProjectedBlock() {
-        val source = manualSource().readText()
+        val source = manualSource().readSourceText()
 
         assertTrue(
             source.contains(

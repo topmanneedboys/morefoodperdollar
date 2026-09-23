@@ -46,7 +46,8 @@ class ArgentinaBackendTransportMappingTest {
                 413 to ArgentinaBackendContract.FailureCode.RESPONSE_TOO_LARGE,
                 429 to ArgentinaBackendContract.FailureCode.RATE_LIMITED,
                 500 to ArgentinaBackendContract.FailureCode.SERVER_ERROR,
-                503 to ArgentinaBackendContract.FailureCode.CURRENT_PRICE_UNAVAILABLE
+                502 to ArgentinaBackendContract.FailureCode.SERVER_ERROR,
+                503 to ArgentinaBackendContract.FailureCode.SERVICE_UNAVAILABLE
             )
 
         expected.forEach { (statusCode, failureCode) ->

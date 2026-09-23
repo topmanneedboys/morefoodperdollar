@@ -134,7 +134,7 @@ class ArgentinaBackendConsumerBridgeTest {
     }
 
     @Test
-    fun staleReleaseAndHttpUnavailableNeverBecomeCurrentPrice() {
+    fun staleReleaseAndEdgeHttpUnavailableRemainDistinct() {
         val staleTransport =
             InMemoryArgentinaBackendTransport(
                 mapOf(ArgentinaBackendConsumerBridge.SHOP_ENDPOINT to response(200, shopJson(itemCount = 1, freshness = "STALE")))
@@ -151,13 +151,13 @@ class ArgentinaBackendConsumerBridgeTest {
                 InMemoryArgentinaBackendTransport(
                     mapOf(
                         ArgentinaBackendConsumerBridge.SHOP_ENDPOINT to
-                            ArgentinaBackendTransportResponse(503, "CURRENT_PRICE_EVIDENCE_UNAVAILABLE")
+                            ArgentinaBackendTransportResponse(503, "{\"error\":\"UPSTREAM_UNAVAILABLE\"}")
                     )
                 ),
                 release
             ).shop(shopRequest(1))
         assertEquals(
-            ArgentinaBackendContract.FailureCode.CURRENT_PRICE_UNAVAILABLE,
+            ArgentinaBackendContract.FailureCode.SERVICE_UNAVAILABLE,
             (unavailable as ArgentinaBackendBridgeResult.Failure).code
         )
     }

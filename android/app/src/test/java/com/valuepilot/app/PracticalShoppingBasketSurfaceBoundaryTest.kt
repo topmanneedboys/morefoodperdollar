@@ -10,8 +10,8 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
 
     @Test
     fun basketMechanicallyRendersImmutableStateAndEmitsOnlyTypedNavigation() {
-        val source = source("PracticalShoppingBasketSurfaceView.kt").readText()
-        val renderer = source("PracticalShoppingBasketRenderer.kt").readText()
+        val source = source("PracticalShoppingBasketSurfaceView.kt").readSourceText()
+        val renderer = source("PracticalShoppingBasketRenderer.kt").readSourceText()
 
         assertTrue(source.contains("fun render(state: PracticalShoppingBasketRenderState)"))
         assertTrue(source.contains("planResult.render(state.result, state.sampleNotice)"))
@@ -67,7 +67,7 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
 
     @Test
     fun ownerCallbackChangesFailClosedForAlreadyRenderedNavigation() {
-        val source = source("PracticalShoppingBasketSurfaceView.kt").readText()
+        val source = source("PracticalShoppingBasketSurfaceView.kt").readSourceText()
 
         listOf(
             "private var hasRenderedState = false",
@@ -82,7 +82,7 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
 
     @Test
     fun checkOffResetIsLocalForegroundStateAndAppearsOnlyWhenMarksExist() {
-        val source = source("PracticalShoppingBasketSurfaceView.kt").readText()
+        val source = source("PracticalShoppingBasketSurfaceView.kt").readSourceText()
 
         assertTrue(source.contains("PracticalShoppingBasketProgressSession.clearCollected"))
         assertTrue(source.contains("progressState.collectedItemKeys.isNotEmpty()"))
@@ -103,7 +103,7 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
 
     @Test
     fun checkOffProgressUsesAPoliteAccessibilityLiveRegion() {
-        val source = source("PracticalShoppingBasketSurfaceView.kt").readText()
+        val source = source("PracticalShoppingBasketSurfaceView.kt").readSourceText()
 
         assertTrue(
             source.contains(
@@ -114,7 +114,7 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
 
     @Test
     fun collectionSafetyDisclosureUsesAPoliteAccessibilityLiveRegion() {
-        val source = source("PracticalShoppingBasketSurfaceView.kt").readText()
+        val source = source("PracticalShoppingBasketSurfaceView.kt").readSourceText()
 
         assertEquals(
             3,
@@ -128,9 +128,9 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
 
     @Test
     fun homeAndBasketShareOneUiReadyPlanResultRenderer() {
-        val home = source("PracticalShoppingHomeSurfaceView.kt").readText()
-        val basket = source("PracticalShoppingBasketSurfaceView.kt").readText()
-        val result = source("PracticalShoppingPlanResultSurfaceView.kt").readText()
+        val home = source("PracticalShoppingHomeSurfaceView.kt").readSourceText()
+        val basket = source("PracticalShoppingBasketSurfaceView.kt").readSourceText()
+        val result = source("PracticalShoppingPlanResultSurfaceView.kt").readSourceText()
 
         assertTrue(home.contains("PracticalShoppingPlanResultSurfaceView(context)"))
         assertTrue(home.contains("resultContainer.render(state.result, state.sampleNotice)"))
@@ -145,7 +145,7 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
 
     @Test
     fun sharedPlanViewFormatsNoMoneyAndMakesNoDecision() {
-        val source = source("PracticalShoppingPlanResultSurfaceView.kt").readText()
+        val source = source("PracticalShoppingPlanResultSurfaceView.kt").readSourceText()
 
         listOf(
             "PracticalShoppingPlanner",
@@ -166,7 +166,7 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
 
     @Test
     fun sharedPlanViewUsesProjectedCompletenessForCautionStyling() {
-        val source = source("PracticalShoppingPlanResultSurfaceView.kt").readText()
+        val source = source("PracticalShoppingPlanResultSurfaceView.kt").readSourceText()
 
         assertTrue(source.contains("practicalShoppingPrimaryCardStyle(state)"))
         assertTrue(source.contains("style.backgroundColor"))
@@ -180,7 +180,7 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
 
     @Test
     fun resultCardsRepeatTheProvidedSampleDisclosureVisibly() {
-        val source = source("PracticalShoppingPlanResultSurfaceView.kt").readText()
+        val source = source("PracticalShoppingPlanResultSurfaceView.kt").readSourceText()
 
         assertTrue(source.contains("require(sampleNotice == null || sampleNotice.isNotBlank())"))
         assertEquals(
@@ -192,7 +192,7 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
 
     @Test
     fun sharedPlanResultAnnouncesProjectedChangesPolitely() {
-        val source = source("PracticalShoppingPlanResultSurfaceView.kt").readText()
+        val source = source("PracticalShoppingPlanResultSurfaceView.kt").readSourceText()
 
         assertTrue(
             source.contains(
@@ -205,7 +205,7 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
 
     @Test
     fun sharedPlanCardsExposeOneSummaryInsteadOfRepeatingDecorativeChildren() {
-        val source = source("PracticalShoppingPlanResultSurfaceView.kt").readText()
+        val source = source("PracticalShoppingPlanResultSurfaceView.kt").readSourceText()
 
         assertEquals(
             2,

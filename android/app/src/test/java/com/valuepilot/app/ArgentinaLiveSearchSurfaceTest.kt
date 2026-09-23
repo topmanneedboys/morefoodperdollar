@@ -70,7 +70,8 @@ class ArgentinaLiveSearchSurfaceTest {
             ArgentinaBackendContract.FailureCode.RELEASE_MISMATCH to ArgentinaLiveSearchSurfaceMode.STALE_RELEASE,
             ArgentinaBackendContract.FailureCode.TIMEOUT to ArgentinaLiveSearchSurfaceMode.TIMEOUT,
             ArgentinaBackendContract.FailureCode.NETWORK_ERROR to ArgentinaLiveSearchSurfaceMode.TEMPORARILY_UNAVAILABLE,
-            ArgentinaBackendContract.FailureCode.SERVER_ERROR to ArgentinaLiveSearchSurfaceMode.TEMPORARILY_UNAVAILABLE
+            ArgentinaBackendContract.FailureCode.SERVER_ERROR to ArgentinaLiveSearchSurfaceMode.TEMPORARILY_UNAVAILABLE,
+            ArgentinaBackendContract.FailureCode.SERVICE_UNAVAILABLE to ArgentinaLiveSearchSurfaceMode.TEMPORARILY_UNAVAILABLE
         )
         failures.forEach { (failure, expectedMode) ->
             val state = ArgentinaLiveSearchSurfacePresenter.from(

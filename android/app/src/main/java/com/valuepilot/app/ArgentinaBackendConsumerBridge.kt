@@ -282,7 +282,7 @@ internal class ArgentinaBackendConsumerBridge(
                     HTTP_REQUEST_TIMEOUT -> ArgentinaBackendContract.FailureCode.TIMEOUT
                     HTTP_REQUEST_TOO_LARGE -> ArgentinaBackendContract.FailureCode.RESPONSE_TOO_LARGE
                     HTTP_TOO_MANY_REQUESTS -> ArgentinaBackendContract.FailureCode.RATE_LIMITED
-                    HTTP_SERVICE_UNAVAILABLE -> ArgentinaBackendContract.FailureCode.CURRENT_PRICE_UNAVAILABLE
+                    HTTP_SERVICE_UNAVAILABLE -> ArgentinaBackendContract.FailureCode.SERVICE_UNAVAILABLE
                     in HTTP_SERVER_ERROR..HTTP_SERVER_ERROR_LAST -> ArgentinaBackendContract.FailureCode.SERVER_ERROR
                     else -> ArgentinaBackendContract.FailureCode.HTTP_ERROR
                 }
