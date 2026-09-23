@@ -1,6 +1,6 @@
 # Current state
 
-Updated: 2026-09-23 11:46 UTC
+Updated: 2026-09-23 12:15 UTC
 
 Branch: `candidate/argentina-live-search-m12-4`
 
@@ -14,6 +14,38 @@ Latest M12.5 production integration on `main`:
 `84584173e27f94ef7d6c1329e59f1183cb8da243`
 
 ## M12.4 / M12.5 checkpoint update — 2026-09-23
+
+### Verification refresh — 2026-09-23 12:15 UTC
+
+At this verification snapshot, candidate code HEAD was
+`4103220b6b88253938af449dcbe156d8d4b0ce35`; the local candidate worktree was
+clean and the remote candidate ref matched it. Exact-head GitHub run
+`35856892970` completed successfully at 12:00:45 UTC: Android test/lint/build,
+privacy and signer checks passed, and browser verification passed. Candidate
+provenance and release-bundle jobs were skipped by their branch guards, so
+this run did not upload an artifact or claim promotion.
+
+The integrated `main` head remains
+`84584173e27f94ef7d6c1329e59f1183cb8da243`; its exact-head acquisition-control
+run `35842285077` and Android build/test run `35842285058` both succeeded.
+The local complete `tools/tests` suite also passed all 300 tests after adding
+the installed Git OpenSSL directory to the test process's temporary `PATH`;
+no repository or machine configuration was changed. The focused acquisition,
+handoff, schedule-control, daily-release and workflow subset passed 57 tests.
+
+M12.4 remains **PARTIAL only for the physical Play-installed Motorola Edge
+2025 smoke**. `adb devices -l` reported no attached device; no Play upload or
+physical-device result is claimed. The M12.4 Search code remains frozen.
+
+M12.5 remains **PARTIAL** pending the first scheduled end-to-end acquisition
+after the retry/outage integration. At 12:06 UTC, GitHub showed no September
+23 scheduled acquisition run; the next expected primary check is 16:30 UTC.
+No national acquisition was manually triggered. The deployed Cloud Workflow
+was still ACTIVE at revision `000011-094`. The last direct GCS pointer read
+remains the 11:07 UTC check recorded below; this refresh did not reread the
+pointer. Observe the scheduled run's exact source SHA, bounded retry outcome,
+OIDC handoff, candidate/SHADOW state, and active/canary pointer writes before
+qualifying the end-to-end path.
 
 ### Candidate follow-up — Android Search HTTP 503 contract
 
