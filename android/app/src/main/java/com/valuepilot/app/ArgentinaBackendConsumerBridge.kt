@@ -147,7 +147,16 @@ internal class ArgentinaBackendConsumerBridge(
             endpoint = SEARCH_ENDPOINT,
             requestBody = ArgentinaBackendJson.searchRequest(request),
             cancellation = cancellation,
-            parser = { body -> ArgentinaBackendContract.parseSearch(body, expectedRelease) }
+            parser = { body ->
+                val response = ArgentinaBackendContract.parseSearch(body, expectedRelease)
+                if (response.query != request.query || response.originalQuery != request.query) {
+                    throw ArgentinaBackendContract.ContractException(
+                        ArgentinaBackendContract.FailureCode.CONTRACT_INVALID,
+                        "search response does not match the requested query"
+                    )
+                }
+                response
+            }
         )
 
     fun searchPresentation(

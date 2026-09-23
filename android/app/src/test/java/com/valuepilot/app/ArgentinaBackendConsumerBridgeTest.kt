@@ -342,6 +342,65 @@ class ArgentinaBackendConsumerBridgeTest {
         val success = result as ArgentinaBackendBridgeResult.Success
         assertEquals("Yerba Mate", success.value.identity.matches.single().displayName)
     }
+
+    @Test
+    fun discoverySearchRejectsGroupedLegacyCandidateShape() {
+        val body =
+            JSONObject(searchJson())
+                .put("resolution", "DISCOVERY")
+                .put("input", JSONObject.NULL)
+                .toString()
+
+        try {
+            ArgentinaBackendContract.parseSearch(body, release)
+            throw AssertionError("grouped discovery rows must not be accepted as the live contract")
+        } catch (error: ArgentinaBackendContract.ContractException) {
+            assertEquals(ArgentinaBackendContract.FailureCode.CONTRACT_INVALID, error.code)
+        }
+    }
+
+    @Test
+    fun searchRejectsAnEchoForAnotherQueryAndDeduplicatesExactIdentityKeys() {
+        val mismatchedBody =
+            JSONObject(searchJson())
+                .put("query", "mate")
+                .put("originalQuery", "mate")
+                .toString()
+        val mismatch =
+            ArgentinaBackendConsumerBridge(
+                InMemoryArgentinaBackendTransport(
+                    mapOf(ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT to response(200, mismatchedBody))
+                ),
+                release
+            ).searchPresentation(searchRequest())
+        assertTrue(mismatch is ArgentinaBackendBridgeResult.Failure)
+        assertEquals(
+            ArgentinaBackendContract.FailureCode.CONTRACT_INVALID,
+            (mismatch as ArgentinaBackendBridgeResult.Failure).code
+        )
+
+        val first = productIdentity().put("score", 100)
+        val duplicate = JSONObject(first.toString())
+        val discoveryBody =
+            JSONObject(searchJson())
+                .put("resolution", "DISCOVERY")
+                .put("input", JSONObject.NULL)
+                .put("matches", JSONArray().put(first).put(duplicate))
+                .toString()
+        val deduplicated =
+            ArgentinaBackendConsumerBridge(
+                InMemoryArgentinaBackendTransport(
+                    mapOf(ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT to response(200, discoveryBody))
+                ),
+                release
+            ).searchPresentation(searchRequest())
+
+        assertTrue(deduplicated is ArgentinaBackendBridgeResult.Success)
+        val presentation = (deduplicated as ArgentinaBackendBridgeResult.Success).value.identity
+        assertEquals(1, presentation.evaluatedCandidateCount)
+        assertEquals(1, presentation.matches.size)
+    }
+
     private fun identityPresentation(query: String): PracticalShoppingSearchIdentityPresentation =
         PracticalShoppingSearchIdentityPresentation(
             query = query,

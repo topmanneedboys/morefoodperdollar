@@ -62,6 +62,7 @@ class MainActivity : AppCompatActivity() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private lateinit var offlineCatalogDiscoverySession: BundledOfflineCatalogDiscoverySession
     private lateinit var argentinaSearchHost: ArgentinaLiveSearchSurfaceHost
+    private val argentinaSearchRenderGate = ArgentinaLiveSearchMainThreadRenderGate()
     private var argentinaSearchSurfaceState: ArgentinaLiveSearchSurfaceState? = null
     private val argentinaLaunchArea = ArgentinaQualifiedLaunchAreas.BuenosAiresCaba
     private var searchQuery = ""
@@ -2077,8 +2078,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun renderArgentinaSearchState(state: ArgentinaLiveSearchSurfaceState) {
         val update = {
-            argentinaSearchSurfaceState = state
-            if (::searchStatus.isInitialized) renderSearch(state)
+            val currentGeneration =
+                if (::argentinaSearchHost.isInitialized) argentinaSearchHost.state().generation
+                else state.generation
+            argentinaSearchRenderGate.renderIfCurrent(state, currentGeneration) {
+                argentinaSearchSurfaceState = it
+                if (::searchStatus.isInitialized) renderSearch(it)
+            }
         }
         if (Looper.myLooper() == Looper.getMainLooper()) update() else mainHandler.post(update)
     }

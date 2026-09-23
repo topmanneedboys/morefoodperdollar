@@ -1,7 +1,9 @@
 package com.valuepilot.app
 
 import java.util.ArrayDeque
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executor
+import java.util.concurrent.TimeUnit
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -41,14 +43,19 @@ class ArgentinaLiveSearchCoordinatorTest {
 
         val blankGeneration = coordinator.submit("   ", context)
         assertTrue(blankGeneration > missingContextGeneration)
-        assertEquals(ArgentinaLiveSearchState.Idle, states.last())
+        assertEquals(ArgentinaLiveSearchState.Idle(blankGeneration), states.last())
         assertEquals(0, transport.calls.size)
         coordinator.close()
     }
 
     @Test
     fun statusIsPinnedOnceAndSearchProjectsIdentityOnlyResults() {
-        val transport = RecordingTransport(statusBody = statusJson(), searchBody = searchJson(2))
+        val transport =
+            RecordingTransport(
+                statusBody = statusJson(),
+                searchBody = searchJson(2),
+                searchBodyByQuery = mapOf("mate" to searchJson(2, query = "mate"))
+            )
         val states = mutableListOf<ArgentinaLiveSearchState>()
         val executor = QueuedExecutor()
         val coordinator = ArgentinaLiveSearchCoordinator(transport, executor, states::add)
@@ -100,7 +107,11 @@ class ArgentinaLiveSearchCoordinatorTest {
 
     @Test
     fun emptySearchIsDifferentFromUnavailableAndResultBoundIsTwentyFour() {
-        val emptyTransport = RecordingTransport(statusBody = statusJson(), searchBody = searchJson(0))
+        val emptyTransport =
+            RecordingTransport(
+                statusBody = statusJson(),
+                searchBody = searchJson(0, query = "nothing")
+            )
         val emptyStates = mutableListOf<ArgentinaLiveSearchState>()
         val emptyExecutor = QueuedExecutor()
         val emptyCoordinator = ArgentinaLiveSearchCoordinator(emptyTransport, emptyExecutor, emptyStates::add)
@@ -109,7 +120,11 @@ class ArgentinaLiveSearchCoordinatorTest {
         assertTrue(emptyStates.last() is ArgentinaLiveSearchState.Empty)
         emptyCoordinator.close()
 
-        val manyTransport = RecordingTransport(statusBody = statusJson(), searchBody = searchJson(30))
+        val manyTransport =
+            RecordingTransport(
+                statusBody = statusJson(),
+                searchBody = searchJson(30, query = "many")
+            )
         val manyStates = mutableListOf<ArgentinaLiveSearchState>()
         val manyExecutor = QueuedExecutor()
         val manyCoordinator = ArgentinaLiveSearchCoordinator(manyTransport, manyExecutor, manyStates::add)
@@ -119,6 +134,33 @@ class ArgentinaLiveSearchCoordinatorTest {
         assertEquals(24, result.presentation.matches.size)
         assertTrue(result.presentation.evaluatedCandidateCount >= 30)
         manyCoordinator.close()
+    }
+
+    @Test
+    fun successfulResultIsReplacedByTheNewQueryEmptyState() {
+        val transport =
+            RecordingTransport(
+                statusBody = statusJson(),
+                searchBody = searchJson(1, query = "found"),
+                searchBodyByQuery = mapOf("nothing" to searchJson(0, query = "nothing"))
+            )
+        val states = mutableListOf<ArgentinaLiveSearchState>()
+        val executor = QueuedExecutor()
+        val coordinator = ArgentinaLiveSearchCoordinator(transport, executor, states::add)
+
+        val foundGeneration = coordinator.submit("found", context)
+        executor.runNext()
+        assertTrue(coordinator.state() is ArgentinaLiveSearchState.Results)
+
+        val emptyGeneration = coordinator.submit("nothing", context)
+        executor.runNext()
+
+        val final = coordinator.state() as ArgentinaLiveSearchState.Empty
+        assertTrue(emptyGeneration > foundGeneration)
+        assertEquals(emptyGeneration, final.generation)
+        assertEquals("nothing", final.query)
+        assertFalse(states.any { it is ArgentinaLiveSearchState.Results && it.generation == emptyGeneration })
+        coordinator.close()
     }
 
     @Test
@@ -179,44 +221,140 @@ class ArgentinaLiveSearchCoordinatorTest {
 
     @Test
     fun supersededGenerationCannotPublishAndCancellationIsRequested() {
-        val transport = RecordingTransport(statusBody = statusJson(), searchBody = searchJson(1), ignoreCancellation = true)
+        val transport =
+            RecordingTransport(
+                statusBody = statusJson(),
+                searchBody = searchJson(1, query = "third"),
+                ignoreCancellation = true
+            )
         val states = mutableListOf<ArgentinaLiveSearchState>()
         val executor = QueuedExecutor()
         val coordinator = ArgentinaLiveSearchCoordinator(transport, executor, states::add)
 
         val first = coordinator.submit("first", context)
         val second = coordinator.submit("second", context)
+        val third = coordinator.submit("third", context)
         assertTrue(second > first)
-        assertEquals(2, executor.size)
+        assertTrue(third > second)
+        assertEquals(3, executor.size)
 
         executor.runNext()
+        executor.runNext()
         assertEquals(0, transport.calls.size)
-        assertTrue(states.none { state ->
-            state is ArgentinaLiveSearchState.Results && state.generation == first
-        })
+        assertFalse(states.any { it is ArgentinaLiveSearchState.Results && it.generation == first })
+        assertFalse(states.any { it is ArgentinaLiveSearchState.Results && it.generation == second })
         executor.runNext()
         val final = states.last() as ArgentinaLiveSearchState.Results
-        assertEquals(second, final.generation)
-        assertEquals("second", final.query)
+        assertEquals(third, final.generation)
+        assertEquals("third", final.query)
+        coordinator.close()
+    }
+
+    @Test
+    fun inFlightOldFailureCannotReplaceNewerSuccessfulSearch() {
+        val firstSearchStarted = CountDownLatch(1)
+        val releaseFirstSearch = CountDownLatch(1)
+        val searchQueries = mutableListOf<String>()
+        val transport = object : ArgentinaBackendTransport {
+            override fun execute(
+                endpoint: String,
+                requestBody: String?
+            ): ArgentinaBackendTransportResponse =
+                execute(endpoint, requestBody, ArgentinaRequestCancellation())
+
+            override fun execute(
+                endpoint: String,
+                requestBody: String?,
+                cancellation: ArgentinaRequestCancellation
+            ): ArgentinaBackendTransportResponse =
+                when (endpoint) {
+                    ArgentinaBackendConsumerBridge.STATUS_ENDPOINT ->
+                        ArgentinaBackendTransportResponse(200, statusJson())
+                    ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT -> {
+                        val query = JSONObject(requireNotNull(requestBody)).getString("query")
+                        searchQueries += query
+                        if (query == "first") {
+                            firstSearchStarted.countDown()
+                            check(releaseFirstSearch.await(3, TimeUnit.SECONDS))
+                            ArgentinaBackendTransportResponse(401, "")
+                        } else {
+                            ArgentinaBackendTransportResponse(200, searchJson(1, query = query))
+                        }
+                    }
+                    else -> ArgentinaBackendTransportResponse(404, "")
+                }
+        }
+        val states = mutableListOf<ArgentinaLiveSearchState>()
+        val executor = QueuedExecutor()
+        val coordinator = ArgentinaLiveSearchCoordinator(transport, executor, states::add)
+
+        val firstGeneration = coordinator.submit("first", context)
+        val firstWorker = Thread { executor.runNext() }.apply { start() }
+        assertTrue(firstSearchStarted.await(3, TimeUnit.SECONDS))
+
+        val secondGeneration = coordinator.submit("second", context)
+        executor.runNext()
+        val secondResult = coordinator.state() as ArgentinaLiveSearchState.Results
+        assertEquals(secondGeneration, secondResult.generation)
+        assertEquals("second", secondResult.query)
+
+        releaseFirstSearch.countDown()
+        firstWorker.join(3_000)
+        assertFalse(firstWorker.isAlive)
+        assertEquals(listOf("first", "second"), searchQueries)
+        assertEquals(secondResult, coordinator.state())
+        assertFalse(states.any { it is ArgentinaLiveSearchState.Unavailable && it.generation == firstGeneration })
+        assertFalse(states.any { it is ArgentinaLiveSearchState.Results && it.generation == firstGeneration })
+        coordinator.close()
+    }
+
+    @Test
+    fun candidateReleaseResponseCannotReplaceTheStatusPinnedActiveRelease() {
+        val transport =
+            RecordingTransport(
+                statusBody = statusJson(),
+                searchBody = searchJson(
+                    count = 1,
+                    releaseId = "argentina-sepa-2026-09-22-candidate",
+                    releaseDate = "2026-09-22"
+                )
+            )
+        val states = mutableListOf<ArgentinaLiveSearchState>()
+        val executor = QueuedExecutor()
+        val coordinator = ArgentinaLiveSearchCoordinator(transport, executor, states::add)
+
+        coordinator.submit("yerba", context)
+        executor.runNext()
+
+        assertEquals(
+            ArgentinaBackendContract.FailureCode.RELEASE_MISMATCH,
+            (coordinator.state() as ArgentinaLiveSearchState.Unavailable).failure
+        )
+        assertFalse(states.any { it is ArgentinaLiveSearchState.Results })
         coordinator.close()
     }
 
     @Test
     fun cancellationAndTeardownStayTyped() {
-        val transport = RecordingTransport(statusBody = statusJson(), searchBody = searchJson(1))
+        val transport =
+            RecordingTransport(
+                statusBody = statusJson(),
+                searchBody = searchJson(1),
+                searchBodyByQuery = mapOf("mate" to searchJson(1, query = "mate"))
+            )
         val states = mutableListOf<ArgentinaLiveSearchState>()
         val executor = QueuedExecutor()
         val coordinator = ArgentinaLiveSearchCoordinator(transport, executor, states::add)
         coordinator.submit("yerba", context)
-        coordinator.queryChanged("ye")
-        assertEquals(ArgentinaLiveSearchState.Idle, states.last())
+        val clearedGeneration = coordinator.queryChanged("ye")
+        assertEquals(ArgentinaLiveSearchState.Idle(clearedGeneration), states.last())
         executor.runNext()
         assertEquals(0, transport.calls.size)
         coordinator.close()
         val callsBeforeClose = transport.calls.size
         coordinator.submit("after-close", context)
         assertEquals(callsBeforeClose, transport.calls.size)
-        assertEquals(ArgentinaLiveSearchState.Idle, coordinator.state())
+        assertTrue(coordinator.state() is ArgentinaLiveSearchState.Idle)
     }
 
     @Test
@@ -257,7 +395,8 @@ class ArgentinaLiveSearchCoordinatorTest {
         private val statusBody: String,
         private val searchBody: String,
         private val searchStatus: Int = 200,
-        private val ignoreCancellation: Boolean = false
+        private val ignoreCancellation: Boolean = false,
+        private val searchBodyByQuery: Map<String, String> = emptyMap()
     ) : ArgentinaBackendTransport {
         data class Call(val endpoint: String, val body: String?)
 
@@ -281,7 +420,13 @@ class ArgentinaLiveSearchCoordinatorTest {
             }
             return when (endpoint) {
                 ArgentinaBackendConsumerBridge.STATUS_ENDPOINT -> ArgentinaBackendTransportResponse(200, statusBody)
-                ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT -> ArgentinaBackendTransportResponse(searchStatus, searchBody)
+                ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT -> {
+                    val query = requestBody?.let { JSONObject(it).optString("query") }.orEmpty()
+                    ArgentinaBackendTransportResponse(
+                        searchStatus,
+                        searchBodyByQuery[query] ?: searchBody
+                    )
+                }
                 else -> ArgentinaBackendTransportResponse(404, "")
             }
         }
@@ -308,6 +453,7 @@ class ArgentinaLiveSearchCoordinatorTest {
 
     private fun searchJson(
         count: Int,
+        query: String = "yerba",
         releaseId: String = release.releaseId,
         releaseDate: String = RELEASE_DATE
     ): String {
@@ -316,14 +462,14 @@ class ArgentinaLiveSearchCoordinatorTest {
             matches.put(
                 JSONObject()
                     .put("lineId", "search-$index")
-                    .put("query", "yerba")
+                    .put("query", query)
                     .put("productCandidates", JSONArray().put(productIdentity(index)))
             )
         }
         return envelope(releaseId, releaseDate)
-            .put("query", "yerba")
-            .put("originalQuery", "yerba")
-            .put("interpretedQuery", "Yerba Mate")
+            .put("query", query)
+            .put("originalQuery", query)
+            .put("interpretedQuery", query)
             .put("resolution", "RESOLVED_EXACT")
             .put("correction", JSONObject.NULL)
             .put("matches", matches)

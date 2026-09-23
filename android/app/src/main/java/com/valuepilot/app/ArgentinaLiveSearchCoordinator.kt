@@ -48,7 +48,7 @@ internal data class ArgentinaSearchContext(
 
 /** Renderer-ready identity-only state for the future live Search surface. */
 internal sealed interface ArgentinaLiveSearchState {
-    data object Idle : ArgentinaLiveSearchState
+    data class Idle(val generation: Long) : ArgentinaLiveSearchState
 
     data class Loading(
         val generation: Long,
@@ -90,7 +90,7 @@ internal class ArgentinaLiveSearchCoordinator(
     private var closed = false
     private var currentCancellation: ArgentinaRequestCancellation? = null
     private var pinnedRelease: ArgentinaBackendContract.ExpectedRelease? = null
-    private var currentState: ArgentinaLiveSearchState = ArgentinaLiveSearchState.Idle
+    private var currentState: ArgentinaLiveSearchState = ArgentinaLiveSearchState.Idle(0L)
 
     fun state(): ArgentinaLiveSearchState = synchronized(lock) { currentState }
 
@@ -111,7 +111,7 @@ internal class ArgentinaLiveSearchCoordinator(
             scheduledGeneration = currentGeneration
             immediate =
                 when {
-                    query.isBlank() -> ArgentinaLiveSearchState.Idle
+                    query.isBlank() -> ArgentinaLiveSearchState.Idle(currentGeneration)
                     query.length > ArgentinaBackendContract.MAX_QUERY_CHARS ->
                         ArgentinaLiveSearchState.Unavailable(
                             currentGeneration,
@@ -162,7 +162,7 @@ internal class ArgentinaLiveSearchCoordinator(
                         ArgentinaBackendContract.FailureCode.CONTRACT_INVALID
                     )
                 } else {
-                    ArgentinaLiveSearchState.Idle
+                    ArgentinaLiveSearchState.Idle(generation)
                 }
             currentState = next
         }
@@ -178,7 +178,7 @@ internal class ArgentinaLiveSearchCoordinator(
             cancelCurrentLocked()
             pinnedRelease = null
             generation = nextGenerationLocked()
-            next = ArgentinaLiveSearchState.Idle
+            next = ArgentinaLiveSearchState.Idle(generation)
             currentState = next
         }
         stateSink(next)
@@ -194,7 +194,7 @@ internal class ArgentinaLiveSearchCoordinator(
                 cancelCurrentLocked()
                 pinnedRelease = null
                 generation = nextGenerationLocked()
-                currentState = ArgentinaLiveSearchState.Idle
+                currentState = ArgentinaLiveSearchState.Idle(generation)
             }
         }
         if (shouldClose) closeExecutor?.invoke()
@@ -212,6 +212,7 @@ internal class ArgentinaLiveSearchCoordinator(
                 publishFailure(requestGeneration, query, release.code)
                 return
             }
+            if (!isCurrent(requestGeneration, cancellation)) return
             val expectedRelease = (release as ArgentinaBackendBridgeResult.Success).value
             val request =
                 ArgentinaBackendContract.SearchRequest(
@@ -269,17 +270,26 @@ internal class ArgentinaLiveSearchCoordinator(
         cancellation: ArgentinaRequestCancellation
     ): ArgentinaBackendBridgeResult<ArgentinaBackendContract.ExpectedRelease> {
         synchronized(lock) {
-            pinnedRelease?.let { return ArgentinaBackendBridgeResult.Success(it) }
-            if (closed || generation != requestGeneration) {
+            if (
+                closed || generation != requestGeneration ||
+                currentCancellation !== cancellation || cancellation.isCancelled()
+            ) {
                 return ArgentinaBackendBridgeResult.Failure(
                     ArgentinaBackendContract.FailureCode.CANCELLED,
                     "search was superseded"
                 )
             }
+            pinnedRelease?.let { return ArgentinaBackendBridgeResult.Success(it) }
         }
 
         val status = ArgentinaBackendConsumerBridge(transport, null).status(cancellation)
         if (status is ArgentinaBackendBridgeResult.Failure) return status
+        if (!isCurrent(requestGeneration, cancellation)) {
+            return ArgentinaBackendBridgeResult.Failure(
+                ArgentinaBackendContract.FailureCode.CANCELLED,
+                "search was superseded"
+            )
+        }
         val value = (status as ArgentinaBackendBridgeResult.Success).value
         val releaseId = value.releaseId
         val releaseDate = value.releaseDate
@@ -316,11 +326,34 @@ internal class ArgentinaLiveSearchCoordinator(
                     "status release metadata is invalid"
                 )
             }
-        synchronized(lock) {
-            if (!closed && generation == requestGeneration) pinnedRelease = expected
+        val accepted = synchronized(lock) {
+            if (
+                closed || generation != requestGeneration ||
+                currentCancellation !== cancellation || cancellation.isCancelled()
+            ) {
+                false
+            } else {
+                pinnedRelease = expected
+                true
+            }
+        }
+        if (!accepted) {
+            return ArgentinaBackendBridgeResult.Failure(
+                ArgentinaBackendContract.FailureCode.CANCELLED,
+                "search was superseded"
+            )
         }
         return ArgentinaBackendBridgeResult.Success(expected)
     }
+
+    private fun isCurrent(
+        requestGeneration: Long,
+        cancellation: ArgentinaRequestCancellation
+    ): Boolean =
+        synchronized(lock) {
+            !closed && generation == requestGeneration &&
+                currentCancellation === cancellation && !cancellation.isCancelled()
+        }
 
     private fun clearPinnedRelease(requestGeneration: Long) {
         synchronized(lock) {
@@ -348,7 +381,7 @@ internal class ArgentinaLiveSearchCoordinator(
 
     private fun generationOf(state: ArgentinaLiveSearchState): Long =
         when (state) {
-            ArgentinaLiveSearchState.Idle -> generation
+            is ArgentinaLiveSearchState.Idle -> state.generation
             is ArgentinaLiveSearchState.Loading -> state.generation
             is ArgentinaLiveSearchState.Results -> state.generation
             is ArgentinaLiveSearchState.Empty -> state.generation

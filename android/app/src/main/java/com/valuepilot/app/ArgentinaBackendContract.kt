@@ -490,18 +490,14 @@ object ArgentinaBackendContract {
 
         if (resolution == SearchResolution.DISCOVERY) {
             boundedArray(rawMatches, MAX_MATCHES, "matches")
-
-            val groupedDiscovery =
-                rawMatches.length() > 0 &&
-                    (rawMatches.get(0) as? JSONObject)?.has("productCandidates") == true
-
-            if (groupedDiscovery) {
-                matches = parseSearchMatches(rawMatches)
-                identityCandidates = matches.flatMap { it.productCandidates }
-            } else {
-                matches = emptyList()
-                identityCandidates = parseProductCandidates(rawMatches)
+            if ((0 until rawMatches.length()).any { index ->
+                    rawMatches.optJSONObject(index)?.has("productCandidates") == true
+                }
+            ) {
+                invalid("discovery matches must contain flat product identities")
             }
+            matches = emptyList()
+            identityCandidates = parseProductCandidates(rawMatches)
         } else {
             matches = parseSearchMatches(rawMatches)
             identityCandidates = matches.flatMap { it.productCandidates }

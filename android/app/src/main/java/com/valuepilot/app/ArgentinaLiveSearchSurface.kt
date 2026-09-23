@@ -15,6 +15,7 @@ internal enum class ArgentinaLiveSearchSurfaceMode {
 internal data class ArgentinaLiveSearchSurfaceState(
     val areaLabel: String,
     val mode: ArgentinaLiveSearchSurfaceMode,
+    val generation: Long = 0L,
     val query: String = "",
     val statusMessage: String,
     val presentation: PracticalShoppingSearchIdentityPresentation? = null,
@@ -22,6 +23,7 @@ internal data class ArgentinaLiveSearchSurfaceState(
 ) {
     init {
         require(areaLabel.isNotBlank())
+        require(generation >= 0L)
         require(statusMessage.isNotBlank())
         require(caveat.isNotBlank())
         require(query.length <= ArgentinaBackendContract.MAX_QUERY_CHARS)
@@ -38,10 +40,14 @@ internal object ArgentinaLiveSearchSurfacePresenter {
     private const val IDENTITY_CAVEAT =
         "Identity suggestions only. No current price, package quantity, stock, availability or ranking is confirmed."
 
-    fun initial(area: ArgentinaQualifiedLaunchArea): ArgentinaLiveSearchSurfaceState =
+    fun initial(
+        area: ArgentinaQualifiedLaunchArea,
+        generation: Long = 0L
+    ): ArgentinaLiveSearchSurfaceState =
         ArgentinaLiveSearchSurfaceState(
             areaLabel = area.label,
             mode = ArgentinaLiveSearchSurfaceMode.IDLE,
+            generation = generation,
             statusMessage = "Search a product in the qualified Argentina area.",
             caveat = IDENTITY_CAVEAT
         )
@@ -51,11 +57,12 @@ internal object ArgentinaLiveSearchSurfacePresenter {
         area: ArgentinaQualifiedLaunchArea
     ): ArgentinaLiveSearchSurfaceState =
         when (state) {
-            ArgentinaLiveSearchState.Idle -> initial(area)
+            is ArgentinaLiveSearchState.Idle -> initial(area, state.generation)
             is ArgentinaLiveSearchState.Loading ->
                 ArgentinaLiveSearchSurfaceState(
                     areaLabel = area.label,
                     mode = ArgentinaLiveSearchSurfaceMode.LOADING,
+                    generation = state.generation,
                     query = state.query,
                     statusMessage = "Searching Argentina product identities…",
                     caveat = IDENTITY_CAVEAT
@@ -64,6 +71,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
                 ArgentinaLiveSearchSurfaceState(
                     areaLabel = area.label,
                     mode = ArgentinaLiveSearchSurfaceMode.RESULTS,
+                    generation = state.generation,
                     query = state.query,
                     statusMessage = "Product identities found.",
                     presentation = state.presentation,
@@ -73,6 +81,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
                 ArgentinaLiveSearchSurfaceState(
                     areaLabel = area.label,
                     mode = ArgentinaLiveSearchSurfaceMode.NO_MATCHES,
+                    generation = state.generation,
                     query = state.query,
                     statusMessage = "No matching product identity was found in this release.",
                     presentation = state.presentation,
@@ -108,6 +117,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
         return ArgentinaLiveSearchSurfaceState(
             areaLabel = area.label,
             mode = mode,
+            generation = state.generation,
             query = state.query,
             statusMessage = message,
             caveat = IDENTITY_CAVEAT
@@ -173,5 +183,21 @@ internal class ArgentinaLiveSearchSurfaceHost(
             render: (ArgentinaLiveSearchSurfaceState) -> Unit
         ): ArgentinaLiveSearchSurfaceHost =
             ArgentinaLiveSearchSurfaceHost(coordinator, area, render)
+    }
+}
+
+/** Main-thread gate that drops callbacks queued before a newer query began. */
+internal class ArgentinaLiveSearchMainThreadRenderGate {
+    private var lastRenderedGeneration = -1L
+
+    fun renderIfCurrent(
+        state: ArgentinaLiveSearchSurfaceState,
+        currentGeneration: Long,
+        render: (ArgentinaLiveSearchSurfaceState) -> Unit
+    ) {
+        require(currentGeneration >= 0L)
+        if (state.generation != currentGeneration || state.generation < lastRenderedGeneration) return
+        lastRenderedGeneration = state.generation
+        render(state)
     }
 }

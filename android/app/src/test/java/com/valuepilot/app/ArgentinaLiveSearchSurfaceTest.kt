@@ -93,4 +93,30 @@ class ArgentinaLiveSearchSurfaceTest {
         assertTrue(state.caveat.contains("stock"))
         assertTrue(state.caveat.contains("ranking"))
     }
+
+    @Test
+    fun `main thread render gate drops a queued callback from an older query`() {
+        val gate = ArgentinaLiveSearchMainThreadRenderGate()
+        val rendered = mutableListOf<ArgentinaLiveSearchSurfaceState>()
+        val oldResult =
+            ArgentinaLiveSearchSurfacePresenter.from(
+                ArgentinaLiveSearchState.Results(4, "yerba", presentation),
+                area
+            )
+        val newLoading =
+            ArgentinaLiveSearchSurfacePresenter.from(
+                ArgentinaLiveSearchState.Loading(5, "mate"),
+                area
+            )
+
+        gate.renderIfCurrent(newLoading, currentGeneration = 5, rendered::add)
+        gate.renderIfCurrent(oldResult, currentGeneration = 5, rendered::add)
+        gate.renderIfCurrent(oldResult, currentGeneration = 4, rendered::add)
+        val callbackFromReplacedHost = newLoading.copy(generation = 6)
+        gate.renderIfCurrent(callbackFromReplacedHost, currentGeneration = 5, rendered::add)
+
+        assertEquals(listOf(newLoading), rendered)
+        assertEquals(5L, rendered.single().generation)
+        assertEquals(6L, ArgentinaLiveSearchSurfacePresenter.from(ArgentinaLiveSearchState.Idle(6), area).generation)
+    }
 }
