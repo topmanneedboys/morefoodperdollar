@@ -8,17 +8,23 @@ from dataclasses import replace
 from pathlib import Path
 
 from backend.object_store import LocalFilesystemObjectStore
-from tools.argentina_acquisition_schedule_control import candidate_release_id
+from tools.argentina_acquisition_schedule_control import candidate_release_id, metadata_fingerprint
 from tools.argentina_acquisition_schedule_control_v2 import (
     CHECK_PHASE_LATE_RECHECK,
     CHECK_PHASE_METADATA_ONLY,
     CHECK_PHASE_PRIMARY,
     LATE_RECHECK_PREFIX,
+    AcquisitionScheduleError,
     finalize_download_observation,
+    metadata_change_evidence,
     preflight_observation,
+    read_daily_state,
+    record_shadow_state,
     reserve_build_attempt,
+    upstream_outage_result,
+    _write_daily_state,
 )
-from tools.argentina_release_acquisition import AcquisitionCandidate, DATASET_ID, DiscoveryResult
+from tools.argentina_release_acquisition import AcquisitionCandidate, AcquisitionError, DATASET_ID, DiscoveryResult
 
 
 OBSERVED_AT = "2026-09-15T16:30:00Z"
@@ -252,7 +258,11 @@ class ArgentinaAcquisitionScheduleControlV2Tests(unittest.TestCase):
 
     def test_metadata_change_at_midday_gets_a_new_primary_byte_check(self) -> None:
         self._record_primary_no_change()
-        changed_candidate = replace(self.candidate, last_modified="2026-09-15T15:00:00Z")
+        changed_candidate = replace(
+            self.candidate,
+            last_modified="2026-09-15T15:00:00Z",
+            observed_at="2026-09-15T16:31:00Z",
+        )
         changed = preflight_observation(
             discovery=_discovery(changed_candidate),
             candidate=changed_candidate,
@@ -294,6 +304,201 @@ class ArgentinaAcquisitionScheduleControlV2Tests(unittest.TestCase):
         self.assertEqual(repeated["status"], "NO_BUILD_REQUIRED")
         self.assertEqual(repeated["observationKind"], "LATE_RECHECK")
         self.assertEqual(repeated["dailyObservationKey"], first_late["dailyObservationKey"])
+
+    def test_metadata_change_evidence_requires_a_distinct_fingerprint(self) -> None:
+        prior = {
+            "metadataFingerprint": "a" * 64,
+            "catalogResponseSha256": "c" * 64,
+        }
+        unchanged = metadata_change_evidence(
+            metadata_fingerprint="a" * 64,
+            catalog_response_sha256="c" * 64,
+            resource_id="resource-martes",
+            same_day_state=prior,
+        )
+        changed = metadata_change_evidence(
+            metadata_fingerprint="b" * 64,
+            catalog_response_sha256="d" * 64,
+            resource_id="resource-miercoles",
+            same_day_state=prior,
+        )
+        self.assertFalse(unchanged["upstreamChanged"])
+        self.assertEqual(unchanged["metadataChangeEvidenceStatus"], "UNCHANGED")
+        self.assertIsNone(unchanged["upstreamChangeEvidence"])
+        self.assertTrue(changed["upstreamChanged"])
+        self.assertEqual(changed["metadataChangeEvidenceStatus"], "CHANGE_PROVEN")
+        self.assertTrue(changed["upstreamChangeEvidence"]["changed"])
+        self.assertEqual(changed["upstreamChangeEvidence"]["resourceId"], "resource-miercoles")
+        self.assertEqual(changed["upstreamChangeEvidence"]["previousDiscoveryResponseSha256"], "c" * 64)
+        self.assertEqual(changed["upstreamChangeEvidence"]["currentDiscoveryResponseSha256"], "d" * 64)
+        self.assertEqual(changed["upstreamChangeEvidence"]["previousMetadataFingerprint"], "a" * 64)
+        self.assertEqual(changed["upstreamChangeEvidence"]["currentMetadataFingerprint"], "b" * 64)
+        self.assertEqual(changed["upstreamChangeEvidence"]["catalogResponseSha256"], "d" * 64)
+
+    def test_metadata_change_without_prior_response_digest_fails_closed(self) -> None:
+        result = metadata_change_evidence(
+            metadata_fingerprint="b" * 64,
+            catalog_response_sha256="d" * 64,
+            resource_id="resource-miercoles",
+            same_day_state={"metadataFingerprint": "a" * 64},
+        )
+        self.assertFalse(result["upstreamChanged"])
+        self.assertEqual(result["metadataChangeEvidenceStatus"], "CHANGE_UNPROVEN_PREVIOUS_RESPONSE_MISSING")
+        self.assertIsNone(result["upstreamChangeEvidence"])
+
+    def test_metadata_change_with_same_discovery_digest_is_a_state_invariant_failure(self) -> None:
+        with self.assertRaises(AcquisitionScheduleError) as caught:
+            metadata_change_evidence(
+                metadata_fingerprint="b" * 64,
+                catalog_response_sha256="c" * 64,
+                resource_id="resource-miercoles",
+                same_day_state={"metadataFingerprint": "a" * 64, "catalogResponseSha256": "c" * 64},
+            )
+        self.assertEqual(caught.exception.code, "INVALID_CONTROL_STATE")
+
+    def test_metadata_outage_reports_explicit_freshness_without_mutation(self) -> None:
+        error = AcquisitionError(
+            "official metadata unavailable",
+            code="UPSTREAM_TEMPORARILY_UNAVAILABLE",
+            http_status=502,
+            attempts=3,
+            cause_code="UPSTREAM_TRANSIENT_HTTP",
+        )
+        healthy = upstream_outage_result(
+            observed_at="2026-09-22T16:30:00Z",
+            current_release_date="2026-09-18",
+            current_source_sha256="a" * 64,
+            error=error,
+            same_day_state={"status": "BUILD_RESERVED", "candidateReleaseId": "candidate"},
+        )
+        near = upstream_outage_result(
+            observed_at="2026-09-22T16:30:00Z",
+            current_release_date="2026-09-16",
+            current_source_sha256="a" * 64,
+            error=error,
+            same_day_state=None,
+        )
+        stale = upstream_outage_result(
+            observed_at="2026-09-22T16:30:00Z",
+            current_release_date="2026-09-14",
+            current_source_sha256="a" * 64,
+            error=error,
+            same_day_state=None,
+        )
+        unknown_active = upstream_outage_result(
+            observed_at="2026-09-22T16:30:00Z",
+            current_release_date=None,
+            current_source_sha256=None,
+            error=error,
+            same_day_state=None,
+        )
+        self.assertEqual(healthy["status"], "UPSTREAM_TEMPORARILY_UNAVAILABLE")
+        self.assertEqual(healthy["freshness"]["state"], "FRESH")
+        self.assertEqual(healthy["sameDayState"]["status"], "BUILD_RESERVED")
+        self.assertEqual(near["freshness"]["state"], "NEARING_LIMIT")
+        self.assertTrue(near["operatorAttentionRequired"])
+        self.assertEqual(stale["status"], "FRESHNESS_LIMIT_EXCEEDED")
+        self.assertEqual(unknown_active["status"], "ACTIVE_RELEASE_UNVERIFIED")
+        self.assertEqual(unknown_active["freshness"]["state"], "UNVERIFIED")
+        for result in (healthy, near, stale, unknown_active):
+            self.assertTrue(result["activeReleaseUnchanged"])
+            self.assertEqual(result["activePointerWrites"], 0)
+            self.assertEqual(result["canaryPointerWrites"], 0)
+            self.assertEqual(result["sourceSubstitution"], 0)
+            self.assertFalse(result["candidatePromotion"])
+
+    def test_shadow_state_is_idempotent_and_success_cannot_be_downgraded(self) -> None:
+        resolution = self._record_primary_no_change()
+        started = record_shadow_state(
+            resolution=resolution,
+            store=self.store,
+            status="SHADOW_STARTED",
+            workflow_execution="execution-1",
+            reservation_id="reservation-1",
+            recorded_at="2026-09-15T17:00:00Z",
+        )
+        self.assertEqual(started["status"], "SHADOW_STARTED")
+        failed = record_shadow_state(
+            resolution=resolution,
+            store=self.store,
+            status="SHADOW_FAILED",
+            workflow_execution="execution-1",
+            reservation_id="reservation-1",
+            shadow_result={"status": "FAILED", "activePointerWrites": 0},
+            recorded_at="2026-09-15T17:01:00Z",
+        )
+        self.assertEqual(failed["status"], "SHADOW_FAILED")
+        succeeded = record_shadow_state(
+            resolution=resolution,
+            store=self.store,
+            status="SHADOW_SUCCEEDED",
+            workflow_execution="execution-1",
+            reservation_id="reservation-1",
+            shadow_result={"status": "SUCCEEDED", "activePointerWrites": 0},
+            recorded_at="2026-09-15T17:02:00Z",
+        )
+        self.assertEqual(succeeded["status"], "SHADOW_SUCCEEDED")
+        rerun_failure = record_shadow_state(
+            resolution=resolution,
+            store=self.store,
+            status="SHADOW_FAILED",
+            workflow_execution="execution-1",
+            reservation_id="reservation-1",
+            shadow_result={"status": "FAILED", "activePointerWrites": 0},
+            recorded_at="2026-09-15T17:03:00Z",
+        )
+        self.assertEqual(rerun_failure["status"], "SHADOW_SUCCEEDED")
+        self.assertEqual(rerun_failure["shadowResult"]["status"], "SUCCEEDED")
+        self.assertEqual(read_daily_state(store=self.store, argentina_day="2026-09-15")["status"], "SHADOW_SUCCEEDED")
+
+        rerun = preflight_observation(
+            discovery=self.discovery,
+            candidate=self.candidate,
+            store=self.store,
+            check_phase=CHECK_PHASE_METADATA_ONLY,
+        )
+        self.assertEqual(rerun["priorSameDayState"]["status"], "SHADOW_SUCCEEDED")
+        self.assertEqual(rerun["activePointerWrites"], 0)
+
+    def test_daily_state_cas_retry_preserves_a_concurrent_advanced_state(self) -> None:
+        class InterleavingStore(LocalFilesystemObjectStore):
+            injected = False
+
+            def compare_and_swap(self, key, data, *, expected_etag):
+                if key == "acquisition/daily-state/2026-09-15.json" and not self.injected:
+                    self.injected = True
+                    concurrent = json.loads(data)
+                    concurrent.update(
+                        {
+                            "status": "BUILD_RESERVED",
+                            "candidateReleaseId": "candidate-1",
+                            "buildReservationId": "reservation-1",
+                        }
+                    )
+                    super().compare_and_swap(
+                        key,
+                        _canonical(concurrent) + b"\n",
+                        expected_etag=expected_etag,
+                    )
+                return super().compare_and_swap(key, data, expected_etag=expected_etag)
+
+        racing_store = InterleavingStore(Path(self.directory.name) / "racing-archive")
+        metadata_identity = {"resource": "fixture"}
+        written = _write_daily_state(
+            store=racing_store,
+            value={
+                "argentinaDate": "2026-09-15",
+                "observedAt": OBSERVED_AT,
+                "updatedAt": OBSERVED_AT,
+                "metadataFingerprint": metadata_fingerprint(metadata_identity),
+                "metadataIdentity": metadata_identity,
+                "catalogResponseSha256": "b" * 64,
+                "status": "METADATA_DISCOVERED",
+            },
+        )
+        self.assertEqual(written["status"], "BUILD_RESERVED")
+        self.assertEqual(written["candidateReleaseId"], "candidate-1")
+        self.assertEqual(read_daily_state(store=racing_store, argentina_day="2026-09-15")["status"], "BUILD_RESERVED")
 
 
 if __name__ == "__main__":

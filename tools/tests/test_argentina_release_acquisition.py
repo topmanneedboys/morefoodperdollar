@@ -95,7 +95,109 @@ class ArgentinaReleaseAcquisitionTests(unittest.TestCase):
         self.assertEqual(result.candidates[0].last_modified, "2026-06-30T16:19:00.091864")
         self.assertEqual(result.observed_at, "2026-09-13T19:00:00Z")
         self.assertEqual(len(result.response_sha256), 64)
+        self.assertEqual(result.attempts, 1)
         self.assertEqual(select_latest_candidate(result.candidates).resource_name, "Miércoles")
+
+    def test_metadata_retries_502_then_succeeds_once_or_twice_with_fixed_backoff(self) -> None:
+        for failures in (1, 2):
+            with self.subTest(transient_failures=failures):
+                outcomes = [
+                    AcquisitionError(
+                        "temporary gateway failure",
+                        code="UPSTREAM_TRANSIENT_HTTP",
+                        http_status=502,
+                    )
+                    for _ in range(failures)
+                ] + [self.metadata]
+                calls: list[str] = []
+                delays: list[float] = []
+
+                def fetcher(endpoint: str) -> bytes:
+                    calls.append(endpoint)
+                    outcome = outcomes.pop(0)
+                    if isinstance(outcome, BaseException):
+                        raise outcome
+                    return outcome
+
+                result = discover_metadata(
+                    observed_at="2026-09-13T12:00:00Z",
+                    fetcher=fetcher,
+                    resolver=SAFE_RESOLVER,
+                    sleep_fn=delays.append,
+                )
+                self.assertEqual(result.attempts, failures + 1)
+                self.assertEqual(len(calls), failures + 1)
+                self.assertEqual(delays, [0.5, 1.0][:failures])
+
+    def test_metadata_three_502_failures_become_explicit_upstream_outage(self) -> None:
+        calls: list[str] = []
+        delays: list[float] = []
+
+        def fetcher(endpoint: str) -> bytes:
+            calls.append(endpoint)
+            raise AcquisitionError(
+                "temporary gateway failure",
+                code="UPSTREAM_TRANSIENT_HTTP",
+                http_status=502,
+            )
+
+        with self.assertRaises(AcquisitionError) as failure:
+            discover_metadata(
+                observed_at="2026-09-13T12:00:00Z",
+                fetcher=fetcher,
+                resolver=SAFE_RESOLVER,
+                sleep_fn=delays.append,
+            )
+        self.assertEqual(failure.exception.code, "UPSTREAM_TEMPORARILY_UNAVAILABLE")
+        self.assertEqual(failure.exception.http_status, 502)
+        self.assertEqual(failure.exception.attempts, 3)
+        self.assertEqual(failure.exception.cause_code, "UPSTREAM_TRANSIENT_HTTP")
+        self.assertEqual(len(calls), 3)
+        self.assertEqual(delays, [0.5, 1.0])
+
+    def test_metadata_429_and_timeout_recover_with_bounded_retries(self) -> None:
+        for first_error in (
+            AcquisitionError("rate limited", code="UPSTREAM_TRANSIENT_HTTP", http_status=429),
+            TimeoutError("temporary timeout"),
+        ):
+            with self.subTest(error=type(first_error).__name__):
+                outcomes = [first_error, self.metadata]
+                delays: list[float] = []
+
+                def fetcher(_: str) -> bytes:
+                    outcome = outcomes.pop(0)
+                    if isinstance(outcome, BaseException):
+                        raise outcome
+                    return outcome
+
+                result = discover_metadata(
+                    observed_at="2026-09-13T12:00:00Z",
+                    fetcher=fetcher,
+                    resolver=SAFE_RESOLVER,
+                    sleep_fn=delays.append,
+                )
+                self.assertEqual(result.attempts, 2)
+                self.assertEqual(delays, [0.5])
+
+    def test_permanent_metadata_4xx_is_not_retried(self) -> None:
+        calls = 0
+        delays: list[float] = []
+
+        def fetcher(_: str) -> bytes:
+            nonlocal calls
+            calls += 1
+            raise AcquisitionError("not found", code="HTTP_ERROR", http_status=404)
+
+        with self.assertRaises(AcquisitionError) as failure:
+            discover_metadata(
+                observed_at="2026-09-13T12:00:00Z",
+                fetcher=fetcher,
+                resolver=SAFE_RESOLVER,
+                sleep_fn=delays.append,
+            )
+        self.assertEqual(failure.exception.code, "HTTP_ERROR")
+        self.assertEqual(calls, 1)
+        self.assertEqual(delays, [])
 
     def test_discovery_rejects_malformed_json_and_contract_changes(self) -> None:
         with self.assertRaisesRegex(AcquisitionError, "valid UTF-8 JSON"):

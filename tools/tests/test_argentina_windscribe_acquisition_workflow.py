@@ -6,6 +6,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).parents[2]
 WORKFLOW = ROOT / ".github" / "workflows" / "acquire-argentina-sepa-windscribe.yml"
+RELEASE_WORKFLOW = ROOT / "ARGENTINA_RELEASE_WORKFLOW.yaml"
+BUILD_WORKFLOW = ROOT / ".github" / "workflows" / "build-valuepilot-android.yml"
 
 
 class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
@@ -34,6 +36,10 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
         self.assertIn("steps.preflight.outputs.status == 'DOWNLOAD_REQUIRED'", text)
         self.assertIn("Reuse today's immutable acquisition evidence without VPN", text)
         self.assertIn("force_download", text)
+        self.assertIn("UPSTREAM_TEMPORARILY_UNAVAILABLE", text)
+        self.assertIn("DISCOVERY_PLUS_RECOVERY", text)
+        self.assertIn("Explain temporary official metadata unavailability", text)
+        self.assertIn("nearing its explicit freshness limit", text)
 
     def test_wireguard_source_acquisition_is_full_tunnel_and_fail_closed(self) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")
@@ -81,7 +87,7 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
         reserve = text.index("Reserve at most one heavy build attempt per candidate per Argentina day")
         launch = text.index("Start one asynchronous Google SHADOW release workflow")
         self.assertLess(reserve, launch)
-        self.assertIn("tools.argentina_acquisition_schedule_control reserve", text)
+        self.assertIn("tools.argentina_acquisition_schedule_control_v2 reserve", text)
         self.assertIn("steps.reserve.outputs.status == 'RESERVED'", text)
         self.assertIn('"promotionMode": "SHADOW"', text)
         self.assertNotIn('"promotionMode": "AUTO_ACTIVATE"', text)
@@ -89,6 +95,60 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
         self.assertIn("gcloud workflows execute", text)
         self.assertNotIn("gcloud workflows run", text)
         self.assertIn("The GitHub runner will not wait for the multi-hour Cloud Build", text)
+        self.assertIn('"upstreamChangeEvidence": preflight.get("upstreamChangeEvidence")', text)
+
+    def test_cloud_workflow_reconciles_only_an_exact_idempotent_state_write_conflict(self) -> None:
+        text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("state_write_error.code == 412", text)
+        self.assertIn("STATE_WRITE_FAILED", text)
+        self.assertIn("STATE_WRITE_UNVERIFIED", text)
+        self.assertIn("STATE_WRITE_CONFLICT", text)
+        self.assertIn("stateWriteStatus: ALREADY_RECORDED", text)
+        for identity_field in (
+            "metadataChecksum",
+            "datasetId",
+            "candidateReleaseId",
+            "sourceArchiveSha256",
+            "promotionMode",
+            "upstreamChanged",
+        ):
+            self.assertIn(f'map.get(conflicting_state, "{identity_field}")', text)
+        self.assertIn("VALUEPILOT_UPSTREAM_CHANGE_EVIDENCE_JSON", text)
+        self.assertIn("VERIFIED_METADATA_CHANGE_EVIDENCE_REQUIRED", text)
+        self.assertIn("VALUEPILOT_UPSTREAM_CHANGED", text)
+
+    def test_cloud_workflow_materializes_worker_contract_evidence_file(self) -> None:
+        text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+        for evidence_field in (
+            "changed",
+            "resourceId",
+            "previousDiscoveryResponseSha256",
+            "currentDiscoveryResponseSha256",
+        ):
+            self.assertIn(f'"{evidence_field}"', text)
+        self.assertIn("/tmp/valuepilot-upstream-change-evidence.json", text)
+        self.assertIn("payload = evidence if evidence is not None else {}", text)
+        self.assertNotIn('"upstreamChangeEvidence": evidence', text)
+        self.assertIn('"--upstream-change-evidence=/tmp/valuepilot-upstream-change-evidence.json"', text)
+        self.assertIn("UNEXPECTED_METADATA_CHANGE_EVIDENCE", text)
+
+    def test_full_android_ci_triggers_for_acquisition_milestone_changes(self) -> None:
+        text = BUILD_WORKFLOW.read_text(encoding="utf-8")
+        paths = (
+            ".github/workflows/acquire-argentina-sepa-windscribe.yml",
+            ".github/workflows/test-argentina-acquisition-control.yml",
+            "ARGENTINA_RELEASE_WORKFLOW.yaml",
+            "ARGENTINA_AUTOMATED_RELEASE_SOURCE_CONTRACT.json",
+            "tools/argentina_acquisition_schedule_control_v2.py",
+            "tools/argentina_release_acquisition.py",
+            "tools/argentina_release_acquisition_handoff.py",
+            "tools/tests/test_argentina_acquisition_schedule_control_v2.py",
+            "tools/tests/test_argentina_release_acquisition.py",
+            "tools/tests/test_argentina_windscribe_acquisition_workflow.py",
+        )
+        for path in paths:
+            with self.subTest(path=path):
+                self.assertGreaterEqual(text.count(f"'{path}'"), 2)
 
     def test_runner_cleanup_removes_credentials_vpn_config_and_raw_source(self) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")

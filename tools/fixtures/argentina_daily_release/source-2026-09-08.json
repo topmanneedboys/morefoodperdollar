@@ -1,0 +1,172 @@
+{
+  "fixture": true,
+  "source": {
+    "provider": "ARGENTINA_SEPA_PRECIOS_CLAROS",
+    "releaseDate": "2026-09-08",
+    "license": "Creative Commons Attribution 4.0",
+    "attribution": "Precios Claros - Base SEPA; source: datos.produccion.gob.ar"
+  },
+  "schema": {
+    "recordFields": [
+      "commerceId",
+      "storeId",
+      "productEvidenceKey",
+      "providerProductId",
+      "name",
+      "brand",
+      "gtin",
+      "price",
+      "currency",
+      "quantity",
+      "province",
+      "latitude",
+      "longitude",
+      "promotion",
+      "providerUpdateTime"
+    ],
+    "delimiter": "|",
+    "encoding": "utf-8-sig"
+  },
+  "packages": [
+    {"name": "2026-09-08/retailer-a.zip", "bytes": 1200, "status": "PRESENT"},
+    {"name": "2026-09-08/retailer-empty.zip", "bytes": 0, "status": "EMPTY_PROVIDER_PACKAGE"}
+  ],
+  "records": [
+    {
+      "commerceId": "commerce-a",
+      "storeId": "store-1",
+      "productEvidenceKey": "commerce-a:tomato-1",
+      "providerProductId": "0000000000001",
+      "gtin": "036000291452",
+      "name": "Tomate fresco",
+      "brand": "Huerta",
+      "price": "10.50",
+      "currency": "ARS",
+      "quantity": {"value": "1", "unit": "kg"},
+      "province": "AR-C",
+      "locality": "CABA",
+      "latitude": "-34.6037",
+      "longitude": "-58.3816",
+      "providerUpdateTime": "2026-09-08T09:05:10-03:00",
+      "promotions": [{"slot": 1, "price": "9.50", "condition": "Con tarjeta", "eligibility": "UNKNOWN"}]
+    },
+    {
+      "commerceId": "commerce-a",
+      "storeId": "store-1",
+      "productEvidenceKey": "commerce-a:milk-1",
+      "providerProductId": "milk-1",
+      "name": "Leche entera",
+      "brand": "La Granja",
+      "price": "2.25",
+      "currency": "ARS",
+      "quantity": {"value": "1", "unit": "L"},
+      "province": "AR-C",
+      "locality": "CABA",
+      "latitude": "-34.6037",
+      "longitude": "-58.3816",
+      "providerUpdateTime": "2026-09-08T09:05:10-03:00"
+    },
+    {
+      "commerceId": "commerce-b",
+      "storeId": "store-2",
+      "productEvidenceKey": "commerce-b:tomato-1",
+      "providerProductId": "tomato-2",
+      "name": "Tomate fresco",
+      "brand": "Huerta",
+      "price": "12.00",
+      "currency": "ARS",
+      "quantity": {"value": "1", "unit": "kg"},
+      "province": "AR-C",
+      "locality": "CABA",
+      "latitude": "-34.6100",
+      "longitude": "-58.3900",
+      "providerUpdateTime": "2026-09-08T01:05:07-03:00"
+    },
+    {
+      "commerceId": "commerce-a",
+      "storeId": "store-1",
+      "productEvidenceKey": "commerce-a:low",
+      "providerProductId": "low-1",
+      "name": "Oferta sospechosa",
+      "price": "5",
+      "currency": "ARS",
+      "province": "AR-C",
+      "latitude": "-34.6037",
+      "longitude": "-58.3816",
+      "providerUpdateTime": "2026-09-08T09:05:10-03:00"
+    },
+    {
+      "commerceId": "commerce-a",
+      "storeId": "store-1",
+      "productEvidenceKey": "commerce-a:stale",
+      "providerProductId": "stale-1",
+      "name": "Producto antiguo",
+      "price": "20.00",
+      "currency": "ARS",
+      "province": "AR-C",
+      "latitude": "-34.6037",
+      "longitude": "-58.3816",
+      "providerUpdateTime": "2026-09-01T09:05:10-03:00"
+    },
+    {
+      "commerceId": "commerce-a",
+      "storeId": "store-1",
+      "productEvidenceKey": "commerce-a:invalid-price",
+      "providerProductId": "invalid-price",
+      "name": "Precio inválido",
+      "price": "0",
+      "currency": "ARS",
+      "province": "AR-C",
+      "latitude": "-34.6037",
+      "longitude": "-58.3816"
+    },
+    {
+      "commerceId": "commerce-a",
+      "storeId": "store-1",
+      "productEvidenceKey": "commerce-a:orphan",
+      "providerProductId": "orphan",
+      "name": "Tienda huérfana",
+      "price": "4.00",
+      "currency": "ARS",
+      "storeKnown": false,
+      "province": "AR-C"
+    },
+    {
+      "commerceId": "commerce-c",
+      "storeId": "store-3",
+      "productEvidenceKey": "commerce-c:geo-missing",
+      "providerProductId": "geo-missing",
+      "name": "Coordenada faltante",
+      "price": "7.00",
+      "currency": "ARS",
+      "province": "AR-C",
+      "locality": "CABA"
+    },
+    {
+      "commerceId": "commerce-d",
+      "storeId": "store-4",
+      "productEvidenceKey": "commerce-d:geo-invalid",
+      "providerProductId": "geo-invalid",
+      "name": "Coordenada fuera de país",
+      "price": "8.00",
+      "currency": "ARS",
+      "province": "AR-C",
+      "latitude": "10",
+      "longitude": "10"
+    },
+    {
+      "commerceId": "commerce-b",
+      "storeId": "store-2",
+      "productEvidenceKey": "commerce-b:bad-gtin",
+      "providerProductId": "not-a-gtin",
+      "gtin": "12345",
+      "name": "Identidad sin GTIN",
+      "price": "9.00",
+      "currency": "ARS",
+      "province": "AR-C",
+      "latitude": "-34.6100",
+      "longitude": "-58.3900",
+      "providerUpdateTime": "2026-09-08T01:05:07-03:00"
+    }
+  ]
+}

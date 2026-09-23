@@ -167,6 +167,60 @@ class ArgentinaReleaseAcquisitionHandoffTests(unittest.TestCase):
         self.assertEqual(report["error"], "REVIEW_REQUIRED")
         self.assertFalse((archive_root / "source-archive").exists())
 
+    def test_same_day_revision_is_archived_only_with_matching_metadata_change_evidence(self) -> None:
+        directory = tempfile.TemporaryDirectory(prefix="valuepilot-same-day-revision-")
+        self.addCleanup(directory.cleanup)
+        archive = LocalFilesystemObjectStore(Path(directory.name) / "archive")
+        value = candidate()
+        evidence = {
+            "previousMetadataFingerprint": "1" * 64,
+            "currentMetadataFingerprint": "2" * 64,
+            "catalogResponseSha256": "a" * 64,
+        }
+        report = acquire_handoff(
+            observed_at=OBSERVED_AT,
+            archive_store=archive,
+            current_release_date="2026-09-08",
+            current_source_sha256=ACTIVE_SOURCE_SHA,
+            upstream_changed=True,
+            upstream_change_evidence=evidence,
+            expected_discovery_response_sha256="a" * 64,
+            discover=lambda **_kwargs: discovery(value),
+            select=lambda candidates: candidates[0],
+            download=fake_download,
+            inspect=fake_inspect("2026-09-08"),
+        )
+        self.assertEqual(report["status"], "HANDOFF_READY")
+        self.assertEqual(report["sourceDecision"]["disposition"], "SAME_DAY_REVISION")
+        self.assertEqual(report["upstreamChangeEvidence"], evidence)
+        self.assertEqual(report["source"]["sha256"], SOURCE_SHA)
+        self.assertEqual(report["activePointerWrites"], 0)
+
+    def test_same_day_revision_evidence_must_match_discovery_and_change_fingerprint(self) -> None:
+        value = candidate()
+        invalid_evidence = {
+            "previousMetadataFingerprint": "1" * 64,
+            "currentMetadataFingerprint": "1" * 64,
+            "catalogResponseSha256": "a" * 64,
+        }
+        with tempfile.TemporaryDirectory(prefix="valuepilot-same-day-invalid-") as directory:
+            report = acquire_handoff(
+                observed_at=OBSERVED_AT,
+                archive_store=LocalFilesystemObjectStore(Path(directory) / "archive"),
+                current_release_date="2026-09-08",
+                current_source_sha256=ACTIVE_SOURCE_SHA,
+                upstream_changed=True,
+                upstream_change_evidence=invalid_evidence,
+                expected_discovery_response_sha256="b" * 64,
+                discover=lambda **_kwargs: discovery(value),
+                select=lambda candidates: candidates[0],
+                download=fake_download,
+                inspect=fake_inspect("2026-09-08"),
+            )
+        self.assertEqual(report["status"], "FAILED")
+        self.assertEqual(report["error"], "UPSTREAM_CHANGE_EVIDENCE_INVALID")
+        self.assertNotIn("archive", report)
+
     def test_download_and_zip_identity_mismatch_fails_before_archive(self) -> None:
         report, archive_root = self.run_case(
             release_date="2026-09-13",
