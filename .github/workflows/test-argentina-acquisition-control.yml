@@ -6,7 +6,9 @@ on:
     paths:
       - '.github/workflows/acquire-argentina-sepa-windscribe.yml'
       - '.github/workflows/test-argentina-acquisition-control.yml'
+      - 'ARGENTINA_RELEASE_WORKFLOW.yaml'
       - 'ARGENTINA_AUTOMATED_RELEASE_SOURCE_CONTRACT.json'
+      - 'backend/clock.py'
       - 'backend/object_store.py'
       - 'backend/requirements.txt'
       - 'tools/argentina_acquisition_schedule_control.py'
@@ -14,6 +16,7 @@ on:
       - 'tools/argentina_processed_source_guard.py'
       - 'tools/argentina_daily_release.py'
       - 'tools/argentina_object_store_publisher.py'
+      - 'tools/data/argentina_input_aliases.json'
       - 'tools/argentina_release_acquisition.py'
       - 'tools/argentina_release_acquisition_handoff.py'
       - 'tools/consumer_input_intelligence.py'
@@ -23,6 +26,7 @@ on:
       - 'tools/fixtures/argentina_release_acquisition/**'
       - 'tools/tests/test_argentina_acquisition_schedule_control.py'
       - 'tools/tests/test_argentina_acquisition_schedule_control_v2.py'
+      - 'tools/tests/test_argentina_daily_release_operations.py'
       - 'tools/tests/test_argentina_processed_source_guard.py'
       - 'tools/tests/test_argentina_release_acquisition.py'
       - 'tools/tests/test_argentina_release_acquisition_handoff.py'
@@ -52,6 +56,7 @@ jobs:
         run: |
           python -m py_compile \
             backend/object_store.py \
+            backend/clock.py \
             tools/consumer_input_intelligence.py \
             tools/qualify_argentina_sepa.py \
             tools/argentina_daily_release.py \
@@ -69,6 +74,7 @@ jobs:
           python -m unittest \
             tools.tests.test_argentina_release_acquisition \
             tools.tests.test_argentina_release_acquisition_handoff \
+            tools.tests.test_argentina_daily_release_operations \
             tools.tests.test_argentina_acquisition_schedule_control \
             tools.tests.test_argentina_acquisition_schedule_control_v2 \
             tools.tests.test_argentina_processed_source_guard \

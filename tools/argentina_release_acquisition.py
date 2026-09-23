@@ -57,6 +57,9 @@ DOWNLOAD_CHUNK_BYTES = 1024 * 1024
 MAX_RETRIES = 3
 RETRY_BACKOFF_SECONDS = 0.5
 RETRY_JITTER_SECONDS = 0.25
+METADATA_RETRY_BACKOFF_SECONDS = 0.5
+TRANSIENT_HTTP_STATUSES = frozenset({408, 425, 429, 500, 502, 503, 504})
+METADATA_RETRY_POLICY_VERSION = "valuepilot-argentina-metadata-retry-v1"
 MAX_RESOURCES = 64
 MAX_RESOURCE_NAME_BYTES = 256
 MAX_DESCRIPTION_BYTES = 4096
@@ -82,9 +85,20 @@ _DATE = re.compile(r"(?<!\d)(20\d{2}-\d{2}-\d{2})(?!\d)")
 class AcquisitionError(RuntimeError):
     """An acquisition operation failed closed."""
 
-    def __init__(self, message: str, *, code: str = "ACQUISITION_FAILED") -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str = "ACQUISITION_FAILED",
+        http_status: int | None = None,
+        attempts: int | None = None,
+        cause_code: str | None = None,
+    ) -> None:
         super().__init__(message)
         self.code = code
+        self.http_status = http_status
+        self.attempts = attempts
+        self.cause_code = cause_code
 
 
 def canonical_bytes(value: Any) -> bytes:
@@ -252,7 +266,12 @@ def _http_open(url: str, *, expected_host: str, timeout: float, resolver: Callab
     try:
         return opener.open(request, timeout=timeout)
     except urllib.error.HTTPError as exc:
-        raise AcquisitionError(f"official source returned HTTP {exc.code}", code="HTTP_ERROR") from exc
+        code = "UPSTREAM_TRANSIENT_HTTP" if exc.code in TRANSIENT_HTTP_STATUSES else "HTTP_ERROR"
+        raise AcquisitionError(
+            f"official source returned HTTP {exc.code}",
+            code=code,
+            http_status=exc.code,
+        ) from exc
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         raise AcquisitionError("official source request failed", code="NETWORK_ERROR") from exc
 
@@ -261,7 +280,8 @@ def _default_fetch_metadata(url: str, *, timeout: float, resolver: Callable[[str
     with _response_context(_http_open(url, expected_host=CATALOG_HOST, timeout=timeout, resolver=resolver)) as response:
         status = getattr(response, "status", getattr(response, "code", 200))
         if status != 200:
-            raise AcquisitionError(f"metadata returned HTTP {status}", code="HTTP_ERROR")
+            code = "UPSTREAM_TRANSIENT_HTTP" if status in TRANSIENT_HTTP_STATUSES else "HTTP_ERROR"
+            raise AcquisitionError(f"metadata returned HTTP {status}", code=code, http_status=status)
         length = response.headers.get("Content-Length") if getattr(response, "headers", None) is not None else None
         if length is not None:
             try:
@@ -317,6 +337,7 @@ class DiscoveryResult:
     dataset_title: str
     license_title: str
     candidates: tuple[AcquisitionCandidate, ...]
+    attempts: int = 1
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -330,6 +351,7 @@ class DiscoveryResult:
             "datasetTitle": self.dataset_title,
             "licenseTitle": self.license_title,
             "candidates": [candidate.as_dict() for candidate in self.candidates],
+            "attempts": self.attempts,
         }
 
 
@@ -392,6 +414,8 @@ def discover_metadata(
     endpoint: str = CATALOG_ENDPOINT,
     fetcher: Callable[[str], bytes] | None = None,
     resolver: Callable[[str, int], Iterable[Any]] | None = None,
+    max_retries: int = MAX_RETRIES,
+    sleep_fn: Callable[[float], None] = time.sleep,
 ) -> DiscoveryResult:
     """Read and validate the official CKAN package metadata.
 
@@ -402,7 +426,53 @@ def discover_metadata(
 
     observed = _iso_timestamp(observed_at)
     validate_official_url(endpoint, expected_host=CATALOG_HOST, resolver=resolver)
-    raw = fetcher(endpoint) if fetcher is not None else _default_fetch_metadata(endpoint, timeout=20.0, resolver=resolver)
+    if isinstance(max_retries, bool) or not isinstance(max_retries, int) or max_retries < 1:
+        raise AcquisitionError("metadata retry bound is invalid", code="INVALID_CONFIGURATION")
+    attempts_limit = min(max_retries, MAX_RETRIES)
+    raw: bytes | None = None
+    last_error: BaseException | None = None
+    attempts = 0
+    for attempts in range(1, attempts_limit + 1):
+        try:
+            raw = (
+                fetcher(endpoint)
+                if fetcher is not None
+                else _default_fetch_metadata(endpoint, timeout=20.0, resolver=resolver)
+            )
+            break
+        except Exception as exc:  # noqa: BLE001 - classify, then apply a bounded transport-only retry policy
+            last_error = exc
+            status = getattr(exc, "http_status", None)
+            if isinstance(exc, urllib.error.HTTPError):
+                status = exc.code
+            transient = (
+                isinstance(exc, (TimeoutError, ConnectionError, urllib.error.URLError))
+                or (
+                    isinstance(exc, AcquisitionError)
+                    and exc.code in {"NETWORK_ERROR", "UPSTREAM_TRANSIENT_HTTP"}
+                )
+                or (isinstance(status, int) and status in TRANSIENT_HTTP_STATUSES)
+            )
+            if not transient:
+                if isinstance(exc, AcquisitionError):
+                    raise
+                raise AcquisitionError("official metadata response is invalid", code="INVALID_METADATA") from exc
+            if attempts >= attempts_limit:
+                raise AcquisitionError(
+                    "official metadata remained temporarily unavailable after bounded retries",
+                    code="UPSTREAM_TEMPORARILY_UNAVAILABLE",
+                    http_status=status if isinstance(status, int) else None,
+                    attempts=attempts,
+                    cause_code=getattr(exc, "code", "NETWORK_ERROR"),
+                ) from exc
+            sleep_fn(METADATA_RETRY_BACKOFF_SECONDS * (2 ** (attempts - 1)))
+    if raw is None:
+        raise AcquisitionError(
+            "official metadata remained temporarily unavailable after bounded retries",
+            code="UPSTREAM_TEMPORARILY_UNAVAILABLE",
+            attempts=attempts,
+            cause_code=getattr(last_error, "code", "NETWORK_ERROR"),
+        ) from last_error
     if not isinstance(raw, bytes) or len(raw) > MAX_METADATA_BYTES:
         raise AcquisitionError("metadata response exceeds bound", code="METADATA_TOO_LARGE")
     response_sha256 = sha256_bytes(raw)
@@ -429,7 +499,17 @@ def discover_metadata(
     candidates = tuple(sorted((candidate for resource in resources if isinstance(resource, Mapping) for candidate in (_parse_resource(resource, response_sha256=response_sha256, observed_at=observed, resolver=resolver),) if candidate is not None), key=lambda candidate: (candidate.release_date_hint or "", candidate.last_modified or "", candidate.resource_name.casefold(), candidate.resource_id)))
     if not candidates:
         raise AcquisitionError("metadata contains no eligible weekday ZIP resources", code="SOURCE_CONTRACT_CHANGED")
-    return DiscoveryResult(endpoint, response_sha256, observed, dataset_id, dataset_name, dataset_title, license_title, candidates)
+    return DiscoveryResult(
+        endpoint,
+        response_sha256,
+        observed,
+        dataset_id,
+        dataset_name,
+        dataset_title,
+        license_title,
+        candidates,
+        attempts,
+    )
 
 
 def select_latest_candidate(candidates: Sequence[AcquisitionCandidate]) -> AcquisitionCandidate:
@@ -478,7 +558,10 @@ class DownloadedSource:
 def _retryable(error: BaseException) -> bool:
     # A size mismatch against the authoritative metadata is deterministic and
     # must not be retried as if it were a transient transport failure.
-    return isinstance(error, (TimeoutError, ConnectionError, OSError)) or (isinstance(error, AcquisitionError) and error.code in {"NETWORK_ERROR", "HTTP_ERROR", "DOWNLOAD_TRANSIENT"})
+    return isinstance(error, (TimeoutError, ConnectionError, urllib.error.URLError)) or (
+        isinstance(error, AcquisitionError)
+        and error.code in {"NETWORK_ERROR", "UPSTREAM_TRANSIENT_HTTP", "DOWNLOAD_TRANSIENT"}
+    )
 
 
 def _open_download(url: str, *, timeout: float, resolver: Callable[[str, int], Iterable[Any]] | None) -> Any:
@@ -521,7 +604,7 @@ def download_candidate(
                 final_url = str(getattr(response, "geturl", lambda: candidate.official_url)())
                 validate_official_url(final_url, expected_host=SOURCE_HOST, resolver=resolver)
                 status = getattr(response, "status", getattr(response, "code", 200))
-                if status in {408, 425, 429} or status >= 500:
+                if status in TRANSIENT_HTTP_STATUSES:
                     raise AcquisitionError(f"official source returned HTTP {status}", code="DOWNLOAD_TRANSIENT")
                 if status != 200:
                     raise AcquisitionError(f"official source returned HTTP {status}", code="HTTP_ERROR")

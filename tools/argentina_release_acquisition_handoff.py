@@ -165,6 +165,9 @@ def acquire_handoff(
     current_source_sha256: str | None,
     current_store: ObjectStore | None = None,
     metadata_endpoint: str = CATALOG_ENDPOINT,
+    upstream_changed: bool = False,
+    upstream_change_evidence: Mapping[str, Any] | None = None,
+    expected_discovery_response_sha256: str | None = None,
     discover: Callable[..., DiscoveryResult] = discover_metadata,
     select: Callable[[Sequence[AcquisitionCandidate]], AcquisitionCandidate] = select_latest_candidate,
     download: Callable[..., Any] = download_candidate,
@@ -176,6 +179,28 @@ def acquire_handoff(
     try:
         if (current_release_date is None) != (current_source_sha256 is None):
             raise AcquisitionHandoffError("current release date and source hash must be supplied together", code="INVALID_CONFIGURATION")
+        if not isinstance(upstream_changed, bool):
+            raise AcquisitionHandoffError("upstream change flag is invalid", code="INVALID_CONFIGURATION")
+        if upstream_changed:
+            if not isinstance(upstream_change_evidence, Mapping):
+                raise AcquisitionHandoffError("same-day revision lacks metadata-change evidence", code="UPSTREAM_CHANGE_EVIDENCE_REQUIRED")
+            previous_fingerprint = upstream_change_evidence.get("previousMetadataFingerprint")
+            current_fingerprint = upstream_change_evidence.get("currentMetadataFingerprint")
+            response_sha = upstream_change_evidence.get("catalogResponseSha256")
+            if (
+                not isinstance(previous_fingerprint, str)
+                or _SHA256.fullmatch(previous_fingerprint) is None
+                or not isinstance(current_fingerprint, str)
+                or _SHA256.fullmatch(current_fingerprint) is None
+                or previous_fingerprint == current_fingerprint
+                or not isinstance(response_sha, str)
+                or _SHA256.fullmatch(response_sha) is None
+            ):
+                raise AcquisitionHandoffError("same-day revision metadata evidence is invalid", code="UPSTREAM_CHANGE_EVIDENCE_INVALID")
+            if expected_discovery_response_sha256 != response_sha:
+                raise AcquisitionHandoffError("same-day revision metadata evidence does not match preflight", code="UPSTREAM_CHANGE_EVIDENCE_INVALID")
+        elif upstream_change_evidence is not None:
+            raise AcquisitionHandoffError("metadata-change evidence was supplied without a detected change", code="INVALID_CONFIGURATION")
         if current_store is not None:
             if current_release_date is not None or current_source_sha256 is not None:
                 raise AcquisitionHandoffError("manual current identity and current store are mutually exclusive", code="INVALID_CONFIGURATION")
@@ -188,12 +213,16 @@ def acquire_handoff(
             raise AcquisitionHandoffError("current trusted release identity is required", code="CURRENT_STATE_REQUIRED")
 
         discovery = discover(observed_at=observed_at, endpoint=metadata_endpoint)
+        if expected_discovery_response_sha256 is not None and discovery.response_sha256 != expected_discovery_response_sha256:
+            raise AcquisitionHandoffError("official metadata changed after preflight", code="SOURCE_METADATA_RACE")
         candidate = select(discovery.candidates)
         report.update(
             {
                 "stage": "DOWNLOAD",
                 "catalogEndpoint": discovery.endpoint,
                 "catalogResponseSha256": discovery.response_sha256,
+                "upstreamChanged": upstream_changed,
+                "upstreamChangeEvidence": dict(upstream_change_evidence) if upstream_change_evidence is not None else None,
                 "datasetId": discovery.dataset_id,
                 "candidate": {
                     "resourceId": candidate.resource_id,
@@ -234,7 +263,7 @@ def acquire_handoff(
                 source_sha256=source.sha256,
                 current_release_date=current_release_date,
                 current_source_sha256=current_source_sha256,
-                upstream_changed=False,
+                upstream_changed=upstream_changed,
             )
             report["sourceDecision"] = decision.as_dict()
             if decision.disposition in {"NO_CHANGE", "OLDER_REJECTED"}:
@@ -242,7 +271,7 @@ def acquire_handoff(
                 return report
             if decision.disposition == "REVIEW_REQUIRED":
                 raise AcquisitionHandoffError(decision.reason, code="REVIEW_REQUIRED")
-            if decision.disposition != "NEWER_RELEASE":
+            if decision.disposition not in {"NEWER_RELEASE", "SAME_DAY_REVISION"}:
                 raise AcquisitionHandoffError("source disposition is not eligible for automatic handoff", code="UNEXPECTED_SOURCE_DECISION")
             archive = PrivateSourceArchive(archive_store).archive_file(
                 downloaded.path,
@@ -277,6 +306,9 @@ def _main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--metadata-endpoint", default=CATALOG_ENDPOINT)
     parser.add_argument("--current-release-date")
     parser.add_argument("--current-source-sha256")
+    parser.add_argument("--upstream-changed", action="store_true")
+    parser.add_argument("--upstream-change-evidence", type=Path)
+    parser.add_argument("--expected-discovery-response-sha256")
     archive_group = parser.add_mutually_exclusive_group(required=True)
     archive_group.add_argument("--archive-store", type=Path)
     archive_group.add_argument("--archive-bucket")
@@ -301,6 +333,18 @@ def _main(argv: Sequence[str] | None = None) -> int:
     else:
         current_store = None
 
+    evidence = None
+    expected_response_sha256 = args.expected_discovery_response_sha256
+    if args.upstream_change_evidence is not None:
+        try:
+            source_preflight = json.loads(args.upstream_change_evidence.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise SystemExit("upstream change evidence is unavailable or invalid") from exc
+        if not isinstance(source_preflight, Mapping):
+            raise SystemExit("upstream change evidence must be an object")
+        evidence = source_preflight.get("upstreamChangeEvidence")
+        if expected_response_sha256 is None:
+            expected_response_sha256 = source_preflight.get("catalogResponseSha256")
     report = acquire_handoff(
         observed_at=args.observed_at,
         archive_store=archive_store,
@@ -308,6 +352,9 @@ def _main(argv: Sequence[str] | None = None) -> int:
         current_source_sha256=args.current_source_sha256,
         current_store=current_store,
         metadata_endpoint=args.metadata_endpoint,
+        upstream_changed=bool(args.upstream_changed),
+        upstream_change_evidence=evidence,
+        expected_discovery_response_sha256=expected_response_sha256,
     )
     if args.output is not None:
         _write_json_atomic(args.output, report)

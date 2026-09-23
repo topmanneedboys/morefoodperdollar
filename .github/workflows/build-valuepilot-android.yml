@@ -5,10 +5,40 @@ on:
   push:
     paths:
       - 'android/**'
+      - 'backend/clock.py'
+      - '.github/workflows/acquire-argentina-sepa-windscribe.yml'
+      - '.github/workflows/test-argentina-acquisition-control.yml'
+      - 'ARGENTINA_RELEASE_WORKFLOW.yaml'
+      - 'ARGENTINA_AUTOMATED_RELEASE_SOURCE_CONTRACT.json'
+      - 'tools/argentina_acquisition_schedule_control_v2.py'
+      - 'tools/argentina_daily_release.py'
+      - 'tools/argentina_release_acquisition.py'
+      - 'tools/argentina_release_acquisition_handoff.py'
+      - 'tools/argentina_object_store_publisher.py'
+      - 'tools/tests/test_argentina_acquisition_schedule_control_v2.py'
+      - 'tools/tests/test_argentina_daily_release_operations.py'
+      - 'tools/tests/test_argentina_release_acquisition.py'
+      - 'tools/tests/test_argentina_release_acquisition_handoff.py'
+      - 'tools/tests/test_argentina_windscribe_acquisition_workflow.py'
       - '.github/workflows/build-valuepilot-android.yml'
   pull_request:
     paths:
       - 'android/**'
+      - 'backend/clock.py'
+      - '.github/workflows/acquire-argentina-sepa-windscribe.yml'
+      - '.github/workflows/test-argentina-acquisition-control.yml'
+      - 'ARGENTINA_RELEASE_WORKFLOW.yaml'
+      - 'ARGENTINA_AUTOMATED_RELEASE_SOURCE_CONTRACT.json'
+      - 'tools/argentina_acquisition_schedule_control_v2.py'
+      - 'tools/argentina_daily_release.py'
+      - 'tools/argentina_release_acquisition.py'
+      - 'tools/argentina_release_acquisition_handoff.py'
+      - 'tools/argentina_object_store_publisher.py'
+      - 'tools/tests/test_argentina_acquisition_schedule_control_v2.py'
+      - 'tools/tests/test_argentina_daily_release_operations.py'
+      - 'tools/tests/test_argentina_release_acquisition.py'
+      - 'tools/tests/test_argentina_release_acquisition_handoff.py'
+      - 'tools/tests/test_argentina_windscribe_acquisition_workflow.py'
       - '.github/workflows/build-valuepilot-android.yml'
 
 jobs:
@@ -28,6 +58,8 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
 
       - name: Install Android API 36 and Build Tools 36
         run: |
@@ -54,9 +86,10 @@ jobs:
         run: cp android/app/build/outputs/apk/debug/app-debug.apk ValuePilot-v100-debug.apk
 
       - name: Upload APK artifact
+        if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: ValuePilot-v100-debug-apk
           path: ValuePilot-v100-debug.apk
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3
