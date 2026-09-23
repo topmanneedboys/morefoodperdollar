@@ -120,12 +120,23 @@ and no new source was promoted.
 Production deployment is intentionally withheld. The deployed Google Workflow
 `valuepilot-argentina-release` in `us-east4` is still revision
 `000010-bf5` (updated Sep 21), and its source differs from the local M12.5
-definition. The Cloud Build source and worker image are separately pinned; the
-invoked `tools.argentina_release_handoff_worker` module is not present in this
-repository, so it is not yet proven that the pinned worker consumes the new
-same-day acquisition-evidence environment fields. Deploying before that
-integration is checked could waste a multi-hour candidate build or reject a
-legitimate same-day revision. No Cloud Workflow was deployed by this checkpoint.
+definition. Read-only inspection of the pinned Cloud Build source archive
+`gs://valuepilot-argentina_cloudbuild/valuepilot-release-source/96a9630799a3d900e48d240b24afbc72e6cf95ff.tar.gz`
+(generation `1789355757382369`; 3,358,665 bytes) confirmed that the archived
+source contains both `tools.argentina_release_handoff_worker` and
+`tools.argentina_release_worker`; these modules are absent from this candidate
+checkout. The handoff entrypoint restores the content-addressed source ZIP and
+delegates to the release worker. The archived release worker supports an
+`--upstream-change-evidence` input and requires that evidence to prove a
+same-day revision. The deployed workflow passes current source identity,
+archive identity, acquisition time, and the `VALUEPILOT_UPSTREAM_CHANGED`
+boolean, but does not pass that evidence input or an equivalent evidence
+payload. Therefore the archive handoff path is present, but transport of the
+new same-day proof is not qualified. The builder image is separately pinned;
+its source-to-image identity and a compatible workflow/worker deployment must
+be verified before deployment. Deploying before that integration is checked
+could waste a multi-hour candidate build or reject a legitimate same-day
+revision. No Cloud Workflow was deployed by this checkpoint.
 
 The acquisition tooling is now included in a focused Python CI workflow, and
 the full Android/release workflow path filters watch these M12.5 files too.
