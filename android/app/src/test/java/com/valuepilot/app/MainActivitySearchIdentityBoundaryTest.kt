@@ -56,6 +56,22 @@ class MainActivitySearchIdentityBoundaryTest {
         assertTrue(card.contains("openComparisonWithSharedText"))
     }
 
+    @Test
+    fun `transient live results are not restored across activity recreation`() {
+        val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
+            .replace("\r\n", "\n")
+        val saveStart = activity.indexOf("override fun onSaveInstanceState(outState: Bundle)")
+        val destroyStart = activity.indexOf("override fun onDestroy()", saveStart)
+        assertTrue(saveStart >= 0)
+        assertTrue(destroyStart > saveStart)
+        val savedState = activity.substring(saveStart, destroyStart)
+
+        assertTrue(savedState.contains("STATE_SEARCH_QUERY"))
+        assertFalse(savedState.contains("argentinaSearchSurfaceState"))
+        assertTrue(activity.contains("ArgentinaLiveSearchSurfaceHost.createProduction("))
+        assertTrue(activity.contains("argentinaSearchHost.close()"))
+    }
+
     private fun source(relativePath: String): File {
         var directory = File(System.getProperty("user.dir") ?: error("user.dir unavailable"))
         repeat(8) {

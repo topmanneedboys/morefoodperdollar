@@ -309,6 +309,113 @@ class ArgentinaLiveSearchCoordinatorTest {
     }
 
     @Test
+    fun inFlightOldSuccessCannotReplaceNewerSuccessfulSearch() {
+        val firstSearchStarted = CountDownLatch(1)
+        val releaseFirstSearch = CountDownLatch(1)
+        val searchQueries = mutableListOf<String>()
+        val transport = object : ArgentinaBackendTransport {
+            override fun execute(
+                endpoint: String,
+                requestBody: String?
+            ): ArgentinaBackendTransportResponse =
+                execute(endpoint, requestBody, ArgentinaRequestCancellation())
+
+            override fun execute(
+                endpoint: String,
+                requestBody: String?,
+                cancellation: ArgentinaRequestCancellation
+            ): ArgentinaBackendTransportResponse =
+                when (endpoint) {
+                    ArgentinaBackendConsumerBridge.STATUS_ENDPOINT ->
+                        ArgentinaBackendTransportResponse(200, statusJson())
+                    ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT -> {
+                        val query = JSONObject(requireNotNull(requestBody)).getString("query")
+                        searchQueries += query
+                        if (query == "first") {
+                            firstSearchStarted.countDown()
+                            check(releaseFirstSearch.await(3, TimeUnit.SECONDS))
+                        }
+                        ArgentinaBackendTransportResponse(200, searchJson(1, query = query))
+                    }
+                    else -> ArgentinaBackendTransportResponse(404, "")
+                }
+        }
+        val states = mutableListOf<ArgentinaLiveSearchState>()
+        val executor = QueuedExecutor()
+        val coordinator = ArgentinaLiveSearchCoordinator(transport, executor, states::add)
+
+        val firstGeneration = coordinator.submit("first", context)
+        val firstWorker = Thread { executor.runNext() }.apply { start() }
+        assertTrue(firstSearchStarted.await(3, TimeUnit.SECONDS))
+
+        val secondGeneration = coordinator.submit("second", context)
+        executor.runNext()
+        val secondResult = coordinator.state() as ArgentinaLiveSearchState.Results
+        assertEquals(secondGeneration, secondResult.generation)
+        assertEquals("second", secondResult.query)
+
+        releaseFirstSearch.countDown()
+        firstWorker.join(3_000)
+        assertFalse(firstWorker.isAlive)
+        assertEquals(listOf("first", "second"), searchQueries)
+        assertEquals(secondResult, coordinator.state())
+        assertFalse(states.any { it is ArgentinaLiveSearchState.Results && it.generation == firstGeneration })
+        assertFalse(states.any { it is ArgentinaLiveSearchState.Results && it.query == "first" })
+        coordinator.close()
+    }
+
+    @Test
+    fun failedSearchCanBeRetriedWithoutRetainingItsErrorState() {
+        var searchAttempts = 0
+        val transport = object : ArgentinaBackendTransport {
+            override fun execute(
+                endpoint: String,
+                requestBody: String?
+            ): ArgentinaBackendTransportResponse =
+                execute(endpoint, requestBody, ArgentinaRequestCancellation())
+
+            override fun execute(
+                endpoint: String,
+                requestBody: String?,
+                cancellation: ArgentinaRequestCancellation
+            ): ArgentinaBackendTransportResponse =
+                when (endpoint) {
+                    ArgentinaBackendConsumerBridge.STATUS_ENDPOINT ->
+                        ArgentinaBackendTransportResponse(200, statusJson())
+                    ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT -> {
+                        searchAttempts += 1
+                        if (searchAttempts == 1) {
+                            ArgentinaBackendTransportResponse(502, "")
+                        } else {
+                            val query = JSONObject(requireNotNull(requestBody)).getString("query")
+                            ArgentinaBackendTransportResponse(200, searchJson(1, query = query))
+                        }
+                    }
+                    else -> ArgentinaBackendTransportResponse(404, "")
+                }
+        }
+        val states = mutableListOf<ArgentinaLiveSearchState>()
+        val executor = QueuedExecutor()
+        val coordinator = ArgentinaLiveSearchCoordinator(transport, executor, states::add)
+
+        val failedGeneration = coordinator.submit("yerba", context)
+        executor.runNext()
+        val failure = coordinator.state() as ArgentinaLiveSearchState.Unavailable
+        assertEquals(failedGeneration, failure.generation)
+        assertEquals(ArgentinaBackendContract.FailureCode.SERVER_ERROR, failure.failure)
+
+        val retryGeneration = coordinator.submit("yerba", context)
+        assertEquals(ArgentinaLiveSearchState.Loading(retryGeneration, "yerba"), coordinator.state())
+        executor.runNext()
+        val retry = coordinator.state() as ArgentinaLiveSearchState.Results
+        assertEquals(retryGeneration, retry.generation)
+        assertEquals("yerba", retry.query)
+        assertEquals(2, searchAttempts)
+        assertFalse(states.any { it is ArgentinaLiveSearchState.Unavailable && it.generation == retryGeneration })
+        coordinator.close()
+    }
+
+    @Test
     fun candidateReleaseResponseCannotReplaceTheStatusPinnedActiveRelease() {
         val transport =
             RecordingTransport(
@@ -369,6 +476,7 @@ class ArgentinaLiveSearchCoordinatorTest {
         assertEquals(1, transport.calls.count { it.endpoint == ArgentinaBackendConsumerBridge.STATUS_ENDPOINT })
 
         coordinator.invalidateForRouteChange()
+        assertTrue(coordinator.state() is ArgentinaLiveSearchState.Idle)
         coordinator.submit("mate", context)
         executor.runNext()
         assertEquals(2, transport.calls.count { it.endpoint == ArgentinaBackendConsumerBridge.STATUS_ENDPOINT })
