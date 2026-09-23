@@ -7,7 +7,7 @@ Branch: `candidate/argentina-live-search-m12-4`
 M12.4 candidate code HEAD: `2176ed8709c5b89ae4c529cfcfc186c982681e82`
 
 Latest M12.5 production integration on `main`:
-`03b4cee652e46f5739879b05fc59d691baa27b8f`
+`dc84302d3d0049c5b7ac81216f1bbe762b68a705`
 
 ## M12.4 / M12.5 checkpoint update — 2026-09-23
 
@@ -17,7 +17,9 @@ No phone was attached during this checkpoint. The locally signed 10104 and
 10105 bundles have not been uploaded to Google Play.
 Candidate HEAD `2176ed8` passed Android tests, lint, builds, privacy checks and
 the single-signer check in run `35828919495`; release-bundle/provenance jobs
-were skipped by their branch guards.
+were skipped by their branch guards. The later status/documentation branch HEAD
+`780e3da` also passed Android and browser CI in run `35836331447`; its
+release-bundle/provenance jobs were skipped by the same branch guards.
 
 10104 was signed with the same protected local Play-signing mechanism used for
 10103. The current-user DPAPI credential was consumed locally without a
@@ -34,8 +36,9 @@ has not been uploaded. Physical-device M12.4 validation remains outstanding.
 M12.5 is **PARTIAL — the production workflow definition is deployed and its
 fail-closed validation gates pass live smoke tests, but the next scheduled
 OIDC acquisition/recovery run has not yet qualified the end-to-end path**.
-M12.5 changes were integrated through PR #4 and PR #5. `main` is at
-`03b4cee652e46f5739879b05fc59d691baa27b8f`.
+M12.5 changes were integrated through PR #4, PR #5 and the outage-exit
+regression PR #6. `main` is at
+`dc84302d3d0049c5b7ac81216f1bbe762b68a705`.
 
 The deployed Google Workflow `valuepilot-argentina-release` in `us-east4` is
 ACTIVE at revision `000011-094`, with source SHA-256
@@ -53,23 +56,35 @@ metadata-change evidence. Both completed successfully before discovery or
 Cloud Build, reporting `cloudBuildStarted=false` and `activePointerWrites=0`.
 These prove deployment parsing and early fail-closed gates only; they are not
 evidence of a scheduled OIDC download, outage retry, or full candidate build.
-No such potentially expensive acquisition was manually triggered.
+No such potentially expensive acquisition was manually triggered. The later
+Sep 22 scheduled run `35795809367` exhausted official metadata discovery on
+HTTP 502 and failed during preflight before VPN, download, or Cloud Build; it
+ran pre-integration code at `9dd3f01`. PR #6 adds an offline CLI regression
+proving three exhausted 502 attempts return a handled outage report and exit
+successfully, while preserving any reserved same-day candidate and reporting
+zero pointer writes, zero source substitution, and no promotion. The first
+scheduled run using the merged retry/outage behavior has not yet occurred.
 
 The active release remains
-`argentina-sepa-2026-09-18-619498b8e3230298-routing-v1-search-v2`, fresh under
-the seven-Argentina-calendar-day policy on Sep 23. Both regional active pointer
+`argentina-sepa-2026-09-18-619498b8e3230298-routing-v1-search-v2`, age 5 of the
+seven-Argentina-calendar-day limit and fresh on Sep 23. Both regional active pointer
 object generations remain unchanged at `1789973690114545` and
 `1789973692306062`; both still name Sep 18 as active and last-known-good. No
 canary pointer exists in either runtime bucket. The Sep 22 shadow candidate's
 earlier GCS 412 remains historical evidence with zero active/canary writes.
 
-Final M12.5 verification: 78 local tooling tests passed. Exact-head GitHub CI
+Final M12.5 verification: 79 local tooling tests passed. Exact-head GitHub CI
 passed on PR #4 head `87d11bf8001558357585713016bd2f105314770d` (runs
 `35833958111`, `35833958234`, `35833964264`) and PR #5 head
 `d52b8946b1b17bdaee63e69a9f9573c7393e012b` (runs `35834966494`,
 `35834995735`, `35834966488`); both included Android unit tests/debug APK
-build and acquisition-control regressions. Cloud Workflows accepted the merged
-source, and both safe live gate executions succeeded. Routine CI now
+build and acquisition-control regressions. PR #6 head
+`c36a79042072eec47a264792d1bb5b897b911267` passed acquisition-control run
+`35838406711` and Android runs `35838406722` / `35838439751`; it was squash
+merged at `dc84302d3d0049c5b7ac81216f1bbe762b68a705`. Exact merged-head runs
+`35838679332` (acquisition-control) and `35838679219` (Android tests/debug
+build) also passed. Cloud Workflows accepted the merged source, and both safe
+live gate executions succeeded. Routine CI now
 builds/verifies the debug APK but uploads it only for an explicit manual
 dispatch (3-day retention), avoiding normal push/PR APK artifacts.
 
@@ -189,12 +204,15 @@ Candidate identity:
 `argentina-sepa-2026-09-22-eaefeae3d9f2885a-routing-v1-search-v2`, reserved as
 `github-35776323661-1`. Cloud Build
 `4eba2181-f40f-4fda-8639-0b183d3624b7` completed and persisted the immutable
-candidate archive. The surrounding workflow ended as `STATE_WRITE_FAILED`
-after a GCS 412 control-state conflict; this is not an activation result.
-Recorded safety evidence was zero active/canary pointer writes, SHADOW-only,
-and activation not executed. A later same-day acquisition run succeeded by
-reusing the existing result; a subsequent metadata HTTP 502 run occurred before
-the new retry/outage implementation was deployed.
+candidate archive (1,163 objects; 889,653,903 bytes: 1,159 new and 4 reused).
+The candidate manifest says `completionState=COMPLETE` and
+`qualificationStatus=QUALIFIED`, but `automatedOfficialAcquisitionProven=false`.
+The surrounding workflow ended as `STATE_WRITE_FAILED` after a GCS 412
+control-state conflict; its explicit result is `SHADOW_ONLY`,
+`activation=NOT_EXECUTED`, with zero active/canary writes. It is not an
+activation or promotion-eligibility result. A later same-day acquisition run
+reused the existing reservation without starting another heavy build; the
+subsequent HTTP 502 was observed on the pre-integration workflow revision.
 
 The currently trusted release remains
 `argentina-sepa-2026-09-18-619498b8e3230298-routing-v1-search-v2`, source SHA-256
