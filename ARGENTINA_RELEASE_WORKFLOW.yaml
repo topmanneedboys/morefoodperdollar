@@ -37,6 +37,7 @@ main:
           - source_archive_key: ${default(map.get(args, "sourceArchiveKey"), "")}
           - source_archive_sha256: ${default(map.get(args, "sourceArchiveSha256"), "")}
           - upstream_changed: ${default(map.get(args, "upstreamChanged"), false)}
+          - upstream_change_evidence: ${map.get(args, "upstreamChangeEvidence")}
           - promotion_mode: ${default(map.get(args, "promotionMode"), "SHADOW")}
 
     - validate_handoff:
@@ -51,6 +52,12 @@ main:
             return:
               status: INVALID_HANDOFF
               reason: CURRENT_TRUSTED_SOURCE_IDENTITY_REQUIRED
+              cloudBuildStarted: false
+              activePointerWrites: 0
+          - condition: ${upstream_changed and (upstream_change_evidence == null or map.get(upstream_change_evidence, "previousMetadataFingerprint") == null or map.get(upstream_change_evidence, "currentMetadataFingerprint") == null or map.get(upstream_change_evidence, "catalogResponseSha256") == null or map.get(upstream_change_evidence, "previousMetadataFingerprint") == map.get(upstream_change_evidence, "currentMetadataFingerprint"))}
+            return:
+              status: INVALID_HANDOFF
+              reason: VERIFIED_METADATA_CHANGE_EVIDENCE_REQUIRED
               cloudBuildStarted: false
               activePointerWrites: 0
 
@@ -325,6 +332,7 @@ main:
                     - '${"BUILDER_IMAGE=" + args.workerImage}'
                     - '${"BUILDER_SHA=" + args.builderSha}'
                     - '${"VALUEPILOT_UPSTREAM_CHANGED=" + string(upstream_changed)}'
+                    - '${"VALUEPILOT_UPSTREAM_CHANGE_EVIDENCE_JSON=" + json.encode(upstream_change_evidence)}'
                     - '${"VALUEPILOT_SOURCE_ARCHIVE_KEY=" + source_archive_key}'
                     - '${"VALUEPILOT_SOURCE_ARCHIVE_SHA256=" + source_archive_sha256}'
                     - '${"VALUEPILOT_CANDIDATE_ARCHIVE_BUCKET=" + archive_bucket}'
@@ -417,6 +425,10 @@ main:
               observedAt: ${args.observedAt}
               datasetId: ${catalog_response.body.result.id}
               buildId: ${release_build.metadata.build.id}
+              candidateReleaseId: ${map.get(worker_summary, "releaseId")}
+              sourceArchiveSha256: ${source_archive_sha256}
+              promotionMode: ${promotion_mode}
+              upstreamChanged: ${upstream_changed}
           - discovery_state_bytes: ${json.encode(discovery_state)}
 
     - write_discovery_state:
@@ -432,18 +444,90 @@ main:
         except:
           as: state_write_error
           steps:
-            - state_write_failed:
+            - classify_state_write_error:
+                switch:
+                  - condition: ${state_write_error.code == 412}
+                    next: read_state_after_conflict
+                  - condition: true
+                    return:
+                      status: STATE_WRITE_FAILED
+                      buildId: ${release_build.metadata.build.id}
+                      error: ${state_write_error}
+                      cloudBuildStarted: true
+                      activePointerWrites: ${map.get(worker_summary, "activePointerWrites")}
+                      promotion: ${map.get(worker_summary, "promotion")}
+
+    - read_state_after_conflict:
+        try:
+          steps:
+            - get_conflicting_state_metadata:
+                call: googleapis.storage.v1.objects.get
+                args:
+                  bucket: ${control_bucket}
+                  object: ${text.url_encode(state_object)}
+                result: conflicting_state_metadata
+            - get_conflicting_state_media:
+                call: googleapis.storage.v1.objects.get
+                args:
+                  bucket: ${control_bucket}
+                  object: ${text.url_encode(state_object)}
+                  alt: media
+                result: conflicting_state_bytes
+            - confirm_conflicting_state_generation:
+                call: googleapis.storage.v1.objects.get
+                args:
+                  bucket: ${control_bucket}
+                  object: ${text.url_encode(state_object)}
+                result: conflicting_state_confirmation
+            - decode_conflicting_state:
+                assign:
+                  - conflicting_state: ${json.decode(conflicting_state_bytes)}
+        except:
+          as: conflicting_state_error
+          steps:
+            - state_write_unverified:
                 return:
-                  status: STATE_WRITE_FAILED
+                  status: STATE_WRITE_UNVERIFIED
                   buildId: ${release_build.metadata.build.id}
-                  error: ${state_write_error}
+                  error: ${conflicting_state_error}
                   cloudBuildStarted: true
                   activePointerWrites: ${map.get(worker_summary, "activePointerWrites")}
                   promotion: ${map.get(worker_summary, "promotion")}
 
+    - reconcile_state_conflict:
+        switch:
+          - condition: ${conflicting_state_metadata.generation == conflicting_state_confirmation.generation and map.get(worker_summary, "releaseId") != null and map.get(conflicting_state, "schemaVersion") == "valuepilot-argentina-workflow-discovery-v1" and map.get(conflicting_state, "metadataChecksum") == metadata_checksum and map.get(conflicting_state, "datasetId") == catalog_response.body.result.id and map.get(conflicting_state, "candidateReleaseId") == map.get(worker_summary, "releaseId") and map.get(conflicting_state, "sourceArchiveSha256") == source_archive_sha256 and map.get(conflicting_state, "promotionMode") == promotion_mode and map.get(conflicting_state, "upstreamChanged") == upstream_changed}
+            return:
+              status: ${default(map.get(worker_summary, "status"), "WORKER_STATUS_MISSING")}
+              stateWriteStatus: ALREADY_RECORDED
+              buildId: ${release_build.metadata.build.id}
+              metadataChecksum: ${metadata_checksum}
+              releaseId: ${map.get(worker_summary, "releaseId")}
+              cloudBuildStarted: true
+              activePointerWrites: ${map.get(worker_summary, "activePointerWrites")}
+              promotion: ${map.get(worker_summary, "promotion")}
+              activation: ${default(map.get(worker_summary, "activation"), "NOT_EXECUTED")}
+          - condition: true
+            return:
+              status: STATE_WRITE_CONFLICT
+              buildId: ${release_build.metadata.build.id}
+              attemptedReleaseId: ${map.get(worker_summary, "releaseId")}
+              attemptedSourceArchiveSha256: ${source_archive_sha256}
+              conflictingReleaseId: ${map.get(conflicting_state, "candidateReleaseId")}
+              conflictingSourceArchiveSha256: ${map.get(conflicting_state, "sourceArchiveSha256")}
+              error: "Concurrent workflow state does not match this verified candidate identity."
+              cloudBuildStarted: true
+              activePointerWrites: ${map.get(worker_summary, "activePointerWrites")}
+              promotion: ${map.get(worker_summary, "promotion")}
+
+    - state_write_completed:
+        assign:
+          - state_write_status: WRITTEN
+
     - return_build:
         return:
           status: ${default(map.get(worker_summary, "status"), "WORKER_STATUS_MISSING")}
+          stateWriteStatus: ${state_write_status}
           buildId: ${release_build.metadata.build.id}
           metadataChecksum: ${metadata_checksum}
           cloudBuildStarted: true

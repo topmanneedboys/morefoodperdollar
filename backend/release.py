@@ -9,7 +9,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
-from .clock import Clock, SystemClock, freshness
+from .clock import DEFAULT_MAX_RELEASE_AGE_DAYS, Clock, SystemClock, freshness
 from .artifacts import FilesystemReleaseArtifactStore, ManifestReleaseArtifactStore, ReleaseArtifactError, ReleaseArtifactStore
 from .object_store import LocalFilesystemObjectStore, ObjectStore, ObjectStoreError, validate_key
 
@@ -31,7 +31,7 @@ class ReleaseHandle:
 class ReleaseManager:
     """Pins one active release for the full lifetime of a request."""
 
-    def __init__(self, root: Path | str | None = None, *, object_store: ObjectStore | None = None, clock: Clock | None = None, max_age_days: int = 7, profile: str | None = None):
+    def __init__(self, root: Path | str | None = None, *, object_store: ObjectStore | None = None, clock: Clock | None = None, max_age_days: int = DEFAULT_MAX_RELEASE_AGE_DAYS, profile: str | None = None):
         if (root is None) == (object_store is None):
             raise ValueError("exactly one release root or object store is required")
         self.root = Path(root).resolve() if root is not None else None

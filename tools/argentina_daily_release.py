@@ -786,7 +786,7 @@ class DailyReleaseResult:
 class DailyReleaseOrchestrator:
     """Run one deterministic release candidate and optionally publish it."""
 
-    def __init__(self, *, source_path: Path, workspace: Path, output: Path, fixture: bool = False, previous_release: Path | None = None, activate: bool = False, dry_run: bool = True, allow_fixture_activation: bool = False, fail_after_stage: str | None = None, fail_publication_after: int | None = None, operator_acquired_at: str | None = None):
+    def __init__(self, *, source_path: Path, workspace: Path, output: Path, fixture: bool = False, previous_release: Path | None = None, activate: bool = False, dry_run: bool = True, allow_fixture_activation: bool = False, fail_after_stage: str | None = None, fail_publication_after: int | None = None, operator_acquired_at: str | None = None, upstream_changed: bool = False, acquisition_evidence: Mapping[str, Any] | None = None):
         self.source_path = Path(source_path).resolve()
         self.workspace = Path(workspace).resolve()
         self.output = Path(output).resolve()
@@ -798,6 +798,13 @@ class DailyReleaseOrchestrator:
         self.fail_after_stage = fail_after_stage
         self.fail_publication_after = fail_publication_after
         self.operator_acquired_at = operator_acquired_at
+        if not isinstance(upstream_changed, bool):
+            raise DailyReleaseError("upstream change flag is invalid", code="INVALID_SOURCE")
+        self.upstream_changed = upstream_changed
+        self.acquisition_evidence = dict(acquisition_evidence or {})
+        if len(canonical_bytes(self.acquisition_evidence)) > 16 * 1024:
+            raise DailyReleaseError("acquisition evidence exceeds bound", code="INVALID_SOURCE")
+        self._validate_acquisition_evidence()
         self.stage_root = self.output / "stages"
         self.artifact_root = self.output / "artifacts"
         self.timings: dict[str, float] = {}
@@ -814,19 +821,68 @@ class DailyReleaseOrchestrator:
             return None
         return store.read_release(active["releaseId"])
 
+    def _validate_acquisition_evidence(self) -> None:
+        if not self.upstream_changed:
+            if self.acquisition_evidence.get("upstreamChanged") is True:
+                raise DailyReleaseError("acquisition evidence disagrees with upstream change flag", code="INVALID_SOURCE")
+            return
+        evidence = self.acquisition_evidence
+        revision = evidence.get("upstreamChangeEvidence")
+        previous = revision.get("previousMetadataFingerprint") if isinstance(revision, Mapping) else None
+        current = revision.get("currentMetadataFingerprint") if isinstance(revision, Mapping) else None
+        response = revision.get("catalogResponseSha256") if isinstance(revision, Mapping) else None
+        if (
+            evidence.get("upstreamChanged") is not True
+            or evidence.get("status") != "HANDOFF_READY"
+            or evidence.get("stage") != "ARCHIVED"
+            or not isinstance(previous, str)
+            or _HEX64.fullmatch(previous) is None
+            or not isinstance(current, str)
+            or _HEX64.fullmatch(current) is None
+            or previous == current
+            or not isinstance(response, str)
+            or _HEX64.fullmatch(response) is None
+            or evidence.get("catalogResponseSha256") != response
+        ):
+            raise DailyReleaseError("same-day revision lacks verified metadata and archive evidence", code="INVALID_SOURCE")
+
     def _source_gate(self, source: SourceIdentity, previous: Mapping[str, Any] | None) -> bool:
         old_date = str((previous or {}).get("source", {}).get("releaseDate") or BASELINE_RELEASE_DATE)
-        if source.official and (source.release_date <= old_date or source.sha256 == BASELINE_SOURCE_SHA256):
-            raise DailyReleaseError(f"source {source.release_date} is not newer than qualified reference {old_date}", code="SECOND_RELEASE_REQUIRED")
-        return source.official and source.release_date > old_date
+        old_sha = str((previous or {}).get("source", {}).get("sha256") or BASELINE_SOURCE_SHA256)
+        if not source.official:
+            return False
+        if source.release_date < old_date:
+            raise DailyReleaseError(f"source {source.release_date} is older than qualified reference {old_date}", code="SECOND_RELEASE_REQUIRED")
+        if source.release_date == old_date:
+            if source.sha256 == old_sha:
+                raise DailyReleaseError(f"source {source.release_date} has the same hash as the qualified reference", code="SECOND_RELEASE_REQUIRED")
+            if not self.upstream_changed:
+                raise DailyReleaseError("same-date source revision lacks upstream change evidence", code="SECOND_RELEASE_REQUIRED")
+            handoff_source = self.acquisition_evidence.get("source")
+            if (
+                not isinstance(handoff_source, Mapping)
+                or handoff_source.get("official") is not True
+                or handoff_source.get("releaseDate") != source.release_date
+                or handoff_source.get("sha256") != source.sha256
+            ):
+                raise DailyReleaseError("same-day revision evidence does not bind the inspected source", code="SECOND_RELEASE_REQUIRED")
+            return True
+        if source.sha256 == BASELINE_SOURCE_SHA256:
+            raise DailyReleaseError("source hash is the qualified baseline", code="SECOND_RELEASE_REQUIRED")
+        return True
 
     def _identity(self, source: SourceIdentity, upstream: Mapping[str, str] | None = None) -> dict[str, Any]:
-        return _stage_identity(source, upstream=upstream, config={"fixture": self.fixture, "releaseDate": source.release_date, "mobileLogicalPartitions": MOBILE_LOGICAL_PARTITIONS, "backendLogicalPartitions": BACKEND_LOGICAL_PARTITIONS, "physicalPacks": PHYSICAL_PACKS, "staleAfterDays": STALE_AFTER_DAYS})
+        config = {"fixture": self.fixture, "releaseDate": source.release_date, "mobileLogicalPartitions": MOBILE_LOGICAL_PARTITIONS, "backendLogicalPartitions": BACKEND_LOGICAL_PARTITIONS, "physicalPacks": PHYSICAL_PACKS, "staleAfterDays": STALE_AFTER_DAYS, "upstreamChanged": self.upstream_changed}
+        if self.acquisition_evidence:
+            config["acquisitionEvidenceSha256"] = sha256_bytes(canonical_bytes(self.acquisition_evidence))
+        return _stage_identity(source, upstream=upstream, config=config)
 
     def _write_source_stage(self, root: Path, source: SourceIdentity) -> dict[str, Any]:
         _write_json(root / "source.json", source.as_dict())
+        if self.acquisition_evidence:
+            _write_json(root / "acquisition.json", self.acquisition_evidence)
         _write_json(root / "schema-drift.json", detect_schema_drift(source.schema))
-        return {"source": source.as_dict(), "schemaDrift": detect_schema_drift(source.schema)}
+        return {"source": source.as_dict(), "schemaDrift": detect_schema_drift(source.schema), "acquisitionEvidence": dict(self.acquisition_evidence) if self.acquisition_evidence else None}
 
     def _validate_structure(self, root: Path, source: SourceIdentity) -> dict[str, Any]:
         drift = detect_schema_drift(source.schema)
@@ -1095,7 +1151,10 @@ class DailyReleaseOrchestrator:
                 descriptors.append({"path": relative, "sha256": digest, "bytes": size, "compressedBytes": size, "uncompressedBytes": uncompressed_sizes.get(relative, size)})
             backend_profile = _read_json(self.artifact_root / "backend-profile.json") if (self.artifact_root / "backend-profile.json").is_file() else {}
             backend_counts = backend_profile.get("counts", {}) if isinstance(backend_profile, Mapping) else {}
-            manifest = {"schemaVersion": SCHEMA_VERSION, "policyVersion": POLICY_VERSION, "toolVersion": TOOL_VERSION, "completionState": "COMPLETE", "releaseId": release_id, "source": source.as_dict(), "backendProfile": {"logicalPartitionCount": BACKEND_LOGICAL_PARTITIONS, "physicalPackCount": PHYSICAL_PACKS, "mobileLogicalPartitionCount": MOBILE_LOGICAL_PARTITIONS, "mobilePhysicalPackCount": PHYSICAL_PACKS}, "backendCounts": dict(backend_counts) if isinstance(backend_counts, Mapping) else {}, "objects": descriptors, "qualificationStatus": "FIXTURE_ONLY" if self.fixture else "QUALIFIED", "rawProviderDataCommitted": False, "automatedOfficialAcquisitionProven": False}
+            old_date = str((previous or {}).get("source", {}).get("releaseDate") or BASELINE_RELEASE_DATE)
+            old_sha = str((previous or {}).get("source", {}).get("sha256") or BASELINE_SOURCE_SHA256)
+            same_day_revision = bool(source.official and source.release_date == old_date and source.sha256 != old_sha and self.upstream_changed)
+            manifest = {"schemaVersion": SCHEMA_VERSION, "policyVersion": POLICY_VERSION, "toolVersion": TOOL_VERSION, "completionState": "COMPLETE", "releaseId": release_id, "source": source.as_dict(), "backendProfile": {"logicalPartitionCount": BACKEND_LOGICAL_PARTITIONS, "physicalPackCount": PHYSICAL_PACKS, "mobileLogicalPartitionCount": MOBILE_LOGICAL_PARTITIONS, "mobilePhysicalPackCount": PHYSICAL_PACKS}, "backendCounts": dict(backend_counts) if isinstance(backend_counts, Mapping) else {}, "objects": descriptors, "qualificationStatus": "FIXTURE_ONLY" if self.fixture else "QUALIFIED", "rawProviderDataCommitted": False, "sameDayRevisionProven": same_day_revision, "acquisitionEvidence": self.acquisition_evidence or None, "automatedOfficialAcquisitionProven": False}
             release_dir = store.releases / release_id
             release_dir.mkdir(parents=True, exist_ok=True)
             _write_json(release_dir / "manifest.json", manifest)
@@ -1121,7 +1180,11 @@ class DailyReleaseOrchestrator:
         previous = self._previous_manifest(store)
         second_official = self._source_gate(source, previous)
         release_id = _release_id(source.release_date, source.sha256)
-        _write_json(self.output / "candidate.json", {"schemaVersion": SCHEMA_VERSION, "releaseId": release_id, "source": source.as_dict(), "secondOfficialReleaseProven": second_official})
+        old_source = (previous or {}).get("source", {})
+        old_date = str(old_source.get("releaseDate") or BASELINE_RELEASE_DATE) if isinstance(old_source, Mapping) else BASELINE_RELEASE_DATE
+        old_sha = str(old_source.get("sha256") or BASELINE_SOURCE_SHA256) if isinstance(old_source, Mapping) else BASELINE_SOURCE_SHA256
+        same_day_revision = bool(source.official and source.release_date == old_date and source.sha256 != old_sha and self.upstream_changed)
+        _write_json(self.output / "candidate.json", {"schemaVersion": SCHEMA_VERSION, "releaseId": release_id, "source": source.as_dict(), "secondOfficialReleaseProven": second_official, "sameDayRevisionProven": same_day_revision, "acquisitionEvidence": self.acquisition_evidence or None})
         stage_meta: dict[str, Any] = {}
         upstream: dict[str, str] = {}
         last_stage = "DISCOVERED"
@@ -1212,6 +1275,8 @@ class DailyReleaseOrchestrator:
             "oldRelease": {"date": (previous or {}).get("source", {}).get("releaseDate", BASELINE_RELEASE_DATE), "sha256": (previous or {}).get("source", {}).get("sha256", BASELINE_SOURCE_SHA256), "backendCounts": old_backend_counts, "qualification": old_qualification_metrics},
             "newRelease": new_release,
             "secondOfficialReleaseProven": second_official,
+            "sameDayRevisionProven": same_day_revision,
+            "acquisitionEvidence": self.acquisition_evidence or None,
             "sourceStructure": {"nestedPackages": len(source.nested_packages), "zeroBytePackages": sum(1 for item in source.nested_packages if int(item.get("bytes", 0)) == 0), "sourceKind": source.source_kind, "outerZipCrcVerified": source.official, "nestedPackageHashesSource": "M1 qualification report" if qualification_report_sha else "NOT_AVAILABLE"},
             "schemaDrift": stage_meta.get("STRUCTURALLY_VALIDATED", {}).get("schemaDrift", {"classification": "NOT_MEASURED"}),
             "qualification": {"status": stage_meta.get("QUALIFIED", {}).get("status", qualification_report.get("status", "UNKNOWN")), "counts": qualification_metrics, "sourceReportSha256": qualification_report_sha, "rawProviderDataPublished": False},
@@ -1317,11 +1382,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--publish", action="store_true")
     parser.add_argument("--audit-at", default="operator-unspecified")
     parser.add_argument("--operator-acquired-at")
+    parser.add_argument("--upstream-changed", action="store_true", help="require verified acquisition evidence for a same-date source revision")
+    parser.add_argument("--acquisition-evidence", type=Path, help="bounded HANDOFF_READY acquisition report, including source and metadata-change provenance")
     parser.add_argument("--fail-after-stage", choices=STAGES)
     parser.add_argument("--fail-publication-after", type=int, help="test-only publication failure injection; never use for normal activation")
     args = parser.parse_args(argv)
     try:
-        result = DailyReleaseOrchestrator(source_path=args.input, workspace=args.workspace, output=args.output, fixture=args.fixture, previous_release=args.previous_release, activate=args.activate, dry_run=not args.publish and not args.activate, operator_acquired_at=args.operator_acquired_at, fail_after_stage=args.fail_after_stage, fail_publication_after=args.fail_publication_after).run(audit_at=args.audit_at)
+        acquisition_evidence: Mapping[str, Any] | None = None
+        if args.acquisition_evidence is not None:
+            if args.acquisition_evidence.stat().st_size > 16 * 1024:
+                raise DailyReleaseError("acquisition evidence exceeds bound", code="INVALID_SOURCE")
+            value = _read_json(args.acquisition_evidence)
+            if not isinstance(value, Mapping):
+                raise DailyReleaseError("acquisition evidence must be a JSON object", code="INVALID_SOURCE")
+            acquisition_evidence = dict(value)
+        result = DailyReleaseOrchestrator(source_path=args.input, workspace=args.workspace, output=args.output, fixture=args.fixture, previous_release=args.previous_release, activate=args.activate, dry_run=not args.publish and not args.activate, operator_acquired_at=args.operator_acquired_at, upstream_changed=args.upstream_changed, acquisition_evidence=acquisition_evidence, fail_after_stage=args.fail_after_stage, fail_publication_after=args.fail_publication_after).run(audit_at=args.audit_at)
         _write_atomic(args.output / "release-report.md", markdown_report(result.report).encode("utf-8"))
         summary = {"source": result.source.as_dict(), "releaseId": result.release_id, "lastStage": result.last_stage, "secondOfficialReleaseProven": result.report["secondOfficialReleaseProven"], "qualification": result.report.get("qualification", {}).get("status"), "offers": result.report.get("backendProfile", {}).get("details", {}).get("counts", {}).get("offers"), "stores": result.report.get("backendProfile", {}).get("details", {}).get("counts", {}).get("stores"), "products": result.report.get("backendProfile", {}).get("details", {}).get("counts", {}).get("productEvidenceRecords"), "quarantine": result.report.get("qualification", {}).get("counts", {}).get("quarantineRows"), "backendBytes": result.report.get("contentAddressed", {}).get("dedup", {}).get("logicalBytes"), "reusedBytes": result.report.get("contentAddressed", {}).get("dedup", {}).get("reusedBytes"), "newBytes": result.report.get("contentAddressed", {}).get("dedup", {}).get("newBytes"), "dedupPercent": result.report.get("contentAddressed", {}).get("dedup", {}).get("deduplicationPercent"), "activeBefore": result.report.get("activation", {}).get("activeBefore"), "activeAfter": result.report.get("activation", {}).get("activeAfter"), "status": result.report["status"], "reusedStages": list(result.reused_stages), "report": str(args.output / "release-report.json")}
         print(json.dumps(summary, ensure_ascii=False, sort_keys=True))

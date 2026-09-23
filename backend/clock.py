@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 
 
 ARGENTINA_ZONE = ZoneInfo("America/Argentina/Buenos_Aires")
+DEFAULT_MAX_RELEASE_AGE_DAYS = 7
 
 
 class Clock(Protocol):
@@ -30,7 +31,12 @@ class FrozenClock:
         self.value += timedelta(**kwargs)
 
 
-def freshness(release_date: str, *, clock: Clock, max_age_days: int = 7) -> str:
+def freshness(
+    release_date: str,
+    *,
+    clock: Clock,
+    max_age_days: int = DEFAULT_MAX_RELEASE_AGE_DAYS,
+) -> str:
     try:
         released = date.fromisoformat(release_date)
     except ValueError as exc:
@@ -39,4 +45,11 @@ def freshness(release_date: str, *, clock: Clock, max_age_days: int = 7) -> str:
     return "FRESH" if 0 <= age <= max_age_days else "STALE"
 
 
-__all__ = ["ARGENTINA_ZONE", "Clock", "FrozenClock", "SystemClock", "freshness"]
+__all__ = [
+    "ARGENTINA_ZONE",
+    "Clock",
+    "DEFAULT_MAX_RELEASE_AGE_DAYS",
+    "FrozenClock",
+    "SystemClock",
+    "freshness",
+]

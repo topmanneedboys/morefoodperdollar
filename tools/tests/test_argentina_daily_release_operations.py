@@ -4,6 +4,7 @@ import json
 import shutil
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 from tools.argentina_daily_release import (
@@ -47,6 +48,8 @@ class ArgentinaDailyReleaseOperationsTests(unittest.TestCase):
         self.assertEqual(result.report["backendProfile"]["online"], "1024/32")
         self.assertEqual(result.report["backendProfile"]["mobilePreserved"], "128/32")
         self.assertEqual(result.report["m8Regression"], "INDEX_REBUILT_FIXTURE")
+        self.assertFalse(result.report["sameDayRevisionProven"])
+        self.assertIsNone(result.report["acquisitionEvidence"])
 
         vocabulary = json.loads((result.candidate_root / "artifacts" / "input-vocabulary.json").read_text(encoding="utf-8"))
         self.assertEqual(vocabulary["completionState"], "COMPLETE")
@@ -94,6 +97,8 @@ class ArgentinaDailyReleaseOperationsTests(unittest.TestCase):
         store = ContentAddressedStore(workspace)
         manifest = store.read_release(first.release_id)
         store.verify_manifest_objects(manifest)
+        self.assertFalse(manifest["sameDayRevisionProven"])
+        self.assertIsNone(manifest["acquisitionEvidence"])
 
         second = self.run_fixture("second", workspace=workspace, dry_run=False, allow_fixture_activation=True)
         self.assertGreater(second.report["contentAddressed"]["dedup"]["unchangedObjectCount"], 0)
@@ -158,6 +163,64 @@ class ArgentinaDailyReleaseOperationsTests(unittest.TestCase):
         quarantine = (normalized / "quarantine.jsonl").read_text(encoding="utf-8")
         self.assertIn("INVALID_REQUIRED_PRICE", quarantine)
         self.assertIn("UNKNOWN_STORE_REFERENCE", quarantine)
+
+    def test_same_day_official_revision_requires_bound_archived_acquisition_evidence(self) -> None:
+        fixture_source = inspect_source(self.source, fixture=True)
+        source = replace(
+            fixture_source,
+            official=True,
+            release_date="2026-09-18",
+            sha256="c" * 64,
+        )
+        previous = {"source": {"releaseDate": "2026-09-18", "sha256": "a" * 64}}
+        with self.assertRaises(DailyReleaseError) as missing:
+            DailyReleaseOrchestrator(
+                source_path=self.source,
+                workspace=self.root / "revision-missing-ws",
+                output=self.root / "revision-missing-out",
+                upstream_changed=True,
+            )
+        self.assertEqual(missing.exception.code, "INVALID_SOURCE")
+
+        evidence = {
+            "status": "HANDOFF_READY",
+            "stage": "ARCHIVED",
+            "upstreamChanged": True,
+            "catalogResponseSha256": "e" * 64,
+            "upstreamChangeEvidence": {
+                "previousMetadataFingerprint": "1" * 64,
+                "currentMetadataFingerprint": "2" * 64,
+                "catalogResponseSha256": "e" * 64,
+            },
+            "source": {"official": True, "releaseDate": source.release_date, "sha256": source.sha256},
+        }
+        orchestrator = DailyReleaseOrchestrator(
+            source_path=self.source,
+            workspace=self.root / "revision-ws",
+            output=self.root / "revision-out",
+            upstream_changed=True,
+            acquisition_evidence=evidence,
+        )
+        self.assertTrue(orchestrator._source_gate(source, previous))
+
+        mismatched_source = replace(source, sha256="d" * 64)
+        with self.assertRaises(DailyReleaseError) as mismatch:
+            orchestrator._source_gate(mismatched_source, previous)
+        self.assertEqual(mismatch.exception.code, "SECOND_RELEASE_REQUIRED")
+
+        unchanged_source = replace(source, sha256="a" * 64)
+        with self.assertRaises(DailyReleaseError) as unchanged:
+            orchestrator._source_gate(unchanged_source, previous)
+        self.assertEqual(unchanged.exception.code, "SECOND_RELEASE_REQUIRED")
+
+        no_revision_proof = DailyReleaseOrchestrator(
+            source_path=self.source,
+            workspace=self.root / "revision-unproven-ws",
+            output=self.root / "revision-unproven-out",
+        )
+        with self.assertRaises(DailyReleaseError) as unproven:
+            no_revision_proof._source_gate(source, previous)
+        self.assertEqual(unproven.exception.code, "SECOND_RELEASE_REQUIRED")
 
 
 if __name__ == "__main__":

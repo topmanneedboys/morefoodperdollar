@@ -1,0 +1,35 @@
+{
+  "success": true,
+  "result": {
+    "id": "0f495d54-4a5d-5fa3-a323-f6e97ce434cf",
+    "name": "precios-claros-base-sepa",
+    "title": "Precios Claros - Base SEPA",
+    "license_title": "Creative Commons Attribution 4.0",
+    "resources": [
+      {
+        "id": "resource-martes-fixture",
+        "name": "Martes",
+        "format": "ZIP",
+        "url": "https://datos.produccion.gob.ar/dataset/example/resource/resource-martes/download/sepa_martes.zip",
+        "size": 325118492,
+        "last_modified": "2026-06-30T16:19:00.091864",
+        "description": "Precios SEPA Minoristas martes, 2026-06-30"
+      },
+      {
+        "id": "resource-miercoles-fixture",
+        "name": "Miércoles",
+        "format": "ZIP",
+        "url": "https://datos.produccion.gob.ar/dataset/example/resource/resource-miercoles/download/sepa_miercoles.zip",
+        "size": null,
+        "last_modified": "2026-07-01T16:19:57.057187",
+        "description": "Precios SEPA Minoristas miércoles, 2026-07-01"
+      },
+      {
+        "id": "resource-metadata-fixture",
+        "name": "Metadata",
+        "format": "PDF",
+        "url": "https://datos.produccion.gob.ar/dataset/example/resource/resource-metadata/download/fields.pdf"
+      }
+    ]
+  }
+}
