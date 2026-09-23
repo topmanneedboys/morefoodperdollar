@@ -17,7 +17,7 @@ No phone was attached during this checkpoint. The locally signed 10104 and
 10105 bundles have not been uploaded to Google Play.
 Candidate HEAD `2176ed8` passed Android tests, lint, builds, privacy checks and
 the single-signer check in run `35828919495`; release-bundle/provenance jobs
-were skipped by their branch guards. The latest status/documentation branch
+were skipped by their branch guards. The preceding status/documentation branch
 HEAD `575f0989fd5bcb89c5471e087f442a39206dac03` passed exact-head Android and
 browser CI in run `35839211038`; release-bundle/provenance jobs were skipped
 by the same branch guards.
