@@ -1,11 +1,11 @@
 # Current state
 
-Updated: 2026-09-23 12:32 UTC
+Updated: 2026-09-23 12:50 UTC
 
 Branch: `candidate/argentina-live-search-m12-4`
 
 Candidate branch HEAD before this status update:
-`1cc78376fe73e998d7f942fc537590d58c7aab53`
+`0435a29d39ebaf8b44437daa1071969c15c6efea`
 
 M12.4 candidate code baseline before the current documentation-only follow-up:
 `c739346344c77fd00cb49809c8cc529e2893b66b`
@@ -74,6 +74,36 @@ regional `control/active.json` objects still name the Sep 18 release as active
 and last-known-good. Their generations remain
 `1789973690114545` (`southamerica-east1`) and `1789973692306062` (`us-east4`),
 last updated 2026-09-21; no pointer mutation occurred in the observed window.
+
+### Exact-head and device refresh — 2026-09-23 12:50 UTC
+
+Candidate HEAD `0435a29d39ebaf8b44437daa1071969c15c6efea` is clean and matches
+the remote branch. Exact-head GitHub run `35861180731` completed successfully
+at 12:41 UTC: browser verification and Android test/lint/build, privacy and
+single-signer verification passed. Candidate release-bundle and provenance
+jobs were skipped by their branch guards; this run did not claim promotion.
+
+The signed 10104 AAB was already present in the earlier local worktree and was
+independently checked without changing or copying it. `jarsigner` reports the
+archive verified with no invalid signatures or unsigned entries; it has one
+signature block and the same certificate fingerprint as 10103. Its SHA-256 is
+`23633c008c21db9d6ca1a343d96c76f1dc1c5f06da19a32a3dd095476039d5bb`. The
+strict trust check reports that this self-issued upload certificate is not
+rooted in a public CA; that is a trust-chain warning, not a signature mismatch,
+and Play acceptance has not been tested. PowerShell history confirms the
+existing local flow uses a current-user protected credential and an
+environment-based signer input; no password prompt or secret output occurred.
+No bundle was uploaded to Play.
+
+`adb devices -l` still reports no attached Android device, so M12.4 remains
+**PARTIAL** only for the signed Play-installed Motorola Edge 2025 smoke. At
+12:50 UTC, the latest scheduled acquisition run was still Sep 22 run
+`35795809367`; the Sep 23 16:30 UTC primary run has not occurred and no
+national acquisition was manually triggered. Read-only reads of both regional
+`control/active.json` pointers still show the Sep 18 release as both active and
+last-known-good, at the same generations recorded above. M12.5 remains
+**PARTIAL** pending the scheduled post-integration OIDC acquisition/recovery
+run; no active-pointer mutation occurred in this refresh.
 
 ### Candidate follow-up — Android Search HTTP 503 contract
 
