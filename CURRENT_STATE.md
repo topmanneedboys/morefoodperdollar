@@ -6,7 +6,7 @@ Branch: `candidate/argentina-live-search-m12-4`
 
 Latest M12.5 implementation commit: `68acf3358988e29a040a6b387c2063a7034a420e`
 
-Android version: 101.1.2 (10103 M12.4B Play test build candidate)
+Android version: 101.1.4 (10105 M12.4 Search candidate)
 
 ## Current M12.4B visible Argentina identity Search candidate
 
@@ -14,9 +14,11 @@ M12.4 status: **PARTIAL — implementation and automated validation are ready;
 physical Motorola Edge 2025 smoke is still not performed.** Search code remains
 frozen while that device-only gate is pending.
 
-M12.4B is implemented on `candidate/argentina-live-search-m12-4` at
-implementation commit `4881750886a26de9e203e52d16963156719733cc` and is
-recorded in
+M12.4B Search was introduced at
+`4881750886a26de9e203e52d16963156719733cc` and stabilized for live response
+shape, ordering and request behavior by
+`5dac9978ea842acc9c1afcd4651d5c0a3c6a72e5`. The current candidate version is
+`10105` / `101.1.4`; the original M12.4B scope and launch-area evidence are recorded in
 [ARGENTINA_LIVE_SEARCH_M12_4B.md](ARGENTINA_LIVE_SEARCH_M12_4B.md).
 Search is now a visible, user-triggered identity-only surface backed by the
 existing bounded M12.4A coordinator/bridge/transport. It uses the explicit
@@ -40,7 +42,7 @@ active release is
 false. This is therefore backend-ready and Play-build-ready but **not
 device/live-search qualified** until the signed app passes the explicit
 physical-device smoke. The existing protected Play upload key was found and
-verified; the current 10103 / 101.1.2 AAB is signed locally but not uploaded:
+verified; the earlier 10103 / 101.1.2 AAB is signed locally but not uploaded:
 `android/app/build/outputs/bundle/release/app-release-play-upload-signed-10103.aab`
 (SHA-256
 `b195d6a6318db823a61f27035cc2b8c66adda392c2040a4b87d71e17b4cd3679`). The
