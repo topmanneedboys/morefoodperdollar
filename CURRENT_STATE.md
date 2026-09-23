@@ -22,27 +22,43 @@ the 503 mapping, generic Search error, and 502 distinction. Two Android source
 boundary tests now use the existing newline-normalizing reader so their
 assertions are stable on Windows.
 
+The local Windows failure was traced to Git `core.autocrlf=true`: all 10
+affected signed-catalog text files were byte-for-byte the committed Git blobs
+after undoing only CRLF conversion; the other two files already matched. The
+catalog output is cryptographically byte-sensitive, so
+`.gitattributes` now marks `android/app/src/main/assets/offline_catalog/**`
+`-text`. Only the attribute rule is a repository content change; the local
+catalog files were restored to their exact tracked bytes. Both signed regional
+catalogs then passed the strict signature/hash verifier. The complete tooling
+suite passed all 300 tests.
+
 Local Android validation passed on this code: shared-core tests, Android unit
 tests, debug/release lint, debug/release assembly, and release bundle assembly
-(`BUILD SUCCESSFUL`, 122 tasks). No Android device was attached. The broad
-candidate Python suite ran 299 tests: 282 passed, 14 skipped, one failed and
-two errored. The three failing outcomes are the pre-existing signed GTA and
-Metro Vancouver offline-catalog assets: both `manifest.json` files end in a
-CRLF, while the strict verifier requires canonical JSON bytes. Git's existing
-OpenSSL was added only to the test process PATH to resolve the separate local
-tool-discovery issue. No catalog bytes or signatures were changed; regenerating
-those signed assets is a separate release operation. The M12.5-focused tooling
-suite on its integration worktree passed all 80 tests. Exact-head GitHub CI for
+(`BUILD SUCCESSFUL`, 122 actionable tasks). The debug APK passed the workflow's
+privacy check (`INTERNET` present, `ACCESS_NETWORK_STATE` absent) and its
+single-signer verification. The debug APK and release AAB each contain all 12
+offline-catalog files byte-for-byte identical to the verified source assets.
+No Android device was attached. The M12.5-focused tooling suite on its
+integration worktree passed all 80 tests. Exact-head GitHub CI for
 `12b42984f45ec9dd2141c676fd36b3b70d39dcbb` passed in run `35848056265`:
 Android job `107138891858` and browser job `107138892324` succeeded; milestone
 provenance and release-bundle jobs were skipped by their candidate-branch
 guards. Routine artifact uploads were also skipped.
 
+A supplemental local run of the broader candidate `backend/tests` suite under
+CPython 3.14 was not clean: this machine lacks the pinned FastAPI/Boto3 test
+dependencies, and two backend-access-shape byte-count assertions observed
+240160 rather than their 240159 baseline. The same backend test/source and
+fixture-builder paths are unchanged from candidate SHA `35cc732`; its full
+backend/container workflow passed with Python 3.12 and installed requirements
+in run `35822853987`. The subsequent M12.5 acquisition-specific changes were
+independently covered by their focused Python 3.12 CI runs recorded below.
+
 M12.4 remains **PARTIAL**: candidate code, local Android checks, and exact-head
 Android/browser CI are green, but the signed Play-installed Motorola Edge 2025
 Search smoke remains outstanding. No phone was attached during this
-checkpoint. The locally signed 10104 and 10105 bundles have not been uploaded
-to Google Play. Earlier candidate HEAD `2176ed8` passed Android tests, lint,
+checkpoint. The locally signed 10104, 10105, and 10106 bundles have not been
+uploaded to Google Play. Earlier candidate HEAD `2176ed8` passed Android tests, lint,
 builds, privacy checks and the single-signer check in run
 `35828919495`; release-bundle/provenance jobs were skipped by their branch
 guards. The preceding status/documentation branch HEAD
@@ -60,7 +76,12 @@ The 10104 AAB SHA-256 is
 not uploaded to Google Play. The 10105 AAB was also verified locally with the
 same signer (SHA-256
 `c982a6ab8c46eeddee196289205d464f3827c85d8f4754d409fbcdf3af825f2e`); it too
-has not been uploaded. Physical-device M12.4 validation remains outstanding.
+has not been uploaded. Candidate 10106 was signed and independently verified
+through the same protected local mechanism without a password prompt or secret
+output. Its SHA-256 is
+`d8189b3fa0b5e7da3bb506d5c1e7d23af7502f93a0ba3360eb540af9dc7243e6`; its
+certificate fingerprint matches 10103/10104/10105. Physical-device M12.4
+validation remains outstanding.
 
 M12.5 is **PARTIAL — the production workflow definition is deployed and its
 fail-closed validation gates pass live smoke tests, but the next scheduled
@@ -84,7 +105,9 @@ metadata-change evidence. Both completed successfully before discovery or
 Cloud Build, reporting `cloudBuildStarted=false` and `activePointerWrites=0`.
 These prove deployment parsing and early fail-closed gates only; they are not
 evidence of a scheduled OIDC download, outage retry, or full candidate build.
-No such potentially expensive acquisition was manually triggered. The later
+No such potentially expensive acquisition was manually triggered. As of
+2026-09-23 11:07 UTC, the next scheduled 13:30 ART acquisition had not yet
+occurred. The later
 Sep 22 scheduled run `35795809367` exhausted official metadata discovery on
 HTTP 502 and failed during preflight before VPN, download, or Cloud Build; it
 ran pre-integration code at `9dd3f01`. PR #6 adds an offline CLI regression
@@ -153,7 +176,8 @@ M12.4B Search was introduced at
 `4881750886a26de9e203e52d16963156719733cc` and stabilized for live response
 shape, ordering and request behavior by
 `5dac9978ea842acc9c1afcd4651d5c0a3c6a72e5`. The current candidate version is
-`10105` / `101.1.4`; the original M12.4B scope and launch-area evidence are recorded in
+`10106` / `101.1.5`; the original M12.4B scope and launch-area evidence are
+recorded in
 [ARGENTINA_LIVE_SEARCH_M12_4B.md](ARGENTINA_LIVE_SEARCH_M12_4B.md).
 Search is now a visible, user-triggered identity-only surface backed by the
 existing bounded M12.4A coordinator/bridge/transport. It uses the explicit
@@ -904,7 +928,13 @@ Production arithmetic remains `Money`, `NormalizedQuantity`, `UnitRate`, `Determ
 
 `ProductionSearchSurfaceView` is physically present but starts `GONE`, saves no state, has no link/click/provider behavior and renders sanitized state only.
 
-**MainActivity still does not wire or drive this production surface.** Current visible Search remains fictional/sample. Do not route verified production evidence through `UniversalSearchController.receive()`, `DeterministicProductParser`, `ValueEngine.analyze()`, `RankingModePolicy`, `DeterministicRankingEngine` or `ValueEngine.rank()`.
+**MainActivity still does not wire or drive the separate production Best Value
+surface described above.** The current visible Search is the M12.4B live,
+identity-only Argentina Search, not the old fictional/sample path. Keep its
+identity results separate from current-price/Best Value authority; do not route
+them through `UniversalSearchController.receive()`, `DeterministicProductParser`,
+`ValueEngine.analyze()`, `RankingModePolicy`, `DeterministicRankingEngine` or
+`ValueEngine.rank()`.
 
 ## Rakuten / Jamieson — updated 2026-08-29
 

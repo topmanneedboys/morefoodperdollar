@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import hashlib
 import io
+import subprocess
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -13,6 +14,21 @@ from tools.verify_offline_catalog_snapshot import main, verify_snapshot
 class BundledOfflineCatalogAssetTest(unittest.TestCase):
     root = Path(__file__).resolve().parents[2]
     assets = root / "android" / "app" / "src" / "main" / "assets" / "offline_catalog"
+
+    def test_signed_catalog_assets_disable_git_text_conversion(self):
+        for relative in (
+            "android/app/src/main/assets/offline_catalog/ca-gta/manifest.json",
+            "android/app/src/main/assets/offline_catalog/sources/off-ca.jsonl",
+        ):
+            with self.subTest(path=relative):
+                result = subprocess.run(
+                    ["git", "check-attr", "text", "--", relative],
+                    cwd=self.root,
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(f"{relative}: text: unset\n", result.stdout)
 
     def test_both_metro_assets_are_signed_bounded_identity_only_snapshots(self):
         public_key = self.assets / "public-key.pem"
