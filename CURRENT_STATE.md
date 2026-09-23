@@ -76,11 +76,17 @@ dispatch (3-day retention), avoiding normal push/PR APK artifacts.
 GitHub Actions storage audit: the account warning showed `0.47 GB / 0.50 GB`.
 This repository has two unexpired `ValuePilot-v101-provenance-proof` artifacts
 at 36.65 MiB each; they are preserved as release evidence. No Actions caches
-were present. One already-expired, disposable `github-pages` artifact about
-0.01 MiB was removed. The account-wide billing endpoint requires a GitHub
-authorization scope unavailable to this session, so the remaining account
-storage cannot be attributed to other repositories; the rejected APK upload
-did not report a reliable artifact size.
+were deleted. The repository currently has 12 recent Gradle caches totaling
+687.65 MiB; these are rebuildable CI dependencies and remain well below the
+separate 10 GB per-repository cache allowance, so they were retained to keep
+builds fast. [GitHub's billing guidance](https://docs.github.com/en/billing/concepts/product-billing/github-actions)
+states that cache storage is separate from the pooled artifact/Packages
+allowance shown in the alert. One already-expired, disposable `github-pages`
+artifact about 0.01 MiB was removed. The account-wide billing endpoint requires
+a GitHub authorization scope unavailable to this session, so the remaining
+artifact/Packages usage cannot be attributed to other repositories; the
+rejected APK upload did not report a reliable artifact size. The current
+artifact inventory contains no APK/AAB or Rust `target` build artifacts.
 The M12.4 candidate branch remains substantially divergent from `main`; no PR
 exists for that whole branch. Only the narrow M12.5 integration PRs were
 merged. Do not merge the entire M12.4 branch as a narrow milestone.
