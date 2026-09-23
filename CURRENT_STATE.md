@@ -1,12 +1,18 @@
 # Current state
 
-Updated: 2026-09-21
+Updated: 2026-09-22
 
 Branch: `candidate/argentina-live-search-m12-4`
+
+Latest M12.5 implementation commit: `68acf3358988e29a040a6b387c2063a7034a420e`
 
 Android version: 101.1.2 (10103 M12.4B Play test build candidate)
 
 ## Current M12.4B visible Argentina identity Search candidate
+
+M12.4 status: **PARTIAL — implementation and automated validation are ready;
+physical Motorola Edge 2025 smoke is still not performed.** Search code remains
+frozen while that device-only gate is pending.
 
 M12.4B is implemented on `candidate/argentina-live-search-m12-4` at
 implementation commit `4881750886a26de9e203e52d16963156719733cc` and is
@@ -37,8 +43,10 @@ physical-device smoke. The existing protected Play upload key was found and
 verified; the current 10103 / 101.1.2 AAB is signed locally but not uploaded:
 `android/app/build/outputs/bundle/release/app-release-play-upload-signed-10103.aab`
 (SHA-256
-`b195d6a6318db823a61f27035cc2b8c66adda392c2040a4b87d71e17b4cd3679`). No
-M12.5 work has started.
+`b195d6a6318db823a61f27035cc2b8c66adda392c2040a4b87d71e17b4cd3679`). The
+later 10104 bundle was signed through the same protected local mechanism and
+its signature verified without manual password entry or secret disclosure; it
+also has not been uploaded.
 
 The active release was independently verified from the official archived source
 SHA-256 `619498b8e3230298b8a91f3df05ee7fe44e190a8f909e0e103cf43867fec73ee`
@@ -58,6 +66,74 @@ returns the bounded status payload. Firebase project `valuepilot-argentina`
 is active and the registered Android app remains `com.valuepilot.app` /
 `ValuePilot Android`. See the canonical report for the exact cloud, build,
 privacy and remaining human-action evidence.
+
+## Current M12.5 Argentina acquisition reliability candidate
+
+Status: **PARTIAL — local implementation and regression gates are green; the
+production workflow/worker integration is not deployed or independently
+qualified.** Implementation commit: `68acf33` (`M12.5 harden Argentina
+acquisition recovery`), on this candidate branch. Do not treat this commit as
+active production configuration.
+
+The bounded implementation adds three-attempt metadata discovery with
+deterministic 0.5s / 1.0s retry delays for transient HTTP 408/425/429/500/502/
+503/504, timeouts and temporary connection failures; permanent/semantic errors
+are not blindly retried. Exhaustion is represented as
+`UPSTREAM_TEMPORARILY_UNAVAILABLE` while the trusted active release is within
+the explicit seven-Argentina-calendar-day freshness limit; approaching the
+limit is surfaced as an operator warning. An outage path reports zero active
+and canary pointer writes, no source substitution and no promotion.
+
+The daily controller explicitly uses `DISCOVERY_PLUS_RECOVERY`: each scheduled
+phase checks authoritative metadata, while a later phase may perform one
+bounded byte recheck after an unchanged-metadata primary result. Same-day source
+revisions require metadata-change evidence bound to the discovery response and
+archived source identity. Daily state reads bracket the payload with matching
+object generations; CAS retries preserve newer state; shadow results are
+monotonic so a late failure cannot downgrade a recorded success. Exact
+idempotent Cloud Workflow state-write conflicts are distinguished from real
+conflicts. SHADOW remains the only automatic build mode; no active/canary
+pointer operation was added.
+
+The Sep 22, 2026 external evidence was checked read-only. Official source ZIP:
+321,841,103 bytes, SHA-256
+`eaefeae3d9f2885a9e95558d936955be4f36e7cd2e69e4d4e064e3d44463b20d`.
+Candidate identity:
+`argentina-sepa-2026-09-22-eaefeae3d9f2885a-routing-v1-search-v2`, reserved as
+`github-35776323661-1`. Cloud Build
+`4eba2181-f40f-4fda-8639-0b183d3624b7` completed and persisted the immutable
+candidate archive. The surrounding workflow ended as `STATE_WRITE_FAILED`
+after a GCS 412 control-state conflict; this is not an activation result.
+Recorded safety evidence was zero active/canary pointer writes, SHADOW-only,
+and activation not executed. A later same-day acquisition run succeeded by
+reusing the existing result; a subsequent metadata HTTP 502 run occurred before
+the new retry/outage implementation was deployed.
+
+The currently trusted release remains
+`argentina-sepa-2026-09-18-619498b8e3230298-routing-v1-search-v2`, source SHA-256
+`619498b8e3230298b8a91f3df05ee7fe44e190a8f909e0e103cf43867fec73ee`. It was
+age 4 of the 7 allowed days on Sep 22, therefore `FRESH`; no date was extended
+and no new source was promoted.
+
+Production deployment is intentionally withheld. The deployed Google Workflow
+`valuepilot-argentina-release` in `us-east4` is still revision
+`000010-bf5` (updated Sep 21), and its source differs from the local M12.5
+definition. The Cloud Build source and worker image are separately pinned; the
+invoked `tools.argentina_release_handoff_worker` module is not present in this
+repository, so it is not yet proven that the pinned worker consumes the new
+same-day acquisition-evidence environment fields. Deploying before that
+integration is checked could waste a multi-hour candidate build or reject a
+legitimate same-day revision. No Cloud Workflow was deployed by this checkpoint.
+
+The acquisition tooling is now included in a focused Python CI workflow, and
+the full Android/release workflow path filters watch these M12.5 files too.
+Local verification on this checkpoint: 73 focused acquisition/workflow tests,
+296 tooling tests, 110 backend tests, Python compilation, YAML parsing, and
+`git diff --check` all passed. The required Android shared-core/app unit-test,
+debug lint and debug build gate passed (most tasks were up-to-date); APK
+inspection found the existing `INTERNET` and `CAMERA` permissions, no
+`ACCESS_NETWORK_STATE`, and one debug signer. GitHub exact-HEAD CI remains
+pending after push.
 
 ## Current M12.4A live Search foundation candidate
 
