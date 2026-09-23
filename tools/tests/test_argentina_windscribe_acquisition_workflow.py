@@ -41,6 +41,38 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
         self.assertIn("Explain temporary official metadata unavailability", text)
         self.assertIn("nearing its explicit freshness limit", text)
 
+    def test_upstream_outage_is_handled_only_when_active_freshness_is_safe(self) -> None:
+        text = WORKFLOW.read_text(encoding="utf-8")
+        preflight = text.index("Reuse today's immutable acquisition evidence without VPN")
+        resolution_start = text.index("      - id: resolution", preflight)
+        stop_start = text.index("      - name: Stop cleanly when no build is required", resolution_start)
+        resolution_gate = text[resolution_start:stop_start]
+        case_start = resolution_gate.index('case "${status}" in')
+        case_end = resolution_gate.index("esac", case_start)
+        accepted_statuses = resolution_gate[case_start:case_end]
+
+        self.assertIn("UPSTREAM_TEMPORARILY_UNAVAILABLE)", accepted_statuses)
+        self.assertIn("FRESHNESS_LIMIT_EXCEEDED|ACTIVE_RELEASE_UNVERIFIED)", accepted_statuses)
+        unsafe_state = accepted_statuses[
+            accepted_statuses.index("FRESHNESS_LIMIT_EXCEEDED|ACTIVE_RELEASE_UNVERIFIED)") :
+        ]
+        self.assertIn("exit 2", unsafe_state)
+        self.assertIn("if: steps.reserve.outputs.status == 'RESERVED'", text)
+
+        outage_report = text[
+            text.index("      - name: Explain temporary official metadata unavailability") :
+            text.index("      - name: Reuse today's immutable acquisition evidence without VPN")
+        ]
+        for diagnostic in (
+            "Active release unchanged",
+            "Trusted release:",
+            "Freshness policy:",
+            "Active/canary pointer writes:",
+            "Source substitutions:",
+        ):
+            with self.subTest(diagnostic=diagnostic):
+                self.assertIn(diagnostic, outage_report)
+
     def test_wireguard_source_acquisition_is_full_tunnel_and_fail_closed(self) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("WINDSCRIBE_WIREGUARD_CONFIG_B64", text)
