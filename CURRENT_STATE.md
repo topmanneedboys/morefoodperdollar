@@ -7,7 +7,7 @@ Branch: `candidate/argentina-live-search-m12-4`
 M12.4 candidate code HEAD: `2176ed8709c5b89ae4c529cfcfc186c982681e82`
 
 Latest M12.5 production integration on `main`:
-`dc84302d3d0049c5b7ac81216f1bbe762b68a705`
+`84584173e27f94ef7d6c1329e59f1183cb8da243`
 
 ## M12.4 / M12.5 checkpoint update — 2026-09-23
 
@@ -17,9 +17,10 @@ No phone was attached during this checkpoint. The locally signed 10104 and
 10105 bundles have not been uploaded to Google Play.
 Candidate HEAD `2176ed8` passed Android tests, lint, builds, privacy checks and
 the single-signer check in run `35828919495`; release-bundle/provenance jobs
-were skipped by their branch guards. The later status/documentation branch HEAD
-`780e3da` also passed Android and browser CI in run `35836331447`; its
-release-bundle/provenance jobs were skipped by the same branch guards.
+were skipped by their branch guards. The latest status/documentation branch
+HEAD `575f0989fd5bcb89c5471e087f442a39206dac03` passed exact-head Android and
+browser CI in run `35839211038`; release-bundle/provenance jobs were skipped
+by the same branch guards.
 
 10104 was signed with the same protected local Play-signing mechanism used for
 10103. The current-user DPAPI credential was consumed locally without a
@@ -36,9 +37,8 @@ has not been uploaded. Physical-device M12.4 validation remains outstanding.
 M12.5 is **PARTIAL — the production workflow definition is deployed and its
 fail-closed validation gates pass live smoke tests, but the next scheduled
 OIDC acquisition/recovery run has not yet qualified the end-to-end path**.
-M12.5 changes were integrated through PR #4, PR #5 and the outage-exit
-regression PR #6. `main` is at
-`dc84302d3d0049c5b7ac81216f1bbe762b68a705`.
+M12.5 changes were integrated through PRs #4–#8. `main` is at
+`84584173e27f94ef7d6c1329e59f1183cb8da243`.
 
 The deployed Google Workflow `valuepilot-argentina-release` in `us-east4` is
 ACTIVE at revision `000011-094`, with source SHA-256
@@ -73,7 +73,14 @@ object generations remain unchanged at `1789973690114545` and
 canary pointer exists in either runtime bucket. The Sep 22 shadow candidate's
 earlier GCS 412 remains historical evidence with zero active/canary writes.
 
-Final M12.5 verification: 79 local tooling tests passed. Exact-head GitHub CI
+Final M12.5 verification: 80 local tooling tests passed; the focused workflow
+regression suite passed 14 tests and `git diff --check` passed. PR #7 added a
+regression proving only an upstream outage with still-fresh, verified active
+release may be treated as handled; unsafe freshness remains a hard failure,
+and the build reservation remains gated on `SOURCE_READY`. PR #8 extends the
+run summary for unsafe freshness failures with the active release/freshness,
+candidate, reservation and write diagnostics while preserving the existing
+fail-closed outcome. Exact-head GitHub CI
 passed on PR #4 head `87d11bf8001558357585713016bd2f105314770d` (runs
 `35833958111`, `35833958234`, `35833964264`) and PR #5 head
 `d52b8946b1b17bdaee63e69a9f9573c7393e012b` (runs `35834966494`,
@@ -175,7 +182,8 @@ Status: **PARTIAL — the production workflow integration is deployed and its
 fail-closed gates pass live smoke tests; end-to-end scheduled OIDC acquisition
 and outage-recovery behavior still needs one scheduled run.** The bounded
 implementation commit `68acf33` originated on this candidate branch; production
-integration was merged separately to `main` at `03b4cee`.
+integration was merged separately to `main`, most recently at
+`84584173e27f94ef7d6c1329e59f1183cb8da243` (PR #8).
 
 The bounded implementation adds three-attempt metadata discovery with
 deterministic 0.5s / 1.0s retry delays for transient HTTP 408/425/429/500/502/
@@ -225,9 +233,10 @@ Production integration is now deployed. Google Workflow
 `000011-094`, updated Sep 23, with source SHA-256
 `b7d52f2876baeb88ae8766b88b239f89a7d2ece2a7915cc8e0481b2764258381`, matching
 the merged `main` source. The existing service account and `LOG_ERRORS_ONLY`
-call logging were preserved. Exact-source CI passed, including 78 local
-tooling regressions and a new expression-size guard; the actual Cloud Workflows
-service accepted the source after two over-limit expressions were split.
+call logging were preserved. Exact-source CI passed, including the later
+outage/freshness failure-summary regressions recorded in the checkpoint above;
+the actual Cloud Workflows service accepted the source after two over-limit
+expressions were split.
 
 Live execution checks `fcde61a5-3160-4480-91fb-d42c4c1bed06` and
 `5f80333a-7f20-41ff-adfc-66058905f404` both succeeded on revision `000011-094`
@@ -254,6 +263,16 @@ HEAD `35cc732a2671bc3d0cb771a90f9af77d864e6bb7`:
 - `35822853987` production backend native tests, Python regressions, container
   builds and health-boundary smoke.
 - `35822854003` merchant-feed qualification and regional tests.
+
+PR #7 head `4fae5147d5ebfc22072dc5bc71e60c8fc5ff5ec8` passed exact-head
+acquisition-control run `35840981247` and Android runs `35840981299` /
+`35840998252`, then merged as `72c40d8b55c857626ed421395ab792108b24c076`.
+PR #8 head `8fb99af345ca0b554975e85eb75bef9c53aef55d` passed exact-head
+acquisition-control run `35842021415` and Android runs `35842021352` /
+`35842038777`, then merged as `84584173e27f94ef7d6c1329e59f1183cb8da243`.
+The exact merged-main acquisition-control and Android test/debug-build runs
+`35842285077` and `35842285058` both passed. No APK artifact was uploaded by
+the ordinary push run.
 
 All four workflow runs concluded successfully for that earlier checkpoint; the
 later merged M12.5 integration is verified by the exact-head runs above.
