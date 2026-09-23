@@ -4,7 +4,8 @@ Updated: 2026-09-23
 
 Branch: `candidate/argentina-live-search-m12-4`
 
-M12.4 candidate code HEAD: `12b42984f45ec9dd2141c676fd36b3b70d39dcbb`
+M12.4 candidate code baseline before the current documentation-only follow-up:
+`c739346344c77fd00cb49809c8cc529e2893b66b`
 
 Latest M12.5 production integration on `main`:
 `84584173e27f94ef7d6c1329e59f1183cb8da243`
@@ -44,6 +45,17 @@ integration worktree passed all 80 tests. Exact-head GitHub CI for
 Android job `107138891858` and browser job `107138892324` succeeded; milestone
 provenance and release-bundle jobs were skipped by their candidate-branch
 guards. Routine artifact uploads were also skipped.
+
+The Windows signed-catalog byte-preservation follow-up at code commit
+`c739346344c77fd00cb49809c8cc529e2893b66b` adds a narrow `-text` attribute
+for signed offline-catalog assets and a regression test for that checkout
+boundary. Exact-head run `35852776932` passed Android verification job
+`107154117037` (tests, lint/build, privacy and single-signer checks) and browser
+job `107154117308`; offline-catalog snapshot run `35852776966` also passed at
+the same SHA. Candidate-only provenance and normal artifact upload jobs were
+skipped by their guards. Subsequent changes in this status/architecture
+follow-up are documentation-only and are not represented by those code-run
+results.
 
 A supplemental local run of the broader candidate `backend/tests` suite under
 CPython 3.14 was not clean: this machine lacks the pinned FastAPI/Boto3 test
@@ -976,10 +988,11 @@ GS1 Canada ECCnet inquiry was sent and acknowledged 2026-08-28; no substantive e
 
 The paragraph below records the pre-M12.3 offline checkpoint. M12.3 is the
 separately authorized exception recorded above: Android now intentionally has
-`INTERNET` for a bounded, App-Check-protected public edge foundation, while
-`ACCESS_NETWORK_STATE` remains absent. The current Home/Search UI still has no
-live wiring or background sync, and the app still has no account, telemetry,
-remote AI dependency, private-backend access, or server credential.
+`INTERNET` for a bounded, App-Check-protected public edge route, while
+`ACCESS_NETWORK_STATE` remains absent. M12.4B Search is explicitly
+user-triggered and identity-only; Home and the separate production Best Value
+surface remain offline/inactive. There is no background sync, account,
+telemetry, remote AI dependency, private-backend access, or server credential.
 
 Do not silently expand this boundary. Any future live-surface or server change
 requires an explicit milestone with privacy, security, offline and failure-mode

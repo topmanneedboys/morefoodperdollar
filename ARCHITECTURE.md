@@ -101,12 +101,15 @@ If accessibility text is incomplete, the user can request a screenshot from adva
 
 ## Privacy boundaries
 
-The browser has no network code. M12.3 adds a separate, HTTPS-only Android
-edge transport protected by Firebase App Check; it is not wired to Home/Search,
-does not contact private M11, and does not run background sync. The merged
-manifest intentionally includes INTERNET for that future user-triggered route
-but removes ACCESS_NETWORK_STATE and disables cleartext. There is no account,
-telemetry SDK, server credential, remote model, or cross-store backend in the
-Android client. Settings remain local; only newly visible cards scan
-automatically, while off-screen traversal, OCR, and any future edge request
-remain user initiated.
+The browser has no network code. M12.3 introduced a separate, HTTPS-only
+Android edge transport protected by Firebase App Check. M12.4B wires that
+transport only to explicit, user-triggered Argentina identity Search: it pins
+the active release through the public edge and shows identity suggestions, not
+prices, stock, availability or Best Value. It does not call private M11. Home
+and the separate production Best Value surface remain offline/inactive, and
+there is no background sync. The merged manifest intentionally includes
+INTERNET for this bounded route, removes ACCESS_NETWORK_STATE and disables
+cleartext. There is no account, telemetry SDK, server credential, remote model,
+or cross-store backend in the Android client. Settings remain local; only newly
+visible cards scan automatically, while off-screen traversal, OCR, and any
+future edge request remain user initiated.
