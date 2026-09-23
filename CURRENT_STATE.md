@@ -134,8 +134,19 @@ Local verification on this checkpoint: 73 focused acquisition/workflow tests,
 `git diff --check` all passed. The required Android shared-core/app unit-test,
 debug lint and debug build gate passed (most tasks were up-to-date); APK
 inspection found the existing `INTERNET` and `CAMERA` permissions, no
-`ACCESS_NETWORK_STATE`, and one debug signer. GitHub exact-HEAD CI remains
-pending after push.
+`ACCESS_NETWORK_STATE`, and one debug signer. GitHub checks passed on exact code
+HEAD `35cc732a2671bc3d0cb771a90f9af77d864e6bb7`:
+
+- `35822854005` Android shared-core/app tests, debug lint/build, privacy and
+  single-signer checks; browser verification passed. The candidate branch's
+  release-bundle/provenance jobs were skipped by their branch guards.
+- `35822854045` acquisition-control regressions.
+- `35822853987` production backend native tests, Python regressions, container
+  builds and health-boundary smoke.
+- `35822854003` merchant-feed qualification and regional tests.
+
+All four workflow runs concluded successfully. The later status-only commit does
+not change those tested source files.
 
 ## Current M12.4A live Search foundation candidate
 
