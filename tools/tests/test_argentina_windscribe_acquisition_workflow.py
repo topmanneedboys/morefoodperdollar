@@ -95,6 +95,7 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
         self.assertIn("gcloud workflows execute", text)
         self.assertNotIn("gcloud workflows run", text)
         self.assertIn("The GitHub runner will not wait for the multi-hour Cloud Build", text)
+        self.assertIn('"upstreamChangeEvidence": preflight.get("upstreamChangeEvidence")', text)
 
     def test_cloud_workflow_reconciles_only_an_exact_idempotent_state_write_conflict(self) -> None:
         text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
@@ -115,6 +116,21 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
         self.assertIn("VALUEPILOT_UPSTREAM_CHANGE_EVIDENCE_JSON", text)
         self.assertIn("VERIFIED_METADATA_CHANGE_EVIDENCE_REQUIRED", text)
         self.assertIn("VALUEPILOT_UPSTREAM_CHANGED", text)
+
+    def test_cloud_workflow_materializes_worker_contract_evidence_file(self) -> None:
+        text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+        for evidence_field in (
+            "changed",
+            "resourceId",
+            "previousDiscoveryResponseSha256",
+            "currentDiscoveryResponseSha256",
+        ):
+            self.assertIn(f'"{evidence_field}"', text)
+        self.assertIn("/tmp/valuepilot-upstream-change-evidence.json", text)
+        self.assertIn("payload = evidence if evidence is not None else {}", text)
+        self.assertNotIn('"upstreamChangeEvidence": evidence', text)
+        self.assertIn('"--upstream-change-evidence=/tmp/valuepilot-upstream-change-evidence.json"', text)
+        self.assertIn("UNEXPECTED_METADATA_CHANGE_EVIDENCE", text)
 
     def test_full_android_ci_triggers_for_acquisition_milestone_changes(self) -> None:
         text = BUILD_WORKFLOW.read_text(encoding="utf-8")

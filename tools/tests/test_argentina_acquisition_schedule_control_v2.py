@@ -14,6 +14,7 @@ from tools.argentina_acquisition_schedule_control_v2 import (
     CHECK_PHASE_METADATA_ONLY,
     CHECK_PHASE_PRIMARY,
     LATE_RECHECK_PREFIX,
+    AcquisitionScheduleError,
     finalize_download_observation,
     metadata_change_evidence,
     preflight_observation,
@@ -305,23 +306,55 @@ class ArgentinaAcquisitionScheduleControlV2Tests(unittest.TestCase):
         self.assertEqual(repeated["dailyObservationKey"], first_late["dailyObservationKey"])
 
     def test_metadata_change_evidence_requires_a_distinct_fingerprint(self) -> None:
-        prior = {"metadataFingerprint": "a" * 64}
+        prior = {
+            "metadataFingerprint": "a" * 64,
+            "catalogResponseSha256": "c" * 64,
+        }
         unchanged = metadata_change_evidence(
             metadata_fingerprint="a" * 64,
             catalog_response_sha256="c" * 64,
+            resource_id="resource-martes",
             same_day_state=prior,
         )
         changed = metadata_change_evidence(
             metadata_fingerprint="b" * 64,
             catalog_response_sha256="d" * 64,
+            resource_id="resource-miercoles",
             same_day_state=prior,
         )
         self.assertFalse(unchanged["upstreamChanged"])
+        self.assertEqual(unchanged["metadataChangeEvidenceStatus"], "UNCHANGED")
         self.assertIsNone(unchanged["upstreamChangeEvidence"])
         self.assertTrue(changed["upstreamChanged"])
+        self.assertEqual(changed["metadataChangeEvidenceStatus"], "CHANGE_PROVEN")
+        self.assertTrue(changed["upstreamChangeEvidence"]["changed"])
+        self.assertEqual(changed["upstreamChangeEvidence"]["resourceId"], "resource-miercoles")
+        self.assertEqual(changed["upstreamChangeEvidence"]["previousDiscoveryResponseSha256"], "c" * 64)
+        self.assertEqual(changed["upstreamChangeEvidence"]["currentDiscoveryResponseSha256"], "d" * 64)
         self.assertEqual(changed["upstreamChangeEvidence"]["previousMetadataFingerprint"], "a" * 64)
         self.assertEqual(changed["upstreamChangeEvidence"]["currentMetadataFingerprint"], "b" * 64)
         self.assertEqual(changed["upstreamChangeEvidence"]["catalogResponseSha256"], "d" * 64)
+
+    def test_metadata_change_without_prior_response_digest_fails_closed(self) -> None:
+        result = metadata_change_evidence(
+            metadata_fingerprint="b" * 64,
+            catalog_response_sha256="d" * 64,
+            resource_id="resource-miercoles",
+            same_day_state={"metadataFingerprint": "a" * 64},
+        )
+        self.assertFalse(result["upstreamChanged"])
+        self.assertEqual(result["metadataChangeEvidenceStatus"], "CHANGE_UNPROVEN_PREVIOUS_RESPONSE_MISSING")
+        self.assertIsNone(result["upstreamChangeEvidence"])
+
+    def test_metadata_change_with_same_discovery_digest_is_a_state_invariant_failure(self) -> None:
+        with self.assertRaises(AcquisitionScheduleError) as caught:
+            metadata_change_evidence(
+                metadata_fingerprint="b" * 64,
+                catalog_response_sha256="c" * 64,
+                resource_id="resource-miercoles",
+                same_day_state={"metadataFingerprint": "a" * 64, "catalogResponseSha256": "c" * 64},
+            )
+        self.assertEqual(caught.exception.code, "INVALID_CONTROL_STATE")
 
     def test_metadata_outage_reports_explicit_freshness_without_mutation(self) -> None:
         error = AcquisitionError(

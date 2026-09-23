@@ -722,19 +722,60 @@ def metadata_change_evidence(
     *,
     metadata_fingerprint: str,
     catalog_response_sha256: str,
+    resource_id: str | None,
     same_day_state: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     current = _base._sha(metadata_fingerprint, field="metadata fingerprint")
     response = _base._sha(catalog_response_sha256, field="catalog response SHA-256")
     previous = same_day_state.get("metadataFingerprint") if isinstance(same_day_state, Mapping) else None
     if previous is None:
-        return {"upstreamChanged": False, "upstreamChangeEvidence": None}
+        return {
+            "upstreamChanged": False,
+            "metadataChangeEvidenceStatus": "NO_PRIOR_DISCOVERY",
+            "upstreamChangeEvidence": None,
+        }
     previous = _base._sha(previous, field="previous metadata fingerprint")
     if previous == current:
-        return {"upstreamChanged": False, "upstreamChangeEvidence": None}
+        return {
+            "upstreamChanged": False,
+            "metadataChangeEvidenceStatus": "UNCHANGED",
+            "upstreamChangeEvidence": None,
+        }
+
+    previous_response_value = same_day_state.get("catalogResponseSha256") if isinstance(same_day_state, Mapping) else None
+    if previous_response_value is None:
+        # Older daily-state records may not contain a response digest.  A
+        # changed fingerprint without that raw-response anchor is not enough
+        # to authorize a same-day source revision; wait for a complete pair of
+        # discovery observations rather than substituting another identifier.
+        return {
+            "upstreamChanged": False,
+            "metadataChangeEvidenceStatus": "CHANGE_UNPROVEN_PREVIOUS_RESPONSE_MISSING",
+            "upstreamChangeEvidence": None,
+        }
+    previous_response = _base._sha(previous_response_value, field="previous catalog response SHA-256")
+    if previous_response == response:
+        raise AcquisitionScheduleError(
+            "metadata fingerprint changed while the catalog response hash stayed identical",
+            code="INVALID_CONTROL_STATE",
+        )
+    if not isinstance(resource_id, str) or not resource_id.strip() or len(resource_id) > 256:
+        return {
+            "upstreamChanged": False,
+            "metadataChangeEvidenceStatus": "CHANGE_UNPROVEN_RESOURCE_ID_INVALID",
+            "upstreamChangeEvidence": None,
+        }
     return {
         "upstreamChanged": True,
+        "metadataChangeEvidenceStatus": "CHANGE_PROVEN",
         "upstreamChangeEvidence": {
+            # These four fields match the pinned release worker's
+            # --upstream-change-evidence contract.  The metadata fingerprints
+            # remain as additional auditable producer-side evidence.
+            "changed": True,
+            "resourceId": resource_id,
+            "previousDiscoveryResponseSha256": previous_response,
+            "currentDiscoveryResponseSha256": response,
             "previousMetadataFingerprint": previous,
             "currentMetadataFingerprint": current,
             "catalogResponseSha256": response,
@@ -832,6 +873,12 @@ def _main(argv: Sequence[str] | None = None) -> int:
                 metadata_change_evidence(
                     metadata_fingerprint=str(result["metadataFingerprint"]),
                     catalog_response_sha256=discovery.response_sha256,
+                    resource_id=(
+                        result.get("metadataIdentity", {}).get("resource", {}).get("resourceId")
+                        if isinstance(result.get("metadataIdentity"), Mapping)
+                        and isinstance(result.get("metadataIdentity", {}).get("resource"), Mapping)
+                        else None
+                    ),
                     same_day_state=same_day_state,
                 )
             )

@@ -54,10 +54,16 @@ main:
               reason: CURRENT_TRUSTED_SOURCE_IDENTITY_REQUIRED
               cloudBuildStarted: false
               activePointerWrites: 0
-          - condition: ${upstream_changed and (upstream_change_evidence == null or map.get(upstream_change_evidence, "previousMetadataFingerprint") == null or map.get(upstream_change_evidence, "currentMetadataFingerprint") == null or map.get(upstream_change_evidence, "catalogResponseSha256") == null or map.get(upstream_change_evidence, "previousMetadataFingerprint") == map.get(upstream_change_evidence, "currentMetadataFingerprint"))}
+          - condition: ${upstream_changed and (upstream_change_evidence == null or map.get(upstream_change_evidence, "changed") != true or map.get(upstream_change_evidence, "resourceId") == null or map.get(upstream_change_evidence, "resourceId") == "" or map.get(upstream_change_evidence, "previousDiscoveryResponseSha256") == null or map.get(upstream_change_evidence, "currentDiscoveryResponseSha256") == null or map.get(upstream_change_evidence, "currentDiscoveryResponseSha256") != map.get(upstream_change_evidence, "catalogResponseSha256") or map.get(upstream_change_evidence, "previousDiscoveryResponseSha256") == map.get(upstream_change_evidence, "currentDiscoveryResponseSha256") or map.get(upstream_change_evidence, "previousMetadataFingerprint") == null or map.get(upstream_change_evidence, "currentMetadataFingerprint") == null or map.get(upstream_change_evidence, "previousMetadataFingerprint") == map.get(upstream_change_evidence, "currentMetadataFingerprint"))}
             return:
               status: INVALID_HANDOFF
               reason: VERIFIED_METADATA_CHANGE_EVIDENCE_REQUIRED
+              cloudBuildStarted: false
+              activePointerWrites: 0
+          - condition: ${upstream_changed == false and upstream_change_evidence != null}
+            return:
+              status: INVALID_HANDOFF
+              reason: UNEXPECTED_METADATA_CHANGE_EVIDENCE
               cloudBuildStarted: false
               activePointerWrites: 0
 
@@ -253,6 +259,41 @@ main:
                       if [ "$?" -ne 0 ]; then
                         exit 70
                       fi
+                      python - <<'PY'
+                      import json
+                      import os
+                      from pathlib import Path
+
+                      raw = os.environ.get("VALUEPILOT_UPSTREAM_CHANGE_EVIDENCE_JSON", "null")
+                      try:
+                          evidence = json.loads(raw)
+                      except (TypeError, json.JSONDecodeError) as exc:
+                          raise SystemExit("upstream-change evidence JSON is invalid") from exc
+                      if evidence is not None and not isinstance(evidence, dict):
+                          raise SystemExit("upstream-change evidence must be a JSON object or null")
+                      if evidence is not None:
+                          required = {
+                              "changed",
+                              "resourceId",
+                              "previousDiscoveryResponseSha256",
+                              "currentDiscoveryResponseSha256",
+                          }
+                          if not required.issubset(evidence) or evidence.get("changed") is not True:
+                              raise SystemExit("upstream-change evidence does not satisfy the worker contract")
+                      # The pinned release worker reads the file as the
+                      # evidence mapping itself, not as a nested wrapper.
+                      # An empty mapping is safe when change evidence is
+                      # absent and the worker's upstreamChanged flag is false.
+                      payload = evidence if evidence is not None else {}
+                      path = Path("/tmp/valuepilot-upstream-change-evidence.json")
+                      path.write_text(
+                          json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n",
+                          encoding="utf-8",
+                      )
+                      PY
+                      if [ "$?" -ne 0 ]; then
+                        exit 71
+                      fi
                       python "$@"
                       worker_rc=$?
                       if [ "$worker_rc" -ne 0 ]; then
@@ -327,6 +368,7 @@ main:
                     - '${"--promotion-us-smoke-url=" + default(map.get(args, "promotionUsSmokeUrl"), "")}'
                     - '${"--promotion-sa-smoke-url=" + default(map.get(args, "promotionSaSmokeUrl"), "")}'
                     - '${"--promotion-r2-smoke-url=" + default(map.get(args, "promotionR2SmokeUrl"), "")}'
+                    - "--upstream-change-evidence=/tmp/valuepilot-upstream-change-evidence.json"
                   env:
                     - "PYTHONUNBUFFERED=1"
                     - '${"BUILDER_IMAGE=" + args.workerImage}'
