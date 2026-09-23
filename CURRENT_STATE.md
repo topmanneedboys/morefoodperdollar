@@ -1,8 +1,11 @@
 # Current state
 
-Updated: 2026-09-23
+Updated: 2026-09-23 11:46 UTC
 
 Branch: `candidate/argentina-live-search-m12-4`
+
+Candidate branch HEAD before this status update:
+`1cc78376fe73e998d7f942fc537590d58c7aab53`
 
 M12.4 candidate code baseline before the current documentation-only follow-up:
 `c739346344c77fd00cb49809c8cc529e2893b66b`
@@ -117,12 +120,11 @@ metadata-change evidence. Both completed successfully before discovery or
 Cloud Build, reporting `cloudBuildStarted=false` and `activePointerWrites=0`.
 These prove deployment parsing and early fail-closed gates only; they are not
 evidence of a scheduled OIDC download, outage retry, or full candidate build.
-No such potentially expensive acquisition was manually triggered. As of
-2026-09-23 11:07 UTC, the next scheduled 13:30 ART acquisition had not yet
-occurred. The later
-Sep 22 scheduled run `35795809367` exhausted official metadata discovery on
-HTTP 502 and failed during preflight before VPN, download, or Cloud Build; it
-ran pre-integration code at `9dd3f01`. PR #6 adds an offline CLI regression
+No national acquisition was manually triggered. As of 2026-09-23 11:46 UTC,
+the next scheduled 13:30 ART / 16:30 UTC acquisition had not yet occurred.
+The Sep 22 scheduled run `35795809367` exhausted official metadata discovery
+on HTTP 502 and failed during preflight before VPN, download, or Cloud Build;
+it ran pre-integration code at `9dd3f01`. PR #6 adds an offline CLI regression
 proving three exhausted 502 attempts return a handled outage report and exit
 successfully, while preserving any reserved same-day candidate and reporting
 zero pointer writes, zero source substitution, and no promotion. The first
@@ -130,11 +132,12 @@ scheduled run using the merged retry/outage behavior has not yet occurred.
 
 The active release remains
 `argentina-sepa-2026-09-18-619498b8e3230298-routing-v1-search-v2`, age 5 of the
-seven-Argentina-calendar-day limit and fresh on Sep 23. Both regional active pointer
-object generations remain unchanged at `1789973690114545` and
-`1789973692306062`; both still name Sep 18 as active and last-known-good. No
-canary pointer exists in either runtime bucket. The Sep 22 shadow candidate's
-earlier GCS 412 remains historical evidence with zero active/canary writes.
+seven-Argentina-calendar-day limit and fresh on Sep 23. At the last direct
+pointer-generation read (11:07 UTC), both regional generations were
+`1789973690114545` and `1789973692306062`, both naming Sep 18 as active and
+last-known-good. The Sep 22 build and later fail-closed workflow checks all
+report zero active/canary writes; no Sep 23 scheduled acquisition has begun by
+11:46 UTC. No canary pointer exists in either runtime bucket.
 
 Final M12.5 verification: 80 local tooling tests passed; the focused workflow
 regression suite passed 14 tests and `git diff --check` passed. PR #7 added a
@@ -269,22 +272,50 @@ idempotent Cloud Workflow state-write conflicts are distinguished from real
 conflicts. SHADOW remains the only automatic build mode; no active/canary
 pointer operation was added.
 
-The Sep 22, 2026 external evidence was checked read-only. Official source ZIP:
-321,841,103 bytes, SHA-256
-`eaefeae3d9f2885a9e95558d936955be4f36e7cd2e69e4d4e064e3d44463b20d`.
-Candidate identity:
+The Sep 22, 2026 scheduled acquisition was verified read-only from GitHub and
+GCP evidence. Primary run `35776323661` (19:50Z, pre-integration GitHub SHA
+`9dd3f01dd547fa0cfcff4f316835045fd670d649`) downloaded the official Precios
+Claros `Martes` ZIP: 321,841,103 bytes, SHA-256
+`eaefeae3d9f2885a9e95558d936955be4f36e7cd2e69e4d4e064e3d44463b20d`. The
+official metadata description and `lastModified` still said 2026-06-30, but
+the acquired ZIP's internal dated package paths proved 2026-09-22; the
+candidate release date is based on that internal evidence, not the stale CKAN
+hint. The exact source archive manifest records `rawProviderDataCommitted=false`
+and `runtimePublicationAllowed=false`. The local Downloads
+`sepa_martes.zip` is a different 2026-09-08 file (325,118,492 bytes) and was
+not used for this Sep 22 verification.
+
+The candidate identity is
 `argentina-sepa-2026-09-22-eaefeae3d9f2885a-routing-v1-search-v2`, reserved as
-`github-35776323661-1`. Cloud Build
-`4eba2181-f40f-4fda-8639-0b183d3624b7` completed and persisted the immutable
-candidate archive (1,163 objects; 889,653,903 bytes: 1,159 new and 4 reused).
-The candidate manifest says `completionState=COMPLETE` and
-`qualificationStatus=QUALIFIED`, but `automatedOfficialAcquisitionProven=false`.
-The surrounding workflow ended as `STATE_WRITE_FAILED` after a GCS 412
-control-state conflict; its explicit result is `SHADOW_ONLY`,
-`activation=NOT_EXECUTED`, with zero active/canary writes. It is not an
-activation or promotion-eligibility result. A later same-day acquisition run
-reused the existing reservation without starting another heavy build; the
-subsequent HTTP 502 was observed on the pre-integration workflow revision.
+`github-35776323661-1`. Later same-day run `35787122024` (21:31Z) rediscovered
+the same metadata fingerprint and source hash, returned `SOURCE_READY` and
+`ALREADY_RESERVED`, and did not start a duplicate Cloud Workflow while the
+first build was still running. The single Cloud Workflow execution was
+`12d9c499-1508-44c3-81e4-e399e60cb3b8`, on old revision `000010-bf5`; its
+Cloud Build `4eba2181-f40f-4fda-8639-0b183d3624b7` completed `SUCCESS` at
+2026-09-23 00:07:59Z. The worker summary was `CANDIDATE_VERIFIED`, and the
+release manifest records `completionState=COMPLETE`,
+`qualificationStatus=QUALIFIED`, source date/hash as above, and
+`automatedOfficialAcquisitionProven=false`. The immutable candidate archive
+receipt is `PERSISTED`: 1,163 objects, 889,425,844 object bytes (889,653,903
+total bytes), 1,159 new immutable objects and 4 reused. The candidate manifest
+sidecar SHA-256 `c99b519c034be83db961714d16b3cc214dc19bb7c6f34813697144c62e26de3e`
+was independently checked against its full manifest bytes.
+
+After the successful build, old workflow revision `000010-bf5` failed its
+conditional workflow-discovery-state write with GCS HTTP 412
+(`STATE_WRITE_FAILED`). This was state bookkeeping after candidate validation,
+not a failed Cloud Build: promotion remained `SHADOW_ONLY`, activation was
+`NOT_EXECUTED`, and active/canary pointer writes were both zero. The subsequent
+pre-integration scheduled run `35795809367` (23:06Z) exhausted official
+metadata discovery on HTTP 502 before VPN, download or Cloud Build. Current
+revision `000011-094` was deployed at 2026-09-23 08:06Z with the exact-match
+412 reconciliation: it rereads the state generation, returns
+`ALREADY_RECORDED` only for the same verified candidate identity, and reports
+unverifiable or different state explicitly. Its live source hash matches the
+merged `main` workflow. The first scheduled acquisition using the merged retry
+and recovery behavior is still pending; no national acquisition was manually
+triggered.
 
 The currently trusted release remains
 `argentina-sepa-2026-09-18-619498b8e3230298-routing-v1-search-v2`, source SHA-256
