@@ -1,8 +1,10 @@
 # Current state
 
-Updated: 2026-09-24 03:47 UTC
+Updated: 2026-09-24 20:50 UTC
 
-Branch: `candidate/argentina-live-search-m12-4`
+Branch: `fix/argentina-live-search-response-contract`
+
+Current HEAD: `e821b8099fea9d1288065b5a7f8cfc7f83f2763e`
 
 ## M12.4 live Search repair — 2026-09-24
 

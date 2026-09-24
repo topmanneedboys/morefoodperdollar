@@ -212,7 +212,7 @@ Play upload or production Android UI qualification.
 
 ## Remaining bounded actions
 
-1. Upload the already verified signed 10103 bundle through the normal protected
+1. Upload the already verified signed 10107 bundle through the normal protected
    Play Console internal-track process; do not upload an unverified copy.
 2. Install that signed bundle through Google Play and perform the explicit
    CABA identity-search smoke. Only then can this status advance to device
