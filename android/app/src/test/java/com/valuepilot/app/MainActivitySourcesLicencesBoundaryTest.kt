@@ -47,12 +47,18 @@ class MainActivitySourcesLicencesBoundaryTest {
             "ODbL-1.0",
             "offline search only",
             "not live retailer offers",
-            "fictional demo data",
+            "fictional sample data",
+            "Search cards are source-attributed product identity suggestions only",
             "authorized current-offer feed",
             "No flyer content is copied here"
         ).forEach { required ->
             assertTrue("Expected truthful disclosure copy: $required", strings.contains(required))
         }
+
+        assertFalse(
+            "Search identity results must not be described as fictional demo cards",
+            strings.contains("Home and Search cards are clearly labelled fictional")
+        )
 
         listOf(
             "PracticalShoppingPlanner",

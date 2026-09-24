@@ -30,6 +30,8 @@ class PracticalShoppingDataStatusPresentationTest {
         assertTrue(presentation.connectivity.contains("bounded HTTPS edge foundation"))
         assertTrue(presentation.connectivity.contains("ACCESS_NETWORK_STATE remains absent"))
         assertTrue(presentation.demoData.contains("fictional"))
+        assertTrue(presentation.demoData.contains("Search identity suggestions are source-attributed"))
+        assertTrue(presentation.demoData.contains("do not provide current prices"))
         assertTrue(presentation.message.contains("Unknown prices stay unknown"))
     }
 

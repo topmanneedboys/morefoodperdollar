@@ -87,7 +87,7 @@ internal data class PracticalShoppingDataStatusPresentation(
                 connectivity =
                     "Offline-first core: the app has a bounded HTTPS edge foundation for a later user-triggered route, but no background sync or private-backend access. ACCESS_NETWORK_STATE remains absent.",
                 demoData =
-                    "Home and Search planner examples are clearly fictional sample data, not local retailer results."
+                    "Home planner examples are clearly fictional sample data, not local retailer results. Search identity suggestions are source-attributed and do not provide current prices, stock, availability or Best Value decisions."
             )
         }
 
