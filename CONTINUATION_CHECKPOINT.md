@@ -4,7 +4,27 @@ Updated: 2026-09-23
 
 Branch: `candidate/argentina-live-search-m12-4`
 
-## Latest continuation checkpoint — 2026-09-23
+## Latest continuation checkpoint — 2026-09-24
+
+The immutable daily acquisition-state repair is prepared but not merged. PR #9
+(`fix/argentina-immutable-acquisition-state`) is open at
+`5ea105ab84c25d8784ad40a6f874ad97b4737f29`; acquisition-control and both
+Android PR checks are green, and the complete checked-in tooling discovery
+passes 86 tests. The repair uses a bounded append-only event journal below
+`acquisition/daily-state-events/<day>/`, reads legacy v1 state, and never needs
+archive-object overwrite/delete permission. It also rechecks an event with a
+bounded `head()` when a provider listing omits its size.
+
+The verified Sep 23 failure was a create-only archive-object replacement
+attempt, not an unproven race. Sep 22 remains a separate HTTP 412 after a
+SHADOW build; deployed workflow revision `000011-094` already reconciles only
+an exact candidate/source/metadata/promotion identity. No production workflow
+deployment, national acquisition, IAM change, pointer write, or Play upload
+has occurred. M12.5 remains partial pending PR review/merge and one normal
+scheduled OIDC run. M12.4 remains partial pending the Motorola Edge 2025
+Play-installed Search smoke.
+
+### Prior continuation checkpoint — 2026-09-23
 
 M12.4 candidate code HEAD before this documentation update is
 `2176ed8709c5b89ae4c529cfcfc186c982681e82`. Its visible Search implementation
