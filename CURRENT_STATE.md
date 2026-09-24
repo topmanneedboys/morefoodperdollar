@@ -36,19 +36,20 @@ promotion identity; mismatches return `STATE_WRITE_CONFLICT` with pointer
 writes preserved at zero. The new fix does not weaken that boundary.
 
 The isolated fix branch `fix/argentina-immutable-acquisition-state` is frozen
-at `b6f13b77e7398b664fd1d528f86d7c8972772c7c` with PR
+at `5ea105ab84c25d8784ad40a6f874ad97b4737f29` with PR
 [topmanneedboys/morefoodperdollar#9](https://github.com/topmanneedboys/morefoodperdollar/pull/9).
 It replaces same-day state replacement with a bounded append-only immutable
 event journal under `acquisition/daily-state-events/<day>/`, keeps legacy v1
 state readable, adds bounded immediate-prefix listing to all object-store
-adapters, and retains fail-closed status/identity conflict handling. It does
-not change Android, active/canary pointers, IAM, raw data, or the deployed
-Cloud Workflow.
+adapters, rechecks event size when a provider listing is partial, and retains
+fail-closed status/identity conflict handling. It does not change Android,
+active/canary pointers, IAM, raw data, or the deployed Cloud Workflow.
 
-Exact PR checks are green: acquisition-control run `35952209747`, Android
-build runs `35952209838` and `35952223223`. The complete checked-in tooling
-discovery on the fix branch passed 85 tests. No national acquisition, Cloud
-Workflow deployment, pointer write, or Play upload was triggered. M12.5 is
+Exact PR checks for the current commit are green: acquisition-control run
+`35952625920`, Android build runs `35952625984` and `35952628699`. The complete
+checked-in tooling discovery on the fix branch passed 86 tests. No national
+acquisition, Cloud Workflow deployment, pointer write, or Play upload was
+triggered. M12.5 is
 still **PARTIAL** until PR #9 is reviewed/merged and one normal scheduled OIDC
 run proves the event-journal receipt, candidate/SHADOW result, and zero active/
 canary pointer writes. M12.4 remains **PARTIAL** for the Motorola Edge 2025
