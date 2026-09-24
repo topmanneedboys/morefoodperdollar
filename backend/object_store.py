@@ -23,6 +23,10 @@ class ObjectStoreError(RuntimeError):
     """A storage operation failed closed."""
 
 
+class ObjectStoreLimitExceeded(ObjectStoreError):
+    """A bounded object-store listing exceeded its declared safety limit."""
+
+
 @dataclass(frozen=True)
 class ObjectMetadata:
     key: str
@@ -38,6 +42,7 @@ class ObjectStore(Protocol):
     def stream(self, key: str, *, chunk_size: int = 1024 * 1024) -> Iterator[bytes]: ...
     def get_range(self, key: str, offset: int, length: int) -> bytes: ...
     def exists(self, key: str) -> bool: ...
+    def list_immediate(self, prefix: str, *, max_results: int) -> tuple[ObjectMetadata, ...]: ...
     def put_immutable(self, key: str, data: bytes, *, sha256: str | None = None) -> ObjectMetadata: ...
     def put_immutable_file(self, key: str, source: Path | str, *, sha256: str | None = None) -> ObjectMetadata: ...
     def compare_and_swap(self, key: str, data: bytes, *, expected_etag: str | None) -> ObjectMetadata: ...
@@ -52,6 +57,25 @@ def validate_key(key: str) -> str:
     if any(part in {"", ".", ".."} for part in parts):
         raise ObjectStoreError("object key is invalid")
     return key
+
+
+def validate_prefix(prefix: str) -> str:
+    """Validate a bounded directory-like object prefix."""
+
+    if not isinstance(prefix, str) or not prefix or len(prefix) > 1024 or not prefix.endswith("/"):
+        raise ObjectStoreError("object prefix is invalid")
+    if "\\" in prefix or prefix.startswith("/") or "\x00" in prefix:
+        raise ObjectStoreError("object prefix is invalid")
+    parts = prefix[:-1].split("/")
+    if any(part in {"", ".", ".."} for part in parts):
+        raise ObjectStoreError("object prefix is invalid")
+    return prefix
+
+
+def _validate_list_bound(max_results: int) -> int:
+    if not isinstance(max_results, int) or not 1 <= max_results <= 10_000:
+        raise ObjectStoreError("object listing bound is invalid")
+    return max_results
 
 
 def _sha256(data: bytes) -> str:
@@ -164,6 +188,30 @@ class LocalFilesystemObjectStore:
 
     def exists(self, key: str) -> bool:
         return self._path(key).is_file()
+
+    def list_immediate(self, prefix: str, *, max_results: int) -> tuple[ObjectMetadata, ...]:
+        prefix = validate_prefix(prefix)
+        max_results = _validate_list_bound(max_results)
+        directory = self._path(prefix.rstrip("/"))
+        try:
+            if not directory.exists():
+                return ()
+            if not directory.is_dir():
+                raise ObjectStoreError("object prefix is not a directory")
+            entries = sorted(os.scandir(directory), key=lambda entry: entry.name)
+            if any(entry.is_dir() for entry in entries):
+                raise ObjectStoreLimitExceeded("object prefix contains nested keys")
+            files = [entry for entry in entries if entry.is_file()]
+            if len(files) > max_results:
+                raise ObjectStoreLimitExceeded("object listing exceeds bound")
+            return tuple(
+                self._metadata(f"{prefix}{entry.name}", Path(entry.path))
+                for entry in files
+            )
+        except ObjectStoreError:
+            raise
+        except OSError as exc:
+            raise ObjectStoreError("object listing unavailable") from exc
 
     def put_immutable(self, key: str, data: bytes, *, sha256: str | None = None) -> ObjectMetadata:
         if not isinstance(data, bytes):
@@ -360,6 +408,40 @@ class S3CompatibleObjectStore:
             return True
         except ObjectStoreError:
             return False
+
+    def list_immediate(self, prefix: str, *, max_results: int) -> tuple[ObjectMetadata, ...]:
+        prefix = validate_prefix(prefix)
+        max_results = _validate_list_bound(max_results)
+        try:
+            response = self.client.list_objects_v2(
+                Bucket=self.bucket,
+                Prefix=prefix,
+                MaxKeys=max_results + 1,
+                Delimiter="/",
+            )
+        except Exception as exc:  # noqa: BLE001 - normalize provider errors
+            raise ObjectStoreError("object listing unavailable") from exc
+        if response.get("CommonPrefixes"):
+            raise ObjectStoreLimitExceeded("object prefix contains nested keys")
+        contents = list(response.get("Contents") or [])
+        if response.get("IsTruncated") or len(contents) > max_results:
+            raise ObjectStoreLimitExceeded("object listing exceeds bound")
+        result: list[ObjectMetadata] = []
+        for item in contents:
+            key = str(item.get("Key", ""))
+            relative = key.removeprefix(prefix)
+            if not relative or "/" in relative:
+                raise ObjectStoreLimitExceeded("object prefix contains nested keys")
+            result.append(
+                ObjectMetadata(
+                    key,
+                    int(item.get("Size", -1)),
+                    str(item.get("ETag", "")).strip('"'),
+                    None,
+                    (),
+                )
+            )
+        return tuple(sorted(result, key=lambda item: item.key))
 
     def put_immutable(self, key: str, data: bytes, *, sha256: str | None = None) -> ObjectMetadata:
         key = validate_key(key)
@@ -627,6 +709,36 @@ class GCSObjectStore:
         except Exception as exc:  # noqa: BLE001
             raise ObjectStoreError("object existence is unavailable") from exc
 
+    def list_immediate(self, prefix: str, *, max_results: int) -> tuple[ObjectMetadata, ...]:
+        prefix = validate_prefix(prefix)
+        max_results = _validate_list_bound(max_results)
+        try:
+            blobs = self._bucket.list_blobs(prefix=prefix, max_results=max_results + 1)
+            result: list[ObjectMetadata] = []
+            for blob in blobs:
+                key = str(getattr(blob, "name", ""))
+                relative = key.removeprefix(prefix)
+                if not relative or "/" in relative:
+                    raise ObjectStoreLimitExceeded("object prefix contains nested keys")
+                result.append(
+                    ObjectMetadata(
+                        key,
+                        int(getattr(blob, "size", -1) or 0),
+                        self._generation(blob),
+                        None,
+                        (),
+                    )
+                )
+                if len(result) > max_results:
+                    raise ObjectStoreLimitExceeded("object listing exceeds bound")
+            return tuple(sorted(result, key=lambda item: item.key))
+        except ObjectStoreLimitExceeded:
+            raise
+        except ObjectStoreError:
+            raise
+        except Exception as exc:  # noqa: BLE001 - normalize provider errors
+            raise ObjectStoreError("object listing unavailable") from exc
+
     def _verified_existing(self, key: str, *, data: bytes, digest: str) -> ObjectMetadata | None:
         if not self.exists(key):
             return None
@@ -762,6 +874,9 @@ class ReadOnlyObjectStore:
     def exists(self, key: str) -> bool:
         return self._store.exists(key)
 
+    def list_immediate(self, prefix: str, *, max_results: int) -> tuple[ObjectMetadata, ...]:
+        return self._store.list_immediate(prefix, max_results=max_results)
+
     def stats_snapshot(self) -> dict[str, int]:
         snapshot = getattr(self._store, "stats_snapshot", None)
         return dict(snapshot()) if callable(snapshot) else {}
@@ -776,4 +891,4 @@ class ReadOnlyObjectStore:
         raise ObjectStoreError("runtime object store is read-only")
 
 
-__all__ = ["GCSObjectStore", "LocalFilesystemObjectStore", "OBJECT_STREAM_CHUNK_BYTES", "ObjectMetadata", "ObjectStore", "ObjectStoreError", "ReadOnlyObjectStore", "S3CompatibleObjectStore", "validate_key"]
+__all__ = ["GCSObjectStore", "LocalFilesystemObjectStore", "OBJECT_STREAM_CHUNK_BYTES", "ObjectMetadata", "ObjectStore", "ObjectStoreError", "ObjectStoreLimitExceeded", "ReadOnlyObjectStore", "S3CompatibleObjectStore", "validate_key", "validate_prefix"]

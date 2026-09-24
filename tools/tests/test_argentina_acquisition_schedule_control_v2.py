@@ -10,13 +10,16 @@ from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
-from backend.object_store import LocalFilesystemObjectStore
+from backend.object_store import LocalFilesystemObjectStore, ObjectStoreError, ObjectStoreLimitExceeded
 from tools.argentina_acquisition_schedule_control import candidate_release_id, metadata_fingerprint
 from tools import argentina_acquisition_schedule_control_v2 as schedule_control
 from tools.argentina_acquisition_schedule_control_v2 import (
     CHECK_PHASE_LATE_RECHECK,
     CHECK_PHASE_METADATA_ONLY,
     CHECK_PHASE_PRIMARY,
+    DAILY_STATE_EVENT_MAX,
+    DAILY_STATE_EVENT_PREFIX,
+    daily_state_key,
     LATE_RECHECK_PREFIX,
     AcquisitionScheduleError,
     finalize_download_observation,
@@ -517,45 +520,139 @@ class ArgentinaAcquisitionScheduleControlV2Tests(unittest.TestCase):
         self.assertEqual(rerun["priorSameDayState"]["status"], "SHADOW_SUCCEEDED")
         self.assertEqual(rerun["activePointerWrites"], 0)
 
-    def test_daily_state_cas_retry_preserves_a_concurrent_advanced_state(self) -> None:
-        class InterleavingStore(LocalFilesystemObjectStore):
-            injected = False
+    def test_daily_state_journal_survives_a_create_only_store(self) -> None:
+        class CreateOnlyStore(LocalFilesystemObjectStore):
+            cas_calls = 0
 
             def compare_and_swap(self, key, data, *, expected_etag):
-                if key == "acquisition/daily-state/2026-09-15.json" and not self.injected:
-                    self.injected = True
-                    concurrent = json.loads(data)
-                    concurrent.update(
-                        {
-                            "status": "BUILD_RESERVED",
-                            "candidateReleaseId": "candidate-1",
-                            "buildReservationId": "reservation-1",
-                        }
-                    )
-                    super().compare_and_swap(
-                        key,
-                        _canonical(concurrent) + b"\n",
-                        expected_etag=expected_etag,
-                    )
-                return super().compare_and_swap(key, data, expected_etag=expected_etag)
+                self.cas_calls += 1
+                raise ObjectStoreError("conditional replacement is forbidden")
 
-        racing_store = InterleavingStore(Path(self.directory.name) / "racing-archive")
+        store = CreateOnlyStore(Path(self.directory.name) / "create-only-archive")
         metadata_identity = {"resource": "fixture"}
-        written = _write_daily_state(
-            store=racing_store,
+        base = {
+            "argentinaDate": "2026-09-15",
+            "observedAt": OBSERVED_AT,
+            "updatedAt": OBSERVED_AT,
+            "metadataFingerprint": metadata_fingerprint(metadata_identity),
+            "metadataIdentity": metadata_identity,
+            "catalogResponseSha256": "b" * 64,
+        }
+        self.assertEqual(
+            _write_daily_state(store=store, value={**base, "status": "METADATA_DISCOVERED"})["status"],
+            "METADATA_DISCOVERED",
+        )
+        advanced = _write_daily_state(
+            store=store,
             value={
-                "argentinaDate": "2026-09-15",
-                "observedAt": OBSERVED_AT,
-                "updatedAt": OBSERVED_AT,
-                "metadataFingerprint": metadata_fingerprint(metadata_identity),
-                "metadataIdentity": metadata_identity,
-                "catalogResponseSha256": "b" * 64,
-                "status": "METADATA_DISCOVERED",
+                **base,
+                "status": "BUILD_RESERVED",
+                "candidateReleaseId": "candidate-1",
+                "buildReservationId": "reservation-1",
+                "updatedAt": "2026-09-15T16:31:00Z",
             },
         )
-        self.assertEqual(written["status"], "BUILD_RESERVED")
-        self.assertEqual(written["candidateReleaseId"], "candidate-1")
-        self.assertEqual(read_daily_state(store=racing_store, argentina_day="2026-09-15")["status"], "BUILD_RESERVED")
+        self.assertEqual(advanced["status"], "BUILD_RESERVED")
+        self.assertEqual(advanced["candidateReleaseId"], "candidate-1")
+        self.assertEqual(read_daily_state(store=store, argentina_day="2026-09-15")["status"], "BUILD_RESERVED")
+        self.assertEqual(store.cas_calls, 0)
+        events = store.list_immediate(
+            f"{DAILY_STATE_EVENT_PREFIX}/2026-09-15/",
+            max_results=DAILY_STATE_EVENT_MAX,
+        )
+        self.assertEqual(len(events), 2)
+
+    def test_full_source_ready_reservation_retry_works_without_cas_replacement(self) -> None:
+        class CreateOnlyStore(LocalFilesystemObjectStore):
+            cas_calls = 0
+
+            def compare_and_swap(self, key, data, *, expected_etag):
+                self.cas_calls += 1
+                raise ObjectStoreError("conditional replacement is forbidden")
+
+        self.store = CreateOnlyStore(Path(self.directory.name) / "full-create-only-archive")
+        self._record_primary_no_change()
+        late = preflight_observation(
+            discovery=self.discovery,
+            candidate=self.candidate,
+            store=self.store,
+            check_phase=CHECK_PHASE_LATE_RECHECK,
+        )
+        _put_source_archive(self.store, LATE_BYTES, "2026-09-15")
+        result = finalize_download_observation(
+            preflight=late,
+            handoff=_handoff(
+                self.candidate,
+                status="HANDOFF_READY",
+                source_sha=LATE_SHA,
+                source_bytes=len(LATE_BYTES),
+                release_date="2026-09-15",
+            ),
+            publish=_publish(LATE_SHA, len(LATE_BYTES)),
+            store=self.store,
+        )
+        self.assertEqual(result["status"], "SOURCE_READY")
+        self.assertEqual(reserve_build_attempt(resolution=result, store=self.store, reservation_id="reservation-1")["status"], "RESERVED")
+        self.assertEqual(reserve_build_attempt(resolution=result, store=self.store, reservation_id="reservation-2")["status"], "ALREADY_RESERVED")
+        self.assertEqual(self.store.cas_calls, 0)
+        self.assertEqual(read_daily_state(store=self.store, argentina_day="2026-09-15")["status"], "BUILD_RESERVED")
+
+    def test_legacy_v1_daily_state_is_read_and_migrated_by_next_write(self) -> None:
+        store = LocalFilesystemObjectStore(Path(self.directory.name) / "legacy-archive")
+        metadata_identity = {"resource": "legacy-fixture"}
+        legacy = {
+            "schemaVersion": "valuepilot-argentina-daily-state-v1",
+            "policyVersion": "valuepilot-argentina-daily-state-policy-v1",
+            "argentinaDate": "2026-09-15",
+            "observedAt": OBSERVED_AT,
+            "updatedAt": OBSERVED_AT,
+            "metadataFingerprint": metadata_fingerprint(metadata_identity),
+            "metadataIdentity": metadata_identity,
+            "catalogResponseSha256": "c" * 64,
+            "status": "METADATA_DISCOVERED",
+        }
+        store.put_immutable(daily_state_key("2026-09-15"), _canonical(legacy) + b"\n")
+        self.assertEqual(read_daily_state(store=store, argentina_day="2026-09-15")["status"], "METADATA_DISCOVERED")
+        advanced = _write_daily_state(
+            store=store,
+            value={**legacy, "status": "BUILD_RESERVED", "updatedAt": "2026-09-15T16:31:00Z"},
+        )
+        self.assertEqual(advanced["status"], "BUILD_RESERVED")
+        events = store.list_immediate(f"{DAILY_STATE_EVENT_PREFIX}/2026-09-15/", max_results=DAILY_STATE_EVENT_MAX)
+        self.assertEqual(len(events), 1)
+
+    def test_daily_state_journal_rejects_same_slot_same_rank_source_conflict(self) -> None:
+        store = LocalFilesystemObjectStore(Path(self.directory.name) / "conflict-archive")
+        metadata_identity = {"resource": "fixture"}
+        common = {
+            "argentinaDate": "2026-09-15",
+            "observedAt": OBSERVED_AT,
+            "updatedAt": OBSERVED_AT,
+            "metadataFingerprint": metadata_fingerprint(metadata_identity),
+            "metadataIdentity": metadata_identity,
+            "catalogResponseSha256": "b" * 64,
+            "dailyObservationKey": "acquisition/daily-observations/2026-09-15/slot.json",
+            "status": "SOURCE_READY",
+        }
+        first = {
+            **common,
+            "source": {"releaseDate": "2026-09-15", "sha256": "a" * 64, "bytes": 10},
+        }
+        second = {
+            **common,
+            "source": {"releaseDate": "2026-09-15", "sha256": "b" * 64, "bytes": 11},
+        }
+        _write_daily_state(store=store, value=first)
+        with self.assertRaisesRegex(AcquisitionScheduleError, "source identities conflict"):
+            _write_daily_state(store=store, value=second)
+
+    def test_daily_state_event_listing_is_bounded(self) -> None:
+        store = LocalFilesystemObjectStore(Path(self.directory.name) / "bounded-archive")
+        prefix = f"{DAILY_STATE_EVENT_PREFIX}/2026-09-15/"
+        for index in range(DAILY_STATE_EVENT_MAX + 1):
+            store.put_immutable(f"{prefix}{index:064x}.json", str(index).encode("ascii"))
+        with self.assertRaises(ObjectStoreLimitExceeded):
+            store.list_immediate(prefix, max_results=DAILY_STATE_EVENT_MAX)
 
 
 if __name__ == "__main__":
