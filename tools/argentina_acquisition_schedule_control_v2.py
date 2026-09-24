@@ -224,7 +224,16 @@ def _read_daily_state_events(*, store: ObjectStore, argentina_day: str) -> list[
                 "same-day acquisition event is unavailable",
                 code="CONTROL_STORE_UNAVAILABLE",
             ) from exc
-        if len(raw) != metadata.size or hashlib.sha256(raw).hexdigest() != digest:
+        expected_size = metadata.size
+        if expected_size < 0:
+            try:
+                expected_size = store.head(metadata.key).size
+            except ObjectStoreError as exc:
+                raise AcquisitionScheduleError(
+                    "same-day acquisition event metadata is unavailable",
+                    code="CONTROL_STORE_UNAVAILABLE",
+                ) from exc
+        if len(raw) != expected_size or hashlib.sha256(raw).hexdigest() != digest:
             raise AcquisitionScheduleError("same-day acquisition event hash is invalid", code="INVALID_CONTROL_STATE")
         try:
             value = json.loads(raw)

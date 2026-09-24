@@ -712,6 +712,7 @@ class GCSObjectStore:
     def list_immediate(self, prefix: str, *, max_results: int) -> tuple[ObjectMetadata, ...]:
         prefix = validate_prefix(prefix)
         max_results = _validate_list_bound(max_results)
+        self._record("listRequests")
         try:
             blobs = self._bucket.list_blobs(prefix=prefix, max_results=max_results + 1)
             result: list[ObjectMetadata] = []
@@ -723,7 +724,7 @@ class GCSObjectStore:
                 result.append(
                     ObjectMetadata(
                         key,
-                        int(getattr(blob, "size", -1) or 0),
+                        int(getattr(blob, "size", -1) if getattr(blob, "size", None) is not None else -1),
                         self._generation(blob),
                         None,
                         (),

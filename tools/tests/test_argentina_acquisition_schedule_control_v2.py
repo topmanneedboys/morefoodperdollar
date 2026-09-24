@@ -10,7 +10,7 @@ from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
-from backend.object_store import LocalFilesystemObjectStore, ObjectStoreError, ObjectStoreLimitExceeded
+from backend.object_store import LocalFilesystemObjectStore, ObjectMetadata, ObjectStoreError, ObjectStoreLimitExceeded
 from tools.argentina_acquisition_schedule_control import candidate_release_id, metadata_fingerprint
 from tools import argentina_acquisition_schedule_control_v2 as schedule_control
 from tools.argentina_acquisition_schedule_control_v2 import (
@@ -653,6 +653,28 @@ class ArgentinaAcquisitionScheduleControlV2Tests(unittest.TestCase):
             store.put_immutable(f"{prefix}{index:064x}.json", str(index).encode("ascii"))
         with self.assertRaises(ObjectStoreLimitExceeded):
             store.list_immediate(prefix, max_results=DAILY_STATE_EVENT_MAX)
+
+    def test_event_reader_rechecks_size_when_listing_metadata_is_partial(self) -> None:
+        class PartialListingStore(LocalFilesystemObjectStore):
+            def list_immediate(self, prefix, *, max_results):
+                entries = super().list_immediate(prefix, max_results=max_results)
+                return tuple(ObjectMetadata(item.key, -1, item.etag, None, ()) for item in entries)
+
+        store = PartialListingStore(Path(self.directory.name) / "partial-listing-archive")
+        metadata_identity = {"resource": "partial-listing-fixture"}
+        _write_daily_state(
+            store=store,
+            value={
+                "argentinaDate": "2026-09-15",
+                "observedAt": OBSERVED_AT,
+                "updatedAt": OBSERVED_AT,
+                "metadataFingerprint": metadata_fingerprint(metadata_identity),
+                "metadataIdentity": metadata_identity,
+                "catalogResponseSha256": "d" * 64,
+                "status": "METADATA_DISCOVERED",
+            },
+        )
+        self.assertEqual(read_daily_state(store=store, argentina_day="2026-09-15")["status"], "METADATA_DISCOVERED")
 
 
 if __name__ == "__main__":

@@ -39,6 +39,8 @@ Daily acquisition state now uses a bounded, append-only immutable journal:
 * reads accept the existing v1 daily-state object and merge it with v2 events;
 * the journal is capped at 128 immediate objects per day and rejects nested,
   malformed, tampered, conflicting, or over-limit records;
+* a partial provider listing is rechecked with a bounded object `head()` before
+  its event bytes are accepted;
 * status ordering remains monotonic, exact candidate/reservation/workflow
   identities remain fail-closed, and late-check source revisions remain
   distinguishable by their immutable observation key.
@@ -60,7 +62,7 @@ The focused acquisition and workflow regressions pass, including:
 * the September 22 HTTP 412 reconciliation contract and fail-closed mismatch;
 * late recheck and SHADOW success monotonicity.
 
-The complete checked-in tooling test discovery passes: 85 tests, 0 failures.
+The complete checked-in tooling test discovery passes: 86 tests, 0 failures.
 No production acquisition or Cloud Workflow execution was triggered by this
 change. The active and last-known-good release remains the September 18
 release, and observed active-pointer writes remain zero.
