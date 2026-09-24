@@ -1,5 +1,7 @@
 package com.valuepilot.app
 
+import android.util.Log
+
 /** Renderer-owned modes for the visible, identity-only Argentina Search. */
 internal enum class ArgentinaLiveSearchSurfaceMode {
     IDLE,
@@ -174,7 +176,8 @@ internal class ArgentinaLiveSearchSurfaceHost(
             lateinit var host: ArgentinaLiveSearchSurfaceHost
             val coordinator = ArgentinaLiveSearchCoordinator.create(
                 transport = ValuePilotArgentinaEdgeTransportFactory.create(),
-                stateSink = { state -> host.accept(state) }
+                stateSink = { state -> host.accept(state) },
+                diagnosticSink = ArgentinaLiveSearchDiagnostics::record
             )
             host = ArgentinaLiveSearchSurfaceHost(coordinator, area, render)
             return host
@@ -186,6 +189,29 @@ internal class ArgentinaLiveSearchSurfaceHost(
             render: (ArgentinaLiveSearchSurfaceState) -> Unit
         ): ArgentinaLiveSearchSurfaceHost =
             ArgentinaLiveSearchSurfaceHost(coordinator, area, render)
+    }
+}
+
+/**
+ * Production-only safe failure trace. It contains no query, response body,
+ * App Check token, URL, headers or personal data.
+ */
+internal object ArgentinaLiveSearchDiagnostics {
+    private const val TAG = "ValuePilotLiveSearch"
+
+    fun record(
+        failure: ArgentinaBackendContract.FailureCode,
+        metadata: ArgentinaBackendFailureMetadata?
+    ) {
+        val fields = buildList {
+            add("failure=${failure.name}")
+            metadata?.endpoint?.let { add("endpoint=$it") }
+            metadata?.httpStatus?.let { add("httpStatus=$it") }
+            metadata?.requestId?.let { add("requestId=$it") }
+            metadata?.releaseId?.let { add("releaseId=$it") }
+            metadata?.releaseDate?.let { add("releaseDate=$it") }
+        }
+        Log.w(TAG, fields.joinToString(" "))
     }
 }
 

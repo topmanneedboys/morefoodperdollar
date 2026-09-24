@@ -70,7 +70,8 @@ internal sealed interface ArgentinaLiveSearchState {
     data class Unavailable(
         val generation: Long,
         val query: String,
-        val failure: ArgentinaBackendContract.FailureCode
+        val failure: ArgentinaBackendContract.FailureCode,
+        val metadata: ArgentinaBackendFailureMetadata? = null
     ) : ArgentinaLiveSearchState
 }
 
@@ -82,7 +83,8 @@ internal class ArgentinaLiveSearchCoordinator(
     private val transport: ArgentinaBackendTransport,
     private val executor: Executor,
     private val stateSink: (ArgentinaLiveSearchState) -> Unit,
-    private val closeExecutor: (() -> Unit)? = null
+    private val closeExecutor: (() -> Unit)? = null,
+    private val diagnosticSink: (ArgentinaBackendContract.FailureCode, ArgentinaBackendFailureMetadata?) -> Unit = { _, _ -> }
 ) : AutoCloseable {
 
     private val lock = Any()
@@ -209,7 +211,7 @@ internal class ArgentinaLiveSearchCoordinator(
         try {
             val release = pinRelease(requestGeneration, cancellation)
             if (release is ArgentinaBackendBridgeResult.Failure) {
-                publishFailure(requestGeneration, query, release.code)
+                publishFailure(requestGeneration, query, release.code, release.metadata)
                 return
             }
             if (!isCurrent(requestGeneration, cancellation)) return
@@ -229,7 +231,7 @@ internal class ArgentinaLiveSearchCoordinator(
                     if (result.code == ArgentinaBackendContract.FailureCode.RELEASE_MISMATCH) {
                         clearPinnedRelease(requestGeneration)
                     }
-                    publishFailure(requestGeneration, query, result.code)
+                    publishFailure(requestGeneration, query, result.code, result.metadata)
                 }
                 is ArgentinaBackendBridgeResult.Success -> {
                     if (result.value.response.common.freshness != ArgentinaBackendContract.Freshness.FRESH) {
@@ -364,9 +366,11 @@ internal class ArgentinaLiveSearchCoordinator(
     private fun publishFailure(
         generation: Long,
         query: String,
-        failure: ArgentinaBackendContract.FailureCode
+        failure: ArgentinaBackendContract.FailureCode,
+        metadata: ArgentinaBackendFailureMetadata? = null
     ) {
-        publish(ArgentinaLiveSearchState.Unavailable(generation, query, failure))
+        diagnosticSink(failure, metadata)
+        publish(ArgentinaLiveSearchState.Unavailable(generation, query, failure, metadata))
     }
 
     private fun publish(next: ArgentinaLiveSearchState) {
@@ -401,7 +405,8 @@ internal class ArgentinaLiveSearchCoordinator(
     companion object {
         fun create(
             transport: ArgentinaBackendTransport,
-            stateSink: (ArgentinaLiveSearchState) -> Unit
+            stateSink: (ArgentinaLiveSearchState) -> Unit,
+            diagnosticSink: (ArgentinaBackendContract.FailureCode, ArgentinaBackendFailureMetadata?) -> Unit = { _, _ -> }
         ): ArgentinaLiveSearchCoordinator {
             val executor = ThreadPoolExecutor(
                 1,
@@ -418,6 +423,7 @@ internal class ArgentinaLiveSearchCoordinator(
                 transport = transport,
                 executor = executor,
                 stateSink = stateSink,
+                diagnosticSink = diagnosticSink,
                 closeExecutor = executor::shutdownNow
             )
         }

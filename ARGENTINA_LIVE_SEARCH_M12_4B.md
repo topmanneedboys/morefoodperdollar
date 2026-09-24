@@ -1,11 +1,38 @@
 # ValuePilot Argentina Live Search M12.4B
 
-Status: `ARGENTINA_LIVE_SEARCH_M12_4B_PLAY_BUILD_READY_NOT_DEVICE_QUALIFIED`
+Status: `ARGENTINA_LIVE_SEARCH_M12_4B_REPAIR_BUILD_READY_NOT_DEVICE_QUALIFIED`
 
-Updated: 2026-09-21
-Repository: `topmanneedboys/morefoodperdollar`  
-Branch: `candidate/argentina-live-search-m12-4`  
-Implementation commit: `4881750886a26de9e203e52d16963156719733cc`
+Updated: 2026-09-24
+Repository: `topmanneedboys/morefoodperdollar`
+Branch: `fix/argentina-live-search-response-contract`
+
+## 10106 failure diagnosis and bounded repair
+
+The first real Motorola Edge 2025 / Play-installed `10106` request reached the
+public Consumer Edge and private M11 successfully: Cloud Run request logs show
+`POST /v1/status` and `POST /v1/search` both returned HTTP 200, with the same
+Play-installed user agent. The M11 search response was a valid discovery
+response, but its additive `diagnostics.regionsQueried` field is a JSON array.
+The Android parser accepted diagnostic strings, numbers, booleans and objects,
+but rejected arrays, converting that valid 200 response into
+`CONTRACT_INVALID`; the surface then showed the generic temporary-failure
+message.
+
+The repair keeps the contract strict and bounded: diagnostic arrays are
+accepted only up to 32 scalar items, each item is bounded, and nested objects,
+nested arrays and nulls remain rejected. The values are projected to stable
+diagnostic text and never gain price, identity, ranking or availability
+authority. Failures now retain only safe endpoint/status/request/release
+metadata and the production Search trace logs those fields without query text,
+response bodies, URLs, headers or App Check tokens.
+
+The corrected build is Android `10107` / `101.1.6`. Its local Play-upload AAB
+was signed and verified with the existing upload certificate (the same
+protected mechanism used for 10103–10106); it has not been uploaded to Google
+Play. The physical smoke remains pending because the attached phone currently
+has 10106 and is PIN-locked. Use the single bounded
+`tools/collect_live_search_10107_trace.ps1` script only after Google Play has
+installed 10107 and the phone is unlocked.
 
 ## Scope completed
 
@@ -116,7 +143,7 @@ evidence.
 
 ## Build and privacy evidence
 
-The candidate sets Android version `10103` / `101.1.2`. The release bundle task
+The original candidate set Android version `10103` / `101.1.2`. Its release bundle task
 completed successfully and produced the ignored local unsigned artifact:
 
 `android/app/build/outputs/bundle/release/app-release.aab`
@@ -139,16 +166,30 @@ certificate is the known upload certificate SHA-256
 Do not generate a replacement key. The signed artifact is not uploaded to
 Google Play by this checkpoint.
 
+### 10107 repair artifact
+
+The repair build is Android `10107` / `101.1.6`. The unsigned release APK
+reports package `com.valuepilot.app`, the intentional `INTERNET` and optional
+`CAMERA` permissions, no `ACCESS_NETWORK_STATE` or location permission, and
+cleartext disabled. The signed Play-upload bundle is the ignored local artifact
+`android/app/build/outputs/bundle/release/app-release-play-upload-signed-10107.aab`;
+it is `36,321,330` bytes with SHA-256
+`a72f1155c98d75075be3a117ff56be670640f1be7c67645c2fcc0297df265179`.
+`jarsigner` verification and the known upload-certificate fingerprint passed;
+no password was printed and no Play upload was attempted.
+
 ## Verification
 
 The following completed successfully on this candidate:
 
 - `:shared-core:test`: 405 tests.
-- `:app:testDebugUnitTest`: 1,668 tests.
+- `:app:testDebugUnitTest`: 1,681 tests.
 - `:app:lintDebug` and `:app:lintRelease`.
 - `:app:assembleDebug`, `:app:assembleRelease` and `:app:bundleRelease`.
-- Backend compile plus 46 backend tests.
-- Offline tooling compile plus 197 tooling tests.
+- Backend compile plus 110 backend tests.
+- Offline tooling compile plus 300 tooling tests.
+- Regression coverage for the live array-shaped diagnostic, bounded scalar
+  arrays, safe correlation/release metadata and the corrected 10107 boundary.
 - Browser model/tests/Firefox lint: 30 tests, zero failures or skips.
 - Cloud negative boundary: missing App Check 401, invalid App Check 401,
   unknown route 404, direct private M11 403; authenticated private status 200.

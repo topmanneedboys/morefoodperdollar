@@ -36,6 +36,7 @@ object ArgentinaBackendContract {
     const val MAX_PROMOTIONS = 16
     const val MAX_DIAGNOSTIC_ENTRIES = 64
     const val MAX_DIAGNOSTIC_VALUE_CHARS = 256
+    const val MAX_DIAGNOSTIC_ARRAY_ITEMS = 32
     const val MAX_ADDRESS_ENTRIES = 16
     const val MAX_ADDRESS_VALUE_CHARS = 256
 
@@ -141,6 +142,13 @@ object ArgentinaBackendContract {
         val freshness: Freshness,
         val evidenceSemantics: EvidenceSemantics?,
         val diagnostics: Map<String, String>
+    )
+
+    /** Safe envelope fields retained for failure diagnostics only. */
+    internal data class SafeResponseMetadata(
+        val requestId: String?,
+        val releaseId: String?,
+        val releaseDate: String?
     )
 
     data class StatusResponse(
@@ -563,6 +571,27 @@ object ArgentinaBackendContract {
         if (result == null && input.safeRequestReady) invalid("clarification-required shop-text input cannot be safeRequestReady")
         if (result != null && !input.safeRequestReady) invalid("shop-text result requires safeRequestReady input")
         return ShopTextResponse(common, regions, input, result, skipped)
+    }
+
+    /**
+     * Extract only bounded, non-sensitive correlation/release fields without
+     * weakening the strict consumer parser. This is used when a response
+     * fails later validation so diagnostics can identify the request safely.
+     */
+    internal fun safeResponseMetadata(rawJson: String): SafeResponseMetadata {
+        if (rawJson.toByteArray(StandardCharsets.UTF_8).size > MAX_RESPONSE_BYTES) {
+            return SafeResponseMetadata(null, null, null)
+        }
+        val root = try {
+            parseRoot(rawJson)
+        } catch (_: Exception) {
+            return SafeResponseMetadata(null, null, null)
+        }
+        return SafeResponseMetadata(
+            requestId = safeIdentifier(root, "requestId", 96),
+            releaseId = safeIdentifier(root, "releaseId", 320),
+            releaseDate = safeDate(root, "releaseDate")
+        )
     }
 
     /**
@@ -1010,6 +1039,7 @@ object ArgentinaBackendContract {
                 is String -> value
                 is Number -> value.toString()
                 is Boolean -> value.toString()
+                is JSONArray -> parseDiagnosticArray(value, label, key)
                 is JSONObject -> {
                     val nested = parseDiagnostics(value, "$label.$key")
                     nested.entries.joinToString(",") { (nestedKey, nestedValue) -> "$nestedKey=$nestedValue" }
@@ -1020,6 +1050,32 @@ object ArgentinaBackendContract {
             result[key] = text
         }
         return result
+    }
+
+    /**
+     * The live backend uses a bounded string array for diagnostics such as
+     * `regionsQueried`.  Keep diagnostics non-authoritative and deterministic:
+     * accept only scalar, bounded values and project them to one stable text
+     * value. Nested objects/arrays and nulls remain rejected rather than guessed.
+     */
+    private fun parseDiagnosticArray(array: JSONArray, label: String, key: String): String {
+        if (array.length() > MAX_DIAGNOSTIC_ARRAY_ITEMS) {
+            invalid("$label.$key array exceeds its bounded item limit")
+        }
+        return (0 until array.length()).joinToString(",") { index ->
+            val value = array.get(index)
+            val text =
+                when (value) {
+                    is String -> value
+                    is Number -> value.toString()
+                    is Boolean -> value.toString()
+                    else -> invalid("$label.$key contains an unsupported array value")
+                }
+            if (text.length > MAX_DIAGNOSTIC_VALUE_CHARS) {
+                invalid("$label.$key array value is too long")
+            }
+            text
+        }
     }
 
     private fun parseClarification(root: JSONObject, lineIdOptional: Boolean): InputClarification {
@@ -1122,6 +1178,18 @@ object ArgentinaBackendContract {
     private fun optionalString(root: JSONObject, name: String, maxChars: Int): String? {
         if (!root.has(name) || root.isNull(name)) return null
         return requiredString(root, name, maxChars)
+    }
+
+    private fun safeIdentifier(root: JSONObject, name: String, maxChars: Int): String? {
+        if (!root.has(name) || root.isNull(name)) return null
+        val value = root.get(name)
+        return (value as? String)?.takeIf { it.length <= maxChars && ID_PATTERN.matches(it) }
+    }
+
+    private fun safeDate(root: JSONObject, name: String): String? {
+        if (!root.has(name) || root.isNull(name)) return null
+        val value = root.get(name) as? String ?: return null
+        return value.takeIf { DATE_PATTERN.matches(it) && validIsoDate(it) }
     }
 
     private fun requiredId(root: JSONObject, name: String, maxChars: Int): String {

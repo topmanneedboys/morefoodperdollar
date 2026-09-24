@@ -4,6 +4,29 @@ Updated: 2026-09-24 03:47 UTC
 
 Branch: `candidate/argentina-live-search-m12-4`
 
+## M12.4 live Search repair — 2026-09-24
+
+The real Play-installed Motorola `10106` failure is isolated to the Android
+contract boundary, not App Check, Play Integrity, the public edge, OIDC, the
+active release or M11. Cloud Run logs show the device's `/v1/status` and
+`/v1/search` requests returning HTTP 200. The valid discovery response carries
+`diagnostics.regionsQueried` as a bounded JSON array, which the old Android
+diagnostic parser rejected as `CONTRACT_INVALID`; the Search surface therefore
+showed its generic temporary-failure message.
+
+The focused repair branch is `fix/argentina-live-search-response-contract`.
+It accepts only bounded scalar diagnostic arrays, preserves strict rejection of
+nested objects/arrays/nulls, carries safe endpoint/status/request/release
+metadata on failures, and logs only those fields in production. It adds no
+price, stock, availability, ranking, provider or Android-networking authority.
+The corrected local Play-upload artifact is Android `10107` / `101.1.6`, signed
+with the existing protected upload certificate and not uploaded to Play yet.
+The physical smoke remains **PARTIAL** because the attached phone still has
+10106 and is PIN-locked; `tools/collect_live_search_10107_trace.ps1` is the
+single bounded trace action after Play installs 10107 and the phone is
+unlocked. See [ARGENTINA_LIVE_SEARCH_M12_4B.md](ARGENTINA_LIVE_SEARCH_M12_4B.md)
+for the repair evidence.
+
 Candidate branch HEAD before this status update:
 `0435a29d39ebaf8b44437daa1071969c15c6efea`
 

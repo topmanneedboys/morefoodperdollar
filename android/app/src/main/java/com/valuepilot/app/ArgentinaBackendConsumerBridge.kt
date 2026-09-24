@@ -62,8 +62,23 @@ internal sealed class ArgentinaBackendBridgeResult<out T> {
 
     data class Failure(
         val code: ArgentinaBackendContract.FailureCode,
-        val message: String
+        val message: String,
+        val metadata: ArgentinaBackendFailureMetadata? = null
     ) : ArgentinaBackendBridgeResult<Nothing>()
+}
+
+/** Bounded, non-sensitive context for diagnosing a failed backend exchange. */
+internal data class ArgentinaBackendFailureMetadata(
+    val endpoint: String,
+    val httpStatus: Int? = null,
+    val requestId: String? = null,
+    val releaseId: String? = null,
+    val releaseDate: String? = null
+) {
+    init {
+        require(endpoint in setOf("/v1/status", "/v1/search", "/v1/interpret", "/v1/shop-text", "/v1/shop"))
+        require(httpStatus == null || httpStatus in 100..599)
+    }
 }
 
 /** One identity-only search response ready for the existing Search seam. */
@@ -249,7 +264,8 @@ internal class ArgentinaBackendConsumerBridge(
         if (requestBody != null && requestBody.toByteArray(StandardCharsets.UTF_8).size > MAX_REQUEST_BYTES) {
             return ArgentinaBackendBridgeResult.Failure(
                 ArgentinaBackendContract.FailureCode.REQUEST_TOO_LARGE,
-                "backend request exceeds the bounded byte limit"
+                "backend request exceeds the bounded byte limit",
+                metadata = ArgentinaBackendFailureMetadata(endpoint)
             )
         }
 
@@ -263,12 +279,14 @@ internal class ArgentinaBackendConsumerBridge(
             } catch (error: ArgentinaBackendTransportException) {
                 return ArgentinaBackendBridgeResult.Failure(
                     error.failureCode,
-                    error.safeMessage
+                    error.safeMessage,
+                    metadata = ArgentinaBackendFailureMetadata(endpoint)
                 )
             } catch (error: Exception) {
                 return ArgentinaBackendBridgeResult.Failure(
                     ArgentinaBackendContract.FailureCode.HTTP_ERROR,
-                    "backend transport failed"
+                    "backend transport failed",
+                    metadata = ArgentinaBackendFailureMetadata(endpoint)
                 )
             }
 
@@ -286,24 +304,52 @@ internal class ArgentinaBackendConsumerBridge(
                     in HTTP_SERVER_ERROR..HTTP_SERVER_ERROR_LAST -> ArgentinaBackendContract.FailureCode.SERVER_ERROR
                     else -> ArgentinaBackendContract.FailureCode.HTTP_ERROR
                 }
-            return ArgentinaBackendBridgeResult.Failure(code, "backend returned HTTP ${response.statusCode}")
+            return ArgentinaBackendBridgeResult.Failure(
+                code,
+                "backend returned HTTP ${response.statusCode}",
+                metadata = failureMetadata(endpoint, response.body, response.statusCode)
+            )
         }
 
         return try {
             ArgentinaBackendBridgeResult.Success(parser(response.body))
         } catch (error: ArgentinaBackendContract.ContractException) {
-            ArgentinaBackendBridgeResult.Failure(error.code, error.message ?: "backend contract is invalid")
+            ArgentinaBackendBridgeResult.Failure(
+                error.code,
+                error.message ?: "backend contract is invalid",
+                metadata = failureMetadata(endpoint, response.body)
+            )
         } catch (error: IllegalArgumentException) {
             ArgentinaBackendBridgeResult.Failure(
                 ArgentinaBackendContract.FailureCode.CONTRACT_INVALID,
-                error.message ?: "backend contract is invalid"
+                error.message ?: "backend contract is invalid",
+                metadata = failureMetadata(endpoint, response.body)
             )
         } catch (error: Exception) {
             ArgentinaBackendBridgeResult.Failure(
                 ArgentinaBackendContract.FailureCode.CONTRACT_INVALID,
-                error.message ?: "backend contract is invalid"
+                error.message ?: "backend contract is invalid",
+                metadata = failureMetadata(endpoint, response.body)
             )
         }
+    }
+
+    private fun failureMetadata(
+        endpoint: String,
+        body: String,
+        httpStatus: Int? = null
+    ): ArgentinaBackendFailureMetadata? {
+        val safe = ArgentinaBackendContract.safeResponseMetadata(body)
+        if (httpStatus == null && safe.requestId == null && safe.releaseId == null && safe.releaseDate == null) {
+            return null
+        }
+        return ArgentinaBackendFailureMetadata(
+            endpoint = endpoint,
+            httpStatus = httpStatus,
+            requestId = safe.requestId,
+            releaseId = safe.releaseId,
+            releaseDate = safe.releaseDate
+        )
     }
 
     private fun <A, B> mapResult(

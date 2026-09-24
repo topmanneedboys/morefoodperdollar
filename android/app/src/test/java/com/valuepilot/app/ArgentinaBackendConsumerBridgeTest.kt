@@ -344,6 +344,80 @@ class ArgentinaBackendConsumerBridgeTest {
     }
 
     @Test
+    fun discoverySearchAcceptsBoundedDiagnosticArraysFromLiveBackend() {
+        val body =
+            JSONObject(searchJson())
+                .put(
+                    "diagnostics",
+                    JSONObject()
+                        .put("regionsQueried", JSONArray().put("ar-b").put("ar-caba"))
+                        .put("regionalSearchMs", 1673.376)
+                )
+                .put("resolution", "DISCOVERY")
+                .put("input", JSONObject.NULL)
+                .put("matches", JSONArray().put(productIdentity().put("score", 100)))
+                .toString()
+
+        val parsed = ArgentinaBackendContract.parseSearch(body, release)
+
+        assertEquals("ar-b,ar-caba", parsed.common.diagnostics["regionsQueried"])
+        assertEquals("1673.376", parsed.common.diagnostics["regionalSearchMs"])
+        assertEquals(1, parsed.identityCandidates.size)
+    }
+
+    @Test
+    fun failedSearchCarriesOnlySafeCorrelationAndReleaseMetadata() {
+        val malformed =
+            JSONObject(searchJson())
+                .put("matches", JSONObject())
+                .toString()
+        val result =
+            ArgentinaBackendConsumerBridge(
+                InMemoryArgentinaBackendTransport(
+                    mapOf(ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT to response(200, malformed))
+                ),
+                release
+            ).searchPresentation(searchRequest())
+
+        assertTrue(result is ArgentinaBackendBridgeResult.Failure)
+        val failure = result as ArgentinaBackendBridgeResult.Failure
+        assertEquals(ArgentinaBackendContract.FailureCode.CONTRACT_INVALID, failure.code)
+        assertEquals("/v1/search", failure.metadata?.endpoint)
+        assertEquals("request-search", failure.metadata?.requestId)
+        assertEquals(release.releaseId, failure.metadata?.releaseId)
+        assertEquals(RELEASE_DATE, failure.metadata?.releaseDate)
+        assertTrue(failure.message.contains("matches"))
+    }
+
+    @Test
+    fun diagnosticArraysRemainBoundedAndScalarOnly() {
+        val tooMany = JSONArray().apply {
+            repeat(ArgentinaBackendContract.MAX_DIAGNOSTIC_ARRAY_ITEMS + 1) { put("region-$it") }
+        }
+        val oversized = JSONObject(searchJson()).put(
+            "diagnostics",
+            JSONObject().put("regionsQueried", tooMany)
+        )
+        try {
+            ArgentinaBackendContract.parseSearch(oversized.toString(), release)
+            throw AssertionError("oversized diagnostic arrays must be rejected")
+        } catch (error: ArgentinaBackendContract.ContractException) {
+            assertEquals(ArgentinaBackendContract.FailureCode.CONTRACT_INVALID, error.code)
+        }
+
+        val nested = JSONObject(searchJson()).put(
+            "diagnostics",
+            JSONObject().put("regionsQueried", JSONArray().put(JSONObject().put("region", "ar-caba")))
+        )
+        try {
+            ArgentinaBackendContract.parseSearch(nested.toString(), release)
+            throw AssertionError("nested diagnostic objects must be rejected")
+        } catch (error: ArgentinaBackendContract.ContractException) {
+            assertEquals(ArgentinaBackendContract.FailureCode.CONTRACT_INVALID, error.code)
+        }
+    }
+
+    @Test
     fun discoverySearchRejectsGroupedLegacyCandidateShape() {
         val body =
             JSONObject(searchJson())
