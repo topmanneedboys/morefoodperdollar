@@ -13,6 +13,47 @@ M12.4 candidate code baseline before the current documentation-only follow-up:
 Latest M12.5 production integration on `main`:
 `84584173e27f94ef7d6c1329e59f1183cb8da243`
 
+## M12.5 immutable acquisition-state fix — 2026-09-24
+
+The September 23 `CONTROL_STORE_CONFLICT` failures are now explained by
+production evidence, not a guessed race. Run `35911475904` had already
+archived the official source and successfully wrote
+`acquisition/daily-state/2026-09-23.json` (generation `1790192790919843`,
+`METADATA_DISCOVERED`). Later state transitions attempted to replace that
+object. The GitHub OIDC identity on the archive bucket has
+`roles/storage.objectCreator` and `roles/storage.objectViewer`; it can create
+and read objects but cannot replace an existing object. The old CAS retry loop
+therefore mislabeled a permanent create-only permission boundary as
+`same-day acquisition state CAS did not converge`. Run `35931479929` failed at
+the same deduplication boundary before opening egress. No IAM broadening is
+authorized or needed.
+
+The September 22 execution
+`12d9c499-1508-44c3-81e4-e399e60cb3b8` is a separate HTTP 412 after the
+multi-hour SHADOW build. Deployed Cloud Workflow revision `000011-094` already
+reads back the state and accepts only an exact candidate/source/metadata/
+promotion identity; mismatches return `STATE_WRITE_CONFLICT` with pointer
+writes preserved at zero. The new fix does not weaken that boundary.
+
+The isolated fix branch `fix/argentina-immutable-acquisition-state` is frozen
+at `b6f13b77e7398b664fd1d528f86d7c8972772c7c` with PR
+[topmanneedboys/morefoodperdollar#9](https://github.com/topmanneedboys/morefoodperdollar/pull/9).
+It replaces same-day state replacement with a bounded append-only immutable
+event journal under `acquisition/daily-state-events/<day>/`, keeps legacy v1
+state readable, adds bounded immediate-prefix listing to all object-store
+adapters, and retains fail-closed status/identity conflict handling. It does
+not change Android, active/canary pointers, IAM, raw data, or the deployed
+Cloud Workflow.
+
+Exact PR checks are green: acquisition-control run `35952209747`, Android
+build runs `35952209838` and `35952223223`. The complete checked-in tooling
+discovery on the fix branch passed 85 tests. No national acquisition, Cloud
+Workflow deployment, pointer write, or Play upload was triggered. M12.5 is
+still **PARTIAL** until PR #9 is reviewed/merged and one normal scheduled OIDC
+run proves the event-journal receipt, candidate/SHADOW result, and zero active/
+canary pointer writes. M12.4 remains **PARTIAL** for the Motorola Edge 2025
+Play-installed Search smoke.
+
 ## M12.4 / M12.5 checkpoint update — 2026-09-23
 
 ### Verification refresh — 2026-09-23 12:15 UTC
