@@ -156,6 +156,43 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
         self.assertIn("VERIFIED_METADATA_CHANGE_EVIDENCE_REQUIRED", text)
         self.assertIn("VALUEPILOT_UPSTREAM_CHANGED", text)
 
+    def test_september_22_shadow_conflict_fails_closed_for_a_different_candidate(self) -> None:
+        """Lock the observed 412 recovery boundary to the Sep 22 identities."""
+
+        text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+        observed_candidate = "argentina-sepa-2026-09-22-eaefeae3d9f2885a-routing-v1-search-v2"
+        worker_summary = {
+            "metadataChecksum": "m" * 64,
+            "datasetId": "precios-claros-base-sepa",
+            "candidateReleaseId": observed_candidate,
+            "sourceArchiveSha256": "a" * 64,
+            "promotionMode": "SHADOW",
+            "upstreamChanged": False,
+        }
+        conflicting_state = {**worker_summary, "candidateReleaseId": "different-candidate"}
+        exact_repeat = all(
+            worker_summary[field] == conflicting_state[field]
+            for field in (
+                "metadataChecksum",
+                "datasetId",
+                "candidateReleaseId",
+                "sourceArchiveSha256",
+                "promotionMode",
+                "upstreamChanged",
+            )
+        )
+        self.assertFalse(exact_repeat)
+        self.assertIn("state_write_error.code == 412", text)
+        self.assertIn("next: read_state_after_conflict", text)
+        self.assertIn("status: STATE_WRITE_CONFLICT", text)
+        self.assertIn("attemptedReleaseId", text)
+        self.assertIn("conflictingReleaseId", text)
+        self.assertIn("activePointerWrites: ${map.get(worker_summary, \"activePointerWrites\")}", text)
+        self.assertIn("promotion: ${map.get(worker_summary, \"promotion\")}", text)
+        # Keep the observed candidate as a fixture only; it must never become a
+        # production source selector or an activation authority.
+        self.assertTrue(observed_candidate.endswith("routing-v1-search-v2"))
+
     def test_cloud_workflow_materializes_worker_contract_evidence_file(self) -> None:
         text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
         for evidence_field in (
