@@ -1,12 +1,48 @@
 package com.valuepilot.app
 
 import android.content.Context
+import com.valuepilot.core.OfflineCatalogAdmissionBlocker
 import com.valuepilot.core.OfflineCatalogDiscoveryResult
 import com.valuepilot.core.OfflineCatalogDiscoveryIndex
 import com.valuepilot.core.OfflineCatalogDiscoveryRequest
 import com.valuepilot.core.OfflineCatalogIntegrityAssessment
 import com.valuepilot.core.TextCanonicalizer
 import java.nio.charset.StandardCharsets
+
+/**
+ * Raised when a bundled region fails the existing signed-catalog admission gate.
+ *
+ * The failure is typed so the consumer surface can explain an expired snapshot
+ * honestly instead of presenting it as an unexplained catalog outage. The
+ * exception carries no products and does not weaken the admission boundary.
+ */
+internal class BundledOfflineCatalogAdmissionException(
+    val regionId: String,
+    blockers: Set<OfflineCatalogAdmissionBlocker>
+) : IllegalStateException(
+    "Bundled catalog region $regionId is not admitted: " +
+        blockers.sortedBy { it.name }.joinToString(",")
+) {
+
+    val blockers: Set<OfflineCatalogAdmissionBlocker> = blockers.toSet()
+
+    val kind: BundledOfflineCatalogFailureKind =
+        if (OfflineCatalogAdmissionBlocker.EXPIRED_SNAPSHOT in this.blockers) {
+            BundledOfflineCatalogFailureKind.EXPIRED
+        } else {
+            BundledOfflineCatalogFailureKind.UNAVAILABLE
+        }
+
+    init {
+        require(regionId.isNotBlank())
+        require(this.blockers.isNotEmpty())
+    }
+}
+
+internal enum class BundledOfflineCatalogFailureKind {
+    EXPIRED,
+    UNAVAILABLE
+}
 
 /** The two explicitly supported Canada-first identity-discovery regions. */
 enum class BundledOfflineCatalogRegion(
@@ -149,8 +185,11 @@ object BundledOfflineCatalog {
                     maximumSnapshotAgeMillis = maximumSnapshotAgeMillis,
                     lastKnownGoodGeneratedAtEpochMillis = lastKnownGoodGeneratedAtEpochMillis
                 ).also { loaded ->
-                    check(loaded.admission.accepted) {
-                        "Bundled catalog region ${region.regionId} is not admitted"
+                    if (!loaded.admission.accepted) {
+                        throw BundledOfflineCatalogAdmissionException(
+                            regionId = region.regionId,
+                            blockers = loaded.admission.blockers
+                        )
                     }
                 }
             }

@@ -44,6 +44,11 @@ class MainActivity : AppCompatActivity() {
         val presentation: PracticalShoppingHomeOfflineCatalogPresentation
     )
 
+    private sealed interface OfflineCatalogLookupOutcome {
+        data class Success(val lookup: OfflineCatalogLookup) : OfflineCatalogLookupOutcome
+        data class Failure(val kind: BundledOfflineCatalogFailureKind) : OfflineCatalogLookupOutcome
+    }
+
     private var shellState = AppShellState.initial()
     private var homeSessionState = PracticalShoppingHomeSession.initialState()
     private val homeSessionStore by lazy(LazyThreadSafetyMode.NONE) {
@@ -648,7 +653,7 @@ class MainActivity : AppCompatActivity() {
         dialog.show()
 
         offlineCatalogLookup = searchExecutor.submit {
-            val lookup =
+            val outcome: OfflineCatalogLookupOutcome =
                 try {
                     val discoveryResult = offlineCatalogDiscoverySession.discover(
                         rawQuery = query,
@@ -656,16 +661,22 @@ class MainActivity : AppCompatActivity() {
                         evaluatedAtEpochMillis = System.currentTimeMillis(),
                         maximumSnapshotAgeMillis = OFFLINE_CATALOG_MAX_AGE_MILLIS
                     )
-                    OfflineCatalogLookup(
-                        discoveryResult = discoveryResult,
-                        presentation =
-                            PracticalShoppingHomeOfflineCatalogPresentation.from(
-                                query,
-                                discoveryResult
-                            )
+                    OfflineCatalogLookupOutcome.Success(
+                        OfflineCatalogLookup(
+                            discoveryResult = discoveryResult,
+                            presentation =
+                                PracticalShoppingHomeOfflineCatalogPresentation.from(
+                                    query,
+                                    discoveryResult
+                                )
+                        )
                     )
+                } catch (failure: BundledOfflineCatalogAdmissionException) {
+                    OfflineCatalogLookupOutcome.Failure(failure.kind)
                 } catch (ignored: Exception) {
-                    null
+                    OfflineCatalogLookupOutcome.Failure(
+                        BundledOfflineCatalogFailureKind.UNAVAILABLE
+                    )
                 }
 
             mainHandler.post {
@@ -679,16 +690,27 @@ class MainActivity : AppCompatActivity() {
                     return@post
                 }
                 offlineCatalogLookup = null
-                if (lookup == null) {
-                    dialog.setMessage(getString(R.string.home_offline_catalog_unavailable))
-                } else {
-                    showOfflineCatalogResult(
-                        token = query,
-                        presentation = lookup.presentation,
-                        discoveryResult = lookup.discoveryResult,
-                        requestId = requestId,
-                        exactProductItemKey = exactProductItemKey
-                    )
+                when (outcome) {
+                    is OfflineCatalogLookupOutcome.Failure -> {
+                        dialog.setMessage(
+                            getString(
+                                if (outcome.kind == BundledOfflineCatalogFailureKind.EXPIRED) {
+                                    R.string.home_offline_catalog_expired
+                                } else {
+                                    R.string.home_offline_catalog_unavailable
+                                }
+                            )
+                        )
+                    }
+                    is OfflineCatalogLookupOutcome.Success -> {
+                        showOfflineCatalogResult(
+                            token = query,
+                            presentation = outcome.lookup.presentation,
+                            discoveryResult = outcome.lookup.discoveryResult,
+                            requestId = requestId,
+                            exactProductItemKey = exactProductItemKey
+                        )
+                    }
                 }
             }
         }
