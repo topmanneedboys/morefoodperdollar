@@ -1,0 +1,309 @@
+package com.valuepilot.core
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
+import org.junit.Test
+
+class ProviderOfferImportTest {
+
+    private val provider = EvidenceProvider(
+        id = EvidenceProviderId("provider-test"),
+        displayName = "Provider Test"
+    )
+
+    private val source = ShoppingSource(
+        id = ShoppingSourceId("merchant-test"),
+        displayName = "Merchant Test"
+    )
+
+    private val dataset = EvidenceDatasetNamespace(
+        id = "provider-test-feed",
+        displayName = "Provider Test Feed",
+        licenseId = "rights-review-pending",
+        storageBoundary = EvidenceStorageBoundary.PROPRIETARY_RESTRICTED
+    )
+
+    private fun record(
+        identity: ImportedSourceIdentity = ImportedSourceIdentity(
+            providerItemId = "product-1",
+            sku = "sku-1",
+            suppliedGtin = "036000291452"
+        ),
+        prices: List<ImportedPriceField> = listOf(
+            ImportedPriceField("retail_price", "9.99", Money(999, "CAD")),
+            ImportedPriceField("sale_price", "12.99", Money(1299, "CAD"))
+        ),
+        datasetGeneratedAtEpochMillis: Long? = 1_000L,
+        priceObservedAtEpochMillis: Long? = null
+    ): ProviderOfferImportRecord =
+        ProviderOfferImportRecord(
+            provider = provider,
+            source = source,
+            dataset = dataset,
+            environment = EvidenceEnvironment.REAL_WORLD,
+            channel = EvidenceChannel.FIRST_PARTY_FEED,
+            claimKind = EvidenceClaimKind.SOURCE_ASSERTED,
+            identity = identity,
+            productName = "Example Product",
+            sourcePriceFields = prices,
+            availability = AvailabilityEvidence(
+                state = AvailabilityState.IN_STOCK,
+                claimKind = EvidenceClaimKind.SOURCE_ASSERTED
+            ),
+            productUrl = "https://example.test/product",
+            imageUrl = "https://example.test/image.jpg",
+            datasetGeneratedAtEpochMillis = datasetGeneratedAtEpochMillis,
+            priceObservedAtEpochMillis = priceObservedAtEpochMillis
+        )
+
+    @Test
+    fun preservesDistinctProviderPriceFieldsWithoutChoosingCurrentPrice() {
+        val imported = record()
+
+        assertEquals(
+            ImportedPriceSemantics.UNRESOLVED_SOURCE_FIELDS,
+            imported.priceSemantics
+        )
+        assertEquals(999L, imported.priceField("retail_price")?.parsedAmount?.minorUnits)
+        assertEquals(1299L, imported.priceField("SALE_PRICE")?.parsedAmount?.minorUnits)
+        assertEquals("9.99", imported.priceField("retail_price")?.rawValue)
+        assertEquals("12.99", imported.priceField("sale_price")?.rawValue)
+    }
+
+    @Test
+    fun discountedBelowReferenceIsStructurallyConsistentWithoutSelectingCurrentPrice() {
+        val imported = record(
+            prices = listOf(
+                ImportedPriceField("reference", "12.99", Money(1299, "CAD")),
+                ImportedPriceField("discounted", "9.99", Money(999, "CAD"))
+            )
+        )
+
+        val assessment = imported.assessDiscountRelationship(
+            discountedFieldName = "DISCOUNTED",
+            referenceFieldName = "reference"
+        )
+
+        assertEquals(
+            ImportedDiscountRelationship.DISCOUNTED_BELOW_REFERENCE,
+            assessment.relationship
+        )
+        assertTrue(assessment.structurallySupportsDiscountClaim)
+        assertFalse(assessment.hasSemanticConflict)
+        assertEquals(ImportedPriceSemantics.UNRESOLVED_SOURCE_FIELDS, imported.priceSemantics)
+    }
+
+    @Test
+    fun equalDiscountedAndReferencePriceDoesNotSupportSavingsClaim() {
+        val imported = record(
+            prices = listOf(
+                ImportedPriceField("reference", "12.99", Money(1299, "CAD")),
+                ImportedPriceField("discounted", "12.99", Money(1299, "CAD"))
+            )
+        )
+
+        val assessment = imported.assessDiscountRelationship("discounted", "reference")
+
+        assertEquals(ImportedDiscountRelationship.EQUAL, assessment.relationship)
+        assertFalse(assessment.structurallySupportsDiscountClaim)
+        assertFalse(assessment.hasSemanticConflict)
+    }
+
+    @Test
+    fun discountedAboveReferenceFailsClosedAsSemanticConflict() {
+        val imported = record(
+            prices = listOf(
+                ImportedPriceField("reference", "9.99", Money(999, "CAD")),
+                ImportedPriceField("discounted", "12.99", Money(1299, "CAD"))
+            )
+        )
+
+        val assessment = imported.assessDiscountRelationship("discounted", "reference")
+
+        assertEquals(
+            ImportedDiscountRelationship.DISCOUNTED_ABOVE_REFERENCE_CONFLICT,
+            assessment.relationship
+        )
+        assertFalse(assessment.structurallySupportsDiscountClaim)
+        assertTrue(assessment.hasSemanticConflict)
+    }
+
+    @Test
+    fun missingMalformedOrNonPositivePriceFailsClosedAsUnavailable() {
+        val missing = record(
+            prices = listOf(
+                ImportedPriceField("reference", "9.99", Money(999, "CAD"))
+            )
+        )
+        assertEquals(
+            ImportedDiscountRelationship.UNAVAILABLE,
+            missing.assessDiscountRelationship("discounted", "reference").relationship
+        )
+
+        val malformed = record(
+            prices = listOf(
+                ImportedPriceField("reference", "9.99", Money(999, "CAD")),
+                ImportedPriceField("discounted", "bad", null)
+            )
+        )
+        assertEquals(
+            ImportedDiscountRelationship.UNAVAILABLE,
+            malformed.assessDiscountRelationship("discounted", "reference").relationship
+        )
+
+        val nonPositive = record(
+            prices = listOf(
+                ImportedPriceField("reference", "9.99", Money(999, "CAD")),
+                ImportedPriceField("discounted", "0.00", Money(0, "CAD"))
+            )
+        )
+        assertEquals(
+            ImportedDiscountRelationship.UNAVAILABLE,
+            nonPositive.assessDiscountRelationship("discounted", "reference").relationship
+        )
+    }
+
+    @Test
+    fun differentCurrencyOrScaleIsNotCompared() {
+        val differentCurrency = record(
+            prices = listOf(
+                ImportedPriceField("reference", "12.99", Money(1299, "CAD")),
+                ImportedPriceField("discounted", "9.99", Money(999, "USD"))
+            )
+        )
+        assertEquals(
+            ImportedDiscountRelationship.INCOMPARABLE_MONEY,
+            differentCurrency.assessDiscountRelationship("discounted", "reference").relationship
+        )
+
+        val differentScale = record(
+            prices = listOf(
+                ImportedPriceField("reference", "12.990", Money(12990, "CAD", 3)),
+                ImportedPriceField("discounted", "9.99", Money(999, "CAD", 2))
+            )
+        )
+        assertEquals(
+            ImportedDiscountRelationship.INCOMPARABLE_MONEY,
+            differentScale.assessDiscountRelationship("discounted", "reference").relationship
+        )
+    }
+
+    @Test
+    fun sameFieldCannotBeBothDiscountedAndReference() {
+        try {
+            record().assessDiscountRelationship("retail_price", "RETAIL_PRICE")
+            fail("Expected distinct role field validation")
+        } catch (expected: IllegalArgumentException) {
+            assertTrue(expected.message.orEmpty().contains("distinct"))
+        }
+    }
+
+    @Test
+    fun invalidSuppliedGtinIsPreservedButNotPromoted() {
+        val identity = ImportedSourceIdentity(
+            providerItemId = "product-1",
+            sku = "sku-1",
+            suppliedGtin = "036000291453"
+        )
+
+        assertEquals(ImportedGtinStatus.INVALID, identity.gtinStatus)
+        assertEquals("036000291453", identity.suppliedGtin)
+        assertNull(identity.validatedGtin)
+        assertNull(identity.canonicalGtin)
+
+        val promoted = identity.validatedSourceProductIdentity()
+        assertNotNull(promoted)
+        assertEquals("product-1", promoted?.providerItemId)
+        assertEquals("sku-1", promoted?.sku)
+        assertNull(promoted?.gtin)
+    }
+
+    @Test
+    fun checksumValidGtinPreservesRawButPromotesCanonicalIdentity() {
+        val identity = ImportedSourceIdentity(
+            providerItemId = "product-1",
+            sku = "sku-1",
+            suppliedGtin = "036000291452"
+        )
+
+        assertEquals(ImportedGtinStatus.VALID, identity.gtinStatus)
+        assertEquals("036000291452", identity.validatedGtin)
+        assertEquals("0036000291452", identity.canonicalGtin)
+        assertEquals(
+            "0036000291452",
+            identity.validatedSourceProductIdentity()?.gtin
+        )
+    }
+
+    @Test
+    fun equivalentLeadingZeroRepresentationsPromoteSameCrossSourceIdentity() {
+        val upc12 = ImportedSourceIdentity(suppliedGtin = "036000291452")
+        val gtin13 = ImportedSourceIdentity(suppliedGtin = "0036000291452")
+        val gtin14 = ImportedSourceIdentity(suppliedGtin = "00036000291452")
+
+        assertEquals(upc12.canonicalGtin, gtin13.canonicalGtin)
+        assertEquals(gtin13.canonicalGtin, gtin14.canonicalGtin)
+        assertEquals(
+            upc12.validatedSourceProductIdentity()?.gtin,
+            gtin14.validatedSourceProductIdentity()?.gtin
+        )
+    }
+
+    @Test
+    fun invalidGtinAloneDoesNotCreateAValidatedIdentity() {
+        val identity = ImportedSourceIdentity(
+            suppliedGtin = "036000291453"
+        )
+
+        assertEquals(ImportedGtinStatus.INVALID, identity.gtinStatus)
+        assertNull(identity.validatedSourceProductIdentity())
+    }
+
+    @Test
+    fun datasetGenerationTimeIsNotPromotedToOfferFreshness() {
+        val imported = record(
+            datasetGeneratedAtEpochMillis = 123_456L,
+            priceObservedAtEpochMillis = null
+        )
+
+        assertEquals(123_456L, imported.datasetGeneratedAtEpochMillis)
+        assertNull(imported.priceObservedAtEpochMillis)
+        assertNull(imported.availability.observedAtEpochMillis)
+    }
+
+    @Test
+    fun malformedSourcePriceCanRemainAuditableWithoutBecomingMoney() {
+        val imported = record(
+            prices = listOf(
+                ImportedPriceField(
+                    sourceFieldName = "retail_price",
+                    rawValue = "not-a-price",
+                    parsedAmount = null
+                )
+            )
+        )
+
+        val field = imported.priceField("retail_price")
+        assertEquals("not-a-price", field?.rawValue)
+        assertNull(field?.parsedAmount)
+    }
+
+    @Test
+    fun duplicateSourcePriceFieldNamesAreRejectedCaseInsensitively() {
+        try {
+            record(
+                prices = listOf(
+                    ImportedPriceField("sale_price", "9.99", Money(999, "CAD")),
+                    ImportedPriceField("SALE_PRICE", "8.99", Money(899, "CAD"))
+                )
+            )
+            fail("Expected duplicate price-field rejection")
+        } catch (expected: IllegalArgumentException) {
+            assertTrue(expected.message.orEmpty().contains("unique"))
+        }
+    }
+}

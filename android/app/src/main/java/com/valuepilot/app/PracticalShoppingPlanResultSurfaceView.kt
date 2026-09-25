@@ -1,0 +1,291 @@
+package com.valuepilot.app
+
+import android.content.Context
+import android.graphics.Color
+import android.graphics.Typeface
+import android.util.AttributeSet
+import android.util.TypedValue
+import android.view.View
+import android.widget.LinearLayout
+import android.widget.TextView
+import com.google.android.material.card.MaterialCardView
+
+/**
+ * Presentation-only treatment for the already-projected primary result card.
+ *
+ * A known subtotal is useful, but it must not look like a complete basket. The
+ * completeness marker is supplied by the projector; this mapping only chooses
+ * calm visual emphasis and never decides a shopping outcome.
+ */
+internal data class PracticalShoppingPrimaryCardStyle(
+    val backgroundColor: String,
+    val strokeColor: String,
+    val accentColor: String
+)
+
+internal fun practicalShoppingPrimaryCardStyle(
+    state: PracticalShoppingPrimaryUiState
+): PracticalShoppingPrimaryCardStyle =
+    if (state.missingItemsText == null && !state.hasPriceFreshnessCaution) {
+        PracticalShoppingPrimaryCardStyle(
+            backgroundColor = "#ECFDF5",
+            strokeColor = "#A7F3D0",
+            accentColor = "#047857"
+        )
+    } else {
+        PracticalShoppingPrimaryCardStyle(
+            backgroundColor = "#FFFBEB",
+            strokeColor = "#FDE68A",
+            accentColor = "#92400E"
+        )
+    }
+
+/**
+ * Gives assistive technology one complete, card-level summary of the projected result.
+ *
+ * The summary is assembled exclusively from renderer-ready fields already visible in the card;
+ * it does not infer completeness, recalculate money, or create an action.
+ */
+internal fun practicalShoppingPrimaryCardContentDescription(
+    state: PracticalShoppingPrimaryUiState,
+    sampleNotice: String? = null
+): String {
+    require(sampleNotice == null || sampleNotice.isNotBlank())
+    return accessibilitySummary(
+        listOfNotNull(
+            state.badge,
+            practicalShoppingPlannedStoreAccessibility(state.storeName),
+            state.basketCostText,
+            state.coverageText,
+            state.missingItemsText,
+            state.travelText,
+            state.evidenceText,
+            state.whyText,
+            state.notice,
+            state.freshnessNotice,
+            sampleNotice
+        )
+    )
+}
+
+internal fun practicalShoppingSecondStopCardContentDescription(
+    state: PracticalShoppingSecondStopUiState,
+    sampleNotice: String? = null
+): String {
+    require(sampleNotice == null || sampleNotice.isNotBlank())
+    return accessibilitySummary(
+        listOfNotNull(
+            state.badge,
+            practicalShoppingPlannedStoreAccessibility(state.storeName),
+            state.baseItemsText,
+            state.addedItemsText,
+            state.combinedBasketCostText,
+            state.savingsText,
+            state.additionalTravelText,
+            state.evidenceText,
+            sampleNotice
+        )
+    )
+}
+
+private fun accessibilitySummary(parts: List<String>): String =
+    parts.joinToString(". ") { it.trim().trimEnd('.', '!', '?') } + "."
+
+/** Mechanically renders an already-projected Practical Shopping decision. */
+class PracticalShoppingPlanResultSurfaceView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : LinearLayout(context, attrs, defStyleAttr) {
+
+    init {
+        orientation = VERTICAL
+        isSaveEnabled = false
+        // A newly projected plan replaces the empty result area after a user
+        // action. Announce that change politely while keeping all decision
+        // content and authority in the immutable projection.
+        accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+    }
+
+    fun render(state: PracticalShoppingUiState?) {
+        render(state, sampleNotice = null)
+    }
+
+    /**
+     * Renders a result with optional already-visible context from its owning
+     * surface. The context is used only to keep accessibility disclosure in
+     * parity with the nearby visible sample notice.
+     */
+    fun render(
+        state: PracticalShoppingUiState?,
+        sampleNotice: String?
+    ) {
+        require(sampleNotice == null || sampleNotice.isNotBlank())
+        removeAllViews()
+        if (state == null) return
+
+        addView(line(state.headline, 22f, "#111827", true, 24))
+        state.primary?.let { addView(primaryCard(it, sampleNotice)) }
+        state.secondStop?.let { addView(secondStopCard(it, sampleNotice)) }
+        state.secondaryMessage?.let {
+            addView(line(it, 13f, "#6B7280", topPadding = 12))
+        }
+    }
+
+    private fun primaryCard(
+        state: PracticalShoppingPrimaryUiState,
+        sampleNotice: String?
+    ): View {
+        val style = practicalShoppingPrimaryCardStyle(state)
+        return card(style.backgroundColor, style.strokeColor, 12).apply {
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+            contentDescription =
+                practicalShoppingPrimaryCardContentDescription(state, sampleNotice)
+            addView(
+                column().apply {
+                    // The card already exposes one complete projected summary.
+                    // Hide only this decorative body from TalkBack so the same
+                    // projected fields are not repeated child by child.
+                    importantForAccessibility =
+                        View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+                    addView(line(state.badge, 11f, style.accentColor, true))
+                    sampleNotice?.let { notice ->
+                        addView(
+                            line(
+                                notice,
+                                12f,
+                                "#92400E",
+                                true,
+                                topPadding = 7
+                            )
+                        )
+                    }
+                    addView(
+                        line(
+                            practicalShoppingPlannedStoreLabel(state.storeName),
+                            22f,
+                            "#111827",
+                            true,
+                            6
+                        )
+                    )
+                    addView(
+                        line(
+                            PRACTICAL_SHOPPING_PLANNED_STORE_NOTICE,
+                            12f,
+                            "#6B7280",
+                            topPadding = 4
+                        )
+                    )
+                    addView(line(state.basketCostText, 18f, "#111827", true, 8))
+                    addView(
+                        line(
+                            "${state.coverageText}  •  ${state.travelText}",
+                            14f,
+                            "#374151",
+                            topPadding = 6
+                        )
+                    )
+                    state.missingItemsText?.let {
+                        addView(line(it, 13f, "#92400E", true, 8))
+                    }
+                    addView(line(state.evidenceText, 12f, "#6B7280", topPadding = 5))
+                    addView(line(state.whyText, 13f, "#374151", topPadding = 9))
+                    state.notice?.let {
+                        addView(line(it, 12f, "#92400E", topPadding = 7))
+                    }
+                    state.freshnessNotice?.let {
+                        addView(line(it, 12f, "#92400E", topPadding = 7))
+                    }
+                }
+            )
+        }
+    }
+
+    private fun secondStopCard(
+        state: PracticalShoppingSecondStopUiState,
+        sampleNotice: String?
+    ): View =
+        card("#FFFFFF", "#D1FAE5", 12).apply {
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+            contentDescription =
+                practicalShoppingSecondStopCardContentDescription(state, sampleNotice)
+            addView(
+                column().apply {
+                    // This summary is intentionally the single accessibility
+                    // stop for the projected optional-stop result.
+                    importantForAccessibility =
+                        View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+                    addView(line(state.badge, 11f, "#047857", true))
+                    sampleNotice?.let { notice ->
+                        addView(
+                            line(
+                                notice,
+                                12f,
+                                "#92400E",
+                                true,
+                                topPadding = 7
+                            )
+                        )
+                    }
+                    addView(
+                        line(
+                            practicalShoppingPlannedStoreLabel(state.storeName),
+                            18f,
+                            "#111827",
+                            true,
+                            6
+                        )
+                    )
+                    addView(
+                        line(
+                            PRACTICAL_SHOPPING_PLANNED_STORE_NOTICE,
+                            12f,
+                            "#6B7280",
+                            topPadding = 4
+                        )
+                    )
+                    addView(line(state.baseItemsText, 13f, "#374151", topPadding = 8))
+                    addView(line(state.addedItemsText, 13f, "#374151", topPadding = 4))
+                    addView(line(state.savingsText, 17f, "#047857", true, 7))
+                    addView(line(state.combinedBasketCostText, 14f, "#374151", topPadding = 5))
+                    addView(line(state.additionalTravelText, 13f, "#374151", topPadding = 4))
+                    addView(line(state.evidenceText, 12f, "#6B7280", topPadding = 5))
+                }
+            )
+        }
+
+    private fun card(background: String, stroke: String, topMargin: Int): MaterialCardView =
+        MaterialCardView(context).apply {
+            radius = dp(18).toFloat()
+            cardElevation = 0f
+            setCardBackgroundColor(ValuePilotPalette.color(background))
+            strokeColor = ValuePilotPalette.color(stroke)
+            strokeWidth = dp(1)
+            layoutParams =
+                LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+                    this.topMargin = dp(topMargin)
+                }
+        }
+
+    private fun column(): LinearLayout = LinearLayout(context).apply {
+        orientation = VERTICAL
+        setPadding(dp(16), dp(15), dp(16), dp(15))
+    }
+
+    private fun line(
+        value: String,
+        sizeSp: Float,
+        color: String,
+        bold: Boolean = false,
+        topPadding: Int = 0
+    ): TextView = TextView(context).apply {
+        text = value
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
+        setTextColor(ValuePilotPalette.color(color))
+        if (bold) setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+        if (topPadding > 0) setPadding(0, dp(topPadding), 0, 0)
+    }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+}

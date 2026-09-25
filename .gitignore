@@ -1,0 +1,30 @@
+browser-extension/node_modules/
+browser-extension/dist/
+android/.gradle/
+android/.kotlin/
+android/app/build/
+*.apk
+*.zip
+release/
+android/shared-core/build/
+__pycache__/
+*.py[cod]
+
+# Authorized/provider feed files and generated validation output stay local.
+# Do not commit merchant catalog data, credentials, or provider-restricted exports.
+local-provider-data/
+local-feed-reports/
+
+# Backend measurements may contain selected local evidence and are regenerated
+# from the ignored qualified root; keep only the checked-in qualification
+# summary/report in Git.
+backend/measurement-*.json
+
+# The generic release/ rule above also matches Android's release source set.
+# Keep the small production App Check provider source tracked.
+!android/app/src/release/
+!android/app/src/release/java/
+!android/app/src/release/java/com/
+!android/app/src/release/java/com/valuepilot/
+!android/app/src/release/java/com/valuepilot/app/
+!android/app/src/release/java/com/valuepilot/app/ValuePilotAppCheckProvider.kt

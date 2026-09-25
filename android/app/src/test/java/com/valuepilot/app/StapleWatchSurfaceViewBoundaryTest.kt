@@ -1,0 +1,118 @@
+package com.valuepilot.app
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.io.File
+
+class StapleWatchSurfaceViewBoundaryTest {
+
+    @Test
+    fun physicalViewConsumesConsumerStateOnly() {
+        val source = source("StapleWatchSurfaceView.kt").readSourceText()
+
+        assertTrue(source.contains("StapleWatchSurfaceRenderer"))
+        assertTrue(source.contains("render(state: StapleWatchUiState)"))
+        assertTrue(source.contains("StapleWatchSwitchUiState"))
+
+        listOf(
+            "StapleWatchUiProjection",
+            "StapleWatchEconomicDecision",
+            "StapleWatchEconomicEvaluator",
+            "ShoppingStoreKey",
+            "recommendedStoreKey",
+            "Money"
+        ).forEach { forbidden ->
+            assertFalse("Physical staple-watch View must not own $forbidden", source.contains(forbidden))
+        }
+    }
+
+    @Test
+    fun physicalViewStartsHiddenRendersVisibleAndClearsAllConsumerState() {
+        val source = source("StapleWatchSurfaceView.kt").readSourceText()
+
+        assertTrue(source.contains("isSaveEnabled = false\n        visibility = GONE"))
+        assertTrue(source.contains("override fun render(state: StapleWatchUiState)"))
+        assertTrue(source.contains("notice.visibility = VISIBLE\n        }\n        visibility = VISIBLE"))
+        assertTrue(source.contains("fun clear()"))
+        assertTrue(source.contains("headline.text = \"\""))
+        assertTrue(source.contains("statusTitle.text = \"\""))
+        assertTrue(source.contains("guidance.text = \"\""))
+        assertTrue(source.contains("baselineEvidence.text = \"\""))
+        assertTrue(source.contains("renderSwitchCandidate(null)"))
+        assertTrue(source.contains("notice.text = \"\""))
+        assertTrue(source.contains("notice.visibility = GONE"))
+        assertTrue(source.contains("visibility = GONE"))
+    }
+
+    @Test
+    fun switchCandidateSummaryIncludesEveryProjectedConsumerField() {
+        val candidate =
+            StapleWatchSwitchUiState(
+                badge = "ECONOMIC SWITCH CANDIDATE",
+                storeName = "Example Grocer",
+                savingsText = "Could save 19.00 CAD",
+                additionalTravelText = "Adds 5 min · 2 km",
+                alternativeEvidenceText = "Alternative evidence: 2 fresh · 1 stale · 0 unknown",
+                actionText = "Worth checking before your next shop"
+            )
+
+        assertEquals(
+            "ECONOMIC SWITCH CANDIDATE. Candidate store: Example Grocer. " +
+                "Candidate store only — product availability is not confirmed. " +
+                "Could save 19.00 CAD. " +
+                "Adds 5 min · 2 km. Alternative evidence: 2 fresh · 1 stale · 0 unknown. " +
+                "Worth checking before your next shop.",
+            stapleWatchSwitchCardContentDescription(candidate)
+        )
+    }
+
+    @Test
+    fun physicalViewAnnouncesStatusAndKeepsWatchAuthorityOutsideTheView() {
+        val source = source("StapleWatchSurfaceView.kt").readSourceText()
+
+        assertTrue(source.contains("accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"))
+        assertTrue(source.contains("contentDescription = stapleWatchSwitchCardContentDescription(candidate)"))
+        assertTrue(source.contains("valuePilotCandidateStoreLabel(candidate.storeName)"))
+        assertTrue(source.contains("VALUEPILOT_STORE_AVAILABILITY_NOTICE"))
+        assertTrue(
+            source.contains(
+                "importantForAccessibility =\n                        View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS"
+            )
+        )
+
+        listOf(
+            "StapleWatchEconomicEvaluator",
+            "StapleWatchPolicy",
+            "Money.parse",
+            "System.currentTimeMillis",
+            "ShoppingStoreKey"
+        ).forEach { forbidden ->
+            assertFalse("Watch View must not own authority through $forbidden", source.contains(forbidden))
+        }
+    }
+
+    @Test
+    fun `projected Watch warning is also a polite live region`() {
+        val source = source("StapleWatchSurfaceView.kt").readSourceText()
+        val noticeStart = source.indexOf("private val notice =")
+        val noticeEnd = source.indexOf("\n\n    init {", noticeStart)
+
+        assertTrue("Watch warning field must exist", noticeStart >= 0)
+        assertTrue("Watch warning block must be complete", noticeEnd > noticeStart)
+        assertTrue(
+            source.substring(noticeStart, noticeEnd).contains(
+                "accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"
+            )
+        )
+    }
+
+    private fun source(name: String): File {
+        val workingDirectory =
+            requireNotNull(System.getProperty("user.dir")) { "Missing user.dir for source boundary test" }
+        return File(workingDirectory, "src/main/java/com/valuepilot/app/$name").also {
+            assertTrue("Missing source $name at ${it.absolutePath}", it.isFile)
+        }
+    }
+}

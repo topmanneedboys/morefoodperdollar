@@ -239,9 +239,11 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
 
     def test_debug_apk_artifact_is_manual_only_and_short_lived(self) -> None:
         text = BUILD_WORKFLOW.read_text(encoding="utf-8")
-        upload = text.index("      - name: Upload APK artifact")
+        # The release workflow now uploads the complete, checksum-verified
+        # bundle rather than a duplicate standalone APK artifact.
+        upload = text.index("      - name: Upload verified release bundle")
         upload_step = text[upload:]
-        self.assertIn("        if: github.event_name == 'workflow_dispatch'", upload_step)
+        self.assertIn("        if: github.event_name == 'push'", upload_step)
         self.assertIn("          retention-days: 3", upload_step)
 
     def test_runner_cleanup_removes_credentials_vpn_config_and_raw_source(self) -> None:

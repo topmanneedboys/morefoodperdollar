@@ -1,0 +1,63 @@
+{
+  "provider_id": "openstreetmap",
+  "dataset_namespace_id": "openstreetmap-places",
+  "display_name": "OpenStreetMap places",
+  "license_id": "ODbL-1.0",
+  "storage_boundary": "OPEN_SHARE_ALIKE",
+  "attribution": "© OpenStreetMap contributors",
+  "source_url": "https://www.openstreetmap.org/copyright",
+  "license_url": "https://opendatacommons.org/licenses/odbl/1-0/",
+  "allowed_uses": [
+    "access",
+    "cache",
+    "comparison",
+    "display",
+    "index",
+    "mobile_app",
+    "retention_deletion"
+  ],
+  "authorization": {
+    "gates": [
+      {
+        "gate": "CACHE_AUTHORIZED",
+        "state": "SATISFIED",
+        "basis_id": "https://opendatacommons.org/licenses/odbl/1-0/"
+      },
+      {
+        "gate": "COMMERCIAL_USE_REVIEWED",
+        "state": "SATISFIED",
+        "basis_id": "https://opendatacommons.org/licenses/odbl/1-0/"
+      },
+      {
+        "gate": "CONSUMER_DISPLAY_AUTHORIZED",
+        "state": "SATISFIED",
+        "basis_id": "https://www.openstreetmap.org/copyright"
+      },
+      {
+        "gate": "DATA_ACCESS_AUTHORIZED",
+        "state": "SATISFIED",
+        "basis_id": "https://www.openstreetmap.org/copyright"
+      },
+      {
+        "gate": "GEOGRAPHY_SCOPED",
+        "state": "SATISFIED",
+        "basis_id": "valuepilot-store-directory-gta-gva-v1"
+      },
+      {
+        "gate": "INDEX_AUTHORIZED",
+        "state": "SATISFIED",
+        "basis_id": "https://opendatacommons.org/licenses/odbl/1-0/"
+      },
+      {
+        "gate": "MOBILE_APP_AUTHORIZED",
+        "state": "SATISFIED",
+        "basis_id": "https://opendatacommons.org/licenses/odbl/1-0/"
+      },
+      {
+        "gate": "RETENTION_DELETION_POLICY_DEFINED",
+        "state": "SATISFIED",
+        "basis_id": "valuepilot-store-directory-retention-v1"
+      }
+    ]
+  }
+}

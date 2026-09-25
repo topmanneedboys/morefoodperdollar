@@ -1,53 +1,2331 @@
 package com.valuepilot.app
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Bundle
-import android.provider.Settings
-import android.text.TextUtils
+import android.os.Handler
+import android.os.Looper
+import android.text.Editable
+import android.text.InputFilter
+import android.text.InputType
+import android.text.TextWatcher
+import android.util.TypedValue
+import android.view.Gravity
+import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
+import android.widget.CheckBox
+import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
+import com.google.android.material.chip.Chip
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
+import com.valuepilot.core.OfflineCatalogDiscoveryResult
+import com.valuepilot.core.ShoppingItemKey
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var status: TextView
+
+    private data class OfflineCatalogLookup(
+        val discoveryResult: OfflineCatalogDiscoveryResult,
+        val presentation: PracticalShoppingHomeOfflineCatalogPresentation
+    )
+
+    private sealed interface OfflineCatalogLookupOutcome {
+        data class Success(val lookup: OfflineCatalogLookup) : OfflineCatalogLookupOutcome
+        data class Failure(val kind: BundledOfflineCatalogFailureKind) : OfflineCatalogLookupOutcome
+    }
+
+    private var shellState = AppShellState.initial()
+    private var homeSessionState = PracticalShoppingHomeSession.initialState()
+    private val homeSessionStore by lazy(LazyThreadSafetyMode.NONE) {
+        AndroidPracticalShoppingHomeSessionStore(applicationContext)
+    }
+    private val homePreferenceStore by lazy(LazyThreadSafetyMode.NONE) {
+        AndroidPracticalShoppingHomePreferenceStore(applicationContext)
+    }
+    private val homePrivateMemoryStore by lazy(LazyThreadSafetyMode.NONE) {
+        CompareHerePrivatePriceMemoryAndroidStore(applicationContext)
+    }
+    private var homePrivateMemoryState = CompareHerePrivatePriceMemoryState.empty()
+    private var homePrivateMemoryLoadIssue: CompareHerePrivatePriceMemoryStoreIssue? = null
+
+    private val searchExecutor = Executors.newSingleThreadExecutor()
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private lateinit var offlineCatalogDiscoverySession: BundledOfflineCatalogDiscoverySession
+    private lateinit var argentinaSearchHost: ArgentinaLiveSearchSurfaceHost
+    private val argentinaSearchRenderGate = ArgentinaLiveSearchMainThreadRenderGate()
+    private var argentinaSearchSurfaceState: ArgentinaLiveSearchSurfaceState? = null
+    private val argentinaLaunchArea = ArgentinaQualifiedLaunchAreas.BuenosAiresCaba
+    private var searchQuery = ""
+
+    private lateinit var shellRoot: View
+    private lateinit var bottomNavArea: View
+    private lateinit var bottomNavigation: BottomNavigationView
+    private lateinit var screenEyebrow: TextView
+    private lateinit var screenTitle: TextView
+    private lateinit var screenBody: TextView
+    private lateinit var screenFootnote: TextView
+    private lateinit var primaryAction: Button
+    private lateinit var sourcesLicencesButton: MaterialButton
+    private lateinit var dataStatusButton: MaterialButton
+    private lateinit var homeExperience: PracticalShoppingHomeSurfaceView
+    private lateinit var basketExperience: PracticalShoppingBasketSurfaceView
+    private lateinit var searchExperience: View
+    private lateinit var searchInput: TextInputEditText
+    private lateinit var searchButton: MaterialButton
+    private lateinit var searchAreaLabel: TextView
+    private lateinit var searchStatus: TextView
+    private lateinit var searchProgress: ProgressBar
+    private lateinit var searchResultsHeading: TextView
+    private lateinit var searchResultsContainer: LinearLayout
+    private lateinit var searchLoadMoreButton: MaterialButton
+    private lateinit var searchResultsEnd: TextView
+    private lateinit var savedExperience: PracticalShoppingSavedSurfaceView
+    private lateinit var savedStapleLaunchExperience: PracticalShoppingSavedStapleLaunchView
+    private lateinit var savedObservedPriceLaunchExperience: PracticalShoppingSavedObservedPriceLaunchView
+    private lateinit var observedPriceSavedSelectionExperience: UserObservedPriceSavedSelectionSurfaceView
+    private lateinit var observedPriceSavedPrefillResultExperience:
+        UserObservedPriceSavedPrefillHandoffSurfaceView
+    private lateinit var observedPriceConfirmationDraftExperience:
+        UserObservedPriceConfirmationDraftSurfaceView
+    private lateinit var observedPriceConfirmationDraftPriceInputExperience:
+        UserObservedPriceConfirmationDraftPriceInputSurfaceView
+    private lateinit var observedPriceConfirmationDraftObservedAtInputExperience:
+        UserObservedPriceConfirmationDraftObservedAtInputSurfaceView
+    private lateinit var observedPriceConfirmationDraftProofReferenceInputExperience:
+        UserObservedPriceConfirmationDraftProofReferenceInputSurfaceView
+    private lateinit var observedPriceConfirmationDraftProofContentSelectionExperience:
+        UserObservedPriceConfirmationDraftProofContentSelectionSurfaceView
+    private lateinit var observedPriceConfirmationActionExperience:
+        UserObservedPriceConfirmationActionSurfaceView
+    private lateinit var stapleWatchSetupExperience: StapleWatchSavedSelectionSurfaceView
+    private lateinit var stapleWatchPolicyExperience: StapleWatchPolicyDraftSurfaceView
+    private lateinit var stapleWatchResultExperience: StapleWatchSurfaceView
+    private lateinit var savedRouteCoordinator: PracticalShoppingSavedRouteCoordinator
+    private lateinit var observedPriceSavedSelectionCoordinator:
+        UserObservedPriceSavedSelectionCompositionCoordinator
+    private lateinit var observedPriceSavedSelectionSurfaceCoordinator:
+        UserObservedPriceSavedSelectionSurfaceCoordinator
+    private lateinit var observedPriceSavedPrefillResultSurfaceBinding:
+        UserObservedPriceSavedPrefillHandoffResultSurfaceBinding
+    private lateinit var observedPriceConfirmationDraftRouteCoordinator:
+        UserObservedPriceSavedConfirmationDraftRouteCoordinator
+    private lateinit var observedPriceConfirmationDraftProofContentSelectionCoordinator:
+        UserObservedPriceConfirmationDraftProofContentSelectionCoordinator
+    private lateinit var observedPriceConfirmationDraftProofContentPicker:
+        AndroidUserObservedPriceProofContentPicker
+    private lateinit var observedPriceConfirmationActionPresentationController:
+        UserObservedPriceConfirmationActionPresentationController
+    private lateinit var observedPriceConfirmationAndroidSession:
+        UserObservedPriceConfirmationAndroidSession
+    private lateinit var observedPriceConfirmationActionCoordinator:
+        UserObservedPriceConfirmationActionCoordinator
+    private lateinit var stapleWatchForegroundEvaluationInputHost: StapleWatchForegroundEvaluationInputHost
+    private lateinit var stapleWatchForegroundResultSurfaceBinding:
+        StapleWatchForegroundResultSurfaceBinding
+    private lateinit var stapleWatchSavedDisplayMetadataCompositionCoordinator:
+        StapleWatchSavedDisplayMetadataCompositionCoordinator
+    private lateinit var stapleWatchFactResolutionHost: StapleWatchFactResolutionHost
+    private lateinit var stapleWatchSetupCoordinator: StapleWatchSavedSetupCompositionCoordinator
+    private lateinit var stapleWatchPolicySetupCoordinator: StapleWatchPolicySetupCompositionCoordinator
+    private lateinit var rememberConfirmedChoiceAndroidSession:
+        PracticalShoppingRememberConfirmedChoiceAndroidSession
+
+    private var comparisonActivityOpen = false
+    private var homeItemDetailsDialog: AlertDialog? = null
+    private var homeItemDetailsItemKey: ShoppingItemKey? = null
+    private var homeItemDetailsPackageInput: TextInputEditText? = null
+    private var homeItemDetailsBrandInput: TextInputEditText? = null
+    private var homeItemDetailsExactProduct: CheckBox? = null
+    private var homeRenderState: PracticalShoppingHomeRenderState? = null
+    private var homeSavedExactProductContext: PracticalShoppingHomeSavedExactProductContext? = null
+    private var homeShareCard: PracticalShoppingHomeShareCard? = null
+    private var homeShareDialog: AlertDialog? = null
+    private var offlineCatalogDialog: AlertDialog? = null
+    private var pendingExactProductLabel: String? = null
+    private var pendingExactProductItemKey: ShoppingItemKey? = null
+    private var dataStatusDialog: AlertDialog? = null
+    private var privatePriceHistoryDialog: AlertDialog? = null
+    private var privatePriceHistoryClearDialog: AlertDialog? = null
+    private var privatePriceHistoryExportDialog: AlertDialog? = null
+    private var privatePriceHistoryForgetDialog: AlertDialog? = null
+    private var offlineCatalogLookup: Future<*>? = null
+    private var offlineCatalogRequestId = 0L
+    private var suppressSearchInputCallback = false
+    private var searchRouteActive = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        status = findViewById(R.id.serviceStatus)
-        findViewById<Button>(R.id.enableButton).setOnClickListener { showAccessibilityDisclosure() }
-        findViewById<Button>(R.id.settingsButton).setOnClickListener { openAccessibilitySettings() }
+        setContentView(R.layout.activity_shell)
+        offlineCatalogDiscoverySession =
+            BundledOfflineCatalog.createDiscoverySession(applicationContext)
+
+        shellRoot = findViewById(R.id.shellRoot)
+        bottomNavArea = findViewById(R.id.bottomNavArea)
+        bottomNavigation = findViewById(R.id.bottomNavigation)
+        screenEyebrow = findViewById(R.id.screenEyebrow)
+        screenTitle = findViewById(R.id.screenTitle)
+        screenBody = findViewById(R.id.screenBody)
+        screenFootnote = findViewById(R.id.screenFootnote)
+        primaryAction = findViewById(R.id.primaryAction)
+        sourcesLicencesButton = findViewById(R.id.sourcesLicencesButton)
+        dataStatusButton = findViewById(R.id.dataStatusButton)
+        homeExperience = findViewById(R.id.homeExperience)
+        basketExperience = findViewById(R.id.basketExperience)
+        searchExperience = findViewById(R.id.searchExperience)
+        searchInput = findViewById(R.id.searchInput)
+        searchButton = findViewById(R.id.searchButton)
+        searchAreaLabel = findViewById(R.id.searchAreaLabel)
+        searchStatus = findViewById(R.id.searchStatus)
+        searchProgress = findViewById(R.id.searchProgress)
+        searchResultsHeading = findViewById(R.id.searchResultsHeading)
+        searchResultsContainer = findViewById(R.id.searchResultsContainer)
+        searchLoadMoreButton = findViewById(R.id.searchLoadMoreButton)
+        searchResultsEnd = findViewById(R.id.searchResultsEnd)
+        savedExperience = findViewById(R.id.savedExperience)
+        savedStapleLaunchExperience = findViewById(R.id.savedStapleLaunchExperience)
+        savedObservedPriceLaunchExperience = findViewById(R.id.savedObservedPriceLaunchExperience)
+        observedPriceSavedSelectionExperience = findViewById(R.id.observedPriceSavedSelectionExperience)
+        observedPriceSavedPrefillResultExperience =
+            findViewById(R.id.observedPriceSavedPrefillResultExperience)
+        observedPriceConfirmationDraftExperience =
+            findViewById(R.id.observedPriceConfirmationDraftExperience)
+        observedPriceConfirmationDraftPriceInputExperience =
+            findViewById(R.id.observedPriceConfirmationDraftPriceInputExperience)
+        observedPriceConfirmationDraftObservedAtInputExperience =
+            findViewById(R.id.observedPriceConfirmationDraftObservedAtInputExperience)
+        observedPriceConfirmationDraftProofReferenceInputExperience =
+            findViewById(R.id.observedPriceConfirmationDraftProofReferenceInputExperience)
+        observedPriceConfirmationDraftProofContentSelectionExperience =
+            findViewById(R.id.observedPriceConfirmationDraftProofContentSelectionExperience)
+        observedPriceConfirmationActionExperience =
+            findViewById(R.id.observedPriceConfirmationActionExperience)
+        stapleWatchSetupExperience = findViewById(R.id.stapleWatchSetupExperience)
+        stapleWatchPolicyExperience = findViewById(R.id.stapleWatchPolicyExperience)
+        stapleWatchResultExperience = findViewById(R.id.stapleWatchResultExperience)
+
+        installSystemBarInsets()
+        shellState = restoreShellState(savedInstanceState)
+        homeSessionState = restoreHomeState(savedInstanceState)
+        refreshHomePrivateMemory()
+        searchQuery = savedInstanceState?.getString(STATE_SEARCH_QUERY).orEmpty()
+        argentinaSearchHost = ArgentinaLiveSearchSurfaceHost.createProduction(
+            area = argentinaLaunchArea,
+            render = ::renderArgentinaSearchState
+        )
+        configureHomeUi()
+        configureBasketUi()
+        configureSearchUi()
+        configureSavedUi()
+
+        bottomNavigation.setOnItemSelectedListener { item ->
+            val tab = when (item.itemId) {
+                R.id.navHome -> AppPrimaryTab.HOME
+                R.id.navSearch -> AppPrimaryTab.SEARCH
+                R.id.navBasket -> AppPrimaryTab.BASKET
+                R.id.navSaved -> AppPrimaryTab.SAVED
+                else -> null
+            } ?: return@setOnItemSelectedListener false
+
+            dispatch(AppShellIntent.SelectPrimary(tab))
+            true
+        }
+
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    if (
+                        shellState.route == AppRoute.OBSERVED_PRICE_SAVED_SELECTION ||
+                        shellState.route == AppRoute.OBSERVED_PRICE_CONFIRMATION_DRAFT ||
+                        shellState.route == AppRoute.STAPLE_WATCH_SETUP ||
+                        shellState.route == AppRoute.STAPLE_WATCH_POLICY
+                    ) {
+                        dispatch(AppShellIntent.NavigateBack)
+                    } else {
+                        isEnabled = false
+                        onBackPressedDispatcher.onBackPressed()
+                        isEnabled = true
+                    }
+                }
+            }
+        )
+
+        primaryAction.setOnClickListener { openComparison() }
+        sourcesLicencesButton.setOnClickListener { showSourcesLicences() }
+        dataStatusButton.setOnClickListener { showDataStatus() }
+
+        bottomNavigation.selectedItemId = menuIdFor(shellState.selectedPrimaryTab)
+        renderShell(shellState)
+        restoreHomeItemDetailsDialog(savedInstanceState)
     }
 
     override fun onResume() {
         super.onResume()
-        val enabled = isServiceEnabled()
-        status.text = if (enabled) "ValuePilot accessibility scanner: ON" else "ValuePilot accessibility scanner: OFF"
-        status.setTextColor(if (enabled) 0xff0f7b4d.toInt() else 0xffb42318.toInt())
+
+        refreshHomePrivateMemory()
+
+        if (comparisonActivityOpen && shellState.route == AppRoute.COMPARE) {
+            comparisonActivityOpen = false
+            dispatch(AppShellIntent.NavigateBack)
+        }
     }
 
-    private fun showAccessibilityDisclosure() {
-        AlertDialog.Builder(this)
-            .setTitle("Before enabling ValuePilot")
-            .setMessage(
-                "ValuePilot uses Android Accessibility access to read product/menu text in the app currently on screen and to display its floating comparison panel. " +
-                    "It scrolls a list only after you tap Scan all. If you tap OCR, it captures the visible app window for on-device text recognition. " +
-                    "This build has no INTERNET permission and does not upload screen contents, account credentials, or shopping data."
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putString(STATE_PRIMARY_TAB, shellState.selectedPrimaryTab.name)
+
+        val homeSnapshot = PracticalShoppingHomeSession.snapshot(homeSessionState)
+        outState.putString(STATE_HOME_QUERY, homeSnapshot.query)
+        outState.putBoolean(STATE_HOME_WAS_SUBMITTED, homeSnapshot.wasSubmitted)
+        outState.putString(STATE_HOME_CHICKEN_CHOICE, homeSnapshot.chickenChoice?.name)
+        outState.putString(
+            STATE_HOME_EXTRA_STOP_MINIMUM_SAVINGS,
+            homeSnapshot.extraStopMinimumSavingsChoice.name
+        )
+        homeSnapshot.requestDetailsLifecycleState?.let { encoded ->
+            outState.putByteArray(STATE_HOME_REQUEST_DETAILS, encoded)
+        }
+        if (homeItemDetailsDialog?.isShowing == true) {
+            homeItemDetailsItemKey?.let { itemKey ->
+                outState.putString(STATE_HOME_DETAILS_ITEM_KEY, itemKey.value)
+                outState.putString(
+                    STATE_HOME_DETAILS_PACKAGE_COUNT,
+                    homeItemDetailsPackageInput?.text?.toString().orEmpty()
+                )
+                outState.putString(
+                    STATE_HOME_DETAILS_BRAND,
+                    homeItemDetailsBrandInput?.text?.toString().orEmpty()
+                )
+                outState.putBoolean(
+                    STATE_HOME_DETAILS_EXACT_PRODUCT,
+                    homeItemDetailsExactProduct?.isChecked == true
+                )
+            }
+        }
+
+        outState.putString(STATE_SEARCH_QUERY, searchQuery)
+        super.onSaveInstanceState(outState)
+    }
+
+    override fun onDestroy() {
+        dismissHomeItemDetailsDialog()
+        dismissHomeShareDialog()
+        cancelOfflineCatalogLookup()
+        offlineCatalogDialog?.dismiss()
+        offlineCatalogDialog = null
+        pendingExactProductLabel = null
+        pendingExactProductItemKey = null
+        if (::argentinaSearchHost.isInitialized) {
+            argentinaSearchHost.close()
+        }
+        dataStatusDialog?.dismiss()
+        dataStatusDialog = null
+        privatePriceHistoryDialog?.dismiss()
+        privatePriceHistoryDialog = null
+        privatePriceHistoryClearDialog?.dismiss()
+        privatePriceHistoryClearDialog = null
+        privatePriceHistoryForgetDialog?.dismiss()
+        privatePriceHistoryForgetDialog = null
+        privatePriceHistoryExportDialog?.dismiss()
+        privatePriceHistoryExportDialog = null
+        if (::homeExperience.isInitialized) {
+            homeExperience.onQueryChanged = null
+            homeExperience.onSubmit = null
+            homeExperience.onQuickAdd = null
+            homeExperience.onRemoveItem = null
+            homeExperience.onRemoveUnknownItem = null
+            homeExperience.onFindOfflineCatalogMatch = null
+            homeExperience.onChooseExactProduct = null
+            homeExperience.onChickenChoice = null
+            homeExperience.onExtraStopMinimumSavingsChoice = null
+            homeExperience.onEditItemDetails = null
+            homeExperience.onAddObservedPrice = null
+            homeExperience.onCompare = null
+            homeExperience.onReviewPrivateMemory = null
+            homeExperience.onExportPrivateMemory = null
+            homeExperience.onForgetPrivateMemory = null
+            homeExperience.onGoodPrice = null
+            homeExperience.onShopAgain = null
+            homeExperience.onSharePlan = null
+        }
+        if (::basketExperience.isInitialized) {
+            basketExperience.onAction = null
+        }
+        if (::savedRouteCoordinator.isInitialized) {
+            savedExperience.onAction = null
+            savedStapleLaunchExperience.onAction = null
+            savedObservedPriceLaunchExperience.onAction = null
+            observedPriceConfirmationDraftPriceInputExperience.onCommit = null
+            observedPriceConfirmationDraftObservedAtInputExperience.onCommit = null
+            observedPriceConfirmationDraftProofReferenceInputExperience.onCommit = null
+            observedPriceConfirmationDraftProofContentSelectionExperience.onSelectRequested = null
+            observedPriceConfirmationActionExperience.onAction = null
+            observedPriceConfirmationActionPresentationController.close()
+            observedPriceConfirmationAndroidSession.close()
+            observedPriceConfirmationDraftProofContentPicker.close()
+            observedPriceConfirmationDraftProofContentSelectionCoordinator.close()
+            observedPriceSavedSelectionSurfaceCoordinator.close()
+            observedPriceSavedPrefillResultSurfaceBinding.close()
+            observedPriceConfirmationDraftRouteCoordinator.close()
+            stapleWatchSetupExperience.onAction = null
+            stapleWatchSetupExperience.onContinueAction = null
+            stapleWatchPolicyExperience.onAction = null
+            stapleWatchPolicyExperience.onContinueAction = null
+            observedPriceSavedSelectionCoordinator.close()
+            stapleWatchPolicySetupCoordinator.close()
+            stapleWatchSetupCoordinator.close()
+            stapleWatchFactResolutionHost.close()
+            stapleWatchSavedDisplayMetadataCompositionCoordinator.close()
+            stapleWatchForegroundEvaluationInputHost.close()
+            savedRouteCoordinator.close()
+        }
+        if (::rememberConfirmedChoiceAndroidSession.isInitialized) {
+            rememberConfirmedChoiceAndroidSession.close()
+        }
+        if (::offlineCatalogDiscoverySession.isInitialized) {
+            offlineCatalogDiscoverySession.close()
+        }
+        searchExecutor.shutdownNow()
+        mainHandler.removeCallbacksAndMessages(null)
+        super.onDestroy()
+    }
+
+    private fun installSystemBarInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(shellRoot) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(bars.left, bars.top, bars.right, 0)
+            bottomNavArea.setPadding(0, 0, 0, bars.bottom)
+            insets
+        }
+        ViewCompat.requestApplyInsets(shellRoot)
+    }
+
+    private fun restoreShellState(savedInstanceState: Bundle?): AppShellState {
+        val savedTab = savedInstanceState
+            ?.getString(STATE_PRIMARY_TAB)
+            ?.let { runCatching { AppPrimaryTab.valueOf(it) }.getOrNull() }
+            ?: AppPrimaryTab.HOME
+
+        return AppShellReducer.reduce(
+            AppShellState.initial(),
+            AppShellIntent.SelectPrimary(savedTab)
+        )
+    }
+
+    private fun restoreHomeState(
+        savedInstanceState: Bundle?
+    ): PracticalShoppingHomeSession.State {
+        if (savedInstanceState?.containsKey(STATE_HOME_QUERY) != true) {
+            homeSessionStore.load()?.let { persisted ->
+                return PracticalShoppingHomeSession.restoreState(persisted)
+            }
+        }
+
+        val choice =
+            savedInstanceState
+                ?.getString(STATE_HOME_CHICKEN_CHOICE)
+                ?.let { saved ->
+                    runCatching {
+                        LocalSamplePracticalShoppingDemo.ChickenChoice.valueOf(saved)
+                    }.getOrNull()
+                }
+
+        val extraStopMinimumSavingsChoice =
+            if (savedInstanceState?.containsKey(STATE_HOME_EXTRA_STOP_MINIMUM_SAVINGS) == true) {
+                PracticalShoppingHomePreferenceCodec.decode(
+                    savedInstanceState.getString(STATE_HOME_EXTRA_STOP_MINIMUM_SAVINGS)
+                )
+            } else {
+                homePreferenceStore.loadExtraStopMinimumSavingsChoice()
+            }
+
+        return PracticalShoppingHomeSession.restoreState(
+            PracticalShoppingHomeSession.Snapshot(
+                query = savedInstanceState?.getString(STATE_HOME_QUERY).orEmpty(),
+                wasSubmitted = savedInstanceState?.getBoolean(STATE_HOME_WAS_SUBMITTED, false) ?: false,
+                chickenChoice = choice,
+                extraStopMinimumSavingsChoice = extraStopMinimumSavingsChoice,
+                requestDetailsLifecycleState =
+                    savedInstanceState?.getByteArray(STATE_HOME_REQUEST_DETAILS)
             )
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Continue") { _, _ -> openAccessibilitySettings() }
+        )
+    }
+
+    private fun configureHomeUi() {
+        homeExperience.onQueryChanged = { rawQuery ->
+            homeSessionState =
+                PracticalShoppingHomeSession.queryChanged(homeSessionState, rawQuery)
+            renderHome()
+        }
+        homeExperience.onSubmit = { rawQuery ->
+            homeSessionState = PracticalShoppingHomeSession.submit(homeSessionState, rawQuery)
+            renderHome(revealResult = true)
+        }
+        homeExperience.onQuickAdd = { choice ->
+            homeSessionState = PracticalShoppingHomeSession.addQuickItem(homeSessionState, choice)
+            renderHome()
+        }
+        homeExperience.onRemoveItem = { itemKey ->
+            homeSessionState = PracticalShoppingHomeSession.removeItem(homeSessionState, itemKey)
+            renderHome()
+        }
+        homeExperience.onRemoveUnknownItem = { token ->
+            homeSessionState =
+                PracticalShoppingHomeSession.removeUnknownItem(homeSessionState, token)
+            renderHome()
+        }
+        homeExperience.onFindOfflineCatalogMatch = { token ->
+            showOfflineCatalogMatches(token)
+        }
+        homeExperience.onChooseExactProduct = { itemKey ->
+            homeSessionState.model.ui.items.firstOrNull { it.key == itemKey }?.let { item ->
+                showOfflineCatalogMatches(item.name, exactProductItemKey = itemKey)
+            }
+        }
+        homeExperience.onChickenChoice = { choice ->
+            homeSessionState =
+                PracticalShoppingHomeSession.chooseChicken(homeSessionState, choice)
+            renderHome(revealResult = true)
+        }
+        homeExperience.onExtraStopMinimumSavingsChoice = { choice ->
+            homePreferenceStore.saveExtraStopMinimumSavingsChoice(choice)
+            homeSessionState =
+                PracticalShoppingHomeSession.chooseExtraStopMinimumSavings(
+                    homeSessionState,
+                    choice
+                )
+            renderHome()
+        }
+        homeExperience.onEditItemDetails = { itemKey ->
+            showHomeItemDetails(itemKey)
+        }
+        homeExperience.onAddObservedPrice = { itemKey ->
+            openGoodPriceForHomeItem(itemKey)
+        }
+        homeExperience.onCompare = { openComparison() }
+        homeExperience.onReviewPrivateMemory = { reviewPrivatePriceHistory() }
+        homeExperience.onExportPrivateMemory = { exportPrivatePriceHistory() }
+        homeExperience.onForgetPrivateMemory = { forgetPrivatePriceHistoryObservation() }
+        homeExperience.onGoodPrice = { openGoodPriceCheck() }
+        homeExperience.onShopAgain = {
+            homeSessionState = PracticalShoppingHomeSession.shopAgain(homeSessionState)
+            renderHome(revealResult = true)
+        }
+        homeExperience.onSharePlan = { shareHomePlan() }
+        rememberConfirmedChoiceAndroidSession =
+            PracticalShoppingRememberConfirmedChoiceAndroidSession.create(
+                context = this,
+                completionListener = ::onHomeExactProductRemembered
+            )
+        renderHome()
+    }
+
+    private fun renderHome(revealResult: Boolean = false) {
+        homeSessionStore.save(PracticalShoppingHomeSession.snapshot(homeSessionState))
+        val homeState =
+            PracticalShoppingHomeRenderer.render(
+                homeSessionState.model.ui,
+                homeSessionState.requestDetails.details,
+                homePrivateMemoryState,
+                privateMemoryStatus =
+                    if (homePrivateMemoryLoadIssue == null) {
+                        PracticalShoppingHomePrivateMemoryStatus.AVAILABLE
+                    } else {
+                        PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE
+                    },
+                savedExactProductContext = homeSavedExactProductContext
+            )
+        // A render invalidates any pending share preview. This prevents a dialog opened for an
+        // earlier list/result from sending text after the Home projection has changed.
+        dismissHomeShareDialog()
+        homeRenderState = homeState
+        if (
+            homeItemDetailsDialog?.isShowing == true &&
+                practicalShoppingHomeItemDetailsDialogShouldDismiss(
+                    activeItemKey = homeItemDetailsItemKey,
+                    visibleItemKeys = homeState.items.map { it.key }
+                )
+        ) {
+            // A list edit can remove or replace the item while its editor is
+            // still open. Close the stale editor before it can save details
+            // against a request that no longer contains that identity.
+            dismissHomeItemDetailsDialog()
+        }
+        homeExperience.render(homeState)
+        if (revealResult) {
+            homeExperience.revealProjectedResult()
+        }
+        basketExperience.render(PracticalShoppingBasketRenderer.render(homeState))
+    }
+
+    private fun dismissHomeShareDialog() {
+        homeShareDialog?.dismiss()
+        homeShareDialog = null
+        homeShareCard = null
+    }
+
+    /**
+     * Refreshes bounded local comparison memory when Home resumes, including after Compare Here
+     * returns. A corrupt/read-failed store is treated as no usable context, but the issue is
+     * retained so Home can distinguish unavailable history from an empty history. It never
+     * becomes planner or offer authority and never blocks the already-usable Home surface.
+     */
+    private fun refreshHomePrivateMemory() {
+        val loaded = homePrivateMemoryStore.load()
+        val next = loaded.state ?: CompareHerePrivatePriceMemoryState.empty()
+        val nextIssue = loaded.issue
+        if (next == homePrivateMemoryState && nextIssue == homePrivateMemoryLoadIssue) return
+
+        homePrivateMemoryState = next
+        homePrivateMemoryLoadIssue = nextIssue
+        dataStatusDialog?.dismiss()
+        dataStatusDialog = null
+        privatePriceHistoryDialog?.dismiss()
+        privatePriceHistoryDialog = null
+        privatePriceHistoryClearDialog?.dismiss()
+        privatePriceHistoryClearDialog = null
+        privatePriceHistoryExportDialog?.dismiss()
+        privatePriceHistoryExportDialog = null
+        privatePriceHistoryForgetDialog?.dismiss()
+        privatePriceHistoryForgetDialog = null
+        if (
+            ::homeExperience.isInitialized &&
+                shellState.route != AppRoute.COMPARE
+        ) {
+            renderHome()
+        }
+    }
+
+    private fun dismissHomeItemDetailsDialog() {
+        homeItemDetailsDialog?.dismiss()
+        homeItemDetailsDialog = null
+        homeItemDetailsItemKey = null
+        homeItemDetailsPackageInput = null
+        homeItemDetailsBrandInput = null
+        homeItemDetailsExactProduct = null
+    }
+
+    private fun cancelOfflineCatalogLookup() {
+        offlineCatalogLookup?.cancel(true)
+        offlineCatalogLookup = null
+    }
+
+    private fun showOfflineCatalogMatches(
+        token: String,
+        exactProductItemKey: ShoppingItemKey? = null
+    ) {
+        val query = token.trim()
+        if (query.isBlank()) return
+
+        // A newer unresolved item replaces the previous dialog and work. Do
+        // not let stale catalog scans accumulate behind the single executor.
+        cancelOfflineCatalogLookup()
+        offlineCatalogDialog?.dismiss()
+        val requestId = Math.addExact(offlineCatalogRequestId, 1L)
+        offlineCatalogRequestId = requestId
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(getString(R.string.home_unknown_find_matches_title, query))
+                .setMessage(R.string.home_offline_catalog_loading)
+                .setNegativeButton(R.string.cancel, null)
+                .create()
+        offlineCatalogDialog = dialog
+        dialog.setOnDismissListener {
+            if (offlineCatalogDialog === dialog) {
+                offlineCatalogDialog = null
+                cancelOfflineCatalogLookup()
+            }
+        }
+        dialog.show()
+
+        offlineCatalogLookup = searchExecutor.submit {
+            val outcome: OfflineCatalogLookupOutcome =
+                try {
+                    val discoveryResult = offlineCatalogDiscoverySession.discover(
+                        rawQuery = query,
+                        canonicalizer = JvmTextCanonicalizer,
+                        evaluatedAtEpochMillis = System.currentTimeMillis(),
+                        maximumSnapshotAgeMillis = OFFLINE_CATALOG_MAX_AGE_MILLIS
+                    )
+                    OfflineCatalogLookupOutcome.Success(
+                        OfflineCatalogLookup(
+                            discoveryResult = discoveryResult,
+                            presentation =
+                                PracticalShoppingHomeOfflineCatalogPresentation.from(
+                                    query,
+                                    discoveryResult
+                                )
+                        )
+                    )
+                } catch (failure: BundledOfflineCatalogAdmissionException) {
+                    OfflineCatalogLookupOutcome.Failure(failure.kind)
+                } catch (ignored: Exception) {
+                    OfflineCatalogLookupOutcome.Failure(
+                        BundledOfflineCatalogFailureKind.UNAVAILABLE
+                    )
+                }
+
+            mainHandler.post {
+                if (
+                    isFinishing ||
+                        isDestroyed ||
+                        requestId != offlineCatalogRequestId ||
+                        offlineCatalogDialog !== dialog ||
+                        !dialog.isShowing
+                ) {
+                    return@post
+                }
+                offlineCatalogLookup = null
+                when (outcome) {
+                    is OfflineCatalogLookupOutcome.Failure -> {
+                        dialog.setMessage(
+                            getString(
+                                if (outcome.kind == BundledOfflineCatalogFailureKind.EXPIRED) {
+                                    R.string.home_offline_catalog_expired
+                                } else {
+                                    R.string.home_offline_catalog_unavailable
+                                }
+                            )
+                        )
+                    }
+                    is OfflineCatalogLookupOutcome.Success -> {
+                        showOfflineCatalogResult(
+                            token = query,
+                            presentation = outcome.lookup.presentation,
+                            discoveryResult = outcome.lookup.discoveryResult,
+                            requestId = requestId,
+                            exactProductItemKey = exactProductItemKey
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Replaces the loading dialog with an explicit, reversible identity-choice surface.
+     * Unknown Home words remain query-only. A resolved item may additionally be saved as an
+     * exact product preference, but only after the existing source-revalidated confirmation
+     * boundary accepts the selected catalog row.
+     */
+    private fun showOfflineCatalogResult(
+        token: String,
+        presentation: PracticalShoppingHomeOfflineCatalogPresentation,
+        discoveryResult: OfflineCatalogDiscoveryResult,
+        requestId: Long,
+        exactProductItemKey: ShoppingItemKey?
+    ) {
+        if (requestId != offlineCatalogRequestId || offlineCatalogDialog == null) return
+
+        offlineCatalogDialog?.dismiss()
+        offlineCatalogDialog = null
+
+        if (presentation.matches.isEmpty()) {
+            val dialog =
+                AlertDialog.Builder(this)
+                    .setTitle(getString(R.string.home_unknown_find_matches_title, token))
+                    .setMessage(presentation.message)
+                    .setNegativeButton(R.string.cancel, null)
+                    .create()
+            offlineCatalogDialog = dialog
+            dialog.setOnDismissListener {
+                if (offlineCatalogDialog === dialog) offlineCatalogDialog = null
+            }
+            dialog.show()
+            return
+        }
+
+        var selectedIndex = -1
+        lateinit var resultDialog: AlertDialog
+        val labels =
+            presentation.matches
+                .map { match ->
+                    buildString {
+                        append(match.displayName)
+                        match.brand?.let { append(" · ").append(it) }
+                        append(" (").append(match.matchLabel).append(")")
+                    }
+                }
+                .toTypedArray()
+        val builder =
+            AlertDialog.Builder(this)
+                .setTitle(getString(R.string.home_unknown_find_matches_title, token))
+                .setMessage(
+                    presentation.summaryMessage +
+                        "\n\n" +
+                        getString(
+                            if (exactProductItemKey == null) {
+                                R.string.home_offline_catalog_select_match
+                            } else {
+                                R.string.home_offline_catalog_confirm_exact_message
+                            }
+                        )
+                )
+                .setSingleChoiceItems(labels, -1) { _, which ->
+                    selectedIndex = which
+                    resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
+                    if (exactProductItemKey == null) {
+                        resultDialog.getButton(AlertDialog.BUTTON_NEUTRAL).isEnabled =
+                            PracticalShoppingHomeOfflineCatalogComparisonSelection.displayNameFor(
+                                matches = presentation.matches,
+                                selectedIndex = selectedIndex
+                            ) != null
+                    }
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(
+                    if (exactProductItemKey == null) {
+                        R.string.home_offline_catalog_replace_list_word
+                    } else {
+                        R.string.home_offline_catalog_confirm_exact_product
+                    },
+                    null
+                )
+
+        if (exactProductItemKey == null) {
+            builder.setNeutralButton(R.string.home_offline_catalog_open_compare, null)
+        }
+
+        resultDialog = builder.create()
+        offlineCatalogDialog = resultDialog
+        resultDialog.setOnDismissListener {
+            if (offlineCatalogDialog === resultDialog) offlineCatalogDialog = null
+        }
+        resultDialog.setOnShowListener {
+            resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).apply {
+                isEnabled = false
+                contentDescription =
+                    getString(
+                        if (exactProductItemKey == null) {
+                            R.string.home_offline_catalog_replace_list_word_description
+                        } else {
+                            R.string.home_offline_catalog_confirm_exact_description
+                        }
+                    )
+            }
+            if (exactProductItemKey == null) {
+                resultDialog.getButton(AlertDialog.BUTTON_NEUTRAL).apply {
+                    isEnabled = false
+                    contentDescription =
+                        getString(R.string.home_offline_catalog_open_compare_description)
+                }
+            }
+            resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val match = presentation.matches.getOrNull(selectedIndex) ?: return@setOnClickListener
+                if (exactProductItemKey != null) {
+                    confirmHomeExactProduct(
+                        itemKey = exactProductItemKey,
+                        discoveryResult = discoveryResult,
+                        matchIndex = selectedIndex,
+                        presentationGeneration = requestId,
+                        displayName = match.displayName,
+                        resultDialog = resultDialog
+                    )
+                    return@setOnClickListener
+                }
+                val editedQuery =
+                    PracticalShoppingHomeOfflineCatalogSelection.replaceUnknownToken(
+                        rawQuery = homeSessionState.model.ui.query,
+                        unknownToken = token,
+                        replacementName = match.displayName
+                    ) ?: run {
+                        // The Home list may have changed while the bounded lookup was open.
+                        // Explain the stale/unsafe selection instead of silently ignoring it.
+                        resultDialog.setMessage(getString(R.string.home_offline_catalog_match_apply_failed))
+                        resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+                        return@setOnClickListener
+                    }
+                homeSessionState =
+                    PracticalShoppingHomeSession.queryChanged(homeSessionState, editedQuery)
+                renderHome()
+                resultDialog.dismiss()
+            }
+            if (exactProductItemKey == null) {
+                resultDialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                    if (
+                        requestId != offlineCatalogRequestId ||
+                            offlineCatalogDialog !== resultDialog ||
+                            !resultDialog.isShowing
+                    ) {
+                        resultDialog.dismiss()
+                        return@setOnClickListener
+                    }
+                    val displayName =
+                        PracticalShoppingHomeOfflineCatalogComparisonSelection.displayNameFor(
+                            matches = presentation.matches,
+                            selectedIndex = selectedIndex
+                        ) ?: return@setOnClickListener
+                    resultDialog.dismiss()
+                    openComparisonWithSharedText(displayName)
+                }
+            }
+        }
+        resultDialog.show()
+    }
+
+    private fun confirmHomeExactProduct(
+        itemKey: ShoppingItemKey,
+        discoveryResult: OfflineCatalogDiscoveryResult,
+        matchIndex: Int,
+        presentationGeneration: Long,
+        displayName: String,
+        resultDialog: AlertDialog
+    ) {
+        if (
+            presentationGeneration != offlineCatalogRequestId ||
+                offlineCatalogDialog !== resultDialog ||
+                !resultDialog.isShowing
+        ) {
+            return
+        }
+
+        val currentItem = homeSessionState.model.ui.items.firstOrNull { it.key == itemKey }
+        if (currentItem == null) {
+            resultDialog.setMessage(getString(R.string.home_offline_catalog_confirm_unavailable))
+            resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+            return
+        }
+
+        val selection =
+            PracticalShoppingHomeOfflineCatalogExactSelection.confirm(
+                itemKey = itemKey,
+                result = discoveryResult,
+                matchIndex = matchIndex,
+                presentationGeneration = presentationGeneration,
+                confirmedCandidateId = "home-confirmed-$presentationGeneration-${matchIndex + 1}"
+            )
+        val chosen = selection.selection
+        if (chosen == null) {
+            resultDialog.setMessage(getString(R.string.home_offline_catalog_confirm_unavailable))
+            resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+            return
+        }
+
+        if (!rememberConfirmedChoiceAndroidSession.remember(chosen.rememberRequest)) {
+            resultDialog.setMessage(getString(R.string.home_offline_catalog_save_progress))
+            resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+            return
+        }
+
+        pendingExactProductLabel = displayName
+        pendingExactProductItemKey = itemKey
+        resultDialog.setMessage(getString(R.string.home_offline_catalog_save_progress))
+        resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+    }
+
+    private fun onHomeExactProductRemembered(
+        completion: PracticalShoppingRememberConfirmedChoiceCompletion
+    ) {
+        val label = pendingExactProductLabel
+        val itemKey = pendingExactProductItemKey
+        pendingExactProductLabel = null
+        pendingExactProductItemKey = null
+        val dialog = offlineCatalogDialog
+        offlineCatalogDialog = null
+        dialog?.dismiss()
+
+        val outcome = completion.outcome
+        val title: Int
+        val message: String
+        when (outcome) {
+            is PracticalShoppingRememberConfirmedChoiceExecutionOutcome.Completed -> {
+                val result = outcome.result
+                if (result.exactSaved && itemKey != null) {
+                    val currentContext =
+                        homeSavedExactProductContext
+                            ?: PracticalShoppingHomeSavedExactProductContext()
+                    homeSavedExactProductContext =
+                        if (result.fullyLabeled && label != null) {
+                            val preference = result.exactResult.state?.productFor(itemKey)
+                            currentContext.withNamedProduct(
+                                itemKey = itemKey,
+                                displayName = label,
+                                forbiddenIdentifiers =
+                                    listOfNotNull(
+                                        preference?.providerId?.value,
+                                        preference?.sourceIdentity?.providerItemId,
+                                        preference?.sourceIdentity?.sku,
+                                        preference?.sourceIdentity?.gtin,
+                                        preference?.dataset?.id
+                                    )
+                            )
+                                ?: currentContext.withUnresolvedProduct(itemKey)
+                        } else {
+                            currentContext.withUnresolvedProduct(itemKey)
+                        }
+                    if (shellState.route == AppRoute.HOME) renderHome()
+                }
+                if (result.exactSaved) {
+                    title = R.string.home_offline_catalog_saved_title
+                    message =
+                        if (result.fullyLabeled && label != null) {
+                            getString(R.string.home_offline_catalog_saved_message, label)
+                        } else {
+                            getString(R.string.home_offline_catalog_saved_unlabelled_message)
+                        }
+                } else {
+                    title = R.string.home_offline_catalog_save_failed_title
+                    message = getString(R.string.home_offline_catalog_save_failed_message)
+                }
+            }
+
+            PracticalShoppingRememberConfirmedChoiceExecutionOutcome.Failed -> {
+                title = R.string.home_offline_catalog_save_failed_title
+                message = getString(R.string.home_offline_catalog_save_failed_message)
+            }
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton(R.string.nav_saved) { _, _ ->
+                dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED))
+            }
+            .setNegativeButton(R.string.home_stay, null)
             .show()
     }
 
-    private fun openAccessibilitySettings() {
-        startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+    private fun restoreHomeItemDetailsDialog(savedInstanceState: Bundle?) {
+        if (shellState.route != AppRoute.HOME) return
+        val state = savedInstanceState ?: return
+
+        val itemKey =
+            state
+                .getString(STATE_HOME_DETAILS_ITEM_KEY)
+                ?.takeIf(String::isNotBlank)
+                ?.let(::ShoppingItemKey)
+                ?: return
+
+        showHomeItemDetails(
+            itemKey = itemKey,
+            draftOverride =
+                PracticalShoppingHomeItemDetailsEditor.Draft(
+                    packageCountText =
+                        state
+                            .getString(STATE_HOME_DETAILS_PACKAGE_COUNT)
+                            .orEmpty(),
+                    brandText =
+                        state
+                            .getString(STATE_HOME_DETAILS_BRAND)
+                            .orEmpty(),
+                    exactProduct =
+                        state.getBoolean(STATE_HOME_DETAILS_EXACT_PRODUCT, false)
+                )
+        )
     }
 
-    private fun isServiceEnabled(): Boolean {
-        val expected = "$packageName/${ValueAccessibilityService::class.java.name}"
-        val enabledServices = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: return false
-        val splitter = TextUtils.SimpleStringSplitter(':').apply { setString(enabledServices) }
-        return splitter.any { it.equals(expected, true) }
+    private fun showHomeItemDetails(
+        itemKey: ShoppingItemKey,
+        draftOverride: PracticalShoppingHomeItemDetailsEditor.Draft? = null
+    ) {
+        dismissHomeItemDetailsDialog()
+        val item = homeSessionState.model.ui.items.firstOrNull { it.key == itemKey } ?: return
+        val current = homeSessionState.requestDetails.details?.detailFor(itemKey)
+        if (homeSessionState.requestDetails.details == null) return
+
+        val draft =
+            draftOverride ?: PracticalShoppingHomeItemDetailsEditor.initialDraft(current)
+        val body = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(4), dp(4), dp(4), 0)
+        }
+        val packageLayout = TextInputLayout(this).apply {
+            hint = getString(R.string.home_item_details_package_count_hint)
+            isCounterEnabled = true
+            counterMaxLength = 7
+        }
+        val packageInput = TextInputEditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+            imeOptions = EditorInfo.IME_ACTION_NEXT
+            filters = arrayOf(InputFilter.LengthFilter(7))
+            setText(draft.packageCountText)
+            setSelectAllOnFocus(false)
+        }
+        packageLayout.addView(packageInput)
+
+        val brandLayout = TextInputLayout(this).apply {
+            hint = getString(R.string.home_item_details_brand_hint)
+            isCounterEnabled = true
+            counterMaxLength = 160
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(12) }
+        }
+        val brandInput = TextInputEditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
+            imeOptions = EditorInfo.IME_ACTION_DONE
+            filters = arrayOf(InputFilter.LengthFilter(160))
+            setText(draft.brandText)
+            setSingleLine(true)
+        }
+        brandLayout.addView(brandInput)
+
+        val exactProduct = CheckBox(this).apply {
+            text = getString(R.string.home_item_details_exact_product)
+            isChecked = draft.exactProduct
+            setPadding(0, dp(8), 0, 0)
+        }
+        body.addView(packageLayout)
+        body.addView(brandLayout)
+        body.addView(exactProduct)
+        body.addView(
+            TextView(this).apply {
+                text = getString(R.string.home_item_details_exact_product_note)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                setTextColor(ValuePilotPalette.color("#6B7280"))
+                setPadding(dp(4), 0, dp(4), 0)
+            }
+        )
+
+        val dialogBuilder =
+            AlertDialog.Builder(this)
+                .setTitle(getString(R.string.home_item_details_title, item.name))
+                .setMessage(getString(R.string.home_item_details_body))
+                .setView(body)
+                .setNegativeButton(R.string.cancel, null)
+
+        if (current != null) {
+            dialogBuilder.setNeutralButton(R.string.home_item_details_clear) { _, _ ->
+                homeSessionState =
+                    PracticalShoppingHomeSession.withoutItemDetail(
+                        homeSessionState,
+                        itemKey
+                    )
+                renderHome()
+            }
+        }
+
+        val dialog =
+            dialogBuilder
+                .setPositiveButton(R.string.home_item_details_save, null)
+                .create()
+        homeItemDetailsDialog = dialog
+        homeItemDetailsItemKey = itemKey
+        homeItemDetailsPackageInput = packageInput
+        homeItemDetailsBrandInput = brandInput
+        homeItemDetailsExactProduct = exactProduct
+        dialog.setOnDismissListener {
+            if (homeItemDetailsDialog === dialog) {
+                homeItemDetailsDialog = null
+                homeItemDetailsItemKey = null
+                homeItemDetailsPackageInput = null
+                homeItemDetailsBrandInput = null
+                homeItemDetailsExactProduct = null
+            }
+        }
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                packageLayout.error = null
+                brandLayout.error = null
+                when (
+                    val outcome =
+                        PracticalShoppingHomeItemDetailsEditor.apply(
+                            itemKey = itemKey,
+                            current = current,
+                            draft =
+                                PracticalShoppingHomeItemDetailsEditor.Draft(
+                                    packageCountText = packageInput.text?.toString().orEmpty(),
+                                    brandText = brandInput.text?.toString().orEmpty(),
+                                    exactProduct = exactProduct.isChecked
+                                )
+                        )
+                ) {
+                    is PracticalShoppingHomeItemDetailsEditor.Outcome.Accepted -> {
+                        homeSessionState =
+                            outcome.detail?.let { detail ->
+                                PracticalShoppingHomeSession.withItemDetail(
+                                    homeSessionState,
+                                    detail
+                                )
+                            } ?: PracticalShoppingHomeSession.withoutItemDetail(
+                                homeSessionState,
+                                itemKey
+                            )
+                        renderHome()
+                        dialog.dismiss()
+                    }
+
+                    is PracticalShoppingHomeItemDetailsEditor.Outcome.Rejected -> {
+                        when (outcome.field) {
+                            PracticalShoppingHomeItemDetailsEditor.Field.PACKAGE_COUNT -> {
+                                packageLayout.error = outcome.message
+                                packageInput.requestFocus()
+                            }
+
+                            PracticalShoppingHomeItemDetailsEditor.Field.BRAND -> {
+                                brandLayout.error = outcome.message
+                                brandInput.requestFocus()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        dialog.show()
+    }
+
+    private fun configureBasketUi() {
+        basketExperience.onAction = { action ->
+            when (action) {
+                PracticalShoppingBasketUiAction.OpenHome ->
+                    dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.HOME))
+            }
+        }
+    }
+
+    private fun configureSearchUi() {
+        suppressSearchInputCallback = true
+        searchInput.setText(searchQuery)
+        searchInput.setSelection(searchInput.text?.length ?: 0)
+        suppressSearchInputCallback = false
+
+        searchInput.addTextChangedListener(
+            object : TextWatcher {
+                override fun beforeTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    count: Int,
+                    after: Int
+                ) = Unit
+
+                override fun onTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    before: Int,
+                    count: Int
+                ) = Unit
+
+                override fun afterTextChanged(s: Editable?) {
+                    if (suppressSearchInputCallback) return
+
+                    searchQuery = s?.toString().orEmpty()
+                    argentinaSearchHost.queryChanged(searchQuery)
+                }
+            }
+        )
+
+        searchInput.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                submitArgentinaSearch()
+                true
+            } else {
+                false
+            }
+        }
+
+        searchButton.setOnClickListener { submitArgentinaSearch() }
+        searchLoadMoreButton.setOnClickListener { argentinaSearchHost.loadMore() }
+
+        quickSearchEntries().forEach { (chipId, query) ->
+            configureQuickSearch(chipId, query)
+        }
+    }
+
+    private fun configureSavedUi() {
+        val savedPresenter = PracticalShoppingSavedSurfacePresenter(savedExperience)
+        val stapleLaunchPresenter =
+            PracticalShoppingSavedStapleLaunchPresenter(savedStapleLaunchExperience)
+        val observedPriceLaunchPresenter =
+            PracticalShoppingSavedObservedPriceLaunchPresenter(savedObservedPriceLaunchExperience)
+        observedPriceSavedPrefillResultSurfaceBinding =
+            UserObservedPriceSavedPrefillHandoffResultSurfaceBinding(
+                surface = observedPriceSavedPrefillResultExperience
+            )
+        val observedPriceSelectionRenderer =
+            UserObservedPriceSavedSelectionSurfaceRenderer { state ->
+                observedPriceSavedPrefillResultSurfaceBinding.clear()
+                observedPriceSavedSelectionExperience.render(state)
+            }
+        val observedPriceSelectionPresenter =
+            UserObservedPriceSavedSelectionSurfacePresenter(observedPriceSelectionRenderer)
+        val observedPriceConfirmationDraftPresenter =
+            UserObservedPriceConfirmationDraftSurfacePresenter(
+                observedPriceConfirmationDraftExperience
+            )
+        observedPriceConfirmationActionPresentationController =
+            UserObservedPriceConfirmationActionPresentationController(
+                renderer = observedPriceConfirmationActionExperience,
+                submitAction = { observedPriceConfirmationActionCoordinator.submit() }
+            )
+        observedPriceConfirmationAndroidSession =
+            UserObservedPriceConfirmationAndroidSession.create(
+                context = this,
+                completionListener = observedPriceConfirmationActionPresentationController
+            )
+        val observedPriceConfirmationDraftRouteShellAdapter =
+            UserObservedPriceConfirmationDraftRouteShellAdapter(
+                currentRoute = { shellState.route },
+                emitIntent = ::dispatch
+            )
+        observedPriceConfirmationDraftRouteCoordinator =
+            UserObservedPriceSavedConfirmationDraftRouteCoordinator(
+                routeOpenObserver = observedPriceConfirmationDraftRouteShellAdapter,
+                sessionFactory = {
+                    UserObservedPriceConfirmationDraftRouteSession(
+                        observer =
+                            UserObservedPriceConfirmationDraftObserver { finalization ->
+                                observedPriceConfirmationDraftPresenter.render(finalization)
+                                observedPriceConfirmationActionPresentationController
+                                    .onDraftOrProofChanged()
+                            }
+                    )
+                }
+            )
+        observedPriceConfirmationDraftPriceInputExperience.onCommit =
+            observedPriceConfirmationDraftRouteCoordinator::onPriceInput
+        observedPriceConfirmationDraftObservedAtInputExperience.onCommit =
+            observedPriceConfirmationDraftRouteCoordinator::onObservedAtInput
+        observedPriceConfirmationDraftProofReferenceInputExperience.onCommit =
+            observedPriceConfirmationDraftRouteCoordinator::onProofReferenceInput
+        observedPriceConfirmationDraftProofContentSelectionCoordinator =
+            UserObservedPriceConfirmationDraftProofContentSelectionCoordinator(
+                requestForegroundSelection = {
+                    observedPriceConfirmationDraftProofContentPicker.launch()
+                },
+                observer =
+                    UserObservedPriceConfirmationDraftProofContentSelectionObserver { presentation ->
+                        observedPriceConfirmationDraftProofContentSelectionExperience
+                            .onPresentation(presentation)
+                        observedPriceConfirmationActionPresentationController
+                            .onDraftOrProofChanged()
+                    }
+            )
+        observedPriceConfirmationDraftProofContentPicker =
+            AndroidUserObservedPriceProofContentPicker(
+                activity = this,
+                contentSource = AndroidUserObservedPriceProofContentSource(contentResolver),
+                onReadResult =
+                    observedPriceConfirmationDraftProofContentSelectionCoordinator::onContentReadResult
+            )
+        observedPriceConfirmationDraftProofContentSelectionExperience.onSelectRequested =
+            observedPriceConfirmationDraftProofContentSelectionCoordinator::onSelectRequested
+        observedPriceConfirmationActionCoordinator =
+            UserObservedPriceConfirmationActionCoordinator(
+                routeCoordinator = observedPriceConfirmationDraftRouteCoordinator,
+                proofContentCoordinator =
+                    observedPriceConfirmationDraftProofContentSelectionCoordinator,
+                target =
+                    UserObservedPriceConfirmationAndroidSubmissionTarget(
+                        observedPriceConfirmationAndroidSession
+                    )
+            )
+        observedPriceConfirmationActionExperience.onAction =
+            observedPriceConfirmationActionPresentationController::onSubmitRequested
+        val observedPricePrefillAttemptFanout =
+            UserObservedPriceSavedPrefillHandoffAttemptFanout(
+                resultObserver = observedPriceSavedPrefillResultSurfaceBinding,
+                confirmationDraftObserver = observedPriceConfirmationDraftRouteCoordinator
+            )
+        val stapleSetupPresenter =
+            StapleWatchSavedSelectionSurfacePresenter(stapleWatchSetupExperience)
+        val staplePolicyPresenter =
+            StapleWatchPolicyDraftSurfacePresenter(stapleWatchPolicyExperience)
+
+        observedPriceSavedSelectionCoordinator =
+            UserObservedPriceSavedSelectionCompositionCoordinator(
+                prefillHandoffAttemptObserver = observedPricePrefillAttemptFanout
+            ) { snapshot ->
+                UserObservedPriceSavedSelectionRouteSession(
+                    initialSnapshot = snapshot,
+                    presenter = observedPriceSelectionPresenter
+                )
+            }
+        observedPriceSavedSelectionSurfaceCoordinator =
+            UserObservedPriceSavedSelectionSurfaceCoordinator(
+                surface = observedPriceSavedSelectionExperience,
+                compositionCoordinator = observedPriceSavedSelectionCoordinator
+            )
+        stapleWatchForegroundResultSurfaceBinding =
+            StapleWatchForegroundResultSurfaceBinding(
+                renderer = stapleWatchResultExperience,
+                clearSurface = stapleWatchResultExperience::clear
+            )
+        stapleWatchForegroundEvaluationInputHost =
+            StapleWatchForegroundEvaluationInputHost(
+                outputObserver = stapleWatchForegroundResultSurfaceBinding.outputObserver
+            )
+        val stapleWatchPolicyAvailabilityShellAdapter =
+            StapleWatchPolicyRouteAvailabilityShellAdapter(
+                currentRoute = { shellState.route },
+                emitIntent = ::dispatch
+            )
+        stapleWatchPolicySetupCoordinator =
+            StapleWatchPolicySetupCompositionCoordinator(
+                policyObserver = stapleWatchForegroundEvaluationInputHost,
+                routeAvailabilityObserver = stapleWatchPolicyAvailabilityShellAdapter,
+                sessionFactory = { moneySpec ->
+                    StapleWatchPolicyDraftRouteSession(
+                        moneySpec = moneySpec,
+                        presenter = staplePolicyPresenter
+                    )
+                }
+            )
+        val stapleWatchEvidencePreconditionsFanout =
+            StapleWatchEconomicEvidencePreconditionsFanout(
+                foregroundInputObserver = stapleWatchForegroundEvaluationInputHost,
+                policySetupObserver = stapleWatchPolicySetupCoordinator
+            )
+        stapleWatchSavedDisplayMetadataCompositionCoordinator =
+            StapleWatchSavedDisplayMetadataCompositionCoordinator(
+                preconditionsObserver = stapleWatchEvidencePreconditionsFanout,
+                displayMetadataObserver = stapleWatchForegroundEvaluationInputHost
+            )
+        stapleWatchFactResolutionHost =
+            StapleWatchFactResolutionHost(
+                preconditionsObserver = stapleWatchSavedDisplayMetadataCompositionCoordinator,
+                readinessObserver = stapleSetupPresenter::onFactResolutionReadiness
+            )
+        stapleWatchSetupCoordinator =
+            StapleWatchSavedSetupCompositionCoordinator(
+                handoffAttemptObserver = stapleSetupPresenter::onHandoffAttempt,
+                factCheckIntentObserver = stapleWatchFactResolutionHost,
+                sessionFactory = { snapshot ->
+                    StapleWatchSavedSelectionRouteSession(
+                        initialSnapshot = snapshot,
+                        presenter = stapleSetupPresenter
+                    )
+                }
+            )
+
+        val savedRenderer =
+            PracticalShoppingSavedLifecycleRenderer { state ->
+                if (
+                    state.status !in setOf(
+                        PracticalShoppingSavedLifecycleStatus.READY,
+                        PracticalShoppingSavedLifecycleStatus.DEGRADED
+                    )
+                ) {
+                    // A Saved refresh/mutation is authoritative for whether a choice still
+                    // exists. Do not leave old identity context visible while it is unresolved.
+                    homeSavedExactProductContext = null
+                    if (shellState.route == AppRoute.HOME) renderHome()
+                }
+                savedPresenter.render(state)
+                stapleLaunchPresenter.render(state)
+                observedPriceLaunchPresenter.render(state)
+            }
+        val savedSnapshotObserver =
+            PracticalShoppingSavedValidatedSnapshotObserver { snapshot ->
+                homeSavedExactProductContext =
+                    PracticalShoppingHomeSavedExactProductContext.fromSnapshot(snapshot)
+                if (shellState.route == AppRoute.HOME) renderHome()
+                observedPriceSavedSelectionCoordinator.onSnapshot(snapshot)
+                stapleWatchSetupCoordinator.onSnapshot(snapshot)
+                stapleWatchSavedDisplayMetadataCompositionCoordinator.onSnapshot(snapshot)
+            }
+
+        savedRouteCoordinator =
+            PracticalShoppingSavedRouteCoordinator(
+                sessionFactory = {
+                    PracticalShoppingSavedAndroidSession.create(
+                        context = this,
+                        renderer = savedRenderer,
+                        snapshotObserver = savedSnapshotObserver
+                    )
+                }
+            )
+
+        savedExperience.onAction = { action ->
+            when (action) {
+                is PracticalShoppingSavedSurfaceAction.CheckProductPrice ->
+                    openGoodPriceForSavedProduct(action.displayName)
+
+                else -> savedRouteCoordinator.onSurfaceAction(action)
+            }
+        }
+        savedStapleLaunchExperience.onAction = { action ->
+            when (action) {
+                PracticalShoppingSavedStapleLaunchAction.OpenStapleWatchSetup ->
+                    dispatch(AppShellIntent.OpenStapleWatchSetup)
+            }
+        }
+        savedObservedPriceLaunchExperience.onAction = { action ->
+            when (action) {
+                PracticalShoppingSavedObservedPriceLaunchAction.OpenObservedPriceSavedSelection ->
+                    dispatch(AppShellIntent.OpenObservedPriceSavedSelection)
+            }
+        }
+        stapleWatchSetupExperience.onAction = stapleWatchSetupCoordinator::onSurfaceAction
+        stapleWatchSetupExperience.onContinueAction = stapleWatchSetupCoordinator::onContinueAction
+        stapleWatchPolicyExperience.onAction = stapleWatchPolicySetupCoordinator::onSurfaceAction
+        stapleWatchPolicyExperience.onContinueAction =
+            stapleWatchPolicySetupCoordinator::onContinueAction
+    }
+
+    private fun configureQuickSearch(chipId: Int, query: String) {
+        findViewById<Chip>(chipId).setOnClickListener {
+            if (argentinaSearchSurfaceState?.mode == ArgentinaLiveSearchSurfaceMode.LOADING) {
+                hideKeyboard()
+                return@setOnClickListener
+            }
+            setSearchQuery(query)
+            submitArgentinaSearch()
+        }
+    }
+
+    private fun quickSearchEntries(): List<Pair<Int, String>> =
+        listOf(
+            R.id.quickEggs to getString(R.string.search_quick_eggs),
+            R.id.quickMilk to getString(R.string.search_quick_milk),
+            R.id.quickChicken to getString(R.string.search_quick_chicken),
+            R.id.quickRice to getString(R.string.search_quick_rice),
+            R.id.quickPizza to getString(R.string.search_quick_pizza)
+        )
+
+    private fun setSearchQuery(query: String) {
+        suppressSearchInputCallback = true
+        searchInput.setText(query)
+        searchInput.setSelection(query.length)
+        suppressSearchInputCallback = false
+        searchQuery = query
+        argentinaSearchHost.queryChanged(query)
+    }
+
+    private fun submitArgentinaSearch() {
+        val rawQuery = searchInput.text?.toString().orEmpty()
+        if (rawQuery.trim().isBlank() ||
+            rawQuery.length > ArgentinaBackendContract.MAX_QUERY_CHARS ||
+            argentinaSearchSurfaceState?.mode == ArgentinaLiveSearchSurfaceMode.LOADING
+        ) {
+            hideKeyboard()
+            return
+        }
+        searchQuery = rawQuery
+        hideKeyboard()
+        argentinaSearchHost.submit(rawQuery)
+    }
+
+    private fun openComparisonWithSharedText(displayName: String) {
+        dismissHomeItemDetailsDialog()
+        shellState =
+            AppShellReducer.reduce(
+                shellState,
+                AppShellIntent.OpenStandaloneCompare
+            )
+        comparisonActivityOpen = true
+        startActivity(
+            Intent(this, ComparisonActivity::class.java).apply {
+                putExtra(ComparisonActivity.EXTRA_SHARED_TEXT, displayName)
+            }
+        )
+    }
+
+    private fun hideKeyboard() {
+        val manager = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+        manager?.hideSoftInputFromWindow(searchInput.windowToken, 0)
+        searchInput.clearFocus()
+    }
+
+    private fun openComparison() {
+        dismissHomeItemDetailsDialog()
+        shellState = AppShellReducer.reduce(
+            shellState,
+            AppShellIntent.OpenStandaloneCompare
+        )
+        comparisonActivityOpen = true
+        startActivity(Intent(this, ComparisonActivity::class.java))
+    }
+
+    /**
+     * Shows the existing device-only comparison memory without making the user re-run a
+     * comparison. An unavailable store still goes to the existing recovery route so its clear
+     * controls remain reachable; no history-derived value is shown in that state.
+     */
+    private fun reviewPrivatePriceHistory() {
+        if (homePrivateMemoryLoadIssue != null) {
+            openComparison()
+            return
+        }
+
+        val presentation =
+            PracticalShoppingPrivatePriceHistoryPresentation.from(homePrivateMemoryState)
+        if (presentation.rows.isEmpty()) {
+            openComparison()
+            return
+        }
+
+        privatePriceHistoryExportDialog?.dismiss()
+        privatePriceHistoryExportDialog = null
+        privatePriceHistoryForgetDialog?.dismiss()
+        privatePriceHistoryForgetDialog = null
+        privatePriceHistoryClearDialog?.dismiss()
+        privatePriceHistoryClearDialog = null
+        privatePriceHistoryDialog?.dismiss()
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(presentation.title)
+                .setMessage(presentation.message)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setNeutralButton(R.string.home_private_memory_clear, null)
+                .setPositiveButton(R.string.home_compare_secondary) { _, _ ->
+                    openComparison()
+                }
+                .create()
+        dialog.setOnDismissListener {
+            if (privatePriceHistoryDialog === dialog) privatePriceHistoryDialog = null
+        }
+        privatePriceHistoryDialog = dialog
+        dialog.show()
+        dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+            confirmClearPrivatePriceHistory()
+        }
+    }
+
+    /**
+     * Offers an explicit, human-readable copy of the device-only history. The preview and the
+     * outgoing text are generated by a bounded pure exporter; this route never turns personal
+     * observations into offers, store facts or planner input. The store is re-read immediately
+     * before sharing so a paused/resumed Activity cannot export an erased or stale snapshot.
+     */
+    private fun exportPrivatePriceHistory() {
+        if (homePrivateMemoryLoadIssue != null) {
+            openComparison()
+            return
+        }
+
+        val export = PracticalShoppingPrivatePriceHistoryExport.from(homePrivateMemoryState)
+        if (!export.accepted) {
+            showPrivatePriceHistoryExportError(export.issue)
+            return
+        }
+
+        privatePriceHistoryDialog?.dismiss()
+        privatePriceHistoryDialog = null
+        privatePriceHistoryClearDialog?.dismiss()
+        privatePriceHistoryClearDialog = null
+        privatePriceHistoryForgetDialog?.dismiss()
+        privatePriceHistoryForgetDialog = null
+
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(R.string.home_private_memory_export_title)
+                .setMessage(
+                    requireNotNull(export.preview) +
+                        "\n\n" +
+                        getString(R.string.home_private_memory_export_body)
+                )
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.home_private_memory_export_send, null)
+                .create()
+        dialog.setOnDismissListener {
+            if (privatePriceHistoryExportDialog === dialog) {
+                privatePriceHistoryExportDialog = null
+            }
+        }
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val loaded = homePrivateMemoryStore.load()
+                val latestState = loaded.state
+                val latestExport =
+                    if (loaded.accepted && latestState != null) {
+                        PracticalShoppingPrivatePriceHistoryExport.from(latestState)
+                    } else {
+                        null
+                    }
+                if (latestExport?.accepted != true) {
+                    dialog.dismiss()
+                    refreshHomePrivateMemory()
+                    showPrivatePriceHistoryExportError(
+                        latestExport?.issue ?: PracticalShoppingPrivatePriceHistoryExportIssue.EMPTY
+                    )
+                    return@setOnClickListener
+                }
+
+                val sendIntent =
+                    Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(
+                            Intent.EXTRA_SUBJECT,
+                            getString(R.string.home_private_memory_export_subject)
+                        )
+                        putExtra(Intent.EXTRA_TEXT, requireNotNull(latestExport.text))
+                    }
+                try {
+                    startActivity(
+                        Intent.createChooser(
+                            sendIntent,
+                            getString(R.string.home_private_memory_export_send)
+                        )
+                    )
+                    dialog.dismiss()
+                } catch (_: ActivityNotFoundException) {
+                    dialog.dismiss()
+                    showPrivatePriceHistoryExportError(null)
+                }
+            }
+        }
+        privatePriceHistoryExportDialog = dialog
+        dialog.show()
+    }
+
+    /**
+     * Opens a bounded exact-observation picker. The picker carries fingerprints rather than list
+     * positions, and the selected id is re-checked against the atomic store before deletion.
+     */
+    private fun forgetPrivatePriceHistoryObservation() {
+        if (homePrivateMemoryLoadIssue != null) {
+            openComparison()
+            return
+        }
+
+        val presentation =
+            PracticalShoppingPrivatePriceHistoryForgetPresentation.from(homePrivateMemoryState)
+        if (presentation == null) {
+            AlertDialog.Builder(this)
+                .setTitle(R.string.home_private_memory_forget_error_title)
+                .setMessage(R.string.home_private_memory_forget_empty)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+            return
+        }
+
+        privatePriceHistoryDialog?.dismiss()
+        privatePriceHistoryDialog = null
+        privatePriceHistoryClearDialog?.dismiss()
+        privatePriceHistoryClearDialog = null
+        privatePriceHistoryExportDialog?.dismiss()
+        privatePriceHistoryExportDialog = null
+
+        var selectedObservationId: String? = null
+        val choices = presentation.choices.map { choice -> choice.label }.toTypedArray()
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(presentation.title)
+                .setMessage(presentation.message)
+                .setSingleChoiceItems(choices, -1) { _, which ->
+                    selectedObservationId = presentation.choices.getOrNull(which)?.observationId
+                    privatePriceHistoryForgetDialog
+                        ?.getButton(AlertDialog.BUTTON_POSITIVE)
+                        ?.isEnabled = selectedObservationId != null
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.home_private_memory_forget_confirm, null)
+                .create()
+        dialog.setOnDismissListener {
+            if (privatePriceHistoryForgetDialog === dialog) {
+                privatePriceHistoryForgetDialog = null
+            }
+        }
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val observationId = selectedObservationId ?: return@setOnClickListener
+                val loaded = homePrivateMemoryStore.load()
+                val latestState = loaded.state
+                if (!loaded.accepted || latestState == null) {
+                    dialog.dismiss()
+                    refreshHomePrivateMemory()
+                    showPrivatePriceHistoryForgetError(loaded.issue)
+                    return@setOnClickListener
+                }
+                if (latestState.entries.none { it.observationId == observationId }) {
+                    dialog.dismiss()
+                    refreshHomePrivateMemory()
+                    showPrivatePriceHistoryForgetError(
+                        CompareHerePrivatePriceMemoryStoreIssue.ENTRY_NOT_FOUND
+                    )
+                    return@setOnClickListener
+                }
+
+                val result = homePrivateMemoryStore.remove(observationId)
+                if (!result.accepted) {
+                    dialog.dismiss()
+                    refreshHomePrivateMemory()
+                    showPrivatePriceHistoryForgetError(result.issue)
+                    return@setOnClickListener
+                }
+
+                dialog.dismiss()
+                homePrivateMemoryState = requireNotNull(result.state)
+                homePrivateMemoryLoadIssue = null
+                renderHome()
+            }
+        }
+        privatePriceHistoryForgetDialog = dialog
+        dialog.show()
+    }
+
+    private fun showPrivatePriceHistoryForgetError(
+        issue: CompareHerePrivatePriceMemoryStoreIssue?
+    ) {
+        val messageRes =
+            when (issue) {
+                CompareHerePrivatePriceMemoryStoreIssue.ENTRY_NOT_FOUND ->
+                    R.string.home_private_memory_forget_not_found
+
+                CompareHerePrivatePriceMemoryStoreIssue.READ_FAILED,
+                CompareHerePrivatePriceMemoryStoreIssue.STORED_DATA_TOO_LARGE,
+                CompareHerePrivatePriceMemoryStoreIssue.STORED_DATA_INVALID,
+                CompareHerePrivatePriceMemoryStoreIssue.ENCODE_REJECTED,
+                CompareHerePrivatePriceMemoryStoreIssue.WRITE_FAILED,
+                CompareHerePrivatePriceMemoryStoreIssue.DELETE_FAILED,
+                null -> R.string.home_private_memory_forget_failed
+            }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.home_private_memory_forget_error_title)
+            .setMessage(messageRes)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
+    private fun showPrivatePriceHistoryExportError(
+        issue: PracticalShoppingPrivatePriceHistoryExportIssue?
+    ) {
+        val messageRes =
+            when (issue) {
+                PracticalShoppingPrivatePriceHistoryExportIssue.EMPTY ->
+                    R.string.home_private_memory_export_empty
+
+                PracticalShoppingPrivatePriceHistoryExportIssue.OUTPUT_TOO_LARGE ->
+                    R.string.home_private_memory_export_too_large
+
+                null -> R.string.home_private_memory_export_unavailable
+            }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.home_private_memory_export_error_title)
+            .setMessage(messageRes)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
+    /**
+     * Confirms deletion of only the bounded, device-local comparison memory. This action never
+     * treats the memory as a current offer, changes the Home request, or changes planner output.
+     */
+    private fun confirmClearPrivatePriceHistory() {
+        if (
+            homePrivateMemoryLoadIssue != null ||
+                homePrivateMemoryState.entries.isEmpty()
+        ) {
+            return
+        }
+
+        privatePriceHistoryClearDialog?.dismiss()
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(R.string.home_private_memory_clear_title)
+                .setMessage(R.string.home_private_memory_clear_body)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.home_private_memory_clear_confirm) { _, _ ->
+                    clearPrivatePriceHistory()
+                }
+                .create()
+        dialog.setOnDismissListener {
+            if (privatePriceHistoryClearDialog === dialog) {
+                privatePriceHistoryClearDialog = null
+            }
+        }
+        privatePriceHistoryClearDialog = dialog
+        dialog.show()
+    }
+
+    private fun clearPrivatePriceHistory() {
+        val result = homePrivateMemoryStore.clear()
+        if (!result.accepted) {
+            showPrivatePriceHistoryClearError()
+            return
+        }
+
+        homePrivateMemoryState = CompareHerePrivatePriceMemoryState.empty()
+        homePrivateMemoryLoadIssue = null
+        privatePriceHistoryDialog?.dismiss()
+        privatePriceHistoryDialog = null
+        privatePriceHistoryForgetDialog?.dismiss()
+        privatePriceHistoryForgetDialog = null
+        if (::homeExperience.isInitialized && shellState.route != AppRoute.COMPARE) {
+            renderHome()
+        }
+    }
+
+    private fun showPrivatePriceHistoryClearError() {
+        privatePriceHistoryClearDialog?.dismiss()
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(R.string.home_private_memory_clear_error_title)
+                .setMessage(R.string.home_private_memory_clear_error)
+                .setPositiveButton(android.R.string.ok, null)
+                .create()
+        dialog.setOnDismissListener {
+            if (privatePriceHistoryClearDialog === dialog) {
+                privatePriceHistoryClearDialog = null
+            }
+        }
+        privatePriceHistoryClearDialog = dialog
+        dialog.show()
+    }
+
+    private fun showSourcesLicences() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.sources_licences_title)
+            .setMessage(R.string.sources_licences_body)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
+    private fun showDataStatus() {
+        dataStatusDialog?.dismiss()
+        val storeDirectorySummary =
+            runCatching {
+                BundledStoreDirectory.loadSummary(
+                    context = applicationContext,
+                    evaluatedAtEpochMillis = System.currentTimeMillis()
+                )
+            }.getOrNull()
+        val presentation =
+            PracticalShoppingDataStatusPresentation.from(
+                privateMemory = homePrivateMemoryState,
+                privateMemoryAvailable = homePrivateMemoryLoadIssue == null,
+                storeDirectorySummary = storeDirectorySummary
+            )
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(R.string.data_status_title)
+                .setMessage(presentation.message)
+                .setPositiveButton(android.R.string.ok, null)
+                .create()
+        dialog.setOnDismissListener {
+            if (dataStatusDialog === dialog) dataStatusDialog = null
+        }
+        dataStatusDialog = dialog
+        dialog.show()
+    }
+
+    private fun openGoodPriceCheck() {
+        dismissHomeItemDetailsDialog()
+        startActivity(Intent(this, GoodPriceActivity::class.java))
+    }
+
+    /**
+     * Previews and explicitly shares a bounded summary of the current projected Home plan.
+     * The pure projector formats existing UI facts only; it never re-ranks, reads private item
+     * history, or turns the fictional demo into a live retailer claim.
+     */
+    private fun shareHomePlan() {
+        val state = homeRenderState ?: return
+        val result = state.result ?: return
+        if (result.primary == null) return
+        val card =
+            PracticalShoppingHomeShareCardProjector.project(result, state.sampleNotice)
+                ?: return
+
+        dismissHomeShareDialog()
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(R.string.home_share_plan_title)
+                .setMessage(card.preview)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.home_share_plan_send, null)
+                .create()
+        dialog.setOnDismissListener {
+            if (homeShareDialog === dialog) {
+                homeShareDialog = null
+                homeShareCard = null
+            }
+        }
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val currentCard = homeShareCard ?: return@setOnClickListener
+                val sendIntent =
+                    Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_SUBJECT, currentCard.title)
+                        putExtra(Intent.EXTRA_TEXT, currentCard.text)
+                    }
+                try {
+                    startActivity(
+                        Intent.createChooser(
+                            sendIntent,
+                            getString(R.string.home_share_plan)
+                        )
+                    )
+                    dialog.dismiss()
+                } catch (_: ActivityNotFoundException) {
+                    dialog.dismiss()
+                    AlertDialog.Builder(this)
+                        .setTitle(R.string.home_share_plan_title)
+                        .setMessage(R.string.home_share_plan_unavailable)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
+                }
+            }
+        }
+        homeShareCard = card
+        homeShareDialog = dialog
+        dialog.show()
+    }
+
+    /**
+     * Starts the existing local observed-price flow for one unresolved Home item.
+     * The name is an untrusted prefill only; Good Price still requires the shopper
+     * to enter an exact package quantity and observed price before remembering it.
+     */
+    private fun openGoodPriceForHomeItem(itemKey: ShoppingItemKey) {
+        dismissHomeItemDetailsDialog()
+        val item = homeSessionState.model.ui.items.firstOrNull { it.key == itemKey } ?: return
+        startActivity(
+            Intent(this, GoodPriceActivity::class.java).putExtra(
+                GoodPriceActivity.EXTRA_PRODUCT_NAME,
+                item.name
+            )
+        )
+    }
+
+    /**
+     * Reuses a saved display label as an untrusted Good Price prefill. The saved identity itself
+     * remains in the Saved lifecycle; Good Price still requires fresh user-entered evidence.
+     */
+    private fun openGoodPriceForSavedProduct(displayName: String) {
+        val safeName = GoodPriceActivityPrefill.sanitize(displayName) ?: return
+        startActivity(
+            Intent(this, GoodPriceActivity::class.java).putExtra(
+                GoodPriceActivity.EXTRA_PRODUCT_NAME,
+                safeName
+            )
+        )
+    }
+
+    private fun dispatch(intent: AppShellIntent) {
+        val next = AppShellReducer.reduce(shellState, intent)
+        if (next == shellState) return
+        shellState = next
+        renderShell(next)
+    }
+
+    private fun renderShell(state: AppShellState) {
+        if (state.route != AppRoute.HOME) {
+            dismissHomeItemDetailsDialog()
+            dismissHomeShareDialog()
+            cancelOfflineCatalogLookup()
+            offlineCatalogDialog?.dismiss()
+        }
+        val searchVisible =
+            state.route == AppRoute.SEARCH && state.selectedPrimaryTab == AppPrimaryTab.SEARCH
+        if (!searchVisible && searchRouteActive) {
+            argentinaSearchHost.invalidateForRouteChange()
+        }
+        searchRouteActive = searchVisible
+        if (state.route == AppRoute.COMPARE) {
+            savedExperience.onRouteVisibilityChanged(false)
+            return
+        }
+
+        val copy = copyFor(state.selectedPrimaryTab)
+        screenEyebrow.text = copy.eyebrow
+        screenTitle.text = copy.title
+        screenBody.text = copy.body
+        screenFootnote.text = copy.footnote
+        primaryAction.visibility = if (copy.showCompareAction) View.VISIBLE else View.GONE
+
+        val homeVisible = state.selectedPrimaryTab == AppPrimaryTab.HOME
+        homeExperience.visibility = if (homeVisible) View.VISIBLE else View.GONE
+        if (homeVisible) renderHome()
+
+        val basketVisible = state.selectedPrimaryTab == AppPrimaryTab.BASKET
+        basketExperience.visibility = if (basketVisible) View.VISIBLE else View.GONE
+        if (basketVisible) renderHome()
+
+        searchExperience.visibility = if (searchVisible) View.VISIBLE else View.GONE
+
+        if (searchVisible) {
+            argentinaSearchSurfaceState?.let(::renderSearch)
+        }
+
+        val savedVisible = state.route == AppRoute.SAVED
+        val observedPriceSelectionVisible =
+            state.route == AppRoute.OBSERVED_PRICE_SAVED_SELECTION
+        val observedPriceConfirmationDraftVisible =
+            state.route == AppRoute.OBSERVED_PRICE_CONFIRMATION_DRAFT
+        val stapleSetupVisible = state.route == AppRoute.STAPLE_WATCH_SETUP
+        val staplePolicyVisible = state.route == AppRoute.STAPLE_WATCH_POLICY
+        savedExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
+        savedStapleLaunchExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
+        savedObservedPriceLaunchExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
+        observedPriceSavedSelectionExperience.visibility =
+            if (observedPriceSelectionVisible) View.VISIBLE else View.GONE
+        observedPriceConfirmationDraftExperience.visibility =
+            if (observedPriceConfirmationDraftVisible) View.VISIBLE else View.GONE
+        observedPriceConfirmationDraftPriceInputExperience.visibility =
+            if (observedPriceConfirmationDraftVisible) View.VISIBLE else View.GONE
+        observedPriceConfirmationDraftObservedAtInputExperience.visibility =
+            if (observedPriceConfirmationDraftVisible) View.VISIBLE else View.GONE
+        observedPriceConfirmationDraftProofReferenceInputExperience.visibility =
+            if (observedPriceConfirmationDraftVisible) View.VISIBLE else View.GONE
+        observedPriceConfirmationDraftProofContentSelectionExperience.visibility =
+            if (observedPriceConfirmationDraftVisible) View.VISIBLE else View.GONE
+        observedPriceConfirmationActionExperience.visibility =
+            if (observedPriceConfirmationDraftVisible) View.VISIBLE else View.GONE
+        if (!observedPriceConfirmationDraftVisible) {
+            observedPriceConfirmationDraftPriceInputExperience.clearInput()
+            observedPriceConfirmationDraftProofReferenceInputExperience.clearInput()
+        }
+        if (!observedPriceConfirmationDraftVisible) {
+            observedPriceConfirmationDraftObservedAtInputExperience.clearInput()
+        }
+        stapleWatchSetupExperience.visibility =
+            if (stapleSetupVisible) View.VISIBLE else View.GONE
+        stapleWatchPolicyExperience.visibility =
+            if (staplePolicyVisible) View.VISIBLE else View.GONE
+        savedExperience.onRouteVisibilityChanged(savedVisible)
+        savedRouteCoordinator.onRouteVisibilityChanged(savedVisible)
+        observedPriceSavedSelectionCoordinator.onRouteVisibilityChanged(observedPriceSelectionVisible)
+        observedPriceSavedPrefillResultSurfaceBinding
+            .onRouteVisibilityChanged(observedPriceSelectionVisible)
+        observedPriceConfirmationDraftRouteCoordinator
+            .onRouteVisibilityChanged(observedPriceConfirmationDraftVisible)
+        observedPriceConfirmationDraftProofContentSelectionCoordinator
+            .onRouteVisibilityChanged(observedPriceConfirmationDraftVisible)
+        observedPriceConfirmationActionPresentationController
+            .onRouteVisibilityChanged(observedPriceConfirmationDraftVisible)
+        stapleWatchSetupCoordinator.onRouteVisibilityChanged(stapleSetupVisible)
+        stapleWatchPolicySetupCoordinator.onRouteVisibilityChanged(staplePolicyVisible)
+        stapleWatchForegroundResultSurfaceBinding
+            .onPolicyRouteVisibilityChanged(staplePolicyVisible)
+
+        val expectedMenuItem = menuIdFor(state.selectedPrimaryTab)
+        if (bottomNavigation.selectedItemId != expectedMenuItem) {
+            bottomNavigation.selectedItemId = expectedMenuItem
+        }
+    }
+
+    private fun renderArgentinaSearchState(state: ArgentinaLiveSearchSurfaceState) {
+        val update = {
+            val currentGeneration =
+                if (::argentinaSearchHost.isInitialized) argentinaSearchHost.state().generation
+                else state.generation
+            argentinaSearchRenderGate.renderIfCurrent(state, currentGeneration) {
+                argentinaSearchSurfaceState = it
+                if (::searchStatus.isInitialized) renderSearch(it)
+            }
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) update() else mainHandler.post(update)
+    }
+
+    private fun renderSearch(state: ArgentinaLiveSearchSurfaceState) {
+        searchAreaLabel.text = getString(R.string.search_area_label, state.areaLabel)
+        searchStatus.text = state.statusMessage
+        searchStatus.setTextColor(
+            when (state.mode) {
+                ArgentinaLiveSearchSurfaceMode.RESULTS -> ValuePilotPalette.color("#374151")
+                ArgentinaLiveSearchSurfaceMode.AUTHORIZATION_UNAVAILABLE,
+                ArgentinaLiveSearchSurfaceMode.STALE_RELEASE,
+                ArgentinaLiveSearchSurfaceMode.TIMEOUT,
+                ArgentinaLiveSearchSurfaceMode.TEMPORARILY_UNAVAILABLE -> ValuePilotPalette.color("#B42318")
+                else -> ValuePilotPalette.color("#6B7280")
+            }
+        )
+        searchProgress.visibility =
+            if (state.mode == ArgentinaLiveSearchSurfaceMode.LOADING) View.VISIBLE else View.GONE
+
+        searchButton.isEnabled =
+            state.mode != ArgentinaLiveSearchSurfaceMode.LOADING &&
+                searchQuery.trim().isNotBlank() &&
+                searchQuery.length <= ArgentinaBackendContract.MAX_QUERY_CHARS
+        quickSearchEntries().forEach { (chipId, _) ->
+            findViewById<Chip>(chipId).isEnabled =
+                state.mode != ArgentinaLiveSearchSurfaceMode.LOADING
+        }
+
+        searchResultsContainer.removeAllViews()
+        val presentation = state.presentation
+        searchResultsHeading.visibility =
+            if (presentation != null && presentation.matches.isNotEmpty()
+            ) View.VISIBLE else View.GONE
+
+        presentation?.matches?.forEach { match ->
+            searchResultsContainer.addView(createSearchResultView(match, state.caveat))
+        }
+
+        val canLoadMore =
+            state.mode == ArgentinaLiveSearchSurfaceMode.RESULTS &&
+                presentation?.hasMore == true && presentation.nextPage != null
+        searchLoadMoreButton.visibility = if (canLoadMore) View.VISIBLE else View.GONE
+        searchLoadMoreButton.isEnabled = state.mode == ArgentinaLiveSearchSurfaceMode.RESULTS
+        searchResultsEnd.visibility =
+            if (state.mode == ArgentinaLiveSearchSurfaceMode.RESULTS &&
+                presentation != null && presentation.matches.isNotEmpty() && !canLoadMore
+            ) View.VISIBLE
+            else View.GONE
+        searchResultsEnd.text =
+            when {
+                presentation?.limitReached == true -> getString(R.string.search_results_limit_reached)
+                presentation != null && presentation.matches.isNotEmpty() -> getString(R.string.search_results_end)
+                else -> ""
+            }
+    }
+
+    private fun createSearchResultView(
+        match: PracticalShoppingSearchIdentityPresentation.Match,
+        caveat: String
+    ): View {
+        val card = MaterialCardView(this).apply {
+            radius = dp(18).toFloat()
+            cardElevation = 0f
+            setCardBackgroundColor(ValuePilotPalette.color("#FFF1E8"))
+            strokeColor = ValuePilotPalette.color("#E8CDBF")
+            strokeWidth = dp(1)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(12) }
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { openComparisonWithSharedText(match.displayName) }
+            contentDescription =
+                listOfNotNull(
+                    match.displayName,
+                    match.brand,
+                    match.matchLabel,
+                    "Argentina SEPA identity result",
+                    caveat,
+                    "Tap to review this name in Scan and compare"
+                ).joinToString(". ") { it.trim().trimEnd('.', '!', '?') } + "."
+        }
+
+        val body = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(15), dp(16), dp(15))
+            // The card exposes one complete projected summary. Keep the
+            // visible child labels decorative for assistive technology so the
+            // same fields are not announced repeatedly.
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        }
+
+        val name = TextView(this).apply {
+            text = match.displayName
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+            setTextColor(ValuePilotPalette.color("#111827"))
+            setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+            setPadding(0, dp(5), 0, 0)
+        }
+
+        val brand = match.brand?.let { brandName ->
+            TextView(this).apply {
+                text = brandName
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                setTextColor(ValuePilotPalette.color("#374151"))
+                setPadding(0, dp(7), 0, 0)
+            }
+        }
+
+        val matchLabel = TextView(this).apply {
+            text = getString(R.string.search_identity_match_label, match.matchLabel)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextColor(ValuePilotPalette.color("#6B7280"))
+            setPadding(0, dp(8), 0, 0)
+        }
+
+        val source = TextView(this).apply {
+            text = getString(R.string.search_identity_source)
+            gravity = Gravity.START
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextColor(ValuePilotPalette.color("#6B7280"))
+            setPadding(0, dp(9), 0, 0)
+        }
+
+        body.addView(name)
+        brand?.let(body::addView)
+        body.addView(matchLabel)
+        TextView(this).apply {
+            text = caveat
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextColor(ValuePilotPalette.color("#92400E"))
+            setPadding(0, dp(7), 0, 0)
+        }.also(body::addView)
+        body.addView(source)
+        TextView(this).apply {
+            text = getString(R.string.search_identity_open_compare)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            setTextColor(ValuePilotPalette.color("#8F3620"))
+            setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+            minHeight = dp(48)
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(10), 0, 0)
+        }.also(body::addView)
+        card.addView(body)
+        return card
+    }
+
+    private fun copyFor(tab: AppPrimaryTab): ScreenCopy =
+        when (tab) {
+            AppPrimaryTab.HOME -> ScreenCopy(
+                getString(R.string.home_eyebrow),
+                getString(R.string.home_title),
+                getString(R.string.home_body),
+                getString(R.string.home_footnote),
+                false
+            )
+            AppPrimaryTab.SEARCH -> ScreenCopy(
+                getString(R.string.search_eyebrow),
+                getString(R.string.search_title),
+                getString(R.string.search_body),
+                getString(R.string.search_footnote),
+                false
+            )
+            AppPrimaryTab.BASKET -> ScreenCopy(
+                getString(R.string.basket_eyebrow),
+                getString(R.string.basket_title),
+                getString(R.string.basket_body),
+                getString(R.string.basket_footnote),
+                false
+            )
+            AppPrimaryTab.SAVED -> ScreenCopy(
+                getString(R.string.saved_eyebrow),
+                getString(R.string.saved_title),
+                getString(R.string.saved_body),
+                getString(R.string.saved_footnote),
+                false
+            )
+        }
+
+    private fun menuIdFor(tab: AppPrimaryTab): Int =
+        when (tab) {
+            AppPrimaryTab.HOME -> R.id.navHome
+            AppPrimaryTab.SEARCH -> R.id.navSearch
+            AppPrimaryTab.BASKET -> R.id.navBasket
+            AppPrimaryTab.SAVED -> R.id.navSaved
+        }
+
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density).toInt()
+
+    private data class ScreenCopy(
+        val eyebrow: String,
+        val title: String,
+        val body: String,
+        val footnote: String,
+        val showCompareAction: Boolean
+    )
+
+    companion object {
+        private const val STATE_PRIMARY_TAB = "app_shell.primary_tab"
+        private const val STATE_HOME_QUERY = "app_shell.home_query"
+        private const val STATE_HOME_WAS_SUBMITTED = "app_shell.home_was_submitted"
+        private const val STATE_HOME_CHICKEN_CHOICE = "app_shell.home_chicken_choice"
+        private const val STATE_HOME_EXTRA_STOP_MINIMUM_SAVINGS =
+            "app_shell.home_extra_stop_minimum_savings"
+        private const val STATE_HOME_REQUEST_DETAILS = "app_shell.home_request_details"
+        private const val STATE_HOME_DETAILS_ITEM_KEY = "app_shell.home_details_item_key"
+        private const val STATE_HOME_DETAILS_PACKAGE_COUNT = "app_shell.home_details_package_count"
+        private const val STATE_HOME_DETAILS_BRAND = "app_shell.home_details_brand"
+        private const val STATE_HOME_DETAILS_EXACT_PRODUCT = "app_shell.home_details_exact_product"
+        private const val STATE_SEARCH_QUERY = "app_shell.search_query"
+        private const val OFFLINE_CATALOG_MAX_AGE_MILLIS = 8L * 24L * 60L * 60L * 1_000L
     }
 }

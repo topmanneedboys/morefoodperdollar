@@ -1,13 +1,60 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- M12.3 secure edge transport. No private backend, credentials, or cleartext fallback. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- No connectivity probe is needed; keep this permission absent from the final APK. -->
+    <uses-permission
+        android:name="android.permission.ACCESS_NETWORK_STATE"
+        tools:node="remove" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="false" />
+
     <application
         android:allowBackup="false"
-        android:label="ValuePilot"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:label="@string/app_name"
         android:icon="@drawable/vp_bubble"
         android:theme="@style/Theme.ValuePilot"
         android:usesCleartextTraffic="false"
+        android:name=".ValuePilotApplication"
         android:supportsRtl="true">
-        <activity android:name=".MainActivity" android:exported="true">
+        <activity
+            android:name=".ComparisonActivity"
+            android:exported="false" />
+        <activity
+            android:name=".GoodPriceActivity"
+            android:exported="false" />
+        <activity
+            android:name=".BarcodeCaptureActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ShareToValuePilotActivity"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+        </activity>
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

@@ -1,4 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="white">#FFFFFF</color>
-    <color name="black">#111827</color>
+    <!-- ValuePilot's consumer palette: warm, readable, and deliberately calm. -->
+    <color name="vp_background">#FCF8F3</color>
+    <color name="vp_surface">#FFFDF9</color>
+    <color name="vp_surface_subtle">#F7EFE6</color>
+    <color name="vp_surface_accent">#FFF1E8</color>
+    <color name="vp_primary">#B34B2E</color>
+    <color name="vp_primary_dark">#8F3620</color>
+    <color name="vp_on_primary">#FFFFFF</color>
+    <color name="vp_text_primary">#2A211C</color>
+    <color name="vp_text_secondary">#5F5148</color>
+    <color name="vp_text_muted">#82736A</color>
+    <color name="vp_outline">#D8CFC6</color>
+    <color name="vp_success">#2F6F59</color>
+    <color name="vp_warning">#9A5B16</color>
+    <color name="vp_error">#A63D32</color>
 </resources>

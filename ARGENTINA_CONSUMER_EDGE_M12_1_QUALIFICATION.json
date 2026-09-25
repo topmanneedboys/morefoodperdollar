@@ -1,0 +1,69 @@
+{
+  "schemaVersion": "valuepilot-argentina-consumer-edge-qualification-v1",
+  "status": "QUALIFIED_FOR_LOCAL_EDGE_BOUNDARY_ONLY",
+  "milestone": "M12.1",
+  "contractVersion": "valuepilot-argentina-consumer-edge-v1",
+  "allowedRoutes": {
+    "GET": ["/v1/status"],
+    "POST": ["/v1/search", "/v1/interpret", "/v1/shop-text", "/v1/shop"]
+  },
+  "security": {
+    "httpsRequired": true,
+    "trustedForwardedProto": "exact_https_only",
+    "appCheckRequired": true,
+    "appCheckVerifier": "firebase-admin-python",
+    "tokensForwarded": false,
+    "tokensLogged": false,
+    "productionTokenAndIamVerified": false
+  },
+  "bounds": {
+    "maxRequestBytes": 16384,
+    "maxResponseBytes": 524288,
+    "maxTokenBytes": 4096,
+    "maxJsonDepth": 24,
+    "maxJsonArrayItems": 4096,
+    "maxJsonObjectKeys": 64,
+    "maxJsonStringBytes": 4096,
+    "maxConcurrentRequests": 16,
+    "queueTimeoutSeconds": 0.05,
+    "upstreamTimeoutSeconds": 5.0,
+    "rateLimitRequests": 60,
+    "rateLimitWindowSeconds": 60.0,
+    "rateLimitKeys": 1024
+  },
+  "upstream": {
+    "configured": false,
+    "defaultBehavior": "FAIL_CLOSED",
+    "m12_2Required": true
+  },
+  "android": {
+    "networkingAuthorized": false,
+    "internetPermission": false,
+    "accessNetworkStatePermission": false
+  },
+  "verification": {
+    "candidateSha": "5e829251cc43653e42a8583c2acd2cb2e9c18fb6",
+    "localEdgeTests": 17,
+    "backendRegressionTests": 27,
+    "toolingRegressionTests": 197,
+    "networkRequired": false,
+    "providerDataRequired": false,
+    "dockerBuildRequiredInCi": true,
+    "exactHeadCi": {
+      "backendRunId": 35058092106,
+      "androidRunId": 35058092151,
+      "androidRunStatusAtDocumentation": "SUCCESS",
+      "androidJobs": {
+        "browserVerify": 104672396676,
+        "androidVerify": 104672396323,
+        "releaseBundle": 104674454452
+      }
+    }
+  },
+  "references": {
+    "firebaseAppCheck": "https://firebase.google.com/docs/app-check/custom-resource-backend",
+    "firebasePlayIntegrity": "https://firebase.google.com/docs/app-check/android/play-integrity-provider",
+    "cloudRunServiceAuth": "https://docs.cloud.google.com/run/docs/authenticating/service-to-service",
+    "cloudRunHttps": "https://docs.cloud.google.com/run/docs/triggering/https-request"
+  }
+}

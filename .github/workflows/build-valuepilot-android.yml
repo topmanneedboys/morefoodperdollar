@@ -1,57 +1,265 @@
-name: Build ValuePilot Android APK
+name: Build ValuePilot v101 release
 
 on:
   workflow_dispatch:
   push:
     paths:
       - 'android/**'
-      - 'backend/clock.py'
+      - 'backend/**'
       - '.github/workflows/acquire-argentina-sepa-windscribe.yml'
       - '.github/workflows/test-argentina-acquisition-control.yml'
       - 'ARGENTINA_RELEASE_WORKFLOW.yaml'
       - 'ARGENTINA_AUTOMATED_RELEASE_SOURCE_CONTRACT.json'
-      - 'tools/argentina_acquisition_schedule_control_v2.py'
+      - 'consumer_edge/**'
+      - 'browser-extension/**'
+      - 'tools/build_offline_catalog_snapshot.py'
+      - 'tools/verify_offline_catalog_snapshot.py'
+      - 'tools/promote_offline_catalog_snapshot.py'
+      - 'tools/promote_offline_catalog_release.py'
+      - 'tools/import_open_food_facts_catalog.py'
+      - 'tools/select_open_food_facts_launch_catalog.py'
+      - 'tools/refresh_offline_catalog_snapshots.py'
+      - 'tools/qualify_merchant_feed.py'
+      - 'tools/qualify_argentina_sepa.py'
+      - 'tools/build_argentina_sepa_regional_snapshot.py'
+      - 'tools/verify_argentina_sepa_regional_snapshot.py'
+      - 'tools/build_argentina_sepa_national_shards.py'
+      - 'tools/verify_argentina_sepa_national_shards.py'
+      - 'tools/argentina_sepa_search.py'
+      - 'tools/argentina_sepa_mobile_search.py'
+      - 'tools/build_argentina_sepa_query_selective_mobile.py'
+      - 'tools/verify_argentina_sepa_query_selective_mobile.py'
+      - 'tools/argentina_sepa_query.py'
+      - 'tools/argentina_searchpack.py'
+      - 'tools/measure_argentina_sepa_query_selective_mobile.py'
+      - 'tools/build_argentina_sepa_micro_partition_mobile.py'
+      - 'tools/verify_argentina_sepa_micro_partition_mobile.py'
+      - 'tools/argentina_sepa_micro_partition.py'
+      - 'tools/measure_argentina_sepa_micro_partition_mobile.py'
+      - 'tools/audit_argentina_sepa_search.py'
+      - 'tools/shopping_intelligence_engine.py'
+      - 'tools/argentina_shopping_intelligence.py'
+      - 'tools/measure_argentina_shopping_intelligence.py'
       - 'tools/argentina_daily_release.py'
+      - 'tools/argentina_acquisition_schedule_control.py'
+      - 'tools/argentina_acquisition_schedule_control_v2.py'
+      - 'tools/argentina_processed_source_guard.py'
       - 'tools/argentina_release_acquisition.py'
       - 'tools/argentina_release_acquisition_handoff.py'
       - 'tools/argentina_object_store_publisher.py'
+      - 'tools/publish_argentina_source_handoff.py'
+      - 'tools/read_argentina_active_source_identity.py'
+      - 'tools/fixtures/argentina_release_acquisition/**'
+      - 'tools/tests/test_argentina_acquisition_schedule_control.py'
       - 'tools/tests/test_argentina_acquisition_schedule_control_v2.py'
-      - 'tools/tests/test_argentina_daily_release_operations.py'
+      - 'tools/tests/test_argentina_processed_source_guard.py'
       - 'tools/tests/test_argentina_release_acquisition.py'
       - 'tools/tests/test_argentina_release_acquisition_handoff.py'
       - 'tools/tests/test_argentina_windscribe_acquisition_workflow.py'
+      - 'tools/tests/test_publish_argentina_source_handoff.py'
+      - 'tools/build_argentina_daily_release.py'
+      - 'tools/argentina_storage_retention.py'
+      - 'tools/manage_argentina_storage_retention.py'
+      - 'tools/fixtures/argentina_daily_release/**'
+      - 'tools/fixtures/argentina_storage_retention/**'
+      - 'tools/tests/test_argentina_daily_release_operations.py'
+      - 'tools/tests/test_argentina_storage_retention.py'
+      - 'ARGENTINA_PRODUCTION_STORAGE_RETENTION_QUALIFICATION.*'
+      - 'tools/consumer_input_intelligence.py'
+      - 'tools/build_argentina_input_vocabulary.py'
+      - 'tools/measure_argentina_consumer_input_intelligence.py'
+      - 'tools/data/argentina_input_aliases.json'
+      - 'ARGENTINA_SHOPPING_INTELLIGENCE_QUALIFICATION.json'
+      - 'ARGENTINA_SHOPPING_INTELLIGENCE_QUALIFICATION.md'
+      - 'ARGENTINA_CONSUMER_INPUT_INTELLIGENCE_QUALIFICATION.json'
+      - 'ARGENTINA_CONSUMER_INPUT_INTELLIGENCE_QUALIFICATION.md'
+      - 'tools/tests/test_build_offline_catalog_snapshot.py'
+      - 'tools/tests/test_promote_offline_catalog_snapshot.py'
+      - 'tools/tests/test_promote_offline_catalog_release.py'
+      - 'tools/tests/test_import_open_food_facts_catalog.py'
+      - 'tools/tests/test_select_open_food_facts_launch_catalog.py'
+      - 'tools/tests/test_refresh_offline_catalog_snapshots.py'
+      - 'tools/tests/test_qualify_merchant_feed.py'
+      - 'tools/tests/test_qualify_argentina_sepa.py'
+      - 'tools/tests/test_argentina_sepa_*.py'
+      - 'tools/tests/test_argentina_searchpack.py'
+      - 'tools/tests/test_shopping_intelligence_engine.py'
+      - 'tools/tests/test_argentina_shopping_intelligence.py'
+      - 'tools/tests/test_consumer_input_intelligence.py'
+      - 'tools/tests/test_bundled_offline_catalog_assets.py'
+      - 'tools/build_store_directory_snapshot.py'
+      - 'tools/verify_store_directory_snapshot.py'
+      - 'tools/tests/test_build_store_directory_snapshot.py'
+      - 'tools/tests/test_bundled_store_directory_assets.py'
+      - 'tools/store_directory/**'
+      - 'CURRENT_STATE.md'
+      - 'CONTINUATION_CHECKPOINT.md'
+      - 'PRACTICAL_SHOPPING_MVP_STATUS.md'
+      - 'PRACTICAL_SHOPPING_HOME_CHECKPOINT.md'
+      - 'ARGENTINA_CONSUMER_CONTRACT_BRIDGE_OFFLINE_QUALIFICATION.*'
+      - 'ARGENTINA_LIVE_SEARCH_M12_4B.*'
       - '.github/workflows/build-valuepilot-android.yml'
   pull_request:
     paths:
       - 'android/**'
-      - 'backend/clock.py'
+      - 'backend/**'
       - '.github/workflows/acquire-argentina-sepa-windscribe.yml'
       - '.github/workflows/test-argentina-acquisition-control.yml'
       - 'ARGENTINA_RELEASE_WORKFLOW.yaml'
       - 'ARGENTINA_AUTOMATED_RELEASE_SOURCE_CONTRACT.json'
-      - 'tools/argentina_acquisition_schedule_control_v2.py'
+      - 'consumer_edge/**'
+      - 'browser-extension/**'
+      - 'tools/build_offline_catalog_snapshot.py'
+      - 'tools/verify_offline_catalog_snapshot.py'
+      - 'tools/promote_offline_catalog_snapshot.py'
+      - 'tools/promote_offline_catalog_release.py'
+      - 'tools/import_open_food_facts_catalog.py'
+      - 'tools/select_open_food_facts_launch_catalog.py'
+      - 'tools/refresh_offline_catalog_snapshots.py'
+      - 'tools/qualify_merchant_feed.py'
+      - 'tools/qualify_argentina_sepa.py'
+      - 'tools/build_argentina_sepa_regional_snapshot.py'
+      - 'tools/verify_argentina_sepa_regional_snapshot.py'
+      - 'tools/build_argentina_sepa_national_shards.py'
+      - 'tools/verify_argentina_sepa_national_shards.py'
+      - 'tools/argentina_sepa_search.py'
+      - 'tools/argentina_sepa_mobile_search.py'
+      - 'tools/build_argentina_sepa_query_selective_mobile.py'
+      - 'tools/verify_argentina_sepa_query_selective_mobile.py'
+      - 'tools/argentina_sepa_query.py'
+      - 'tools/argentina_searchpack.py'
+      - 'tools/measure_argentina_sepa_query_selective_mobile.py'
+      - 'tools/build_argentina_sepa_micro_partition_mobile.py'
+      - 'tools/verify_argentina_sepa_micro_partition_mobile.py'
+      - 'tools/argentina_sepa_micro_partition.py'
+      - 'tools/measure_argentina_sepa_micro_partition_mobile.py'
+      - 'tools/audit_argentina_sepa_search.py'
+      - 'tools/shopping_intelligence_engine.py'
+      - 'tools/argentina_shopping_intelligence.py'
+      - 'tools/measure_argentina_shopping_intelligence.py'
       - 'tools/argentina_daily_release.py'
+      - 'tools/argentina_acquisition_schedule_control.py'
+      - 'tools/argentina_acquisition_schedule_control_v2.py'
+      - 'tools/argentina_processed_source_guard.py'
       - 'tools/argentina_release_acquisition.py'
       - 'tools/argentina_release_acquisition_handoff.py'
       - 'tools/argentina_object_store_publisher.py'
+      - 'tools/publish_argentina_source_handoff.py'
+      - 'tools/read_argentina_active_source_identity.py'
+      - 'tools/fixtures/argentina_release_acquisition/**'
+      - 'tools/tests/test_argentina_acquisition_schedule_control.py'
       - 'tools/tests/test_argentina_acquisition_schedule_control_v2.py'
-      - 'tools/tests/test_argentina_daily_release_operations.py'
+      - 'tools/tests/test_argentina_processed_source_guard.py'
       - 'tools/tests/test_argentina_release_acquisition.py'
       - 'tools/tests/test_argentina_release_acquisition_handoff.py'
       - 'tools/tests/test_argentina_windscribe_acquisition_workflow.py'
+      - 'tools/tests/test_publish_argentina_source_handoff.py'
+      - 'tools/build_argentina_daily_release.py'
+      - 'tools/argentina_storage_retention.py'
+      - 'tools/manage_argentina_storage_retention.py'
+      - 'tools/fixtures/argentina_daily_release/**'
+      - 'tools/fixtures/argentina_storage_retention/**'
+      - 'tools/tests/test_argentina_daily_release_operations.py'
+      - 'tools/tests/test_argentina_storage_retention.py'
+      - 'ARGENTINA_PRODUCTION_STORAGE_RETENTION_QUALIFICATION.*'
+      - 'tools/consumer_input_intelligence.py'
+      - 'tools/build_argentina_input_vocabulary.py'
+      - 'tools/measure_argentina_consumer_input_intelligence.py'
+      - 'tools/data/argentina_input_aliases.json'
+      - 'ARGENTINA_SHOPPING_INTELLIGENCE_QUALIFICATION.json'
+      - 'ARGENTINA_SHOPPING_INTELLIGENCE_QUALIFICATION.md'
+      - 'ARGENTINA_CONSUMER_INPUT_INTELLIGENCE_QUALIFICATION.json'
+      - 'ARGENTINA_CONSUMER_INPUT_INTELLIGENCE_QUALIFICATION.md'
+      - 'tools/tests/test_build_offline_catalog_snapshot.py'
+      - 'tools/tests/test_promote_offline_catalog_snapshot.py'
+      - 'tools/tests/test_promote_offline_catalog_release.py'
+      - 'tools/tests/test_import_open_food_facts_catalog.py'
+      - 'tools/tests/test_select_open_food_facts_launch_catalog.py'
+      - 'tools/tests/test_refresh_offline_catalog_snapshots.py'
+      - 'tools/tests/test_qualify_merchant_feed.py'
+      - 'tools/tests/test_qualify_argentina_sepa.py'
+      - 'tools/tests/test_argentina_sepa_*.py'
+      - 'tools/tests/test_argentina_searchpack.py'
+      - 'tools/tests/test_shopping_intelligence_engine.py'
+      - 'tools/tests/test_argentina_shopping_intelligence.py'
+      - 'tools/tests/test_consumer_input_intelligence.py'
+      - 'tools/tests/test_bundled_offline_catalog_assets.py'
+      - 'tools/build_store_directory_snapshot.py'
+      - 'tools/verify_store_directory_snapshot.py'
+      - 'tools/tests/test_build_store_directory_snapshot.py'
+      - 'tools/tests/test_bundled_store_directory_assets.py'
+      - 'tools/store_directory/**'
+      - 'CURRENT_STATE.md'
+      - 'CONTINUATION_CHECKPOINT.md'
+      - 'PRACTICAL_SHOPPING_MVP_STATUS.md'
+      - 'PRACTICAL_SHOPPING_HOME_CHECKPOINT.md'
+      - 'ARGENTINA_CONSUMER_CONTRACT_BRIDGE_OFFLINE_QUALIFICATION.*'
+      - 'ARGENTINA_LIVE_SEARCH_M12_4B.*'
       - '.github/workflows/build-valuepilot-android.yml'
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
-  build:
+  browser-verify:
+    if: github.event_name != 'push' || github.ref != 'refs/heads/work/valuepilot-android-milestone'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Install browser dependencies
+        working-directory: browser-extension
+        run: npm ci
+
+      - name: Test model, engine, UI, and Firefox package
+        working-directory: browser-extension
+        env:
+          WEB_EXT_NO_UPDATE_NOTIFIER: '1'
+        run: npm run check
+
+      - name: Package browser extensions
+        run: |
+          mkdir -p release-browser
+          (cd browser-extension/dist/chromium && zip -X -q -r ../../../release-browser/ValuePilot-v101-chromium.zip .)
+          (cd browser-extension/dist/firefox && zip -X -q -r ../../../release-browser/ValuePilot-v101-firefox.zip .)
+
+      - name: Upload verified browser parts
+        # Pull requests still run the complete browser verification above, but
+        # their rebuildable zips are not durable release evidence. Keep upload
+        # storage for candidate/milestone pushes only.
+        if: github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/candidate/') || startsWith(github.ref, 'refs/heads/work/valuepilot-'))
+        uses: actions/upload-artifact@v6
+        with:
+          name: ValuePilot-v101-browser-parts
+          path: release-browser/
+          if-no-files-found: error
+          retention-days: 1
+
+  android-verify:
+    if: github.event_name != 'push' || github.ref != 'refs/heads/work/valuepilot-android-milestone'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -67,29 +275,338 @@ jobs:
           sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
 
       - name: Set up Gradle 9.5
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: '9.5.0'
+          cache-disabled: true
 
-      - name: Run unit tests
+      - name: Test, lint, and build Android APK
         working-directory: android
-        run: gradle --no-daemon :app:testDebugUnitTest
+        run: gradle --no-daemon :shared-core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 
-      - name: Build installable debug APK
-        working-directory: android
-        run: gradle --no-daemon :app:assembleDebug
+      - name: Summarize JVM test results
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs')
 
-      - name: Verify APK exists
-        run: test -s android/app/build/outputs/apk/debug/app-debug.apk
+          for (const [label, directory] of [
+            ['shared-core', 'android/shared-core/build/test-results/test'],
+            ['android-app', 'android/app/build/test-results/testDebugUnitTest'],
+          ]) {
+            const reports = fs.readdirSync(directory).filter(name => /^TEST-.*\.xml$/.test(name))
+            if (reports.length === 0) throw new Error(`No JUnit reports found for ${label}`)
+            const totals = { tests: 0, failures: 0, errors: 0, skipped: 0 }
+            for (const report of reports) {
+              const xml = fs.readFileSync(`${directory}/${report}`, 'utf8')
+              const suite = xml.match(/<testsuite\b[^>]*>/)?.[0]
+              if (!suite) throw new Error(`No testsuite found in ${report}`)
+              for (const key of Object.keys(totals)) {
+                totals[key] += Number(suite.match(new RegExp(`\\b${key}="(\\d+)"`))?.[1] ?? 0)
+              }
+            }
+            console.log(`${label}: ${totals.tests} tests, ${totals.failures} failures, ${totals.errors} errors, ${totals.skipped} skipped`)
+          }
+          NODE
 
-      - name: Rename APK
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk ValuePilot-v100-debug.apk
+      - name: Verify Android privacy boundary
+        run: |
+          set -euo pipefail
+          apk='android/app/build/outputs/apk/debug/app-debug.apk'
+          test -s "$apk"
+          permissions="$($ANDROID_HOME/build-tools/36.0.0/aapt dump permissions "$apk")"
+          if ! grep -q 'android.permission.INTERNET' <<<"$permissions"; then
+            echo 'Expected intentional INTERNET permission is missing from the APK' >&2
+            exit 1
+          fi
+          if grep -q 'android.permission.ACCESS_NETWORK_STATE' <<<"$permissions"; then
+            echo 'Unexpected ACCESS_NETWORK_STATE permission in APK' >&2
+            exit 1
+          fi
 
-      - name: Upload APK artifact
-        if: github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v4
+      - name: Verify APK signature and single signer
+        run: |
+          set -euo pipefail
+          apk='android/app/build/outputs/apk/debug/app-debug.apk'
+          signature="$($ANDROID_HOME/build-tools/36.0.0/apksigner verify --verbose --print-certs "$apk")"
+          printf '%s\n' "$signature"
+          signer_count="$(awk '/^Signer #[0-9]+ certificate DN:/{count++} END{print count+0}' <<<"$signature")"
+          if [[ "$signer_count" -ne 1 ]]; then
+            echo "Expected exactly one APK signer, found $signer_count" >&2
+            exit 1
+          fi
+
+      - name: Stage verified Android APK
+        run: |
+          mkdir -p release-android
+          cp android/app/build/outputs/apk/debug/app-debug.apk release-android/ValuePilot-v101.1-android.apk
+
+      - name: Upload verified Android part
+        # Pull requests still run the complete Android verification above, but
+        # their rebuildable APK is not durable release evidence.
+        if: github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/candidate/') || startsWith(github.ref, 'refs/heads/work/valuepilot-'))
+        uses: actions/upload-artifact@v6
         with:
-          name: ValuePilot-v100-debug-apk
-          path: ValuePilot-v100-debug.apk
+          name: ValuePilot-v101-android-part
+          path: release-android/
           if-no-files-found: error
+          retention-days: 1
+
+  release-bundle:
+    # Assemble release artifacts only from candidate/milestone pushes. A pull
+    # request must still run all verification jobs, but must not depend on
+    # disposable artifact uploads.
+    if: github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/candidate/') || startsWith(github.ref, 'refs/heads/work/valuepilot-'))
+    needs:
+      - browser-verify
+      - android-verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Download verified browser parts
+        uses: actions/download-artifact@v8
+        with:
+          name: ValuePilot-v101-browser-parts
+          path: release
+
+      - name: Download verified Android part
+        uses: actions/download-artifact@v8
+        with:
+          name: ValuePilot-v101-android-part
+          path: release
+
+      - name: Verify release inputs and record provenance
+        run: |
+          set -euo pipefail
+          expected_files=(
+            'ValuePilot-v101-chromium.zip'
+            'ValuePilot-v101-firefox.zip'
+            'ValuePilot-v101.1-android.apk'
+          )
+          for file in "${expected_files[@]}"; do
+            test -s "release/$file"
+          done
+          actual="$(find release -maxdepth 1 -type f -printf '%f\n' | sort)"
+          expected="$(printf '%s\n' "${expected_files[@]}" | sort)"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "Unexpected release inputs" >&2
+            echo "Expected:" >&2
+            printf '%s\n' "$expected" >&2
+            echo "Actual:" >&2
+            printf '%s\n' "$actual" >&2
+            exit 1
+          fi
+          printf '%s\n' "$GITHUB_SHA" > release/COMMIT_SHA.txt
+
+      - name: Assemble checksums
+        working-directory: release
+        run: |
+          set -euo pipefail
+          sha256sum \
+            ValuePilot-v101-chromium.zip \
+            ValuePilot-v101-firefox.zip \
+            ValuePilot-v101.1-android.apk \
+            COMMIT_SHA.txt \
+            > SHA256SUMS.txt
+          sha256sum -c SHA256SUMS.txt
+
+      - name: Upload verified release bundle
+        if: github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/candidate/') || startsWith(github.ref, 'refs/heads/work/valuepilot-'))
+        uses: actions/upload-artifact@v6
+        with:
+          name: ValuePilot-v101-release
+          path: release/
+          if-no-files-found: error
+          # Candidate bundles are disposable inputs to the same-day promotion
+          # proof.  The promoted proof below remains the durable evidence.
           retention-days: 3
+
+  milestone-provenance-proof:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/work/valuepilot-android-milestone'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Find successful full candidate run for exact SHA
+        id: candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs'
+
+          const token = process.env.GH_TOKEN
+          const repository = process.env.GITHUB_REPOSITORY
+          const sha = process.env.GITHUB_SHA
+          const currentRunId = Number(process.env.GITHUB_RUN_ID)
+          const workflowName = 'Build ValuePilot v101 release'
+          const workflowPath = '.github/workflows/build-valuepilot-android.yml'
+          const requiredJobs = new Set(['browser-verify', 'android-verify', 'release-bundle'])
+          const headers = {
+            Accept: 'application/vnd.github+json',
+            Authorization: `Bearer ${token}`,
+            'X-GitHub-Api-Version': '2022-11-28',
+            'User-Agent': 'valuepilot-milestone-provenance'
+          }
+
+          async function get(path) {
+            const response = await fetch(`https://api.github.com/repos/${repository}${path}`, { headers })
+            if (!response.ok) {
+              throw new Error(`GitHub API ${response.status} for ${path}: ${await response.text()}`)
+            }
+            return response.json()
+          }
+
+          const runs = await get(`/actions/runs?head_sha=${encodeURIComponent(sha)}&per_page=100`)
+          // Historical ValuePilot candidate branches use work/valuepilot-*.
+          // Keep the milestone branch itself ineligible so a direct milestone
+          // run can never satisfy its own provenance proof.
+          const isCandidateBranch = branch =>
+            branch?.startsWith('candidate/') ||
+            (branch?.startsWith('work/valuepilot-') &&
+              branch !== 'work/valuepilot-android-milestone')
+          const candidates = runs.workflow_runs
+            .filter(run =>
+              run.id !== currentRunId &&
+              run.name === workflowName &&
+              run.path === workflowPath &&
+              run.head_sha === sha &&
+              isCandidateBranch(run.head_branch) &&
+              run.event === 'push' &&
+              run.status === 'completed' &&
+              run.conclusion === 'success'
+            )
+            .sort((left, right) => right.id - left.id)
+
+          let selected = null
+          for (const run of candidates) {
+            const jobs = await get(`/actions/runs/${run.id}/jobs?per_page=100`)
+            const successfulJobs = new Set(
+              jobs.jobs
+                .filter(job => job.status === 'completed' && job.conclusion === 'success')
+                .map(job => job.name)
+            )
+            if (![...requiredJobs].every(name => successfulJobs.has(name))) continue
+
+            const artifacts = await get(`/actions/runs/${run.id}/artifacts?per_page=100`)
+            const release = artifacts.artifacts.find(artifact =>
+              artifact.name === 'ValuePilot-v101-release' &&
+              artifact.expired === false &&
+              artifact.workflow_run?.head_sha === sha
+            )
+            if (!release) continue
+
+            selected = { run, release }
+            break
+          }
+
+          if (!selected) {
+            throw new Error(`No successful full candidate run with a verified release artifact exists for ${sha}`)
+          }
+
+          const output = process.env.GITHUB_OUTPUT
+          fs.appendFileSync(output, `run_id=${selected.run.id}\n`)
+          fs.appendFileSync(output, `artifact_id=${selected.release.id}\n`)
+          fs.appendFileSync(output, `artifact_digest=${selected.release.digest ?? ''}\n`)
+          console.log(`Using candidate run ${selected.run.id} from ${selected.run.head_branch}`)
+          console.log(`Release artifact ${selected.release.id} digest ${selected.release.digest ?? 'unavailable'}`)
+          NODE
+
+      - name: Download exact verified candidate release
+        uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ steps.candidate.outputs.artifact_id }}
+          path: verified-candidate
+          merge-multiple: true
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.candidate.outputs.run_id }}
+
+      - name: Verify candidate bundle and current milestone ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFIED_CANDIDATE_RUN_ID: ${{ steps.candidate.outputs.run_id }}
+          VERIFIED_ARTIFACT_DIGEST: ${{ steps.candidate.outputs.artifact_digest }}
+        run: |
+          set -euo pipefail
+
+          expected_files=(
+            'COMMIT_SHA.txt'
+            'SHA256SUMS.txt'
+            'ValuePilot-v101-chromium.zip'
+            'ValuePilot-v101-firefox.zip'
+            'ValuePilot-v101.1-android.apk'
+          )
+          actual="$(find verified-candidate -maxdepth 1 -type f -printf '%f\n' | sort)"
+          expected="$(printf '%s\n' "${expected_files[@]}" | sort)"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "Candidate release bundle has unexpected files" >&2
+            echo "Expected:" >&2
+            printf '%s\n' "$expected" >&2
+            echo "Actual:" >&2
+            printf '%s\n' "$actual" >&2
+            exit 1
+          fi
+
+          recorded_sha="$(tr -d '\r\n' < verified-candidate/COMMIT_SHA.txt)"
+          if [[ "$recorded_sha" != "$GITHUB_SHA" ]]; then
+            echo "Candidate artifact SHA $recorded_sha does not match promoted SHA $GITHUB_SHA" >&2
+            exit 1
+          fi
+
+          expected_manifest_files="$(printf '%s\n' \
+            'COMMIT_SHA.txt' \
+            'ValuePilot-v101-chromium.zip' \
+            'ValuePilot-v101-firefox.zip' \
+            'ValuePilot-v101.1-android.apk' | sort)"
+          actual_manifest_files="$(awk '{print $2}' verified-candidate/SHA256SUMS.txt | sed 's/^\*//' | sort)"
+          if [[ "$actual_manifest_files" != "$expected_manifest_files" ]]; then
+            echo "Candidate checksum manifest has unexpected entries" >&2
+            exit 1
+          fi
+
+          (cd verified-candidate && sha256sum -c SHA256SUMS.txt)
+
+          branch_sha="$(node --input-type=module <<'NODE'
+          const token = process.env.GH_TOKEN
+          const repository = process.env.GITHUB_REPOSITORY
+          const branch = encodeURIComponent('work/valuepilot-android-milestone')
+          const response = await fetch(`https://api.github.com/repos/${repository}/branches/${branch}`, {
+            headers: {
+              Accept: 'application/vnd.github+json',
+              Authorization: `Bearer ${token}`,
+              'X-GitHub-Api-Version': '2022-11-28',
+              'User-Agent': 'valuepilot-milestone-provenance'
+            }
+          })
+          if (!response.ok) throw new Error(`Branch lookup failed: ${response.status} ${await response.text()}`)
+          const body = await response.json()
+          console.log(body.commit.sha)
+          NODE
+          )"
+          if [[ "$branch_sha" != "$GITHUB_SHA" ]]; then
+            echo "Milestone branch moved from $GITHUB_SHA to $branch_sha during verification" >&2
+            exit 1
+          fi
+
+          {
+            echo '### ValuePilot milestone provenance proof'
+            echo "- promoted SHA: \`$GITHUB_SHA\`"
+            echo "- verified candidate run: \`$VERIFIED_CANDIDATE_RUN_ID\`"
+            echo "- candidate artifact digest: \`$VERIFIED_ARTIFACT_DIGEST\`"
+            echo '- candidate bundle SHA and internal SHA-256 manifest: verified'
+            echo '- milestone ref still points to promoted SHA: verified'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload provenance-verified candidate copy
+        uses: actions/upload-artifact@v6
+        with:
+          name: ValuePilot-v101-provenance-proof
+          path: verified-candidate/
+          if-no-files-found: error
+          retention-days: 90

@@ -1,0 +1,1241 @@
+package com.valuepilot.app
+
+import android.content.Context
+import android.content.res.ColorStateList
+import android.graphics.Color
+import android.graphics.Rect
+import android.graphics.Typeface
+import android.text.Editable
+import android.text.InputFilter
+import android.text.TextWatcher
+import android.util.AttributeSet
+import android.util.TypedValue
+import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import android.widget.LinearLayout
+import android.widget.TextView
+import androidx.core.view.doOnLayout
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.card.MaterialCardView
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
+import com.valuepilot.core.ShoppingItemKey
+
+/**
+ * Gives assistive technology the same context as the visible extra-stop summary,
+ * including whether the progressive settings panel is currently open.
+ *
+ * This is fixed presentation copy. It does not interpret the threshold or make
+ * a second-stop decision.
+ */
+internal fun practicalShoppingExtraStopSettingsContentDescription(
+    summary: String,
+    expanded: Boolean,
+    notice: String? = null
+): String {
+    require(summary.isNotBlank())
+    require(notice == null || notice.isNotBlank())
+    val action = if (expanded) "Hide" else "Show"
+    return if (notice == null) {
+        "$action extra-stop rule settings. $summary"
+    } else {
+        "$action extra-stop rule settings. $summary. $notice."
+    }
+}
+
+/**
+ * Replaceable Android renderer for the fictional Practical Shopping Home proof.
+ * It receives immutable render state and forwards typed actions only.
+ */
+class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : LinearLayout(context, attrs, defStyleAttr) {
+
+    private val queryOwnerControls = mutableListOf<View>()
+    private val submitOwnerControls = mutableListOf<View>()
+    private val quickAddOwnerControls = mutableListOf<View>()
+    private val itemRemovalOwnerControls = mutableListOf<View>()
+    private val unknownRemovalOwnerControls = mutableListOf<View>()
+    private val offlineCatalogOwnerControls = mutableListOf<View>()
+    private val itemDetailsOwnerControls = mutableListOf<View>()
+    private val exactProductOwnerControls = mutableListOf<View>()
+    private val observedPriceOwnerControls = mutableListOf<View>()
+    private val chickenChoiceOwnerControls = mutableListOf<View>()
+    private val extraStopOwnerControls = mutableListOf<View>()
+    private val extraStopChoiceOwnerControls = mutableListOf<View>()
+    private val goodPriceOwnerControls = mutableListOf<View>()
+    private val privateMemoryReviewOwnerControls = mutableListOf<View>()
+    private val privateMemoryExportOwnerControls = mutableListOf<View>()
+    private val privateMemoryForgetOwnerControls = mutableListOf<View>()
+    private val shopAgainOwnerControls = mutableListOf<View>()
+    private val sharePlanOwnerControls = mutableListOf<View>()
+
+    private var hasRenderedState = false
+    private var lastRenderedSubmitEnabled = false
+    private var lastRenderedQuickAddVisible = false
+    private var projectedResultVisible = false
+
+    var onQueryChanged: ((String) -> Unit)? = null
+        set(value) {
+            field = value
+            queryOwnerControls.forEach { control ->
+                control.isEnabled = value != null && hasRenderedState
+            }
+        }
+    var onSubmit: ((String) -> Unit)? = null
+        set(value) {
+            field = value
+            submitOwnerControls.forEach { control ->
+                control.isEnabled = value != null && lastRenderedSubmitEnabled
+            }
+        }
+    var onQuickAdd: ((PracticalShoppingHomeQuickAdd) -> Unit)? = null
+        set(value) {
+            field = value
+            quickAddOwnerControls.forEach { control ->
+                control.isEnabled = value != null && lastRenderedQuickAddVisible
+            }
+        }
+    var onRemoveItem: ((ShoppingItemKey) -> Unit)? = null
+        set(value) {
+            field = value
+            itemRemovalOwnerControls.forEach { control ->
+                control.isEnabled = value != null
+            }
+        }
+    var onRemoveUnknownItem: ((String) -> Unit)? = null
+        set(value) {
+            field = value
+            unknownRemovalOwnerControls.forEach { control ->
+                control.isEnabled = value != null
+            }
+        }
+    var onFindOfflineCatalogMatch: ((String) -> Unit)? = null
+        set(value) {
+            field = value
+            offlineCatalogOwnerControls.forEach { control ->
+                control.isEnabled = value != null
+            }
+        }
+    var onChickenChoice: ((LocalSamplePracticalShoppingDemo.ChickenChoice) -> Unit)? = null
+        set(value) {
+            field = value
+            chickenChoiceOwnerControls.forEach { control ->
+                control.isEnabled = value != null
+            }
+        }
+    var onExtraStopMinimumSavingsChoice:
+        ((LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice) -> Unit)? = null
+        set(value) {
+            field = value
+            extraStopOwnerControls.forEach { control ->
+                control.isEnabled =
+                    value != null && hasRenderedState && extraStopSettingsButton.visibility == VISIBLE
+            }
+            extraStopChoiceOwnerControls.forEach { control ->
+                control.isEnabled = value != null
+            }
+            if (value == null) {
+                // A detached owner must not leave a previously expanded settings
+                // panel visible with stale choices while the surface remains mounted.
+                extraStopSettingsExpanded = false
+                syncExtraStopSettingsVisibility()
+            }
+        }
+    var onEditItemDetails: ((ShoppingItemKey) -> Unit)? = null
+        set(value) {
+            field = value
+            itemDetailsOwnerControls.forEach { control ->
+                control.isEnabled = value != null
+            }
+        }
+    var onChooseExactProduct: ((ShoppingItemKey) -> Unit)? = null
+        set(value) {
+            field = value
+            exactProductOwnerControls.forEach { control ->
+                control.isEnabled = value != null
+            }
+        }
+    var onAddObservedPrice: ((ShoppingItemKey) -> Unit)? = null
+        set(value) {
+            field = value
+            observedPriceOwnerControls.forEach { control ->
+                control.isEnabled = value != null
+            }
+        }
+    var onCompare: (() -> Unit)? = null
+        set(value) {
+            field = value
+            compareActionButton.isEnabled = value != null && hasRenderedState
+        }
+    var onGoodPrice: (() -> Unit)? = null
+        set(value) {
+            field = value
+            goodPriceOwnerControls.forEach { control ->
+                control.isEnabled = value != null && hasRenderedState
+            }
+        }
+    var onReviewPrivateMemory: (() -> Unit)? = null
+        set(value) {
+            field = value
+            privateMemoryReviewOwnerControls.forEach { control ->
+                control.isEnabled =
+                    value != null && hasRenderedState && control.visibility == VISIBLE
+            }
+        }
+    var onExportPrivateMemory: (() -> Unit)? = null
+        set(value) {
+            field = value
+            privateMemoryExportOwnerControls.forEach { control ->
+                control.isEnabled =
+                    value != null && hasRenderedState && control.visibility == VISIBLE
+            }
+        }
+    var onForgetPrivateMemory: (() -> Unit)? = null
+        set(value) {
+            field = value
+            privateMemoryForgetOwnerControls.forEach { control ->
+                control.isEnabled =
+                    value != null && hasRenderedState && control.visibility == VISIBLE
+            }
+        }
+    var onShopAgain: (() -> Unit)? = null
+        set(value) {
+            field = value
+            shopAgainOwnerControls.forEach { control ->
+                control.isEnabled =
+                    value != null && hasRenderedState && control.visibility == VISIBLE
+            }
+        }
+    var onSharePlan: (() -> Unit)? = null
+        set(value) {
+            field = value
+            sharePlanOwnerControls.forEach { control ->
+                control.isEnabled =
+                    value != null && hasRenderedState && control.visibility == VISIBLE
+            }
+        }
+
+    private var suppressInputCallback = false
+    private var extraStopSettingsExpanded = false
+    private var currentExtraStopSettingsNotice: String? = null
+
+    private val input = TextInputEditText(context).apply {
+        maxLines = 3
+        imeOptions = EditorInfo.IME_ACTION_DONE
+        inputType =
+            android.text.InputType.TYPE_CLASS_TEXT or
+                android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
+                android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+        isSaveEnabled = false
+        // A detached Home surface must not accept edits that have no owner to consume them.
+        isEnabled = false
+    }
+
+    private val inputLayout = TextInputLayout(context).apply {
+        boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
+        hint = context.getString(R.string.home_list_hint)
+        setBoxBackgroundColor(ValuePilotPalette.color("#FFFFFF"))
+        setBoxCornerRadii(
+            dp(18).toFloat(),
+            dp(18).toFloat(),
+            dp(18).toFloat(),
+            dp(18).toFloat()
+        )
+        endIconMode = TextInputLayout.END_ICON_CLEAR_TEXT
+        addView(input)
+    }
+
+    private var appliedQueryCharacterLimit: Int? = null
+
+    private val submitButton = MaterialButton(context).apply {
+        text = context.getString(R.string.home_plan_action)
+        // Fail closed until the first immutable render state supplies readiness.
+        isEnabled = false
+        isAllCaps = false
+        textSize = 16f
+        cornerRadius = dp(16)
+        layoutParams = fullWidth(dp(54), 12)
+    }
+
+    // Keep the two high-frequency, first-session questions beside the primary
+    // Home action. They are still owner-driven navigation controls; this
+    // heading only makes their purpose discoverable before a long result is
+    // rendered below the list.
+    private val fastActionsHeading = line("", 13f, "#374151", true).apply {
+        setPadding(dp(2), dp(14), dp(2), 0)
+    }
+
+    private val quickAddHeading = line("", 13f, "#374151", true).apply {
+        setPadding(dp(2), dp(12), dp(2), 0)
+        visibility = GONE
+    }
+
+    private val quickAddGroup = ChipGroup(context).apply {
+        isSingleLine = false
+        setChipSpacingHorizontal(dp(8))
+        setChipSpacingVertical(dp(6))
+        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 4)
+        visibility = GONE
+    }
+
+    private val message = line("", 14f, "#6B7280").apply {
+        setPadding(dp(2), dp(14), dp(2), 0)
+        // Refinement and validation feedback changes after user actions. Let
+        // assistive technology hear the new immutable message without making
+        // the View infer any shopping state.
+        accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+    }
+
+    private val itemsHeading = heading(context.getString(R.string.home_items_title))
+    private val itemsContainer = bareColumn()
+
+    private val refinementBody = column()
+    private val refinementCard = card("#FFFBEB", "#FDE68A", 16, refinementBody)
+
+    private val unknownBody = column()
+    private val unknownCard = card("#FFF7ED", "#FED7AA", 12, unknownBody)
+
+    private val resultContainer = PracticalShoppingPlanResultSurfaceView(context)
+    private val extraStopSettingsButton = MaterialButton(context).apply {
+        isAllCaps = false
+        textSize = 14f
+        cornerRadius = dp(16)
+        strokeWidth = dp(1)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
+        setTextColor(ValuePilotPalette.color("#374151"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
+        layoutParams = fullWidth(dp(50), 12)
+        setOnClickListener {
+            extraStopSettingsExpanded = !extraStopSettingsExpanded
+            syncExtraStopSettingsAccessibility()
+            syncExtraStopSettingsVisibility()
+        }
+    }
+    private val extraStopSettingsBody = column()
+    private val extraStopSettingsCard =
+        card("#F9FAFB", "#E5E7EB", 8, extraStopSettingsBody)
+    private val shopAgainActionButton = shopAgainButton()
+    private val sharePlanActionButton = sharePlanButton()
+    private val privateMemorySummary = line("", 13f, "#6B7280").apply {
+        accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        visibility = GONE
+    }
+    private val privateMemoryHighlightsBody = column()
+    private val privateMemoryHighlightsCard =
+        card("#EFF6FF", "#BFDBFE", 8, privateMemoryHighlightsBody).apply {
+            visibility = GONE
+        }
+    private val privateMemoryNotice = line("", 13f, "#92400E").apply {
+        accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        visibility = GONE
+    }
+    private val sampleNotice = line("", 13f, "#374151")
+    private val goodPriceActionButton = goodPriceButton()
+    private val privateMemoryReviewActionButton = privateMemoryReviewButton()
+    private val privateMemoryExportActionButton = privateMemoryExportButton()
+    private val privateMemoryForgetActionButton = privateMemoryForgetButton()
+    private val compareActionButton = compareButton()
+    private val noCoverageSummary = line("", 13f, "#92400E", true).apply {
+        accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        visibility = GONE
+    }
+
+    init {
+        orientation = VERTICAL
+        isSaveEnabled = false
+
+        queryOwnerControls += inputLayout
+        queryOwnerControls += input
+        submitOwnerControls += submitButton
+        extraStopOwnerControls += extraStopSettingsButton
+
+        addView(inputLayout)
+        addView(submitButton)
+        addView(fastActionsHeading)
+        addView(compareActionButton)
+        addView(goodPriceActionButton)
+        // Keep fictional demo shortcuts below the real first-value actions. A blank Home should
+        // lead with Plan my shop and the two owner-driven questions; the shortcuts remain a
+        // bounded, clearly disclosed way to explore the offline sample without competing with
+        // the product's primary actions.
+        addView(quickAddHeading)
+        addView(quickAddGroup)
+        addView(message)
+        addView(sampleCard())
+        addView(privateMemorySummary)
+        addView(privateMemoryHighlightsCard)
+        addView(privateMemoryReviewActionButton)
+        addView(privateMemoryExportActionButton)
+        addView(privateMemoryForgetActionButton)
+        addView(privateMemoryNotice)
+        addView(itemsHeading)
+        addView(itemsContainer)
+        addView(refinementCard)
+        addView(unknownCard)
+        addView(noCoverageSummary)
+        addView(resultContainer)
+        addView(shopAgainActionButton)
+        addView(sharePlanActionButton)
+        addView(extraStopSettingsButton)
+        addView(extraStopSettingsCard)
+
+        itemsHeading.visibility = GONE
+        refinementCard.visibility = GONE
+        unknownCard.visibility = GONE
+        extraStopSettingsCard.visibility = GONE
+        privateMemoryReviewActionButton.visibility = GONE
+        privateMemoryExportActionButton.visibility = GONE
+        privateMemoryForgetActionButton.visibility = GONE
+        shopAgainActionButton.visibility = GONE
+        sharePlanActionButton.visibility = GONE
+
+        input.addTextChangedListener(
+            object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+                override fun afterTextChanged(s: Editable?) {
+                    if (!suppressInputCallback) onQueryChanged?.invoke(s?.toString().orEmpty())
+                }
+            }
+        )
+        input.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                submit()
+                true
+            } else {
+                false
+            }
+        }
+        submitButton.setOnClickListener { submit() }
+    }
+
+    fun render(state: PracticalShoppingHomeRenderState) {
+        itemRemovalOwnerControls.clear()
+        unknownRemovalOwnerControls.clear()
+        offlineCatalogOwnerControls.clear()
+        itemDetailsOwnerControls.clear()
+        exactProductOwnerControls.clear()
+        observedPriceOwnerControls.clear()
+        chickenChoiceOwnerControls.clear()
+        quickAddOwnerControls.clear()
+        extraStopChoiceOwnerControls.clear()
+        hasRenderedState = true
+
+        syncQueryCharacterLimit(state.queryCharacterLimit)
+        syncQuery(state.query)
+        // The clear-text end icon belongs to the TextInputLayout wrapper, so
+        // gate the wrapper as well as the editor when no owner can consume
+        // query changes.
+        inputLayout.isEnabled = onQueryChanged != null
+        input.isEnabled = onQueryChanged != null
+        lastRenderedSubmitEnabled = state.submitEnabled
+        submitButton.isEnabled = state.submitEnabled && onSubmit != null
+        compareActionButton.isEnabled = onCompare != null
+        renderMessage(state)
+        renderItems(state.items)
+        renderRefinement(state.refinement)
+        renderQuickAdd(state.quickAddVisible, state.quickAddChoices)
+        fastActionsHeading.text = context.getString(R.string.home_fast_actions_title)
+        renderUnknown(state.unknownItems)
+        renderNoCoverageSummary(state.noCoverageSummary)
+        resultContainer.render(state.result, state.sampleNotice)
+        projectedResultVisible = state.result != null
+        renderShopAgain(state.shopAgainVisible)
+        renderSharePlan(state.result?.primary != null)
+        renderExtraStopSettings(state.extraStopSettings)
+        renderPrivateMemory(
+            status = state.privateMemoryStatus,
+            summary = state.privateMemorySummary,
+            highlights = state.privateMemoryHighlights,
+            reviewActionVisible = state.privateMemoryReviewActionVisible,
+            exportActionVisible = state.privateMemoryExportActionVisible,
+            forgetActionVisible = state.privateMemoryForgetActionVisible
+        )
+        sampleNotice.text = state.sampleNotice
+        goodPriceOwnerControls.forEach { control ->
+            control.isEnabled = onGoodPrice != null && hasRenderedState
+        }
+    }
+
+    /**
+     * Asks the Home scroll container to reveal the latest projected answer after an explicit
+     * shopper action. The bounded rectangle keeps a long result from forcing the whole card into
+     * a tiny viewport, while all shopping authority remains in the immutable render state.
+     */
+    fun revealProjectedResult() {
+        if (!projectedResultVisible) return
+
+        // Rendering replaces result children and may request a new layout. Waiting for that
+        // layout avoids scrolling to an old/zero-height result when the answer first appears.
+        resultContainer.doOnLayout {
+            if (!projectedResultVisible) return@doOnLayout
+            val revealHeight = minOf(resultContainer.height, dp(320))
+            if (resultContainer.width <= 0 || revealHeight <= 0) return@doOnLayout
+            resultContainer.requestRectangleOnScreen(
+                Rect(0, 0, resultContainer.width, revealHeight),
+                true
+            )
+        }
+    }
+
+    private fun submit() {
+        // The IME action can arrive independently of the visible button click. Keep
+        // both entry points on the same immutable readiness boundary.
+        if (!submitButton.isEnabled || onSubmit == null) {
+            hideKeyboard()
+            return
+        }
+        onSubmit?.invoke(input.text?.toString().orEmpty())
+        hideKeyboard()
+    }
+
+    private fun syncQuery(query: String) {
+        if (input.text?.toString() == query) return
+        suppressInputCallback = true
+        input.setText(query)
+        input.setSelection(query.length)
+        suppressInputCallback = false
+    }
+
+    private fun syncQueryCharacterLimit(limit: Int) {
+        if (appliedQueryCharacterLimit == limit) return
+
+        input.filters = arrayOf(InputFilter.LengthFilter(limit + 1))
+        inputLayout.counterMaxLength = limit
+        inputLayout.isCounterEnabled = true
+        appliedQueryCharacterLimit = limit
+    }
+
+    private fun renderMessage(state: PracticalShoppingHomeRenderState) {
+        val value = state.message
+        if (value == null) {
+            message.visibility = GONE
+            return
+        }
+        message.text = value
+        message.setTextColor(
+            ValuePilotPalette.color(
+                when (state.messageTone) {
+                    PracticalShoppingHomeMessageTone.NEUTRAL -> "#6B7280"
+                    PracticalShoppingHomeMessageTone.ACTION_REQUIRED -> "#92400E"
+                    PracticalShoppingHomeMessageTone.ERROR -> "#B42318"
+                }
+            )
+        )
+        message.visibility = VISIBLE
+    }
+
+    private fun renderPrivateMemory(
+        status: PracticalShoppingHomePrivateMemoryStatus,
+        summary: String?,
+        highlights: List<PracticalShoppingHomePrivateMemoryHighlight>,
+        reviewActionVisible: Boolean,
+        exportActionVisible: Boolean,
+        forgetActionVisible: Boolean
+    ) {
+        if (status == PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE) {
+            privateMemorySummary.text = ""
+            privateMemorySummary.visibility = GONE
+            privateMemoryHighlightsBody.removeAllViews()
+            privateMemoryHighlightsCard.visibility = GONE
+            privateMemoryReviewActionButton.visibility =
+                if (reviewActionVisible) VISIBLE else GONE
+            privateMemoryReviewActionButton.isEnabled =
+                reviewActionVisible && onReviewPrivateMemory != null && hasRenderedState
+            privateMemoryExportActionButton.visibility = GONE
+            privateMemoryExportActionButton.isEnabled = false
+            privateMemoryForgetActionButton.visibility = GONE
+            privateMemoryForgetActionButton.isEnabled = false
+            privateMemoryNotice.text = context.getString(R.string.home_private_memory_unavailable)
+            privateMemoryNotice.visibility = VISIBLE
+        } else {
+            privateMemorySummary.text = summary.orEmpty()
+            privateMemorySummary.visibility = if (summary == null) GONE else VISIBLE
+            renderPrivateMemoryHighlights(highlights)
+            privateMemoryReviewActionButton.visibility = if (reviewActionVisible) VISIBLE else GONE
+            privateMemoryReviewActionButton.isEnabled =
+                reviewActionVisible && onReviewPrivateMemory != null && hasRenderedState
+            privateMemoryExportActionButton.visibility = if (exportActionVisible) VISIBLE else GONE
+            privateMemoryExportActionButton.isEnabled =
+                exportActionVisible && onExportPrivateMemory != null && hasRenderedState
+            privateMemoryForgetActionButton.visibility = if (forgetActionVisible) VISIBLE else GONE
+            privateMemoryForgetActionButton.isEnabled =
+                forgetActionVisible && onForgetPrivateMemory != null && hasRenderedState
+            privateMemoryNotice.text = ""
+            privateMemoryNotice.visibility = GONE
+        }
+    }
+
+    private fun renderPrivateMemoryHighlights(
+        highlights: List<PracticalShoppingHomePrivateMemoryHighlight>
+    ) {
+        privateMemoryHighlightsBody.removeAllViews()
+        if (highlights.isEmpty()) {
+            privateMemoryHighlightsCard.visibility = GONE
+            return
+        }
+
+        privateMemoryHighlightsBody.addView(
+            line(context.getString(R.string.home_private_memory_highlights_title), 14f, "#1D4ED8", true)
+        )
+        privateMemoryHighlightsBody.addView(
+            line(context.getString(R.string.home_private_memory_highlights_body), 12f, "#374151", topPadding = 4)
+        )
+        highlights.forEachIndexed { index, highlight ->
+            privateMemoryHighlightsBody.addView(
+                line(
+                    highlight.displayName,
+                    15f,
+                    "#111827",
+                    true,
+                    topPadding = if (index == 0) 10 else 12
+                )
+            )
+            privateMemoryHighlightsBody.addView(
+                line(
+                    context.getString(
+                        R.string.home_private_memory_highlight_prices,
+                        highlight.latestPriceText,
+                        highlight.latestUnitRateText,
+                        highlight.lowestPriceText
+                    ),
+                    13f,
+                    "#374151",
+                    topPadding = 3
+                )
+            )
+            privateMemoryHighlightsBody.addView(
+                line(
+                    context.getString(
+                        R.string.home_private_memory_highlight_detail,
+                        if (highlight.observationCount == 1) {
+                            "1 observation"
+                        } else {
+                            "${highlight.observationCount} observations"
+                        },
+                        highlight.rangeText,
+                        highlight.latestObservedText
+                    ),
+                    12f,
+                    "#6B7280",
+                    topPadding = 2
+                )
+            )
+            highlight.recentMovementText?.let { movement ->
+                privateMemoryHighlightsBody.addView(
+                    line(
+                        context.getString(
+                            R.string.home_private_memory_highlight_movement,
+                            movement
+                        ),
+                        12f,
+                        "#1D4ED8",
+                        topPadding = 2
+                    )
+                )
+            }
+        }
+        privateMemoryHighlightsCard.visibility = VISIBLE
+    }
+
+    private fun renderItems(items: List<PracticalShoppingHomeItemRenderState>) {
+        itemsContainer.removeAllViews()
+        itemsHeading.visibility = if (items.isEmpty()) GONE else VISIBLE
+        items.forEach { item ->
+            itemsContainer.addView(itemRow(item))
+        }
+    }
+
+    private fun renderQuickAdd(
+        visible: Boolean,
+        choices: List<PracticalShoppingHomeQuickAddRenderState>
+    ) {
+        lastRenderedQuickAddVisible = visible
+        quickAddHeading.text = context.getString(R.string.home_quick_add_title)
+        quickAddHeading.visibility = if (visible) VISIBLE else GONE
+        quickAddGroup.removeAllViews()
+        quickAddGroup.visibility = if (visible) VISIBLE else GONE
+        if (!visible) return
+
+        choices.forEach { option ->
+            quickAddGroup.addView(
+                Chip(context).apply {
+                    quickAddOwnerControls += this
+                    text = option.label
+                    contentDescription =
+                        context.getString(
+                            R.string.home_quick_add_description,
+                            option.label
+                        )
+                    isCheckable = false
+                    isEnabled = onQuickAdd != null
+                    setOnClickListener {
+                        onQuickAdd?.invoke(option.choice)
+                        hideKeyboard()
+                    }
+                }
+            )
+        }
+    }
+
+    private fun renderNoCoverageSummary(summary: String?) {
+        noCoverageSummary.text = summary.orEmpty()
+        noCoverageSummary.visibility = if (summary == null) GONE else VISIBLE
+    }
+
+    private fun renderShopAgain(visible: Boolean) {
+        shopAgainActionButton.visibility = if (visible) VISIBLE else GONE
+        shopAgainActionButton.isEnabled =
+            visible && onShopAgain != null && hasRenderedState
+    }
+
+    private fun renderSharePlan(visible: Boolean) {
+        sharePlanActionButton.visibility = if (visible) VISIBLE else GONE
+        sharePlanActionButton.isEnabled =
+            visible && onSharePlan != null && hasRenderedState
+    }
+
+    private fun itemRow(item: PracticalShoppingHomeItemRenderState): View =
+        card("#FFFDF9", "#D8CFC6", 8).apply {
+            addView(
+                column().apply {
+                    addView(
+                        actionRow(
+                            label = "${item.name}  •  ${item.detail}",
+                            onRemove = { onRemoveItem?.invoke(item.key) },
+                            removeEnabled = onRemoveItem != null,
+                            removeOwnerControls = itemRemovalOwnerControls,
+                            removeDescription =
+                                context.getString(R.string.home_remove_item_description, item.name),
+                            onDetails = { onEditItemDetails?.invoke(item.key) },
+                            detailsEnabled = onEditItemDetails != null,
+                            detailsOwnerControls = itemDetailsOwnerControls,
+                            detailsLabel = item.requestDetailsActionLabel,
+                            detailsDescription =
+                                context.getString(
+                                    R.string.home_item_details_action_description,
+                                    item.name
+                                )
+                        )
+                    )
+                    if (item.exactProductActionVisible) {
+                        addView(
+                            detailButton(
+                                onDetails = { onChooseExactProduct?.invoke(item.key) },
+                                label =
+                                    context.getString(
+                                        if (item.savedExactProductNotice == null) {
+                                            R.string.home_choose_exact_product
+                                        } else {
+                                            R.string.home_change_exact_product
+                                        }
+                                    ),
+                                description =
+                                    context.getString(
+                                        if (item.savedExactProductNotice == null) {
+                                            R.string.home_choose_exact_product_description
+                                        } else {
+                                            R.string.home_change_exact_product_description
+                                        },
+                                        item.name
+                                    ),
+                                enabled = onChooseExactProduct != null,
+                                ownerControls = exactProductOwnerControls
+                            )
+                        )
+                    }
+                    item.savedExactProductNotice?.let { notice ->
+                        addView(line(notice, 12f, "#374151", topPadding = 2))
+                    }
+                    item.storeAssignment?.let { store ->
+                        addView(
+                            line(
+                                practicalShoppingPlannedStoreLabel(store),
+                                12f,
+                                "#374151",
+                                topPadding = 2
+                            )
+                        )
+                        addView(
+                            line(
+                                PRACTICAL_SHOPPING_PLANNED_STORE_NOTICE,
+                                12f,
+                                "#6B7280",
+                                topPadding = 2
+                            )
+                        )
+                    }
+                    item.plannedPriceText?.let { price ->
+                        addView(line("Included in plan: $price", 12f, "#374151", topPadding = 2))
+                    }
+                    item.plannedPriceNotice?.let { notice ->
+                        addView(line(notice, 12f, "#6B7280", topPadding = 2))
+                    }
+                    item.priceCoverageNotice?.let { notice ->
+                        addView(line(notice, 12f, "#92400E", topPadding = 2))
+                    }
+                    item.personalHistoryNotice?.let { notice ->
+                        addView(line(notice, 12f, "#6B7280", topPadding = 2))
+                    }
+                    if (item.observedPriceActionVisible) {
+                        addView(
+                            detailButton(
+                                onDetails = { onAddObservedPrice?.invoke(item.key) },
+                                label = context.getString(R.string.home_item_observed_price_action),
+                                description =
+                                    context.getString(
+                                        R.string.home_item_observed_price_action_description,
+                                        item.name
+                                    ),
+                                enabled = onAddObservedPrice != null,
+                                ownerControls = observedPriceOwnerControls
+                            )
+                        )
+                    }
+                    addView(line(item.requestDetailsSummary, 12f, "#6B7280", topPadding = 2))
+                    item.requestDetailsNotice?.let { notice ->
+                        addView(line(notice, 12f, "#92400E", topPadding = 2))
+                    }
+                }
+            )
+        }
+
+    private fun actionRow(
+        label: String,
+        onRemove: () -> Unit,
+        removeEnabled: Boolean = false,
+        removeOwnerControls: MutableList<View>? = null,
+        lineColor: String = "#374151",
+        removeDescription: String = context.getString(R.string.home_remove_item),
+        onDetails: (() -> Unit)? = null,
+        detailsEnabled: Boolean = false,
+        detailsOwnerControls: MutableList<View>? = null,
+        detailsLabel: String = context.getString(R.string.home_item_details_action),
+        detailsDescription: String = detailsLabel
+    ): View =
+        LinearLayout(context).apply {
+            orientation = VERTICAL
+            layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 5)
+
+            addView(line(label, 15f, lineColor, topPadding = 7))
+            onDetails?.let {
+                addView(
+                    detailButton(
+                        it,
+                        detailsLabel,
+                        detailsDescription,
+                        detailsEnabled,
+                        detailsOwnerControls
+                    ).apply {
+                        layoutParams = fullWidth(dp(48), 6)
+                    }
+                )
+            }
+            addView(
+                removeButton(
+                    onRemove,
+                    removeDescription,
+                    removeEnabled,
+                    removeOwnerControls
+                ).apply {
+                    layoutParams = fullWidth(dp(48), 6)
+                }
+            )
+        }
+
+    private fun detailButton(
+        onDetails: () -> Unit,
+        label: String,
+        description: String,
+        enabled: Boolean,
+        ownerControls: MutableList<View>? = null
+    ): MaterialButton = MaterialButton(context).apply {
+        ownerControls?.add(this)
+        text = label
+        contentDescription = description
+        isAllCaps = false
+        textSize = 14f
+        minHeight = dp(40)
+        minimumHeight = dp(40)
+        minWidth = 0
+        minimumWidth = 0
+        insetTop = 0
+        insetBottom = 0
+        isEnabled = enabled
+        setPadding(dp(8), 0, dp(8), 0)
+        layoutParams = LinearLayout.LayoutParams(
+            LayoutParams.WRAP_CONTENT,
+            dp(40)
+        ).apply { leftMargin = dp(4) }
+        setOnClickListener { onDetails() }
+    }
+
+    private fun removeButton(
+        onRemove: () -> Unit,
+        description: String,
+        enabled: Boolean,
+        ownerControls: MutableList<View>? = null
+    ): MaterialButton =
+        MaterialButton(context).apply {
+            ownerControls?.add(this)
+            text = context.getString(R.string.home_remove_item)
+            contentDescription = description
+            isAllCaps = false
+            textSize = 14f
+            minHeight = dp(40)
+            minimumHeight = dp(40)
+            minWidth = 0
+            minimumWidth = 0
+            insetTop = 0
+            insetBottom = 0
+            isEnabled = enabled
+            setPadding(dp(10), 0, dp(10), 0)
+            strokeWidth = dp(1)
+            strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D8CFC6"))
+            setTextColor(ValuePilotPalette.color("#5F5148"))
+            backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFDF9"))
+            layoutParams = LinearLayout.LayoutParams(
+                LayoutParams.WRAP_CONTENT,
+                dp(40)
+            ).apply { leftMargin = dp(8) }
+            setOnClickListener { onRemove() }
+        }
+
+    private fun renderRefinement(state: PracticalShoppingHomeRefinementRenderState?) {
+        refinementBody.removeAllViews()
+        if (state == null) {
+            refinementCard.visibility = GONE
+            return
+        }
+        refinementBody.addView(line(context.getString(R.string.home_refinement_title), 11f, "#92400E", true))
+        refinementBody.addView(
+            line(
+                context.getString(R.string.home_refinement_question, state.prompt),
+                17f,
+                "#111827",
+                true,
+                5
+            )
+        )
+        refinementBody.addView(
+            ChipGroup(context).apply {
+                isSingleLine = false
+                setPadding(0, dp(8), 0, 0)
+                setChipSpacingHorizontal(dp(8))
+                setChipSpacingVertical(dp(6))
+                state.choices.forEach { option ->
+                    addView(
+                        Chip(context).apply {
+                            chickenChoiceOwnerControls += this
+                            text = option.label
+                            contentDescription =
+                                context.getString(
+                                    R.string.home_chicken_choice_description,
+                                    option.label,
+                                    state.prompt
+                                )
+                            isCheckable = false
+                            isEnabled = onChickenChoice != null
+                            setOnClickListener {
+                                onChickenChoice?.invoke(option.choice)
+                                hideKeyboard()
+                            }
+                        }
+                    )
+                }
+            }
+        )
+        refinementCard.visibility = VISIBLE
+    }
+
+    private fun renderUnknown(items: List<String>) {
+        unknownBody.removeAllViews()
+        if (items.isEmpty()) {
+            unknownCard.visibility = GONE
+            return
+        }
+        unknownBody.addView(line(context.getString(R.string.home_unknown_title), 13f, "#92400E", true))
+        items.forEach { token ->
+            unknownBody.addView(
+                actionRow(
+                    label = "• $token",
+                    onRemove = { onRemoveUnknownItem?.invoke(token) },
+                    removeEnabled = onRemoveUnknownItem != null,
+                    removeOwnerControls = unknownRemovalOwnerControls,
+                    lineColor = "#92400E",
+                    removeDescription =
+                        context.getString(R.string.home_remove_item_description, token),
+                    onDetails = { onFindOfflineCatalogMatch?.invoke(token) },
+                    detailsEnabled = onFindOfflineCatalogMatch != null,
+                    detailsOwnerControls = offlineCatalogOwnerControls,
+                    detailsLabel = context.getString(R.string.home_unknown_find_matches),
+                    detailsDescription =
+                        context.getString(R.string.home_unknown_find_matches_description, token)
+                )
+            )
+        }
+        unknownCard.visibility = VISIBLE
+    }
+
+    private fun renderExtraStopSettings(
+        state: PracticalShoppingHomeExtraStopSettingsRenderState
+    ) {
+        extraStopSettingsButton.visibility = if (state.visible) VISIBLE else GONE
+        // The disclosure itself is an owner-driven control too. Keep a detached
+        // Home renderer inert even when an already-projected result makes the
+        // settings panel visible; the option chips below use the same gate.
+        extraStopSettingsButton.isEnabled =
+            state.visible && onExtraStopMinimumSavingsChoice != null
+        if (!state.visible || onExtraStopMinimumSavingsChoice == null) {
+            // Do not leave a stale expanded panel on screen after its owner
+            // disappears; a detached/reused renderer should look inert too.
+            extraStopSettingsExpanded = false
+        }
+        currentExtraStopSettingsNotice = state.notice
+        extraStopSettingsButton.text = state.summary
+        syncExtraStopSettingsAccessibility()
+        extraStopSettingsBody.removeAllViews()
+        extraStopSettingsBody.addView(line(state.prompt, 15f, "#111827", true))
+        state.notice?.let {
+            extraStopSettingsBody.addView(line(it, 13f, "#92400E", topPadding = 8))
+        }
+        extraStopSettingsBody.addView(
+            ChipGroup(context).apply {
+                isSingleLine = false
+                isSingleSelection = true
+                setPadding(0, dp(8), 0, 0)
+                setChipSpacingHorizontal(dp(8))
+                setChipSpacingVertical(dp(6))
+                state.choices.forEach { option ->
+                    addView(
+                        Chip(context).apply {
+                            extraStopChoiceOwnerControls += this
+                            text = option.label
+                            contentDescription =
+                                context.getString(
+                                    R.string.home_extra_stop_choice_description,
+                                    option.label
+                                )
+                            isCheckable = true
+                            isChecked = option.selected
+                            isEnabled = onExtraStopMinimumSavingsChoice != null
+                            setOnClickListener {
+                                onExtraStopMinimumSavingsChoice?.invoke(option.choice)
+                            }
+                        }
+                    )
+                }
+            }
+        )
+        syncExtraStopSettingsVisibility()
+    }
+
+    private fun syncExtraStopSettingsAccessibility() {
+        extraStopSettingsButton.contentDescription =
+            if (extraStopSettingsButton.visibility == VISIBLE) {
+                practicalShoppingExtraStopSettingsContentDescription(
+                    summary = extraStopSettingsButton.text?.toString().orEmpty(),
+                    expanded = extraStopSettingsExpanded,
+                    notice = currentExtraStopSettingsNotice
+                )
+            } else {
+                null
+            }
+    }
+
+    private fun syncExtraStopSettingsVisibility() {
+        extraStopSettingsCard.visibility =
+            if (extraStopSettingsButton.visibility == VISIBLE && extraStopSettingsExpanded) {
+                VISIBLE
+            } else {
+                GONE
+            }
+    }
+
+    private fun sampleCard(): View =
+        card("#F0FDF4", "#BBF7D0", 20).apply {
+            addView(
+                column().apply {
+                    addView(line(context.getString(R.string.home_sample_badge), 11f, "#047857", true))
+                    sampleNotice.setPadding(0, dp(4), 0, 0)
+                    addView(sampleNotice)
+                }
+            )
+        }
+
+    private fun compareButton(): MaterialButton = MaterialButton(context).apply {
+        text = context.getString(R.string.home_compare_secondary)
+        isAllCaps = false
+        textSize = 14f
+        cornerRadius = dp(16)
+        strokeWidth = dp(1)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
+        setTextColor(ValuePilotPalette.color("#374151"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
+        layoutParams = fullWidth(dp(50), 12)
+        // Keep the owner-driven comparison route inert until its callback is attached.
+        isEnabled = false
+        setOnClickListener { onCompare?.invoke() }
+    }
+
+    private fun shopAgainButton(): MaterialButton = MaterialButton(context).apply {
+        shopAgainOwnerControls += this
+        text = context.getString(R.string.home_shop_again)
+        contentDescription = context.getString(R.string.home_shop_again_description)
+        isAllCaps = false
+        textSize = 14f
+        cornerRadius = dp(16)
+        strokeWidth = dp(1)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
+        setTextColor(ValuePilotPalette.color("#374151"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
+        layoutParams = fullWidth(dp(50), 12)
+        // Keep this repeat-use action inert until the owner attaches and a
+        // completed immutable result is rendered.
+        isEnabled = false
+        setOnClickListener { onShopAgain?.invoke() }
+    }
+
+    private fun sharePlanButton(): MaterialButton = MaterialButton(context).apply {
+        sharePlanOwnerControls += this
+        text = context.getString(R.string.home_share_plan)
+        contentDescription = context.getString(R.string.home_share_plan_description)
+        isAllCaps = false
+        textSize = 14f
+        cornerRadius = dp(16)
+        strokeWidth = dp(1)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
+        setTextColor(ValuePilotPalette.color("#374151"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
+        layoutParams = fullWidth(dp(50), 8)
+        // Sharing is an explicit owner-driven action over an already-projected result.
+        isEnabled = false
+        setOnClickListener { onSharePlan?.invoke() }
+    }
+
+    private fun goodPriceButton(): MaterialButton = MaterialButton(context).apply {
+        goodPriceOwnerControls += this
+        text = context.getString(R.string.home_good_price_secondary)
+        isAllCaps = false
+        textSize = 14f
+        cornerRadius = dp(16)
+        strokeWidth = dp(1)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
+        setTextColor(ValuePilotPalette.color("#374151"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
+        layoutParams = fullWidth(dp(50), 12)
+        // Keep the owner-driven price question inert until its callback is attached.
+        isEnabled = false
+        setOnClickListener { onGoodPrice?.invoke() }
+    }
+
+    private fun privateMemoryReviewButton(): MaterialButton = MaterialButton(context).apply {
+        privateMemoryReviewOwnerControls += this
+        text = context.getString(R.string.home_private_memory_review)
+        contentDescription = context.getString(R.string.home_private_memory_review_description)
+        isAllCaps = false
+        textSize = 14f
+        cornerRadius = dp(16)
+        strokeWidth = dp(1)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
+        setTextColor(ValuePilotPalette.color("#374151"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
+        layoutParams = fullWidth(dp(50), 8)
+        // Keep the owner-driven history route inert until its callback is attached.
+        isEnabled = false
+        setOnClickListener { onReviewPrivateMemory?.invoke() }
+    }
+
+    private fun privateMemoryExportButton(): MaterialButton = MaterialButton(context).apply {
+        privateMemoryExportOwnerControls += this
+        text = context.getString(R.string.home_private_memory_export)
+        contentDescription =
+            context.getString(R.string.home_private_memory_export_description)
+        isAllCaps = false
+        textSize = 14f
+        cornerRadius = dp(16)
+        strokeWidth = dp(1)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
+        setTextColor(ValuePilotPalette.color("#374151"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
+        layoutParams = fullWidth(dp(50), 4)
+        // Keep the owner-driven export route inert until its callback is attached.
+        isEnabled = false
+        setOnClickListener { onExportPrivateMemory?.invoke() }
+    }
+
+    private fun privateMemoryForgetButton(): MaterialButton = MaterialButton(context).apply {
+        privateMemoryForgetOwnerControls += this
+        text = context.getString(R.string.home_private_memory_forget)
+        contentDescription =
+            context.getString(R.string.home_private_memory_forget_description)
+        isAllCaps = false
+        textSize = 14f
+        cornerRadius = dp(16)
+        strokeWidth = dp(1)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
+        setTextColor(ValuePilotPalette.color("#374151"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
+        layoutParams = fullWidth(dp(50), 4)
+        // Keep the owner-driven removal route inert until its callback is attached.
+        isEnabled = false
+        setOnClickListener { onForgetPrivateMemory?.invoke() }
+    }
+
+    private fun heading(value: String): TextView = line(value, 13f, "#374151", true, 18)
+
+    private fun card(
+        background: String,
+        stroke: String,
+        topMargin: Int,
+        body: View? = null
+    ): MaterialCardView = MaterialCardView(context).apply {
+        radius = dp(18).toFloat()
+        cardElevation = 0f
+        setCardBackgroundColor(ValuePilotPalette.color(background))
+        strokeColor = ValuePilotPalette.color(stroke)
+        strokeWidth = dp(1)
+        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, topMargin)
+        body?.let(::addView)
+    }
+
+    private fun bareColumn(): LinearLayout = LinearLayout(context).apply {
+        orientation = VERTICAL
+    }
+
+    private fun column(): LinearLayout = bareColumn().apply {
+        setPadding(dp(16), dp(15), dp(16), dp(15))
+    }
+
+    private fun line(
+        value: String,
+        sizeSp: Float,
+        color: String,
+        bold: Boolean = false,
+        topPadding: Int = 0
+    ): TextView = TextView(context).apply {
+        text = value
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
+        setTextColor(ValuePilotPalette.color(color))
+        if (bold) setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+        if (topPadding > 0) setPadding(0, dp(topPadding), 0, 0)
+    }
+
+    private fun fullWidth(height: Int, topMargin: Int): LayoutParams =
+        LayoutParams(LayoutParams.MATCH_PARENT, height).apply { this.topMargin = dp(topMargin) }
+
+    private fun hideKeyboard() {
+        val manager = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        manager?.hideSoftInputFromWindow(input.windowToken, 0)
+        input.clearFocus()
+    }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+}

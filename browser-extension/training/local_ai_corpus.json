@@ -1,0 +1,234 @@
+{
+  "schemaVersion": 1,
+  "classes": {
+    "nonfood": {
+      "label": "non-food",
+      "food": false,
+      "portionEligible": false,
+      "basePortionPoints": 0.0,
+      "meatRatio": 0.0,
+      "examples": [
+        "wireless bluetooth earbuds", "laundry detergent pods", "paper towel six pack",
+        "phone charging cable", "shampoo and conditioner", "kitchen garbage bags",
+        "cotton t shirt", "ceramic dinner plates", "order subtotal delivery fee",
+        "checkout service fee and tax", "sponsored membership offer", "gift card balance"
+      ]
+    },
+    "produce": {
+      "label": "produce",
+      "food": true,
+      "portionEligible": false,
+      "basePortionPoints": 0.0,
+      "meatRatio": 0.0,
+      "examples": [
+        "honeycrisp apples", "ripe bananas", "navel oranges", "fresh strawberries",
+        "roma tomatoes", "yellow onions", "russet potatoes", "broccoli crowns",
+        "avocado bag", "seedless grapes", "carrots bunch", "organic spinach"
+      ]
+    },
+    "dairy": {
+      "label": "dairy and eggs",
+      "food": true,
+      "portionEligible": false,
+      "basePortionPoints": 0.0,
+      "meatRatio": 0.0,
+      "examples": [
+        "whole milk", "greek yogurt", "cheddar cheese block", "large brown eggs",
+        "salted butter", "cottage cheese", "sour cream", "mozzarella cheese",
+        "oat milk carton", "vanilla yogurt cups", "cream cheese", "half and half cream"
+      ]
+    },
+    "pantry": {
+      "label": "pantry grocery",
+      "food": true,
+      "portionEligible": false,
+      "basePortionPoints": 0.0,
+      "meatRatio": 0.0,
+      "examples": [
+        "basmati rice bag", "all purpose flour", "breakfast cereal box", "canned black beans",
+        "peanut butter jar", "olive oil bottle", "instant ramen noodles", "granola bars",
+        "tomato pasta sauce", "white sandwich bread", "rolled oats", "potato chips"
+      ]
+    },
+    "beverage": {
+      "label": "drink",
+      "food": true,
+      "portionEligible": false,
+      "basePortionPoints": 0.0,
+      "meatRatio": 0.0,
+      "examples": [
+        "bottled spring water", "cola soft drink", "orange juice", "iced coffee latte",
+        "mango smoothie", "lemonade", "energy drink", "sparkling water",
+        "chocolate milkshake", "bubble tea", "hot cappuccino", "apple juice box"
+      ]
+    },
+    "beef": {
+      "label": "beef entrée",
+      "food": true,
+      "portionEligible": true,
+      "basePortionPoints": 1.15,
+      "meatRatio": 0.9,
+      "examples": [
+        "grilled ribeye steak", "beef short ribs", "roast beef dinner", "sirloin steak entrée",
+        "beef brisket plate", "steak frites", "beef kebab platter", "barbacoa beef",
+        "korean beef bulgogi", "beef shawarma plate", "steak and potatoes", "braised beef entrée"
+      ]
+    },
+    "chicken": {
+      "label": "chicken entrée",
+      "food": true,
+      "portionEligible": true,
+      "basePortionPoints": 1.1,
+      "meatRatio": 0.85,
+      "examples": [
+        "fried chicken dinner", "grilled chicken breast", "chicken wings", "chicken tenders",
+        "rotisserie chicken", "chicken shawarma plate", "butter chicken", "chicken kebab platter",
+        "crispy chicken pieces", "chicken tikka", "roasted chicken quarter", "chicken nuggets"
+      ]
+    },
+    "seafood": {
+      "label": "seafood entrée",
+      "food": true,
+      "portionEligible": true,
+      "basePortionPoints": 1.0,
+      "meatRatio": 0.8,
+      "examples": [
+        "grilled salmon fillet", "fried shrimp basket", "fish and chips", "tuna steak",
+        "garlic prawns", "lobster tail dinner", "cod fillet", "seafood platter",
+        "tilapia dinner", "calamari entrée", "crab cake plate", "baked haddock"
+      ]
+    },
+    "pork": {
+      "label": "pork entrée",
+      "food": true,
+      "portionEligible": true,
+      "basePortionPoints": 1.05,
+      "meatRatio": 0.85,
+      "examples": [
+        "pork chop dinner", "pulled pork plate", "bacon breakfast", "ham dinner",
+        "pork belly entrée", "sausage platter", "pepperoni slices", "prosciutto sandwich",
+        "bbq pork ribs", "carnitas pork", "chorizo plate", "pancetta pasta"
+      ]
+    },
+    "pizza": {
+      "label": "pizza",
+      "food": true,
+      "portionEligible": true,
+      "basePortionPoints": 1.5,
+      "meatRatio": 0.3,
+      "examples": [
+        "pepperoni pizza", "margherita pizza", "cheese pizza pie", "meat lovers pizza",
+        "vegetarian pizza", "hawaiian pizza", "deep dish pizza", "thin crust pizza",
+        "family pizza", "flatbread pizza", "four cheese pizza", "supreme pizza"
+      ]
+    },
+    "burger": {
+      "label": "burger",
+      "food": true,
+      "portionEligible": true,
+      "basePortionPoints": 1.0,
+      "meatRatio": 0.55,
+      "examples": [
+        "classic cheeseburger", "double beef burger", "bacon burger", "crispy chicken burger",
+        "veggie burger", "smash burger", "mushroom swiss burger", "quarter pound burger",
+        "jalapeno burger", "grilled hamburger", "burger with fries", "triple patty burger"
+      ]
+    },
+    "sandwich": {
+      "label": "sandwich or wrap",
+      "food": true,
+      "portionEligible": true,
+      "basePortionPoints": 0.95,
+      "meatRatio": 0.45,
+      "examples": [
+        "turkey club sandwich", "chicken shawarma wrap", "steak submarine sandwich", "grilled cheese sandwich",
+        "falafel wrap", "roast beef sub", "chicken burrito", "tuna sandwich",
+        "beef gyro wrap", "panini sandwich", "deli sub combo", "chicken quesadilla"
+      ]
+    },
+    "bowl": {
+      "label": "rice or grain bowl",
+      "food": true,
+      "portionEligible": true,
+      "basePortionPoints": 1.25,
+      "meatRatio": 0.4,
+      "examples": [
+        "chicken rice bowl", "beef burrito bowl", "salmon poke bowl", "bibimbap rice bowl",
+        "chicken biryani", "beef fried rice", "teriyaki bowl", "shawarma rice plate",
+        "curry rice bowl", "quinoa power bowl", "korean rice bowl", "mixed grill rice plate"
+      ]
+    },
+    "pasta": {
+      "label": "pasta or noodles",
+      "food": true,
+      "portionEligible": true,
+      "basePortionPoints": 1.2,
+      "meatRatio": 0.25,
+      "examples": [
+        "spaghetti bolognese", "fettuccine alfredo", "chicken penne pasta", "beef lasagna",
+        "pad thai noodles", "ramen noodle bowl", "macaroni and cheese", "shrimp linguine",
+        "pesto pasta", "udon noodles", "meatball spaghetti", "rigatoni tomato sauce"
+      ]
+    },
+    "breakfast": {
+      "label": "breakfast",
+      "food": true,
+      "portionEligible": true,
+      "basePortionPoints": 1.05,
+      "meatRatio": 0.3,
+      "examples": [
+        "pancake breakfast", "eggs and toast", "breakfast platter", "french toast",
+        "omelette with potatoes", "waffle breakfast", "egg breakfast sandwich", "full breakfast",
+        "scrambled eggs meal", "breakfast burrito", "hash brown breakfast", "bagel egg combo"
+      ]
+    },
+    "side": {
+      "label": "side dish",
+      "food": true,
+      "portionEligible": true,
+      "basePortionPoints": 0.65,
+      "meatRatio": 0.1,
+      "examples": [
+        "french fries", "onion rings", "mashed potatoes", "side rice",
+        "garlic bread", "coleslaw side", "sweet potato fries", "mozzarella sticks",
+        "side vegetables", "poutine side", "potato wedges", "corn on the cob"
+      ]
+    },
+    "salad": {
+      "label": "salad",
+      "food": true,
+      "portionEligible": true,
+      "basePortionPoints": 0.85,
+      "meatRatio": 0.15,
+      "examples": [
+        "caesar salad", "greek salad", "garden salad", "chicken cobb salad",
+        "kale salad", "tuna salad bowl", "chef salad", "quinoa salad",
+        "avocado salad", "house green salad", "spinach salad", "mediterranean salad"
+      ]
+    },
+    "dessert": {
+      "label": "dessert",
+      "food": true,
+      "portionEligible": true,
+      "basePortionPoints": 0.6,
+      "meatRatio": 0.0,
+      "examples": [
+        "chocolate cake slice", "cheesecake dessert", "ice cream sundae", "apple pie",
+        "brownie dessert", "tiramisu", "chocolate chip cookies", "donut box",
+        "vanilla cupcake", "milk chocolate bar", "banana split", "cinnamon roll"
+      ]
+    },
+    "combo": {
+      "label": "meal combo",
+      "food": true,
+      "portionEligible": true,
+      "basePortionPoints": 1.4,
+      "meatRatio": 0.4,
+      "examples": [
+        "burger combo meal", "chicken sandwich combo", "family meal deal", "lunch special meal",
+        "dinner combo plate", "two entrée combo", "mixed grill feast", "value meal with drink",
+        "sharing platter", "party meal bundle", "chicken family feast", "restaurant combo special"
+      ]
+    }
+  }
+}

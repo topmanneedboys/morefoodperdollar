@@ -6,28 +6,37 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 
 object OcrScanner {
-    private val priceHint = Regex("(?:\\b(?:CA\\$|C\\$|US\\$|A\\$)|[$€£₹৳])\\s*\\d{1,5}(?:[.,]\\d{1,2})?|\\b\\d{1,5}(?:[.,]\\d{1,2})?\\s*(?:CAD|USD|EUR|GBP|INR|BDT)\\b", RegexOption.IGNORE_CASE)
+    private const val MAX_RESULTS = CompareHereManualInputAdapter.MAX_OBSERVATIONS
 
-    fun scan(bitmap: Bitmap, sourcePackage: String?, callback: (List<ValueItem>, Throwable?) -> Unit) {
+    fun scan(bitmap: Bitmap, callback: (List<String>, Throwable?) -> Unit) {
         val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
         recognizer.process(InputImage.fromBitmap(bitmap, 0))
             .addOnSuccessListener { result ->
                 val texts = linkedSetOf<String>()
                 for (block in result.textBlocks) {
+                    if (texts.size >= MAX_RESULTS) break
                     val bt = block.text.trim()
-                    if (priceHint.containsMatchIn(bt)) texts += bt
+                    if (
+                        bt.length <= CompareHereManualProductDraft.MAX_BLOCK_CHARS &&
+                        CompareHerePhotoTextHints.containsPriceLikeText(bt)
+                    ) {
+                        texts += bt
+                    }
                     val lines = block.lines
-                    lines.forEachIndexed { index, line ->
-                        if (priceHint.containsMatchIn(line.text)) {
+                    for ((index, line) in lines.withIndex()) {
+                        if (texts.size >= MAX_RESULTS) break
+                        if (CompareHerePhotoTextHints.containsPriceLikeText(line.text)) {
                             val start = maxOf(0, index - 2)
                             val end = minOf(lines.lastIndex, index + 2)
-                            texts += (start..end).joinToString("\n") { lines[it].text }
+                            val context = (start..end).joinToString("\n") { lines[it].text }
+                            if (context.length <= CompareHereManualProductDraft.MAX_BLOCK_CHARS) {
+                                texts += context
+                            }
                         }
                     }
                 }
-                val items = ValueEngine.dedupe(texts.mapNotNull { ValueEngine.analyze(it, sourcePackage) })
                 recognizer.close()
-                callback(items, null)
+                callback(texts.toList(), null)
             }
             .addOnFailureListener { err -> recognizer.close(); callback(emptyList(), err) }
     }

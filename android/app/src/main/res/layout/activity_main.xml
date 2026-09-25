@@ -1,74 +1,332 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/comparisonRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/vp_background"
     android:fillViewport="true">
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:paddingStart="20dp"
+        android:paddingTop="24dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="32dp">
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="ValuePilot"
-            android:textSize="30sp"
-            android:textStyle="bold"
-            android:textColor="#111827" />
+            android:text="@string/app_name"
+            android:textColor="@color/vp_text_primary"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Universal grocery + restaurant value ranking"
-            android:textSize="16sp"
-            android:textColor="#4B5563" />
+            android:layout_marginTop="6dp"
+            android:text="@string/app_tagline"
+            android:textColor="@color/vp_text_secondary"
+            android:textSize="16sp" />
+
         <TextView
-            android:id="@+id/serviceStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/standalone_intro"
+            android:textColor="@color/vp_text_secondary"
+            android:textSize="15sp"
+            android:lineSpacingExtra="2dp" />
+
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="Checking scanner status…"
+            android:text="@string/products_to_compare"
+            android:textColor="@color/vp_text_primary"
+            android:textSize="18sp"
             android:textStyle="bold" />
-        <Button
-            android:id="@+id/enableButton"
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/product_input_instructions"
+            android:textColor="@color/vp_text_muted"
+            android:textSize="13sp" />
+
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button"
+            android:id="@+id/capturePhotoButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="Enable ValuePilot scanner" />
+            android:text="@string/compare_capture_photo"
+            android:textAllCaps="false" />
+
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
+            android:id="@+id/importPhotoButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/compare_import_photo"
+            android:textAllCaps="false" />
+
+        <TextView
+            android:id="@+id/photoImportStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/compare_photo_ready"
+            android:textColor="@color/vp_text_muted"
+            android:textSize="12sp" />
+
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
+            android:id="@+id/cancelPhotoButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/compare_photo_cancel"
+            android:textAllCaps="false"
+            android:visibility="gone" />
+
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
+            android:id="@+id/retryPhotoButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/compare_photo_retry"
+            android:textAllCaps="false"
+            android:visibility="gone" />
+
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
+            android:id="@+id/compareBarcodeButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/compare_barcode_action"
+            android:textAllCaps="false" />
+
+        <TextView
+            android:id="@+id/compareBarcodeStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/compare_barcode_ready"
+            android:textColor="@color/vp_text_muted"
+            android:textSize="12sp" />
+
+        <LinearLayout
+            android:id="@+id/productInputsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
+            android:id="@+id/addProductButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/add_another_product"
+            android:textAllCaps="false" />
+
+        <CheckBox
+            android:id="@+id/likeForLikeConfirmation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="@string/like_for_like_confirmation"
+            android:textColor="@color/vp_text_primary"
+            android:textSize="15sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_marginTop="2dp"
+            android:text="@string/like_for_like_confirmation_body"
+            android:textColor="@color/vp_text_muted"
+            android:textSize="12sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="@string/price_selection_title"
+            android:textColor="@color/vp_text_primary"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:text="@string/price_selection_body"
+            android:textColor="@color/vp_text_muted"
+            android:textSize="12sp" />
+
+        <RadioGroup
+            android:id="@+id/priceSelectionGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/priceSelectionCurrent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/price_selection_current"
+                android:textColor="@color/vp_text_primary"
+                android:textSize="15sp" />
+
+            <RadioButton
+                android:id="@+id/priceSelectionMember"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/price_selection_member"
+                android:textColor="@color/vp_text_primary"
+                android:textSize="15sp" />
+        </RadioGroup>
+
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button"
+            android:id="@+id/compareButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="@string/compare_value"
+            android:textAllCaps="false" />
+
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
+            android:id="@+id/clearButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/clear_comparison"
+            android:textAllCaps="false" />
+
+        <com.valuepilot.app.CompareHereManualScreenView
+            android:id="@+id/compareHereScreen"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp" />
+
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
+            android:id="@+id/shareComparisonButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/compare_share_result"
+            android:textAllCaps="false"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/shareComparisonStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/vp_text_muted"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/privateMemoryStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:textColor="@color/vp_success"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
+            android:id="@+id/clearPrivateMemoryButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/compare_memory_clear"
+            android:textAllCaps="false"
+            android:visibility="gone" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="30dp"
+            android:background="@color/vp_outline" />
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="How to use"
+            android:text="@string/optional_live_scanner"
+            android:textColor="@color/vp_text_primary"
             android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="#111827" />
+            android:textStyle="bold" />
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="1. Enable the accessibility scanner once.\n\n2. Open Uber Eats, a grocery app, restaurant app, or shopping website in your browser.\n\n3. Tap the floating VP bubble.\n\n4. Use Loaded for the current screen, Scan all for lazy/off-screen lists, or OCR when an app does not expose useful accessibility text.\n\n5. Rank by Smart, $/kg, $/L, calories/$, pizza area/$, or $/unit."
-            android:textColor="#374151"
+            android:layout_marginTop="6dp"
+            android:text="@string/optional_live_scanner_body"
+            android:textColor="@color/vp_text_secondary"
+            android:textSize="14sp"
             android:lineSpacingExtra="2dp" />
+
         <TextView
+            android:id="@+id/scannerStatus"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="Privacy"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="#111827" />
-        <TextView
+            android:layout_marginTop="12dp"
+            android:text="@string/checking_status"
+            android:textColor="@color/vp_text_muted"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button"
+            android:id="@+id/enableButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="This build performs parsing, ranking and OCR on-device. It has no network permission and does not send screen contents, account credentials or shopping data to a server."
-            android:textColor="#374151" />
-        <Button
+            android:layout_marginTop="10dp"
+            android:text="@string/enable_scanner"
+            android:textAllCaps="false" />
+
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
             android:id="@+id/settingsButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="Open accessibility settings" />
+            android:layout_marginTop="6dp"
+            android:text="@string/open_accessibility_settings"
+            android:textAllCaps="false" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="26dp"
+            android:text="@string/privacy"
+            android:textColor="@color/vp_text_primary"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/privacy_body"
+            android:textColor="@color/vp_text_secondary"
+            android:textSize="14sp"
+            android:lineSpacingExtra="2dp" />
+
     </LinearLayout>
 </ScrollView>

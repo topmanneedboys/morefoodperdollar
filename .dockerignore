@@ -1,0 +1,10 @@
+.git
+.github
+android
+browser-extension
+local-provider-data
+backend/measurement-*.json
+**/__pycache__
+*.pyc
+*.zip
+*.apk

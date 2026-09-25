@@ -1,0 +1,166 @@
+"""FastAPI HTTP surface for ValuePilot's read-only backend."""
+
+import os
+import uuid
+from typing import Any
+
+from .object_store import GCSObjectStore, ObjectStoreError, ReadOnlyObjectStore, S3CompatibleObjectStore
+from .release import ReleaseManager
+from .service import BackendService, MAX_REQUEST_BYTES, ResponseLimitError
+
+
+def _runtime_service() -> BackendService:
+    """Build a local or read-only object-store backed service from config.
+
+    boto3 receives credentials through its normal provider chain.  No
+    credential value is read, logged, or embedded in the application.
+    """
+
+    backend = os.environ.get("VALUEPILOT_RELEASE_STORE", "local").strip().lower()
+    if backend == "local":
+        root = os.environ.get("VALUEPILOT_RELEASE_ROOT", "local-provider-data/argentina-backend-release")
+        return BackendService(root)
+    if backend == "gcs":
+        bucket = os.environ.get("VALUEPILOT_RELEASE_BUCKET", "").strip()
+        if not bucket:
+            raise RuntimeError("VALUEPILOT_RELEASE_BUCKET is required for GCS runtime")
+        try:
+            store = GCSObjectStore(bucket=bucket, project=os.environ.get("GOOGLE_CLOUD_PROJECT") or None)
+        except ObjectStoreError as exc:
+            raise RuntimeError("GCS object-store runtime is unavailable") from exc
+        return BackendService("", release_manager=ReleaseManager(object_store=ReadOnlyObjectStore(store)))
+    if backend not in {"s3", "s3-compatible"}:
+        raise RuntimeError("VALUEPILOT_RELEASE_STORE must be local, gcs, or s3")
+    bucket = os.environ.get("VALUEPILOT_RELEASE_BUCKET", "").strip()
+    if not bucket:
+        raise RuntimeError("VALUEPILOT_RELEASE_BUCKET is required for object-store runtime")
+    endpoint = os.environ.get("VALUEPILOT_RELEASE_ENDPOINT_URL") or None
+    region = os.environ.get("VALUEPILOT_RELEASE_REGION") or None
+    try:
+        store = S3CompatibleObjectStore(bucket=bucket, endpoint_url=endpoint, region_name=region)
+    except ObjectStoreError as exc:
+        raise RuntimeError("object-store runtime is unavailable") from exc
+    return BackendService("", release_manager=ReleaseManager(object_store=ReadOnlyObjectStore(store)))
+
+
+def create_app(service: BackendService | None = None):
+    try:
+        from fastapi import FastAPI, Request
+        from fastapi.responses import JSONResponse
+        from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr
+    except ImportError as exc:  # pragma: no cover
+        raise RuntimeError("backend dependencies are not installed") from exc
+
+    class Item(BaseModel):
+        model_config = ConfigDict(extra="forbid")
+        lineId: StrictStr | None = None
+        query: StrictStr
+        amount: StrictStr
+        unit: StrictStr
+
+    class ShopRequest(BaseModel):
+        model_config = ConfigDict(extra="forbid")
+        latitude: StrictStr
+        longitude: StrictStr
+        radiusKm: StrictStr
+        items: list[Item] = Field(min_length=1, max_length=10)
+
+    class SearchRequest(BaseModel):
+        model_config = ConfigDict(extra="forbid")
+        latitude: StrictStr
+        longitude: StrictStr
+        radiusKm: StrictStr
+        query: StrictStr = Field(min_length=1, max_length=96)
+        page: StrictInt = Field(default=0, ge=0, le=5)
+
+    class InterpretRequest(BaseModel):
+        model_config = ConfigDict(extra="forbid")
+        text: StrictStr = Field(min_length=1, max_length=4096)
+
+    class ShopTextRequest(BaseModel):
+        model_config = ConfigDict(extra="forbid")
+        latitude: StrictStr
+        longitude: StrictStr
+        radiusKm: StrictStr
+        text: StrictStr = Field(min_length=1, max_length=4096)
+
+    app = FastAPI(title="ValuePilot Argentina Backend", version="valuepilot-argentina-backend-v1", docs_url=None, redoc_url=None, openapi_url=None)
+    runtime_service = service or _runtime_service()
+
+    @app.middleware("http")
+    async def bounded_body(request: Request, call_next):
+        length = request.headers.get("content-length")
+        if length is not None:
+            try:
+                if int(length) > MAX_REQUEST_BYTES:
+                    return JSONResponse({"error": "REQUEST_TOO_LARGE"}, status_code=413)
+            except ValueError:
+                return JSONResponse({"error": "INVALID_CONTENT_LENGTH"}, status_code=400)
+        return await call_next(request)
+
+    def correlation(request: Request) -> str:
+        value = request.headers.get("x-request-id")
+        return value if value and len(value) <= 96 and value.isprintable() else str(uuid.uuid4())
+
+    @app.get("/healthz")
+    async def healthz():
+        return runtime_service.health()
+
+    @app.get("/readyz")
+    async def readyz():
+        from fastapi import HTTPException
+        ready, value = runtime_service.ready()
+        if not ready:
+            raise HTTPException(status_code=503, detail=value)
+        return value
+
+    @app.get("/v1/status")
+    async def status():
+        return runtime_service.status()
+
+    @app.post("/v1/search")
+    async def search(payload: SearchRequest, request: Request):
+        try:
+            return runtime_service.search(payload.model_dump(exclude_none=True), correlation_id=correlation(request))
+        except ResponseLimitError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=413)
+        except Exception as exc:  # noqa: BLE001 - public boundary is fail-closed
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/v1/interpret")
+    async def interpret(payload: InterpretRequest, request: Request):
+        try:
+            return runtime_service.interpret(payload.model_dump(exclude_none=True), correlation_id=correlation(request))
+        except ResponseLimitError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=413)
+        except Exception as exc:  # noqa: BLE001 - public boundary is fail-closed
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/v1/shop-text")
+    async def shop_text(payload: ShopTextRequest, request: Request):
+        try:
+            return runtime_service.shop_text(payload.model_dump(exclude_none=True), correlation_id=correlation(request))
+        except ResponseLimitError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=413)
+        except Exception as exc:  # noqa: BLE001 - public boundary is fail-closed
+            from fastapi import HTTPException
+            status_code = 503 if str(exc) == "CURRENT_PRICE_EVIDENCE_UNAVAILABLE" else 400
+            raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+
+    @app.post("/v1/shop")
+    async def shop(payload: ShopRequest, request: Request):
+        try:
+            return runtime_service.shop(payload.model_dump(exclude_none=True), correlation_id=correlation(request))
+        except ResponseLimitError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=413)
+        except Exception as exc:  # noqa: BLE001
+            from fastapi import HTTPException
+            status_code = 503 if str(exc) == "CURRENT_PRICE_EVIDENCE_UNAVAILABLE" else 400
+            raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+
+    return app
+
+
+__all__ = ["create_app"]

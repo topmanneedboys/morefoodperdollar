@@ -1,0 +1,1737 @@
+{
+  "notes": "Small manually reviewed identity-only fixture derived from the exact CABA product table; no prices, offers, images, or availability claims.",
+  "queries": [
+    {
+      "candidates": [
+        {
+          "brand": "CASANTO",
+          "gtin": "7790742192103",
+          "name": "LECHE DESCREMA 1 ULTRA P CASANTO SACHET X 1LT",
+          "productEvidenceKey": "ar-sepa-product:10:7790742192103",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CASANTO",
+          "gtin": "7790742192202",
+          "name": "LECHE DESCREMA 2 ULTRA P CASANTO SACHET X 1LT",
+          "productEvidenceKey": "ar-sepa-product:10:7790742192202",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CASANTO",
+          "gtin": "7790742192301",
+          "name": "LECHE ENTERA 3 ULTRA P CASANTO SACHET X 1LT",
+          "productEvidenceKey": "ar-sepa-product:10:7790742192301",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "ARMONIA",
+          "gtin": "7790742331304",
+          "name": "LECHE MODIFICADA EN POLVO ARMONIA BOLSA X 800 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7790742331304",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "ARMONIA",
+          "gtin": "7790742331601",
+          "name": "LECHE MODIFICADA EN POLVO ARMONIA BOLSA X 400 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7790742331601",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "LULEMUU",
+          "gtin": "0000077919335",
+          "name": "BARRA DE ARROZ DULCE DE LECHE LULEMUU PAQUETEX12GR",
+          "productEvidenceKey": "ar-sepa-product:10:0000077919335",
+          "rationale": "dulce de leche is a confection, not plain milk",
+          "relevant": false
+        },
+        {
+          "brand": "VAUQUITA",
+          "gtin": "0000077927361",
+          "name": "TABLETA DULCE DE LECHE LIGHT VAUQUITA X 22 GRS.",
+          "productEvidenceKey": "ar-sepa-product:10:0000077927361",
+          "rationale": "dulce de leche tablet is a confection",
+          "relevant": false
+        },
+        {
+          "brand": "ROSE CARE",
+          "gtin": "4005900773845",
+          "name": "LECHE Y TONICO MICELAR 2EN1 NIVEA ROSE CARE X200CC",
+          "productEvidenceKey": "ar-sepa-product:10:4005900773845",
+          "rationale": "cosmetic micellar milk product",
+          "relevant": false
+        }
+      ],
+      "query": "leche"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "CARREFOUR CRISTAL",
+          "gtin": "2301656000009",
+          "name": "PAN FRANCES X KG (ELAB.P.)",
+          "productEvidenceKey": "ar-sepa-product:10:2301656000009",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CARREFOUR CRISTAL",
+          "gtin": "2306983000005",
+          "name": "PAN RALLADO X KILO (ELAB. P.)",
+          "productEvidenceKey": "ar-sepa-product:10:2306983000005",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CARREFOUR CRISTAL",
+          "gtin": "2509100000005",
+          "name": "PAN FLAUTITA X KG (W)",
+          "productEvidenceKey": "ar-sepa-product:10:2509100000005",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CARREFOUR CRISTAL",
+          "gtin": "2509156000004",
+          "name": "PAN RALLADO X KILO",
+          "productEvidenceKey": "ar-sepa-product:10:2509156000004",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "S/D",
+          "gtin": "2510670000005",
+          "name": "PAN CIABATTA X KG (GA)",
+          "productEvidenceKey": "ar-sepa-product:10:2510670000005",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "TEFAL",
+          "gtin": "3168430274235",
+          "name": "CUCHILLO DE PAN 20 CM ICE FORCE TEFAL",
+          "productEvidenceKey": "ar-sepa-product:10:3168430274235",
+          "rationale": "bread knife, not bread",
+          "relevant": false
+        },
+        {
+          "brand": "S/D",
+          "gtin": "3616473866851",
+          "name": "HORNO DE PAN BLUESKY BBM550 21L",
+          "productEvidenceKey": "ar-sepa-product:10:3616473866851",
+          "rationale": "bread oven appliance, not bread",
+          "relevant": false
+        },
+        {
+          "brand": "PAN",
+          "gtin": "7702084137520",
+          "name": "HARINA DE MAIZ BLANCO PRECOCIDA PAN X 1 KG",
+          "productEvidenceKey": "ar-sepa-product:10:7702084137520",
+          "rationale": "PAN is the brand on a maize flour item",
+          "relevant": false
+        }
+      ],
+      "query": "pan"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "CARREFOUR CRISTAL",
+          "gtin": "2305237000006",
+          "name": "ARROZ PARA SUSHI X KG",
+          "productEvidenceKey": "ar-sepa-product:10:2305237000006",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "S/D",
+          "gtin": "2508789000009",
+          "name": "ARROZ PARA SUSHI X KG",
+          "productEvidenceKey": "ar-sepa-product:10:2508789000009",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "S/D",
+          "gtin": "2508790000005",
+          "name": "ARROZ PARA RISOTTO X KG",
+          "productEvidenceKey": "ar-sepa-product:10:2508790000005",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "S/D",
+          "gtin": "2508803000008",
+          "name": "ARROZ INTEGRAL YAMANI X KG.",
+          "productEvidenceKey": "ar-sepa-product:10:2508803000008",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "S/D",
+          "gtin": "3248046800094",
+          "name": "ARROZ CORTO PULIDO P PAELLA RUEDO 400GRS",
+          "productEvidenceKey": "ar-sepa-product:10:3248046800094",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "LULEMUU",
+          "gtin": "0000077919335",
+          "name": "BARRA DE ARROZ DULCE DE LECHE LULEMUU PAQUETEX12GR",
+          "productEvidenceKey": "ar-sepa-product:10:0000077919335",
+          "rationale": "rice confection bar, not staple rice",
+          "relevant": false
+        },
+        {
+          "brand": "LULEMUU",
+          "gtin": "0000077987839",
+          "name": "ALFAJOR ARROZ BLANCO LULEMUU X 22 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:0000077987839",
+          "rationale": "rice alfajor confection",
+          "relevant": false
+        },
+        {
+          "brand": "CARREFOUR CRISTAL",
+          "gtin": "2920724700001",
+          "name": "CONDIMENTO P ARROZ X 50 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:2920724700001",
+          "rationale": "rice seasoning, not rice",
+          "relevant": false
+        }
+      ],
+      "query": "arroz"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "ENTRENUTS",
+          "gtin": "0656750783931",
+          "name": "ACEITE DE COCO ENTRENUTS FRASCO X 360 CC",
+          "productEvidenceKey": "ar-sepa-product:10:0656750783931",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "COCINERO",
+          "gtin": "7790060023684",
+          "name": "ACEITE GIRASOL COCINERO PET X 1.5 LT",
+          "productEvidenceKey": "ar-sepa-product:10:7790060023684",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "COCINERO",
+          "gtin": "7790060234868",
+          "name": "ACEITE MEZCLA SOJA GIRASOL COCINERO X 900 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7790060234868",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "COCINERO",
+          "gtin": "7790070012050",
+          "name": "ACEITE GIRASOL COCINERO PET X 900 CC",
+          "productEvidenceKey": "ar-sepa-product:10:7790070012050",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "COCINERO",
+          "gtin": "7790070104304",
+          "name": "ACEITE OLIVA EXTRA VIRGEN COCINERO PET X 900 CC",
+          "productEvidenceKey": "ar-sepa-product:10:7790070104304",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "OGX",
+          "gtin": "0022796901217",
+          "name": "ACONDICIONADOR REPARA C ACEITE COCO OGX X 385 CC",
+          "productEvidenceKey": "ar-sepa-product:10:0022796901217",
+          "rationale": "hair conditioner mentioning coconut oil",
+          "relevant": false
+        },
+        {
+          "brand": "JOHNSONS BABY",
+          "gtin": "7790010002936",
+          "name": "ACEITE PARA BEBE PURO JOHNSONS BABY X 200 CC",
+          "productEvidenceKey": "ar-sepa-product:10:7790010002936",
+          "rationale": "baby-care oil, not cooking oil",
+          "relevant": false
+        },
+        {
+          "brand": "S/D",
+          "gtin": "3616475330558",
+          "name": "FREIDORA CON ACEITE MANDINE 3LTS MDF30 21L",
+          "productEvidenceKey": "ar-sepa-product:10:3616475330558",
+          "rationale": "fryer appliance mentioning oil",
+          "relevant": false
+        }
+      ],
+      "query": "aceite"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "BULNEZ",
+          "gtin": "7791720036921",
+          "name": "FIDEO SPAGHETTI BULNEZ PAQUETE X 500 GRAMOS",
+          "productEvidenceKey": "ar-sepa-product:10:7791720036921",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "BULNEZ",
+          "gtin": "7791720036938",
+          "name": "FIDEO TALLARIN BULNEZ PAQUETE X 500 GRAMOS",
+          "productEvidenceKey": "ar-sepa-product:10:7791720036938",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "BULNEZ",
+          "gtin": "7791720036945",
+          "name": "FIDEO TIRABUZONES BULNEZ PAQUETE X 500 GRAMOS",
+          "productEvidenceKey": "ar-sepa-product:10:7791720036945",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "TERAMO",
+          "gtin": "7794059001127",
+          "name": "FIDEO TIRABUZON S TACC MAIZ ESPINACA TERAMO X500GR",
+          "productEvidenceKey": "ar-sepa-product:10:7794059001127",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "BONALMA",
+          "gtin": "7798199870063",
+          "name": "FIDEO CHIFFERI RIGATE BONALMA X 500 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7798199870063",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "ALICANTE",
+          "gtin": "7790150440438",
+          "name": "SOPA DE FIDEOS CON VEGETALES ALICANTE X 72 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7790150440438",
+          "rationale": "soup containing noodles, not a plain noodle package",
+          "relevant": false
+        },
+        {
+          "brand": "ALICANTE",
+          "gtin": "7790150441343",
+          "name": "SOPA DE FIDEOS TIPO CAMPESTRE ALICANTE X 68 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7790150441343",
+          "rationale": "soup containing noodles, not a plain noodle package",
+          "relevant": false
+        },
+        {
+          "brand": "MARUCHAN",
+          "gtin": "0041789001833",
+          "name": "FIDEOS CON QUESO MARUCHAN VASO X 64 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:0041789001833",
+          "rationale": "instant cup noodles with a prepared sauce context",
+          "relevant": false
+        }
+      ],
+      "query": "fideos"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "LE-FIT",
+          "gtin": "0727373047295",
+          "name": "HARINA DE MANI ALTA EN PROTEINA LE FIT X 300 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:0727373047295",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "PAN",
+          "gtin": "7702084137520",
+          "name": "HARINA DE MAIZ BLANCO PRECOCIDA PAN X 1 KG",
+          "productEvidenceKey": "ar-sepa-product:10:7702084137520",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "BLANCAFLOR",
+          "gtin": "7790070562180",
+          "name": "HARINA LEUDANTE BLANCAFLOR X 1 KG",
+          "productEvidenceKey": "ar-sepa-product:10:7790070562180",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "FAVORITA",
+          "gtin": "7790070562258",
+          "name": "HARINA DE TRIGO 000 C VITAMINAS FAVORITA X 1 KG",
+          "productEvidenceKey": "ar-sepa-product:10:7790070562258",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "FAVORITA",
+          "gtin": "7790070562265",
+          "name": "HARINA DE TRIGO 0000 FORTIFICADA FAVORITA X 1 KG",
+          "productEvidenceKey": "ar-sepa-product:10:7790070562265",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CARREFOUR CRISTAL",
+          "gtin": "2646570000002",
+          "name": "COPOS DE HARINA DE MAIZ AZUCARADOS X 80 GRS.",
+          "productEvidenceKey": "ar-sepa-product:10:2646570000002",
+          "rationale": "sweetened cereal flakes mentioning flour",
+          "relevant": false
+        },
+        {
+          "brand": "MAMA COCINA",
+          "gtin": "7792180131959",
+          "name": "ROCIO VEGETAL SABOR MANTECA CON HARINA MAMA COCINA",
+          "productEvidenceKey": "ar-sepa-product:10:7792180131959",
+          "rationale": "vegetable oil product mentioning flour",
+          "relevant": false
+        },
+        {
+          "brand": "PARQUE",
+          "gtin": "7796221011026",
+          "name": "FERTILIZANTE HARINA DE HUESO X 250",
+          "productEvidenceKey": "ar-sepa-product:10:7796221011026",
+          "rationale": "bone fertilizer, not food flour",
+          "relevant": false
+        }
+      ],
+      "query": "harina"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "CARREFOUR CLASSIC",
+          "gtin": "7791720038475",
+          "name": "AZUCAR IMPALPABLE CARREFOUR CLASSIC SOBRE X 100 GR",
+          "productEvidenceKey": "ar-sepa-product:10:7791720038475",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CARREFOUR ORGANICO",
+          "gtin": "7791720042465",
+          "name": "AZUCAR RUBIA ORGANICA CARREFOUR ORGANICO X 1 KG",
+          "productEvidenceKey": "ar-sepa-product:10:7791720042465",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "BULNEZ",
+          "gtin": "7791720048726",
+          "name": "AZUCAR COMUN BULNEZ X 1KG.",
+          "productEvidenceKey": "ar-sepa-product:10:7791720048726",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "LEDESMA",
+          "gtin": "7792540250450",
+          "name": "AZUCAR MOLIDA SUPERIOR LEDESMA BOLSA X 1 KG.",
+          "productEvidenceKey": "ar-sepa-product:10:7792540250450",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "LEDESMA",
+          "gtin": "7792540260138",
+          "name": "AZUCAR MOLIDA CLASICA LEDESMA BOLSA X 1 KG",
+          "productEvidenceKey": "ar-sepa-product:10:7792540260138",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "GEORGALOS",
+          "gtin": "0000077917911",
+          "name": "CHOCOLATE NEGRO SIN AZUCAR GEORGALOS X 30 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:0000077917911",
+          "rationale": "sugar-free chocolate",
+          "relevant": false
+        },
+        {
+          "brand": "TOPLINE",
+          "gtin": "0000077932693",
+          "name": "CHICLE MANDARINE S AZUCAR TOPLINE X 14 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:0000077932693",
+          "rationale": "sugar-free chewing gum",
+          "relevant": false
+        },
+        {
+          "brand": "FANTA ZERO",
+          "gtin": "7790895002304",
+          "name": "GASEOSA NARANJA S AZUCAR VIT C FANTA X 1.5 LT",
+          "productEvidenceKey": "ar-sepa-product:10:7790895002304",
+          "rationale": "sugar-free soda",
+          "relevant": false
+        }
+      ],
+      "query": "az\u00facar"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "S/D",
+          "gtin": "0723540523869",
+          "name": "HUEVO BLANCO DON REYNALDO X 6 UNI",
+          "productEvidenceKey": "ar-sepa-product:10:0723540523869",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "S/D",
+          "gtin": "0723540523876",
+          "name": "HUEVO COLOR DON REYNALDO X 12 UNI",
+          "productEvidenceKey": "ar-sepa-product:10:0723540523876",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "S/D",
+          "gtin": "0723540523883",
+          "name": "HUEVO BLANCO DON REYNALDO X 12 UNI",
+          "productEvidenceKey": "ar-sepa-product:10:0723540523883",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "S/D",
+          "gtin": "0723540523890",
+          "name": "HUEVO COLOR DON REYNALDO X 30 UNI",
+          "productEvidenceKey": "ar-sepa-product:10:0723540523890",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "S/D",
+          "gtin": "0723540523944",
+          "name": "HUEVO COLOR DON REYNALDO X 6 UNI",
+          "productEvidenceKey": "ar-sepa-product:10:0723540523944",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "KINDER",
+          "gtin": "0000040084107",
+          "name": "HUEVO CHOCOLATE SORPRESA CELESTE KINDER X 20 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:0000040084107",
+          "rationale": "chocolate surprise egg confection",
+          "relevant": false
+        },
+        {
+          "brand": "GENERICO",
+          "gtin": "3617702730332",
+          "name": "HUEVOS PASCUAS PARA PINTAR",
+          "productEvidenceKey": "ar-sepa-product:10:3617702730332",
+          "rationale": "Easter eggs for painting",
+          "relevant": false
+        },
+        {
+          "brand": "GENERICO",
+          "gtin": "4892401048004",
+          "name": "JUEGO DIDACTICO HUEVOS ARCOIRIS",
+          "productEvidenceKey": "ar-sepa-product:10:4892401048004",
+          "rationale": "toy egg game",
+          "relevant": false
+        }
+      ],
+      "query": "huevos"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "CAFE MARTINEZ",
+          "gtin": "7798090320353",
+          "name": "CAFE MOLIDO ESTILO ITALIANO CAFE MATINEZ X 250 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7798090320353",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CAFE MARTINEZ",
+          "gtin": "7798090320674",
+          "name": "CAFE TOSTADO MOLIDO BRASIL CAFE MARTINEZ X 250 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7798090320674",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CAFE MARTINEZ",
+          "gtin": "7798090320681",
+          "name": "CAFE MOLIDO BLEND SELECTO CAFE MATINEZ X 250 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7798090320681",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CAFE MARTINEZ",
+          "gtin": "7798090320704",
+          "name": "CAFE MOLIDO TOSTADO FRUTADO CAFE MARTINEZ X 250G",
+          "productEvidenceKey": "ar-sepa-product:10:7798090320704",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CAFE MARTINEZ",
+          "gtin": "7798090321589",
+          "name": "CAFE TOSTADO MOLIDO SUAVE CAFE MARTINEZ X 260 GR",
+          "productEvidenceKey": "ar-sepa-product:10:7798090321589",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CARREFOUR CRISTAL",
+          "gtin": "2920750700006",
+          "name": "FICHA DE CAFE X UNID",
+          "productEvidenceKey": "ar-sepa-product:10:2920750700006",
+          "rationale": "coffee-themed token/card item",
+          "relevant": false
+        },
+        {
+          "brand": "GENERICO",
+          "gtin": "3616475677493",
+          "name": "CORONA CAFE 45CM",
+          "productEvidenceKey": "ar-sepa-product:10:3616475677493",
+          "rationale": "coffee-colored appliance/accessory",
+          "relevant": false
+        },
+        {
+          "brand": "COLGATE LUMINOUS",
+          "gtin": "7509546667577",
+          "name": "CREMA DENTAL LOVER CAFE COLGATE LUMINOUS X70GR",
+          "productEvidenceKey": "ar-sepa-product:10:7509546667577",
+          "rationale": "dental cream with coffee wording",
+          "relevant": false
+        }
+      ],
+      "query": "caf\u00e9"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "TWININGS",
+          "gtin": "0070177169640",
+          "name": "TE LIMON Y FRAMBUESA TWININGS X 10 UNI",
+          "productEvidenceKey": "ar-sepa-product:10:0070177169640",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "TWININGS",
+          "gtin": "0070177197131",
+          "name": "TE EN SAQUITOS ENGLISH BREAKFAST TWININGS X 10 UNI",
+          "productEvidenceKey": "ar-sepa-product:10:0070177197131",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "TWININGS",
+          "gtin": "0070177197230",
+          "name": "TE VERDE Y MENTA TWININGS X 10 UNI",
+          "productEvidenceKey": "ar-sepa-product:10:0070177197230",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "TWININGS",
+          "gtin": "0070177197285",
+          "name": "TE EN SAQUITOS INDIAN CHAI TWININGS X 10 UNI",
+          "productEvidenceKey": "ar-sepa-product:10:0070177197285",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "TWININGS",
+          "gtin": "0070177197292",
+          "name": "TE EN SAQUITOS EARL GREY TWININGS X 10 UNI",
+          "productEvidenceKey": "ar-sepa-product:10:0070177197292",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "GENERICO",
+          "gtin": "0082228213240",
+          "name": "PLAYSET HORA DEL TE",
+          "productEvidenceKey": "ar-sepa-product:10:0082228213240",
+          "rationale": "tea playset toy",
+          "relevant": false
+        },
+        {
+          "brand": "S/D",
+          "gtin": "3617702077390",
+          "name": "SHORT RUNNING CON CALZA TE CB I992093",
+          "productEvidenceKey": "ar-sepa-product:10:3617702077390",
+          "rationale": "sports clothing with a short token",
+          "relevant": false
+        },
+        {
+          "brand": "GENERICO",
+          "gtin": "3617703028179",
+          "name": "PLATSET TE 8 PZS",
+          "productEvidenceKey": "ar-sepa-product:10:3617703028179",
+          "rationale": "tea-themed tableware set",
+          "relevant": false
+        }
+      ],
+      "query": "t\u00e9"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "AGUA DE LAS MISIONES",
+          "gtin": "7798164280019",
+          "name": "AGUA 500 ML SIN GAS",
+          "productEvidenceKey": "ar-sepa-product:11:7798164280019",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "AGUA DE LAS MISIONES",
+          "gtin": "7798164280026",
+          "name": "AGUA 500 ML CON GAS",
+          "productEvidenceKey": "ar-sepa-product:11:7798164280026",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "AGUA DE LAS MISIONES",
+          "gtin": "7798164280033",
+          "name": "AGUA 1500 ML SIN GAS",
+          "productEvidenceKey": "ar-sepa-product:11:7798164280033",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "AGUA DE LAS MISIONES",
+          "gtin": "7798164280057",
+          "name": "AGUA 6500 ML SIN GAS",
+          "productEvidenceKey": "ar-sepa-product:11:7798164280057",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "ALVURA",
+          "gtin": "0040232920325",
+          "name": "AGUA MINERAL SIN GAS BAJO SODIO ALVURA BIDON X 8LT",
+          "productEvidenceKey": "ar-sepa-product:10:0040232920325",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "TEATRICAL",
+          "gtin": "0650240051623",
+          "name": "AGUA MICELAR SUAVIZANTE TEATRICAL X 600 CC",
+          "productEvidenceKey": "ar-sepa-product:10:0650240051623",
+          "rationale": "micellar cosmetic water",
+          "relevant": false
+        },
+        {
+          "brand": "CRISTAR",
+          "gtin": "0813293020675",
+          "name": "COPA AGUA CRISTAR LEXINGTON 355 CC",
+          "productEvidenceKey": "ar-sepa-product:10:0813293020675",
+          "rationale": "water glass, not drinking water",
+          "relevant": false
+        },
+        {
+          "brand": "CARREFOUR",
+          "gtin": "2616780000000",
+          "name": "ENDUIDO PLASTICO AL AGUA EXT INTERIOR 1L",
+          "productEvidenceKey": "ar-sepa-product:10:2616780000000",
+          "rationale": "water-based wall coating",
+          "relevant": false
+        }
+      ],
+      "query": "agua"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "CUNNINGTON",
+          "gtin": "7790639003437",
+          "name": "GASEOSA COLA CLASSIC CUNNINGTON PET X 2.25 LT",
+          "productEvidenceKey": "ar-sepa-product:10:7790639003437",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CUNNINGTON",
+          "gtin": "7790639003444",
+          "name": "GASEOSA TONICA CLASSIC CUNNINGTON X 2.25 LT",
+          "productEvidenceKey": "ar-sepa-product:10:7790639003444",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CUNNINGTON",
+          "gtin": "7790639003451",
+          "name": "GASEOSA POMELO CLASSIC CUNNINGTON X 2.25 LT",
+          "productEvidenceKey": "ar-sepa-product:10:7790639003451",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CUNNINGTON",
+          "gtin": "7790639003468",
+          "name": "GASEOSA LIMA LIMON CLASSIC CUNNINGTON X2.25 LT",
+          "productEvidenceKey": "ar-sepa-product:10:7790639003468",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CUNNINGTON",
+          "gtin": "7790639003475",
+          "name": "GASEOSA NARANJA CLASSIC CUNNINGTON X 2.25 LT",
+          "productEvidenceKey": "ar-sepa-product:10:7790639003475",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "S/D",
+          "gtin": "2607328000002",
+          "name": "GASEOSA EMPLEADOS EXTERNOS",
+          "productEvidenceKey": "ar-sepa-product:10:2607328000002",
+          "rationale": "empty/employee return item, not soda",
+          "relevant": false
+        },
+        {
+          "brand": "S/D",
+          "gtin": "2621100000004",
+          "name": "ARTICULO ENVASE GASEOSA RET X 2.5 LT.X 1 UNI",
+          "productEvidenceKey": "ar-sepa-product:10:2621100000004",
+          "rationale": "soda bottle container",
+          "relevant": false
+        },
+        {
+          "brand": "S/D",
+          "gtin": "2910129700003",
+          "name": "ARTICULO ENVASE GASEOSA R PET X 2 LT.X 1 UNI",
+          "productEvidenceKey": "ar-sepa-product:10:2910129700003",
+          "rationale": "returnable soda container",
+          "relevant": false
+        }
+      ],
+      "query": "gaseosa"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "YOGUR",
+          "gtin": "7791337009974",
+          "name": "YOGUR GRIEGO C/FRUTI",
+          "productEvidenceKey": "ar-sepa-product:15:7791337009974",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "YOGUR",
+          "gtin": "7791337009981",
+          "name": "YOGUR GRIEGO NAT EDU",
+          "productEvidenceKey": "ar-sepa-product:15:7791337009981",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "YOGUR",
+          "gtin": "7791337010000",
+          "name": "YOGUR GRIEGO NAT END",
+          "productEvidenceKey": "ar-sepa-product:15:7791337010000",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "YOGUR",
+          "gtin": "7791337010017",
+          "name": "YOGUR GRIEGO NAT S/E",
+          "productEvidenceKey": "ar-sepa-product:15:7791337010017",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "YOGUR",
+          "gtin": "7791337010093",
+          "name": "YOGUR GRIEGO C/GRANO",
+          "productEvidenceKey": "ar-sepa-product:15:7791337010093",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CARREFOUR CLASSIC",
+          "gtin": "0000077989970",
+          "name": "BARRA CEREAL FRUT Y YOGUR CARREFOUR CLASSIC X21GRS",
+          "productEvidenceKey": "ar-sepa-product:10:0000077989970",
+          "rationale": "cereal bar with yogurt wording",
+          "relevant": false
+        },
+        {
+          "brand": "CADBURY",
+          "gtin": "7622201818654",
+          "name": "TABLETA DE CHOCOLATE CON YOGUR CADBURY X 29 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7622201818654",
+          "rationale": "chocolate tablet with yogurt wording",
+          "relevant": false
+        },
+        {
+          "brand": "FLYNN PAFF",
+          "gtin": "7790380029861",
+          "name": "CARAMELOS CONFITADOS YOGUR FLYNN PAFF X 50 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7790380029861",
+          "rationale": "candy with yogurt wording",
+          "relevant": false
+        }
+      ],
+      "query": "yogur"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "FELICES LAS VACAS",
+          "gtin": "0076625251271",
+          "name": "QUESO UNTABL CLAS CREMOS FELICES LS VACAS X 200 GR",
+          "productEvidenceKey": "ar-sepa-product:10:0076625251271",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "FELICES LAS VACAS",
+          "gtin": "0656750747919",
+          "name": "QUESO UNTABL FANTAST HIERBAS FELICS LS VACAS X 200",
+          "productEvidenceKey": "ar-sepa-product:10:0656750747919",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CREMON",
+          "gtin": "2505254000007",
+          "name": "QUESO DOBLE CREMA CREMON LA SERENISIMA X KG",
+          "productEvidenceKey": "ar-sepa-product:10:2505254000007",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "SANTA ROSA",
+          "gtin": "2505258000003",
+          "name": "QUESO SARDO SANTA ROSA X KG",
+          "productEvidenceKey": "ar-sepa-product:10:2505258000003",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "SUPERCREM",
+          "gtin": "2505259000002",
+          "name": "QUESO CREMOSO SUPERCREM HORMA X KG",
+          "productEvidenceKey": "ar-sepa-product:10:2505259000002",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "KRAFT",
+          "gtin": "0021000067060",
+          "name": "MACARRONES CON QUESO KRAFT X 206 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:0021000067060",
+          "rationale": "macaroni prepared meal with cheese",
+          "relevant": false
+        },
+        {
+          "brand": "MARUCHAN",
+          "gtin": "0041789001833",
+          "name": "FIDEOS CON QUESO MARUCHAN VASO X 64 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:0041789001833",
+          "rationale": "instant noodles with cheese wording",
+          "relevant": false
+        },
+        {
+          "brand": "SNYDERS",
+          "gtin": "0077975095140",
+          "name": "PRETZEL SABOR QUESO QUEDAR SNYDERS X 318 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:0077975095140",
+          "rationale": "cheese-flavored pretzel snack",
+          "relevant": false
+        }
+      ],
+      "query": "queso"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "CONAPROLE",
+          "gtin": "0000077306197",
+          "name": "MANTECA SIN SAL CONAPROLE X 200 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:0000077306197",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CONAPROLE",
+          "gtin": "0000077306456",
+          "name": "MANTECA EXTRA SAL CONAPROLE X 200 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:0000077306456",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "PAYSAN BRETON",
+          "gtin": "3184030001613",
+          "name": "MANTECA SIN SAL PAYSAN BRETON X 200 GRM",
+          "productEvidenceKey": "ar-sepa-product:10:3184030001613",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "PAYSAN BRETON",
+          "gtin": "3184030011629",
+          "name": "MANTECA CON SAL PAYSAN BRETON X 200 GRM",
+          "productEvidenceKey": "ar-sepa-product:10:3184030011629",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "PRESIDENT",
+          "gtin": "3228020355741",
+          "name": "MANTECA REGULAR CON SAL PRESIDENT X 200 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:3228020355741",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "GLOW",
+          "gtin": "0790757845640",
+          "name": "ROLLO PAPEL MANTECA GLOW X4MTS",
+          "productEvidenceKey": "ar-sepa-product:10:0790757845640",
+          "rationale": "butter paper, not butter",
+          "relevant": false
+        },
+        {
+          "brand": "S/D",
+          "gtin": "2920511200004",
+          "name": "MEDIALUNA MANTECA HOJALDRADA X UNID (MC)",
+          "productEvidenceKey": "ar-sepa-product:10:2920511200004",
+          "rationale": "butter croissant pastry, not butter",
+          "relevant": false
+        },
+        {
+          "brand": "NIVEA BODY",
+          "gtin": "4006000040417",
+          "name": "CREMA CORP 5EN1 MANTECA KARITE NIVEA X 250 CC",
+          "productEvidenceKey": "ar-sepa-product:10:4006000040417",
+          "rationale": "body cream with shea butter wording",
+          "relevant": false
+        }
+      ],
+      "query": "manteca"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "SWIFT",
+          "gtin": "7790360984234",
+          "name": "ATUN AL NATURAL LOMITOS SWIFT LATA X 170 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7790360984234",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "SWIFT",
+          "gtin": "7790360984241",
+          "name": "ATUN EN ACEITE LOMITOS SWIFT LATA X 170 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7790360984241",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "LA CAMPAGNOLA",
+          "gtin": "7790580131357",
+          "name": "ATUN EN ACEITE LOMITOS LA CAMPAGNOLA X 170 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7790580131357",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "LA CAMPAGNOLA",
+          "gtin": "7790580131364",
+          "name": "ATUN AL NATURAL LOMITOS LA CAMPAGNOLA X 170 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7790580131364",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "LA CAMPAGNOLA",
+          "gtin": "7790580138769",
+          "name": "ATUN EN ACEITE LA CAMPAGNOLA LATA X 300 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7790580138769",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CARREFOUR EXTRA",
+          "gtin": "7791720043547",
+          "name": "ACEITUNAS VERDES RELLENAS DE ATUN EXTRA X 200 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7791720043547",
+          "rationale": "stuffed olives with tuna, not canned tuna",
+          "relevant": false
+        },
+        {
+          "brand": "CARREFOUR CLASSIC",
+          "gtin": "7791720049815",
+          "name": "ENSALADA DE ATUN CARREFOUR CLASSIC X 160 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7791720049815",
+          "rationale": "prepared tuna salad",
+          "relevant": false
+        },
+        {
+          "brand": "WHISKAS",
+          "gtin": "7797453971744",
+          "name": "ALIMENTO GATOS HUMEDO WHISKAS LATA ATUN 340GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7797453971744",
+          "rationale": "cat food with tuna",
+          "relevant": false
+        }
+      ],
+      "query": "at\u00fan"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "S/D",
+          "gtin": "2506662000009",
+          "name": "POLLO CONGELADO X KG CALIB 11 12",
+          "productEvidenceKey": "ar-sepa-product:10:2506662000009",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "S/D",
+          "gtin": "2507175000005",
+          "name": "POLLO FRESCO COMUN X KG. AVICOLA LUJAN",
+          "productEvidenceKey": "ar-sepa-product:10:2507175000005",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "S/D",
+          "gtin": "2507199000005",
+          "name": "POLLO PARRILLERO E BANDEJA X KG POLLOLIN",
+          "productEvidenceKey": "ar-sepa-product:10:2507199000005",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "S/D",
+          "gtin": "2507200000000",
+          "name": "POLLO DEL ABUELO ROBERTO E BANDEJA C KG POLLOLIN",
+          "productEvidenceKey": "ar-sepa-product:10:2507200000000",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CARREFOUR CRISTAL",
+          "gtin": "2507384000001",
+          "name": "POLLO CONGELADO",
+          "productEvidenceKey": "ar-sepa-product:10:2507384000001",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "MARUCHAN",
+          "gtin": "0041789001918",
+          "name": "FIDEOS CON POLLO MARUCHAN VASO X 64 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:0041789001918",
+          "rationale": "instant noodles with chicken flavor",
+          "relevant": false
+        },
+        {
+          "brand": "MARUCHAN",
+          "gtin": "0041789002915",
+          "name": "SOPA SABOR POLLO MARUCHAN BOLSA X 85 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:0041789002915",
+          "rationale": "chicken-flavored soup",
+          "relevant": false
+        },
+        {
+          "brand": "FELICES LAS VACAS",
+          "gtin": "0724751007674",
+          "name": "NUGGETS DE SOJA SAB POLLO FELICES LS VACAS X 300GR",
+          "productEvidenceKey": "ar-sepa-product:10:0724751007674",
+          "rationale": "soy nuggets with chicken flavor",
+          "relevant": false
+        }
+      ],
+      "query": "pollo"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "CEREAL MIX",
+          "gtin": "0000077916525",
+          "name": "CEREAL MIX BARRA DE CEREAL CHOCOLATE Y ALMENDRAS 23G",
+          "productEvidenceKey": "ar-sepa-product:11:0000077916525",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CEREAL MIX",
+          "gtin": "0000077916501",
+          "name": "Cereal arcor mix PAQ-23-gr.",
+          "productEvidenceKey": "ar-sepa-product:9:0000077916501",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CEREAL MIX",
+          "gtin": "0000077916525",
+          "name": "Cereal arcor mix crispies PAQ-23-gr.",
+          "productEvidenceKey": "ar-sepa-product:9:0000077916525",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "S/D",
+          "gtin": "7794377085533",
+          "name": "CEREAL CUBIERTO CON CHOCOLATE SEMIAMARGO X 150 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7794377085533",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CARREFOUR CRISTAL",
+          "gtin": "7798052362797",
+          "name": "CEREAL DE MAIZ INFLADO X 350G.",
+          "productEvidenceKey": "ar-sepa-product:10:7798052362797",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "MANFREY",
+          "gtin": "7791058000465",
+          "name": "YOGUR C CEREAL MANFREY POTE X 170 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7791058000465",
+          "rationale": "yogurt with cereal, not a cereal product",
+          "relevant": false
+        },
+        {
+          "brand": "LA SERENISIMA",
+          "gtin": "7791337010291",
+          "name": "YOGUR DESC BATIDO CON CEREAL LA SERENISIMA X 157GR",
+          "productEvidenceKey": "ar-sepa-product:10:7791337010291",
+          "rationale": "yogurt with cereal, not a cereal product",
+          "relevant": false
+        },
+        {
+          "brand": "GANDARA",
+          "gtin": "7798335282248",
+          "name": "YOGUR CON CEREAL GANDARA POT 160 GRM",
+          "productEvidenceKey": "ar-sepa-product:12:7798335282248",
+          "rationale": "yogurt with cereal, not a cereal product",
+          "relevant": false
+        }
+      ],
+      "query": "cereal"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "CARREFOUR CLASSIC",
+          "gtin": "7791720042472",
+          "name": "GALLETA ARROZ SAL MULT CARREFOUR CLASSIC X 100 GR",
+          "productEvidenceKey": "ar-sepa-product:10:7791720042472",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CARREFOUR CLASSIC",
+          "gtin": "7791720042489",
+          "name": "GALLETA ARROZ MULT DULCE CARREFOUR CLASSIC X 100GR",
+          "productEvidenceKey": "ar-sepa-product:10:7791720042489",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CARREFOUR CLASSIC",
+          "gtin": "7791720042496",
+          "name": "GALLETA ARROZ MULT S SAL CARREFOUR CLASSIC X 100GR",
+          "productEvidenceKey": "ar-sepa-product:10:7791720042496",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CARREFOUR EXTRA",
+          "gtin": "7791720043691",
+          "name": "GALLETA LIMON BANADA CHOCO CARREFOUR EXTRA X 32 GR",
+          "productEvidenceKey": "ar-sepa-product:10:7791720043691",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CARREFOUR EXTRA",
+          "gtin": "7791720043707",
+          "name": "GALLETA LIMON BANADA CHOCO CARREFOUR EXTRA X 6 UNI",
+          "productEvidenceKey": "ar-sepa-product:10:7791720043707",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "CARREFOUR",
+          "gtin": "3608144305905",
+          "name": "CORTANTES PARA GALLETITAS GSA25",
+          "productEvidenceKey": "ar-sepa-product:10:3608144305905",
+          "rationale": "cookie cutters, not cookies",
+          "relevant": false
+        },
+        {
+          "brand": "PET CLASS",
+          "gtin": "7798139796835",
+          "name": "PETS CLASS PERRO GALLETITA CARNE 50GR",
+          "productEvidenceKey": "ar-sepa-product:11:7798139796835",
+          "rationale": "dog biscuit, not a shopper cookie",
+          "relevant": false
+        },
+        {
+          "brand": "PET CLASS",
+          "gtin": "7798139796859",
+          "name": "PETS CLASS GALLETITA CARNE 120GR",
+          "productEvidenceKey": "ar-sepa-product:11:7798139796859",
+          "rationale": "dog biscuit, not a shopper cookie",
+          "relevant": false
+        }
+      ],
+      "query": "galletitas"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "FINISH",
+          "gtin": "3059946160139",
+          "name": "DETERGENTE TABLETAS FINISH DP X 30 UNI",
+          "productEvidenceKey": "ar-sepa-product:10:3059946160139",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "FINISH",
+          "gtin": "6001106225582",
+          "name": "DETERGENTE TABLETAS FINISH DP X 80 UNI",
+          "productEvidenceKey": "ar-sepa-product:10:6001106225582",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "MAGISTRAL",
+          "gtin": "7790990003022",
+          "name": "DETERGENTE ULTRA LIMON MAGISTRAL BOT X 300 CC",
+          "productEvidenceKey": "ar-sepa-product:10:7790990003022",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "MAGISTRAL",
+          "gtin": "7790990003039",
+          "name": "DETERGENTE ULTRA LIMON MAGISTRAL BOT X 500 CC",
+          "productEvidenceKey": "ar-sepa-product:10:7790990003039",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "MAGISTRAL",
+          "gtin": "7790990003046",
+          "name": "DETERGENTE ULTRA LIMON MAGISTRAL BOT X 750 CC",
+          "productEvidenceKey": "ar-sepa-product:10:7790990003046",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "LIMZUL",
+          "gtin": "7790990001349",
+          "name": "JABON EN POLVO FRAGANCIA LARGA DUR LIMZUL X 800GRM",
+          "productEvidenceKey": "ar-sepa-product:10:7790990001349",
+          "rationale": "laundry soap, not detergent wording",
+          "relevant": false
+        },
+        {
+          "brand": "LIMZUL",
+          "gtin": "7790990001370",
+          "name": "JABON EN POLVO BE LIMZUL X 800 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7790990001370",
+          "rationale": "laundry soap, not detergent wording",
+          "relevant": false
+        },
+        {
+          "brand": "COLOMBRARO",
+          "gtin": "7790733009014",
+          "name": "DOSIFICADOR COLOMBRARO DE JABON EN POLVO",
+          "productEvidenceKey": "ar-sepa-product:10:7790733009014",
+          "rationale": "powder-soap dispenser, not detergent",
+          "relevant": false
+        }
+      ],
+      "query": "detergente"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "HIGIENOL",
+          "gtin": "7790250014485",
+          "name": "PAPEL HIGIENICO HS FRESH HIGIENOL 18 UNI X 30MTS",
+          "productEvidenceKey": "ar-sepa-product:10:7790250014485",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "HIGIENOL",
+          "gtin": "7790250015536",
+          "name": "PAPEL HIGIENICO D HOJA PLUS HIGIENOL 4 X 30 MTS",
+          "productEvidenceKey": "ar-sepa-product:10:7790250015536",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "HIGIENOL",
+          "gtin": "7790250015543",
+          "name": "PAPEL HIGIENICO D H BALANCE HIGIENOL 4 X 30 MTS",
+          "productEvidenceKey": "ar-sepa-product:10:7790250015543",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "HIGIENOL",
+          "gtin": "7790250015567",
+          "name": "PAPEL HIGIENICO DOBLE HOJA PLUS HIGIENOL 4 X 20 MT",
+          "productEvidenceKey": "ar-sepa-product:10:7790250015567",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "HIGIENOL",
+          "gtin": "7790250015840",
+          "name": "PAPEL HIGIENICO HS MAX HIGIENOL 4 X 100 MTS",
+          "productEvidenceKey": "ar-sepa-product:10:7790250015840",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "GLOW",
+          "gtin": "0790757845640",
+          "name": "ROLLO PAPEL MANTECA GLOW X4MTS",
+          "productEvidenceKey": "ar-sepa-product:10:0790757845640",
+          "rationale": "butter paper, not toilet paper",
+          "relevant": false
+        },
+        {
+          "brand": "CARREFOUR",
+          "gtin": "2631633000006",
+          "name": "PALITO PORTO ROLLO CARREFOUR PAPEL HIGIENICO",
+          "productEvidenceKey": "ar-sepa-product:10:2631633000006",
+          "rationale": "non-paper accessory with a toilet-paper phrase",
+          "relevant": false
+        },
+        {
+          "brand": "ROLOPAC",
+          "gtin": "7790065000048",
+          "name": "PAPEL MANTECA ROLOPAC 28 CM X 5 MTS",
+          "productEvidenceKey": "ar-sepa-product:10:7790065000048",
+          "rationale": "butter paper, not toilet paper",
+          "relevant": false
+        }
+      ],
+      "query": "papel higi\u00e9nico"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "SEDAL",
+          "gtin": "0000077982698",
+          "name": "SHAMPOO CERAMIDAS SEDAL X 10 CC",
+          "productEvidenceKey": "ar-sepa-product:10:0000077982698",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "SEDAL",
+          "gtin": "0000077982704",
+          "name": "SHAMPOO CREMA BALANCE SEDAL X 10 CC",
+          "productEvidenceKey": "ar-sepa-product:10:0000077982704",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "OGX",
+          "gtin": "0022796910059",
+          "name": "SHAMPOO LECHE DE COCO OGX X 385 CC",
+          "productEvidenceKey": "ar-sepa-product:10:0022796910059",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "OGX",
+          "gtin": "0022796916013",
+          "name": "SHAMPOO BRAZILIAN KERATIN SMOOTH OGX X 385 CC",
+          "productEvidenceKey": "ar-sepa-product:10:0022796916013",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "OGX",
+          "gtin": "0022796916112",
+          "name": "SHAMPOO ACEITE DE ARGAN MARROQUI OGX X 385CC",
+          "productEvidenceKey": "ar-sepa-product:10:0022796916112",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "NIVEA",
+          "gtin": "0000042277132",
+          "name": "TONICO DESMAQ DE OJOS BIFASICO NIVEA X 125 CC",
+          "productEvidenceKey": "ar-sepa-product:10:0000042277132",
+          "rationale": "makeup remover tonic, not shampoo",
+          "relevant": false
+        },
+        {
+          "brand": "SEDAL",
+          "gtin": "0000077982728",
+          "name": "ACONDICIONADOR CERAMIDAS SEDAL X 10 CC",
+          "productEvidenceKey": "ar-sepa-product:10:0000077982728",
+          "rationale": "hair conditioner, not shampoo",
+          "relevant": false
+        },
+        {
+          "brand": "BIO RENEW",
+          "gtin": "0190679000118",
+          "name": "ACONDICIONADOR COCONUT MILK HERBAL ESSENCES X400CC",
+          "productEvidenceKey": "ar-sepa-product:10:0190679000118",
+          "rationale": "hair conditioner, not shampoo",
+          "relevant": false
+        }
+      ],
+      "query": "shampoo"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "ASEPXIA",
+          "gtin": "0650240004643",
+          "name": "JABON TOCADOR EXFOLIANTE ASEPXIA X 100 GRM",
+          "productEvidenceKey": "ar-sepa-product:10:0650240004643",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "ASEPXIA",
+          "gtin": "0650240035401",
+          "name": "JABON TOCADOR CARBON DETOX ASEPXIA X 100 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:0650240035401",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "NIVEA",
+          "gtin": "4005808538553",
+          "name": "JABON LIQUIDO INTIMO SUAVE NIVEA X 250 CC",
+          "productEvidenceKey": "ar-sepa-product:10:4005808538553",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "NIVEA",
+          "gtin": "4005900683830",
+          "name": "JABON TOCADOR AVENA NIVEA 3 X 125 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:4005900683830",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "NIVEA",
+          "gtin": "4006000050171",
+          "name": "JABON DE TOCADOR COCONUT MILK NIVEA X 125 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:4006000050171",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "GENERICO",
+          "gtin": "7401560136780",
+          "name": "DISPENSER DE JABON QUO B",
+          "productEvidenceKey": "ar-sepa-product:10:7401560136780",
+          "rationale": "soap dispenser, not soap",
+          "relevant": false
+        },
+        {
+          "brand": "SCRUB DADDY",
+          "gtin": "0810044130997",
+          "name": "ESPONJA SCRUB DADDY DISH DADDY CON DISPENS D JABON",
+          "productEvidenceKey": "ar-sepa-product:10:0810044130997",
+          "rationale": "sponge/dispenser accessory with soap wording",
+          "relevant": false
+        },
+        {
+          "brand": "COLOMBRARO",
+          "gtin": "7790733009014",
+          "name": "DOSIFICADOR COLOMBRARO DE JABON EN POLVO",
+          "productEvidenceKey": "ar-sepa-product:10:7790733009014",
+          "rationale": "powder-soap dispenser, not soap",
+          "relevant": false
+        }
+      ],
+      "query": "jab\u00f3n"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "SENSODYNE",
+          "gtin": "5054563204387",
+          "name": "PASTA DENTAL BLANQ CLINICAL SENSODYNE X 100 GRM",
+          "productEvidenceKey": "ar-sepa-product:10:5054563204387",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "ORAL B",
+          "gtin": "7500435177054",
+          "name": "PASTA DENTAL 3D WHITE ORAL B X 140 GRM",
+          "productEvidenceKey": "ar-sepa-product:10:7500435177054",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "ORAL B",
+          "gtin": "7500435231213",
+          "name": "PASTA DENTAL EXTRA BCO CARBON ACT ORAL B X 140 GRM",
+          "productEvidenceKey": "ar-sepa-product:10:7500435231213",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "ORAL B",
+          "gtin": "7500435231220",
+          "name": "PASTA DENTAL EXTRA BCO CARBON ACT ORAL B X 70 GRM",
+          "productEvidenceKey": "ar-sepa-product:10:7500435231220",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "ORAL B",
+          "gtin": "7500435243858",
+          "name": "PASTA DENTAL EXTRA BLANCO ORAL B X 180 GRM",
+          "productEvidenceKey": "ar-sepa-product:10:7500435243858",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "BOX",
+          "gtin": "7792180146892",
+          "name": "PASTA CON SALSA DE QUESOS MENU BOX SOBRE X 75 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7792180146892",
+          "rationale": "prepared pasta meal, not toothpaste",
+          "relevant": false
+        },
+        {
+          "brand": "KNORR",
+          "gtin": "7794000009523",
+          "name": "PASTA CON SALSA DE HONGOS KNORR X 200 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7794000009523",
+          "rationale": "pasta sauce, not toothpaste",
+          "relevant": false
+        },
+        {
+          "brand": "MARUCHAN",
+          "gtin": "0041789001833",
+          "name": "FIDEOS CON QUESO MARUCHAN VASO X 64 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:0041789001833",
+          "rationale": "noodle product, not toothpaste",
+          "relevant": false
+        }
+      ],
+      "query": "pasta dental"
+    },
+    {
+      "candidates": [
+        {
+          "brand": "TENA",
+          "gtin": "7702026174156",
+          "name": "PANAL INCONTINENCIAS PANTS LARGE TENA X 8 UNI",
+          "productEvidenceKey": "ar-sepa-product:10:7702026174156",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "TENA",
+          "gtin": "7702026181390",
+          "name": "PANAL PANTS ULTRA LARGE TENA X 8 UNI",
+          "productEvidenceKey": "ar-sepa-product:10:7702026181390",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "BABYSEC",
+          "gtin": "7759185010924",
+          "name": "PANAL RN SUPERPREMIUM BABYSEC X 20 UNI",
+          "productEvidenceKey": "ar-sepa-product:10:7759185010924",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "ESTRELLA BABY",
+          "gtin": "7790064004337",
+          "name": "PANAL TALLE G PREM HIPERPCK ESTRELLA BABY X 40 UNI",
+          "productEvidenceKey": "ar-sepa-product:10:7790064004337",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "ESTRELLA BABY",
+          "gtin": "7790064004344",
+          "name": "PANAL TALLE XG PREM HIPERPCK ESTRELLA BABY X 36UNI",
+          "productEvidenceKey": "ar-sepa-product:10:7790064004344",
+          "rationale": "Exact source description is a plausible product for this grocery query.",
+          "relevant": true
+        },
+        {
+          "brand": "OKEBON",
+          "gtin": "7790263119696",
+          "name": "GALLETITAS COCO PANAL OKEBON X 222 GRS",
+          "productEvidenceKey": "ar-sepa-product:10:7790263119696",
+          "rationale": "cookie product with a panal token",
+          "relevant": false
+        },
+        {
+          "brand": "HIGIENOL",
+          "gtin": "7790250015864",
+          "name": "PAPEL HIGIENICO HS ALOE PANAL HIGIENOL 50M X 4",
+          "productEvidenceKey": "ar-sepa-product:10:7790250015864",
+          "rationale": "toilet paper with an aloe/panal token",
+          "relevant": false
+        },
+        {
+          "brand": "S/D",
+          "gtin": "7792180005953",
+          "name": "PANAL DE MEMBRILLO X 72 UNID.",
+          "productEvidenceKey": "ar-sepa-product:10:7792180005953",
+          "rationale": "quince paste with a panal token",
+          "relevant": false
+        }
+      ],
+      "query": "pa\u00f1ales"
+    }
+  ],
+  "regionId": "ar-caba",
+  "schemaVersion": "argentina-sepa-search-audit-fixture-v1",
+  "source": {
+    "outerSha256": "e6c08be6a36e5e5b90e6eb0b6f54a07c8bccded929fab2a28ad7f000ed08b305",
+    "provider": "ARGENTINA_SEPA_PRECIOS_CLAROS",
+    "releaseDate": "2026-09-06"
+  }
+}

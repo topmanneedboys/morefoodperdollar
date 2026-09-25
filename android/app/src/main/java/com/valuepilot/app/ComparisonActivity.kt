@@ -1,0 +1,2355 @@
+package com.valuepilot.app
+
+import android.Manifest
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.pm.PackageManager
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.net.Uri
+import android.os.Bundle
+import android.provider.Settings
+import android.text.Editable
+import android.text.InputFilter
+import android.text.InputType
+import android.text.TextUtils
+import android.text.TextWatcher
+import android.util.TypedValue
+import android.view.Gravity
+import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import android.widget.Button
+import android.widget.CheckBox
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.RadioGroup
+import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContract
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import com.valuepilot.core.CompareHerePriceSelection
+import java.io.File
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+
+class ComparisonActivity : AppCompatActivity() {
+    private lateinit var productInputsContainer: LinearLayout
+    private lateinit var addProductButton: Button
+    private lateinit var compareButton: Button
+    private lateinit var likeForLikeConfirmation: CheckBox
+    private lateinit var priceSelectionGroup: RadioGroup
+    private lateinit var comparisonScreen: CompareHereManualScreenView
+    private lateinit var comparisonPresenter: CompareHereManualScreenPresenter
+    private lateinit var shareComparisonButton: Button
+    private lateinit var shareComparisonStatus: TextView
+    private lateinit var scannerStatus: TextView
+    private lateinit var importPhotoButton: Button
+    private lateinit var capturePhotoButton: Button
+    private lateinit var photoImportStatus: TextView
+    private lateinit var cancelPhotoButton: Button
+    private lateinit var retryPhotoButton: Button
+    private lateinit var compareBarcodeButton: Button
+    private lateinit var compareBarcodeStatus: TextView
+    private lateinit var privateMemoryStatus: TextView
+    private lateinit var clearPrivateMemoryButton: Button
+    private lateinit var privateMemoryStore: CompareHerePrivatePriceMemoryStore
+    private var privateMemoryStateWhenStatusRendered: CompareHerePrivatePriceMemoryState? = null
+    private lateinit var offlineCatalogDiscoverySession: BundledOfflineCatalogDiscoverySession
+
+    private val productInputs = mutableListOf<EditText>()
+    private val productInputRows = mutableListOf<ProductInputRow>()
+    private val photoExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val barcodeLookupExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+    private val photoPickerLauncher =
+        registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            onPhotoSelected(uri, cleanupFile = null)
+        }
+    private val cameraPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            onCameraPermissionResult(granted)
+        }
+    private val cameraCaptureLauncher =
+        registerForActivityResult(CameraCaptureContract()) { captured ->
+            onCameraCaptureCompleted(captured)
+        }
+    private val barcodeCaptureLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            onBarcodeCaptureResult(result.resultCode, result.data?.getStringExtra(BarcodeCaptureActivity.EXTRA_GTIN))
+        }
+
+    private var activityState = CompareHereManualActivitySessionState.initial()
+    private var restoringDraft = false
+    private var photoRequestId = 0L
+    private var photoImportInFlight = false
+    private var photoImportClosed = false
+    /** Tracks the ML Kit task after the executor has returned; cancellation invalidates it but
+     * does not pretend its resources were released until its callback arrives. */
+    private var photoRecognitionState = CompareHerePhotoRecognitionState()
+    private var pendingPhotoStop: CompareHerePhotoStopState? = null
+    private var photoReviewDialog: AlertDialog? = null
+    private var photoReviewRequestId = 0L
+    private var lastPhotoCaptureKind: CompareHerePhotoCaptureKind? = null
+    private var cameraCaptureRequestId = 0L
+    private var cameraCaptureUri: Uri? = null
+    private var cameraCaptureFile: File? = null
+    private var barcodeLookupRequestId = 0L
+    private var barcodeLookupInFlight = false
+    private var barcodeLookupClosed = false
+    private var barcodeDialog: AlertDialog? = null
+    private var sharedTextDialog: AlertDialog? = null
+    private var shareCard: CompareHereShareCard? = null
+    /** Transient URI retained only while a shared-image OCR request is still in flight. */
+    private var pendingSharedImageUri: String? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+        offlineCatalogDiscoverySession =
+            BundledOfflineCatalog.createDiscoverySession(applicationContext)
+
+        installSystemBarInsets()
+
+        productInputsContainer = findViewById(R.id.productInputsContainer)
+        addProductButton = findViewById(R.id.addProductButton)
+        compareButton = findViewById(R.id.compareButton)
+        likeForLikeConfirmation = findViewById(R.id.likeForLikeConfirmation)
+        priceSelectionGroup = findViewById(R.id.priceSelectionGroup)
+        comparisonScreen = findViewById(R.id.compareHereScreen)
+        comparisonPresenter = CompareHereManualScreenPresenter(comparisonScreen)
+        shareComparisonButton = findViewById(R.id.shareComparisonButton)
+        shareComparisonStatus = findViewById(R.id.shareComparisonStatus)
+        shareComparisonStatus.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        scannerStatus = findViewById(R.id.scannerStatus)
+        // Optional scanner availability can change while this screen resumes. Announce the
+        // projected status politely without making the legacy accessibility adapter a product
+        // or shopping authority.
+        scannerStatus.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        importPhotoButton = findViewById(R.id.importPhotoButton)
+        capturePhotoButton = findViewById(R.id.capturePhotoButton)
+        photoImportStatus = findViewById(R.id.photoImportStatus)
+        photoImportStatus.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        cancelPhotoButton = findViewById(R.id.cancelPhotoButton)
+        cancelPhotoButton.contentDescription =
+            getString(R.string.compare_photo_cancel_description)
+        cancelPhotoButton.setOnClickListener {
+            cancelPhotoRequest()
+        }
+        retryPhotoButton = findViewById(R.id.retryPhotoButton)
+        retryPhotoButton.contentDescription = getString(R.string.compare_photo_retry_description)
+        retryPhotoButton.setOnClickListener {
+            val kind = lastPhotoCaptureKind ?: return@setOnClickListener
+            when (kind) {
+                CompareHerePhotoCaptureKind.CAMERA -> beginCameraCapture()
+                CompareHerePhotoCaptureKind.IMPORT -> beginPhotoImport()
+            }
+        }
+        compareBarcodeButton = findViewById(R.id.compareBarcodeButton)
+        compareBarcodeStatus = findViewById(R.id.compareBarcodeStatus)
+        compareBarcodeStatus.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        privateMemoryStatus = findViewById(R.id.privateMemoryStatus)
+        // Private-memory outcomes (saved history, unavailable reads, and clear failures) are
+        // dynamic feedback. Announce them politely while keeping the evidence and comparison
+        // authorities in the existing coordinator/store layers.
+        privateMemoryStatus.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        clearPrivateMemoryButton = findViewById(R.id.clearPrivateMemoryButton)
+        privateMemoryStore = CompareHerePrivatePriceMemoryAndroidStore(this)
+
+        clearPrivateMemoryButton.setOnClickListener {
+            val result = privateMemoryStore.clear()
+            if (result.accepted) {
+                privateMemoryStateWhenStatusRendered = CompareHerePrivatePriceMemoryState.empty()
+                hidePrivateMemoryStatus()
+            } else {
+                privateMemoryStatus.text = getString(R.string.compare_memory_clear_error)
+                privateMemoryStatus.visibility = View.VISIBLE
+            }
+        }
+
+        importPhotoButton.setOnClickListener {
+            beginPhotoImport()
+        }
+
+        capturePhotoButton.setOnClickListener {
+            beginCameraCapture()
+        }
+
+        compareBarcodeButton.setOnClickListener {
+            beginBarcodeCapture()
+        }
+
+        syncPhotoActionButtons()
+
+        val draft = restoreDraft(savedInstanceState)
+        activityState =
+            CompareHereManualActivitySessionState.restore(
+                comparisonWasRun = draft.compared,
+                observedAtEpochMillis = draft.observedAtEpochMillis,
+                likeForLikeConfirmed = draft.likeForLikeConfirmed,
+                priceSelection = draft.priceSelection
+            )
+
+        renderProductInputs(draft.blocks)
+        val sharedTextImportIssue = applySharedTextIfPresent(savedInstanceState)
+        val sharedImageImportIssue = applySharedImageIfPresent(savedInstanceState)
+        syncLikeForLikeConfirmation()
+        syncPriceSelection()
+
+        likeForLikeConfirmation.setOnCheckedChangeListener { _, isChecked ->
+            if (!restoringDraft) {
+                activityState =
+                    CompareHereManualActivitySessionReducer.confirmationChanged(
+                        state = activityState,
+                        confirmed = isChecked
+                    )
+                renderIdleScreen()
+            }
+        }
+
+        priceSelectionGroup.setOnCheckedChangeListener { _, checkedId ->
+            if (restoringDraft) {
+                return@setOnCheckedChangeListener
+            }
+
+            val selection =
+                when (checkedId) {
+                    R.id.priceSelectionCurrent -> CompareHerePriceSelection.CURRENT
+                    R.id.priceSelectionMember -> CompareHerePriceSelection.MEMBER
+                    else -> return@setOnCheckedChangeListener
+                }
+
+            activityState =
+                CompareHereManualActivitySessionReducer.priceSelectionChanged(
+                    state = activityState,
+                    selection = selection
+                )
+            renderIdleScreen()
+        }
+
+        addProductButton.setOnClickListener {
+            if (productInputs.size < CompareHereManualInputAdapter.MAX_OBSERVATIONS) {
+                addProductInput("")
+                onProductsChanged()
+                updateAddProductButton()
+                // Adding a product is an explicit shopper action. Move directly to the new
+                // editable block so the next aisle-side entry does not require another tap;
+                // this changes navigation only and leaves exact parsing and validation below.
+                focusProductInput(productInputs.lastIndex)
+            }
+        }
+
+        compareButton.setOnClickListener {
+            val now = System.currentTimeMillis()
+            runComparison(
+                blocks = currentProductBlocks(),
+                observedAtEpochMillis = now,
+                priceSelection = activityState.priceSelection,
+                persist = true
+            )
+        }
+
+        findViewById<Button>(R.id.clearButton).setOnClickListener {
+            clearComparison()
+        }
+
+        findViewById<Button>(R.id.enableButton).setOnClickListener {
+            showAccessibilityDisclosure()
+        }
+
+        findViewById<Button>(R.id.settingsButton).setOnClickListener {
+            openAccessibilitySettings()
+        }
+
+        if (
+            activityState.comparisonWasRun &&
+            currentDraftActionState().compareEnabled
+        ) {
+            val restoreTime =
+                activityState.observedAtEpochMillis.takeIf { it > 0L }
+                    ?: System.currentTimeMillis()
+
+            runComparison(
+                blocks = currentProductBlocks(),
+                observedAtEpochMillis = restoreTime,
+                persist = false
+            )
+        } else {
+            renderIdleScreen()
+        }
+
+        sharedTextImportIssue?.let(::showSharedTextImportFailure)
+        if (sharedImageImportIssue) {
+            photoImportStatus.text = getString(R.string.compare_shared_image_invalid)
+            photoImportStatus.visibility = View.VISIBLE
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        renderScannerStatus()
+        val expected = privateMemoryStateWhenStatusRendered
+        if (expected != null && privateMemoryStatus.visibility == View.VISIBLE) {
+            val loaded = privateMemoryStore.load()
+            if (!loaded.accepted || loaded.state != expected) {
+                // Home or another ValuePilot route may have changed device-only history while
+                // this screen was paused. Do not leave a stale personal-memory message visible.
+                privateMemoryStateWhenStatusRendered =
+                    loaded.state ?: CompareHerePrivatePriceMemoryState.empty()
+                hidePrivateMemoryStatus()
+            }
+        }
+    }
+
+    override fun onPause() {
+        saveDraftToPreferences()
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+        photoImportClosed = true
+        invalidatePhotoRequest()
+        photoRecognitionState = CompareHerePhotoRecognitionState()
+        pendingPhotoStop = null
+        photoExecutor.shutdownNow()
+        barcodeLookupClosed = true
+        barcodeLookupRequestId += 1L
+        barcodeDialog?.dismiss()
+        barcodeDialog = null
+        sharedTextDialog?.dismiss()
+        sharedTextDialog = null
+        barcodeLookupExecutor.shutdownNow()
+        if (::offlineCatalogDiscoverySession.isInitialized) {
+            offlineCatalogDiscoverySession.close()
+        }
+        super.onDestroy()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putStringArrayList(
+            STATE_BLOCKS,
+            ArrayList(currentProductBlocks())
+        )
+        outState.putBoolean(
+            STATE_COMPARED,
+            activityState.comparisonWasRun
+        )
+        outState.putLong(
+            STATE_OBSERVED_AT,
+            activityState.observedAtEpochMillis
+        )
+        outState.putBoolean(
+            STATE_LIKE_FOR_LIKE_CONFIRMED,
+            activityState.likeForLikeConfirmed
+        )
+        outState.putString(
+            STATE_PRICE_SELECTION,
+            CompareHerePriceSelectionPersistence.encode(activityState.priceSelection)
+        )
+        if (photoImportInFlight) {
+            pendingSharedImageUri?.let { uri ->
+                outState.putString(STATE_SHARED_IMAGE_URI, uri)
+            }
+        } else {
+            outState.remove(STATE_SHARED_IMAGE_URI)
+        }
+
+        super.onSaveInstanceState(outState)
+    }
+
+    private fun beginBarcodeCapture() {
+        if (
+            barcodeLookupClosed ||
+                barcodeLookupInFlight ||
+                photoImportInFlight ||
+                photoReviewDialog != null
+        ) {
+            return
+        }
+
+        barcodeLookupInFlight = true
+        barcodeLookupRequestId += 1L
+        syncPhotoActionButtons()
+        compareBarcodeStatus.text = getString(R.string.compare_barcode_processing)
+        compareBarcodeStatus.visibility = View.VISIBLE
+
+        try {
+            barcodeCaptureLauncher.launch(
+                Intent(this, BarcodeCaptureActivity::class.java)
+            )
+        } catch (_: Exception) {
+            finishBarcodeRequest(R.string.compare_barcode_unavailable)
+        }
+    }
+
+    private fun onBarcodeCaptureResult(resultCode: Int, gtin: String?) {
+        if (barcodeLookupClosed || !barcodeLookupInFlight) {
+            return
+        }
+        if (resultCode != RESULT_OK || gtin.isNullOrBlank()) {
+            finishBarcodeRequest(R.string.compare_barcode_cancelled)
+            return
+        }
+        beginBarcodeIdentityLookup(gtin)
+    }
+
+    private fun beginBarcodeIdentityLookup(gtin: String) {
+        val trimmed = gtin.trim()
+        if (barcodeLookupClosed || trimmed.isBlank()) {
+            finishBarcodeRequest(R.string.compare_barcode_unavailable)
+            return
+        }
+
+        val requestId = barcodeLookupRequestId
+        compareBarcodeStatus.text = getString(R.string.compare_barcode_processing)
+        compareBarcodeStatus.visibility = View.VISIBLE
+
+        try {
+            barcodeLookupExecutor.execute {
+                val presentation =
+                    runCatching {
+                        GoodPriceBarcodeIdentityPresentation.from(
+                            gtin = trimmed,
+                            result =
+                                offlineCatalogDiscoverySession.discover(
+                                    rawQuery = trimmed,
+                                    canonicalizer = JvmTextCanonicalizer,
+                                    evaluatedAtEpochMillis = System.currentTimeMillis(),
+                                    maximumSnapshotAgeMillis = OFFLINE_CATALOG_MAX_AGE_MILLIS
+                                )
+                        )
+                    }.getOrNull()
+
+                runOnUiThread {
+                    if (
+                        barcodeLookupClosed ||
+                        requestId != barcodeLookupRequestId ||
+                        !barcodeLookupInFlight ||
+                        isFinishing ||
+                        isDestroyed
+                    ) {
+                        return@runOnUiThread
+                    }
+                    if (presentation == null) {
+                        finishBarcodeRequest(R.string.compare_barcode_unavailable)
+                        return@runOnUiThread
+                    }
+                    showBarcodeIdentityChoices(presentation, requestId)
+                }
+            }
+        } catch (_: Throwable) {
+            finishBarcodeRequest(R.string.compare_barcode_unavailable)
+        }
+    }
+
+    private fun showBarcodeIdentityChoices(
+        presentation: GoodPriceBarcodeIdentityPresentation,
+        dialogRequestId: Long
+    ) {
+        if (presentation.options.isEmpty()) {
+            finishBarcodeRequest(
+                R.string.compare_barcode_no_match,
+                presentation.gtin
+            )
+            return
+        }
+
+        // A single exact-GTIN identity is still only an editable name suggestion, but asking the
+        // shopper to confirm an unambiguous name before placing it into an empty slot adds a
+        // redundant tap. The existing draft helper keeps every non-empty entry untouched, while
+        // the exact quantity, currency, price and evidence gates remain downstream.
+        if (presentation.options.size == 1) {
+            val addedIndex =
+                applyBarcodeIdentitySuggestion(
+                    option = presentation.options.single(),
+                    gtin = presentation.gtin
+                )
+            if (addedIndex != null) {
+                focusProductInput(addedIndex)
+            }
+            return
+        }
+
+        var selectedIndex = -1
+        var outcomeCommitted = false
+        lateinit var dialog: AlertDialog
+        val builder =
+            AlertDialog.Builder(this)
+                .setTitle(R.string.compare_barcode_match_title)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.compare_barcode_use_name, null)
+
+        builder
+            .setMessage(
+                getString(
+                    R.string.compare_barcode_multiple_message,
+                    presentation.gtin
+                )
+            )
+            .setSingleChoiceItems(
+                presentation.options.map { it.label }.toTypedArray(),
+                -1
+            ) { _, which ->
+                selectedIndex = which
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
+            }
+
+        dialog = builder.create()
+        barcodeDialog = dialog
+        dialog.setOnDismissListener {
+            if (barcodeDialog === dialog) {
+                barcodeDialog = null
+            }
+            if (barcodeLookupInFlight) {
+                barcodeLookupInFlight = false
+                if (
+                    !outcomeCommitted &&
+                        !barcodeLookupClosed &&
+                        dialogRequestId == barcodeLookupRequestId
+                ) {
+                    compareBarcodeStatus.text = getString(R.string.compare_barcode_cancelled)
+                    compareBarcodeStatus.visibility = View.VISIBLE
+                }
+                syncPhotoActionButtons()
+            }
+        }
+        dialog.setOnShowListener {
+            val button = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            button.contentDescription =
+                getString(R.string.compare_barcode_use_name_description)
+            button.isEnabled = selectedIndex >= 0
+            button.setOnClickListener {
+                val option = presentation.options.getOrNull(selectedIndex)
+                    ?: return@setOnClickListener
+                val addedIndex =
+                    applyBarcodeIdentitySuggestion(
+                        option = option,
+                        gtin = presentation.gtin
+                    )
+                if (addedIndex == null) {
+                    outcomeCommitted = true
+                    dialog.dismiss()
+                    return@setOnClickListener
+                }
+                outcomeCommitted = true
+                dialog.dismiss()
+                focusProductInput(addedIndex)
+            }
+        }
+        dialog.show()
+    }
+
+    /**
+     * Inserts only the identity label returned by the offline barcode rail. The returned editor
+     * index lets the caller focus the exact editable slot after any dialog has been dismissed.
+     */
+    private fun applyBarcodeIdentitySuggestion(
+        option: GoodPriceBarcodeIdentityPresentation.Option,
+        gtin: String
+    ): Int? {
+        val result =
+            CompareHereBarcodeDraft.apply(
+                existingBlocks = currentProductBlocks(),
+                displayName = option.displayName
+            )
+        if (!result.added) {
+            finishBarcodeRequest(
+                when (result.issue) {
+                    CompareHereBarcodeDraftIssue.IDENTITY_TOO_LONG ->
+                        R.string.compare_barcode_identity_too_long
+                    CompareHereBarcodeDraftIssue.NO_EMPTY_SLOT ->
+                        R.string.compare_barcode_no_empty_slot
+                    else -> R.string.compare_barcode_unavailable
+                }
+            )
+            return null
+        }
+
+        renderProductInputs(result.blocks)
+        activityState =
+            CompareHereManualActivitySessionReducer.productsChanged(activityState)
+        syncLikeForLikeConfirmation()
+        syncPriceSelection()
+        renderIdleScreen()
+        saveDraftToPreferences()
+        barcodeLookupInFlight = false
+        syncPhotoActionButtons()
+        compareBarcodeStatus.text =
+            getString(
+                R.string.compare_barcode_used,
+                option.label,
+                gtin
+            )
+        compareBarcodeStatus.visibility = View.VISIBLE
+        return result.addedIndex
+    }
+
+    /**
+     * Put the cursor in the exact-entry block that barcode identity populated. This is only a
+     * navigation affordance: the shopper may still need to enter or review package quantity and
+     * price before the comparison coordinator can produce an answer.
+     */
+    private fun focusProductInput(index: Int?) {
+        focusProductInput(index, showKeyboard = true)
+    }
+
+    private fun focusProductInput(index: Int?, showKeyboard: Boolean) {
+        val input = index?.let(productInputs::getOrNull) ?: return
+        input.post {
+            if (isFinishing || isDestroyed) return@post
+            input.requestFocus()
+            input.setSelection(input.text?.length ?: 0)
+            // OCR/barcode handoffs leave the shopper at the exact editable block that still
+            // needs package quantity and price. Re-open the on-device keyboard when the handoff
+            // still needs immediate editing; a complete detected-details OCR handoff only needs
+            // visual review, so keeping controls visible is the lower-friction path.
+            if (showKeyboard) {
+                val manager = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+                manager?.showSoftInput(input, InputMethodManager.SHOW_IMPLICIT)
+            }
+        }
+    }
+
+    private fun finishBarcodeRequest(@StringRes statusRes: Int, vararg formatArgs: Any) {
+        barcodeLookupInFlight = false
+        syncPhotoActionButtons()
+        compareBarcodeStatus.text = getString(statusRes, *formatArgs)
+        compareBarcodeStatus.visibility = View.VISIBLE
+    }
+
+    private fun clearBarcodeStatus() {
+        barcodeLookupRequestId += 1L
+        barcodeDialog?.dismiss()
+        barcodeDialog = null
+        barcodeLookupInFlight = false
+        compareBarcodeStatus.text = getString(R.string.compare_barcode_ready)
+        compareBarcodeStatus.visibility = View.VISIBLE
+        syncPhotoActionButtons()
+    }
+
+    private fun beginPhotoImport() {
+        if (
+            photoImportClosed ||
+                photoImportInFlight ||
+                barcodeLookupInFlight ||
+                photoReviewDialog != null
+        ) {
+            return
+        }
+
+        lastPhotoCaptureKind = CompareHerePhotoCaptureKind.IMPORT
+        hidePhotoRetry()
+        beginPhotoRequest()
+        syncPhotoActionButtons()
+        photoImportStatus.text = getString(R.string.compare_photo_processing)
+        try {
+            photoPickerLauncher.launch("image/*")
+        } catch (_: Exception) {
+            finishPhotoRequest(
+                R.string.compare_photo_error,
+                retryOutcome = CompareHerePhotoRetryOutcome.CAPTURE_FAILURE
+            )
+        }
+    }
+
+    private fun beginCameraCapture() {
+        if (
+            photoImportClosed ||
+                photoImportInFlight ||
+                barcodeLookupInFlight ||
+                photoReviewDialog != null
+        ) {
+            return
+        }
+
+        if (!packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)) {
+            finishPhotoRequest(R.string.compare_camera_unavailable)
+            return
+        }
+
+        lastPhotoCaptureKind = CompareHerePhotoCaptureKind.CAMERA
+        hidePhotoRetry()
+        beginPhotoRequest()
+        cameraCaptureRequestId = photoRequestId
+        syncPhotoActionButtons()
+
+        if (
+            ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) ==
+                PackageManager.PERMISSION_GRANTED
+        ) {
+            launchCameraCapture(cameraCaptureRequestId)
+        } else {
+            photoImportStatus.text = getString(R.string.compare_camera_permission_needed)
+            try {
+                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+            } catch (_: Exception) {
+                finishPhotoRequest(
+                    R.string.compare_camera_error,
+                    retryOutcome = CompareHerePhotoRetryOutcome.CAPTURE_FAILURE
+                )
+            }
+        }
+    }
+
+    private fun onCameraPermissionResult(granted: Boolean) {
+        if (
+            photoImportClosed ||
+            !photoImportInFlight ||
+            cameraCaptureRequestId != photoRequestId
+        ) {
+            return
+        }
+
+        if (!granted) {
+            finishPhotoRequest(
+                R.string.compare_camera_permission_denied,
+                retryOutcome = CompareHerePhotoRetryOutcome.PERMISSION_DENIED
+            )
+            return
+        }
+
+        launchCameraCapture(cameraCaptureRequestId)
+    }
+
+    private fun launchCameraCapture(requestId: Long) {
+        if (
+            photoImportClosed ||
+            !photoImportInFlight ||
+            requestId != photoRequestId
+        ) {
+            return
+        }
+
+        try {
+            val directory = File(cacheDir, CAMERA_CACHE_DIRECTORY).apply {
+                mkdirs()
+            }
+            val file = File.createTempFile(CAMERA_FILE_PREFIX, CAMERA_FILE_SUFFIX, directory)
+            val uri =
+                FileProvider.getUriForFile(
+                    this,
+                    "$packageName.fileprovider",
+                    file
+                )
+            cameraCaptureFile = file
+            cameraCaptureUri = uri
+            photoImportStatus.text = getString(R.string.compare_photo_processing)
+            cameraCaptureLauncher.launch(uri)
+        } catch (_: Exception) {
+            cleanupCameraCaptureFile()
+            finishPhotoRequest(
+                R.string.compare_camera_error,
+                retryOutcome = CompareHerePhotoRetryOutcome.CAPTURE_FAILURE
+            )
+        }
+    }
+
+    private fun onCameraCaptureCompleted(captured: Boolean) {
+        val requestId = cameraCaptureRequestId
+        val uri = cameraCaptureUri
+        if (
+            photoImportClosed ||
+            requestId != photoRequestId ||
+            !photoImportInFlight
+        ) {
+            cleanupCameraCaptureFile()
+            return
+        }
+
+        cameraCaptureUri = null
+        if (!captured || uri == null) {
+            cleanupCameraCaptureFile()
+            finishPhotoRequest(R.string.compare_camera_cancelled)
+            return
+        }
+
+        onPhotoSelected(uri, cleanupFile = cameraCaptureFile)
+    }
+
+    private fun onPhotoSelected(uri: Uri?, cleanupFile: File?) {
+        if (photoImportClosed || !photoImportInFlight) {
+            cleanupFile?.let { deleteCameraCaptureFile(it) }
+            return
+        }
+
+        val requestId = photoRequestId
+        if (uri == null) {
+            cleanupFile?.let { deleteCameraCaptureFile(it) }
+            finishPhotoRequest(R.string.compare_photo_cancelled)
+            return
+        }
+
+        val recognitionState =
+            CompareHerePhotoRecognitionPolicy.begin(
+                previous = photoRecognitionState,
+                requestId = requestId
+            )
+        if (recognitionState == null) {
+            cleanupFile?.let { deleteCameraCaptureFile(it) }
+            // This is a defensive race guard. The visible capture actions remain disabled while
+            // the prior ML Kit task finishes, so a second worker cannot be queued or run in
+            // parallel with it.
+            finishPhotoRequest(
+                R.string.compare_photo_error,
+                retryOutcome = CompareHerePhotoRetryOutcome.OCR_FAILURE
+            )
+            return
+        }
+        photoRecognitionState = recognitionState
+
+        try {
+            photoExecutor.execute {
+                val bitmap = decodeBoundedPhoto(uri)
+                if (bitmap == null) {
+                    cleanupFile?.let { deleteCameraCaptureFile(it) }
+                    postPhotoImportResult(requestId, emptyList(), IllegalArgumentException("decode"))
+                    return@execute
+                }
+
+                try {
+                    OcrScanner.scan(bitmap) { recognizedBlocks, error ->
+                        if (!bitmap.isRecycled) {
+                            bitmap.recycle()
+                        }
+                        cleanupFile?.let { deleteCameraCaptureFile(it) }
+                        postPhotoImportResult(requestId, recognizedBlocks, error)
+                    }
+                } catch (error: Throwable) {
+                    if (!bitmap.isRecycled) {
+                        bitmap.recycle()
+                    }
+                    cleanupFile?.let { deleteCameraCaptureFile(it) }
+                    postPhotoImportResult(requestId, emptyList(), error)
+                }
+            }
+        } catch (error: Throwable) {
+            photoRecognitionState =
+                CompareHerePhotoRecognitionPolicy.complete(
+                    previous = photoRecognitionState,
+                    callbackRequestId = requestId
+                )
+            syncPhotoActionButtons()
+            cleanupFile?.let { deleteCameraCaptureFile(it) }
+            postPhotoImportResult(requestId, emptyList(), error)
+        }
+    }
+
+    private fun postPhotoImportResult(
+        requestId: Long,
+        recognizedBlocks: List<String>,
+        error: Throwable?
+    ) {
+        runOnUiThread {
+            // A callback means the transient shared URI has finished its only local read. Do not
+            // retain it across a later recreation or any unrelated draft transition.
+            pendingSharedImageUri = null
+            val stopCompletion =
+                CompareHerePhotoStopPolicy.complete(
+                    pending = pendingPhotoStop,
+                    callbackRequestId = requestId
+                )
+            pendingPhotoStop = stopCompletion.pending
+            photoRecognitionState =
+                CompareHerePhotoRecognitionPolicy.complete(
+                    previous = photoRecognitionState,
+                    callbackRequestId = requestId
+                )
+            stopCompletion.completedReason?.let { reason ->
+                if (!photoImportClosed && !isFinishing && !isDestroyed) {
+                    photoImportStatus.text = getString(photoStopStatusRes(reason))
+                    photoImportStatus.visibility = View.VISIBLE
+                }
+            }
+            // A user cancellation may have invalidated the request while ML Kit was still
+            // finishing. Release the capture/retry controls only after that worker is gone.
+            syncPhotoActionButtons()
+            applyPhotoImportResult(requestId, recognizedBlocks, error)
+        }
+    }
+
+    private fun applyPhotoImportResult(
+        requestId: Long,
+        recognizedBlocks: List<String>,
+        error: Throwable?
+    ) {
+        if (
+            !CompareHerePhotoRequestPolicy.accepts(
+                callbackRequestId = requestId,
+                current =
+                    CompareHerePhotoRequestState(
+                        requestId = photoRequestId,
+                        inFlight = photoImportInFlight
+                    ),
+                closed = photoImportClosed || isFinishing || isDestroyed
+            )
+        ) {
+            return
+        }
+
+        photoImportInFlight = false
+        syncPhotoActionButtons()
+
+        if (error != null) {
+            photoImportStatus.text = getString(R.string.compare_photo_error)
+            showPhotoRetryIfEligible(CompareHerePhotoRetryOutcome.OCR_FAILURE)
+            return
+        }
+
+        val review =
+            CompareHerePhotoDraft.review(
+                existingBlocks = currentProductBlocks(),
+                recognizedBlocks = recognizedBlocks
+            )
+
+        if (review.candidates.isEmpty()) {
+            photoImportStatus.text = getString(R.string.compare_photo_no_matches)
+            showPhotoRetryIfEligible(CompareHerePhotoRetryOutcome.NO_USABLE_SUGGESTION)
+            return
+        }
+
+        showPhotoReviewDialog(
+            requestId = requestId,
+            review = review
+        )
+    }
+
+    /**
+     * Keeps OCR in a proposal-only state until the shopper explicitly selects what to add. The
+     * selected values still go through the existing bounded draft helper and exact route.
+     */
+    private fun showPhotoReviewDialog(
+        requestId: Long,
+        review: CompareHerePhotoDraftReview
+    ) {
+        if (
+            photoImportClosed ||
+                requestId != photoRequestId ||
+                isFinishing ||
+                isDestroyed
+        ) {
+            return
+        }
+
+        val selected = BooleanArray(review.candidates.size) { true }
+        val presentations =
+            review.candidates.map(
+                CompareHerePhotoSuggestionPresentationFactory::forCandidate
+            )
+        val primaryUsesDetectedDetails =
+            CompareHerePhotoReviewActionPolicy.primaryUsesDetectedDetails(presentations)
+        val hasDetectedDetailsAlternative =
+            CompareHerePhotoReviewActionPolicy.hasDetectedDetailsAlternative(presentations)
+        var outcomeCommitted = false
+        lateinit var dialog: AlertDialog
+        val builder =
+            AlertDialog.Builder(this)
+                .setTitle(R.string.compare_photo_review_title)
+                .setMessage(
+                    getString(
+                        R.string.compare_photo_review_body,
+                        review.candidates.size
+                    )
+                )
+                .setMultiChoiceItems(
+                    presentations.map { it.displayLabel }.toTypedArray(),
+                    selected
+                ) { _, which, checked ->
+                    if (which in selected.indices) {
+                        selected[which] = checked
+                    }
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(
+                    if (primaryUsesDetectedDetails) {
+                        R.string.compare_photo_add_with_details
+                    } else {
+                        R.string.compare_photo_add_selected
+                    },
+                    null
+                )
+
+        if (hasDetectedDetailsAlternative) {
+            builder.setNeutralButton(
+                if (primaryUsesDetectedDetails) {
+                    R.string.compare_photo_add_selected
+                } else {
+                    R.string.compare_photo_add_with_details
+                },
+                null
+            )
+        }
+
+        dialog = builder.create()
+
+        photoReviewDialog = dialog
+        photoReviewRequestId = requestId
+        dialog.setOnDismissListener {
+            if (
+                !outcomeCommitted &&
+                    !photoImportClosed &&
+                    requestId == photoRequestId
+            ) {
+                photoImportStatus.text = getString(R.string.compare_photo_cancelled)
+                photoImportStatus.visibility = View.VISIBLE
+            }
+            if (photoReviewDialog === dialog) {
+                photoReviewDialog = null
+                photoReviewRequestId = 0L
+                syncPhotoActionButtons()
+            }
+        }
+        dialog.setOnShowListener {
+            fun commitSelection(useDetectedDetails: Boolean) {
+                if (
+                    photoImportClosed ||
+                        requestId != photoRequestId ||
+                        photoReviewRequestId != requestId ||
+                        photoReviewDialog !== dialog ||
+                        isFinishing ||
+                        isDestroyed
+                ) {
+                    dialog.dismiss()
+                    return
+                }
+
+                val selectedCandidates =
+                    review.candidates.mapIndexedNotNull { index, rawCandidate ->
+                        if (!selected[index]) {
+                            null
+                        } else if (useDetectedDetails) {
+                            presentations[index].editorPrefill ?: rawCandidate
+                        } else {
+                            rawCandidate
+                        }
+                    }
+                if (selectedCandidates.isEmpty()) {
+                    outcomeCommitted = true
+                    photoImportStatus.text = getString(R.string.compare_photo_none_selected)
+                    photoImportStatus.visibility = View.VISIBLE
+                    dialog.dismiss()
+                    return
+                }
+
+                val result =
+                    CompareHerePhotoDraft.append(
+                        existingBlocks = currentProductBlocks(),
+                        recognizedBlocks = selectedCandidates
+                    )
+                if (result.addedCount == 0) {
+                    outcomeCommitted = true
+                    photoImportStatus.text = getString(R.string.compare_photo_no_matches)
+                    photoImportStatus.visibility = View.VISIBLE
+                    dialog.dismiss()
+                    return
+                }
+
+                renderProductInputs(result.blocks)
+                val firstAddedIndex = result.firstAddedIndex
+                activityState =
+                    CompareHereManualActivitySessionReducer.productsChanged(activityState)
+                syncLikeForLikeConfirmation()
+                syncPriceSelection()
+                renderIdleScreen()
+                saveDraftToPreferences()
+                photoImportStatus.text =
+                    getString(
+                        if (useDetectedDetails) {
+                            R.string.compare_photo_added_with_details
+                        } else {
+                            R.string.compare_photo_added
+                        },
+                        result.addedCount,
+                        result.skippedCount
+                    )
+                photoImportStatus.visibility = View.VISIBLE
+                hidePhotoRetry()
+                outcomeCommitted = true
+                dialog.dismiss()
+                focusProductInput(
+                    firstAddedIndex,
+                    showKeyboard =
+                        CompareHerePhotoReviewActionPolicy.shouldOpenKeyboardAfterCommit(
+                            presentations = presentations,
+                            selected = selected,
+                            useDetectedDetails = useDetectedDetails
+                        )
+                )
+            }
+
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                commitSelection(useDetectedDetails = primaryUsesDetectedDetails)
+            }
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.let { button ->
+                button.contentDescription =
+                    getString(
+                        if (primaryUsesDetectedDetails) {
+                            R.string.compare_photo_add_selected_description
+                        } else {
+                            R.string.compare_photo_add_with_details_description
+                        }
+                    )
+                button.setOnClickListener {
+                    commitSelection(useDetectedDetails = !primaryUsesDetectedDetails)
+                }
+            }
+        }
+        syncPhotoActionButtons()
+        dialog.show()
+    }
+
+    private fun finishPhotoRequest(@StringRes statusRes: Int) {
+        finishPhotoRequest(statusRes, retryOutcome = null)
+    }
+
+    private fun finishPhotoRequest(
+        @StringRes statusRes: Int,
+        retryOutcome: CompareHerePhotoRetryOutcome?
+    ) {
+        pendingSharedImageUri = null
+        photoImportInFlight = false
+        syncPhotoActionButtons()
+        photoImportStatus.text = getString(statusRes)
+        showPhotoRetryIfEligible(retryOutcome)
+    }
+
+    private fun beginPhotoRequest() {
+        val next =
+            CompareHerePhotoRequestPolicy.begin(
+                CompareHerePhotoRequestState(
+                    requestId = photoRequestId,
+                    inFlight = photoImportInFlight
+                )
+            )
+        photoRequestId = next.requestId
+        photoImportInFlight = next.inFlight
+    }
+
+    /**
+     * Invalidates the current photo generation before a draft/lifecycle transition can expose a
+     * result from the old draft. This does not cancel OCR work internally; its callback is simply
+     * rejected and any temporary camera file is removed.
+     */
+    private fun invalidatePhotoRequest() {
+        val next =
+            CompareHerePhotoRequestPolicy.invalidate(
+                CompareHerePhotoRequestState(
+                    requestId = photoRequestId,
+                    inFlight = photoImportInFlight
+                )
+            )
+        photoRequestId = next.requestId
+        photoImportInFlight = next.inFlight
+        pendingSharedImageUri = null
+        photoReviewRequestId = 0L
+        photoReviewDialog?.dismiss()
+        photoReviewDialog = null
+        cameraCaptureRequestId = 0L
+        cleanupCameraCaptureFile()
+        lastPhotoCaptureKind = null
+        hidePhotoRetry()
+        syncPhotoActionButtons()
+    }
+
+    private fun cancelPhotoRequest() {
+        if (photoImportClosed || !photoImportInFlight) return
+        val stop =
+            CompareHerePhotoStopPolicy.begin(
+                recognition = photoRecognitionState,
+                reason = CompareHerePhotoStopReason.USER_CANCELLED
+            )
+        pendingPhotoStop = stop
+        invalidatePhotoRequest()
+        photoImportStatus.text =
+            getString(
+                if (stop == null) {
+                    R.string.compare_photo_cancelled_by_user
+                } else {
+                    R.string.compare_photo_stopping
+                }
+            )
+        photoImportStatus.visibility = View.VISIBLE
+    }
+
+    private fun cancelPhotoRequestForDraftChange() {
+        if (
+            !photoImportInFlight &&
+                photoReviewDialog == null &&
+                cameraCaptureFile == null
+        ) {
+            return
+        }
+
+        val stop =
+            CompareHerePhotoStopPolicy.begin(
+                recognition = photoRecognitionState,
+                reason = CompareHerePhotoStopReason.DRAFT_CHANGED
+            )
+        pendingPhotoStop = stop
+        invalidatePhotoRequest()
+        photoImportStatus.text =
+            getString(
+                if (stop == null) {
+                    R.string.compare_photo_draft_changed
+                } else {
+                    R.string.compare_photo_stopping
+                }
+            )
+        photoImportStatus.visibility = View.VISIBLE
+    }
+
+    @StringRes
+    private fun photoStopStatusRes(reason: CompareHerePhotoStopReason): Int =
+        when (reason) {
+            CompareHerePhotoStopReason.USER_CANCELLED ->
+                R.string.compare_photo_cancelled_by_user
+            CompareHerePhotoStopReason.DRAFT_CHANGED ->
+                R.string.compare_photo_draft_changed
+        }
+
+    private fun showPhotoRetryIfEligible(outcome: CompareHerePhotoRetryOutcome?) {
+        if (
+            !CompareHerePhotoRetryPolicy.shouldOfferRetry(
+                captureKind = lastPhotoCaptureKind,
+                outcome = outcome
+            )
+        ) {
+            hidePhotoRetry()
+            return
+        }
+
+        retryPhotoButton.visibility = View.VISIBLE
+        retryPhotoButton.isEnabled = !photoImportClosed
+    }
+
+    private fun hidePhotoRetry() {
+        if (!::retryPhotoButton.isInitialized) return
+        retryPhotoButton.visibility = View.GONE
+        retryPhotoButton.isEnabled = false
+    }
+
+    private fun syncPhotoActionButtons() {
+        val enabled =
+            !photoImportInFlight &&
+                photoRecognitionState.activeRequestId == null &&
+                !barcodeLookupInFlight &&
+                photoReviewDialog == null &&
+                !photoImportClosed &&
+                !barcodeLookupClosed
+        if (::importPhotoButton.isInitialized) {
+            importPhotoButton.isEnabled = enabled
+        }
+        if (::capturePhotoButton.isInitialized) {
+            capturePhotoButton.isEnabled = enabled
+        }
+        if (::cancelPhotoButton.isInitialized) {
+            cancelPhotoButton.visibility =
+                if (photoImportInFlight && !photoImportClosed && photoReviewDialog == null) {
+                    View.VISIBLE
+                } else {
+                    View.GONE
+                }
+            cancelPhotoButton.isEnabled = photoImportInFlight && !photoImportClosed
+        }
+        if (::compareBarcodeButton.isInitialized) {
+            compareBarcodeButton.isEnabled = enabled
+        }
+        if (::retryPhotoButton.isInitialized) {
+            retryPhotoButton.isEnabled =
+                retryPhotoButton.visibility == View.VISIBLE && enabled
+        }
+    }
+
+    private fun cleanupCameraCaptureFile() {
+        cameraCaptureFile?.let { deleteCameraCaptureFile(it) }
+        cameraCaptureFile = null
+        cameraCaptureUri = null
+    }
+
+    private fun deleteCameraCaptureFile(file: File) {
+        runCatching {
+            if (file.exists()) {
+                file.delete()
+            }
+        }
+        if (cameraCaptureFile == file) {
+            cameraCaptureFile = null
+            cameraCaptureUri = null
+        }
+    }
+
+    /** Decode an image to a bounded bitmap before handing it to on-device OCR. */
+    private fun decodeBoundedPhoto(uri: Uri): Bitmap? {
+        return try {
+            val bounds = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+            }
+            contentResolver.openInputStream(uri).use { stream ->
+                if (stream == null) return null
+                BitmapFactory.decodeStream(stream, null, bounds)
+            }
+
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+                return null
+            }
+
+            val largestDimension = maxOf(bounds.outWidth, bounds.outHeight)
+            var sampleSize = 1
+            while (largestDimension / sampleSize > MAX_PHOTO_DIMENSION) {
+                sampleSize *= 2
+            }
+
+            val options = BitmapFactory.Options().apply {
+                inSampleSize = sampleSize
+                inPreferredConfig = Bitmap.Config.ARGB_8888
+            }
+            contentResolver.openInputStream(uri).use { stream ->
+                if (stream == null) return null
+                BitmapFactory.decodeStream(stream, null, options)
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun renderProductInputs(blocks: List<String>) {
+        restoringDraft = true
+
+        productInputs.clear()
+        productInputRows.clear()
+        productInputsContainer.removeAllViews()
+
+        val initialBlocks =
+            CompareHereManualProductDraft.prepareForEditor(blocks)
+                .toMutableList()
+
+        while (initialBlocks.size < 2) {
+            initialBlocks += CompareHereManualEditorBlock(text = "")
+        }
+
+        initialBlocks.forEach { block ->
+            addProductInput(
+                initialText = block.text,
+                initialIssue = block.issue
+            )
+        }
+
+        shareComparisonButton.setOnClickListener {
+            shareComparisonResult()
+        }
+
+        restoringDraft = false
+        updateAddProductButton()
+    }
+
+    private fun addProductInput(
+        initialText: String,
+        initialIssue: CompareHereManualEditorBlockIssue? = null
+    ) {
+        val index = productInputs.size + 1
+
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(
+                dp(16),
+                dp(14),
+                dp(16),
+                dp(14)
+            )
+
+            layoutParams =
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = dp(12)
+                }
+
+            background = GradientDrawable().apply {
+                cornerRadius = dp(14).toFloat()
+                setColor(ValuePilotPalette.color("#F9FAFB"))
+                setStroke(
+                    dp(1),
+                    ValuePilotPalette.color("#D1D5DB")
+                )
+            }
+        }
+
+        val label = TextView(this).apply {
+            text = getString(
+                R.string.product_number,
+                index
+            )
+            setTextSize(
+                TypedValue.COMPLEX_UNIT_SP,
+                14f
+            )
+            setTextColor(ValuePilotPalette.color("#374151"))
+            setTypeface(
+                Typeface.DEFAULT,
+                Typeface.BOLD
+            )
+        }
+
+        val input = EditText(this).apply {
+            // Give each runtime-created editor a stable-for-this-view ID so its visible
+            // "Product N" label can be associated with it for TalkBack without persisting or
+            // exposing any product identity.
+            id = View.generateViewId()
+            hint = getString(R.string.product_input_hint)
+            gravity = Gravity.TOP or Gravity.START
+            minLines = 4
+            maxLines = 9
+            setHorizontallyScrolling(false)
+
+            inputType =
+                InputType.TYPE_CLASS_TEXT or
+                    InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
+                    InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            filters =
+                arrayOf(
+                    InputFilter.LengthFilter(
+                        CompareHereManualProductDraft.MAX_BLOCK_CHARS
+                    )
+                )
+
+            setTextSize(
+                TypedValue.COMPLEX_UNIT_SP,
+                16f
+            )
+            setTextColor(ValuePilotPalette.color("#111827"))
+            setHintTextColor(ValuePilotPalette.color("#9CA3AF"))
+            setPadding(
+                0,
+                dp(8),
+                0,
+                0
+            )
+            background = null
+            setText(initialText)
+        }
+        // Keep the multiline editor, but make the keyboard's Done action follow the same
+        // visible comparison gate. While another product box exists it advances there; on the
+        // final box it runs the exact comparison only when the existing button is enabled.
+        // This is navigation only: parsing, confirmation, evidence checks and ranking remain in
+        // the existing route coordinator.
+        input.imeOptions = EditorInfo.IME_ACTION_DONE
+        input.setOnEditorActionListener { _, actionId, _ ->
+            if (
+                actionId != EditorInfo.IME_ACTION_DONE &&
+                    actionId != EditorInfo.IME_ACTION_NEXT
+            ) {
+                return@setOnEditorActionListener false
+            }
+
+            val currentIndex = productInputs.indexOf(input)
+            if (currentIndex < 0) {
+                return@setOnEditorActionListener false
+            }
+
+            val nextIndex = currentIndex + 1
+            if (nextIndex < productInputs.size) {
+                focusProductInput(nextIndex)
+                true
+            } else if (compareButton.isEnabled) {
+                runComparison(
+                    blocks = currentProductBlocks(),
+                    observedAtEpochMillis = System.currentTimeMillis(),
+                    priceSelection = activityState.priceSelection,
+                    persist = true
+                )
+                true
+            } else {
+                false
+            }
+        }
+        label.labelFor = input.id
+
+        val removeButton = ValuePilotProgrammaticButton.outlined(
+            context = this,
+            compact = true,
+            destructive = true
+        ).apply {
+            text = getString(R.string.remove_product)
+            contentDescription = getString(R.string.remove_product_description, index)
+            isAllCaps = false
+            setOnClickListener { removeProductInput(input) }
+        }
+
+        input.addTextChangedListener(
+            object : TextWatcher {
+                override fun beforeTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    count: Int,
+                    after: Int
+                ) = Unit
+
+                override fun onTextChanged(
+                    s: CharSequence?,
+                    start: Int,
+                    before: Int,
+                    count: Int
+                ) = Unit
+
+                override fun afterTextChanged(s: Editable?) {
+                    if (restoringDraft) {
+                        return
+                    }
+
+                    input.error = null
+                    onProductsChanged()
+                }
+            }
+        )
+
+        if (initialIssue == CompareHereManualEditorBlockIssue.TOO_LONG) {
+            input.error = getString(R.string.product_input_too_long)
+        }
+
+        card.addView(label)
+        card.addView(input)
+        card.addView(removeButton)
+
+        productInputs += input
+        productInputRows += ProductInputRow(card, label, removeButton)
+        productInputsContainer.addView(card)
+
+        // The visible keyboard action mirrors the already-existing navigation
+        // contract: intermediate product editors advance to the next block,
+        // while the final block submits through the same enabled comparison
+        // gate. Re-sync after every add so the previous final editor does not
+        // keep advertising Done once another block exists.
+        syncProductEditorImeActions()
+        updateAddProductButton()
+        updateRemoveProductButtons()
+    }
+
+    private fun removeProductInput(input: EditText) {
+        val index = productInputs.indexOf(input)
+        if (index < 0) return
+
+        val nextBlocks =
+            CompareHereManualProductDraft.removeAt(
+                blocks = currentProductBlocks(),
+                index = index
+            )
+
+        if (productInputs.size <= 2) {
+            input.setText(nextBlocks[index])
+            return
+        }
+
+        productInputs.removeAt(index)
+        val row = productInputRows.removeAt(index)
+        productInputsContainer.removeView(row.card)
+        refreshProductInputRows()
+        updateAddProductButton()
+        onProductsChanged()
+    }
+
+    private fun refreshProductInputRows() {
+        productInputRows.forEachIndexed { index, row ->
+            row.label.text = getString(R.string.product_number, index + 1)
+            row.removeButton.contentDescription =
+                getString(R.string.remove_product_description, index + 1)
+        }
+        syncProductEditorImeActions()
+        updateRemoveProductButtons()
+    }
+
+    /**
+     * Keeps the software-keyboard affordance aligned with the existing
+     * editor-action behavior without moving any comparison authority into the
+     * dynamically-created views.
+     */
+    private fun syncProductEditorImeActions() {
+        val finalIndex = productInputs.lastIndex
+        productInputs.forEachIndexed { index, editor ->
+            editor.imeOptions =
+                if (index == finalIndex) {
+                    EditorInfo.IME_ACTION_DONE
+                } else {
+                    EditorInfo.IME_ACTION_NEXT
+                }
+        }
+    }
+
+    private fun updateRemoveProductButtons() {
+        val visible = if (productInputs.size > 2) View.VISIBLE else View.GONE
+        productInputRows.forEach { row -> row.removeButton.visibility = visible }
+    }
+
+    private fun currentProductBlocks(): List<String> =
+        productInputs.map {
+            it.text?.toString().orEmpty()
+        }
+
+    private fun runComparison(
+        blocks: List<String>,
+        observedAtEpochMillis: Long,
+        priceSelection: CompareHerePriceSelection = activityState.priceSelection,
+        persist: Boolean
+    ) {
+        // The result replaces the editor's primary task. Close the IME before the projected
+        // answer is rendered so it cannot cover the exact comparison or its memory outcome.
+        hideKeyboard()
+        val evaluation =
+            CompareHereManualRouteCoordinator.evaluateBlocks(
+                rawBlocks = blocks,
+                observedAtEpochMillis = observedAtEpochMillis,
+                userConfirmedLikeForLike = activityState.likeForLikeConfirmed,
+                priceSelection = priceSelection
+            )
+
+        activityState =
+            CompareHereManualActivitySessionReducer.comparisonAttempted(
+                state = activityState,
+                observedAtEpochMillis = observedAtEpochMillis
+            )
+
+        comparisonPresenter.render(evaluation.state)
+        renderShareCard(evaluation.state.shareCard)
+
+        if (persist) {
+            updatePrivateMemoryStatus(evaluation.privateMemoryCapture)
+            saveDraftToPreferences()
+        }
+    }
+
+    private fun hideKeyboard() {
+        val manager = getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager
+        val focusedView = currentFocus ?: productInputs.firstOrNull()
+        val windowToken = focusedView?.windowToken ?: window.decorView.windowToken
+        if (windowToken != null) {
+            manager?.hideSoftInputFromWindow(windowToken, 0)
+        }
+        focusedView?.clearFocus()
+    }
+
+    private fun onProductsChanged() {
+        cancelPhotoRequestForDraftChange()
+        clearBarcodeStatus()
+        activityState =
+            CompareHereManualActivitySessionReducer.productsChanged(activityState)
+        syncLikeForLikeConfirmation()
+        renderIdleScreen()
+    }
+
+    private fun syncLikeForLikeConfirmation() {
+        if (likeForLikeConfirmation.isChecked == activityState.likeForLikeConfirmed) {
+            return
+        }
+
+        restoringDraft = true
+        likeForLikeConfirmation.isChecked = activityState.likeForLikeConfirmed
+        restoringDraft = false
+    }
+
+    private fun syncPriceSelection() {
+        val selectedId =
+            if (activityState.priceSelection == CompareHerePriceSelection.MEMBER) {
+                R.id.priceSelectionMember
+            } else {
+                R.id.priceSelectionCurrent
+            }
+
+        if (priceSelectionGroup.checkedRadioButtonId == selectedId) {
+            return
+        }
+
+        restoringDraft = true
+        priceSelectionGroup.check(selectedId)
+        restoringDraft = false
+    }
+
+    private fun renderIdleScreen() {
+        hidePrivateMemoryStatus()
+        renderShareCard(null)
+        val actionState = currentDraftActionState()
+        compareButton.isEnabled = actionState.compareEnabled
+        val content =
+            when (actionState.readiness) {
+                CompareHereManualDraftReadiness.ADD_PRODUCTS ->
+                    CompareHereManualScreenContent.Message(
+                        title = getString(R.string.compare_add_products_title),
+                        guidance = getString(R.string.compare_add_products_body)
+                    )
+
+                CompareHereManualDraftReadiness.CONFIRM_LIKE_FOR_LIKE ->
+                    CompareHereManualScreenContent.Message(
+                        title = getString(R.string.compare_confirmation_needed_title),
+                        guidance = getString(R.string.compare_confirmation_needed_body)
+                    )
+
+                CompareHereManualDraftReadiness.READY ->
+                    CompareHereManualScreenContent.Message(
+                        title = getString(R.string.compare_ready_title),
+                        guidance = getString(R.string.compare_ready_body)
+                    )
+            }
+
+        comparisonScreen.render(content)
+    }
+
+    private fun currentDraftActionState(): CompareHereManualDraftActionState =
+        CompareHereManualDraftActionEvaluator.evaluate(
+            rawBlocks = currentProductBlocks(),
+            likeForLikeConfirmed = activityState.likeForLikeConfirmed
+        )
+
+    /**
+     * Shows sharing only for the immutable, fully labelled READY result returned by the route.
+     * The preview and outgoing text are generated by [CompareHereShareCardProjector] and contain
+     * no product names, private history, receipt, location or account data.
+     */
+    private fun renderShareCard(card: CompareHereShareCard?) {
+        shareCard = card
+        shareComparisonButton.visibility = if (card == null) View.GONE else View.VISIBLE
+        shareComparisonButton.isEnabled = card != null
+        shareComparisonButton.contentDescription =
+            if (card == null) {
+                ""
+            } else {
+                getString(R.string.compare_share_result_description)
+            }
+        if (card == null) {
+            shareComparisonStatus.text = ""
+            shareComparisonStatus.visibility = View.GONE
+        }
+    }
+
+    private fun shareComparisonResult() {
+        val card = shareCard ?: return
+        val preview =
+            card.preview + "\n\n" + getString(R.string.compare_share_preview_body)
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(R.string.compare_share_preview_title)
+                .setMessage(preview)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.compare_share_send, null)
+                .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val sendIntent =
+                    Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_SUBJECT, card.title)
+                        putExtra(Intent.EXTRA_TEXT, card.text)
+                    }
+                try {
+                    startActivity(
+                        Intent.createChooser(
+                            sendIntent,
+                            getString(R.string.compare_share_result)
+                        )
+                    )
+                    dialog.dismiss()
+                } catch (_: ActivityNotFoundException) {
+                    shareComparisonStatus.text =
+                        getString(R.string.compare_share_unavailable)
+                    shareComparisonStatus.visibility = View.VISIBLE
+                    dialog.dismiss()
+                }
+            }
+        }
+        dialog.show()
+    }
+
+    private fun clearComparison() {
+        cancelPhotoRequestForDraftChange()
+        clearBarcodeStatus()
+        hidePhotoRetry()
+        hidePrivateMemoryStatus()
+        activityState = CompareHereManualActivitySessionReducer.clear()
+        syncLikeForLikeConfirmation()
+        syncPriceSelection()
+
+        getSharedPreferences(
+            PREFS_NAME,
+            MODE_PRIVATE
+        )
+            .edit()
+            .clear()
+            .apply()
+
+        renderProductInputs(
+            listOf("", "")
+        )
+
+        renderIdleScreen()
+    }
+
+    /**
+     * Applies one intentionally shared text value to the earliest empty Compare Here slot, or
+     * appends one bounded slot when the visible entries have capacity. The source remains raw and
+     * reviewable; this never replaces an existing entry or parses it in the lifecycle owner.
+     * Instance-state restoration wins so rotation cannot apply the share twice.
+     */
+    private fun applySharedTextIfPresent(
+        savedInstanceState: Bundle?
+    ): CompareHereSharedTextDraftIssue? {
+        if (savedInstanceState != null) return null
+
+        val rawText =
+            runCatching {
+                intent?.getStringExtra(EXTRA_SHARED_TEXT)
+            }.getOrNull()
+                ?: return null
+        val input = ShareToValuePilotInput.validate(rawText)
+        val sharedText =
+            input.text
+                ?: return when (input.issue) {
+                    ShareToValuePilotInputIssue.EMPTY ->
+                        CompareHereSharedTextDraftIssue.BLANK_TEXT
+                    ShareToValuePilotInputIssue.TOO_LONG ->
+                        CompareHereSharedTextDraftIssue.TEXT_TOO_LONG
+                    null -> null
+                }
+
+        val result =
+            CompareHereSharedTextDraft.apply(
+                existingBlocks = currentProductBlocks(),
+                sharedText = sharedText
+            )
+        if (!result.added) return result.issue
+
+        restoringDraft = true
+        renderProductInputs(result.blocks)
+        restoringDraft = false
+        onProductsChanged()
+        // Shared text is an intentional handoff into the same editable, untrusted draft as
+        // barcode/OCR suggestions. Focus its populated block and reopen the keyboard so the
+        // shopper can review it and continue entering exact package and price facts immediately.
+        focusProductInput(result.addedIndex)
+        return null
+    }
+
+    /**
+     * Starts the existing local OCR pipeline for an explicitly shared content URI. The URI is
+     * only a transient input handoff; no image is persisted, uploaded, parsed into exact facts or
+     * accepted without the same bounded review dialog used by Import photo.
+     */
+    private fun applySharedImageIfPresent(savedInstanceState: Bundle?): Boolean {
+        val rawUri =
+            savedInstanceState?.getString(STATE_SHARED_IMAGE_URI)
+                ?: if (savedInstanceState == null) {
+                    runCatching {
+                        intent?.getStringExtra(EXTRA_SHARED_IMAGE_URI)
+                    }.getOrNull()
+                } else {
+                    null
+                }
+                ?: return false
+        val input = ShareToValuePilotImageInput.validate(rawUri)
+        val uri = input.uri ?: return true
+
+        beginSharedPhotoImport(uri)
+        return false
+    }
+
+    private fun beginSharedPhotoImport(rawUri: String) {
+        if (
+            photoImportClosed ||
+                photoImportInFlight ||
+                barcodeLookupInFlight ||
+                photoReviewDialog != null
+        ) {
+            return
+        }
+
+        val uri = runCatching { Uri.parse(rawUri) }.getOrNull()
+        if (uri == null || ShareToValuePilotImageInput.schemeOf(rawUri) != "content") {
+            photoImportStatus.text = getString(R.string.compare_shared_image_invalid)
+            photoImportStatus.visibility = View.VISIBLE
+            return
+        }
+
+        lastPhotoCaptureKind = CompareHerePhotoCaptureKind.IMPORT
+        pendingSharedImageUri = rawUri
+        hidePhotoRetry()
+        beginPhotoRequest()
+        syncPhotoActionButtons()
+        photoImportStatus.text = getString(R.string.compare_photo_processing)
+        onPhotoSelected(uri, cleanupFile = null)
+    }
+
+    private fun showSharedTextImportFailure(
+        issue: CompareHereSharedTextDraftIssue
+    ) {
+        val message =
+            when (issue) {
+                CompareHereSharedTextDraftIssue.BLANK_TEXT ->
+                    getString(R.string.compare_shared_text_empty_body)
+                CompareHereSharedTextDraftIssue.TEXT_TOO_LONG ->
+                    getString(
+                        R.string.share_to_valuepilot_too_large_guidance,
+                        ShareToValuePilotInput.MAX_CHARS
+                    )
+                CompareHereSharedTextDraftIssue.NO_EMPTY_SLOT ->
+                    getString(R.string.compare_shared_text_no_empty_slot_body)
+            }
+
+        sharedTextDialog?.dismiss()
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(
+                    when (issue) {
+                        CompareHereSharedTextDraftIssue.BLANK_TEXT ->
+                            R.string.share_to_valuepilot_empty_title
+                        CompareHereSharedTextDraftIssue.TEXT_TOO_LONG ->
+                            R.string.share_to_valuepilot_too_large_title
+                        CompareHereSharedTextDraftIssue.NO_EMPTY_SLOT ->
+                            R.string.compare_shared_text_no_empty_slot_title
+                    }
+                )
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok, null)
+                .create()
+        dialog.setOnDismissListener {
+            if (sharedTextDialog === dialog) sharedTextDialog = null
+        }
+        sharedTextDialog = dialog
+        dialog.show()
+    }
+
+    private fun updatePrivateMemoryStatus(
+        capture: CompareHerePrivatePriceMemoryCapture?
+    ) {
+        if (capture == null) {
+            privateMemoryStateWhenStatusRendered = null
+            hidePrivateMemoryStatus()
+            return
+        }
+
+        val loaded = privateMemoryStore.load()
+        val insights =
+            if (loaded.accepted) {
+                capture.entries
+                    .map { entry ->
+                        CompareHerePriceMemoryEvaluator.assess(
+                            current = entry,
+                            history = requireNotNull(loaded.state)
+                        )
+                    }
+                    .filterNot {
+                        it.assessment == CompareHerePriceMemoryAssessment.NO_MATCHING_HISTORY
+                    }
+                    .sortedBy { it.displayName.lowercase() }
+                    .take(3)
+            } else {
+                emptyList()
+            }
+
+        val result = privateMemoryStore.append(capture)
+        if (result.accepted) {
+            privateMemoryStateWhenStatusRendered = requireNotNull(result.state)
+            val savedText = getString(R.string.compare_memory_saved, capture.entries.size)
+            val summaries =
+                capture.entries
+                    .mapNotNull { entry ->
+                        result.state?.let { state ->
+                            CompareHerePriceMemoryHistory.summarize(
+                                current = entry,
+                                state = state
+                            )
+                        }
+                    }
+                    .sortedBy { it.displayName.lowercase() }
+                    .take(3)
+            val insightText =
+                summaries
+                    .map { summary ->
+                        val insight = insights.firstOrNull { it.displayName == summary.displayName }
+                        buildString {
+                            append(summary.displayName)
+                            insight?.let {
+                                append(": ")
+                                append(CompareHerePriceMemoryInsightPresenter.describe(it))
+                            }
+                            append(if (insight == null) ": " else " ")
+                            append(CompareHerePriceMemoryInsightPresenter.describeHistory(summary))
+                        }
+                    }
+                    .joinToString(separator = "\n")
+            privateMemoryStatus.text =
+                if (insightText.isBlank()) savedText else "$savedText\n$insightText"
+            privateMemoryStatus.setTextColor(
+                if (
+                    insights.any {
+                        it.assessment == CompareHerePriceMemoryAssessment.ABOVE_PERSONAL_RANGE ||
+                            it.assessment == CompareHerePriceMemoryAssessment.HIGHER_THAN_LAST
+                    }
+                ) {
+                    ValuePilotPalette.color("#92400E")
+                } else {
+                    ValuePilotPalette.color("#047857")
+                }
+            )
+            privateMemoryStatus.visibility = View.VISIBLE
+            clearPrivateMemoryButton.visibility = View.VISIBLE
+        } else {
+            privateMemoryStatus.text = getString(R.string.compare_memory_error)
+            privateMemoryStatus.setTextColor(ValuePilotPalette.color("#92400E"))
+            privateMemoryStatus.visibility = View.VISIBLE
+            clearPrivateMemoryButton.visibility = View.VISIBLE
+        }
+    }
+
+    private fun hidePrivateMemoryStatus() {
+        if (!::privateMemoryStatus.isInitialized) return
+        privateMemoryStatus.text = ""
+        privateMemoryStatus.visibility = View.GONE
+        if (::clearPrivateMemoryButton.isInitialized) {
+            clearPrivateMemoryButton.visibility = View.GONE
+        }
+    }
+
+    private fun updateAddProductButton() {
+        if (::addProductButton.isInitialized) {
+            addProductButton.isEnabled =
+                productInputs.size < CompareHereManualInputAdapter.MAX_OBSERVATIONS
+        }
+    }
+
+    private fun saveDraftToPreferences() {
+        val blocks = currentProductBlocks()
+
+        val prefs = getSharedPreferences(
+            PREFS_NAME,
+            MODE_PRIVATE
+        )
+
+        if (
+            blocks.all { it.isBlank() } &&
+            !activityState.comparisonWasRun
+        ) {
+            prefs.edit()
+                .clear()
+                .apply()
+            return
+        }
+
+        val editor =
+            prefs.edit()
+                .clear()
+                .putInt(
+                    PREF_COUNT,
+                    blocks.size
+                )
+                .putBoolean(
+                    PREF_COMPARED,
+                    activityState.comparisonWasRun
+                )
+                .putLong(
+                    PREF_OBSERVED_AT,
+                    activityState.observedAtEpochMillis
+                )
+                .putBoolean(
+                    PREF_LIKE_FOR_LIKE_CONFIRMED,
+                    activityState.likeForLikeConfirmed
+                )
+                .putString(
+                    PREF_PRICE_SELECTION,
+                    CompareHerePriceSelectionPersistence.encode(activityState.priceSelection)
+                )
+
+        blocks.forEachIndexed { index, value ->
+            editor.putString(
+                "$PREF_BLOCK_PREFIX$index",
+                value
+            )
+        }
+
+        editor.apply()
+    }
+
+    private fun restoreDraft(
+        savedInstanceState: Bundle?
+    ): Draft {
+        if (
+            savedInstanceState != null &&
+            savedInstanceState.containsKey(STATE_BLOCKS)
+        ) {
+            return Draft(
+                blocks =
+                    savedInstanceState
+                        .getStringArrayList(STATE_BLOCKS)
+                        ?.toList()
+                        .orEmpty(),
+                compared =
+                    savedInstanceState.getBoolean(
+                        STATE_COMPARED,
+                        false
+                    ),
+                observedAtEpochMillis =
+                    savedInstanceState.getLong(
+                        STATE_OBSERVED_AT,
+                        0L
+                    ),
+                likeForLikeConfirmed =
+                    savedInstanceState.getBoolean(
+                        STATE_LIKE_FOR_LIKE_CONFIRMED,
+                        false
+                    ),
+                priceSelection =
+                    CompareHerePriceSelectionPersistence.decode(
+                        savedInstanceState.getString(STATE_PRICE_SELECTION)
+                    )
+            )
+        }
+
+        val prefs = getSharedPreferences(
+            PREFS_NAME,
+            MODE_PRIVATE
+        )
+
+        val count =
+            prefs
+                .getInt(PREF_COUNT, 0)
+                .coerceIn(
+                    0,
+                    CompareHereManualInputAdapter.MAX_OBSERVATIONS
+                )
+
+        if (count == 0) {
+            return Draft(
+                blocks = listOf("", ""),
+                compared = false,
+                observedAtEpochMillis = 0L,
+                likeForLikeConfirmed = false,
+                priceSelection = CompareHerePriceSelection.CURRENT
+            )
+        }
+
+        val blocks =
+            (0 until count).map { index ->
+                prefs.getString(
+                    "$PREF_BLOCK_PREFIX$index",
+                    ""
+                ).orEmpty()
+            }
+
+        return Draft(
+            blocks = blocks,
+            compared = prefs.getBoolean(
+                PREF_COMPARED,
+                false
+            ),
+            observedAtEpochMillis =
+                prefs.getLong(
+                    PREF_OBSERVED_AT,
+                    0L
+                ),
+            likeForLikeConfirmed =
+                prefs.getBoolean(
+                    PREF_LIKE_FOR_LIKE_CONFIRMED,
+                    false
+                ),
+            priceSelection =
+                CompareHerePriceSelectionPersistence.decode(
+                    prefs.getString(PREF_PRICE_SELECTION, null)
+                )
+        )
+    }
+
+    private fun renderScannerStatus() {
+        val enabled = isServiceEnabled()
+
+        scannerStatus.text =
+            if (enabled) {
+                getString(R.string.scanner_on)
+            } else {
+                getString(R.string.scanner_off)
+            }
+
+        scannerStatus.setTextColor(
+            if (enabled) {
+                ValuePilotPalette.color("#047857")
+            } else {
+                ValuePilotPalette.color("#6B7280")
+            }
+        )
+    }
+
+    private fun showAccessibilityDisclosure() {
+        AlertDialog.Builder(this)
+            .setTitle(
+                R.string.accessibility_disclosure_title
+            )
+            .setMessage(
+                R.string.accessibility_disclosure_body
+            )
+            .setNegativeButton(
+                R.string.cancel,
+                null
+            )
+            .setPositiveButton(
+                R.string.continue_label
+            ) { _, _ ->
+                openAccessibilitySettings()
+            }
+            .show()
+    }
+
+    private fun openAccessibilitySettings() {
+        startActivity(
+            Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+        )
+    }
+
+    private fun isServiceEnabled(): Boolean {
+        val expected =
+            "$packageName/${ValueAccessibilityService::class.java.name}"
+
+        val enabledServices =
+            Settings.Secure.getString(
+                contentResolver,
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            ) ?: return false
+
+        val splitter =
+            TextUtils.SimpleStringSplitter(':')
+                .apply {
+                    setString(enabledServices)
+                }
+
+        return splitter.any {
+            it.equals(expected, true)
+        }
+    }
+
+    private fun installSystemBarInsets() {
+        val root =
+            findViewById<View>(
+                R.id.comparisonRoot
+            )
+
+        ViewCompat.setOnApplyWindowInsetsListener(
+            root
+        ) { view, insets ->
+            val bars =
+                insets.getInsets(
+                    WindowInsetsCompat.Type.systemBars()
+                )
+
+            view.setPadding(
+                bars.left,
+                bars.top,
+                bars.right,
+                bars.bottom
+            )
+
+            insets
+        }
+
+        ViewCompat.requestApplyInsets(
+            root
+        )
+    }
+
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density)
+            .toInt()
+
+    private data class Draft(
+        val blocks: List<String>,
+        val compared: Boolean,
+        val observedAtEpochMillis: Long,
+        val likeForLikeConfirmed: Boolean,
+        val priceSelection: CompareHerePriceSelection
+    )
+
+    private data class ProductInputRow(
+        val card: View,
+        val label: TextView,
+        val removeButton: Button
+    )
+
+    companion object {
+        const val EXTRA_SHARED_TEXT =
+            "com.valuepilot.app.extra.SHARED_TEXT"
+
+        const val EXTRA_SHARED_IMAGE_URI =
+            "com.valuepilot.app.extra.SHARED_IMAGE_URI"
+
+        private const val PREFS_NAME =
+            "standalone_comparison_draft"
+
+        private const val PREF_COUNT =
+            "product_count"
+
+        private const val PREF_COMPARED =
+            "comparison_was_run"
+
+        private const val PREF_OBSERVED_AT =
+            "observed_at"
+
+        private const val PREF_LIKE_FOR_LIKE_CONFIRMED =
+            "like_for_like_confirmed"
+
+        private const val PREF_PRICE_SELECTION =
+            "price_selection"
+
+        private const val PREF_BLOCK_PREFIX =
+            "product_"
+
+        private const val MAX_PHOTO_DIMENSION =
+            2_048
+
+        private const val CAMERA_CACHE_DIRECTORY =
+            "camera"
+
+        private const val CAMERA_FILE_PREFIX =
+            "valuepilot-price-"
+
+        private const val CAMERA_FILE_SUFFIX =
+            ".jpg"
+
+        private const val OFFLINE_CATALOG_MAX_AGE_MILLIS =
+            8L * 24L * 60L * 60L * 1_000L
+
+        private const val STATE_BLOCKS =
+            "standalone.blocks"
+
+        private const val STATE_COMPARED =
+            "standalone.compared"
+
+        private const val STATE_OBSERVED_AT =
+            "standalone.observed_at"
+
+        private const val STATE_LIKE_FOR_LIKE_CONFIRMED =
+            "standalone.like_for_like_confirmed"
+
+        private const val STATE_PRICE_SELECTION =
+            "standalone.price_selection"
+
+        private const val STATE_SHARED_IMAGE_URI =
+            "standalone.shared_image_uri"
+    }
+
+    /** Adds the URI grants that the stock TakePicture contract intentionally leaves to callers. */
+    private class CameraCaptureContract : ActivityResultContract<Uri, Boolean>() {
+        private val delegate = ActivityResultContracts.TakePicture()
+
+        override fun createIntent(context: Context, input: Uri): Intent =
+            delegate.createIntent(context, input).apply {
+                addFlags(
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            }
+
+        override fun parseResult(resultCode: Int, intent: Intent?): Boolean =
+            delegate.parseResult(resultCode, intent)
+    }
+}

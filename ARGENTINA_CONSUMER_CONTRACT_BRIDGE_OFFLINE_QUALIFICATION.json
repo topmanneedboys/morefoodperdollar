@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "valuepilot-argentina-consumer-contract-bridge-qualification-v1",
+  "status": "QUALIFIED_FOR_OFFLINE_CONSUMER_CONTRACT_ONLY",
+  "milestone": "M12.0",
+  "apiContractVersion": "valuepilot-argentina-backend-http-v1",
+  "transport": "IN_MEMORY_ONLY",
+  "androidNetworkingAuthorized": false,
+  "productionAndroidUiAuthorized": false,
+  "permissionsForbidden": [
+    "android.permission.INTERNET",
+    "android.permission.ACCESS_NETWORK_STATE"
+  ],
+  "provider": "ARGENTINA_SEPA_PRECIOS_CLAROS",
+  "releaseDate": "2026-09-06",
+  "releaseId": "sepa-2026-09-06",
+  "mapper": {
+    "sharedCorePlannerRerun": false,
+    "availability": "UNKNOWN",
+    "distance": "STRAIGHT_LINE_HAVERSINE_ONLY",
+    "promotions": "UNKNOWN_ELIGIBILITY_NOT_INCLUDED_IN_BASE_TOTAL",
+    "twoStorePresentation": "EXPLICITLY_UNAVAILABLE_UNTIL_DEDICATED_SURFACE"
+  },
+  "verification": {
+    "candidateSha": "48b1d747125d656b3cf0ec77603820c1390e7aae",
+    "local": {
+      "sharedCoreTests": 405,
+      "androidUnitTests": 1630,
+      "backendTests": 11,
+      "toolingTests": 197,
+      "browserTests": 30,
+      "failures": 0,
+      "skips": 0,
+      "androidLint": "PASS",
+      "debugAssembly": "PASS",
+      "releaseAssembly": "PASS",
+      "apkPrivacy": "PASS_NO_INTERNET_OR_ACCESS_NETWORK_STATE",
+      "apkSingleSigner": "PASS"
+    },
+    "exactHeadCi": {
+      "runId": 35053280023,
+      "url": "https://github.com/topmanneedboys/morefoodperdollar/actions/runs/35053280023",
+      "androidJobId": 104658056547,
+      "browserJobId": 104658056705,
+      "releaseBundleJobId": 104659354704,
+      "conclusion": "success"
+    }
+  }
+}

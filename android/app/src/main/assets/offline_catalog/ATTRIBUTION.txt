@@ -1,0 +1,14 @@
+ValuePilot offline identity catalog
+
+This catalog contains a bounded selection of product identity and display
+metadata derived from Open Food Facts. Open Food Facts data is provided by its
+community and is available under the Open Database License (ODbL-1.0) and the
+Database Contents License. See:
+
+https://openfoodfacts.github.io/openfoodfacts-server/api/
+https://opendatacommons.org/licenses/odbl/1-0/
+
+This asset is identity-only. It does not assert a retailer, store, price,
+promotion, package quantity, stock state, availability, or freshness. The
+Canada-labelled selection is a discovery baseline for the GTA and Metro
+Vancouver surfaces, not proof that a product is stocked in either region.

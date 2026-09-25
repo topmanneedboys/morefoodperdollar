@@ -1,0 +1,6 @@
+Store directory source: OpenStreetMap contributors.
+License: Open Database License (ODbL-1.0).
+This artifact contains source-listed physical locations only; it does not assert price, stock, availability, or current retailer status.
+Source snapshot: overpass-gta-gva-20260904 observed at 1788529603000 epoch milliseconds.
+https://www.openstreetmap.org/copyright
+https://opendatacommons.org/licenses/odbl/1-0/

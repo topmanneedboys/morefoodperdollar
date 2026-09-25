@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "status": "ARGENTINA_LIVE_SEARCH_M12_4B_REPAIR_BUILD_READY_NOT_DEVICE_QUALIFIED",
+  "updated": "2026-09-24",
+  "repository": "topmanneedboys/morefoodperdollar",
+  "branch": "fix/argentina-live-search-response-contract",
+  "implementationCommit": "e821b8099fea9d1288065b5a7f8cfc7f83f2763e",
+  "android": {
+    "applicationId": "com.valuepilot.app",
+    "versionCode": 10107,
+    "versionName": "101.1.6",
+    "targetSdk": 36,
+    "unsignedBundle": "android/app/build/outputs/bundle/release/app-release.aab",
+    "unsignedBundleSha256": "2454B6AC4872E10138891A7B5C95D33666D3F0FD6964AE9242F744299D3B38B9",
+    "signedBundle": "android/app/build/outputs/bundle/release/app-release-play-upload-signed-10107.aab",
+    "signedBundleSha256": "A72F1155C98D75075BE3A117FF56BE670640F1BE7C67645C2FCC0297DF265179",
+    "signedBundleBytes": 36321330,
+    "knownUploadCertificateSha256": "A0:B6:5D:8A:5A:F9:44:9E:76:6F:05:39:6F:E1:78:20:D5:2F:26:7C:E9:D5:8A:B0:C2:F6:CD:E4:DC:B8:52:DA",
+    "internetPermission": true,
+    "accessNetworkStatePermission": false,
+    "locationPermission": false,
+    "cleartextTraffic": false,
+    "productionAndroidUiAuthorized": false
+  },
+  "launchArea": {
+    "id": "ar-caba-buenos-aires",
+    "label": "Buenos Aires (CABA)",
+    "latitude": "-34.605506",
+    "longitude": "-58.442562",
+    "radiusKm": "25",
+    "regionId": "ar-caba",
+    "provider": "ARGENTINA_SEPA_PRECIOS_CLAROS",
+    "releaseDate": "2026-09-06",
+    "manifestSha256": "49c88fb9fc9b745788562bf292352649692196e3c0f68a01737ddc779850eda3",
+    "storesSha256": "de38f7c8e2715cca07a2ba734cc5c7b4d65ba7a3ed187e710c2bfb795ebf26ad"
+  },
+  "firebase": {
+    "projectId": "valuepilot-argentina",
+    "projectNumber": "17260882200",
+    "androidAppNickname": "ValuePilot Android",
+    "androidAppId": "1:17260882200:android:446eec76e5f1a175f2566d",
+    "packageName": "com.valuepilot.app",
+    "appCheckProvider": "PLAY_INTEGRITY_RELEASE_DEBUG_PROVIDER_DEBUG_ONLY"
+  },
+  "cloud": {
+    "edgeRevision": "valuepilot-argentina-consumer-edge-00004-5lg",
+    "edgeImageDigest": "sha256:315e37021aa7b1adf2f77eba88bc85f09984025ebac98e89612ff40168238581",
+    "privateRevision": "valuepilot-argentina-sa-east1-00037-nuj",
+    "privateImageDigest": "sha256:5033e5bdd315c7954c8d1f4c0c6f7f9d034a6586819294beec31c3e4eada0eae",
+    "cloudBuildId": "0f8e511d-6d24-4d4c-888a-296ccf2a5951",
+    "activeReleaseId": "argentina-sepa-2026-09-18-619498b8e3230298-routing-v1-search-v2",
+    "activeReleaseDate": "2026-09-18",
+    "officialSourceSha256": "619498b8e3230298b8a91f3df05ee7fe44e190a8f909e0e103cf43867fec73ee",
+    "officialSourceBytes": 335486139,
+    "candidateManifestSha256": "9a558cafcb5d5a162eb04330448612418f437eda7d1f5a3e5ba44e9202c415cf",
+    "searchPackObjectCount": 1163,
+    "searchPackObjectBytes": 897007419,
+    "mobileProfile": "128/32",
+    "backendProfile": "1024/32",
+    "pointerGenerations": {
+      "southamerica-east1": "1789973690114545",
+      "us-east4": "1789973692306062"
+    },
+    "freshness": "FRESH",
+    "backendCodeQualified": true,
+    "androidNetworkingAuthorized": true,
+    "productionAndroidUiAuthorized": false,
+    "edgeMaxScale": 20,
+    "privateInvokerBindingCount": 1,
+    "negativeSmoke": {
+      "missingAppCheck": 401,
+      "invalidAppCheck": 401,
+      "unknownRoute": 404,
+      "directPrivateM11Unauthenticated": 403,
+      "authenticatedPrivateStatus": 200
+    }
+  },
+  "verification": {
+    "sharedCoreTests": 405,
+    "androidUnitTests": 1681,
+    "backendTests": 110,
+    "toolingTests": 300,
+    "browserTests": 30,
+    "androidLint": "debug_and_release_green",
+    "androidBuild": "debug_release_bundle_green",
+    "deviceQualified": false,
+    "playUploaded": false,
+    "playUploadSigning": "VERIFIED_EXISTING_PROTECTED_KEY_10107",
+    "gcsImageBuild": "SUCCESS",
+    "liveBackendSmoke": "FRESH_READY_STATUS_AUTHORIZED_SEARCH_GREEN",
+    "mirrorAudit": "ZERO_MISSING_SIZE_OR_CHECKSUM_MISMATCHES"
+  },
+  "remainingGates": [
+    "upload the verified signed 10107 bundle through the protected Play process",
+    "install through Play and perform explicit CABA live Search smoke"
+  ],
+  "nextMilestoneStarted": false
+}

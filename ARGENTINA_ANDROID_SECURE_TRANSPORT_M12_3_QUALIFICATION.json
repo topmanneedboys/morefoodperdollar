@@ -1,0 +1,172 @@
+{
+  "schemaVersion": "valuepilot-argentina-android-secure-transport-qualification-v3",
+  "status": "ARGENTINA_ANDROID_SECURE_TRANSPORT_M12_3_QUALIFIED",
+  "updated": "2026-09-19",
+  "repository": "topmanneedboys/morefoodperdollar",
+  "branch": "candidate/argentina-android-consumer-bridge-m12-v2",
+  "checkpointHead": "1573a853baffa65260aa3c30b7989cae4a66dd63",
+  "codeHead": "5cf09af3a4703842978f0ee0f3c250a881f63575",
+  "firebase": {
+    "projectId": "valuepilot-argentina",
+    "projectNumber": "17260882200",
+    "androidAppId": "1:17260882200:android:446eec76e5f1a175f2566d",
+    "packageName": "com.valuepilot.app",
+    "appCheckApiEnabled": true,
+    "playIntegrityApiEnabled": true,
+    "productionProviderInstalledInReleaseSource": true,
+    "debugProviderInstalledInDebugSource": true,
+    "debugTokenCommitted": false,
+    "registeredSha256": [
+      "0f31bb4d297d70d1d0830cecd74a2e26a08dd50a3337d00b2d5e33ba23240638",
+      "744117326b67e857fd24bf4dab57103aca1a89564467555b145df3c28cbe3182"
+    ],
+    "appCheck": {
+      "registered": true,
+      "provider": "PLAY_INTEGRITY",
+      "ttlHours": 1,
+      "policy": {
+        "playRecognizedRequired": true,
+        "licensedRequired": true,
+        "minimumDeviceIntegrity": "NO_EXPLICIT_CHECK"
+      }
+    }
+  },
+  "android": {
+    "internetPermission": true,
+    "accessNetworkStatePermission": false,
+    "cleartextTraffic": false,
+    "privateM11OriginInClient": false,
+    "liveHomeSearchWiring": false,
+    "backgroundSync": false
+  },
+  "transport": {
+    "publicEdgeHost": "valuepilot-argentina-consumer-edge-m72bv57hrq-rj.a.run.app",
+    "maxRequestBytes": 16384,
+    "maxResponseBytes": 524288,
+    "connectTimeoutMillis": 5000,
+    "readTimeoutMillis": 8000,
+    "totalTimeoutMillis": 15000,
+    "retries": 0,
+    "appCheckHeader": "X-Firebase-AppCheck"
+  },
+  "verification": {
+    "focusedTransportTests": true,
+    "debugCompile": true,
+    "releaseCompile": true,
+    "physicalDeviceSmoke": true,
+    "playConsoleLinkage": true,
+    "internalReleaseActive": true,
+    "firebaseAppCheckRegistered": true,
+    "edgeNoAppCheck": {"status": 401, "body": "UNAUTHENTICATED"},
+    "edgeInvalidAppCheck": {"status": 401, "body": "UNAUTHENTICATED"},
+    "edgeUnknownRoute": {"status": 404, "body": "NOT_FOUND"},
+    "privateM11Direct": {"status": 403, "body": "Forbidden"},
+    "validPlayBackedRequest": {
+      "method": "GET",
+      "path": "/v1/status",
+      "status": 200,
+      "probeLog": "M12_3_STATUS=200",
+      "playIntegrity": {
+        "cloudProjectNumber": "17260882200",
+        "requestIntegrityTokenSucceeded": true
+      }
+    },
+    "firstColdStartObservation": {
+      "consumerEdge": {
+        "method": "GET",
+        "path": "/v1/status",
+        "status": 504,
+        "latencySeconds": 8.578306877
+      },
+      "privateM11SouthamericaEast1": {
+        "method": "GET",
+        "path": "/v1/status",
+        "status": 200,
+        "latencySeconds": 4.898859329
+      },
+      "interpretation": "Authenticated forwarding reached private M11, but the bounded edge request timed out during upstream cold start; the immediate warm retry returned 200."
+    },
+    "fullRepositoryCi": {
+      "runId": 35257997035,
+      "headSha": "1573a853baffa65260aa3c30b7989cae4a66dd63",
+      "substantiveChecks": "PASS",
+      "artifactUploads": "FAILED_GITHUB_ACTIONS_STORAGE_QUOTA"
+    }
+  },
+  "play": {
+    "app": "ValuePilot",
+    "packageName": "com.valuepilot.app",
+    "internalTrackId": "4701231628553906260",
+    "releaseName": "ValuePilot 101.1.1 M12.3 Internal",
+    "status": "QUALIFIED_INTERNAL_TEST_BUILD",
+    "versionCode": 10102,
+    "versionName": "101.1.1",
+    "minApi": 23,
+    "targetSdk": 36,
+    "optInUrl": "https://play.google.com/apps/internaltest/4701231628553906260",
+    "installationProvenance": {
+      "installerPackageName": "com.android.vending",
+      "initiatingPackageName": "com.android.vending",
+      "deviceModel": "Motorola Edge 2025",
+      "playInstalled": true
+    },
+    "historicalPreviousInternalRelease": {
+      "versionCode": 10101,
+      "versionName": "101.1.0",
+      "label": "historical pre-qualification release"
+    },
+    "uploadCertificateSha256": "A0:B6:5D:8A:5A:F9:44:9E:76:6F:05:39:6F:E1:78:20:D5:2F:26:7C:E9:D5:8A:B0:C2:F6:CD:E4:DC:B8:52:DA",
+    "appSigningCertificateSha256": "74:41:17:32:6B:67:E8:57:FD:24:BF:4D:AB:57:10:3A:CA:1A:89:56:44:67:55:5B:14:5D:F3:C2:8C:BE:31:82",
+    "integrityApi": {
+      "linkedProject": "valuepilot-argentina",
+      "projectNumber": "17260882200",
+      "responses": {
+        "LICENSED": true,
+        "PLAY_RECOGNIZED": true,
+        "MEETS_DEVICE_INTEGRITY": true
+      }
+    }
+  },
+  "candidateBuild": {
+    "versionCode": 10102,
+    "versionName": "101.1.1",
+    "packageName": "com.valuepilot.app",
+    "unsignedAab": "android/app/build/outputs/bundle/release/app-release.aab",
+    "signedAab": "android/app/build/outputs/bundle/release/app-release-play-upload-signed-10102.aab",
+    "signedAabSha256": "3B9526F5A5F4AEB702E6FBA0D375E5C97CD0FDCE8FF5D7765459AB4AFADD2F3F",
+    "signedAabVerified": true,
+    "probe": {
+      "releaseBuildConfig": true,
+      "debugBuildConfig": false,
+      "oneStatusRequestPerProcess": true,
+      "safeLogOnly": true
+    }
+  },
+  "security": {
+    "m11PrivateIam": true,
+    "staticCredentialsInClient": false,
+    "tokenLoggingOrPersistence": false,
+    "debugProviderInRelease": false,
+    "cleartextTraffic": false,
+    "accessNetworkState": false
+  },
+  "qualificationBoundary": {
+    "deviceModel": "Motorola Edge 2025",
+    "adbAttachedDuringQualification": true,
+    "status": "QUALIFIED",
+    "playInstallation": {
+      "installerPackageName": "com.android.vending",
+      "initiatingPackageName": "com.android.vending",
+      "packageName": "com.valuepilot.app",
+      "versionCode": 10102,
+      "versionName": "101.1.1"
+    },
+    "next": "Carry the cold-start timeout observation into M12.4 reliability work before considering live Search production-ready"
+  },
+  "reliabilityObservation": {
+    "coldStartCanExceedBoundedTimeout": true,
+    "warmRetrySucceeded": true,
+    "m12_4Requirement": "Measure and harden scale-to-zero/cold-upstream reliability before live Search is production-ready"
+  },
+  "m12_4": "NOT_STARTED"
+}

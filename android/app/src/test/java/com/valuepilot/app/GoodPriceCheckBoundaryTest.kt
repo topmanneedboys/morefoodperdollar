@@ -1,0 +1,406 @@
+package com.valuepilot.app
+
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.io.File
+
+class GoodPriceCheckBoundaryTest {
+
+    @Test
+    fun `coordinator reuses exact comparison and private history authorities`() {
+        val source = source("GoodPriceCheck.kt").readText()
+
+        listOf(
+            "ManualProductObservationAdapter.captureBlocks",
+            "CompareHereManualComparisonService.compare",
+            "CompareHerePriceMemoryEvaluator.assess",
+            "CompareHerePrivatePriceMemoryCapture",
+            "CONFIRMED_GOOD_PRICE_CHECK"
+        ).forEach { required -> assertTrue(source.contains(required)) }
+
+        listOf(
+            "PracticalShoppingPlanner",
+            "CompareHereEvaluator.evaluate",
+            "Money.parse",
+            "HttpURLConnection",
+            "URL(",
+            "RankingEngine",
+            "current store",
+            "live inventory"
+        ).forEach { forbidden -> assertFalse(source.contains(forbidden)) }
+    }
+
+    @Test
+    fun `physical good price view consumes projected content only`() {
+        val source = source("GoodPriceCheckSurfaceView.kt").readText()
+
+        assertTrue(source.contains("GoodPriceCheckScreenRenderer"))
+        assertTrue(source.contains("GoodPriceCheckScreenContent.Message"))
+        assertTrue(source.contains("GoodPriceCheckScreenContent.Result"))
+        assertTrue(source.contains("accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"))
+        listOf(
+            "goodPriceAnswerCardContentDescription(state)",
+            "importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES",
+            "View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS",
+            "contentDescription = history"
+        ).forEach { required -> assertTrue(source.contains(required)) }
+        listOf(
+            "GoodPriceCheckRouteCoordinator",
+            "CompareHereManualComparisonService",
+            "CompareHerePriceMemoryEvaluator",
+            "Money.parse",
+            "System.currentTimeMillis",
+            "PracticalShoppingPlanner",
+            "RankingEngine"
+        ).forEach { forbidden -> assertFalse(source.contains(forbidden)) }
+    }
+
+    @Test
+    fun `activity owns only local orchestration and has no network or ranking authority`() {
+        val source = source("GoodPriceActivity.kt").readText()
+
+        listOf(
+            "GoodPriceCheckRouteCoordinator.checkBlock",
+            "CompareHerePrivatePriceMemoryAndroidStore",
+            "privateMemoryLoadIssue",
+            "good_price_memory_unavailable",
+            "BundledOfflineCatalog.createDiscoverySession(applicationContext)",
+            "offlineCatalogDiscoverySession.discover(",
+            "if (::offlineCatalogDiscoverySession.isInitialized)",
+            "offlineCatalogDiscoverySession.close()",
+            "memoryStore.append",
+            "memoryStore.clear",
+            "EXTRA_PRODUCT_NAME",
+            "GoodPriceActivityPrefill",
+            ".sanitize(intent.getStringExtra(EXTRA_PRODUCT_NAME))",
+            "productInput.setText(value)",
+            "focusProductInput()",
+            "private fun focusProductInput()",
+            "productInput.requestFocus()",
+            "productInput.setSelection(productInput.text?.length ?: 0)",
+            "manager?.showSoftInput(productInput, InputMethodManager.SHOW_IMPLICIT)"
+        ).forEach { required -> assertTrue(source.contains(required)) }
+        listOf(
+            "HttpURLConnection",
+            "URL(",
+            "PracticalShoppingPlanner",
+            "CompareHereEvaluator",
+            "RankingEngine",
+            "INTERNET"
+        ).forEach { forbidden -> assertFalse(source.contains(forbidden)) }
+    }
+
+    @Test
+    fun `good price barcode handoff focuses the manual exact-entry field`() {
+        val source = source("GoodPriceActivity.kt").readText()
+        val useNameHandler =
+            source
+                .substringAfter("button.setOnClickListener {")
+                .substringBefore("dialog.show()")
+
+        assertTrue(useNameHandler.contains("applyBarcodeIdentitySuggestion"))
+        assertTrue(useNameHandler.contains("dialog.dismiss()"))
+        assertTrue(useNameHandler.contains("focusProductInput()"))
+        assertTrue(
+            useNameHandler.indexOf("dialog.dismiss()") <
+                useNameHandler.indexOf("focusProductInput()")
+        )
+        assertTrue(source.contains("if (isFinishing || isDestroyed) return@post"))
+    }
+
+    @Test
+    fun `good price barcode handoff reopens the keyboard after focusing the product field`() {
+        val source = source("GoodPriceActivity.kt").readText()
+        val focus =
+            source
+                .substringAfter("private fun focusProductInput()")
+                .substringBefore("private fun clearBarcodeStatus")
+
+        assertTrue(focus.indexOf("productInput.requestFocus()") >= 0)
+        assertTrue(
+            focus.indexOf("productInput.setSelection") >
+                focus.indexOf("productInput.requestFocus()")
+        )
+        assertTrue(
+            focus.indexOf("manager?.showSoftInput(productInput, InputMethodManager.SHOW_IMPLICIT)") >
+                focus.indexOf("productInput.setSelection")
+        )
+    }
+
+    @Test
+    fun `good price intent prefill focuses the editable field after the idle projection`() {
+        val source = source("GoodPriceActivity.kt").readText()
+        val prefillHandoff =
+            source
+                .substringAfter("GoodPriceActivityPrefill")
+                .substringBefore("override fun onResume")
+
+        assertTrue(prefillHandoff.contains("prefilledFromIntent = true"))
+        assertTrue(prefillHandoff.contains("if (prefilledFromIntent)"))
+        assertTrue(
+            prefillHandoff.indexOf("renderIdle()") <
+                prefillHandoff.indexOf("if (prefilledFromIntent)")
+        )
+        assertTrue(
+            prefillHandoff.indexOf("focusProductInput()") >
+                prefillHandoff.indexOf("if (prefilledFromIntent)")
+        )
+        assertTrue(
+            source.contains(
+                "manager?.showSoftInput(productInput, InputMethodManager.SHOW_IMPLICIT)"
+            )
+        )
+    }
+
+    @Test
+    fun `good price barcode selection labels replacement when an existing draft would be lost`() {
+        val source = source("GoodPriceActivity.kt").readText()
+        val strings = strings().readText()
+        val choiceDialog =
+            source
+                .substringAfter("private fun showBarcodeIdentityChoices")
+                .substringBefore("private fun focusProductInput")
+
+        assertTrue(choiceDialog.contains("val hasExistingDraft = productInput.text?.toString()?.isNotBlank() == true"))
+        assertTrue(choiceDialog.contains("R.string.good_price_barcode_replace_draft"))
+        assertTrue(choiceDialog.contains("R.string.good_price_barcode_replace_message"))
+        assertTrue(choiceDialog.contains("R.string.good_price_barcode_replace_warning"))
+        assertTrue(choiceDialog.contains("R.string.good_price_barcode_replace_description"))
+        assertTrue(
+            choiceDialog.indexOf("productInput.setText(option.displayName)") >
+                choiceDialog.indexOf("button.setOnClickListener")
+        )
+        listOf(
+            "name=\"good_price_barcode_replace_draft\"",
+            "name=\"good_price_barcode_replace_message\"",
+            "name=\"good_price_barcode_replace_warning\"",
+            "name=\"good_price_barcode_replace_description\""
+        ).forEach { required -> assertTrue(strings.contains(required)) }
+    }
+
+    @Test
+    fun `good price auto-prefills one exact barcode identity only for an empty draft`() {
+        val source = source("GoodPriceActivity.kt").readText()
+        val barcodeFlow =
+            source
+                .substringAfter("private fun showBarcodeIdentityChoices")
+                .substringBefore("private fun focusProductInput")
+
+        listOf(
+            "presentation.options.size == 1 && !hasExistingDraft",
+            "applyBarcodeIdentitySuggestion(",
+            "focusProductInput()",
+            "var selectedIndex = if (presentation.options.size == 1) 0 else -1"
+        ).forEach { required -> assertTrue(barcodeFlow.contains(required)) }
+        assertTrue(barcodeFlow.contains("good_price_barcode_replace_message"))
+    }
+
+    @Test
+    fun `cancelling good price barcode identity choices clears the processing status`() {
+        val source = source("GoodPriceActivity.kt").readText()
+        val choiceDialog =
+            source
+                .substringAfter("private fun showBarcodeIdentityChoices")
+                .substringBefore("private fun focusProductInput")
+
+        listOf(
+            "var outcomeCommitted = false",
+            "!outcomeCommitted",
+            "!barcodeLookupClosed",
+            "dialogRequestId == barcodeLookupRequestId",
+            "R.string.good_price_barcode_cancelled"
+        ).forEach { required -> assertTrue(choiceDialog.contains(required)) }
+        assertTrue(
+            choiceDialog.indexOf("outcomeCommitted = true") <
+                choiceDialog.indexOf("dialog.dismiss()")
+        )
+    }
+
+    @Test
+    fun `good price preserves the bounded typed draft across recreation`() {
+        val source = source("GoodPriceActivity.kt").readText()
+        val saveState =
+            source
+                .substringAfter("override fun onSaveInstanceState")
+                .substringBefore("private fun runCheck")
+
+        assertTrue(source.contains("STATE_PRODUCT_INPUT"))
+        assertTrue(source.contains("savedInstanceState?.containsKey(STATE_PRODUCT_INPUT) == true"))
+        assertTrue(source.contains("productInput.setText(restoredInput)"))
+        assertTrue(saveState.contains("productInput.text?.toString().orEmpty()"))
+        assertTrue(source.contains("} else {"))
+        assertTrue(source.contains("GoodPriceActivityPrefill"))
+    }
+
+    @Test
+    fun `good price restores an evaluated answer without persisting it again`() {
+        val source = source("GoodPriceActivity.kt").readText()
+        val saveState =
+            source
+                .substringAfter("override fun onSaveInstanceState")
+                .substringBefore("private fun runCheck")
+        val runCheck =
+            source
+                .substringAfter("private fun runCheck")
+                .substringBefore("private fun renderIdle")
+
+        listOf(
+            "STATE_CHECK_OBSERVED_AT",
+            "lastCheckObservedAtEpochMillis",
+            "it.containsKey(STATE_CHECK_OBSERVED_AT)",
+            "observedAtEpochMillis = restoredCheckObservedAt",
+            "persist = false"
+        ).forEach { required -> assertTrue(source.contains(required)) }
+        assertTrue(saveState.contains("outState.putLong(STATE_CHECK_OBSERVED_AT, observedAt)"))
+        assertTrue(runCheck.contains("persist: Boolean = true"))
+        assertTrue(runCheck.contains("if (!persist)"))
+        assertTrue(runCheck.contains("memoryStore.append(capture)"))
+        assertTrue(source.contains("lastCheckObservedAtEpochMillis = null"))
+    }
+
+    @Test
+    fun `good price private memory outcomes use a polite live region`() {
+        val source = source("GoodPriceActivity.kt").readText()
+
+        assertTrue(
+            source.contains(
+                "memoryStatus.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"
+            )
+        )
+        assertTrue(source.contains("memoryStatus = findViewById(R.id.goodPriceMemoryStatus)"))
+    }
+
+    @Test
+    fun `good price keyboard done uses the same visible check gate`() {
+        val source = source("GoodPriceActivity.kt").readText()
+        val listener =
+            source
+                .substringAfter("productInput.setOnEditorActionListener")
+                .substringBefore("barcodeButton.setOnClickListener")
+
+        assertTrue(source.contains("productInput.imeOptions = EditorInfo.IME_ACTION_DONE"))
+        assertTrue(listener.contains("actionId == EditorInfo.IME_ACTION_DONE"))
+        assertTrue(listener.contains("checkButton.isEnabled"))
+        assertTrue(listener.contains("runCheck()"))
+        assertTrue(listener.contains("true"))
+        assertTrue(listener.indexOf("checkButton.isEnabled") < listener.indexOf("runCheck()"))
+        assertTrue(listener.indexOf("runCheck()") < listener.indexOf("true"))
+    }
+
+    @Test
+    fun `good price invalidates projected personal context when memory changes on resume`() {
+        val source = source("GoodPriceActivity.kt").readText()
+        val onResume =
+            source.substringAfter("override fun onResume").substringBefore("override fun onDestroy")
+
+        listOf(
+            "val previousMemory = privateMemory",
+            "val previousIssue = privateMemoryLoadIssue",
+            "privateMemory = loadPrivateMemory()",
+            "previousMemory != privateMemory || previousIssue != privateMemoryLoadIssue",
+            "renderIdle()",
+            "showMemoryUnavailable()"
+        ).forEach { required -> assertTrue(onResume.contains(required)) }
+    }
+
+    @Test
+    fun `good price activity is not exported`() {
+        val manifest = manifest().readText()
+        val activityStart = manifest.indexOf("android:name=\".GoodPriceActivity\"")
+        assertTrue(activityStart >= 0)
+        val activityEnd = manifest.indexOf("/>", activityStart)
+        assertTrue(activityEnd > activityStart)
+        assertTrue(manifest.substring(activityStart, activityEnd).contains("android:exported=\"false\""))
+    }
+
+    @Test
+    fun `good price layout keeps its own basis and unavailable-history copy`() {
+        val layout = layout().readText()
+        val strings = strings().readText()
+
+        assertTrue(layout.contains("@string/good_price_selection_body"))
+        assertTrue(strings.contains("name=\"good_price_selection_body\""))
+        assertTrue(strings.contains("name=\"good_price_memory_unavailable\""))
+    }
+
+    @Test
+    fun `good price sharing stays explicit generic and offline`() {
+        val activity = source("GoodPriceActivity.kt").readText()
+        val share = source("GoodPriceShareCard.kt").readText()
+        val layout = layout().readText()
+        val strings = strings().readText()
+
+        listOf(
+            "GoodPriceShareCard",
+            "renderShareCard(evaluation.state.shareCard)",
+            "shareGoodPriceResult()",
+            "Intent(Intent.ACTION_SEND)",
+            "good_price_share_preview_body"
+        ).forEach { required -> assertTrue(activity.contains(required)) }
+        listOf(
+            "GoodPriceShareCardProjector",
+            "not live store pricing",
+            "product name",
+            "private history",
+            "Character.isISOControl"
+        ).forEach { required -> assertTrue(share.contains(required)) }
+        listOf(
+            "goodPriceShareButton",
+            "goodPriceShareStatus",
+            "@string/good_price_share_result"
+        ).forEach { required -> assertTrue(layout.contains(required)) }
+        listOf(
+            "name=\"good_price_share_result\"",
+            "name=\"good_price_share_result_description\"",
+            "name=\"good_price_share_unavailable\""
+        ).forEach { required -> assertTrue(strings.contains(required)) }
+        listOf(
+            "HttpURLConnection",
+            "URL(",
+            "INTERNET",
+            "PracticalShoppingPlanner",
+            "RankingEngine"
+        ).forEach { forbidden -> assertFalse(activity.contains(forbidden)) }
+    }
+
+    @Test
+    fun `clearing private memory invalidates any displayed good price result`() {
+        val activity = source("GoodPriceActivity.kt").readText()
+        val clearHandler =
+            activity
+                .substringAfter("clearMemoryButton.setOnClickListener")
+                .substringBefore("checkButton.setOnClickListener")
+
+        assertTrue(clearHandler.contains("privateMemory = CompareHerePrivatePriceMemoryState.empty()"))
+        assertTrue(clearHandler.contains("renderIdle()"))
+        assertTrue(
+            "Clearing Good Price history must not leave the deleted result/share card visible",
+            clearHandler.contains("renderIdle()")
+        )
+    }
+
+    private fun source(name: String): File =
+        File(
+            requireNotNull(System.getProperty("user.dir")),
+            "src/main/java/com/valuepilot/app/$name"
+        ).also { assertTrue("Missing source at ${it.absolutePath}", it.isFile) }
+
+    private fun manifest(): File =
+        File(
+            requireNotNull(System.getProperty("user.dir")),
+            "src/main/AndroidManifest.xml"
+        ).also { assertTrue("Missing manifest at ${it.absolutePath}", it.isFile) }
+
+    private fun layout(): File =
+        File(
+            requireNotNull(System.getProperty("user.dir")),
+            "src/main/res/layout/activity_good_price.xml"
+        ).also { assertTrue("Missing layout at ${it.absolutePath}", it.isFile) }
+
+    private fun strings(): File =
+        File(
+            requireNotNull(System.getProperty("user.dir")),
+            "src/main/res/values/strings.xml"
+        ).also { assertTrue("Missing strings at ${it.absolutePath}", it.isFile) }
+}

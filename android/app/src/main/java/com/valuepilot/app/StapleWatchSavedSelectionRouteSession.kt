@@ -1,0 +1,98 @@
+package com.valuepilot.app
+
+/**
+ * Pure route-local owner for configuring Watch My Staples from an already-validated Saved
+ * snapshot.
+ *
+ * The validated snapshot is the trust boundary for Saved identity plus identity-bound display
+ * metadata. This session owns only temporary explicit selection, route visibility, reconciliation
+ * against newer validated snapshots, and re-presentation through the verified setup presenter. It
+ * never loads Saved data, persists staple selection, resolves shopping facts, creates an identity
+ * handoff, evaluates economics, schedules work, or interprets presentation readiness as
+ * authorization.
+ *
+ * Selection survives hide/show transitions within this session, but remains memory-only. Closing
+ * the session discards it. Actions are accepted only while the setup route is visible; stale
+ * actions are still reduced so the existing fail-closed reducer can reconcile removed Saved
+ * identities before the current safe state is rendered again. A composition owner may read a
+ * detached immutable selection snapshot only while this route is visible; that read does not
+ * create or authorize any downstream handoff by itself.
+ */
+internal class StapleWatchSavedSelectionRouteSession(
+    initialSnapshot: PracticalShoppingSavedValidatedSnapshot,
+    private val presenter: StapleWatchSavedSelectionSurfacePresenter
+) : AutoCloseable {
+
+    private var savedState = initialSnapshot.exactState
+    private var metadata = initialSnapshot.displayMetadata
+    private var selection = StapleWatchSavedIdentitySelectionReducer.initial()
+    private var routeVisible = false
+    private var closed = false
+
+    fun onRouteVisibilityChanged(visible: Boolean) {
+        if (closed || visible == routeVisible) return
+
+        routeVisible = visible
+        if (visible) {
+            selection =
+                StapleWatchSavedIdentitySelectionReducer.reconcile(
+                    previous = selection,
+                    savedState = savedState
+                )
+            renderCurrent()
+        }
+    }
+
+    fun onSavedSnapshotChanged(snapshot: PracticalShoppingSavedValidatedSnapshot) {
+        if (closed) return
+
+        savedState = snapshot.exactState
+        metadata = snapshot.displayMetadata
+        selection =
+            StapleWatchSavedIdentitySelectionReducer.reconcile(
+                previous = selection,
+                savedState = savedState
+            )
+
+        if (routeVisible) {
+            renderCurrent()
+        }
+    }
+
+    fun onSurfaceAction(action: StapleWatchSavedIdentitySelectionAction) {
+        if (closed || !routeVisible) return
+
+        val transition =
+            StapleWatchSavedIdentitySelectionReducer.reduce(
+                previous = selection,
+                savedState = savedState,
+                action = action
+            )
+        selection = transition.state
+        renderCurrent()
+    }
+
+    fun currentSelectionOrNull(): StapleWatchSavedIdentitySelection? {
+        if (closed || !routeVisible) return null
+
+        return selection.copy(
+            watchedItemKeys = selection.watchedItemKeys.toList()
+        )
+    }
+
+    override fun close() {
+        if (closed) return
+
+        closed = true
+        routeVisible = false
+        selection = StapleWatchSavedIdentitySelectionReducer.initial()
+    }
+
+    private fun renderCurrent() {
+        presenter.render(
+            savedState = savedState,
+            selection = selection,
+            metadata = metadata
+        )
+    }
+}
