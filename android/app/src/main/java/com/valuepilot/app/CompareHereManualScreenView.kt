@@ -114,7 +114,7 @@ class CompareHereManualScreenView @JvmOverloads constructor(
         topPadding: Int = 0
     ): TextView = TextView(context).apply {
         setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
-        setTextColor(Color.parseColor(color))
+        setTextColor(ValuePilotPalette.color(color))
         if (bold) setTypeface(Typeface.DEFAULT, Typeface.BOLD)
         if (topPadding > 0) setPadding(0, dp(topPadding), 0, 0)
     }

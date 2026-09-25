@@ -128,8 +128,8 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
             // existing renderer-ready labels politely without making this
             // physical card interpret policy readiness.
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
-            setCardBackgroundColor(Color.parseColor("#FFFBEB"))
-            strokeColor = Color.parseColor("#FDE68A")
+            setCardBackgroundColor(ValuePilotPalette.color("#FFFBEB"))
+            strokeColor = ValuePilotPalette.color("#FDE68A")
             strokeWidth = dp(1)
             layoutParams =
                 LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
@@ -143,7 +143,7 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
                         TextView(context).apply {
                             text = "Still needed"
                             setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-                            setTextColor(Color.parseColor("#92400E"))
+                            setTextColor(ValuePilotPalette.color("#92400E"))
                             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
                         }
                     )
@@ -152,7 +152,7 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
                             TextView(context).apply {
                                 text = "• $label"
                                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-                                setTextColor(Color.parseColor("#92400E"))
+                                setTextColor(ValuePilotPalette.color("#92400E"))
                                 setPadding(0, dp(5), 0, 0)
                             }
                         )
@@ -334,7 +334,7 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
-            setTextColor(Color.parseColor("#111827"))
+            setTextColor(ValuePilotPalette.color("#111827"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
         }
 
@@ -342,7 +342,7 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            setTextColor(Color.parseColor("#4B5563"))
+            setTextColor(ValuePilotPalette.color("#4B5563"))
             setPadding(0, dp(8), 0, 0)
         }
 
@@ -350,7 +350,7 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            setTextColor(Color.parseColor("#92400E"))
+            setTextColor(ValuePilotPalette.color("#92400E"))
             setPadding(0, dp(10), 0, 0)
             // Handoff and validation feedback comes from immutable projected
             // state. Keep announcements polite and let the View only render it.
@@ -361,7 +361,7 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            setTextColor(Color.parseColor("#111827"))
+            setTextColor(ValuePilotPalette.color("#111827"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
         }
 
@@ -369,7 +369,7 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setTextColor(Color.parseColor("#6B7280"))
+            setTextColor(ValuePilotPalette.color("#6B7280"))
             setPadding(0, dp(4), 0, 0)
         }
 

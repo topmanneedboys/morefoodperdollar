@@ -114,7 +114,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:text="@string/compare_barcode_ready"
-            android:textColor="#6B7280"
+            android:textColor="@color/vp_text_muted"
             android:textSize="12sp" />
 
         <LinearLayout
@@ -154,7 +154,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
             android:text="@string/price_selection_title"
-            android:textColor="#111827"
+            android:textColor="@color/vp_text_primary"
             android:textSize="15sp"
             android:textStyle="bold" />
 
@@ -163,7 +163,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
             android:text="@string/price_selection_body"
-            android:textColor="#6B7280"
+            android:textColor="@color/vp_text_muted"
             android:textSize="12sp" />
 
         <RadioGroup

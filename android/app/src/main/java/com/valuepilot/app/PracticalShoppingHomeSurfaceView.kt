@@ -241,7 +241,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val inputLayout = TextInputLayout(context).apply {
         boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
         hint = context.getString(R.string.home_list_hint)
-        setBoxBackgroundColor(Color.WHITE)
+        setBoxBackgroundColor(ValuePilotPalette.color("#FFFFFF"))
         setBoxCornerRadii(
             dp(18).toFloat(),
             dp(18).toFloat(),
@@ -308,9 +308,9 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         textSize = 14f
         cornerRadius = dp(16)
         strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(Color.parseColor("#D1D5DB"))
-        setTextColor(Color.parseColor("#374151"))
-        backgroundTintList = ColorStateList.valueOf(Color.WHITE)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
+        setTextColor(ValuePilotPalette.color("#374151"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(dp(50), 12)
         setOnClickListener {
             extraStopSettingsExpanded = !extraStopSettingsExpanded
@@ -521,7 +521,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         }
         message.text = value
         message.setTextColor(
-            Color.parseColor(
+            ValuePilotPalette.color(
                 when (state.messageTone) {
                     PracticalShoppingHomeMessageTone.NEUTRAL -> "#6B7280"
                     PracticalShoppingHomeMessageTone.ACTION_REQUIRED -> "#92400E"
@@ -1067,9 +1067,9 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         textSize = 14f
         cornerRadius = dp(16)
         strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(Color.parseColor("#D1D5DB"))
-        setTextColor(Color.parseColor("#374151"))
-        backgroundTintList = ColorStateList.valueOf(Color.WHITE)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
+        setTextColor(ValuePilotPalette.color("#374151"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(dp(50), 12)
         // Keep the owner-driven comparison route inert until its callback is attached.
         isEnabled = false
@@ -1084,9 +1084,9 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         textSize = 14f
         cornerRadius = dp(16)
         strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(Color.parseColor("#D1D5DB"))
-        setTextColor(Color.parseColor("#374151"))
-        backgroundTintList = ColorStateList.valueOf(Color.WHITE)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
+        setTextColor(ValuePilotPalette.color("#374151"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(dp(50), 12)
         // Keep this repeat-use action inert until the owner attaches and a
         // completed immutable result is rendered.
@@ -1102,9 +1102,9 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         textSize = 14f
         cornerRadius = dp(16)
         strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(Color.parseColor("#D1D5DB"))
-        setTextColor(Color.parseColor("#374151"))
-        backgroundTintList = ColorStateList.valueOf(Color.WHITE)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
+        setTextColor(ValuePilotPalette.color("#374151"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(dp(50), 8)
         // Sharing is an explicit owner-driven action over an already-projected result.
         isEnabled = false
@@ -1118,9 +1118,9 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         textSize = 14f
         cornerRadius = dp(16)
         strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(Color.parseColor("#D1D5DB"))
-        setTextColor(Color.parseColor("#374151"))
-        backgroundTintList = ColorStateList.valueOf(Color.WHITE)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
+        setTextColor(ValuePilotPalette.color("#374151"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(dp(50), 12)
         // Keep the owner-driven price question inert until its callback is attached.
         isEnabled = false
@@ -1135,9 +1135,9 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         textSize = 14f
         cornerRadius = dp(16)
         strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(Color.parseColor("#D1D5DB"))
-        setTextColor(Color.parseColor("#374151"))
-        backgroundTintList = ColorStateList.valueOf(Color.WHITE)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
+        setTextColor(ValuePilotPalette.color("#374151"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(dp(50), 8)
         // Keep the owner-driven history route inert until its callback is attached.
         isEnabled = false
@@ -1153,9 +1153,9 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         textSize = 14f
         cornerRadius = dp(16)
         strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(Color.parseColor("#D1D5DB"))
-        setTextColor(Color.parseColor("#374151"))
-        backgroundTintList = ColorStateList.valueOf(Color.WHITE)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
+        setTextColor(ValuePilotPalette.color("#374151"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(dp(50), 4)
         // Keep the owner-driven export route inert until its callback is attached.
         isEnabled = false
@@ -1171,9 +1171,9 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         textSize = 14f
         cornerRadius = dp(16)
         strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(Color.parseColor("#D1D5DB"))
-        setTextColor(Color.parseColor("#374151"))
-        backgroundTintList = ColorStateList.valueOf(Color.WHITE)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
+        setTextColor(ValuePilotPalette.color("#374151"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(dp(50), 4)
         // Keep the owner-driven removal route inert until its callback is attached.
         isEnabled = false
@@ -1190,8 +1190,8 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     ): MaterialCardView = MaterialCardView(context).apply {
         radius = dp(18).toFloat()
         cardElevation = 0f
-        setCardBackgroundColor(Color.parseColor(background))
-        strokeColor = Color.parseColor(stroke)
+        setCardBackgroundColor(ValuePilotPalette.color(background))
+        strokeColor = ValuePilotPalette.color(stroke)
         strokeWidth = dp(1)
         layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, topMargin)
         body?.let(::addView)
@@ -1214,7 +1214,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     ): TextView = TextView(context).apply {
         text = value
         setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
-        setTextColor(Color.parseColor(color))
+        setTextColor(ValuePilotPalette.color(color))
         if (bold) setTypeface(Typeface.DEFAULT, Typeface.BOLD)
         if (topPadding > 0) setPadding(0, dp(topPadding), 0, 0)
     }

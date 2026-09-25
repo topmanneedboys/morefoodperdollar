@@ -34,8 +34,8 @@ class ResultAdapter(
             radius = dp(14).toFloat()
             cardElevation = dp(1).toFloat()
             strokeWidth = dp(1)
-            setStrokeColor(0xffe5e7eb.toInt())
-            setCardBackgroundColor(0xffffffff.toInt())
+            setStrokeColor(ValuePilotPalette.color("#E5E7EB"))
+            setCardBackgroundColor(ValuePilotPalette.color("#FFFFFF"))
             isClickable = true
             isFocusable = true
             minimumHeight = dp(104)
@@ -55,10 +55,10 @@ class ResultAdapter(
             includeFontPadding = false
         }
 
-        val title = textView(15f, 0xff111827.toInt(), Typeface.BOLD).apply {
+        val title = textView(15f, ValuePilotPalette.color("#111827"), Typeface.BOLD).apply {
             tag = TAG_TITLE
         }
-        val quantity = textView(12f, 0xff4b5563.toInt()).apply {
+        val quantity = textView(12f, ValuePilotPalette.color("#4B5563")).apply {
             tag = TAG_QUANTITY
             setPadding(0, dp(3), 0, 0)
         }
@@ -67,19 +67,19 @@ class ResultAdapter(
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, dp(8), 0, 0)
         }
-        val metric = textView(16f, 0xff0f766e.toInt(), Typeface.BOLD).apply { tag = TAG_METRIC }
-        val exactness = textView(10f, 0xff4b5563.toInt(), Typeface.BOLD).apply {
+        val metric = textView(16f, ValuePilotPalette.color("#047857"), Typeface.BOLD).apply { tag = TAG_METRIC }
+        val exactness = textView(10f, ValuePilotPalette.color("#4B5563"), Typeface.BOLD).apply {
             tag = TAG_EXACTNESS
             setPadding(dp(8), dp(3), dp(8), dp(3))
-            setBackgroundColor(0xfff3f4f6.toInt())
+            setBackgroundColor(ValuePilotPalette.color("#F9FAFB"))
         }
         metricRow.addView(metric, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         metricRow.addView(exactness)
-        val prices = textView(12f, 0xff374151.toInt()).apply {
+        val prices = textView(12f, ValuePilotPalette.color("#374151")).apply {
             tag = TAG_PRICES
             setPadding(0, dp(5), 0, 0)
         }
-        val availability = textView(11f, 0xff0f7b4d.toInt()).apply {
+        val availability = textView(11f, ValuePilotPalette.color("#047857")).apply {
             tag = TAG_AVAILABILITY
             setPadding(0, dp(6), 0, 0)
         }
@@ -108,7 +108,13 @@ class ResultAdapter(
             quantity.visibility = if (item.quantity == null) View.GONE else View.VISIBLE
             metric.text = ranked.metricLabel
             exactness.text = ranked.exactnessLabel
-            exactness.setTextColor(if (ranked.exactnessLabel == "Estimate") 0xff92400e.toInt() else 0xff4b5563.toInt())
+            exactness.setTextColor(
+                if (ranked.exactnessLabel == "Estimate") {
+                    ValuePilotPalette.color("#92400E")
+                } else {
+                    ValuePilotPalette.color("#4B5563")
+                }
+            )
             prices.text = buildString {
                 append(ValueEngine.money(item.offer.currentPrice, item.offer.currency))
                 item.offer.memberPrice?.let { append(" · Member ${ValueEngine.money(it, item.offer.currency)}") }
@@ -117,7 +123,13 @@ class ResultAdapter(
                 }
             }
             availability.text = item.availability ?: "Tap to open item"
-            availability.setTextColor(if (item.availability == "Out of stock") 0xffb42318.toInt() else 0xff0f7b4d.toInt())
+            availability.setTextColor(
+                if (item.availability == "Out of stock") {
+                    ValuePilotPalette.color("#B42318")
+                } else {
+                    ValuePilotPalette.color("#047857")
+                }
+            )
             card.contentDescription = buildString {
                 append("Rank ${ranked.rank}, ${item.name}, ${ranked.metricLabel}, ${prices.text}")
                 item.availability?.let { append(", $it") }

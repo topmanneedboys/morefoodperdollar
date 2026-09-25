@@ -37,7 +37,7 @@ internal class UserObservedPriceConfirmationActionSurfaceView @JvmOverloads cons
     private val statusText =
         TextView(context).apply {
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            setTextColor(Color.parseColor("#4B5563"))
+            setTextColor(ValuePilotPalette.color("#4B5563"))
             isSaveEnabled = false
             // Confirmation and failure arrive asynchronously. Announce the
             // projected message without moving any execution authority here.
@@ -61,7 +61,7 @@ internal class UserObservedPriceConfirmationActionSurfaceView @JvmOverloads cons
             TextView(context).apply {
                 text = "Confirm observed price"
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-                setTextColor(Color.parseColor("#111827"))
+                setTextColor(ValuePilotPalette.color("#111827"))
                 setTypeface(Typeface.DEFAULT, Typeface.BOLD)
                 isSaveEnabled = false
             }

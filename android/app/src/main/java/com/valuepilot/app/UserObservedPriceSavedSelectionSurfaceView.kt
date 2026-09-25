@@ -131,9 +131,9 @@ internal class UserObservedPriceSavedSelectionSurfaceView @JvmOverloads construc
                 radius = dp(18).toFloat()
                 cardElevation = 0f
                 setCardBackgroundColor(
-                    Color.parseColor(if (selected) "#F0FDF4" else "#FFFFFF")
+                    ValuePilotPalette.color(if (selected) "#F0FDF4" else "#FFFFFF")
                 )
-                strokeColor = Color.parseColor(if (selected) "#86EFAC" else "#E5E7EB")
+                strokeColor = ValuePilotPalette.color(if (selected) "#86EFAC" else "#E5E7EB")
                 strokeWidth = dp(1)
                 layoutParams =
                     LayoutParams(
@@ -173,7 +173,7 @@ internal class UserObservedPriceSavedSelectionSurfaceView @JvmOverloads construc
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
-            setTextColor(Color.parseColor("#111827"))
+            setTextColor(ValuePilotPalette.color("#111827"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
         }
 
@@ -197,7 +197,7 @@ internal class UserObservedPriceSavedSelectionSurfaceView @JvmOverloads construc
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            setTextColor(Color.parseColor("#374151"))
+            setTextColor(ValuePilotPalette.color("#374151"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             setPadding(0, dp(20), 0, 0)
         }
@@ -216,7 +216,7 @@ internal class UserObservedPriceSavedSelectionSurfaceView @JvmOverloads construc
             setAllCaps(false)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, if (compact) 13f else 14f)
             if (destructive) {
-                setTextColor(Color.parseColor("#B91C1C"))
+                setTextColor(ValuePilotPalette.color("#B91C1C"))
             }
             isEnabled = onSelectionAction != null
             setOnClickListener { onSelectionAction?.invoke(action) }
@@ -258,7 +258,7 @@ internal class UserObservedPriceSavedSelectionSurfaceView @JvmOverloads construc
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
-            setTextColor(Color.parseColor(textColor))
+            setTextColor(ValuePilotPalette.color(textColor))
             if (bold) setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             if (topPadding > 0) setPadding(0, dp(topPadding), 0, 0)
         }

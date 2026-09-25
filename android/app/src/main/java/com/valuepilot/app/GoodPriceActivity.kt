@@ -162,7 +162,7 @@ class GoodPriceActivity : AppCompatActivity() {
                 renderIdle()
             } else {
                 memoryStatus.text = getString(R.string.compare_memory_clear_error)
-                memoryStatus.setTextColor(Color.parseColor("#92400E"))
+                memoryStatus.setTextColor(ValuePilotPalette.color("#92400E"))
                 memoryStatus.visibility = View.VISIBLE
                 clearMemoryButton.visibility = View.VISIBLE
             }
@@ -316,7 +316,7 @@ class GoodPriceActivity : AppCompatActivity() {
                     R.string.good_price_memory_saved,
                     capture.entries.single().displayName
                 )
-            memoryStatus.setTextColor(Color.parseColor("#047857"))
+            memoryStatus.setTextColor(ValuePilotPalette.color("#047857"))
             memoryStatus.visibility = View.VISIBLE
             clearMemoryButton.visibility = View.VISIBLE
         } else {
@@ -327,7 +327,7 @@ class GoodPriceActivity : AppCompatActivity() {
                 showMemoryUnavailable()
             } else {
                 memoryStatus.text = getString(R.string.good_price_memory_error)
-                memoryStatus.setTextColor(Color.parseColor("#92400E"))
+                memoryStatus.setTextColor(ValuePilotPalette.color("#92400E"))
                 memoryStatus.visibility = View.VISIBLE
                 clearMemoryButton.visibility = View.VISIBLE
             }
@@ -657,7 +657,7 @@ class GoodPriceActivity : AppCompatActivity() {
 
     private fun showMemoryUnavailable() {
         memoryStatus.text = getString(R.string.good_price_memory_unavailable)
-        memoryStatus.setTextColor(Color.parseColor("#92400E"))
+        memoryStatus.setTextColor(ValuePilotPalette.color("#92400E"))
         memoryStatus.visibility = View.VISIBLE
         clearMemoryButton.visibility = View.VISIBLE
     }

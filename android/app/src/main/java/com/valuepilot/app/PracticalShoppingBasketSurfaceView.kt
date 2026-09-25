@@ -90,9 +90,9 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         textSize = 13f
         cornerRadius = dp(14)
         strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(Color.parseColor("#D1D5DB"))
-        setTextColor(Color.parseColor("#374151"))
-        backgroundTintList = ColorStateList.valueOf(Color.WHITE)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
+        setTextColor(ValuePilotPalette.color("#374151"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 6)
         setOnClickListener {
             progressState = PracticalShoppingBasketProgressSession.clearCollected(progressState)
@@ -117,9 +117,9 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         textSize = 15f
         cornerRadius = dp(16)
         strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(Color.parseColor("#D1D5DB"))
-        setTextColor(Color.parseColor("#374151"))
-        backgroundTintList = ColorStateList.valueOf(Color.WHITE)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
+        setTextColor(ValuePilotPalette.color("#374151"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(dp(52), 16)
         // Keep the replaceable navigation control inert until its typed owner is attached.
         isEnabled = false
@@ -350,9 +350,9 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         gravity = Gravity.START or Gravity.CENTER_VERTICAL
         cornerRadius = dp(14)
         strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(Color.parseColor("#D1D5DB"))
-        setTextColor(Color.parseColor("#374151"))
-        backgroundTintList = ColorStateList.valueOf(Color.WHITE)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
+        setTextColor(ValuePilotPalette.color("#374151"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 7)
         text = "${if (collected) "✓" else "○"} ${item.name}  •  ${item.detail}"
         contentDescription = practicalShoppingBasketCollectionActionDescription(item, collected)
@@ -410,8 +410,8 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     ): MaterialCardView = MaterialCardView(context).apply {
         radius = dp(18).toFloat()
         cardElevation = 0f
-        setCardBackgroundColor(Color.parseColor(background))
-        strokeColor = Color.parseColor(stroke)
+        setCardBackgroundColor(ValuePilotPalette.color(background))
+        strokeColor = ValuePilotPalette.color(stroke)
         strokeWidth = dp(1)
         layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, topMargin)
         body?.let(::addView)
@@ -431,7 +431,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     ): TextView = TextView(context).apply {
         text = value
         setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
-        setTextColor(Color.parseColor(color))
+        setTextColor(ValuePilotPalette.color(color))
         if (bold) setTypeface(Typeface.DEFAULT, Typeface.BOLD)
         if (topPadding > 0) setPadding(0, dp(topPadding), 0, 0)
     }

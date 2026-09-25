@@ -139,8 +139,8 @@ internal class GoodPriceCheckSurfaceView @JvmOverloads constructor(
     ): MaterialCardView = MaterialCardView(context).apply {
         radius = dp(18).toFloat()
         cardElevation = 0f
-        setCardBackgroundColor(Color.parseColor(background))
-        strokeColor = Color.parseColor(stroke)
+        setCardBackgroundColor(ValuePilotPalette.color(background))
+        strokeColor = ValuePilotPalette.color(stroke)
         strokeWidth = dp(1)
         layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, topMargin)
     }
@@ -162,7 +162,7 @@ internal class GoodPriceCheckSurfaceView @JvmOverloads constructor(
     ): TextView = TextView(context).apply {
         text = value
         setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
-        setTextColor(Color.parseColor(color))
+        setTextColor(ValuePilotPalette.color(color))
         if (bold) setTypeface(Typeface.DEFAULT, Typeface.BOLD)
         if (topPadding > 0) setPadding(0, dp(topPadding), 0, 0)
     }

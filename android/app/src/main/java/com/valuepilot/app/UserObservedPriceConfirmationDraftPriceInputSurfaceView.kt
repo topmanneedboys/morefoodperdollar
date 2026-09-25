@@ -165,7 +165,7 @@ class UserObservedPriceConfirmationDraftPriceInputSurfaceView @JvmOverloads cons
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-            setTextColor(Color.parseColor("#111827"))
+            setTextColor(ValuePilotPalette.color("#111827"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
         }
 
@@ -173,7 +173,7 @@ class UserObservedPriceConfirmationDraftPriceInputSurfaceView @JvmOverloads cons
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setTextColor(Color.parseColor("#6B7280"))
+            setTextColor(ValuePilotPalette.color("#6B7280"))
             setPadding(0, dp(5), 0, 0)
         }
 

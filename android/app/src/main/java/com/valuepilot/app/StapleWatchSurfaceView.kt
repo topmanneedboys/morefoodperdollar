@@ -123,7 +123,7 @@ class StapleWatchSurfaceView @JvmOverloads constructor(
         }
 
     private fun statusColor(status: StapleWatchUiStatus): Int =
-        Color.parseColor(
+        ValuePilotPalette.color(
             when (status) {
                 StapleWatchUiStatus.WORTH_CHECKING -> "#047857"
                 StapleWatchUiStatus.NOT_WORTH_SWITCHING -> "#374151"
@@ -140,8 +140,8 @@ class StapleWatchSurfaceView @JvmOverloads constructor(
     ): MaterialCardView = MaterialCardView(context).apply {
         radius = dp(18).toFloat()
         cardElevation = 0f
-        setCardBackgroundColor(Color.parseColor(background))
-        strokeColor = Color.parseColor(stroke)
+        setCardBackgroundColor(ValuePilotPalette.color(background))
+        strokeColor = ValuePilotPalette.color(stroke)
         strokeWidth = dp(1)
         layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, topMargin)
     }
@@ -163,7 +163,7 @@ class StapleWatchSurfaceView @JvmOverloads constructor(
     ): TextView = TextView(context).apply {
         text = value
         setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
-        setTextColor(Color.parseColor(color))
+        setTextColor(ValuePilotPalette.color(color))
         if (bold) setTypeface(Typeface.DEFAULT, Typeface.BOLD)
         if (topPadding > 0) setPadding(0, dp(topPadding), 0, 0)
     }

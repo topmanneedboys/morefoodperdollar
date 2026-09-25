@@ -49,7 +49,7 @@ internal class UserObservedPriceConfirmationDraftSurfaceView @JvmOverloads const
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
-            setTextColor(Color.parseColor("#111827"))
+            setTextColor(ValuePilotPalette.color("#111827"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             isSaveEnabled = false
         }
@@ -58,7 +58,7 @@ internal class UserObservedPriceConfirmationDraftSurfaceView @JvmOverloads const
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-            setTextColor(Color.parseColor("#111827"))
+            setTextColor(ValuePilotPalette.color("#111827"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             setPadding(0, dp(12), 0, 0)
             isSaveEnabled = false
@@ -68,7 +68,7 @@ internal class UserObservedPriceConfirmationDraftSurfaceView @JvmOverloads const
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            setTextColor(Color.parseColor("#4B5563"))
+            setTextColor(ValuePilotPalette.color("#4B5563"))
             setPadding(0, dp(6), 0, 0)
             isSaveEnabled = false
         }
@@ -77,7 +77,7 @@ internal class UserObservedPriceConfirmationDraftSurfaceView @JvmOverloads const
         TextView(context).apply {
             text = "• $value"
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            setTextColor(Color.parseColor("#374151"))
+            setTextColor(ValuePilotPalette.color("#374151"))
             setPadding(dp(4), dp(8), 0, 0)
             isSaveEnabled = false
         }
@@ -86,7 +86,7 @@ internal class UserObservedPriceConfirmationDraftSurfaceView @JvmOverloads const
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            setTextColor(Color.parseColor("#92400E"))
+            setTextColor(ValuePilotPalette.color("#92400E"))
             setPadding(0, dp(14), 0, 0)
             isSaveEnabled = false
         }

@@ -68,7 +68,7 @@ class ProductionSearchSurfaceView @JvmOverloads constructor(
         TextView(context).apply {
             text = textValue
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
-            setTextColor(Color.parseColor("#111827"))
+            setTextColor(ValuePilotPalette.color("#111827"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
         }
 
@@ -76,7 +76,7 @@ class ProductionSearchSurfaceView @JvmOverloads constructor(
         TextView(context).apply {
             text = textValue
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            setTextColor(Color.parseColor("#374151"))
+            setTextColor(ValuePilotPalette.color("#374151"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             setPadding(0, dp(18), 0, 0)
         }
@@ -87,9 +87,9 @@ class ProductionSearchSurfaceView @JvmOverloads constructor(
                 radius = dp(18).toFloat()
                 cardElevation = 0f
                 setCardBackgroundColor(
-                    Color.parseColor(if (row.bestValue) "#ECFDF5" else "#FFFFFF")
+                    ValuePilotPalette.color(if (row.bestValue) "#ECFDF5" else "#FFFFFF")
                 )
-                strokeColor = Color.parseColor(if (row.bestValue) "#A7F3D0" else "#E5E7EB")
+                strokeColor = ValuePilotPalette.color(if (row.bestValue) "#A7F3D0" else "#E5E7EB")
                 strokeWidth = dp(1)
                 layoutParams =
                     LayoutParams(
@@ -176,7 +176,7 @@ class ProductionSearchSurfaceView @JvmOverloads constructor(
         TextView(context).apply {
             text = textValue
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setTextColor(Color.parseColor("#92400E"))
+            setTextColor(ValuePilotPalette.color("#92400E"))
             setPadding(dp(2), dp(16), dp(2), 0)
         }
 
@@ -190,7 +190,7 @@ class ProductionSearchSurfaceView @JvmOverloads constructor(
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
-            setTextColor(Color.parseColor(textColor))
+            setTextColor(ValuePilotPalette.color(textColor))
             if (bold) setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             if (topPadding > 0) setPadding(0, dp(topPadding), 0, 0)
         }

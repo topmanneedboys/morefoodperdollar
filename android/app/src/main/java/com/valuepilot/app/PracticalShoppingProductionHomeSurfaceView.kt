@@ -68,7 +68,7 @@ class PracticalShoppingProductionHomeSurfaceView @JvmOverloads constructor(
         TextView(context).apply {
             text = textValue
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
-            setTextColor(Color.parseColor("#111827"))
+            setTextColor(ValuePilotPalette.color("#111827"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
         }
 
@@ -79,10 +79,10 @@ class PracticalShoppingProductionHomeSurfaceView @JvmOverloads constructor(
                 radius = dp(16).toFloat()
                 cardElevation = 0f
                 setCardBackgroundColor(
-                    Color.parseColor(if (cautious) "#FFFBEB" else "#FFFFFF")
+                    ValuePilotPalette.color(if (cautious) "#FFFBEB" else "#FFFFFF")
                 )
                 strokeColor =
-                    Color.parseColor(if (cautious) "#FDE68A" else "#E5E7EB")
+                    ValuePilotPalette.color(if (cautious) "#FDE68A" else "#E5E7EB")
                 strokeWidth = dp(1)
                 layoutParams =
                     LayoutParams(
@@ -168,7 +168,7 @@ class PracticalShoppingProductionHomeSurfaceView @JvmOverloads constructor(
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
-            setTextColor(Color.parseColor(color))
+            setTextColor(ValuePilotPalette.color(color))
             if (bold) setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             if (topPadding > 0) setPadding(0, dp(topPadding), 0, 0)
         }

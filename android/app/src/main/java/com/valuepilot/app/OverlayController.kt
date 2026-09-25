@@ -108,7 +108,7 @@ class OverlayController(
             text = "0"
             textSize = 9f
             gravity = Gravity.CENTER
-            setTextColor(0xff111827.toInt())
+            setTextColor(ValuePilotPalette.color("#111827"))
             setBackgroundResource(R.drawable.vp_badge)
             contentDescription = "0 matching items"
         }
@@ -295,8 +295,8 @@ class OverlayController(
             gravity = Gravity.CENTER_VERTICAL
         }
         val titleBlock = LinearLayout(service).apply { orientation = LinearLayout.VERTICAL }
-        titleBlock.addView(label("ValuePilot", 21f, 0xff111827.toInt(), Typeface.BOLD))
-        contextLabel = label("Current page · 0 matches", 13f, 0xff4b5563.toInt()).also {
+        titleBlock.addView(label("ValuePilot", 21f, ValuePilotPalette.color("#111827"), Typeface.BOLD))
+        contextLabel = label("Current page · 0 matches", 13f, ValuePilotPalette.color("#4B5563")).also {
             it.maxLines = 2
             titleBlock.addView(it)
         }
@@ -355,7 +355,7 @@ class OverlayController(
             visibility = if (loading) View.VISIBLE else View.GONE
         }
         root.addView(progress, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(3)))
-        statusLabel = label(lastStatus, 11f, 0xff6b7280.toInt()).apply {
+        statusLabel = label(lastStatus, 11f, ValuePilotPalette.color("#6B7280")).apply {
             setPadding(0, dp(5), 0, dp(5))
             maxLines = if (advancedMode) 3 else 1
             contentDescription = "ValuePilot status"
@@ -377,7 +377,7 @@ class OverlayController(
             } else null
         }
         recycler = list
-        val empty = label("No matching products yet. Keep the shopping page open, scroll to reveal more items, or tap Rescan.", 14f, 0xff4b5563.toInt()).apply {
+        val empty = label("No matching products yet. Keep the shopping page open, scroll to reveal more items, or tap Rescan.", 14f, ValuePilotPalette.color("#4B5563")).apply {
             gravity = Gravity.CENTER
             setPadding(dp(24), dp(24), dp(24), dp(24))
         }
@@ -461,12 +461,12 @@ class OverlayController(
             setPadding(dp(20), 0, dp(20), dp(16))
         }
         val header = LinearLayout(service).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        header.addView(label("Filters", 21f, 0xff111827.toInt(), Typeface.BOLD), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        header.addView(label("Filters", 21f, ValuePilotPalette.color("#111827"), Typeface.BOLD), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         header.addView(Button(service).apply { text = "Done"; isAllCaps = false; setOnClickListener { showMainContent() } }, LinearLayout.LayoutParams(dp(88), dp(48)))
         filters.addView(header)
         val scroll = ScrollView(service)
         val controls = LinearLayout(service).apply { orientation = LinearLayout.VERTICAL }
-        controls.addView(label("Maximum spend", 13f, 0xff374151.toInt(), Typeface.BOLD))
+        controls.addView(label("Maximum spend", 13f, ValuePilotPalette.color("#374151"), Typeface.BOLD))
         val budget = EditText(service).apply {
             hint = "No budget limit"
             contentDescription = "Maximum total spend"
@@ -489,7 +489,7 @@ class OverlayController(
         val advancedActions = LinearLayout(service).apply {
             orientation = LinearLayout.VERTICAL
             visibility = if (advancedMode) View.VISIBLE else View.GONE
-            addView(label("Advanced scanning", 13f, 0xff374151.toInt(), Typeface.BOLD))
+            addView(label("Advanced scanning", 13f, ValuePilotPalette.color("#374151"), Typeface.BOLD))
         }
         scanAllButton = Button(service).apply {
             text = if (scanningAll) "Stop collection" else "Collect off-screen items"
@@ -551,14 +551,14 @@ class OverlayController(
             setPadding(dp(20), 0, dp(20), dp(16))
         }
         val header = LinearLayout(service).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        header.addView(label("About rankings", 21f, 0xff111827.toInt(), Typeface.BOLD), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        header.addView(label("About rankings", 21f, ValuePilotPalette.color("#111827"), Typeface.BOLD), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         header.addView(Button(service).apply { text = "Back"; isAllCaps = false; setOnClickListener { showFilters() } }, LinearLayout.LayoutParams(dp(88), dp(48)))
         about.addView(header)
         about.addView(label(
             "Smart Value chooses the strongest exact measurement available for the current products: price per kg, litre, or item; calories per dollar; or pizza area. " +
                 "Food amount and meat value are clearly labeled estimates and never replace exact price, quantity, promotion, or unit mathematics. Member prices are used only when you enable that filter.",
             14f,
-            0xff374151.toInt()
+            ValuePilotPalette.color("#374151")
         ).apply { setLineSpacing(0f, 1.15f); setPadding(0, dp(12), 0, 0) })
         showContent(frame, about)
     }

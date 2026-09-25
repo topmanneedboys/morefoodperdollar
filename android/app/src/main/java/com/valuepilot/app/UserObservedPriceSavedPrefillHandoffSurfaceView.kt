@@ -52,7 +52,7 @@ internal class UserObservedPriceSavedPrefillHandoffSurfaceView @JvmOverloads con
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
-            setTextColor(Color.parseColor("#111827"))
+            setTextColor(ValuePilotPalette.color("#111827"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
         }
 
@@ -60,7 +60,7 @@ internal class UserObservedPriceSavedPrefillHandoffSurfaceView @JvmOverloads con
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            setTextColor(Color.parseColor("#4B5563"))
+            setTextColor(ValuePilotPalette.color("#4B5563"))
             setPadding(0, dp(8), 0, 0)
         }
 
@@ -69,8 +69,8 @@ internal class UserObservedPriceSavedPrefillHandoffSurfaceView @JvmOverloads con
             MaterialCardView(context).apply {
                 radius = dp(18).toFloat()
                 cardElevation = 0f
-                setCardBackgroundColor(Color.parseColor("#F9FAFB"))
-                strokeColor = Color.parseColor("#E5E7EB")
+                setCardBackgroundColor(ValuePilotPalette.color("#F9FAFB"))
+                strokeColor = ValuePilotPalette.color("#E5E7EB")
                 strokeWidth = dp(1)
                 layoutParams =
                     LayoutParams(
@@ -96,7 +96,7 @@ internal class UserObservedPriceSavedPrefillHandoffSurfaceView @JvmOverloads con
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setTextColor(Color.parseColor("#6B7280"))
+            setTextColor(ValuePilotPalette.color("#6B7280"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             if (topPadding > 0) setPadding(0, dp(topPadding), 0, 0)
         }
@@ -105,7 +105,7 @@ internal class UserObservedPriceSavedPrefillHandoffSurfaceView @JvmOverloads con
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-            setTextColor(Color.parseColor("#111827"))
+            setTextColor(ValuePilotPalette.color("#111827"))
             setPadding(0, dp(3), 0, 0)
         }
 

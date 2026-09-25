@@ -51,7 +51,7 @@ class PracticalShoppingSavedStapleLaunchView @JvmOverloads constructor(
                 TextView(context).apply {
                     text = titleText
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f)
-                    setTextColor(Color.parseColor("#111827"))
+                    setTextColor(ValuePilotPalette.color("#111827"))
                     setTypeface(Typeface.DEFAULT, Typeface.BOLD)
                 }
             )
@@ -61,7 +61,7 @@ class PracticalShoppingSavedStapleLaunchView @JvmOverloads constructor(
                 TextView(context).apply {
                     text = supportingText
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-                    setTextColor(Color.parseColor("#4B5563"))
+                    setTextColor(ValuePilotPalette.color("#4B5563"))
                     setPadding(0, dp(6), 0, 0)
                 }
             )
@@ -71,7 +71,7 @@ class PracticalShoppingSavedStapleLaunchView @JvmOverloads constructor(
                 TextView(context).apply {
                     text = noticeText
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-                    setTextColor(Color.parseColor("#92400E"))
+                    setTextColor(ValuePilotPalette.color("#92400E"))
                     setPadding(0, dp(8), 0, 0)
                     // This projected readiness explanation is important
                     // feedback when navigation is intentionally unavailable.

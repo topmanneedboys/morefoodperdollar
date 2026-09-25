@@ -1065,7 +1065,7 @@ class MainActivity : AppCompatActivity() {
             TextView(this).apply {
                 text = getString(R.string.home_item_details_exact_product_note)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-                setTextColor(Color.parseColor("#6B7280"))
+                setTextColor(ValuePilotPalette.color("#6B7280"))
                 setPadding(dp(4), 0, dp(4), 0)
             }
         )
@@ -2099,12 +2099,12 @@ class MainActivity : AppCompatActivity() {
         searchStatus.text = state.statusMessage
         searchStatus.setTextColor(
             when (state.mode) {
-                ArgentinaLiveSearchSurfaceMode.RESULTS -> Color.parseColor("#374151")
+                ArgentinaLiveSearchSurfaceMode.RESULTS -> ValuePilotPalette.color("#374151")
                 ArgentinaLiveSearchSurfaceMode.AUTHORIZATION_UNAVAILABLE,
                 ArgentinaLiveSearchSurfaceMode.STALE_RELEASE,
                 ArgentinaLiveSearchSurfaceMode.TIMEOUT,
-                ArgentinaLiveSearchSurfaceMode.TEMPORARILY_UNAVAILABLE -> Color.parseColor("#B42318")
-                else -> Color.parseColor("#6B7280")
+                ArgentinaLiveSearchSurfaceMode.TEMPORARILY_UNAVAILABLE -> ValuePilotPalette.color("#B42318")
+                else -> ValuePilotPalette.color("#6B7280")
             }
         )
         searchProgress.visibility =
@@ -2154,8 +2154,8 @@ class MainActivity : AppCompatActivity() {
         val card = MaterialCardView(this).apply {
             radius = dp(18).toFloat()
             cardElevation = 0f
-            setCardBackgroundColor(Color.WHITE)
-            strokeColor = Color.parseColor("#D1D5DB")
+            setCardBackgroundColor(ValuePilotPalette.color("#FFFFFF"))
+            strokeColor = ValuePilotPalette.color("#D1D5DB")
             strokeWidth = dp(1)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -2188,7 +2188,7 @@ class MainActivity : AppCompatActivity() {
         val name = TextView(this).apply {
             text = match.displayName
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-            setTextColor(Color.parseColor("#111827"))
+            setTextColor(ValuePilotPalette.color("#111827"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             setPadding(0, dp(5), 0, 0)
         }
@@ -2197,7 +2197,7 @@ class MainActivity : AppCompatActivity() {
             TextView(this).apply {
                 text = brandName
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-                setTextColor(Color.parseColor("#374151"))
+                setTextColor(ValuePilotPalette.color("#374151"))
                 setPadding(0, dp(7), 0, 0)
             }
         }
@@ -2205,7 +2205,7 @@ class MainActivity : AppCompatActivity() {
         val matchLabel = TextView(this).apply {
             text = getString(R.string.search_identity_match_label, match.matchLabel)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setTextColor(Color.parseColor("#6B7280"))
+            setTextColor(ValuePilotPalette.color("#6B7280"))
             setPadding(0, dp(8), 0, 0)
         }
 
@@ -2213,7 +2213,7 @@ class MainActivity : AppCompatActivity() {
             text = getString(R.string.search_identity_source)
             gravity = Gravity.START
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setTextColor(Color.parseColor("#6B7280"))
+            setTextColor(ValuePilotPalette.color("#6B7280"))
             setPadding(0, dp(9), 0, 0)
         }
 
@@ -2223,7 +2223,7 @@ class MainActivity : AppCompatActivity() {
         TextView(this).apply {
             text = caveat
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setTextColor(Color.parseColor("#92400E"))
+            setTextColor(ValuePilotPalette.color("#92400E"))
             setPadding(0, dp(7), 0, 0)
         }.also(body::addView)
         body.addView(source)

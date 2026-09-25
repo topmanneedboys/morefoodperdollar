@@ -1375,10 +1375,10 @@ class ComparisonActivity : AppCompatActivity() {
 
             background = GradientDrawable().apply {
                 cornerRadius = dp(14).toFloat()
-                setColor(Color.parseColor("#F9FAFB"))
+                setColor(ValuePilotPalette.color("#F9FAFB"))
                 setStroke(
                     dp(1),
-                    Color.parseColor("#D1D5DB")
+                    ValuePilotPalette.color("#D1D5DB")
                 )
             }
         }
@@ -1392,7 +1392,7 @@ class ComparisonActivity : AppCompatActivity() {
                 TypedValue.COMPLEX_UNIT_SP,
                 14f
             )
-            setTextColor(Color.parseColor("#374151"))
+            setTextColor(ValuePilotPalette.color("#374151"))
             setTypeface(
                 Typeface.DEFAULT,
                 Typeface.BOLD
@@ -1425,8 +1425,8 @@ class ComparisonActivity : AppCompatActivity() {
                 TypedValue.COMPLEX_UNIT_SP,
                 16f
             )
-            setTextColor(Color.parseColor("#111827"))
-            setHintTextColor(Color.parseColor("#9CA3AF"))
+            setTextColor(ValuePilotPalette.color("#111827"))
+            setHintTextColor(ValuePilotPalette.color("#9CA3AF"))
             setPadding(
                 0,
                 dp(8),
@@ -1986,16 +1986,16 @@ class ComparisonActivity : AppCompatActivity() {
                             it.assessment == CompareHerePriceMemoryAssessment.HIGHER_THAN_LAST
                     }
                 ) {
-                    Color.parseColor("#92400E")
+                    ValuePilotPalette.color("#92400E")
                 } else {
-                    Color.parseColor("#047857")
+                    ValuePilotPalette.color("#047857")
                 }
             )
             privateMemoryStatus.visibility = View.VISIBLE
             clearPrivateMemoryButton.visibility = View.VISIBLE
         } else {
             privateMemoryStatus.text = getString(R.string.compare_memory_error)
-            privateMemoryStatus.setTextColor(Color.parseColor("#92400E"))
+            privateMemoryStatus.setTextColor(ValuePilotPalette.color("#92400E"))
             privateMemoryStatus.visibility = View.VISIBLE
             clearPrivateMemoryButton.visibility = View.VISIBLE
         }
@@ -2170,9 +2170,9 @@ class ComparisonActivity : AppCompatActivity() {
 
         scannerStatus.setTextColor(
             if (enabled) {
-                Color.parseColor("#047857")
+                ValuePilotPalette.color("#047857")
             } else {
-                Color.parseColor("#6B7280")
+                ValuePilotPalette.color("#6B7280")
             }
         )
     }

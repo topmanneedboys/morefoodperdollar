@@ -42,7 +42,7 @@ internal class UserObservedPriceConfirmationDraftProofContentSelectionSurfaceVie
             TextView(context).apply {
                 text = "Attach proof content"
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-                setTextColor(Color.parseColor("#111827"))
+                setTextColor(ValuePilotPalette.color("#111827"))
                 setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             }
         )
@@ -52,14 +52,14 @@ internal class UserObservedPriceConfirmationDraftProofContentSelectionSurfaceVie
                     "Choose the actual receipt or price-tag image/PDF. The selected content stays " +
                         "temporary on this screen and is not evidence by itself."
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-                setTextColor(Color.parseColor("#6B7280"))
+                setTextColor(ValuePilotPalette.color("#6B7280"))
                 setPadding(0, dp(5), 0, 0)
             }
         )
 
         status.apply {
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setTextColor(Color.parseColor("#6B7280"))
+            setTextColor(ValuePilotPalette.color("#6B7280"))
             setPadding(0, dp(8), 0, 0)
         }
         addView(status)
@@ -95,24 +95,24 @@ internal class UserObservedPriceConfirmationDraftProofContentSelectionSurfaceVie
         when (presentation) {
             UserObservedPriceConfirmationDraftProofContentSelectionPresentation.Inactive -> {
                 status.text = ""
-                status.setTextColor(Color.parseColor("#6B7280"))
+                status.setTextColor(ValuePilotPalette.color("#6B7280"))
             }
 
             UserObservedPriceConfirmationDraftProofContentSelectionPresentation.AwaitingSelection -> {
                 status.text = "No proof image or PDF selected yet."
-                status.setTextColor(Color.parseColor("#6B7280"))
+                status.setTextColor(ValuePilotPalette.color("#6B7280"))
             }
 
             is UserObservedPriceConfirmationDraftProofContentSelectionPresentation.Ready -> {
                 status.text =
                     "Proof content selected (${presentation.byteLength} bytes). " +
                         "It remains temporary until a later explicit confirmation step."
-                status.setTextColor(Color.parseColor("#047857"))
+                status.setTextColor(ValuePilotPalette.color("#047857"))
             }
 
             is UserObservedPriceConfirmationDraftProofContentSelectionPresentation.Rejected -> {
                 status.text = rejectionMessage(presentation.issue)
-                status.setTextColor(Color.parseColor("#B42318"))
+                status.setTextColor(ValuePilotPalette.color("#B42318"))
             }
         }
     }

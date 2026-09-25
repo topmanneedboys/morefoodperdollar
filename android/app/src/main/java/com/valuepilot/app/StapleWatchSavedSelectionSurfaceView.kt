@@ -133,9 +133,9 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
                 radius = dp(18).toFloat()
                 cardElevation = 0f
                 setCardBackgroundColor(
-                    Color.parseColor(if (selected) "#F0FDF4" else "#FFFFFF")
+                    ValuePilotPalette.color(if (selected) "#F0FDF4" else "#FFFFFF")
                 )
-                strokeColor = Color.parseColor(if (selected) "#86EFAC" else "#E5E7EB")
+                strokeColor = ValuePilotPalette.color(if (selected) "#86EFAC" else "#E5E7EB")
                 strokeWidth = dp(1)
                 layoutParams =
                     LayoutParams(
@@ -175,7 +175,7 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
-            setTextColor(Color.parseColor("#111827"))
+            setTextColor(ValuePilotPalette.color("#111827"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
         }
 
@@ -219,8 +219,8 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
             // Foreground fact-resolution progress is an immutable projection;
             // announce changes without giving this card fact authority.
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
-            setCardBackgroundColor(Color.parseColor("#F9FAFB"))
-            strokeColor = Color.parseColor("#D1D5DB")
+            setCardBackgroundColor(ValuePilotPalette.color("#F9FAFB"))
+            strokeColor = ValuePilotPalette.color("#D1D5DB")
             strokeWidth = dp(1)
             layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
                 topMargin = dp(14)
@@ -250,7 +250,7 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            setTextColor(Color.parseColor("#374151"))
+            setTextColor(ValuePilotPalette.color("#374151"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             setPadding(0, dp(20), 0, 0)
         }
@@ -269,7 +269,7 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
             setAllCaps(false)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, if (compact) 13f else 14f)
             if (destructive) {
-                setTextColor(Color.parseColor("#B91C1C"))
+                setTextColor(ValuePilotPalette.color("#B91C1C"))
             }
             isEnabled = onAction != null
             setOnClickListener { onAction?.invoke(action) }
@@ -311,7 +311,7 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
-            setTextColor(Color.parseColor(textColor))
+            setTextColor(ValuePilotPalette.color(textColor))
             if (bold) setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             if (topPadding > 0) setPadding(0, dp(topPadding), 0, 0)
         }

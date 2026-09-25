@@ -111,7 +111,7 @@ class UserObservedPriceConfirmationDraftProofReferenceInputSurfaceView @JvmOverl
         proofTypeError.apply {
             visibility = View.GONE
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setTextColor(Color.parseColor("#B42318"))
+            setTextColor(ValuePilotPalette.color("#B42318"))
             setPadding(0, dp(4), 0, 0)
         }
         addView(proofTypeError)
@@ -176,7 +176,7 @@ class UserObservedPriceConfirmationDraftProofReferenceInputSurfaceView @JvmOverl
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-            setTextColor(Color.parseColor("#111827"))
+            setTextColor(ValuePilotPalette.color("#111827"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
         }
 
@@ -184,7 +184,7 @@ class UserObservedPriceConfirmationDraftProofReferenceInputSurfaceView @JvmOverl
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setTextColor(Color.parseColor("#6B7280"))
+            setTextColor(ValuePilotPalette.color("#6B7280"))
             setPadding(0, dp(5), 0, 0)
         }
 

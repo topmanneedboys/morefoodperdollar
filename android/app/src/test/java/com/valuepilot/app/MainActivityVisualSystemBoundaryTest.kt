@@ -1,6 +1,7 @@
 package com.valuepilot.app
 
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -65,6 +66,24 @@ class MainActivityVisualSystemBoundaryTest {
             assertTrue("$name must use the shared background", layout.contains("@color/vp_background"))
             assertFalse("$name must not retain the old cold white root", layout.contains("android:background=\"#FFFFFF\""))
         }
+    }
+
+    @Test
+    fun `programmatic consumer colors resolve through the warm palette`() {
+        val sources = File("src/main/java/com/valuepilot/app")
+            .walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .filterNot { it.name == "ValuePilotPalette.kt" }
+            .toList()
+        assertTrue(sources.isNotEmpty())
+        sources.forEach { file ->
+            assertFalse(
+                "Programmatic color parsing must use the shared palette: ${file.name}",
+                file.readText().contains("Color.parseColor(")
+            )
+        }
+        assertEquals("#2A211C", ValuePilotPalette.token("#111827"))
+        assertEquals("#FFFDF9", ValuePilotPalette.token("#FFFFFF"))
     }
 
     @Test

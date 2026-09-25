@@ -180,8 +180,8 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
             MaterialCardView(context).apply {
                 radius = dp(18).toFloat()
                 cardElevation = 0f
-                setCardBackgroundColor(Color.WHITE)
-                strokeColor = Color.parseColor("#E5E7EB")
+                setCardBackgroundColor(ValuePilotPalette.color("#FFFFFF"))
+                strokeColor = ValuePilotPalette.color("#E5E7EB")
                 strokeWidth = dp(1)
                 layoutParams =
                     LayoutParams(
@@ -242,7 +242,7 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
-            setTextColor(Color.parseColor("#111827"))
+            setTextColor(ValuePilotPalette.color("#111827"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
         }
 
@@ -250,7 +250,7 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            setTextColor(Color.parseColor("#374151"))
+            setTextColor(ValuePilotPalette.color("#374151"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             setPadding(0, dp(20), 0, 0)
         }
@@ -322,7 +322,7 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
             setAllCaps(false)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, if (compact) 13f else 14f)
             if (destructive) {
-                setTextColor(Color.parseColor("#B91C1C"))
+                setTextColor(ValuePilotPalette.color("#B91C1C"))
             }
             isEnabled = onAction != null
             setOnClickListener { onClick?.invoke() ?: onAction?.invoke(action) }
@@ -346,7 +346,7 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, sizeSp)
-            setTextColor(Color.parseColor(textColor))
+            setTextColor(ValuePilotPalette.color(textColor))
             if (bold) setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             if (topPadding > 0) setPadding(0, dp(topPadding), 0, 0)
         }
