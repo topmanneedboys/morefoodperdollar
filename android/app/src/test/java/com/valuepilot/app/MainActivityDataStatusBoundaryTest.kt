@@ -64,10 +64,10 @@ class MainActivityDataStatusBoundaryTest {
         val source = source("src/main/java/com/valuepilot/app/PracticalShoppingDataStatusPresentation.kt").readText()
 
         listOf(
-            "current-offer records",
+            "None included. There is no authorized live-offer feed",
             "Unknown prices stay unknown",
-            "Not included yet",
-            "No flyer content is copied",
+            "Not available in this build",
+            "Flyer content is not copied",
             "fictional sample data"
         ).forEach { required ->
             assertTrue("Expected explicit uncertainty boundary: $required", source.contains(required))

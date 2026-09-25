@@ -34,13 +34,13 @@ internal data class PracticalShoppingDataStatusPresentation(
     /** Dialog-safe copy with one clear line per independent evidence boundary. */
     val message: String
         get() = listOf(
-            "Product identities\n$identityCatalog",
-            "Your private observations\n$privateObservations",
-            "Current offers\n$currentOffers",
-            "Store directory\n$storeDirectory",
+            "Product names\n$identityCatalog",
+            "Your saved observations\n$privateObservations",
+            "Live prices\n$currentOffers",
+            "Store locations\n$storeDirectory",
             "Flyers\n$flyers",
-            "Connectivity\n$connectivity",
-            "Sample data\n$demoData"
+            "Connection\n$connectivity",
+            "Home sample\n$demoData"
         ).joinToString("\n\n")
 
     companion object {
@@ -64,30 +64,30 @@ internal data class PracticalShoppingDataStatusPresentation(
             val directoryText =
                 when {
                     storeDirectorySummary == null ->
-                        "Not included yet. No bundled store location is being presented as a retailer or stock claim."
+                        "Not available in this build. No store location is presented as a price, stock or availability claim."
                     !storeDirectorySummary.accepted ->
-                        "Unavailable — the signed store-directory snapshot is ${storeDirectorySummary.admissionState.name.lowercase(Locale.ROOT)}; no location list is exposed from it."
+                        "Unavailable — the signed location list is ${storeDirectorySummary.admissionState.name.lowercase(Locale.ROOT)}; no locations are shown from it."
                     else -> {
                         val gta = storeDirectorySummary.regionRecordCounts["ca-gta"] ?: 0
                         val metroVancouver = storeDirectorySummary.regionRecordCounts["ca-metro-vancouver"] ?: 0
                         val date = observedDate(storeDirectorySummary.observedAtEpochMillis)
-                        "${String.format(Locale.ROOT, "%,d", storeDirectorySummary.totalRecordCount)} source-listed locations: ${String.format(Locale.ROOT, "%,d", gta)} in GTA and ${String.format(Locale.ROOT, "%,d", metroVancouver)} in Metro Vancouver. ${storeDirectorySummary.sourceDisplayName}, ${storeDirectorySummary.licenseId}, observed $date. Location only — no price, stock or availability fact."
+                        "${String.format(Locale.ROOT, "%,d", storeDirectorySummary.totalRecordCount)} source-listed locations: ${String.format(Locale.ROOT, "%,d", gta)} in GTA and ${String.format(Locale.ROOT, "%,d", metroVancouver)} in Metro Vancouver. ${storeDirectorySummary.sourceDisplayName}, observed $date. Location only — no price, stock or availability."
                     }
                 }
 
             return PracticalShoppingDataStatusPresentation(
                 identityCatalog =
-                    "${String.format(Locale.ROOT, "%,d", BUNDLED_IDENTITY_RECORD_COUNT)} Canada-labelled identities across signed, source-labelled GTA and Metro Vancouver snapshots. Identity only — no price, package, stock or availability fact.",
+                    "${String.format(Locale.ROOT, "%,d", BUNDLED_IDENTITY_RECORD_COUNT)} Canada-labelled product names for the GTA and Metro Vancouver. Names only — no live price, package size, stock or availability.",
                 privateObservations = privateText,
                 currentOffers =
-                    "Not included (0 authorized current-offer records). Unknown prices stay unknown.",
+                    "None included. There is no authorized live-offer feed. Unknown prices stay unknown.",
                 storeDirectory = directoryText,
                 flyers =
-                    "Not included. No flyer content is copied or treated as a current offer.",
+                    "None included. Flyer content is not copied or treated as a current offer.",
                 connectivity =
-                    "Offline-first core: the app has a bounded HTTPS edge foundation for a later user-triggered route, but no background sync or private-backend access. ACCESS_NETWORK_STATE remains absent.",
+                    "No background syncing. Only the user-triggered Argentina identity Search may use the secured connection; it does not supply prices or stock.",
                 demoData =
-                    "Home planner examples are clearly fictional sample data, not local retailer results. Search identity suggestions are source-attributed and do not provide current prices, stock, availability or Best Value decisions."
+                    "Home examples are fictional sample data. Search identities are source-attributed names, not current offers or Best Value decisions."
             )
         }
 
