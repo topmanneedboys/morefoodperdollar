@@ -62,7 +62,8 @@
             android:textIsSelectable="true"
             android:textSize="15sp" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button"
             android:id="@+id/shareToValuePilotOpenComparison"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -70,7 +71,8 @@
             android:text="@string/share_to_valuepilot_open_comparison"
             android:textAllCaps="false" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
             android:id="@+id/shareToValuePilotCancel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

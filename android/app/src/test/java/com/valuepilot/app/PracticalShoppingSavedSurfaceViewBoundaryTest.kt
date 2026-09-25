@@ -71,6 +71,16 @@ class PracticalShoppingSavedSurfaceViewBoundaryTest {
     }
 
     @Test
+    fun saved_actions_use_the_shared_warm_outlined_button_surface() {
+        val source = source().readText()
+
+        assertTrue(source.contains("MaterialButton(context).apply"))
+        assertTrue(source.contains("backgroundTintList"))
+        assertTrue(source.contains("strokeColor"))
+        assertTrue(source.contains("minHeight = dp(if (compact) 44 else 52)"))
+    }
+
+    @Test
     fun detachedOwnerDismissesAnySavedConfirmationDialog() {
         val source = source().readText()
 

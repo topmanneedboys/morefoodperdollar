@@ -57,7 +57,8 @@
             android:textColor="@color/vp_text_muted"
             android:textSize="13sp" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button"
             android:id="@+id/capturePhotoButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -65,7 +66,8 @@
             android:text="@string/compare_capture_photo"
             android:textAllCaps="false" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
             android:id="@+id/importPhotoButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -82,7 +84,8 @@
             android:textColor="@color/vp_text_muted"
             android:textSize="12sp" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
             android:id="@+id/cancelPhotoButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -91,7 +94,8 @@
             android:textAllCaps="false"
             android:visibility="gone" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
             android:id="@+id/retryPhotoButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -100,7 +104,8 @@
             android:textAllCaps="false"
             android:visibility="gone" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
             android:id="@+id/compareBarcodeButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -123,7 +128,8 @@
             android:layout_height="wrap_content"
             android:orientation="vertical" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
             android:id="@+id/addProductButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -190,7 +196,8 @@
                 android:textSize="15sp" />
         </RadioGroup>
 
-        <Button
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button"
             android:id="@+id/compareButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -198,7 +205,8 @@
             android:text="@string/compare_value"
             android:textAllCaps="false" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
             android:id="@+id/clearButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -212,7 +220,8 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
             android:id="@+id/shareComparisonButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -240,7 +249,8 @@
             android:textStyle="bold"
             android:visibility="gone" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
             android:id="@+id/clearPrivateMemoryButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -282,7 +292,8 @@
             android:textColor="@color/vp_text_muted"
             android:textStyle="bold" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button"
             android:id="@+id/enableButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -290,7 +301,8 @@
             android:text="@string/enable_scanner"
             android:textAllCaps="false" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
             android:id="@+id/settingsButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

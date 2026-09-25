@@ -69,6 +69,22 @@ class MainActivityVisualSystemBoundaryTest {
     }
 
     @Test
+    fun `standalone route actions use the shared warm MaterialButton styles`() {
+        listOf(
+            "activity_main.xml",
+            "activity_good_price.xml",
+            "activity_barcode_capture.xml",
+            "activity_share_to_valuepilot.xml"
+        ).forEach { name ->
+            val layout = source("src/main/res/layout/$name").readText()
+            assertFalse("$name must not fall back to platform Button styling", layout.contains("<Button"))
+            assertTrue("$name must use MaterialButton controls", layout.contains("<com.google.android.material.button.MaterialButton"))
+            assertTrue("$name must include the filled shared action style", layout.contains("@style/Widget.ValuePilot.Button"))
+            assertTrue("$name must include the outlined shared action style", layout.contains("@style/Widget.ValuePilot.Button.Outlined"))
+        }
+    }
+
+    @Test
     fun `programmatic consumer colors resolve through the warm palette`() {
         val sources = File("src/main/java/com/valuepilot/app")
             .walkTopDown()

@@ -1,6 +1,7 @@
 package com.valuepilot.app
 
 import android.content.Context
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.util.AttributeSet
@@ -12,6 +13,7 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 
 /**
@@ -315,15 +317,26 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
         contentDescription: String? = null,
         onClick: (() -> Unit)? = null
     ): Button =
-        Button(context).apply {
+        MaterialButton(context).apply {
             ownerBoundButtons += this
             text = label
             this.contentDescription = contentDescription
             setAllCaps(false)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, if (compact) 13f else 14f)
-            if (destructive) {
-                setTextColor(ValuePilotPalette.color("#B91C1C"))
-            }
+            cornerRadius = dp(14)
+            strokeWidth = dp(1)
+            strokeColor =
+                ColorStateList.valueOf(
+                    ValuePilotPalette.color(if (destructive) "#E2B8AE" else "#D8CFC6")
+                )
+            backgroundTintList =
+                ColorStateList.valueOf(ValuePilotPalette.color("#FFFDF9"))
+            setTextColor(
+                ValuePilotPalette.color(if (destructive) "#A63D32" else "#8F3620")
+            )
+            insetTop = 0
+            insetBottom = 0
+            minHeight = dp(if (compact) 44 else 52)
             isEnabled = onAction != null
             setOnClickListener { onClick?.invoke() ?: onAction?.invoke(action) }
             layoutParams =

@@ -67,7 +67,8 @@
             android:textColor="@color/vp_text_muted"
             android:textSize="13sp" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
             android:id="@+id/goodPriceBarcodeButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -125,7 +126,8 @@
                 android:textSize="15sp" />
         </RadioGroup>
 
-        <Button
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button"
             android:id="@+id/checkGoodPriceButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -133,7 +135,8 @@
             android:text="@string/check_good_price"
             android:textAllCaps="false" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
             android:id="@+id/clearGoodPriceButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -147,7 +150,8 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
             android:id="@+id/goodPriceShareButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -175,7 +179,8 @@
             android:textStyle="bold"
             android:visibility="gone" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
             android:id="@+id/clearGoodPriceMemoryButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

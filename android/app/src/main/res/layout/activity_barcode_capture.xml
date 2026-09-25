@@ -32,7 +32,8 @@
             android:textSize="15sp"
             android:lineSpacingExtra="2dp" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button"
             android:id="@+id/barcodeCaptureButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -40,7 +41,8 @@
             android:text="@string/barcode_capture_action"
             android:textAllCaps="false" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
             android:id="@+id/barcodeImportButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -57,7 +59,8 @@
             android:textColor="@color/vp_text_muted"
             android:textSize="13sp" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
+            style="@style/Widget.ValuePilot.Button.Outlined"
             android:id="@+id/barcodeCancelButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
