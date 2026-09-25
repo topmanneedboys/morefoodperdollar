@@ -304,6 +304,28 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical" />
 
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/searchLoadMoreButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="14dp"
+                    android:contentDescription="@string/search_load_more_description"
+                    android:text="@string/search_load_more"
+                    android:textAllCaps="false"
+                    android:visibility="gone"
+                    app:cornerRadius="16dp"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+                <TextView
+                    android:id="@+id/searchResultsEnd"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:lineSpacingExtra="2dp"
+                    android:textColor="#6B7280"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
+
                 <com.valuepilot.app.ProductionSearchSurfaceView
                     android:id="@+id/productionSearchSurface"
                     android:layout_width="match_parent"

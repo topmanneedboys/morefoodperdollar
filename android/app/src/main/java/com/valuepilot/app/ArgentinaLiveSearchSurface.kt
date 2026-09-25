@@ -30,10 +30,9 @@ internal data class ArgentinaLiveSearchSurfaceState(
         require(caveat.isNotBlank())
         require(query.length <= ArgentinaBackendContract.MAX_QUERY_CHARS)
         require(presentation == null || presentation.query.isNotBlank())
-        require(
-            (mode == ArgentinaLiveSearchSurfaceMode.RESULTS) ==
-                (presentation != null && presentation.matches.isNotEmpty())
-        )
+        if (mode == ArgentinaLiveSearchSurfaceMode.RESULTS) {
+            require(presentation != null && presentation.matches.isNotEmpty())
+        }
         require(mode != ArgentinaLiveSearchSurfaceMode.NO_MATCHES || presentation != null)
     }
 }
@@ -66,7 +65,13 @@ internal object ArgentinaLiveSearchSurfacePresenter {
                     mode = ArgentinaLiveSearchSurfaceMode.LOADING,
                     generation = state.generation,
                     query = state.query,
-                    statusMessage = "Searching Argentina product identities…",
+                    statusMessage =
+                        if (state.previousPresentation == null) {
+                            "Searching Argentina product identities…"
+                        } else {
+                            "Loading more matching identities…"
+                        },
+                    presentation = state.previousPresentation,
                     caveat = IDENTITY_CAVEAT
                 )
             is ArgentinaLiveSearchState.Results ->
@@ -75,7 +80,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
                     mode = ArgentinaLiveSearchSurfaceMode.RESULTS,
                     generation = state.generation,
                     query = state.query,
-                    statusMessage = "Product identities found.",
+                    statusMessage = resultStatus(state.presentation),
                     presentation = state.presentation,
                     caveat = IDENTITY_CAVEAT
                 )
@@ -91,6 +96,16 @@ internal object ArgentinaLiveSearchSurfacePresenter {
                 )
             is ArgentinaLiveSearchState.Unavailable ->
                 unavailable(state, area)
+        }
+
+    private fun resultStatus(presentation: PracticalShoppingSearchIdentityPresentation): String =
+        when {
+            presentation.limitReached ->
+                "Product identities found. This release reached the bounded result limit."
+            presentation.hasMore ->
+                "Product identities found. More matching identities are available."
+            else ->
+                "Product identities found. No more matching identities were returned in this release."
         }
 
     private fun unavailable(
@@ -125,6 +140,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
             generation = state.generation,
             query = state.query,
             statusMessage = message,
+            presentation = state.previousPresentation,
             caveat = IDENTITY_CAVEAT
         )
     }
@@ -152,6 +168,10 @@ internal class ArgentinaLiveSearchSurfaceHost(
 
     fun submit(rawQuery: String) {
         coordinator.submit(rawQuery, area.context())
+    }
+
+    fun loadMore() {
+        coordinator.loadMore()
     }
 
     fun invalidateForRouteChange() {

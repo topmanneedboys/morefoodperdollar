@@ -161,6 +161,7 @@ class _StubReader:
         self.trusted_calls: list[object] = []
         self.discovery_calls: list[tuple[str, tuple[str, ...], int]] = []
         self.interpret_calls: list[str] = []
+        self.discovery_values: list[dict[str, object]] | None = None
 
     def interpret_text(self, text: str, *, require_quantities: bool = False, region_ids=None):
         self.interpret_calls.append(text)
@@ -184,19 +185,21 @@ class _StubReader:
     def discover(self, query: str, *, region_ids, product_limit: int = 5):
         selected = tuple(region_ids)
         self.discovery_calls.append((query, selected, product_limit))
-        candidate = {
-            "productEvidenceKey": "key-1",
-            "name": query,
-            "brand": None,
-            "gtin": None,
-            "score": 100,
-            "matchedTokens": [query],
-        }
+        values = self.discovery_values
+        if values is None:
+            values = [{
+                "productEvidenceKey": "key-1",
+                "name": query,
+                "brand": None,
+                "gtin": None,
+                "score": 100,
+                "matchedTokens": [query],
+            }]
         metrics = SimpleNamespace(
             regions_queried=list(selected),
             as_dict=lambda: {"regionsQueried": list(selected), "searchPackCorpusScanned": 0},
         )
-        return (candidate,), metrics
+        return tuple(values[:product_limit]), metrics
 
 
 class SearchPackM11Tests(unittest.TestCase):
@@ -493,8 +496,36 @@ class SearchPackM11Tests(unittest.TestCase):
         self.assertEqual(response["resolution"], "DISCOVERY")
         self.assertEqual(response["regionsQueried"], ["ar-caba"])
         self.assertEqual(response["matches"][0]["productEvidenceKey"], "key-1")
-        self.assertEqual(reader.discovery_calls, [("arroz", ("ar-caba",), 5)])
+        self.assertEqual(reader.discovery_calls, [("arroz", ("ar-caba",), 6)])
         self.assertEqual(reader.interpret_calls, [])
+        self.assertEqual(response["pagination"], {"page": 0, "pageSize": 5, "hasMore": False, "nextPage": None, "limitReached": False})
+
+    def test_service_search_pages_deterministically_with_bounded_continuation(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": f"key-{index}",
+                "name": f"Arroz {index}",
+                "brand": None,
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["arroz"],
+            }
+            for index in range(11)
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        first = service.search({"latitude": "-34", "longitude": "-58", "radiusKm": "5", "query": "arroz", "page": 0})
+        second = service.search({"latitude": "-34", "longitude": "-58", "radiusKm": "5", "query": "arroz", "page": 1})
+
+        self.assertEqual([item["productEvidenceKey"] for item in first["matches"]], [f"key-{index}" for index in range(5)])
+        self.assertEqual([item["productEvidenceKey"] for item in second["matches"]], [f"key-{index}" for index in range(5, 10)])
+        self.assertEqual(first["pagination"]["nextPage"], 1)
+        self.assertTrue(first["pagination"]["hasMore"])
+        self.assertFalse(second["pagination"]["limitReached"])
+        self.assertEqual(reader.discovery_calls[-2:], [("arroz", ("ar-caba",), 6), ("arroz", ("ar-caba",), 11)])
 
     def test_public_shop_mapping_cannot_inject_trusted_identity(self) -> None:
         manager = _StubReleaseManager()

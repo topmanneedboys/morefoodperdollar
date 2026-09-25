@@ -49,6 +49,9 @@ SEARCHPACK_FORMAT_VERSION = 2
 POSTINGS_BLOCK_MAX_IDS = 65_536
 SEARCHPACK_CANDIDATE_HORIZON = 256
 SEARCHPACK_MAX_DOCS = 100_000
+# Search discovery is paged at the service boundary.  Keep the extra result
+# bounded so callers can detect continuation without materializing a corpus.
+SEARCHPACK_MAX_DISCOVERY_RESULTS = 31
 MAX_RANK_WORKERS = 4
 DOCSTORE_BLOCK_RECORDS = 128
 LEXICON_BLOCK_ENTRIES = 4_096
@@ -1173,7 +1176,7 @@ class SearchPackRegion:
         return self.get_records((int(doc_id),), stats=stats, max_records=1).get(int(doc_id))
 
     def search_many(self, queries: Sequence[str], *, product_limit: int = 5, candidate_bound: int = SEARCHPACK_MAX_DOCS, stats: SearchPackStats | None = None) -> tuple[tuple[Mapping[str, Any], ...], ...]:
-        if not isinstance(product_limit, int) or not 1 <= product_limit <= 5:
+        if not isinstance(product_limit, int) or not 1 <= product_limit <= SEARCHPACK_MAX_DISCOVERY_RESULTS:
             raise SearchPackError("product limit is invalid")
         if not isinstance(candidate_bound, int) or not 1 <= candidate_bound <= SEARCHPACK_MAX_DOCS:
             raise SearchPackError("SearchPack ranked candidate bound is invalid")

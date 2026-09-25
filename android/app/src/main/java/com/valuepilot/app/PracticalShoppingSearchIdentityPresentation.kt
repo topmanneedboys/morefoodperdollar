@@ -17,26 +17,36 @@ internal data class PracticalShoppingSearchIdentityPresentation(
     val query: String,
     val matches: List<Match>,
     val evaluatedCandidateCount: Int,
-    val notice: String
+    val notice: String,
+    val page: Int = 0,
+    val hasMore: Boolean = false,
+    val nextPage: Int? = null,
+    val limitReached: Boolean = false
 ) {
     data class Match(
         val displayName: String,
         val brand: String?,
-        val matchLabel: String
+        val matchLabel: String,
+        val identityKey: String = displayName
     ) {
         init {
             require(displayName.isNotBlank())
             require(brand == null || brand.isNotBlank())
             require(matchLabel.isNotBlank())
+            require(identityKey.isNotBlank())
         }
     }
 
     init {
         require(query.isNotBlank())
-        require(matches.size <= 24)
+        require(matches.size <= 30)
         require(evaluatedCandidateCount >= matches.size)
         require(evaluatedCandidateCount <= OfflineCatalogSnapshotManifest.MAX_TOTAL_RECORDS)
         require(notice.isNotBlank())
+        require(page in 0..ArgentinaBackendContract.MAX_SEARCH_PAGE)
+        require(nextPage == null || nextPage == page + 1)
+        require(!limitReached || hasMore)
+        require(!hasMore || nextPage != null || limitReached)
     }
 
     /** Dialog-safe summary that keeps the identity-only boundary visible. */

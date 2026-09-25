@@ -70,6 +70,10 @@ MAX_OFFERS = 100_000
 MAX_REMOTE_ROUTING_CONCURRENCY = 4
 MAX_OFFER_PARTITION_CONCURRENCY = 4
 MAX_SEARCH_CACHE_ENTRIES = 512
+# Public identity discovery is deliberately paged.  The extra record lets the
+# service determine whether another bounded page exists without exposing an
+# unbounded search result or changing the tighter planner limits below.
+MAX_DISCOVERY_PRODUCT_LIMIT = 31
 MAX_INPUT_CANDIDATE_CACHE_ENTRIES = 8
 MAX_INPUT_CANDIDATE_UNION = INPUT_MAX_LINES * INPUT_MAX_CANDIDATES
 MAX_SMALL_CATALOG_FALLBACK_RECORDS = 2_048
@@ -757,7 +761,7 @@ class ArgentinaBackendReader:
 
         if not isinstance(query, str) or not query.strip() or len(query) > 96:
             raise BackendQueryError("query must contain 1-96 characters")
-        if not isinstance(product_limit, int) or not 1 <= product_limit <= 5:
+        if not isinstance(product_limit, int) or not 1 <= product_limit <= MAX_DISCOVERY_PRODUCT_LIMIT:
             raise BackendQueryError("product limit is invalid")
         selected = tuple(sorted({value for value in region_ids if isinstance(value, str) and value}))
         metrics = RequestMetrics(regions_queried=list(selected))

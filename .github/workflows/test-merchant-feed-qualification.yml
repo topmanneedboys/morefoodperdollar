@@ -15,6 +15,7 @@ on:
       - 'tools/build_argentina_sepa_query_selective_mobile.py'
       - 'tools/verify_argentina_sepa_query_selective_mobile.py'
       - 'tools/argentina_sepa_query.py'
+      - 'tools/argentina_searchpack.py'
       - 'tools/measure_argentina_sepa_query_selective_mobile.py'
       - 'tools/build_argentina_sepa_micro_partition_mobile.py'
       - 'tools/verify_argentina_sepa_micro_partition_mobile.py'
@@ -40,6 +41,7 @@ on:
       - 'tools/run_rakuten_off_quantity_coverage.py'
       - 'tools/tests/test_qualify_*.py'
       - 'tools/tests/test_argentina_sepa_*.py'
+      - 'tools/tests/test_argentina_searchpack.py'
       - 'tools/tests/test_shopping_intelligence_engine.py'
       - 'tools/tests/test_argentina_shopping_intelligence.py'
       - '.github/workflows/test-merchant-feed-qualification.yml'
@@ -56,6 +58,7 @@ on:
       - 'tools/build_argentina_sepa_query_selective_mobile.py'
       - 'tools/verify_argentina_sepa_query_selective_mobile.py'
       - 'tools/argentina_sepa_query.py'
+      - 'tools/argentina_searchpack.py'
       - 'tools/measure_argentina_sepa_query_selective_mobile.py'
       - 'tools/build_argentina_sepa_micro_partition_mobile.py'
       - 'tools/verify_argentina_sepa_micro_partition_mobile.py'
@@ -81,6 +84,7 @@ on:
       - 'tools/run_rakuten_off_quantity_coverage.py'
       - 'tools/tests/test_qualify_*.py'
       - 'tools/tests/test_argentina_sepa_*.py'
+      - 'tools/tests/test_argentina_searchpack.py'
       - 'tools/tests/test_shopping_intelligence_engine.py'
       - 'tools/tests/test_argentina_shopping_intelligence.py'
       - '.github/workflows/test-merchant-feed-qualification.yml'
@@ -116,6 +120,7 @@ jobs:
           tools/build_argentina_sepa_query_selective_mobile.py
           tools/verify_argentina_sepa_query_selective_mobile.py
           tools/argentina_sepa_query.py
+          tools/argentina_searchpack.py
           tools/measure_argentina_sepa_query_selective_mobile.py
           tools/build_argentina_sepa_micro_partition_mobile.py
           tools/verify_argentina_sepa_micro_partition_mobile.py

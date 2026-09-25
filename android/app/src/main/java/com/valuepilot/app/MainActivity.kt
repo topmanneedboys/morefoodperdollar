@@ -87,6 +87,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var searchProgress: ProgressBar
     private lateinit var searchResultsHeading: TextView
     private lateinit var searchResultsContainer: LinearLayout
+    private lateinit var searchLoadMoreButton: MaterialButton
+    private lateinit var searchResultsEnd: TextView
     private lateinit var savedExperience: PracticalShoppingSavedSurfaceView
     private lateinit var savedStapleLaunchExperience: PracticalShoppingSavedStapleLaunchView
     private lateinit var savedObservedPriceLaunchExperience: PracticalShoppingSavedObservedPriceLaunchView
@@ -187,6 +189,8 @@ class MainActivity : AppCompatActivity() {
         searchProgress = findViewById(R.id.searchProgress)
         searchResultsHeading = findViewById(R.id.searchResultsHeading)
         searchResultsContainer = findViewById(R.id.searchResultsContainer)
+        searchLoadMoreButton = findViewById(R.id.searchLoadMoreButton)
+        searchResultsEnd = findViewById(R.id.searchResultsEnd)
         savedExperience = findViewById(R.id.savedExperience)
         savedStapleLaunchExperience = findViewById(R.id.savedStapleLaunchExperience)
         savedObservedPriceLaunchExperience = findViewById(R.id.savedObservedPriceLaunchExperience)
@@ -1204,6 +1208,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         searchButton.setOnClickListener { submitArgentinaSearch() }
+        searchLoadMoreButton.setOnClickListener { argentinaSearchHost.loadMore() }
 
         quickSearchEntries().forEach { (chipId, query) ->
             configureQuickSearch(chipId, query)
@@ -2117,13 +2122,29 @@ class MainActivity : AppCompatActivity() {
         searchResultsContainer.removeAllViews()
         val presentation = state.presentation
         searchResultsHeading.visibility =
-            if (state.mode == ArgentinaLiveSearchSurfaceMode.RESULTS &&
-                presentation != null && presentation.matches.isNotEmpty()
+            if (presentation != null && presentation.matches.isNotEmpty()
             ) View.VISIBLE else View.GONE
 
         presentation?.matches?.forEach { match ->
             searchResultsContainer.addView(createSearchResultView(match, state.caveat))
         }
+
+        val canLoadMore =
+            state.mode == ArgentinaLiveSearchSurfaceMode.RESULTS &&
+                presentation?.hasMore == true && presentation.nextPage != null
+        searchLoadMoreButton.visibility = if (canLoadMore) View.VISIBLE else View.GONE
+        searchLoadMoreButton.isEnabled = state.mode == ArgentinaLiveSearchSurfaceMode.RESULTS
+        searchResultsEnd.visibility =
+            if (state.mode == ArgentinaLiveSearchSurfaceMode.RESULTS &&
+                presentation != null && presentation.matches.isNotEmpty() && !canLoadMore
+            ) View.VISIBLE
+            else View.GONE
+        searchResultsEnd.text =
+            when {
+                presentation?.limitReached == true -> getString(R.string.search_results_limit_reached)
+                presentation != null && presentation.matches.isNotEmpty() -> getString(R.string.search_results_end)
+                else -> ""
+            }
     }
 
     private fun createSearchResultView(

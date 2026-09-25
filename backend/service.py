@@ -11,7 +11,12 @@ import threading
 from decimal import Decimal, InvalidOperation
 from typing import Any, Mapping
 
-from .reader import ArgentinaBackendReader, BackendQueryError, CurrentPriceEvidenceUnavailable
+from .reader import (
+    MAX_DISCOVERY_PRODUCT_LIMIT,
+    ArgentinaBackendReader,
+    BackendQueryError,
+    CurrentPriceEvidenceUnavailable,
+)
 from .release import ReleaseError, ReleaseManager
 
 LOGGER = logging.getLogger("valuepilot.backend")
@@ -24,6 +29,8 @@ ANDROID_NETWORKING_SCOPE_ENV = "VALUEPILOT_ANDROID_NETWORKING_SCOPE"
 ANDROID_NETWORKING_RELEASE_ID_ENV = "VALUEPILOT_ANDROID_NETWORKING_RELEASE_ID"
 ANDROID_NETWORKING_RELEASE_DATE_ENV = "VALUEPILOT_ANDROID_NETWORKING_RELEASE_DATE"
 ANDROID_NETWORKING_SCOPE = "identity-search"
+DISCOVERY_PAGE_SIZE = 5
+DISCOVERY_MAX_PAGE = 5
 
 
 def _android_networking_authorized(status: Mapping[str, Any]) -> bool:
@@ -265,12 +272,20 @@ class BackendService:
         query = payload.get("query")
         if not isinstance(query, str) or not query.strip() or len(query.strip()) > 96:
             raise BackendQueryError("query must contain 1-96 characters")
+        page = payload.get("page", 0)
+        if isinstance(page, bool) or not isinstance(page, int) or not 0 <= page <= DISCOVERY_MAX_PAGE:
+            raise BackendQueryError("search page is invalid")
         request_id = correlation_id or str(uuid.uuid4())
         started = time.perf_counter()
         handle = self.release_manager.pin(require_fresh=True)
         reader = self._reader(handle)
         regions = self._route_ids(reader, payload)
-        candidates, metrics = reader.discover(query, region_ids=regions, product_limit=5)
+        offset = page * DISCOVERY_PAGE_SIZE
+        window_limit = min(offset + DISCOVERY_PAGE_SIZE + 1, MAX_DISCOVERY_PRODUCT_LIMIT)
+        candidates, metrics = reader.discover(query, region_ids=regions, product_limit=window_limit)
+        has_more = len(candidates) > offset + DISCOVERY_PAGE_SIZE
+        limit_reached = has_more and page == DISCOVERY_MAX_PAGE
+        visible_candidates = candidates[offset:offset + DISCOVERY_PAGE_SIZE]
         response = {
             "apiContractVersion": "valuepilot-argentina-backend-http-v1",
             "requestId": request_id,
@@ -288,7 +303,14 @@ class BackendService:
             # discovery deliberately has no correction or interpreter object.
             "correction": None,
             "input": None,
-            "matches": [dict(value) for value in candidates],
+            "matches": [dict(value) for value in visible_candidates],
+            "pagination": {
+                "page": page,
+                "pageSize": DISCOVERY_PAGE_SIZE,
+                "hasMore": has_more,
+                "nextPage": (page + 1) if has_more and not limit_reached else None,
+                "limitReached": limit_reached,
+            },
             "evidenceSemantics": {
                 "availability": "UNKNOWN",
                 "distance": "STRAIGHT_LINE_HAVERSINE_ONLY",

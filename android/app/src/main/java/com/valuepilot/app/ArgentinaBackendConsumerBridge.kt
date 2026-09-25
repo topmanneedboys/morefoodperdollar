@@ -170,6 +170,14 @@ internal class ArgentinaBackendConsumerBridge(
                         "search response does not match the requested query"
                     )
                 }
+                response.pagination?.let { pagination ->
+                    if (pagination.page != request.page) {
+                        throw ArgentinaBackendContract.ContractException(
+                            ArgentinaBackendContract.FailureCode.CONTRACT_INVALID,
+                            "search response page does not match the requested page"
+                        )
+                    }
+                }
                 response
             }
         )
@@ -401,6 +409,7 @@ private object ArgentinaBackendJson {
             .put("longitude", request.longitude)
             .put("radiusKm", request.radiusKm)
             .put("query", request.query)
+            .apply { if (request.page > 0) put("page", request.page) }
             .toString()
 
     fun interpretRequest(request: ArgentinaBackendContract.InterpretRequest): String =
@@ -483,17 +492,25 @@ private object ArgentinaBackendIdentityMapper {
                                 "exact barcode"
                             } else {
                                 "provider identity match"
-                            }
+                            },
+                        identityKey = candidate.productEvidenceKey
                     )
             }
         }
-        val matches = byKey.values.take(24)
+        // Preserve the long-standing resolved-search display bound.  Only the
+        // explicit paged discovery contract may accumulate the larger bound.
+        val matches = byKey.values.take(if (response.pagination == null) 24 else 30)
         val evaluated = response.identityCandidates.size
+        val pagination = response.pagination
         return PracticalShoppingSearchIdentityPresentation(
             query = response.originalQuery.trim(),
             matches = matches,
             evaluatedCandidateCount = maxOf(evaluated, matches.size),
-            notice = "$NOTICE_PREFIX ${response.common.releaseDate} only — no current prices, stock, package quantity or freshness are implied."
+            notice = "$NOTICE_PREFIX ${response.common.releaseDate} only — no current prices, stock, package quantity or freshness are implied.",
+            page = pagination?.page ?: 0,
+            hasMore = pagination?.hasMore == true,
+            nextPage = pagination?.nextPage,
+            limitReached = pagination?.limitReached == true
         )
     }
 }

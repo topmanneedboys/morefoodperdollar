@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Any, Iterable, Iterator, Mapping, Sequence
 
 try:
-    from tools.argentina_sepa_search import MAX_CANDIDATES, MAX_RESULTS, SearchError, SearchResult, search_products
+    from tools.argentina_sepa_search import MAX_CANDIDATES, MAX_DISCOVERY_RESULTS, MAX_RESULTS, SearchError, SearchResult, search_products
     from tools.build_argentina_sepa_national_shards import AVAILABILITY, CURRENCY, DELIVERY_PICKUP, ARGENTINA_REGIONS, _canonical_decimal, _canonical_json
     from tools.build_argentina_sepa_query_selective_mobile import (
         BOOTSTRAP_FILE,
@@ -48,7 +48,7 @@ try:
     )
     from tools.build_argentina_sepa_regional_snapshot import RegionSpec, _canonical_timestamp
 except ModuleNotFoundError:  # direct ``python tools/argentina_sepa_query.py`` invocation
-    from argentina_sepa_search import MAX_CANDIDATES, MAX_RESULTS, SearchError, SearchResult, search_products
+    from argentina_sepa_search import MAX_CANDIDATES, MAX_DISCOVERY_RESULTS, MAX_RESULTS, SearchError, SearchResult, search_products
     from build_argentina_sepa_national_shards import AVAILABILITY, CURRENCY, DELIVERY_PICKUP, ARGENTINA_REGIONS, _canonical_decimal, _canonical_json
     from build_argentina_sepa_query_selective_mobile import (
         BOOTSTRAP_FILE,
@@ -266,7 +266,7 @@ def _bounded_chunked_search_many(
     """
 
     _require(isinstance(max_candidates, int) and 1 <= max_candidates <= MAX_CANDIDATES, "max_candidates is invalid")
-    _require(isinstance(limit, int) and 1 <= limit <= MAX_RESULTS, "limit is invalid")
+    _require(isinstance(limit, int) and 1 <= limit <= MAX_DISCOVERY_RESULTS, "limit is invalid")
     unique_queries = tuple(dict.fromkeys(queries))
     _require(all(isinstance(query, str) for query in unique_queries), "query must be a string")
     best: dict[str, dict[str, SearchResult]] = {query: {} for query in unique_queries}
@@ -277,7 +277,7 @@ def _bounded_chunked_search_many(
         if not values:
             return
         for query in unique_queries:
-            for result in search_products(values, query, limit=limit, max_candidates=len(values)):
+            for result in search_products(values, query, limit=limit, max_candidates=len(values), _allow_discovery=True):
                 previous = best[query].get(result.product_evidence_key)
                 if previous is None or (-result.score, result.product_evidence_key, result.name) < (-previous.score, previous.product_evidence_key, previous.name):
                     best[query][result.product_evidence_key] = result

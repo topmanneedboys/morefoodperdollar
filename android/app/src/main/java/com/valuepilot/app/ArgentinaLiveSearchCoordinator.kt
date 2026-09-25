@@ -52,7 +52,8 @@ internal sealed interface ArgentinaLiveSearchState {
 
     data class Loading(
         val generation: Long,
-        val query: String
+        val query: String,
+        val previousPresentation: PracticalShoppingSearchIdentityPresentation? = null
     ) : ArgentinaLiveSearchState
 
     data class Results(
@@ -71,7 +72,8 @@ internal sealed interface ArgentinaLiveSearchState {
         val generation: Long,
         val query: String,
         val failure: ArgentinaBackendContract.FailureCode,
-        val metadata: ArgentinaBackendFailureMetadata? = null
+        val metadata: ArgentinaBackendFailureMetadata? = null,
+        val previousPresentation: PracticalShoppingSearchIdentityPresentation? = null
     ) : ArgentinaLiveSearchState
 }
 
@@ -91,6 +93,7 @@ internal class ArgentinaLiveSearchCoordinator(
     private var generation = 0L
     private var closed = false
     private var currentCancellation: ArgentinaRequestCancellation? = null
+    private var currentContext: ArgentinaSearchContext? = null
     private var pinnedRelease: ArgentinaBackendContract.ExpectedRelease? = null
     private var currentState: ArgentinaLiveSearchState = ArgentinaLiveSearchState.Idle(0L)
 
@@ -108,6 +111,7 @@ internal class ArgentinaLiveSearchCoordinator(
         synchronized(lock) {
             if (closed) return generation
             cancelCurrentLocked()
+            currentContext = context
             generation = nextGenerationLocked()
             val currentGeneration = generation
             scheduledGeneration = currentGeneration
@@ -148,6 +152,59 @@ internal class ArgentinaLiveSearchCoordinator(
         return generation
     }
 
+    /** Request the next bounded identity page for the current result set. */
+    fun loadMore(): Long {
+        var task: (() -> Unit)? = null
+        var immediate: ArgentinaLiveSearchState? = null
+        var scheduledGeneration = 0L
+        synchronized(lock) {
+            if (closed) return generation
+            val result =
+                when (val state = currentState) {
+                    is ArgentinaLiveSearchState.Results -> state.query to state.presentation
+                    is ArgentinaLiveSearchState.Empty -> state.query to state.presentation
+                    else -> null
+                } ?: return generation
+            val query = result.first
+            val presentation = result.second
+            val nextPage = presentation.nextPage ?: return generation
+            val context = currentContext ?: return generation
+            cancelCurrentLocked()
+            generation = nextGenerationLocked()
+            scheduledGeneration = generation
+            val cancellation = ArgentinaRequestCancellation()
+            currentCancellation = cancellation
+            task = {
+                performSearch(
+                    requestGeneration = scheduledGeneration,
+                    query = query,
+                    context = context,
+                    cancellation = cancellation,
+                    page = nextPage,
+                    previousPresentation = presentation
+                )
+            }
+            immediate = ArgentinaLiveSearchState.Loading(
+                scheduledGeneration,
+                query,
+                presentation
+            )
+            currentState = immediate
+        }
+        immediate?.let(stateSink)
+        try {
+            task?.let { work -> executor.execute(Runnable { work() }) }
+        } catch (_: RuntimeException) {
+            publishFailure(
+                generation = scheduledGeneration,
+                query = (immediate as? ArgentinaLiveSearchState.Loading)?.query.orEmpty(),
+                failure = ArgentinaBackendContract.FailureCode.NETWORK_ERROR,
+                previousPresentation = (immediate as? ArgentinaLiveSearchState.Loading)?.previousPresentation
+            )
+        }
+        return scheduledGeneration
+    }
+
     /** Query edits invalidate in-flight work but never start a request. */
     fun queryChanged(rawQuery: String): Long {
         val query = rawQuery.trim()
@@ -155,6 +212,7 @@ internal class ArgentinaLiveSearchCoordinator(
         synchronized(lock) {
             if (closed) return generation
             cancelCurrentLocked()
+            currentContext = null
             generation = nextGenerationLocked()
             next =
                 if (query.length > ArgentinaBackendContract.MAX_QUERY_CHARS) {
@@ -178,6 +236,7 @@ internal class ArgentinaLiveSearchCoordinator(
         synchronized(lock) {
             if (closed) return generation
             cancelCurrentLocked()
+            currentContext = null
             pinnedRelease = null
             generation = nextGenerationLocked()
             next = ArgentinaLiveSearchState.Idle(generation)
@@ -194,6 +253,7 @@ internal class ArgentinaLiveSearchCoordinator(
             if (shouldClose) {
                 closed = true
                 cancelCurrentLocked()
+                currentContext = null
                 pinnedRelease = null
                 generation = nextGenerationLocked()
                 currentState = ArgentinaLiveSearchState.Idle(generation)
@@ -206,12 +266,14 @@ internal class ArgentinaLiveSearchCoordinator(
         requestGeneration: Long,
         query: String,
         context: ArgentinaSearchContext,
-        cancellation: ArgentinaRequestCancellation
+        cancellation: ArgentinaRequestCancellation,
+        page: Int = 0,
+        previousPresentation: PracticalShoppingSearchIdentityPresentation? = null
     ) {
         try {
             val release = pinRelease(requestGeneration, cancellation)
             if (release is ArgentinaBackendBridgeResult.Failure) {
-                publishFailure(requestGeneration, query, release.code, release.metadata)
+                publishFailure(requestGeneration, query, release.code, release.metadata, previousPresentation)
                 return
             }
             if (!isCurrent(requestGeneration, cancellation)) return
@@ -221,7 +283,8 @@ internal class ArgentinaLiveSearchCoordinator(
                     latitude = context.latitude,
                     longitude = context.longitude,
                     radiusKm = context.radiusKm,
-                    query = query
+                    query = query,
+                    page = page
                 )
             val result =
                 ArgentinaBackendConsumerBridge(transport, expectedRelease)
@@ -231,17 +294,18 @@ internal class ArgentinaLiveSearchCoordinator(
                     if (result.code == ArgentinaBackendContract.FailureCode.RELEASE_MISMATCH) {
                         clearPinnedRelease(requestGeneration)
                     }
-                    publishFailure(requestGeneration, query, result.code, result.metadata)
+                    publishFailure(requestGeneration, query, result.code, result.metadata, previousPresentation)
                 }
                 is ArgentinaBackendBridgeResult.Success -> {
                     if (result.value.response.common.freshness != ArgentinaBackendContract.Freshness.FRESH) {
                         publishFailure(
                             requestGeneration,
                             query,
-                            ArgentinaBackendContract.FailureCode.STALE_RELEASE
+                            ArgentinaBackendContract.FailureCode.STALE_RELEASE,
+                            previousPresentation = previousPresentation
                         )
                     } else {
-                        val presentation = result.value.identity
+                        val presentation = mergePresentations(previousPresentation, result.value.identity)
                         publish(
                             if (presentation.matches.isEmpty()) {
                                 ArgentinaLiveSearchState.Empty(requestGeneration, query, presentation)
@@ -367,10 +431,26 @@ internal class ArgentinaLiveSearchCoordinator(
         generation: Long,
         query: String,
         failure: ArgentinaBackendContract.FailureCode,
-        metadata: ArgentinaBackendFailureMetadata? = null
+        metadata: ArgentinaBackendFailureMetadata? = null,
+        previousPresentation: PracticalShoppingSearchIdentityPresentation? = null
     ) {
         diagnosticSink(failure, metadata)
-        publish(ArgentinaLiveSearchState.Unavailable(generation, query, failure, metadata))
+        publish(ArgentinaLiveSearchState.Unavailable(generation, query, failure, metadata, previousPresentation))
+    }
+
+    private fun mergePresentations(
+        previous: PracticalShoppingSearchIdentityPresentation?,
+        incoming: PracticalShoppingSearchIdentityPresentation
+    ): PracticalShoppingSearchIdentityPresentation {
+        if (previous == null) return incoming
+        val merged = LinkedHashMap<String, PracticalShoppingSearchIdentityPresentation.Match>()
+        (previous.matches + incoming.matches).forEach { match ->
+            if (!merged.containsKey(match.identityKey)) merged[match.identityKey] = match
+        }
+        return incoming.copy(
+            matches = merged.values.toList(),
+            evaluatedCandidateCount = maxOf(previous.evaluatedCandidateCount, incoming.evaluatedCandidateCount, merged.size)
+        )
     }
 
     private fun publish(next: ArgentinaLiveSearchState) {

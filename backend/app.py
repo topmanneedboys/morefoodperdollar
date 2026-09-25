@@ -47,7 +47,7 @@ def create_app(service: BackendService | None = None):
     try:
         from fastapi import FastAPI, Request
         from fastapi.responses import JSONResponse
-        from pydantic import BaseModel, ConfigDict, Field, StrictStr
+        from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr
     except ImportError as exc:  # pragma: no cover
         raise RuntimeError("backend dependencies are not installed") from exc
 
@@ -71,6 +71,7 @@ def create_app(service: BackendService | None = None):
         longitude: StrictStr
         radiusKm: StrictStr
         query: StrictStr = Field(min_length=1, max_length=96)
+        page: StrictInt = Field(default=0, ge=0, le=5)
 
     class InterpretRequest(BaseModel):
         model_config = ConfigDict(extra="forbid")

@@ -27,6 +27,8 @@ object ArgentinaBackendContract {
     const val MAX_JSON_DEPTH = 24
     const val MAX_TEXT_CHARS = 4_096
     const val MAX_QUERY_CHARS = 96
+    const val SEARCH_PAGE_SIZE = 5
+    const val MAX_SEARCH_PAGE = 5
     const val MAX_LINES = 10
     const val MAX_MATCHES = 32
     const val MAX_PRODUCT_CANDIDATES = 128
@@ -239,8 +241,25 @@ object ArgentinaBackendContract {
         val correction: Map<String, String>?,
         val matches: List<SearchMatch>,
         val identityCandidates: List<ProductIdentity>,
-        val input: InputResult?
+        val input: InputResult?,
+        val pagination: SearchPagination? = null
     )
+
+    data class SearchPagination(
+        val page: Int,
+        val pageSize: Int,
+        val hasMore: Boolean,
+        val nextPage: Int?,
+        val limitReached: Boolean
+    ) {
+        init {
+            require(page in 0..MAX_SEARCH_PAGE)
+            require(pageSize == SEARCH_PAGE_SIZE)
+            require(nextPage == null || nextPage == page + 1)
+            require(!limitReached || hasMore)
+            require(!hasMore || nextPage != null || limitReached)
+        }
+    }
 
     data class InterpretResponse(
         val common: CommonEnvelope,
@@ -357,13 +376,15 @@ object ArgentinaBackendContract {
         val latitude: String,
         val longitude: String,
         val radiusKm: String,
-        val query: String
+        val query: String,
+        val page: Int = 0
     ) {
         init {
             validateCoordinate(latitude, "latitude", -90, 90)
             validateCoordinate(longitude, "longitude", -180, 180)
             validateDecimal(radiusKm, "radiusKm", nonNegative = true)
             require(query.trim().isNotEmpty() && query.length <= MAX_QUERY_CHARS)
+            require(page in 0..MAX_SEARCH_PAGE)
         }
     }
 
@@ -492,6 +513,9 @@ object ArgentinaBackendContract {
         val resolution = optionalSearchResolution(root, "resolution")
         val correction = optionalStringMap(root, "correction", 8, 160)
         val rawMatches = requiredArray(root, "matches")
+        val pagination =
+            if (!root.has("pagination") || root.isNull("pagination")) null
+            else parseSearchPagination(requiredObject(root, "pagination"))
 
         val matches: List<SearchMatch>
         val identityCandidates: List<ProductIdentity>
@@ -506,7 +530,9 @@ object ArgentinaBackendContract {
             }
             matches = emptyList()
             identityCandidates = parseProductCandidates(rawMatches)
+            if (pagination != null && pagination.pageSize != SEARCH_PAGE_SIZE) invalid("discovery pagination page size is invalid")
         } else {
+            if (pagination != null) invalid("non-discovery search cannot contain pagination")
             matches = parseSearchMatches(rawMatches)
             identityCandidates = matches.flatMap { it.productCandidates }
         }
@@ -530,8 +556,22 @@ object ArgentinaBackendContract {
             correction,
             matches,
             identityCandidates,
-            input
+            input,
+            pagination
         )
+    }
+
+    private fun parseSearchPagination(root: JSONObject): SearchPagination {
+        val page = requiredInt(root, "page", 0, MAX_SEARCH_PAGE)
+        val pageSize = requiredInt(root, "pageSize", SEARCH_PAGE_SIZE, SEARCH_PAGE_SIZE)
+        val hasMore = requiredBoolean(root, "hasMore")
+        val nextPage = optionalInt(root, "nextPage", 0, MAX_SEARCH_PAGE)
+        val limitReached = requiredBoolean(root, "limitReached")
+        return try {
+            SearchPagination(page, pageSize, hasMore, nextPage, limitReached)
+        } catch (error: IllegalArgumentException) {
+            invalid("discovery pagination is inconsistent")
+        }
     }
 
     fun parseInterpret(

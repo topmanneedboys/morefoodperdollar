@@ -20,6 +20,10 @@ from typing import Any, Iterable, Mapping
 SEARCH_SCHEMA_VERSION = "argentina-sepa-spanish-search-v1"
 MAX_QUERY_LENGTH = 96
 MAX_RESULTS = 5
+# Discovery continuation may ask for a small bounded window.  The ordinary
+# callers keep the historical top-five default; this is only a validation
+# ceiling for the explicitly paged public discovery path.
+MAX_DISCOVERY_RESULTS = 31
 MAX_CANDIDATES = 100_000
 
 # These are broad, documented Argentine-Spanish spelling equivalents rather
@@ -191,11 +195,19 @@ def _score(query: str, name: str, brand: str | None, aliases: Iterable[str] = ()
     return score, tuple(sorted(set(matched)))
 
 
-def search_products(products: Iterable[Mapping[str, Any]], query: str, *, limit: int = MAX_RESULTS, max_candidates: int = MAX_CANDIDATES) -> list[SearchResult]:
+def search_products(
+    products: Iterable[Mapping[str, Any]],
+    query: str,
+    *,
+    limit: int = MAX_RESULTS,
+    max_candidates: int = MAX_CANDIDATES,
+    _allow_discovery: bool = False,
+) -> list[SearchResult]:
     """Return a bounded, deterministic top-k search over product records."""
 
-    if not isinstance(limit, int) or not 1 <= limit <= MAX_RESULTS:
-        raise SearchError(f"limit must be between 1 and {MAX_RESULTS}")
+    maximum_limit = MAX_DISCOVERY_RESULTS if _allow_discovery else MAX_RESULTS
+    if not isinstance(limit, int) or not 1 <= limit <= maximum_limit:
+        raise SearchError(f"limit must be between 1 and {maximum_limit}")
     normalized_query = normalize_spanish(query)
     if not normalized_query:
         return []
@@ -255,4 +267,4 @@ def evaluate_audit(products: Iterable[Mapping[str, Any]], audit_rows: Iterable[M
     return {"schemaVersion": SEARCH_SCHEMA_VERSION, "queries": per_query, "overallPrecisionAt5": f"{overall:.4f}", "queryCount": len(per_query), "recallClaimed": False}
 
 
-__all__ = ["MAX_CANDIDATES", "MAX_RESULTS", "SEARCH_SCHEMA_VERSION", "SearchError", "SearchResult", "evaluate_audit", "normalize_spanish", "search_products"]
+__all__ = ["MAX_CANDIDATES", "MAX_DISCOVERY_RESULTS", "MAX_RESULTS", "SEARCH_SCHEMA_VERSION", "SearchError", "SearchResult", "evaluate_audit", "normalize_spanish", "search_products"]

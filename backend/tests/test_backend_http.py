@@ -54,6 +54,12 @@ class BackendHttpTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["requestId"], "test-request")
 
+    def test_search_page_is_strictly_bounded(self):
+        payload = {"latitude": "-34", "longitude": "-58", "radiusKm": "5", "query": "leche", "page": 6}
+        self.assertEqual(self.client.post("/v1/search", json=payload).status_code, 422)
+        payload["page"] = True
+        self.assertEqual(self.client.post("/v1/search", json=payload).status_code, 422)
+
     def test_consumer_input_endpoints_are_bounded_and_fail_closed(self):
         response = self.client.post("/v1/interpret", json={"text": "arroz 1kg"}, headers={"x-request-id": "interpret-request"})
         self.assertEqual(response.status_code, 200)

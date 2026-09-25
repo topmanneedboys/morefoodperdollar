@@ -483,6 +483,42 @@ class ArgentinaLiveSearchCoordinatorTest {
         coordinator.close()
     }
 
+    @Test
+    fun pagedDiscoveryAppendsWithoutDuplicatesAndKeepsOlderCardsWhileLoading() {
+        val transport =
+            RecordingTransport(
+                statusBody = statusJson(),
+                searchBody = discoverySearchJson(page = 0, start = 0, count = 5, hasMore = true),
+                searchBodyByPage = mapOf(
+                    0 to discoverySearchJson(page = 0, start = 0, count = 5, hasMore = true),
+                    1 to discoverySearchJson(page = 1, start = 5, count = 5, hasMore = false)
+                )
+            )
+        val states = mutableListOf<ArgentinaLiveSearchState>()
+        val executor = QueuedExecutor()
+        val coordinator = ArgentinaLiveSearchCoordinator(transport, executor, states::add)
+
+        coordinator.submit("yerba", context)
+        executor.runNext()
+        val first = coordinator.state() as ArgentinaLiveSearchState.Results
+        assertEquals(5, first.presentation.matches.size)
+        assertTrue(first.presentation.hasMore)
+        assertEquals(1, first.presentation.nextPage)
+
+        val nextGeneration = coordinator.loadMore()
+        val loading = coordinator.state() as ArgentinaLiveSearchState.Loading
+        assertEquals(nextGeneration, loading.generation)
+        assertEquals(5, loading.previousPresentation?.matches?.size)
+        executor.runNext()
+
+        val combined = coordinator.state() as ArgentinaLiveSearchState.Results
+        assertEquals(10, combined.presentation.matches.size)
+        assertEquals(10, combined.presentation.matches.map { it.identityKey }.distinct().size)
+        assertFalse(combined.presentation.hasMore)
+        assertTrue(transport.calls.last().body!!.contains("\"page\":1"))
+        coordinator.close()
+    }
+
     private class QueuedExecutor : Executor {
         private val tasks = ArrayDeque<Runnable>()
 
@@ -504,7 +540,8 @@ class ArgentinaLiveSearchCoordinatorTest {
         private val searchBody: String,
         private val searchStatus: Int = 200,
         private val ignoreCancellation: Boolean = false,
-        private val searchBodyByQuery: Map<String, String> = emptyMap()
+        private val searchBodyByQuery: Map<String, String> = emptyMap(),
+        private val searchBodyByPage: Map<Int, String> = emptyMap()
     ) : ArgentinaBackendTransport {
         data class Call(val endpoint: String, val body: String?)
 
@@ -530,9 +567,10 @@ class ArgentinaLiveSearchCoordinatorTest {
                 ArgentinaBackendConsumerBridge.STATUS_ENDPOINT -> ArgentinaBackendTransportResponse(200, statusBody)
                 ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT -> {
                     val query = requestBody?.let { JSONObject(it).optString("query") }.orEmpty()
+                    val page = requestBody?.let { JSONObject(it).optInt("page", 0) } ?: 0
                     ArgentinaBackendTransportResponse(
                         searchStatus,
-                        searchBodyByQuery[query] ?: searchBody
+                        searchBodyByPage[page] ?: searchBodyByQuery[query] ?: searchBody
                     )
                 }
                 else -> ArgentinaBackendTransportResponse(404, "")
@@ -582,6 +620,34 @@ class ArgentinaLiveSearchCoordinatorTest {
             .put("correction", JSONObject.NULL)
             .put("matches", matches)
             .put("input", inputObject())
+            .toString()
+    }
+
+    private fun discoverySearchJson(
+        page: Int,
+        start: Int,
+        count: Int,
+        hasMore: Boolean
+    ): String {
+        val matches = JSONArray()
+        repeat(count) { offset -> matches.put(productIdentity(start + offset)) }
+        return envelope(release.releaseId, RELEASE_DATE)
+            .put("query", "yerba")
+            .put("originalQuery", "yerba")
+            .put("interpretedQuery", "yerba")
+            .put("resolution", "DISCOVERY")
+            .put("correction", JSONObject.NULL)
+            .put("matches", matches)
+            .put("input", JSONObject.NULL)
+            .put(
+                "pagination",
+                JSONObject()
+                    .put("page", page)
+                    .put("pageSize", 5)
+                    .put("hasMore", hasMore)
+                    .put("nextPage", if (hasMore) page + 1 else JSONObject.NULL)
+                    .put("limitReached", false)
+            )
             .toString()
     }
 
