@@ -28,7 +28,12 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from backend.clock import DEFAULT_MAX_RELEASE_AGE_DAYS, FrozenClock, freshness
-from backend.object_store import GCSObjectStore, ObjectStore, ObjectStoreError
+from backend.object_store import (
+    GCSObjectStore,
+    ObjectStore,
+    ObjectStoreError,
+    ObjectStoreLimitExceeded,
+)
 from tools import argentina_acquisition_schedule_control as _base
 from tools.argentina_processed_source_guard import (
     SUPPRESSION_REASON,
@@ -49,12 +54,15 @@ DAILY_OBSERVATION_PREFIX = _base.DAILY_OBSERVATION_PREFIX
 BUILD_ATTEMPT_PREFIX = _base.BUILD_ATTEMPT_PREFIX
 LATE_RECHECK_PREFIX = "acquisition/late-rechecks"
 DAILY_STATE_PREFIX = "acquisition/daily-state"
-DAILY_STATE_SCHEMA_VERSION = "valuepilot-argentina-daily-state-v1"
-DAILY_STATE_POLICY_VERSION = "valuepilot-argentina-daily-state-policy-v1"
+DAILY_STATE_EVENT_PREFIX = "acquisition/daily-state-events"
+DAILY_STATE_SCHEMA_VERSION = "valuepilot-argentina-daily-state-v2"
+DAILY_STATE_POLICY_VERSION = "valuepilot-argentina-daily-state-policy-v2"
+LEGACY_DAILY_STATE_SCHEMA_VERSION = "valuepilot-argentina-daily-state-v1"
+LEGACY_DAILY_STATE_POLICY_VERSION = "valuepilot-argentina-daily-state-policy-v1"
+DAILY_STATE_EVENT_MAX = 128
 LATE_CHECK_POLICY = "DISCOVERY_PLUS_RECOVERY"
 ACTIVE_RELEASE_MAX_AGE_DAYS = DEFAULT_MAX_RELEASE_AGE_DAYS
 FRESHNESS_WARNING_WINDOW_DAYS = 2
-DAILY_STATE_CAS_ATTEMPTS = 3
 DAILY_STATE_READ_ATTEMPTS = 3
 _DAY_STATE_RANK = {
     "METADATA_DISCOVERED": 0,
@@ -91,10 +99,22 @@ def daily_state_key(argentina_day: str) -> str:
     return f"{DAILY_STATE_PREFIX}/{day}.json"
 
 
+def daily_state_event_prefix(argentina_day: str) -> str:
+    try:
+        day = _dt.date.fromisoformat(argentina_day).isoformat()
+    except (TypeError, ValueError) as exc:
+        raise AcquisitionScheduleError("Argentina date is invalid", code="INVALID_CONTROL_STATE") from exc
+    return f"{DAILY_STATE_EVENT_PREFIX}/{day}/"
+
+
 def _validate_daily_state(value: Mapping[str, Any], argentina_day: str) -> None:
+    schema_policy = (value.get("schemaVersion"), value.get("policyVersion"))
     if (
-        value.get("schemaVersion") != DAILY_STATE_SCHEMA_VERSION
-        or value.get("policyVersion") != DAILY_STATE_POLICY_VERSION
+        schema_policy
+        not in {
+            (DAILY_STATE_SCHEMA_VERSION, DAILY_STATE_POLICY_VERSION),
+            (LEGACY_DAILY_STATE_SCHEMA_VERSION, LEGACY_DAILY_STATE_POLICY_VERSION),
+        }
         or value.get("argentinaDate") != argentina_day
         or value.get("status") not in _DAY_STATE_RANK
     ):
@@ -169,20 +189,197 @@ def _read_daily_state_snapshot(
     )
 
 
-def read_daily_state(*, store: ObjectStore, argentina_day: str) -> dict[str, Any] | None:
-    """Read one bounded same-day checkpoint before discovering metadata."""
+def _read_daily_state_events(*, store: ObjectStore, argentina_day: str) -> list[tuple[str, dict[str, Any]]]:
+    """Read the bounded immutable event journal for one acquisition day."""
 
-    value, _ = _read_daily_state_snapshot(store=store, argentina_day=argentina_day)
-    return value
+    try:
+        entries = store.list_immediate(
+            daily_state_event_prefix(argentina_day),
+            max_results=DAILY_STATE_EVENT_MAX,
+        )
+    except ObjectStoreLimitExceeded as exc:
+        raise AcquisitionScheduleError(
+            "same-day acquisition event journal exceeds bound",
+            code="INVALID_CONTROL_STATE",
+        ) from exc
+    except ObjectStoreError as exc:
+        raise AcquisitionScheduleError(
+            "same-day acquisition event journal is unavailable",
+            code="CONTROL_STORE_UNAVAILABLE",
+        ) from exc
+
+    events: list[tuple[str, dict[str, Any]]] = []
+    prefix = daily_state_event_prefix(argentina_day)
+    for metadata in entries:
+        relative = metadata.key.removeprefix(prefix)
+        if not relative.endswith(".json") or len(relative) != 69:
+            raise AcquisitionScheduleError("same-day acquisition event key is invalid", code="INVALID_CONTROL_STATE")
+        digest = relative[:-5]
+        if len(digest) != 64 or any(character not in "0123456789abcdef" for character in digest):
+            raise AcquisitionScheduleError("same-day acquisition event key is invalid", code="INVALID_CONTROL_STATE")
+        try:
+            raw = store.get(metadata.key)
+        except ObjectStoreError as exc:
+            raise AcquisitionScheduleError(
+                "same-day acquisition event is unavailable",
+                code="CONTROL_STORE_UNAVAILABLE",
+            ) from exc
+        expected_size = metadata.size
+        if expected_size < 0:
+            try:
+                expected_size = store.head(metadata.key).size
+            except ObjectStoreError as exc:
+                raise AcquisitionScheduleError(
+                    "same-day acquisition event metadata is unavailable",
+                    code="CONTROL_STORE_UNAVAILABLE",
+                ) from exc
+        if len(raw) != expected_size or hashlib.sha256(raw).hexdigest() != digest:
+            raise AcquisitionScheduleError("same-day acquisition event hash is invalid", code="INVALID_CONTROL_STATE")
+        try:
+            value = json.loads(raw)
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise AcquisitionScheduleError("same-day acquisition event is invalid JSON", code="INVALID_CONTROL_STATE") from exc
+        if not isinstance(value, dict):
+            raise AcquisitionScheduleError("same-day acquisition event is invalid", code="INVALID_CONTROL_STATE")
+        _validate_daily_state(value, argentina_day)
+        events.append((digest, value))
+    return events
+
+
+def _canonical_value(value: Any) -> bytes:
+    return _base.canonical_bytes(value)
+
+
+def _merge_daily_state_records(
+    records: Sequence[tuple[str, Mapping[str, Any]]],
+    *,
+    argentina_day: str,
+) -> dict[str, Any] | None:
+    """Merge immutable records without hiding identity or evidence conflicts."""
+
+    if not records:
+        return None
+    validated: list[tuple[str, dict[str, Any]]] = []
+    for digest, record in records:
+        value = dict(record)
+        _validate_daily_state(value, argentina_day)
+        validated.append((digest, value))
+
+    def parsed_time(record: Mapping[str, Any]) -> _dt.datetime:
+        return _dt.datetime.fromisoformat(str(record["updatedAt"]).replace("Z", "+00:00"))
+
+    latest_time = max(parsed_time(record) for _, record in validated)
+    latest_records = [(digest, record) for digest, record in validated if parsed_time(record) == latest_time]
+    latest_fingerprints = {record.get("metadataFingerprint") for _, record in latest_records}
+    if len(latest_fingerprints) > 1:
+        raise AcquisitionScheduleError("same-time daily acquisition states conflict", code="CONTROL_CONFLICT")
+    selected_fingerprint = next(iter(latest_fingerprints))
+    selected = [
+        (digest, record)
+        for digest, record in validated
+        if record.get("metadataFingerprint") == selected_fingerprint
+    ]
+    selected.sort(key=lambda item: (parsed_time(item[1]), item[0]))
+    merged = dict(selected[-1][1])
+
+    # Probe identity is immutable for one metadata fingerprint.  A mismatch
+    # means the journal cannot establish which source claim is authoritative.
+    for field in ("metadataIdentity", "catalogResponseSha256", "observedAt"):
+        values = {
+            _canonical_value(record.get(field))
+            for _, record in selected
+            if record.get(field) is not None
+        }
+        if len(values) > 1:
+            raise AcquisitionScheduleError(
+                f"same-fingerprint daily acquisition {field} conflicts",
+                code="CONTROL_CONFLICT",
+            )
+
+    identity_fields = ("candidateReleaseId", "buildReservationId", "workflowExecution")
+    for field in identity_fields:
+        values = {record.get(field) for _, record in selected if record.get(field) is not None}
+        if len(values) > 1:
+            raise AcquisitionScheduleError(
+                f"same-fingerprint daily acquisition {field} conflicts",
+                code="CONTROL_CONFLICT",
+            )
+
+    # A source archive is itself identity evidence.  Its representation can
+    # gain fields as the handoff advances, so compare the immutable identity
+    # fields and retain the most complete/latest representation.
+    source_identities: set[tuple[Any, ...]] = set()
+    source_entries: list[tuple[str, Mapping[str, Any], Mapping[str, Any]]] = []
+    for digest, record in selected:
+        source = record.get("source")
+        if not isinstance(source, Mapping):
+            continue
+        source_entries.append((digest, record, source))
+        source_identities.add(
+            (
+                source.get("releaseDate"),
+                source.get("sha256"),
+                source.get("bytes"),
+                source.get("candidateReleaseId"),
+            )
+        )
+    source_observation_keys = {record.get("dailyObservationKey") for _, record, _ in source_entries}
+    source_statuses = {_DAY_STATE_RANK[record["status"]] for _, record, _ in source_entries}
+    if (
+        len(source_identities - {(None, None, None, None)}) > 1
+        and len(source_observation_keys) <= 1
+        and len(source_statuses) <= 1
+    ):
+        raise AcquisitionScheduleError("same-fingerprint source identities conflict", code="CONTROL_CONFLICT")
+    if source_entries:
+        source_entries.sort(key=lambda item: (_DAY_STATE_RANK[item[1]["status"]], parsed_time(item[1]), item[0]))
+        merged["source"] = dict(source_entries[-1][2])
+
+    status_record = max(
+        selected,
+        key=lambda item: (_DAY_STATE_RANK[item[1]["status"]], parsed_time(item[1]), item[0]),
+    )[1]
+    merged["status"] = status_record["status"]
+    top_rank = _DAY_STATE_RANK[status_record["status"]]
+    top_shadow_values = [
+        record.get("shadowResult")
+        for _, record in selected
+        if _DAY_STATE_RANK[record["status"]] == top_rank and record.get("shadowResult") is not None
+    ]
+    if top_shadow_values:
+        shadow_digests = {_canonical_value(value) for value in top_shadow_values}
+        if len(shadow_digests) > 1:
+            raise AcquisitionScheduleError("same-fingerprint SHADOW results conflict", code="CONTROL_CONFLICT")
+        merged["shadowResult"] = top_shadow_values[-1]
+    # updatedAt remains the latest event time even when a lower-ranked retry is
+    # merged, so a new metadata fingerprint can supersede an older day cleanly.
+    merged["updatedAt"] = selected[-1][1]["updatedAt"]
+    for field in identity_fields:
+        values = [record.get(field) for _, record in selected if record.get(field) is not None]
+        if values:
+            merged[field] = values[-1]
+    return merged
+
+
+def read_daily_state(*, store: ObjectStore, argentina_day: str) -> dict[str, Any] | None:
+    """Read legacy state plus the bounded immutable same-day event journal."""
+
+    legacy, _ = _read_daily_state_snapshot(store=store, argentina_day=argentina_day)
+    records: list[tuple[str, Mapping[str, Any]]] = []
+    if legacy is not None:
+        legacy_raw = _base.canonical_bytes(legacy) + b"\n"
+        records.append((hashlib.sha256(legacy_raw).hexdigest(), legacy))
+    records.extend(_read_daily_state_events(store=store, argentina_day=argentina_day))
+    merged = _merge_daily_state_records(records, argentina_day=argentina_day)
+    return merged
 
 
 def _write_daily_state(*, store: ObjectStore, value: Mapping[str, Any]) -> dict[str, Any]:
-    """CAS-update one bounded day pointer; concurrent stale writers cannot win."""
+    """Append one immutable state event; concurrent writers cannot overwrite evidence."""
 
     day = value.get("argentinaDate")
     if not isinstance(day, str):
         raise AcquisitionScheduleError("same-day acquisition state is invalid", code="INVALID_CONTROL_STATE")
-    key = daily_state_key(day)
     incoming = dict(value)
     incoming["schemaVersion"] = DAILY_STATE_SCHEMA_VERSION
     incoming["policyVersion"] = DAILY_STATE_POLICY_VERSION
@@ -190,58 +387,29 @@ def _write_daily_state(*, store: ObjectStore, value: Mapping[str, Any]) -> dict[
         raise AcquisitionScheduleError("same-day acquisition status is invalid", code="INVALID_CONTROL_STATE")
     incoming["updatedAt"] = _base._timestamp(str(incoming.get("updatedAt")), field="dailyState.updatedAt")
 
-    for _ in range(DAILY_STATE_CAS_ATTEMPTS):
-        current, current_etag = _read_daily_state_snapshot(store=store, argentina_day=day)
-        if current is not None:
-            old_updated = _dt.datetime.fromisoformat(current["updatedAt"].replace("Z", "+00:00"))
-            new_updated = _dt.datetime.fromisoformat(incoming["updatedAt"].replace("Z", "+00:00"))
-            same_fingerprint = current.get("metadataFingerprint") == incoming.get("metadataFingerprint")
-            if new_updated < old_updated:
-                return current
-            if new_updated == old_updated and not same_fingerprint:
-                raise AcquisitionScheduleError("same-time daily acquisition state conflicts", code="CONTROL_CONFLICT")
-            if same_fingerprint:
-                for field in ("buildReservationId", "workflowExecution"):
-                    old_identity = current.get(field)
-                    new_identity = incoming.get(field)
-                    if old_identity is not None and new_identity is not None and old_identity != new_identity:
-                        raise AcquisitionScheduleError(
-                            f"same-fingerprint daily acquisition {field} conflicts",
-                            code="CONTROL_CONFLICT",
-                        )
-            if same_fingerprint and _DAY_STATE_RANK[current["status"]] > _DAY_STATE_RANK[incoming["status"]]:
-                incoming["status"] = current["status"]
-                preserve_existing_terminal = current["status"] in {"SHADOW_SUCCEEDED", "SHADOW_FAILED"}
-            else:
-                preserve_existing_terminal = False
-            if same_fingerprint:
-                for field in (
-                    "source",
-                    "candidateReleaseId",
-                    "buildReservationId",
-                    "workflowExecution",
-                    "shadowResult",
-                ):
-                    if (preserve_existing_terminal or incoming.get(field) is None) and current.get(field) is not None:
-                        incoming[field] = current[field]
-            if same_fingerprint and incoming["status"] == current["status"]:
-                if incoming.get("workflowExecution") is None:
-                    incoming["workflowExecution"] = current.get("workflowExecution")
-                if incoming.get("shadowResult") is None:
-                    incoming["shadowResult"] = current.get("shadowResult")
-        raw = _base.canonical_bytes(incoming) + b"\n"
-        if len(raw) > _base.MAX_CONTROL_BYTES:
-            raise AcquisitionScheduleError("same-day acquisition state exceeds bound", code="INVALID_CONTROL_STATE")
-        try:
-            store.compare_and_swap(
-                key,
-                raw,
-                expected_etag=current_etag,
-            )
-            return incoming
-        except ObjectStoreError:
-            continue
-    raise AcquisitionScheduleError("same-day acquisition state CAS did not converge", code="CONTROL_STORE_CONFLICT")
+    current = read_daily_state(store=store, argentina_day=day)
+    if current is not None:
+        old_updated = _dt.datetime.fromisoformat(current["updatedAt"].replace("Z", "+00:00"))
+        new_updated = _dt.datetime.fromisoformat(incoming["updatedAt"].replace("Z", "+00:00"))
+        if new_updated < old_updated:
+            return current
+        merged = _merge_daily_state_records(
+            [("current", current), ("incoming", incoming)],
+            argentina_day=day,
+        )
+        if merged is None:
+            raise AcquisitionScheduleError("same-day acquisition state is unavailable", code="CONTROL_STORE_UNAVAILABLE")
+        incoming = merged
+    raw = _base.canonical_bytes(incoming) + b"\n"
+    if len(raw) > _base.MAX_CONTROL_BYTES:
+        raise AcquisitionScheduleError("same-day acquisition state exceeds bound", code="INVALID_CONTROL_STATE")
+    digest = hashlib.sha256(raw).hexdigest()
+    key = f"{daily_state_event_prefix(day)}{digest}.json"
+    try:
+        store.put_immutable(key, raw, sha256=digest)
+    except ObjectStoreError as exc:
+        raise AcquisitionScheduleError("same-day acquisition event could not be recorded", code="CONTROL_STORE_UNAVAILABLE") from exc
+    return incoming
 
 
 def _persist_resolution_state(
@@ -951,6 +1119,8 @@ __all__ = [
     "CHECK_PHASE_METADATA_ONLY",
     "CHECK_PHASE_PRIMARY",
     "DAILY_OBSERVATION_PREFIX",
+    "DAILY_STATE_EVENT_MAX",
+    "DAILY_STATE_EVENT_PREFIX",
     "DAILY_STATE_POLICY_VERSION",
     "DAILY_STATE_SCHEMA_VERSION",
     "DAILY_STATE_PREFIX",
@@ -959,6 +1129,8 @@ __all__ = [
     "POLICY_VERSION",
     "SCHEMA_VERSION",
     "finalize_download_observation",
+    "daily_state_event_prefix",
+    "daily_state_key",
     "metadata_change_evidence",
     "preflight_observation",
     "read_daily_state",

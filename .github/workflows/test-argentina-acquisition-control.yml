@@ -10,13 +10,13 @@ on:
       - 'ARGENTINA_AUTOMATED_RELEASE_SOURCE_CONTRACT.json'
       - 'backend/clock.py'
       - 'backend/object_store.py'
-      - 'backend/release.py'
       - 'backend/requirements.txt'
       - 'tools/argentina_acquisition_schedule_control.py'
       - 'tools/argentina_acquisition_schedule_control_v2.py'
       - 'tools/argentina_processed_source_guard.py'
       - 'tools/argentina_daily_release.py'
       - 'tools/argentina_object_store_publisher.py'
+      - 'tools/data/argentina_input_aliases.json'
       - 'tools/argentina_release_acquisition.py'
       - 'tools/argentina_release_acquisition_handoff.py'
       - 'tools/consumer_input_intelligence.py'
@@ -57,7 +57,6 @@ jobs:
           python -m py_compile \
             backend/object_store.py \
             backend/clock.py \
-            backend/release.py \
             tools/consumer_input_intelligence.py \
             tools/qualify_argentina_sepa.py \
             tools/argentina_daily_release.py \

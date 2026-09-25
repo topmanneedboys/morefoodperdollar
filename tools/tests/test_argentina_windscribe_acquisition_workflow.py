@@ -41,6 +41,45 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
         self.assertIn("Explain temporary official metadata unavailability", text)
         self.assertIn("nearing its explicit freshness limit", text)
 
+    def test_upstream_outage_is_handled_only_when_active_freshness_is_safe(self) -> None:
+        text = WORKFLOW.read_text(encoding="utf-8")
+        preflight = text.index("Reuse today's immutable acquisition evidence without VPN")
+        resolution_start = text.index("      - id: resolution", preflight)
+        stop_start = text.index("      - name: Stop cleanly when no build is required", resolution_start)
+        resolution_gate = text[resolution_start:stop_start]
+        case_start = resolution_gate.index('case "${status}" in')
+        case_end = resolution_gate.index("esac", case_start)
+        accepted_statuses = resolution_gate[case_start:case_end]
+
+        self.assertIn("UPSTREAM_TEMPORARILY_UNAVAILABLE)", accepted_statuses)
+        self.assertIn("FRESHNESS_LIMIT_EXCEEDED|ACTIVE_RELEASE_UNVERIFIED)", accepted_statuses)
+        unsafe_state = accepted_statuses[
+            accepted_statuses.index("FRESHNESS_LIMIT_EXCEEDED|ACTIVE_RELEASE_UNVERIFIED)") :
+        ]
+        self.assertIn("exit 2", unsafe_state)
+        self.assertIn("if: steps.reserve.outputs.status == 'RESERVED'", text)
+
+        outage_report = text[
+            text.index("      - name: Explain temporary official metadata unavailability") :
+            text.index("      - name: Reuse today's immutable acquisition evidence without VPN")
+        ]
+        self.assertIn("steps.preflight.outputs.status == 'UPSTREAM_TEMPORARILY_UNAVAILABLE'", outage_report)
+        self.assertIn("steps.preflight.outputs.status == 'FRESHNESS_LIMIT_EXCEEDED'", outage_report)
+        self.assertIn("steps.preflight.outputs.status == 'ACTIVE_RELEASE_UNVERIFIED'", outage_report)
+        self.assertIn("Argentina acquisition blocked: active freshness is unsafe", outage_report)
+        self.assertIn("::error::Official metadata is unavailable and active-release freshness cannot safely cover it", outage_report)
+        for diagnostic in (
+            "Active release unchanged",
+            "Active release identity:",
+            "Freshness policy:",
+            "Same-day state/candidate:",
+            "Same-day reservation/SHADOW:",
+            "Active/canary pointer writes:",
+            "Source substitutions:",
+        ):
+            with self.subTest(diagnostic=diagnostic):
+                self.assertIn(diagnostic, outage_report)
+
     def test_wireguard_source_acquisition_is_full_tunnel_and_fail_closed(self) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("WINDSCRIBE_WIREGUARD_CONFIG_B64", text)
@@ -117,6 +156,43 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
         self.assertIn("VERIFIED_METADATA_CHANGE_EVIDENCE_REQUIRED", text)
         self.assertIn("VALUEPILOT_UPSTREAM_CHANGED", text)
 
+    def test_september_22_shadow_conflict_fails_closed_for_a_different_candidate(self) -> None:
+        """Lock the observed 412 recovery boundary to the Sep 22 identities."""
+
+        text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+        observed_candidate = "argentina-sepa-2026-09-22-eaefeae3d9f2885a-routing-v1-search-v2"
+        worker_summary = {
+            "metadataChecksum": "m" * 64,
+            "datasetId": "precios-claros-base-sepa",
+            "candidateReleaseId": observed_candidate,
+            "sourceArchiveSha256": "a" * 64,
+            "promotionMode": "SHADOW",
+            "upstreamChanged": False,
+        }
+        conflicting_state = {**worker_summary, "candidateReleaseId": "different-candidate"}
+        exact_repeat = all(
+            worker_summary[field] == conflicting_state[field]
+            for field in (
+                "metadataChecksum",
+                "datasetId",
+                "candidateReleaseId",
+                "sourceArchiveSha256",
+                "promotionMode",
+                "upstreamChanged",
+            )
+        )
+        self.assertFalse(exact_repeat)
+        self.assertIn("state_write_error.code == 412", text)
+        self.assertIn("next: read_state_after_conflict", text)
+        self.assertIn("status: STATE_WRITE_CONFLICT", text)
+        self.assertIn("attemptedReleaseId", text)
+        self.assertIn("conflictingReleaseId", text)
+        self.assertIn("activePointerWrites: ${map.get(worker_summary, \"activePointerWrites\")}", text)
+        self.assertIn("promotion: ${map.get(worker_summary, \"promotion\")}", text)
+        # Keep the observed candidate as a fixture only; it must never become a
+        # production source selector or an activation authority.
+        self.assertTrue(observed_candidate.endswith("routing-v1-search-v2"))
+
     def test_cloud_workflow_materializes_worker_contract_evidence_file(self) -> None:
         text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
         for evidence_field in (
@@ -131,6 +207,17 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
         self.assertNotIn('"upstreamChangeEvidence": evidence', text)
         self.assertIn('"--upstream-change-evidence=/tmp/valuepilot-upstream-change-evidence.json"', text)
         self.assertIn("UNEXPECTED_METADATA_CHANGE_EVIDENCE", text)
+
+    def test_cloud_workflow_expressions_fit_service_limit(self) -> None:
+        text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+        over_limit = []
+        for line_number, line in enumerate(text.splitlines(), start=1):
+            if "${" not in line or "}" not in line:
+                continue
+            expression = line[line.index("${") + 2 : line.rfind("}")]
+            if len(expression) > 400:
+                over_limit.append((line_number, len(expression)))
+        self.assertEqual([], over_limit)
 
     def test_full_android_ci_triggers_for_acquisition_milestone_changes(self) -> None:
         text = BUILD_WORKFLOW.read_text(encoding="utf-8")
@@ -149,6 +236,13 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
         for path in paths:
             with self.subTest(path=path):
                 self.assertGreaterEqual(text.count(f"'{path}'"), 2)
+
+    def test_debug_apk_artifact_is_manual_only_and_short_lived(self) -> None:
+        text = BUILD_WORKFLOW.read_text(encoding="utf-8")
+        upload = text.index("      - name: Upload APK artifact")
+        upload_step = text[upload:]
+        self.assertIn("        if: github.event_name == 'workflow_dispatch'", upload_step)
+        self.assertIn("          retention-days: 3", upload_step)
 
     def test_runner_cleanup_removes_credentials_vpn_config_and_raw_source(self) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")

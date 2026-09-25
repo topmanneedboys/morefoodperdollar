@@ -200,7 +200,7 @@ jobs:
           echo "Acquisition preflight: ${status} / ${check_phase} for ${argentina_date}; active freshness=${freshness}; prior same-day state=${prior_status}"
 
       - name: Explain temporary official metadata unavailability
-        if: steps.preflight.outputs.status == 'UPSTREAM_TEMPORARILY_UNAVAILABLE'
+        if: steps.preflight.outputs.status == 'UPSTREAM_TEMPORARILY_UNAVAILABLE' || steps.preflight.outputs.status == 'FRESHNESS_LIMIT_EXCEEDED' || steps.preflight.outputs.status == 'ACTIVE_RELEASE_UNVERIFIED'
         shell: bash
         run: |
           python - <<'PY'
@@ -213,21 +213,26 @@ jobs:
           active = report.get("activeRelease") or {}
           freshness = report.get("freshness") or {}
           same_day = report.get("sameDayState") or {}
+          unsafe_freshness = report.get("status") in {"FRESHNESS_LIMIT_EXCEEDED", "ACTIVE_RELEASE_UNVERIFIED"}
+          heading = "### Argentina acquisition blocked: active freshness is unsafe" if unsafe_freshness else "### Official metadata temporarily unavailable"
           lines = [
-              "### Official metadata temporarily unavailable",
+              heading,
               "",
               f"- State: {report.get('status')}",
               f"- Upstream failure: {upstream.get('code')} / HTTP {upstream.get('httpStatus')} after {upstream.get('attempts')} bounded attempts",
               f"- Active release unchanged: {report.get('activeReleaseUnchanged')}",
-              f"- Trusted release: {report.get('activeReleaseId')} / {active.get('releaseDate')} / {active.get('sourceSha256')}",
+              f"- Active release identity: {report.get('activeReleaseId') or 'UNVERIFIED'} / {active.get('releaseDate') or 'UNKNOWN'} / {active.get('sourceSha256') or 'UNKNOWN'}",
               f"- Freshness policy: {freshness.get('state')} ({freshness.get('ageDays')} of {freshness.get('maxAgeDays')} days; evaluated {freshness.get('evaluationDate')})",
-              f"- Existing same-day candidate: {same_day.get('candidateReleaseId')}",
+              f"- Same-day state/candidate: {same_day.get('status')} / {same_day.get('candidateReleaseId')}",
+              f"- Same-day reservation/SHADOW: {same_day.get('buildReservationId')} / {((same_day.get('shadowResult') or {}).get('status') if isinstance(same_day.get('shadowResult'), dict) else 'UNKNOWN')}",
               f"- Active/canary pointer writes: {report.get('activePointerWrites')} / {report.get('canaryPointerWrites')}",
               f"- Source substitutions: {report.get('sourceSubstitution')}; candidate promotion: {report.get('candidatePromotion')}",
           ]
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
               handle.write("\n".join(lines) + "\n")
-          if freshness.get("state") == "NEARING_LIMIT":
+          if unsafe_freshness:
+              print(f"::error::Official metadata is unavailable and active-release freshness cannot safely cover it ({report.get('status')}; {freshness.get('state')}).")
+          elif freshness.get("state") == "NEARING_LIMIT":
               print("::warning::Official metadata is unavailable and the trusted active release is nearing its explicit freshness limit.")
           print(" | ".join(lines[2:]))
           PY
