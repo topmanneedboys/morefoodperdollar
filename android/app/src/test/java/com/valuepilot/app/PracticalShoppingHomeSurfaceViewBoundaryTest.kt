@@ -198,6 +198,17 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
     }
 
     @Test
+    fun homeItemRowsUseReadableCardsAndStackedActions() {
+        val source = source().readText()
+
+        assertTrue("Each Home item should have a bounded visual card", source.contains("card(\"#FFFDF9\", \"#D8CFC6\", 8)"))
+        assertTrue("Item actions must stack below the full-width label", source.contains("orientation = VERTICAL"))
+        assertTrue("Item actions need a comfortable full-width touch target", source.contains("layoutParams = fullWidth(dp(48), 6)"))
+        assertTrue("Item labels must remain readable beside no controls", source.contains("addView(line(label, 15f"))
+        assertTrue("Remove must be visually secondary to the primary item action", source.contains("backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color(\"#FFFDF9\"))"))
+    }
+
+    @Test
     fun clearingExtraStopOwnerCollapsesExpandedSettingsImmediately() {
         val source = source().readText()
         val setterStart = source.indexOf("var onExtraStopMinimumSavingsChoice:")

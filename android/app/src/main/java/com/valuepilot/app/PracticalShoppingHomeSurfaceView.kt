@@ -703,102 +703,108 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     }
 
     private fun itemRow(item: PracticalShoppingHomeItemRenderState): View =
-        bareColumn().apply {
-            layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 5)
+        card("#FFFDF9", "#D8CFC6", 8).apply {
             addView(
-                actionRow(
-                    label = "${item.name}  •  ${item.detail}",
-                    onRemove = { onRemoveItem?.invoke(item.key) },
-                    removeEnabled = onRemoveItem != null,
-                    removeOwnerControls = itemRemovalOwnerControls,
-                    removeDescription =
-                        context.getString(R.string.home_remove_item_description, item.name),
-                    onDetails = { onEditItemDetails?.invoke(item.key) },
-                    detailsEnabled = onEditItemDetails != null,
-                    detailsOwnerControls = itemDetailsOwnerControls,
-                    detailsLabel = item.requestDetailsActionLabel,
-                    detailsDescription =
-                        context.getString(R.string.home_item_details_action_description, item.name)
-                )
+                column().apply {
+                    addView(
+                        actionRow(
+                            label = "${item.name}  •  ${item.detail}",
+                            onRemove = { onRemoveItem?.invoke(item.key) },
+                            removeEnabled = onRemoveItem != null,
+                            removeOwnerControls = itemRemovalOwnerControls,
+                            removeDescription =
+                                context.getString(R.string.home_remove_item_description, item.name),
+                            onDetails = { onEditItemDetails?.invoke(item.key) },
+                            detailsEnabled = onEditItemDetails != null,
+                            detailsOwnerControls = itemDetailsOwnerControls,
+                            detailsLabel = item.requestDetailsActionLabel,
+                            detailsDescription =
+                                context.getString(
+                                    R.string.home_item_details_action_description,
+                                    item.name
+                                )
+                        )
+                    )
+                    if (item.exactProductActionVisible) {
+                        addView(
+                            detailButton(
+                                onDetails = { onChooseExactProduct?.invoke(item.key) },
+                                label =
+                                    context.getString(
+                                        if (item.savedExactProductNotice == null) {
+                                            R.string.home_choose_exact_product
+                                        } else {
+                                            R.string.home_change_exact_product
+                                        }
+                                    ),
+                                description =
+                                    context.getString(
+                                        if (item.savedExactProductNotice == null) {
+                                            R.string.home_choose_exact_product_description
+                                        } else {
+                                            R.string.home_change_exact_product_description
+                                        },
+                                        item.name
+                                    ),
+                                enabled = onChooseExactProduct != null,
+                                ownerControls = exactProductOwnerControls
+                            )
+                        )
+                    }
+                    item.savedExactProductNotice?.let { notice ->
+                        addView(line(notice, 12f, "#374151", topPadding = 2))
+                    }
+                    item.storeAssignment?.let { store ->
+                        addView(
+                            line(
+                                practicalShoppingPlannedStoreLabel(store),
+                                12f,
+                                "#374151",
+                                topPadding = 2
+                            )
+                        )
+                        addView(
+                            line(
+                                PRACTICAL_SHOPPING_PLANNED_STORE_NOTICE,
+                                12f,
+                                "#6B7280",
+                                topPadding = 2
+                            )
+                        )
+                    }
+                    item.plannedPriceText?.let { price ->
+                        addView(line("Included in plan: $price", 12f, "#374151", topPadding = 2))
+                    }
+                    item.plannedPriceNotice?.let { notice ->
+                        addView(line(notice, 12f, "#6B7280", topPadding = 2))
+                    }
+                    item.priceCoverageNotice?.let { notice ->
+                        addView(line(notice, 12f, "#92400E", topPadding = 2))
+                    }
+                    item.personalHistoryNotice?.let { notice ->
+                        addView(line(notice, 12f, "#6B7280", topPadding = 2))
+                    }
+                    if (item.observedPriceActionVisible) {
+                        addView(
+                            detailButton(
+                                onDetails = { onAddObservedPrice?.invoke(item.key) },
+                                label = context.getString(R.string.home_item_observed_price_action),
+                                description =
+                                    context.getString(
+                                        R.string.home_item_observed_price_action_description,
+                                        item.name
+                                    ),
+                                enabled = onAddObservedPrice != null,
+                                ownerControls = observedPriceOwnerControls
+                            )
+                        )
+                    }
+                    addView(line(item.requestDetailsSummary, 12f, "#6B7280", topPadding = 2))
+                    item.requestDetailsNotice?.let { notice ->
+                        addView(line(notice, 12f, "#92400E", topPadding = 2))
+                    }
+                }
             )
-            if (item.exactProductActionVisible) {
-                addView(
-                    detailButton(
-                        onDetails = { onChooseExactProduct?.invoke(item.key) },
-                        label =
-                            context.getString(
-                                if (item.savedExactProductNotice == null) {
-                                    R.string.home_choose_exact_product
-                                } else {
-                                    R.string.home_change_exact_product
-                                }
-                            ),
-                        description =
-                            context.getString(
-                                if (item.savedExactProductNotice == null) {
-                                    R.string.home_choose_exact_product_description
-                                } else {
-                                    R.string.home_change_exact_product_description
-                                },
-                                item.name
-                            ),
-                        enabled = onChooseExactProduct != null,
-                        ownerControls = exactProductOwnerControls
-                    )
-                )
-            }
-            item.savedExactProductNotice?.let { notice ->
-                addView(line(notice, 12f, "#374151", topPadding = 2))
-            }
-            item.storeAssignment?.let { store ->
-                addView(
-                    line(
-                        practicalShoppingPlannedStoreLabel(store),
-                        12f,
-                        "#374151",
-                        topPadding = 2
-                    )
-                )
-                addView(
-                    line(
-                        PRACTICAL_SHOPPING_PLANNED_STORE_NOTICE,
-                        12f,
-                        "#6B7280",
-                        topPadding = 2
-                    )
-                )
-            }
-            item.plannedPriceText?.let { price ->
-                addView(line("Included in plan: $price", 12f, "#374151", topPadding = 2))
-            }
-            item.plannedPriceNotice?.let { notice ->
-                addView(line(notice, 12f, "#6B7280", topPadding = 2))
-            }
-            item.priceCoverageNotice?.let { notice ->
-                addView(line(notice, 12f, "#92400E", topPadding = 2))
-            }
-            item.personalHistoryNotice?.let { notice ->
-                addView(line(notice, 12f, "#6B7280", topPadding = 2))
-            }
-            if (item.observedPriceActionVisible) {
-                addView(
-                    detailButton(
-                        onDetails = { onAddObservedPrice?.invoke(item.key) },
-                        label = context.getString(R.string.home_item_observed_price_action),
-                        description =
-                            context.getString(
-                                R.string.home_item_observed_price_action_description,
-                                item.name
-                            ),
-                        enabled = onAddObservedPrice != null,
-                        ownerControls = observedPriceOwnerControls
-                    )
-                )
-            }
-            addView(line(item.requestDetailsSummary, 12f, "#6B7280", topPadding = 2))
-            item.requestDetailsNotice?.let { notice ->
-                addView(line(notice, 12f, "#92400E", topPadding = 2))
-            }
         }
 
     private fun actionRow(
@@ -815,15 +821,10 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         detailsDescription: String = detailsLabel
     ): View =
         LinearLayout(context).apply {
-            orientation = HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
+            orientation = VERTICAL
             layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 5)
 
-            addView(
-                line(label, 14f, lineColor, topPadding = 7).apply {
-                    layoutParams = LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
-                }
-            )
+            addView(line(label, 15f, lineColor, topPadding = 7))
             onDetails?.let {
                 addView(
                     detailButton(
@@ -832,7 +833,9 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                         detailsDescription,
                         detailsEnabled,
                         detailsOwnerControls
-                    )
+                    ).apply {
+                        layoutParams = fullWidth(dp(48), 6)
+                    }
                 )
             }
             addView(
@@ -841,7 +844,9 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                     removeDescription,
                     removeEnabled,
                     removeOwnerControls
-                )
+                ).apply {
+                    layoutParams = fullWidth(dp(48), 6)
+                }
             )
         }
 
@@ -856,7 +861,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         text = label
         contentDescription = description
         isAllCaps = false
-        textSize = 12f
+        textSize = 14f
         minHeight = dp(40)
         minimumHeight = dp(40)
         minWidth = 0
@@ -883,7 +888,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
             text = context.getString(R.string.home_remove_item)
             contentDescription = description
             isAllCaps = false
-            textSize = 12f
+            textSize = 14f
             minHeight = dp(40)
             minimumHeight = dp(40)
             minWidth = 0
@@ -892,6 +897,10 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
             insetBottom = 0
             isEnabled = enabled
             setPadding(dp(10), 0, dp(10), 0)
+            strokeWidth = dp(1)
+            strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D8CFC6"))
+            setTextColor(ValuePilotPalette.color("#5F5148"))
+            backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFDF9"))
             layoutParams = LinearLayout.LayoutParams(
                 LayoutParams.WRAP_CONTENT,
                 dp(40)
