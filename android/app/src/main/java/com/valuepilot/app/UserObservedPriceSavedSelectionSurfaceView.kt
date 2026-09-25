@@ -209,15 +209,16 @@ internal class UserObservedPriceSavedSelectionSurfaceView @JvmOverloads construc
         compact: Boolean,
         contentDescription: String = label
     ): Button =
-        Button(context).apply {
+        ValuePilotProgrammaticButton.outlined(
+            context = context,
+            compact = compact,
+            destructive = destructive
+        ).apply {
             ownerBoundSelectionButtons += this
             text = label
             this.contentDescription = contentDescription
             setAllCaps(false)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, if (compact) 13f else 14f)
-            if (destructive) {
-                setTextColor(ValuePilotPalette.color("#B91C1C"))
-            }
             isEnabled = onSelectionAction != null
             setOnClickListener { onSelectionAction?.invoke(action) }
             layoutParams =
@@ -234,7 +235,7 @@ internal class UserObservedPriceSavedSelectionSurfaceView @JvmOverloads construc
         label: String,
         action: UserObservedPriceSavedPrefillCheckUiAction
     ): Button =
-        Button(context).apply {
+        ValuePilotProgrammaticButton.filled(context).apply {
             ownerBoundPrefillButtons += this
             text = label
             setAllCaps(false)

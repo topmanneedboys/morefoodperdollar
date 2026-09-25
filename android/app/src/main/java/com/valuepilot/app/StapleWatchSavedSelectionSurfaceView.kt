@@ -262,15 +262,16 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
         compact: Boolean,
         contentDescription: String? = null
     ): Button =
-        Button(context).apply {
+        ValuePilotProgrammaticButton.outlined(
+            context = context,
+            compact = compact,
+            destructive = destructive
+        ).apply {
             ownerBoundActionButtons += this
             text = label
             this.contentDescription = contentDescription
             setAllCaps(false)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, if (compact) 13f else 14f)
-            if (destructive) {
-                setTextColor(ValuePilotPalette.color("#B91C1C"))
-            }
             isEnabled = onAction != null
             setOnClickListener { onAction?.invoke(action) }
             layoutParams =
@@ -287,7 +288,7 @@ class StapleWatchSavedSelectionSurfaceView @JvmOverloads constructor(
         label: String,
         action: StapleWatchSavedIdentityHandoffUiAction
     ): Button =
-        Button(context).apply {
+        ValuePilotProgrammaticButton.filled(context).apply {
             ownerBoundContinuationButtons += this
             text = label
             setAllCaps(false)

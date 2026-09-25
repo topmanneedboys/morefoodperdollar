@@ -81,7 +81,7 @@ internal class PracticalShoppingSavedObservedPriceLaunchView @JvmOverloads const
         }
         state.action?.let { action ->
             addView(
-                Button(context).apply {
+                ValuePilotProgrammaticButton.filled(context, compact = true).apply {
                     ownerBoundButtons += this
                     text = requireNotNull(state.actionLabel)
                     setAllCaps(false)

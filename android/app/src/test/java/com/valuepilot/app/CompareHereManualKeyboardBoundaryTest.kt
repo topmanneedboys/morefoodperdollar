@@ -103,7 +103,7 @@ class CompareHereManualKeyboardBoundaryTest {
         val inputBlock =
             source
                 .substringAfter("val input = EditText(this).apply")
-                .substringBefore("val removeButton = Button(this).apply")
+                .substringBefore("val removeButton = ValuePilotProgrammaticButton.outlined(")
 
         assertTrue(inputBlock.contains("id = View.generateViewId()"))
         assertTrue(source.contains("label.labelFor = input.id"))

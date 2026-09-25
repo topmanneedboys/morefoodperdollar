@@ -6,7 +6,6 @@ import android.graphics.Typeface
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
-import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 
@@ -25,7 +24,7 @@ internal class UserObservedPriceConfirmationDraftProofContentSelectionSurfaceVie
     UserObservedPriceConfirmationDraftProofContentSelectionObserver {
 
     private val status = TextView(context)
-    private val selectButton = Button(context)
+    private val selectButton = ValuePilotProgrammaticButton.filled(context)
 
     var onSelectRequested: (() -> Unit)? = null
         set(value) {

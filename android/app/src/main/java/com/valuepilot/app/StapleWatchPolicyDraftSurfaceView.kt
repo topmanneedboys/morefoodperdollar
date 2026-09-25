@@ -199,7 +199,7 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
                 )
             )
             addView(
-                Button(context).apply {
+                ValuePilotProgrammaticButton.outlined(context).apply {
                     ownerBoundActionButtons += this
                     text = "No distance limit"
                     contentDescription = "Set ${state.distanceLimitLabel} to no limit"
@@ -268,7 +268,7 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
                         (if (decimal) InputType.TYPE_NUMBER_FLAG_DECIMAL else 0)
             }
         val applyButton =
-            Button(context).apply {
+            ValuePilotProgrammaticButton.filled(context).apply {
                 ownerBoundActionButtons += this
                 text = "Apply"
                 contentDescription = "Apply $fieldLabel"
@@ -309,7 +309,7 @@ class StapleWatchPolicyDraftSurfaceView @JvmOverloads constructor(
         label: String,
         action: StapleWatchPolicyHandoffUiAction
     ): Button =
-        Button(context).apply {
+        ValuePilotProgrammaticButton.filled(context).apply {
             ownerBoundContinuationButtons += this
             text = label
             setAllCaps(false)

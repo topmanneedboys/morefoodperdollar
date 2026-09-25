@@ -8,7 +8,6 @@ import android.text.InputType
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
-import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -32,7 +31,7 @@ class UserObservedPriceConfirmationDraftObservedAtInputSurfaceView @JvmOverloads
     private val dateEditor = EditText(context)
     private val timeEditor = EditText(context)
     private val utcOffsetEditor = EditText(context)
-    private val applyButton = Button(context)
+    private val applyButton = ValuePilotProgrammaticButton.filled(context)
     private val ownerBoundControls = mutableListOf<View>()
 
     var onCommit: ((Long) -> Unit)? = null

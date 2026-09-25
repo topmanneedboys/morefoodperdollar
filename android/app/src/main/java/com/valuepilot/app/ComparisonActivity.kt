@@ -1473,7 +1473,11 @@ class ComparisonActivity : AppCompatActivity() {
         }
         label.labelFor = input.id
 
-        val removeButton = Button(this).apply {
+        val removeButton = ValuePilotProgrammaticButton.outlined(
+            context = this,
+            compact = true,
+            destructive = true
+        ).apply {
             text = getString(R.string.remove_product)
             contentDescription = getString(R.string.remove_product_description, index)
             isAllCaps = false
