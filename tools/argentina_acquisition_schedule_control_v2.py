@@ -282,9 +282,12 @@ def _merge_daily_state_records(
     selected.sort(key=lambda item: (parsed_time(item[1]), item[0]))
     merged = dict(selected[-1][1])
 
-    # Probe identity is immutable for one metadata fingerprint.  A mismatch
-    # means the journal cannot establish which source claim is authoritative.
-    for field in ("metadataIdentity", "catalogResponseSha256", "observedAt"):
+    # The metadata identity and exact catalog response remain immutable anchors
+    # for one fingerprint. ``observedAt`` is deliberately excluded: it records
+    # when an individual scheduled probe ran, so a later check of the same
+    # unchanged source is a normal repeat rather than contradictory evidence.
+    # The append-only event journal still preserves every original timestamp.
+    for field in ("metadataIdentity", "catalogResponseSha256"):
         values = {
             _canonical_value(record.get(field))
             for _, record in selected

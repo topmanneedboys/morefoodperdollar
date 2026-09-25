@@ -380,7 +380,7 @@ main:
                     - '${"BUILDER_IMAGE=" + args.workerImage}'
                     - '${"BUILDER_SHA=" + args.builderSha}'
                     - '${"VALUEPILOT_UPSTREAM_CHANGED=" + string(upstream_changed)}'
-                    - '${"VALUEPILOT_UPSTREAM_CHANGE_EVIDENCE_JSON=" + json.encode(upstream_change_evidence)}'
+                    - '${"VALUEPILOT_UPSTREAM_CHANGE_EVIDENCE_JSON=" + text.decode(json.encode(upstream_change_evidence), "UTF-8")}'
                     - '${"VALUEPILOT_SOURCE_ARCHIVE_KEY=" + source_archive_key}'
                     - '${"VALUEPILOT_SOURCE_ARCHIVE_SHA256=" + source_archive_sha256}'
                     - '${"VALUEPILOT_CANDIDATE_ARCHIVE_BUCKET=" + archive_bucket}'

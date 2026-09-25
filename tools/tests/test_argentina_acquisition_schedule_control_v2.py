@@ -353,6 +353,31 @@ class ArgentinaAcquisitionScheduleControlV2Tests(unittest.TestCase):
         self.assertEqual(result["metadataChangeEvidenceStatus"], "CHANGE_UNPROVEN_PREVIOUS_RESPONSE_MISSING")
         self.assertIsNone(result["upstreamChangeEvidence"])
 
+    def test_same_fingerprint_repeat_with_new_observed_at_is_not_a_conflict(self) -> None:
+        self._record_primary_no_change()
+        repeated_candidate = replace(self.candidate, observed_at="2026-09-15T16:31:00Z")
+
+        repeated = preflight_observation(
+            discovery=_discovery(repeated_candidate),
+            candidate=repeated_candidate,
+            store=self.store,
+            check_phase=CHECK_PHASE_METADATA_ONLY,
+        )
+
+        self.assertEqual(repeated["status"], "NO_BUILD_REQUIRED")
+        self.assertEqual(repeated["reason"], "NO_CHANGE")
+        state = read_daily_state(store=self.store, argentina_day="2026-09-15")
+        self.assertIsNotNone(state)
+        self.assertEqual(state["metadataFingerprint"], repeated["metadataFingerprint"])
+        self.assertEqual(state["observedAt"], "2026-09-15T16:31:00Z")
+        events = self.store.list_immediate(
+            f"{DAILY_STATE_EVENT_PREFIX}/2026-09-15/",
+            max_results=DAILY_STATE_EVENT_MAX,
+        )
+        observed_times = {json.loads(self.store.get(item.key))["observedAt"] for item in events}
+        self.assertIn(OBSERVED_AT, observed_times)
+        self.assertIn("2026-09-15T16:31:00Z", observed_times)
+
     def test_metadata_change_with_same_discovery_digest_is_a_state_invariant_failure(self) -> None:
         with self.assertRaises(AcquisitionScheduleError) as caught:
             metadata_change_evidence(

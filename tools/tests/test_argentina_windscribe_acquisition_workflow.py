@@ -208,6 +208,17 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
         self.assertIn('"--upstream-change-evidence=/tmp/valuepilot-upstream-change-evidence.json"', text)
         self.assertIn("UNEXPECTED_METADATA_CHANGE_EVIDENCE", text)
 
+    def test_cloud_workflow_decodes_json_bytes_before_string_concatenation(self) -> None:
+        text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn(
+            'VALUEPILOT_UPSTREAM_CHANGE_EVIDENCE_JSON=" + text.decode(json.encode(upstream_change_evidence), "UTF-8")',
+            text,
+        )
+        self.assertNotIn(
+            'VALUEPILOT_UPSTREAM_CHANGE_EVIDENCE_JSON=" + json.encode(upstream_change_evidence)',
+            text,
+        )
+
     def test_cloud_workflow_expressions_fit_service_limit(self) -> None:
         text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
         over_limit = []
