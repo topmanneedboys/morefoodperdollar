@@ -2154,8 +2154,8 @@ class MainActivity : AppCompatActivity() {
         val card = MaterialCardView(this).apply {
             radius = dp(18).toFloat()
             cardElevation = 0f
-            setCardBackgroundColor(ValuePilotPalette.color("#FFFFFF"))
-            strokeColor = ValuePilotPalette.color("#D1D5DB")
+            setCardBackgroundColor(ValuePilotPalette.color("#FFF1E8"))
+            strokeColor = ValuePilotPalette.color("#E8CDBF")
             strokeWidth = dp(1)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -2227,6 +2227,15 @@ class MainActivity : AppCompatActivity() {
             setPadding(0, dp(7), 0, 0)
         }.also(body::addView)
         body.addView(source)
+        TextView(this).apply {
+            text = getString(R.string.search_identity_open_compare)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            setTextColor(ValuePilotPalette.color("#8F3620"))
+            setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+            minHeight = dp(48)
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(10), 0, 0)
+        }.also(body::addView)
         card.addView(body)
         return card
     }
