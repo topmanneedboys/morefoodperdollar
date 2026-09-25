@@ -5,7 +5,7 @@
     android:id="@+id/shellRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F7F8FA"
+    android:background="@color/vp_background"
     android:orientation="vertical">
 
     <ScrollView
@@ -19,16 +19,16 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingStart="20dp"
-            android:paddingTop="24dp"
+            android:paddingTop="20dp"
             android:paddingEnd="20dp"
-            android:paddingBottom="32dp">
+            android:paddingBottom="36dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/app_name"
-                android:textColor="#111827"
-                android:textSize="29sp"
+                android:textColor="@color/vp_text_primary"
+                android:textSize="25sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -36,30 +36,30 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="@string/app_tagline"
-                android:textColor="#6B7280"
-                android:textSize="15sp" />
+                android:textColor="@color/vp_text_muted"
+                android:textSize="14sp" />
 
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="28dp"
-                app:cardBackgroundColor="#FFFFFF"
-                app:cardCornerRadius="24dp"
+                android:layout_marginTop="22dp"
+                app:cardBackgroundColor="@color/vp_surface"
+                app:cardCornerRadius="20dp"
                 app:cardElevation="0dp"
-                app:strokeColor="#E5E7EB"
+                app:strokeColor="@color/vp_outline"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="22dp">
+                    android:padding="20dp">
 
                     <TextView
                         android:id="@+id/screenEyebrow"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textColor="#047857"
+                        android:textColor="@color/vp_primary_dark"
                         android:textSize="12sp"
                         android:textStyle="bold" />
 
@@ -69,8 +69,8 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="10dp"
                         android:accessibilityLiveRegion="polite"
-                        android:textColor="#111827"
-                        android:textSize="28sp"
+                        android:textColor="@color/vp_text_primary"
+                        android:textSize="26sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -79,17 +79,17 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:lineSpacingExtra="3dp"
-                        android:textColor="#4B5563"
-                        android:textSize="16sp" />
+                        android:textColor="@color/vp_text_secondary"
+                        android:textSize="15sp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/primaryAction"
                         android:layout_width="match_parent"
                         android:layout_height="56dp"
-                        android:layout_marginTop="24dp"
+                        android:layout_marginTop="20dp"
                         android:text="@string/compare_products"
                         android:textAllCaps="false"
-                        android:textSize="16sp"
+                        android:textSize="15sp"
                         app:cornerRadius="16dp" />
 
                 </LinearLayout>
@@ -123,7 +123,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="@string/search_hint"
-                    app:boxBackgroundColor="#FFFFFF"
+                    app:boxBackgroundColor="@color/vp_surface"
                     app:boxCornerRadiusBottomEnd="18dp"
                     app:boxCornerRadiusBottomStart="18dp"
                     app:boxCornerRadiusTopEnd="18dp"
@@ -152,14 +152,14 @@
                     android:text="@string/search_action"
                     android:textAllCaps="false"
                     android:textSize="16sp"
-                     app:cornerRadius="16dp" />
+                     app:cornerRadius="14dp" />
 
                 <TextView
                     android:id="@+id/searchAreaLabel"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
-                    android:textColor="#374151"
+                     android:textColor="@color/vp_text_secondary"
                     android:textSize="13sp"
                     android:textStyle="bold" />
 
@@ -168,7 +168,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
                     android:text="@string/search_quick_title"
-                    android:textColor="#374151"
+                     android:textColor="@color/vp_text_secondary"
                     android:textSize="13sp"
                     android:textStyle="bold" />
 
@@ -187,35 +187,35 @@
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/quickEggs"
-                            style="@style/Widget.MaterialComponents.Chip.Action"
+                             style="@style/Widget.ValuePilot.Chip"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/search_quick_eggs" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/quickMilk"
-                            style="@style/Widget.MaterialComponents.Chip.Action"
+                             style="@style/Widget.ValuePilot.Chip"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/search_quick_milk" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/quickChicken"
-                            style="@style/Widget.MaterialComponents.Chip.Action"
+                             style="@style/Widget.ValuePilot.Chip"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/search_quick_chicken" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/quickRice"
-                            style="@style/Widget.MaterialComponents.Chip.Action"
+                             style="@style/Widget.ValuePilot.Chip"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/search_quick_rice" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/quickPizza"
-                            style="@style/Widget.MaterialComponents.Chip.Action"
+                             style="@style/Widget.ValuePilot.Chip"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/search_quick_pizza" />
@@ -228,10 +228,10 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
-                    app:cardBackgroundColor="#F9FAFB"
+                     app:cardBackgroundColor="@color/vp_surface_subtle"
                     app:cardCornerRadius="16dp"
                     app:cardElevation="0dp"
-                    app:strokeColor="#D1D5DB"
+                     app:strokeColor="@color/vp_outline"
                     app:strokeWidth="1dp">
 
                     <LinearLayout
@@ -244,7 +244,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/search_identity_badge"
-                            android:textColor="#374151"
+                             android:textColor="@color/vp_text_secondary"
                             android:textSize="11sp"
                             android:textStyle="bold" />
 
@@ -254,7 +254,7 @@
                             android:layout_marginTop="4dp"
                             android:lineSpacingExtra="2dp"
                             android:text="@string/search_identity_notice"
-                            android:textColor="#374151"
+                             android:textColor="@color/vp_text_secondary"
                             android:textSize="13sp" />
 
                     </LinearLayout>
@@ -282,7 +282,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:accessibilityLiveRegion="polite"
-                        android:textColor="#6B7280"
+                         android:textColor="@color/vp_text_muted"
                         android:textSize="14sp" />
 
                 </LinearLayout>
@@ -293,7 +293,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="24dp"
                     android:text="@string/search_results_title"
-                    android:textColor="#111827"
+                     android:textColor="@color/vp_text_primary"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:visibility="gone" />
@@ -314,7 +314,7 @@
                     android:textAllCaps="false"
                     android:visibility="gone"
                     app:cornerRadius="16dp"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                     style="@style/Widget.ValuePilot.Button.Outlined" />
 
                 <TextView
                     android:id="@+id/searchResultsEnd"
@@ -322,7 +322,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:lineSpacingExtra="2dp"
-                    android:textColor="#6B7280"
+                     android:textColor="@color/vp_text_muted"
                     android:textSize="13sp"
                     android:visibility="gone" />
 
@@ -444,7 +444,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
                 android:lineSpacingExtra="2dp"
-                android:textColor="#6B7280"
+                 android:textColor="@color/vp_text_muted"
                 android:textSize="13sp" />
 
             <com.google.android.material.button.MaterialButton
@@ -456,7 +456,7 @@
                 android:textAllCaps="false"
                 android:textSize="15sp"
                 app:cornerRadius="16dp"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                 style="@style/Widget.ValuePilot.Button.Outlined" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/dataStatusButton"
@@ -467,7 +467,7 @@
                 android:textAllCaps="false"
                 android:textSize="15sp"
                 app:cornerRadius="16dp"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                 style="@style/Widget.ValuePilot.Button.Outlined" />
 
         </LinearLayout>
 
@@ -477,13 +477,16 @@
         android:id="@+id/bottomNavArea"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#FFFFFF">
+         android:background="@color/vp_surface">
 
         <com.google.android.material.bottomnavigation.BottomNavigationView
             android:id="@+id/bottomNavigation"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#FFFFFF"
+             android:background="@color/vp_surface"
+             app:itemIconTint="@color/vp_bottom_nav_tint"
+             app:itemTextColor="@color/vp_bottom_nav_tint"
+             app:itemRippleColor="@color/vp_surface_subtle"
             app:labelVisibilityMode="labeled"
             app:menu="@menu/valuepilot_bottom_navigation" />
 

@@ -4,7 +4,7 @@
     android:id="@+id/goodPriceRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF"
+    android:background="@color/vp_background"
     android:fillViewport="true">
 
     <LinearLayout
@@ -20,8 +20,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/app_name"
-            android:textColor="#111827"
-            android:textSize="30sp"
+            android:textColor="@color/vp_text_primary"
+            android:textSize="26sp"
             android:textStyle="bold" />
 
         <TextView
@@ -29,7 +29,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:text="@string/good_price_intro"
-            android:textColor="#374151"
+            android:textColor="@color/vp_text_secondary"
             android:textSize="15sp"
             android:lineSpacingExtra="2dp" />
 
@@ -40,7 +40,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="22dp"
             android:hint="@string/good_price_input_hint"
-            app:boxBackgroundColor="#FFFFFF"
+            app:boxBackgroundColor="@color/vp_surface"
             app:boxCornerRadiusBottomEnd="18dp"
             app:boxCornerRadiusBottomStart="18dp"
             app:boxCornerRadiusTopEnd="18dp"
@@ -64,7 +64,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="5dp"
             android:text="@string/good_price_input_body"
-            android:textColor="#6B7280"
+            android:textColor="@color/vp_text_muted"
             android:textSize="13sp" />
 
         <Button
@@ -81,7 +81,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="5dp"
             android:text="@string/good_price_barcode_ready"
-            android:textColor="#6B7280"
+            android:textColor="@color/vp_text_muted"
             android:textSize="12sp" />
 
         <TextView
@@ -89,7 +89,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:text="@string/price_selection_title"
-            android:textColor="#111827"
+            android:textColor="@color/vp_text_primary"
             android:textSize="15sp"
             android:textStyle="bold" />
 
@@ -98,7 +98,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
             android:text="@string/good_price_selection_body"
-            android:textColor="#6B7280"
+            android:textColor="@color/vp_text_muted"
             android:textSize="12sp" />
 
         <RadioGroup
@@ -113,7 +113,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/price_selection_current"
-                android:textColor="#111827"
+                android:textColor="@color/vp_text_primary"
                 android:textSize="15sp" />
 
             <RadioButton
@@ -121,7 +121,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/price_selection_member"
-                android:textColor="#111827"
+                android:textColor="@color/vp_text_primary"
                 android:textSize="15sp" />
         </RadioGroup>
 
@@ -161,7 +161,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:textColor="#6B7280"
+            android:textColor="@color/vp_text_muted"
             android:textSize="12sp"
             android:visibility="gone" />
 
@@ -170,7 +170,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:textColor="#047857"
+            android:textColor="@color/vp_success"
             android:textSize="13sp"
             android:textStyle="bold"
             android:visibility="gone" />
@@ -189,7 +189,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="28dp"
             android:text="@string/good_price_privacy"
-            android:textColor="#4B5563"
+            android:textColor="@color/vp_text_secondary"
             android:textSize="13sp"
             android:lineSpacingExtra="2dp" />
 

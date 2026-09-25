@@ -3,7 +3,7 @@
     android:id="@+id/comparisonRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF"
+    android:background="@color/vp_background"
     android:fillViewport="true">
 
     <LinearLayout
@@ -19,8 +19,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/app_name"
-            android:textColor="#111827"
-            android:textSize="30sp"
+            android:textColor="@color/vp_text_primary"
+            android:textSize="26sp"
             android:textStyle="bold" />
 
         <TextView
@@ -28,7 +28,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:text="@string/app_tagline"
-            android:textColor="#4B5563"
+            android:textColor="@color/vp_text_secondary"
             android:textSize="16sp" />
 
         <TextView
@@ -36,7 +36,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:text="@string/standalone_intro"
-            android:textColor="#374151"
+            android:textColor="@color/vp_text_secondary"
             android:textSize="15sp"
             android:lineSpacingExtra="2dp" />
 
@@ -45,7 +45,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
             android:text="@string/products_to_compare"
-            android:textColor="#111827"
+            android:textColor="@color/vp_text_primary"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -54,7 +54,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:text="@string/product_input_instructions"
-            android:textColor="#6B7280"
+            android:textColor="@color/vp_text_muted"
             android:textSize="13sp" />
 
         <Button
@@ -79,7 +79,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:text="@string/compare_photo_ready"
-            android:textColor="#6B7280"
+            android:textColor="@color/vp_text_muted"
             android:textSize="12sp" />
 
         <Button
@@ -137,7 +137,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
             android:text="@string/like_for_like_confirmation"
-            android:textColor="#111827"
+            android:textColor="@color/vp_text_primary"
             android:textSize="15sp" />
 
         <TextView
@@ -146,7 +146,7 @@
             android:layout_marginStart="4dp"
             android:layout_marginTop="2dp"
             android:text="@string/like_for_like_confirmation_body"
-            android:textColor="#6B7280"
+            android:textColor="@color/vp_text_muted"
             android:textSize="12sp" />
 
         <TextView
@@ -178,7 +178,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/price_selection_current"
-                android:textColor="#111827"
+                android:textColor="@color/vp_text_primary"
                 android:textSize="15sp" />
 
             <RadioButton
@@ -186,7 +186,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/price_selection_member"
-                android:textColor="#111827"
+                android:textColor="@color/vp_text_primary"
                 android:textSize="15sp" />
         </RadioGroup>
 
@@ -226,7 +226,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:textColor="#6B7280"
+            android:textColor="@color/vp_text_muted"
             android:textSize="12sp"
             android:visibility="gone" />
 
@@ -235,7 +235,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:textColor="#047857"
+            android:textColor="@color/vp_success"
             android:textSize="13sp"
             android:textStyle="bold"
             android:visibility="gone" />
@@ -253,14 +253,14 @@
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:layout_marginTop="30dp"
-            android:background="#E5E7EB" />
+            android:background="@color/vp_outline" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
             android:text="@string/optional_live_scanner"
-            android:textColor="#111827"
+            android:textColor="@color/vp_text_primary"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -269,7 +269,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:text="@string/optional_live_scanner_body"
-            android:textColor="#4B5563"
+            android:textColor="@color/vp_text_secondary"
             android:textSize="14sp"
             android:lineSpacingExtra="2dp" />
 
@@ -279,7 +279,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:text="@string/checking_status"
-            android:textColor="#6B7280"
+            android:textColor="@color/vp_text_muted"
             android:textStyle="bold" />
 
         <Button
@@ -303,7 +303,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="26dp"
             android:text="@string/privacy"
-            android:textColor="#111827"
+            android:textColor="@color/vp_text_primary"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -312,7 +312,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:text="@string/privacy_body"
-            android:textColor="#4B5563"
+            android:textColor="@color/vp_text_secondary"
             android:textSize="14sp"
             android:lineSpacingExtra="2dp" />
 
