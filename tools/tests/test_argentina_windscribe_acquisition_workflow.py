@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 from pathlib import Path
+from urllib.parse import quote, unquote
 
 
 ROOT = Path(__file__).parents[2]
@@ -155,6 +156,35 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
         self.assertIn("VALUEPILOT_UPSTREAM_CHANGE_EVIDENCE_JSON", text)
         self.assertIn("VERIFIED_METADATA_CHANGE_EVIDENCE_REQUIRED", text)
         self.assertIn("VALUEPILOT_UPSTREAM_CHANGED", text)
+
+    def test_discovery_state_write_uses_canonical_object_name_after_observed_412_404(self) -> None:
+        """Reproduce the malformed encoded-key collision seen on 2026-09-25."""
+
+        text = RELEASE_WORKFLOW.read_text(encoding="utf-8")
+        state_object = "control/workflow-discovery-state.json"
+        encoded_key = quote(state_object, safe="")
+
+        # The old insert used the URL-encoded value as the Storage object
+        # name, leaving a literal `%2F` key.  Connector path reads decode that
+        # value to the canonical slash path, so the existing malformed object
+        # is invisible to the read and conflict-reconciliation calls.
+        objects = {encoded_key: {"generation": "old-generation"}}
+        read_key = unquote(encoded_key)
+        self.assertNotIn(read_key, objects)
+        self.assertIn(encoded_key, objects)
+        with self.assertRaises(KeyError):
+            _ = objects[read_key]
+        conditional_insert_would_be_412 = encoded_key in objects
+        conflict_read_would_be_404 = read_key not in objects
+        self.assertTrue(conditional_insert_would_be_412)
+        self.assertTrue(conflict_read_would_be_404)
+
+        # The repaired workflow writes the canonical name while retaining the
+        # encoded path form for Storage connector reads.
+        self.assertIn("name: ${state_object}", text)
+        self.assertNotIn("name: ${text.url_encode(state_object)}", text)
+        self.assertIn("object: ${text.url_encode(state_object)}", text)
+        self.assertIn('ifGenerationMatch: ${default(previous_state_generation, "0")}', text)
 
     def test_september_22_shadow_conflict_fails_closed_for_a_different_candidate(self) -> None:
         """Lock the observed 412 recovery boundary to the Sep 22 identities."""

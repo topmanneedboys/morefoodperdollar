@@ -484,7 +484,7 @@ main:
           call: googleapis.storage.v1.objects.insert
           args:
             bucket: ${control_bucket}
-            name: ${text.url_encode(state_object)}
+            name: ${state_object}
             uploadType: media
             ifGenerationMatch: ${default(previous_state_generation, "0")}
             body: ${discovery_state_bytes}
