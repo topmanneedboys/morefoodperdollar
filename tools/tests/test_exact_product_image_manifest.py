@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tools.exact_product_image_manifest import build_manifest
+from tools.exact_product_image_manifest import _compatible_license, build_manifest
 
 
 class ExactProductImageManifestTest(unittest.TestCase):
@@ -85,6 +85,22 @@ class ExactProductImageManifestTest(unittest.TestCase):
                         "image_front_url": "https://example.invalid/not-authorized.jpg",
                         "image_front_licenses": "CC BY-SA 4.0",
                     },
+                    {
+                        "code": "036000291452",
+                        "product_name": "Whole Milk",
+                        "brands": "Example Brand",
+                        "quantity": "500 g",
+                        "image_front_url": "https://images.openfoodfacts.org/images/products/036/000/291/452/front_en.3.400.jpg",
+                        "image_front_licenses": "CC BY-NC-SA 4.0",
+                    },
+                    {
+                        "code": "036000291452",
+                        "product_name": "Whole Milk",
+                        "brands": "Example Brand",
+                        "quantity": "500 g",
+                        "image_front_url": "https://images.openfoodfacts.org/images/products/036/000/291/452/front_en.4.400.jpg",
+                        "image_front_licenses": "CC BY-ND 4.0",
+                    },
                 ]
             )
         return catalog, export
@@ -95,13 +111,14 @@ class ExactProductImageManifestTest(unittest.TestCase):
             output = Path(tmp) / "manifest.jsonl"
             report = build_manifest(catalog, export, output)
 
-            self.assertEqual(3, report["counts"]["strict_identity_rows"])
-            self.assertEqual(3, report["counts"]["valid_image_candidates"])
+            self.assertEqual(5, report["counts"]["strict_identity_rows"])
+            self.assertEqual(5, report["counts"]["valid_image_candidates"])
             self.assertEqual(3, report["counts"]["accepted_evidence_rows"])
             self.assertEqual({"CC-BY": 1, "CC-BY-SA": 2}, report["acceptedLicences"])
             self.assertEqual({"front": 2, "ingredients": 1}, report["acceptedRoles"])
             self.assertEqual({"es": 3}, report["acceptedLanguages"])
             self.assertEqual(1, report["rejections"]["IMAGE_URL_INVALID_OR_UNSUPPORTED_HOST"])
+            self.assertEqual(2, report["rejections"]["RIGHTS_EVIDENCE_MISSING_OR_INCOMPATIBLE"])
             self.assertIn("preserve attribution", report["obligations"])
 
             lines = output.read_text(encoding="utf-8").splitlines()
@@ -123,6 +140,19 @@ class ExactProductImageManifestTest(unittest.TestCase):
             self.assertEqual(first.read_bytes(), second.read_bytes())
             with self.assertRaisesRegex(ValueError, "Refusing to overwrite"):
                 build_manifest(catalog, export, first)
+
+    def test_restricted_creative_commons_variants_are_not_accepted(self) -> None:
+        for value in (
+            "CC BY-NC 4.0",
+            "CC BY-NC-SA 4.0",
+            "CC BY-ND 4.0",
+            "https://creativecommons.org/licenses/by-nc/4.0/",
+            "Creative Commons Attribution-NonCommercial 4.0",
+            "Creative Commons Attribution-NoDerivatives 4.0",
+        ):
+            self.assertIsNone(_compatible_license(value), value)
+        self.assertEqual(("CC-BY", True, False), _compatible_license("CC BY 4.0"))
+        self.assertEqual(("CC-BY-SA", True, True), _compatible_license("CC BY-SA 4.0"))
 
 
 if __name__ == "__main__":
