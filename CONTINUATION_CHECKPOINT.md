@@ -30,10 +30,12 @@ No images or raw exports are stored in Git or Android.
 
 M12.4 is still partial pending a valid >5-result/App-Check smoke in both
 regions and the Motorola path. The existing M12.7/M12.8 offline/private
-surfaces remain bounded and truthful; live offers are not enabled. M12.9 must
-use versionCode >=10108, but no signing or Play upload has been started.
+surfaces remain bounded and truthful; live offers are not enabled. M12.9 now
+has an unsigned 10108 / 101.1.7 candidate in the normal build configuration.
+No new signing or Play upload has been started; 10107 remains the installed
+Play build for the pending physical smoke.
 
-Branch: `candidate/argentina-live-search-m12-4`
+Branch: `work/valuepilot-m124-m129`
 
 ## Latest continuation checkpoint — 2026-09-24
 

@@ -36,12 +36,13 @@ downloaded, committed, or added to Android. This is measured evidence, not a
 M12.4 remains **PARTIAL**: the >5-result, valid-App-Check smoke across both
 regions still needs a valid credential/device path. M12.7/M12.8 remain
 code-complete for the existing offline/private evidence boundaries, but no
-live price or inventory claim is enabled. M12.9 has not signed or uploaded a
-new build; the installed Play build is 10107 and the next versionCode must be
-at least 10108. Physical Motorola validation, any credentialed live smoke,
-and explicit approval for unattended promotion remain external gates.
+live price or inventory claim is enabled. M12.9 now prepares an unsigned
+10108 / 101.1.7 candidate in the normal build configuration; no new signing
+or Play upload has occurred. The installed Play build remains 10107.
+Physical Motorola validation, any credentialed live smoke, and explicit
+approval for unattended promotion remain external gates.
 
-Branch: `fix/argentina-live-search-response-contract`
+Branch: `work/valuepilot-m124-m129`
 
 Current HEAD: `e821b8099fea9d1288065b5a7f8cfc7f83f2763e`
 
