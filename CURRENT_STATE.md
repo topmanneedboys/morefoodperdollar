@@ -1,15 +1,18 @@
 # Current state
 
-Updated: 2026-09-27 12:08 UTC
+Updated: 2026-09-27 12:35 UTC
 
 ## Resumed M12.4–M12.9 checkpoint — 2026-09-27
 
 The active continuation branch is `work/valuepilot-m124-m129`. The verified
 Data Status repair remains at `dcb40372bd0ed6f45afc87fea405d1dfdf01775b` and
 was not repeated; the untracked `device-audit/` directory is preserved. The
-current branch tip is `e320de8beb3fa749f1da9717b4d914d2486e93b7`. Remote
-`main` is `5d1b4e5e1fa944bc08ee0b00063d58a79b724c5d` after merged PR #22, and
-the branch tree is content-equivalent to that main tree.
+current branch tip is `0e73ddeec55435b1ebe2ce3586899d8d0591ea60`.
+Remote `main` is `8ab8e422db74b8dc87be474a84537a7603670657` after merged PR #23.
+PR #23 refreshed these post-merge heads and passed exact-head workflow
+`36318208437` plus post-merge main workflow `36318781459`; browser and Android
+verification passed in both runs, while provenance/release-bundle jobs were
+skipped by policy.
 
 M12.5 now has bounded SHADOW-result reconciliation, terminal failure alerts,
 write-free success checks, and idempotent receipts. It does not enable
