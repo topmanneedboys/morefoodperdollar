@@ -141,6 +141,11 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
         text = WORKFLOW.read_text(encoding="utf-8")
         reconcile = text.index("  reconcile-shadow:")
         section = text[reconcile:]
+        self.assertIn("    needs:\n      - acquire-and-shadow", section)
+        self.assertIn(
+            "    if: always() && (github.event_name == 'workflow_dispatch' || vars.ARGENTINA_AUTOMATED_ACQUISITION_ENABLED == 'true')",
+            section,
+        )
         self.assertIn("read-shadow-state", section)
         self.assertIn("gcloud workflows executions describe", section)
         self.assertIn("reconcile-shadow-state", section)
