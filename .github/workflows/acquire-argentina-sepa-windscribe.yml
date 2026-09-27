@@ -584,7 +584,12 @@ jobs:
     # bounded read of the asynchronous Cloud Workflow and records only the
     # terminal SHADOW result; it never starts another national build and never
     # writes an ACTIVE or CANARY pointer.
-    if: github.event_name == 'workflow_dispatch' || vars.ARGENTINA_AUTOMATED_ACQUISITION_ENABLED == 'true'
+    # Serialize it after the handoff so it cannot read the previous day's
+    # state while the acquisition job is still recording today's execution.
+    # always() keeps recovery reconciliation available when acquisition fails.
+    needs:
+      - acquire-and-shadow
+    if: always() && (github.event_name == 'workflow_dispatch' || vars.ARGENTINA_AUTOMATED_ACQUISITION_ENABLED == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: argentina-production
