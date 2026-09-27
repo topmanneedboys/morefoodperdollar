@@ -7,7 +7,10 @@ Updated: 2026-09-27
 Work continues on `work/valuepilot-m124-m129` from the verified Data Status
 repair `dcb40372bd0ed6f45afc87fea405d1dfdf01775b`; the untracked `device-audit/`
 directory remains untouched. The current implementation checkpoint is
-`dc4e0e9455dc126bedd8a86075db0beace9c63fe`.
+`dc4e0e9455dc126bedd8a86075db0beace9c63fe`. The current report-only branch
+HEAD is `867abc9a50e9fca35e39cb89a3a337eea150405c`; remote `main` is
+`2281848155534f71f85141b9511a568899343cb5` after PR #19, and exact-main
+verification run `36311518989` passed.
 
 The M12.5 acquisition controller now reconciles asynchronous SHADOW results
 with exact execution identity, requires a write-free verified candidate for
@@ -43,7 +46,7 @@ No images or raw exports are stored in Git or Android.
 
 M12.4 is still partial pending a valid >5-result/App-Check smoke in both
 regions and the Motorola path. The exact merged-main verification run
-`36309391236` is green, but it cannot replace that physical evidence. The
+`36311518989` is green, but it cannot replace that physical evidence. The
 existing M12.7/M12.8 offline/private
 surfaces remain bounded and truthful; live offers are not enabled. M12.9 now
 has an unsigned 10108 / 101.1.7 candidate in the normal build configuration.
