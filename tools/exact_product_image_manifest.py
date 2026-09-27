@@ -238,9 +238,12 @@ def build_manifest(catalog_path: Path, off_path: Path, output_path: Path) -> dic
                         continue
                     counters["valid_image_candidates"] += 1
                     license_text = _license_value(row, candidate["field"], candidate["role"])
+                    if not license_text:
+                        rejection_reasons["RIGHTS_EVIDENCE_MISSING"] += 1
+                        continue
                     license_info = _compatible_license(license_text)
                     if license_info is None:
-                        rejection_reasons["RIGHTS_EVIDENCE_MISSING_OR_INCOMPATIBLE"] += 1
+                        rejection_reasons["RIGHTS_LICENSE_INCOMPATIBLE"] += 1
                         continue
                     license_id, attribution_required, share_alike_required = license_info
                     accepted_licenses[license_id] += 1

@@ -101,6 +101,13 @@ class ExactProductImageManifestTest(unittest.TestCase):
                         "image_front_url": "https://images.openfoodfacts.org/images/products/036/000/291/452/front_en.4.400.jpg",
                         "image_front_licenses": "CC BY-ND 4.0",
                     },
+                    {
+                        "code": "036000291452",
+                        "product_name": "Whole Milk",
+                        "brands": "Example Brand",
+                        "quantity": "500 g",
+                        "image_front_url": "https://images.openfoodfacts.org/images/products/036/000/291/452/front_en.5.400.jpg",
+                    },
                 ]
             )
         return catalog, export
@@ -111,14 +118,15 @@ class ExactProductImageManifestTest(unittest.TestCase):
             output = Path(tmp) / "manifest.jsonl"
             report = build_manifest(catalog, export, output)
 
-            self.assertEqual(5, report["counts"]["strict_identity_rows"])
-            self.assertEqual(5, report["counts"]["valid_image_candidates"])
+            self.assertEqual(6, report["counts"]["strict_identity_rows"])
+            self.assertEqual(6, report["counts"]["valid_image_candidates"])
             self.assertEqual(3, report["counts"]["accepted_evidence_rows"])
             self.assertEqual({"CC-BY": 1, "CC-BY-SA": 2}, report["acceptedLicences"])
             self.assertEqual({"front": 2, "ingredients": 1}, report["acceptedRoles"])
             self.assertEqual({"es": 3}, report["acceptedLanguages"])
             self.assertEqual(1, report["rejections"]["IMAGE_URL_INVALID_OR_UNSUPPORTED_HOST"])
-            self.assertEqual(2, report["rejections"]["RIGHTS_EVIDENCE_MISSING_OR_INCOMPATIBLE"])
+            self.assertEqual(1, report["rejections"]["RIGHTS_EVIDENCE_MISSING"])
+            self.assertEqual(2, report["rejections"]["RIGHTS_LICENSE_INCOMPATIBLE"])
             self.assertIn("preserve attribution", report["obligations"])
 
             lines = output.read_text(encoding="utf-8").splitlines()
