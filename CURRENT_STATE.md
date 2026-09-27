@@ -17,6 +17,11 @@ durable release/provenance artifacts were deliberately preserved. GitHub run
 `36295847180` is **not green**: its code tests passed, but artifact uploads
 failed because the Actions storage quota was full.
 
+The build workflow now keeps disposable browser/APK/release uploads only for
+explicit `candidate/*` and `work/valuepilot-android-milestone` pushes;
+ordinary `work/valuepilot-*` pushes still run the full checks without storing
+duplicate outputs.
+
 M12.6's first real coverage audit is recorded in
 [ARGENTINA_PRODUCT_IMAGE_COVERAGE_M12_6.md](ARGENTINA_PRODUCT_IMAGE_COVERAGE_M12_6.md).
 Against 66,716 valid-GTIN Argentina identity records (44,683 unique GTINs),

@@ -16,6 +16,8 @@ and is idempotent. It does not activate unattended production promotion.
 Ordinary research artifact retention is 3 days; qualified provenance evidence
 was preserved. GitHub run `36295847180` remains failed overall because only its
 artifact uploads hit the full Actions quota; its reported code checks passed.
+The build workflow now skips disposable uploads on ordinary work branches and
+retains them only for explicit candidate/milestone pushes.
 
 The M12.6 image audit is deterministic and offline. Of 66,716 valid-GTIN
 identity records (44,683 unique GTINs), 21 strict exact image URL candidates
