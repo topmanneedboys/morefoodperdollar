@@ -12,6 +12,7 @@ class MainActivitySearchIdentityBoundaryTest {
         val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
             .replace("\r\n", "\n")
         val layout = source("src/main/res/layout/activity_shell.xml").readText()
+        val strings = source("src/main/res/values/strings.xml").readText()
 
         listOf(
             "ArgentinaLiveSearchSurfaceHost",
@@ -27,6 +28,8 @@ class MainActivitySearchIdentityBoundaryTest {
             assertTrue("Expected visible identity boundary $required", activity.contains(required))
         }
         assertTrue(layout.contains("android:id=\"@+id/searchAreaLabel\""))
+        assertTrue(strings.contains("package size appears only when the source supplies it explicitly"))
+        assertFalse(strings.contains("not live prices, stock, availability, package quantities"))
         assertFalse(layout.contains("@+id/searchIdentityButton"))
         assertFalse(activity.contains("LocalSampleProductSearchProvider"))
         assertFalse(activity.contains("UniversalSearchController"))
