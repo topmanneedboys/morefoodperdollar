@@ -1,14 +1,14 @@
 # Current state
 
-Updated: 2026-09-27 11:30 UTC
+Updated: 2026-09-27 12:08 UTC
 
 ## Resumed M12.4–M12.9 checkpoint — 2026-09-27
 
 The active continuation branch is `work/valuepilot-m124-m129`. The verified
 Data Status repair remains at `dcb40372bd0ed6f45afc87fea405d1dfdf01775b` and
 was not repeated; the untracked `device-audit/` directory is preserved. The
-current branch tip is `73ecbf5e20170fe85f6935406585d08f39170683`. Remote
-`main` is `09c36d2473e925739d9f178491e5bd9db754e3c6` after merged PR #21, and
+current branch tip is `e320de8beb3fa749f1da9717b4d914d2486e93b7`. Remote
+`main` is `5d1b4e5e1fa944bc08ee0b00063d58a79b724c5d` after merged PR #22, and
 the branch tree is content-equivalent to that main tree.
 
 M12.5 now has bounded SHADOW-result reconciliation, terminal failure alerts,
@@ -19,7 +19,10 @@ reconciliation and keeps recovery reconciliation enabled after acquisition
 failure. Exact-head PR runs `36315163770` and `36315146325`, plus post-merge
 main runs `36315728824` and `36315728794`, passed Android test/lint/build,
 privacy, single-signer, browser and acquisition-control checks. Release and
-provenance uploads were skipped by policy.
+provenance uploads were skipped by policy. The PR #22 exact-head run
+`36316729499` and post-merge main run `36317378112` also passed browser and
+Android test/lint/build, privacy and single-signer checks; provenance and
+release-bundle uploads were skipped by policy.
 The deployed `valuepilot-argentina-release` workflow is now ACTIVE at
 revision `000013-32a`. Its latest scheduled execution was on the prior
 revision `000012-0a4` (`c46e8991-4927-4737-b6ae-5af7a2818029`): Cloud Build
