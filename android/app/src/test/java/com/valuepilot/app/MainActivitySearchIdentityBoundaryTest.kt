@@ -55,6 +55,8 @@ class MainActivitySearchIdentityBoundaryTest {
         assertTrue(card.contains("caveat"))
         assertTrue(card.contains("openComparisonWithSharedText"))
         assertTrue(card.contains("search_identity_open_compare"))
+        assertTrue(card.contains("search_identity_no_verified_picture"))
+        assertTrue(card.contains("picturePlaceholder"))
         assertTrue(card.contains("minHeight = dp(48)"))
         assertTrue(card.contains("#FFF1E8"))
     }

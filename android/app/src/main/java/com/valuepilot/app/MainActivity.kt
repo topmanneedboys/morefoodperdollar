@@ -2193,6 +2193,7 @@ class MainActivity : AppCompatActivity() {
                     match.brand,
                     match.matchLabel,
                     "Argentina SEPA identity result",
+                    getString(R.string.search_identity_no_verified_picture),
                     caveat,
                     "Tap to review this name in Scan and compare"
                 ).joinToString(". ") { it.trim().trimEnd('.', '!', '?') } + "."
@@ -2213,6 +2214,16 @@ class MainActivity : AppCompatActivity() {
             setTextColor(ValuePilotPalette.color("#111827"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             setPadding(0, dp(5), 0, 0)
+        }
+
+        val picturePlaceholder = TextView(this).apply {
+            text = getString(R.string.search_identity_no_verified_picture)
+            gravity = Gravity.CENTER
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextColor(ValuePilotPalette.color("#6B7280"))
+            setBackgroundColor(ValuePilotPalette.color("#FFF8F4"))
+            minHeight = dp(72)
+            setPadding(dp(12), dp(10), dp(12), dp(10))
         }
 
         val brand = match.brand?.let { brandName ->
@@ -2239,6 +2250,7 @@ class MainActivity : AppCompatActivity() {
             setPadding(0, dp(9), 0, 0)
         }
 
+        body.addView(picturePlaceholder)
         body.addView(name)
         brand?.let(body::addView)
         body.addView(matchLabel)
