@@ -127,6 +127,26 @@ class ExactProductImageManifestTest(unittest.TestCase):
             self.assertEqual(1, report["rejections"]["IMAGE_URL_INVALID_OR_UNSUPPORTED_HOST"])
             self.assertEqual(1, report["rejections"]["RIGHTS_EVIDENCE_MISSING"])
             self.assertEqual(2, report["rejections"]["RIGHTS_LICENSE_INCOMPATIBLE"])
+            self.assertEqual(
+                {
+                    "catalogValidGtinIdentities": 2,
+                    "catalogUniqueGtins": 2,
+                    "strictExactIdentityCount": 2,
+                    "rightsQualifiedImageEvidenceIdentityCount": 2,
+                    "rightsQualifiedImageEvidencePercentOfCatalogValidGtinIdentities": 100.0,
+                    "rightsQualifiedImageEvidencePercentOfStrictExactIdentities": 100.0,
+                    "yerbaCatalogIdentities": 1,
+                    "yerbaRightsQualifiedImageEvidenceIdentityCount": 1,
+                    "yerbaRightsQualifiedImageEvidencePercent": 100.0,
+                    "displayEligibleIdentityCount": 0,
+                    "displayEligibility": "NOT_CLAIMED_IMAGE_BYTES_NOT_DOWNLOADED",
+                },
+                report["coverage"],
+            )
+            self.assertEqual(
+                "EVIDENCE_ONLY_IMAGE_BYTES_NOT_DOWNLOADED",
+                report["displayEligibility"],
+            )
             self.assertIn("preserve attribution", report["obligations"])
 
             lines = output.read_text(encoding="utf-8").splitlines()
