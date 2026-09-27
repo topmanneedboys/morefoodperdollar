@@ -1,6 +1,6 @@
 # Current state
 
-Updated: 2026-09-27 09:18 UTC
+Updated: 2026-09-27 10:05 UTC
 
 ## Resumed M12.4–M12.9 checkpoint — 2026-09-26
 
@@ -12,6 +12,23 @@ next M12.5 code checkpoint is `44c6b4b99b11578bd77de4247dcf15e34a529d01`.
 M12.5 now has bounded SHADOW-result reconciliation, terminal failure alerts,
 write-free success checks, and idempotent receipts. It does not enable
 unattended production promotion. Its focused local tests pass (42 tests).
+The deployed `valuepilot-argentina-release` workflow is now ACTIVE at
+revision `000013-32a`. Its latest scheduled execution was on the prior
+revision `000012-0a4` (`c46e8991-4927-4737-b6ae-5af7a2818029`): Cloud Build
+`f929bfbe-82fc-4a1d-862d-c5f7e65bdd36` succeeded and persisted candidate
+`argentina-sepa-2026-09-25-93ce53aac8d3db32-routing-v1-search-v2`, but the
+workflow could not verify/write its discovery-state object and therefore
+returned `STATE_WRITE_UNVERIFIED`; promotion remained `SHADOW_ONLY` with zero
+active-pointer writes. This is useful candidate evidence, not end-to-end
+production qualification, and no unattended promotion is enabled.
+Read-only runtime inspection now shows both regional `control/active.json`
+pointers at
+`argentina-sepa-2026-09-25-93ce53aac8d3db32-routing-v1-search-v2`; the active
+manifest is complete and qualified from the official source hash
+`93ce53aac8d3db322c07b0bc66900016a91aba6b4ccf858a835bfb5f3f13b680`, while
+its own metadata records `automatedOfficialAcquisitionProven: false`. The
+running backend advertises that release and `androidNetworkingAuthorized=true`.
+This still does not prove a credentialed >5-result physical Search smoke.
 Ordinary research artifact retention was reduced from 14 to 3 days; the two
 durable release/provenance artifacts were deliberately preserved. GitHub run
 `36295847180` is **not green**: its code tests passed, but artifact uploads
@@ -57,9 +74,9 @@ claimed as physically verified.
 
 Branch: `work/valuepilot-m124-m129`
 
-Candidate branch HEAD: `5a16e1166dd8d7d5a8d9c2893cfabe84ff8b4a97`
+Candidate branch HEAD: `dc4e0e9455dc126bedd8a86075db0beace9c63fe`
 
-Integrated `main` HEAD: `7840cb6555200ef3692bec2ec319fb74840fa2bb`
+Integrated `main` HEAD: `46098347bf4a5cae403a26f2139fd6d31992e933`
 
 ## M12.4 live Search repair — 2026-09-24
 

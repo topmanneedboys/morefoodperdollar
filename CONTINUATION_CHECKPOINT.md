@@ -1,18 +1,31 @@
 # ValuePilot Continuation Checkpoint
 
-Updated: 2026-09-23
+Updated: 2026-09-27
 
 ## Resumed M12.4–M12.9 checkpoint — 2026-09-26
 
 Work continues on `work/valuepilot-m124-m129` from the verified Data Status
 repair `dcb40372bd0ed6f45afc87fea405d1dfdf01775b`; the untracked `device-audit/`
 directory remains untouched. The current implementation checkpoint is
-`44c6b4b99b11578bd77de4247dcf15e34a529d01`.
+`dc4e0e9455dc126bedd8a86075db0beace9c63fe`.
 
 The M12.5 acquisition controller now reconciles asynchronous SHADOW results
 with exact execution identity, requires a write-free verified candidate for
 success, records bounded failure evidence, alerts on unsafe terminal results,
 and is idempotent. It does not activate unattended production promotion.
+The deployed `valuepilot-argentina-release` workflow is ACTIVE at revision
+`000013-32a`. Its latest scheduled execution (on revision `000012-0a4`) ran
+Cloud Build successfully and persisted candidate
+`argentina-sepa-2026-09-25-93ce53aac8d3db32-routing-v1-search-v2`, but returned
+`STATE_WRITE_UNVERIFIED` because the discovery-state object could not be
+verified. Promotion stayed `SHADOW_ONLY` with zero active-pointer writes, so
+this does not qualify the unattended end-to-end path.
+The current regional runtime pointers nevertheless read that same
+2026-09-25 release, whose complete manifest carries source SHA-256
+`93ce53aac8d3db322c07b0bc66900016a91aba6b4ccf858a835bfb5f3f13b680` and
+explicitly records `automatedOfficialAcquisitionProven: false`. The backend
+advertises the release and Android identity-search authorization, but this is
+not physical App Check/pagination evidence.
 Ordinary research artifact retention is 3 days; qualified provenance evidence
 was preserved. GitHub run `36295847180` remains failed overall because only its
 artifact uploads hit the full Actions quota; its reported code checks passed.
@@ -29,7 +42,9 @@ eligible. The 389 `yerba` identities had 0 strict image candidates. See
 No images or raw exports are stored in Git or Android.
 
 M12.4 is still partial pending a valid >5-result/App-Check smoke in both
-regions and the Motorola path. The existing M12.7/M12.8 offline/private
+regions and the Motorola path. The exact merged-main verification run
+`36309391236` is green, but it cannot replace that physical evidence. The
+existing M12.7/M12.8 offline/private
 surfaces remain bounded and truthful; live offers are not enabled. M12.9 now
 has an unsigned 10108 / 101.1.7 candidate in the normal build configuration.
 No new signing or Play upload has been started; 10107 remains the installed
