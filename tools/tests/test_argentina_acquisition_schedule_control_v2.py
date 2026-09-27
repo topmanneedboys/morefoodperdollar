@@ -25,7 +25,9 @@ from tools.argentina_acquisition_schedule_control_v2 import (
     finalize_download_observation,
     metadata_change_evidence,
     preflight_observation,
+    reconcile_shadow_state,
     read_daily_state,
+    read_shadow_state,
     record_shadow_state,
     reserve_build_attempt,
     upstream_outage_result,
@@ -544,6 +546,157 @@ class ArgentinaAcquisitionScheduleControlV2Tests(unittest.TestCase):
         )
         self.assertEqual(rerun["priorSameDayState"]["status"], "SHADOW_SUCCEEDED")
         self.assertEqual(rerun["activePointerWrites"], 0)
+
+    def test_shadow_reconciliation_leaves_active_execution_pending(self) -> None:
+        resolution = self._record_primary_no_change()
+        record_shadow_state(
+            resolution=resolution,
+            store=self.store,
+            status="SHADOW_STARTED",
+            workflow_execution="execution-pending",
+            reservation_id="reservation-pending",
+            recorded_at="2026-09-15T17:00:00Z",
+        )
+
+        pending = reconcile_shadow_state(
+            store=self.store,
+            argentina_day="2026-09-15",
+            workflow_execution="execution-pending",
+            execution_state="ACTIVE",
+            recorded_at="2026-09-15T17:05:00Z",
+        )
+
+        self.assertEqual(pending["status"], "SHADOW_PENDING")
+        self.assertEqual(pending["reconciliationStatus"], "PENDING")
+        self.assertEqual(read_daily_state(store=self.store, argentina_day="2026-09-15")["status"], "SHADOW_STARTED")
+
+    def test_shadow_reconciliation_records_only_verified_write_free_success(self) -> None:
+        resolution = self._record_primary_no_change()
+        record_shadow_state(
+            resolution=resolution,
+            store=self.store,
+            status="SHADOW_STARTED",
+            workflow_execution="execution-success",
+            reservation_id="reservation-success",
+            recorded_at="2026-09-15T17:00:00Z",
+        )
+
+        reconciled = reconcile_shadow_state(
+            store=self.store,
+            argentina_day="2026-09-15",
+            workflow_execution="execution-success",
+            execution_state="SUCCEEDED",
+            workflow_result={
+                "status": "CANDIDATE_VERIFIED",
+                "activePointerWrites": 0,
+                "canaryPointerWrites": 0,
+                "promotionMode": "SHADOW",
+                "activation": "NOT_EXECUTED",
+                "promotion": {"status": "SHADOW_ONLY", "activePointerWrites": 0},
+            },
+            recorded_at="2026-09-15T17:05:00Z",
+        )
+
+        self.assertEqual(reconciled["status"], "SHADOW_SUCCEEDED")
+        self.assertEqual(reconciled["reconciliationStatus"], "RECORDED")
+        state = read_daily_state(store=self.store, argentina_day="2026-09-15")
+        self.assertEqual(state["status"], "SHADOW_SUCCEEDED")
+        self.assertEqual(state["shadowResult"]["workflowResult"]["status"], "CANDIDATE_VERIFIED")
+        self.assertEqual(state["shadowResult"]["workflowResult"]["activePointerWrites"], 0)
+
+    def test_shadow_reconciliation_records_terminal_failure_and_alertable_reason(self) -> None:
+        resolution = self._record_primary_no_change()
+        record_shadow_state(
+            resolution=resolution,
+            store=self.store,
+            status="SHADOW_STARTED",
+            workflow_execution="execution-failed",
+            reservation_id="reservation-failed",
+            recorded_at="2026-09-15T17:00:00Z",
+        )
+
+        reconciled = reconcile_shadow_state(
+            store=self.store,
+            argentina_day="2026-09-15",
+            workflow_execution="execution-failed",
+            execution_state="FAILED",
+            workflow_error={"code": "BUILD_FAILED", "message": "fixture failure"},
+            recorded_at="2026-09-15T17:05:00Z",
+        )
+
+        self.assertEqual(reconciled["status"], "SHADOW_FAILED")
+        self.assertEqual(reconciled["reason"], "WORKFLOW_EXECUTION_FAILED")
+        state = read_daily_state(store=self.store, argentina_day="2026-09-15")
+        self.assertEqual(state["status"], "SHADOW_FAILED")
+        self.assertEqual(state["shadowResult"]["workflowError"]["code"], "BUILD_FAILED")
+
+    def test_shadow_reconciliation_rejects_wrong_execution_and_unsafe_success(self) -> None:
+        resolution = self._record_primary_no_change()
+        record_shadow_state(
+            resolution=resolution,
+            store=self.store,
+            status="SHADOW_STARTED",
+            workflow_execution="execution-identity",
+            reservation_id="reservation-identity",
+            recorded_at="2026-09-15T17:00:00Z",
+        )
+
+        with self.assertRaises(AcquisitionScheduleError) as conflict:
+            reconcile_shadow_state(
+                store=self.store,
+                argentina_day="2026-09-15",
+                workflow_execution="different-execution",
+                execution_state="SUCCEEDED",
+                workflow_result={"status": "CANDIDATE_VERIFIED", "activePointerWrites": 0},
+                recorded_at="2026-09-15T17:05:00Z",
+            )
+        self.assertEqual(conflict.exception.code, "CONTROL_CONFLICT")
+
+        unsafe = reconcile_shadow_state(
+            store=self.store,
+            argentina_day="2026-09-15",
+            workflow_execution="execution-identity",
+            execution_state="SUCCEEDED",
+            workflow_result={"status": "CANDIDATE_VERIFIED", "activePointerWrites": 1},
+            recorded_at="2026-09-15T17:06:00Z",
+        )
+        self.assertEqual(unsafe["status"], "SHADOW_FAILED")
+        self.assertEqual(unsafe["reason"], "ACTIVE_POINTER_WRITE_CLAIMED")
+
+    def test_shadow_reconciliation_is_idempotent_after_terminal_record(self) -> None:
+        resolution = self._record_primary_no_change()
+        record_shadow_state(
+            resolution=resolution,
+            store=self.store,
+            status="SHADOW_STARTED",
+            workflow_execution="execution-terminal",
+            reservation_id="reservation-terminal",
+            recorded_at="2026-09-15T17:00:00Z",
+        )
+        first = reconcile_shadow_state(
+            store=self.store,
+            argentina_day="2026-09-15",
+            workflow_execution="execution-terminal",
+            execution_state="SUCCEEDED",
+            workflow_result={"status": "CANDIDATE_VERIFIED", "activePointerWrites": 0},
+            recorded_at="2026-09-15T17:05:00Z",
+        )
+        second = reconcile_shadow_state(
+            store=self.store,
+            argentina_day="2026-09-15",
+            workflow_execution="execution-terminal",
+            execution_state="SUCCEEDED",
+            workflow_result={"status": "CANDIDATE_VERIFIED", "activePointerWrites": 0},
+            recorded_at="2026-09-15T17:10:00Z",
+        )
+        self.assertEqual(first["status"], "SHADOW_SUCCEEDED")
+        self.assertEqual(second["status"], "SHADOW_SUCCEEDED")
+        self.assertEqual(second["reconciliationStatus"], "ALREADY_RECORDED")
+
+    def test_read_shadow_state_is_bounded_and_reports_missing_day(self) -> None:
+        missing = read_shadow_state(store=self.store, argentina_day="2026-09-16")
+        self.assertEqual(missing["status"], "NO_STATE")
+        self.assertIsNone(missing["workflowExecution"])
 
     def test_daily_state_journal_survives_a_create_only_store(self) -> None:
         class CreateOnlyStore(LocalFilesystemObjectStore):

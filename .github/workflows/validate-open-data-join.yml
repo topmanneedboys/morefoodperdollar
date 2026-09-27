@@ -59,4 +59,7 @@ jobs:
             build/open-data-join/open-prices-off-join.json
             build/open-data-join/open-prices-off-join.md
           if-no-files-found: error
-          retention-days: 14
+          # This is a rebuildable research report, not release/provenance
+          # evidence. Keep it briefly so routine validation cannot consume the
+          # repository's Actions storage allocation.
+          retention-days: 3
