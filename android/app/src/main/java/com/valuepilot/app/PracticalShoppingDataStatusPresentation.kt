@@ -77,7 +77,7 @@ internal data class PracticalShoppingDataStatusPresentation(
 
             return PracticalShoppingDataStatusPresentation(
                 identityCatalog =
-                    "${String.format(Locale.ROOT, "%,d", BUNDLED_IDENTITY_RECORD_COUNT)} Canada-labelled product names for the GTA and Metro Vancouver. Names only — no live price, package size, stock or availability.",
+                    "${String.format(Locale.ROOT, "%,d", BUNDLED_IDENTITY_RECORD_COUNT)} Canada-labelled product names in the offline identity catalogue. Names only — this is not proof of GTA or Metro Vancouver availability, price, package size, stock or availability.",
                 privateObservations = privateText,
                 currentOffers =
                     "None included. There is no authorized live-offer feed. Unknown prices stay unknown.",

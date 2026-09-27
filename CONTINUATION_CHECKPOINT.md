@@ -2,6 +2,35 @@
 
 Updated: 2026-09-23
 
+## Resumed M12.4–M12.9 checkpoint — 2026-09-26
+
+Work continues on `work/valuepilot-m124-m129` from the verified Data Status
+repair `dcb40372bd0ed6f45afc87fea405d1dfdf01775b`; the untracked `device-audit/`
+directory remains untouched. The current implementation checkpoint is
+`44c6b4b99b11578bd77de4247dcf15e34a529d01`.
+
+The M12.5 acquisition controller now reconciles asynchronous SHADOW results
+with exact execution identity, requires a write-free verified candidate for
+success, records bounded failure evidence, alerts on unsafe terminal results,
+and is idempotent. It does not activate unattended production promotion.
+Ordinary research artifact retention is 3 days; qualified provenance evidence
+was preserved. GitHub run `36295847180` remains failed overall because only its
+artifact uploads hit the full Actions quota; its reported code checks passed.
+The build workflow now skips disposable uploads on ordinary work branches and
+retains them only for explicit candidate/milestone pushes.
+
+The M12.6 image audit is deterministic and offline. Of 66,716 valid-GTIN
+identity records (44,683 unique GTINs), 21 strict exact image URL candidates
+were found (0.031477%), with 0 per-image licence-qualified and 0 display
+eligible. The 389 `yerba` identities had 0 strict image candidates. See
+[ARGENTINA_PRODUCT_IMAGE_COVERAGE_M12_6.md](ARGENTINA_PRODUCT_IMAGE_COVERAGE_M12_6.md).
+No images or raw exports are stored in Git or Android.
+
+M12.4 is still partial pending a valid >5-result/App-Check smoke in both
+regions and the Motorola path. The existing M12.7/M12.8 offline/private
+surfaces remain bounded and truthful; live offers are not enabled. M12.9 must
+use versionCode >=10108, but no signing or Play upload has been started.
+
 Branch: `candidate/argentina-live-search-m12-4`
 
 ## Latest continuation checkpoint — 2026-09-24

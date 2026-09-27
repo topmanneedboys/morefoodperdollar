@@ -17,6 +17,9 @@ on:
       - 'tools/promote_offline_catalog_snapshot.py'
       - 'tools/promote_offline_catalog_release.py'
       - 'tools/import_open_food_facts_catalog.py'
+      - 'tools/audit_argentina_product_images.py'
+      - 'tools/tests/test_audit_argentina_product_images.py'
+      - 'ARGENTINA_PRODUCT_IMAGE_COVERAGE_M12_6.*'
       - 'tools/select_open_food_facts_launch_catalog.py'
       - 'tools/refresh_offline_catalog_snapshots.py'
       - 'tools/qualify_merchant_feed.py'
@@ -114,6 +117,9 @@ on:
       - 'tools/promote_offline_catalog_snapshot.py'
       - 'tools/promote_offline_catalog_release.py'
       - 'tools/import_open_food_facts_catalog.py'
+      - 'tools/audit_argentina_product_images.py'
+      - 'tools/tests/test_audit_argentina_product_images.py'
+      - 'ARGENTINA_PRODUCT_IMAGE_COVERAGE_M12_6.*'
       - 'tools/select_open_food_facts_launch_catalog.py'
       - 'tools/refresh_offline_catalog_snapshots.py'
       - 'tools/qualify_merchant_feed.py'
@@ -233,10 +239,11 @@ jobs:
           (cd browser-extension/dist/firefox && zip -X -q -r ../../../release-browser/ValuePilot-v101-firefox.zip .)
 
       - name: Upload verified browser parts
-        # Pull requests still run the complete browser verification above, but
-        # their rebuildable zips are not durable release evidence. Keep upload
-        # storage for candidate/milestone pushes only.
-        if: github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/candidate/') || startsWith(github.ref, 'refs/heads/work/valuepilot-'))
+        # Pull requests and ordinary work branches still run complete browser
+        # verification, but their rebuildable zips are not durable release
+        # evidence. Keep upload storage for explicit candidate/milestone
+        # pushes only.
+        if: github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/candidate/') || github.ref == 'refs/heads/work/valuepilot-android-milestone')
         uses: actions/upload-artifact@v6
         with:
           name: ValuePilot-v101-browser-parts
@@ -343,7 +350,7 @@ jobs:
       - name: Upload verified Android part
         # Pull requests still run the complete Android verification above, but
         # their rebuildable APK is not durable release evidence.
-        if: github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/candidate/') || startsWith(github.ref, 'refs/heads/work/valuepilot-'))
+        if: github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/candidate/') || github.ref == 'refs/heads/work/valuepilot-android-milestone')
         uses: actions/upload-artifact@v6
         with:
           name: ValuePilot-v101-android-part
@@ -355,7 +362,7 @@ jobs:
     # Assemble release artifacts only from candidate/milestone pushes. A pull
     # request must still run all verification jobs, but must not depend on
     # disposable artifact uploads.
-    if: github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/candidate/') || startsWith(github.ref, 'refs/heads/work/valuepilot-'))
+    if: github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/candidate/') || github.ref == 'refs/heads/work/valuepilot-android-milestone')
     needs:
       - browser-verify
       - android-verify
@@ -411,7 +418,7 @@ jobs:
           sha256sum -c SHA256SUMS.txt
 
       - name: Upload verified release bundle
-        if: github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/candidate/') || startsWith(github.ref, 'refs/heads/work/valuepilot-'))
+        if: github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/candidate/') || github.ref == 'refs/heads/work/valuepilot-android-milestone')
         uses: actions/upload-artifact@v6
         with:
           name: ValuePilot-v101-release

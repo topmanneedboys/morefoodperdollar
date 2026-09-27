@@ -578,3 +578,169 @@ jobs:
           fi
           rm -f gha-creds-*.json "${WG_CONFIG}" "${RUNNER_TEMP}/valuepilot-catalog-probe.json"
           rm -rf "${LOCAL_ARCHIVE}"
+
+  reconcile-shadow:
+    # This job is deliberately separate from acquisition.  It performs one
+    # bounded read of the asynchronous Cloud Workflow and records only the
+    # terminal SHADOW result; it never starts another national build and never
+    # writes an ACTIVE or CANARY pointer.
+    if: github.event_name == 'workflow_dispatch' || vars.ARGENTINA_AUTOMATED_ACQUISITION_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: argentina-production
+
+    env:
+      GCP_PROJECT_ID: ${{ vars.VALUEPILOT_GCP_PROJECT_ID }}
+      ARCHIVE_BUCKET: ${{ vars.VALUEPILOT_ARGENTINA_ARCHIVE_BUCKET }}
+      RELEASE_WORKFLOW_NAME: ${{ vars.VALUEPILOT_ARGENTINA_WORKFLOW_NAME }}
+      RELEASE_WORKFLOW_LOCATION: ${{ vars.VALUEPILOT_ARGENTINA_WORKFLOW_LOCATION }}
+      WIF_PROVIDER: ${{ vars.VALUEPILOT_GCP_WIF_PROVIDER }}
+      RELEASE_SERVICE_ACCOUNT: ${{ vars.VALUEPILOT_GCP_RELEASE_SERVICE_ACCOUNT }}
+
+    steps:
+      - name: Checkout exact repository revision
+        uses: actions/checkout@v5
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install bounded reconciliation dependencies
+        run: python -m pip install --disable-pip-version-check -r backend/requirements.txt
+
+      - name: Authenticate control-state read with GitHub OIDC
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.RELEASE_SERVICE_ACCOUNT }}
+          create_credentials_file: true
+
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          version: '>= 520.0.0'
+
+      - name: Read today's persisted SHADOW state
+        id: state
+        shell: bash
+        run: |
+          set -euo pipefail
+          argentina_day="$(python - <<'PY'
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          print(datetime.now(ZoneInfo("America/Argentina/Buenos_Aires")).date().isoformat())
+          PY
+          )"
+          echo "argentina_day=${argentina_day}" >> "${GITHUB_OUTPUT}"
+          python -m tools.argentina_acquisition_schedule_control_v2 read-shadow-state \
+            --argentina-day "${argentina_day}" \
+            --archive-bucket "${ARCHIVE_BUCKET}" \
+            --archive-project "${GCP_PROJECT_ID}" \
+            --output "${RUNNER_TEMP}/valuepilot-shadow-state.json"
+          status="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["status"])' "${RUNNER_TEMP}/valuepilot-shadow-state.json")"
+          workflow_execution="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8")).get("workflowExecution") or "")' "${RUNNER_TEMP}/valuepilot-shadow-state.json")"
+          echo "status=${status}" >> "${GITHUB_OUTPUT}"
+          echo "workflow_execution=${workflow_execution}" >> "${GITHUB_OUTPUT}"
+          echo "Persisted SHADOW state: ${status} (${workflow_execution:-none})"
+
+      - name: Finish cleanly when no SHADOW is awaiting reconciliation
+        if: steps.state.outputs.status != 'SHADOW_STARTED'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "No asynchronous SHADOW execution is awaiting reconciliation."
+          echo "- State: ${{ steps.state.outputs.status }}" >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Describe the exact asynchronous Cloud Workflow execution
+        id: execution
+        if: steps.state.outputs.status == 'SHADOW_STARTED'
+        shell: bash
+        env:
+          WORKFLOW_EXECUTION: ${{ steps.state.outputs.workflow_execution }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${WORKFLOW_EXECUTION}" ]]; then
+            echo "::error::Persisted SHADOW_STARTED state has no workflow execution identity."
+            exit 2
+          fi
+          gcloud workflows executions describe "${WORKFLOW_EXECUTION}" \
+            --workflow "${RELEASE_WORKFLOW_NAME}" \
+            --location "${RELEASE_WORKFLOW_LOCATION}" \
+            --project "${GCP_PROJECT_ID}" \
+            --format=json > "${RUNNER_TEMP}/valuepilot-workflow-execution.json"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          temp = Path(os.environ["RUNNER_TEMP"])
+          source = json.loads((temp / "valuepilot-workflow-execution.json").read_text(encoding="utf-8"))
+          (temp / "valuepilot-workflow-result.json").write_text(
+              json.dumps(source.get("result"), ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n",
+              encoding="utf-8",
+          )
+          (temp / "valuepilot-workflow-error.json").write_text(
+              json.dumps(source.get("error"), ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n",
+              encoding="utf-8",
+          )
+          print(f"execution state: {source.get('state', 'UNKNOWN')}")
+          PY
+          execution_state="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8")).get("state", ""))' "${RUNNER_TEMP}/valuepilot-workflow-execution.json")"
+          echo "execution_state=${execution_state}" >> "${GITHUB_OUTPUT}"
+
+      - name: Reconcile the exact SHADOW result without promotion
+        id: reconcile
+        if: steps.state.outputs.status == 'SHADOW_STARTED'
+        shell: bash
+        env:
+          ARGENTINA_DAY: ${{ steps.state.outputs.argentina_day }}
+          WORKFLOW_EXECUTION: ${{ steps.state.outputs.workflow_execution }}
+          EXECUTION_STATE: ${{ steps.execution.outputs.execution_state }}
+        run: |
+          set -euo pipefail
+          recorded_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          python -m tools.argentina_acquisition_schedule_control_v2 reconcile-shadow-state \
+            --argentina-day "${ARGENTINA_DAY}" \
+            --workflow-execution "${WORKFLOW_EXECUTION}" \
+            --execution-state "${EXECUTION_STATE}" \
+            --workflow-result "${RUNNER_TEMP}/valuepilot-workflow-result.json" \
+            --workflow-error "${RUNNER_TEMP}/valuepilot-workflow-error.json" \
+            --recorded-at "${recorded_at}" \
+            --archive-bucket "${ARCHIVE_BUCKET}" \
+            --archive-project "${GCP_PROJECT_ID}" \
+            --output "${RUNNER_TEMP}/valuepilot-shadow-reconciliation.json"
+          status="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["status"])' "${RUNNER_TEMP}/valuepilot-shadow-reconciliation.json")"
+          reconciliation="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8")).get("reconciliationStatus", "UNKNOWN"))' "${RUNNER_TEMP}/valuepilot-shadow-reconciliation.json")"
+          reason="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8")).get("reason", ""))' "${RUNNER_TEMP}/valuepilot-shadow-reconciliation.json")"
+          echo "status=${status}" >> "${GITHUB_OUTPUT}"
+          echo "reconciliation=${reconciliation}" >> "${GITHUB_OUTPUT}"
+          echo "reason=${reason}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "### Argentina SHADOW reconciliation"
+            echo "- Workflow execution: ${WORKFLOW_EXECUTION}"
+            echo "- Cloud Workflow state: ${EXECUTION_STATE}"
+            echo "- Durable state: ${status} (${reconciliation})"
+            echo "- Reason: ${reason:-none}"
+            echo "- Active/canary pointer writes by reconciler: 0"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Alert on terminal SHADOW failure
+        if: steps.reconcile.outputs.status == 'SHADOW_FAILED'
+        shell: bash
+        run: |
+          echo "::error::Argentina SHADOW execution failed closed: ${{ steps.reconcile.outputs.reason }}"
+          exit 1
+
+      - name: Remove runner-local credential material
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          credential_path="${GOOGLE_GHA_CREDS_PATH:-${GOOGLE_APPLICATION_CREDENTIALS:-}}"
+          if [[ -n "${credential_path}" && -f "${credential_path}" ]]; then
+            shred -u "${credential_path}" >/dev/null 2>&1 || rm -f "${credential_path}"
+          fi
+          rm -f gha-creds-*.json

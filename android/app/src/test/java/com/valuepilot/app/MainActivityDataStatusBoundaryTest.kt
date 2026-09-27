@@ -68,7 +68,9 @@ class MainActivityDataStatusBoundaryTest {
             "Unknown prices stay unknown",
             "Not available in this build",
             "Flyer content is not copied",
-            "fictional sample data"
+            "fictional sample data",
+            "offline identity catalogue",
+            "not proof of GTA or Metro Vancouver availability"
         ).forEach { required ->
             assertTrue("Expected explicit uncertainty boundary: $required", source.contains(required))
         }

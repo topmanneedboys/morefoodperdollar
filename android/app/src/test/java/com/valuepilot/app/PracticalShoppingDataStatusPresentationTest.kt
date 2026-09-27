@@ -22,8 +22,9 @@ class PracticalShoppingDataStatusPresentationTest {
             )
 
         assertTrue(presentation.identityCatalog.contains("30,000"))
-        assertTrue(presentation.identityCatalog.contains("GTA"))
-        assertTrue(presentation.identityCatalog.contains("Metro Vancouver"))
+        assertTrue(presentation.identityCatalog.contains("offline identity catalogue"))
+        assertTrue(presentation.identityCatalog.contains("not proof of GTA or Metro Vancouver availability"))
+        assertTrue(!presentation.identityCatalog.contains("product names for the GTA and Metro Vancouver"))
         assertTrue(presentation.currentOffers.contains("None included"))
         assertTrue(presentation.storeDirectory.contains("Not available"))
         assertTrue(presentation.flyers.contains("None included"))

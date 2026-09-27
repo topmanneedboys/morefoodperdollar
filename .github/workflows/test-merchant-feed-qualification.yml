@@ -38,6 +38,8 @@ on:
       - 'tools/measure_rakuten_off_quantity_coverage.py'
       - 'tools/measure_rakuten_off_quantity_coverage_v2.py'
       - 'tools/open_facts_barcode.py'
+      - 'tools/audit_argentina_product_images.py'
+      - 'tools/tests/test_audit_argentina_product_images.py'
       - 'tools/run_rakuten_off_quantity_coverage.py'
       - 'tools/tests/test_qualify_*.py'
       - 'tools/tests/test_argentina_sepa_*.py'
@@ -81,6 +83,8 @@ on:
       - 'tools/measure_rakuten_off_quantity_coverage.py'
       - 'tools/measure_rakuten_off_quantity_coverage_v2.py'
       - 'tools/open_facts_barcode.py'
+      - 'tools/audit_argentina_product_images.py'
+      - 'tools/tests/test_audit_argentina_product_images.py'
       - 'tools/run_rakuten_off_quantity_coverage.py'
       - 'tools/tests/test_qualify_*.py'
       - 'tools/tests/test_argentina_sepa_*.py'
@@ -139,6 +143,7 @@ jobs:
           tools/measure_rakuten_off_quantity_coverage_v2.py
           tools/open_facts_barcode.py
           tools/run_rakuten_off_quantity_coverage.py
+          tools/audit_argentina_product_images.py
 
       - name: Run offline qualification and regional tests
         run: python -m unittest discover -s tools/tests -p 'test_*.py' -v

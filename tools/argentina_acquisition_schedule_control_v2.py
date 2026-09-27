@@ -76,6 +76,16 @@ _DAY_STATE_RANK = {
     "SHADOW_SUCCEEDED": 7,
 }
 
+# Cloud Workflows reports ACTIVE while a release build is still running and
+# SUCCEEDED/FAILED/CANCELLED after it reaches a terminal state.  The
+# reconciliation job intentionally treats unrecognised states as invalid
+# rather than guessing a terminal outcome.
+SHADOW_ACTIVE_WORKFLOW_STATES = frozenset({"ACTIVE", "QUEUED", "RUNNING", "PENDING"})
+SHADOW_TERMINAL_WORKFLOW_STATES = frozenset({"SUCCEEDED", "FAILED", "CANCELLED"})
+SHADOW_SUCCESS_WORKER_STATUS = "CANDIDATE_VERIFIED"
+SHADOW_RESULT_MAX_BYTES = 16 * 1024
+SHADOW_DIAGNOSTIC_MAX_BYTES = 4 * 1024
+
 CHECK_PHASE_PRIMARY = "PRIMARY"
 CHECK_PHASE_METADATA_ONLY = "METADATA_ONLY"
 CHECK_PHASE_LATE_RECHECK = "LATE_RECHECK"
@@ -798,6 +808,241 @@ def record_shadow_state(
     return result
 
 
+def _workflow_payload(value: Any, *, label: str) -> dict[str, Any] | None:
+    """Decode one bounded Cloud Workflows result/error payload.
+
+    ``gcloud workflows executions describe --format=json`` has emitted the
+    execution result both as an object and as a JSON-encoded string across
+    CLI versions.  Accepting both representations keeps reconciliation
+    deterministic while rejecting arbitrary values and oversized payloads.
+    """
+
+    if value is None:
+        return None
+    decoded: Any = value
+    if isinstance(value, str):
+        if len(value.encode("utf-8")) > SHADOW_RESULT_MAX_BYTES:
+            raise AcquisitionScheduleError(
+                f"{label} exceeds bound",
+                code="INVALID_CONTROL_STATE",
+            )
+        try:
+            decoded = json.loads(value)
+        except json.JSONDecodeError as exc:
+            # A provider error may be a plain diagnostic string rather than a
+            # JSON object.  Preserve it as a bounded message; it is never used
+            # as evidence of a successful candidate.
+            if len(value.encode("utf-8")) > SHADOW_DIAGNOSTIC_MAX_BYTES:
+                value = value.encode("utf-8")[:SHADOW_DIAGNOSTIC_MAX_BYTES].decode("utf-8", "ignore")
+            return {"message": value, "payloadParseError": str(exc)}
+    if not isinstance(decoded, Mapping):
+        raise AcquisitionScheduleError(
+            f"{label} must be an object",
+            code="INVALID_CONTROL_STATE",
+        )
+    value_map = dict(decoded)
+    if len(_base.canonical_bytes(value_map)) > SHADOW_RESULT_MAX_BYTES:
+        raise AcquisitionScheduleError(
+            f"{label} exceeds bound",
+            code="INVALID_CONTROL_STATE",
+        )
+    return value_map
+
+
+def _shadow_result_for_record(
+    *,
+    workflow_execution: str,
+    execution_state: str,
+    workflow_result: Mapping[str, Any] | None,
+    workflow_error: Mapping[str, Any] | None,
+    reason: str | None = None,
+) -> dict[str, Any]:
+    """Build the bounded, auditable evidence written to daily state."""
+
+    result: dict[str, Any] = {
+        "workflowExecution": workflow_execution,
+        "workflowState": execution_state,
+    }
+    if workflow_result is not None:
+        result["workflowResult"] = dict(workflow_result)
+    if workflow_error is not None:
+        result["workflowError"] = dict(workflow_error)
+    if reason is not None:
+        result["reason"] = reason
+    if len(_base.canonical_bytes(result)) <= SHADOW_RESULT_MAX_BYTES:
+        return result
+
+    # Keep a deterministic digest and the state identity when a provider
+    # unexpectedly returns more diagnostic data than the daily-state bound.
+    encoded = _base.canonical_bytes(result)
+    return {
+        "workflowExecution": workflow_execution,
+        "workflowState": execution_state,
+        "diagnostic": "WORKFLOW_PAYLOAD_EXCEEDS_BOUND",
+        "payloadSha256": hashlib.sha256(encoded).hexdigest(),
+        "reason": reason or "WORKFLOW_PAYLOAD_EXCEEDS_BOUND",
+    }
+
+
+def _shadow_success_failure_reason(
+    *,
+    workflow_result: Mapping[str, Any] | None,
+) -> str | None:
+    """Return a fail-closed reason unless a SHADOW candidate is proven."""
+
+    if workflow_result is None:
+        return "WORKFLOW_RESULT_MISSING"
+    if workflow_result.get("status") != SHADOW_SUCCESS_WORKER_STATUS:
+        return "WORKER_STATUS_NOT_CANDIDATE_VERIFIED"
+    if workflow_result.get("activePointerWrites") != 0:
+        return "ACTIVE_POINTER_WRITE_CLAIMED"
+    if workflow_result.get("canaryPointerWrites") not in (None, 0):
+        return "CANARY_POINTER_WRITE_CLAIMED"
+    if workflow_result.get("promotionMode") not in (None, "SHADOW"):
+        return "PROMOTION_MODE_NOT_SHADOW"
+    if workflow_result.get("activation") not in (None, "NOT_EXECUTED"):
+        return "ACTIVATION_CLAIMED"
+
+    promotion = workflow_result.get("promotion")
+    if promotion is not None:
+        if not isinstance(promotion, Mapping):
+            return "PROMOTION_RESULT_INVALID"
+        if promotion.get("status") not in (None, "SHADOW_ONLY"):
+            return "PROMOTION_NOT_SHADOW_ONLY"
+        if promotion.get("activePointerWrites") not in (None, 0):
+            return "ACTIVE_POINTER_WRITE_CLAIMED"
+        if promotion.get("canaryPointerWrites") not in (None, 0):
+            return "CANARY_POINTER_WRITE_CLAIMED"
+        if promotion.get("activated") is True:
+            return "ACTIVATION_CLAIMED"
+    return None
+
+
+def read_shadow_state(*, store: ObjectStore, argentina_day: str) -> dict[str, Any]:
+    """Return only the bounded fields needed by the scheduled reconciler."""
+
+    state = read_daily_state(store=store, argentina_day=argentina_day)
+    if state is None:
+        return {
+            "schemaVersion": DAILY_STATE_SCHEMA_VERSION,
+            "policyVersion": DAILY_STATE_POLICY_VERSION,
+            "argentinaDate": argentina_day,
+            "status": "NO_STATE",
+            "workflowExecution": None,
+            "buildReservationId": None,
+            "candidateReleaseId": None,
+        }
+    return {
+        "schemaVersion": DAILY_STATE_SCHEMA_VERSION,
+        "policyVersion": DAILY_STATE_POLICY_VERSION,
+        "argentinaDate": argentina_day,
+        "status": state.get("status"),
+        "workflowExecution": state.get("workflowExecution"),
+        "buildReservationId": state.get("buildReservationId"),
+        "candidateReleaseId": state.get("candidateReleaseId"),
+        "updatedAt": state.get("updatedAt"),
+    }
+
+
+def reconcile_shadow_state(
+    *,
+    store: ObjectStore,
+    argentina_day: str,
+    workflow_execution: str,
+    execution_state: str,
+    workflow_result: Any = None,
+    workflow_error: Any = None,
+    recorded_at: str | None = None,
+) -> dict[str, Any]:
+    """Durably reconcile one asynchronous SHADOW workflow, without promotion."""
+
+    if not isinstance(workflow_execution, str) or not workflow_execution.strip() or len(workflow_execution) > 512:
+        raise AcquisitionScheduleError("workflow execution identity is invalid", code="INVALID_CONTROL_STATE")
+    execution = workflow_execution.strip()
+    if not isinstance(execution_state, str):
+        raise AcquisitionScheduleError("workflow execution state is invalid", code="INVALID_CONTROL_STATE")
+    state_name = execution_state.strip().upper()
+    if state_name not in SHADOW_ACTIVE_WORKFLOW_STATES | SHADOW_TERMINAL_WORKFLOW_STATES:
+        raise AcquisitionScheduleError("workflow execution state is invalid", code="INVALID_CONTROL_STATE")
+
+    current = read_daily_state(store=store, argentina_day=argentina_day)
+    if current is None:
+        return {
+            "schemaVersion": DAILY_STATE_SCHEMA_VERSION,
+            "policyVersion": DAILY_STATE_POLICY_VERSION,
+            "argentinaDate": argentina_day,
+            "status": "NO_SHADOW_STATE",
+            "reconciliationStatus": "NO_STATE",
+            "workflowExecution": execution,
+        }
+
+    current_execution = current.get("workflowExecution")
+    if current_execution != execution:
+        raise AcquisitionScheduleError(
+            "workflow execution does not match persisted SHADOW state",
+            code="CONTROL_CONFLICT",
+        )
+
+    current_status = current.get("status")
+    if current_status in {"SHADOW_SUCCEEDED", "SHADOW_FAILED"}:
+        return {
+            **read_shadow_state(store=store, argentina_day=argentina_day),
+            "reconciliationStatus": "ALREADY_RECORDED",
+        }
+    if current_status != "SHADOW_STARTED":
+        raise AcquisitionScheduleError(
+            "persisted state is not awaiting SHADOW reconciliation",
+            code="INVALID_CONTROL_STATE",
+        )
+
+    result_map = _workflow_payload(workflow_result, label="workflow result")
+    error_map = _workflow_payload(workflow_error, label="workflow error")
+    if state_name in SHADOW_ACTIVE_WORKFLOW_STATES:
+        return {
+            **read_shadow_state(store=store, argentina_day=argentina_day),
+            "status": "SHADOW_PENDING",
+            "reconciliationStatus": "PENDING",
+            "workflowState": state_name,
+        }
+
+    reason: str | None = None
+    if state_name != "SUCCEEDED":
+        reason = "WORKFLOW_EXECUTION_FAILED" if state_name == "FAILED" else "WORKFLOW_EXECUTION_CANCELLED"
+    else:
+        reason = _shadow_success_failure_reason(workflow_result=result_map)
+    final_status = "SHADOW_SUCCEEDED" if reason is None else "SHADOW_FAILED"
+    shadow_result = _shadow_result_for_record(
+        workflow_execution=execution,
+        execution_state=state_name,
+        workflow_result=result_map,
+        workflow_error=error_map,
+        reason=reason,
+    )
+    # The durable daily-state envelope has its own v2 schema.  Rehydrate the
+    # original acquisition probe schema before passing it through the existing
+    # record-shadow writer; this preserves the shared validation authority
+    # instead of duplicating probe checks in the reconciler.
+    resolution = dict(current)
+    resolution["schemaVersion"] = _base.SCHEMA_VERSION
+    resolution["policyVersion"] = _base.POLICY_VERSION
+    persisted = record_shadow_state(
+        resolution=resolution,
+        store=store,
+        status=final_status,
+        workflow_execution=execution,
+        reservation_id=current.get("buildReservationId"),
+        shadow_result=shadow_result,
+        recorded_at=recorded_at,
+    )
+    return {
+        **read_shadow_state(store=store, argentina_day=argentina_day),
+        "status": persisted.get("status"),
+        "reconciliationStatus": "RECORDED",
+        "workflowState": state_name,
+        "reason": reason,
+    }
+
+
 def upstream_outage_result(
     *,
     observed_at: str,
@@ -1005,6 +1250,23 @@ def _main(argv: Sequence[str] | None = None) -> int:
     shadow_parser.add_argument("--archive-project")
     shadow_parser.add_argument("--output", type=Path, required=True)
 
+    read_shadow_parser = sub.add_parser("read-shadow-state")
+    read_shadow_parser.add_argument("--argentina-day", required=True)
+    read_shadow_parser.add_argument("--archive-bucket", required=True)
+    read_shadow_parser.add_argument("--archive-project")
+    read_shadow_parser.add_argument("--output", type=Path, required=True)
+
+    reconcile_parser = sub.add_parser("reconcile-shadow-state")
+    reconcile_parser.add_argument("--argentina-day", required=True)
+    reconcile_parser.add_argument("--workflow-execution", required=True)
+    reconcile_parser.add_argument("--execution-state", required=True)
+    reconcile_parser.add_argument("--workflow-result", type=Path)
+    reconcile_parser.add_argument("--workflow-error", type=Path)
+    reconcile_parser.add_argument("--recorded-at", required=True)
+    reconcile_parser.add_argument("--archive-bucket", required=True)
+    reconcile_parser.add_argument("--archive-project")
+    reconcile_parser.add_argument("--output", type=Path, required=True)
+
     args = parser.parse_args(argv)
     try:
         if args.command == "preflight":
@@ -1089,6 +1351,35 @@ def _main(argv: Sequence[str] | None = None) -> int:
             )
             _base._emit(result, args.output)
             return 0
+        if args.command == "read-shadow-state":
+            result = read_shadow_state(
+                store=_gcs_store(args.archive_bucket, args.archive_project),
+                argentina_day=args.argentina_day,
+            )
+            _base._emit(result, args.output)
+            return 0
+        if args.command == "reconcile-shadow-state":
+            workflow_result = (
+                _base._read_json_file(args.workflow_result, label="workflow result")
+                if args.workflow_result
+                else None
+            )
+            workflow_error = (
+                _base._read_json_file(args.workflow_error, label="workflow error")
+                if args.workflow_error
+                else None
+            )
+            result = reconcile_shadow_state(
+                store=_gcs_store(args.archive_bucket, args.archive_project),
+                argentina_day=args.argentina_day,
+                workflow_execution=args.workflow_execution,
+                execution_state=args.execution_state,
+                workflow_result=workflow_result,
+                workflow_error=workflow_error,
+                recorded_at=args.recorded_at,
+            )
+            _base._emit(result, args.output)
+            return 0
         raise AcquisitionScheduleError("unknown command", code="INVALID_CONTROL_STATE")
     except (AcquisitionError, AcquisitionScheduleError, ObjectStoreError) as exc:
         error = {
@@ -1136,7 +1427,9 @@ __all__ = [
     "daily_state_key",
     "metadata_change_evidence",
     "preflight_observation",
+    "read_shadow_state",
     "read_daily_state",
+    "reconcile_shadow_state",
     "record_shadow_state",
     "reserve_build_attempt",
     "upstream_outage_result",
