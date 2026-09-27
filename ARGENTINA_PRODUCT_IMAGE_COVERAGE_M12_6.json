@@ -1,0 +1,51 @@
+{
+  "catalog": {
+    "duplicate_gtin_records": 22033,
+    "invalid_gtin": 90,
+    "records_seen": 66806,
+    "sha256": "3353dd443d9adb6e6c7e20ed584c2d36b755b1cfbe24063c08c844bf15d0ed19",
+    "unique_gtin_values": 44683,
+    "valid_gtin_records": 66716,
+    "yerba_records": 389
+  },
+  "coverage": {
+    "catalogIdentitiesWithExactGtinMatch": 15592,
+    "catalogUniqueGtins": 44683,
+    "catalogValidGtinRecords": 66716,
+    "displayEligibility": "BLOCKED_PER_IMAGE_RIGHTS_EVIDENCE_MISSING",
+    "displayEligibleImages": 0,
+    "strictExactIdentities": 21,
+    "strictExactImageCandidatePercentOfValidGtinCatalog": 0.031477,
+    "strictExactImageCandidates": 21,
+    "strictExactImageCandidatesWithPerImageLicense": 0,
+    "yerbaCatalogIdentities": 389,
+    "yerbaImageCandidatePercentOfYerbaCatalog": 0.0,
+    "yerbaStrictExactIdentities": 0,
+    "yerbaStrictExactImageCandidates": 0
+  },
+  "openFoodFactsExport": {
+    "catalog_identity_matches_evaluated": 15592,
+    "image_candidates_without_per_image_license": 21,
+    "off_rows_invalid_gtin": 159633,
+    "off_rows_matching_catalog_gtin": 6799,
+    "off_rows_seen": 4532767,
+    "sha256": "f72687ee8bc6522054fe69dbfda6b91902c16af1ec2e043cde27bc6c29ad8176",
+    "strict_rows_with_off_image_candidate": 21
+  },
+  "policyVersion": "exact-gtin-name-brand-quantity-off-rights-v1",
+  "rejections": {
+    "brand_mismatch": 92,
+    "name_mismatch": 15450,
+    "off_quantity_unknown_or_ambiguous": 28,
+    "quantity_mismatch": 1
+  },
+  "schemaVersion": "valuepilot-product-image-coverage-v1",
+  "sourcePolicy": {
+    "datasetLicense": "CC BY-SA (source documentation); per-image/third-party rights still require review",
+    "imageHost": "images.openfoodfacts.org",
+    "imagesCommitted": false,
+    "imagesDownloaded": false,
+    "priceOrAvailabilityClaim": false,
+    "provider": "open-food-facts"
+  }
+}

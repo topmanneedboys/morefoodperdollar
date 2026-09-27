@@ -2,6 +2,38 @@
 
 Updated: 2026-09-24 20:50 UTC
 
+## Resumed M12.4–M12.9 checkpoint — 2026-09-26
+
+The active continuation branch is `work/valuepilot-m124-m129`. The verified
+Data Status repair remains at `dcb40372bd0ed6f45afc87fea405d1dfdf01775b` and
+was not repeated; the untracked `device-audit/` directory is preserved. The
+next M12.5 code checkpoint is `44c6b4b99b11578bd77de4247dcf15e34a529d01`.
+
+M12.5 now has bounded SHADOW-result reconciliation, terminal failure alerts,
+write-free success checks, and idempotent receipts. It does not enable
+unattended production promotion. Its focused local tests pass (42 tests).
+Ordinary research artifact retention was reduced from 14 to 3 days; the two
+durable release/provenance artifacts were deliberately preserved. GitHub run
+`36295847180` is **not green**: its code tests passed, but artifact uploads
+failed because the Actions storage quota was full.
+
+M12.6's first real coverage audit is recorded in
+[ARGENTINA_PRODUCT_IMAGE_COVERAGE_M12_6.md](ARGENTINA_PRODUCT_IMAGE_COVERAGE_M12_6.md).
+Against 66,716 valid-GTIN Argentina identity records (44,683 unique GTINs),
+only 21 strict exact Open Food Facts image candidates were found (0.031477%);
+none had per-image licence evidence, so display-eligible coverage is 0%.
+The 389 `yerba` identities had 0 strict image candidates. No images were
+downloaded, committed, or added to Android. This is measured evidence, not a
+90% claim.
+
+M12.4 remains **PARTIAL**: the >5-result, valid-App-Check smoke across both
+regions still needs a valid credential/device path. M12.7/M12.8 remain
+code-complete for the existing offline/private evidence boundaries, but no
+live price or inventory claim is enabled. M12.9 has not signed or uploaded a
+new build; the installed Play build is 10107 and the next versionCode must be
+at least 10108. Physical Motorola validation, any credentialed live smoke,
+and explicit approval for unattended promotion remain external gates.
+
 Branch: `fix/argentina-live-search-response-contract`
 
 Current HEAD: `e821b8099fea9d1288065b5a7f8cfc7f83f2763e`
