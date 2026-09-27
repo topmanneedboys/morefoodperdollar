@@ -317,7 +317,7 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="search_quick_rice">tomato</string>
     <string name="search_quick_pizza">coffee</string>
     <string name="search_identity_badge">QUALIFIED ARGENTINA IDENTITY RELEASE</string>
-    <string name="search_identity_notice">Product identities only. Results are not live prices, stock, availability, package quantities or Best Value rankings.</string>
+    <string name="search_identity_notice">Product identities only. Results are not live prices, stock, availability or Best Value rankings; package size appears only when the source supplies it explicitly.</string>
     <string name="search_identity_dialog_title">Offline product identities for “%1$s”</string>
     <string name="search_identity_loading">Checking the signed offline identity catalog…</string>
     <string name="search_identity_unavailable">Offline product identity search is unavailable right now. Nothing was changed.</string>
