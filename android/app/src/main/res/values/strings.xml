@@ -337,6 +337,10 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="search_results_end">No more matching identities were returned in this release.</string>
     <string name="search_results_limit_reached">This release reached ValuePilot’s bounded identity-result limit. No price or availability is implied.</string>
     <string name="search_results_title">Product identities</string>
+    <plurals name="search_results_count">
+        <item quantity="one">Showing %1$d matching identity suggestion.</item>
+        <item quantity="other">Showing %1$d matching identity suggestions.</item>
+    </plurals>
 
     <string name="production_search_results_title">Shopping comparison results</string>
     <plurals name="production_search_reference_only_count">
