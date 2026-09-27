@@ -1,6 +1,6 @@
 # ValuePilot Continuation Checkpoint
 
-Updated: 2026-09-27 16:20 UTC
+Updated: 2026-09-27 16:46 UTC
 
 ## Resumed M12.4–M12.9 checkpoint — 2026-09-27
 
@@ -29,6 +29,12 @@ remain absent. Focused tests and the full local debug/release gate passed.
 The Search surface now also reports the bounded number of deduplicated identity
 suggestions currently visible after each page/Load More operation. This is
 presentation-only and does not imply price, stock or availability.
+
+PR #32 is merged on main at `c7d820a1246dc30c47b5fcd1438d05881db8a90b`.
+The single [M12.4–M12.9 work ledger](M12_4_M12_9_WORK_LEDGER.md) records the
+actual remaining gates. The M12.6 discovery audit now distinguishes the old
+front-image-only measurement from the new bounded rights-aware exact-product
+manifest; no full-export coverage or 90% result is claimed.
 
 The merged M12.8 handoff lets a Search identity result enter the private Home
 draft as one unresolved multi-word item. Search cards now show an explicitly

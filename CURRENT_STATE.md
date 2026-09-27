@@ -1,6 +1,6 @@
 # Current state
 
-Updated: 2026-09-27 16:20 UTC
+Updated: 2026-09-27 16:46 UTC
 
 ## Resumed M12.4–M12.9 checkpoint — 2026-09-27
 
@@ -29,6 +29,14 @@ remain absent. Focused tests and the full local debug/release gate passed.
 The Search surface now also reports the bounded number of deduplicated identity
 suggestions currently visible after each page/Load More operation. This is
 presentation-only and does not imply price, stock or availability.
+
+PR #32 is merged on main at `c7d820a1246dc30c47b5fcd1438d05881db8a90b`.
+The single [M12.4–M12.9 work ledger](M12_4_M12_9_WORK_LEDGER.md) now drives
+the remaining goal. M12.6 has a new bounded, offline rights-aware image
+evidence manifest tool and a discovery audit
+([ARGENTINA_PRODUCT_IMAGE_DISCOVERY_M12_6.md](ARGENTINA_PRODUCT_IMAGE_DISCOVERY_M12_6.md));
+it broadens documented role/variant discovery but does not claim remeasured
+full-catalog coverage or download image bytes.
 
 The M12.8 Search-to-Home handoff is now merged: an Argentina identity result
 can be added to the private Home draft as one clearly unresolved multi-word
