@@ -13,6 +13,13 @@ The M12.5 acquisition controller now reconciles asynchronous SHADOW results
 with exact execution identity, requires a write-free verified candidate for
 success, records bounded failure evidence, alerts on unsafe terminal results,
 and is idempotent. It does not activate unattended production promotion.
+The deployed `valuepilot-argentina-release` workflow is ACTIVE at revision
+`000013-32a`. Its latest scheduled execution (on revision `000012-0a4`) ran
+Cloud Build successfully and persisted candidate
+`argentina-sepa-2026-09-25-93ce53aac8d3db32-routing-v1-search-v2`, but returned
+`STATE_WRITE_UNVERIFIED` because the discovery-state object could not be
+verified. Promotion stayed `SHADOW_ONLY` with zero active-pointer writes, so
+this does not qualify the unattended end-to-end path.
 Ordinary research artifact retention is 3 days; qualified provenance evidence
 was preserved. GitHub run `36295847180` remains failed overall because only its
 artifact uploads hit the full Actions quota; its reported code checks passed.

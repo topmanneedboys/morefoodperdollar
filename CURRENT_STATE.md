@@ -12,6 +12,15 @@ next M12.5 code checkpoint is `44c6b4b99b11578bd77de4247dcf15e34a529d01`.
 M12.5 now has bounded SHADOW-result reconciliation, terminal failure alerts,
 write-free success checks, and idempotent receipts. It does not enable
 unattended production promotion. Its focused local tests pass (42 tests).
+The deployed `valuepilot-argentina-release` workflow is now ACTIVE at
+revision `000013-32a`. Its latest scheduled execution was on the prior
+revision `000012-0a4` (`c46e8991-4927-4737-b6ae-5af7a2818029`): Cloud Build
+`f929bfbe-82fc-4a1d-862d-c5f7e65bdd36` succeeded and persisted candidate
+`argentina-sepa-2026-09-25-93ce53aac8d3db32-routing-v1-search-v2`, but the
+workflow could not verify/write its discovery-state object and therefore
+returned `STATE_WRITE_UNVERIFIED`; promotion remained `SHADOW_ONLY` with zero
+active-pointer writes. This is useful candidate evidence, not end-to-end
+production qualification, and no unattended promotion is enabled.
 Ordinary research artifact retention was reduced from 14 to 3 days; the two
 durable release/provenance artifacts were deliberately preserved. GitHub run
 `36295847180` is **not green**: its code tests passed, but artifact uploads
