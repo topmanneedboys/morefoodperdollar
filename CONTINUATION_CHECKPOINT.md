@@ -1,6 +1,6 @@
 # ValuePilot Continuation Checkpoint
 
-Updated: 2026-09-27 14:24 UTC
+Updated: 2026-09-27 15:16 UTC
 
 ## Resumed M12.4–M12.9 checkpoint — 2026-09-27
 
@@ -8,8 +8,10 @@ Work continues on `work/valuepilot-m124-m129` from the verified Data Status
 repair `dcb40372bd0ed6f45afc87fea405d1dfdf01775b`; that repair was not
 repeated. The untracked `device-audit/` directory remains untouched. The
 latest feature commit before this documentation checkpoint is
-`2ab962573acd3436ba5d84cf6cc190eed956b90a`.
-Remote `main` is `b7c766e1d1a86f60b02ffc764cca3f0a35f0395c` after merged PR #27.
+`d14a39565852fae3c3817d191476aced262e9d27` and
+`910a694dc6505a9313924b609511e147b48de6f3`.
+PR #29 and PR #30 merged these Search trust-copy repairs; remote `main` is
+`0deba71ddf101c1f79827f0898bf0b6344c15e7b` after merged PR #30.
 PR #24 exact-head workflow `36320656523` and post-merge main workflow
 `36321271157` passed browser and Android verification. PR #25 exact-head
 workflow `36321466323` and post-merge main workflow `36322095653` also passed
@@ -17,6 +19,13 @@ browser and Android verification; provenance/release-bundle jobs were skipped
 by policy. PR #27 exact-head workflow `36324495187` and post-merge main
 workflow `36325161398` passed browser and Android verification; provenance and
 release-bundle jobs were skipped by policy.
+PR #29 exact-head workflow `36327482792` and post-merge main workflow
+`36328146814` passed browser and Android verification; PR #30 exact-head
+workflow `36329032948` and post-merge main workflow `36329673905` also passed.
+The merged repairs align both Search disclosure copies with the actual
+identity-only boundary: package size appears only when explicitly supplied by
+the source, while current prices, stock, availability, freshness and ranking
+remain absent. Focused tests and the full local debug/release gate passed.
 
 The merged M12.8 handoff lets a Search identity result enter the private Home
 draft as one unresolved multi-word item. Search cards now show an explicitly
@@ -75,6 +84,10 @@ truthful; live offers are not enabled. M12.9 has an unsigned 10108 / 101.1.7
 candidate in the normal build configuration. No new signing or Play upload
 has been started; 10107 remains the installed Play build for the pending
 physical smoke.
+The local release APK is `android/app/build/outputs/apk/release/app-release-unsigned.apk`
+with versionCode `10108` / versionName `101.1.7`; its privacy check confirms
+`INTERNET` is present for the existing edge path and `ACCESS_NETWORK_STATE` is
+absent. This is a build artifact only, not a signed or uploaded release.
 
 GitHub Actions storage remains free-first: two durable provenance artifacts
 (`10085413603`, `10000282677`) total 76,864,219 bytes and active cache usage
