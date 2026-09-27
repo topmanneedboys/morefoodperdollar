@@ -175,11 +175,15 @@ def build_manifest(catalog_path: Path, off_path: Path, output_path: Path) -> dic
     _require(output_path != catalog_path and output_path != off_path, "output must differ from inputs")
     _require(not output_path.exists(), f"Refusing to overwrite output: {output_path}")
     catalog, catalog_meta = _load_catalog(catalog_path)
+    yerba_keys: set[str] = set(catalog_meta["yerba_keys"])
     counters: Counter[str] = Counter()
     rejection_reasons: Counter[str] = Counter()
     accepted_licenses: Counter[str] = Counter()
     roles: Counter[str] = Counter()
     languages: Counter[str] = Counter()
+    strict_identity_keys: set[str] = set()
+    accepted_identity_keys: set[str] = set()
+    accepted_yerba_identity_keys: set[str] = set()
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     header = {
@@ -225,6 +229,7 @@ def build_manifest(catalog_path: Path, off_path: Path, output_path: Path) -> dic
                     rejection_reasons[mismatch.upper()] += 1
                     continue
                 counters["strict_identity_rows"] += 1
+                strict_identity_keys.add(identity_key)
                 row_candidates: set[tuple[str, str]] = set()
                 for candidate in _iter_image_candidates(row):
                     counters["image_fields_seen"] += 1
@@ -249,6 +254,9 @@ def build_manifest(catalog_path: Path, off_path: Path, output_path: Path) -> dic
                     accepted_licenses[license_id] += 1
                     roles[candidate["role"]] += 1
                     languages[candidate["language"]] += 1
+                    accepted_identity_keys.add(identity_key)
+                    if identity_key in yerba_keys:
+                        accepted_yerba_identity_keys.add(identity_key)
                     evidence = {
                         "recordType": "acceptedImageEvidence",
                         "schemaVersion": SCHEMA_VERSION,
@@ -276,6 +284,13 @@ def build_manifest(catalog_path: Path, off_path: Path, output_path: Path) -> dic
         handle.flush()
     temporary.replace(output_path)
 
+    catalog_valid_gtin_identities = int(
+        catalog_meta["catalog_counters"].get("valid_gtin_records", 0)
+    )
+
+    def _percent(numerator: int, denominator: int) -> float:
+        return round((numerator * 100 / denominator), 6) if denominator else 0.0
+
     return {
         "schemaVersion": SCHEMA_VERSION,
         "policyVersion": POLICY_VERSION,
@@ -292,7 +307,30 @@ def build_manifest(catalog_path: Path, off_path: Path, output_path: Path) -> dic
         "acceptedRoles": dict(sorted(roles.items())),
         "acceptedLanguages": dict(sorted(languages.items())),
         "rejections": dict(sorted(rejection_reasons.items())),
-        "displayEligibility": "RIGHTS_AND_EXACT_IDENTITY_EVIDENCE_PRESENT_PER_ROW",
+        "coverage": {
+            "catalogValidGtinIdentities": catalog_valid_gtin_identities,
+            "catalogUniqueGtins": int(
+                catalog_meta["catalog_counters"].get("unique_gtin_values", 0)
+            ),
+            "strictExactIdentityCount": len(strict_identity_keys),
+            "rightsQualifiedImageEvidenceIdentityCount": len(accepted_identity_keys),
+            "rightsQualifiedImageEvidencePercentOfCatalogValidGtinIdentities": _percent(
+                len(accepted_identity_keys), catalog_valid_gtin_identities
+            ),
+            "rightsQualifiedImageEvidencePercentOfStrictExactIdentities": _percent(
+                len(accepted_identity_keys), len(strict_identity_keys)
+            ),
+            "yerbaCatalogIdentities": len(yerba_keys),
+            "yerbaRightsQualifiedImageEvidenceIdentityCount": len(
+                accepted_yerba_identity_keys
+            ),
+            "yerbaRightsQualifiedImageEvidencePercent": _percent(
+                len(accepted_yerba_identity_keys), len(yerba_keys)
+            ),
+            "displayEligibleIdentityCount": 0,
+            "displayEligibility": "NOT_CLAIMED_IMAGE_BYTES_NOT_DOWNLOADED",
+        },
+        "displayEligibility": "EVIDENCE_ONLY_IMAGE_BYTES_NOT_DOWNLOADED",
         "obligations": ["preserve attribution", "honour share-alike when required", "retain source provenance"],
     }
 
