@@ -1,0 +1,11 @@
+{
+  "attributionRequired": true,
+  "displayEligible": false,
+  "evidenceUrl": "https://openfoodfacts.github.io/openfoodfacts-server/api/tutorials/license-be-on-the-legal-side/",
+  "imageBytesDownloaded": false,
+  "licenseId": "CC-BY-SA",
+  "provider": "open-food-facts",
+  "schemaVersion": "valuepilot-image-source-rights-policy-v1",
+  "shareAlikeRequired": true,
+  "thirdPartyRightsReviewRequired": true
+}

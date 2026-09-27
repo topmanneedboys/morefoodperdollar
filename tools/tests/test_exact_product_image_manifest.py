@@ -7,7 +7,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tools.exact_product_image_manifest import _compatible_license, build_manifest
+from tools.exact_product_image_manifest import (
+    _compatible_license,
+    _load_source_rights_policy,
+    _validate_source_rights_policy,
+    build_manifest,
+)
 
 
 class ExactProductImageManifestTest(unittest.TestCase):
@@ -133,6 +138,7 @@ class ExactProductImageManifestTest(unittest.TestCase):
                     "catalogUniqueGtins": 2,
                     "strictExactIdentityCount": 2,
                     "rightsQualifiedImageEvidenceIdentityCount": 2,
+                    "rightsQualifiedImageEvidenceFromSourcePolicyIdentityCount": 0,
                     "rightsQualifiedImageEvidencePercentOfCatalogValidGtinIdentities": 100.0,
                     "rightsQualifiedImageEvidencePercentOfStrictExactIdentities": 100.0,
                     "yerbaCatalogIdentities": 1,
@@ -148,6 +154,15 @@ class ExactProductImageManifestTest(unittest.TestCase):
                 report["displayEligibility"],
             )
             self.assertIn("preserve attribution", report["obligations"])
+            self.assertEqual(
+                {
+                    "acceptedRowLicenseEvidenceRows": 3,
+                    "acceptedSourcePolicyEvidenceRows": 0,
+                    "sourcePolicyIdentityCount": 0,
+                    "thirdPartyRightsReviewRequired": False,
+                },
+                report["rightsEvidence"],
+            )
 
             lines = output.read_text(encoding="utf-8").splitlines()
             self.assertEqual("manifestHeader", json.loads(lines[0])["recordType"])
@@ -268,6 +283,73 @@ class ExactProductImageManifestTest(unittest.TestCase):
             export.write_text('{"code":"036000291452"}\nnot-json\n', encoding="utf-8")
             with self.assertRaisesRegex(ValueError, r"JSONL product row 2 is malformed"):
                 build_manifest(catalog, export, root / "manifest.jsonl")
+
+    def test_source_rights_policy_covers_missing_row_licence_without_granting_display(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            catalog, export = self._fixture(root)
+            policy = {
+                "schemaVersion": "valuepilot-image-source-rights-policy-v1",
+                "provider": "open-food-facts",
+                "licenseId": "CC-BY-SA",
+                "evidenceUrl": "https://openfoodfacts.github.io/openfoodfacts-server/api/tutorials/license-be-on-the-legal-side/",
+                "attributionRequired": True,
+                "shareAlikeRequired": True,
+                "thirdPartyRightsReviewRequired": True,
+                "displayEligible": False,
+                "imageBytesDownloaded": False,
+            }
+            output = root / "manifest.jsonl"
+            report = build_manifest(catalog, export, output, source_rights_policy=policy)
+
+            # The fixture's final candidate has no row-level licence.  The
+            # explicit source policy supplies evidence for it, while display
+            # remains blocked because bytes and third-party review are still
+            # separate gates.
+            self.assertEqual(4, report["counts"]["accepted_evidence_rows"])
+            self.assertEqual(3, report["rightsEvidence"]["acceptedRowLicenseEvidenceRows"])
+            self.assertEqual(1, report["rightsEvidence"]["acceptedSourcePolicyEvidenceRows"])
+            self.assertEqual(1, report["rightsEvidence"]["sourcePolicyIdentityCount"])
+            self.assertTrue(report["rightsEvidence"]["thirdPartyRightsReviewRequired"])
+            self.assertEqual(1, report["coverage"]["rightsQualifiedImageEvidenceFromSourcePolicyIdentityCount"])
+            self.assertEqual("EVIDENCE_ONLY_IMAGE_BYTES_NOT_DOWNLOADED", report["displayEligibility"])
+            evidence = [
+                json.loads(line)
+                for line in output.read_text(encoding="utf-8").splitlines()[1:]
+            ]
+            source_policy_records = [
+                record for record in evidence if record["licenseEvidenceType"] == "SOURCE_POLICY"
+            ]
+            self.assertEqual(1, len(source_policy_records))
+            self.assertTrue(source_policy_records[0]["thirdPartyRightsReviewRequired"])
+
+            policy_path = root / "rights-policy.json"
+            policy_path.write_text(json.dumps(policy), encoding="utf-8")
+            self.assertEqual(policy, _load_source_rights_policy(policy_path))
+
+    def test_source_rights_policy_rejects_unreviewed_or_display_granting_config(self) -> None:
+        base = {
+            "schemaVersion": "valuepilot-image-source-rights-policy-v1",
+            "provider": "open-food-facts",
+            "licenseId": "CC-BY-SA",
+            "evidenceUrl": "https://openfoodfacts.github.io/openfoodfacts-server/api/tutorials/license-be-on-the-legal-side/",
+            "attributionRequired": True,
+            "shareAlikeRequired": True,
+            "thirdPartyRightsReviewRequired": True,
+            "displayEligible": False,
+            "imageBytesDownloaded": False,
+        }
+        with self.assertRaisesRegex(ValueError, "official HTTPS URL"):
+            _validate_source_rights_policy({**base, "evidenceUrl": "https://example.com/policy"})
+        with self.assertRaisesRegex(ValueError, "cannot grant display eligibility"):
+            _validate_source_rights_policy({**base, "displayEligible": True})
+
+    def test_checked_in_open_food_facts_policy_is_conservative(self) -> None:
+        policy_path = Path(__file__).parents[1] / "data" / "open_food_facts_image_rights_policy.json"
+        policy = _load_source_rights_policy(policy_path)
+        self.assertFalse(policy["displayEligible"])
+        self.assertFalse(policy["imageBytesDownloaded"])
+        self.assertTrue(policy["thirdPartyRightsReviewRequired"])
 
 
 if __name__ == "__main__":
