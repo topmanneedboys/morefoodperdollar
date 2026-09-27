@@ -9,7 +9,9 @@ explicit compatible open licence are both present.  Image bytes are never
 downloaded, and no country or language filter is applied: those are evidence
 fields, not identity shortcuts.
 
-The output is JSONL so a national export can be processed with bounded memory.
+The input may be a tabular export or one-product-per-line API JSON/JSONL; both
+are streamed. The output is JSONL so a national export can be processed with
+bounded memory.
 The first line is a deterministic manifest header; subsequent lines are
 accepted evidence records carrying attribution/share-alike obligations.
 """
@@ -17,18 +19,18 @@ accepted evidence records carrying attribution/share-alike obligations.
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import re
 import tempfile
 from collections import Counter
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Iterable, Mapping, Sequence, TextIO
 from urllib.parse import urlparse
 
 from tools.audit_argentina_product_images import (
     ProductImageAuditError,
     _clean,
-    _iter_off_rows,
     _load_catalog,
     _strict_match,
     _sha256,
@@ -88,14 +90,18 @@ def _valid_image_url(value: Any) -> bool:
     )
 
 
-def _variant_metadata(url: str, role: str) -> dict[str, str]:
+def _variant_metadata(url: str, role: str, language_hint: str = "UNKNOWN", resolution_hint: str = "UNKNOWN") -> dict[str, str]:
     match = _SELECTED_IMAGE_RE.search(urlparse(url).path)
     if match is None:
-        return {"role": role, "language": "UNKNOWN", "resolution": "UNKNOWN"}
+        return {
+            "role": role,
+            "language": language_hint.casefold() or "UNKNOWN",
+            "resolution": resolution_hint.casefold() or "UNKNOWN",
+        }
     return {
         "role": match.group("role").lower(),
-        "language": (match.group("language") or "UNKNOWN").lower(),
-        "resolution": match.group("resolution").lower(),
+        "language": (match.group("language") or language_hint or "UNKNOWN").lower(),
+        "resolution": (match.group("resolution") or resolution_hint or "UNKNOWN").lower(),
     }
 
 
@@ -159,9 +165,97 @@ def _iter_image_candidates(row: Mapping[str, Any]) -> Iterable[dict[str, str]]:
             "resolution": metadata["resolution"],
         }
 
+    # Product API/JSONL responses expose the documented selected image map as
+    # role -> resolution -> language -> URL.  Walk it in a stable order so the
+    # resulting manifest remains byte-deterministic while staying bounded to
+    # the current product row.
+    selected_images = row.get("selected_images")
+    if not isinstance(selected_images, Mapping):
+        return
+    for role in sorted(selected_images):
+        variants = selected_images.get(role)
+        if not isinstance(variants, Mapping):
+            continue
+        for resolution in sorted(variants):
+            by_language = variants.get(resolution)
+            if not isinstance(by_language, Mapping):
+                continue
+            for language in sorted(by_language):
+                raw = _clean(by_language.get(language))
+                if not raw:
+                    continue
+                field = f"selected_images.{role}.{resolution}.{language}"
+                key = (field, raw)
+                if key in seen:
+                    continue
+                seen.add(key)
+                metadata = _variant_metadata(raw, str(role), str(language), str(resolution))
+                yield {
+                    "field": field,
+                    "url": raw,
+                    "role": metadata["role"],
+                    "language": metadata["language"],
+                    "resolution": metadata["resolution"],
+                }
+
 
 def _canonical_json(value: Mapping[str, Any]) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def _open_jsonl(path: Path) -> TextIO:
+    if not path.is_file():
+        raise ImageManifestError(f"Missing Open Food Facts export: {path}")
+    if path.name.casefold().endswith((".gz", ".gzip")):
+        return gzip.open(path, "rt", encoding="utf-8", errors="replace", newline="")
+    return path.open("r", encoding="utf-8", errors="replace", newline="")
+
+
+def _iter_jsonl_rows(path: Path) -> Iterable[dict[str, Any]]:
+    handle = _open_jsonl(path)
+    try:
+        for line_number, line in enumerate(handle, start=1):
+            if len(line.encode("utf-8")) > 16 * 1024 * 1024:
+                raise ImageManifestError(f"JSONL product row {line_number} exceeds field bound")
+            if not line.strip():
+                continue
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise ImageManifestError(f"JSONL product row {line_number} is malformed") from exc
+            if not isinstance(payload, Mapping):
+                raise ImageManifestError(f"JSONL product row {line_number} must be an object")
+            product = payload.get("product")
+            if isinstance(product, Mapping):
+                row = dict(product)
+                if not _clean(row.get("code")):
+                    row["code"] = payload.get("code")
+                yield row
+            else:
+                yield dict(payload)
+    finally:
+        handle.close()
+
+
+def _iter_off_rows(path: Path) -> Iterable[dict[str, Any]]:
+    """Stream TSV/TSV.GZ exports or one-product-per-line API JSON/JSONL."""
+    if path.name.casefold().endswith((".jsonl", ".jsonl.gz", ".jsonl.gzip", ".ndjson", ".ndjson.gz", ".ndjson.gzip")):
+        yield from _iter_jsonl_rows(path)
+        return
+    handle = _open_jsonl(path)
+    try:
+        import csv
+
+        csv.field_size_limit(16 * 1024 * 1024)
+        reader = csv.DictReader(handle, delimiter="\t")
+        if reader.fieldnames is None or "code" not in reader.fieldnames:
+            raise ImageManifestError("Open Food Facts export is missing code column")
+        for row in reader:
+            yield row
+    except csv.Error as exc:
+        raise ImageManifestError("Open Food Facts export has malformed tabular data") from exc
+    finally:
+        handle.close()
 
 
 def build_manifest(catalog_path: Path, off_path: Path, output_path: Path) -> dict[str, Any]:

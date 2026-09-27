@@ -182,6 +182,93 @@ class ExactProductImageManifestTest(unittest.TestCase):
         self.assertEqual(("CC-BY", True, False), _compatible_license("CC BY 4.0"))
         self.assertEqual(("CC-BY-SA", True, True), _compatible_license("CC BY-SA 4.0"))
 
+    def test_documented_selected_images_jsonl_shape_is_streamed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            catalog = root / "catalog.json"
+            catalog.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": "fixture",
+                        "records": [
+                            {
+                                "gtin": "0036000291452",
+                                "name": "Whole Milk",
+                                "brand": "Example Brand",
+                                "quantity": {"unit": "GRAM", "value": "500"},
+                                "productEvidenceKey": "identity-milk",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            export = root / "products.jsonl.gz"
+            with gzip.open(export, "wt", encoding="utf-8", newline="") as handle:
+                handle.write(
+                    json.dumps(
+                        {
+                            "code": "036000291452",
+                            "product": {
+                                "code": "036000291452",
+                                "product_name": "Whole Milk",
+                                "product_name_en": "Whole Milk",
+                                "brands": "Example Brand",
+                                "quantity": "500 g",
+                                "image_licenses": "CC BY-SA 4.0",
+                                "selected_images": {
+                                    "front": {
+                                        "display": {
+                                            "en": "https://images.openfoodfacts.org/images/products/036/000/291/452/front_en.5.400.jpg"
+                                        },
+                                        "thumb": {
+                                            "en": "https://images.openfoodfacts.org/images/products/036/000/291/452/front_en.5.100.jpg"
+                                        },
+                                    },
+                                    "ingredients": {
+                                        "display": {
+                                            "fr": "https://images.openfoodfacts.org/images/products/036/000/291/452/ingredients_fr.6.400.jpg"
+                                        }
+                                    },
+                                },
+                            },
+                        },
+                        ensure_ascii=False,
+                    )
+                    + "\n"
+                )
+            output = root / "manifest.jsonl"
+            report = build_manifest(catalog, export, output)
+
+            self.assertEqual(1, report["counts"]["off_rows_seen"])
+            self.assertEqual(1, report["counts"]["strict_identity_rows"])
+            self.assertEqual(3, report["counts"]["valid_image_candidates"])
+            self.assertEqual(3, report["counts"]["accepted_evidence_rows"])
+            self.assertEqual({"front": 2, "ingredients": 1}, report["acceptedRoles"])
+            self.assertEqual({"en": 2, "fr": 1}, report["acceptedLanguages"])
+            records = [
+                json.loads(line)
+                for line in output.read_text(encoding="utf-8").splitlines()[1:]
+            ]
+            self.assertEqual(
+                [
+                    "selected_images.front.display.en",
+                    "selected_images.front.thumb.en",
+                    "selected_images.ingredients.display.fr",
+                ],
+                [record["imageField"] for record in records],
+            )
+            self.assertEqual(["400", "100", "400"], [record["imageResolution"] for record in records])
+
+    def test_malformed_jsonl_is_rejected_with_line_context(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            catalog, _ = self._fixture(root)
+            export = root / "products.jsonl"
+            export.write_text('{"code":"036000291452"}\nnot-json\n', encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, r"JSONL product row 2 is malformed"):
+                build_manifest(catalog, export, root / "manifest.jsonl")
+
 
 if __name__ == "__main__":
     unittest.main()
