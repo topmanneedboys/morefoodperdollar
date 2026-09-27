@@ -65,6 +65,17 @@ object PracticalShoppingHomeSession {
         return queryChanged(state, nextQuery)
     }
 
+    /** Adds one source-labelled Search identity as an unresolved private Home draft item. */
+    fun addIdentityDraft(state: State, identityName: String): State {
+        val nextQuery =
+            PracticalShoppingHomeQuickAddPolicy.appendIdentityNameToQuery(
+                rawQuery = state.model.ui.query,
+                identityName = identityName
+            ) ?: return state
+        if (nextQuery == state.model.ui.query) return state
+        return queryChanged(state, nextQuery)
+    }
+
     /** Submits a list and reconciles details only against the resulting stable item keys. */
     fun submit(state: State, rawQuery: String): State {
         val changed = queryChanged(state, rawQuery)

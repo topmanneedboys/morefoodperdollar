@@ -46,4 +46,31 @@ internal object PracticalShoppingHomeQuickAddPolicy {
             }
         return next.takeIf { it.length <= LocalSamplePracticalShoppingDemo.MAX_QUERY_CHARACTERS }
     }
+
+    /**
+     * Adds a real Search identity to the private Home draft without treating it as a
+     * recognised sample product. Quoting keeps a multi-word identity together as one
+     * unresolved item, so the shopper can review or resolve it instead of seeing one
+     * unknown chip for every word.
+     */
+    fun appendIdentityNameToQuery(rawQuery: String, identityName: String): String? {
+        val trimmedQuery = rawQuery.trim()
+        val trimmedName = identityName.trim()
+        if (trimmedName.isBlank()) return null
+        if (LocalSamplePracticalShoppingDemo.queryContainsItemName(trimmedQuery, trimmedName)) {
+            return trimmedQuery
+        }
+
+        val encodedName =
+            trimmedName
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+        val next =
+            if (trimmedQuery.isBlank()) {
+                "\"$encodedName\""
+            } else {
+                "$trimmedQuery \"$encodedName\""
+            }
+        return next.takeIf { it.length <= LocalSamplePracticalShoppingDemo.MAX_QUERY_CHARACTERS }
+    }
 }

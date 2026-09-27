@@ -2148,7 +2148,13 @@ class MainActivity : AppCompatActivity() {
             ) View.VISIBLE else View.GONE
 
         presentation?.matches?.forEach { match ->
-            searchResultsContainer.addView(createSearchResultView(match, state.caveat))
+            searchResultsContainer.addView(
+                createSearchResultView(
+                    match = match,
+                    caveat = state.caveat,
+                    onAddToHome = ::addSearchIdentityToHome
+                )
+            )
         }
 
         val canLoadMore =
@@ -2171,7 +2177,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun createSearchResultView(
         match: PracticalShoppingSearchIdentityPresentation.Match,
-        caveat: String
+        caveat: String,
+        onAddToHome: (String) -> Unit
     ): View {
         val card = MaterialCardView(this).apply {
             radius = dp(18).toFloat()
@@ -2195,16 +2202,17 @@ class MainActivity : AppCompatActivity() {
                     "Argentina SEPA identity result",
                     getString(R.string.search_identity_no_verified_picture),
                     caveat,
-                    "Tap to review this name in Scan and compare"
+                    "Tap to review this name in Scan and compare",
+                    getString(R.string.search_identity_add_home_draft)
                 ).joinToString(". ") { it.trim().trimEnd('.', '!', '?') } + "."
         }
 
         val body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(15), dp(16), dp(15))
-            // The card exposes one complete projected summary. Keep the
-            // visible child labels decorative for assistive technology so the
-            // same fields are not announced repeatedly.
+            // Keep the projected text as one card-level announcement. The explicit
+            // Home action is added as a sibling below this decorative summary so it
+            // remains available to keyboard and assistive-technology users.
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         }
 
@@ -2270,8 +2278,37 @@ class MainActivity : AppCompatActivity() {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, dp(10), 0, 0)
         }.also(body::addView)
+        val addHomeButton = MaterialButton(this).apply {
+            text = getString(R.string.search_identity_add_home_draft)
+            isAllCaps = false
+            minHeight = dp(48)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(dp(16), dp(6), dp(16), dp(12))
+            }
+            contentDescription = getString(
+                R.string.search_identity_add_home_draft_description,
+                match.displayName
+            )
+            setOnClickListener { onAddToHome(match.displayName) }
+        }
         card.addView(body)
+        card.addView(addHomeButton)
         return card
+    }
+
+    private fun addSearchIdentityToHome(displayName: String) {
+        val previousQuery = homeSessionState.model.ui.query
+        val nextState = PracticalShoppingHomeSession.addIdentityDraft(homeSessionState, displayName)
+        if (nextState.model.ui.query == previousQuery) {
+            searchStatus.text = getString(R.string.search_identity_add_home_failed)
+            return
+        }
+        homeSessionState = nextState
+        dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.HOME))
+        renderHome()
     }
 
     private fun copyFor(tab: AppPrimaryTab): ScreenCopy =

@@ -19,6 +19,8 @@ class MainActivitySearchIdentityBoundaryTest {
             "searchAreaLabel",
             "PracticalShoppingSearchIdentityPresentation.Match",
             "openComparisonWithSharedText(match.displayName)",
+            "addSearchIdentityToHome",
+            "search_identity_add_home_draft",
             "Argentina SEPA identity result"
         ).forEach { required ->
             assertTrue("Expected visible identity boundary $required", activity.contains(required))
@@ -55,6 +57,7 @@ class MainActivitySearchIdentityBoundaryTest {
         assertTrue(card.contains("caveat"))
         assertTrue(card.contains("openComparisonWithSharedText"))
         assertTrue(card.contains("search_identity_open_compare"))
+        assertTrue(card.contains("search_identity_add_home_draft"))
         assertTrue(card.contains("search_identity_no_verified_picture"))
         assertTrue(card.contains("picturePlaceholder"))
         assertTrue(card.contains("minHeight = dp(48)"))

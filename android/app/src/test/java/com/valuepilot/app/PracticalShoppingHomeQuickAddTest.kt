@@ -67,4 +67,40 @@ class PracticalShoppingHomeQuickAddTest {
         assertTrue(next.model.ui.items.isEmpty())
         assertSame(initial.requestDetails, next.requestDetails)
     }
+
+    @Test
+    fun identityDraftKeepsARealMultiWordNameAsOneUnresolvedItem() {
+        val initial = PracticalShoppingHomeSession.initialState()
+        val next =
+            PracticalShoppingHomeSession.addIdentityDraft(
+                initial,
+                "Yerba Mate 1 kg"
+            )
+
+        assertEquals("\"Yerba Mate 1 kg\"", next.model.ui.query)
+        val submitted = PracticalShoppingHomeSession.submit(next, next.model.ui.query)
+        assertEquals(
+            listOf("yerba mate 1 kg"),
+            submitted.model.ui.unknownItems
+        )
+    }
+
+    @Test
+    fun identityDraftIsIdempotentAndRespectsTheExistingBound() {
+        val once =
+            PracticalShoppingHomeQuickAddPolicy.appendIdentityNameToQuery(
+                rawQuery = "\"Yerba Mate 1 kg\"",
+                identityName = "Yerba Mate 1 kg"
+            )
+        assertEquals("\"Yerba Mate 1 kg\"", once)
+
+        val tooLong = "x".repeat(LocalSamplePracticalShoppingDemo.MAX_QUERY_CHARACTERS)
+        assertEquals(
+            null,
+            PracticalShoppingHomeQuickAddPolicy.appendIdentityNameToQuery(
+                rawQuery = tooLong,
+                identityName = "Milk"
+            )
+        )
+    }
 }
