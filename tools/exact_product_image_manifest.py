@@ -14,6 +14,12 @@ are streamed. The output is JSONL so a national export can be processed with
 bounded memory.
 The first line is a deterministic manifest header; subsequent lines are
 accepted evidence records carrying attribution/share-alike obligations.
+
+An explicit Open Food Facts source-rights policy may be supplied when a
+provider export does not repeat its documented image licence on every row.
+That policy records source-level evidence only; third-party review, attribution
+implementation, image-byte handling and display eligibility remain blocked
+until their independent gates pass.
 """
 
 from __future__ import annotations
@@ -42,6 +48,9 @@ SCHEMA_VERSION = "valuepilot-exact-product-image-manifest-v1"
 POLICY_VERSION = "exact-gtin-name-brand-quantity-rights-roles-v1"
 OFF_IMAGE_HOSTS = frozenset(("images.openfoodfacts.org", "static.openfoodfacts.org"))
 MAX_OUTPUT_RECORD_BYTES = 32 * 1024
+MAX_POLICY_BYTES = 64 * 1024
+SOURCE_RIGHTS_POLICY_SCHEMA_VERSION = "valuepilot-image-source-rights-policy-v1"
+SOURCE_RIGHTS_POLICY_HOSTS = frozenset(("openfoodfacts.github.io", "world.openfoodfacts.org"))
 
 # The API documents these selected roles.  Small/thumb variants are included
 # as fallback evidence, but the engine keeps the source field and URL so a
@@ -77,6 +86,65 @@ def _require(condition: bool, message: str) -> None:
         raise ImageManifestError(message)
 
 
+def _validate_source_rights_policy(value: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate explicit provider-level image-rights evidence.
+
+    This policy is an evidence rail, not a display permission.  It is only
+    allowed to relax a missing per-row licence field when the caller supplies
+    the reviewed policy explicitly.  Third-party packaging rights,
+    attribution implementation, and downloaded-byte checks remain separate
+    gates and therefore keep display eligibility blocked.
+    """
+
+    _require(isinstance(value, Mapping), "source rights policy must be an object")
+    _require(
+        value.get("schemaVersion") == SOURCE_RIGHTS_POLICY_SCHEMA_VERSION,
+        "source rights policy schema version is invalid",
+    )
+    _require(
+        _clean(value.get("provider")).casefold() == "open-food-facts",
+        "source rights policy provider is invalid",
+    )
+    license_id = _clean(value.get("licenseId"))
+    license_info = _compatible_license(license_id)
+    _require(license_info is not None and license_info[0] == "CC-BY-SA", "source rights policy licence is not CC-BY-SA")
+    evidence_url = _clean(value.get("evidenceUrl"))
+    parsed_url = urlparse(evidence_url)
+    _require(
+        parsed_url.scheme == "https" and parsed_url.hostname in SOURCE_RIGHTS_POLICY_HOSTS,
+        "source rights policy evidence URL is not an official HTTPS URL",
+    )
+    _require(value.get("attributionRequired") is True, "source rights policy must require attribution")
+    _require(value.get("shareAlikeRequired") is True, "source rights policy must require share-alike")
+    _require(
+        value.get("thirdPartyRightsReviewRequired") is True,
+        "source rights policy must retain third-party rights review",
+    )
+    _require(value.get("displayEligible") is False, "source rights policy cannot grant display eligibility")
+    _require(value.get("imageBytesDownloaded") is False, "source rights policy cannot claim downloaded image bytes")
+    return {
+        "schemaVersion": SOURCE_RIGHTS_POLICY_SCHEMA_VERSION,
+        "provider": "open-food-facts",
+        "licenseId": "CC-BY-SA",
+        "evidenceUrl": evidence_url,
+        "attributionRequired": True,
+        "shareAlikeRequired": True,
+        "thirdPartyRightsReviewRequired": True,
+        "displayEligible": False,
+        "imageBytesDownloaded": False,
+    }
+
+
+def _load_source_rights_policy(path: Path) -> dict[str, Any]:
+    _require(path.is_file(), f"Missing source rights policy: {path}")
+    _require(path.stat().st_size <= MAX_POLICY_BYTES, "source rights policy exceeds size bound")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ImageManifestError(f"Unable to parse source rights policy: {path}") from exc
+    return _validate_source_rights_policy(payload)
+
+
 def _valid_image_url(value: Any) -> bool:
     raw = _clean(value)
     if not raw:
@@ -90,7 +158,12 @@ def _valid_image_url(value: Any) -> bool:
     )
 
 
-def _variant_metadata(url: str, role: str, language_hint: str = "UNKNOWN", resolution_hint: str = "UNKNOWN") -> dict[str, str]:
+def _variant_metadata(
+    url: str,
+    role: str,
+    language_hint: str = "UNKNOWN",
+    resolution_hint: str = "UNKNOWN",
+) -> dict[str, str]:
     match = _SELECTED_IMAGE_RE.search(urlparse(url).path)
     if match is None:
         return {
@@ -258,7 +331,13 @@ def _iter_off_rows(path: Path) -> Iterable[dict[str, Any]]:
         handle.close()
 
 
-def build_manifest(catalog_path: Path, off_path: Path, output_path: Path) -> dict[str, Any]:
+def build_manifest(
+    catalog_path: Path,
+    off_path: Path,
+    output_path: Path,
+    *,
+    source_rights_policy: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     """Build a deterministic accepted-evidence JSONL manifest.
 
     The catalog is bounded by the existing audit loader.  The Open Food Facts
@@ -268,6 +347,11 @@ def build_manifest(catalog_path: Path, off_path: Path, output_path: Path) -> dic
 
     _require(output_path != catalog_path and output_path != off_path, "output must differ from inputs")
     _require(not output_path.exists(), f"Refusing to overwrite output: {output_path}")
+    validated_source_rights_policy = (
+        _validate_source_rights_policy(source_rights_policy)
+        if source_rights_policy is not None
+        else None
+    )
     catalog, catalog_meta = _load_catalog(catalog_path)
     yerba_keys: set[str] = set(catalog_meta["yerba_keys"])
     counters: Counter[str] = Counter()
@@ -277,9 +361,17 @@ def build_manifest(catalog_path: Path, off_path: Path, output_path: Path) -> dic
     languages: Counter[str] = Counter()
     strict_identity_keys: set[str] = set()
     accepted_identity_keys: set[str] = set()
+    source_policy_identity_keys: set[str] = set()
     accepted_yerba_identity_keys: set[str] = set()
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    rights_header: dict[str, Any] = {
+        "acceptedLicences": ["CC-BY-SA", "CC-BY", "CC0_OR_PUBLIC_DOMAIN"],
+        "attributionRequired": True,
+        "shareAlikeMayBeRequired": True,
+    }
+    if validated_source_rights_policy is not None:
+        rights_header["sourcePolicy"] = validated_source_rights_policy
     header = {
         "recordType": "manifestHeader",
         "schemaVersion": SCHEMA_VERSION,
@@ -293,11 +385,7 @@ def build_manifest(catalog_path: Path, off_path: Path, output_path: Path) -> dic
             "imageHosts": sorted(OFF_IMAGE_HOSTS),
             "imageBytesDownloaded": False,
         },
-        "rights": {
-            "acceptedLicences": ["CC-BY-SA", "CC-BY", "CC0_OR_PUBLIC_DOMAIN"],
-            "attributionRequired": True,
-            "shareAlikeMayBeRequired": True,
-        },
+        "rights": rights_header,
     }
 
     with tempfile.NamedTemporaryFile(
@@ -337,6 +425,10 @@ def build_manifest(catalog_path: Path, off_path: Path, output_path: Path) -> dic
                         continue
                     counters["valid_image_candidates"] += 1
                     license_text = _license_value(row, candidate["field"], candidate["role"])
+                    license_evidence_type = "ROW_FIELD"
+                    if not license_text and validated_source_rights_policy is not None:
+                        license_text = validated_source_rights_policy["licenseId"]
+                        license_evidence_type = "SOURCE_POLICY"
                     if not license_text:
                         rejection_reasons["RIGHTS_EVIDENCE_MISSING"] += 1
                         continue
@@ -346,9 +438,15 @@ def build_manifest(catalog_path: Path, off_path: Path, output_path: Path) -> dic
                         continue
                     license_id, attribution_required, share_alike_required = license_info
                     accepted_licenses[license_id] += 1
+                    if license_evidence_type == "SOURCE_POLICY":
+                        counters["accepted_source_policy_evidence_rows"] += 1
+                    else:
+                        counters["accepted_row_license_evidence_rows"] += 1
                     roles[candidate["role"]] += 1
                     languages[candidate["language"]] += 1
                     accepted_identity_keys.add(identity_key)
+                    if license_evidence_type == "SOURCE_POLICY":
+                        source_policy_identity_keys.add(identity_key)
                     if identity_key in yerba_keys:
                         accepted_yerba_identity_keys.add(identity_key)
                     evidence = {
@@ -365,14 +463,23 @@ def build_manifest(catalog_path: Path, off_path: Path, output_path: Path) -> dic
                         "imageResolution": candidate["resolution"],
                         "imageUrl": candidate["url"],
                         "licenseEvidence": license_text,
+                        "licenseEvidenceType": license_evidence_type,
                         "licenseId": license_id,
                         "attributionRequired": attribution_required,
                         "shareAlikeRequired": share_alike_required,
+                        "thirdPartyRightsReviewRequired": (
+                            validated_source_rights_policy is not None
+                            if license_evidence_type == "SOURCE_POLICY"
+                            else False
+                        ),
                         "exactIdentityBasis": "VALID_GTIN_NAME_BRAND_EXPLICIT_QUANTITY",
                         "priceOrAvailabilityClaim": False,
                     }
                     encoded = _canonical_json(evidence)
-                    _require(len(encoded.encode("utf-8")) <= MAX_OUTPUT_RECORD_BYTES, "manifest evidence row exceeds bound")
+                    _require(
+                        len(encoded.encode("utf-8")) <= MAX_OUTPUT_RECORD_BYTES,
+                        "manifest evidence row exceeds bound",
+                    )
                     handle.write(encoded + "\n")
                     counters["accepted_evidence_rows"] += 1
         handle.flush()
@@ -395,9 +502,16 @@ def build_manifest(catalog_path: Path, off_path: Path, output_path: Path) -> dic
             "openFoodFactsExportSha256": _sha256(off_path),
             "countryFilter": "NONE",
             "imageBytesDownloaded": False,
+            "rightsPolicy": validated_source_rights_policy,
         },
         "counts": dict(sorted(counters.items())),
         "acceptedLicences": dict(sorted(accepted_licenses.items())),
+        "rightsEvidence": {
+            "acceptedRowLicenseEvidenceRows": counters.get("accepted_row_license_evidence_rows", 0),
+            "acceptedSourcePolicyEvidenceRows": counters.get("accepted_source_policy_evidence_rows", 0),
+            "sourcePolicyIdentityCount": len(source_policy_identity_keys),
+            "thirdPartyRightsReviewRequired": validated_source_rights_policy is not None,
+        },
         "acceptedRoles": dict(sorted(roles.items())),
         "acceptedLanguages": dict(sorted(languages.items())),
         "rejections": dict(sorted(rejection_reasons.items())),
@@ -408,6 +522,7 @@ def build_manifest(catalog_path: Path, off_path: Path, output_path: Path) -> dic
             ),
             "strictExactIdentityCount": len(strict_identity_keys),
             "rightsQualifiedImageEvidenceIdentityCount": len(accepted_identity_keys),
+            "rightsQualifiedImageEvidenceFromSourcePolicyIdentityCount": len(source_policy_identity_keys),
             "rightsQualifiedImageEvidencePercentOfCatalogValidGtinIdentities": _percent(
                 len(accepted_identity_keys), catalog_valid_gtin_identities
             ),
@@ -434,9 +549,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--catalog", required=True, type=Path)
     parser.add_argument("--open-food-facts", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--source-rights-policy", type=Path)
     args = parser.parse_args(argv)
     try:
-        report = build_manifest(args.catalog, args.open_food_facts, args.output)
+        source_rights_policy = (
+            _load_source_rights_policy(args.source_rights_policy)
+            if args.source_rights_policy is not None
+            else None
+        )
+        report = build_manifest(
+            args.catalog,
+            args.open_food_facts,
+            args.output,
+            source_rights_policy=source_rights_policy,
+        )
     except (ImageManifestError, OSError) as exc:
         print(f"Exact product image manifest failed: {exc}")
         return 2

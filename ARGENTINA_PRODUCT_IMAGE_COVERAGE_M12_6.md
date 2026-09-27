@@ -26,8 +26,12 @@ Measured results:
 - The 389 catalog identities whose name/brand contains `yerba` had **0 strict
   image candidates (0%)**.
 
-The source policy records Open Food Facts' documented CC BY-SA image boundary,
-but keeps per-image and third-party-rights review separate. This audit therefore
+The checked-in [`open_food_facts_image_rights_policy.json`](tools/data/open_food_facts_image_rights_policy.json)
+records Open Food Facts' documented CC BY-SA image boundary. Passing that
+policy explicitly to `exact_product_image_manifest.py` can preserve a missing
+per-row licence as **source-policy evidence**, but the manifest marks the row
+with attribution/share-alike obligations and unresolved third-party review;
+image bytes and display eligibility remain separate gates. This audit therefore
 does not authorize republishing, ranking, price claims, or Android networking.
 The next safe picture milestone is a rights-qualified source/manifest and a
 variant-aware picture field; until then the app must show its existing neutral
