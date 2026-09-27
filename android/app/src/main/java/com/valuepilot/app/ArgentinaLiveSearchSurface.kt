@@ -39,7 +39,7 @@ internal data class ArgentinaLiveSearchSurfaceState(
 
 internal object ArgentinaLiveSearchSurfacePresenter {
     private const val IDENTITY_CAVEAT =
-        "Identity suggestions only. No current price, package quantity, stock, availability or ranking is confirmed."
+        "Identity suggestions only. No current price, stock, availability or ranking is confirmed; package size appears only when the source supplies it explicitly."
 
     fun initial(
         area: ArgentinaQualifiedLaunchArea,

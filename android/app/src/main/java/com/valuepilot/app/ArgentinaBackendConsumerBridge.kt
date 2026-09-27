@@ -493,6 +493,7 @@ private object ArgentinaBackendIdentityMapper {
                             } else {
                                 "provider identity match"
                             },
+                        packageQuantityLabel = candidate.quantity?.let(::productQuantityLabel),
                         identityKey = candidate.productEvidenceKey
                     )
             }
@@ -506,7 +507,7 @@ private object ArgentinaBackendIdentityMapper {
             query = response.originalQuery.trim(),
             matches = matches,
             evaluatedCandidateCount = maxOf(evaluated, matches.size),
-            notice = "$NOTICE_PREFIX ${response.common.releaseDate} only — no current prices, stock, package quantity or freshness are implied.",
+            notice = "$NOTICE_PREFIX ${response.common.releaseDate} only — no current prices, stock, availability or freshness are implied; package size is shown only when explicitly supplied by the source.",
             page = pagination?.page ?: 0,
             hasMore = pagination?.hasMore == true,
             nextPage = pagination?.nextPage,
@@ -514,6 +515,9 @@ private object ArgentinaBackendIdentityMapper {
         )
     }
 }
+
+private fun productQuantityLabel(quantity: ArgentinaBackendContract.Quantity): String =
+    "${quantity.amount} ${quantity.unit}"
 
 private object ArgentinaBackendHomeMapper {
     private const val PROVIDER = "ARGENTINA_SEPA_PRECIOS_CLAROS"
