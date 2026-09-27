@@ -1,8 +1,20 @@
+param(
+    [string]$Package = 'com.valuepilot.app',
+    [int]$ExpectedVersionCode = 10107,
+    [string]$Query = 'arroz',
+    [string[]]$ExpectedRegions = @('ar-b', 'ar-caba'),
+    [int]$MinimumResultCount = 6,
+    [int]$WaitSeconds = 18
+)
+
 $ErrorActionPreference = 'Stop'
 
-$Package = 'com.valuepilot.app'
-$ExpectedVersionCode = '10107'
-$Query = 'leche'
+if ($MinimumResultCount -lt 6) {
+    throw 'MINIMUM_RESULT_COUNT_MUST_EXCEED_FIVE'
+}
+if ($WaitSeconds -lt 1 -or $WaitSeconds -gt 120) {
+    throw 'WAIT_SECONDS_OUT_OF_BOUNDS'
+}
 $UiDumpPath = '/sdcard/valuepilot-live-search-trace.xml'
 $StayAwakeChanged = $false
 $Serial = $null
@@ -46,6 +58,31 @@ function Tap-Resource {
     Invoke-Adb @('-s', $Serial, 'shell', 'input', 'tap', $center[0], $center[1]) | Out-Null
 }
 
+function Get-SearchCards {
+    param([Parameter(Mandatory = $true)][System.Xml.XmlDocument]$Ui)
+    $container = $Ui.SelectSingleNode("//*[@resource-id='$Package:id/searchResultsContainer']")
+    if ($null -eq $container) {
+        throw 'UI_SEARCH_RESULTS_CONTAINER_MISSING'
+    }
+
+    $directCards = @($container.ChildNodes | Where-Object {
+        $_ -is [System.Xml.XmlElement] -and $_.GetAttribute('class') -match 'CardView'
+    })
+    if ($directCards.Count -gt 0) {
+        return $directCards
+    }
+
+    # Compatibility fallback for older UI dumps.  Keep only card-class nodes
+    # rather than every clickable child inside a card.
+    return @($container.SelectNodes(".//*[contains(@class,'CardView')]") )
+}
+
+function Test-VisibleNode {
+    param([Parameter(Mandatory = $true)][System.Xml.XmlElement]$Node)
+    $bounds = $Node.GetAttribute('bounds')
+    return -not [string]::IsNullOrWhiteSpace($bounds) -and $bounds -ne '[0,0][0,0]'
+}
+
 try {
     $deviceRows = @(adb devices | Select-String '\sdevice$')
     if ($deviceRows.Count -ne 1) {
@@ -83,21 +120,65 @@ try {
     Start-Sleep -Milliseconds 250
     $ui = Get-UiXml
     Tap-Resource $ui "$Package:id/searchButton"
-    Start-Sleep -Seconds 18
+    Start-Sleep -Seconds $WaitSeconds
+
+    # Follow the user-visible bounded pagination until the trace has more than
+    # five cards, or fail explicitly instead of calling one page a success.
+    for ($pageAttempt = 0; $pageAttempt -lt 6; $pageAttempt++) {
+        $ui = Get-UiXml
+        $cards = @(Get-SearchCards $ui)
+        if ($cards.Count -ge $MinimumResultCount) {
+            break
+        }
+        $loadMore = $ui.SelectSingleNode("//*[@resource-id='$Package:id/searchLoadMoreButton']")
+        if ($null -eq $loadMore -or -not (Test-VisibleNode $loadMore)) {
+            throw "REQUIRED_MORE_THAN_FIVE_RESULTS_UNAVAILABLE_$($cards.Count)"
+        }
+        Tap-Resource $ui "$Package:id/searchLoadMoreButton"
+        Start-Sleep -Seconds $WaitSeconds
+    }
 
     $ui = Get-UiXml
     $status = $ui.SelectSingleNode("//*[@resource-id='$Package:id/searchStatus']")
     $heading = $ui.SelectSingleNode("//*[@resource-id='$Package:id/searchResultsHeading']")
-    $cards = @($ui.SelectNodes("//*[@resource-id='$Package:id/searchResultsContainer']//*[contains(@class,'MaterialCardView') or @clickable='true']"))
+    $cards = @(Get-SearchCards $ui)
+    if ($cards.Count -lt $MinimumResultCount) {
+        throw "REQUIRED_MORE_THAN_FIVE_RESULTS_UNAVAILABLE_$($cards.Count)"
+    }
+    $safeLogcat = @(
+        Invoke-Adb @('-s', $Serial, 'logcat', '-d', '-v', 'brief', '-s', 'ValuePilotLiveSearch:I', 'AndroidRuntime:E') |
+            ForEach-Object { $_.ToString() -replace '(?i)(token|authorization|cookie|password|secret)[=:]\S+', '$1=<REDACTED>' }
+    )
+    $successLines = @($safeLogcat | Where-Object { $_ -match 'success=true' })
+    if ($successLines.Count -eq 0) {
+        throw 'SUCCESS_DIAGNOSTICS_MISSING'
+    }
+    $observedRegions = New-Object System.Collections.Generic.HashSet[string]
+    foreach ($line in $successLines) {
+        $regionMatch = [regex]::Match($line, 'regionsQueried=([^\s]+)')
+        if ($regionMatch.Success -and $regionMatch.Groups[1].Value -ne '<unknown>') {
+            foreach ($region in $regionMatch.Groups[1].Value.Split(',')) {
+                if (-not [string]::IsNullOrWhiteSpace($region)) {
+                    [void]$observedRegions.Add($region)
+                }
+            }
+        }
+    }
+    $missingRegions = @($ExpectedRegions | Where-Object { -not $observedRegions.Contains($_) })
+    if ($missingRegions.Count -gt 0) {
+        throw "EXPECTED_REGIONS_MISSING_$($missingRegions -join '_')"
+    }
     Write-Output 'DEVICE_TRACE_COMPLETE'
     Write-Output "SERIAL=$Serial"
     Write-Output "VERSION_CODE=$ExpectedVersionCode"
+    Write-Output "QUERY=$Query"
     Write-Output "SEARCH_STATUS=$($status.text)"
     Write-Output "RESULT_HEADING=$($heading.text)"
     Write-Output "RESULT_NODE_COUNT=$($cards.Count)"
+    Write-Output "EXPECTED_MINIMUM_RESULT_COUNT=$MinimumResultCount"
+    Write-Output "REGIONS_QUERIED=$($ExpectedRegions -join ',')"
     Write-Output 'SAFE_LOGCAT_BEGIN'
-    Invoke-Adb @('-s', $Serial, 'logcat', '-d', '-v', 'brief', '-s', 'ValuePilotLiveSearch:W', 'AndroidRuntime:E') |
-        ForEach-Object { $_.ToString() -replace '(?i)(token|authorization|cookie|password|secret)[=:]\S+', '$1=<REDACTED>' }
+    $safeLogcat | ForEach-Object { $_ }
     Write-Output 'SAFE_LOGCAT_END'
 }
 finally {

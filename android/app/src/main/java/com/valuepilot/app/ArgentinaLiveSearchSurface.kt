@@ -197,7 +197,8 @@ internal class ArgentinaLiveSearchSurfaceHost(
             val coordinator = ArgentinaLiveSearchCoordinator.create(
                 transport = ValuePilotArgentinaEdgeTransportFactory.create(),
                 stateSink = { state -> host.accept(state) },
-                diagnosticSink = ArgentinaLiveSearchDiagnostics::record
+                diagnosticSink = ArgentinaLiveSearchDiagnostics::record,
+                successDiagnosticSink = ArgentinaLiveSearchDiagnostics::recordSuccess
             )
             host = ArgentinaLiveSearchSurfaceHost(coordinator, area, render)
             return host
@@ -232,6 +233,23 @@ internal object ArgentinaLiveSearchDiagnostics {
             metadata?.releaseDate?.let { add("releaseDate=$it") }
         }
         Log.w(TAG, fields.joinToString(" "))
+    }
+
+    fun recordSuccess(metadata: ArgentinaLiveSearchSuccessMetadata) {
+        val fields = buildList {
+            add("success=true")
+            add("page=${metadata.page}")
+            add("pageResultCount=${metadata.pageResultCount}")
+            add("hasMore=${metadata.hasMore}")
+            add("limitReached=${metadata.limitReached}")
+            add("regionsQueried=${metadata.regionsQueried.joinToString(",").ifBlank { "<unknown>" }}")
+            metadata.requestId?.let { add("requestId=$it") }
+            metadata.releaseId?.let { add("releaseId=$it") }
+            metadata.releaseDate?.let { add("releaseDate=$it") }
+        }
+        // This is bounded verification telemetry only. It contains no query,
+        // product identity, response body, token, URL, header or PII.
+        Log.i(TAG, fields.joinToString(" "))
     }
 }
 

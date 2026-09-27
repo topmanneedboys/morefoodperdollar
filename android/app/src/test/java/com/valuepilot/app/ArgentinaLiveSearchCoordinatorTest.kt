@@ -495,8 +495,14 @@ class ArgentinaLiveSearchCoordinatorTest {
                 )
             )
         val states = mutableListOf<ArgentinaLiveSearchState>()
+        val successDiagnostics = mutableListOf<ArgentinaLiveSearchSuccessMetadata>()
         val executor = QueuedExecutor()
-        val coordinator = ArgentinaLiveSearchCoordinator(transport, executor, states::add)
+        val coordinator = ArgentinaLiveSearchCoordinator(
+            transport = transport,
+            executor = executor,
+            stateSink = states::add,
+            successDiagnosticSink = successDiagnostics::add
+        )
 
         coordinator.submit("yerba", context)
         executor.runNext()
@@ -504,6 +510,11 @@ class ArgentinaLiveSearchCoordinatorTest {
         assertEquals(5, first.presentation.matches.size)
         assertTrue(first.presentation.hasMore)
         assertEquals(1, first.presentation.nextPage)
+        assertEquals(1, successDiagnostics.size)
+        assertEquals(0, successDiagnostics.single().page)
+        assertEquals(5, successDiagnostics.single().pageResultCount)
+        assertTrue(successDiagnostics.single().hasMore)
+        assertEquals(listOf("ar-b", "ar-caba"), successDiagnostics.single().regionsQueried)
 
         val nextGeneration = coordinator.loadMore()
         val loading = coordinator.state() as ArgentinaLiveSearchState.Loading
@@ -515,6 +526,10 @@ class ArgentinaLiveSearchCoordinatorTest {
         assertEquals(10, combined.presentation.matches.size)
         assertEquals(10, combined.presentation.matches.map { it.identityKey }.distinct().size)
         assertFalse(combined.presentation.hasMore)
+        assertEquals(2, successDiagnostics.size)
+        assertEquals(1, successDiagnostics.last().page)
+        assertEquals(5, successDiagnostics.last().pageResultCount)
+        assertFalse(successDiagnostics.last().hasMore)
         assertTrue(transport.calls.last().body!!.contains("\"page\":1"))
         coordinator.close()
     }
@@ -632,6 +647,7 @@ class ArgentinaLiveSearchCoordinatorTest {
         val matches = JSONArray()
         repeat(count) { offset -> matches.put(productIdentity(start + offset)) }
         return envelope(release.releaseId, RELEASE_DATE)
+            .put("diagnostics", JSONObject().put("regionsQueried", JSONArray().put("ar-b").put("ar-caba")))
             .put("query", "yerba")
             .put("originalQuery", "yerba")
             .put("interpretedQuery", "yerba")
