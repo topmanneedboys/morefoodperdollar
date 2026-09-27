@@ -115,13 +115,28 @@ def _license_value(row: Mapping[str, Any], field: str, role: str) -> str:
 
 
 def _compatible_license(value: str) -> tuple[str, bool, bool] | None:
-    normalized = value.casefold().replace("–", "-")
-    if "cc by-sa" in normalized or "cc-by-sa" in normalized or "creativecommons.org/licenses/by-sa/" in normalized:
-        return ("CC-BY-SA", True, True)
-    if "cc by" in normalized or "cc-by" in normalized or "creativecommons.org/licenses/by/" in normalized:
-        return ("CC-BY", True, False)
-    if "cc0" in normalized or "public domain" in normalized:
+    """Return the small set of licenses safe for the display pipeline.
+
+    License labels are provider data, not trusted enum values.  Matching a
+    broad substring such as ``"cc by"`` would incorrectly accept restricted
+    variants like CC BY-NC or CC BY-ND.  Normalize punctuation into tokens,
+    reject explicit non-commercial/no-derivatives markers first, and only
+    then accept the exact commercial-compatible families we document.
+    """
+
+    normalized = value.casefold().replace("–", "-").replace("—", "-")
+    tokens = re.sub(r"[^a-z0-9]+", "-", normalized).strip("-")
+    token_set = set(tokens.split("-")) if tokens else set()
+    if {"nc", "nd", "noncommercial", "noderivatives"} & token_set:
+        return None
+    if re.search(r"non[- ]?commercial|no[- ]?derivatives", normalized):
+        return None
+    if "public-domain" in tokens or "cc0" in token_set or "creativecommons.org/publicdomain/zero/" in normalized:
         return ("CC0_OR_PUBLIC_DOMAIN", False, False)
+    if "creativecommons.org/licenses/by-sa/" in normalized or re.search(r"(?:^|-)cc-by-sa(?:-|$)", tokens):
+        return ("CC-BY-SA", True, True)
+    if "creativecommons.org/licenses/by/" in normalized or re.search(r"(?:^|-)cc-by(?:-|$)", tokens):
+        return ("CC-BY", True, False)
     return None
 
 
