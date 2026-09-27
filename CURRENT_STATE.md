@@ -21,6 +21,8 @@ The build workflow now keeps disposable browser/APK/release uploads only for
 explicit `candidate/*` and `work/valuepilot-android-milestone` pushes;
 ordinary `work/valuepilot-*` pushes still run the full checks without storing
 duplicate outputs.
+The two rebuildable Open Prices research workflows likewise keep their
+reports in the job summary and upload them only for an explicit manual run.
 
 M12.6's first real coverage audit is recorded in
 [ARGENTINA_PRODUCT_IMAGE_COVERAGE_M12_6.md](ARGENTINA_PRODUCT_IMAGE_COVERAGE_M12_6.md).
