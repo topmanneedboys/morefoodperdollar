@@ -27,6 +27,24 @@ untouched.
 
 Updated: 2026-09-27 16:46 UTC
 
+## Preserved Motorola audit review — 2026-09-27
+
+The untracked `device-audit/` directory was preserved and inspected without
+editing or deleting any file. Its September 24 XML and screenshots identify
+`com.valuepilot.app` and show the qualified Buenos Aires (CABA) identity-only
+Search surface, source attribution, unknown-price disclosure, Home/Basket/Saved/
+Compare/Good Price flows, Data Status, large-font rendering and rotation. The
+captured milk and yerba traces each contain five distinct identity cards across
+their scroll captures. They contain no `searchLoadMoreButton`, `hasMore`, or
+bounded-limit text, so they are not evidence of the current continuation
+implementation or of Search beyond five results. The source-level continuation
+code and deterministic tests are newer than this device trace.
+
+This audit strengthens the physical presentation evidence for M12.7 and the
+offline/private boundaries of M12.8, but it does not prove current-build
+pagination, valid App Check, both-region routing, live prices/stock, signing or
+Play installation of 10108. Those gates remain explicitly open.
+
 ## Resumed M12.4–M12.9 checkpoint — 2026-09-27
 
 Work continues on `work/valuepilot-m124-m129` from the verified Data Status
