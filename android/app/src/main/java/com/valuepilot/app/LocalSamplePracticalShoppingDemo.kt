@@ -470,8 +470,15 @@ object LocalSamplePracticalShoppingDemo {
         resolution.unknownItems
             .asSequence()
             .filterNot { it == excludedUnknownToken }
+            .map(::canonicalUnknownToken)
             .forEach(::add)
     }.joinToString(" ")
+
+    private fun canonicalUnknownToken(token: String): String {
+        if (token.none(Char::isWhitespace)) return token
+        val escaped = token.replace("\\", "\\\\").replace("\"", "\\\"")
+        return "\"$escaped\""
+    }
 
     private fun evaluate(
         rawQuery: String,
@@ -670,12 +677,47 @@ object LocalSamplePracticalShoppingDemo {
     }
 
     private fun tokenize(raw: String): List<String> =
-        raw.lowercase()
-            .replace(Regex("[,;\\n\\r\\t]+"), " ")
-            .trim()
-            .split(Regex("\\s+"))
-            .map { it.trim('.', ':', '!', '?', '(', ')', '[', ']', '{', '}') }
-            .filter(String::isNotBlank)
+        buildList {
+            val input = raw.lowercase()
+            val token = StringBuilder()
+            var quoted = false
+            var escaped = false
+
+            fun flush() {
+                val value = token.toString().trim('.', ':', '!', '?', '(', ')', '[', ']', '{', '}')
+                if (value.isNotBlank()) add(value)
+                token.setLength(0)
+            }
+
+            input.forEach { character ->
+                when {
+                    escaped -> {
+                        token.append(character)
+                        escaped = false
+                    }
+
+                    quoted && character == '\\' -> escaped = true
+                    character == '\"' -> {
+                        if (quoted) {
+                            quoted = false
+                            flush()
+                        } else {
+                            flush()
+                            quoted = true
+                        }
+                    }
+
+                    quoted -> token.append(character)
+                    character.isWhitespace() || character == ',' || character == ';' -> flush()
+                    else -> token.append(character)
+                }
+            }
+            if (escaped) token.append('\\')
+            flush()
+        }
+
+    internal fun queryContainsItemName(rawQuery: String, itemName: String): Boolean =
+        tokenize(rawQuery).any { it == itemName.trim().lowercase() }
 
     private fun singleCandidate(
         store: SampleStore,
