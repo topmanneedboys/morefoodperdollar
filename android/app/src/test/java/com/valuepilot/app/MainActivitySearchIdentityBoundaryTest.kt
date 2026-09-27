@@ -23,12 +23,16 @@ class MainActivitySearchIdentityBoundaryTest {
             "openComparisonWithSharedText(match.displayName)",
             "addSearchIdentityToHome",
             "search_identity_add_home_draft",
-            "Argentina SEPA identity result"
+            "Argentina SEPA identity result",
+            "searchResultsCount",
+            "R.plurals.search_results_count"
         ).forEach { required ->
             assertTrue("Expected visible identity boundary $required", activity.contains(required))
         }
         assertTrue(layout.contains("android:id=\"@+id/searchAreaLabel\""))
+        assertTrue(layout.contains("android:id=\"@+id/searchResultsCount\""))
         assertTrue(strings.contains("package size appears only when the source supplies it explicitly"))
+        assertTrue(strings.contains("Showing %1\$d matching identity suggestions."))
         assertFalse(strings.contains("not live prices, stock, availability, package quantities"))
         assertFalse(layout.contains("@+id/searchIdentityButton"))
         assertFalse(activity.contains("LocalSampleProductSearchProvider"))

@@ -91,6 +91,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var searchStatus: TextView
     private lateinit var searchProgress: ProgressBar
     private lateinit var searchResultsHeading: TextView
+    private lateinit var searchResultsCount: TextView
     private lateinit var searchResultsContainer: LinearLayout
     private lateinit var searchLoadMoreButton: MaterialButton
     private lateinit var searchResultsEnd: TextView
@@ -193,6 +194,7 @@ class MainActivity : AppCompatActivity() {
         searchStatus = findViewById(R.id.searchStatus)
         searchProgress = findViewById(R.id.searchProgress)
         searchResultsHeading = findViewById(R.id.searchResultsHeading)
+        searchResultsCount = findViewById(R.id.searchResultsCount)
         searchResultsContainer = findViewById(R.id.searchResultsContainer)
         searchLoadMoreButton = findViewById(R.id.searchLoadMoreButton)
         searchResultsEnd = findViewById(R.id.searchResultsEnd)
@@ -2146,6 +2148,12 @@ class MainActivity : AppCompatActivity() {
         searchResultsHeading.visibility =
             if (presentation != null && presentation.matches.isNotEmpty()
             ) View.VISIBLE else View.GONE
+        searchResultsCount.text =
+            presentation?.matches?.size?.takeIf { it > 0 }?.let { count ->
+                resources.getQuantityString(R.plurals.search_results_count, count, count)
+            }.orEmpty()
+        searchResultsCount.visibility =
+            if (presentation != null && presentation.matches.isNotEmpty()) View.VISIBLE else View.GONE
 
         presentation?.matches?.forEach { match ->
             searchResultsContainer.addView(

@@ -1,6 +1,6 @@
 # Current state
 
-Updated: 2026-09-27 15:16 UTC
+Updated: 2026-09-27 16:20 UTC
 
 ## Resumed M12.4–M12.9 checkpoint — 2026-09-27
 
@@ -26,6 +26,9 @@ The merged repairs align both Search disclosure copies with the actual
 identity-only boundary: package size appears only when explicitly supplied by
 the source, while current prices, stock, availability, freshness and ranking
 remain absent. Focused tests and the full local debug/release gate passed.
+The Search surface now also reports the bounded number of deduplicated identity
+suggestions currently visible after each page/Load More operation. This is
+presentation-only and does not imply price, stock or availability.
 
 The M12.8 Search-to-Home handoff is now merged: an Argentina identity result
 can be added to the private Home draft as one clearly unresolved multi-word
