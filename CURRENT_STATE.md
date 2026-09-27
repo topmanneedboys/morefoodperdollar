@@ -1,6 +1,6 @@
 # Current state
 
-Updated: 2026-09-27 09:18 UTC
+Updated: 2026-09-27 10:05 UTC
 
 ## Resumed M12.4–M12.9 checkpoint — 2026-09-26
 
@@ -57,9 +57,9 @@ claimed as physically verified.
 
 Branch: `work/valuepilot-m124-m129`
 
-Candidate branch HEAD: `5a16e1166dd8d7d5a8d9c2893cfabe84ff8b4a97`
+Candidate branch HEAD: `dc4e0e9455dc126bedd8a86075db0beace9c63fe`
 
-Integrated `main` HEAD: `7840cb6555200ef3692bec2ec319fb74840fa2bb`
+Integrated `main` HEAD: `46098347bf4a5cae403a26f2139fd6d31992e933`
 
 ## M12.4 live Search repair — 2026-09-24
 
