@@ -324,6 +324,7 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="search_identity_select">Choose a name to review in Scan &amp; compare. This catalog does not confirm quantity, price or availability.</string>
     <string name="search_identity_open_compare">Open in Scan &amp; compare</string>
     <string name="search_identity_open_compare_description">Put the selected identity name into Scan &amp; compare for review. This does not confirm quantity, price or availability.</string>
+    <string name="search_identity_no_verified_picture">No verified product picture available</string>
     <string name="search_area_label">Search area: %1$s</string>
     <string name="search_identity_match_label">Match: %1$s</string>
     <string name="search_identity_source">Source: Argentina SEPA / Precios Claros qualified release</string>
