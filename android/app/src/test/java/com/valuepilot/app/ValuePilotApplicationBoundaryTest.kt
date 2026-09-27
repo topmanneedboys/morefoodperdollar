@@ -7,13 +7,13 @@ import java.io.File
 
 class ValuePilotApplicationBoundaryTest {
     @Test
-    fun `10107 startup initializes Firebase but does not run the historical probe`() {
+    fun `10108 startup initializes Firebase but does not run the historical probe`() {
         val source = file("src/main/java/com/valuepilot/app/ValuePilotApplication.kt").readText()
         val gradle = file("build.gradle.kts").readText()
         assertTrue(source.contains("ValuePilotFirebaseRuntime.initialize(this)"))
         assertFalse(source.contains("startIfEligible"))
-        assertTrue(gradle.contains("versionCode = 10107"))
-        assertTrue(gradle.contains("versionName = \"101.1.6\""))
+        assertTrue(gradle.contains("versionCode = 10108"))
+        assertTrue(gradle.contains("versionName = \"101.1.7\""))
         assertTrue(gradle.contains("buildConfigField(\"boolean\", \"M12_3_QUALIFICATION_PROBE\", \"false\")"))
     }
 
