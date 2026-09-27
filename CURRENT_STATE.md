@@ -21,6 +21,14 @@ workflow could not verify/write its discovery-state object and therefore
 returned `STATE_WRITE_UNVERIFIED`; promotion remained `SHADOW_ONLY` with zero
 active-pointer writes. This is useful candidate evidence, not end-to-end
 production qualification, and no unattended promotion is enabled.
+Read-only runtime inspection now shows both regional `control/active.json`
+pointers at
+`argentina-sepa-2026-09-25-93ce53aac8d3db32-routing-v1-search-v2`; the active
+manifest is complete and qualified from the official source hash
+`93ce53aac8d3db322c07b0bc66900016a91aba6b4ccf858a835bfb5f3f13b680`, while
+its own metadata records `automatedOfficialAcquisitionProven: false`. The
+running backend advertises that release and `androidNetworkingAuthorized=true`.
+This still does not prove a credentialed >5-result physical Search smoke.
 Ordinary research artifact retention was reduced from 14 to 3 days; the two
 durable release/provenance artifacts were deliberately preserved. GitHub run
 `36295847180` is **not green**: its code tests passed, but artifact uploads

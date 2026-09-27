@@ -20,6 +20,12 @@ Cloud Build successfully and persisted candidate
 `STATE_WRITE_UNVERIFIED` because the discovery-state object could not be
 verified. Promotion stayed `SHADOW_ONLY` with zero active-pointer writes, so
 this does not qualify the unattended end-to-end path.
+The current regional runtime pointers nevertheless read that same
+2026-09-25 release, whose complete manifest carries source SHA-256
+`93ce53aac8d3db322c07b0bc66900016a91aba6b4ccf858a835bfb5f3f13b680` and
+explicitly records `automatedOfficialAcquisitionProven: false`. The backend
+advertises the release and Android identity-search authorization, but this is
+not physical App Check/pagination evidence.
 Ordinary research artifact retention is 3 days; qualified provenance evidence
 was preserved. GitHub run `36295847180` remains failed overall because only its
 artifact uploads hit the full Actions quota; its reported code checks passed.
