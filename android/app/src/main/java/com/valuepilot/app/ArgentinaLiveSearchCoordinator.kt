@@ -46,6 +46,37 @@ internal data class ArgentinaSearchContext(
     }
 }
 
+/**
+ * Bounded, non-authoritative success evidence for the physical live-search
+ * trace.  This intentionally excludes the query, response body, product
+ * names, tokens, URLs, and headers; it exists only to make page/region/result
+ * verification auditable without changing the Search authority boundary.
+ */
+internal data class ArgentinaLiveSearchSuccessMetadata(
+    val page: Int,
+    val pageResultCount: Int,
+    val hasMore: Boolean,
+    val limitReached: Boolean,
+    val regionsQueried: List<String>,
+    val requestId: String?,
+    val releaseId: String?,
+    val releaseDate: String?
+) {
+    init {
+        require(page in 0..ArgentinaBackendContract.MAX_SEARCH_PAGE)
+        require(pageResultCount in 0..MAX_RESULT_COUNT)
+        require(regionsQueried.size <= MAX_REGIONS)
+        require(regionsQueried.all { REGION_ID_PATTERN.matches(it) })
+    }
+
+    private companion object {
+        const val MAX_REGIONS = 32
+        const val MAX_RESULT_COUNT =
+            ArgentinaBackendContract.MAX_MATCHES * ArgentinaBackendContract.MAX_PRODUCT_CANDIDATES
+        val REGION_ID_PATTERN = Regex("ar-[a-z0-9-]{1,31}")
+    }
+}
+
 /** Renderer-ready identity-only state for the future live Search surface. */
 internal sealed interface ArgentinaLiveSearchState {
     data class Idle(val generation: Long) : ArgentinaLiveSearchState
@@ -86,7 +117,8 @@ internal class ArgentinaLiveSearchCoordinator(
     private val executor: Executor,
     private val stateSink: (ArgentinaLiveSearchState) -> Unit,
     private val closeExecutor: (() -> Unit)? = null,
-    private val diagnosticSink: (ArgentinaBackendContract.FailureCode, ArgentinaBackendFailureMetadata?) -> Unit = { _, _ -> }
+    private val diagnosticSink: (ArgentinaBackendContract.FailureCode, ArgentinaBackendFailureMetadata?) -> Unit = { _, _ -> },
+    private val successDiagnosticSink: (ArgentinaLiveSearchSuccessMetadata) -> Unit = {}
 ) : AutoCloseable {
 
     private val lock = Any()
@@ -306,6 +338,9 @@ internal class ArgentinaLiveSearchCoordinator(
                         )
                     } else {
                         val presentation = mergePresentations(previousPresentation, result.value.identity)
+                        runCatching {
+                            successDiagnosticSink(successMetadata(result.value.response))
+                        }
                         publish(
                             if (presentation.matches.isEmpty()) {
                                 ArgentinaLiveSearchState.Empty(requestGeneration, query, presentation)
@@ -453,6 +488,30 @@ internal class ArgentinaLiveSearchCoordinator(
         )
     }
 
+    private fun successMetadata(
+        response: ArgentinaBackendContract.SearchResponse
+    ): ArgentinaLiveSearchSuccessMetadata {
+        val pagination = response.pagination
+        return ArgentinaLiveSearchSuccessMetadata(
+            page = pagination?.page ?: 0,
+            pageResultCount = response.identityCandidates.size,
+            hasMore = pagination?.hasMore == true,
+            limitReached = pagination?.limitReached == true,
+            regionsQueried = response.common.diagnostics["regionsQueried"]
+                .orEmpty()
+                .split(',')
+                .asSequence()
+                .map(String::trim)
+                .filter { it.isNotEmpty() && REGION_ID_PATTERN.matches(it) }
+                .distinct()
+                .take(MAX_REGIONS)
+                .toList(),
+            requestId = response.common.requestId,
+            releaseId = response.common.releaseId,
+            releaseDate = response.common.releaseDate
+        )
+    }
+
     private fun publish(next: ArgentinaLiveSearchState) {
         val accepted: Boolean
         synchronized(lock) {
@@ -483,10 +542,14 @@ internal class ArgentinaLiveSearchCoordinator(
     }
 
     companion object {
+        private const val MAX_REGIONS = 32
+        private val REGION_ID_PATTERN = Regex("ar-[a-z0-9-]{1,31}")
+
         fun create(
             transport: ArgentinaBackendTransport,
             stateSink: (ArgentinaLiveSearchState) -> Unit,
-            diagnosticSink: (ArgentinaBackendContract.FailureCode, ArgentinaBackendFailureMetadata?) -> Unit = { _, _ -> }
+            diagnosticSink: (ArgentinaBackendContract.FailureCode, ArgentinaBackendFailureMetadata?) -> Unit = { _, _ -> },
+            successDiagnosticSink: (ArgentinaLiveSearchSuccessMetadata) -> Unit = {}
         ): ArgentinaLiveSearchCoordinator {
             val executor = ThreadPoolExecutor(
                 1,
@@ -504,8 +567,10 @@ internal class ArgentinaLiveSearchCoordinator(
                 executor = executor,
                 stateSink = stateSink,
                 diagnosticSink = diagnosticSink,
+                successDiagnosticSink = successDiagnosticSink,
                 closeExecutor = executor::shutdownNow
             )
         }
     }
+
 }
