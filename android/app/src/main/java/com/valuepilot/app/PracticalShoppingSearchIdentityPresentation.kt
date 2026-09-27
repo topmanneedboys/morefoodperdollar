@@ -86,7 +86,7 @@ internal data class PracticalShoppingSearchIdentityPresentation(
 
     companion object {
         private const val NOTICE =
-            "Signed offline product-identity suggestions from Canada-labelled Open Food Facts snapshots for the GTA and Metro Vancouver (ODbL-1.0) only — no current prices, package quantities, stock, store availability or freshness are included."
+            "Signed offline product-identity suggestions from Canada-labelled Open Food Facts snapshots for the GTA and Metro Vancouver (ODbL-1.0) only — no current prices, stock, store availability or freshness are included; package size appears only when explicitly supplied by the source."
 
         fun from(
             query: String,

@@ -46,6 +46,8 @@ class PracticalShoppingSearchIdentityPresentationTest {
         assertEquals("Dairyland", presentation.matches.first().brand)
         assertEquals(30_000, presentation.evaluatedCandidateCount)
         assertTrue(presentation.summaryMessage.contains("no current prices"))
+        assertTrue(presentation.summaryMessage.contains("package size appears only when explicitly supplied"))
+        assertFalse(presentation.summaryMessage.contains("no current prices, package quantities"))
         assertTrue(presentation.summaryMessage.contains("Checked 30000 bundled product identities"))
         assertFalse(presentation.message.contains("CAD"))
         assertFalse(presentation.message.contains("Store:"))
