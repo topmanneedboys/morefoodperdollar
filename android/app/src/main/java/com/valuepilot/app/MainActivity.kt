@@ -2198,6 +2198,9 @@ class MainActivity : AppCompatActivity() {
                 listOfNotNull(
                     match.displayName,
                     match.brand,
+                    match.packageQuantityLabel?.let {
+                        getString(R.string.search_identity_package_size, it)
+                    },
                     match.matchLabel,
                     "Argentina SEPA identity result",
                     getString(R.string.search_identity_no_verified_picture),
@@ -2243,6 +2246,15 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        val packageQuantity = match.packageQuantityLabel?.let { quantityLabel ->
+            TextView(this).apply {
+                text = getString(R.string.search_identity_package_size, quantityLabel)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                setTextColor(ValuePilotPalette.color("#374151"))
+                setPadding(0, dp(7), 0, 0)
+            }
+        }
+
         val matchLabel = TextView(this).apply {
             text = getString(R.string.search_identity_match_label, match.matchLabel)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
@@ -2261,6 +2273,7 @@ class MainActivity : AppCompatActivity() {
         body.addView(picturePlaceholder)
         body.addView(name)
         brand?.let(body::addView)
+        packageQuantity?.let(body::addView)
         body.addView(matchLabel)
         TextView(this).apply {
             text = caveat

@@ -8,10 +8,12 @@ import com.valuepilot.core.OfflineCatalogSnapshotManifest
 /**
  * Immutable presentation for Search's real, offline identity rail.
  *
- * The bundled catalog contributes names and optional brands only. It carries
- * no package quantity, price, store, availability, freshness or ranking
- * authority. A later action may hand the selected name to Scan & compare, but
- * that route still requires the shopper to review and supply exact evidence.
+ * The bundled catalog contributes names and optional brands only. The
+ * Argentina identity rail may also carry an explicitly validated package
+ * quantity, but this presentation carries no price, store, availability,
+ * freshness or ranking authority. A later action may hand the selected name
+ * to Scan & compare, but that route still requires the shopper to review and
+ * supply exact evidence.
  */
 internal data class PracticalShoppingSearchIdentityPresentation(
     val query: String,
@@ -27,12 +29,16 @@ internal data class PracticalShoppingSearchIdentityPresentation(
         val displayName: String,
         val brand: String?,
         val matchLabel: String,
+        /** Exact structured package quantity when the source supplied one. */
+        val packageQuantityLabel: String? = null,
         val identityKey: String = displayName
     ) {
         init {
             require(displayName.isNotBlank())
             require(brand == null || brand.isNotBlank())
             require(matchLabel.isNotBlank())
+            require(packageQuantityLabel == null || packageQuantityLabel.isNotBlank())
+            require(packageQuantityLabel == null || packageQuantityLabel.length <= 64)
             require(identityKey.isNotBlank())
         }
     }
@@ -72,6 +78,7 @@ internal data class PracticalShoppingSearchIdentityPresentation(
                     append("• ")
                     append(match.displayName)
                     match.brand?.let { append(" · ").append(it) }
+                    match.packageQuantityLabel?.let { append(" · package ").append(it) }
                     append(" (").append(match.matchLabel).append(")")
                 }
             }

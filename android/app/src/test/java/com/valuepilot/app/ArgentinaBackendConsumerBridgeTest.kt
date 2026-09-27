@@ -34,7 +34,9 @@ class ArgentinaBackendConsumerBridgeTest {
         assertTrue(bridge.status() is ArgentinaBackendBridgeResult.Success)
         val search = bridge.searchPresentation(searchRequest())
         assertTrue(search.toString(), search is ArgentinaBackendBridgeResult.Success)
-        assertEquals("exact barcode", (search as ArgentinaBackendBridgeResult.Success).value.identity.matches.single().matchLabel)
+        val searchSuccess = search as ArgentinaBackendBridgeResult.Success
+        assertEquals("exact barcode", searchSuccess.value.identity.matches.single().matchLabel)
+        assertEquals("1 kg", searchSuccess.value.identity.matches.single().packageQuantityLabel)
 
         val interpreted = bridge.interpretPresentation(ArgentinaBackendContract.InterpretRequest("1 kg yerba"))
         assertTrue(interpreted is ArgentinaBackendBridgeResult.Success)
@@ -363,6 +365,34 @@ class ArgentinaBackendConsumerBridgeTest {
         assertEquals("ar-b,ar-caba", parsed.common.diagnostics["regionsQueried"])
         assertEquals("1673.376", parsed.common.diagnostics["regionalSearchMs"])
         assertEquals(1, parsed.identityCandidates.size)
+    }
+
+    @Test
+    fun searchIdentityWithoutQuantityRemainsExplicitlyUnknown() {
+        val body =
+            JSONObject(searchJson())
+                .put("resolution", "DISCOVERY")
+                .put("input", JSONObject.NULL)
+                .put(
+                    "matches",
+                    JSONArray().put(
+                        JSONObject(productIdentity().toString()).put("quantity", JSONObject.NULL)
+                    )
+                )
+                .toString()
+
+        val result =
+            ArgentinaBackendConsumerBridge(
+                InMemoryArgentinaBackendTransport(
+                    mapOf(ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT to response(200, body))
+                ),
+                release
+            ).searchPresentation(searchRequest())
+
+        assertTrue(result is ArgentinaBackendBridgeResult.Success)
+        val success = result as ArgentinaBackendBridgeResult.Success
+        assertNull(success.value.identity.matches.single().packageQuantityLabel)
+        assertTrue(success.value.identity.notice.contains("package size is shown only when explicitly supplied"))
     }
 
     @Test

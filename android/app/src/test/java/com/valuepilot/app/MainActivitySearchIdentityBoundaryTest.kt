@@ -18,6 +18,7 @@ class MainActivitySearchIdentityBoundaryTest {
             "ArgentinaQualifiedLaunchAreas.BuenosAiresCaba",
             "searchAreaLabel",
             "PracticalShoppingSearchIdentityPresentation.Match",
+            "packageQuantityLabel",
             "openComparisonWithSharedText(match.displayName)",
             "addSearchIdentityToHome",
             "search_identity_add_home_draft",
@@ -59,6 +60,7 @@ class MainActivitySearchIdentityBoundaryTest {
         assertTrue(card.contains("search_identity_open_compare"))
         assertTrue(card.contains("search_identity_add_home_draft"))
         assertTrue(card.contains("search_identity_no_verified_picture"))
+        assertTrue(card.contains("search_identity_package_size"))
         assertTrue(card.contains("picturePlaceholder"))
         assertTrue(card.contains("minHeight = dp(48)"))
         assertTrue(card.contains("#FFF1E8"))
