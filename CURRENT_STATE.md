@@ -1,18 +1,24 @@
 # Current state
 
-Updated: 2026-09-27 12:35 UTC
+Updated: 2026-09-27 13:32 UTC
 
 ## Resumed M12.4–M12.9 checkpoint — 2026-09-27
 
 The active continuation branch is `work/valuepilot-m124-m129`. The verified
 Data Status repair remains at `dcb40372bd0ed6f45afc87fea405d1dfdf01775b` and
 was not repeated; the untracked `device-audit/` directory is preserved. The
-current branch tip is `0e73ddeec55435b1ebe2ce3586899d8d0591ea60`.
-Remote `main` is `8ab8e422db74b8dc87be474a84537a7603670657` after merged PR #23.
-PR #23 refreshed these post-merge heads and passed exact-head workflow
-`36318208437` plus post-merge main workflow `36318781459`; browser and Android
-verification passed in both runs, while provenance/release-bundle jobs were
-skipped by policy.
+current branch tip is `891fc7144509502aada1ccc507c5cb56f05402a6`.
+Remote `main` is `7b16e5d79e153f7ab42c8a4114ac96755004c7cc` after merged PR #25.
+PR #24 exact-head workflow `36320656523` and post-merge main workflow
+`36321271157` passed browser and Android verification. PR #25 exact-head
+workflow `36321466323` and post-merge main workflow `36322095653` also passed
+browser and Android verification; provenance/release-bundle jobs were skipped
+by policy.
+
+The M12.8 Search-to-Home handoff is now merged: an Argentina identity result
+can be added to the private Home draft as one clearly unresolved multi-word
+item. This does not add price, stock, availability, ranking or planner
+authority; the Home planner remains the fictional offline sample path.
 
 M12.5 now has bounded SHADOW-result reconciliation, terminal failure alerts,
 write-free success checks, and idempotent receipts. It does not enable
