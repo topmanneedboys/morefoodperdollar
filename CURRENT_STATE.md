@@ -1,6 +1,6 @@
 # Current state
 
-Updated: 2026-09-24 20:50 UTC
+Updated: 2026-09-27 09:18 UTC
 
 ## Resumed M12.4–M12.9 checkpoint — 2026-09-26
 
@@ -42,9 +42,24 @@ or Play upload has occurred. The installed Play build remains 10107.
 Physical Motorola validation, any credentialed live smoke, and explicit
 approval for unattended promotion remain external gates.
 
+The bounded M12.4 trace gate was strengthened in commit
+`5a16e1166dd8d7d5a8d9c2893cfabe84ff8b4a97` and merged through PR #17 into
+`main` at `7840cb6555200ef3692bec2ec319fb74840fa2bb`. Success diagnostics
+contain only page, page-result count, pagination flags, bounded region IDs and
+safe release correlation fields; they never log the query, response body,
+product names, URL, headers or App Check token. The physical trace now follows
+the existing bounded Load More control and fails unless it observes at least
+six cards and the expected `ar-b` and `ar-caba` regions. The exact merged-main
+verification run `36308327069` passed: 405 shared-core tests, 1,694 Android
+tests, browser verification, lint/build, privacy and single-signer checks.
+No Motorola is attached (`adb devices -l` is empty), so M12.4 is still not
+claimed as physically verified.
+
 Branch: `work/valuepilot-m124-m129`
 
-Current HEAD: `e821b8099fea9d1288065b5a7f8cfc7f83f2763e`
+Candidate branch HEAD: `5a16e1166dd8d7d5a8d9c2893cfabe84ff8b4a97`
+
+Integrated `main` HEAD: `7840cb6555200ef3692bec2ec319fb74840fa2bb`
 
 ## M12.4 live Search repair — 2026-09-24
 
