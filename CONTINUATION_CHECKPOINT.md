@@ -2,16 +2,23 @@
 
 Updated: 2026-09-27
 
-## Resumed M12.4–M12.9 checkpoint — 2026-09-26
+## Resumed M12.4–M12.9 checkpoint — 2026-09-27
 
 Work continues on `work/valuepilot-m124-m129` from the verified Data Status
-repair `dcb40372bd0ed6f45afc87fea405d1dfdf01775b`; the untracked `device-audit/`
-directory remains untouched. The current implementation checkpoint is
-`dc4e0e9455dc126bedd8a86075db0beace9c63fe`. The branch includes the
-remote-main synchronization merge at `ac4c8585a771526422d0a5a9ae88ffb92b2be3f7`
-and the report-only correction `c57df814673b0476407870bc0b4958acac6c4952`.
-Remote `main` is `2281848155534f71f85141b9511a568899343cb5` after PR #19;
-the latest exact-head verification for this branch is run `36312862938`.
+repair `dcb40372bd0ed6f45afc87fea405d1dfdf01775b`; that repair was not
+repeated. The untracked `device-audit/` directory remains untouched. The
+current branch tip is `73ecbf5e20170fe85f6935406585d08f39170683`; its tree is
+content-equivalent to remote `main` at
+`09c36d2473e925739d9f178491e5bd9db754e3c6` after PR #21.
+
+PR #21 (`Serialize Argentina SHADOW reconciliation`) is merged. It makes the
+GitHub acquisition handoff run before SHADOW reconciliation, removing the
+same-run durable-state race, while `always()` still permits recovery
+reconciliation after an acquisition failure. Exact-head PR runs
+`36315163770` and `36315146325` passed; post-merge main runs
+`36315728824` and `36315728794` passed. Android test/lint/build, privacy,
+single-signer, browser and acquisition-control checks were green. Release and
+provenance uploads were skipped by policy; this is not a release promotion.
 
 The M12.5 acquisition controller now reconciles asynchronous SHADOW results
 with exact execution identity, requires a write-free verified candidate for
@@ -46,13 +53,19 @@ eligible. The 389 `yerba` identities had 0 strict image candidates. See
 No images or raw exports are stored in Git or Android.
 
 M12.4 is still partial pending a valid >5-result/App-Check smoke in both
-regions and the Motorola path. The latest exact-head verification run
-`36312862938` is green, but it cannot replace that physical evidence. The
-existing M12.7/M12.8 offline/private
-surfaces remain bounded and truthful; live offers are not enabled. M12.9 now
-has an unsigned 10108 / 101.1.7 candidate in the normal build configuration.
-No new signing or Play upload has been started; 10107 remains the installed
-Play build for the pending physical smoke.
+regions and the Motorola path. The current code uses five-result pages with
+bounded Load More accumulation, but no live physical evidence is claimed.
+The existing M12.7/M12.8 offline/private surfaces remain bounded and
+truthful; live offers are not enabled. M12.9 has an unsigned 10108 / 101.1.7
+candidate in the normal build configuration. No new signing or Play upload
+has been started; 10107 remains the installed Play build for the pending
+physical smoke.
+
+GitHub Actions storage remains free-first: two durable provenance artifacts
+(`10085413603`, `10000282677`) total 76,864,219 bytes and active cache usage
+is zero. They are preserved; no provenance or raw data was deleted. Run
+`36295847180` remains overall failed because only its artifact uploads hit the
+quota, even though its code checks passed.
 
 Branch: `work/valuepilot-m124-m129`
 

@@ -1,17 +1,25 @@
 # Current state
 
-Updated: 2026-09-27 10:05 UTC
+Updated: 2026-09-27 11:30 UTC
 
-## Resumed M12.4–M12.9 checkpoint — 2026-09-26
+## Resumed M12.4–M12.9 checkpoint — 2026-09-27
 
 The active continuation branch is `work/valuepilot-m124-m129`. The verified
 Data Status repair remains at `dcb40372bd0ed6f45afc87fea405d1dfdf01775b` and
 was not repeated; the untracked `device-audit/` directory is preserved. The
-next M12.5 code checkpoint is `44c6b4b99b11578bd77de4247dcf15e34a529d01`.
+current branch tip is `73ecbf5e20170fe85f6935406585d08f39170683`. Remote
+`main` is `09c36d2473e925739d9f178491e5bd9db754e3c6` after merged PR #21, and
+the branch tree is content-equivalent to that main tree.
 
 M12.5 now has bounded SHADOW-result reconciliation, terminal failure alerts,
 write-free success checks, and idempotent receipts. It does not enable
 unattended production promotion. Its focused local tests pass (42 tests).
+PR #21 additionally serializes the GitHub acquisition handoff before SHADOW
+reconciliation and keeps recovery reconciliation enabled after acquisition
+failure. Exact-head PR runs `36315163770` and `36315146325`, plus post-merge
+main runs `36315728824` and `36315728794`, passed Android test/lint/build,
+privacy, single-signer, browser and acquisition-control checks. Release and
+provenance uploads were skipped by policy.
 The deployed `valuepilot-argentina-release` workflow is now ACTIVE at
 revision `000013-32a`. Its latest scheduled execution was on the prior
 revision `000012-0a4` (`c46e8991-4927-4737-b6ae-5af7a2818029`): Cloud Build
@@ -74,13 +82,10 @@ claimed as physically verified.
 
 Branch: `work/valuepilot-m124-m129`
 
-The current branch includes synchronized `main` plus the report-only
-checkpoint correction; its exact Git HEAD is reported separately at the
-checkpoint. The implementation checkpoint remains the earlier
-`dc4e0e9455dc126bedd8a86075db0beace9c63fe`. Remote `main` is
-`2281848155534f71f85141b9511a568899343cb5` (PR #19 squash merge). The latest
-exact-head verification run `36312862938` passed; release-bundle and
-provenance uploads were skipped by policy.
+The current branch preserves the untracked `device-audit/` evidence. GitHub
+Actions currently stores only the two durable provenance artifacts
+(`10085413603`, `10000282677`), totalling 76,864,219 bytes, with zero active
+caches. They remain preserved; no provenance or raw provider data was deleted.
 
 ## M12.4 live Search repair — 2026-09-24
 
