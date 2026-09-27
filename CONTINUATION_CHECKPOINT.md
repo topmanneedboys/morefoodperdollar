@@ -1,23 +1,28 @@
 # ValuePilot Continuation Checkpoint
 
-Updated: 2026-09-27 13:32 UTC
+Updated: 2026-09-27 14:24 UTC
 
 ## Resumed M12.4–M12.9 checkpoint — 2026-09-27
 
 Work continues on `work/valuepilot-m124-m129` from the verified Data Status
 repair `dcb40372bd0ed6f45afc87fea405d1dfdf01775b`; that repair was not
 repeated. The untracked `device-audit/` directory remains untouched. The
-current branch tip is `891fc7144509502aada1ccc507c5cb56f05402a6`.
-Remote `main` is `7b16e5d79e153f7ab42c8a4114ac96755004c7cc` after merged PR #25.
+latest feature commit before this documentation checkpoint is
+`2ab962573acd3436ba5d84cf6cc190eed956b90a`.
+Remote `main` is `b7c766e1d1a86f60b02ffc764cca3f0a35f0395c` after merged PR #27.
 PR #24 exact-head workflow `36320656523` and post-merge main workflow
 `36321271157` passed browser and Android verification. PR #25 exact-head
 workflow `36321466323` and post-merge main workflow `36322095653` also passed
 browser and Android verification; provenance/release-bundle jobs were skipped
-by policy.
+by policy. PR #27 exact-head workflow `36324495187` and post-merge main
+workflow `36325161398` passed browser and Android verification; provenance and
+release-bundle jobs were skipped by policy.
 
 The merged M12.8 handoff lets a Search identity result enter the private Home
-draft as one unresolved multi-word item. It remains identity-only and does not
-create a price, stock, availability, ranking or planner claim.
+draft as one unresolved multi-word item. Search cards now show an explicitly
+validated Argentina package size when the source supplies one; a missing
+quantity stays unknown. These remain identity-only changes and do not create a
+price, stock, availability, ranking or planner claim.
 
 PR #21 (`Serialize Argentina SHADOW reconciliation`) is merged. It makes the
 GitHub acquisition handoff run before SHADOW reconciliation, removing the
