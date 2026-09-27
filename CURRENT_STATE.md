@@ -74,12 +74,13 @@ claimed as physically verified.
 
 Branch: `work/valuepilot-m124-m129`
 
-Current branch HEAD: `867abc9a50e9fca35e39cb89a3a337eea150405c`.
-This is the report-only continuation head after PR #19; the implementation
-checkpoint remains the earlier `dc4e0e9455dc126bedd8a86075db0beace9c63fe`.
-Integrated remote `main` HEAD: `2281848155534f71f85141b9511a568899343cb5`
-(PR #19 squash merge). Exact merged-main verification run `36311518989`
-passed; release-bundle and provenance uploads were skipped by policy.
+Current branch integration HEAD: `ac4c8585a771526422d0a5a9ae88ffb92b2be3f7`.
+The report-only correction commit is `c57df814673b0476407870bc0b4958acac6c4952`;
+the implementation checkpoint remains the earlier
+`dc4e0e9455dc126bedd8a86075db0beace9c63fe`. Remote `main` base for this
+review is `2281848155534f71f85141b9511a568899343cb5` (PR #19 squash merge).
+The correction commit's exact-head verification run `36312350591` passed;
+release-bundle and provenance uploads were skipped by policy.
 
 ## M12.4 live Search repair — 2026-09-24
 

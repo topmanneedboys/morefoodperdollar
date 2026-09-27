@@ -7,10 +7,11 @@ Updated: 2026-09-27
 Work continues on `work/valuepilot-m124-m129` from the verified Data Status
 repair `dcb40372bd0ed6f45afc87fea405d1dfdf01775b`; the untracked `device-audit/`
 directory remains untouched. The current implementation checkpoint is
-`dc4e0e9455dc126bedd8a86075db0beace9c63fe`. The current report-only branch
-HEAD is `867abc9a50e9fca35e39cb89a3a337eea150405c`; remote `main` is
-`2281848155534f71f85141b9511a568899343cb5` after PR #19, and exact-main
-verification run `36311518989` passed.
+`dc4e0e9455dc126bedd8a86075db0beace9c63fe`. The branch now includes the
+remote-main synchronization merge at `ac4c8585a771526422d0a5a9ae88ffb92b2be3f7`;
+the report-only correction itself is `c57df814673b0476407870bc0b4958acac6c4952`.
+Its exact-head verification run `36312350591` passed; the synchronized base
+was remote `main` `2281848155534f71f85141b9511a568899343cb5` after PR #19.
 
 The M12.5 acquisition controller now reconciles asynchronous SHADOW results
 with exact execution identity, requires a write-free verified candidate for
@@ -45,8 +46,8 @@ eligible. The 389 `yerba` identities had 0 strict image candidates. See
 No images or raw exports are stored in Git or Android.
 
 M12.4 is still partial pending a valid >5-result/App-Check smoke in both
-regions and the Motorola path. The exact merged-main verification run
-`36311518989` is green, but it cannot replace that physical evidence. The
+regions and the Motorola path. The correction's exact-head verification run
+`36312350591` is green, but it cannot replace that physical evidence. The
 existing M12.7/M12.8 offline/private
 surfaces remain bounded and truthful; live offers are not enabled. M12.9 now
 has an unsigned 10108 / 101.1.7 candidate in the normal build configuration.
