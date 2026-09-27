@@ -1,24 +1,29 @@
 # Current state
 
-Updated: 2026-09-27 13:32 UTC
+Updated: 2026-09-27 14:24 UTC
 
 ## Resumed M12.4–M12.9 checkpoint — 2026-09-27
 
 The active continuation branch is `work/valuepilot-m124-m129`. The verified
 Data Status repair remains at `dcb40372bd0ed6f45afc87fea405d1dfdf01775b` and
 was not repeated; the untracked `device-audit/` directory is preserved. The
-current branch tip is `891fc7144509502aada1ccc507c5cb56f05402a6`.
-Remote `main` is `7b16e5d79e153f7ab42c8a4114ac96755004c7cc` after merged PR #25.
+latest feature commit before this documentation checkpoint is
+`2ab962573acd3436ba5d84cf6cc190eed956b90a`.
+Remote `main` is `b7c766e1d1a86f60b02ffc764cca3f0a35f0395c` after merged PR #27.
 PR #24 exact-head workflow `36320656523` and post-merge main workflow
 `36321271157` passed browser and Android verification. PR #25 exact-head
 workflow `36321466323` and post-merge main workflow `36322095653` also passed
 browser and Android verification; provenance/release-bundle jobs were skipped
-by policy.
+by policy. PR #27 exact-head workflow `36324495187` and post-merge main
+workflow `36325161398` passed browser and Android verification; provenance and
+release-bundle jobs were skipped by policy.
 
 The M12.8 Search-to-Home handoff is now merged: an Argentina identity result
 can be added to the private Home draft as one clearly unresolved multi-word
-item. This does not add price, stock, availability, ranking or planner
-authority; the Home planner remains the fictional offline sample path.
+item. Search cards now also show an explicitly validated Argentina package
+size when the source supplies one; missing quantity remains unknown. These
+changes do not add price, stock, availability, ranking or planner authority;
+the Home planner remains the fictional offline sample path.
 
 M12.5 now has bounded SHADOW-result reconciliation, terminal failure alerts,
 write-free success checks, and idempotent receipts. It does not enable
