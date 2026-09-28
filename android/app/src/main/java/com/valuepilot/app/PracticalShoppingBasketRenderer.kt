@@ -15,6 +15,26 @@ enum class PracticalShoppingBasketStatus {
     PLANNED
 }
 
+/** Identity-only private Basket row. It carries no price, store or availability authority. */
+data class PracticalShoppingBasketPrivateIdentityRenderState(
+    val identityKey: String,
+    val displayName: String,
+    val brand: String?,
+    val sourceLabel: String?,
+    val packageQuantityLabel: String?,
+    val collected: Boolean,
+    val notice: String = PracticalShoppingHomeRenderer.PRIVATE_IDENTITY_NOTICE
+) {
+    init {
+        require(identityKey.isNotBlank())
+        require(displayName.isNotBlank())
+        require(brand == null || brand.isNotBlank())
+        require(sourceLabel == null || sourceLabel.isNotBlank())
+        require(packageQuantityLabel == null || packageQuantityLabel.isNotBlank())
+        require(notice.isNotBlank())
+    }
+}
+
 data class PracticalShoppingBasketRenderState(
     val status: PracticalShoppingBasketStatus,
     val headline: String,
@@ -51,7 +71,9 @@ data class PracticalShoppingBasketRenderState(
             "Check-off is only a local shopping-session aid; it does not place an order or change the plan."
         } else {
             null
-        }
+        },
+    /** Separate, identity-only checklist rows saved from Search on Home. */
+    val privateIdentityItems: List<PracticalShoppingBasketPrivateIdentityRenderState> = emptyList()
 ) {
     init {
         require(headline.isNotBlank())
@@ -76,6 +98,10 @@ data class PracticalShoppingBasketRenderState(
         require(collectionScopeId == null || collectionScopeId.length <= 64)
         require((collectionScopeId != null) == collectionEnabled)
         require((collectionNotice != null) == collectionEnabled)
+        require(privateIdentityItems.size <= PracticalShoppingPrivateIdentity.MAX_COUNT)
+        require(
+            privateIdentityItems.map { it.identityKey }.distinct().size == privateIdentityItems.size
+        )
         if (status == PracticalShoppingBasketStatus.EMPTY) {
             require(items.isEmpty())
             require(unknownItems.isEmpty())
@@ -185,7 +211,22 @@ object PracticalShoppingBasketRenderer {
                     "Edit on Home"
                 },
             sampleNotice = source.sampleNotice,
-            collectibleItemKeys = collectibleItemKeys
+            collectibleItemKeys = collectibleItemKeys,
+            privateIdentityItems =
+                source.privateIdentityItems
+                    .take(PracticalShoppingPrivateIdentity.MAX_COUNT)
+                    .distinctBy { it.identityKey }
+                    .map { identity ->
+                        PracticalShoppingBasketPrivateIdentityRenderState(
+                            identityKey = identity.identityKey,
+                            displayName = identity.displayName,
+                            brand = identity.brand,
+                            sourceLabel = identity.sourceLabel,
+                            packageQuantityLabel = identity.packageQuantityLabel,
+                            collected =
+                                identity.identityKey in source.privateIdentityCollectedKeys
+                        )
+                    }
         )
     }
 

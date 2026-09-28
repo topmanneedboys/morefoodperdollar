@@ -117,7 +117,7 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
         val source = source("PracticalShoppingBasketSurfaceView.kt").readSourceText()
 
         assertEquals(
-            3,
+            4,
             source
                 .split("accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE")
                 .size - 1

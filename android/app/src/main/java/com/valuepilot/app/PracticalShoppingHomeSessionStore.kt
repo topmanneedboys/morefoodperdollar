@@ -23,7 +23,8 @@ object PracticalShoppingHomeSessionStoreCodec {
         chickenChoice: String?,
         extraStopMinimumSavingsChoice: String?,
         requestDetailsLifecycleState: ByteArray?,
-        privateIdentities: String? = null
+        privateIdentities: String? = null,
+        privateBasketCollectedIdentityKeys: String? = null
     ): PracticalShoppingHomeSession.Snapshot? {
         val safeQuery = query ?: return null
         if (safeQuery.length > MAX_PERSISTED_QUERY_LENGTH) return null
@@ -46,7 +47,9 @@ object PracticalShoppingHomeSessionStoreCodec {
             extraStopMinimumSavingsChoice =
                 PracticalShoppingHomePreferenceCodec.decode(extraStopMinimumSavingsChoice),
             requestDetailsLifecycleState = safeDetails,
-            privateIdentities = decodePrivateIdentities(privateIdentities)
+            privateIdentities = decodePrivateIdentities(privateIdentities),
+            privateBasketCollectedIdentityKeys =
+                decodePrivateBasketCollectedIdentityKeys(privateBasketCollectedIdentityKeys)
         )
     }
 
@@ -115,6 +118,41 @@ object PracticalShoppingHomeSessionStoreCodec {
         }
     }
 
+    /** Encodes only exact identity keys whose local checklist mark is collected. */
+    fun encodePrivateBasketCollectedIdentityKeys(values: List<String>): String? {
+        val keys =
+            values
+                .asSequence()
+                .filter(String::isNotBlank)
+                .distinct()
+                .take(PracticalShoppingPrivateIdentity.MAX_COUNT)
+                .toList()
+        if (keys.isEmpty()) return null
+        return buildString {
+            append(PRIVATE_BASKET_KEYS_VERSION)
+            append(':')
+            keys.joinTo(this, separator = ";", transform = ::encodeField)
+        }
+    }
+
+    /** Invalid, duplicate or oversized checklist storage fails closed. */
+    fun decodePrivateBasketCollectedIdentityKeys(encoded: String?): List<String> {
+        if (encoded.isNullOrBlank() || encoded.length > MAX_PRIVATE_BASKET_KEYS_ENCODED_LENGTH) {
+            return emptyList()
+        }
+        val prefix = "$PRIVATE_BASKET_KEYS_VERSION:"
+        if (!encoded.startsWith(prefix)) return emptyList()
+        val entries = encoded.removePrefix(prefix).split(';')
+        if (entries.isEmpty() || entries.size > PracticalShoppingPrivateIdentity.MAX_COUNT) {
+            return emptyList()
+        }
+        val decoded = entries.map { value ->
+            decodeField(value, PracticalShoppingPrivateIdentity.MAX_IDENTITY_KEY_LENGTH, true)
+                ?: return emptyList()
+        }
+        return if (decoded.distinct().size == decoded.size) decoded else emptyList()
+    }
+
     private fun encodeField(value: String?): String =
         value?.let {
             val bytes = it.toByteArray(StandardCharsets.UTF_8)
@@ -150,6 +188,8 @@ object PracticalShoppingHomeSessionStoreCodec {
 
     private const val PRIVATE_IDENTITIES_VERSION = "v1"
     private const val MAX_PRIVATE_IDENTITIES_ENCODED_LENGTH = 400_000
+    private const val PRIVATE_BASKET_KEYS_VERSION = "v1"
+    private const val MAX_PRIVATE_BASKET_KEYS_ENCODED_LENGTH = 40_000
     private const val HEX_DIGITS = "0123456789abcdef"
 }
 
@@ -186,7 +226,9 @@ class AndroidPracticalShoppingHomeSessionStore(context: Context) :
             extraStopMinimumSavingsChoice =
                 preferences.getString(KEY_EXTRA_STOP_MINIMUM_SAVINGS, null),
             requestDetailsLifecycleState = details,
-            privateIdentities = preferences.getString(KEY_PRIVATE_IDENTITIES, null)
+            privateIdentities = preferences.getString(KEY_PRIVATE_IDENTITIES, null),
+            privateBasketCollectedIdentityKeys =
+                preferences.getString(KEY_PRIVATE_BASKET_KEYS, null)
         )
     }
 
@@ -209,6 +251,13 @@ class AndroidPracticalShoppingHomeSessionStore(context: Context) :
             ?.let { encoded -> editor.putString(KEY_PRIVATE_IDENTITIES, encoded) }
             ?: editor.remove(KEY_PRIVATE_IDENTITIES)
 
+        PracticalShoppingHomeSessionStoreCodec
+            .encodePrivateBasketCollectedIdentityKeys(
+                snapshot.privateBasketCollectedIdentityKeys
+            )
+            ?.let { encoded -> editor.putString(KEY_PRIVATE_BASKET_KEYS, encoded) }
+            ?: editor.remove(KEY_PRIVATE_BASKET_KEYS)
+
         snapshot.requestDetailsLifecycleState?.let { bytes ->
             editor.putString(
                 KEY_REQUEST_DETAILS,
@@ -228,6 +277,7 @@ class AndroidPracticalShoppingHomeSessionStore(context: Context) :
             .remove(KEY_EXTRA_STOP_MINIMUM_SAVINGS)
             .remove(KEY_REQUEST_DETAILS)
             .remove(KEY_PRIVATE_IDENTITIES)
+            .remove(KEY_PRIVATE_BASKET_KEYS)
             .apply()
     }
 
@@ -239,5 +289,6 @@ class AndroidPracticalShoppingHomeSessionStore(context: Context) :
         const val KEY_EXTRA_STOP_MINIMUM_SAVINGS = "extra_stop_minimum_savings"
         const val KEY_REQUEST_DETAILS = "request_details"
         const val KEY_PRIVATE_IDENTITIES = "private_identities"
+        const val KEY_PRIVATE_BASKET_KEYS = "private_basket_collected_keys"
     }
 }

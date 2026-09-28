@@ -79,6 +79,56 @@ class PracticalShoppingHomeSessionTest {
     }
 
     @Test
+    fun privateBasketChecklistTogglesPersistsAndRemovalClearsProgress() {
+        val first = identity("sepa:first")
+        val second = identity("sepa:second", name = "Tea")
+        var state = PracticalShoppingHomeSession.initialState()
+        state = PracticalShoppingHomeSession.addPrivateIdentity(state, first)
+        state = PracticalShoppingHomeSession.addPrivateIdentity(state, second)
+
+        state = PracticalShoppingHomeSession.togglePrivateIdentityCollected(state, second.identityKey)
+        assertEquals(listOf(second.identityKey), state.privateBasketCollectedIdentityKeys)
+
+        val restored =
+            PracticalShoppingHomeSession.restoreState(
+                PracticalShoppingHomeSession.snapshot(state)
+            )
+        assertEquals(listOf(first, second), restored.privateIdentities)
+        assertEquals(listOf(second.identityKey), restored.privateBasketCollectedIdentityKeys)
+
+        val removed =
+            PracticalShoppingHomeSession.removePrivateIdentity(restored, second.identityKey)
+        assertTrue(removed.privateBasketCollectedIdentityKeys.isEmpty())
+
+        val readded = PracticalShoppingHomeSession.addPrivateIdentity(removed, second)
+        assertTrue(readded.privateBasketCollectedIdentityKeys.isEmpty())
+    }
+
+    @Test
+    fun privateBasketChecklistIgnoresUnknownKeysAndCapsAtIdentityLimit() {
+        val identities =
+            (0 until PracticalShoppingPrivateIdentity.MAX_COUNT).map { index ->
+                identity("sepa:$index", name = "Product $index")
+            }
+        val state =
+            PracticalShoppingHomeSession.restoreState(
+                PracticalShoppingHomeSession.Snapshot(
+                    query = "",
+                    wasSubmitted = false,
+                    chickenChoice = null,
+                    privateIdentities = identities,
+                    privateBasketCollectedIdentityKeys =
+                        listOf("sepa:99", "unknown", "sepa:99", " ")
+                )
+            )
+
+        assertEquals(listOf("sepa:99"), state.privateBasketCollectedIdentityKeys)
+        assertTrue(
+            PracticalShoppingHomeSession.togglePrivateIdentityCollected(state, "unknown") == state
+        )
+    }
+
+    @Test
     fun typedButUnsubmittedQueryRestoresAsIdleDraft() {
         var model = LocalSamplePracticalShoppingDemo.initialModel()
         model =

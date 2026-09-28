@@ -313,6 +313,9 @@ class MainActivity : AppCompatActivity() {
         PracticalShoppingHomeSessionStoreCodec
             .encodePrivateIdentities(homeSnapshot.privateIdentities)
             ?.let { encoded -> outState.putString(STATE_HOME_PRIVATE_IDENTITIES, encoded) }
+        PracticalShoppingHomeSessionStoreCodec
+            .encodePrivateBasketCollectedIdentityKeys(homeSnapshot.privateBasketCollectedIdentityKeys)
+            ?.let { encoded -> outState.putString(STATE_HOME_PRIVATE_BASKET_KEYS, encoded) }
         homeSnapshot.requestDetailsLifecycleState?.let { encoded ->
             outState.putByteArray(STATE_HOME_REQUEST_DETAILS, encoded)
         }
@@ -385,6 +388,7 @@ class MainActivity : AppCompatActivity() {
         }
         if (::basketExperience.isInitialized) {
             basketExperience.onAction = null
+            basketExperience.onPrivateIdentityToggle = null
         }
         if (::savedRouteCoordinator.isInitialized) {
             savedExperience.onAction = null
@@ -485,6 +489,10 @@ class MainActivity : AppCompatActivity() {
                 privateIdentities =
                     PracticalShoppingHomeSessionStoreCodec.decodePrivateIdentities(
                         savedInstanceState?.getString(STATE_HOME_PRIVATE_IDENTITIES)
+                    ),
+                privateBasketCollectedIdentityKeys =
+                    PracticalShoppingHomeSessionStoreCodec.decodePrivateBasketCollectedIdentityKeys(
+                        savedInstanceState?.getString(STATE_HOME_PRIVATE_BASKET_KEYS)
                     )
             )
         )
@@ -581,7 +589,8 @@ class MainActivity : AppCompatActivity() {
                         PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE
                     },
                 savedExactProductContext = homeSavedExactProductContext,
-                privateIdentities = homeSessionState.privateIdentities
+                privateIdentities = homeSessionState.privateIdentities,
+                privateIdentityCollectedKeys = homeSessionState.privateBasketCollectedIdentityKeys
             )
         // A render invalidates any pending share preview. This prevents a dialog opened for an
         // earlier list/result from sending text after the Home projection has changed.
@@ -1220,6 +1229,14 @@ class MainActivity : AppCompatActivity() {
                 PracticalShoppingBasketUiAction.OpenHome ->
                     dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.HOME))
             }
+        }
+        basketExperience.onPrivateIdentityToggle = { identityKey ->
+            homeSessionState =
+                PracticalShoppingHomeSession.togglePrivateIdentityCollected(
+                    homeSessionState,
+                    identityKey
+                )
+            renderHome()
         }
     }
 
@@ -2458,6 +2475,7 @@ class MainActivity : AppCompatActivity() {
             "app_shell.home_extra_stop_minimum_savings"
         private const val STATE_HOME_REQUEST_DETAILS = "app_shell.home_request_details"
         private const val STATE_HOME_PRIVATE_IDENTITIES = "app_shell.home_private_identities"
+        private const val STATE_HOME_PRIVATE_BASKET_KEYS = "app_shell.home_private_basket_keys"
         private const val STATE_HOME_DETAILS_ITEM_KEY = "app_shell.home_details_item_key"
         private const val STATE_HOME_DETAILS_PACKAGE_COUNT = "app_shell.home_details_package_count"
         private const val STATE_HOME_DETAILS_BRAND = "app_shell.home_details_brand"

@@ -136,6 +136,33 @@ class PracticalShoppingHomeSessionStoreCodecTest {
     }
 
     @Test
+    fun privateBasketChecklistEncodingIsDeterministicAndFailsClosed() {
+        val keys = listOf("sepa:yerba:001", "sepa:second")
+        val encoded =
+            requireNotNull(
+                PracticalShoppingHomeSessionStoreCodec.encodePrivateBasketCollectedIdentityKeys(
+                    keys
+                )
+            )
+
+        assertEquals(encoded, PracticalShoppingHomeSessionStoreCodec.encodePrivateBasketCollectedIdentityKeys(keys))
+        assertEquals(
+            keys,
+            PracticalShoppingHomeSessionStoreCodec.decodePrivateBasketCollectedIdentityKeys(encoded)
+        )
+        assertTrue(
+            PracticalShoppingHomeSessionStoreCodec.decodePrivateBasketCollectedIdentityKeys(
+                "v1:bad"
+            ).isEmpty()
+        )
+        assertTrue(
+            PracticalShoppingHomeSessionStoreCodec.decodePrivateBasketCollectedIdentityKeys(
+                "v1:1:736570613a6b6579:736570613a6b6579"
+            ).isEmpty()
+        )
+    }
+
+    @Test
     fun malformedPrivateIdentityStorageFailsClosedWithoutAffectingTheHomeEnvelope() {
         val decoded =
             requireNotNull(
@@ -145,11 +172,13 @@ class PracticalShoppingHomeSessionStoreCodecTest {
                     chickenChoice = null,
                     extraStopMinimumSavingsChoice = null,
                     requestDetailsLifecycleState = null,
-                    privateIdentities = "v1:not-valid"
+                    privateIdentities = "v1:not-valid",
+                    privateBasketCollectedIdentityKeys = "v1:not-valid"
                 )
             )
 
         assertEquals("milk", decoded.query)
         assertTrue(decoded.privateIdentities.isEmpty())
+        assertTrue(decoded.privateBasketCollectedIdentityKeys.isEmpty())
     }
 }
