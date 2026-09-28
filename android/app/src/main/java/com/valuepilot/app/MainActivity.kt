@@ -20,6 +20,7 @@ import android.widget.Button
 import android.widget.CheckBox
 import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
@@ -71,8 +72,13 @@ class MainActivity : AppCompatActivity() {
     private var argentinaSearchSurfaceState: ArgentinaLiveSearchSurfaceState? = null
     private val argentinaLaunchArea = ArgentinaQualifiedLaunchAreas.BuenosAiresCaba
     private var searchQuery = ""
+    private var searchWasSubmitted = false
+    private var searchScrollY = 0
+    private var renderedSearchMatches:
+        List<PracticalShoppingSearchIdentityPresentation.Match>? = null
 
     private lateinit var shellRoot: View
+    private lateinit var shellScrollView: ScrollView
     private lateinit var bottomNavArea: View
     private lateinit var bottomNavigation: BottomNavigationView
     private lateinit var screenEyebrow: TextView
@@ -176,6 +182,7 @@ class MainActivity : AppCompatActivity() {
             BundledOfflineCatalog.createDiscoverySession(applicationContext)
 
         shellRoot = findViewById(R.id.shellRoot)
+        shellScrollView = findViewById(R.id.shellScrollView)
         bottomNavArea = findViewById(R.id.bottomNavArea)
         bottomNavigation = findViewById(R.id.bottomNavigation)
         screenEyebrow = findViewById(R.id.screenEyebrow)
@@ -225,10 +232,15 @@ class MainActivity : AppCompatActivity() {
         homeSessionState = restoreHomeState(savedInstanceState)
         refreshHomePrivateMemory()
         searchQuery = savedInstanceState?.getString(STATE_SEARCH_QUERY).orEmpty()
+        searchWasSubmitted = savedInstanceState?.getBoolean(STATE_SEARCH_WAS_SUBMITTED) == true
+        searchScrollY = savedInstanceState?.getInt(STATE_SEARCH_SCROLL_Y, 0)?.coerceAtLeast(0) ?: 0
         argentinaSearchHost = ArgentinaLiveSearchSurfaceHost.createProduction(
             area = argentinaLaunchArea,
             render = ::renderArgentinaSearchState
         )
+        if (searchWasSubmitted && searchQuery.trim().isNotBlank()) {
+            argentinaSearchHost.restoreForRevalidation(searchQuery)
+        }
         configureHomeUi()
         configureBasketUi()
         configureSearchUi()
@@ -319,7 +331,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        if (searchRouteActive) searchScrollY = shellScrollView.scrollY.coerceAtLeast(0)
         outState.putString(STATE_SEARCH_QUERY, searchQuery)
+        outState.putBoolean(STATE_SEARCH_WAS_SUBMITTED, searchWasSubmitted)
+        outState.putInt(STATE_SEARCH_SCROLL_Y, searchScrollY)
         super.onSaveInstanceState(outState)
     }
 
@@ -1217,6 +1232,7 @@ class MainActivity : AppCompatActivity() {
                     if (suppressSearchInputCallback) return
 
                     searchQuery = s?.toString().orEmpty()
+                    searchWasSubmitted = false
                     argentinaSearchHost.queryChanged(searchQuery)
                 }
             }
@@ -1509,6 +1525,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         searchQuery = rawQuery
+        searchWasSubmitted = true
         hideKeyboard()
         argentinaSearchHost.submit(rawQuery)
     }
@@ -2018,8 +2035,9 @@ class MainActivity : AppCompatActivity() {
         }
         val searchVisible =
             state.route == AppRoute.SEARCH && state.selectedPrimaryTab == AppPrimaryTab.SEARCH
+        val enteringSearch = searchVisible && !searchRouteActive
         if (!searchVisible && searchRouteActive) {
-            argentinaSearchHost.invalidateForRouteChange()
+            searchScrollY = shellScrollView.scrollY.coerceAtLeast(0)
         }
         searchRouteActive = searchVisible
         if (state.route == AppRoute.COMPARE) {
@@ -2046,6 +2064,7 @@ class MainActivity : AppCompatActivity() {
 
         if (searchVisible) {
             argentinaSearchSurfaceState?.let(::renderSearch)
+            if (enteringSearch) restoreSearchScrollPosition()
         }
 
         val savedVisible = state.route == AppRoute.SAVED
@@ -2134,6 +2153,10 @@ class MainActivity : AppCompatActivity() {
         searchProgress.visibility =
             if (state.mode == ArgentinaLiveSearchSurfaceMode.LOADING) View.VISIBLE else View.GONE
 
+        searchButton.setText(
+            if (state.requiresRevalidation) R.string.search_again else R.string.search_action
+        )
+
         searchButton.isEnabled =
             state.mode != ArgentinaLiveSearchSurfaceMode.LOADING &&
                 searchQuery.trim().isNotBlank() &&
@@ -2143,8 +2166,28 @@ class MainActivity : AppCompatActivity() {
                 state.mode != ArgentinaLiveSearchSurfaceMode.LOADING
         }
 
-        searchResultsContainer.removeAllViews()
         val presentation = state.presentation
+        val matches = presentation?.matches
+        if (matches != renderedSearchMatches) {
+            val preservedScrollY =
+                if (::shellScrollView.isInitialized) shellScrollView.scrollY.coerceAtLeast(0) else 0
+            searchResultsContainer.removeAllViews()
+            matches?.forEach { match ->
+                searchResultsContainer.addView(
+                    createSearchResultView(
+                        match = match,
+                        caveat = state.caveat,
+                        onAddToHome = ::addSearchIdentityToHome
+                    )
+                )
+            }
+            renderedSearchMatches = matches
+            if (::shellScrollView.isInitialized) {
+                shellScrollView.post {
+                    if (searchRouteActive) shellScrollView.scrollTo(0, preservedScrollY)
+                }
+            }
+        }
         searchResultsHeading.visibility =
             if (presentation != null && presentation.matches.isNotEmpty()
             ) View.VISIBLE else View.GONE
@@ -2154,16 +2197,6 @@ class MainActivity : AppCompatActivity() {
             }.orEmpty()
         searchResultsCount.visibility =
             if (presentation != null && presentation.matches.isNotEmpty()) View.VISIBLE else View.GONE
-
-        presentation?.matches?.forEach { match ->
-            searchResultsContainer.addView(
-                createSearchResultView(
-                    match = match,
-                    caveat = state.caveat,
-                    onAddToHome = ::addSearchIdentityToHome
-                )
-            )
-        }
 
         val canLoadMore =
             state.mode == ArgentinaLiveSearchSurfaceMode.RESULTS &&
@@ -2181,6 +2214,13 @@ class MainActivity : AppCompatActivity() {
                 presentation != null && presentation.matches.isNotEmpty() -> getString(R.string.search_results_end)
                 else -> ""
             }
+    }
+
+    private fun restoreSearchScrollPosition() {
+        val targetY = searchScrollY.coerceAtLeast(0)
+        shellScrollView.post {
+            if (searchRouteActive) shellScrollView.scrollTo(0, targetY)
+        }
     }
 
     private fun createSearchResultView(
@@ -2396,6 +2436,8 @@ class MainActivity : AppCompatActivity() {
         private const val STATE_HOME_DETAILS_BRAND = "app_shell.home_details_brand"
         private const val STATE_HOME_DETAILS_EXACT_PRODUCT = "app_shell.home_details_exact_product"
         private const val STATE_SEARCH_QUERY = "app_shell.search_query"
+        private const val STATE_SEARCH_WAS_SUBMITTED = "app_shell.search_was_submitted"
+        private const val STATE_SEARCH_SCROLL_Y = "app_shell.search_scroll_y"
         private const val OFFLINE_CATALOG_MAX_AGE_MILLIS = 8L * 24L * 60L * 60L * 1_000L
     }
 }
