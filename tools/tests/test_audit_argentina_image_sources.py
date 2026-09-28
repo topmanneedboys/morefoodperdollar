@@ -8,6 +8,7 @@ from urllib.parse import parse_qs, urlparse
 from tools.audit_argentina_image_sources import (
     ImageSourceAuditError,
     _request_batch,
+    audit_bulk_image_key_index,
     audit_sample,
     select_sample,
 )
@@ -92,6 +93,28 @@ class ArgentinaImageSourceAuditTests(unittest.TestCase):
         self.assertEqual(["7793670000670"], query["code"])
         self.assertIn("selected_images", query["fields"][0])
 
+    def test_bulk_image_key_inventory_is_bounded_and_not_identity_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "data_keys.gz"
+            with gzip.open(path, "wt", encoding="utf-8", newline="\n") as handle:
+                handle.write("data/779/367/000/0670/1.400.jpg\n")
+                handle.write("data/779/367/000/0670/2.json.gz\n")
+                handle.write("data/779/071/033/4641/1.jpg\n")
+                handle.write("not-a-key\n")
+            report = audit_bulk_image_key_index(
+                path,
+                ["7793670000670", "7790710334641", "7790710334573"],
+                yerba_gtins=["7793670000670"],
+            )
+            self.assertEqual(2, report["sampleGtinsWithImageKeys"])
+            self.assertEqual(2, report["matchingImageKeys"])
+            self.assertEqual(1, report["sampleGtinsWithoutImageKeys"])
+            self.assertEqual(1, report["yerbaSampleGtinsWithImageKeys"])
+            self.assertEqual("NONE", report["rightsEvidence"])
+            self.assertFalse(report["imageBytesDownloaded"])
+            self.assertGreater(report["inventoryBytes"], 0)
+            self.assertEqual(64, len(report["inventorySha256"]))
+
     def test_audit_reuses_exact_manifest_and_never_claims_display(self) -> None:
         gtins = [
             "7793670000670",
@@ -140,6 +163,7 @@ class ArgentinaImageSourceAuditTests(unittest.TestCase):
                 source_sha256="a" * 64,
                 coverage_reference=None,
                 source_rights_policy=policy,
+                bulk_image_key_index=None,
                 batch_size=4,
                 min_request_interval_seconds=0,
                 user_agent="ValuePilot-test",

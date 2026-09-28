@@ -49,6 +49,7 @@ MAX_BATCH_SIZE = 100
 MAX_RESPONSE_BYTES = 32 * 1024 * 1024
 MAX_PRODUCTS_PER_RESPONSE_FACTOR = 3
 MAX_DISTINCT_GTINS_TRACKED = 200_000
+MAX_BULK_KEY_LINE_BYTES = 8 * 1024
 ALLOWED_API_HOSTS = frozenset(
     (
         "world.openfoodfacts.org",
@@ -112,6 +113,13 @@ def _sha256(path: Path) -> str:
 
 def _open_observations(path: Path):
     _require(path.is_file(), f"Missing accepted observations: {path}")
+    if path.name.casefold().endswith((".gz", ".gzip")):
+        return gzip.open(path, "rt", encoding="utf-8", errors="replace", newline="")
+    return path.open("r", encoding="utf-8", errors="replace", newline="")
+
+
+def _open_text_input(path: Path):
+    _require(path.is_file(), f"Missing bulk image-key inventory: {path}")
     if path.name.casefold().endswith((".gz", ".gzip")):
         return gzip.open(path, "rt", encoding="utf-8", errors="replace", newline="")
     return path.open("r", encoding="utf-8", errors="replace", newline="")
@@ -296,6 +304,84 @@ def select_sample(
     return selected, metadata
 
 
+def _bulk_key_gtin(value: str) -> str | None:
+    """Extract a canonical GTIN from a documented OFF image object key."""
+
+    parts = value.strip().replace("\\", "/").split("/")
+    if len(parts) < 6 or parts[0] != "data":
+        return None
+    groups = parts[1:5]
+    if any(not group.isdigit() for group in groups):
+        return None
+    if [len(group) for group in groups] != [3, 3, 3, 4]:
+        return None
+    return canonical_open_facts_gtin("".join(groups))
+
+
+def audit_bulk_image_key_index(
+    path: Path,
+    sample_gtins: Iterable[str],
+    yerba_gtins: Iterable[str] | None = None,
+) -> dict[str, Any]:
+    """Count image objects for a bounded sample without downloading bytes.
+
+    The S3 inventory is only an object-key listing.  It is deliberately kept
+    separate from exact product identity and rights evidence: a matching key
+    proves only that an image-shaped object was listed for a barcode.
+    """
+
+    requested = {str(value) for value in sample_gtins}
+    _require(requested, "bulk image-key inventory requires at least one sample GTIN")
+    yerba_requested = requested.intersection(str(value) for value in (yerba_gtins or ()))
+    matches: dict[str, int] = {}
+    counters: Counter[str] = Counter()
+    handle = _open_text_input(path)
+    try:
+        for line_number, line in enumerate(handle, start=1):
+            counters["keyLinesSeen"] += 1
+            if len(line.encode("utf-8")) > MAX_BULK_KEY_LINE_BYTES:
+                counters["oversizedKeyLines"] += 1
+                continue
+            key = line.strip()
+            if not key:
+                continue
+            gtin = _bulk_key_gtin(key)
+            if gtin is None:
+                counters["malformedKeyLines"] += 1
+                continue
+            lower = key.casefold()
+            if lower.endswith((".jpg", ".jpeg", ".png")):
+                counters["imageKeysSeen"] += 1
+            else:
+                continue
+            if gtin not in requested:
+                continue
+            counters["matchingImageKeys"] += 1
+            matches[gtin] = matches.get(gtin, 0) + 1
+    finally:
+        handle.close()
+    return {
+        "status": "EVALUATED",
+        "inventoryPath": str(path),
+        "inventoryBytes": path.stat().st_size,
+        "inventorySha256": _sha256(path),
+        "sampleGtinsEvaluated": len(requested),
+        "sampleGtinsWithImageKeys": len(matches),
+        "sampleGtinsWithoutImageKeys": len(requested - matches.keys()),
+        "yerbaSampleGtinsEvaluated": len(yerba_requested),
+        "yerbaSampleGtinsWithImageKeys": len(yerba_requested.intersection(matches)),
+        "yerbaSampleGtinsWithoutImageKeys": len(yerba_requested - matches.keys()),
+        "matchingImageKeys": counters["matchingImageKeys"],
+        "keyLinesSeen": counters["keyLinesSeen"],
+        "imageKeysSeen": counters["imageKeysSeen"],
+        "malformedKeyLines": counters["malformedKeyLines"],
+        "oversizedKeyLines": counters["oversizedKeyLines"],
+        "identityEvidence": "OBJECT_KEY_ONLY_NOT_EXACT_PRODUCT_IDENTITY",
+        "rightsEvidence": "NONE",
+        "imageBytesDownloaded": False,
+    }
+
+
 def _request_batch(
     endpoint: str,
     codes: Sequence[str],
@@ -398,6 +484,7 @@ def audit_sample(
     source_sha256: str | None,
     coverage_reference: Path | None,
     source_rights_policy: Path | None,
+    bulk_image_key_index: Path | None = None,
     batch_size: int,
     min_request_interval_seconds: float,
     user_agent: str,
@@ -428,6 +515,33 @@ def audit_sample(
     _write_json_atomic(sample_catalog_path, {"records": sample})
 
     codes = [str(item["gtin"]) for item in sample]
+    bulk_image_inventory = (
+        audit_bulk_image_key_index(
+            bulk_image_key_index,
+            codes,
+            yerba_gtins={
+                item["gtin"]
+                for item in sample
+                if "yerba" in " ".join(
+                    (_clean(item.get("name")), _clean(item.get("brand")))
+                ).casefold()
+            },
+        )
+        if bulk_image_key_index is not None
+        else {
+            "status": "NOT_EVALUATED",
+            "reason": "bulk image-key inventory was not supplied",
+            "sampleGtinsEvaluated": len(codes),
+            "sampleGtinsWithImageKeys": None,
+            "sampleGtinsWithoutImageKeys": None,
+            "yerbaSampleGtinsEvaluated": sample_metadata["sampleYerbaIdentities"],
+            "yerbaSampleGtinsWithImageKeys": None,
+            "yerbaSampleGtinsWithoutImageKeys": None,
+            "identityEvidence": "OBJECT_KEY_ONLY_NOT_EXACT_PRODUCT_IDENTITY",
+            "rightsEvidence": "NONE",
+            "imageBytesDownloaded": False,
+        }
+    )
     products_by_code: dict[str, dict[str, Any]] = {}
     request_count = 0
     response_product_count = 0
@@ -489,6 +603,7 @@ def audit_sample(
             "responseDataSha256": _sha256(sample_api_path),
             "imageBytesDownloaded": False,
         },
+        "bulkImageInventory": bulk_image_inventory,
         "manifest": {
             "counts": manifest_report["counts"],
             "rejections": manifest_report["rejections"],
@@ -527,6 +642,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--source-sha256")
     parser.add_argument("--coverage-reference", type=Path)
     parser.add_argument("--source-rights-policy", type=Path)
+    parser.add_argument("--bulk-image-key-index", type=Path)
     parser.add_argument("--batch-size", type=int, default=100)
     parser.add_argument("--min-request-interval-seconds", type=float, default=6.0)
     parser.add_argument("--user-agent", default=DEFAULT_USER_AGENT)
@@ -544,6 +660,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             source_sha256=args.source_sha256,
             coverage_reference=args.coverage_reference,
             source_rights_policy=args.source_rights_policy,
+            bulk_image_key_index=args.bulk_image_key_index,
             batch_size=args.batch_size,
             min_request_interval_seconds=args.min_request_interval_seconds,
             user_agent=args.user_agent,

@@ -45,6 +45,16 @@
     "bulkImageDataset": {
       "documentedLocation": "s3://openfoodfacts-images/data/data_keys.gz",
       "role": "monthly image-key inventory only; not product identity or display-rights evidence",
+      "inventoryBytes": 65628255,
+      "inventorySha256": "f6b1b000b4fa5ca089d2b14f5e1dd4e6c83469de4a2a87d14232626420b809af",
+      "keyLinesSeen": 29868627,
+      "imageKeysSeen": 19600258,
+      "malformedKeyLines": 469890,
+      "sampleGtinsEvaluated": 1000,
+      "sampleGtinsWithImageKeys": 139,
+      "matchingImageKeys": 794,
+      "identityEvidence": "OBJECT_KEY_ONLY_NOT_EXACT_PRODUCT_IDENTITY",
+      "rightsEvidence": "NONE",
       "imageBytesDownloaded": false
     },
     "rejections": {
@@ -55,6 +65,8 @@
   },
   "yerba": {
     "sampleIdentities": 100,
+    "bulkImageKeyGtinsWithImageKeys": 42,
+    "bulkImageKeyGtinsWithoutImageKeys": 58,
     "strictExactImageCandidateCount": 0,
     "displayEligibleIdentityCount": 0
   },

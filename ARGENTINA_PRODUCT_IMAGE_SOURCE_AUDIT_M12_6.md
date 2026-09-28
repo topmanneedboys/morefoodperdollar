@@ -24,6 +24,12 @@ responses, and the generated evidence JSONL remain under the ignored
   image candidates**, **0 rights-qualified image identities**, and **0
   display-eligible identities**. The 100 sampled yerba identities also
   produced **0** exact candidates.
+- The bulk image-key inventory contained **794 image keys** for **139/1,000
+  sampled GTINs**. In the reserved yerba subset, **42/100** had at least one
+  image key. These are object-key observations only—not exact product matches,
+  licence evidence, or displayable images. The downloaded inventory was
+  **65,628,255 bytes** with SHA-256
+  `f6b1b000b4fa5ca089d2b14f5e1dd4e6c83469de4a2a87d14232626420b809af`.
 
 The documented worldwide Open Food Facts image bucket was also evaluated as a
 possible bulk path. Its `data/data_keys.gz` object is an image-key inventory
