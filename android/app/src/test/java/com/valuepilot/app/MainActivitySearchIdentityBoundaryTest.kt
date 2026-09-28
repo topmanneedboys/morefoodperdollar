@@ -77,6 +77,7 @@ class MainActivitySearchIdentityBoundaryTest {
     fun `activity recreation restores only the query and asks for fresh validation`() {
         val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
             .replace("\r\n", "\n")
+        val layout = source("src/main/res/layout/activity_shell.xml").readText()
         val saveStart = activity.indexOf("override fun onSaveInstanceState(outState: Bundle)")
         val destroyStart = activity.indexOf("override fun onDestroy()", saveStart)
         assertTrue(saveStart >= 0)
@@ -90,6 +91,7 @@ class MainActivitySearchIdentityBoundaryTest {
         assertTrue(activity.contains("ArgentinaLiveSearchSurfaceHost.createProduction("))
         assertTrue(activity.contains("argentinaSearchHost.restoreForRevalidation(searchQuery)"))
         assertTrue(activity.contains("R.string.search_again"))
+        assertTrue(layout.contains("android:saveEnabled=\"false\""))
         assertTrue(activity.contains("argentinaSearchHost.close()"))
     }
 
