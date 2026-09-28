@@ -25,6 +25,14 @@ responses, and the generated evidence JSONL remain under the ignored
   display-eligible identities**. The 100 sampled yerba identities also
   produced **0** exact candidates.
 
+The documented worldwide Open Food Facts image bucket was also evaluated as a
+possible bulk path. Its `data/data_keys.gz` object is an image-key inventory
+that is synchronized monthly; it does not itself carry the exact product,
+brand, package, or commercial-rights evidence required by ValuePilot. The
+inventory therefore cannot be counted as product coverage, and no image bytes
+were downloaded. The same exact-identity and rights gates would still be
+required after joining it to a complete product export.
+
 The `76,196` distinct-GTIN figure in the machine-readable report is a bounded
 diagnostic count from the accepted-observation stream. It is not a replacement
 for the independently generated catalog denominator (`66,716` valid-GTIN
@@ -59,7 +67,9 @@ bulk export or an explicitly authorized image source may be evaluated with
 the same tool; it must pass the same exact-identity and rights gates before
 any bytes or UI integration are considered.
 
-Open Food Facts documents the bulk-code API and image roles in its
+Open Food Facts documents the bulk-code API, image roles, and the worldwide
+S3 image-key inventory in its
 [API introduction](https://openfoodfacts.github.io/openfoodfacts-server/api/),
 [image-download guide](https://openfoodfacts.github.io/openfoodfacts-server/api/how-to-download-images/),
+[AWS image dataset guide](https://openfoodfacts.github.io/openfoodfacts-server/api/aws-images-dataset/),
 and [licence guidance](https://openfoodfacts.github.io/openfoodfacts-server/api/tutorials/license-be-on-the-legal-side/).

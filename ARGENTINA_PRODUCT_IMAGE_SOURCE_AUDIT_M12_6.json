@@ -42,6 +42,11 @@
     "rightsQualifiedImageEvidenceIdentityCount": 0,
     "displayEligibleIdentityCount": 0,
     "evidenceManifestSha256": "424a32c53451249c600e61551370908557175d7f461abb289722e3a24508d8d",
+    "bulkImageDataset": {
+      "documentedLocation": "s3://openfoodfacts-images/data/data_keys.gz",
+      "role": "monthly image-key inventory only; not product identity or display-rights evidence",
+      "imageBytesDownloaded": false
+    },
     "rejections": {
       "NAME_MISMATCH": 112
     },
