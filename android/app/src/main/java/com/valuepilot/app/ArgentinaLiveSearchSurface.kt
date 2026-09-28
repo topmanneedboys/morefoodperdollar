@@ -21,7 +21,13 @@ internal data class ArgentinaLiveSearchSurfaceState(
     val query: String = "",
     val statusMessage: String,
     val presentation: PracticalShoppingSearchIdentityPresentation? = null,
-    val caveat: String
+    val caveat: String,
+    /**
+     * Activity recreation never restores live result cards.  This flag keeps
+     * the restored query useful while making the required fresh validation
+     * action explicit to the shopper.
+     */
+    val requiresRevalidation: Boolean = false
 ) {
     init {
         require(areaLabel.isNotBlank())
@@ -52,6 +58,25 @@ internal object ArgentinaLiveSearchSurfacePresenter {
             statusMessage = "Search a product in the qualified Argentina area.",
             caveat = IDENTITY_CAVEAT
         )
+
+    fun revalidationRequired(
+        area: ArgentinaQualifiedLaunchArea,
+        rawQuery: String,
+        generation: Long = 0L
+    ): ArgentinaLiveSearchSurfaceState {
+        val query = rawQuery.trim()
+        require(query.isNotBlank())
+        require(query.length <= ArgentinaBackendContract.MAX_QUERY_CHARS)
+        return ArgentinaLiveSearchSurfaceState(
+            areaLabel = area.label,
+            mode = ArgentinaLiveSearchSurfaceMode.IDLE,
+            generation = generation,
+            query = query,
+            statusMessage = "Your previous Search needs a fresh check. Tap Search again.",
+            caveat = IDENTITY_CAVEAT,
+            requiresRevalidation = true
+        )
+    }
 
     fun from(
         state: ArgentinaLiveSearchState,
@@ -176,6 +201,19 @@ internal class ArgentinaLiveSearchSurfaceHost(
 
     fun invalidateForRouteChange() {
         coordinator.invalidateForRouteChange()
+    }
+
+    /**
+     * Restores only the shopper's query after activity recreation.  Live
+     * results are intentionally not restored because they require a fresh
+     * release/App Check validation before they can be shown again.
+     */
+    fun restoreForRevalidation(rawQuery: String) {
+        val query = rawQuery.trim()
+        if (query.isBlank() || query.length > ArgentinaBackendContract.MAX_QUERY_CHARS) return
+        val restored = ArgentinaLiveSearchSurfacePresenter.revalidationRequired(area, query)
+        latest = restored
+        render(restored)
     }
 
     override fun close() {

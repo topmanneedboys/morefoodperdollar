@@ -310,6 +310,7 @@ This build does not include an authorized current-offer feed. No flyer content i
 
     <string name="search_hint">Try yerba, milk, rice or another product</string>
     <string name="search_action">Search Argentina products</string>
+    <string name="search_again">Search again</string>
     <string name="search_quick_title">Try a product search</string>
     <string name="search_quick_eggs">yerba</string>
     <string name="search_quick_milk">milk</string>

@@ -34,7 +34,8 @@ class MainActivitySearchSubmissionBoundaryTest {
         val host = source("src/main/java/com/valuepilot/app/ArgentinaLiveSearchSurface.kt").readText()
 
         assertTrue(activity.contains("ArgentinaLiveSearchSurfaceHost.createProduction"))
-        assertTrue(activity.contains("argentinaSearchHost.invalidateForRouteChange()"))
+        assertTrue(activity.contains("argentinaSearchHost.restoreForRevalidation(searchQuery)"))
+        assertFalse(activity.contains("argentinaSearchHost.invalidateForRouteChange()"))
         assertFalse(activity.contains("searchInput.post { submit"))
         assertTrue(host.contains("fun submit(rawQuery: String)"))
         assertTrue(host.contains("coordinator.submit(rawQuery, area.context())"))

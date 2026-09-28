@@ -74,7 +74,7 @@ class MainActivitySearchIdentityBoundaryTest {
     }
 
     @Test
-    fun `transient live results are not restored across activity recreation`() {
+    fun `activity recreation restores only the query and asks for fresh validation`() {
         val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
             .replace("\r\n", "\n")
         val saveStart = activity.indexOf("override fun onSaveInstanceState(outState: Bundle)")
@@ -84,9 +84,25 @@ class MainActivitySearchIdentityBoundaryTest {
         val savedState = activity.substring(saveStart, destroyStart)
 
         assertTrue(savedState.contains("STATE_SEARCH_QUERY"))
+        assertTrue(savedState.contains("STATE_SEARCH_WAS_SUBMITTED"))
+        assertTrue(savedState.contains("STATE_SEARCH_SCROLL_Y"))
         assertFalse(savedState.contains("argentinaSearchSurfaceState"))
         assertTrue(activity.contains("ArgentinaLiveSearchSurfaceHost.createProduction("))
+        assertTrue(activity.contains("argentinaSearchHost.restoreForRevalidation(searchQuery)"))
+        assertTrue(activity.contains("R.string.search_again"))
         assertTrue(activity.contains("argentinaSearchHost.close()"))
+    }
+
+    @Test
+    fun `search session stays mounted across primary tab changes and reuses unchanged cards`() {
+        val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
+            .replace("\r\n", "\n")
+        assertTrue(activity.contains("val enteringSearch = searchVisible && !searchRouteActive"))
+        assertTrue(activity.contains("searchScrollY = shellScrollView.scrollY"))
+        assertFalse(activity.contains("argentinaSearchHost.invalidateForRouteChange()"))
+        assertTrue(activity.contains("if (matches != renderedSearchMatches)"))
+        assertTrue(activity.contains("renderedSearchMatches = matches"))
+        assertTrue(activity.contains("shellScrollView.scrollTo(0, preservedScrollY)"))
     }
 
     private fun source(relativePath: String): File {

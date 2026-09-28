@@ -2,6 +2,7 @@ package com.valuepilot.app
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -93,6 +94,17 @@ class ArgentinaLiveSearchSurfaceTest {
         assertTrue(state.caveat.contains("No current price"))
         assertTrue(state.caveat.contains("stock"))
         assertTrue(state.caveat.contains("ranking"))
+    }
+
+    @Test
+    fun `recreation restores the query but never presents unvalidated live cards`() {
+        val restored = ArgentinaLiveSearchSurfacePresenter.revalidationRequired(area, "  yerba  ")
+
+        assertEquals(ArgentinaLiveSearchSurfaceMode.IDLE, restored.mode)
+        assertEquals("yerba", restored.query)
+        assertTrue(restored.requiresRevalidation)
+        assertTrue(restored.statusMessage.contains("Search again"))
+        assertNull(restored.presentation)
     }
 
     @Test
