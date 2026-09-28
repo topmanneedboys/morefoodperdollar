@@ -62,6 +62,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val itemRemovalOwnerControls = mutableListOf<View>()
     private val unknownRemovalOwnerControls = mutableListOf<View>()
     private val privateIdentityRemovalOwnerControls = mutableListOf<View>()
+    private val privateIdentityPhotoOwnerControls = mutableListOf<View>()
     private val offlineCatalogOwnerControls = mutableListOf<View>()
     private val itemDetailsOwnerControls = mutableListOf<View>()
     private val exactProductOwnerControls = mutableListOf<View>()
@@ -120,6 +121,13 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         set(value) {
             field = value
             privateIdentityRemovalOwnerControls.forEach { control ->
+                control.isEnabled = value != null
+            }
+        }
+    var onOpenPrivateIdentityPhotos: ((String) -> Unit)? = null
+        set(value) {
+            field = value
+            privateIdentityPhotoOwnerControls.forEach { control ->
                 control.isEnabled = value != null
             }
         }
@@ -436,6 +444,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         itemRemovalOwnerControls.clear()
         unknownRemovalOwnerControls.clear()
         privateIdentityRemovalOwnerControls.clear()
+        privateIdentityPhotoOwnerControls.clear()
         offlineCatalogOwnerControls.clear()
         itemDetailsOwnerControls.clear()
         exactProductOwnerControls.clear()
@@ -709,6 +718,9 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                 line(identity.notice, 12f, "#92400E", topPadding = 3)
             )
             privateIdentityBody.addView(
+                privateIdentityPhotoButton(identity)
+            )
+            privateIdentityBody.addView(
                 removeButton(
                     onRemove = { onRemovePrivateIdentity?.invoke(identity.identityKey) },
                     description = context.getString(
@@ -722,6 +734,36 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                 }
             )
         }
+    }
+
+    private fun privateIdentityPhotoButton(
+        identity: PracticalShoppingHomePrivateIdentityRenderState
+    ): MaterialButton = MaterialButton(context).apply {
+        privateIdentityPhotoOwnerControls += this
+        text = context.getString(R.string.home_private_identity_photos)
+        contentDescription = context.getString(
+            R.string.home_private_identity_photos_description,
+            identity.displayName
+        )
+        isAllCaps = false
+        textSize = 13f
+        minHeight = dp(40)
+        minimumHeight = dp(40)
+        minWidth = 0
+        minimumWidth = 0
+        insetTop = 0
+        insetBottom = 0
+        isEnabled = onOpenPrivateIdentityPhotos != null
+        setPadding(dp(10), 0, dp(10), 0)
+        strokeWidth = dp(1)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#BFDBFE"))
+        setTextColor(ValuePilotPalette.color("#1D4ED8"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
+        layoutParams = LinearLayout.LayoutParams(
+            LayoutParams.WRAP_CONTENT,
+            dp(40)
+        ).apply { leftMargin = dp(8) }
+        setOnClickListener { onOpenPrivateIdentityPhotos?.invoke(identity.identityKey) }
     }
 
     private fun renderQuickAdd(

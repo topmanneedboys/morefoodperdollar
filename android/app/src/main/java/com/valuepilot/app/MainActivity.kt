@@ -25,6 +25,7 @@ import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -74,6 +75,7 @@ class MainActivity : AppCompatActivity() {
     private var searchQuery = ""
     private var searchWasSubmitted = false
     private var searchScrollY = 0
+    private var googlePhotoViewerLaunchInFlight = false
     private var renderedSearchMatches:
         List<PracticalShoppingSearchIdentityPresentation.Match>? = null
 
@@ -291,6 +293,9 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
+        // A Custom Tab owns the external page. When the shopper returns, the
+        // next explicit tap is allowed to open it again.
+        googlePhotoViewerLaunchInFlight = false
         refreshHomePrivateMemory()
 
         if (comparisonActivityOpen && shellState.route == AppRoute.COMPARE) {
@@ -372,6 +377,7 @@ class MainActivity : AppCompatActivity() {
             homeExperience.onRemoveItem = null
             homeExperience.onRemoveUnknownItem = null
             homeExperience.onRemovePrivateIdentity = null
+            homeExperience.onOpenPrivateIdentityPhotos = null
             homeExperience.onFindOfflineCatalogMatch = null
             homeExperience.onChooseExactProduct = null
             homeExperience.onChickenChoice = null
@@ -389,6 +395,7 @@ class MainActivity : AppCompatActivity() {
         if (::basketExperience.isInitialized) {
             basketExperience.onAction = null
             basketExperience.onPrivateIdentityToggle = null
+            basketExperience.onOpenPrivateIdentityPhotos = null
         }
         if (::savedRouteCoordinator.isInitialized) {
             savedExperience.onAction = null
@@ -528,6 +535,11 @@ class MainActivity : AppCompatActivity() {
                     identityKey
                 )
             renderHome()
+        }
+        homeExperience.onOpenPrivateIdentityPhotos = { identityKey ->
+            homeSessionState.privateIdentities
+                .firstOrNull { identity -> identity.identityKey == identityKey }
+                ?.let(::openGoogleProductPhotos)
         }
         homeExperience.onFindOfflineCatalogMatch = { token ->
             showOfflineCatalogMatches(token)
@@ -1237,6 +1249,11 @@ class MainActivity : AppCompatActivity() {
                     identityKey
                 )
             renderHome()
+        }
+        basketExperience.onOpenPrivateIdentityPhotos = { identityKey ->
+            homeSessionState.privateIdentities
+                .firstOrNull { identity -> identity.identityKey == identityKey }
+                ?.let(::openGoogleProductPhotos)
         }
     }
 
@@ -2211,7 +2228,8 @@ class MainActivity : AppCompatActivity() {
                     createSearchResultView(
                         match = match,
                         caveat = state.caveat,
-                        onAddToHome = ::addSearchIdentityToHome
+                        onAddToHome = ::addSearchIdentityToHome,
+                        onOpenPhotos = ::openGoogleProductPhotos
                     )
                 )
             }
@@ -2260,7 +2278,8 @@ class MainActivity : AppCompatActivity() {
     private fun createSearchResultView(
         match: PracticalShoppingSearchIdentityPresentation.Match,
         caveat: String,
-        onAddToHome: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit
+        onAddToHome: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
+        onOpenPhotos: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit
     ): View {
         val card = MaterialCardView(this).apply {
             radius = dp(18).toFloat()
@@ -2286,6 +2305,7 @@ class MainActivity : AppCompatActivity() {
                     match.matchLabel,
                     "Argentina SEPA identity result",
                     getString(R.string.search_identity_no_verified_picture),
+                    getString(R.string.search_identity_photo_disclosure),
                     caveat,
                     "Tap to review this name in Scan and compare",
                     getString(R.string.search_identity_add_home_draft)
@@ -2365,6 +2385,12 @@ class MainActivity : AppCompatActivity() {
         }.also(body::addView)
         body.addView(source)
         TextView(this).apply {
+            text = getString(R.string.search_identity_photo_disclosure)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextColor(ValuePilotPalette.color("#6B7280"))
+            setPadding(0, dp(7), 0, 0)
+        }.also(body::addView)
+        TextView(this).apply {
             text = getString(R.string.search_identity_open_compare)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             setTextColor(ValuePilotPalette.color("#8F3620"))
@@ -2390,8 +2416,53 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { onAddToHome(match) }
         }
         card.addView(body)
+        PracticalShoppingPrivateIdentity.fromSearchMatch(match)?.let { identity ->
+            val photoButton = MaterialButton(this).apply {
+                text = getString(R.string.search_identity_view_photos)
+                isAllCaps = false
+                minHeight = dp(48)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    setMargins(dp(16), dp(6), dp(16), dp(6))
+                }
+                contentDescription = getString(
+                    R.string.search_identity_view_photos_description,
+                    identity.displayName
+                )
+                setOnClickListener { onOpenPhotos(match) }
+            }
+            card.addView(photoButton)
+        }
         card.addView(addHomeButton)
         return card
+    }
+
+    private fun openGoogleProductPhotos(
+        match: PracticalShoppingSearchIdentityPresentation.Match
+    ) {
+        PracticalShoppingPrivateIdentity.fromSearchMatch(match)?.let(::openGoogleProductPhotos)
+    }
+
+    private fun openGoogleProductPhotos(identity: PracticalShoppingPrivateIdentity) {
+        if (googlePhotoViewerLaunchInFlight) return
+        val url = GoogleProductPhotoViewer.urlFor(identity) ?: return
+        googlePhotoViewerLaunchInFlight = true
+        val intent =
+            CustomTabsIntent.Builder()
+                .setShowTitle(true)
+                .setInitialActivityHeightPx(
+                    dp(600),
+                    CustomTabsIntent.ACTIVITY_HEIGHT_ADJUSTABLE
+                )
+                .build()
+        try {
+            intent.launchUrl(this, android.net.Uri.parse(url))
+        } catch (_: ActivityNotFoundException) {
+            googlePhotoViewerLaunchInFlight = false
+            searchStatus.text = getString(R.string.search_identity_browser_unavailable)
+        }
     }
 
     private fun addSearchIdentityToHome(

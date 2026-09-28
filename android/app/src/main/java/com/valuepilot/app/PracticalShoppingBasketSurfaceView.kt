@@ -66,6 +66,9 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     /** Typed owner action for the separate private Search-identity checklist. */
     var onPrivateIdentityToggle: ((String) -> Unit)? = null
 
+    /** Opens only the user-requested, unverified external photo search. */
+    var onOpenPrivateIdentityPhotos: ((String) -> Unit)? = null
+
     private val headline = line("", 22f, "#111827", true)
     private val guidance = line("", 14f, "#4B5563", topPadding = 8)
     private val noCoverageSummary = line("", 13f, "#92400E", true, 8).apply {
@@ -312,6 +315,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
                 )
             }
             privateIdentityBody.addView(line(identity.notice, 12f, "#6B7280", topPadding = 2))
+            privateIdentityBody.addView(privateIdentityPhotoButton(identity))
         }
     }
 
@@ -335,6 +339,32 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
                 ". This is only a local shopping checklist mark."
         isEnabled = onPrivateIdentityToggle != null
         setOnClickListener { onPrivateIdentityToggle?.invoke(identity.identityKey) }
+    }
+
+    private fun privateIdentityPhotoButton(
+        identity: PracticalShoppingBasketPrivateIdentityRenderState
+    ): MaterialButton = MaterialButton(context).apply {
+        text = context.getString(R.string.search_identity_view_photos)
+        contentDescription = context.getString(
+            R.string.home_private_identity_photos_description,
+            identity.displayName
+        )
+        isAllCaps = false
+        textSize = 13f
+        minHeight = dp(40)
+        minimumHeight = dp(40)
+        minWidth = 0
+        minimumWidth = 0
+        insetTop = 0
+        insetBottom = 0
+        isEnabled = onOpenPrivateIdentityPhotos != null
+        setPadding(dp(10), 0, dp(10), 0)
+        strokeWidth = dp(1)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#BFDBFE"))
+        setTextColor(ValuePilotPalette.color("#1D4ED8"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
+        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 5)
+        setOnClickListener { onOpenPrivateIdentityPhotos?.invoke(identity.identityKey) }
     }
 
     private fun privateIdentityHeadingSeparator(): View =
