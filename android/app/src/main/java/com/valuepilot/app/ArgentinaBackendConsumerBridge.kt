@@ -474,6 +474,7 @@ private object ArgentinaBackendInputMapper {
 }
 
 private object ArgentinaBackendIdentityMapper {
+    private const val SOURCE_LABEL = "Argentina SEPA / Precios Claros"
     private const val NOTICE_PREFIX =
         "Argentina SEPA / Precios Claros identity suggestions from the qualified release"
 
@@ -494,6 +495,7 @@ private object ArgentinaBackendIdentityMapper {
                                 "provider identity match"
                             },
                         packageQuantityLabel = candidate.quantity?.let(::productQuantityLabel),
+                        sourceLabel = SOURCE_LABEL,
                         identityKey = candidate.productEvidenceKey
                     )
             }

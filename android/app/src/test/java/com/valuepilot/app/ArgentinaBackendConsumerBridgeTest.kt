@@ -37,6 +37,10 @@ class ArgentinaBackendConsumerBridgeTest {
         val searchSuccess = search as ArgentinaBackendBridgeResult.Success
         assertEquals("exact barcode", searchSuccess.value.identity.matches.single().matchLabel)
         assertEquals("1 kg", searchSuccess.value.identity.matches.single().packageQuantityLabel)
+        assertEquals(
+            "Argentina SEPA / Precios Claros",
+            searchSuccess.value.identity.matches.single().sourceLabel
+        )
 
         val interpreted = bridge.interpretPresentation(ArgentinaBackendContract.InterpretRequest("1 kg yerba"))
         assertTrue(interpreted is ArgentinaBackendBridgeResult.Success)
