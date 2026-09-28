@@ -19,6 +19,15 @@ class PracticalShoppingHomeSessionStoreCodecTest {
 
     private val milk = ShoppingItemKey("sample-milk-2pct-4l")
 
+    private val privateIdentity =
+        PracticalShoppingPrivateIdentity(
+            identityKey = "sepa:yerba:001",
+            displayName = "Yerba Mate, Miércoles",
+            brand = "Marca / Sábado",
+            sourceLabel = "Argentina SEPA / Precios Claros",
+            packageQuantityLabel = "1 kg"
+        )
+
     @Test
     fun validDurableEnvelopeRestoresTypedSnapshotAndDetachesBytes() {
         val details =
@@ -104,5 +113,43 @@ class PracticalShoppingHomeSessionStoreCodecTest {
             decoded.extraStopMinimumSavingsChoice
         )
         assertNull(decoded.requestDetailsLifecycleState)
+    }
+
+    @Test
+    fun privateIdentityEncodingIsDeterministicAndRoundTripsAccentsAndMissingMetadata() {
+        val values =
+            listOf(
+                privateIdentity,
+                privateIdentity.copy(
+                    identityKey = "sepa:variant",
+                    displayName = "Sin marca",
+                    brand = null,
+                    packageQuantityLabel = null
+                )
+            )
+        val encoded = requireNotNull(PracticalShoppingHomeSessionStoreCodec.encodePrivateIdentities(values))
+        assertEquals(encoded, PracticalShoppingHomeSessionStoreCodec.encodePrivateIdentities(values))
+        assertEquals(
+            values,
+            PracticalShoppingHomeSessionStoreCodec.decodePrivateIdentities(encoded)
+        )
+    }
+
+    @Test
+    fun malformedPrivateIdentityStorageFailsClosedWithoutAffectingTheHomeEnvelope() {
+        val decoded =
+            requireNotNull(
+                PracticalShoppingHomeSessionStoreCodec.decode(
+                    query = "milk",
+                    wasSubmitted = false,
+                    chickenChoice = null,
+                    extraStopMinimumSavingsChoice = null,
+                    requestDetailsLifecycleState = null,
+                    privateIdentities = "v1:not-valid"
+                )
+            )
+
+        assertEquals("milk", decoded.query)
+        assertTrue(decoded.privateIdentities.isEmpty())
     }
 }

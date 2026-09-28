@@ -310,6 +310,9 @@ class MainActivity : AppCompatActivity() {
             STATE_HOME_EXTRA_STOP_MINIMUM_SAVINGS,
             homeSnapshot.extraStopMinimumSavingsChoice.name
         )
+        PracticalShoppingHomeSessionStoreCodec
+            .encodePrivateIdentities(homeSnapshot.privateIdentities)
+            ?.let { encoded -> outState.putString(STATE_HOME_PRIVATE_IDENTITIES, encoded) }
         homeSnapshot.requestDetailsLifecycleState?.let { encoded ->
             outState.putByteArray(STATE_HOME_REQUEST_DETAILS, encoded)
         }
@@ -365,6 +368,7 @@ class MainActivity : AppCompatActivity() {
             homeExperience.onQuickAdd = null
             homeExperience.onRemoveItem = null
             homeExperience.onRemoveUnknownItem = null
+            homeExperience.onRemovePrivateIdentity = null
             homeExperience.onFindOfflineCatalogMatch = null
             homeExperience.onChooseExactProduct = null
             homeExperience.onChickenChoice = null
@@ -477,7 +481,11 @@ class MainActivity : AppCompatActivity() {
                 chickenChoice = choice,
                 extraStopMinimumSavingsChoice = extraStopMinimumSavingsChoice,
                 requestDetailsLifecycleState =
-                    savedInstanceState?.getByteArray(STATE_HOME_REQUEST_DETAILS)
+                    savedInstanceState?.getByteArray(STATE_HOME_REQUEST_DETAILS),
+                privateIdentities =
+                    PracticalShoppingHomeSessionStoreCodec.decodePrivateIdentities(
+                        savedInstanceState?.getString(STATE_HOME_PRIVATE_IDENTITIES)
+                    )
             )
         )
     }
@@ -503,6 +511,14 @@ class MainActivity : AppCompatActivity() {
         homeExperience.onRemoveUnknownItem = { token ->
             homeSessionState =
                 PracticalShoppingHomeSession.removeUnknownItem(homeSessionState, token)
+            renderHome()
+        }
+        homeExperience.onRemovePrivateIdentity = { identityKey ->
+            homeSessionState =
+                PracticalShoppingHomeSession.removePrivateIdentity(
+                    homeSessionState,
+                    identityKey
+                )
             renderHome()
         }
         homeExperience.onFindOfflineCatalogMatch = { token ->
@@ -564,7 +580,8 @@ class MainActivity : AppCompatActivity() {
                     } else {
                         PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE
                     },
-                savedExactProductContext = homeSavedExactProductContext
+                savedExactProductContext = homeSavedExactProductContext,
+                privateIdentities = homeSessionState.privateIdentities
             )
         // A render invalidates any pending share preview. This prevents a dialog opened for an
         // earlier list/result from sending text after the Home projection has changed.
@@ -2226,7 +2243,7 @@ class MainActivity : AppCompatActivity() {
     private fun createSearchResultView(
         match: PracticalShoppingSearchIdentityPresentation.Match,
         caveat: String,
-        onAddToHome: (String) -> Unit
+        onAddToHome: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit
     ): View {
         val card = MaterialCardView(this).apply {
             radius = dp(18).toFloat()
@@ -2353,17 +2370,26 @@ class MainActivity : AppCompatActivity() {
                 R.string.search_identity_add_home_draft_description,
                 match.displayName
             )
-            setOnClickListener { onAddToHome(match.displayName) }
+            setOnClickListener { onAddToHome(match) }
         }
         card.addView(body)
         card.addView(addHomeButton)
         return card
     }
 
-    private fun addSearchIdentityToHome(displayName: String) {
-        val previousQuery = homeSessionState.model.ui.query
-        val nextState = PracticalShoppingHomeSession.addIdentityDraft(homeSessionState, displayName)
-        if (nextState.model.ui.query == previousQuery) {
+    private fun addSearchIdentityToHome(
+        match: PracticalShoppingSearchIdentityPresentation.Match
+    ) {
+        val identity = PracticalShoppingPrivateIdentity.fromSearchMatch(match)
+        if (identity == null) {
+            searchStatus.text = getString(R.string.search_identity_add_home_failed)
+            return
+        }
+        val previousCount = homeSessionState.privateIdentities.size
+        val nextState = PracticalShoppingHomeSession.addPrivateIdentity(homeSessionState, identity)
+        if (nextState.privateIdentities.size == previousCount &&
+            nextState.privateIdentities.none { it.identityKey == identity.identityKey }
+        ) {
             searchStatus.text = getString(R.string.search_identity_add_home_failed)
             return
         }
@@ -2431,6 +2457,7 @@ class MainActivity : AppCompatActivity() {
         private const val STATE_HOME_EXTRA_STOP_MINIMUM_SAVINGS =
             "app_shell.home_extra_stop_minimum_savings"
         private const val STATE_HOME_REQUEST_DETAILS = "app_shell.home_request_details"
+        private const val STATE_HOME_PRIVATE_IDENTITIES = "app_shell.home_private_identities"
         private const val STATE_HOME_DETAILS_ITEM_KEY = "app_shell.home_details_item_key"
         private const val STATE_HOME_DETAILS_PACKAGE_COUNT = "app_shell.home_details_package_count"
         private const val STATE_HOME_DETAILS_BRAND = "app_shell.home_details_brand"

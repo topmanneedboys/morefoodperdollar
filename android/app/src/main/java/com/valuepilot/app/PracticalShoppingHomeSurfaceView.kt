@@ -61,6 +61,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val quickAddOwnerControls = mutableListOf<View>()
     private val itemRemovalOwnerControls = mutableListOf<View>()
     private val unknownRemovalOwnerControls = mutableListOf<View>()
+    private val privateIdentityRemovalOwnerControls = mutableListOf<View>()
     private val offlineCatalogOwnerControls = mutableListOf<View>()
     private val itemDetailsOwnerControls = mutableListOf<View>()
     private val exactProductOwnerControls = mutableListOf<View>()
@@ -112,6 +113,13 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         set(value) {
             field = value
             unknownRemovalOwnerControls.forEach { control ->
+                control.isEnabled = value != null
+            }
+        }
+    var onRemovePrivateIdentity: ((String) -> Unit)? = null
+        set(value) {
+            field = value
+            privateIdentityRemovalOwnerControls.forEach { control ->
                 control.isEnabled = value != null
             }
         }
@@ -295,6 +303,10 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
 
     private val itemsHeading = heading(context.getString(R.string.home_items_title))
     private val itemsContainer = bareColumn()
+    private val privateIdentityHeading = heading(context.getString(R.string.home_private_identity_title))
+    private val privateIdentityBody = column()
+    private val privateIdentityCard =
+        card("#EFF6FF", "#BFDBFE", 12, privateIdentityBody)
 
     private val refinementBody = column()
     private val refinementCard = card("#FFFBEB", "#FDE68A", 16, refinementBody)
@@ -368,6 +380,8 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         addView(quickAddHeading)
         addView(quickAddGroup)
         addView(message)
+        addView(privateIdentityHeading)
+        addView(privateIdentityCard)
         addView(sampleCard())
         addView(privateMemorySummary)
         addView(privateMemoryHighlightsCard)
@@ -387,6 +401,8 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         addView(extraStopSettingsCard)
 
         itemsHeading.visibility = GONE
+        privateIdentityHeading.visibility = GONE
+        privateIdentityCard.visibility = GONE
         refinementCard.visibility = GONE
         unknownCard.visibility = GONE
         extraStopSettingsCard.visibility = GONE
@@ -419,6 +435,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     fun render(state: PracticalShoppingHomeRenderState) {
         itemRemovalOwnerControls.clear()
         unknownRemovalOwnerControls.clear()
+        privateIdentityRemovalOwnerControls.clear()
         offlineCatalogOwnerControls.clear()
         itemDetailsOwnerControls.clear()
         exactProductOwnerControls.clear()
@@ -439,6 +456,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         submitButton.isEnabled = state.submitEnabled && onSubmit != null
         compareActionButton.isEnabled = onCompare != null
         renderMessage(state)
+        renderPrivateIdentities(state.privateIdentityItems)
         renderItems(state.items)
         renderRefinement(state.refinement)
         renderQuickAdd(state.quickAddVisible, state.quickAddChoices)
@@ -650,6 +668,59 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         itemsHeading.visibility = if (items.isEmpty()) GONE else VISIBLE
         items.forEach { item ->
             itemsContainer.addView(itemRow(item))
+        }
+    }
+
+    private fun renderPrivateIdentities(
+        identities: List<PracticalShoppingHomePrivateIdentityRenderState>
+    ) {
+        privateIdentityBody.removeAllViews()
+        privateIdentityHeading.visibility = if (identities.isEmpty()) GONE else VISIBLE
+        privateIdentityCard.visibility = if (identities.isEmpty()) GONE else VISIBLE
+        if (identities.isEmpty()) return
+
+        privateIdentityBody.addView(
+            line(
+                context.getString(R.string.home_private_identity_body),
+                13f,
+                "#374151"
+            )
+        )
+        identities.forEach { identity ->
+            val label = buildString {
+                append(identity.displayName)
+                identity.brand?.let { append(" · ").append(it) }
+                identity.packageQuantityLabel?.let { append(" · ").append(it) }
+            }
+            privateIdentityBody.addView(
+                line(label, 15f, "#111827", true, topPadding = 12)
+            )
+            identity.sourceLabel?.let { source ->
+                privateIdentityBody.addView(
+                    line(
+                        context.getString(R.string.home_private_identity_source, source),
+                        12f,
+                        "#6B7280",
+                        topPadding = 3
+                    )
+                )
+            }
+            privateIdentityBody.addView(
+                line(identity.notice, 12f, "#92400E", topPadding = 3)
+            )
+            privateIdentityBody.addView(
+                removeButton(
+                    onRemove = { onRemovePrivateIdentity?.invoke(identity.identityKey) },
+                    description = context.getString(
+                        R.string.home_private_identity_remove_description,
+                        identity.displayName
+                    ),
+                    enabled = onRemovePrivateIdentity != null,
+                    ownerControls = privateIdentityRemovalOwnerControls
+                ).apply {
+                    layoutParams = fullWidth(dp(40), 5)
+                }
+            )
         }
     }
 

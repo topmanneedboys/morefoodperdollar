@@ -31,6 +31,8 @@ internal data class PracticalShoppingSearchIdentityPresentation(
         val matchLabel: String,
         /** Exact structured package quantity when the source supplied one. */
         val packageQuantityLabel: String? = null,
+        /** Source attribution supplied by the identity rail, when available. */
+        val sourceLabel: String? = null,
         val identityKey: String = displayName
     ) {
         init {
@@ -39,6 +41,8 @@ internal data class PracticalShoppingSearchIdentityPresentation(
             require(matchLabel.isNotBlank())
             require(packageQuantityLabel == null || packageQuantityLabel.isNotBlank())
             require(packageQuantityLabel == null || packageQuantityLabel.length <= 64)
+            require(sourceLabel == null || sourceLabel.isNotBlank())
+            require(sourceLabel == null || sourceLabel.length <= 160)
             require(identityKey.isNotBlank())
         }
     }

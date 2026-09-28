@@ -110,6 +110,25 @@ data class PracticalShoppingHomeItemRenderState(
     }
 }
 
+/** Identity-only row for the shopper's separate private Home list. */
+data class PracticalShoppingHomePrivateIdentityRenderState(
+    val identityKey: String,
+    val displayName: String,
+    val brand: String?,
+    val sourceLabel: String?,
+    val packageQuantityLabel: String?,
+    val notice: String
+) {
+    init {
+        require(identityKey.isNotBlank())
+        require(displayName.isNotBlank())
+        require(brand == null || brand.isNotBlank())
+        require(sourceLabel == null || sourceLabel.isNotBlank())
+        require(packageQuantityLabel == null || packageQuantityLabel.isNotBlank())
+        require(notice.isNotBlank())
+    }
+}
+
 data class PracticalShoppingHomeChickenChoiceRenderState(
     val choice: LocalSamplePracticalShoppingDemo.ChickenChoice,
     val label: String
@@ -180,6 +199,7 @@ data class PracticalShoppingHomeRenderState(
     val result: PracticalShoppingUiState?,
     val extraStopSettings: PracticalShoppingHomeExtraStopSettingsRenderState,
     val sampleNotice: String,
+    val privateIdentityItems: List<PracticalShoppingHomePrivateIdentityRenderState> = emptyList(),
     val privateMemorySummary: String? = null,
     /** Whether Home may expose the contextual route into the private history screen. */
     val privateMemoryReviewActionVisible: Boolean = false,
@@ -207,6 +227,10 @@ data class PracticalShoppingHomeRenderState(
         require(quickAddChoices.isNotEmpty())
         require(quickAddChoices.map { it.choice }.distinct().size == quickAddChoices.size)
         require(sampleNotice.isNotBlank())
+        require(privateIdentityItems.size <= PracticalShoppingPrivateIdentity.MAX_COUNT)
+        require(
+            privateIdentityItems.map { it.identityKey }.distinct().size == privateIdentityItems.size
+        )
         require(privateMemorySummary == null || privateMemorySummary.isNotBlank())
         require(privateMemoryHighlights.size <= MAX_HOME_PRIVATE_MEMORY_HIGHLIGHTS)
         require(
@@ -248,6 +272,8 @@ object PracticalShoppingHomeRenderer {
      */
     const val ITEM_PRICE_BREAKDOWN_NOTICE =
         "Included in the basket total — exact item price not shown."
+    const val PRIVATE_IDENTITY_NOTICE =
+        "Selection only — no current price, store, stock, availability or ranking is confirmed."
 
     fun render(source: LocalSamplePracticalShoppingDemo.UiState): PracticalShoppingHomeRenderState =
         render(source, requestDetails = null, privateMemory = null)
@@ -258,7 +284,8 @@ object PracticalShoppingHomeRenderer {
         privateMemory: CompareHerePrivatePriceMemoryState? = null,
         privateMemoryStatus: PracticalShoppingHomePrivateMemoryStatus =
             PracticalShoppingHomePrivateMemoryStatus.AVAILABLE,
-        savedExactProductContext: PracticalShoppingHomeSavedExactProductContext? = null
+        savedExactProductContext: PracticalShoppingHomeSavedExactProductContext? = null,
+        privateIdentities: List<PracticalShoppingPrivateIdentity> = emptyList()
     ): PracticalShoppingHomeRenderState {
         // A failed read is not permission to display stale or caller-provided history. Keep the
         // status visible while suppressing every history-derived row notice until recovery.
@@ -435,6 +462,20 @@ object PracticalShoppingHomeRenderer {
                     notice = extraStopSettingsNotice
                 ),
             sampleNotice = source.sampleNotice,
+            privateIdentityItems =
+                privateIdentities
+                    .take(PracticalShoppingPrivateIdentity.MAX_COUNT)
+                    .distinctBy { it.identityKey }
+                    .map { identity ->
+                        PracticalShoppingHomePrivateIdentityRenderState(
+                            identityKey = identity.identityKey,
+                            displayName = identity.displayName,
+                            brand = identity.brand,
+                            sourceLabel = identity.sourceLabel,
+                            packageQuantityLabel = identity.packageQuantityLabel,
+                            notice = PRIVATE_IDENTITY_NOTICE
+                        )
+                    },
             privateMemorySummary = privateMemorySummary,
             // A readable nonempty history gets a review action. An unreadable
             // store gets the same route so the shopper can open Compare Here
