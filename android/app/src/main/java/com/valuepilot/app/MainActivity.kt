@@ -18,6 +18,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.CheckBox
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
@@ -2431,7 +2432,14 @@ class MainActivity : AppCompatActivity() {
             )
             setOnClickListener { onAddToHome(match) }
         }
-        card.addView(body)
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        content.addView(body)
         PracticalShoppingPrivateIdentity.fromSearchMatch(match)?.let { identity ->
             val photoButton = MaterialButton(this).apply {
                 text = getString(R.string.search_identity_view_photos)
@@ -2449,9 +2457,10 @@ class MainActivity : AppCompatActivity() {
                 )
                 setOnClickListener { onOpenPhotos(match) }
             }
-            card.addView(photoButton)
+            content.addView(photoButton)
         }
-        card.addView(addHomeButton)
+        content.addView(addHomeButton)
+        card.addView(content)
         return card
     }
 

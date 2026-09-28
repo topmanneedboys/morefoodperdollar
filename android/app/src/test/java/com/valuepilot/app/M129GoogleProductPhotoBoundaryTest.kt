@@ -70,6 +70,24 @@ class M129GoogleProductPhotoBoundaryTest {
     }
 
     @Test
+    fun searchCardPhotoAndSaveActionsUseSeparateVerticalTouchTargets() {
+        val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
+            .replace("\r\n", "\n")
+        val cardStart = activity.indexOf("private fun createSearchResultView(")
+        val cardEnd = activity.indexOf("private fun openGoogleProductPhotos(", cardStart)
+        assertTrue(cardStart >= 0)
+        assertTrue(cardEnd > cardStart)
+        val card = activity.substring(cardStart, cardEnd)
+
+        assertTrue("Search card must wrap its body and actions", card.contains("val content = LinearLayout(this)"))
+        assertTrue("Photo action must be a content child", card.contains("content.addView(photoButton)"))
+        assertTrue("Save action must be a content child", card.contains("content.addView(addHomeButton)"))
+        assertTrue("Wrapped card content must be attached once", card.contains("card.addView(content)"))
+        assertFalse("Photo action must not overlap as a direct FrameLayout child", card.contains("card.addView(photoButton)"))
+        assertFalse("Save action must not overlap as a direct FrameLayout child", card.contains("card.addView(addHomeButton)"))
+    }
+
+    @Test
     fun basketCollectionTapUsesTheIncrementalSurfaceUpdate() {
         val main = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
         val start = main.indexOf("basketExperience.onPrivateIdentityToggle = {")
