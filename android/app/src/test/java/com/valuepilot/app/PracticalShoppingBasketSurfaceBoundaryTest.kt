@@ -117,13 +117,52 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
         val source = source("PracticalShoppingBasketSurfaceView.kt").readSourceText()
 
         assertEquals(
-            4,
+            5,
             source
                 .split("accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE")
                 .size - 1
         )
         assertTrue(source.contains("private val collectionNotice"))
         assertTrue(source.contains("projected safety disclosure"))
+    }
+
+    @Test
+    fun privateIdentityChecklistReconcilesRowsByStableIdentityKey() {
+        val source = source("PracticalShoppingBasketSurfaceView.kt").readSourceText()
+        val renderStart = source.indexOf("private fun renderPrivateIdentities")
+        val reconcileStart = source.indexOf("private fun reconcilePrivateIdentityRows", renderStart)
+
+        assertTrue("Expected private checklist renderer", renderStart >= 0)
+        assertTrue("Expected keyed private checklist reconciliation", reconcileStart > renderStart)
+        val renderBody = source.substring(renderStart, reconcileStart)
+
+        assertFalse(
+            "A private checkbox tap must not rebuild the checklist body",
+            renderBody.contains("privateIdentityBody.removeAllViews()")
+        )
+        listOf(
+            "privateIdentityRowsByKey",
+            "reconcilePrivateIdentityRows(identities)",
+            "privateIdentityRows.removeViewAt",
+            "privateIdentityRows.addView",
+            "fun updatePrivateIdentityCollected(identityKey: String, collected: Boolean)"
+        ).forEach { required ->
+            assertTrue("Missing stable private-row boundary $required", source.contains(required))
+        }
+    }
+
+    @Test
+    fun privatePhotoFailureIsAVisibleAccessibleBasketState() {
+        val source = source("PracticalShoppingBasketSurfaceView.kt").readSourceText()
+
+        listOf(
+            "privateIdentityPhotoError",
+            "accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE",
+            "importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES",
+            "fun showPhotoError(message: String)"
+        ).forEach { required ->
+            assertTrue("Missing Basket photo error boundary $required", source.contains(required))
+        }
     }
 
     @Test

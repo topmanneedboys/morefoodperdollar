@@ -121,6 +121,12 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             "#374151",
             topPadding = 5
         )
+    private val privateIdentityPhotoError = line("", 13f, "#B42318", true, 8).apply {
+        accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+        visibility = GONE
+    }
+    private val privateIdentityRows = column(padded = false)
     private val privateIdentityBody = column()
     private val privateIdentityCard =
         card("#EFF6FF", "#BFDBFE", 12, privateIdentityBody)
@@ -152,10 +158,17 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     private var pendingRestoredCollectedKeys: List<String>? = null
     private var pendingRestoredCollectionScopeId: String? = null
     private var pendingRestoredCollectionScopePresent = false
+    private val privateIdentityRowsByKey = LinkedHashMap<String, PrivateIdentityRow>()
 
     init {
         orientation = VERTICAL
         isSaveEnabled = true
+        privateIdentityBody.addView(privateIdentityHeading)
+        privateIdentityBody.addView(privateIdentityProgress)
+        privateIdentityBody.addView(privateIdentityNotice)
+        privateIdentityBody.addView(privateIdentityPhotoError)
+        privateIdentityBody.addView(privateIdentityHeadingSeparator())
+        privateIdentityBody.addView(privateIdentityRows)
         addView(sampleCard())
         addView(privateIdentityCard)
         addView(headline.apply { setPadding(0, dp(20), 0, 0) })
@@ -229,6 +242,38 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             if (state.extraStopRuleNotice == null) GONE else VISIBLE
     }
 
+    /**
+     * Updates one already-rendered private identity row without rebuilding the
+     * checklist. The owner calls this for a foreground check-off tap so the
+     * row, scroll position and accessibility focus remain stable.
+     */
+    fun updatePrivateIdentityCollected(identityKey: String, collected: Boolean): Boolean {
+        val row = privateIdentityRowsByKey[identityKey] ?: return false
+        row.updateCollected(collected)
+        lastRenderState?.let { state ->
+            lastRenderState =
+                state.copy(
+                    privateIdentityItems =
+                        state.privateIdentityItems.map { identity ->
+                            if (identity.identityKey == identityKey) {
+                                identity.copy(collected = collected)
+                            } else {
+                                identity
+                            }
+                        }
+                )
+        }
+        renderPrivateIdentityProgress()
+        return true
+    }
+
+    /** Shows a user-triggered photo handoff failure on the visible Basket surface. */
+    fun showPhotoError(message: String) {
+        require(message.isNotBlank())
+        privateIdentityPhotoError.text = message
+        privateIdentityPhotoError.visibility = VISIBLE
+    }
+
     override fun onSaveInstanceState(): Parcelable? {
         val state = Bundle()
         state.putParcelable(SAVED_SUPER_STATE, super.onSaveInstanceState())
@@ -288,34 +333,116 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     private fun renderPrivateIdentities(
         identities: List<PracticalShoppingBasketPrivateIdentityRenderState>
     ) {
-        privateIdentityBody.removeAllViews()
         privateIdentityCard.visibility = if (identities.isEmpty()) GONE else VISIBLE
-        if (identities.isEmpty()) return
+        if (identities.isEmpty()) {
+            privateIdentityPhotoError.text = ""
+            privateIdentityPhotoError.visibility = GONE
+            privateIdentityRows.removeAllViews()
+            privateIdentityRowsByKey.clear()
+            renderPrivateIdentityProgress()
+            return
+        }
 
-        privateIdentityBody.addView(privateIdentityHeading)
-        val collectedCount = identities.count { it.collected }
+        privateIdentityPhotoError.visibility =
+            if (privateIdentityPhotoError.text.isNullOrBlank()) GONE else VISIBLE
+        reconcilePrivateIdentityRows(identities)
+        renderPrivateIdentityProgress()
+    }
+
+    private fun reconcilePrivateIdentityRows(
+        identities: List<PracticalShoppingBasketPrivateIdentityRenderState>
+    ) {
+        val desiredKeys = identities.map { it.identityKey }.toSet()
+        privateIdentityRowsByKey.keys
+            .filterNot(desiredKeys::contains)
+            .toList()
+            .forEach { identityKey ->
+                privateIdentityRowsByKey.remove(identityKey)?.root?.let(privateIdentityRows::removeView)
+            }
+
+        identities.forEachIndexed { index, identity ->
+            val row =
+                privateIdentityRowsByKey[identity.identityKey]
+                    ?: PrivateIdentityRow(identity).also {
+                        privateIdentityRowsByKey[identity.identityKey] = it
+                    }
+            row.update(identity)
+            val currentIndex = privateIdentityRows.indexOfChild(row.root)
+            if (currentIndex != index) {
+                if (currentIndex >= 0) privateIdentityRows.removeViewAt(currentIndex)
+                privateIdentityRows.addView(
+                    row.root,
+                    index.coerceAtMost(privateIdentityRows.childCount)
+                )
+            }
+        }
+    }
+
+    private fun renderPrivateIdentityProgress() {
+        val rows = privateIdentityRowsByKey.values
         privateIdentityProgress.text =
-            "$collectedCount of ${identities.size} private items collected"
-        privateIdentityBody.addView(privateIdentityProgress)
-        privateIdentityBody.addView(privateIdentityNotice)
-        privateIdentityBody.addView(privateIdentityHeadingSeparator())
-        identities.forEach { identity ->
-            privateIdentityBody.addView(privateIdentityButton(identity))
-            identity.brand?.let { brand ->
-                privateIdentityBody.addView(line("Brand: $brand", 12f, "#374151", topPadding = 2))
-            }
-            identity.packageQuantityLabel?.let { quantity ->
-                privateIdentityBody.addView(
-                    line("Package: $quantity", 12f, "#374151", topPadding = 2)
-                )
-            }
-            identity.sourceLabel?.let { source ->
-                privateIdentityBody.addView(
-                    line("Source: $source", 12f, "#374151", topPadding = 2)
-                )
-            }
-            privateIdentityBody.addView(line(identity.notice, 12f, "#6B7280", topPadding = 2))
-            privateIdentityBody.addView(privateIdentityPhotoButton(identity))
+            "${rows.count { it.collected }} of ${rows.size} private items collected"
+    }
+
+    private inner class PrivateIdentityRow(identity: PracticalShoppingBasketPrivateIdentityRenderState) {
+        val root = column(padded = false).apply {
+            layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 0)
+        }
+        private val toggle = privateIdentityButton(identity)
+        private val brand = line("", 12f, "#374151", topPadding = 2)
+        private val packageQuantity = line("", 12f, "#374151", topPadding = 2)
+        private val source = line("", 12f, "#374151", topPadding = 2)
+        private val notice = line("", 12f, "#6B7280", topPadding = 2)
+        private val photo = privateIdentityPhotoButton(identity)
+        private var displayName = identity.displayName
+        var collected: Boolean = identity.collected
+            private set
+
+        init {
+            brand.visibility = GONE
+            packageQuantity.visibility = GONE
+            source.visibility = GONE
+            root.addView(toggle)
+            root.addView(brand)
+            root.addView(packageQuantity)
+            root.addView(source)
+            root.addView(notice)
+            root.addView(photo)
+            update(identity)
+        }
+
+        fun update(identity: PracticalShoppingBasketPrivateIdentityRenderState) {
+            displayName = identity.displayName
+            toggle.text = "${if (identity.collected) "✓" else "○"} ${identity.displayName}"
+            toggle.contentDescription =
+                "Mark ${identity.displayName} as " +
+                    (if (identity.collected) "not collected" else "collected") +
+                    ". This is only a local shopping checklist mark."
+            toggle.isEnabled = onPrivateIdentityToggle != null
+            brand.text = identity.brand?.let { "Brand: $it" }.orEmpty()
+            brand.visibility = if (identity.brand == null) GONE else VISIBLE
+            packageQuantity.text = identity.packageQuantityLabel?.let { "Package: $it" }.orEmpty()
+            packageQuantity.visibility =
+                if (identity.packageQuantityLabel == null) GONE else VISIBLE
+            source.text = identity.sourceLabel?.let { "Source: $it" }.orEmpty()
+            source.visibility = if (identity.sourceLabel == null) GONE else VISIBLE
+            notice.text = identity.notice
+            photo.contentDescription = context.getString(
+                R.string.home_private_identity_photos_description,
+                identity.displayName
+            )
+            photo.isEnabled = onOpenPrivateIdentityPhotos != null
+            collected = identity.collected
+        }
+
+        fun updateCollected(nextCollected: Boolean) {
+            if (collected == nextCollected) return
+            toggle.text = "${if (nextCollected) "✓" else "○"} $displayName"
+            toggle.contentDescription =
+                "Mark $displayName as " +
+                    (if (nextCollected) "not collected" else "collected") +
+                    ". This is only a local shopping checklist mark."
+            collected = nextCollected
         }
     }
 

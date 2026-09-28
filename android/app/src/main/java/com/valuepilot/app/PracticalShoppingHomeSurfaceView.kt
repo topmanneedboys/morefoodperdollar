@@ -491,6 +491,14 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         }
     }
 
+    /** Shows a user-triggered external-photo failure on the visible Home surface. */
+    fun showPhotoError(error: String) {
+        require(error.isNotBlank())
+        message.text = error
+        message.setTextColor(ValuePilotPalette.color("#B42318"))
+        message.visibility = VISIBLE
+    }
+
     /**
      * Asks the Home scroll container to reveal the latest projected answer after an explicit
      * shopper action. The bounded rectangle keeps a long result from forcing the whole card into

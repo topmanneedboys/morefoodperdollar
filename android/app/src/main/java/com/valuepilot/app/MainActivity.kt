@@ -1243,12 +1243,28 @@ class MainActivity : AppCompatActivity() {
             }
         }
         basketExperience.onPrivateIdentityToggle = { identityKey ->
-            homeSessionState =
+            val nextState =
                 PracticalShoppingHomeSession.togglePrivateIdentityCollected(
                     homeSessionState,
                     identityKey
                 )
-            renderHome()
+            homeSessionState = nextState
+            homeSessionStore.save(PracticalShoppingHomeSession.snapshot(nextState))
+            homeRenderState =
+                homeRenderState?.copy(
+                    privateIdentityCollectedKeys = nextState.privateBasketCollectedIdentityKeys
+                )
+            val updatedInPlace =
+                basketExperience.updatePrivateIdentityCollected(
+                    identityKey = identityKey,
+                    collected = identityKey in nextState.privateBasketCollectedIdentityKeys
+                )
+            if (!updatedInPlace || shellState.selectedPrimaryTab != AppPrimaryTab.BASKET) {
+                // A stale or detached Basket surface must still converge through
+                // the normal immutable render path. The common tap path above
+                // never rebuilds Home or private identity rows.
+                renderHome()
+            }
         }
         basketExperience.onOpenPrivateIdentityPhotos = { identityKey ->
             homeSessionState.privateIdentities
@@ -2447,8 +2463,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun openGoogleProductPhotos(identity: PracticalShoppingPrivateIdentity) {
         if (googlePhotoViewerLaunchInFlight) return
-        val url = GoogleProductPhotoViewer.urlFor(identity) ?: return
+        val url = GoogleProductPhotoViewer.urlFor(identity) ?: run {
+            showGooglePhotoLaunchError()
+            return
+        }
         googlePhotoViewerLaunchInFlight = true
+        val uri = android.net.Uri.parse(url)
         val intent =
             CustomTabsIntent.Builder()
                 .setShowTitle(true)
@@ -2458,10 +2478,32 @@ class MainActivity : AppCompatActivity() {
                 )
                 .build()
         try {
-            intent.launchUrl(this, android.net.Uri.parse(url))
+            intent.launchUrl(this, uri)
         } catch (_: ActivityNotFoundException) {
+            // Keep the supported browser fallback: a device may have a regular
+            // browser without a Custom Tabs provider.
+            try {
+                startActivity(Intent(Intent.ACTION_VIEW, uri))
+            } catch (_: ActivityNotFoundException) {
+                googlePhotoViewerLaunchInFlight = false
+                showGooglePhotoLaunchError()
+            } catch (_: SecurityException) {
+                googlePhotoViewerLaunchInFlight = false
+                showGooglePhotoLaunchError()
+            }
+        } catch (_: SecurityException) {
             googlePhotoViewerLaunchInFlight = false
-            searchStatus.text = getString(R.string.search_identity_browser_unavailable)
+            showGooglePhotoLaunchError()
+        }
+    }
+
+    private fun showGooglePhotoLaunchError() {
+        val message = getString(R.string.search_identity_browser_unavailable)
+        when (shellState.selectedPrimaryTab) {
+            AppPrimaryTab.HOME -> homeExperience.showPhotoError(message)
+            AppPrimaryTab.BASKET -> basketExperience.showPhotoError(message)
+            AppPrimaryTab.SEARCH -> searchStatus.text = message
+            else -> Unit
         }
     }
 

@@ -50,6 +50,44 @@ class M129GoogleProductPhotoBoundaryTest {
     }
 
     @Test
+    fun launchFailureReportsOnTheCurrentSurfaceAndKeepsBrowserFallback() {
+        val main = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
+        val home = source("src/main/java/com/valuepilot/app/PracticalShoppingHomeSurfaceView.kt").readText()
+        val basket = source("src/main/java/com/valuepilot/app/PracticalShoppingBasketSurfaceView.kt").readText()
+
+        listOf(
+            "showGooglePhotoLaunchError()",
+            "homeExperience.showPhotoError(message)",
+            "basketExperience.showPhotoError(message)",
+            "searchStatus.text = message",
+            "Intent(Intent.ACTION_VIEW, uri)",
+            "catch (_: SecurityException)"
+        ).forEach { required ->
+            assertTrue("Missing current-surface photo failure boundary $required", main.contains(required))
+        }
+        assertTrue(home.contains("fun showPhotoError(error: String)"))
+        assertTrue(basket.contains("fun showPhotoError(message: String)"))
+    }
+
+    @Test
+    fun basketCollectionTapUsesTheIncrementalSurfaceUpdate() {
+        val main = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
+        val start = main.indexOf("basketExperience.onPrivateIdentityToggle = {")
+        val end = main.indexOf("basketExperience.onOpenPrivateIdentityPhotos", start)
+
+        assertTrue("Expected Basket toggle owner callback", start >= 0)
+        assertTrue("Expected Basket photo callback after toggle", end > start)
+        val callback = main.substring(start, end)
+        listOf(
+            "homeSessionStore.save(PracticalShoppingHomeSession.snapshot(nextState))",
+            "basketExperience.updatePrivateIdentityCollected(",
+            "if (!updatedInPlace || shellState.selectedPrimaryTab != AppPrimaryTab.BASKET)"
+        ).forEach { required ->
+            assertTrue("Missing incremental Basket toggle boundary $required", callback.contains(required))
+        }
+    }
+
+    @Test
     fun noNewStorageOrBroadPermissionIsAddedForTheViewer() {
         val manifest = source("src/main/AndroidManifest.xml").readText()
         assertFalse(manifest.contains("WRITE_EXTERNAL_STORAGE"))
