@@ -42,6 +42,8 @@ on:
       - 'tools/tests/test_audit_argentina_product_images.py'
       - 'tools/exact_product_image_manifest.py'
       - 'tools/tests/test_exact_product_image_manifest.py'
+      - 'tools/audit_argentina_image_sources.py'
+      - 'tools/tests/test_audit_argentina_image_sources.py'
       - 'tools/data/open_food_facts_image_rights_policy.json'
       - 'tools/run_rakuten_off_quantity_coverage.py'
       - 'tools/tests/test_qualify_*.py'
@@ -90,6 +92,8 @@ on:
       - 'tools/tests/test_audit_argentina_product_images.py'
       - 'tools/exact_product_image_manifest.py'
       - 'tools/tests/test_exact_product_image_manifest.py'
+      - 'tools/audit_argentina_image_sources.py'
+      - 'tools/tests/test_audit_argentina_image_sources.py'
       - 'tools/data/open_food_facts_image_rights_policy.json'
       - 'tools/run_rakuten_off_quantity_coverage.py'
       - 'tools/tests/test_qualify_*.py'
@@ -151,6 +155,7 @@ jobs:
           tools/run_rakuten_off_quantity_coverage.py
           tools/audit_argentina_product_images.py
           tools/exact_product_image_manifest.py
+          tools/audit_argentina_image_sources.py
 
       - name: Run offline qualification and regional tests
         run: python -m unittest discover -s tools/tests -p 'test_*.py' -v

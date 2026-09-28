@@ -46,7 +46,19 @@ from tools.open_facts_barcode import canonical_open_facts_gtin
 
 SCHEMA_VERSION = "valuepilot-exact-product-image-manifest-v1"
 POLICY_VERSION = "exact-gtin-name-brand-quantity-rights-roles-v1"
-OFF_IMAGE_HOSTS = frozenset(("images.openfoodfacts.org", "static.openfoodfacts.org"))
+# Open Food Facts documents ``images.openfoodfacts.org`` as its production
+# image host.  The official ``world.openfoodfacts.net`` Product Opener
+# endpoint can return the same image paths on its corresponding host; keep
+# that host in the evidence boundary as well, while the rights policy still
+# blocks display until image-byte and third-party review gates pass.
+OFF_IMAGE_HOSTS = frozenset(
+    (
+        "images.openfoodfacts.org",
+        "static.openfoodfacts.org",
+        "images.openfoodfacts.net",
+        "static.openfoodfacts.net",
+    )
+)
 MAX_OUTPUT_RECORD_BYTES = 32 * 1024
 MAX_POLICY_BYTES = 64 * 1024
 SOURCE_RIGHTS_POLICY_SCHEMA_VERSION = "valuepilot-image-source-rights-policy-v1"
