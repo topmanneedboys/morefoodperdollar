@@ -1,8 +1,40 @@
 # Current state
 
-Updated: 2026-09-27 16:46 UTC
+Updated: 2026-09-29 04:30 UTC
 
-## Resumed M12.4–M12.9 checkpoint — 2026-09-27
+## 10112 integration checkpoint — 2026-09-29
+
+The active stacked branch is `work/valuepilot-m128-m129` at
+`080f24e998679e8173862f4b6bd217dc195023f6`. PR #41 targets `main`, PR #42
+targets PR #41, and PR #43 targets PR #42; all are open and currently reported
+mergeable at their stacked bases. A read-only merge-tree calculation against
+`origin/main` produced `4ea3ee61af529b5b339c21ef476509626b4412df` with no
+conflicts. No PR was merged or duplicated locally.
+
+The integrated code preserves Search navigation/query/pagination state,
+durable private Home/Basket identities, exact-key deduplication and
+remove/re-add semantics, Secadero partial/invalid durable-state protection, and
+separate Search Photo/Save touch targets, accessibility labels and callbacks.
+The surfaces remain identity/private-evidence boundaries and do not invent
+price, stock, ranking or provider authority.
+
+Final local gates for this code tree are green: 1,730 Android app JVM tests,
+405 shared-core tests, debug/release lint, debug/release builds and release
+bundle. Privacy inspection confirms no `ACCESS_NETWORK_STATE` permission.
+VersionCode `10112` / versionName `101.1.11` is unused in Play Console. The
+signed local AAB is
+`android/app/build/outputs/bundle/release/app-release-play-upload-signed-10112.aab`
+with SHA-256
+`DBF0AC4212F8AB9F95BD16C5D3A7EDAF93878EFC3F1103B0EA70ADA708F05356`; its
+upload certificate matches the protected Play upload certificate. It has not
+been uploaded or installed. Remaining gates are the GitHub Actions billing /
+spending-limit blocker and later Motorola validation.
+
+The latest PR #43 runs (`36517192131`, `36517195056`) were not started because
+GitHub reports failed recent payments or a spending-limit requirement. No paid
+usage or rerun was requested.
+
+## Historical M12.4–M12.9 checkpoint — 2026-09-27
 
 The active continuation branch is `work/valuepilot-m124-m129`. The verified
 Data Status repair remains at `dcb40372bd0ed6f45afc87fea405d1dfdf01775b` and
@@ -95,18 +127,9 @@ The 389 `yerba` identities had 0 strict image candidates. No images were
 downloaded, committed, or added to Android. This is measured evidence, not a
 90% claim.
 
-M12.4 remains **PARTIAL**: the >5-result, valid-App-Check smoke across both
-regions still needs a valid credential/device path. M12.7/M12.8 remain
-code-complete for the existing offline/private evidence boundaries, but no
-live price or inventory claim is enabled. M12.9 now prepares an unsigned
-10108 / 101.1.7 candidate in the normal build configuration; no new signing
-or Play upload has occurred. The installed Play build remains 10107.
-Physical Motorola validation, any credentialed live smoke, and explicit
-approval for unattended promotion remain external gates.
-The local release APK is `android/app/build/outputs/apk/release/app-release-unsigned.apk`
-with versionCode `10108` / versionName `101.1.7`; its privacy check confirms
-`INTERNET` is present for the existing edge path and `ACCESS_NETWORK_STATE` is
-absent. This is a build artifact only, not a signed or uploaded release.
+The M12.4/M12.9 status in this historical section was superseded by the
+10112 integration checkpoint above. The earlier unsigned 10108 / 101.1.7
+candidate and installed 10107 build are historical records only.
 
 The bounded M12.4 trace gate was strengthened in commit
 `5a16e1166dd8d7d5a8d9c2893cfabe84ff8b4a97` and merged through PR #17 into
@@ -121,7 +144,7 @@ tests, browser verification, lint/build, privacy and single-signer checks.
 No Motorola is attached (`adb devices -l` is empty), so M12.4 is still not
 claimed as physically verified.
 
-Branch: `work/valuepilot-m124-m129`
+Historical branch: `work/valuepilot-m124-m129`
 
 The current branch preserves the untracked `device-audit/` evidence. GitHub
 Actions currently stores only the two durable provenance artifacts
