@@ -2,6 +2,24 @@
 
 Updated: 2026-09-29 04:30 UTC
 
+## Confirmed purchases and private history checkpoint — 2026-09-29
+
+The bounded continuation is complete on `work/valuepilot-confirmed-purchases` at
+`d793452e168ef85779c7b174a8d22d5fe3069133`, from the verified 10113 checkpoint
+`8722904f645660925008cd7a6c131bee660b00e9`. Basket now offers an explicit
+confirmation form; check-off and other list/navigation actions cannot mint a
+purchase. The shared-core model and atomic device-only history preserve exact
+money/quantity, explicit dates/store labels, stable identities, unknown values,
+repeated purchases, correction, deletion, and last-known-good behavior on failed
+writes or malformed state. Saved owns the history route and Repeat only adds the
+identity back to the private Home list. Comparison price memory remains separate.
+
+All local gates passed: shared-core tests, complete Android JVM tests, debug/release
+lint, debug/release builds, release bundle, and privacy inspection with no
+`ACCESS_NETWORK_STATE`. VersionCode `10114` / versionName `101.1.13` is an
+unsigned local candidate only; no Play upload, signing, installation, phone test or
+GitHub Actions retry was performed.
+
 ## 10113 Google Images refinement checkpoint — 2026-09-29
 
 Focused refinement commit: `0cb655c3ebde2bfa219cfc4393e84e56543d0485` on
