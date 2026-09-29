@@ -5,17 +5,19 @@ Updated: 2026-09-29 04:30 UTC
 ## Confirmed purchases and private history checkpoint — 2026-09-29
 
 The next bounded milestone is implemented on `work/valuepilot-confirmed-purchases`
-at `6dbe3112fe6f6073b7335e11b268066531c48d9c`, based on the verified 10113
+at `9f7f4ee`, on top of the verified `6dbe3112fe6f6073b7335e11b268066531c48d9c`
+hardening commit, based on the verified 10113
 checkpoint `8722904f645660925008cd7a6c131bee660b00e9`. It adds a provider-neutral
 shared-core `ConfirmedPurchase` model, an explicit confirmation boundary from
 Basket, and bounded atomic device-only history exposed as a Saved-owned route.
 Check-off, Search/Home identity additions, navigation, comparison completion and
 private comparison price memory never create purchase records. Unknown quantity,
-price, currency, date and store values stay unknown; exact money and quantity are
-validated without binary floating-point arithmetic. History supports repeat-to-
-Home, correction and explicit deletion, while malformed/read-failed state blocks
-mutation instead of being replaced with an empty list. The codec also rejects
-malformed UTF-8 rather than accepting replacement characters.
+price, currency, date and store values stay unknown; exact money and quantity
+(count, mass, or volume units) are validated without binary floating-point
+arithmetic. History supports repeat-to-Home, correction and explicit deletion,
+while malformed/read-failed state blocks mutation instead of being replaced with
+an empty list. The codec also rejects malformed UTF-8 rather than accepting
+replacement characters.
 
 Local verification is green: shared-core tests, the complete app JVM test suite,
 debug/release lint, debug/release builds, release bundle, and APK privacy inspection

@@ -5,14 +5,15 @@ Updated: 2026-09-29 04:30 UTC
 ## Confirmed purchases and private history checkpoint — 2026-09-29
 
 The bounded continuation is complete on `work/valuepilot-confirmed-purchases` at
-`6dbe3112fe6f6073b7335e11b268066531c48d9c`, from the verified 10113 checkpoint
+`9f7f4ee`, from the verified 10113 checkpoint
 `8722904f645660925008cd7a6c131bee660b00e9`. Basket now offers an explicit
 confirmation form; check-off and other list/navigation actions cannot mint a
 purchase. The shared-core model and atomic device-only history preserve exact
-money/quantity, explicit dates/store labels, stable identities, unknown values,
-repeated purchases, correction, deletion, and last-known-good behavior on failed
-writes or malformed state (including invalid UTF-8). Saved owns the history route and Repeat only adds the
-identity back to the private Home list. Comparison price memory remains separate.
+money/quantity, including explicit count/mass/volume units, dates/store labels,
+stable identities, unknown values, repeated purchases, correction, deletion, and
+last-known-good behavior on failed writes or malformed state (including invalid
+UTF-8). Saved owns the history route and Repeat only adds the identity back to
+the private Home list. Comparison price memory remains separate.
 
 All local gates passed: shared-core tests, complete Android JVM tests, debug/release
 lint, debug/release builds, release bundle, and privacy inspection with no

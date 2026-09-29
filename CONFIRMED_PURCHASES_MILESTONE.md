@@ -9,9 +9,10 @@ feeds, price-memory authority, or Android networking policy.
 Basket rows expose an explicit **Confirm purchase** action. Check-off, adding a
 Search identity to Home, navigation, and comparison completion never mint a
 purchase. The confirmation form requires an explicit checkbox and records only
-facts the shopper enters: stable product identity, optional positive count,
-optional exact non-negative money/currency, optional ISO date, and optional store
-label. Blank values remain unknown.
+facts the shopper enters: stable product identity, optional positive normalized
+quantity with an explicit count, mass, or volume unit, optional exact
+non-negative money/currency, optional ISO date, and optional store label. Blank
+values remain unknown.
 
 The shared-core `ConfirmedPurchase` model is provider-neutral and separates
 purchase history from `ObservedOffer`, current prices, inventory, ranking,
