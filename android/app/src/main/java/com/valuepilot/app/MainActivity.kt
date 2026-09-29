@@ -1361,23 +1361,34 @@ class MainActivity : AppCompatActivity() {
             setPadding(dp(4), dp(4), dp(4), 0)
         }
         val quantityLayout = TextInputLayout(this).apply {
-            hint = "Quantity purchased (count, optional)"
+            hint = "Quantity purchased (optional)"
             isCounterEnabled = true
-            counterMaxLength = 9
+            counterMaxLength = 24
         }
         val quantityInput = TextInputEditText(this).apply {
-            inputType = InputType.TYPE_CLASS_NUMBER
-            filters = arrayOf(InputFilter.LengthFilter(9))
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            filters = arrayOf(InputFilter.LengthFilter(24))
             setSingleLine(true)
-            setText(existing?.quantity?.let { quantity ->
-                if (quantity.unit == com.valuepilot.core.BaseUnit.COUNT) {
-                    (quantity.amountMicros / 1_000_000L).toString()
-                } else {
-                    ""
-                }
-            }.orEmpty())
+            setText(existing?.quantity?.let(ConfirmedPurchaseFormParser::displayQuantityText).orEmpty())
         }
         quantityLayout.addView(quantityInput)
+
+        val quantityUnitLayout = TextInputLayout(this).apply {
+            hint = "Quantity unit (count, g/kg, or ml/l; optional)"
+            isCounterEnabled = true
+            counterMaxLength = 16
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(12) }
+        }
+        val quantityUnitInput = TextInputEditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
+            filters = arrayOf(InputFilter.LengthFilter(16))
+            setSingleLine(true)
+            setText(existing?.quantity?.let(ConfirmedPurchaseFormParser::displayQuantityUnitText).orEmpty())
+        }
+        quantityUnitLayout.addView(quantityUnitInput)
 
         val amountLayout = TextInputLayout(this).apply {
             hint = "Amount paid (optional, exact decimal)"
@@ -1464,6 +1475,7 @@ class MainActivity : AppCompatActivity() {
         }
         body.addView(note)
         body.addView(quantityLayout)
+        body.addView(quantityUnitLayout)
         body.addView(amountLayout)
         body.addView(currencyLayout)
         body.addView(dateLayout)
@@ -1486,6 +1498,7 @@ class MainActivity : AppCompatActivity() {
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 quantityLayout.error = null
+                quantityUnitLayout.error = null
                 amountLayout.error = null
                 currencyLayout.error = null
                 dateLayout.error = null
@@ -1500,6 +1513,7 @@ class MainActivity : AppCompatActivity() {
                     ConfirmedPurchaseFormParser.parse(
                         ConfirmedPurchaseFormInput(
                             quantityText = quantityInput.text?.toString().orEmpty(),
+                            quantityUnitText = quantityUnitInput.text?.toString().orEmpty(),
                             amountText = amountInput.text?.toString().orEmpty(),
                             currencyText = currencyInput.text?.toString().orEmpty(),
                             dateText = dateInput.text?.toString().orEmpty(),
@@ -1509,7 +1523,10 @@ class MainActivity : AppCompatActivity() {
                 if (!parsed.accepted || parsed.values == null) {
                     val failure = requireNotNull(parsed.failure)
                     when (failure.field) {
-                        ConfirmedPurchaseFormField.QUANTITY -> quantityLayout.error = failure.message
+                        ConfirmedPurchaseFormField.QUANTITY -> {
+                            quantityLayout.error = failure.message
+                            quantityUnitLayout.error = failure.message
+                        }
                         ConfirmedPurchaseFormField.AMOUNT -> {
                             amountLayout.error = failure.message
                             currencyLayout.error = failure.message

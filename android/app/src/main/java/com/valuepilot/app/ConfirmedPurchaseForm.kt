@@ -2,14 +2,17 @@ package com.valuepilot.app
 
 import com.valuepilot.core.ConfirmedPurchase
 import com.valuepilot.core.ConfirmedPurchaseStore
+import com.valuepilot.core.BaseUnit
 import com.valuepilot.core.Money
 import com.valuepilot.core.NormalizedQuantity
-import com.valuepilot.core.QuantityNormalization
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.util.Locale
 
 /** Raw text collected by the Android form; no text is treated as a fact until parsing succeeds. */
 internal data class ConfirmedPurchaseFormInput(
     val quantityText: String,
+    val quantityUnitText: String,
     val amountText: String,
     val currencyText: String,
     val dateText: String,
@@ -52,21 +55,53 @@ internal data class ConfirmedPurchaseFormParseResult(
 internal object ConfirmedPurchaseFormParser {
     fun parse(input: ConfirmedPurchaseFormInput): ConfirmedPurchaseFormParseResult {
         val quantityText = input.quantityText.trim()
+        val quantityUnitText = input.quantityUnitText.trim().lowercase(Locale.ROOT)
         val quantity =
-            if (quantityText.isBlank()) {
+            if (quantityText.isBlank() && quantityUnitText.isBlank()) {
                 null
             } else {
-                val count = quantityText.toLongOrNull()
-                if (count == null || count <= 0L) {
+                if (quantityText.isBlank() || quantityUnitText.isBlank()) {
                     return failure(
                         ConfirmedPurchaseFormField.QUANTITY,
-                        "Use a positive whole-number quantity or leave it blank"
+                        "Enter both quantity and unit, or leave both unknown"
                     )
                 }
-                runCatching { QuantityNormalization.count(count) }.getOrElse {
+                val number =
+                    quantityText.replace(',', '.').takeIf {
+                        it.matches(Regex("\\d+(?:\\.\\d+)?"))
+                    }?.let { raw ->
+                        runCatching { BigDecimal(raw) }.getOrNull()
+                    }
+                val unitAndFactor =
+                    when (quantityUnitText) {
+                        "count", "counts", "item", "items", "ct", "ea" ->
+                            BaseUnit.COUNT to BigDecimal.ONE
+                        "g", "gram", "grams" -> BaseUnit.GRAM to BigDecimal.ONE
+                        "kg", "kilogram", "kilograms" -> BaseUnit.GRAM to BigDecimal("1000")
+                        "ml", "millilitre", "millilitres", "milliliter", "milliliters" ->
+                            BaseUnit.MILLILITRE to BigDecimal.ONE
+                        "l", "litre", "litres", "liter", "liters" ->
+                            BaseUnit.MILLILITRE to BigDecimal("1000")
+                        else -> null
+                    }
+                if (number == null || number <= BigDecimal.ZERO || unitAndFactor == null) {
                     return failure(
                         ConfirmedPurchaseFormField.QUANTITY,
-                        "That quantity is too large"
+                        "Use a positive exact quantity and unit (count, g/kg, or ml/l)"
+                    )
+                }
+                runCatching {
+                    val micros =
+                        number
+                            .multiply(unitAndFactor.second)
+                            .movePointRight(6)
+                            .setScale(0, RoundingMode.UNNECESSARY)
+                            .longValueExact()
+                    NormalizedQuantity(micros, unitAndFactor.first)
+                }.getOrElse {
+                    return failure(
+                        ConfirmedPurchaseFormField.QUANTITY,
+                        "That quantity is too large or not exact enough"
                     )
                 }
             }
@@ -124,6 +159,20 @@ internal object ConfirmedPurchaseFormParser {
                 )
         )
     }
+
+    fun displayQuantityText(quantity: NormalizedQuantity): String =
+        BigDecimal.valueOf(quantity.amountMicros)
+            .movePointLeft(6)
+            .stripTrailingZeros()
+            .toPlainString()
+
+    fun displayQuantityUnitText(quantity: NormalizedQuantity): String =
+        when (quantity.unit) {
+            BaseUnit.COUNT -> "count"
+            BaseUnit.GRAM -> "g"
+            BaseUnit.MILLILITRE -> "ml"
+            BaseUnit.SQUARE_INCH -> ""
+        }
 
     private fun failure(
         field: ConfirmedPurchaseFormField,
