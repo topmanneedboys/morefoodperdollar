@@ -2483,6 +2483,12 @@ class MainActivity : AppCompatActivity() {
             cancelOfflineCatalogLookup()
             offlineCatalogDialog?.dismiss()
         }
+        if (
+            state.route != AppRoute.BASKET &&
+                state.route != AppRoute.CONFIRMED_PURCHASE_HISTORY
+        ) {
+            confirmedPurchaseDialog?.dismiss()
+        }
         val searchVisible =
             state.route == AppRoute.SEARCH && state.selectedPrimaryTab == AppPrimaryTab.SEARCH
         val enteringSearch = searchVisible && !searchRouteActive
