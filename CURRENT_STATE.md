@@ -5,7 +5,7 @@ Updated: 2026-09-29 04:30 UTC
 ## Confirmed purchases and private history checkpoint — 2026-09-29
 
 The bounded continuation is complete on `work/valuepilot-confirmed-purchases` at
-`d793452e168ef85779c7b174a8d22d5fe3069133`, from the verified 10113 checkpoint
+`070012934c22fe14ebf8f8331299ef1ca654f77e`, from the verified 10113 checkpoint
 `8722904f645660925008cd7a6c131bee660b00e9`. Basket now offers an explicit
 confirmation form; check-off and other list/navigation actions cannot mint a
 purchase. The shared-core model and atomic device-only history preserve exact

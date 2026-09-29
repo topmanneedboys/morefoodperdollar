@@ -5,7 +5,7 @@ Updated: 2026-09-29 04:30 UTC
 ## Confirmed purchases and private history checkpoint — 2026-09-29
 
 The next bounded milestone is implemented on `work/valuepilot-confirmed-purchases`
-at `d793452e168ef85779c7b174a8d22d5fe3069133`, based on the verified 10113
+at `070012934c22fe14ebf8f8331299ef1ca654f77e`, based on the verified 10113
 checkpoint `8722904f645660925008cd7a6c131bee660b00e9`. It adds a provider-neutral
 shared-core `ConfirmedPurchase` model, an explicit confirmation boundary from
 Basket, and bounded atomic device-only history exposed as a Saved-owned route.
