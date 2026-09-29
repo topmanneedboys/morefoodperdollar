@@ -27,7 +27,9 @@ class M128PrivateListIntegrityBoundaryTest {
             .replace("\r\n", "\n")
 
         assertTrue(source.contains("INVALID_DURABLE_PRIVATE_STATE"))
+        assertTrue(source.contains("INVALID_DURABLE_STATE"))
         assertTrue(source.contains("decodePrivateIdentityState("))
+        assertTrue(source.contains("if (decoded == null)"))
         assertTrue(source.contains("if (!preferences.contains(KEY_QUERY))"))
     }
 

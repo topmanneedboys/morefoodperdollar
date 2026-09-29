@@ -287,6 +287,7 @@ object PracticalShoppingHomeSessionStoreCodec {
 
 enum class PracticalShoppingHomeSessionStoreIssue {
     NONE,
+    INVALID_DURABLE_STATE,
     INVALID_DURABLE_PRIVATE_STATE
 }
 
@@ -323,9 +324,17 @@ class AndroidPracticalShoppingHomeSessionStore(context: Context) :
 
     override fun loadResult(): PracticalShoppingHomeSessionStoreLoadResult {
         if (!preferences.contains(KEY_QUERY)) {
+            val hasOrphanedPrivateFields =
+                preferences.contains(KEY_PRIVATE_IDENTITIES) ||
+                    preferences.contains(KEY_PRIVATE_BASKET_KEYS)
             return PracticalShoppingHomeSessionStoreLoadResult(
                 snapshot = null,
-                issue = PracticalShoppingHomeSessionStoreIssue.NONE
+                issue =
+                    if (hasOrphanedPrivateFields) {
+                        PracticalShoppingHomeSessionStoreIssue.INVALID_DURABLE_STATE
+                    } else {
+                        PracticalShoppingHomeSessionStoreIssue.NONE
+                    }
             )
         }
 
@@ -353,6 +362,12 @@ class AndroidPracticalShoppingHomeSessionStore(context: Context) :
             return PracticalShoppingHomeSessionStoreLoadResult(
                 snapshot = null,
                 issue = PracticalShoppingHomeSessionStoreIssue.INVALID_DURABLE_PRIVATE_STATE
+            )
+        }
+        if (decoded == null) {
+            return PracticalShoppingHomeSessionStoreLoadResult(
+                snapshot = null,
+                issue = PracticalShoppingHomeSessionStoreIssue.INVALID_DURABLE_STATE
             )
         }
         return PracticalShoppingHomeSessionStoreLoadResult(

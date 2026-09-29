@@ -255,4 +255,26 @@ class PracticalShoppingHomeSessionStoreCodecTest {
             )
         )
     }
+
+    @Test
+    fun malformedDurableEnvelopeCannotFallbackToAnEmptyPrivateList() {
+        assertNull(
+            PracticalShoppingHomeSessionStoreCodec.decode(
+                query = "x".repeat(242),
+                wasSubmitted = true,
+                chickenChoice = null,
+                extraStopMinimumSavingsChoice = null,
+                requestDetailsLifecycleState = null
+            )
+        )
+        assertNull(
+            PracticalShoppingHomeSessionStoreCodec.recoverPrivateIdentityState(
+                savedStateComplete = false,
+                savedPrivateIdentities = null,
+                savedPrivateBasketCollectedIdentityKeys = null,
+                durableSnapshot = null,
+                durableStateTrusted = false
+            )
+        )
+    }
 }
