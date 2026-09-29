@@ -107,7 +107,7 @@
 
     <string name="privacy">Privacy</string>
 
-    <string name="privacy_body">Standalone comparison, deterministic parsing and exact value evaluation run on-device. The app has a bounded HTTPS edge foundation for a later user-triggered route, but it does not send your product text, screen contents, credentials or shopping data to a server.</string>
+    <string name="privacy_body">Standalone comparison, deterministic parsing and exact value evaluation run on-device. Confirmed purchases and comparison price memory stay private on this device. The app has a bounded HTTPS edge foundation for a later user-triggered route, but it does not send your product text, screen contents, credentials or shopping data to a server.</string>
 
     <string name="sources_licences">Sources &amp; licences</string>
     <string name="sources_licences_title">Sources &amp; licences</string>
@@ -116,6 +116,8 @@
 The bundled store directory uses a separately attributed OpenStreetMap snapshot under ODbL-1.0. Source: https://www.openstreetmap.org/copyright • licence: https://opendatacommons.org/licenses/odbl/1-0/. It contains source-listed GTA and Metro Vancouver locations only. A location row does not prove that a store carries an item, has stock, or has a current price.
 
 Prices and comparisons you enter or confirm stay private on this device. They are personal observations, not live retailer offers. Home planner cards are clearly labelled fictional sample data and must not be read as retailer data. Search cards are source-attributed product identity suggestions only; they do not provide current prices, stock, availability or Best Value rankings.
+
+Confirmed purchases are separate, explicit private records on this device. They do not become live offers, stock, ranking inputs or proof for another shopper. Comparison price memory remains a separate private historical feature.
 
 This build does not include an authorized current-offer feed. No flyer content is copied here. Source rights and attribution are reviewed before any future dataset is activated.</string>
 
@@ -131,6 +133,9 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="nav_search">Search</string>
     <string name="nav_basket">Basket</string>
     <string name="nav_saved">Saved</string>
+
+    <string name="confirmed_purchase_history_open">Confirmed purchases</string>
+    <string name="confirmed_purchase_history_title">Confirmed purchases</string>
 
     <string name="compare_products">Compare products</string>
 

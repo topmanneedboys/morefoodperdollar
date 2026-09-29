@@ -354,6 +354,25 @@
                 android:layout_marginTop="18dp"
                 android:visibility="gone" />
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/confirmedPurchaseHistoryButton"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginTop="12dp"
+                android:text="@string/confirmed_purchase_history_open"
+                android:textAllCaps="false"
+                android:textSize="15sp"
+                android:visibility="gone"
+                app:cornerRadius="16dp"
+                style="@style/Widget.ValuePilot.Button.Outlined" />
+
+            <com.valuepilot.app.ConfirmedPurchaseHistorySurfaceView
+                android:id="@+id/confirmedPurchaseHistoryExperience"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:visibility="gone" />
+
             <com.valuepilot.app.PracticalShoppingSavedStapleLaunchView
                 android:id="@+id/savedStapleLaunchExperience"
                 android:layout_width="match_parent"

@@ -36,7 +36,12 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.valuepilot.core.OfflineCatalogDiscoveryResult
+import com.valuepilot.core.ConfirmedPurchase
+import com.valuepilot.core.ConfirmedPurchaseConfirmation
+import com.valuepilot.core.ConfirmedPurchaseConfirmationInput
+import com.valuepilot.core.ConfirmedPurchaseIdentityOrigin
 import com.valuepilot.core.ShoppingItemKey
+import java.util.UUID
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 
@@ -66,6 +71,11 @@ class MainActivity : AppCompatActivity() {
     }
     private var homePrivateMemoryState = CompareHerePrivatePriceMemoryState.empty()
     private var homePrivateMemoryLoadIssue: CompareHerePrivatePriceMemoryStoreIssue? = null
+    private val confirmedPurchaseStore by lazy(LazyThreadSafetyMode.NONE) {
+        AndroidConfirmedPurchaseHistoryStore(applicationContext)
+    }
+    private var confirmedPurchaseHistoryState = ConfirmedPurchaseHistoryState.empty()
+    private var confirmedPurchaseHistoryLoadIssue: ConfirmedPurchaseHistoryStoreIssue? = null
 
     private val searchExecutor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -106,6 +116,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var searchLoadMoreButton: MaterialButton
     private lateinit var searchResultsEnd: TextView
     private lateinit var savedExperience: PracticalShoppingSavedSurfaceView
+    private lateinit var confirmedPurchaseHistoryButton: MaterialButton
+    private lateinit var confirmedPurchaseHistoryExperience: ConfirmedPurchaseHistorySurfaceView
     private lateinit var savedStapleLaunchExperience: PracticalShoppingSavedStapleLaunchView
     private lateinit var savedObservedPriceLaunchExperience: PracticalShoppingSavedObservedPriceLaunchView
     private lateinit var observedPriceSavedSelectionExperience: UserObservedPriceSavedSelectionSurfaceView
@@ -174,6 +186,7 @@ class MainActivity : AppCompatActivity() {
     private var privatePriceHistoryClearDialog: AlertDialog? = null
     private var privatePriceHistoryExportDialog: AlertDialog? = null
     private var privatePriceHistoryForgetDialog: AlertDialog? = null
+    private var confirmedPurchaseDialog: AlertDialog? = null
     private var offlineCatalogLookup: Future<*>? = null
     private var offlineCatalogRequestId = 0L
     private var suppressSearchInputCallback = false
@@ -210,6 +223,8 @@ class MainActivity : AppCompatActivity() {
         searchLoadMoreButton = findViewById(R.id.searchLoadMoreButton)
         searchResultsEnd = findViewById(R.id.searchResultsEnd)
         savedExperience = findViewById(R.id.savedExperience)
+        confirmedPurchaseHistoryButton = findViewById(R.id.confirmedPurchaseHistoryButton)
+        confirmedPurchaseHistoryExperience = findViewById(R.id.confirmedPurchaseHistoryExperience)
         savedStapleLaunchExperience = findViewById(R.id.savedStapleLaunchExperience)
         savedObservedPriceLaunchExperience = findViewById(R.id.savedObservedPriceLaunchExperience)
         observedPriceSavedSelectionExperience = findViewById(R.id.observedPriceSavedSelectionExperience)
@@ -235,6 +250,7 @@ class MainActivity : AppCompatActivity() {
         shellState = restoreShellState(savedInstanceState)
         homeSessionState = restoreHomeState(savedInstanceState)
         refreshHomePrivateMemory()
+        refreshConfirmedPurchaseHistory()
         searchQuery = savedInstanceState?.getString(STATE_SEARCH_QUERY).orEmpty()
         searchWasSubmitted = savedInstanceState?.getBoolean(STATE_SEARCH_WAS_SUBMITTED) == true
         searchScrollY = savedInstanceState?.getInt(STATE_SEARCH_SCROLL_Y, 0)?.coerceAtLeast(0) ?: 0
@@ -249,6 +265,10 @@ class MainActivity : AppCompatActivity() {
         configureBasketUi()
         configureSearchUi()
         configureSavedUi()
+        confirmedPurchaseHistoryButton.setOnClickListener {
+            dispatch(AppShellIntent.OpenConfirmedPurchaseHistory)
+        }
+        confirmedPurchaseHistoryExperience.onAction = ::handleConfirmedPurchaseHistoryAction
 
         bottomNavigation.setOnItemSelectedListener { item ->
             val tab = when (item.itemId) {
@@ -271,7 +291,8 @@ class MainActivity : AppCompatActivity() {
                         shellState.route == AppRoute.OBSERVED_PRICE_SAVED_SELECTION ||
                         shellState.route == AppRoute.OBSERVED_PRICE_CONFIRMATION_DRAFT ||
                         shellState.route == AppRoute.STAPLE_WATCH_SETUP ||
-                        shellState.route == AppRoute.STAPLE_WATCH_POLICY
+                        shellState.route == AppRoute.STAPLE_WATCH_POLICY ||
+                        shellState.route == AppRoute.CONFIRMED_PURCHASE_HISTORY
                     ) {
                         dispatch(AppShellIntent.NavigateBack)
                     } else {
@@ -299,6 +320,7 @@ class MainActivity : AppCompatActivity() {
         // next explicit tap is allowed to open it again.
         googlePhotoViewerLaunchInFlight = false
         refreshHomePrivateMemory()
+        refreshConfirmedPurchaseHistory()
 
         if (comparisonActivityOpen && shellState.route == AppRoute.COMPARE) {
             comparisonActivityOpen = false
@@ -375,6 +397,8 @@ class MainActivity : AppCompatActivity() {
         privatePriceHistoryForgetDialog = null
         privatePriceHistoryExportDialog?.dismiss()
         privatePriceHistoryExportDialog = null
+        confirmedPurchaseDialog?.dismiss()
+        confirmedPurchaseDialog = null
         if (::homeExperience.isInitialized) {
             homeExperience.onQueryChanged = null
             homeExperience.onSubmit = null
@@ -401,6 +425,10 @@ class MainActivity : AppCompatActivity() {
             basketExperience.onAction = null
             basketExperience.onPrivateIdentityToggle = null
             basketExperience.onOpenPrivateIdentityPhotos = null
+            basketExperience.onConfirmPurchase = null
+        }
+        if (::confirmedPurchaseHistoryExperience.isInitialized) {
+            confirmedPurchaseHistoryExperience.onAction = null
         }
         if (::savedRouteCoordinator.isInitialized) {
             savedExperience.onAction = null
@@ -1276,6 +1304,8 @@ class MainActivity : AppCompatActivity() {
             when (action) {
                 PracticalShoppingBasketUiAction.OpenHome ->
                     dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.HOME))
+                is PracticalShoppingBasketUiAction.ConfirmPurchase ->
+                    openConfirmedPurchaseDialog(action)
             }
         }
         basketExperience.onPrivateIdentityToggle = { identityKey ->
@@ -1310,6 +1340,319 @@ class MainActivity : AppCompatActivity() {
             homeSessionState.privateIdentities
                 .firstOrNull { identity -> identity.identityKey == identityKey }
                 ?.let(::openGoogleProductPhotos)
+        }
+        basketExperience.onConfirmPurchase = { action ->
+            openConfirmedPurchaseDialog(action)
+        }
+    }
+
+    /**
+     * Opens the only Android-side entry point that can create a confirmed purchase. Basket
+     * check-off and Search/Home identity actions never call the store directly.
+     */
+    private fun openConfirmedPurchaseDialog(
+        action: PracticalShoppingBasketUiAction.ConfirmPurchase,
+        existing: ConfirmedPurchase? = null
+    ) {
+        confirmedPurchaseDialog?.dismiss()
+
+        val body = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(4), dp(4), dp(4), 0)
+        }
+        val quantityLayout = TextInputLayout(this).apply {
+            hint = "Quantity purchased (count, optional)"
+            isCounterEnabled = true
+            counterMaxLength = 9
+        }
+        val quantityInput = TextInputEditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+            filters = arrayOf(InputFilter.LengthFilter(9))
+            setSingleLine(true)
+            setText(existing?.quantity?.let { quantity ->
+                if (quantity.unit == com.valuepilot.core.BaseUnit.COUNT) {
+                    (quantity.amountMicros / 1_000_000L).toString()
+                } else {
+                    ""
+                }
+            }.orEmpty())
+        }
+        quantityLayout.addView(quantityInput)
+
+        val amountLayout = TextInputLayout(this).apply {
+            hint = "Amount paid (optional, exact decimal)"
+            isCounterEnabled = true
+            counterMaxLength = 32
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(12) }
+        }
+        val amountInput = TextInputEditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            filters = arrayOf(InputFilter.LengthFilter(32))
+            setSingleLine(true)
+            setText(existing?.amountPaid?.let { amount ->
+                java.math.BigDecimal.valueOf(amount.minorUnits)
+                    .movePointLeft(amount.fractionDigits)
+                    .toPlainString()
+            }.orEmpty())
+        }
+        amountLayout.addView(amountInput)
+
+        val currencyLayout = TextInputLayout(this).apply {
+            hint = "Currency code (optional, e.g. CAD)"
+            isCounterEnabled = true
+            counterMaxLength = 3
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(12) }
+        }
+        val currencyInput = TextInputEditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
+            filters = arrayOf(InputFilter.LengthFilter(3))
+            setSingleLine(true)
+            setText(existing?.amountPaid?.currencyCode.orEmpty())
+        }
+        currencyLayout.addView(currencyInput)
+
+        val dateLayout = TextInputLayout(this).apply {
+            hint = "Purchase date (YYYY-MM-DD, optional)"
+            isCounterEnabled = true
+            counterMaxLength = 10
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(12) }
+        }
+        val dateInput = TextInputEditText(this).apply {
+            inputType = InputType.TYPE_CLASS_DATETIME
+            filters = arrayOf(InputFilter.LengthFilter(10))
+            setSingleLine(true)
+            setText(existing?.purchaseDateIso.orEmpty())
+        }
+        dateLayout.addView(dateInput)
+
+        val storeLayout = TextInputLayout(this).apply {
+            hint = "Store (optional)"
+            isCounterEnabled = true
+            counterMaxLength = 240
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(12) }
+        }
+        val storeInput = TextInputEditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            filters = arrayOf(InputFilter.LengthFilter(240))
+            setSingleLine(true)
+            setText(existing?.store?.displayName.orEmpty())
+        }
+        storeLayout.addView(storeInput)
+
+        val explicitConfirmation = CheckBox(this).apply {
+            text = "I explicitly confirm this purchase"
+            isChecked = false
+            setPadding(0, dp(10), 0, 0)
+        }
+        val note = TextView(this).apply {
+            text = "${action.displayName}. ${action.plannedPriceText?.let { "The plan price ($it) is only a hint; enter what you actually paid." } ?: "Enter only facts you know; blank fields stay unknown."}"
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextColor(ValuePilotPalette.color("#6B7280"))
+            setPadding(dp(4), dp(8), dp(4), 0)
+        }
+        body.addView(note)
+        body.addView(quantityLayout)
+        body.addView(amountLayout)
+        body.addView(currencyLayout)
+        body.addView(dateLayout)
+        body.addView(storeLayout)
+        body.addView(explicitConfirmation)
+
+        val dialog =
+            AlertDialog.Builder(this)
+                .setTitle(if (existing == null) "Confirm purchase" else "Correct confirmed purchase")
+                .setView(body)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(if (existing == null) "Save purchase" else "Save correction", null)
+                .create()
+        confirmedPurchaseDialog = dialog
+        dialog.setOnDismissListener {
+            if (confirmedPurchaseDialog === dialog) {
+                confirmedPurchaseDialog = null
+            }
+        }
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                quantityLayout.error = null
+                amountLayout.error = null
+                currencyLayout.error = null
+                dateLayout.error = null
+                storeLayout.error = null
+                if (!explicitConfirmation.isChecked) {
+                    explicitConfirmation.error = "Explicit confirmation is required"
+                    return@setOnClickListener
+                }
+                explicitConfirmation.error = null
+
+                val parsed =
+                    ConfirmedPurchaseFormParser.parse(
+                        ConfirmedPurchaseFormInput(
+                            quantityText = quantityInput.text?.toString().orEmpty(),
+                            amountText = amountInput.text?.toString().orEmpty(),
+                            currencyText = currencyInput.text?.toString().orEmpty(),
+                            dateText = dateInput.text?.toString().orEmpty(),
+                            storeText = storeInput.text?.toString().orEmpty()
+                        )
+                    )
+                if (!parsed.accepted || parsed.values == null) {
+                    val failure = requireNotNull(parsed.failure)
+                    when (failure.field) {
+                        ConfirmedPurchaseFormField.QUANTITY -> quantityLayout.error = failure.message
+                        ConfirmedPurchaseFormField.AMOUNT -> {
+                            amountLayout.error = failure.message
+                            currencyLayout.error = failure.message
+                        }
+                        ConfirmedPurchaseFormField.CURRENCY -> currencyLayout.error = failure.message
+                        ConfirmedPurchaseFormField.DATE -> dateLayout.error = failure.message
+                        ConfirmedPurchaseFormField.STORE -> storeLayout.error = failure.message
+                    }
+                    return@setOnClickListener
+                }
+                val values = requireNotNull(parsed.values)
+                val input =
+                    ConfirmedPurchaseConfirmationInput(
+                        purchaseId = existing?.purchaseId ?: "purchase-${UUID.randomUUID()}",
+                        productIdentityKey = action.productIdentityKey,
+                        identityOrigin = existing?.identityOrigin ?: action.identityOrigin,
+                        displayName = existing?.displayName ?: action.displayName,
+                        brand = existing?.brand ?: action.brand,
+                        packageQuantityLabel = existing?.packageQuantityLabel ?: action.packageQuantityLabel,
+                        quantity = values.quantity,
+                        amountPaid = values.amountPaid,
+                        purchaseDateIso = values.purchaseDateIso,
+                        store = values.store,
+                        explicitlyConfirmed = true
+                    )
+                val confirmed = ConfirmedPurchaseConfirmation.confirm(input)
+                val purchase = confirmed.purchase
+                if (!confirmed.accepted || purchase == null) {
+                    dialog.dismiss()
+                    showConfirmedPurchaseError("The purchase details were not valid, so nothing was saved.")
+                    return@setOnClickListener
+                }
+                val result =
+                    if (existing == null) {
+                        confirmedPurchaseStore.append(purchase)
+                    } else {
+                        confirmedPurchaseStore.replace(purchase)
+                    }
+                if (!result.accepted || result.state == null) {
+                    dialog.dismiss()
+                    refreshConfirmedPurchaseHistory()
+                    showConfirmedPurchaseError("ValuePilot could not save this private purchase. Existing history was not replaced.")
+                    return@setOnClickListener
+                }
+                confirmedPurchaseHistoryState = result.state
+                confirmedPurchaseHistoryLoadIssue = null
+                dialog.dismiss()
+                if (shellState.route == AppRoute.CONFIRMED_PURCHASE_HISTORY) {
+                    renderShell(shellState)
+                }
+            }
+        }
+        dialog.show()
+    }
+
+    private fun showConfirmedPurchaseError(message: String) {
+        AlertDialog.Builder(this)
+            .setTitle("Purchase not saved")
+            .setMessage(message)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
+    private fun handleConfirmedPurchaseHistoryAction(action: ConfirmedPurchaseHistoryUiAction) {
+        val purchase = confirmedPurchaseHistoryState.purchases.firstOrNull {
+            it.purchaseId == when (action) {
+                is ConfirmedPurchaseHistoryUiAction.Repeat -> action.purchaseId
+                is ConfirmedPurchaseHistoryUiAction.Edit -> action.purchaseId
+                is ConfirmedPurchaseHistoryUiAction.Delete -> action.purchaseId
+            }
+        }
+        when (action) {
+            is ConfirmedPurchaseHistoryUiAction.Repeat -> {
+                if (purchase == null) {
+                    refreshConfirmedPurchaseHistory()
+                    renderShell(shellState)
+                    return
+                }
+                val identity =
+                    PracticalShoppingPrivateIdentity(
+                        identityKey = purchase.productIdentityKey,
+                        displayName = purchase.displayName,
+                        brand = purchase.brand,
+                        sourceLabel = "Private purchase history",
+                        packageQuantityLabel = purchase.packageQuantityLabel
+                    )
+                val next = PracticalShoppingHomeSession.addPrivateIdentity(homeSessionState, identity)
+                if (next != homeSessionState) {
+                    homeSessionState = next
+                    authorizePrivateListPersistence()
+                    homeSessionStore.save(PracticalShoppingHomeSession.snapshot(next))
+                }
+                dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.HOME))
+                renderHome()
+            }
+            is ConfirmedPurchaseHistoryUiAction.Edit -> {
+                if (purchase == null) {
+                    refreshConfirmedPurchaseHistory()
+                    renderShell(shellState)
+                } else {
+                    openConfirmedPurchaseDialog(
+                        action = PracticalShoppingBasketUiAction.ConfirmPurchase(
+                            productIdentityKey = purchase.productIdentityKey,
+                            displayName = purchase.displayName,
+                            brand = purchase.brand,
+                            packageQuantityLabel = purchase.packageQuantityLabel,
+                            plannedPriceText = null,
+                            identityOrigin = purchase.identityOrigin
+                        ),
+                        existing = purchase
+                    )
+                }
+            }
+            is ConfirmedPurchaseHistoryUiAction.Delete -> {
+                if (purchase == null) {
+                    refreshConfirmedPurchaseHistory()
+                    renderShell(shellState)
+                    return
+                }
+                AlertDialog.Builder(this)
+                    .setTitle("Delete confirmed purchase?")
+                    .setMessage("This removes only this private history record. It does not change your Home list or price memory.")
+                    .setNegativeButton(R.string.cancel, null)
+                    .setPositiveButton("Delete") { _, _ ->
+                        val latest = confirmedPurchaseStore.load()
+                        val result =
+                            if (latest.accepted) {
+                                confirmedPurchaseStore.remove(purchase.purchaseId)
+                            } else {
+                                null
+                            }
+                        if (result?.accepted == true && result.state != null) {
+                            confirmedPurchaseHistoryState = result.state
+                            confirmedPurchaseHistoryLoadIssue = null
+                            renderShell(shellState)
+                        } else {
+                            refreshConfirmedPurchaseHistory()
+                            renderShell(shellState)
+                            showConfirmedPurchaseError("The record was not deleted; existing history was kept.")
+                        }
+                    }
+                    .show()
+            }
         }
     }
 
@@ -2152,7 +2495,19 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        val copy = copyFor(state.selectedPrimaryTab)
+        val historyVisible = state.route == AppRoute.CONFIRMED_PURCHASE_HISTORY
+        val copy =
+            if (historyVisible) {
+                ScreenCopy(
+                    eyebrow = "PRIVATE HISTORY",
+                    title = getString(R.string.confirmed_purchase_history_title),
+                    body = "Review purchases you explicitly confirmed on this device. This is not live pricing or store inventory.",
+                    footnote = "Repeat adds the identity to your private Home list; it never recreates a purchase automatically.",
+                    showCompareAction = false
+                )
+            } else {
+                copyFor(state.selectedPrimaryTab)
+            }
         screenEyebrow.text = copy.eyebrow
         screenTitle.text = copy.title
         screenBody.text = copy.body
@@ -2182,6 +2537,16 @@ class MainActivity : AppCompatActivity() {
         val stapleSetupVisible = state.route == AppRoute.STAPLE_WATCH_SETUP
         val staplePolicyVisible = state.route == AppRoute.STAPLE_WATCH_POLICY
         savedExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
+        confirmedPurchaseHistoryButton.visibility = if (savedVisible) View.VISIBLE else View.GONE
+        confirmedPurchaseHistoryExperience.visibility = if (historyVisible) View.VISIBLE else View.GONE
+        if (historyVisible) {
+            confirmedPurchaseHistoryExperience.render(
+                ConfirmedPurchaseHistoryProjector.project(
+                    state = confirmedPurchaseHistoryState,
+                    unavailable = confirmedPurchaseHistoryLoadIssue != null
+                )
+            )
+        }
         savedStapleLaunchExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
         savedObservedPriceLaunchExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
         observedPriceSavedSelectionExperience.visibility =
@@ -2322,6 +2687,13 @@ class MainActivity : AppCompatActivity() {
                 presentation != null && presentation.matches.isNotEmpty() -> getString(R.string.search_results_end)
                 else -> ""
             }
+    }
+
+    /** Reads only the bounded device-private confirmed-purchase document. */
+    private fun refreshConfirmedPurchaseHistory() {
+        val loaded = confirmedPurchaseStore.load()
+        confirmedPurchaseHistoryState = loaded.state ?: ConfirmedPurchaseHistoryState.empty()
+        confirmedPurchaseHistoryLoadIssue = loaded.issue
     }
 
     private fun restoreSearchScrollPosition() {

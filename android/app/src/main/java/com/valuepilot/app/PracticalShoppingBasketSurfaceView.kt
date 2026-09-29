@@ -14,9 +14,20 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.valuepilot.core.ConfirmedPurchaseIdentityOrigin
 
 sealed interface PracticalShoppingBasketUiAction {
     data object OpenHome : PracticalShoppingBasketUiAction
+
+    /** Opens the explicit confirmation form; it does not mint a purchase itself. */
+    data class ConfirmPurchase(
+        val productIdentityKey: String,
+        val displayName: String,
+        val brand: String?,
+        val packageQuantityLabel: String?,
+        val plannedPriceText: String?,
+        val identityOrigin: ConfirmedPurchaseIdentityOrigin
+    ) : PracticalShoppingBasketUiAction
 }
 
 /**
@@ -68,6 +79,9 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
 
     /** Opens only the user-requested, unverified external photo search. */
     var onOpenPrivateIdentityPhotos: ((String) -> Unit)? = null
+
+    /** Opens an explicit confirmation form for a private purchase. */
+    var onConfirmPurchase: ((PracticalShoppingBasketUiAction.ConfirmPurchase) -> Unit)? = null
 
     private val headline = line("", 22f, "#111827", true)
     private val guidance = line("", 14f, "#4B5563", topPadding = 8)
@@ -394,6 +408,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         private val source = line("", 12f, "#374151", topPadding = 2)
         private val notice = line("", 12f, "#6B7280", topPadding = 2)
         private val photo = privateIdentityPhotoButton(identity)
+        private val purchase = privateIdentityPurchaseButton(identity)
         private var displayName = identity.displayName
         var collected: Boolean = identity.collected
             private set
@@ -408,6 +423,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             root.addView(source)
             root.addView(notice)
             root.addView(photo)
+            root.addView(purchase)
             update(identity)
         }
 
@@ -432,6 +448,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
                 identity.displayName
             )
             photo.isEnabled = onOpenPrivateIdentityPhotos != null
+            purchase.isEnabled = onConfirmPurchase != null
             collected = identity.collected
         }
 
@@ -494,6 +511,40 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         setOnClickListener { onOpenPrivateIdentityPhotos?.invoke(identity.identityKey) }
     }
 
+    private fun privateIdentityPurchaseButton(
+        identity: PracticalShoppingBasketPrivateIdentityRenderState
+    ): MaterialButton = MaterialButton(context).apply {
+        text = "Confirm purchase"
+        contentDescription = "Confirm a purchase of ${identity.displayName}"
+        isAllCaps = false
+        textSize = 13f
+        minHeight = dp(40)
+        minimumHeight = dp(40)
+        minWidth = 0
+        minimumWidth = 0
+        insetTop = 0
+        insetBottom = 0
+        setPadding(dp(10), 0, dp(10), 0)
+        strokeWidth = dp(1)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#A7F3D0"))
+        setTextColor(ValuePilotPalette.color("#047857"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
+        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 5)
+        isEnabled = onConfirmPurchase != null
+        setOnClickListener {
+            onConfirmPurchase?.invoke(
+                PracticalShoppingBasketUiAction.ConfirmPurchase(
+                    productIdentityKey = identity.identityKey,
+                    displayName = identity.displayName,
+                    brand = identity.brand,
+                    packageQuantityLabel = identity.packageQuantityLabel,
+                    plannedPriceText = null,
+                    identityOrigin = ConfirmedPurchaseIdentityOrigin.SEARCH_IDENTITY
+                )
+            )
+        }
+    }
+
     private fun privateIdentityHeadingSeparator(): View =
         View(context).apply {
             layoutParams = fullWidth(dp(1), 5)
@@ -509,6 +560,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
                 itemsContainer.addView(
                     column(padded = false).apply {
                         addView(collectionButton(item, collected))
+                        addView(purchaseButton(item))
                         addItemDetails(item, this, state.collectionEnabled)
                     }
                 )
@@ -523,6 +575,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
                                 topPadding = 7
                             )
                         )
+                        addView(purchaseButton(item))
                         addItemDetails(item, this, state.collectionEnabled)
                     }
                 )
@@ -603,6 +656,39 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             }
         }
     }
+
+    private fun purchaseButton(item: PracticalShoppingHomeItemRenderState): MaterialButton =
+        MaterialButton(context).apply {
+            text = "Confirm purchase"
+            contentDescription = "Confirm a purchase of ${item.name}"
+            isAllCaps = false
+            textSize = 13f
+            minHeight = dp(40)
+            minimumHeight = dp(40)
+            minWidth = 0
+            minimumWidth = 0
+            insetTop = 0
+            insetBottom = 0
+            setPadding(dp(10), 0, dp(10), 0)
+            strokeWidth = dp(1)
+            strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#A7F3D0"))
+            setTextColor(ValuePilotPalette.color("#047857"))
+            backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
+            layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 5)
+            isEnabled = onConfirmPurchase != null
+            setOnClickListener {
+                onConfirmPurchase?.invoke(
+                    PracticalShoppingBasketUiAction.ConfirmPurchase(
+                        productIdentityKey = item.key.value,
+                        displayName = item.name,
+                        brand = null,
+                        packageQuantityLabel = item.detail,
+                        plannedPriceText = item.plannedPriceText,
+                        identityOrigin = ConfirmedPurchaseIdentityOrigin.HOME_BASKET
+                    )
+                )
+            }
+        }
 
     private fun renderUnknownItems(items: List<String>) {
         unresolvedBody.removeAllViews()
