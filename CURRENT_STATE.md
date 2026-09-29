@@ -2,6 +2,24 @@
 
 Updated: 2026-09-29 04:30 UTC
 
+## 10113 Google Images refinement checkpoint — 2026-09-29
+
+Focused refinement commit: `0cb655c3ebde2bfa219cfc4393e84e56543d0485` on
+`work/valuepilot-m128-m129`. Google Images now requests an adjustable partial
+Custom Tab beginning at 65% of display height, and a provider rejection prompts
+before any full-screen browser fallback. Existing explicit Photo taps,
+double-tap protection, unverified-result disclosure, state preservation and
+offline/failure boundaries remain intact.
+
+VersionCode `10113` / versionName `101.1.12` was built locally as the unsigned
+candidate `android/app/build/outputs/bundle/release/app-release.aab` (SHA-256
+`00AD039ABEDEF27BA488783949BDD455163722CC361BD062DBBAAC7BFA91AB12`). The
+previous protected signed 10112 AAB remains unchanged and is not represented
+as containing this code. Local verification passed: 1,732 Android app tests,
+405 shared-core tests, debug/release lint and builds, release bundle and
+privacy inspection with no `ACCESS_NETWORK_STATE`. No Play upload, signing,
+installation, Motorola test or Actions retry was performed.
+
 ## 10112 integration checkpoint — 2026-09-29
 
 The active stacked branch is `work/valuepilot-m128-m129` at

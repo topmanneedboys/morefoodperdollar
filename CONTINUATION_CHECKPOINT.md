@@ -2,6 +2,31 @@
 
 Updated: 2026-09-29 04:30 UTC
 
+## 10113 Google Images refinement checkpoint — 2026-09-29
+
+The focused viewer refinement is committed at
+`0cb655c3ebde2bfa219cfc4393e84e56543d0485` on
+`work/valuepilot-m128-m129`. Supported Custom Tabs now request an adjustable
+partial tab starting at 65% of the display height (with a 320dp small-screen
+floor). If the provider rejects the partial launch, ValuePilot presents an
+explicit full-screen choice instead of opening a browser automatically. The
+existing unverified, explicit-tap-only Google Images query, double-tap guard,
+state preservation, Back/rotation handling and no-download/no-cache boundary
+remain unchanged.
+
+The next local candidate is versionCode `10113` / versionName `101.1.12` at
+`android/app/build/outputs/bundle/release/app-release.aab`; it is unsigned,
+36,314,196 bytes, SHA-256
+`00AD039ABEDEF27BA488783949BDD455163722CC361BD062DBBAAC7BFA91AB12`, and
+has not been signed, uploaded or installed. The protected signed 10112 AAB is
+preserved and does not contain this refinement.
+
+Focused viewer tests and the complete local tree passed: 1,732 Android app
+JVM tests, 405 shared-core tests, debug/release lint, debug/release builds,
+release bundle, and privacy inspection (no `ACCESS_NETWORK_STATE`). GitHub
+Actions retries and Play uploads remain paused while the account billing /
+spending-limit blocker is unresolved; Motorola validation is deferred.
+
 ## 10112 integration checkpoint — 2026-09-29
 
 The current stacked candidate is `work/valuepilot-m128-m129` at
