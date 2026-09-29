@@ -51,6 +51,14 @@ class ConfirmedPurchaseHistoryStoreTest {
     }
 
     @Test
+    fun invalidUtf8InsideHexFieldsFailsClosed() {
+        val malformed =
+            "VALUEPILOT_CONFIRMED_PURCHASES|1\n" +
+                "P|ff|6974656d|MANUAL|426164|~|~|~|~|~|~|~|~|~|~|~|~"
+        assertFalse(ConfirmedPurchaseHistoryCodec.decode(malformed.toByteArray()).accepted)
+    }
+
+    @Test
     fun failedWriteDoesNotReportAcceptedMutation() {
         val storage = FakeStorage(writeAccepted = false)
         val store = AndroidConfirmedPurchaseHistoryStore(storage)

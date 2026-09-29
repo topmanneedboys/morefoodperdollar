@@ -13,6 +13,9 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
+import java.nio.ByteBuffer
+import java.nio.charset.CharacterCodingException
+import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
 
 internal const val MAX_CONFIRMED_PURCHASES = 256
@@ -240,7 +243,17 @@ internal object ConfirmedPurchaseHistoryCodec {
             if (high < 0 || low < 0) throw CodecParseFailure()
             bytes[index / 2] = ((high shl 4) or low).toByte()
         }
-        val decoded = String(bytes, StandardCharsets.UTF_8)
+        val decoded =
+            try {
+                StandardCharsets.UTF_8
+                    .newDecoder()
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT)
+                    .decode(ByteBuffer.wrap(bytes))
+                    .toString()
+            } catch (_: CharacterCodingException) {
+                throw CodecParseFailure()
+            }
         if (decoded.length > maxLength || decoded.isBlank()) throw CodecParseFailure()
         return decoded
     }
