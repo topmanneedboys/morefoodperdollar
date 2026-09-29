@@ -53,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private var shellState = AppShellState.initial()
+    private var homeSessionPersistenceBlocked = false
     private var homeSessionState = PracticalShoppingHomeSession.initialState()
     private val homeSessionStore by lazy(LazyThreadSafetyMode.NONE) {
         AndroidPracticalShoppingHomeSessionStore(applicationContext)
@@ -316,6 +317,9 @@ class MainActivity : AppCompatActivity() {
             STATE_HOME_EXTRA_STOP_MINIMUM_SAVINGS,
             homeSnapshot.extraStopMinimumSavingsChoice.name
         )
+        // The presence bit distinguishes an intentional empty private list from an older or
+        // partial Bundle that never carried private-list fields.
+        outState.putBoolean(STATE_HOME_PRIVATE_STATE_PRESENT, true)
         PracticalShoppingHomeSessionStoreCodec
             .encodePrivateIdentities(homeSnapshot.privateIdentities)
             ?.let { encoded -> outState.putString(STATE_HOME_PRIVATE_IDENTITIES, encoded) }
@@ -462,10 +466,33 @@ class MainActivity : AppCompatActivity() {
     private fun restoreHomeState(
         savedInstanceState: Bundle?
     ): PracticalShoppingHomeSession.State {
+        val durableLoad = homeSessionStore.loadResult()
+        if (durableLoad.issue != PracticalShoppingHomeSessionStoreIssue.NONE) {
+            homeSessionPersistenceBlocked = true
+        }
         if (savedInstanceState?.containsKey(STATE_HOME_QUERY) != true) {
-            homeSessionStore.load()?.let { persisted ->
+            durableLoad.snapshot?.let { persisted ->
                 return PracticalShoppingHomeSession.restoreState(persisted)
             }
+        }
+
+        val privateIdentityState =
+            PracticalShoppingHomeSessionStoreCodec.recoverPrivateIdentityState(
+                savedStateComplete =
+                    savedInstanceState?.getBoolean(STATE_HOME_PRIVATE_STATE_PRESENT, false) == true,
+                savedPrivateIdentities =
+                    savedInstanceState?.getString(STATE_HOME_PRIVATE_IDENTITIES),
+                savedPrivateBasketCollectedIdentityKeys =
+                    savedInstanceState?.getString(STATE_HOME_PRIVATE_BASKET_KEYS),
+                durableSnapshot = durableLoad.snapshot,
+                durableStateTrusted =
+                    durableLoad.issue == PracticalShoppingHomeSessionStoreIssue.NONE
+            )
+        if (privateIdentityState == null) {
+            // Keep the unreadable durable record intact until a user mutation supplies a
+            // replacement. Rendering an empty fallback must not overwrite evidence of a read
+            // failure.
+            homeSessionPersistenceBlocked = true
         }
 
         val choice =
@@ -495,13 +522,9 @@ class MainActivity : AppCompatActivity() {
                 requestDetailsLifecycleState =
                     savedInstanceState?.getByteArray(STATE_HOME_REQUEST_DETAILS),
                 privateIdentities =
-                    PracticalShoppingHomeSessionStoreCodec.decodePrivateIdentities(
-                        savedInstanceState?.getString(STATE_HOME_PRIVATE_IDENTITIES)
-                    ),
+                    privateIdentityState?.identities.orEmpty(),
                 privateBasketCollectedIdentityKeys =
-                    PracticalShoppingHomeSessionStoreCodec.decodePrivateBasketCollectedIdentityKeys(
-                        savedInstanceState?.getString(STATE_HOME_PRIVATE_BASKET_KEYS)
-                    )
+                    privateIdentityState?.collectedIdentityKeys.orEmpty()
             )
         )
     }
@@ -530,11 +553,15 @@ class MainActivity : AppCompatActivity() {
             renderHome()
         }
         homeExperience.onRemovePrivateIdentity = { identityKey ->
+            val previousState = homeSessionState
             homeSessionState =
                 PracticalShoppingHomeSession.removePrivateIdentity(
                     homeSessionState,
                     identityKey
                 )
+            if (homeSessionState != previousState) {
+                authorizePrivateListPersistence()
+            }
             renderHome()
         }
         homeExperience.onOpenPrivateIdentityPhotos = { identityKey ->
@@ -589,7 +616,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderHome(revealResult: Boolean = false) {
-        homeSessionStore.save(PracticalShoppingHomeSession.snapshot(homeSessionState))
+        if (!homeSessionPersistenceBlocked) {
+            homeSessionStore.save(PracticalShoppingHomeSession.snapshot(homeSessionState))
+        }
         val homeState =
             PracticalShoppingHomeRenderer.render(
                 homeSessionState.model.ui,
@@ -626,6 +655,12 @@ class MainActivity : AppCompatActivity() {
             homeExperience.revealProjectedResult()
         }
         basketExperience.render(PracticalShoppingBasketRenderer.render(homeState))
+    }
+
+    private fun authorizePrivateListPersistence() {
+        // Only an explicit private-list mutation may replace a durable record that could not be
+        // read. Ordinary query edits/navigation must not erase that record as a side effect.
+        homeSessionPersistenceBlocked = false
     }
 
     private fun dismissHomeShareDialog() {
@@ -1244,13 +1279,17 @@ class MainActivity : AppCompatActivity() {
             }
         }
         basketExperience.onPrivateIdentityToggle = { identityKey ->
+            val previousState = homeSessionState
             val nextState =
                 PracticalShoppingHomeSession.togglePrivateIdentityCollected(
                     homeSessionState,
                     identityKey
                 )
             homeSessionState = nextState
-            homeSessionStore.save(PracticalShoppingHomeSession.snapshot(nextState))
+            if (nextState != previousState) {
+                authorizePrivateListPersistence()
+                homeSessionStore.save(PracticalShoppingHomeSession.snapshot(nextState))
+            }
             homeRenderState =
                 homeRenderState?.copy(
                     privateIdentityCollectedKeys = nextState.privateBasketCollectedIdentityKeys
@@ -2524,6 +2563,7 @@ class MainActivity : AppCompatActivity() {
             searchStatus.text = getString(R.string.search_identity_add_home_failed)
             return
         }
+        val previousState = homeSessionState
         val previousCount = homeSessionState.privateIdentities.size
         val nextState = PracticalShoppingHomeSession.addPrivateIdentity(homeSessionState, identity)
         if (nextState.privateIdentities.size == previousCount &&
@@ -2533,6 +2573,9 @@ class MainActivity : AppCompatActivity() {
             return
         }
         homeSessionState = nextState
+        if (nextState != previousState) {
+            authorizePrivateListPersistence()
+        }
         dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.HOME))
         renderHome()
     }
@@ -2596,6 +2639,8 @@ class MainActivity : AppCompatActivity() {
         private const val STATE_HOME_EXTRA_STOP_MINIMUM_SAVINGS =
             "app_shell.home_extra_stop_minimum_savings"
         private const val STATE_HOME_REQUEST_DETAILS = "app_shell.home_request_details"
+        private const val STATE_HOME_PRIVATE_STATE_PRESENT =
+            "app_shell.home_private_state_present"
         private const val STATE_HOME_PRIVATE_IDENTITIES = "app_shell.home_private_identities"
         private const val STATE_HOME_PRIVATE_BASKET_KEYS = "app_shell.home_private_basket_keys"
         private const val STATE_HOME_DETAILS_ITEM_KEY = "app_shell.home_details_item_key"

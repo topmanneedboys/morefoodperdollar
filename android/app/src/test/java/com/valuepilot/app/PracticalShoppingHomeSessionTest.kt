@@ -129,6 +129,41 @@ class PracticalShoppingHomeSessionTest {
     }
 
     @Test
+    fun rapidAddRestartNavigationSequenceKeepsExactPrivateIdentitiesAndMarks() {
+        val first = identity("sepa:first", name = "Secadero", quantity = "500 g")
+        val second = identity("sepa:second", name = "Don Basilio", quantity = "1 kg")
+        var state = PracticalShoppingHomeSession.initialState()
+
+        state = PracticalShoppingHomeSession.addPrivateIdentity(state, first)
+        state = PracticalShoppingHomeSession.addPrivateIdentity(state, second)
+        state =
+            PracticalShoppingHomeSession.togglePrivateIdentityCollected(
+                state,
+                first.identityKey
+            )
+
+        // Model the repeated Home/Basket render and Activity recreation boundaries.
+        repeat(3) {
+            state =
+                PracticalShoppingHomeSession.restoreState(
+                    PracticalShoppingHomeSession.snapshot(state)
+                )
+        }
+
+        assertEquals(listOf(first, second), state.privateIdentities)
+        assertEquals(listOf(first.identityKey), state.privateBasketCollectedIdentityKeys)
+
+        val removed =
+            PracticalShoppingHomeSession.removePrivateIdentity(state, first.identityKey)
+        assertEquals(listOf(second), removed.privateIdentities)
+        assertTrue(removed.privateBasketCollectedIdentityKeys.isEmpty())
+
+        val readded = PracticalShoppingHomeSession.addPrivateIdentity(removed, first)
+        assertEquals(listOf(second, first), readded.privateIdentities)
+        assertTrue(readded.privateBasketCollectedIdentityKeys.isEmpty())
+    }
+
+    @Test
     fun typedButUnsubmittedQueryRestoresAsIdleDraft() {
         var model = LocalSamplePracticalShoppingDemo.initialModel()
         model =
