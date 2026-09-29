@@ -30,7 +30,7 @@ class PracticalShoppingHomeDetailsAndroidBindingTest {
             "if (current != null)",
             "dialogBuilder.setNeutralButton(R.string.home_item_details_clear)",
             "AndroidPracticalShoppingHomeSessionStore(applicationContext)",
-            "homeSessionStore.load()",
+            "homeSessionStore.loadResult()",
             "homeSessionStore.save(PracticalShoppingHomeSession.snapshot(homeSessionState))"
         ).forEach { required ->
             assertTrue("Expected Home lifecycle binding $required", source.contains(required))

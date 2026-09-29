@@ -18,6 +18,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.CheckBox
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
@@ -25,6 +26,7 @@ import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -51,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private var shellState = AppShellState.initial()
+    private var homeSessionPersistenceBlocked = false
     private var homeSessionState = PracticalShoppingHomeSession.initialState()
     private val homeSessionStore by lazy(LazyThreadSafetyMode.NONE) {
         AndroidPracticalShoppingHomeSessionStore(applicationContext)
@@ -74,6 +77,7 @@ class MainActivity : AppCompatActivity() {
     private var searchQuery = ""
     private var searchWasSubmitted = false
     private var searchScrollY = 0
+    private var googlePhotoViewerLaunchInFlight = false
     private var renderedSearchMatches:
         List<PracticalShoppingSearchIdentityPresentation.Match>? = null
 
@@ -291,6 +295,9 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
+        // A Custom Tab owns the external page. When the shopper returns, the
+        // next explicit tap is allowed to open it again.
+        googlePhotoViewerLaunchInFlight = false
         refreshHomePrivateMemory()
 
         if (comparisonActivityOpen && shellState.route == AppRoute.COMPARE) {
@@ -310,9 +317,15 @@ class MainActivity : AppCompatActivity() {
             STATE_HOME_EXTRA_STOP_MINIMUM_SAVINGS,
             homeSnapshot.extraStopMinimumSavingsChoice.name
         )
+        // The presence bit distinguishes an intentional empty private list from an older or
+        // partial Bundle that never carried private-list fields.
+        outState.putBoolean(STATE_HOME_PRIVATE_STATE_PRESENT, true)
         PracticalShoppingHomeSessionStoreCodec
             .encodePrivateIdentities(homeSnapshot.privateIdentities)
             ?.let { encoded -> outState.putString(STATE_HOME_PRIVATE_IDENTITIES, encoded) }
+        PracticalShoppingHomeSessionStoreCodec
+            .encodePrivateBasketCollectedIdentityKeys(homeSnapshot.privateBasketCollectedIdentityKeys)
+            ?.let { encoded -> outState.putString(STATE_HOME_PRIVATE_BASKET_KEYS, encoded) }
         homeSnapshot.requestDetailsLifecycleState?.let { encoded ->
             outState.putByteArray(STATE_HOME_REQUEST_DETAILS, encoded)
         }
@@ -369,6 +382,7 @@ class MainActivity : AppCompatActivity() {
             homeExperience.onRemoveItem = null
             homeExperience.onRemoveUnknownItem = null
             homeExperience.onRemovePrivateIdentity = null
+            homeExperience.onOpenPrivateIdentityPhotos = null
             homeExperience.onFindOfflineCatalogMatch = null
             homeExperience.onChooseExactProduct = null
             homeExperience.onChickenChoice = null
@@ -385,6 +399,8 @@ class MainActivity : AppCompatActivity() {
         }
         if (::basketExperience.isInitialized) {
             basketExperience.onAction = null
+            basketExperience.onPrivateIdentityToggle = null
+            basketExperience.onOpenPrivateIdentityPhotos = null
         }
         if (::savedRouteCoordinator.isInitialized) {
             savedExperience.onAction = null
@@ -450,10 +466,33 @@ class MainActivity : AppCompatActivity() {
     private fun restoreHomeState(
         savedInstanceState: Bundle?
     ): PracticalShoppingHomeSession.State {
+        val durableLoad = homeSessionStore.loadResult()
+        if (durableLoad.issue != PracticalShoppingHomeSessionStoreIssue.NONE) {
+            homeSessionPersistenceBlocked = true
+        }
         if (savedInstanceState?.containsKey(STATE_HOME_QUERY) != true) {
-            homeSessionStore.load()?.let { persisted ->
+            durableLoad.snapshot?.let { persisted ->
                 return PracticalShoppingHomeSession.restoreState(persisted)
             }
+        }
+
+        val privateIdentityState =
+            PracticalShoppingHomeSessionStoreCodec.recoverPrivateIdentityState(
+                savedStateComplete =
+                    savedInstanceState?.getBoolean(STATE_HOME_PRIVATE_STATE_PRESENT, false) == true,
+                savedPrivateIdentities =
+                    savedInstanceState?.getString(STATE_HOME_PRIVATE_IDENTITIES),
+                savedPrivateBasketCollectedIdentityKeys =
+                    savedInstanceState?.getString(STATE_HOME_PRIVATE_BASKET_KEYS),
+                durableSnapshot = durableLoad.snapshot,
+                durableStateTrusted =
+                    durableLoad.issue == PracticalShoppingHomeSessionStoreIssue.NONE
+            )
+        if (privateIdentityState == null) {
+            // Keep the unreadable durable record intact until a user mutation supplies a
+            // replacement. Rendering an empty fallback must not overwrite evidence of a read
+            // failure.
+            homeSessionPersistenceBlocked = true
         }
 
         val choice =
@@ -483,9 +522,9 @@ class MainActivity : AppCompatActivity() {
                 requestDetailsLifecycleState =
                     savedInstanceState?.getByteArray(STATE_HOME_REQUEST_DETAILS),
                 privateIdentities =
-                    PracticalShoppingHomeSessionStoreCodec.decodePrivateIdentities(
-                        savedInstanceState?.getString(STATE_HOME_PRIVATE_IDENTITIES)
-                    )
+                    privateIdentityState?.identities.orEmpty(),
+                privateBasketCollectedIdentityKeys =
+                    privateIdentityState?.collectedIdentityKeys.orEmpty()
             )
         )
     }
@@ -514,12 +553,21 @@ class MainActivity : AppCompatActivity() {
             renderHome()
         }
         homeExperience.onRemovePrivateIdentity = { identityKey ->
+            val previousState = homeSessionState
             homeSessionState =
                 PracticalShoppingHomeSession.removePrivateIdentity(
                     homeSessionState,
                     identityKey
                 )
+            if (homeSessionState != previousState) {
+                authorizePrivateListPersistence()
+            }
             renderHome()
+        }
+        homeExperience.onOpenPrivateIdentityPhotos = { identityKey ->
+            homeSessionState.privateIdentities
+                .firstOrNull { identity -> identity.identityKey == identityKey }
+                ?.let(::openGoogleProductPhotos)
         }
         homeExperience.onFindOfflineCatalogMatch = { token ->
             showOfflineCatalogMatches(token)
@@ -568,7 +616,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderHome(revealResult: Boolean = false) {
-        homeSessionStore.save(PracticalShoppingHomeSession.snapshot(homeSessionState))
+        if (!homeSessionPersistenceBlocked) {
+            homeSessionStore.save(PracticalShoppingHomeSession.snapshot(homeSessionState))
+        }
         val homeState =
             PracticalShoppingHomeRenderer.render(
                 homeSessionState.model.ui,
@@ -581,7 +631,8 @@ class MainActivity : AppCompatActivity() {
                         PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE
                     },
                 savedExactProductContext = homeSavedExactProductContext,
-                privateIdentities = homeSessionState.privateIdentities
+                privateIdentities = homeSessionState.privateIdentities,
+                privateIdentityCollectedKeys = homeSessionState.privateBasketCollectedIdentityKeys
             )
         // A render invalidates any pending share preview. This prevents a dialog opened for an
         // earlier list/result from sending text after the Home projection has changed.
@@ -604,6 +655,12 @@ class MainActivity : AppCompatActivity() {
             homeExperience.revealProjectedResult()
         }
         basketExperience.render(PracticalShoppingBasketRenderer.render(homeState))
+    }
+
+    private fun authorizePrivateListPersistence() {
+        // Only an explicit private-list mutation may replace a durable record that could not be
+        // read. Ordinary query edits/navigation must not erase that record as a side effect.
+        homeSessionPersistenceBlocked = false
     }
 
     private fun dismissHomeShareDialog() {
@@ -1220,6 +1277,39 @@ class MainActivity : AppCompatActivity() {
                 PracticalShoppingBasketUiAction.OpenHome ->
                     dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.HOME))
             }
+        }
+        basketExperience.onPrivateIdentityToggle = { identityKey ->
+            val previousState = homeSessionState
+            val nextState =
+                PracticalShoppingHomeSession.togglePrivateIdentityCollected(
+                    homeSessionState,
+                    identityKey
+                )
+            homeSessionState = nextState
+            if (nextState != previousState) {
+                authorizePrivateListPersistence()
+                homeSessionStore.save(PracticalShoppingHomeSession.snapshot(nextState))
+            }
+            homeRenderState =
+                homeRenderState?.copy(
+                    privateIdentityCollectedKeys = nextState.privateBasketCollectedIdentityKeys
+                )
+            val updatedInPlace =
+                basketExperience.updatePrivateIdentityCollected(
+                    identityKey = identityKey,
+                    collected = identityKey in nextState.privateBasketCollectedIdentityKeys
+                )
+            if (!updatedInPlace || shellState.selectedPrimaryTab != AppPrimaryTab.BASKET) {
+                // A stale or detached Basket surface must still converge through
+                // the normal immutable render path. The common tap path above
+                // never rebuilds Home or private identity rows.
+                renderHome()
+            }
+        }
+        basketExperience.onOpenPrivateIdentityPhotos = { identityKey ->
+            homeSessionState.privateIdentities
+                .firstOrNull { identity -> identity.identityKey == identityKey }
+                ?.let(::openGoogleProductPhotos)
         }
     }
 
@@ -2194,7 +2284,8 @@ class MainActivity : AppCompatActivity() {
                     createSearchResultView(
                         match = match,
                         caveat = state.caveat,
-                        onAddToHome = ::addSearchIdentityToHome
+                        onAddToHome = ::addSearchIdentityToHome,
+                        onOpenPhotos = ::openGoogleProductPhotos
                     )
                 )
             }
@@ -2243,7 +2334,8 @@ class MainActivity : AppCompatActivity() {
     private fun createSearchResultView(
         match: PracticalShoppingSearchIdentityPresentation.Match,
         caveat: String,
-        onAddToHome: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit
+        onAddToHome: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
+        onOpenPhotos: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit
     ): View {
         val card = MaterialCardView(this).apply {
             radius = dp(18).toFloat()
@@ -2269,6 +2361,7 @@ class MainActivity : AppCompatActivity() {
                     match.matchLabel,
                     "Argentina SEPA identity result",
                     getString(R.string.search_identity_no_verified_picture),
+                    getString(R.string.search_identity_photo_disclosure),
                     caveat,
                     "Tap to review this name in Scan and compare",
                     getString(R.string.search_identity_add_home_draft)
@@ -2348,6 +2441,12 @@ class MainActivity : AppCompatActivity() {
         }.also(body::addView)
         body.addView(source)
         TextView(this).apply {
+            text = getString(R.string.search_identity_photo_disclosure)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextColor(ValuePilotPalette.color("#6B7280"))
+            setPadding(0, dp(7), 0, 0)
+        }.also(body::addView)
+        TextView(this).apply {
             text = getString(R.string.search_identity_open_compare)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             setTextColor(ValuePilotPalette.color("#8F3620"))
@@ -2372,9 +2471,104 @@ class MainActivity : AppCompatActivity() {
             )
             setOnClickListener { onAddToHome(match) }
         }
-        card.addView(body)
-        card.addView(addHomeButton)
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        content.addView(body)
+        PracticalShoppingPrivateIdentity.fromSearchMatch(match)?.let { identity ->
+            val photoButton = MaterialButton(this).apply {
+                text = getString(R.string.search_identity_view_photos)
+                isAllCaps = false
+                minHeight = dp(48)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    setMargins(dp(16), dp(6), dp(16), dp(6))
+                }
+                contentDescription = getString(
+                    R.string.search_identity_view_photos_description,
+                    identity.displayName
+                )
+                setOnClickListener { onOpenPhotos(match) }
+            }
+            content.addView(photoButton)
+        }
+        content.addView(addHomeButton)
+        card.addView(content)
         return card
+    }
+
+    private fun openGoogleProductPhotos(
+        match: PracticalShoppingSearchIdentityPresentation.Match
+    ) {
+        PracticalShoppingPrivateIdentity.fromSearchMatch(match)?.let(::openGoogleProductPhotos)
+    }
+
+    private fun openGoogleProductPhotos(identity: PracticalShoppingPrivateIdentity) {
+        if (googlePhotoViewerLaunchInFlight) return
+        val url = GoogleProductPhotoViewer.urlFor(identity) ?: run {
+            showGooglePhotoLaunchError()
+            return
+        }
+        googlePhotoViewerLaunchInFlight = true
+        val uri = android.net.Uri.parse(url)
+        val intent =
+            CustomTabsIntent.Builder()
+                .setShowTitle(true)
+                .setInitialActivityHeightPx(
+                    googlePhotoInitialHeightPx(),
+                    CustomTabsIntent.ACTIVITY_HEIGHT_ADJUSTABLE
+                )
+                .build()
+        try {
+            intent.launchUrl(this, uri)
+        } catch (_: ActivityNotFoundException) {
+            // AndroidX has no preflight capability bit for partial Custom Tabs. If the provider
+            // rejects the partial launch, ask before falling back to a full-screen browser.
+            showGooglePhotoBrowserFallback(uri)
+        } catch (_: SecurityException) {
+            showGooglePhotoBrowserFallback(uri)
+        }
+    }
+
+    private fun showGooglePhotoBrowserFallback(uri: android.net.Uri) {
+        googlePhotoViewerLaunchInFlight = false
+        AlertDialog.Builder(this)
+            .setTitle(R.string.search_identity_browser_fallback_title)
+            .setMessage(R.string.search_identity_browser_fallback_message)
+            .setNegativeButton(R.string.search_identity_browser_fallback_cancel, null)
+            .setPositiveButton(R.string.search_identity_browser_fallback_open) { _, _ ->
+                launchGooglePhotoFullScreen(uri)
+            }
+            .show()
+    }
+
+    private fun launchGooglePhotoFullScreen(uri: android.net.Uri) {
+        googlePhotoViewerLaunchInFlight = true
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
+        } catch (_: ActivityNotFoundException) {
+            googlePhotoViewerLaunchInFlight = false
+            showGooglePhotoLaunchError()
+        } catch (_: SecurityException) {
+            googlePhotoViewerLaunchInFlight = false
+            showGooglePhotoLaunchError()
+        }
+    }
+
+    private fun showGooglePhotoLaunchError() {
+        val message = getString(R.string.search_identity_browser_unavailable)
+        when (shellState.selectedPrimaryTab) {
+            AppPrimaryTab.HOME -> homeExperience.showPhotoError(message)
+            AppPrimaryTab.BASKET -> basketExperience.showPhotoError(message)
+            AppPrimaryTab.SEARCH -> searchStatus.text = message
+            else -> Unit
+        }
     }
 
     private fun addSearchIdentityToHome(
@@ -2385,6 +2579,7 @@ class MainActivity : AppCompatActivity() {
             searchStatus.text = getString(R.string.search_identity_add_home_failed)
             return
         }
+        val previousState = homeSessionState
         val previousCount = homeSessionState.privateIdentities.size
         val nextState = PracticalShoppingHomeSession.addPrivateIdentity(homeSessionState, identity)
         if (nextState.privateIdentities.size == previousCount &&
@@ -2394,6 +2589,9 @@ class MainActivity : AppCompatActivity() {
             return
         }
         homeSessionState = nextState
+        if (nextState != previousState) {
+            authorizePrivateListPersistence()
+        }
         dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.HOME))
         renderHome()
     }
@@ -2441,6 +2639,12 @@ class MainActivity : AppCompatActivity() {
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).toInt()
 
+    private fun googlePhotoInitialHeightPx(): Int =
+        maxOf(
+            resources.displayMetrics.heightPixels * GOOGLE_PHOTO_INITIAL_HEIGHT_PERCENT / 100,
+            dp(GOOGLE_PHOTO_MIN_INITIAL_HEIGHT_DP)
+        )
+
     private data class ScreenCopy(
         val eyebrow: String,
         val title: String,
@@ -2450,6 +2654,8 @@ class MainActivity : AppCompatActivity() {
     )
 
     companion object {
+        private const val GOOGLE_PHOTO_INITIAL_HEIGHT_PERCENT = 65
+        private const val GOOGLE_PHOTO_MIN_INITIAL_HEIGHT_DP = 320
         private const val STATE_PRIMARY_TAB = "app_shell.primary_tab"
         private const val STATE_HOME_QUERY = "app_shell.home_query"
         private const val STATE_HOME_WAS_SUBMITTED = "app_shell.home_was_submitted"
@@ -2457,7 +2663,10 @@ class MainActivity : AppCompatActivity() {
         private const val STATE_HOME_EXTRA_STOP_MINIMUM_SAVINGS =
             "app_shell.home_extra_stop_minimum_savings"
         private const val STATE_HOME_REQUEST_DETAILS = "app_shell.home_request_details"
+        private const val STATE_HOME_PRIVATE_STATE_PRESENT =
+            "app_shell.home_private_state_present"
         private const val STATE_HOME_PRIVATE_IDENTITIES = "app_shell.home_private_identities"
+        private const val STATE_HOME_PRIVATE_BASKET_KEYS = "app_shell.home_private_basket_keys"
         private const val STATE_HOME_DETAILS_ITEM_KEY = "app_shell.home_details_item_key"
         private const val STATE_HOME_DETAILS_PACKAGE_COUNT = "app_shell.home_details_package_count"
         private const val STATE_HOME_DETAILS_BRAND = "app_shell.home_details_brand"

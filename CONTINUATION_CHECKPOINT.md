@@ -1,8 +1,69 @@
 # ValuePilot Continuation Checkpoint
 
-Updated: 2026-09-27 16:46 UTC
+Updated: 2026-09-29 04:30 UTC
 
-## Resumed M12.4–M12.9 checkpoint — 2026-09-27
+## 10113 Google Images refinement checkpoint — 2026-09-29
+
+The focused viewer refinement is committed at
+`0cb655c3ebde2bfa219cfc4393e84e56543d0485` on
+`work/valuepilot-m128-m129`. Supported Custom Tabs now request an adjustable
+partial tab starting at 65% of the display height (with a 320dp small-screen
+floor). If the provider rejects the partial launch, ValuePilot presents an
+explicit full-screen choice instead of opening a browser automatically. The
+existing unverified, explicit-tap-only Google Images query, double-tap guard,
+state preservation, Back/rotation handling and no-download/no-cache boundary
+remain unchanged.
+
+The next local candidate is versionCode `10113` / versionName `101.1.12` at
+`android/app/build/outputs/bundle/release/app-release.aab`; it is unsigned,
+36,314,196 bytes, SHA-256
+`00AD039ABEDEF27BA488783949BDD455163722CC361BD062DBBAAC7BFA91AB12`, and
+has not been signed, uploaded or installed. The protected signed 10112 AAB is
+preserved and does not contain this refinement.
+
+Focused viewer tests and the complete local tree passed: 1,732 Android app
+JVM tests, 405 shared-core tests, debug/release lint, debug/release builds,
+release bundle, and privacy inspection (no `ACCESS_NETWORK_STATE`). GitHub
+Actions retries and Play uploads remain paused while the account billing /
+spending-limit blocker is unresolved; Motorola validation is deferred.
+
+## 10112 integration checkpoint — 2026-09-29
+
+The current stacked candidate is `work/valuepilot-m128-m129` at
+`080f24e998679e8173862f4b6bd217dc195023f6`. PR #41 is based on `main`, PR #42
+is based on PR #41, and PR #43 is based on PR #42; all three remain open and
+GitHub reports them mergeable at their respective bases. A read-only
+`git merge-tree --write-tree origin/main HEAD` produced tree
+`4ea3ee61af529b5b339c21ef476509626b4412df` with no conflicts, so the complete
+stack can be integrated after the normal review gates without duplicating or
+prematurely merging commits.
+
+The combined code retains Search query/page accumulation, bounded Load More,
+navigation and recreation state rules; durable private Home/Basket identities;
+exact-key deduplication and checklist projection; the Secadero partial-state
+and malformed-durable-state protection; and independent Search Photo and Save
+buttons with separate accessibility labels and callbacks. No price, stock,
+ranking, provider or Android-network authority moved into these surfaces.
+
+Final local verification at this code tree passed: 1,730 Android app JVM tests,
+405 shared-core tests, debug/release lint, debug/release builds, and
+`:app:bundleRelease`, with zero failures/errors/skips. Privacy inspection found
+`INTERNET` as the existing edge permission and no `ACCESS_NETWORK_STATE`.
+VersionCode `10112` / versionName `101.1.11` was checked as unused in Play
+Console. The protected-key signed candidate is local only at
+`android/app/build/outputs/bundle/release/app-release-play-upload-signed-10112.aab`,
+SHA-256 `DBF0AC4212F8AB9F95BD16C5D3A7EDAF93878EFC3F1103B0EA70ADA708F05356`,
+with upload certificate SHA-256
+`A0:B6:5D:8A:5A:F9:44:9E:76:6F:05:39:6F:E1:78:20:D5:2F:26:7C:E9:D5:8A:B0:C2:F6:CD:E4:DC:B8:52:DA`.
+It has not been uploaded or installed. Remaining gates are the blocked GitHub
+Actions account billing/spending-limit state and later Motorola validation;
+physical testing is intentionally not required in this integration checkpoint.
+
+GitHub runs `36517192131` and `36517195056` were not started because recent
+account payments failed or the spending limit must be increased. No rerun or
+paid usage was requested.
+
+## Historical M12.4–M12.9 checkpoint — 2026-09-27
 
 Work continues on `work/valuepilot-m124-m129` from the verified Data Status
 repair `dcb40372bd0ed6f45afc87fea405d1dfdf01775b`; that repair was not
@@ -85,18 +146,10 @@ eligible. The 389 `yerba` identities had 0 strict image candidates. See
 [ARGENTINA_PRODUCT_IMAGE_COVERAGE_M12_6.md](ARGENTINA_PRODUCT_IMAGE_COVERAGE_M12_6.md).
 No images or raw exports are stored in Git or Android.
 
-M12.4 is still partial pending a valid >5-result/App-Check smoke in both
-regions and the Motorola path. The current code uses five-result pages with
-bounded Load More accumulation, but no live physical evidence is claimed.
-The existing M12.7/M12.8 offline/private surfaces remain bounded and
-truthful; live offers are not enabled. M12.9 has an unsigned 10108 / 101.1.7
-candidate in the normal build configuration. No new signing or Play upload
-has been started; 10107 remains the installed Play build for the pending
-physical smoke.
-The local release APK is `android/app/build/outputs/apk/release/app-release-unsigned.apk`
-with versionCode `10108` / versionName `101.1.7`; its privacy check confirms
-`INTERNET` is present for the existing edge path and `ACCESS_NETWORK_STATE` is
-absent. This is a build artifact only, not a signed or uploaded release.
+The M12.4/M12.9 status in this historical section was superseded by the
+10112 integration checkpoint above. The earlier unsigned 10108 / 101.1.7
+candidate and installed 10107 build are historical records only; they are not
+the current release candidate.
 
 GitHub Actions storage remains free-first: two durable provenance artifacts
 (`10085413603`, `10000282677`) total 76,864,219 bytes and active cache usage

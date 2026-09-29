@@ -150,6 +150,8 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="home_private_identity_body">Saved Search identities stay on this device and remain separate from the fictional sample plan.</string>
     <string name="home_private_identity_source">Source: %1$s</string>
     <string name="home_private_identity_remove_description">Remove %1$s from your private shopping list</string>
+    <string name="home_private_identity_photos">See unverified product photos</string>
+    <string name="home_private_identity_photos_description">Open unverified Google Images results for %1$s. ValuePilot does not verify or download these images.</string>
     <string name="home_remove_item">Remove</string>
     <string name="home_remove_item_description">Remove %1$s from this list</string>
     <string name="home_item_details_action">Add details</string>
@@ -333,6 +335,14 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="search_identity_add_home_draft_description">Save %1$s as a private Home shopping-list identity. This does not confirm price, store, stock or availability.</string>
     <string name="search_identity_add_home_failed">That identity could not be saved safely to your private Home list. Nothing was changed.</string>
     <string name="search_identity_no_verified_picture">No verified product picture available</string>
+    <string name="search_identity_photo_disclosure">Google Images results are unverified and do not change this product identity.</string>
+    <string name="search_identity_view_photos">See product photos</string>
+    <string name="search_identity_view_photos_description">Open unverified Google Images results for %1$s. ValuePilot does not verify, download or use these images as product proof.</string>
+    <string name="search_identity_browser_unavailable">A browser could not open Google Images. Nothing was changed.</string>
+    <string name="search_identity_browser_fallback_title">Open Google Images full screen?</string>
+    <string name="search_identity_browser_fallback_message">This browser could not open the requested resizable partial tab. Open Google Images full screen instead? Your ValuePilot list stays unchanged.</string>
+    <string name="search_identity_browser_fallback_open">Open full screen</string>
+    <string name="search_identity_browser_fallback_cancel">Keep ValuePilot open</string>
     <string name="search_identity_package_size">Package size: %1$s</string>
     <string name="search_area_label">Search area: %1$s</string>
     <string name="search_identity_match_label">Match: %1$s</string>

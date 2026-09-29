@@ -136,6 +136,33 @@ class PracticalShoppingHomeSessionStoreCodecTest {
     }
 
     @Test
+    fun privateBasketChecklistEncodingIsDeterministicAndFailsClosed() {
+        val keys = listOf("sepa:yerba:001", "sepa:second")
+        val encoded =
+            requireNotNull(
+                PracticalShoppingHomeSessionStoreCodec.encodePrivateBasketCollectedIdentityKeys(
+                    keys
+                )
+            )
+
+        assertEquals(encoded, PracticalShoppingHomeSessionStoreCodec.encodePrivateBasketCollectedIdentityKeys(keys))
+        assertEquals(
+            keys,
+            PracticalShoppingHomeSessionStoreCodec.decodePrivateBasketCollectedIdentityKeys(encoded)
+        )
+        assertTrue(
+            PracticalShoppingHomeSessionStoreCodec.decodePrivateBasketCollectedIdentityKeys(
+                "v1:bad"
+            ).isEmpty()
+        )
+        assertTrue(
+            PracticalShoppingHomeSessionStoreCodec.decodePrivateBasketCollectedIdentityKeys(
+                "v1:1:736570613a6b6579:736570613a6b6579"
+            ).isEmpty()
+        )
+    }
+
+    @Test
     fun malformedPrivateIdentityStorageFailsClosedWithoutAffectingTheHomeEnvelope() {
         val decoded =
             requireNotNull(
@@ -145,11 +172,109 @@ class PracticalShoppingHomeSessionStoreCodecTest {
                     chickenChoice = null,
                     extraStopMinimumSavingsChoice = null,
                     requestDetailsLifecycleState = null,
-                    privateIdentities = "v1:not-valid"
+                    privateIdentities = "v1:not-valid",
+                    privateBasketCollectedIdentityKeys = "v1:not-valid"
                 )
             )
 
         assertEquals("milk", decoded.query)
         assertTrue(decoded.privateIdentities.isEmpty())
+        assertTrue(decoded.privateBasketCollectedIdentityKeys.isEmpty())
+    }
+
+    @Test
+    fun partialLifecycleBundleUsesTheCompleteDurablePrivateList() {
+        val first = privateIdentity
+        val durable =
+            PracticalShoppingHomeSession.Snapshot(
+                query = "yerba",
+                wasSubmitted = false,
+                chickenChoice = null,
+                privateIdentities = listOf(first),
+                privateBasketCollectedIdentityKeys = listOf(first.identityKey)
+            )
+
+        val recovered =
+            requireNotNull(
+                PracticalShoppingHomeSessionStoreCodec.recoverPrivateIdentityState(
+                    savedStateComplete = false,
+                    savedPrivateIdentities = null,
+                    savedPrivateBasketCollectedIdentityKeys = null,
+                    durableSnapshot = durable,
+                    durableStateTrusted = true
+                )
+            )
+
+        assertEquals(listOf(first), recovered.identities)
+        assertEquals(listOf(first.identityKey), recovered.collectedIdentityKeys)
+    }
+
+    @Test
+    fun explicitEmptyLifecycleBundleDoesNotResurrectAnIntentionallyRemovedIdentity() {
+        val durable =
+            PracticalShoppingHomeSession.Snapshot(
+                query = "yerba",
+                wasSubmitted = false,
+                chickenChoice = null,
+                privateIdentities = listOf(privateIdentity),
+                privateBasketCollectedIdentityKeys = listOf(privateIdentity.identityKey)
+            )
+
+        val recovered =
+            requireNotNull(
+                PracticalShoppingHomeSessionStoreCodec.recoverPrivateIdentityState(
+                    savedStateComplete = true,
+                    savedPrivateIdentities = null,
+                    savedPrivateBasketCollectedIdentityKeys = null,
+                    durableSnapshot = durable,
+                    durableStateTrusted = true
+                )
+            )
+
+        assertTrue(recovered.identities.isEmpty())
+        assertTrue(recovered.collectedIdentityKeys.isEmpty())
+    }
+
+    @Test
+    fun malformedDurablePrivateStateIsNotAcceptedAsAnEmptyList() {
+        val decoded =
+            PracticalShoppingHomeSessionStoreCodec.decodePrivateIdentityState(
+                privateIdentities = "v1:not-valid",
+                privateBasketCollectedIdentityKeys = null
+            )
+
+        assertTrue(!decoded.valid)
+        assertNull(decoded.state)
+        assertNull(
+            PracticalShoppingHomeSessionStoreCodec.recoverPrivateIdentityState(
+                savedStateComplete = false,
+                savedPrivateIdentities = null,
+                savedPrivateBasketCollectedIdentityKeys = null,
+                durableSnapshot = null,
+                durableStateTrusted = false
+            )
+        )
+    }
+
+    @Test
+    fun malformedDurableEnvelopeCannotFallbackToAnEmptyPrivateList() {
+        assertNull(
+            PracticalShoppingHomeSessionStoreCodec.decode(
+                query = "x".repeat(242),
+                wasSubmitted = true,
+                chickenChoice = null,
+                extraStopMinimumSavingsChoice = null,
+                requestDetailsLifecycleState = null
+            )
+        )
+        assertNull(
+            PracticalShoppingHomeSessionStoreCodec.recoverPrivateIdentityState(
+                savedStateComplete = false,
+                savedPrivateIdentities = null,
+                savedPrivateBasketCollectedIdentityKeys = null,
+                durableSnapshot = null,
+                durableStateTrusted = false
+            )
+        )
     }
 }

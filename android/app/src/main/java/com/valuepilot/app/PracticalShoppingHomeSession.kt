@@ -21,7 +21,8 @@ object PracticalShoppingHomeSession {
             LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice =
                 LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.DEFAULT,
         val requestDetailsLifecycleState: ByteArray? = null,
-        val privateIdentities: List<PracticalShoppingPrivateIdentity> = emptyList()
+        val privateIdentities: List<PracticalShoppingPrivateIdentity> = emptyList(),
+        val privateBasketCollectedIdentityKeys: List<String> = emptyList()
     )
 
     /**
@@ -34,14 +35,16 @@ object PracticalShoppingHomeSession {
     data class State(
         val model: LocalSamplePracticalShoppingDemo.Model,
         val requestDetails: PracticalShoppingRequestDetailsSessionState,
-        val privateIdentities: List<PracticalShoppingPrivateIdentity> = emptyList()
+        val privateIdentities: List<PracticalShoppingPrivateIdentity> = emptyList(),
+        val privateBasketCollectedIdentityKeys: List<String> = emptyList()
     )
 
     fun initialState(): State =
         State(
             model = LocalSamplePracticalShoppingDemo.initialModel(),
             requestDetails = PracticalShoppingRequestDetailsSession.initial(),
-            privateIdentities = emptyList()
+            privateIdentities = emptyList(),
+            privateBasketCollectedIdentityKeys = emptyList()
         )
 
     /** Applies raw Home editing without silently changing the established detail session. */
@@ -86,7 +89,12 @@ object PracticalShoppingHomeSession {
     ): State {
         if (state.privateIdentities.any { it.identityKey == identity.identityKey }) return state
         if (state.privateIdentities.size >= PracticalShoppingPrivateIdentity.MAX_COUNT) return state
-        return state.copy(privateIdentities = state.privateIdentities + identity)
+        return state.copy(
+            privateIdentities = state.privateIdentities + identity,
+            // A newly-added or re-added identity always starts unchecked.
+            privateBasketCollectedIdentityKeys =
+                state.privateBasketCollectedIdentityKeys.filterNot { it == identity.identityKey }
+        )
     }
 
     /** Removes only the exact persisted identity key. */
@@ -94,7 +102,27 @@ object PracticalShoppingHomeSession {
         if (identityKey.isBlank()) return state
         val next = state.privateIdentities.filterNot { it.identityKey == identityKey }
         if (next.size == state.privateIdentities.size) return state
-        return state.copy(privateIdentities = next)
+        return state.copy(
+            privateIdentities = next,
+            // Removing an identity also removes its checklist progress.
+            privateBasketCollectedIdentityKeys =
+                state.privateBasketCollectedIdentityKeys.filterNot { it == identityKey }
+        )
+    }
+
+    /** Toggles only the local collected mark for an exact saved identity key. */
+    fun togglePrivateIdentityCollected(state: State, identityKey: String): State {
+        if (identityKey.isBlank() || state.privateIdentities.none { it.identityKey == identityKey }) {
+            return state
+        }
+        val collected = state.privateBasketCollectedIdentityKeys.toMutableSet()
+        if (!collected.add(identityKey)) collected.remove(identityKey)
+        return state.copy(
+            privateBasketCollectedIdentityKeys =
+                state.privateIdentities
+                    .map { it.identityKey }
+                    .filter(collected::contains)
+        )
     }
 
     /** Submits a list and reconciles details only against the resulting stable item keys. */
@@ -105,7 +133,12 @@ object PracticalShoppingHomeSession {
                 changed.model,
                 LocalSamplePracticalShoppingDemo.Intent.Submit
             )
-        return reconcileDetails(submitted, changed.requestDetails, changed.privateIdentities)
+        return reconcileDetails(
+            submitted,
+            changed.requestDetails,
+            changed.privateIdentities,
+            changed.privateBasketCollectedIdentityKeys
+        )
     }
 
     /**
@@ -128,17 +161,32 @@ object PracticalShoppingHomeSession {
                 state.model,
                 LocalSamplePracticalShoppingDemo.Intent.Submit
             )
-        return reconcileDetails(replayedModel, state.requestDetails, state.privateIdentities)
+        return reconcileDetails(
+            replayedModel,
+            state.requestDetails,
+            state.privateIdentities,
+            state.privateBasketCollectedIdentityKeys
+        )
     }
 
     fun removeItem(state: State, itemKey: ShoppingItemKey): State {
         val next = removeItem(state.model, itemKey)
-        return reconcileDetails(next, state.requestDetails, state.privateIdentities)
+        return reconcileDetails(
+            next,
+            state.requestDetails,
+            state.privateIdentities,
+            state.privateBasketCollectedIdentityKeys
+        )
     }
 
     fun removeUnknownItem(state: State, token: String): State {
         val next = removeUnknownItem(state.model, token)
-        return reconcileDetails(next, state.requestDetails, state.privateIdentities)
+        return reconcileDetails(
+            next,
+            state.requestDetails,
+            state.privateIdentities,
+            state.privateBasketCollectedIdentityKeys
+        )
     }
 
     fun chooseChicken(
@@ -146,7 +194,12 @@ object PracticalShoppingHomeSession {
         choice: LocalSamplePracticalShoppingDemo.ChickenChoice
     ): State {
         val next = chooseChicken(state.model, choice)
-        return reconcileDetails(next, state.requestDetails, state.privateIdentities)
+        return reconcileDetails(
+            next,
+            state.requestDetails,
+            state.privateIdentities,
+            state.privateBasketCollectedIdentityKeys
+        )
     }
 
     fun chooseExtraStopMinimumSavings(
@@ -154,7 +207,12 @@ object PracticalShoppingHomeSession {
         choice: LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice
     ): State {
         val next = chooseExtraStopMinimumSavings(state.model, choice)
-        return reconcileDetails(next, state.requestDetails, state.privateIdentities)
+        return reconcileDetails(
+            next,
+            state.requestDetails,
+            state.privateIdentities,
+            state.privateBasketCollectedIdentityKeys
+        )
     }
 
     /** Adds or replaces one explicit shopper intent without touching the plan result. */
@@ -192,7 +250,12 @@ object PracticalShoppingHomeSession {
                 } else {
                     null
                 },
-            privateIdentities = normalizedPrivateIdentities(state.privateIdentities)
+            privateIdentities = normalizedPrivateIdentities(state.privateIdentities),
+            privateBasketCollectedIdentityKeys =
+                normalizedPrivateBasketCollectedIdentityKeys(
+                    state.privateIdentities,
+                    state.privateBasketCollectedIdentityKeys
+                )
         )
     }
 
@@ -210,7 +273,12 @@ object PracticalShoppingHomeSession {
         return State(
             model = model,
             requestDetails = details,
-            privateIdentities = normalizedPrivateIdentities(snapshot.privateIdentities)
+            privateIdentities = normalizedPrivateIdentities(snapshot.privateIdentities),
+            privateBasketCollectedIdentityKeys =
+                normalizedPrivateBasketCollectedIdentityKeys(
+                    snapshot.privateIdentities,
+                    snapshot.privateBasketCollectedIdentityKeys
+                )
         )
     }
 
@@ -285,6 +353,20 @@ object PracticalShoppingHomeSession {
         return unique.values.toList()
     }
 
+    private fun normalizedPrivateBasketCollectedIdentityKeys(
+        identities: List<PracticalShoppingPrivateIdentity>,
+        collectedKeys: List<String>
+    ): List<String> {
+        val eligible = identities.map { it.identityKey }.toSet()
+        return collectedKeys
+            .asSequence()
+            .filter(String::isNotBlank)
+            .filter(eligible::contains)
+            .distinct()
+            .take(PracticalShoppingPrivateIdentity.MAX_COUNT)
+            .toList()
+    }
+
     fun restore(snapshot: Snapshot): LocalSamplePracticalShoppingDemo.Model {
         var model = LocalSamplePracticalShoppingDemo.initialModel()
         model = chooseExtraStopMinimumSavings(model, snapshot.extraStopMinimumSavingsChoice)
@@ -312,7 +394,8 @@ object PracticalShoppingHomeSession {
     private fun reconcileDetails(
         model: LocalSamplePracticalShoppingDemo.Model,
         details: PracticalShoppingRequestDetailsSessionState,
-        privateIdentities: List<PracticalShoppingPrivateIdentity>
+        privateIdentities: List<PracticalShoppingPrivateIdentity>,
+        privateBasketCollectedIdentityKeys: List<String>
     ): State =
         State(
             model = model,
@@ -320,7 +403,12 @@ object PracticalShoppingHomeSession {
                 establishedRequest(model)?.let { request ->
                     PracticalShoppingRequestDetailsSession.reconcileTo(details, request)
                 } ?: PracticalShoppingRequestDetailsSession.initial(),
-            privateIdentities = normalizedPrivateIdentities(privateIdentities)
+            privateIdentities = normalizedPrivateIdentities(privateIdentities),
+            privateBasketCollectedIdentityKeys =
+                normalizedPrivateBasketCollectedIdentityKeys(
+                    privateIdentities,
+                    privateBasketCollectedIdentityKeys
+                )
         )
 
     private fun establishedRequest(

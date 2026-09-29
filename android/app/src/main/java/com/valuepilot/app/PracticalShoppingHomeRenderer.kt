@@ -200,6 +200,8 @@ data class PracticalShoppingHomeRenderState(
     val extraStopSettings: PracticalShoppingHomeExtraStopSettingsRenderState,
     val sampleNotice: String,
     val privateIdentityItems: List<PracticalShoppingHomePrivateIdentityRenderState> = emptyList(),
+    /** Exact private Search identities currently marked collected in Basket. */
+    val privateIdentityCollectedKeys: List<String> = emptyList(),
     val privateMemorySummary: String? = null,
     /** Whether Home may expose the contextual route into the private history screen. */
     val privateMemoryReviewActionVisible: Boolean = false,
@@ -230,6 +232,12 @@ data class PracticalShoppingHomeRenderState(
         require(privateIdentityItems.size <= PracticalShoppingPrivateIdentity.MAX_COUNT)
         require(
             privateIdentityItems.map { it.identityKey }.distinct().size == privateIdentityItems.size
+        )
+        require(privateIdentityCollectedKeys.distinct().size == privateIdentityCollectedKeys.size)
+        require(
+            privateIdentityCollectedKeys.all { key ->
+                privateIdentityItems.any { it.identityKey == key }
+            }
         )
         require(privateMemorySummary == null || privateMemorySummary.isNotBlank())
         require(privateMemoryHighlights.size <= MAX_HOME_PRIVATE_MEMORY_HIGHLIGHTS)
@@ -285,7 +293,8 @@ object PracticalShoppingHomeRenderer {
         privateMemoryStatus: PracticalShoppingHomePrivateMemoryStatus =
             PracticalShoppingHomePrivateMemoryStatus.AVAILABLE,
         savedExactProductContext: PracticalShoppingHomeSavedExactProductContext? = null,
-        privateIdentities: List<PracticalShoppingPrivateIdentity> = emptyList()
+        privateIdentities: List<PracticalShoppingPrivateIdentity> = emptyList(),
+        privateIdentityCollectedKeys: List<String> = emptyList()
     ): PracticalShoppingHomeRenderState {
         // A failed read is not permission to display stale or caller-provided history. Keep the
         // status visible while suppressing every history-derived row notice until recovery.
@@ -476,6 +485,11 @@ object PracticalShoppingHomeRenderer {
                             notice = PRIVATE_IDENTITY_NOTICE
                         )
                     },
+            privateIdentityCollectedKeys =
+                privateIdentityCollectedKeys
+                    .filter { key -> privateIdentities.any { it.identityKey == key } }
+                    .distinct()
+                    .take(PracticalShoppingPrivateIdentity.MAX_COUNT),
             privateMemorySummary = privateMemorySummary,
             // A readable nonempty history gets a review action. An unreadable
             // store gets the same route so the shopper can open Compare Here

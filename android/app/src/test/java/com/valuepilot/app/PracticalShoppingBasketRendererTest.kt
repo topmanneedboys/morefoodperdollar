@@ -125,6 +125,36 @@ class PracticalShoppingBasketRendererTest {
     }
 
     @Test
+    fun privateSearchIdentitiesBecomeASeparateBoundedBasketChecklist() {
+        val first =
+            PracticalShoppingPrivateIdentity(
+                identityKey = "sepa:yerba:1",
+                displayName = "Yerba Mate",
+                brand = "Marca",
+                sourceLabel = "Argentina SEPA",
+                packageQuantityLabel = "1 kg"
+            )
+        val second =
+            first.copy(identityKey = "sepa:tea:2", displayName = "Tea", packageQuantityLabel = null)
+        val home =
+            PracticalShoppingHomeRenderer.render(
+                LocalSamplePracticalShoppingDemo.initialModel().ui,
+                requestDetails = null,
+                privateIdentities = listOf(first, second),
+                privateIdentityCollectedKeys = listOf(second.identityKey)
+            )
+
+        val basket = PracticalShoppingBasketRenderer.render(home)
+
+        assertEquals(listOf(first.identityKey, second.identityKey), basket.privateIdentityItems.map { it.identityKey })
+        assertEquals(listOf(false, true), basket.privateIdentityItems.map { it.collected })
+        assertEquals("Yerba Mate", basket.privateIdentityItems.first().displayName)
+        assertEquals("Marca", basket.privateIdentityItems.first().brand)
+        assertEquals("1 kg", basket.privateIdentityItems.first().packageQuantityLabel)
+        assertEquals("Argentina SEPA", basket.privateIdentityItems.first().sourceLabel)
+    }
+
+    @Test
     fun incompleteKnownSubtotalAndMissingPriceRemainNonCheckable() {
         val model =
             PracticalShoppingHomeSession.submit(

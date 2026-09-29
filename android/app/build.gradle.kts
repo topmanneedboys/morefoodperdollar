@@ -11,8 +11,8 @@ android {
         applicationId = "com.valuepilot.app"
         minSdk = 23
         targetSdk = 36
-        versionCode = 10110
-        versionName = "101.1.9"
+        versionCode = 10113
+        versionName = "101.1.12"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -37,6 +37,7 @@ dependencies {
     implementation(project(":shared-core"))
     implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.appcompat:appcompat:1.7.1")
+    implementation("androidx.browser:browser:1.8.0")
     implementation("androidx.recyclerview:recyclerview:1.2.1")
     implementation("com.google.android.material:material:1.13.0")
     implementation("com.google.mlkit:text-recognition:16.0.1")
