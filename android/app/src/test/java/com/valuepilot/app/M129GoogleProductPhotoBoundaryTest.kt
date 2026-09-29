@@ -34,6 +34,39 @@ class M129GoogleProductPhotoBoundaryTest {
     }
 
     @Test
+    fun partialViewerStartsNearSixtyFivePercentAndRemainsAdjustable() {
+        val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt")
+            .readText()
+            .replace("\r\n", "\n")
+
+        assertTrue(activity.contains("googlePhotoInitialHeightPx()"))
+        assertTrue(activity.contains("resources.displayMetrics.heightPixels"))
+        assertTrue(activity.contains("GOOGLE_PHOTO_INITIAL_HEIGHT_PERCENT = 65"))
+        assertTrue(activity.contains("CustomTabsIntent.ACTIVITY_HEIGHT_ADJUSTABLE"))
+        assertTrue(activity.contains("GOOGLE_PHOTO_MIN_INITIAL_HEIGHT_DP = 320"))
+    }
+
+    @Test
+    fun unsupportedPartialViewerRequiresAnExplicitFullScreenChoice() {
+        val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt")
+            .readText()
+            .replace("\r\n", "\n")
+        val fallbackStart = activity.indexOf("private fun showGooglePhotoBrowserFallback(")
+        val fallbackEnd = activity.indexOf("private fun showGooglePhotoLaunchError(", fallbackStart)
+        assertTrue(fallbackStart >= 0)
+        assertTrue(fallbackEnd > fallbackStart)
+        val fallback = activity.substring(fallbackStart, fallbackEnd)
+
+        assertTrue(fallback.contains("search_identity_browser_fallback_title"))
+        assertTrue(fallback.contains("search_identity_browser_fallback_message"))
+        assertTrue(fallback.contains("search_identity_browser_fallback_cancel"))
+        assertTrue(fallback.contains("search_identity_browser_fallback_open"))
+        assertTrue(fallback.contains("launchGooglePhotoFullScreen(uri)"))
+        assertTrue(activity.contains("showGooglePhotoBrowserFallback(uri)"))
+        assertTrue(activity.contains("private fun launchGooglePhotoFullScreen(uri:"))
+    }
+
+    @Test
     fun allThreeIdentitySurfacesDiscloseUnverifiedPhotos() {
         val main = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
         val home = source("src/main/java/com/valuepilot/app/PracticalShoppingHomeSurfaceView.kt").readText()

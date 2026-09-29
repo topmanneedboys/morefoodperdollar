@@ -2521,24 +2521,40 @@ class MainActivity : AppCompatActivity() {
             CustomTabsIntent.Builder()
                 .setShowTitle(true)
                 .setInitialActivityHeightPx(
-                    dp(600),
+                    googlePhotoInitialHeightPx(),
                     CustomTabsIntent.ACTIVITY_HEIGHT_ADJUSTABLE
                 )
                 .build()
         try {
             intent.launchUrl(this, uri)
         } catch (_: ActivityNotFoundException) {
-            // Keep the supported browser fallback: a device may have a regular
-            // browser without a Custom Tabs provider.
-            try {
-                startActivity(Intent(Intent.ACTION_VIEW, uri))
-            } catch (_: ActivityNotFoundException) {
-                googlePhotoViewerLaunchInFlight = false
-                showGooglePhotoLaunchError()
-            } catch (_: SecurityException) {
-                googlePhotoViewerLaunchInFlight = false
-                showGooglePhotoLaunchError()
+            // AndroidX has no preflight capability bit for partial Custom Tabs. If the provider
+            // rejects the partial launch, ask before falling back to a full-screen browser.
+            showGooglePhotoBrowserFallback(uri)
+        } catch (_: SecurityException) {
+            showGooglePhotoBrowserFallback(uri)
+        }
+    }
+
+    private fun showGooglePhotoBrowserFallback(uri: android.net.Uri) {
+        googlePhotoViewerLaunchInFlight = false
+        AlertDialog.Builder(this)
+            .setTitle(R.string.search_identity_browser_fallback_title)
+            .setMessage(R.string.search_identity_browser_fallback_message)
+            .setNegativeButton(R.string.search_identity_browser_fallback_cancel, null)
+            .setPositiveButton(R.string.search_identity_browser_fallback_open) { _, _ ->
+                launchGooglePhotoFullScreen(uri)
             }
+            .show()
+    }
+
+    private fun launchGooglePhotoFullScreen(uri: android.net.Uri) {
+        googlePhotoViewerLaunchInFlight = true
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
+        } catch (_: ActivityNotFoundException) {
+            googlePhotoViewerLaunchInFlight = false
+            showGooglePhotoLaunchError()
         } catch (_: SecurityException) {
             googlePhotoViewerLaunchInFlight = false
             showGooglePhotoLaunchError()
@@ -2623,6 +2639,12 @@ class MainActivity : AppCompatActivity() {
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).toInt()
 
+    private fun googlePhotoInitialHeightPx(): Int =
+        maxOf(
+            resources.displayMetrics.heightPixels * GOOGLE_PHOTO_INITIAL_HEIGHT_PERCENT / 100,
+            dp(GOOGLE_PHOTO_MIN_INITIAL_HEIGHT_DP)
+        )
+
     private data class ScreenCopy(
         val eyebrow: String,
         val title: String,
@@ -2632,6 +2654,8 @@ class MainActivity : AppCompatActivity() {
     )
 
     companion object {
+        private const val GOOGLE_PHOTO_INITIAL_HEIGHT_PERCENT = 65
+        private const val GOOGLE_PHOTO_MIN_INITIAL_HEIGHT_DP = 320
         private const val STATE_PRIMARY_TAB = "app_shell.primary_tab"
         private const val STATE_HOME_QUERY = "app_shell.home_query"
         private const val STATE_HOME_WAS_SUBMITTED = "app_shell.home_was_submitted"
