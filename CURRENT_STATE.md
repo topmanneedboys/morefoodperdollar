@@ -5,8 +5,8 @@ Updated: 2026-09-29 04:30 UTC
 ## Connected Shopping Decision Engine checkpoint — 2026-09-29
 
 The shared-core Shopping Decision Engine milestone is implemented on
-`work/valuepilot-confirmed-purchases` (the final code commit is recorded in
-the continuation checkpoint). The engine is stateless and consumes the existing
+`work/valuepilot-confirmed-purchases` at commit
+`dbe1fe4aaaf0d53854197c9fe7f0b44b0aeab83a`. The engine is stateless and consumes the existing
 Basket identities/quantities, confirmed purchases, personal Price Watch
 observations and targets, exact store keys, explicit trip assumptions and a
 future-ready current-offer contract. It does not create a second database or

@@ -5,8 +5,8 @@ Updated: 2026-09-29 04:30 UTC
 ## Connected Shopping Decision Engine checkpoint — 2026-09-29
 
 The next shared-core milestone is complete locally on
-`work/valuepilot-confirmed-purchases`; its final code commit is the parent of
-the documentation checkpoint below. `ShoppingDecisionEngine` reuses the
+`work/valuepilot-confirmed-purchases` at commit
+`dbe1fe4aaaf0d53854197c9fe7f0b44b0aeab83a`. `ShoppingDecisionEngine` reuses the
 existing exact Money/NormalizedQuantity, Basket identity, confirmed-purchase,
 Price Watch, store-key and Trip Planner facts without copying them into a new
 store. It evaluates bounded whole-basket scenarios for explicit stores and
