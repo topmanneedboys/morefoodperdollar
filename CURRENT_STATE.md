@@ -39,7 +39,7 @@ Final local verification at this commit is green: 1,775 Android app JVM
 tests, 419 shared-core tests, debug/release lint, debug/release builds,
 release bundle and privacy inspection. The unsigned candidate is
 `android/app/build/outputs/bundle/release/app-release.aab`, SHA-256
-`31CDC91F4F4A28EDC225BEA4CB0FD66EE5BDB9FA3EB2A10FA3A9C4BE24AA028E`,
+`8D9AE60054CF4C9947AD51779E6F3A79A526820DC4315E2481C122BD3C98D9C6`,
 versionCode `10116` / versionName `101.1.15`, application ID
 `com.valuepilot.app`. Manifest inspection shows the existing INTERNET and
 CAMERA permissions plus optional FINE/COARSE foreground location and no

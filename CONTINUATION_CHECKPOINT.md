@@ -30,7 +30,7 @@ Local verification is green at this exact code: 1,775 app JVM tests, 419
 shared-core tests, debug/release lint, debug/release builds, release bundle,
 and privacy inspection. The unsigned candidate is
 `android/app/build/outputs/bundle/release/app-release.aab` with SHA-256
-`31CDC91F4F4A28EDC225BEA4CB0FD66EE5BDB9FA3EB2A10FA3A9C4BE24AA028E`,
+`8D9AE60054CF4C9947AD51779E6F3A79A526820DC4315E2481C122BD3C98D9C6`,
 versionCode `10116` / versionName `101.1.15`, package
 `com.valuepilot.app`. No Play signing/upload, device install, GitHub Actions
 retry or paid service was performed.
