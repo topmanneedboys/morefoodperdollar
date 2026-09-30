@@ -1,5 +1,8 @@
 # ValuePilot Practical Shopping Production Orchestration Checkpoint
 
+> Historical checkpoint only. Canadian/provider-specific source experiments
+> described here are superseded and are not active runtime dependencies.
+
 Updated: 2026-08-29
 
 Branch: `work/valuepilot-android-milestone`

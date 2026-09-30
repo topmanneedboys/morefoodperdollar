@@ -1,5 +1,8 @@
 # ValuePilot Practical Shopping Saved Preference Transactions Checkpoint
 
+> Historical checkpoint only. Source-specific Canadian discovery references
+> below describe prior provenance, not current runtime data.
+
 Updated: 2026-08-29
 
 Branch: `work/valuepilot-android-milestone`

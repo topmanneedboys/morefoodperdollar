@@ -1,5 +1,8 @@
 # Practical Shopping Remember Execution Checkpoint
 
+> Historical checkpoint only. The source-specific choice path described here
+> was removed with the obsolete Canadian catalog surface.
+
 ## Verified boundary
 
 - Verified code commit: `e02771fac92433badb1ee4e25fa3b402ef499a09` (`Serialize remember confirmed choice execution`)

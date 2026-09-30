@@ -1,5 +1,8 @@
 # ValuePilot CJ Candidate Batch
 
+> Historical provider-screening record only. These CJ candidates are not
+> active ValuePilot sources or runtime dependencies.
+
 Updated: 2026-08-26
 
 Milestone:

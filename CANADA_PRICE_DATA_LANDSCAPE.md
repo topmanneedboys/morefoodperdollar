@@ -1,5 +1,10 @@
 # ValuePilot — Canadian Price Data Landscape
 
+> Historical research record only (2026-09-29). The Canadian catalog, store
+> directory, Open Prices measurements, and provider paths described here are
+> not active runtime sources and are not bundled in the app. See
+> `LEGACY_CANADIAN_DATA_SOURCE_CLEANUP.md` for the current boundary.
+
 Research date: 2026-08-27
 
 Milestone: 5D — Authorized Real Shopping Data Provider Selection

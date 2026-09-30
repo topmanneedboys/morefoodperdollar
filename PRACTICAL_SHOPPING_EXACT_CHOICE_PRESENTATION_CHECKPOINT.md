@@ -1,5 +1,8 @@
 # Practical Shopping Exact Choice Presentation Checkpoint
 
+> Historical checkpoint only. The old Canadian catalog-backed choice surface
+> is removed and is not an active runtime dependency.
+
 ## Verified boundary
 
 - Verified code commit: `7d83fe8020bf8422b5f54b5a036aef56b9163d9c` (`Project exact choices for explicit confirmation`)

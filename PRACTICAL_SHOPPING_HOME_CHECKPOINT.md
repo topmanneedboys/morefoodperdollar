@@ -1,5 +1,10 @@
 # ValuePilot Practical Shopping Checkpoint
 
+> Historical checkpoint notice (2026-09-29): older Canadian catalog and
+> store-directory entries below are superseded and are not active runtime
+> sources. The current source boundary is documented in
+> `LEGACY_CANADIAN_DATA_SOURCE_CLEANUP.md`.
+
 Updated: 2026-09-07
 
 Branch: `work/valuepilot-android-milestone`

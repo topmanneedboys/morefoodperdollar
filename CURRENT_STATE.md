@@ -513,15 +513,11 @@ the 503 mapping, generic Search error, and 502 distinction. Two Android source
 boundary tests now use the existing newline-normalizing reader so their
 assertions are stable on Windows.
 
-The local Windows failure was traced to Git `core.autocrlf=true`: all 10
-affected signed-catalog text files were byte-for-byte the committed Git blobs
-after undoing only CRLF conversion; the other two files already matched. The
-catalog output is cryptographically byte-sensitive, so
-`.gitattributes` now marks `android/app/src/main/assets/offline_catalog/**`
-`-text`. Only the attribute rule is a repository content change; the local
-catalog files were restored to their exact tracked bytes. Both signed regional
-catalogs then passed the strict signature/hash verifier. The complete tooling
-suite passed all 300 tests.
+The local Windows failure was traced to Git `core.autocrlf=true` while the old
+signed Canadian catalog assets were still present. That historical catalog
+path was later removed in the cleanup checkpoint; its old byte-sensitive
+attribute rule is no longer present. The complete tooling suite passed all 300
+tests at that earlier checkpoint.
 
 Local Android validation passed on this code: shared-core tests, Android unit
 tests, debug/release lint, debug/release assembly, and release bundle assembly

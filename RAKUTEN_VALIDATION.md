@@ -1,5 +1,8 @@
 # ValuePilot Rakuten Advertising Validation
 
+> Historical provider-screening record only. Rakuten is not an active
+> ValuePilot source or runtime dependency.
+
 Updated: 2026-08-24
 
 Milestone:

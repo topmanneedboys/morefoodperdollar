@@ -1,5 +1,8 @@
 # ValuePilot CJ West Coast Kids Validation
 
+> Historical provider-screening record only. This CJ candidate is not an
+> active ValuePilot source or runtime dependency.
+
 Updated: 2026-08-26
 
 Milestone:

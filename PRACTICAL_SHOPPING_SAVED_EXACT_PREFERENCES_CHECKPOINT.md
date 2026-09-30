@@ -1,5 +1,8 @@
 # ValuePilot Practical Shopping Saved Exact Preferences Checkpoint
 
+> Historical checkpoint only. The source-specific Canadian discovery paths
+> referenced below are not active runtime dependencies.
+
 Updated: 2026-08-29
 
 Branch: `work/valuepilot-android-milestone`

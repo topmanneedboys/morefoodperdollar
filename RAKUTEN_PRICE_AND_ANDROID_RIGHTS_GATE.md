@@ -1,5 +1,8 @@
 # ValuePilot — Rakuten Price Semantics and Android Rights Gate
 
+> Historical qualification record only. This provider-specific rights gate is
+> not an active runtime dependency.
+
 Updated: 2026-08-28
 
 Milestone: 5D — authorized real shopping data validation

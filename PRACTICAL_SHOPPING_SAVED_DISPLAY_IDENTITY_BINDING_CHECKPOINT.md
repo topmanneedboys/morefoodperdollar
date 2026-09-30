@@ -1,5 +1,8 @@
 # Practical Shopping Saved Display Identity Binding Checkpoint
 
+> Historical checkpoint only. Source-bound Canadian identity adapters described
+> here are not active catalog or offer sources in the current app.
+
 Status: verified code boundary
 
 Latest verified code commit: `a7b1d58f223357708ade36aaa413171676a490cb`

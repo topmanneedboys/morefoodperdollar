@@ -1,5 +1,9 @@
 # ValuePilot Authorized Shopping Data Provider Strategy
 
+> Historical strategy record only. The Canadian provider paths described below
+> are not active runtime sources; the current app has no Canadian catalog or
+> offer rail.
+
 Research date: 2026-08-22
 
 Milestone:

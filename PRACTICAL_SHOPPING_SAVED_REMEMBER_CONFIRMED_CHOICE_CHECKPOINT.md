@@ -1,5 +1,8 @@
 # Practical Shopping Remember Confirmed Choice Checkpoint
 
+> Historical checkpoint only. The source-specific choice path described here
+> was removed with the obsolete Canadian catalog surface.
+
 ## Verified boundary
 
 - Verified code commit: `c3f6cdc70d1c9b3a36b27f24baf3ef87be0128c3` (`Coordinate remembering confirmed saved choices`)

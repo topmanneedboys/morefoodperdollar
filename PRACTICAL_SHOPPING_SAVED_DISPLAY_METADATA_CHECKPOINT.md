@@ -1,5 +1,8 @@
 # ValuePilot Practical Shopping Saved Display Metadata Checkpoint
 
+> Historical checkpoint only. Source-derived Canadian labels described here
+> are compatibility history, not active catalog or offer data.
+
 Updated: 2026-08-29
 
 Branch: `work/valuepilot-android-milestone`

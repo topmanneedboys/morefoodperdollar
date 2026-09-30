@@ -149,7 +149,8 @@ Do not infer these rights from feed availability alone.
 
 ## Engineering direction after the first real feed
 
-Use the existing offline `tools/qualify_rakuten_product_catalog.py` boundary for deterministic feed research. Keep it network-free and separate from the Android production runtime.
+The former Rakuten-specific qualifier was removed during the cleanup. This
+historical record does not provide an active command or runtime dependency.
 
 Next engineering work should harden the qualifier around the real-feed findings, especially explicit `sale < retail`, `sale == retail`, and `sale > retail` counts, then design a provider-neutral import mapping that preserves raw source identity and price semantics without inventing quantity or freshness.
 

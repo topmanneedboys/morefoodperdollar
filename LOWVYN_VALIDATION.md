@@ -1,5 +1,8 @@
 # ValuePilot Provider Validation — Lowvyn
 
+> Historical provider-screening record only. Lowvyn is not an active
+> ValuePilot source or runtime dependency.
+
 Research date: 2026-08-27
 
 Milestone: 5D — Authorized Real Shopping Data Provider Selection

@@ -80,7 +80,9 @@ Sanitized feed-level identity distribution:
 
 ## Corrected normalized lookup and transport resilience
 
-The stable launcher `tools/run_rakuten_off_quantity_coverage.py` delegates to `tools/measure_rakuten_off_quantity_coverage_v2.py` and `tools/open_facts_barcode.py`.
+The former Rakuten-specific launchers were removed during the cleanup. The
+generic `tools/open_facts_barcode.py` helper remains only for the active
+Argentina image audit.
 
 The corrected research path:
 

@@ -1,5 +1,8 @@
 # ValuePilot — Rakuten × Open Food Facts Quantity Coverage Gate
 
+> Historical qualification record only. This provider-specific quantity gate
+> is not an active runtime dependency.
+
 Updated: 2026-08-28
 
 Milestone: 5D — authorized real shopping data validation
@@ -39,11 +42,13 @@ The historical `0 / 271` result is retained only as a regression/discovery event
 
 Stable launcher:
 
-`tools/run_rakuten_off_quantity_coverage.py`
+Former `tools/run_rakuten_off_quantity_coverage.py` launcher (removed; this is
+historical documentation only).
 
 Corrected implementation:
 
-`tools/measure_rakuten_off_quantity_coverage_v2.py`
+Former `tools/measure_rakuten_off_quantity_coverage_v2.py` implementation
+(removed; this is historical documentation only).
 
 Barcode helper:
 

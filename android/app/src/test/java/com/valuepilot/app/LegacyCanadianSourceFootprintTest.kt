@@ -46,6 +46,17 @@ class LegacyCanadianSourceFootprintTest {
         assertTrue(cad.fractionDigits == 2)
     }
 
+    @Test
+    fun `public product copy does not advertise a Canadian source rail`() {
+        val repository = findRepositoryRoot()
+        val publicHome = File(repository, "docs/index.html").readText()
+        val publicMethodology = File(repository, "docs/methodology.html").readText()
+        assertTrue(publicHome.contains("no live Canadian catalog or retailer-offer feed is shipped"))
+        assertTrue(publicMethodology.contains("The shipped app has no Canadian catalog or retailer-offer feed"))
+        assertFalse(File(repository, ".gitattributes").readText().contains("offline_catalog"))
+        assertFalse(File(repository, ".gitattributes").readText().contains("store_directory"))
+    }
+
     private fun findAppRoot(): File {
         var directory = File(System.getProperty("user.dir") ?: error("user.dir unavailable"))
         repeat(8) {
@@ -55,4 +66,7 @@ class LegacyCanadianSourceFootprintTest {
         }
         error("Could not locate android/app from ${System.getProperty("user.dir")}")
     }
+
+    private fun findRepositoryRoot(): File = findAppRoot().parentFile?.parentFile
+        ?: error("Could not locate repository root")
 }

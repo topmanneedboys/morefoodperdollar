@@ -1,5 +1,9 @@
 # ValuePilot Master Continuation Prompt
 
+> Historical continuation record (2026-09-29). Canadian provider/catalog
+> references below are superseded by `LEGACY_CANADIAN_DATA_SOURCE_CLEANUP.md`;
+> they do not authorize or describe active runtime sources.
+
 Updated: 2026-08-29
 
 Purpose: durable copy/paste recovery prompt if the chat is lost. The repository branch tip and newer authenticated account evidence always override this file.

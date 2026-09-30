@@ -1,5 +1,10 @@
 # ValuePilot Provider Account Status
 
+> Historical account/provenance record (2026-09-29). Canadian CJ/Rakuten/
+> Jamieson status below is retained for history only; no such source is active,
+> bundled, or connected to the current app. Do not interpret these records as
+> production authorization.
+
 Updated: 2026-08-29
 
 Purpose: fast-changing external account/application status. This file is operational only; it does not itself authorize production networking, mobile use, caching, affiliate links, ranking or provider integration.

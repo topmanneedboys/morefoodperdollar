@@ -1,5 +1,8 @@
 # ValuePilot Provider Validation Record
 
+> Historical provider-validation record only. Canadian provider candidates
+> described below are not active runtime sources or bundled data.
+
 Updated: 2026-08-22
 
 Milestone:

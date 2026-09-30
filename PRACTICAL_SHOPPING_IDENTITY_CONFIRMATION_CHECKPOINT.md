@@ -1,5 +1,8 @@
 # ValuePilot Practical Shopping Identity Confirmation Checkpoint
 
+> Historical checkpoint only. The Canadian/OpenStreetMap discovery artifacts
+> described here are not bundled or active; see the cleanup report.
+
 Updated: 2026-08-29
 
 Branch: `work/valuepilot-android-milestone`

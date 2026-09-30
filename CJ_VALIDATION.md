@@ -1,5 +1,8 @@
 # ValuePilot CJ Affiliate Validation Record
 
+> Historical provider-screening record only. CJ candidates described here are
+> not active ValuePilot sources or runtime dependencies.
+
 Updated: 2026-08-22
 
 Milestone:

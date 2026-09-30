@@ -1,5 +1,9 @@
 # Project State
 
+> Historical project note. Canadian retailer/accessibility examples below are
+> not current data sources; the shipped app does not bundle Canadian catalog or
+> offer data. See `LEGACY_CANADIAN_DATA_SOURCE_CLEANUP.md`.
+
 Updated: 2026-08-20
 
 Android v101.1 implementation is present on local branch `work/valuepilot-android-milestone`. Source baseline was commit `ceed4d4dbd83f3636c5e9af858d8c4a42e98b2e5` on `agent/valuepilot-apk-ci`.

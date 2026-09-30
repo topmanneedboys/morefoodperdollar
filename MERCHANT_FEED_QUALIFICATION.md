@@ -49,9 +49,12 @@ For a provider with a normal header row, run the generic qualifier first. If aut
 
 ### Rakuten Product Catalog text qualifier
 
-`tools/qualify_rakuten_product_catalog.py`
+Historical only: the former `tools/qualify_rakuten_product_catalog.py` profiler
+was removed during the 2026-09-29 cleanup. The generic qualifier above remains
+the only active provider-neutral tool.
 
-This is a dedicated offline profiler for Rakuten Advertising Product Catalog pipe-delimited `.txt` / `.txt.gz` files.
+The following paragraphs preserve the former profiler's schema findings as
+historical research; they do not describe an active tool or runtime adapter.
 
 It is based on Rakuten Advertising's published Product Catalog Data Feed implementation guide and is deliberately narrower than a production adapter.
 
@@ -158,16 +161,10 @@ When a real feed arrives, place the downloaded file under `local-provider-data/`
 
 Never place FTP/SFTP credentials, passwords, API keys, advertiser account secrets, or private publisher identifiers in the repository or generated reports.
 
-## Example: qualifying a Rakuten text feed
+## Example: qualifying a Rakuten text feed (historical; removed)
 
-```bash
-python tools/qualify_rakuten_product_catalog.py \
-  --input local-provider-data/merchant_feed.txt.gz \
-  --expected-currency CAD \
-  --evaluated-at 2026-08-27T21:00:00-07:00 \
-  --json local-feed-reports/merchant_feed.json \
-  --markdown local-feed-reports/merchant_feed.md
-```
+No provider-specific command is active. Use the generic qualifier only after a
+future provider has independently passed its rights and schema gates.
 
 Use the actual caller-supplied evaluation time when freshness/file-age measurement matters. Do not replace it with a hidden clock inside deterministic core logic.
 
@@ -176,7 +173,7 @@ Use the actual caller-supplied evaluation time when freshness/file-age measureme
 Run this sequence before implementation:
 
 1. preserve the original `.txt.gz` file locally and do not commit it;
-2. run the Rakuten qualifier against the complete file;
+2. use a future provider-neutral qualifier against the complete file;
 3. verify the HDR/TRL integrity and actual row count;
 4. inspect CAD coverage and whether the feed is the intended Canadian variant;
 5. inspect real Product ID, SKU, UPC/GTIN, title, brand, availability, Retail Price, Sale Price, URLs, Class ID, and attribute coverage;

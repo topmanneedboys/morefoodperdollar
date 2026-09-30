@@ -1,5 +1,10 @@
 # ValuePilot Practical Shopping MVP Status
 
+> Current-source override (2026-09-29): older entries in this historical
+> checkpoint mention the removed Canadian catalog and store directory. Those
+> assets, loaders, and provider-specific rails are no longer shipped or active;
+> see `LEGACY_CANADIAN_DATA_SOURCE_CLEANUP.md`.
+
 Updated: 2026-09-07
 
 Branch: `work/valuepilot-android-milestone`

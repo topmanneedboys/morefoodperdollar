@@ -1,5 +1,8 @@
 # ValuePilot Rakuten — Greenworks Tools Canada Validation
 
+> Historical provider-screening record only. This source is not active or
+> connected to the current app.
+
 Updated: 2026-08-26
 
 Milestone:

@@ -1,5 +1,8 @@
 # Jamieson Rakuten Product Catalog — Sanitized Feed Audit
 
+> Historical sanitized audit only. The Jamieson/Rakuten feed and adapter are
+> not active, bundled, or connected to the current app.
+
 Date: 2026-08-28
 
 Milestone: 5D — Authorized Real Shopping Data Provider Selection

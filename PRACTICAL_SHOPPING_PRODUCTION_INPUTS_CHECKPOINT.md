@@ -1,5 +1,8 @@
 # ValuePilot Practical Shopping Production Inputs + Open Identity Checkpoint
 
+> Historical checkpoint only. The Canadian/Open Prices/Open Food Facts source
+> experiments described here are not active runtime sources or bundled data.
+
 Updated: 2026-08-29
 
 Branch: `work/valuepilot-android-milestone`
