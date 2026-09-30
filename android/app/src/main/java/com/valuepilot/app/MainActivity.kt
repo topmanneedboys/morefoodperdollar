@@ -3164,7 +3164,7 @@ class MainActivity : AppCompatActivity() {
     private fun useForegroundLocation() {
         val fineGranted = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val coarseGranted = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        if (!fineGranted && !coarseGranted) {
+        if (!TripPlannerLocationPolicy.hasForegroundPermission(fineGranted, coarseGranted)) {
             requestPermissions(
                 arrayOf(
                     Manifest.permission.ACCESS_FINE_LOCATION,
@@ -3180,7 +3180,7 @@ class MainActivity : AppCompatActivity() {
     private fun captureForegroundLocation() {
         val fineGranted = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val coarseGranted = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        if (!fineGranted && !coarseGranted) {
+        if (!TripPlannerLocationPolicy.hasForegroundPermission(fineGranted, coarseGranted)) {
             Toast.makeText(this, "Location was not granted; manual starting point remains available.", Toast.LENGTH_SHORT).show()
             return
         }

@@ -102,3 +102,9 @@ internal object TripPlannerOriginParser {
     fun manual(raw: String): String? =
         raw.trim().replace(Regex("\\s+"), " ").takeIf { it.isNotBlank() && it.length <= 240 && it.none { c -> c == '\n' || c == '\r' } }
 }
+
+/** Pure permission boundary so a denied request always leaves manual origin available. */
+internal object TripPlannerLocationPolicy {
+    fun hasForegroundPermission(fineGranted: Boolean, coarseGranted: Boolean): Boolean =
+        fineGranted || coarseGranted
+}

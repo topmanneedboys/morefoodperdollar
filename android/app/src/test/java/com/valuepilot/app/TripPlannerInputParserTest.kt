@@ -59,6 +59,13 @@ class TripPlannerInputParserTest {
         assertEquals(null, TripPlannerOriginParser.manual("\n"))
     }
 
+    @Test
+    fun `denied foreground permission keeps manual-origin path available`() {
+        assertFalse(TripPlannerLocationPolicy.hasForegroundPermission(fineGranted = false, coarseGranted = false))
+        assertTrue(TripPlannerLocationPolicy.hasForegroundPermission(fineGranted = true, coarseGranted = false))
+        assertTrue(TripPlannerLocationPolicy.hasForegroundPermission(fineGranted = false, coarseGranted = true))
+    }
+
     private fun itInputWithCurrency(currency: String): TripPlannerAssumptionInput =
         TripPlannerAssumptionInput(
             distanceKmText = "1",
