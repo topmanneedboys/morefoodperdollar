@@ -26,7 +26,7 @@ Current offers, inventory and savings are explicitly UNKNOWN and cannot affect
 organic ranking. The scenario changes with Basket counts/revision and does
 not mutate purchases or Price Watch.
 
-Local verification is green at this exact code: 1,775 app JVM tests, 419
+Local verification is green at this exact code: 1,776 app JVM tests, 419
 shared-core tests, debug/release lint, debug/release builds, release bundle,
 and privacy inspection. The unsigned candidate is
 `android/app/build/outputs/bundle/release/app-release.aab` with SHA-256
