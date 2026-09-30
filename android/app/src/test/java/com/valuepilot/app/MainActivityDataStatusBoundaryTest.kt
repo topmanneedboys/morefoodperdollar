@@ -30,7 +30,6 @@ class MainActivityDataStatusBoundaryTest {
             "dataStatusButton = findViewById(R.id.dataStatusButton)",
             "dataStatusButton.setOnClickListener { showDataStatus() }",
             "private fun showDataStatus()",
-            "BundledStoreDirectory.loadSummary(",
             "PracticalShoppingDataStatusPresentation.from(",
             ".setTitle(R.string.data_status_title)",
             ".setMessage(presentation.message)",
@@ -42,7 +41,7 @@ class MainActivityDataStatusBoundaryTest {
         listOf(
             "data_status",
             "ValuePilot data status",
-            "Open Food Facts",
+            "No bundled product catalogue is shipped",
             "No flyer content is copied here"
         ).forEach { required ->
             assertTrue("Expected truthful status/disclosure copy: $required", strings.contains(required))
@@ -66,11 +65,11 @@ class MainActivityDataStatusBoundaryTest {
         listOf(
             "None included. There is no authorized live-offer feed",
             "Unknown prices stay unknown",
-            "Not available in this build",
+            "No bundled store directory is shipped",
             "Flyer content is not copied",
             "fictional sample data",
-            "offline identity catalogue",
-            "not proof of GTA or Metro Vancouver availability"
+            "No bundled product catalogue is shipped",
+            "source-attributed"
         ).forEach { required ->
             assertTrue("Expected explicit uncertainty boundary: $required", source.contains(required))
         }

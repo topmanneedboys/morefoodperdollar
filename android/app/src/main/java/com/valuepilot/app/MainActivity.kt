@@ -40,7 +40,6 @@ import com.google.android.material.card.MaterialCardView
 import com.google.android.material.chip.Chip
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
-import com.valuepilot.core.OfflineCatalogDiscoveryResult
 import com.valuepilot.core.ConfirmedPurchase
 import com.valuepilot.core.ConfirmedPurchaseConfirmation
 import com.valuepilot.core.ConfirmedPurchaseConfirmationInput
@@ -57,19 +56,8 @@ import com.valuepilot.core.ProductStoreMapCoordinate
 import java.math.BigDecimal
 import java.util.UUID
 import java.util.concurrent.Executors
-import java.util.concurrent.Future
 
 class MainActivity : AppCompatActivity() {
-
-    private data class OfflineCatalogLookup(
-        val discoveryResult: OfflineCatalogDiscoveryResult,
-        val presentation: PracticalShoppingHomeOfflineCatalogPresentation
-    )
-
-    private sealed interface OfflineCatalogLookupOutcome {
-        data class Success(val lookup: OfflineCatalogLookup) : OfflineCatalogLookupOutcome
-        data class Failure(val kind: BundledOfflineCatalogFailureKind) : OfflineCatalogLookupOutcome
-    }
 
     private var shellState = AppShellState.initial()
     private var homeSessionPersistenceBlocked = false
@@ -100,14 +88,8 @@ class MainActivity : AppCompatActivity() {
     }
     private var tripPlannerState = TripPlannerState()
     private var tripPlannerLoadIssue: TripPlannerStoreIssue? = null
-    private var tripStoreDirectorySelections: List<TripStoreSelection> = emptyList()
-    private var tripStoreDirectoryLoading = false
-    private var tripStoreDirectoryLoadIssue: String? = null
-    private var tripStoreDirectoryRequestId = 0L
-
     private val searchExecutor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
-    private lateinit var offlineCatalogDiscoverySession: BundledOfflineCatalogDiscoverySession
     private lateinit var argentinaSearchHost: ArgentinaLiveSearchSurfaceHost
     private val argentinaSearchRenderGate = ArgentinaLiveSearchMainThreadRenderGate()
     private var argentinaSearchSurfaceState: ArgentinaLiveSearchSurfaceState? = null
@@ -201,8 +183,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var stapleWatchFactResolutionHost: StapleWatchFactResolutionHost
     private lateinit var stapleWatchSetupCoordinator: StapleWatchSavedSetupCompositionCoordinator
     private lateinit var stapleWatchPolicySetupCoordinator: StapleWatchPolicySetupCompositionCoordinator
-    private lateinit var rememberConfirmedChoiceAndroidSession:
-        PracticalShoppingRememberConfirmedChoiceAndroidSession
 
     private var comparisonActivityOpen = false
     private var homeItemDetailsDialog: AlertDialog? = null
@@ -214,9 +194,6 @@ class MainActivity : AppCompatActivity() {
     private var homeSavedExactProductContext: PracticalShoppingHomeSavedExactProductContext? = null
     private var homeShareCard: PracticalShoppingHomeShareCard? = null
     private var homeShareDialog: AlertDialog? = null
-    private var offlineCatalogDialog: AlertDialog? = null
-    private var pendingExactProductLabel: String? = null
-    private var pendingExactProductItemKey: ShoppingItemKey? = null
     private var dataStatusDialog: AlertDialog? = null
     private var privatePriceHistoryDialog: AlertDialog? = null
     private var privatePriceHistoryClearDialog: AlertDialog? = null
@@ -228,17 +205,12 @@ class MainActivity : AppCompatActivity() {
     private var tripOriginDialog: AlertDialog? = null
     private var tripAssumptionsDialog: AlertDialog? = null
     private var tripStorePickerDialog: AlertDialog? = null
-    private var offlineCatalogLookup: Future<*>? = null
-    private var offlineCatalogRequestId = 0L
     private var suppressSearchInputCallback = false
     private var searchRouteActive = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_shell)
-        offlineCatalogDiscoverySession =
-            BundledOfflineCatalog.createDiscoverySession(applicationContext)
-
         shellRoot = findViewById(R.id.shellRoot)
         shellScrollView = findViewById(R.id.shellScrollView)
         bottomNavArea = findViewById(R.id.bottomNavArea)
@@ -443,11 +415,6 @@ class MainActivity : AppCompatActivity() {
         productMapDialog?.dismiss()
         productMapDialog = null
         pendingProductMapLocation = null
-        cancelOfflineCatalogLookup()
-        offlineCatalogDialog?.dismiss()
-        offlineCatalogDialog = null
-        pendingExactProductLabel = null
-        pendingExactProductItemKey = null
         if (::argentinaSearchHost.isInitialized) {
             argentinaSearchHost.close()
         }
@@ -481,8 +448,6 @@ class MainActivity : AppCompatActivity() {
             homeExperience.onRemoveUnknownItem = null
             homeExperience.onRemovePrivateIdentity = null
             homeExperience.onOpenPrivateIdentityPhotos = null
-            homeExperience.onFindOfflineCatalogMatch = null
-            homeExperience.onChooseExactProduct = null
             homeExperience.onChickenChoice = null
             homeExperience.onExtraStopMinimumSavingsChoice = null
             homeExperience.onEditItemDetails = null
@@ -541,12 +506,6 @@ class MainActivity : AppCompatActivity() {
             stapleWatchSavedDisplayMetadataCompositionCoordinator.close()
             stapleWatchForegroundEvaluationInputHost.close()
             savedRouteCoordinator.close()
-        }
-        if (::rememberConfirmedChoiceAndroidSession.isInitialized) {
-            rememberConfirmedChoiceAndroidSession.close()
-        }
-        if (::offlineCatalogDiscoverySession.isInitialized) {
-            offlineCatalogDiscoverySession.close()
         }
         searchExecutor.shutdownNow()
         mainHandler.removeCallbacksAndMessages(null)
@@ -681,14 +640,6 @@ class MainActivity : AppCompatActivity() {
                 .firstOrNull { identity -> identity.identityKey == identityKey }
                 ?.let(::openGoogleProductPhotos)
         }
-        homeExperience.onFindOfflineCatalogMatch = { token ->
-            showOfflineCatalogMatches(token)
-        }
-        homeExperience.onChooseExactProduct = { itemKey ->
-            homeSessionState.model.ui.items.firstOrNull { it.key == itemKey }?.let { item ->
-                showOfflineCatalogMatches(item.name, exactProductItemKey = itemKey)
-            }
-        }
         homeExperience.onChickenChoice = { choice ->
             homeSessionState =
                 PracticalShoppingHomeSession.chooseChicken(homeSessionState, choice)
@@ -720,11 +671,6 @@ class MainActivity : AppCompatActivity() {
         }
         homeExperience.onSharePlan = { shareHomePlan() }
         homeExperience.onTogglePriceWatch = ::handleTogglePriceWatch
-        rememberConfirmedChoiceAndroidSession =
-            PracticalShoppingRememberConfirmedChoiceAndroidSession.create(
-                context = this,
-                completionListener = ::onHomeExactProductRemembered
-            )
         renderHome()
     }
 
@@ -825,386 +771,6 @@ class MainActivity : AppCompatActivity() {
         homeItemDetailsPackageInput = null
         homeItemDetailsBrandInput = null
         homeItemDetailsExactProduct = null
-    }
-
-    private fun cancelOfflineCatalogLookup() {
-        offlineCatalogLookup?.cancel(true)
-        offlineCatalogLookup = null
-    }
-
-    private fun showOfflineCatalogMatches(
-        token: String,
-        exactProductItemKey: ShoppingItemKey? = null
-    ) {
-        val query = token.trim()
-        if (query.isBlank()) return
-
-        // A newer unresolved item replaces the previous dialog and work. Do
-        // not let stale catalog scans accumulate behind the single executor.
-        cancelOfflineCatalogLookup()
-        offlineCatalogDialog?.dismiss()
-        val requestId = Math.addExact(offlineCatalogRequestId, 1L)
-        offlineCatalogRequestId = requestId
-        val dialog =
-            AlertDialog.Builder(this)
-                .setTitle(getString(R.string.home_unknown_find_matches_title, query))
-                .setMessage(R.string.home_offline_catalog_loading)
-                .setNegativeButton(R.string.cancel, null)
-                .create()
-        offlineCatalogDialog = dialog
-        dialog.setOnDismissListener {
-            if (offlineCatalogDialog === dialog) {
-                offlineCatalogDialog = null
-                cancelOfflineCatalogLookup()
-            }
-        }
-        dialog.show()
-
-        offlineCatalogLookup = searchExecutor.submit {
-            val outcome: OfflineCatalogLookupOutcome =
-                try {
-                    val discoveryResult = offlineCatalogDiscoverySession.discover(
-                        rawQuery = query,
-                        canonicalizer = JvmTextCanonicalizer,
-                        evaluatedAtEpochMillis = System.currentTimeMillis(),
-                        maximumSnapshotAgeMillis = OFFLINE_CATALOG_MAX_AGE_MILLIS
-                    )
-                    OfflineCatalogLookupOutcome.Success(
-                        OfflineCatalogLookup(
-                            discoveryResult = discoveryResult,
-                            presentation =
-                                PracticalShoppingHomeOfflineCatalogPresentation.from(
-                                    query,
-                                    discoveryResult
-                                )
-                        )
-                    )
-                } catch (failure: BundledOfflineCatalogAdmissionException) {
-                    OfflineCatalogLookupOutcome.Failure(failure.kind)
-                } catch (ignored: Exception) {
-                    OfflineCatalogLookupOutcome.Failure(
-                        BundledOfflineCatalogFailureKind.UNAVAILABLE
-                    )
-                }
-
-            mainHandler.post {
-                if (
-                    isFinishing ||
-                        isDestroyed ||
-                        requestId != offlineCatalogRequestId ||
-                        offlineCatalogDialog !== dialog ||
-                        !dialog.isShowing
-                ) {
-                    return@post
-                }
-                offlineCatalogLookup = null
-                when (outcome) {
-                    is OfflineCatalogLookupOutcome.Failure -> {
-                        dialog.setMessage(
-                            getString(
-                                if (outcome.kind == BundledOfflineCatalogFailureKind.EXPIRED) {
-                                    R.string.home_offline_catalog_expired
-                                } else {
-                                    R.string.home_offline_catalog_unavailable
-                                }
-                            )
-                        )
-                    }
-                    is OfflineCatalogLookupOutcome.Success -> {
-                        showOfflineCatalogResult(
-                            token = query,
-                            presentation = outcome.lookup.presentation,
-                            discoveryResult = outcome.lookup.discoveryResult,
-                            requestId = requestId,
-                            exactProductItemKey = exactProductItemKey
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Replaces the loading dialog with an explicit, reversible identity-choice surface.
-     * Unknown Home words remain query-only. A resolved item may additionally be saved as an
-     * exact product preference, but only after the existing source-revalidated confirmation
-     * boundary accepts the selected catalog row.
-     */
-    private fun showOfflineCatalogResult(
-        token: String,
-        presentation: PracticalShoppingHomeOfflineCatalogPresentation,
-        discoveryResult: OfflineCatalogDiscoveryResult,
-        requestId: Long,
-        exactProductItemKey: ShoppingItemKey?
-    ) {
-        if (requestId != offlineCatalogRequestId || offlineCatalogDialog == null) return
-
-        offlineCatalogDialog?.dismiss()
-        offlineCatalogDialog = null
-
-        if (presentation.matches.isEmpty()) {
-            val dialog =
-                AlertDialog.Builder(this)
-                    .setTitle(getString(R.string.home_unknown_find_matches_title, token))
-                    .setMessage(presentation.message)
-                    .setNegativeButton(R.string.cancel, null)
-                    .create()
-            offlineCatalogDialog = dialog
-            dialog.setOnDismissListener {
-                if (offlineCatalogDialog === dialog) offlineCatalogDialog = null
-            }
-            dialog.show()
-            return
-        }
-
-        var selectedIndex = -1
-        lateinit var resultDialog: AlertDialog
-        val labels =
-            presentation.matches
-                .map { match ->
-                    buildString {
-                        append(match.displayName)
-                        match.brand?.let { append(" · ").append(it) }
-                        append(" (").append(match.matchLabel).append(")")
-                    }
-                }
-                .toTypedArray()
-        val builder =
-            AlertDialog.Builder(this)
-                .setTitle(getString(R.string.home_unknown_find_matches_title, token))
-                .setMessage(
-                    presentation.summaryMessage +
-                        "\n\n" +
-                        getString(
-                            if (exactProductItemKey == null) {
-                                R.string.home_offline_catalog_select_match
-                            } else {
-                                R.string.home_offline_catalog_confirm_exact_message
-                            }
-                        )
-                )
-                .setSingleChoiceItems(labels, -1) { _, which ->
-                    selectedIndex = which
-                    resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
-                    if (exactProductItemKey == null) {
-                        resultDialog.getButton(AlertDialog.BUTTON_NEUTRAL).isEnabled =
-                            PracticalShoppingHomeOfflineCatalogComparisonSelection.displayNameFor(
-                                matches = presentation.matches,
-                                selectedIndex = selectedIndex
-                            ) != null
-                    }
-                }
-                .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(
-                    if (exactProductItemKey == null) {
-                        R.string.home_offline_catalog_replace_list_word
-                    } else {
-                        R.string.home_offline_catalog_confirm_exact_product
-                    },
-                    null
-                )
-
-        if (exactProductItemKey == null) {
-            builder.setNeutralButton(R.string.home_offline_catalog_open_compare, null)
-        }
-
-        resultDialog = builder.create()
-        offlineCatalogDialog = resultDialog
-        resultDialog.setOnDismissListener {
-            if (offlineCatalogDialog === resultDialog) offlineCatalogDialog = null
-        }
-        resultDialog.setOnShowListener {
-            resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).apply {
-                isEnabled = false
-                contentDescription =
-                    getString(
-                        if (exactProductItemKey == null) {
-                            R.string.home_offline_catalog_replace_list_word_description
-                        } else {
-                            R.string.home_offline_catalog_confirm_exact_description
-                        }
-                    )
-            }
-            if (exactProductItemKey == null) {
-                resultDialog.getButton(AlertDialog.BUTTON_NEUTRAL).apply {
-                    isEnabled = false
-                    contentDescription =
-                        getString(R.string.home_offline_catalog_open_compare_description)
-                }
-            }
-            resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val match = presentation.matches.getOrNull(selectedIndex) ?: return@setOnClickListener
-                if (exactProductItemKey != null) {
-                    confirmHomeExactProduct(
-                        itemKey = exactProductItemKey,
-                        discoveryResult = discoveryResult,
-                        matchIndex = selectedIndex,
-                        presentationGeneration = requestId,
-                        displayName = match.displayName,
-                        resultDialog = resultDialog
-                    )
-                    return@setOnClickListener
-                }
-                val editedQuery =
-                    PracticalShoppingHomeOfflineCatalogSelection.replaceUnknownToken(
-                        rawQuery = homeSessionState.model.ui.query,
-                        unknownToken = token,
-                        replacementName = match.displayName
-                    ) ?: run {
-                        // The Home list may have changed while the bounded lookup was open.
-                        // Explain the stale/unsafe selection instead of silently ignoring it.
-                        resultDialog.setMessage(getString(R.string.home_offline_catalog_match_apply_failed))
-                        resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
-                        return@setOnClickListener
-                    }
-                homeSessionState =
-                    PracticalShoppingHomeSession.queryChanged(homeSessionState, editedQuery)
-                renderHome()
-                resultDialog.dismiss()
-            }
-            if (exactProductItemKey == null) {
-                resultDialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                    if (
-                        requestId != offlineCatalogRequestId ||
-                            offlineCatalogDialog !== resultDialog ||
-                            !resultDialog.isShowing
-                    ) {
-                        resultDialog.dismiss()
-                        return@setOnClickListener
-                    }
-                    val displayName =
-                        PracticalShoppingHomeOfflineCatalogComparisonSelection.displayNameFor(
-                            matches = presentation.matches,
-                            selectedIndex = selectedIndex
-                        ) ?: return@setOnClickListener
-                    resultDialog.dismiss()
-                    openComparisonWithSharedText(displayName)
-                }
-            }
-        }
-        resultDialog.show()
-    }
-
-    private fun confirmHomeExactProduct(
-        itemKey: ShoppingItemKey,
-        discoveryResult: OfflineCatalogDiscoveryResult,
-        matchIndex: Int,
-        presentationGeneration: Long,
-        displayName: String,
-        resultDialog: AlertDialog
-    ) {
-        if (
-            presentationGeneration != offlineCatalogRequestId ||
-                offlineCatalogDialog !== resultDialog ||
-                !resultDialog.isShowing
-        ) {
-            return
-        }
-
-        val currentItem = homeSessionState.model.ui.items.firstOrNull { it.key == itemKey }
-        if (currentItem == null) {
-            resultDialog.setMessage(getString(R.string.home_offline_catalog_confirm_unavailable))
-            resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
-            return
-        }
-
-        val selection =
-            PracticalShoppingHomeOfflineCatalogExactSelection.confirm(
-                itemKey = itemKey,
-                result = discoveryResult,
-                matchIndex = matchIndex,
-                presentationGeneration = presentationGeneration,
-                confirmedCandidateId = "home-confirmed-$presentationGeneration-${matchIndex + 1}"
-            )
-        val chosen = selection.selection
-        if (chosen == null) {
-            resultDialog.setMessage(getString(R.string.home_offline_catalog_confirm_unavailable))
-            resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
-            return
-        }
-
-        if (!rememberConfirmedChoiceAndroidSession.remember(chosen.rememberRequest)) {
-            resultDialog.setMessage(getString(R.string.home_offline_catalog_save_progress))
-            resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
-            return
-        }
-
-        pendingExactProductLabel = displayName
-        pendingExactProductItemKey = itemKey
-        resultDialog.setMessage(getString(R.string.home_offline_catalog_save_progress))
-        resultDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
-    }
-
-    private fun onHomeExactProductRemembered(
-        completion: PracticalShoppingRememberConfirmedChoiceCompletion
-    ) {
-        val label = pendingExactProductLabel
-        val itemKey = pendingExactProductItemKey
-        pendingExactProductLabel = null
-        pendingExactProductItemKey = null
-        val dialog = offlineCatalogDialog
-        offlineCatalogDialog = null
-        dialog?.dismiss()
-
-        val outcome = completion.outcome
-        val title: Int
-        val message: String
-        when (outcome) {
-            is PracticalShoppingRememberConfirmedChoiceExecutionOutcome.Completed -> {
-                val result = outcome.result
-                if (result.exactSaved && itemKey != null) {
-                    val currentContext =
-                        homeSavedExactProductContext
-                            ?: PracticalShoppingHomeSavedExactProductContext()
-                    homeSavedExactProductContext =
-                        if (result.fullyLabeled && label != null) {
-                            val preference = result.exactResult.state?.productFor(itemKey)
-                            currentContext.withNamedProduct(
-                                itemKey = itemKey,
-                                displayName = label,
-                                forbiddenIdentifiers =
-                                    listOfNotNull(
-                                        preference?.providerId?.value,
-                                        preference?.sourceIdentity?.providerItemId,
-                                        preference?.sourceIdentity?.sku,
-                                        preference?.sourceIdentity?.gtin,
-                                        preference?.dataset?.id
-                                    )
-                            )
-                                ?: currentContext.withUnresolvedProduct(itemKey)
-                        } else {
-                            currentContext.withUnresolvedProduct(itemKey)
-                        }
-                    if (shellState.route == AppRoute.HOME) renderHome()
-                }
-                if (result.exactSaved) {
-                    title = R.string.home_offline_catalog_saved_title
-                    message =
-                        if (result.fullyLabeled && label != null) {
-                            getString(R.string.home_offline_catalog_saved_message, label)
-                        } else {
-                            getString(R.string.home_offline_catalog_saved_unlabelled_message)
-                        }
-                } else {
-                    title = R.string.home_offline_catalog_save_failed_title
-                    message = getString(R.string.home_offline_catalog_save_failed_message)
-                }
-            }
-
-            PracticalShoppingRememberConfirmedChoiceExecutionOutcome.Failed -> {
-                title = R.string.home_offline_catalog_save_failed_title
-                message = getString(R.string.home_offline_catalog_save_failed_message)
-            }
-        }
-
-        AlertDialog.Builder(this)
-            .setTitle(title)
-            .setMessage(message)
-            .setPositiveButton(R.string.nav_saved) { _, _ ->
-                dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED))
-            }
-            .setNegativeButton(R.string.home_stay, null)
-            .show()
     }
 
     private fun restoreHomeItemDetailsDialog(savedInstanceState: Bundle?) {
@@ -2494,18 +2060,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun showDataStatus() {
         dataStatusDialog?.dismiss()
-        val storeDirectorySummary =
-            runCatching {
-                BundledStoreDirectory.loadSummary(
-                    context = applicationContext,
-                    evaluatedAtEpochMillis = System.currentTimeMillis()
-                )
-            }.getOrNull()
         val presentation =
             PracticalShoppingDataStatusPresentation.from(
                 privateMemory = homePrivateMemoryState,
-                privateMemoryAvailable = homePrivateMemoryLoadIssue == null,
-                storeDirectorySummary = storeDirectorySummary
+                privateMemoryAvailable = homePrivateMemoryLoadIssue == null
             )
         val dialog =
             AlertDialog.Builder(this)
@@ -2625,8 +2183,6 @@ class MainActivity : AppCompatActivity() {
         if (state.route != AppRoute.HOME) {
             dismissHomeItemDetailsDialog()
             dismissHomeShareDialog()
-            cancelOfflineCatalogLookup()
-            offlineCatalogDialog?.dismiss()
         }
         if (
             state.route != AppRoute.BASKET &&
@@ -2962,7 +2518,7 @@ class MainActivity : AppCompatActivity() {
             TripPlannerProjector.project(
                 state = tripPlannerState,
                 basket = basket,
-                directoryAvailable = tripStoreDirectorySelections.isNotEmpty(),
+                directoryAvailable = false,
                 unavailable = tripPlannerLoadIssue != null,
                 decision = decision
             ),
@@ -2986,7 +2542,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleTripPlannerAction(action: TripPlannerUiAction) {
         when (action) {
-            TripPlannerUiAction.ChooseDestinationStore -> ensureTripStoreDirectoryLoaded()
+            TripPlannerUiAction.ChooseDestinationStore -> openTripStorePicker()
             TripPlannerUiAction.SetManualOrigin -> openTripManualOriginDialog()
             TripPlannerUiAction.UseForegroundLocation -> useForegroundLocation()
             TripPlannerUiAction.EditTripAssumptions -> openTripAssumptionsDialog()
@@ -3017,58 +2573,12 @@ class MainActivity : AppCompatActivity() {
         return destination.takeIf { tripPlannerState.preferredStoreKey == it.storeKey }
     }
 
-    private fun ensureTripStoreDirectoryLoaded() {
-        if (tripStoreDirectorySelections.isNotEmpty()) {
-            openTripStorePicker()
-            return
-        }
-        if (tripStoreDirectoryLoading) {
-            Toast.makeText(this, "Loading signed store locations…", Toast.LENGTH_SHORT).show()
-            return
-        }
-        tripStoreDirectoryLoading = true
-        tripStoreDirectoryLoadIssue = null
-        val requestId = Math.addExact(tripStoreDirectoryRequestId, 1L)
-        tripStoreDirectoryRequestId = requestId
-        Toast.makeText(this, "Loading signed store locations…", Toast.LENGTH_SHORT).show()
-        searchExecutor.submit {
-            val result =
-                runCatching {
-                    BundledStoreDirectory.load(
-                        context = applicationContext,
-                        evaluatedAtEpochMillis = System.currentTimeMillis()
-                    )
-                }
-            mainHandler.post {
-                if (requestId != tripStoreDirectoryRequestId || isFinishing || isDestroyed) return@post
-                tripStoreDirectoryLoading = false
-                val loaded = result.getOrNull()
-                if (loaded == null || !loaded.summary.accepted) {
-                    tripStoreDirectorySelections = emptyList()
-                    tripStoreDirectoryLoadIssue = loaded?.summary?.admissionState?.name ?: "LOAD_FAILED"
-                } else {
-                    tripStoreDirectorySelections = loaded.records.map(TripStoreDirectoryAdapter::fromDirectoryRecord)
-                    tripStoreDirectoryLoadIssue = null
-                }
-                renderTripPlanner()
-                openTripStorePicker()
-            }
-        }
-    }
-
     private fun openTripStorePicker() {
         tripStorePickerDialog?.dismiss()
         val body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(4), dp(4), dp(4), 0)
         }
-        val queryLayout = TextInputLayout(this).apply { hint = "Search store name or address" }
-        val queryInput = TextInputEditText(this).apply {
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
-            setSingleLine(true)
-        }
-        queryLayout.addView(queryInput)
-        val results = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val manualLayout = TextInputLayout(this).apply {
             hint = "Private store name (optional)"
             layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) }
@@ -3079,14 +2589,9 @@ class MainActivity : AppCompatActivity() {
         }
         manualLayout.addView(manualInput)
         body.addView(TextView(this).apply {
-            text = "Locations are source-listed only; this does not confirm price, stock or availability."
+            text = "Enter a private store name. A name does not confirm price, stock or availability."
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setTextColor(ValuePilotPalette.color("#6B7280"))
-        })
-        body.addView(queryLayout)
-        body.addView(ScrollView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(-1, dp(260)).apply { topMargin = dp(8) }
-            addView(results)
         })
         body.addView(manualLayout)
         val dialog = AlertDialog.Builder(this)
@@ -3097,50 +2602,11 @@ class MainActivity : AppCompatActivity() {
             .create()
         tripStorePickerDialog = dialog
         dialog.setOnDismissListener { if (tripStorePickerDialog === dialog) tripStorePickerDialog = null }
-        fun renderMatches() {
-            results.removeAllViews()
-            val matches = TripStoreDirectoryAdapter.filter(tripStoreDirectorySelections, queryInput.text?.toString().orEmpty())
-            if (matches.isEmpty()) {
-                results.addView(TextView(this).apply {
-                    text = if (tripStoreDirectorySelections.isEmpty()) "No signed directory locations available." else "No matching locations."
-                    setTextColor(ValuePilotPalette.color("#6B7280"))
-                    setPadding(0, dp(8), 0, dp(8))
-                })
-            } else {
-                matches.forEach { selection ->
-                    results.addView(MaterialButton(this).apply {
-                        text = buildString {
-                            append(selection.displayName)
-                            selection.addressLabel?.let { append("\n").append(it) }
-                        }
-                        contentDescription = "Choose ${selection.displayName} as the destination store"
-                        isAllCaps = false
-                        gravity = Gravity.START
-                        minHeight = dp(52)
-                        setOnClickListener {
-                            persistTripPlannerState(
-                                tripPlannerState.copy(
-                                    destination = selection,
-                                    preferredStoreKey = tripPlannerState.preferredStoreKey?.takeIf { it == selection.storeKey }
-                                )
-                            )
-                            dialog.dismiss()
-                        }
-                        layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) }
-                    })
-                }
-            }
-        }
-        queryInput.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = renderMatches()
-            override fun afterTextChanged(s: Editable?) = Unit
-        })
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val selection = TripStoreDirectoryAdapter.privateEntry(manualInput.text?.toString().orEmpty())
+                val selection = TripStoreSelectionAdapter.privateEntry(manualInput.text?.toString().orEmpty())
                 if (selection == null) {
-                    manualLayout.error = "Enter a private store name or choose a directory location"
+                    manualLayout.error = "Enter a private store name"
                     return@setOnClickListener
                 }
                 manualLayout.error = null
@@ -3152,7 +2618,6 @@ class MainActivity : AppCompatActivity() {
                 )
                 dialog.dismiss()
             }
-            renderMatches()
         }
         dialog.show()
     }
@@ -4206,6 +3671,5 @@ class MainActivity : AppCompatActivity() {
         private const val STATE_SEARCH_SCROLL_Y = "app_shell.search_scroll_y"
         private const val STATE_PRODUCT_MAP_SELECTED_KEY = "app_shell.product_map_selected_key"
         private const val STATE_PRODUCT_MAP_SELECTED_LABEL = "app_shell.product_map_selected_label"
-        private const val OFFLINE_CATALOG_MAX_AGE_MILLIS = 8L * 24L * 60L * 60L * 1_000L
     }
 }

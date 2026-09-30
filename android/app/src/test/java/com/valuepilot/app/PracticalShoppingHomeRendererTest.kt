@@ -157,7 +157,7 @@ class PracticalShoppingHomeRendererTest {
             rendered.items.map { it.key }
         )
         assertEquals(listOf("Eggs", "Milk"), rendered.items.map { it.name })
-        assertTrue(rendered.items.all { it.exactProductActionVisible })
+        assertTrue(rendered.items.map { it.key }.distinct().size == rendered.items.size)
     }
 
     @Test

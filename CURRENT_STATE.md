@@ -2,6 +2,11 @@
 
 Updated: 2026-09-29 04:30 UTC
 
+> Current cleanup boundary (2026-09-29): historical Canadian catalog,
+> store-directory, Open Prices and Rakuten/Jamieson entries below are retained
+> for provenance only. They are not shipped assets or active runtime sources;
+> see `LEGACY_CANADIAN_DATA_SOURCE_CLEANUP.md`.
+
 ## Exact product-to-nearby-store map checkpoint — 2026-09-29
 
 The bounded Search → View on map milestone is complete locally on

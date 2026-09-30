@@ -37,17 +37,11 @@
     <string name="compare_camera_cancelled">Camera photo cancelled. Your existing entries are unchanged.</string>
     <string name="compare_camera_error">That camera photo could not be created. Your existing entries are unchanged; you can import a photo instead.</string>
     <string name="compare_barcode_action">Scan a package barcode</string>
-    <string name="compare_barcode_ready">Scan one packaged product to suggest its name offline. Add the package quantity and price you see before comparing.</string>
-    <string name="compare_barcode_processing">Looking up that barcode identity on this device…</string>
+    <string name="compare_barcode_ready">Scan one packaged product to add its barcode as editable text. Add the package quantity and price you see before comparing.</string>
+    <string name="compare_barcode_processing">Reading that barcode on this device…</string>
     <string name="compare_barcode_cancelled">Barcode capture cancelled. Your existing entries are unchanged.</string>
-    <string name="compare_barcode_unavailable">The offline identity catalog is unavailable. Enter the product, package quantity and price manually.</string>
-    <string name="compare_barcode_no_match">Barcode %1$s is valid, but this offline identity snapshot has no match. Enter the product, package quantity and price manually.</string>
-    <string name="compare_barcode_match_title">Identity suggestion from barcode</string>
-    <string name="compare_barcode_match_message">%1$s\n\nThis offline catalog supplies identity text only. It does not prove package quantity, price, store, stock or availability. Use this name, then add and review the package quantity and price you see.</string>
-    <string name="compare_barcode_multiple_message">Barcode %1$s has more than one identity name in the bundled snapshot. Choose the name you mean; package quantity, price, store, stock and availability still need your own evidence.</string>
-    <string name="compare_barcode_use_name">Use this name</string>
-    <string name="compare_barcode_use_name_description">Use the selected offline identity name in the next available comparison entry. ValuePilot fills a blank entry or adds one while the comparison limit has room; this does not confirm a price or availability.</string>
-    <string name="compare_barcode_used">Identity suggestion added: %1$s (barcode %2$s). Add the package quantity and observed price; this barcode lookup did not confirm a live offer.</string>
+    <string name="compare_barcode_unavailable">The barcode could not be used. Enter the product, package quantity and price manually.</string>
+    <string name="compare_barcode_used">Barcode text added: %1$s. Add the package quantity and observed price; the scan did not confirm a live offer.</string>
     <string name="compare_barcode_no_empty_slot">This comparison has reached its 32-entry limit. Remove one entry before scanning again; existing entries were not replaced.</string>
     <string name="compare_barcode_identity_too_long">That identity name is too long for a comparison entry. Existing entries were not changed.</string>
 
@@ -111,9 +105,7 @@
 
     <string name="sources_licences">Sources &amp; licences</string>
     <string name="sources_licences_title">Sources &amp; licences</string>
-    <string name="sources_licences_body">Product identity discovery uses an attributed, Canada-labelled Open Food Facts snapshot under ODbL-1.0. Source: https://world.openfoodfacts.org/ • licence: https://opendatacommons.org/licenses/odbl/1-0/. It supplies names, aliases and barcodes for offline search only; it does not prove a current price, package quantity, store stock, store location or availability.
-
-The bundled store directory uses a separately attributed OpenStreetMap snapshot under ODbL-1.0. Source: https://www.openstreetmap.org/copyright • licence: https://opendatacommons.org/licenses/odbl/1-0/. It contains source-listed GTA and Metro Vancouver locations only. A location row does not prove that a store carries an item, has stock, or has a current price.
+    <string name="sources_licences_body">User-triggered Argentina Search is source-attributed identity evidence only. No bundled product catalogue is shipped. No Canadian store directory is shipped. It does not prove a current price, package quantity, store stock, location or availability.
 
 Prices and comparisons you enter or confirm stay private on this device. They are personal observations, not live retailer offers. Home planner cards are clearly labelled fictional sample data and must not be read as retailer data. Search cards are source-attributed product identity suggestions only; they do not provide current prices, stock, availability or Best Value rankings.
 
@@ -169,37 +161,11 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="home_item_details_exact_product_note">This is your preference, not proof of product identity. A verified product match is still required before any planner can use it.</string>
     <string name="home_item_details_clear">Clear preferences</string>
     <string name="home_item_details_save">Save preferences</string>
-    <string name="home_choose_exact_product">Choose exact product</string>
-    <string name="home_choose_exact_product_description">Choose and save the exact catalog identity you mean for %1$s. This does not add a current price, stock or availability claim or change the fictional sample plan.</string>
-    <string name="home_change_exact_product">Change exact product</string>
-    <string name="home_change_exact_product_description">Change the saved exact catalog identity for %1$s. This does not add a current price, stock or availability claim or change the fictional sample plan.</string>
     <string name="home_item_observed_price_action">Add observed price</string>
     <string name="home_item_observed_price_action_description">Enter the price and package quantity you see for %1$s. This stays private and does not change the sample plan.</string>
     <string name="home_refinement_title">ONE QUICK QUESTION</string>
     <string name="home_refinement_question">Which %1$s?</string>
     <string name="home_unknown_title">Needs clarification</string>
-    <string name="home_unknown_find_matches">Find offline matches</string>
-    <string name="home_unknown_find_matches_title">Find offline matches for “%1$s”</string>
-    <string name="home_unknown_find_matches_description">Find offline identity matches for %1$s</string>
-    <string name="home_offline_catalog_loading">Checking the bundled identity catalog…</string>
-    <string name="home_offline_catalog_unavailable">ValuePilot could not open its signed offline product-identity catalog. Your Home list is unchanged; no price, store, stock or availability claim was made. You can try again or enter the product in Scan &amp; compare.</string>
-    <string name="home_offline_catalog_expired">The offline Canadian product catalog has expired, so ValuePilot will not use it for exact-product choices or new saved product/watch setup. Your Home list, fictional sample plan, Scan &amp; compare, Good Price, private history and Argentina identity Search remain available. Enter what you personally see if you want to compare it; a newer signed catalog is required before catalog matches return. No current price, stock or availability is inferred.</string>
-    <string name="home_offline_catalog_select_match">Select a name to replace the unresolved list word, or use the selected name in Scan &amp; compare. Review the list, then tap Plan My Shop. This only edits the Home list; the fictional sample planner may still leave the inserted name unresolved, and this does not confirm an exact product.</string>
-    <string name="home_offline_catalog_open_compare">Use in Scan &amp; compare</string>
-    <string name="home_offline_catalog_open_compare_description">Open the selected offline identity name in Scan &amp; compare as untrusted text. You still enter and review the package quantity and price; no availability is confirmed.</string>
-    <string name="home_offline_catalog_replace_list_word">Replace list word</string>
-    <string name="home_offline_catalog_replace_list_word_description">Replace only the unresolved word in the Home list with this identity name. This does not confirm an exact product, price, or availability.</string>
-    <string name="home_offline_catalog_confirm_exact_product">Confirm exact product</string>
-    <string name="home_offline_catalog_confirm_exact_description">Save the selected catalog identity as the exact product for this Home item. This does not add a current price, stock or availability claim or change the fictional sample plan.</string>
-    <string name="home_offline_catalog_confirm_exact_message">Confirm only if this is the exact packaged product you mean. ValuePilot will save this as a private product preference on this device; the identity catalog still does not provide a current price, store, stock or availability, and this does not change the fictional sample plan.</string>
-    <string name="home_offline_catalog_save_progress">Saving this exact product preference on this device…</string>
-    <string name="home_offline_catalog_saved_title">Exact product saved</string>
-    <string name="home_offline_catalog_saved_message">%1$s was saved as an exact product preference on this device. It does not confirm a current price, store, stock, availability or a live shopping result, and it does not change the fictional sample plan.</string>
-    <string name="home_offline_catalog_saved_unlabelled_message">The exact product preference was saved on this device, but its display name could not be stored safely. Saved will keep the exact identity without inventing a label.</string>
-    <string name="home_offline_catalog_save_failed_title">Exact product was not saved</string>
-    <string name="home_offline_catalog_save_failed_message">ValuePilot could not save that exact product preference. Nothing was added to live prices, stock, availability or recommendations; try again from the item.</string>
-    <string name="home_offline_catalog_confirm_unavailable">That catalog choice could not be confirmed safely. Choose another result or use Scan &amp; compare; no product preference was saved.</string>
-    <string name="home_offline_catalog_match_apply_failed">This match can’t be applied to the current list. Review the list and try again.</string>
     <string name="home_sample_badge">OFFLINE FICTIONAL DEMO</string>
     <string name="home_compare_secondary">Scan &amp; compare prices</string>
     <string name="home_good_price_secondary">Is this a good price?</string>
@@ -286,21 +252,11 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="good_price_share_send">Share</string>
     <string name="good_price_share_unavailable">No sharing app is available. Your price result is unchanged.</string>
     <string name="good_price_barcode_action">Scan a package barcode</string>
-    <string name="good_price_barcode_ready">A barcode can suggest the product name offline. You still enter the package quantity and price you personally see.</string>
-    <string name="good_price_barcode_processing">Looking up that identity in the bundled offline catalog…</string>
+    <string name="good_price_barcode_ready">A barcode adds editable identifier text only. You still enter the package quantity and price you personally see.</string>
+    <string name="good_price_barcode_processing">Reading that barcode on this device…</string>
     <string name="good_price_barcode_cancelled">Barcode capture cancelled. Your price-check draft is unchanged.</string>
-    <string name="good_price_barcode_unavailable">The offline identity catalog is unavailable. Enter the product name, package quantity and observed price manually.</string>
-    <string name="good_price_barcode_no_match">Barcode %1$s is valid, but this offline identity snapshot has no match. Enter the product name, package quantity and observed price manually.</string>
-    <string name="good_price_barcode_match_title">Identity suggestion from barcode</string>
-    <string name="good_price_barcode_match_message">%1$s\n\nThis offline catalog supplies identity text only. It does not prove package quantity, price, store, stock or availability. Use this name, then review and enter the package quantity and price you see.</string>
-    <string name="good_price_barcode_replace_message">%1$s\n\nYour price-check draft already has text. Replacing it removes that text, including any package or price details. The barcode only suggests a name; exact quantity and price still need your review.</string>
-    <string name="good_price_barcode_replace_warning">Choosing a name will replace your current price-check draft, including any package or price details.</string>
-    <string name="good_price_barcode_multiple_message">Barcode %1$s has more than one identity name in the bundled snapshot. Choose the name you mean; package quantity, price, store, stock and availability still need your own evidence.</string>
-    <string name="good_price_barcode_use_name">Use this name</string>
-    <string name="good_price_barcode_use_name_description">Use the selected offline identity name in the price-check draft. This does not confirm a price or availability.</string>
-    <string name="good_price_barcode_replace_draft">Replace current draft</string>
-    <string name="good_price_barcode_replace_description">Replace the current price-check draft with the selected offline identity name. Existing package and price text will be removed; no price or availability is confirmed.</string>
-    <string name="good_price_barcode_used">Identity suggestion: %1$s (barcode %2$s). Enter the package quantity and observed price; this barcode lookup did not confirm a live offer.</string>
+    <string name="good_price_barcode_unavailable">The barcode could not be used. Enter the product name, package quantity and observed price manually.</string>
+    <string name="good_price_barcode_used">Barcode text added: %1$s. Enter the package quantity and observed price; the scan did not confirm a live offer.</string>
     <string name="barcode_capture_intro">Take or choose a clear photo of one packaged-product barcode. ValuePilot validates the number on this device and returns it only when exactly one GTIN is safe to use.</string>
     <string name="barcode_capture_action">Take a barcode photo</string>
     <string name="barcode_import_action">Import a barcode photo</string>

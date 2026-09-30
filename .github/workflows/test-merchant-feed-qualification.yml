@@ -34,16 +34,12 @@ on:
       - 'tools/tests/test_argentina_daily_release_operations.py'
       - 'tools/tests/test_argentina_storage_retention.py'
       - 'ARGENTINA_PRODUCTION_STORAGE_RETENTION_QUALIFICATION.*'
-      - 'tools/qualify_rakuten_product_catalog.py'
-      - 'tools/measure_rakuten_off_quantity_coverage.py'
-      - 'tools/measure_rakuten_off_quantity_coverage_v2.py'
       - 'tools/open_facts_barcode.py'
       - 'tools/audit_argentina_product_images.py'
       - 'tools/tests/test_audit_argentina_product_images.py'
       - 'tools/exact_product_image_manifest.py'
       - 'tools/tests/test_exact_product_image_manifest.py'
       - 'tools/data/open_food_facts_image_rights_policy.json'
-      - 'tools/run_rakuten_off_quantity_coverage.py'
       - 'tools/tests/test_qualify_*.py'
       - 'tools/tests/test_argentina_sepa_*.py'
       - 'tools/tests/test_argentina_searchpack.py'
@@ -82,16 +78,12 @@ on:
       - 'tools/tests/test_argentina_daily_release_operations.py'
       - 'tools/tests/test_argentina_storage_retention.py'
       - 'ARGENTINA_PRODUCTION_STORAGE_RETENTION_QUALIFICATION.*'
-      - 'tools/qualify_rakuten_product_catalog.py'
-      - 'tools/measure_rakuten_off_quantity_coverage.py'
-      - 'tools/measure_rakuten_off_quantity_coverage_v2.py'
       - 'tools/open_facts_barcode.py'
       - 'tools/audit_argentina_product_images.py'
       - 'tools/tests/test_audit_argentina_product_images.py'
       - 'tools/exact_product_image_manifest.py'
       - 'tools/tests/test_exact_product_image_manifest.py'
       - 'tools/data/open_food_facts_image_rights_policy.json'
-      - 'tools/run_rakuten_off_quantity_coverage.py'
       - 'tools/tests/test_qualify_*.py'
       - 'tools/tests/test_argentina_sepa_*.py'
       - 'tools/tests/test_argentina_searchpack.py'
@@ -144,11 +136,7 @@ jobs:
           tools/build_argentina_daily_release.py
           tools/argentina_storage_retention.py
           tools/manage_argentina_storage_retention.py
-          tools/qualify_rakuten_product_catalog.py
-          tools/measure_rakuten_off_quantity_coverage.py
-          tools/measure_rakuten_off_quantity_coverage_v2.py
           tools/open_facts_barcode.py
-          tools/run_rakuten_off_quantity_coverage.py
           tools/audit_argentina_product_images.py
           tools/exact_product_image_manifest.py
 

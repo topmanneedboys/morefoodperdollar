@@ -65,12 +65,10 @@ class ComparisonActivity : AppCompatActivity() {
     private lateinit var clearPrivateMemoryButton: Button
     private lateinit var privateMemoryStore: CompareHerePrivatePriceMemoryStore
     private var privateMemoryStateWhenStatusRendered: CompareHerePrivatePriceMemoryState? = null
-    private lateinit var offlineCatalogDiscoverySession: BundledOfflineCatalogDiscoverySession
 
     private val productInputs = mutableListOf<EditText>()
     private val productInputRows = mutableListOf<ProductInputRow>()
     private val photoExecutor: ExecutorService = Executors.newSingleThreadExecutor()
-    private val barcodeLookupExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private val photoPickerLauncher =
         registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             onPhotoSelected(uri, cleanupFile = null)
@@ -103,10 +101,8 @@ class ComparisonActivity : AppCompatActivity() {
     private var cameraCaptureRequestId = 0L
     private var cameraCaptureUri: Uri? = null
     private var cameraCaptureFile: File? = null
-    private var barcodeLookupRequestId = 0L
     private var barcodeLookupInFlight = false
     private var barcodeLookupClosed = false
-    private var barcodeDialog: AlertDialog? = null
     private var sharedTextDialog: AlertDialog? = null
     private var shareCard: CompareHereShareCard? = null
     /** Transient URI retained only while a shared-image OCR request is still in flight. */
@@ -115,9 +111,6 @@ class ComparisonActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        offlineCatalogDiscoverySession =
-            BundledOfflineCatalog.createDiscoverySession(applicationContext)
-
         installSystemBarInsets()
 
         productInputsContainer = findViewById(R.id.productInputsContainer)
@@ -322,15 +315,8 @@ class ComparisonActivity : AppCompatActivity() {
         pendingPhotoStop = null
         photoExecutor.shutdownNow()
         barcodeLookupClosed = true
-        barcodeLookupRequestId += 1L
-        barcodeDialog?.dismiss()
-        barcodeDialog = null
         sharedTextDialog?.dismiss()
         sharedTextDialog = null
-        barcodeLookupExecutor.shutdownNow()
-        if (::offlineCatalogDiscoverySession.isInitialized) {
-            offlineCatalogDiscoverySession.close()
-        }
         super.onDestroy()
     }
 
@@ -377,7 +363,6 @@ class ComparisonActivity : AppCompatActivity() {
         }
 
         barcodeLookupInFlight = true
-        barcodeLookupRequestId += 1L
         syncPhotoActionButtons()
         compareBarcodeStatus.text = getString(R.string.compare_barcode_processing)
         compareBarcodeStatus.visibility = View.VISIBLE
@@ -399,167 +384,19 @@ class ComparisonActivity : AppCompatActivity() {
             finishBarcodeRequest(R.string.compare_barcode_cancelled)
             return
         }
-        beginBarcodeIdentityLookup(gtin)
+        applyScannedBarcode(gtin)
     }
 
-    private fun beginBarcodeIdentityLookup(gtin: String) {
+    private fun applyScannedBarcode(gtin: String) {
         val trimmed = gtin.trim()
         if (barcodeLookupClosed || trimmed.isBlank()) {
             finishBarcodeRequest(R.string.compare_barcode_unavailable)
             return
         }
-
-        val requestId = barcodeLookupRequestId
-        compareBarcodeStatus.text = getString(R.string.compare_barcode_processing)
-        compareBarcodeStatus.visibility = View.VISIBLE
-
-        try {
-            barcodeLookupExecutor.execute {
-                val presentation =
-                    runCatching {
-                        GoodPriceBarcodeIdentityPresentation.from(
-                            gtin = trimmed,
-                            result =
-                                offlineCatalogDiscoverySession.discover(
-                                    rawQuery = trimmed,
-                                    canonicalizer = JvmTextCanonicalizer,
-                                    evaluatedAtEpochMillis = System.currentTimeMillis(),
-                                    maximumSnapshotAgeMillis = OFFLINE_CATALOG_MAX_AGE_MILLIS
-                                )
-                        )
-                    }.getOrNull()
-
-                runOnUiThread {
-                    if (
-                        barcodeLookupClosed ||
-                        requestId != barcodeLookupRequestId ||
-                        !barcodeLookupInFlight ||
-                        isFinishing ||
-                        isDestroyed
-                    ) {
-                        return@runOnUiThread
-                    }
-                    if (presentation == null) {
-                        finishBarcodeRequest(R.string.compare_barcode_unavailable)
-                        return@runOnUiThread
-                    }
-                    showBarcodeIdentityChoices(presentation, requestId)
-                }
-            }
-        } catch (_: Throwable) {
-            finishBarcodeRequest(R.string.compare_barcode_unavailable)
-        }
-    }
-
-    private fun showBarcodeIdentityChoices(
-        presentation: GoodPriceBarcodeIdentityPresentation,
-        dialogRequestId: Long
-    ) {
-        if (presentation.options.isEmpty()) {
-            finishBarcodeRequest(
-                R.string.compare_barcode_no_match,
-                presentation.gtin
-            )
-            return
-        }
-
-        // A single exact-GTIN identity is still only an editable name suggestion, but asking the
-        // shopper to confirm an unambiguous name before placing it into an empty slot adds a
-        // redundant tap. The existing draft helper keeps every non-empty entry untouched, while
-        // the exact quantity, currency, price and evidence gates remain downstream.
-        if (presentation.options.size == 1) {
-            val addedIndex =
-                applyBarcodeIdentitySuggestion(
-                    option = presentation.options.single(),
-                    gtin = presentation.gtin
-                )
-            if (addedIndex != null) {
-                focusProductInput(addedIndex)
-            }
-            return
-        }
-
-        var selectedIndex = -1
-        var outcomeCommitted = false
-        lateinit var dialog: AlertDialog
-        val builder =
-            AlertDialog.Builder(this)
-                .setTitle(R.string.compare_barcode_match_title)
-                .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(R.string.compare_barcode_use_name, null)
-
-        builder
-            .setMessage(
-                getString(
-                    R.string.compare_barcode_multiple_message,
-                    presentation.gtin
-                )
-            )
-            .setSingleChoiceItems(
-                presentation.options.map { it.label }.toTypedArray(),
-                -1
-            ) { _, which ->
-                selectedIndex = which
-                dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
-            }
-
-        dialog = builder.create()
-        barcodeDialog = dialog
-        dialog.setOnDismissListener {
-            if (barcodeDialog === dialog) {
-                barcodeDialog = null
-            }
-            if (barcodeLookupInFlight) {
-                barcodeLookupInFlight = false
-                if (
-                    !outcomeCommitted &&
-                        !barcodeLookupClosed &&
-                        dialogRequestId == barcodeLookupRequestId
-                ) {
-                    compareBarcodeStatus.text = getString(R.string.compare_barcode_cancelled)
-                    compareBarcodeStatus.visibility = View.VISIBLE
-                }
-                syncPhotoActionButtons()
-            }
-        }
-        dialog.setOnShowListener {
-            val button = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-            button.contentDescription =
-                getString(R.string.compare_barcode_use_name_description)
-            button.isEnabled = selectedIndex >= 0
-            button.setOnClickListener {
-                val option = presentation.options.getOrNull(selectedIndex)
-                    ?: return@setOnClickListener
-                val addedIndex =
-                    applyBarcodeIdentitySuggestion(
-                        option = option,
-                        gtin = presentation.gtin
-                    )
-                if (addedIndex == null) {
-                    outcomeCommitted = true
-                    dialog.dismiss()
-                    return@setOnClickListener
-                }
-                outcomeCommitted = true
-                dialog.dismiss()
-                focusProductInput(addedIndex)
-            }
-        }
-        dialog.show()
-    }
-
-    /**
-     * Inserts only the identity label returned by the offline barcode rail. The returned editor
-     * index lets the caller focus the exact editable slot after any dialog has been dismissed.
-     */
-    private fun applyBarcodeIdentitySuggestion(
-        option: GoodPriceBarcodeIdentityPresentation.Option,
-        gtin: String
-    ): Int? {
         val result =
             CompareHereBarcodeDraft.apply(
                 existingBlocks = currentProductBlocks(),
-                displayName = option.displayName
+                displayName = trimmed
             )
         if (!result.added) {
             finishBarcodeRequest(
@@ -571,7 +408,7 @@ class ComparisonActivity : AppCompatActivity() {
                     else -> R.string.compare_barcode_unavailable
                 }
             )
-            return null
+            return
         }
 
         renderProductInputs(result.blocks)
@@ -583,14 +420,9 @@ class ComparisonActivity : AppCompatActivity() {
         saveDraftToPreferences()
         barcodeLookupInFlight = false
         syncPhotoActionButtons()
-        compareBarcodeStatus.text =
-            getString(
-                R.string.compare_barcode_used,
-                option.label,
-                gtin
-            )
+        compareBarcodeStatus.text = getString(R.string.compare_barcode_used, trimmed)
         compareBarcodeStatus.visibility = View.VISIBLE
-        return result.addedIndex
+        focusProductInput(result.addedIndex)
     }
 
     /**
@@ -627,9 +459,6 @@ class ComparisonActivity : AppCompatActivity() {
     }
 
     private fun clearBarcodeStatus() {
-        barcodeLookupRequestId += 1L
-        barcodeDialog?.dismiss()
-        barcodeDialog = null
         barcodeLookupInFlight = false
         compareBarcodeStatus.text = getString(R.string.compare_barcode_ready)
         compareBarcodeStatus.visibility = View.VISIBLE
@@ -2314,9 +2143,6 @@ class ComparisonActivity : AppCompatActivity() {
 
         private const val CAMERA_FILE_SUFFIX =
             ".jpg"
-
-        private const val OFFLINE_CATALOG_MAX_AGE_MILLIS =
-            8L * 24L * 60L * 60L * 1_000L
 
         private const val STATE_BLOCKS =
             "standalone.blocks"

@@ -67,17 +67,15 @@ Promotions record both a received-quantity multiplier and the actual minimum spe
 
 The content script combines semantic/card candidates, price-text ancestor scoring, Product/MenuItem/Offer JSON-LD, mutation rescans, and an explicit controlled-scroll collector. A Shadow DOM isolates the overlay. Results are rendered with DOM nodes and `textContent`, so scraped strings are never interpreted as markup.
 
-## Signed location directory
+## Store identity and trip planning
 
-The bundled GTA and Metro Vancouver store directory is a separate signed,
-source-isolated artifact. Its rows carry only an OpenStreetMap source element,
-name/optional address, coordinates, region, observation time and explicit
-`LOCATION_ONLY` status. `StoreDirectorySnapshotAssetLoader` verifies the
-manifest, source hash, signature, geography and freshness before exposing any
-row; blocked or stale artifacts expose no records. A directory location never
-creates a product, price, stock, availability, offer or ranking fact. The
-Android loader reads only APK assets, so this feature does not add networking or
-retailer scraping.
+The shipped app does not include a Canadian store-directory snapshot. Trip
+planning accepts a shopper-entered private destination identity and manual route
+assumptions. A private store name is location-only evidence: it never creates a
+product, price, stock, availability, offer or ranking fact. Any future signed
+location source must remain a separate, source-attributed artifact and pass its
+own rights, geography and freshness gates before it can be considered for
+display; this cleanup does not add networking or retailer scraping.
 
 ## Android incremental pipeline
 

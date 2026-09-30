@@ -4,6 +4,12 @@ Updated: 2026-08-27
 
 Milestone: 5D — Authorized Real Shopping Data Provider Selection
 
+> Cleanup status (2026-09-29): the generic qualifier below remains reusable,
+> but all Rakuten/Jamieson-specific tooling and any Canadian catalog or offer
+> adapter were removed from the shipped/runtime surface. The provider-specific
+> sections in this document are retained as historical qualification guidance;
+> their old command paths are not active.
+
 ## Purpose
 
 ValuePilot now has an offline qualification layer for evaluating an authorized merchant product feed before any production adapter or Android network permission is added.

@@ -17,8 +17,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AlertDialog
 import com.google.android.material.textfield.TextInputEditText
 import com.valuepilot.core.CompareHerePriceSelection
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 
 /**
  * First-class single-product price question. All recognition and exact math stay in the
@@ -42,14 +40,10 @@ class GoodPriceActivity : AppCompatActivity() {
     private var privateMemory = CompareHerePrivatePriceMemoryState.empty()
     private var privateMemoryLoadIssue: CompareHerePrivatePriceMemoryStoreIssue? = null
     private var restoring = false
-    private val barcodeLookupExecutor: ExecutorService = Executors.newSingleThreadExecutor()
-    private var barcodeLookupRequestId = 0L
     private var barcodeLookupClosed = false
     private var barcodeCaptureInFlight = false
-    private var barcodeDialog: AlertDialog? = null
     private var shareCard: GoodPriceShareCard? = null
     private var lastCheckObservedAtEpochMillis: Long? = null
-    private lateinit var offlineCatalogDiscoverySession: BundledOfflineCatalogDiscoverySession
     private val barcodeCaptureLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (barcodeLookupClosed || !barcodeCaptureInFlight) {
@@ -68,15 +62,12 @@ class GoodPriceActivity : AppCompatActivity() {
                 barcodeStatus.visibility = View.VISIBLE
                 return@registerForActivityResult
             }
-            beginBarcodeIdentityLookup(gtin)
+            applyScannedBarcode(gtin)
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_good_price)
-        offlineCatalogDiscoverySession =
-            BundledOfflineCatalog.createDiscoverySession(applicationContext)
-
         productInput = findViewById(R.id.goodPriceInput)
         priceSelectionGroup = findViewById(R.id.goodPriceSelectionGroup)
         checkButton = findViewById(R.id.checkGoodPriceButton)
@@ -251,13 +242,6 @@ class GoodPriceActivity : AppCompatActivity() {
     override fun onDestroy() {
         barcodeLookupClosed = true
         barcodeCaptureInFlight = false
-        barcodeLookupRequestId += 1L
-        barcodeDialog?.dismiss()
-        barcodeDialog = null
-        barcodeLookupExecutor.shutdownNow()
-        if (::offlineCatalogDiscoverySession.isInitialized) {
-            offlineCatalogDiscoverySession.close()
-        }
         super.onDestroy()
     }
 
@@ -429,199 +413,26 @@ class GoodPriceActivity : AppCompatActivity() {
         }
     }
 
-    private fun beginBarcodeIdentityLookup(gtin: String) {
+    /** A scan supplies an editable identifier only; all package and price facts remain manual. */
+    private fun applyScannedBarcode(gtin: String) {
         val trimmed = gtin.trim()
         if (barcodeLookupClosed || trimmed.isBlank()) {
-            barcodeCaptureInFlight = false
-            barcodeButton.isEnabled = !barcodeLookupClosed
-            return
-        }
-
-        val requestId = barcodeLookupRequestId + 1L
-        barcodeLookupRequestId = requestId
-        barcodeDialog?.dismiss()
-        barcodeDialog = null
-        barcodeButton.isEnabled = false
-        barcodeStatus.text = getString(R.string.good_price_barcode_processing)
-        barcodeStatus.visibility = View.VISIBLE
-
-        try {
-            barcodeLookupExecutor.execute {
-                val presentation =
-                    runCatching {
-                        GoodPriceBarcodeIdentityPresentation.from(
-                            gtin = trimmed,
-                            result =
-                                offlineCatalogDiscoverySession.discover(
-                                    rawQuery = trimmed,
-                                    canonicalizer = JvmTextCanonicalizer,
-                                    evaluatedAtEpochMillis = System.currentTimeMillis(),
-                                    maximumSnapshotAgeMillis = OFFLINE_CATALOG_MAX_AGE_MILLIS
-                                )
-                        )
-                    }.getOrNull()
-
-                runOnUiThread {
-                    if (
-                        barcodeLookupClosed ||
-                        requestId != barcodeLookupRequestId ||
-                        isFinishing ||
-                        isDestroyed
-                    ) {
-                        return@runOnUiThread
-                    }
-                    barcodeButton.isEnabled = true
-                    if (presentation == null) {
-                        barcodeStatus.text = getString(R.string.good_price_barcode_unavailable)
-                        return@runOnUiThread
-                    }
-                    showBarcodeIdentityChoices(presentation, requestId)
-                }
-            }
-        } catch (_: Throwable) {
-            barcodeButton.isEnabled = true
             barcodeStatus.text = getString(R.string.good_price_barcode_unavailable)
-        }
-    }
-
-    private fun showBarcodeIdentityChoices(
-        presentation: GoodPriceBarcodeIdentityPresentation,
-        dialogRequestId: Long
-    ) {
-        if (presentation.options.isEmpty()) {
-            barcodeStatus.text =
-                getString(
-                    R.string.good_price_barcode_no_match,
-                    presentation.gtin
-                )
             barcodeStatus.visibility = View.VISIBLE
             return
         }
-
-        val hasExistingDraft = productInput.text?.toString()?.isNotBlank() == true
-
-        // A single exact-GTIN identity is still only an editable name suggestion. When the
-        // field is empty, showing a confirmation dialog before inserting that one safe-to-edit
-        // value adds a redundant tap; any existing draft remains protected by the dialog below.
-        if (presentation.options.size == 1 && !hasExistingDraft) {
-            applyBarcodeIdentitySuggestion(
-                option = presentation.options.single(),
-                gtin = presentation.gtin
-            )
-            focusProductInput()
-            return
-        }
-
-        var selectedIndex = if (presentation.options.size == 1) 0 else -1
-        var outcomeCommitted = false
-        lateinit var dialog: AlertDialog
-        val builder =
-            AlertDialog.Builder(this)
-                .setTitle(R.string.good_price_barcode_match_title)
-                .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(
-                    if (hasExistingDraft) {
-                        R.string.good_price_barcode_replace_draft
-                    } else {
-                        R.string.good_price_barcode_use_name
-                    },
-                    null
-                )
-
-        if (presentation.options.size == 1) {
-            builder.setMessage(
-                if (hasExistingDraft) {
-                    getString(
-                        R.string.good_price_barcode_replace_message,
-                        presentation.options.single().label
-                    )
-                } else {
-                    getString(
-                        R.string.good_price_barcode_match_message,
-                        presentation.options.single().label
-                    )
-                }
-            )
-        } else {
-            builder
-                .setMessage(
-                    buildString {
-                        append(
-                            getString(
-                                R.string.good_price_barcode_multiple_message,
-                                presentation.gtin
-                            )
-                        )
-                        if (hasExistingDraft) {
-                            append("\n\n")
-                            append(getString(R.string.good_price_barcode_replace_warning))
-                        }
-                    }
-                )
-                .setSingleChoiceItems(
-                    presentation.options.map { it.label }.toTypedArray(),
-                    -1
-                ) { _, which ->
-                    selectedIndex = which
-                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
-                }
-        }
-
-        dialog = builder.create()
-        barcodeDialog = dialog
-        dialog.setOnDismissListener {
-            if (
-                !outcomeCommitted &&
-                    !barcodeLookupClosed &&
-                    dialogRequestId == barcodeLookupRequestId
-            ) {
-                barcodeStatus.text = getString(R.string.good_price_barcode_cancelled)
-                barcodeStatus.visibility = View.VISIBLE
-            }
-            if (barcodeDialog === dialog) barcodeDialog = null
-        }
-        dialog.setOnShowListener {
-            val button = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-            button.contentDescription =
-                getString(
-                    if (hasExistingDraft) {
-                        R.string.good_price_barcode_replace_description
-                    } else {
-                        R.string.good_price_barcode_use_name_description
-                    }
-                )
-            button.isEnabled = selectedIndex >= 0
-            button.setOnClickListener {
-                val option = presentation.options.getOrNull(selectedIndex) ?: return@setOnClickListener
-                applyBarcodeIdentitySuggestion(
-                    option = option,
-                    gtin = presentation.gtin
-                )
-                outcomeCommitted = true
-                dialog.dismiss()
-                focusProductInput()
-            }
-        }
-        dialog.show()
-    }
-
-    /** Inserts only an editable identity name; exact package and price facts remain manual. */
-    private fun applyBarcodeIdentitySuggestion(
-        option: GoodPriceBarcodeIdentityPresentation.Option,
-        gtin: String
-    ) {
         restoring = true
-        productInput.setText(option.displayName)
+        productInput.setText(trimmed)
         productInput.setSelection(productInput.text?.length ?: 0)
         restoring = false
         barcodeStatus.text =
             getString(
                 R.string.good_price_barcode_used,
-                option.label,
-                gtin
+                trimmed
             )
         barcodeStatus.visibility = View.VISIBLE
         renderIdle()
+        focusProductInput()
     }
 
     /**
@@ -641,9 +452,6 @@ class GoodPriceActivity : AppCompatActivity() {
     }
 
     private fun clearBarcodeStatus() {
-        barcodeLookupRequestId += 1L
-        barcodeDialog?.dismiss()
-        barcodeDialog = null
         barcodeStatus.text = getString(R.string.good_price_barcode_ready)
         barcodeStatus.visibility = View.VISIBLE
         barcodeButton.isEnabled = !barcodeLookupClosed && !barcodeCaptureInFlight
@@ -673,6 +481,5 @@ class GoodPriceActivity : AppCompatActivity() {
         private const val STATE_PRICE_SELECTION = "good_price.price_selection"
         private const val STATE_PRODUCT_INPUT = "good_price.product_input"
         private const val STATE_CHECK_OBSERVED_AT = "good_price.check_observed_at"
-        private const val OFFLINE_CATALOG_MAX_AGE_MILLIS = 8L * 24L * 60L * 60L * 1_000L
     }
 }

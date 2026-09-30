@@ -44,20 +44,14 @@ class BarcodeCaptureBoundaryTest {
     }
 
     @Test
-    fun `good price owns only barcode handoff and identity lookup, not offer authority`() {
+    fun `good price owns only barcode handoff and manual evidence, not offer authority`() {
         val source = source("GoodPriceActivity.kt").readText()
         val layout = file("src/main/res/layout/activity_good_price.xml").readText()
 
         listOf(
             "BarcodeCaptureActivity.EXTRA_GTIN",
-            "BundledOfflineCatalog.createDiscoverySession(applicationContext)",
-            "offlineCatalogDiscoverySession.discover(",
-            "GoodPriceBarcodeIdentityPresentation",
-            "barcodeLookupExecutor",
-            "barcodeLookupRequestId",
             "barcodeCaptureInFlight",
-            "if (::offlineCatalogDiscoverySession.isInitialized)",
-            "offlineCatalogDiscoverySession.close()",
+            "applyScannedBarcode(gtin)",
             "good_price_barcode_cancelled",
             "good_price_barcode_used"
         ).forEach { required -> assertTrue(source.contains(required)) }

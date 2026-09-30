@@ -2,6 +2,12 @@
 
 Updated: 2026-09-29 04:30 UTC
 
+> Current cleanup boundary (2026-09-29): Canadian catalog, store-directory,
+> Open Prices and Rakuten/Jamieson references in this historical checkpoint are
+> not active runtime sources. The shipped app now uses the Argentina identity
+> rail and private/provider-neutral evidence; see
+> `LEGACY_CANADIAN_DATA_SOURCE_CLEANUP.md`.
+
 ## Exact product-to-nearby-store map checkpoint — 2026-09-29
 
 The bounded Search → View on map milestone is complete locally on

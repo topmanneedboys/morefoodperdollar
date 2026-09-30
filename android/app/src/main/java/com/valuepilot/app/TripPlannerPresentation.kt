@@ -124,7 +124,7 @@ internal object TripPlannerProjector {
                 if (directoryAvailable) {
                     "Choose a store and enter your own route and vehicle assumptions. Automatic road routing is not connected."
                 } else {
-                    "The signed store directory is unavailable. You can still enter a private destination store and manual route assumptions."
+                    "No bundled store directory is shipped. You can still enter a private destination store and manual route assumptions."
                 }
             TripPlannerSurfaceMode.CALCULATED -> "Manual trip estimate only. Distance and vehicle assumptions are entered by you; no route fact or live price is implied."
             TripPlannerSurfaceMode.UNAVAILABLE -> ""

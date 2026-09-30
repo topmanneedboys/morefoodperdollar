@@ -1,15 +1,10 @@
 package com.valuepilot.app
 
-import com.valuepilot.core.OfflineCatalogDiscoveryMatch
-import com.valuepilot.core.OfflineCatalogDiscoveryResult
-import com.valuepilot.core.OfflineCatalogMatchKind
-import com.valuepilot.core.OfflineCatalogSnapshotManifest
-
 /**
- * Immutable presentation for Search's real, offline identity rail.
+ * Immutable presentation for Search's qualified identity rail.
  *
- * The bundled catalog contributes names and optional brands only. The
- * Argentina identity rail may also carry an explicitly validated package
+ * The Argentina identity rail contributes names and optional brands only. It
+ * may also carry an explicitly validated package
  * quantity, but this presentation carries no price, store, availability,
  * freshness or ranking authority. A later action may hand the selected name
  * to Scan & compare, but that route still requires the shopper to review and
@@ -54,7 +49,7 @@ internal data class PracticalShoppingSearchIdentityPresentation(
         require(query.isNotBlank())
         require(matches.size <= 30)
         require(evaluatedCandidateCount >= matches.size)
-        require(evaluatedCandidateCount <= OfflineCatalogSnapshotManifest.MAX_TOTAL_RECORDS)
+        require(evaluatedCandidateCount <= ArgentinaBackendContract.MAX_PRODUCT_CANDIDATES)
         require(notice.isNotBlank())
         require(page in 0..ArgentinaBackendContract.MAX_SEARCH_PAGE)
         require(nextPage == null || nextPage == page + 1)
@@ -68,7 +63,7 @@ internal data class PracticalShoppingSearchIdentityPresentation(
             append(notice)
             append("\n\nChecked ")
             append(evaluatedCandidateCount)
-            append(" bundled product identities.")
+            append(" source identity candidates.")
         }
 
     /** Dialog-safe result text for empty and non-empty matches. */
@@ -76,8 +71,8 @@ internal data class PracticalShoppingSearchIdentityPresentation(
         get() = buildString {
             append(summaryMessage)
             if (matches.isEmpty()) {
-                append("\nNo matching product identity was found in this bundled snapshot.")
-                append(" This does not mean the product is unavailable; it only means this snapshot had no match.")
+                append("\nNo matching product identity was returned by the qualified source.")
+                append(" This does not mean the product is unavailable; it only means this request had no match.")
             } else {
                 append("\n\n")
                 matches.forEachIndexed { index, match ->
@@ -91,38 +86,4 @@ internal data class PracticalShoppingSearchIdentityPresentation(
             }
         }
 
-    companion object {
-        private const val NOTICE =
-            "Signed offline product-identity suggestions from Canada-labelled Open Food Facts snapshots for the GTA and Metro Vancouver (ODbL-1.0) only — no current prices, stock, store availability or freshness are included; package size appears only when explicitly supplied by the source."
-
-        fun from(
-            query: String,
-            result: OfflineCatalogDiscoveryResult
-        ): PracticalShoppingSearchIdentityPresentation {
-            val normalizedQuery = query.trim()
-            require(normalizedQuery.isNotBlank())
-            return PracticalShoppingSearchIdentityPresentation(
-                query = normalizedQuery,
-                matches = result.matches.map(::mapMatch),
-                evaluatedCandidateCount = result.evaluatedCandidateCount,
-                notice = NOTICE
-            )
-        }
-
-        private fun mapMatch(match: OfflineCatalogDiscoveryMatch): Match =
-            Match(
-                displayName = match.product.displayName,
-                brand = match.product.brand,
-                matchLabel = matchLabel(match.kind)
-            )
-
-        private fun matchLabel(kind: OfflineCatalogMatchKind): String =
-            when (kind) {
-                OfflineCatalogMatchKind.EXACT_GTIN -> "exact barcode"
-                OfflineCatalogMatchKind.EXACT_NAME -> "exact name"
-                OfflineCatalogMatchKind.TOKEN_MATCH -> "name match"
-                OfflineCatalogMatchKind.PREFIX_MATCH -> "name prefix"
-                OfflineCatalogMatchKind.TYPO_MATCH -> "possible typo match"
-            }
-    }
 }

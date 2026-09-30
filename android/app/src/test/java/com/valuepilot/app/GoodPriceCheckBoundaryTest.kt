@@ -65,10 +65,7 @@ class GoodPriceCheckBoundaryTest {
             "CompareHerePrivatePriceMemoryAndroidStore",
             "privateMemoryLoadIssue",
             "good_price_memory_unavailable",
-            "BundledOfflineCatalog.createDiscoverySession(applicationContext)",
-            "offlineCatalogDiscoverySession.discover(",
-            "if (::offlineCatalogDiscoverySession.isInitialized)",
-            "offlineCatalogDiscoverySession.close()",
+            "applyScannedBarcode(gtin)",
             "memoryStore.append",
             "memoryStore.clear",
             "EXTRA_PRODUCT_NAME",
@@ -89,24 +86,6 @@ class GoodPriceCheckBoundaryTest {
             "RankingEngine",
             "INTERNET"
         ).forEach { forbidden -> assertFalse(source.contains(forbidden)) }
-    }
-
-    @Test
-    fun `good price barcode handoff focuses the manual exact-entry field`() {
-        val source = source("GoodPriceActivity.kt").readText()
-        val useNameHandler =
-            source
-                .substringAfter("button.setOnClickListener {")
-                .substringBefore("dialog.show()")
-
-        assertTrue(useNameHandler.contains("applyBarcodeIdentitySuggestion"))
-        assertTrue(useNameHandler.contains("dialog.dismiss()"))
-        assertTrue(useNameHandler.contains("focusProductInput()"))
-        assertTrue(
-            useNameHandler.indexOf("dialog.dismiss()") <
-                useNameHandler.indexOf("focusProductInput()")
-        )
-        assertTrue(source.contains("if (isFinishing || isDestroyed) return@post"))
     }
 
     @Test
@@ -150,70 +129,6 @@ class GoodPriceCheckBoundaryTest {
             source.contains(
                 "manager?.showSoftInput(productInput, InputMethodManager.SHOW_IMPLICIT)"
             )
-        )
-    }
-
-    @Test
-    fun `good price barcode selection labels replacement when an existing draft would be lost`() {
-        val source = source("GoodPriceActivity.kt").readText()
-        val strings = strings().readText()
-        val choiceDialog =
-            source
-                .substringAfter("private fun showBarcodeIdentityChoices")
-                .substringBefore("private fun focusProductInput")
-
-        assertTrue(choiceDialog.contains("val hasExistingDraft = productInput.text?.toString()?.isNotBlank() == true"))
-        assertTrue(choiceDialog.contains("R.string.good_price_barcode_replace_draft"))
-        assertTrue(choiceDialog.contains("R.string.good_price_barcode_replace_message"))
-        assertTrue(choiceDialog.contains("R.string.good_price_barcode_replace_warning"))
-        assertTrue(choiceDialog.contains("R.string.good_price_barcode_replace_description"))
-        assertTrue(
-            choiceDialog.indexOf("productInput.setText(option.displayName)") >
-                choiceDialog.indexOf("button.setOnClickListener")
-        )
-        listOf(
-            "name=\"good_price_barcode_replace_draft\"",
-            "name=\"good_price_barcode_replace_message\"",
-            "name=\"good_price_barcode_replace_warning\"",
-            "name=\"good_price_barcode_replace_description\""
-        ).forEach { required -> assertTrue(strings.contains(required)) }
-    }
-
-    @Test
-    fun `good price auto-prefills one exact barcode identity only for an empty draft`() {
-        val source = source("GoodPriceActivity.kt").readText()
-        val barcodeFlow =
-            source
-                .substringAfter("private fun showBarcodeIdentityChoices")
-                .substringBefore("private fun focusProductInput")
-
-        listOf(
-            "presentation.options.size == 1 && !hasExistingDraft",
-            "applyBarcodeIdentitySuggestion(",
-            "focusProductInput()",
-            "var selectedIndex = if (presentation.options.size == 1) 0 else -1"
-        ).forEach { required -> assertTrue(barcodeFlow.contains(required)) }
-        assertTrue(barcodeFlow.contains("good_price_barcode_replace_message"))
-    }
-
-    @Test
-    fun `cancelling good price barcode identity choices clears the processing status`() {
-        val source = source("GoodPriceActivity.kt").readText()
-        val choiceDialog =
-            source
-                .substringAfter("private fun showBarcodeIdentityChoices")
-                .substringBefore("private fun focusProductInput")
-
-        listOf(
-            "var outcomeCommitted = false",
-            "!outcomeCommitted",
-            "!barcodeLookupClosed",
-            "dialogRequestId == barcodeLookupRequestId",
-            "R.string.good_price_barcode_cancelled"
-        ).forEach { required -> assertTrue(choiceDialog.contains(required)) }
-        assertTrue(
-            choiceDialog.indexOf("outcomeCommitted = true") <
-                choiceDialog.indexOf("dialog.dismiss()")
         )
     }
 

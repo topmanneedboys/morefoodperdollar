@@ -43,14 +43,13 @@ class MainActivitySourcesLicencesBoundaryTest {
         }
 
         listOf(
-            "Open Food Facts",
-            "ODbL-1.0",
-            "offline search only",
             "not live retailer offers",
             "fictional sample data",
             "Search cards are source-attributed product identity suggestions only",
             "authorized current-offer feed",
-            "No flyer content is copied here"
+            "No flyer content is copied here",
+            "No bundled product catalogue is shipped",
+            "No Canadian store directory is shipped"
         ).forEach { required ->
             assertTrue("Expected truthful disclosure copy: $required", strings.contains(required))
         }

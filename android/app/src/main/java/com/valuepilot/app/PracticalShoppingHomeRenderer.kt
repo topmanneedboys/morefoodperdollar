@@ -76,8 +76,6 @@ data class PracticalShoppingHomeItemRenderState(
     val personalHistoryNotice: String? = null,
     /** Whether a missing price or line-item breakdown can open the local observed-price flow. */
     val observedPriceActionVisible: Boolean = false,
-    /** Whether an explicit offline identity choice can be saved for this item. */
-    val exactProductActionVisible: Boolean = false,
     /** Read-only Saved context; never a planner, price or availability input. */
     val savedExactProductNotice: String? = null,
     /** Whether this exact stable key is currently watched in the private Price Watch store. */
@@ -411,7 +409,6 @@ object PracticalShoppingHomeRenderer {
                         // projected result.
                         observedPriceActionVisible =
                             source.result != null && itemStoreAssignment?.priceText == null,
-                        exactProductActionVisible = true,
                         savedExactProductNotice =
                             savedExactProductContext?.noticeFor(item.key),
                         // A planned shopping-request key is not automatically a product identity.

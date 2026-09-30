@@ -10,6 +10,11 @@ Open-data validation path selected for bounded implementation research.
 No production network adapter or Android INTERNET permission is authorized by this document.
 Affiliate/merchant feeds remain valuable and continue in parallel.
 
+> Historical status notice (2026-09-29): the Canadian Open Prices/Open Food
+> Facts validation artifacts and provider-specific adapters described below are
+> not active runtime sources. They remain as research/provenance history only;
+> no Canadian catalog or offer data is bundled by the app.
+
 ## Executive decision
 
 Advertiser approval must not be a single point of failure for ValuePilot.

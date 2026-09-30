@@ -64,9 +64,7 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "private val quickAddOwnerControls = mutableListOf<View>()",
             "private val itemRemovalOwnerControls = mutableListOf<View>()",
             "private val unknownRemovalOwnerControls = mutableListOf<View>()",
-            "private val offlineCatalogOwnerControls = mutableListOf<View>()",
             "private val itemDetailsOwnerControls = mutableListOf<View>()",
-            "private val exactProductOwnerControls = mutableListOf<View>()",
             "private val observedPriceOwnerControls = mutableListOf<View>()",
             "private val chickenChoiceOwnerControls = mutableListOf<View>()",
             "private val extraStopOwnerControls = mutableListOf<View>()",
@@ -104,11 +102,7 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "hasRenderedState = true",
             "removeOwnerControls = itemRemovalOwnerControls",
             "removeOwnerControls = unknownRemovalOwnerControls",
-            "detailsOwnerControls = offlineCatalogOwnerControls",
             "detailsOwnerControls = itemDetailsOwnerControls",
-            "exactProductOwnerControls.clear()",
-            "exactProductOwnerControls.forEach { control ->",
-            "control.isEnabled = value != null",
             "ownerControls = observedPriceOwnerControls",
             "ownerControls?.add(this)",
             "chickenChoiceOwnerControls += this",
@@ -122,30 +116,6 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "visible && onShopAgain != null && hasRenderedState"
         ).forEach { required ->
             assertTrue("Expected live owner invalidation binding $required", source.contains(required))
-        }
-    }
-
-    @Test
-    fun unknownItemsForwardOfflineCatalogLookupThroughAnOwnerCallback() {
-        val source = source().readText()
-
-        listOf(
-            "var onFindOfflineCatalogMatch: ((String) -> Unit)? = null",
-            "offlineCatalogOwnerControls.forEach { control ->",
-            "detailsEnabled = onFindOfflineCatalogMatch != null",
-            "detailsLabel = context.getString(R.string.home_unknown_find_matches)",
-            "onFindOfflineCatalogMatch?.invoke(token)"
-        ).forEach { required ->
-            assertTrue("Expected bounded offline catalog Home action $required", source.contains(required))
-        }
-
-        listOf(
-            "OfflineCatalogDiscoveryEngine",
-            "OfflineCatalogProduct(",
-            "Money.parse",
-            "PracticalShoppingPlanner"
-        ).forEach { forbidden ->
-            assertFalse("Home View must not own catalog or planner authority through $forbidden", source.contains(forbidden))
         }
     }
 
@@ -170,8 +140,7 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
         listOf(
             "PracticalShoppingPlanner",
             "PracticalShoppingUiProjector",
-            "Money.parse",
-            "OfflineCatalogDiscoveryEngine"
+            "Money.parse"
         ).forEach { forbidden ->
             assertFalse("Quick-add View must not own shopping authority through $forbidden", source.contains(forbidden))
         }
@@ -383,35 +352,6 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
             "Money.parse"
         ).forEach { forbidden ->
             assertFalse("Home View must not construct or interpret item intent through $forbidden", source.contains(forbidden))
-        }
-    }
-
-    @Test
-    fun exactProductChoiceIsAnOwnerDrivenIdentityOnlyHomeAction() {
-        val source = source().readText()
-
-        listOf(
-            "var onChooseExactProduct: ((ShoppingItemKey) -> Unit)? = null",
-            "item.exactProductActionVisible",
-            "item.savedExactProductNotice",
-            "R.string.home_choose_exact_product",
-            "R.string.home_choose_exact_product_description",
-            "R.string.home_change_exact_product",
-            "R.string.home_change_exact_product_description",
-            "onChooseExactProduct?.invoke(item.key)",
-            "ownerControls = exactProductOwnerControls"
-        ).forEach { required ->
-            assertTrue("Expected exact-product Home action binding $required", source.contains(required))
-        }
-
-        listOf(
-            "PracticalShoppingPlanner",
-            "Money.parse",
-            "OfflineCatalogDiscoveryEngine",
-            "current_price",
-            "availability"
-        ).forEach { forbidden ->
-            assertFalse("Home View must not own identity, price or planner authority through $forbidden", source.contains(forbidden))
         }
     }
 

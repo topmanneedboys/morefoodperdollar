@@ -63,9 +63,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val unknownRemovalOwnerControls = mutableListOf<View>()
     private val privateIdentityRemovalOwnerControls = mutableListOf<View>()
     private val privateIdentityPhotoOwnerControls = mutableListOf<View>()
-    private val offlineCatalogOwnerControls = mutableListOf<View>()
     private val itemDetailsOwnerControls = mutableListOf<View>()
-    private val exactProductOwnerControls = mutableListOf<View>()
     private val observedPriceOwnerControls = mutableListOf<View>()
     private val chickenChoiceOwnerControls = mutableListOf<View>()
     private val extraStopOwnerControls = mutableListOf<View>()
@@ -132,13 +130,6 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                 control.isEnabled = value != null
             }
         }
-    var onFindOfflineCatalogMatch: ((String) -> Unit)? = null
-        set(value) {
-            field = value
-            offlineCatalogOwnerControls.forEach { control ->
-                control.isEnabled = value != null
-            }
-        }
     var onChickenChoice: ((LocalSamplePracticalShoppingDemo.ChickenChoice) -> Unit)? = null
         set(value) {
             field = value
@@ -168,13 +159,6 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         set(value) {
             field = value
             itemDetailsOwnerControls.forEach { control ->
-                control.isEnabled = value != null
-            }
-        }
-    var onChooseExactProduct: ((ShoppingItemKey) -> Unit)? = null
-        set(value) {
-            field = value
-            exactProductOwnerControls.forEach { control ->
                 control.isEnabled = value != null
             }
         }
@@ -452,9 +436,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         privateIdentityRemovalOwnerControls.clear()
         privateIdentityPhotoOwnerControls.clear()
         priceWatchOwnerControls.clear()
-        offlineCatalogOwnerControls.clear()
         itemDetailsOwnerControls.clear()
-        exactProductOwnerControls.clear()
         observedPriceOwnerControls.clear()
         chickenChoiceOwnerControls.clear()
         quickAddOwnerControls.clear()
@@ -862,32 +844,6 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                                 )
                         )
                     )
-                    if (item.exactProductActionVisible) {
-                        addView(
-                            detailButton(
-                                onDetails = { onChooseExactProduct?.invoke(item.key) },
-                                label =
-                                    context.getString(
-                                        if (item.savedExactProductNotice == null) {
-                                            R.string.home_choose_exact_product
-                                        } else {
-                                            R.string.home_change_exact_product
-                                        }
-                                    ),
-                                description =
-                                    context.getString(
-                                        if (item.savedExactProductNotice == null) {
-                                            R.string.home_choose_exact_product_description
-                                        } else {
-                                            R.string.home_change_exact_product_description
-                                        },
-                                        item.name
-                                    ),
-                                enabled = onChooseExactProduct != null,
-                                ownerControls = exactProductOwnerControls
-                            )
-                        )
-                    }
                     addView(
                         priceWatchButton(
                             productIdentityKey = item.key.value,
@@ -1151,13 +1107,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                     removeOwnerControls = unknownRemovalOwnerControls,
                     lineColor = "#92400E",
                     removeDescription =
-                        context.getString(R.string.home_remove_item_description, token),
-                    onDetails = { onFindOfflineCatalogMatch?.invoke(token) },
-                    detailsEnabled = onFindOfflineCatalogMatch != null,
-                    detailsOwnerControls = offlineCatalogOwnerControls,
-                    detailsLabel = context.getString(R.string.home_unknown_find_matches),
-                    detailsDescription =
-                        context.getString(R.string.home_unknown_find_matches_description, token)
+                        context.getString(R.string.home_remove_item_description, token)
                 )
             )
         }

@@ -4,6 +4,12 @@ Updated: 2026-08-28
 
 Milestone: 5D — provider validation and provenance-safe real-data preparation
 
+> Historical status notice (2026-09-29): this report records earlier Canadian
+> Open Prices/Open Food Facts and Rakuten/Jamieson qualification work. Those
+> Canadian runtime rails and provider-specific tooling are no longer shipped or
+> active. Argentina Search is the current identity rail; the generic evidence
+> and rights boundaries described here remain historical reference only.
+
 ## External provider status
 
 - Lowvyn rights/technical inquiry: sent; await written clarification before integration.
