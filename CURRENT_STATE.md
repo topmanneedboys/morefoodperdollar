@@ -2,6 +2,51 @@
 
 Updated: 2026-09-29 04:30 UTC
 
+## Offline Store and Trip Planner checkpoint — 2026-09-29
+
+The bounded Store/Trip Planner milestone is complete on
+`work/valuepilot-confirmed-purchases` at commit
+`1ff00795f7ce55d24d4ef7963469fa8612e4b7a8`, based on the clean Price Watch
+checkpoint `2936c3c4e29cd8f85c0a6a85eb80b356181c22bb`. Basket now opens a
+Basket-owned private trip scenario that reads the current Basket directly;
+the basket is never copied into trip storage. Signed source-listed GTA and
+Metro Vancouver locations and manually entered private store names become
+durable exact store identities, with an optional explicit preferred-store
+relationship. Confirmed purchases and personal price observations can carry
+that exact store key while unknown store details remain unknown.
+
+The shared-core trip calculator uses exact integer/rational arithmetic for
+round-trip or additional-driving distance, fuel consumption, fuel price,
+currency/precision, optional tolls and parking. Invalid, negative, mixed-
+currency or incomplete assumptions fail closed. A one-shot foreground
+location choice is optional and stores only a labelled context reference;
+there is no background or continuous location tracking. The private draft is
+atomic, bounded, versioned, deterministic, corruption-resistant and keeps
+the last known-good record on failed reads/writes. Home/Basket changes are
+reflected through a basket revision/count projection, and regression tests
+cover restart, malformed state, failed writes, duplicate/private store
+identities, unresolved Basket items, exact calculations and non-mutation of
+confirmed purchases.
+
+Automatic road routing/map facts are **not connected**. The UI accepts manual
+distance assumptions and can open an external directions app only for a
+source-listed destination coordinate; ValuePilot does not import that route
+or treat it as verified. Current retailer offers, inventory and trip savings
+remain explicitly **UNKNOWN**; the trip surface cannot affect organic
+ranking or claim a cheapest plan.
+
+Final local verification at this commit is green: 1,775 Android app JVM
+tests, 419 shared-core tests, debug/release lint, debug/release builds,
+release bundle and privacy inspection. The unsigned candidate is
+`android/app/build/outputs/bundle/release/app-release.aab`, SHA-256
+`31CDC91F4F4A28EDC225BEA4CB0FD66EE5BDB9FA3EB2A10FA3A9C4BE24AA028E`,
+versionCode `10116` / versionName `101.1.15`, application ID
+`com.valuepilot.app`. Manifest inspection shows the existing INTERNET and
+CAMERA permissions plus optional FINE/COARSE foreground location and no
+ACCESS_NETWORK_STATE or background location. The bundle is unsigned and was
+not uploaded, installed, signed, sent to Play, or used for phone validation;
+GitHub Actions and paid services were not retried.
+
 ## Private Price Watch checkpoint — 2026-09-29
 
 The bounded Price Watch continuation is implemented on

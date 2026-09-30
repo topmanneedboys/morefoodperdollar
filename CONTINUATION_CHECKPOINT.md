@@ -2,6 +2,39 @@
 
 Updated: 2026-09-29 04:30 UTC
 
+## Offline Store and Trip Planner checkpoint — 2026-09-29
+
+The bounded Store/Trip Planner milestone is committed on
+`work/valuepilot-confirmed-purchases` at
+`1ff00795f7ce55d24d4ef7963469fa8612e4b7a8`, from the verified Price Watch
+checkpoint `2936c3c4e29cd8f85c0a6a85eb80b356181c22bb`. The Basket-owned route
+uses the live private Basket projection rather than copying it into durable
+trip state. Signed, source-attributed GTA/Metro Vancouver location records
+and explicit private store names map to exact durable store keys; confirmed
+purchases and personal price observations can carry an explicitly selected
+preferred store key without becoming retailer offers.
+
+Trip cost is shared-core exact arithmetic for ROUND_TRIP or ADDITIONAL_DRIVING
+distance, whole-millilitre fuel consumption, exact currency/precision fuel
+price, optional tolls and parking. Manual origin and assumptions are the
+supported path. Foreground location is an optional one-shot permission with
+no background tracking and no raw coordinate persistence. Atomic bounded
+storage fails closed on corruption/read/write errors and retains the last
+known-good scenario. Automatic road routing and map facts are not integrated;
+external directions are only a handoff for a source-listed coordinate.
+Current offers, inventory and savings are explicitly UNKNOWN and cannot affect
+organic ranking. The scenario changes with Basket counts/revision and does
+not mutate purchases or Price Watch.
+
+Local verification is green at this exact code: 1,775 app JVM tests, 419
+shared-core tests, debug/release lint, debug/release builds, release bundle,
+and privacy inspection. The unsigned candidate is
+`android/app/build/outputs/bundle/release/app-release.aab` with SHA-256
+`31CDC91F4F4A28EDC225BEA4CB0FD66EE5BDB9FA3EB2A10FA3A9C4BE24AA028E`,
+versionCode `10116` / versionName `101.1.15`, package
+`com.valuepilot.app`. No Play signing/upload, device install, GitHub Actions
+retry or paid service was performed.
+
 ## Confirmed purchases and private history checkpoint — 2026-09-29
 
 The next bounded milestone is implemented on `work/valuepilot-confirmed-purchases`
