@@ -8,6 +8,7 @@ import com.valuepilot.core.ConfirmedPurchaseStore
 import com.valuepilot.core.Money
 import com.valuepilot.core.NormalizedQuantity
 import com.valuepilot.core.PracticalShoppingStoreIdentityScope
+import com.valuepilot.core.ShoppingStoreKey
 import com.valuepilot.core.BaseUnit
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -92,7 +93,7 @@ internal object ConfirmedPurchaseHistoryCodec {
         }
 
         val lines = ArrayList<String>(ordered.size + 1)
-        lines += "$HISTORY_MAGIC|1"
+        lines += "$HISTORY_MAGIC|2"
         ordered.forEach { purchase ->
             val quantity = purchase.quantity
             val amountPaid = purchase.amountPaid
@@ -115,7 +116,8 @@ internal object ConfirmedPurchaseHistoryCodec {
                 encodeNullable(store?.displayName),
                 encodeNullable(scope?.merchantKey),
                 encodeNullable(scope?.locationKey),
-                encodeNullable(scope?.commerceChannelKey)
+                encodeNullable(scope?.commerceChannelKey),
+                encodeNullable(store?.storeKey?.value)
             ).joinToString("|")
         }
 
@@ -138,15 +140,16 @@ internal object ConfirmedPurchaseHistoryCodec {
         }
         val lines = String(bytes, StandardCharsets.US_ASCII).split('\n')
         val header = lines.firstOrNull()?.split('|').orEmpty()
-        if (header.size != 2 || header[0] != HISTORY_MAGIC || header[1] != "1") {
+        if (header.size != 2 || header[0] != HISTORY_MAGIC || header[1] !in setOf("1", "2")) {
             return failure(ConfirmedPurchaseHistoryCodecIssue.INVALID_HEADER)
         }
+        val version = header[1].toInt()
         if (lines.size - 1 > MAX_CONFIRMED_PURCHASES) {
             return failure(ConfirmedPurchaseHistoryCodecIssue.TOO_MANY_RECORDS)
         }
 
         return try {
-            val purchases = lines.drop(1).map { line -> decodePurchase(line.split('|')) }
+            val purchases = lines.drop(1).map { line -> decodePurchase(line.split('|'), version) }
             if (purchases.map { it.purchaseId }.distinct().size != purchases.size) {
                 return failure(ConfirmedPurchaseHistoryCodecIssue.DUPLICATE_PURCHASE_ID)
             }
@@ -160,8 +163,9 @@ internal object ConfirmedPurchaseHistoryCodec {
         }
     }
 
-    private fun decodePurchase(parts: List<String>): ConfirmedPurchase {
-        if (parts.size != 17 || parts[0] != "P") throw CodecParseFailure()
+    private fun decodePurchase(parts: List<String>, version: Int): ConfirmedPurchase {
+        val expectedSize = if (version == 1) 17 else 18
+        if (parts.size != expectedSize || parts[0] != "P") throw CodecParseFailure()
         val purchaseId = decodeRequired(parts[1], ConfirmedPurchase.MAX_PURCHASE_ID_LENGTH)
         val productIdentityKey = decodeRequired(parts[2], ConfirmedPurchase.MAX_PRODUCT_IDENTITY_KEY_LENGTH)
         val origin = parseEnum<ConfirmedPurchaseIdentityOrigin>(parts[3])
@@ -200,9 +204,15 @@ internal object ConfirmedPurchaseHistoryCodec {
                 locationKey = location,
                 commerceChannelKey = requireNotNull(channel)
             )
+        val storeKey =
+            if (version == 2) {
+                decodeNullable(parts[17], 256)?.let(::ShoppingStoreKey)
+            } else {
+                null
+            }
         val store =
-            if (storeDisplay == null && scope == null) null
-            else ConfirmedPurchaseStore(displayName = storeDisplay, identityScope = scope)
+            if (storeDisplay == null && scope == null && storeKey == null) null
+            else ConfirmedPurchaseStore(displayName = storeDisplay, identityScope = scope, storeKey = storeKey)
 
         return ConfirmedPurchase(
             purchaseId = purchaseId,
@@ -238,8 +248,8 @@ internal object ConfirmedPurchaseHistoryCodec {
         if (value.isEmpty() || value.length % 2 != 0 || value.length > maxLength * 8) throw CodecParseFailure()
         val bytes = ByteArray(value.length / 2)
         (value.indices step 2).forEach { index ->
-            val high = HEX_DIGITS.indexOf(value[index])
-            val low = HEX_DIGITS.indexOf(value[index + 1])
+            val high = HEX_DIGITS.indexOf(value[index].lowercaseChar())
+            val low = HEX_DIGITS.indexOf(value[index + 1].lowercaseChar())
             if (high < 0 || low < 0) throw CodecParseFailure()
             bytes[index / 2] = ((high shl 4) or low).toByte()
         }

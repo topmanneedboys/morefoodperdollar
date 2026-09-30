@@ -19,6 +19,9 @@ import com.valuepilot.core.ConfirmedPurchaseIdentityOrigin
 sealed interface PracticalShoppingBasketUiAction {
     data object OpenHome : PracticalShoppingBasketUiAction
 
+    /** Opens the Basket-owned manual trip planner without copying Basket state. */
+    data object OpenTripPlanner : PracticalShoppingBasketUiAction
+
     /** Opens the explicit confirmation form; it does not mint a purchase itself. */
     data class ConfirmPurchase(
         val productIdentityKey: String,
@@ -82,6 +85,13 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
 
     /** Opens an explicit confirmation form for a private purchase. */
     var onConfirmPurchase: ((PracticalShoppingBasketUiAction.ConfirmPurchase) -> Unit)? = null
+
+    /** Opens the Basket-owned trip planner. */
+    var onOpenTripPlanner: (() -> Unit)? = null
+        set(value) {
+            field = value
+            tripPlannerButton.isEnabled = value != null && hasRenderedState
+        }
 
     /** Toggles the same exact private Price Watch identity used by Home and Search. */
     var onTogglePriceWatch: ((PriceWatchUiAction.ToggleWatch) -> Unit)? = null
@@ -175,6 +185,20 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         isEnabled = false
         setOnClickListener { onAction?.invoke(PracticalShoppingBasketUiAction.OpenHome) }
     }
+    private val tripPlannerButton = MaterialButton(context).apply {
+        text = "Plan this trip"
+        contentDescription = "Plan a manual trip for the current Basket"
+        isAllCaps = false
+        textSize = 15f
+        cornerRadius = dp(16)
+        strokeWidth = dp(1)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
+        setTextColor(ValuePilotPalette.color("#374151"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
+        layoutParams = fullWidth(dp(52), 8)
+        isEnabled = false
+        setOnClickListener { onOpenTripPlanner?.invoke() }
+    }
 
     private var progressState = PracticalShoppingBasketProgressSession.initial()
     private var lastRenderState: PracticalShoppingBasketRenderState? = null
@@ -206,6 +230,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         addView(planResult)
         addView(extraStopRule)
         addView(extraStopRuleNotice)
+        addView(tripPlannerButton)
         addView(actionButton)
         collectionProgress.visibility = GONE
         noCoverageSummary.visibility = GONE
@@ -250,6 +275,9 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         sampleNotice.text = state.sampleNotice
         actionButton.text = state.actionLabel
         actionButton.isEnabled = onAction != null && hasRenderedState
+        tripPlannerButton.visibility =
+            if (state.status == PracticalShoppingBasketStatus.EMPTY) GONE else VISIBLE
+        tripPlannerButton.isEnabled = onOpenTripPlanner != null && hasRenderedState
         renderPrivateIdentities(state.privateIdentityItems)
         renderCollectionProgress(state)
         collectionNotice.text = state.collectionNotice.orEmpty()

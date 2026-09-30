@@ -7,21 +7,21 @@ import java.io.File
 
 class ValuePilotApplicationBoundaryTest {
     @Test
-    fun `10115 startup initializes Firebase but does not run the historical probe`() {
+    fun `10116 startup initializes Firebase but does not run the historical probe`() {
         val source = file("src/main/java/com/valuepilot/app/ValuePilotApplication.kt").readText()
         val gradle = file("build.gradle.kts").readText()
         assertTrue(source.contains("ValuePilotFirebaseRuntime.initialize(this)"))
         assertFalse(source.contains("startIfEligible"))
-        assertTrue(gradle.contains("versionCode = 10115"))
-        assertTrue(gradle.contains("versionName = \"101.1.14\""))
+        assertTrue(gradle.contains("versionCode = 10116"))
+        assertTrue(gradle.contains("versionName = \"101.1.15\""))
         assertTrue(gradle.contains("buildConfigField(\"boolean\", \"M12_3_QUALIFICATION_PROBE\", \"false\")"))
     }
 
     @Test
-    fun `no location permission is introduced for the qualified launch area`() {
+    fun `trip planner uses only optional foreground location`() {
         val manifest = file("src/main/AndroidManifest.xml").readText()
-        assertFalse(manifest.contains("ACCESS_FINE_LOCATION"))
-        assertFalse(manifest.contains("ACCESS_COARSE_LOCATION"))
+        assertTrue(manifest.contains("ACCESS_FINE_LOCATION"))
+        assertTrue(manifest.contains("ACCESS_COARSE_LOCATION"))
         assertFalse(manifest.contains("ACCESS_BACKGROUND_LOCATION"))
     }
 

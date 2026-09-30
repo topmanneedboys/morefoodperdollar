@@ -10,6 +10,7 @@ class ConfirmedPurchaseTest {
 
     @Test
     fun explicitConfirmationKeepsExactMoneyQuantityAndKnownFields() {
+        val storeKey = ShoppingStoreKey("directory:osm:node:123")
         val result = ConfirmedPurchaseConfirmation.confirm(
             ConfirmedPurchaseConfirmationInput(
                 purchaseId = "purchase-1",
@@ -21,7 +22,7 @@ class ConfirmedPurchaseTest {
                 quantity = QuantityNormalization.count(2),
                 amountPaid = Money.parse("6.49", "CAD"),
                 purchaseDateIso = "2026-09-28",
-                store = ConfirmedPurchaseStore(displayName = "Example Market"),
+                store = ConfirmedPurchaseStore(displayName = "Example Market", storeKey = storeKey),
                 explicitlyConfirmed = true
             )
         )
@@ -32,6 +33,7 @@ class ConfirmedPurchaseTest {
         assertEquals(2_000_000L, purchase.quantity?.amountMicros)
         assertEquals("2026-09-28", purchase.purchaseDateIso)
         assertEquals("Example Market", purchase.store?.displayName)
+        assertEquals(storeKey, purchase.store?.storeKey)
     }
 
     @Test

@@ -1,9 +1,13 @@
 package com.valuepilot.app
 
+import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
+import android.location.LocationManager
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -23,6 +27,7 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -44,6 +49,11 @@ import com.valuepilot.core.PriceObservation
 import com.valuepilot.core.PriceWatch
 import com.valuepilot.core.PriceWatchState
 import com.valuepilot.core.ShoppingItemKey
+import com.valuepilot.core.TripDistanceBasis
+import com.valuepilot.core.TripOriginKind
+import com.valuepilot.core.TripOriginReference
+import com.valuepilot.core.ConfirmedPurchaseStore
+import java.math.BigDecimal
 import java.util.UUID
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
@@ -84,6 +94,15 @@ class MainActivity : AppCompatActivity() {
     }
     private var priceWatchState = PriceWatchState.empty()
     private var priceWatchLoadIssue: PriceWatchStoreIssue? = null
+    private val tripPlannerStore by lazy(LazyThreadSafetyMode.NONE) {
+        AndroidTripPlannerStore(applicationContext)
+    }
+    private var tripPlannerState = TripPlannerState()
+    private var tripPlannerLoadIssue: TripPlannerStoreIssue? = null
+    private var tripStoreDirectorySelections: List<TripStoreSelection> = emptyList()
+    private var tripStoreDirectoryLoading = false
+    private var tripStoreDirectoryLoadIssue: String? = null
+    private var tripStoreDirectoryRequestId = 0L
 
     private val searchExecutor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -112,6 +131,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var dataStatusButton: MaterialButton
     private lateinit var homeExperience: PracticalShoppingHomeSurfaceView
     private lateinit var basketExperience: PracticalShoppingBasketSurfaceView
+    private lateinit var tripPlannerExperience: TripPlannerSurfaceView
     private lateinit var searchExperience: View
     private lateinit var searchInput: TextInputEditText
     private lateinit var searchButton: MaterialButton
@@ -199,6 +219,9 @@ class MainActivity : AppCompatActivity() {
     private var confirmedPurchaseDialog: AlertDialog? = null
     private var priceWatchDialog: AlertDialog? = null
     private var priceObservationDialog: AlertDialog? = null
+    private var tripOriginDialog: AlertDialog? = null
+    private var tripAssumptionsDialog: AlertDialog? = null
+    private var tripStorePickerDialog: AlertDialog? = null
     private var offlineCatalogLookup: Future<*>? = null
     private var offlineCatalogRequestId = 0L
     private var suppressSearchInputCallback = false
@@ -223,6 +246,7 @@ class MainActivity : AppCompatActivity() {
         dataStatusButton = findViewById(R.id.dataStatusButton)
         homeExperience = findViewById(R.id.homeExperience)
         basketExperience = findViewById(R.id.basketExperience)
+        tripPlannerExperience = findViewById(R.id.tripPlannerExperience)
         searchExperience = findViewById(R.id.searchExperience)
         searchInput = findViewById(R.id.searchInput)
         searchButton = findViewById(R.id.searchButton)
@@ -266,6 +290,7 @@ class MainActivity : AppCompatActivity() {
         refreshHomePrivateMemory()
         refreshConfirmedPurchaseHistory()
         refreshPriceWatchState()
+        refreshTripPlannerState()
         searchQuery = savedInstanceState?.getString(STATE_SEARCH_QUERY).orEmpty()
         searchWasSubmitted = savedInstanceState?.getBoolean(STATE_SEARCH_WAS_SUBMITTED) == true
         searchScrollY = savedInstanceState?.getInt(STATE_SEARCH_SCROLL_Y, 0)?.coerceAtLeast(0) ?: 0
@@ -278,6 +303,7 @@ class MainActivity : AppCompatActivity() {
         }
         configureHomeUi()
         configureBasketUi()
+        tripPlannerExperience.onAction = ::handleTripPlannerAction
         configureSearchUi()
         configureSavedUi()
         confirmedPurchaseHistoryButton.setOnClickListener {
@@ -311,7 +337,8 @@ class MainActivity : AppCompatActivity() {
                         shellState.route == AppRoute.STAPLE_WATCH_SETUP ||
                         shellState.route == AppRoute.STAPLE_WATCH_POLICY ||
                         shellState.route == AppRoute.CONFIRMED_PURCHASE_HISTORY ||
-                        shellState.route == AppRoute.PRICE_WATCHES
+                        shellState.route == AppRoute.PRICE_WATCHES ||
+                        shellState.route == AppRoute.TRIP_PLANNER
                     ) {
                         dispatch(AppShellIntent.NavigateBack)
                     } else {
@@ -423,6 +450,12 @@ class MainActivity : AppCompatActivity() {
         priceWatchDialog = null
         priceObservationDialog?.dismiss()
         priceObservationDialog = null
+        tripOriginDialog?.dismiss()
+        tripOriginDialog = null
+        tripAssumptionsDialog?.dismiss()
+        tripAssumptionsDialog = null
+        tripStorePickerDialog?.dismiss()
+        tripStorePickerDialog = null
         if (::homeExperience.isInitialized) {
             homeExperience.onQueryChanged = null
             homeExperience.onSubmit = null
@@ -452,6 +485,7 @@ class MainActivity : AppCompatActivity() {
             basketExperience.onOpenPrivateIdentityPhotos = null
             basketExperience.onConfirmPurchase = null
             basketExperience.onTogglePriceWatch = null
+            basketExperience.onOpenTripPlanner = null
         }
         if (::confirmedPurchaseHistoryExperience.isInitialized) {
             confirmedPurchaseHistoryExperience.onAction = null
@@ -459,6 +493,9 @@ class MainActivity : AppCompatActivity() {
         }
         if (::priceWatchExperience.isInitialized) {
             priceWatchExperience.onAction = null
+        }
+        if (::tripPlannerExperience.isInitialized) {
+            tripPlannerExperience.onAction = null
         }
         if (::savedRouteCoordinator.isInitialized) {
             savedExperience.onAction = null
@@ -715,6 +752,9 @@ class MainActivity : AppCompatActivity() {
             homeExperience.revealProjectedResult()
         }
         basketExperience.render(PracticalShoppingBasketRenderer.render(homeState))
+        if (shellState.route == AppRoute.TRIP_PLANNER) {
+            renderTripPlanner()
+        }
     }
 
     private fun authorizePrivateListPersistence() {
@@ -1336,6 +1376,8 @@ class MainActivity : AppCompatActivity() {
             when (action) {
                 PracticalShoppingBasketUiAction.OpenHome ->
                     dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.HOME))
+                PracticalShoppingBasketUiAction.OpenTripPlanner ->
+                    dispatch(AppShellIntent.OpenTripPlanner)
                 is PracticalShoppingBasketUiAction.ConfirmPurchase ->
                     openConfirmedPurchaseDialog(action)
             }
@@ -1377,6 +1419,7 @@ class MainActivity : AppCompatActivity() {
             openConfirmedPurchaseDialog(action)
         }
         basketExperience.onTogglePriceWatch = ::handleTogglePriceWatch
+        basketExperience.onOpenTripPlanner = { dispatch(AppShellIntent.OpenTripPlanner) }
     }
 
     /**
@@ -1495,6 +1538,16 @@ class MainActivity : AppCompatActivity() {
         }
         storeLayout.addView(storeInput)
 
+        // A private preferred store is an explicit convenience association only. It does not
+        // turn a purchase into a live offer or infer a store when the shopper leaves it blank.
+        val preferredStore = preferredTripStoreSelection()
+        val associatePreferredStore = CheckBox(this).apply {
+            text = preferredStore?.let { "Associate with preferred store: ${it.displayName}" }
+            isChecked = preferredStore != null && existing?.store?.storeKey == preferredStore.storeKey
+            visibility = if (preferredStore == null) View.GONE else View.VISIBLE
+            setPadding(0, dp(8), 0, 0)
+        }
+
         val explicitConfirmation = CheckBox(this).apply {
             text = "I explicitly confirm this purchase"
             isChecked = false
@@ -1513,6 +1566,7 @@ class MainActivity : AppCompatActivity() {
         body.addView(currencyLayout)
         body.addView(dateLayout)
         body.addView(storeLayout)
+        body.addView(associatePreferredStore)
         body.addView(explicitConfirmation)
 
         val dialog =
@@ -1571,6 +1625,15 @@ class MainActivity : AppCompatActivity() {
                     return@setOnClickListener
                 }
                 val values = requireNotNull(parsed.values)
+                val associatedStore =
+                    if (associatePreferredStore.isChecked && preferredStore != null) {
+                        ConfirmedPurchaseStore(
+                            displayName = preferredStore.displayName,
+                            storeKey = preferredStore.storeKey
+                        )
+                    } else {
+                        values.store
+                    }
                 val input =
                     ConfirmedPurchaseConfirmationInput(
                         purchaseId = existing?.purchaseId ?: "purchase-${UUID.randomUUID()}",
@@ -1582,7 +1645,7 @@ class MainActivity : AppCompatActivity() {
                         quantity = values.quantity,
                         amountPaid = values.amountPaid,
                         purchaseDateIso = values.purchaseDateIso,
-                        store = values.store,
+                        store = associatedStore,
                         explicitlyConfirmed = true
                     )
                 val confirmed = ConfirmedPurchaseConfirmation.confirm(input)
@@ -2560,6 +2623,14 @@ class MainActivity : AppCompatActivity() {
             priceObservationDialog?.dismiss()
             priceObservationDialog = null
         }
+        if (state.route != AppRoute.TRIP_PLANNER) {
+            tripOriginDialog?.dismiss()
+            tripOriginDialog = null
+            tripAssumptionsDialog?.dismiss()
+            tripAssumptionsDialog = null
+            tripStorePickerDialog?.dismiss()
+            tripStorePickerDialog = null
+        }
         val searchVisible =
             state.route == AppRoute.SEARCH && state.selectedPrimaryTab == AppPrimaryTab.SEARCH
         val enteringSearch = searchVisible && !searchRouteActive
@@ -2574,6 +2645,7 @@ class MainActivity : AppCompatActivity() {
 
         val historyVisible = state.route == AppRoute.CONFIRMED_PURCHASE_HISTORY
         val priceWatchVisible = state.route == AppRoute.PRICE_WATCHES
+        val tripPlannerVisible = state.route == AppRoute.TRIP_PLANNER
         val copy =
             if (historyVisible) {
                 ScreenCopy(
@@ -2591,6 +2663,14 @@ class MainActivity : AppCompatActivity() {
                     footnote = "No authorized live retailer source is connected, so current offers remain unknown.",
                     showCompareAction = false
                 )
+            } else if (tripPlannerVisible) {
+                ScreenCopy(
+                    eyebrow = "PRIVATE TRIP PLANNER",
+                    title = "Plan this trip",
+                    body = "Use the current Basket, a selected store and your own driving assumptions to estimate trip cost.",
+                    footnote = "Manual estimate only. No road route, live offer, stock or savings recommendation is connected.",
+                    showCompareAction = false
+                )
             } else {
                 copyFor(state.selectedPrimaryTab)
             }
@@ -2604,9 +2684,9 @@ class MainActivity : AppCompatActivity() {
         homeExperience.visibility = if (homeVisible) View.VISIBLE else View.GONE
         if (homeVisible) renderHome()
 
-        val basketVisible = state.selectedPrimaryTab == AppPrimaryTab.BASKET
+        val basketVisible = state.selectedPrimaryTab == AppPrimaryTab.BASKET && state.route == AppRoute.BASKET
         basketExperience.visibility = if (basketVisible) View.VISIBLE else View.GONE
-        if (basketVisible) renderHome()
+        if (state.selectedPrimaryTab == AppPrimaryTab.BASKET) renderHome()
 
         searchExperience.visibility = if (searchVisible) View.VISIBLE else View.GONE
 
@@ -2627,6 +2707,7 @@ class MainActivity : AppCompatActivity() {
         confirmedPurchaseHistoryExperience.visibility = if (historyVisible) View.VISIBLE else View.GONE
         priceWatchButton.visibility = if (savedVisible) View.VISIBLE else View.GONE
         priceWatchExperience.visibility = if (priceWatchVisible) View.VISIBLE else View.GONE
+        tripPlannerExperience.visibility = if (tripPlannerVisible) View.VISIBLE else View.GONE
         if (historyVisible) {
             confirmedPurchaseHistoryExperience.render(
                 ConfirmedPurchaseHistoryProjector.project(
@@ -2645,6 +2726,7 @@ class MainActivity : AppCompatActivity() {
                 )
             )
         }
+        if (tripPlannerVisible) renderTripPlanner()
         savedStapleLaunchExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
         savedObservedPriceLaunchExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
         observedPriceSavedSelectionExperience.visibility =
@@ -2814,6 +2896,437 @@ class MainActivity : AppCompatActivity() {
                     unavailable = priceWatchLoadIssue != null
                 )
             )
+        }
+    }
+
+    private fun refreshTripPlannerState() {
+        val loaded = tripPlannerStore.load()
+        tripPlannerState = loaded.state ?: TripPlannerState()
+        tripPlannerLoadIssue = loaded.issue
+        if (::tripPlannerExperience.isInitialized && shellState.route == AppRoute.TRIP_PLANNER) {
+            renderTripPlanner()
+        }
+    }
+
+    private fun currentTripBasketSnapshot(): TripPlannerBasketSnapshot {
+        val rendered = homeRenderState
+        val plannedItemKeys = rendered?.items?.map { it.key.value }
+            ?: homeSessionState.model.ui.items.map { it.key.value }
+        val unknownCount = rendered?.unknownItems?.size ?: homeSessionState.model.ui.unknownItems.size
+        val privateKeys = homeSessionState.privateIdentities.map { it.identityKey }
+        val revisionMaterial =
+            (plannedItemKeys + privateKeys + homeSessionState.model.ui.query + unknownCount.toString())
+                .joinToString("\u001f")
+        return TripPlannerBasketSnapshot(
+            plannedItemCount = plannedItemKeys.size,
+            privateIdentityCount = privateKeys.size,
+            unknownItemCount = unknownCount,
+            revision = revisionMaterial.ifBlank { "empty" }
+        )
+    }
+
+    private fun renderTripPlanner() {
+        if (!::tripPlannerExperience.isInitialized) return
+        val basket = currentTripBasketSnapshot()
+        tripPlannerExperience.render(
+            TripPlannerProjector.project(
+                state = tripPlannerState,
+                basket = basket,
+                directoryAvailable = tripStoreDirectorySelections.isNotEmpty(),
+                unavailable = tripPlannerLoadIssue != null
+            ),
+            preferred = tripPlannerState.preferredStoreKey != null &&
+                tripPlannerState.preferredStoreKey == tripPlannerState.destination?.storeKey
+        )
+    }
+
+    private fun persistTripPlannerState(next: TripPlannerState): Boolean {
+        val result = tripPlannerStore.replace(next)
+        if (!result.accepted) {
+            Toast.makeText(this, "Trip data could not be saved; existing data was preserved.", Toast.LENGTH_SHORT).show()
+            refreshTripPlannerState()
+            return false
+        }
+        tripPlannerState = requireNotNull(result.state)
+        tripPlannerLoadIssue = null
+        renderTripPlanner()
+        return true
+    }
+
+    private fun handleTripPlannerAction(action: TripPlannerUiAction) {
+        when (action) {
+            TripPlannerUiAction.ChooseDestinationStore -> ensureTripStoreDirectoryLoaded()
+            TripPlannerUiAction.SetManualOrigin -> openTripManualOriginDialog()
+            TripPlannerUiAction.UseForegroundLocation -> useForegroundLocation()
+            TripPlannerUiAction.EditTripAssumptions -> openTripAssumptionsDialog()
+            TripPlannerUiAction.Calculate -> renderTripPlanner()
+            TripPlannerUiAction.OpenDirections -> openTripExternalDirections()
+            TripPlannerUiAction.TogglePreferredStore -> {
+                val destination = tripPlannerState.destination ?: return
+                val preferred =
+                    if (tripPlannerState.preferredStoreKey == destination.storeKey) null
+                    else destination.storeKey
+                persistTripPlannerState(tripPlannerState.copy(preferredStoreKey = preferred))
+            }
+            TripPlannerUiAction.Clear -> {
+                val result = tripPlannerStore.clear()
+                if (!result.accepted) {
+                    Toast.makeText(this, "Trip data could not be cleared; existing data was preserved.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                tripPlannerState = TripPlannerState()
+                tripPlannerLoadIssue = null
+                renderTripPlanner()
+            }
+        }
+    }
+
+    private fun preferredTripStoreSelection(): TripStoreSelection? {
+        val destination = tripPlannerState.destination ?: return null
+        return destination.takeIf { tripPlannerState.preferredStoreKey == it.storeKey }
+    }
+
+    private fun ensureTripStoreDirectoryLoaded() {
+        if (tripStoreDirectorySelections.isNotEmpty()) {
+            openTripStorePicker()
+            return
+        }
+        if (tripStoreDirectoryLoading) {
+            Toast.makeText(this, "Loading signed store locations…", Toast.LENGTH_SHORT).show()
+            return
+        }
+        tripStoreDirectoryLoading = true
+        tripStoreDirectoryLoadIssue = null
+        val requestId = Math.addExact(tripStoreDirectoryRequestId, 1L)
+        tripStoreDirectoryRequestId = requestId
+        Toast.makeText(this, "Loading signed store locations…", Toast.LENGTH_SHORT).show()
+        searchExecutor.submit {
+            val result =
+                runCatching {
+                    BundledStoreDirectory.load(
+                        context = applicationContext,
+                        evaluatedAtEpochMillis = System.currentTimeMillis()
+                    )
+                }
+            mainHandler.post {
+                if (requestId != tripStoreDirectoryRequestId || isFinishing || isDestroyed) return@post
+                tripStoreDirectoryLoading = false
+                val loaded = result.getOrNull()
+                if (loaded == null || !loaded.summary.accepted) {
+                    tripStoreDirectorySelections = emptyList()
+                    tripStoreDirectoryLoadIssue = loaded?.summary?.admissionState?.name ?: "LOAD_FAILED"
+                } else {
+                    tripStoreDirectorySelections = loaded.records.map(TripStoreDirectoryAdapter::fromDirectoryRecord)
+                    tripStoreDirectoryLoadIssue = null
+                }
+                renderTripPlanner()
+                openTripStorePicker()
+            }
+        }
+    }
+
+    private fun openTripStorePicker() {
+        tripStorePickerDialog?.dismiss()
+        val body = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(4), dp(4), dp(4), 0)
+        }
+        val queryLayout = TextInputLayout(this).apply { hint = "Search store name or address" }
+        val queryInput = TextInputEditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            setSingleLine(true)
+        }
+        queryLayout.addView(queryInput)
+        val results = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val manualLayout = TextInputLayout(this).apply {
+            hint = "Private store name (optional)"
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) }
+        }
+        val manualInput = TextInputEditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            setSingleLine(true)
+        }
+        manualLayout.addView(manualInput)
+        body.addView(TextView(this).apply {
+            text = "Locations are source-listed only; this does not confirm price, stock or availability."
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextColor(ValuePilotPalette.color("#6B7280"))
+        })
+        body.addView(queryLayout)
+        body.addView(ScrollView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(-1, dp(260)).apply { topMargin = dp(8) }
+            addView(results)
+        })
+        body.addView(manualLayout)
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Choose destination store")
+            .setView(body)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton("Use private name", null)
+            .create()
+        tripStorePickerDialog = dialog
+        dialog.setOnDismissListener { if (tripStorePickerDialog === dialog) tripStorePickerDialog = null }
+        fun renderMatches() {
+            results.removeAllViews()
+            val matches = TripStoreDirectoryAdapter.filter(tripStoreDirectorySelections, queryInput.text?.toString().orEmpty())
+            if (matches.isEmpty()) {
+                results.addView(TextView(this).apply {
+                    text = if (tripStoreDirectorySelections.isEmpty()) "No signed directory locations available." else "No matching locations."
+                    setTextColor(ValuePilotPalette.color("#6B7280"))
+                    setPadding(0, dp(8), 0, dp(8))
+                })
+            } else {
+                matches.forEach { selection ->
+                    results.addView(MaterialButton(this).apply {
+                        text = buildString {
+                            append(selection.displayName)
+                            selection.addressLabel?.let { append("\n").append(it) }
+                        }
+                        contentDescription = "Choose ${selection.displayName} as the destination store"
+                        isAllCaps = false
+                        gravity = Gravity.START
+                        minHeight = dp(52)
+                        setOnClickListener {
+                            persistTripPlannerState(
+                                tripPlannerState.copy(
+                                    destination = selection,
+                                    preferredStoreKey = tripPlannerState.preferredStoreKey?.takeIf { it == selection.storeKey }
+                                )
+                            )
+                            dialog.dismiss()
+                        }
+                        layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4) }
+                    })
+                }
+            }
+        }
+        queryInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = renderMatches()
+            override fun afterTextChanged(s: Editable?) = Unit
+        })
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val selection = TripStoreDirectoryAdapter.privateEntry(manualInput.text?.toString().orEmpty())
+                if (selection == null) {
+                    manualLayout.error = "Enter a private store name or choose a directory location"
+                    return@setOnClickListener
+                }
+                manualLayout.error = null
+                persistTripPlannerState(
+                    tripPlannerState.copy(
+                        destination = selection,
+                        preferredStoreKey = tripPlannerState.preferredStoreKey?.takeIf { it == selection.storeKey }
+                    )
+                )
+                dialog.dismiss()
+            }
+            renderMatches()
+        }
+        dialog.show()
+    }
+
+    private fun openTripManualOriginDialog() {
+        tripOriginDialog?.dismiss()
+        val input = TextInputEditText(this).apply {
+            hint = "Starting point or area"
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            setSingleLine(true)
+            setText(tripPlannerState.origin?.takeIf { it.kind == TripOriginKind.MANUAL }?.label.orEmpty())
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Starting point")
+            .setMessage("This label is private context only. ValuePilot does not geocode it or infer a driving route.")
+            .setView(input)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton("Save", null)
+            .create()
+        tripOriginDialog = dialog
+        dialog.setOnDismissListener { if (tripOriginDialog === dialog) tripOriginDialog = null }
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val label = TripPlannerOriginParser.manual(input.text?.toString().orEmpty())
+                if (label == null) {
+                    input.error = "Enter a short starting point"
+                    return@setOnClickListener
+                }
+                persistTripPlannerState(
+                    tripPlannerState.copy(
+                        origin = TripOriginReference(TripOriginKind.MANUAL, label)
+                    )
+                )
+                dialog.dismiss()
+            }
+        }
+        dialog.show()
+    }
+
+    private fun useForegroundLocation() {
+        val fineGranted = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val coarseGranted = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (!fineGranted && !coarseGranted) {
+            requestPermissions(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ),
+                FOREGROUND_LOCATION_REQUEST
+            )
+            return
+        }
+        captureForegroundLocation()
+    }
+
+    private fun captureForegroundLocation() {
+        val fineGranted = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val coarseGranted = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (!fineGranted && !coarseGranted) {
+            Toast.makeText(this, "Location was not granted; manual starting point remains available.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val manager = getSystemService(LOCATION_SERVICE) as? LocationManager
+        val location =
+            manager?.let {
+                try {
+                    it.getProviders(true).asSequence()
+                        .mapNotNull { provider -> it.getLastKnownLocation(provider) }
+                        .maxByOrNull { candidate -> candidate.time }
+                } catch (_: SecurityException) {
+                    null
+                }
+            }
+        if (location == null) {
+            Toast.makeText(this, "No recent foreground location is available; enter a starting point manually.", Toast.LENGTH_LONG).show()
+            return
+        }
+        persistTripPlannerState(
+            tripPlannerState.copy(
+                origin = TripOriginReference(
+                    kind = TripOriginKind.FOREGROUND_LOCATION,
+                    label = "Current foreground location",
+                    contextId = "foreground-${UUID.randomUUID()}"
+                )
+            )
+        )
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == FOREGROUND_LOCATION_REQUEST && grantResults.any { it == PackageManager.PERMISSION_GRANTED }) {
+            captureForegroundLocation()
+        } else if (requestCode == FOREGROUND_LOCATION_REQUEST) {
+            Toast.makeText(this, "Location was not granted; manual starting point remains available.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun openTripAssumptionsDialog() {
+        tripAssumptionsDialog?.dismiss()
+        val body = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(4), dp(4), dp(4), 0)
+        }
+        val basisGroup = android.widget.RadioGroup(this).apply { orientation = android.widget.RadioGroup.VERTICAL }
+        val roundTrip = android.widget.RadioButton(this).apply { id = View.generateViewId(); text = "Round-trip distance (entered one way)" }
+        val additional = android.widget.RadioButton(this).apply { id = View.generateViewId(); text = "Additional driving distance (already total)" }
+        basisGroup.addView(roundTrip); basisGroup.addView(additional)
+        val distance = tripTripInput("Driving distance (km, max 3 decimals)", tripPlannerState.drivingDistanceMetres?.let { BigDecimal.valueOf(it).movePointLeft(3).stripTrailingZeros().toPlainString() }.orEmpty())
+        val consumption = tripTripInput("Fuel consumption (ml per 100 km)", tripPlannerState.fuelConsumptionMilliLitresPer100Km?.toString().orEmpty())
+        val fuel = tripTripInput("Fuel price per litre", tripPlannerState.fuelPrice?.let { formatTripMoney(it) }.orEmpty())
+        val currency = tripTripInput("Currency code", tripPlannerState.fuelPrice?.currencyCode ?: "CAD")
+        val toll = tripTripInput("Tolls (optional)", tripPlannerState.tolls?.let { formatTripMoney(it) }.orEmpty())
+        val parking = tripTripInput("Parking (optional)", tripPlannerState.parking?.let { formatTripMoney(it) }.orEmpty())
+        body.addView(TextView(this).apply {
+            text = "All values are your entered assumptions. ValuePilot does not turn them into a verified road route."
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextColor(ValuePilotPalette.color("#6B7280"))
+        })
+        body.addView(basisGroup)
+        body.addView(distance.first); body.addView(consumption.first); body.addView(fuel.first)
+        body.addView(currency.first); body.addView(toll.first); body.addView(parking.first)
+        when (tripPlannerState.distanceBasis) {
+            TripDistanceBasis.ADDITIONAL_DRIVING -> additional.isChecked = true
+            else -> roundTrip.isChecked = true
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Driving assumptions")
+            .setView(body)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton("Save", null)
+            .create()
+        tripAssumptionsDialog = dialog
+        dialog.setOnDismissListener { if (tripAssumptionsDialog === dialog) tripAssumptionsDialog = null }
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val basis = if (additional.isChecked) TripDistanceBasis.ADDITIONAL_DRIVING else TripDistanceBasis.ROUND_TRIP
+                val parsed = TripPlannerInputParser.parse(
+                    TripPlannerAssumptionInput(
+                        distanceKmText = distance.second.text?.toString().orEmpty(),
+                        distanceBasis = basis,
+                        consumptionText = consumption.second.text?.toString().orEmpty(),
+                        fuelPriceText = fuel.second.text?.toString().orEmpty(),
+                        currencyText = currency.second.text?.toString().orEmpty(),
+                        tollText = toll.second.text?.toString().orEmpty(),
+                        parkingText = parking.second.text?.toString().orEmpty()
+                    )
+                )
+                if (!parsed.accepted) {
+                    val failure = requireNotNull(parsed.failure)
+                    val target = when (failure.field) {
+                        TripPlannerAssumptionField.DISTANCE -> distance.first
+                        TripPlannerAssumptionField.CONSUMPTION -> consumption.first
+                        TripPlannerAssumptionField.FUEL_PRICE -> fuel.first
+                        TripPlannerAssumptionField.CURRENCY -> currency.first
+                        TripPlannerAssumptionField.TOLLS -> toll.first
+                        TripPlannerAssumptionField.PARKING -> parking.first
+                    }
+                    target.error = failure.message
+                    return@setOnClickListener
+                }
+                val input = requireNotNull(parsed.value)
+                persistTripPlannerState(
+                    tripPlannerState.copy(
+                        drivingDistanceMetres = input.drivingDistanceMetres,
+                        distanceBasis = input.distanceBasis,
+                        fuelConsumptionMilliLitresPer100Km = input.fuelConsumptionMilliLitresPer100Km,
+                        fuelPrice = input.fuelPricePerLitre,
+                        tolls = input.tolls,
+                        parking = input.parking
+                    )
+                )
+                dialog.dismiss()
+            }
+        }
+        dialog.show()
+    }
+
+    private fun tripTripInput(hint: String, value: String): Pair<TextInputLayout, TextInputEditText> {
+        val layout = TextInputLayout(this).apply {
+            this.hint = hint
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) }
+        }
+        val input = TextInputEditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setSingleLine(true)
+            setText(value)
+        }
+        layout.addView(input)
+        return layout to input
+    }
+
+    private fun formatTripMoney(money: com.valuepilot.core.Money): String =
+        BigDecimal.valueOf(money.minorUnits).movePointLeft(money.fractionDigits).toPlainString()
+
+    private fun openTripExternalDirections() {
+        val destination = tripPlannerState.destination ?: return
+        val latitude = destination.latitudeE7 ?: return
+        val longitude = destination.longitudeE7 ?: return
+        val lat = BigDecimal.valueOf(latitude.toLong()).movePointLeft(7).toPlainString()
+        val lon = BigDecimal.valueOf(longitude.toLong()).movePointLeft(7).toPlainString()
+        val uri = Uri.parse("geo:$lat,$lon?q=$lat,$lon(${Uri.encode(destination.displayName)})")
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(this, "No directions app is available. Enter a manual distance instead.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -3248,6 +3761,12 @@ class MainActivity : AppCompatActivity() {
         }
         val storeInput = TextInputEditText(this).apply { setSingleLine(true); setText(existing?.store?.displayName.orEmpty()) }
         storeLayout.addView(storeInput)
+        val preferredStore = preferredTripStoreSelection()
+        val associatePreferredStore = CheckBox(this).apply {
+            text = preferredStore?.let { "Associate with preferred store: ${it.displayName}" }
+            isChecked = preferredStore != null && existing?.store?.storeKey == preferredStore.storeKey
+            visibility = if (preferredStore == null) View.GONE else View.VISIBLE
+        }
         body.addView(TextView(this).apply {
             text = "${watch.displayName}. This remains a private observation, not a live retailer offer."
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
@@ -3255,6 +3774,7 @@ class MainActivity : AppCompatActivity() {
         })
         body.addView(quantityLayout); body.addView(unitLayout); body.addView(amountLayout)
         body.addView(currencyLayout); body.addView(dateLayout); body.addView(storeLayout)
+        body.addView(associatePreferredStore)
         val dialog = AlertDialog.Builder(this)
             .setTitle(if (existing == null) "Add personal price" else "Correct personal price")
             .setView(body)
@@ -3293,13 +3813,19 @@ class MainActivity : AppCompatActivity() {
                     amountLayout.error = "Enter a positive exact price"
                     return@setOnClickListener
                 }
+                val associatedStore =
+                    if (associatePreferredStore.isChecked && preferredStore != null) {
+                        ConfirmedPurchaseStore(displayName = preferredStore.displayName, storeKey = preferredStore.storeKey)
+                    } else {
+                        values.store
+                    }
                 val observation = PriceObservation.personal(
                     observationId = existing?.observationId ?: "observation-${UUID.randomUUID()}",
                     productIdentityKey = productIdentityKey,
                     packageQuantity = values.quantity,
                     price = amount,
                     observedDateIso = values.purchaseDateIso,
-                    store = values.store
+                    store = associatedStore
                 )
                 val result =
                     if (existing == null) {
@@ -3419,6 +3945,8 @@ class MainActivity : AppCompatActivity() {
     )
 
     companion object {
+        private const val FOREGROUND_LOCATION_REQUEST = 7041
+
         private const val GOOGLE_PHOTO_INITIAL_HEIGHT_PERCENT = 65
         private const val GOOGLE_PHOTO_MIN_INITIAL_HEIGHT_DP = 320
         private const val STATE_PRIMARY_TAB = "app_shell.primary_tab"

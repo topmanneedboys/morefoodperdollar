@@ -13,6 +13,7 @@ import com.valuepilot.core.PriceObservationProvenance
 import com.valuepilot.core.PriceObservationSourceKind
 import com.valuepilot.core.PriceWatch
 import com.valuepilot.core.PriceWatchState
+import com.valuepilot.core.ShoppingStoreKey
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileNotFoundException
@@ -82,7 +83,7 @@ internal object PriceWatchCodec {
         }
 
         val lines = ArrayList<String>(watches.size + observations.size + 1)
-        lines += "$PRICE_WATCH_MAGIC|1"
+        lines += "$PRICE_WATCH_MAGIC|2"
         watches.forEach { watch ->
             val target = watch.targetPrice
             lines +=
@@ -117,6 +118,7 @@ internal object PriceWatchCodec {
                     encodeNullable(scope?.merchantKey),
                     encodeNullable(scope?.locationKey),
                     encodeNullable(scope?.commerceChannelKey),
+                    encodeNullable(store?.storeKey?.value),
                     observation.freshness.name,
                     provenance.sourceKind.name,
                     encodeField(provenance.sourceId),
@@ -141,9 +143,10 @@ internal object PriceWatchCodec {
         }
         val lines = String(bytes, StandardCharsets.US_ASCII).split('\n')
         val header = lines.firstOrNull()?.split('|').orEmpty()
-        if (header.size != 2 || header[0] != PRICE_WATCH_MAGIC || header[1] != "1") {
+        if (header.size != 2 || header[0] != PRICE_WATCH_MAGIC || header[1] !in setOf("1", "2")) {
             return failure(PriceWatchCodecIssue.INVALID_HEADER)
         }
+        val version = header[1].toInt()
         if (lines.size - 1 > PriceWatchState.MAX_PRICE_WATCHES + PriceWatchState.MAX_PRICE_OBSERVATIONS) {
             return failure(PriceWatchCodecIssue.TOO_MANY_RECORDS)
         }
@@ -155,7 +158,7 @@ internal object PriceWatchCodec {
                 if (line.isEmpty()) throw CodecParseFailure()
                 when (line.firstOrNull()) {
                     WATCH_RECORD.first() -> watches += decodeWatch(line.split('|'))
-                    OBSERVATION_RECORD.first() -> observations += decodeObservation(line.split('|'))
+                    OBSERVATION_RECORD.first() -> observations += decodeObservation(line.split('|'), version)
                     else -> throw CodecParseFailure()
                 }
             }
@@ -195,8 +198,9 @@ internal object PriceWatchCodec {
         return PriceWatch(key, name, brand, packageLabel, target)
     }
 
-    private fun decodeObservation(parts: List<String>): PriceObservation {
-        if (parts.size != 18 || parts[0] != OBSERVATION_RECORD) throw CodecParseFailure()
+    private fun decodeObservation(parts: List<String>, version: Int): PriceObservation {
+        val expectedSize = if (version == 1) 18 else 19
+        if (parts.size != expectedSize || parts[0] != OBSERVATION_RECORD) throw CodecParseFailure()
         val id = decodeRequired(parts[1], 160)
         val key = decodeRequired(parts[2], 256)
         val price =
@@ -222,6 +226,12 @@ internal object PriceWatchCodec {
         if ((merchant == null) != (location == null) || (merchant == null) != (channel == null)) {
             throw CodecParseFailure()
         }
+        val storeKey =
+            if (version == 2) {
+                decodeNullable(parts[13], 256)?.let(::ShoppingStoreKey)
+            } else {
+                null
+            }
         val scope =
             if (merchant == null) null
             else com.valuepilot.core.PracticalShoppingStoreIdentityScope(
@@ -230,13 +240,14 @@ internal object PriceWatchCodec {
                 commerceChannelKey = requireNotNull(channel)
             )
         val store =
-            if (storeDisplay == null && scope == null) null
-            else ConfirmedPurchaseStore(displayName = storeDisplay, identityScope = scope)
-        val freshness = parseEnum<PriceObservationFreshness>(parts[13])
-        val sourceKind = parseEnum<PriceObservationSourceKind>(parts[14])
-        val sourceId = decodeRequired(parts[15], 160)
-        val rights = decodeNullable(parts[16], 240)
-        val permission = parseEnum<PriceObservationPermission>(parts[17])
+            if (storeDisplay == null && scope == null && storeKey == null) null
+            else ConfirmedPurchaseStore(displayName = storeDisplay, identityScope = scope, storeKey = storeKey)
+        val freshnessIndex = if (version == 2) 14 else 13
+        val freshness = parseEnum<PriceObservationFreshness>(parts[freshnessIndex])
+        val sourceKind = parseEnum<PriceObservationSourceKind>(parts[freshnessIndex + 1])
+        val sourceId = decodeRequired(parts[freshnessIndex + 2], 160)
+        val rights = decodeNullable(parts[freshnessIndex + 3], 240)
+        val permission = parseEnum<PriceObservationPermission>(parts[freshnessIndex + 4])
         return PriceObservation(
             observationId = id,
             productIdentityKey = key,

@@ -16,11 +16,13 @@ enum class ConfirmedPurchaseIdentityOrigin {
 /** Optional shopper-confirmed store context. Missing values stay unknown. */
 data class ConfirmedPurchaseStore(
     val displayName: String? = null,
-    val identityScope: PracticalShoppingStoreIdentityScope? = null
+    val identityScope: PracticalShoppingStoreIdentityScope? = null,
+    /** Exact local store identity when one has been explicitly selected. */
+    val storeKey: ShoppingStoreKey? = null
 ) {
     init {
         require(displayName == null || singleLine(displayName, MAX_STORE_DISPLAY_NAME_LENGTH) != null)
-        require(displayName != null || identityScope != null) {
+        require(displayName != null || identityScope != null || storeKey != null) {
             "A purchase store must contain a display name or exact identity scope"
         }
     }

@@ -19,7 +19,8 @@ enum class AppPrimaryTab {
  * COMPARE is a standalone workflow layered above the four permanent primary tabs.
  * OBSERVED_PRICE_SAVED_SELECTION, OBSERVED_PRICE_CONFIRMATION_DRAFT, STAPLE_WATCH_SETUP,
  * STAPLE_WATCH_POLICY, CONFIRMED_PURCHASE_HISTORY, and PRICE_WATCHES are Saved-owned subroutes layered above
- * the Saved primary tab. None of these workflows is a fifth primary tab.
+ * the Saved primary tab. TRIP_PLANNER is a Basket-owned subroute layered above Basket.
+ * None of these workflows is a fifth primary tab.
  */
 enum class AppRoute {
     HOME,
@@ -32,6 +33,7 @@ enum class AppRoute {
     STAPLE_WATCH_POLICY,
     CONFIRMED_PURCHASE_HISTORY,
     PRICE_WATCHES,
+    TRIP_PLANNER,
     COMPARE
 }
 
@@ -78,6 +80,8 @@ sealed interface AppShellIntent {
 
     data object OpenPriceWatches : AppShellIntent
 
+    data object OpenTripPlanner : AppShellIntent
+
     data object OpenStandaloneCompare : AppShellIntent
 
     data object NavigateBack : AppShellIntent
@@ -116,6 +120,9 @@ object AppShellReducer {
 
             AppShellIntent.OpenPriceWatches ->
                 openPriceWatches(previous)
+
+            AppShellIntent.OpenTripPlanner ->
+                openTripPlanner(previous)
 
             AppShellIntent.OpenStandaloneCompare ->
                 openCompare(previous)
@@ -262,6 +269,23 @@ object AppShellReducer {
         )
     }
 
+    private fun openTripPlanner(
+        previous: AppShellState
+    ): AppShellState {
+        if (previous.route == AppRoute.TRIP_PLANNER) return previous
+        if (
+            previous.selectedPrimaryTab != AppPrimaryTab.BASKET ||
+            previous.route != AppRoute.BASKET
+        ) {
+            return previous
+        }
+        return previous.copy(
+            route = AppRoute.TRIP_PLANNER,
+            compareReturnTab = null,
+            canNavigateBack = true
+        )
+    }
+
     private fun navigateBack(
         previous: AppShellState
     ): AppShellState =
@@ -300,6 +324,9 @@ object AppShellReducer {
 
             AppRoute.PRICE_WATCHES ->
                 selectPrimary(AppPrimaryTab.SAVED)
+
+            AppRoute.TRIP_PLANNER ->
+                selectPrimary(AppPrimaryTab.BASKET)
 
             AppRoute.OBSERVED_PRICE_SAVED_SELECTION,
             AppRoute.STAPLE_WATCH_SETUP ->

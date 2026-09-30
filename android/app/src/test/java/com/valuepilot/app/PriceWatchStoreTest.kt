@@ -4,6 +4,7 @@ import com.valuepilot.core.ConfirmedPurchaseStore
 import com.valuepilot.core.Money
 import com.valuepilot.core.NormalizedQuantity
 import com.valuepilot.core.BaseUnit
+import com.valuepilot.core.ShoppingStoreKey
 import com.valuepilot.core.PriceObservation
 import com.valuepilot.core.PriceWatch
 import org.junit.Assert.assertEquals
@@ -37,7 +38,10 @@ class PriceWatchStoreTest {
                 packageQuantity = NormalizedQuantity(340_000_000L, BaseUnit.GRAM),
                 price = Money.parse("6.49", "CAD"),
                 observedDateIso = "2026-09-29",
-                store = ConfirmedPurchaseStore(displayName = "Local market")
+                store = ConfirmedPurchaseStore(
+                    displayName = "Local market",
+                    storeKey = ShoppingStoreKey("directory:osm:node:123")
+                )
             )
         assertTrue(store.appendObservation(observation).accepted)
 
@@ -46,6 +50,10 @@ class PriceWatchStoreTest {
         assertEquals(1, loaded.watches.size)
         assertEquals(1, loaded.observations.size)
         assertEquals("Local market", loaded.observations.single().store?.displayName)
+        assertEquals(
+            ShoppingStoreKey("directory:osm:node:123"),
+            loaded.observations.single().store?.storeKey
+        )
         assertEquals(340_000_000L, loaded.observations.single().packageQuantity?.amountMicros)
         assertEquals("CAD", loaded.observations.single().price.currencyCode)
     }

@@ -111,6 +111,13 @@
                 android:layout_marginTop="18dp"
                 android:visibility="gone" />
 
+            <com.valuepilot.app.TripPlannerSurfaceView
+                android:id="@+id/tripPlannerExperience"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:visibility="gone" />
+
             <LinearLayout
                 android:id="@+id/searchExperience"
                 android:layout_width="match_parent"

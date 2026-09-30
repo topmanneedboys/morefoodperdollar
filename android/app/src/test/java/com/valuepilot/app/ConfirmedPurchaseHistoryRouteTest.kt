@@ -56,4 +56,32 @@ class ConfirmedPurchaseHistoryRouteTest {
         assertEquals(home, unchanged)
         assertNotEquals(AppRoute.PRICE_WATCHES, unchanged.route)
     }
+
+    @Test
+    fun `trip planner is a Basket-owned route and returns to Basket`() {
+        val basket =
+            AppShellReducer.reduce(
+                AppShellState.initial(),
+                AppShellIntent.SelectPrimary(AppPrimaryTab.BASKET)
+            )
+        val trip = AppShellReducer.reduce(basket, AppShellIntent.OpenTripPlanner)
+
+        assertEquals(AppPrimaryTab.BASKET, trip.selectedPrimaryTab)
+        assertEquals(AppRoute.TRIP_PLANNER, trip.route)
+        assertTrue(trip.canNavigateBack)
+        assertEquals(AppRoute.BASKET, AppShellReducer.reduce(trip, AppShellIntent.NavigateBack).route)
+    }
+
+    @Test
+    fun `trip planner cannot be opened from Saved`() {
+        val saved =
+            AppShellReducer.reduce(
+                AppShellState.initial(),
+                AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED)
+            )
+        val unchanged = AppShellReducer.reduce(saved, AppShellIntent.OpenTripPlanner)
+
+        assertEquals(saved, unchanged)
+        assertNotEquals(AppRoute.TRIP_PLANNER, unchanged.route)
+    }
 }

@@ -6,6 +6,8 @@ import com.valuepilot.core.ConfirmedPurchaseConfirmationInput
 import com.valuepilot.core.ConfirmedPurchaseIdentityOrigin
 import com.valuepilot.core.Money
 import com.valuepilot.core.QuantityNormalization
+import com.valuepilot.core.ConfirmedPurchaseStore
+import com.valuepilot.core.ShoppingStoreKey
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -15,7 +17,12 @@ class ConfirmedPurchaseHistoryStoreTest {
 
     @Test
     fun roundTripPreservesExactFieldsAndUnknowns() {
-        val first = purchase("purchase-1", quantity = true, price = true)
+        val first = purchase("purchase-1", quantity = true, price = true).copy(
+            store = ConfirmedPurchaseStore(
+                displayName = "Example Market",
+                storeKey = ShoppingStoreKey("directory:osm:node:123")
+            )
+        )
         val second = purchase("purchase-2", quantity = false, price = false)
         val encoded =
             requireNotNull(
@@ -30,6 +37,18 @@ class ConfirmedPurchaseHistoryStoreTest {
             ConfirmedPurchaseHistoryState(listOf(first, second)),
             requireNotNull(decoded.state)
         )
+    }
+
+    @Test
+    fun legacyVersionOneDocumentStillDecodesWithoutStoreKey() {
+        val legacy =
+            "VALUEPILOT_CONFIRMED_PURCHASES|1\n" +
+                "P|70757263686173652D6C6567616379|6974656D|MANUAL|436F66666565|~|~|~|~|~|~|~|~|~|~|~|~"
+
+        val decoded = ConfirmedPurchaseHistoryCodec.decode(legacy.toByteArray(Charsets.US_ASCII))
+        assertEquals(null, decoded.issue)
+        assertTrue(decoded.accepted)
+        assertEquals(null, requireNotNull(decoded.state).purchases.single().store)
     }
 
     @Test
