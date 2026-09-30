@@ -76,6 +76,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val privateMemoryForgetOwnerControls = mutableListOf<View>()
     private val shopAgainOwnerControls = mutableListOf<View>()
     private val sharePlanOwnerControls = mutableListOf<View>()
+    private val priceWatchOwnerControls = mutableListOf<View>()
 
     private var hasRenderedState = false
     private var lastRenderedSubmitEnabled = false
@@ -183,6 +184,11 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
             observedPriceOwnerControls.forEach { control ->
                 control.isEnabled = value != null
             }
+        }
+    var onTogglePriceWatch: ((PriceWatchUiAction.ToggleWatch) -> Unit)? = null
+        set(value) {
+            field = value
+            priceWatchOwnerControls.forEach { control -> control.isEnabled = value != null }
         }
     var onCompare: (() -> Unit)? = null
         set(value) {
@@ -445,6 +451,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         unknownRemovalOwnerControls.clear()
         privateIdentityRemovalOwnerControls.clear()
         privateIdentityPhotoOwnerControls.clear()
+        priceWatchOwnerControls.clear()
         offlineCatalogOwnerControls.clear()
         itemDetailsOwnerControls.clear()
         exactProductOwnerControls.clear()
@@ -726,6 +733,15 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                 line(identity.notice, 12f, "#92400E", topPadding = 3)
             )
             privateIdentityBody.addView(
+                priceWatchButton(
+                    productIdentityKey = identity.identityKey,
+                    displayName = identity.displayName,
+                    brand = identity.brand,
+                    packageQuantityLabel = identity.packageQuantityLabel,
+                    watched = identity.watched
+                )
+            )
+            privateIdentityBody.addView(
                 privateIdentityPhotoButton(identity)
             )
             privateIdentityBody.addView(
@@ -872,6 +888,15 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                             )
                         )
                     }
+                    addView(
+                        priceWatchButton(
+                            productIdentityKey = item.key.value,
+                            displayName = item.name,
+                            brand = null,
+                            packageQuantityLabel = item.detail,
+                            watched = item.watched
+                        )
+                    )
                     item.savedExactProductNotice?.let { notice ->
                         addView(line(notice, 12f, "#374151", topPadding = 2))
                     }
@@ -970,6 +995,40 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                 }
             )
         }
+
+    private fun priceWatchButton(
+        productIdentityKey: String,
+        displayName: String,
+        brand: String?,
+        packageQuantityLabel: String?,
+        watched: Boolean
+    ): MaterialButton = MaterialButton(context).apply {
+        priceWatchOwnerControls += this
+        text = if (watched) "Unwatch" else "Watch price"
+        contentDescription =
+            if (watched) {
+                "Stop watching $displayName; private history is retained"
+            } else {
+                "Watch exact product $displayName privately"
+            }
+        isAllCaps = false
+        textSize = 13f
+        minHeight = dp(40)
+        minWidth = 0
+        isEnabled = onTogglePriceWatch != null
+        setOnClickListener {
+            onTogglePriceWatch?.invoke(
+                PriceWatchUiAction.ToggleWatch(
+                    productIdentityKey = productIdentityKey,
+                    displayName = displayName,
+                    brand = brand,
+                    packageQuantityLabel = packageQuantityLabel,
+                    watched = watched
+                )
+            )
+        }
+        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 5)
+    }
 
     private fun detailButton(
         onDetails: () -> Unit,

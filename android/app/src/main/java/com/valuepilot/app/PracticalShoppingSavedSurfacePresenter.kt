@@ -13,9 +13,15 @@ fun interface PracticalShoppingSavedSurfaceRenderer {
  * host/session and a replaceable physical renderer.
  */
 class PracticalShoppingSavedSurfacePresenter(
-    private val renderer: PracticalShoppingSavedSurfaceRenderer
+    private val renderer: PracticalShoppingSavedSurfaceRenderer,
+    private val watchedProductIdentityKeys: () -> Set<String> = { emptySet() }
 ) : PracticalShoppingSavedLifecycleRenderer {
     override fun render(state: PracticalShoppingSavedLifecycleState) {
-        renderer.render(PracticalShoppingSavedSurfaceProjector.project(state))
+        renderer.render(
+            PracticalShoppingSavedSurfaceProjector.project(
+                lifecycle = state,
+                watchedProductIdentityKeys = watchedProductIdentityKeys()
+            )
+        )
     }
 }

@@ -18,7 +18,7 @@ enum class AppPrimaryTab {
  *
  * COMPARE is a standalone workflow layered above the four permanent primary tabs.
  * OBSERVED_PRICE_SAVED_SELECTION, OBSERVED_PRICE_CONFIRMATION_DRAFT, STAPLE_WATCH_SETUP,
- * STAPLE_WATCH_POLICY, and CONFIRMED_PURCHASE_HISTORY are Saved-owned subroutes layered above
+ * STAPLE_WATCH_POLICY, CONFIRMED_PURCHASE_HISTORY, and PRICE_WATCHES are Saved-owned subroutes layered above
  * the Saved primary tab. None of these workflows is a fifth primary tab.
  */
 enum class AppRoute {
@@ -31,6 +31,7 @@ enum class AppRoute {
     STAPLE_WATCH_SETUP,
     STAPLE_WATCH_POLICY,
     CONFIRMED_PURCHASE_HISTORY,
+    PRICE_WATCHES,
     COMPARE
 }
 
@@ -75,6 +76,8 @@ sealed interface AppShellIntent {
 
     data object OpenConfirmedPurchaseHistory : AppShellIntent
 
+    data object OpenPriceWatches : AppShellIntent
+
     data object OpenStandaloneCompare : AppShellIntent
 
     data object NavigateBack : AppShellIntent
@@ -110,6 +113,9 @@ object AppShellReducer {
 
             AppShellIntent.OpenConfirmedPurchaseHistory ->
                 openConfirmedPurchaseHistory(previous)
+
+            AppShellIntent.OpenPriceWatches ->
+                openPriceWatches(previous)
 
             AppShellIntent.OpenStandaloneCompare ->
                 openCompare(previous)
@@ -225,6 +231,23 @@ object AppShellReducer {
         )
     }
 
+    private fun openPriceWatches(
+        previous: AppShellState
+    ): AppShellState {
+        if (previous.route == AppRoute.PRICE_WATCHES) return previous
+        if (
+            previous.selectedPrimaryTab != AppPrimaryTab.SAVED ||
+            previous.route != AppRoute.SAVED
+        ) {
+            return previous
+        }
+        return previous.copy(
+            route = AppRoute.PRICE_WATCHES,
+            compareReturnTab = null,
+            canNavigateBack = true
+        )
+    }
+
     private fun openCompare(
         previous: AppShellState
     ): AppShellState {
@@ -273,6 +296,9 @@ object AppShellReducer {
                 )
 
             AppRoute.CONFIRMED_PURCHASE_HISTORY ->
+                selectPrimary(AppPrimaryTab.SAVED)
+
+            AppRoute.PRICE_WATCHES ->
                 selectPrimary(AppPrimaryTab.SAVED)
 
             AppRoute.OBSERVED_PRICE_SAVED_SELECTION,

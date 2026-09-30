@@ -2,6 +2,7 @@ package com.valuepilot.app
 
 import com.valuepilot.core.ShoppingItemKey
 import com.valuepilot.core.ShoppingStoreKey
+import com.valuepilot.core.ProductionProductEvidenceKeyResolver
 
 private const val MAX_SAVED_PRODUCT_DISPLAY_METADATA = 128
 private const val MAX_SAVED_STORE_DISPLAY_METADATA = 64
@@ -47,7 +48,9 @@ sealed interface PracticalShoppingSavedExactPreferenceUiAction {
 data class PracticalShoppingSavedProductUiRow(
     val title: String,
     val supportingText: String,
-    val action: PracticalShoppingSavedExactPreferenceUiAction.DeleteProduct
+    val action: PracticalShoppingSavedExactPreferenceUiAction.DeleteProduct,
+    /** Exact provider-neutral key when the persisted choice can safely join Price Watch. */
+    val productIdentityKey: String? = null
 ) {
     init {
         require(title.isNotBlank())
@@ -153,7 +156,11 @@ object PracticalShoppingSavedExactPreferenceUiProjector {
                             action =
                                 PracticalShoppingSavedExactPreferenceUiAction.DeleteProduct(
                                     preference.itemKey
-                                )
+                                ),
+                            productIdentityKey =
+                                ProductionProductEvidenceKeyResolver
+                                    .resolve(preference.providerId, preference.sourceIdentity)
+                                    ?.value
                         )
                     }
                 }

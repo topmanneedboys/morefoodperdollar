@@ -50,6 +50,7 @@ internal class PracticalShoppingSavedRouteCoordinator(
                 // consume this typed convenience action without touching the persistence
                 // session or manufacturing any price evidence.
                 Unit
+            is PracticalShoppingSavedSurfaceAction.TogglePriceWatch -> Unit
             is PracticalShoppingSavedSurfaceAction.Preference ->
                 session?.selectAction(action.action)
         }

@@ -18,6 +18,7 @@ internal class ConfirmedPurchaseHistorySurfaceView @JvmOverloads constructor(
 ) : LinearLayout(context, attrs, defStyleAttr) {
 
     var onAction: ((ConfirmedPurchaseHistoryUiAction) -> Unit)? = null
+    var onPriceWatchAction: ((PriceWatchUiAction.ToggleWatch) -> Unit)? = null
 
     init {
         orientation = VERTICAL
@@ -46,6 +47,7 @@ internal class ConfirmedPurchaseHistorySurfaceView @JvmOverloads constructor(
         }
         body.addView(textLine(row.title, 17f, "#111827", bold = true))
         body.addView(textLine(row.details, 12f, "#4B5563", topPadding = 6))
+        row.priceWatchAction?.let { body.addView(priceWatchButton(it)) }
         body.addView(
             actionButton(
                 label = "Repeat purchase",
@@ -80,6 +82,24 @@ internal class ConfirmedPurchaseHistorySurfaceView @JvmOverloads constructor(
             addView(body)
         }
     }
+
+    private fun priceWatchButton(action: PriceWatchUiAction.ToggleWatch): MaterialButton =
+        MaterialButton(context).apply {
+            text = if (action.watched) "Unwatch" else "Watch price"
+            contentDescription =
+                if (action.watched) {
+                    "Stop watching ${action.displayName}; private history is retained"
+                } else {
+                    "Watch exact product ${action.displayName} privately"
+                }
+            isAllCaps = false
+            minHeight = dp(44)
+            setTextColor(ValuePilotPalette.color("#1D4ED8"))
+            setOnClickListener { onPriceWatchAction?.invoke(action) }
+            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(6)
+            }
+        }
 
     private fun actionButton(
         label: String,

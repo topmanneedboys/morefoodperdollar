@@ -2,6 +2,26 @@
 
 Updated: 2026-09-29 04:30 UTC
 
+## Private Price Watch checkpoint — 2026-09-29
+
+The bounded Price Watch continuation is implemented on
+`work/valuepilot-confirmed-purchases` from the confirmed-purchases checkpoint
+`65d1620f1cc08450533afca009178f1e5fe2c150`. Search, private Home/Basket,
+Saved, and confirmed purchase history now expose one exact stable product key
+to a shared, device-only watch store. Watches deduplicate by that key;
+personal observations retain exact money, optional quantity, store and date,
+and remain separately labelled from confirmed purchases. Malformed or failed
+reads/writes preserve the last known-good state. Target prices are optional
+private reminders only. No authorized live retailer source is enabled, so
+current offers remain explicitly unknown and no alerts or trends are claimed.
+
+Focused Price Watch tests, the full JVM suite, debug/release lint, debug/release
+builds, release bundle, and privacy inspection passed. The local release bundle
+is intentionally unsigned and was not uploaded, installed, or sent to Play;
+no phone validation, GitHub Actions retry, networking, or production promotion
+was performed. The Android candidate is versionCode `10115` / versionName
+`101.1.14`.
+
 ## Confirmed purchases and private history checkpoint — 2026-09-29
 
 The bounded continuation is complete on `work/valuepilot-confirmed-purchases` at

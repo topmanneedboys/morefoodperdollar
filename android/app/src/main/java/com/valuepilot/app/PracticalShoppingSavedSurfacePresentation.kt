@@ -41,6 +41,19 @@ sealed interface PracticalShoppingSavedSurfaceAction {
         }
     }
 
+    data class TogglePriceWatch(
+        val productIdentityKey: String,
+        val displayName: String,
+        val watched: Boolean
+    ) : PracticalShoppingSavedSurfaceAction {
+        init {
+            require(productIdentityKey.isNotBlank())
+            require(displayName.isNotBlank())
+            require(displayName.length <= MAX_SAVED_SURFACE_ACTION_DISPLAY_NAME_LENGTH)
+            require(displayName.none { character -> Character.isISOControl(character.code) })
+        }
+    }
+
     data class Preference(
         val action: PracticalShoppingSavedExactPreferenceUiAction
     ) : PracticalShoppingSavedSurfaceAction
@@ -54,7 +67,10 @@ data class PracticalShoppingSavedSurfaceProductRow(
     val actionDescription: String?,
     val secondaryAction: PracticalShoppingSavedSurfaceAction.CheckProductPrice? = null,
     val secondaryActionLabel: String? = null,
-    val secondaryActionDescription: String? = null
+    val secondaryActionDescription: String? = null,
+    val watchAction: PracticalShoppingSavedSurfaceAction.TogglePriceWatch? = null,
+    val watchActionLabel: String? = null,
+    val watchActionDescription: String? = null
 ) {
     init {
         require(title.isNotBlank())
@@ -67,6 +83,10 @@ data class PracticalShoppingSavedSurfaceProductRow(
         require((secondaryAction != null) == (secondaryActionDescription != null))
         require(secondaryActionLabel == null || secondaryActionLabel.isNotBlank())
         require(secondaryActionDescription == null || secondaryActionDescription.isNotBlank())
+        require((watchAction != null) == (watchActionLabel != null))
+        require((watchAction != null) == (watchActionDescription != null))
+        require(watchActionLabel == null || watchActionLabel.isNotBlank())
+        require(watchActionDescription == null || watchActionDescription.isNotBlank())
     }
 }
 
@@ -160,7 +180,8 @@ data class PracticalShoppingSavedSurfaceState(
 object PracticalShoppingSavedSurfaceProjector {
 
     fun project(
-        lifecycle: PracticalShoppingSavedLifecycleState
+        lifecycle: PracticalShoppingSavedLifecycleState,
+        watchedProductIdentityKeys: Set<String> = emptySet()
     ): PracticalShoppingSavedSurfaceState =
         when (lifecycle.status) {
             PracticalShoppingSavedLifecycleStatus.IDLE ->
@@ -189,7 +210,7 @@ object PracticalShoppingSavedSurfaceProjector {
                 }
 
             PracticalShoppingSavedLifecycleStatus.READY ->
-                readyOrEmpty(requireNotNull(lifecycle.projection))
+                    readyOrEmpty(requireNotNull(lifecycle.projection), watchedProductIdentityKeys)
 
             PracticalShoppingSavedLifecycleStatus.DEGRADED ->
                 fromProjection(
@@ -199,6 +220,7 @@ object PracticalShoppingSavedSurfaceProjector {
                     refreshAction = PracticalShoppingSavedSurfaceAction.Refresh,
                     refreshActionLabel = "Refresh",
                     interactionsEnabled = true
+                    , watchedProductIdentityKeys = watchedProductIdentityKeys
                 )
 
             PracticalShoppingSavedLifecycleStatus.MUTATING ->
@@ -226,7 +248,8 @@ object PracticalShoppingSavedSurfaceProjector {
         }
 
     private fun readyOrEmpty(
-        projection: PracticalShoppingSavedExactPreferenceUiProjection
+        projection: PracticalShoppingSavedExactPreferenceUiProjection,
+        watchedProductIdentityKeys: Set<String>
     ): PracticalShoppingSavedSurfaceState {
         val mode =
             if (projection.state.emptyMessage != null) {
@@ -241,6 +264,7 @@ object PracticalShoppingSavedSurfaceProjector {
             refreshAction = PracticalShoppingSavedSurfaceAction.Refresh,
             refreshActionLabel = "Refresh",
             interactionsEnabled = true
+            , watchedProductIdentityKeys = watchedProductIdentityKeys
         )
     }
 
@@ -251,7 +275,8 @@ object PracticalShoppingSavedSurfaceProjector {
         progressVisible: Boolean = false,
         refreshAction: PracticalShoppingSavedSurfaceAction.Refresh? = null,
         refreshActionLabel: String? = null,
-        interactionsEnabled: Boolean
+        interactionsEnabled: Boolean,
+        watchedProductIdentityKeys: Set<String> = emptySet()
     ): PracticalShoppingSavedSurfaceState {
         require((refreshAction != null) == (refreshActionLabel != null))
 
@@ -289,6 +314,30 @@ object PracticalShoppingSavedSurfaceProjector {
                             "Check a price for ${row.title}; package quantity and price are still required"
                         } else {
                             null
+                        },
+                    watchAction =
+                        row.productIdentityKey?.let { productIdentityKey ->
+                            if (interactionsEnabled) {
+                                PracticalShoppingSavedSurfaceAction.TogglePriceWatch(
+                                    productIdentityKey = productIdentityKey,
+                                    displayName = row.title,
+                                    watched = productIdentityKey in watchedProductIdentityKeys
+                                )
+                            } else {
+                                null
+                            }
+                        },
+                    watchActionLabel =
+                        row.productIdentityKey?.takeIf { interactionsEnabled }?.let {
+                            if (it in watchedProductIdentityKeys) "Unwatch" else "Watch price"
+                        },
+                    watchActionDescription =
+                        row.productIdentityKey?.takeIf { interactionsEnabled }?.let {
+                            if (it in watchedProductIdentityKeys) {
+                                "Stop watching ${row.title}; private history is retained"
+                            } else {
+                                "Watch exact product ${row.title} privately"
+                            }
                         }
                 )
             }

@@ -153,7 +153,10 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
             actionDescription = row.actionDescription,
             secondaryAction = row.secondaryAction,
             secondaryActionLabel = row.secondaryActionLabel,
-            secondaryActionDescription = row.secondaryActionDescription
+            secondaryActionDescription = row.secondaryActionDescription,
+            watchAction = row.watchAction,
+            watchActionLabel = row.watchActionLabel,
+            watchActionDescription = row.watchActionDescription
         )
 
     private fun storeCard(row: PracticalShoppingSavedSurfaceStoreRow): View =
@@ -176,7 +179,10 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
         actionDescription: String?,
         secondaryAction: PracticalShoppingSavedSurfaceAction.CheckProductPrice?,
         secondaryActionLabel: String?,
-        secondaryActionDescription: String?
+        secondaryActionDescription: String?,
+        watchAction: PracticalShoppingSavedSurfaceAction.TogglePriceWatch? = null,
+        watchActionLabel: String? = null,
+        watchActionDescription: String? = null
     ): View {
         val card =
             MaterialCardView(context).apply {
@@ -221,6 +227,17 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
                     destructive = false,
                     compact = true,
                     contentDescription = requireNotNull(secondaryActionDescription)
+                )
+            )
+        }
+        watchAction?.let { typedAction ->
+            body.addView(
+                actionButton(
+                    label = requireNotNull(watchActionLabel),
+                    action = typedAction,
+                    destructive = false,
+                    compact = true,
+                    contentDescription = requireNotNull(watchActionDescription)
                 )
             )
         }

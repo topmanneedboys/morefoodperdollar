@@ -21,7 +21,8 @@ internal data class ConfirmedPurchaseHistoryRow(
     val details: String,
     val repeatAction: ConfirmedPurchaseHistoryUiAction.Repeat,
     val editAction: ConfirmedPurchaseHistoryUiAction.Edit,
-    val deleteAction: ConfirmedPurchaseHistoryUiAction.Delete
+    val deleteAction: ConfirmedPurchaseHistoryUiAction.Delete,
+    val priceWatchAction: PriceWatchUiAction.ToggleWatch? = null
 ) {
     init {
         require(purchaseId.isNotBlank())
@@ -51,7 +52,8 @@ internal data class ConfirmedPurchaseHistorySurfaceState(
 internal object ConfirmedPurchaseHistoryProjector {
     fun project(
         state: ConfirmedPurchaseHistoryState?,
-        unavailable: Boolean
+        unavailable: Boolean,
+        watchedProductIdentityKeys: Set<String> = emptySet()
     ): ConfirmedPurchaseHistorySurfaceState {
         if (unavailable || state == null) {
             return ConfirmedPurchaseHistorySurfaceState(
@@ -62,7 +64,9 @@ internal object ConfirmedPurchaseHistoryProjector {
                 rows = emptyList()
             )
         }
-        val rows = state.purchases.map(::row)
+        val rows = state.purchases.map { purchase ->
+            row(purchase, watchedProductIdentityKeys)
+        }
         return ConfirmedPurchaseHistorySurfaceState(
             mode = if (rows.isEmpty()) ConfirmedPurchaseHistorySurfaceMode.EMPTY else ConfirmedPurchaseHistorySurfaceMode.CONTENT,
             headline = "Confirmed purchases",
@@ -76,7 +80,10 @@ internal object ConfirmedPurchaseHistoryProjector {
         )
     }
 
-    private fun row(purchase: ConfirmedPurchase): ConfirmedPurchaseHistoryRow {
+    private fun row(
+        purchase: ConfirmedPurchase,
+        watchedProductIdentityKeys: Set<String>
+    ): ConfirmedPurchaseHistoryRow {
         val fields = mutableListOf<String>()
         purchase.quantity?.let { fields += "Quantity recorded" } ?: fields.add("Quantity unknown")
         purchase.amountPaid?.let { amount ->
@@ -92,7 +99,15 @@ internal object ConfirmedPurchaseHistoryProjector {
             details = fields.joinToString(" · "),
             repeatAction = ConfirmedPurchaseHistoryUiAction.Repeat(purchase.purchaseId),
             editAction = ConfirmedPurchaseHistoryUiAction.Edit(purchase.purchaseId),
-            deleteAction = ConfirmedPurchaseHistoryUiAction.Delete(purchase.purchaseId)
+            deleteAction = ConfirmedPurchaseHistoryUiAction.Delete(purchase.purchaseId),
+            priceWatchAction =
+                PriceWatchUiAction.ToggleWatch(
+                    productIdentityKey = purchase.productIdentityKey,
+                    displayName = purchase.displayName,
+                    brand = purchase.brand,
+                    packageQuantityLabel = purchase.packageQuantityLabel,
+                    watched = purchase.productIdentityKey in watchedProductIdentityKeys
+                )
         )
     }
 

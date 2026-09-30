@@ -79,7 +79,9 @@ data class PracticalShoppingHomeItemRenderState(
     /** Whether an explicit offline identity choice can be saved for this item. */
     val exactProductActionVisible: Boolean = false,
     /** Read-only Saved context; never a planner, price or availability input. */
-    val savedExactProductNotice: String? = null
+    val savedExactProductNotice: String? = null,
+    /** Whether this exact stable key is currently watched in the private Price Watch store. */
+    val watched: Boolean = false
 ) {
     init {
         require(key.value.isNotBlank())
@@ -117,7 +119,9 @@ data class PracticalShoppingHomePrivateIdentityRenderState(
     val brand: String?,
     val sourceLabel: String?,
     val packageQuantityLabel: String?,
-    val notice: String
+    val notice: String,
+    /** Whether this exact private Search identity is currently watched. */
+    val watched: Boolean = false
 ) {
     init {
         require(identityKey.isNotBlank())
@@ -294,7 +298,8 @@ object PracticalShoppingHomeRenderer {
             PracticalShoppingHomePrivateMemoryStatus.AVAILABLE,
         savedExactProductContext: PracticalShoppingHomeSavedExactProductContext? = null,
         privateIdentities: List<PracticalShoppingPrivateIdentity> = emptyList(),
-        privateIdentityCollectedKeys: List<String> = emptyList()
+        privateIdentityCollectedKeys: List<String> = emptyList(),
+        watchedProductIdentityKeys: Set<String> = emptySet()
     ): PracticalShoppingHomeRenderState {
         // A failed read is not permission to display stale or caller-provided history. Keep the
         // status visible while suppressing every history-derived row notice until recovery.
@@ -409,6 +414,9 @@ object PracticalShoppingHomeRenderer {
                         exactProductActionVisible = true,
                         savedExactProductNotice =
                             savedExactProductContext?.noticeFor(item.key),
+                        // A planned shopping-request key is not automatically a product identity.
+                        // Price Watch is offered only where an exact stable identity is present.
+                        watched = false,
                         requestDetailsSummary =
                             PracticalShoppingHomeItemDetailsPresentation.summary(itemDetails),
                         requestDetailsNotice =
@@ -482,7 +490,8 @@ object PracticalShoppingHomeRenderer {
                             brand = identity.brand,
                             sourceLabel = identity.sourceLabel,
                             packageQuantityLabel = identity.packageQuantityLabel,
-                            notice = PRIVATE_IDENTITY_NOTICE
+                            notice = PRIVATE_IDENTITY_NOTICE,
+                            watched = identity.identityKey in watchedProductIdentityKeys
                         )
                     },
             privateIdentityCollectedKeys =

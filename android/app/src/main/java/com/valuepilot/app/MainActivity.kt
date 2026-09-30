@@ -40,6 +40,9 @@ import com.valuepilot.core.ConfirmedPurchase
 import com.valuepilot.core.ConfirmedPurchaseConfirmation
 import com.valuepilot.core.ConfirmedPurchaseConfirmationInput
 import com.valuepilot.core.ConfirmedPurchaseIdentityOrigin
+import com.valuepilot.core.PriceObservation
+import com.valuepilot.core.PriceWatch
+import com.valuepilot.core.PriceWatchState
 import com.valuepilot.core.ShoppingItemKey
 import java.util.UUID
 import java.util.concurrent.Executors
@@ -76,6 +79,11 @@ class MainActivity : AppCompatActivity() {
     }
     private var confirmedPurchaseHistoryState = ConfirmedPurchaseHistoryState.empty()
     private var confirmedPurchaseHistoryLoadIssue: ConfirmedPurchaseHistoryStoreIssue? = null
+    private val priceWatchStore by lazy(LazyThreadSafetyMode.NONE) {
+        AndroidPriceWatchStore(applicationContext)
+    }
+    private var priceWatchState = PriceWatchState.empty()
+    private var priceWatchLoadIssue: PriceWatchStoreIssue? = null
 
     private val searchExecutor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -118,6 +126,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var savedExperience: PracticalShoppingSavedSurfaceView
     private lateinit var confirmedPurchaseHistoryButton: MaterialButton
     private lateinit var confirmedPurchaseHistoryExperience: ConfirmedPurchaseHistorySurfaceView
+    private lateinit var priceWatchButton: MaterialButton
+    private lateinit var priceWatchExperience: PriceWatchSurfaceView
     private lateinit var savedStapleLaunchExperience: PracticalShoppingSavedStapleLaunchView
     private lateinit var savedObservedPriceLaunchExperience: PracticalShoppingSavedObservedPriceLaunchView
     private lateinit var observedPriceSavedSelectionExperience: UserObservedPriceSavedSelectionSurfaceView
@@ -187,6 +197,8 @@ class MainActivity : AppCompatActivity() {
     private var privatePriceHistoryExportDialog: AlertDialog? = null
     private var privatePriceHistoryForgetDialog: AlertDialog? = null
     private var confirmedPurchaseDialog: AlertDialog? = null
+    private var priceWatchDialog: AlertDialog? = null
+    private var priceObservationDialog: AlertDialog? = null
     private var offlineCatalogLookup: Future<*>? = null
     private var offlineCatalogRequestId = 0L
     private var suppressSearchInputCallback = false
@@ -225,6 +237,8 @@ class MainActivity : AppCompatActivity() {
         savedExperience = findViewById(R.id.savedExperience)
         confirmedPurchaseHistoryButton = findViewById(R.id.confirmedPurchaseHistoryButton)
         confirmedPurchaseHistoryExperience = findViewById(R.id.confirmedPurchaseHistoryExperience)
+        priceWatchButton = findViewById(R.id.priceWatchButton)
+        priceWatchExperience = findViewById(R.id.priceWatchExperience)
         savedStapleLaunchExperience = findViewById(R.id.savedStapleLaunchExperience)
         savedObservedPriceLaunchExperience = findViewById(R.id.savedObservedPriceLaunchExperience)
         observedPriceSavedSelectionExperience = findViewById(R.id.observedPriceSavedSelectionExperience)
@@ -251,6 +265,7 @@ class MainActivity : AppCompatActivity() {
         homeSessionState = restoreHomeState(savedInstanceState)
         refreshHomePrivateMemory()
         refreshConfirmedPurchaseHistory()
+        refreshPriceWatchState()
         searchQuery = savedInstanceState?.getString(STATE_SEARCH_QUERY).orEmpty()
         searchWasSubmitted = savedInstanceState?.getBoolean(STATE_SEARCH_WAS_SUBMITTED) == true
         searchScrollY = savedInstanceState?.getInt(STATE_SEARCH_SCROLL_Y, 0)?.coerceAtLeast(0) ?: 0
@@ -269,6 +284,9 @@ class MainActivity : AppCompatActivity() {
             dispatch(AppShellIntent.OpenConfirmedPurchaseHistory)
         }
         confirmedPurchaseHistoryExperience.onAction = ::handleConfirmedPurchaseHistoryAction
+        confirmedPurchaseHistoryExperience.onPriceWatchAction = ::handleTogglePriceWatch
+        priceWatchButton.setOnClickListener { dispatch(AppShellIntent.OpenPriceWatches) }
+        priceWatchExperience.onAction = ::handlePriceWatchAction
 
         bottomNavigation.setOnItemSelectedListener { item ->
             val tab = when (item.itemId) {
@@ -292,7 +310,8 @@ class MainActivity : AppCompatActivity() {
                         shellState.route == AppRoute.OBSERVED_PRICE_CONFIRMATION_DRAFT ||
                         shellState.route == AppRoute.STAPLE_WATCH_SETUP ||
                         shellState.route == AppRoute.STAPLE_WATCH_POLICY ||
-                        shellState.route == AppRoute.CONFIRMED_PURCHASE_HISTORY
+                        shellState.route == AppRoute.CONFIRMED_PURCHASE_HISTORY ||
+                        shellState.route == AppRoute.PRICE_WATCHES
                     ) {
                         dispatch(AppShellIntent.NavigateBack)
                     } else {
@@ -321,6 +340,7 @@ class MainActivity : AppCompatActivity() {
         googlePhotoViewerLaunchInFlight = false
         refreshHomePrivateMemory()
         refreshConfirmedPurchaseHistory()
+        refreshPriceWatchState()
 
         if (comparisonActivityOpen && shellState.route == AppRoute.COMPARE) {
             comparisonActivityOpen = false
@@ -399,6 +419,10 @@ class MainActivity : AppCompatActivity() {
         privatePriceHistoryExportDialog = null
         confirmedPurchaseDialog?.dismiss()
         confirmedPurchaseDialog = null
+        priceWatchDialog?.dismiss()
+        priceWatchDialog = null
+        priceObservationDialog?.dismiss()
+        priceObservationDialog = null
         if (::homeExperience.isInitialized) {
             homeExperience.onQueryChanged = null
             homeExperience.onSubmit = null
@@ -420,15 +444,21 @@ class MainActivity : AppCompatActivity() {
             homeExperience.onGoodPrice = null
             homeExperience.onShopAgain = null
             homeExperience.onSharePlan = null
+            homeExperience.onTogglePriceWatch = null
         }
         if (::basketExperience.isInitialized) {
             basketExperience.onAction = null
             basketExperience.onPrivateIdentityToggle = null
             basketExperience.onOpenPrivateIdentityPhotos = null
             basketExperience.onConfirmPurchase = null
+            basketExperience.onTogglePriceWatch = null
         }
         if (::confirmedPurchaseHistoryExperience.isInitialized) {
             confirmedPurchaseHistoryExperience.onAction = null
+            confirmedPurchaseHistoryExperience.onPriceWatchAction = null
+        }
+        if (::priceWatchExperience.isInitialized) {
+            priceWatchExperience.onAction = null
         }
         if (::savedRouteCoordinator.isInitialized) {
             savedExperience.onAction = null
@@ -635,6 +665,7 @@ class MainActivity : AppCompatActivity() {
             renderHome(revealResult = true)
         }
         homeExperience.onSharePlan = { shareHomePlan() }
+        homeExperience.onTogglePriceWatch = ::handleTogglePriceWatch
         rememberConfirmedChoiceAndroidSession =
             PracticalShoppingRememberConfirmedChoiceAndroidSession.create(
                 context = this,
@@ -660,7 +691,8 @@ class MainActivity : AppCompatActivity() {
                     },
                 savedExactProductContext = homeSavedExactProductContext,
                 privateIdentities = homeSessionState.privateIdentities,
-                privateIdentityCollectedKeys = homeSessionState.privateBasketCollectedIdentityKeys
+                privateIdentityCollectedKeys = homeSessionState.privateBasketCollectedIdentityKeys,
+                watchedProductIdentityKeys = watchedProductIdentityKeys()
             )
         // A render invalidates any pending share preview. This prevents a dialog opened for an
         // earlier list/result from sending text after the Home projection has changed.
@@ -1344,6 +1376,7 @@ class MainActivity : AppCompatActivity() {
         basketExperience.onConfirmPurchase = { action ->
             openConfirmedPurchaseDialog(action)
         }
+        basketExperience.onTogglePriceWatch = ::handleTogglePriceWatch
     }
 
     /**
@@ -1574,7 +1607,7 @@ class MainActivity : AppCompatActivity() {
                 confirmedPurchaseHistoryState = result.state
                 confirmedPurchaseHistoryLoadIssue = null
                 dialog.dismiss()
-                if (shellState.route == AppRoute.CONFIRMED_PURCHASE_HISTORY) {
+                if (shellState.route == AppRoute.CONFIRMED_PURCHASE_HISTORY || shellState.route == AppRoute.PRICE_WATCHES) {
                     renderShell(shellState)
                 }
             }
@@ -1723,7 +1756,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun configureSavedUi() {
-        val savedPresenter = PracticalShoppingSavedSurfacePresenter(savedExperience)
+        val savedPresenter =
+            PracticalShoppingSavedSurfacePresenter(
+                renderer = savedExperience,
+                watchedProductIdentityKeys = ::watchedProductIdentityKeys
+            )
         val stapleLaunchPresenter =
             PracticalShoppingSavedStapleLaunchPresenter(savedStapleLaunchExperience)
         val observedPriceLaunchPresenter =
@@ -1930,6 +1967,17 @@ class MainActivity : AppCompatActivity() {
             when (action) {
                 is PracticalShoppingSavedSurfaceAction.CheckProductPrice ->
                     openGoodPriceForSavedProduct(action.displayName)
+
+                is PracticalShoppingSavedSurfaceAction.TogglePriceWatch ->
+                    handleTogglePriceWatch(
+                        PriceWatchUiAction.ToggleWatch(
+                            productIdentityKey = action.productIdentityKey,
+                            displayName = action.displayName,
+                            brand = null,
+                            packageQuantityLabel = null,
+                            watched = action.watched
+                        )
+                    )
 
                 else -> savedRouteCoordinator.onSurfaceAction(action)
             }
@@ -2506,6 +2554,12 @@ class MainActivity : AppCompatActivity() {
         ) {
             confirmedPurchaseDialog?.dismiss()
         }
+        if (state.route != AppRoute.PRICE_WATCHES) {
+            priceWatchDialog?.dismiss()
+            priceWatchDialog = null
+            priceObservationDialog?.dismiss()
+            priceObservationDialog = null
+        }
         val searchVisible =
             state.route == AppRoute.SEARCH && state.selectedPrimaryTab == AppPrimaryTab.SEARCH
         val enteringSearch = searchVisible && !searchRouteActive
@@ -2519,6 +2573,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val historyVisible = state.route == AppRoute.CONFIRMED_PURCHASE_HISTORY
+        val priceWatchVisible = state.route == AppRoute.PRICE_WATCHES
         val copy =
             if (historyVisible) {
                 ScreenCopy(
@@ -2526,6 +2581,14 @@ class MainActivity : AppCompatActivity() {
                     title = getString(R.string.confirmed_purchase_history_title),
                     body = "Review purchases you explicitly confirmed on this device. This is not live pricing or store inventory.",
                     footnote = "Repeat adds the identity to your private Home list; it never recreates a purchase automatically.",
+                    showCompareAction = false
+                )
+            } else if (priceWatchVisible) {
+                ScreenCopy(
+                    eyebrow = "PRIVATE PRICE WATCH",
+                    title = "Price Watch",
+                    body = "Keep exact products together with your private purchase history and personal price notes.",
+                    footnote = "No authorized live retailer source is connected, so current offers remain unknown.",
                     showCompareAction = false
                 )
             } else {
@@ -2562,11 +2625,23 @@ class MainActivity : AppCompatActivity() {
         savedExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
         confirmedPurchaseHistoryButton.visibility = if (savedVisible) View.VISIBLE else View.GONE
         confirmedPurchaseHistoryExperience.visibility = if (historyVisible) View.VISIBLE else View.GONE
+        priceWatchButton.visibility = if (savedVisible) View.VISIBLE else View.GONE
+        priceWatchExperience.visibility = if (priceWatchVisible) View.VISIBLE else View.GONE
         if (historyVisible) {
             confirmedPurchaseHistoryExperience.render(
                 ConfirmedPurchaseHistoryProjector.project(
                     state = confirmedPurchaseHistoryState,
-                    unavailable = confirmedPurchaseHistoryLoadIssue != null
+                    unavailable = confirmedPurchaseHistoryLoadIssue != null,
+                    watchedProductIdentityKeys = watchedProductIdentityKeys()
+                )
+            )
+        }
+        if (priceWatchVisible) {
+            priceWatchExperience.render(
+                PriceWatchProjector.project(
+                    state = priceWatchState,
+                    purchases = confirmedPurchaseHistoryState.purchases,
+                    unavailable = priceWatchLoadIssue != null
                 )
             )
         }
@@ -2673,7 +2748,9 @@ class MainActivity : AppCompatActivity() {
                         match = match,
                         caveat = state.caveat,
                         onAddToHome = ::addSearchIdentityToHome,
-                        onOpenPhotos = ::openGoogleProductPhotos
+                        onOpenPhotos = ::openGoogleProductPhotos,
+                        watched = match.identityKey in watchedProductIdentityKeys(),
+                        onTogglePriceWatch = ::handleTogglePriceWatch
                     )
                 )
             }
@@ -2719,6 +2796,30 @@ class MainActivity : AppCompatActivity() {
         confirmedPurchaseHistoryLoadIssue = loaded.issue
     }
 
+    private fun refreshPriceWatchState() {
+        val loaded = priceWatchStore.load()
+        val nextState = loaded.state ?: PriceWatchState.empty()
+        if (nextState == priceWatchState && loaded.issue == priceWatchLoadIssue) return
+        priceWatchState = nextState
+        priceWatchLoadIssue = loaded.issue
+        renderedSearchMatches = null
+        if (::homeExperience.isInitialized && shellState.route != AppRoute.COMPARE) {
+            renderHome()
+        }
+        if (::priceWatchExperience.isInitialized && shellState.route == AppRoute.PRICE_WATCHES) {
+            priceWatchExperience.render(
+                PriceWatchProjector.project(
+                    state = priceWatchState,
+                    purchases = confirmedPurchaseHistoryState.purchases,
+                    unavailable = priceWatchLoadIssue != null
+                )
+            )
+        }
+    }
+
+    private fun watchedProductIdentityKeys(): Set<String> =
+        priceWatchState.watches.map { it.productIdentityKey }.toSet()
+
     private fun restoreSearchScrollPosition() {
         val targetY = searchScrollY.coerceAtLeast(0)
         shellScrollView.post {
@@ -2730,7 +2831,9 @@ class MainActivity : AppCompatActivity() {
         match: PracticalShoppingSearchIdentityPresentation.Match,
         caveat: String,
         onAddToHome: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
-        onOpenPhotos: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit
+        onOpenPhotos: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
+        watched: Boolean,
+        onTogglePriceWatch: (PriceWatchUiAction.ToggleWatch) -> Unit
     ): View {
         val card = MaterialCardView(this).apply {
             radius = dp(18).toFloat()
@@ -2893,6 +2996,35 @@ class MainActivity : AppCompatActivity() {
             }
             content.addView(photoButton)
         }
+        val priceWatchButton = MaterialButton(this).apply {
+            text = if (watched) "Unwatch" else "Watch price"
+            isAllCaps = false
+            minHeight = dp(48)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(dp(16), dp(6), dp(16), dp(6))
+            }
+            contentDescription =
+                if (watched) {
+                    "Stop watching ${match.displayName}; private history is retained"
+                } else {
+                    "Watch exact product ${match.displayName} privately"
+                }
+            setOnClickListener {
+                onTogglePriceWatch(
+                    PriceWatchUiAction.ToggleWatch(
+                        productIdentityKey = match.identityKey,
+                        displayName = match.displayName,
+                        brand = match.brand,
+                        packageQuantityLabel = match.packageQuantityLabel,
+                        watched = watched
+                    )
+                )
+            }
+        }
+        content.addView(priceWatchButton)
         content.addView(addHomeButton)
         card.addView(content)
         return card
@@ -2989,6 +3121,244 @@ class MainActivity : AppCompatActivity() {
         }
         dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.HOME))
         renderHome()
+    }
+
+    // private fun copyFor — keep Search card source-boundary inspection scoped to the card.
+
+    private fun handleTogglePriceWatch(action: PriceWatchUiAction.ToggleWatch) {
+        val result =
+            if (action.watched) {
+                priceWatchStore.removeWatch(action.productIdentityKey)
+            } else {
+                priceWatchStore.upsertWatch(
+                    PriceWatch(
+                        productIdentityKey = action.productIdentityKey,
+                        displayName = action.displayName,
+                        brand = action.brand,
+                        packageQuantityLabel = action.packageQuantityLabel
+                    )
+                )
+            }
+        if (!result.accepted) {
+            refreshPriceWatchState()
+            if (::searchStatus.isInitialized) {
+                searchStatus.text =
+                    "Private Price Watch could not be updated; existing data was preserved."
+            }
+            return
+        }
+        priceWatchState = requireNotNull(result.state)
+        priceWatchLoadIssue = null
+        renderedSearchMatches = null
+        renderHome()
+        if (::searchStatus.isInitialized) {
+            argentinaSearchSurfaceState?.let(::renderSearch)
+        }
+        if (shellState.route == AppRoute.SAVED ||
+            shellState.route == AppRoute.PRICE_WATCHES ||
+            shellState.route == AppRoute.CONFIRMED_PURCHASE_HISTORY
+        ) {
+            renderShell(shellState)
+        }
+    }
+
+    private fun handlePriceWatchAction(action: PriceWatchUiAction) {
+        when (action) {
+            is PriceWatchUiAction.ToggleWatch -> handleTogglePriceWatch(action)
+            is PriceWatchUiAction.AddPersonalObservation ->
+                openPriceObservationDialog(action.productIdentityKey)
+            is PriceWatchUiAction.EditTarget -> openPriceWatchTargetDialog(action.productIdentityKey)
+            is PriceWatchUiAction.EditObservation -> {
+                priceWatchState.observations
+                    .firstOrNull { it.observationId == action.observationId }
+                    ?.let { observation ->
+                        openPriceObservationDialog(observation.productIdentityKey, observation)
+                    }
+            }
+            is PriceWatchUiAction.DeleteObservation -> {
+                val result = priceWatchStore.removeObservation(action.observationId)
+                if (!result.accepted) {
+                    refreshPriceWatchState()
+                    return
+                }
+                priceWatchState = requireNotNull(result.state)
+                priceWatchLoadIssue = null
+                renderedSearchMatches = null
+                renderShell(shellState)
+            }
+        }
+    }
+
+    private fun openPriceObservationDialog(
+        productIdentityKey: String,
+        existing: PriceObservation? = null
+    ) {
+        val watch = priceWatchState.watches.firstOrNull { it.productIdentityKey == productIdentityKey } ?: return
+        priceObservationDialog?.dismiss()
+        val body = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(4), dp(4), dp(4), 0)
+        }
+        val quantityLayout = TextInputLayout(this).apply { hint = "Package quantity (optional)" }
+        val quantityInput = TextInputEditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setSingleLine(true)
+            setText(existing?.packageQuantity?.let(ConfirmedPurchaseFormParser::displayQuantityText).orEmpty())
+        }
+        quantityLayout.addView(quantityInput)
+        val unitLayout = TextInputLayout(this).apply {
+            hint = "Quantity unit (count, g/kg, or ml/l; optional)"
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) }
+        }
+        val unitInput = TextInputEditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
+            setSingleLine(true)
+            setText(existing?.packageQuantity?.let(ConfirmedPurchaseFormParser::displayQuantityUnitText).orEmpty())
+        }
+        unitLayout.addView(unitInput)
+        val amountLayout = TextInputLayout(this).apply {
+            hint = "Price paid (required, exact decimal)"
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) }
+        }
+        val amountInput = TextInputEditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setSingleLine(true)
+            setText(existing?.let { PriceWatchProjector.formatMoney(it.price).substringBeforeLast(" ") }.orEmpty())
+        }
+        amountLayout.addView(amountInput)
+        val currencyLayout = TextInputLayout(this).apply {
+            hint = "Currency code (required, e.g. CAD)"
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) }
+        }
+        val currencyInput = TextInputEditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
+            setSingleLine(true)
+            setText(existing?.price?.currencyCode.orEmpty())
+        }
+        currencyLayout.addView(currencyInput)
+        val dateLayout = TextInputLayout(this).apply {
+            hint = "Observed date YYYY-MM-DD (optional)"
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) }
+        }
+        val dateInput = TextInputEditText(this).apply { setSingleLine(true); setText(existing?.observedDateIso.orEmpty()) }
+        dateLayout.addView(dateInput)
+        val storeLayout = TextInputLayout(this).apply {
+            hint = "Store (optional)"
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) }
+        }
+        val storeInput = TextInputEditText(this).apply { setSingleLine(true); setText(existing?.store?.displayName.orEmpty()) }
+        storeLayout.addView(storeInput)
+        body.addView(TextView(this).apply {
+            text = "${watch.displayName}. This remains a private observation, not a live retailer offer."
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextColor(ValuePilotPalette.color("#6B7280"))
+        })
+        body.addView(quantityLayout); body.addView(unitLayout); body.addView(amountLayout)
+        body.addView(currencyLayout); body.addView(dateLayout); body.addView(storeLayout)
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(if (existing == null) "Add personal price" else "Correct personal price")
+            .setView(body)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton("Save", null)
+            .create()
+        priceObservationDialog = dialog
+        dialog.setOnDismissListener { if (priceObservationDialog === dialog) priceObservationDialog = null }
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                listOf(quantityLayout, unitLayout, amountLayout, currencyLayout, dateLayout, storeLayout).forEach { it.error = null }
+                val parsed = ConfirmedPurchaseFormParser.parse(
+                    ConfirmedPurchaseFormInput(
+                        quantityText = quantityInput.text?.toString().orEmpty(),
+                        quantityUnitText = unitInput.text?.toString().orEmpty(),
+                        amountText = amountInput.text?.toString().orEmpty(),
+                        currencyText = currencyInput.text?.toString().orEmpty(),
+                        dateText = dateInput.text?.toString().orEmpty(),
+                        storeText = storeInput.text?.toString().orEmpty()
+                    )
+                )
+                if (!parsed.accepted || parsed.values == null) {
+                    val failure = requireNotNull(parsed.failure)
+                    val target = when (failure.field) {
+                        ConfirmedPurchaseFormField.QUANTITY -> quantityLayout
+                        ConfirmedPurchaseFormField.AMOUNT, ConfirmedPurchaseFormField.CURRENCY -> amountLayout
+                        ConfirmedPurchaseFormField.DATE -> dateLayout
+                        ConfirmedPurchaseFormField.STORE -> storeLayout
+                    }
+                    target.error = failure.message
+                    return@setOnClickListener
+                }
+                val values = requireNotNull(parsed.values)
+                val amount = values.amountPaid
+                if (amount == null || amount.minorUnits <= 0L) {
+                    amountLayout.error = "Enter a positive exact price"
+                    return@setOnClickListener
+                }
+                val observation = PriceObservation.personal(
+                    observationId = existing?.observationId ?: "observation-${UUID.randomUUID()}",
+                    productIdentityKey = productIdentityKey,
+                    packageQuantity = values.quantity,
+                    price = amount,
+                    observedDateIso = values.purchaseDateIso,
+                    store = values.store
+                )
+                val result =
+                    if (existing == null) {
+                        priceWatchStore.appendObservation(observation)
+                    } else {
+                        priceWatchStore.replaceObservation(observation)
+                    }
+                if (!result.accepted) {
+                    amountLayout.error = "Could not save; existing private history was preserved"
+                    refreshPriceWatchState()
+                    return@setOnClickListener
+                }
+                priceWatchState = requireNotNull(result.state)
+                priceWatchLoadIssue = null
+                renderedSearchMatches = null
+                dialog.dismiss()
+                renderShell(shellState)
+            }
+        }
+        dialog.show()
+    }
+
+    private fun openPriceWatchTargetDialog(productIdentityKey: String) {
+        val watch = priceWatchState.watches.firstOrNull { it.productIdentityKey == productIdentityKey } ?: return
+        priceWatchDialog?.dismiss()
+        val body = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(4), dp(4), dp(4), 0) }
+        val amountLayout = TextInputLayout(this).apply { hint = "Target amount (blank clears)" }
+        val amountInput = TextInputEditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setSingleLine(true)
+            setText(watch.targetPrice?.let { PriceWatchProjector.formatMoney(it).substringBeforeLast(" ") }.orEmpty())
+        }
+        amountLayout.addView(amountInput)
+        val currencyLayout = TextInputLayout(this).apply { hint = "Currency code"; layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) } }
+        val currencyInput = TextInputEditText(this).apply { inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS; setSingleLine(true); setText(watch.targetPrice?.currencyCode.orEmpty()) }
+        currencyLayout.addView(currencyInput)
+        body.addView(TextView(this).apply { text = "Target prices are private reminders only; they never create alerts or change ranking."; setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f); setTextColor(ValuePilotPalette.color("#6B7280")) })
+        body.addView(amountLayout); body.addView(currencyLayout)
+        val dialog = AlertDialog.Builder(this).setTitle("Target price").setView(body).setNegativeButton(R.string.cancel, null).setPositiveButton("Save", null).create()
+        priceWatchDialog = dialog
+        dialog.setOnDismissListener { if (priceWatchDialog === dialog) priceWatchDialog = null }
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                amountLayout.error = null; currencyLayout.error = null
+                val amountText = amountInput.text?.toString()?.trim().orEmpty()
+                val currencyText = currencyInput.text?.toString()?.trim().orEmpty()
+                val parsedTarget = PriceWatchTargetParser.parse(amountText, currencyText)
+                if (!parsedTarget.accepted) {
+                    amountLayout.error = parsedTarget.message
+                    return@setOnClickListener
+                }
+                val target = parsedTarget.target
+                val result = priceWatchStore.upsertWatch(watch.copy(targetPrice = target))
+                if (!result.accepted) { amountLayout.error = "Could not save; existing private data was preserved"; refreshPriceWatchState(); return@setOnClickListener }
+                priceWatchState = requireNotNull(result.state); priceWatchLoadIssue = null; renderedSearchMatches = null
+                dialog.dismiss(); renderShell(shellState)
+            }
+        }
+        dialog.show()
     }
 
     private fun copyFor(tab: AppPrimaryTab): ScreenCopy =

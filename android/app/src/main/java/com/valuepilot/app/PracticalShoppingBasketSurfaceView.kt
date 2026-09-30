@@ -83,6 +83,15 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     /** Opens an explicit confirmation form for a private purchase. */
     var onConfirmPurchase: ((PracticalShoppingBasketUiAction.ConfirmPurchase) -> Unit)? = null
 
+    /** Toggles the same exact private Price Watch identity used by Home and Search. */
+    var onTogglePriceWatch: ((PriceWatchUiAction.ToggleWatch) -> Unit)? = null
+        set(value) {
+            field = value
+            priceWatchOwnerControls.forEach { control -> control.isEnabled = value != null }
+        }
+
+    private val priceWatchOwnerControls = mutableListOf<View>()
+
     private val headline = line("", 22f, "#111827", true)
     private val guidance = line("", 14f, "#4B5563", topPadding = 8)
     private val noCoverageSummary = line("", 13f, "#92400E", true, 8).apply {
@@ -353,6 +362,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             privateIdentityPhotoError.visibility = GONE
             privateIdentityRows.removeAllViews()
             privateIdentityRowsByKey.clear()
+            priceWatchOwnerControls.clear()
             renderPrivateIdentityProgress()
             return
         }
@@ -408,6 +418,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         private val source = line("", 12f, "#374151", topPadding = 2)
         private val notice = line("", 12f, "#6B7280", topPadding = 2)
         private val photo = privateIdentityPhotoButton(identity)
+        private val priceWatch = privateIdentityPriceWatchButton(identity)
         private val purchase = privateIdentityPurchaseButton(identity)
         private var displayName = identity.displayName
         var collected: Boolean = identity.collected
@@ -422,6 +433,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             root.addView(packageQuantity)
             root.addView(source)
             root.addView(notice)
+            root.addView(priceWatch)
             root.addView(photo)
             root.addView(purchase)
             update(identity)
@@ -448,6 +460,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
                 identity.displayName
             )
             photo.isEnabled = onOpenPrivateIdentityPhotos != null
+            priceWatch.updatePriceWatch(identity)
             purchase.isEnabled = onConfirmPurchase != null
             collected = identity.collected
         }
@@ -509,6 +522,51 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 5)
         setOnClickListener { onOpenPrivateIdentityPhotos?.invoke(identity.identityKey) }
+    }
+
+    private fun privateIdentityPriceWatchButton(
+        identity: PracticalShoppingBasketPrivateIdentityRenderState
+    ): MaterialButton = MaterialButton(context).apply {
+        priceWatchOwnerControls += this
+        isAllCaps = false
+        textSize = 13f
+        minHeight = dp(40)
+        minimumHeight = dp(40)
+        minWidth = 0
+        minimumWidth = 0
+        insetTop = 0
+        insetBottom = 0
+        setPadding(dp(10), 0, dp(10), 0)
+        strokeWidth = dp(1)
+        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#BFDBFE"))
+        setTextColor(ValuePilotPalette.color("#1D4ED8"))
+        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
+        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 5)
+        updatePriceWatch(identity)
+        setOnClickListener {
+            onTogglePriceWatch?.invoke(
+                PriceWatchUiAction.ToggleWatch(
+                    productIdentityKey = identity.identityKey,
+                    displayName = identity.displayName,
+                    brand = identity.brand,
+                    packageQuantityLabel = identity.packageQuantityLabel,
+                    watched = identity.watched
+                )
+            )
+        }
+    }
+
+    private fun MaterialButton.updatePriceWatch(
+        identity: PracticalShoppingBasketPrivateIdentityRenderState
+    ) {
+        text = if (identity.watched) "Unwatch" else "Watch price"
+        contentDescription =
+            if (identity.watched) {
+                "Stop watching ${identity.displayName}; private history is retained"
+            } else {
+                "Watch exact product ${identity.displayName} privately"
+            }
+        isEnabled = onTogglePriceWatch != null
     }
 
     private fun privateIdentityPurchaseButton(
@@ -685,6 +743,44 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
                         packageQuantityLabel = item.detail,
                         plannedPriceText = item.plannedPriceText,
                         identityOrigin = ConfirmedPurchaseIdentityOrigin.HOME_BASKET
+                    )
+                )
+            }
+        }
+
+    private fun priceWatchButton(item: PracticalShoppingHomeItemRenderState): MaterialButton =
+        MaterialButton(context).apply {
+            priceWatchOwnerControls += this
+            text = if (item.watched) "Unwatch" else "Watch price"
+            contentDescription =
+                if (item.watched) {
+                    "Stop watching ${item.name}; private history is retained"
+                } else {
+                    "Watch exact product ${item.name} privately"
+                }
+            isAllCaps = false
+            textSize = 13f
+            minHeight = dp(40)
+            minimumHeight = dp(40)
+            minWidth = 0
+            minimumWidth = 0
+            insetTop = 0
+            insetBottom = 0
+            setPadding(dp(10), 0, dp(10), 0)
+            strokeWidth = dp(1)
+            strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#BFDBFE"))
+            setTextColor(ValuePilotPalette.color("#1D4ED8"))
+            backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
+            layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 5)
+            isEnabled = onTogglePriceWatch != null
+            setOnClickListener {
+                onTogglePriceWatch?.invoke(
+                    PriceWatchUiAction.ToggleWatch(
+                        productIdentityKey = item.key.value,
+                        displayName = item.name,
+                        brand = null,
+                        packageQuantityLabel = item.detail,
+                        watched = item.watched
                     )
                 )
             }

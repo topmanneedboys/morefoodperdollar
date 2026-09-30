@@ -23,7 +23,8 @@ data class PracticalShoppingBasketPrivateIdentityRenderState(
     val sourceLabel: String?,
     val packageQuantityLabel: String?,
     val collected: Boolean,
-    val notice: String = PracticalShoppingHomeRenderer.PRIVATE_IDENTITY_NOTICE
+    val notice: String = PracticalShoppingHomeRenderer.PRIVATE_IDENTITY_NOTICE,
+    val watched: Boolean = false
 ) {
     init {
         require(identityKey.isNotBlank())
@@ -224,7 +225,8 @@ object PracticalShoppingBasketRenderer {
                             sourceLabel = identity.sourceLabel,
                             packageQuantityLabel = identity.packageQuantityLabel,
                             collected =
-                                identity.identityKey in source.privateIdentityCollectedKeys
+                                identity.identityKey in source.privateIdentityCollectedKeys,
+                            watched = identity.watched
                         )
                     }
         )
