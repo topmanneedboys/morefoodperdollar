@@ -6,7 +6,7 @@ Updated: 2026-09-29 04:30 UTC
 
 The bounded Store/Trip Planner milestone is complete on
 `work/valuepilot-confirmed-purchases` at commit
-`1ff00795f7ce55d24d4ef7963469fa8612e4b7a8`, based on the clean Price Watch
+`37d6182dfba9d2e6ee857162861fe1d2e089b66e`, based on the clean Price Watch
 checkpoint `2936c3c4e29cd8f85c0a6a85eb80b356181c22bb`. Basket now opens a
 Basket-owned private trip scenario that reads the current Basket directly;
 the basket is never copied into trip storage. Signed source-listed GTA and
@@ -39,7 +39,7 @@ Final local verification at this commit is green: 1,775 Android app JVM
 tests, 419 shared-core tests, debug/release lint, debug/release builds,
 release bundle and privacy inspection. The unsigned candidate is
 `android/app/build/outputs/bundle/release/app-release.aab`, SHA-256
-`8D9AE60054CF4C9947AD51779E6F3A79A526820DC4315E2481C122BD3C98D9C6`,
+`78DF8AF169CCC5B1A1E894350AE90DAFEFC37F1A0428C75E936D2A55C6590C87`,
 versionCode `10116` / versionName `101.1.15`, application ID
 `com.valuepilot.app`. Manifest inspection shows the existing INTERNET and
 CAMERA permissions plus optional FINE/COARSE foreground location and no

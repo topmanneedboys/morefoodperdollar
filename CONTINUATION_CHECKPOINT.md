@@ -6,7 +6,7 @@ Updated: 2026-09-29 04:30 UTC
 
 The bounded Store/Trip Planner milestone is committed on
 `work/valuepilot-confirmed-purchases` at
-`1ff00795f7ce55d24d4ef7963469fa8612e4b7a8`, from the verified Price Watch
+`37d6182dfba9d2e6ee857162861fe1d2e089b66e`, from the verified Price Watch
 checkpoint `2936c3c4e29cd8f85c0a6a85eb80b356181c22bb`. The Basket-owned route
 uses the live private Basket projection rather than copying it into durable
 trip state. Signed, source-attributed GTA/Metro Vancouver location records
@@ -30,7 +30,7 @@ Local verification is green at this exact code: 1,775 app JVM tests, 419
 shared-core tests, debug/release lint, debug/release builds, release bundle,
 and privacy inspection. The unsigned candidate is
 `android/app/build/outputs/bundle/release/app-release.aab` with SHA-256
-`8D9AE60054CF4C9947AD51779E6F3A79A526820DC4315E2481C122BD3C98D9C6`,
+`78DF8AF169CCC5B1A1E894350AE90DAFEFC37F1A0428C75E936D2A55C6590C87`,
 versionCode `10116` / versionName `101.1.15`, package
 `com.valuepilot.app`. No Play signing/upload, device install, GitHub Actions
 retry or paid service was performed.
