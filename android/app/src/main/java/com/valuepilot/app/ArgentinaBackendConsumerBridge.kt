@@ -437,6 +437,7 @@ private object ArgentinaBackendJson {
             .put("query", item.query)
             .put("amount", item.amount)
             .put("unit", item.unit)
+            .apply { item.productEvidenceKey?.let { put("productEvidenceKey", it) } }
 }
 
 private object ArgentinaBackendInputMapper {
@@ -496,7 +497,8 @@ private object ArgentinaBackendIdentityMapper {
                             },
                         packageQuantityLabel = candidate.quantity?.let(::productQuantityLabel),
                         sourceLabel = SOURCE_LABEL,
-                        identityKey = candidate.productEvidenceKey
+                        identityKey = candidate.productEvidenceKey,
+                        gtin = candidate.gtin
                     )
             }
         }

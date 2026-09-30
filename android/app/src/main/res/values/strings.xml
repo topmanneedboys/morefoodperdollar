@@ -343,6 +343,8 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="search_identity_photo_disclosure">Google Images results are unverified and do not change this product identity.</string>
     <string name="search_identity_view_photos">See product photos</string>
     <string name="search_identity_view_photos_description">Open unverified Google Images results for %1$s. ValuePilot does not verify, download or use these images as product proof.</string>
+    <string name="search_identity_view_map">View on map</string>
+    <string name="search_identity_view_map_description">View qualified Argentina SEPA stores for the exact product identity %1$s. Distance is approximate straight-line distance; stock remains unknown.</string>
     <string name="search_identity_browser_unavailable">A browser could not open Google Images. Nothing was changed.</string>
     <string name="search_identity_browser_fallback_title">Open Google Images full screen?</string>
     <string name="search_identity_browser_fallback_message">This browser could not open the requested resizable partial tab. Open Google Images full screen instead? Your ValuePilot list stays unchanged.</string>

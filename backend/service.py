@@ -109,11 +109,32 @@ class BackendService:
             result[line_id] = key
         return result or None
 
-    def _execute(self, payload: Mapping[str, Any], *, correlation_id: str | None = None):
+    @staticmethod
+    def _trusted_keys_from_shop_payload(payload: Mapping[str, Any]) -> dict[str, str] | None:
+        """Carry only explicit Search-selected identities into direct /shop."""
+
+        items = payload.get("items")
+        if not isinstance(items, list):
+            return None
+        trusted: dict[str, str] = {}
+        for index, item in enumerate(items):
+            if not isinstance(item, Mapping):
+                return None
+            supplied_line_id = item.get("lineId")
+            line_id = supplied_line_id if supplied_line_id is not None else f"item-{index + 1}"
+            product_key = item.get("productEvidenceKey")
+            if product_key is None:
+                continue
+            if not isinstance(line_id, str) or not line_id or not isinstance(product_key, str) or not product_key:
+                raise BackendQueryError("trusted product identity is invalid")
+            trusted[line_id] = product_key
+        return trusted or None
+
+    def _execute(self, payload: Mapping[str, Any], *, correlation_id: str | None = None, trusted_product_keys: Mapping[str, str] | None = None):
         request_id = correlation_id or str(uuid.uuid4())
         handle = self.release_manager.pin(require_fresh=True)
         reader = self._reader(handle)
-        decision, metrics = reader.query(payload)
+        decision, metrics = reader.query(payload, trusted_product_keys=trusted_product_keys)
         return request_id, handle, decision, metrics
 
     @staticmethod
@@ -202,7 +223,11 @@ class BackendService:
         started = time.perf_counter()
         handle = None
         try:
-            request_id, handle, decision, metrics = self._execute(payload, correlation_id=request_id)
+            request_id, handle, decision, metrics = self._execute(
+                payload,
+                correlation_id=request_id,
+                trusted_product_keys=self._trusted_keys_from_shop_payload(payload),
+            )
         except CurrentPriceEvidenceUnavailable:
             LOGGER.info("request=%s release=%s result=current_evidence_unavailable", request_id, getattr(handle, "release_id", None))
             raise

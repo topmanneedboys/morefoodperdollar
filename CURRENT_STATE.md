@@ -2,6 +2,52 @@
 
 Updated: 2026-09-29 04:30 UTC
 
+## Exact product-to-nearby-store map checkpoint — 2026-09-29
+
+The bounded Search → View on map milestone is complete locally on
+`work/valuepilot-confirmed-purchases`, based on `5214819a1ac3cfdaee7bf8d4a178e057815af57f`.
+The map action is shown only for the qualified Argentina SEPA identity rail.
+It carries the exact Search `productEvidenceKey` through the existing backend
+contract; the backend accepts that key only when it is present on the explicit
+request item, while arbitrary top-level identity injection remains ignored.
+
+The qualified response fields audited for this surface are: product identity
+and optional GTIN; store key, commerce/banner/provider store identifiers, name,
+address, locality/province fields, latitude/longitude and geo status; exact
+product/store offer relationship, published price, and release/update
+provenance. The Android adapter reuses the existing planner's store and line
+records rather than creating a second product or store database. It joins only
+the selected exact product key, rejects wrong package/GTIN identities, bounds
+the relationship index to 2,048 records/64 pins, rejects malformed or
+out-of-envelope Argentina coordinates, deduplicates stable store keys, and
+hides conflicting prices. Published SEPA prices remain release evidence;
+availability and inventory are UNKNOWN.
+
+The renderer is a provider-neutral, tile-free coordinate canvas. MapLibre
+Native Android was investigated as a replaceable renderer, but no tile provider
+or permanent OSM tile dependency was added. Without device location the map
+works around the qualified Buenos Aires CABA search-area center and labels that
+origin. A user-triggered one-shot foreground-location action can re-sort the
+same pins by approximate straight-line distance; no background or continuous
+tracking is used. Road distance/time, routing, live stock and current-price
+claims remain unavailable.
+
+Focused map coverage is 10 tests (5 shared-core index tests, 5 Android
+adapter/UI/identity-boundary tests). Full local verification is green: 438
+shared-core tests, 1,784 Android JVM tests, 114 backend tests, 330 tooling
+tests, debug/release lint, debug/release builds, release bundle, privacy
+inspection (INTERNET/CAMERA plus optional foreground location; no
+ACCESS_NETWORK_STATE or background location), and `git diff --check`.
+
+The local unsigned candidate is versionCode `10118` / versionName `101.1.17`,
+application ID `com.valuepilot.app`, at
+`android/app/build/outputs/bundle/release/app-release.aab`, size 36,463,757
+bytes, SHA-256
+`7F62F2D70A4957FABD291C7EC2513A0BF9646F8A1FCA912EC5B60825A9C293C6`.
+It was not signed, uploaded, installed, or sent to a phone. GitHub Actions was
+not retried because the existing account allowance/billing lock remains a
+known external blocker.
+
 ## Connected Shopping Decision Engine checkpoint — 2026-09-29
 
 The shared-core Shopping Decision Engine milestone is implemented on

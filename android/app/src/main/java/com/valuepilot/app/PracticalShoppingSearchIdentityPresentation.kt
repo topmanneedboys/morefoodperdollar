@@ -33,7 +33,9 @@ internal data class PracticalShoppingSearchIdentityPresentation(
         val packageQuantityLabel: String? = null,
         /** Source attribution supplied by the identity rail, when available. */
         val sourceLabel: String? = null,
-        val identityKey: String = displayName
+        val identityKey: String = displayName,
+        /** The source-validated GTIN, when the exact identity supplied one. */
+        val gtin: String? = null
     ) {
         init {
             require(displayName.isNotBlank())
@@ -44,6 +46,7 @@ internal data class PracticalShoppingSearchIdentityPresentation(
             require(sourceLabel == null || sourceLabel.isNotBlank())
             require(sourceLabel == null || sourceLabel.length <= 160)
             require(identityKey.isNotBlank())
+            require(gtin == null || gtin.matches(Regex("[0-9]{8}|[0-9]{12}|[0-9]{13}|[0-9]{14}")))
         }
     }
 

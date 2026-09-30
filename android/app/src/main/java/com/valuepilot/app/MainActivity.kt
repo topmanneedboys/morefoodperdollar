@@ -53,6 +53,7 @@ import com.valuepilot.core.TripDistanceBasis
 import com.valuepilot.core.TripOriginKind
 import com.valuepilot.core.TripOriginReference
 import com.valuepilot.core.ConfirmedPurchaseStore
+import com.valuepilot.core.ProductStoreMapCoordinate
 import java.math.BigDecimal
 import java.util.UUID
 import java.util.concurrent.Executors
@@ -117,6 +118,11 @@ class MainActivity : AppCompatActivity() {
     private var googlePhotoViewerLaunchInFlight = false
     private var renderedSearchMatches:
         List<PracticalShoppingSearchIdentityPresentation.Match>? = null
+    private var productMapDialog: AlertDialog? = null
+    private var productMapRequestId = 0L
+    private var productMapSelectedKey: String? = null
+    private var productMapSelectedLabel: String? = null
+    private var pendingProductMapLocation: (() -> Unit)? = null
 
     private lateinit var shellRoot: View
     private lateinit var shellScrollView: ScrollView
@@ -294,6 +300,8 @@ class MainActivity : AppCompatActivity() {
         searchQuery = savedInstanceState?.getString(STATE_SEARCH_QUERY).orEmpty()
         searchWasSubmitted = savedInstanceState?.getBoolean(STATE_SEARCH_WAS_SUBMITTED) == true
         searchScrollY = savedInstanceState?.getInt(STATE_SEARCH_SCROLL_Y, 0)?.coerceAtLeast(0) ?: 0
+        productMapSelectedKey = savedInstanceState?.getString(STATE_PRODUCT_MAP_SELECTED_KEY)
+        productMapSelectedLabel = savedInstanceState?.getString(STATE_PRODUCT_MAP_SELECTED_LABEL)
         argentinaSearchHost = ArgentinaLiveSearchSurfaceHost.createProduction(
             area = argentinaLaunchArea,
             render = ::renderArgentinaSearchState
@@ -331,7 +339,11 @@ class MainActivity : AppCompatActivity() {
             this,
             object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
-                    if (
+                    if (productMapDialog?.isShowing == true) {
+                        productMapDialog?.dismiss()
+                        productMapDialog = null
+                        pendingProductMapLocation = null
+                    } else if (
                         shellState.route == AppRoute.OBSERVED_PRICE_SAVED_SELECTION ||
                         shellState.route == AppRoute.OBSERVED_PRICE_CONFIRMATION_DRAFT ||
                         shellState.route == AppRoute.STAPLE_WATCH_SETUP ||
@@ -420,12 +432,17 @@ class MainActivity : AppCompatActivity() {
         outState.putString(STATE_SEARCH_QUERY, searchQuery)
         outState.putBoolean(STATE_SEARCH_WAS_SUBMITTED, searchWasSubmitted)
         outState.putInt(STATE_SEARCH_SCROLL_Y, searchScrollY)
+        outState.putString(STATE_PRODUCT_MAP_SELECTED_KEY, productMapSelectedKey)
+        outState.putString(STATE_PRODUCT_MAP_SELECTED_LABEL, productMapSelectedLabel)
         super.onSaveInstanceState(outState)
     }
 
     override fun onDestroy() {
         dismissHomeItemDetailsDialog()
         dismissHomeShareDialog()
+        productMapDialog?.dismiss()
+        productMapDialog = null
+        pendingProductMapLocation = null
         cancelOfflineCatalogLookup()
         offlineCatalogDialog?.dismiss()
         offlineCatalogDialog = null
@@ -2633,6 +2650,11 @@ class MainActivity : AppCompatActivity() {
         }
         val searchVisible =
             state.route == AppRoute.SEARCH && state.selectedPrimaryTab == AppPrimaryTab.SEARCH
+        if (!searchVisible && productMapDialog?.isShowing == true) {
+            productMapDialog?.dismiss()
+            productMapDialog = null
+            pendingProductMapLocation = null
+        }
         val enteringSearch = searchVisible && !searchRouteActive
         if (!searchVisible && searchRouteActive) {
             searchScrollY = shellScrollView.scrollY.coerceAtLeast(0)
@@ -2831,6 +2853,7 @@ class MainActivity : AppCompatActivity() {
                         caveat = state.caveat,
                         onAddToHome = ::addSearchIdentityToHome,
                         onOpenPhotos = ::openGoogleProductPhotos,
+                        onOpenMap = ::openProductStoreMap,
                         watched = match.identityKey in watchedProductIdentityKeys(),
                         onTogglePriceWatch = ::handleTogglePriceWatch
                     )
@@ -3220,7 +3243,15 @@ class MainActivity : AppCompatActivity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == FOREGROUND_LOCATION_REQUEST && grantResults.any { it == PackageManager.PERMISSION_GRANTED }) {
+        if (requestCode == PRODUCT_MAP_FOREGROUND_LOCATION_REQUEST) {
+            val pending = pendingProductMapLocation
+            pendingProductMapLocation = null
+            if (grantResults.any { it == PackageManager.PERMISSION_GRANTED }) {
+                pending?.invoke()
+            } else {
+                Toast.makeText(this, "Location was not granted; the CABA search-area map remains available.", Toast.LENGTH_SHORT).show()
+            }
+        } else if (requestCode == FOREGROUND_LOCATION_REQUEST && grantResults.any { it == PackageManager.PERMISSION_GRANTED }) {
             captureForegroundLocation()
         } else if (requestCode == FOREGROUND_LOCATION_REQUEST) {
             Toast.makeText(this, "Location was not granted; manual starting point remains available.", Toast.LENGTH_SHORT).show()
@@ -3353,9 +3384,11 @@ class MainActivity : AppCompatActivity() {
         caveat: String,
         onAddToHome: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
         onOpenPhotos: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
+        onOpenMap: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
         watched: Boolean,
         onTogglePriceWatch: (PriceWatchUiAction.ToggleWatch) -> Unit
     ): View {
+        val mapEligible = ArgentinaProductStoreMapAdapter.canQuery(match)
         val card = MaterialCardView(this).apply {
             radius = dp(18).toFloat()
             cardElevation = 0f
@@ -3383,6 +3416,7 @@ class MainActivity : AppCompatActivity() {
                     getString(R.string.search_identity_photo_disclosure),
                     caveat,
                     "Tap to review this name in Scan and compare",
+                    if (mapEligible) "View exact product stores on map" else null,
                     getString(R.string.search_identity_add_home_draft)
                 ).joinToString(". ") { it.trim().trimEnd('.', '!', '?') } + "."
         }
@@ -3546,9 +3580,203 @@ class MainActivity : AppCompatActivity() {
             }
         }
         content.addView(priceWatchButton)
+        if (mapEligible) {
+            val mapButton = MaterialButton(this).apply {
+                text = getString(R.string.search_identity_view_map)
+                isAllCaps = false
+                minHeight = dp(48)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    setMargins(dp(16), dp(6), dp(16), dp(6))
+                }
+                contentDescription = getString(
+                    R.string.search_identity_view_map_description,
+                    match.displayName
+                )
+                setOnClickListener { onOpenMap(match) }
+            }
+            content.addView(mapButton)
+        }
         content.addView(addHomeButton)
         card.addView(content)
         return card
+    }
+
+    private fun openProductStoreMap(
+        match: PracticalShoppingSearchIdentityPresentation.Match
+    ) {
+        productMapSelectedKey = match.identityKey
+        productMapSelectedLabel = match.displayName
+        val surface = ProductStoreMapSurfaceView(this)
+        surface.showLoading(match.displayName)
+        surface.onClose = {
+            productMapDialog?.dismiss()
+            productMapDialog = null
+            pendingProductMapLocation = null
+        }
+        surface.onSelectStore = ::selectProductMapStore
+        var latestResponse: ArgentinaBackendContract.ShopResponse? = null
+        surface.onUseForegroundLocation = {
+            useProductMapForegroundLocation(surface, match) { latestResponse }
+        }
+        productMapDialog?.dismiss()
+        productMapDialog = AlertDialog.Builder(this)
+            .setView(surface)
+            .create()
+            .also { dialog ->
+                dialog.setOnDismissListener {
+                    if (productMapDialog === dialog) productMapDialog = null
+                    pendingProductMapLocation = null
+                }
+                dialog.show()
+            }
+
+        val requestId = Math.addExact(productMapRequestId, 1L)
+        productMapRequestId = requestId
+        searchExecutor.submit {
+            val outcome = runCatching {
+                val status =
+                    ArgentinaBackendConsumerBridge(
+                        ValuePilotArgentinaEdgeTransportFactory.create(),
+                        null
+                    ).status()
+                val statusValue = (status as? ArgentinaBackendBridgeResult.Success)?.value
+                    ?: throw IllegalStateException("The qualified Argentina release is unavailable.")
+                val release = ArgentinaBackendContract.ExpectedRelease(
+                    releaseId = statusValue.releaseId
+                        ?: throw IllegalStateException("The qualified Argentina release has no id."),
+                    releaseDate = statusValue.releaseDate
+                        ?: throw IllegalStateException("The qualified Argentina release has no date.")
+                )
+                val quantity = ArgentinaProductStoreMapAdapter.explicitPackageQuantity(match.packageQuantityLabel)
+                    ?: throw IllegalStateException("This exact identity has no structured package quantity; ValuePilot will not infer one for map lookup.")
+                val request = ArgentinaBackendContract.ShopRequest(
+                    latitude = argentinaLaunchArea.latitude,
+                    longitude = argentinaLaunchArea.longitude,
+                    radiusKm = argentinaLaunchArea.radiusKm,
+                    items = listOf(
+                        ArgentinaBackendContract.RequestItem(
+                            lineId = ArgentinaProductStoreMapAdapter.deterministicLineId(match.identityKey),
+                            query = match.displayName,
+                            amount = quantity.first,
+                            unit = quantity.second,
+                            productEvidenceKey = match.identityKey
+                        )
+                    )
+                )
+                ArgentinaBackendConsumerBridge(
+                    ValuePilotArgentinaEdgeTransportFactory.create(),
+                    release
+                ).shop(request)
+            }
+            mainHandler.post {
+                if (requestId != productMapRequestId || isFinishing || isDestroyed) return@post
+                if (productMapDialog == null || !productMapDialog!!.isShowing) return@post
+                val result = outcome.getOrNull()
+                when (result) {
+                    is ArgentinaBackendBridgeResult.Success -> {
+                        latestResponse = result.value
+                        val origin = ProductStoreMapCoordinate.parse(
+                            argentinaLaunchArea.latitude,
+                            argentinaLaunchArea.longitude
+                        )
+                        val mapResult = ArgentinaProductStoreMapAdapter.query(result.value, match, origin)
+                        surface.render(
+                            match.displayName,
+                            mapResult,
+                            "the qualified CABA search-area center (not device location)"
+                        )
+                    }
+                    else -> {
+                        surface.showFailure(
+                            "Store map is unavailable right now. Search is unchanged; no price or stock claim was inferred."
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private fun useProductMapForegroundLocation(
+        surface: ProductStoreMapSurfaceView,
+        match: PracticalShoppingSearchIdentityPresentation.Match,
+        responseProvider: () -> ArgentinaBackendContract.ShopResponse?
+    ) {
+        if (productMapDialog == null || !productMapDialog!!.isShowing || isFinishing || isDestroyed) return
+        val fineGranted = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val coarseGranted = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val capture = {
+            captureProductMapForegroundLocation(surface, match, responseProvider)
+        }
+        if (!TripPlannerLocationPolicy.hasForegroundPermission(fineGranted, coarseGranted)) {
+            pendingProductMapLocation = capture
+            requestPermissions(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                ),
+                PRODUCT_MAP_FOREGROUND_LOCATION_REQUEST
+            )
+            return
+        }
+        capture()
+    }
+
+    private fun captureProductMapForegroundLocation(
+        surface: ProductStoreMapSurfaceView,
+        match: PracticalShoppingSearchIdentityPresentation.Match,
+        responseProvider: () -> ArgentinaBackendContract.ShopResponse?
+    ) {
+        if (productMapDialog == null || !productMapDialog!!.isShowing || isFinishing || isDestroyed) return
+        val fineGranted = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val coarseGranted = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (!TripPlannerLocationPolicy.hasForegroundPermission(fineGranted, coarseGranted)) {
+            Toast.makeText(this, "Location was not granted; the CABA search-area map remains available.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val manager = getSystemService(LOCATION_SERVICE) as? LocationManager
+        val location = manager?.let {
+            try {
+                it.getProviders(true).asSequence()
+                    .mapNotNull { provider -> it.getLastKnownLocation(provider) }
+                    .maxByOrNull { candidate -> candidate.time }
+            } catch (_: SecurityException) {
+                null
+            }
+        }
+        val response = responseProvider()
+        val coordinate = location?.let {
+            ProductStoreMapCoordinate.parse(it.latitude.toString(), it.longitude.toString())
+        }
+        if (response == null || coordinate == null) {
+            Toast.makeText(this, "No recent foreground location is available; the CABA search-area map remains available.", Toast.LENGTH_LONG).show()
+            return
+        }
+        val result = ArgentinaProductStoreMapAdapter.query(response, match, coordinate)
+        surface.render(match.displayName, result, "one foreground location reading")
+    }
+
+    private fun selectProductMapStore(pin: com.valuepilot.core.ProductStoreMapPin) {
+        val selection =
+            TripStoreSelection(
+                storeKey = pin.storeKey,
+                displayName = pin.storeName,
+                addressLabel = pin.addressLabel,
+                sourceLabel = pin.sourceLabel,
+                latitudeE7 = pin.coordinate.latitudeE7,
+                longitudeE7 = pin.coordinate.longitudeE7
+            )
+        if (!persistTripPlannerState(tripPlannerState.copy(destination = selection, preferredStoreKey = null))) {
+            Toast.makeText(this, "That store could not be saved; the map remains unchanged.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        productMapDialog?.dismiss()
+        productMapDialog = null
+        pendingProductMapLocation = null
+        dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.BASKET))
+        dispatch(AppShellIntent.OpenTripPlanner)
     }
 
     private fun openGoogleProductPhotos(
@@ -3954,6 +4182,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val FOREGROUND_LOCATION_REQUEST = 7041
+        private const val PRODUCT_MAP_FOREGROUND_LOCATION_REQUEST = 7042
 
         private const val GOOGLE_PHOTO_INITIAL_HEIGHT_PERCENT = 65
         private const val GOOGLE_PHOTO_MIN_INITIAL_HEIGHT_DP = 320
@@ -3975,6 +4204,8 @@ class MainActivity : AppCompatActivity() {
         private const val STATE_SEARCH_QUERY = "app_shell.search_query"
         private const val STATE_SEARCH_WAS_SUBMITTED = "app_shell.search_was_submitted"
         private const val STATE_SEARCH_SCROLL_Y = "app_shell.search_scroll_y"
+        private const val STATE_PRODUCT_MAP_SELECTED_KEY = "app_shell.product_map_selected_key"
+        private const val STATE_PRODUCT_MAP_SELECTED_LABEL = "app_shell.product_map_selected_label"
         private const val OFFLINE_CATALOG_MAX_AGE_MILLIS = 8L * 24L * 60L * 60L * 1_000L
     }
 }

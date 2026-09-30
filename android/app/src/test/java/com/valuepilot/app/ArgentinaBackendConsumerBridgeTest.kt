@@ -57,6 +57,30 @@ class ArgentinaBackendConsumerBridgeTest {
     }
 
     @Test
+    fun exactSearchIdentityIsCarriedIntoShopRequest() {
+        val transport =
+            InMemoryArgentinaBackendTransport(
+                mapOf(ArgentinaBackendConsumerBridge.SHOP_ENDPOINT to response(200, shopJson(itemCount = 1)))
+            )
+        val bridge = ArgentinaBackendConsumerBridge(transport, release)
+        bridge.shop(
+            shopRequest(1).copy(
+                items = listOf(
+                    ArgentinaBackendContract.RequestItem(
+                        lineId = "line-1",
+                        query = "Yerba Mate",
+                        amount = "1",
+                        unit = "kg",
+                        productEvidenceKey = "product-yerba"
+                    )
+                )
+            )
+        )
+        assertTrue(transport.calls.single().requestBody!!.contains("productEvidenceKey"))
+        assertTrue(transport.calls.single().requestBody!!.contains("product-yerba"))
+    }
+
+    @Test
     fun validOneFiveAndTenLineBasketsMapWithoutReplanning() {
         listOf(1, 5, 10).forEach { count ->
             val bridge =

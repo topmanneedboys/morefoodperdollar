@@ -57,6 +57,9 @@ def create_app(service: BackendService | None = None):
         query: StrictStr
         amount: StrictStr
         unit: StrictStr
+        # Optional exact identity supplied by the already-qualified Search rail.
+        # When present, the reader must not replace it with lexical candidates.
+        productEvidenceKey: StrictStr | None = None
 
     class ShopRequest(BaseModel):
         model_config = ConfigDict(extra="forbid")

@@ -2,6 +2,48 @@
 
 Updated: 2026-09-29 04:30 UTC
 
+## Exact product-to-nearby-store map checkpoint — 2026-09-29
+
+The bounded Search → View on map milestone is complete locally on
+`work/valuepilot-confirmed-purchases`, based on
+`5214819a1ac3cfdaee7bf8d4a178e057815af57f`. Only qualified Argentina SEPA
+identity results expose the map action. The selected Search
+`productEvidenceKey` is carried into the existing direct shop request, and the
+backend trusts it only when it is an explicit item field; arbitrary public
+top-level identity injection is still ignored.
+
+The actual qualified schema audit found product identity/optional GTIN,
+commerce/banner/store identifiers, store name/address/locality/province,
+latitude/longitude/geo status, exact product-to-store offer relationships,
+published price and release/update provenance. The map adapter reuses the
+existing plan lines and store declarations, never copies the national catalog
+or invents a relationship. Wrong packages/GTINs, malformed coordinates and
+coordinates outside a broad Argentina envelope fail closed; exact store keys
+deduplicate; conflicting prices are hidden. SEPA publication remains release
+evidence only, with availability and inventory UNKNOWN.
+
+The map is a provider-neutral, tile-free coordinate canvas. MapLibre Native
+Android was reviewed as a future renderer, but no tile provider or permanent
+OSM tile backend was added. It works without location around the qualified
+CABA search-area center and labels that origin. A separate explicit user action
+can use one foreground location reading to re-sort pins by approximate
+straight-line distance. There is no background/continuous tracking. Road
+routing, driving distance/time, live stock and current-price claims are not
+provided.
+
+Map-focused coverage is 10 tests. Complete local verification is green: 438
+shared-core tests, 1,784 Android JVM tests, 114 backend tests, 330 tooling
+tests, debug/release lint, debug/release builds, release bundle, APK privacy
+inspection (no `ACCESS_NETWORK_STATE` or background location), and
+`git diff --check`.
+
+Unsigned candidate: versionCode `10118`, versionName `101.1.17`, package
+`com.valuepilot.app`; `android/app/build/outputs/bundle/release/app-release.aab`,
+36,463,757 bytes, SHA-256
+`7F62F2D70A4957FABD291C7EC2513A0BF9646F8A1FCA912EC5B60825A9C293C6`.
+No signing, Play upload, phone install or GitHub Actions retry was performed;
+the Actions allowance/billing lock remains external and unresolved.
+
 ## Connected Shopping Decision Engine checkpoint — 2026-09-29
 
 The next shared-core milestone is complete locally on
