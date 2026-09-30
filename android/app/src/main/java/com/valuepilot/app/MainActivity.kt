@@ -2928,12 +2928,20 @@ class MainActivity : AppCompatActivity() {
     private fun renderTripPlanner() {
         if (!::tripPlannerExperience.isInitialized) return
         val basket = currentTripBasketSnapshot()
+        val decision =
+            ShoppingDecisionTripPlannerBridge.evaluate(
+                home = homeSessionState,
+                trip = tripPlannerState,
+                purchases = confirmedPurchaseHistoryState.purchases,
+                priceWatchState = priceWatchState
+            )
         tripPlannerExperience.render(
             TripPlannerProjector.project(
                 state = tripPlannerState,
                 basket = basket,
                 directoryAvailable = tripStoreDirectorySelections.isNotEmpty(),
-                unavailable = tripPlannerLoadIssue != null
+                unavailable = tripPlannerLoadIssue != null,
+                decision = decision
             ),
             preferred = tripPlannerState.preferredStoreKey != null &&
                 tripPlannerState.preferredStoreKey == tripPlannerState.destination?.storeKey

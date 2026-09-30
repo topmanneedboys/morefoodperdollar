@@ -43,6 +43,7 @@ internal class TripPlannerSurfaceView @JvmOverloads constructor(
         addView(line(state.assumptionsText, 13f, "#374151", top = 5))
         addView(line(state.tripCostText, 14f, "#92400E", bold = true, top = 10))
         addView(line(state.savingsText, 12f, "#6B7280", top = 5))
+        addView(line(state.decisionText, 12f, "#6B7280", top = 5))
 
         addView(actionButton("Choose destination store", "Choose the exact destination store for this private trip scenario", TripPlannerUiAction.ChooseDestinationStore))
         addView(actionButton("Set starting point", "Enter a private starting point for this trip scenario", TripPlannerUiAction.SetManualOrigin))

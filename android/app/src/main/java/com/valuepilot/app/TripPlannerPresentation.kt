@@ -40,6 +40,7 @@ internal data class TripPlannerSurfaceState(
     val assumptionsText: String,
     val tripCostText: String,
     val savingsText: String,
+    val decisionText: String = "Shopping decision unavailable until an exact store is selected.",
     val directionsAvailable: Boolean,
     val canCalculate: Boolean,
     val basketRevision: String
@@ -54,6 +55,7 @@ internal data class TripPlannerSurfaceState(
             assumptionsText,
             tripCostText,
             savingsText,
+            decisionText,
             basketRevision
         ).forEach { require(it.isNotBlank()) }
         require(mode != TripPlannerSurfaceMode.CALCULATED || canCalculate)
@@ -65,7 +67,8 @@ internal object TripPlannerProjector {
         state: TripPlannerState?,
         basket: TripPlannerBasketSnapshot,
         directoryAvailable: Boolean,
-        unavailable: Boolean = false
+        unavailable: Boolean = false,
+        decision: com.valuepilot.core.ShoppingDecisionScenarioResult? = null
     ): TripPlannerSurfaceState {
         if (unavailable || state == null) {
             return TripPlannerSurfaceState(
@@ -78,6 +81,8 @@ internal object TripPlannerProjector {
                 assumptionsText = "Trip assumptions unavailable",
                 tripCostText = "Trip cost unknown",
                 savingsText = unknownSavingsText(),
+                decisionText = decision?.let(ShoppingDecisionTripPlannerBridge::summary)
+                    ?: "Shopping decision unavailable because the private trip draft could not be read.",
                 directionsAvailable = false,
                 canCalculate = false,
                 basketRevision = basket.revision
@@ -104,6 +109,8 @@ internal object TripPlannerProjector {
             assumptionsText = input?.let(::assumptionsText) ?: "Enter driving distance, fuel use and fuel price",
             tripCostText = result?.let(::costText) ?: "Trip cost: unknown until complete assumptions are entered",
             savingsText = unknownSavingsText(),
+            decisionText = decision?.let(ShoppingDecisionTripPlannerBridge::summary)
+                ?: "Shopping decision unavailable until an exact destination store is selected.",
             directionsAvailable = state.destination?.let { it.latitudeE7 != null && it.longitudeE7 != null } == true,
             canCalculate = ready,
             basketRevision = basket.revision

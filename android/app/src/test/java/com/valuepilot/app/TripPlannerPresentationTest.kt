@@ -1,6 +1,12 @@
 package com.valuepilot.app
 
 import com.valuepilot.core.Money
+import com.valuepilot.core.NormalizedQuantity
+import com.valuepilot.core.ShoppingDecisionBasketLine
+import com.valuepilot.core.ShoppingDecisionEngine
+import com.valuepilot.core.ShoppingDecisionInput
+import com.valuepilot.core.ShoppingDecisionStoreScenario
+import com.valuepilot.core.ShoppingItemKey
 import com.valuepilot.core.ShoppingStoreKey
 import com.valuepilot.core.TripDistanceBasis
 import com.valuepilot.core.TripOriginKind
@@ -76,6 +82,36 @@ class TripPlannerPresentationTest {
         assertEquals("r1", first.basketRevision)
         assertEquals("r2", second.basketRevision)
         assertTrue(second.guidance.contains("manual route"))
+    }
+
+    @Test
+    fun `decision evidence is inspectable without claiming a live price`() {
+        val store = ShoppingStoreKey("directory:store:decision")
+        val decision =
+            ShoppingDecisionEngine.evaluate(
+                ShoppingDecisionInput(
+                    basket =
+                        listOf(
+                            ShoppingDecisionBasketLine(
+                                lineId = "bread",
+                                productIdentityKey = ShoppingItemKey("bread"),
+                                displayName = "Bread",
+                                requestedQuantity = NormalizedQuantity(1_000_000L, com.valuepilot.core.BaseUnit.COUNT)
+                            )
+                        ),
+                    stores = listOf(ShoppingDecisionStoreScenario(store))
+                )
+            ).scenarios.single()
+        val projected =
+            TripPlannerProjector.project(
+                state = TripPlannerState(destination = TripStoreSelection(store, "Market", sourceLabel = "signed")),
+                basket = basket(planned = 1, privateItems = 0, unknown = 0, revision = "decision"),
+                directoryAvailable = true,
+                decision = decision
+            )
+
+        assertTrue(projected.decisionText.contains("unknown"))
+        assertTrue(projected.decisionText.contains("authorized live offer"))
     }
 
     @Test

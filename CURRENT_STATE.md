@@ -2,6 +2,38 @@
 
 Updated: 2026-09-29 04:30 UTC
 
+## Connected Shopping Decision Engine checkpoint — 2026-09-29
+
+The shared-core Shopping Decision Engine milestone is implemented on
+`work/valuepilot-confirmed-purchases` (the final code commit is recorded in
+the continuation checkpoint). The engine is stateless and consumes the existing
+Basket identities/quantities, confirmed purchases, personal Price Watch
+observations and targets, exact store keys, explicit trip assumptions and a
+future-ready current-offer contract. It does not create a second database or
+activate a retailer feed.
+
+Each explicit store scenario now reports per-line current-authorized,
+historical-retailer, confirmed-purchase, personal, target or unknown evidence;
+exact package-size arithmetic; partial versus complete basket coverage;
+currency separation; conflicts; provenance IDs; and an explanation of known,
+estimated, missing and used facts. Trip cost is calculated only from explicit
+manual assumptions, and the exact break-even additional-savings threshold is
+shown without claiming a cheapest store, current inventory or today's savings.
+The existing Trip Planner re-evaluates the current Home/Basket projection and
+private stores on render and displays this evidence summary read-only.
+
+The candidate is versionCode `10117` / versionName `101.1.16`. Local release
+bundle verification passed for package `com.valuepilot.app`; the unsigned AAB
+is `android/app/build/outputs/bundle/release/app-release.aab`, size
+36,441,056 bytes, SHA-256
+`884BC3AC8F92414F466D469F2836165A03323801E19F6986E26E6B35EB118CA7`.
+Full local verification is green: 433 shared-core tests, 1,777 Android app
+JVM tests, debug/release lint, debug/release builds, release bundle,
+`git diff --check`, and the privacy boundary (INTERNET remains intentional;
+no ACCESS_NETWORK_STATE or background-location permission). The AAB is
+unsigned, was not uploaded or installed, and no phone, GitHub Actions retry or
+paid service was used.
+
 ## Offline Store and Trip Planner checkpoint — 2026-09-29
 
 The bounded Store/Trip Planner milestone is complete on

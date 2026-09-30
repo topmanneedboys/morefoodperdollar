@@ -2,6 +2,34 @@
 
 Updated: 2026-09-29 04:30 UTC
 
+## Connected Shopping Decision Engine checkpoint — 2026-09-29
+
+The next shared-core milestone is complete locally on
+`work/valuepilot-confirmed-purchases`; its final code commit is the parent of
+the documentation checkpoint below. `ShoppingDecisionEngine` reuses the
+existing exact Money/NormalizedQuantity, Basket identity, confirmed-purchase,
+Price Watch, store-key and Trip Planner facts without copying them into a new
+store. It evaluates bounded whole-basket scenarios for explicit stores and
+keeps current authorized offers, historical retailer observations, confirmed
+purchases, personal observations, watch targets, unknowns and estimated travel
+as separate evidence classes.
+
+The result includes per-line provenance IDs, deterministic package-count
+arithmetic, unknown/conflict/currency blockers, partial and complete totals,
+historical context, explicit trip cost, break-even additional savings and a
+human-readable explanation. No store is ranked and no unsupported current
+savings or inventory claim is produced. Trip Planner now displays the result
+read-only from the current Home/Basket projection; it supplies no live offers.
+
+Focused decision tests: 14. Full local verification: 433 shared-core tests,
+1,777 Android JVM tests, debug/release lint, debug/release assemble, release
+bundle, privacy check and diff check all passed. VersionCode `10117`,
+versionName `101.1.16`, package `com.valuepilot.app`. Unsigned AAB:
+`android/app/build/outputs/bundle/release/app-release.aab`; SHA-256
+`884BC3AC8F92414F466D469F2836165A03323801E19F6986E26E6B35EB118CA7`;
+size 36,441,056 bytes. No signing, Play upload, phone install, GitHub Actions
+retry, network source or paid service was used.
+
 ## Offline Store and Trip Planner checkpoint — 2026-09-29
 
 The bounded Store/Trip Planner milestone is committed on
