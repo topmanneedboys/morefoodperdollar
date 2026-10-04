@@ -113,11 +113,13 @@ class M129GoogleProductPhotoBoundaryTest {
         val card = activity.substring(cardStart, cardEnd)
 
         assertTrue("Search card must wrap its body and actions", card.contains("val content = LinearLayout(this)"))
-        assertTrue("Photo action must be a content child", card.contains("content.addView(photoButton)"))
-        assertTrue("Save action must be a content child", card.contains("content.addView(addHomeButton)"))
+        assertTrue("Search card must use the shared progressive action menu", card.contains("ValuePilotProductContextMenu(this)"))
+        assertTrue("Photo action must be represented by a typed menu action", card.contains("ValuePilotProductContextActionKind.PHOTO"))
+        assertTrue("Photo callback must remain independent", card.contains("ValuePilotProductContextActionKind.PHOTO -> onOpenPhotos(match)"))
+        assertTrue("Save action must remain a direct primary action", card.contains("content.addView(addHomeButton)"))
         assertTrue("Wrapped card content must be attached once", card.contains("card.addView(content)"))
-        assertFalse("Photo action must not overlap as a direct FrameLayout child", card.contains("card.addView(photoButton)"))
         assertFalse("Save action must not overlap as a direct FrameLayout child", card.contains("card.addView(addHomeButton)"))
+        assertFalse("Legacy direct photo button must not be recreated", card.contains("val photoButton ="))
     }
 
     @Test

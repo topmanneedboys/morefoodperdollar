@@ -40,9 +40,10 @@ class SecondaryConsumerButtonVisualBoundaryTest {
 
         assertTrue(source.contains("fun filled("))
         assertTrue(source.contains("fun outlined("))
-        assertTrue(source.contains("if (compact) 44 else 52"))
-        assertTrue(source.contains("#B84A2B"))
-        assertTrue(source.contains("#FFFDF9"))
+        assertTrue(source.contains("ValuePilotDesignTokens.TouchTarget.COMPACT_MINIMUM_DP"))
+        assertTrue(source.contains("ValuePilotDesignTokens.TouchTarget.MINIMUM_DP"))
+        assertTrue(source.contains("ValuePilotDesignTokens.Colors.ACTION_FILLED"))
+        assertTrue(source.contains("ValuePilotDesignTokens.Colors.SURFACE"))
         assertTrue(source.contains("strokeColor"))
         assertTrue(source.contains("destructive"))
     }

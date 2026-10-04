@@ -2996,75 +2996,69 @@ class MainActivity : AppCompatActivity() {
                 FrameLayout.LayoutParams.WRAP_CONTENT
             )
         }
-        content.addView(body)
-        PracticalShoppingPrivateIdentity.fromSearchMatch(match)?.let { identity ->
-            val photoButton = MaterialButton(this).apply {
-                text = getString(R.string.search_identity_view_photos)
-                isAllCaps = false
-                minHeight = dp(48)
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    setMargins(dp(16), dp(6), dp(16), dp(6))
-                }
-                contentDescription = getString(
-                    R.string.search_identity_view_photos_description,
-                    identity.displayName
-                )
-                setOnClickListener { onOpenPhotos(match) }
-            }
-            content.addView(photoButton)
-        }
-        val priceWatchButton = MaterialButton(this).apply {
-            text = if (watched) "Unwatch" else "Watch price"
-            isAllCaps = false
-            minHeight = dp(48)
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                setMargins(dp(16), dp(6), dp(16), dp(6))
-            }
-            contentDescription =
-                if (watched) {
-                    "Stop watching ${match.displayName}; private history is retained"
-                } else {
-                    "Watch exact product ${match.displayName} privately"
-                }
-            setOnClickListener {
-                onTogglePriceWatch(
-                    PriceWatchUiAction.ToggleWatch(
-                        productIdentityKey = match.identityKey,
-                        displayName = match.displayName,
-                        brand = match.brand,
-                        packageQuantityLabel = match.packageQuantityLabel,
-                        watched = watched
+        val privateIdentity = PracticalShoppingPrivateIdentity.fromSearchMatch(match)
+        val contextActions = ValuePilotProductContextMenu(this).apply {
+            setActions(
+                buildList {
+                    privateIdentity?.let { identity ->
+                        add(
+                            ValuePilotProductContextAction(
+                                kind = ValuePilotProductContextActionKind.PHOTO,
+                                label = getString(R.string.search_identity_view_photos),
+                                contentDescription = getString(
+                                    R.string.search_identity_view_photos_description,
+                                    identity.displayName
+                                )
+                            )
+                        )
+                    }
+                    add(
+                        ValuePilotProductContextAction(
+                            kind = ValuePilotProductContextActionKind.WATCH,
+                            label = if (watched) "Unwatch" else "Watch price",
+                            contentDescription =
+                                if (watched) {
+                                    "Stop watching ${match.displayName}; private history is retained"
+                                } else {
+                                    "Watch exact product ${match.displayName} privately"
+                                }
+                        )
                     )
-                )
-            }
-        }
-        content.addView(priceWatchButton)
-        if (mapEligible) {
-            val mapButton = MaterialButton(this).apply {
-                text = getString(R.string.search_identity_view_map)
-                isAllCaps = false
-                minHeight = dp(48)
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    setMargins(dp(16), dp(6), dp(16), dp(6))
+                    if (mapEligible) {
+                        add(
+                            ValuePilotProductContextAction(
+                                kind = ValuePilotProductContextActionKind.MAP,
+                                label = getString(R.string.search_identity_view_map),
+                                contentDescription = getString(
+                                    R.string.search_identity_view_map_description,
+                                    match.displayName
+                                )
+                            )
+                        )
+                    }
                 }
-                contentDescription = getString(
-                    R.string.search_identity_view_map_description,
-                    match.displayName
-                )
-                setOnClickListener { onOpenMap(match) }
+            )
+            onAction = { action ->
+                when (action.kind) {
+                    ValuePilotProductContextActionKind.PHOTO -> onOpenPhotos(match)
+                    ValuePilotProductContextActionKind.WATCH ->
+                        onTogglePriceWatch(
+                            PriceWatchUiAction.ToggleWatch(
+                                productIdentityKey = match.identityKey,
+                                displayName = match.displayName,
+                                brand = match.brand,
+                                packageQuantityLabel = match.packageQuantityLabel,
+                                watched = watched
+                            )
+                        )
+                    ValuePilotProductContextActionKind.MAP -> onOpenMap(match)
+                }
             }
-            content.addView(mapButton)
         }
+        content.addView(body)
+        // Saving to the private Home list remains the one obvious shopping action.
         content.addView(addHomeButton)
+        content.addView(contextActions)
         card.addView(content)
         return card
     }

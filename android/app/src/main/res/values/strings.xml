@@ -126,6 +126,11 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="nav_basket">Basket</string>
     <string name="nav_saved">Saved</string>
 
+    <string name="product_context_more_actions">More product actions</string>
+    <string name="product_context_more_actions_description">Show secondary actions for this product</string>
+    <string name="product_context_hide_actions">Hide product actions</string>
+    <string name="product_context_hide_actions_description">Hide secondary actions for this product</string>
+
     <string name="confirmed_purchase_history_open">Confirmed purchases</string>
     <string name="confirmed_purchase_history_title">Confirmed purchases</string>
 
