@@ -2418,8 +2418,10 @@ class MainActivity : AppCompatActivity() {
                         match = match,
                         caveat = state.caveat,
                         onAddToHome = ::addSearchIdentityToHome,
+                        onToggleHome = ::toggleSearchIdentityInHome,
                         onOpenPhotos = ::openGoogleProductPhotos,
                         onOpenMap = ::openProductStoreMap,
+                        onOpenHistory = ::openSearchProductHistory,
                         watched = match.identityKey in watchedProductIdentityKeys(),
                         onTogglePriceWatch = ::handleTogglePriceWatch
                     )
@@ -2858,12 +2860,21 @@ class MainActivity : AppCompatActivity() {
         match: PracticalShoppingSearchIdentityPresentation.Match,
         caveat: String,
         onAddToHome: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
+        onToggleHome: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
         onOpenPhotos: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
         onOpenMap: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
+        onOpenHistory: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
         watched: Boolean,
         onTogglePriceWatch: (PriceWatchUiAction.ToggleWatch) -> Unit
     ): View {
         val mapEligible = ArgentinaProductStoreMapAdapter.canQuery(match)
+        val historyAvailable =
+            confirmedPurchaseHistoryState.purchases.any { purchase ->
+                purchase.productIdentityKey == match.identityKey
+            }
+        val homeSaved = homeSessionState.privateIdentities.any { identity ->
+            identity.identityKey == match.identityKey
+        }
         val card = ValuePilotProductCard(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -2887,7 +2898,14 @@ class MainActivity : AppCompatActivity() {
                     caveat,
                     "Tap to review this name in Scan and compare",
                     if (mapEligible) "View exact product stores on map" else null,
-                    getString(R.string.search_identity_add_home_draft)
+                    if (historyAvailable) "Open confirmed purchase history" else null,
+                    getString(
+                        if (homeSaved) {
+                            R.string.search_identity_remove_home_draft
+                        } else {
+                            R.string.search_identity_add_home_draft
+                        }
+                    )
                 ).joinToString(". ") { it.trim().trimEnd('.', '!', '?') } + "."
         }
 
@@ -2979,7 +2997,13 @@ class MainActivity : AppCompatActivity() {
             setPadding(0, dp(10), 0, 0)
         }.also(body::addView)
         val addHomeButton = MaterialButton(this).apply {
-            text = getString(R.string.search_identity_add_home_draft)
+            text = getString(
+                if (homeSaved) {
+                    R.string.search_identity_remove_home_draft
+                } else {
+                    R.string.search_identity_add_home_draft
+                }
+            )
             isAllCaps = false
             minHeight = dp(48)
             layoutParams = LinearLayout.LayoutParams(
@@ -2989,10 +3013,16 @@ class MainActivity : AppCompatActivity() {
                 setMargins(dp(16), dp(6), dp(16), dp(12))
             }
             contentDescription = getString(
-                R.string.search_identity_add_home_draft_description,
+                if (homeSaved) {
+                    R.string.search_identity_remove_home_draft_description
+                } else {
+                    R.string.search_identity_add_home_draft_description
+                },
                 match.displayName
             )
-            setOnClickListener { onAddToHome(match) }
+            setOnClickListener {
+                if (homeSaved) onToggleHome(match) else onAddToHome(match)
+            }
         }
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -3041,6 +3071,18 @@ class MainActivity : AppCompatActivity() {
                             )
                         )
                     }
+                    if (historyAvailable) {
+                        add(
+                            ValuePilotProductContextAction(
+                                kind = ValuePilotProductContextActionKind.HISTORY,
+                                label = getString(R.string.search_identity_view_history),
+                                contentDescription = getString(
+                                    R.string.search_identity_view_history_description,
+                                    match.displayName
+                                )
+                            )
+                        )
+                    }
                 }
             )
             onAction = { action ->
@@ -3057,6 +3099,7 @@ class MainActivity : AppCompatActivity() {
                             )
                         )
                     ValuePilotProductContextActionKind.MAP -> onOpenMap(match)
+                    ValuePilotProductContextActionKind.HISTORY -> onOpenHistory(match)
                 }
             }
         }
@@ -3066,6 +3109,50 @@ class MainActivity : AppCompatActivity() {
         content.addView(contextActions)
         card.addView(content)
         return card
+    }
+
+    private fun openSearchProductHistory(
+        match: PracticalShoppingSearchIdentityPresentation.Match
+    ) {
+        // History entry is exact-key gated; Search never fuzzy-matches a
+        // purchase or creates a new history record as a side effect.
+        if (confirmedPurchaseHistoryState.purchases.none { purchase ->
+                purchase.productIdentityKey == match.identityKey
+            }
+        ) {
+            return
+        }
+        dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED))
+        dispatch(AppShellIntent.OpenConfirmedPurchaseHistory)
+    }
+
+    private fun toggleSearchIdentityInHome(
+        match: PracticalShoppingSearchIdentityPresentation.Match
+    ) {
+        val previousState = homeSessionState
+        val nextState =
+            if (previousState.privateIdentities.any { identity ->
+                    identity.identityKey == match.identityKey
+                }
+            ) {
+                PracticalShoppingHomeSession.removePrivateIdentity(
+                    previousState,
+                    match.identityKey
+                )
+            } else {
+                PracticalShoppingPrivateIdentity.fromSearchMatch(match)?.let { identity ->
+                    PracticalShoppingHomeSession.addPrivateIdentity(previousState, identity)
+                } ?: previousState
+            }
+        if (nextState == previousState) {
+            searchStatus.text = getString(R.string.search_identity_add_home_failed)
+            return
+        }
+        homeSessionState = nextState
+        authorizePrivateListPersistence()
+        renderHome()
+        renderedSearchMatches = null
+        argentinaSearchSurfaceState?.let(::renderSearch)
     }
 
     private fun openProductStoreMap(

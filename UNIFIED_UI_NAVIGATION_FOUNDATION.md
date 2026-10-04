@@ -58,7 +58,7 @@ workflows rather than bottom-navigation destinations.
   rebuilt merely because another tab was selected.
 - New product cards and context actions use stable opaque callbacks rather than
   reconstructing identity from display text; secondary actions are bounded to
-  three and use minimum 48dp touch targets.
+  four and use minimum 48dp touch targets.
 - The disclosure control and every secondary action have explicit labels for
   screen readers. The foundation introduces no mandatory animation and keeps
   existing large-text-compatible TextView layouts intact.
@@ -94,9 +94,32 @@ the bounded `ValuePilotMotion` reveal helper. Motion is a 180 ms disclosure
 only, resets immediately when Android disables animator motion, and has no
 effect on state, persistence or planner authority.
 
+## Stage 3 Search, product context and map
+
+Search keeps one shared `ValuePilotProductCard` per exact identity. The name,
+brand/variant, source-supplied package quantity and identity/evidence caveat
+are visually grouped; saving to the private Home list remains the single
+obvious action. Photo, Watch, Map and exact-match History are bounded typed
+actions inside the same expandable context surface. History appears only when
+the exact opaque identity key exists in the private purchase store.
+
+The existing Product → Nearby Store Map now uses the same warm card/touch
+tokens. It highlights the exact product, relative store positions, the
+selected store, release/freshness evidence, approximate straight-line distance
+and the existing Trip Planner handoff. It remains deliberately tile-free and
+does not imply stock, driving distance, driving time or cheapest-store status.
+Selection still passes the original `ProductStoreMapPin`/`storeKey` into the
+existing Trip Planner state; no second store model was introduced.
+
+Search query, loaded pages, rendered-match identity, scroll position, basket,
+Saved, watches and history remain owned by their existing state boundaries.
+Opening context or the map does not invalidate Search; returning through the
+same primary route restores the saved scroll position. Map and context
+disclosures use the shared motion helper and collapse after an action.
+
 ## Deliberately not migrated yet
 
-Basket, Saved, History, Price Watch, Trip Planner, Map, Compare, Good Price and
+Basket, Saved, History, Price Watch, Trip Planner, Compare, Good Price and
 the standalone capture surfaces still use their existing renderers. They remain
 functional and are intentionally deferred to later bounded migration stages.
 Search was not redesigned in Stage 2. No new catalog, provider, network,

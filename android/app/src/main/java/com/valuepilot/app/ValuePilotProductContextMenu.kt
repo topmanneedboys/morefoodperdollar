@@ -14,7 +14,8 @@ import android.widget.LinearLayout
 internal enum class ValuePilotProductContextActionKind {
     PHOTO,
     WATCH,
-    MAP
+    MAP,
+    HISTORY
 }
 
 internal data class ValuePilotProductContextAction(
@@ -80,7 +81,10 @@ internal class ValuePilotProductContextMenu @JvmOverloads constructor(
                         else ValuePilotDesignTokens.Spacing.XXS_DP
                     )
                 }
-                setOnClickListener { onAction?.invoke(action) }
+                setOnClickListener {
+                    setExpanded(false)
+                    onAction?.invoke(action)
+                }
             }
             actionsContainer.addView(button)
         }
@@ -91,6 +95,7 @@ internal class ValuePilotProductContextMenu @JvmOverloads constructor(
     fun setExpanded(value: Boolean) {
         expanded = value && actions.isNotEmpty()
         actionsContainer.visibility = if (expanded) VISIBLE else GONE
+        ValuePilotMotion.reveal(actionsContainer, animate = expanded)
         updateDisclosurePresentation()
     }
 
@@ -116,6 +121,6 @@ internal class ValuePilotProductContextMenu @JvmOverloads constructor(
         (value * resources.displayMetrics.density).toInt()
 
     private companion object {
-        const val MAX_ACTIONS = 3
+        const val MAX_ACTIONS = 4
     }
 }

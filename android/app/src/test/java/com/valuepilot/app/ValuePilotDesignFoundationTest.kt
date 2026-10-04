@@ -28,10 +28,12 @@ class ValuePilotDesignFoundationTest {
     @Test
     fun `context menu is presentation-only and bounded`() {
         val source = source("ValuePilotProductContextMenu.kt")
-        assertTrue(source.contains("const val MAX_ACTIONS = 3"))
+        assertTrue(source.contains("const val MAX_ACTIONS = 4"))
         assertTrue(source.contains("ValuePilotProductContextAction"))
         assertTrue(source.contains("R.string.product_context_more_actions"))
         assertTrue(source.contains("ValuePilotDesignTokens.TouchTarget.MINIMUM_DP"))
+        assertTrue(source.contains("ValuePilotMotion.reveal(actionsContainer"))
+        assertTrue(source.contains("setExpanded(false)"))
         assertTrue(source.contains("onAction?.invoke(action)"))
     }
 
