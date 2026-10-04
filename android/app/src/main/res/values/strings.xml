@@ -146,6 +146,9 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="home_chicken_choice_description">Choose %1$s for %2$s</string>
     <string name="home_extra_stop_choice_description">Set the extra-stop minimum savings to %1$s</string>
     <string name="home_plan_action">Plan my shop</string>
+    <string name="home_repeat_purchase">Repeat a past purchase</string>
+    <string name="home_repeat_purchase_count">Repeat a past purchase (%1$d saved)</string>
+    <string name="home_repeat_purchase_description">Open your confirmed private purchase history to repeat an exact product identity. This does not recreate a purchase automatically.</string>
     <string name="home_fast_actions_title">Quick answers</string>
     <string name="home_items_title">On your list</string>
     <string name="home_private_identity_title">Your private shopping list</string>

@@ -3,6 +3,7 @@ package com.valuepilot.app
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.graphics.Rect
 import android.graphics.Typeface
 import android.text.Editable
@@ -74,12 +75,14 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val privateMemoryForgetOwnerControls = mutableListOf<View>()
     private val shopAgainOwnerControls = mutableListOf<View>()
     private val sharePlanOwnerControls = mutableListOf<View>()
+    private val purchaseHistoryOwnerControls = mutableListOf<View>()
     private val priceWatchOwnerControls = mutableListOf<View>()
 
     private var hasRenderedState = false
     private var lastRenderedSubmitEnabled = false
     private var lastRenderedQuickAddVisible = false
     private var projectedResultVisible = false
+    private var lastCommandCenterSignature: String? = null
 
     var onQueryChanged: ((String) -> Unit)? = null
         set(value) {
@@ -226,6 +229,13 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                     value != null && hasRenderedState && control.visibility == VISIBLE
             }
         }
+    var onOpenConfirmedPurchaseHistory: (() -> Unit)? = null
+        set(value) {
+            field = value
+            purchaseHistoryOwnerControls.forEach { control ->
+                control.isEnabled = value != null && hasRenderedState && control.visibility == VISIBLE
+            }
+        }
 
     private var suppressInputCallback = false
     private var extraStopSettingsExpanded = false
@@ -256,6 +266,73 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         )
         endIconMode = TextInputLayout.END_ICON_CLEAR_TEXT
         addView(input)
+    }
+
+    private val commandCenterListPill = commandCenterPill()
+    private val commandCenterStatusPill = commandCenterPill()
+    private val commandCenterEyebrow = line(
+        "YOUR SHOPPING SPACE",
+        11f,
+        ValuePilotDesignTokens.Colors.PRIMARY_DARK,
+        true
+    )
+    private val commandCenterTitle = line(
+        "Start with your list",
+        21f,
+        ValuePilotDesignTokens.Colors.TEXT_PRIMARY,
+        true,
+        topPadding = 6
+    )
+    private val commandCenterSummary = line(
+        "Keep the next useful action in view.",
+        13f,
+        ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
+        topPadding = 5
+    )
+    private val commandCenterPills = LinearLayout(context).apply {
+        orientation = HORIZONTAL
+        gravity = android.view.Gravity.CENTER_VERTICAL
+        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 14)
+        addView(commandCenterListPill)
+        addView(commandCenterStatusPill)
+    }
+    private val commandCenterHistoryButton = MaterialButton(context).apply {
+        purchaseHistoryOwnerControls += this
+        text = context.getString(R.string.home_repeat_purchase)
+        contentDescription = context.getString(R.string.home_repeat_purchase_description)
+        isAllCaps = false
+        textSize = 13f
+        minHeight = dp(ValuePilotDesignTokens.TouchTarget.COMPACT_MINIMUM_DP)
+        minimumHeight = dp(ValuePilotDesignTokens.TouchTarget.COMPACT_MINIMUM_DP)
+        minWidth = 0
+        minimumWidth = 0
+        insetTop = 0
+        insetBottom = 0
+        setPadding(dp(10), 0, dp(10), 0)
+        cornerRadius = dp(ValuePilotDesignTokens.Shape.CONTROL_RADIUS_DP)
+        strokeWidth = dp(1)
+        strokeColor = ColorStateList.valueOf(
+            ValuePilotPalette.color(ValuePilotDesignTokens.Colors.OUTLINE)
+        )
+        setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.PRIMARY_DARK))
+        backgroundTintList = ColorStateList.valueOf(
+            ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE)
+        )
+        layoutParams = fullWidth(dp(ValuePilotDesignTokens.TouchTarget.COMPACT_MINIMUM_DP), 10)
+        visibility = GONE
+        isEnabled = false
+        setOnClickListener { onOpenConfirmedPurchaseHistory?.invoke() }
+    }
+    private val commandCenterBody = column().apply {
+        addView(commandCenterEyebrow)
+        addView(commandCenterTitle)
+        addView(commandCenterSummary)
+        addView(commandCenterPills)
+        addView(commandCenterHistoryButton)
+    }
+    private val commandCenterCard = ValuePilotProductCard(context).apply {
+        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 0)
+        addView(commandCenterBody)
     }
 
     private var appliedQueryCharacterLimit: Int? = null
@@ -366,6 +443,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         submitOwnerControls += submitButton
         extraStopOwnerControls += extraStopSettingsButton
 
+        addView(commandCenterCard)
         addView(inputLayout)
         addView(submitButton)
         addView(fastActionsHeading)
@@ -452,6 +530,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         input.isEnabled = onQueryChanged != null
         lastRenderedSubmitEnabled = state.submitEnabled
         submitButton.isEnabled = state.submitEnabled && onSubmit != null
+        renderCommandCenter(state)
         compareActionButton.isEnabled = onCompare != null
         renderMessage(state)
         renderPrivateIdentities(state.privateIdentityItems)
@@ -677,6 +756,66 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         }
     }
 
+    private fun renderCommandCenter(state: PracticalShoppingHomeRenderState) {
+        val itemCount = state.items.size
+        val privateCount = state.privateIdentityItems.size
+        val primary = state.result?.primary
+        commandCenterTitle.text =
+            when {
+                primary != null -> "Your projected plan is ready"
+                itemCount > 0 -> "Your list is ready"
+                privateCount > 0 -> "Your private list is ready"
+                else -> "Start with your list"
+            }
+        commandCenterSummary.text =
+            when {
+                primary != null ->
+                    "${primary.coverageText} · Review the evidence below before you shop."
+                itemCount > 0 ->
+                    "Check the list, then choose Plan my shop for the next step."
+                privateCount > 0 ->
+                    "Saved identities stay on this device and never imply price or availability."
+                else ->
+                    "Type a list in plain language. ValuePilot will keep uncertainty visible."
+            }
+        commandCenterListPill.text =
+            if (itemCount == 0) {
+                "No planned items"
+            } else if (itemCount == 1) {
+                "1 planned item"
+            } else {
+                "$itemCount planned items"
+            }
+        commandCenterStatusPill.text =
+            when {
+                primary != null -> "Plan ready"
+                state.result != null -> "Coverage needs review"
+                privateCount > 0 -> "$privateCount private saved"
+                else -> "No plan yet"
+            }
+        val historyVisible = state.confirmedPurchaseCount > 0
+        commandCenterHistoryButton.visibility = if (historyVisible) VISIBLE else GONE
+        commandCenterHistoryButton.text =
+            context.getString(
+                R.string.home_repeat_purchase_count,
+                state.confirmedPurchaseCount
+            )
+        commandCenterHistoryButton.isEnabled =
+            historyVisible && onOpenConfirmedPurchaseHistory != null && hasRenderedState
+        val signature =
+            listOf(
+                itemCount,
+                privateCount,
+                state.confirmedPurchaseCount,
+                state.result?.headline,
+                primary?.coverageText
+            ).joinToString("|")
+        if (signature != lastCommandCenterSignature) {
+            lastCommandCenterSignature = signature
+            ValuePilotMotion.reveal(commandCenterCard)
+        }
+    }
+
     private fun renderPrivateIdentities(
         identities: List<PracticalShoppingHomePrivateIdentityRenderState>
     ) {
@@ -822,7 +961,10 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     }
 
     private fun itemRow(item: PracticalShoppingHomeItemRenderState): View =
-        card("#FFFDF9", "#D8CFC6", 8).apply {
+        ValuePilotProductCard(context).apply {
+            setCardBackgroundColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE))
+            strokeColor = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.OUTLINE)
+            layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 8)
             addView(
                 column().apply {
                     addView(
@@ -1317,6 +1459,21 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         // Keep the owner-driven removal route inert until its callback is attached.
         isEnabled = false
         setOnClickListener { onForgetPrivateMemory?.invoke() }
+    }
+
+    private fun commandCenterPill(): TextView = TextView(context).apply {
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+        setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.PRIMARY_DARK))
+        setPadding(dp(10), dp(8), dp(10), dp(8))
+        minHeight = dp(ValuePilotDesignTokens.TouchTarget.COMPACT_MINIMUM_DP)
+        minimumHeight = dp(ValuePilotDesignTokens.TouchTarget.COMPACT_MINIMUM_DP)
+        background = GradientDrawable().apply {
+            setColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE))
+            cornerRadius = dp(16).toFloat()
+        }
+        layoutParams = LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply {
+            rightMargin = dp(ValuePilotDesignTokens.Spacing.XS_DP)
+        }
     }
 
     private fun heading(value: String): TextView = line(value, 13f, "#374151", true, 18)

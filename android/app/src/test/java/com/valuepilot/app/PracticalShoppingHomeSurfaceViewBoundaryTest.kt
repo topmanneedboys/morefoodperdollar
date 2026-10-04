@@ -170,7 +170,8 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
     fun homeItemRowsUseReadableCardsAndStackedActions() {
         val source = source().readText()
 
-        assertTrue("Each Home item should have a bounded visual card", source.contains("card(\"#FFFDF9\", \"#D8CFC6\", 8)"))
+        assertTrue("Each Home item should have a shared product card surface", source.contains("ValuePilotProductCard(context)"))
+        assertTrue("Each Home item should have a bounded visual card", source.contains("layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 8)"))
         assertTrue("Item actions must stack below the full-width label", source.contains("orientation = VERTICAL"))
         assertTrue("Item actions need a comfortable full-width touch target", source.contains("layoutParams = fullWidth(dp(48), 6)"))
         assertTrue("Item labels must remain readable beside no controls", source.contains("addView(line(label, 15f"))

@@ -215,6 +215,8 @@ data class PracticalShoppingHomeRenderState(
         PracticalShoppingHomePrivateMemoryStatus.AVAILABLE,
     /** Bounded read-only proof that automatic private memory has become useful. */
     val privateMemoryHighlights: List<PracticalShoppingHomePrivateMemoryHighlight> = emptyList(),
+    /** Number of explicitly confirmed private purchases available for a repeat entry point. */
+    val confirmedPurchaseCount: Int = 0,
     /**
      * Renderer-only aggregate for a no-coverage result. A projected primary plan already
      * carries its own exact coverage text, so this remains null whenever one exists.
@@ -243,6 +245,7 @@ data class PracticalShoppingHomeRenderState(
         )
         require(privateMemorySummary == null || privateMemorySummary.isNotBlank())
         require(privateMemoryHighlights.size <= MAX_HOME_PRIVATE_MEMORY_HIGHLIGHTS)
+        require(confirmedPurchaseCount >= 0)
         require(
             privateMemoryHighlights.isEmpty() ||
                 (privateMemoryStatus == PracticalShoppingHomePrivateMemoryStatus.AVAILABLE &&
@@ -297,7 +300,8 @@ object PracticalShoppingHomeRenderer {
         savedExactProductContext: PracticalShoppingHomeSavedExactProductContext? = null,
         privateIdentities: List<PracticalShoppingPrivateIdentity> = emptyList(),
         privateIdentityCollectedKeys: List<String> = emptyList(),
-        watchedProductIdentityKeys: Set<String> = emptySet()
+        watchedProductIdentityKeys: Set<String> = emptySet(),
+        confirmedPurchaseCount: Int = 0
     ): PracticalShoppingHomeRenderState {
         // A failed read is not permission to display stale or caller-provided history. Keep the
         // status visible while suppressing every history-derived row notice until recovery.
@@ -512,6 +516,7 @@ object PracticalShoppingHomeRenderer {
                     privateMemorySummary != null,
             privateMemoryStatus = privateMemoryStatus,
             privateMemoryHighlights = privateMemoryHighlights,
+            confirmedPurchaseCount = confirmedPurchaseCount,
             noCoverageSummary = noCoverageSummary(source),
             shopAgainVisible =
                 source.status == LocalSamplePracticalShoppingDemo.Status.RESULT &&

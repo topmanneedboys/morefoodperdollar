@@ -109,6 +109,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var shellScrollView: ScrollView
     private lateinit var bottomNavArea: View
     private lateinit var bottomNavigation: BottomNavigationView
+    private lateinit var screenHeaderCard: View
     private lateinit var screenEyebrow: TextView
     private lateinit var screenTitle: TextView
     private lateinit var screenBody: TextView
@@ -214,6 +215,7 @@ class MainActivity : AppCompatActivity() {
         shellScrollView = findViewById(R.id.shellScrollView)
         bottomNavArea = findViewById(R.id.bottomNavArea)
         bottomNavigation = findViewById(R.id.bottomNavigation)
+        screenHeaderCard = findViewById(R.id.screenHeaderCard)
         screenEyebrow = findViewById(R.id.screenEyebrow)
         screenTitle = findViewById(R.id.screenTitle)
         screenBody = findViewById(R.id.screenBody)
@@ -661,6 +663,9 @@ class MainActivity : AppCompatActivity() {
         }
         homeExperience.onCompare = { openComparison() }
         homeExperience.onReviewPrivateMemory = { reviewPrivatePriceHistory() }
+        homeExperience.onOpenConfirmedPurchaseHistory = {
+            dispatch(AppShellIntent.OpenConfirmedPurchaseHistory)
+        }
         homeExperience.onExportPrivateMemory = { exportPrivatePriceHistory() }
         homeExperience.onForgetPrivateMemory = { forgetPrivatePriceHistoryObservation() }
         homeExperience.onGoodPrice = { openGoodPriceCheck() }
@@ -691,7 +696,8 @@ class MainActivity : AppCompatActivity() {
                 savedExactProductContext = homeSavedExactProductContext,
                 privateIdentities = homeSessionState.privateIdentities,
                 privateIdentityCollectedKeys = homeSessionState.privateBasketCollectedIdentityKeys,
-                watchedProductIdentityKeys = watchedProductIdentityKeys()
+                watchedProductIdentityKeys = watchedProductIdentityKeys(),
+                confirmedPurchaseCount = confirmedPurchaseHistoryState.purchases.size
             )
         // A render invalidates any pending share preview. This prevents a dialog opened for an
         // earlier list/result from sending text after the Home projection has changed.
@@ -2255,6 +2261,11 @@ class MainActivity : AppCompatActivity() {
         screenTitle.text = copy.title
         screenBody.text = copy.body
         screenFootnote.text = copy.footnote
+        // Home has its own compact command center. Keeping the long route
+        // header for secondary destinations avoids repeating the same copy
+        // above the primary shopping workspace.
+        screenHeaderCard.visibility =
+            if (state.route == AppRoute.HOME) View.GONE else View.VISIBLE
         primaryAction.visibility = if (copy.showCompareAction) View.VISIBLE else View.GONE
 
         val homeVisible = state.selectedPrimaryTab == AppPrimaryTab.HOME

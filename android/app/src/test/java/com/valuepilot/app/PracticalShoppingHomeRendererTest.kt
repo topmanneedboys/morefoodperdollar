@@ -83,6 +83,21 @@ class PracticalShoppingHomeRendererTest {
             rendered.extraStopSettings.choices.map { it.selected }
         )
         assertTrue(rendered.sampleNotice.contains("Fictional sample data"))
+        assertEquals(0, rendered.confirmedPurchaseCount)
+    }
+
+    @Test
+    fun confirmedPurchaseCount_is_read_only_home_context_for_repeat_entry() {
+        val rendered =
+            PracticalShoppingHomeRenderer.render(
+                LocalSamplePracticalShoppingDemo.initialModel().ui,
+                requestDetails = null,
+                confirmedPurchaseCount = 2
+            )
+
+        assertEquals(2, rendered.confirmedPurchaseCount)
+        assertTrue(rendered.items.isEmpty())
+        assertNull(rendered.result)
     }
 
     @Test

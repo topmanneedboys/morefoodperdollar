@@ -76,10 +76,28 @@ workflows rather than bottom-navigation destinations.
   actions only when requested. Existing callbacks and identity/evidence
   boundaries remain unchanged.
 
+## Stage 2 Home command center
+
+Home now starts with a compact command-center card instead of repeating the
+long route header above the shopping workspace. It is presentation-only and
+is derived from the existing immutable `PracticalShoppingHomeRenderState`:
+
+- planned-item count and plan/coverage status are shown as small visual pills;
+- projected-plan copy remains evidence-aware and never claims live inventory;
+- a repeat-purchase entry appears only when the bounded private confirmed
+  purchase store has records, and opens the existing Saved-owned history route;
+- saved identities and private price memory remain separate from the sample
+  planning result.
+
+The card uses `ValuePilotProductCard`, shared spacing/shape/color tokens and
+the bounded `ValuePilotMotion` reveal helper. Motion is a 180 ms disclosure
+only, resets immediately when Android disables animator motion, and has no
+effect on state, persistence or planner authority.
+
 ## Deliberately not migrated yet
 
-Home, Basket, Saved, History, Price Watch, Trip Planner, Map, Compare, Good
-Price and the standalone capture surfaces still use their existing renderers.
-They remain functional and are intentionally deferred to later bounded
-migration stages. No new catalog, provider, network, ranking or business logic
-was introduced here.
+Basket, Saved, History, Price Watch, Trip Planner, Map, Compare, Good Price and
+the standalone capture surfaces still use their existing renderers. They remain
+functional and are intentionally deferred to later bounded migration stages.
+Search was not redesigned in Stage 2. No new catalog, provider, network,
+ranking or business logic was introduced here.

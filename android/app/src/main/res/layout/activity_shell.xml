@@ -41,6 +41,7 @@
                 android:textSize="14sp" />
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/screenHeaderCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="22dp"
