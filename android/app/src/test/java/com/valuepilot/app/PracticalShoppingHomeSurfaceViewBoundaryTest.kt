@@ -240,6 +240,29 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
     }
 
     @Test
+    fun modernHomeHasOneSearchActionAndHidesAdvancedModulesByDefault() {
+        val source = source().readText()
+
+        listOf(
+            "private val homeHeroCard",
+            "home_search_products",
+            "var onOpenSearch: (() -> Unit)? = null",
+            "var onOpenBasket: (() -> Unit)? = null",
+            "private fun renderModernHome",
+            "PracticalShoppingHomePresentationPolicy.from(state)",
+            "commandCenterCard.visibility = GONE",
+            "compareActionButton.visibility = GONE",
+            "goodPriceActionButton.visibility = GONE",
+            "sampleCardView.visibility = GONE",
+            "privateMemoryHighlightsCard.visibility = GONE",
+            "extraStopSettingsButton.visibility = GONE",
+            "R.string.home_open_basket"
+        ).forEach { required ->
+            assertTrue("Expected Stage 1 Home presentation binding $required", source.contains(required))
+        }
+    }
+
+    @Test
     fun choiceChipsGiveTalkBackTheQuestionTheyAnswer() {
         val source = source().readText()
         val strings =

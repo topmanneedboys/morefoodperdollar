@@ -14,7 +14,7 @@ class PracticalShoppingHomeShareCardTest {
 
         assertNotNull(card)
         val text = requireNotNull(card).text
-        assertTrue(text.contains("Basket 10.28 CAD"))
+        assertTrue(text.contains("Basket 10.28 ARS"))
         assertTrue(text.contains("Example Grocer East"))
         assertTrue(text.contains("2 of 2 items priced"))
         assertTrue(text.contains("Fictional sample data only — not live retailer prices or availability."))
@@ -30,7 +30,7 @@ class PracticalShoppingHomeShareCardTest {
 
         assertNotNull(card)
         val text = requireNotNull(card).text
-        assertTrue(text.contains("Known subtotal 4.49 CAD"))
+        assertTrue(text.contains("Known subtotal 4.49 ARS"))
         assertTrue(text.contains("1 of 2 items priced"))
         assertTrue(text.contains("This is not a complete basket total."))
         assertTrue(text.contains("Fictional sample data only"))
@@ -68,7 +68,7 @@ class PracticalShoppingHomeShareCardTest {
         assertNotNull(card)
         val text = requireNotNull(card).text
         assertTrue(text.contains("Optional planned stop at Example Grocer East"))
-        assertTrue(text.contains("Could save 2.50 CAD"))
+        assertTrue(text.contains("Could save 2.50 ARS"))
         assertTrue(text.contains(secondStop.additionalTravelText))
         assertTrue(text.contains(secondStop.evidenceText))
         assertFalse(text.contains("Bananas"))

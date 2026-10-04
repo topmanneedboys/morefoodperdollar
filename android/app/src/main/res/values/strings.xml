@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">ValuePilot</string>
 
-    <string name="app_tagline">Compare the real cost. Build the smarter basket.</string>
+    <string name="app_tagline">Find products. Build your basket. Shop smarter.</string>
 
     <string name="shell_back">Back</string>
     <string name="shell_back_description">Return to the previous ValuePilot screen</string>
@@ -129,7 +129,7 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="nav_home">Home</string>
     <string name="nav_search">Search</string>
     <string name="nav_basket">Basket</string>
-    <string name="nav_saved">Saved</string>
+    <string name="nav_saved">You</string>
 
     <string name="product_context_more_actions">More product actions</string>
     <string name="product_context_more_actions_description">Show secondary actions for this product</string>
@@ -141,7 +141,7 @@ This build does not include an authorized current-offer feed. No flyer content i
 
     <string name="compare_products">Compare products</string>
 
-    <string name="home_eyebrow">PRACTICAL SHOPPING • SAMPLE DATA</string>
+    <string name="home_eyebrow">HOME</string>
     <string name="home_title">What do you need?</string>
     <string name="home_body">Type your grocery list in plain language. ValuePilot asks only when something genuinely needs clarification.</string>
     <string name="home_footnote">Search stays separate for item-by-item value. Direct product comparison remains available as a secondary tool.</string>
@@ -221,6 +221,23 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="home_private_memory_clear_confirm">Clear history</string>
     <string name="home_private_memory_clear_error_title">History was not cleared</string>
     <string name="home_private_memory_clear_error">ValuePilot could not confirm clearing private history. Your existing observations remain available; try again or use Scan &amp; compare.</string>
+    <string name="home_purpose">Start with one search.</string>
+    <string name="home_search_products">Search products</string>
+    <string name="home_search_products_description">Open product Search to find an exact identity</string>
+    <string name="home_open_basket">Open</string>
+    <string name="home_open_basket_description">Open your current Basket</string>
+    <string name="home_basket_label">YOUR BASKET</string>
+    <string name="home_basket_one_item">1 item</string>
+    <string name="home_basket_item_count">%1$d items</string>
+    <string name="home_basket_collected">%1$d of %2$d saved items collected</string>
+    <string name="home_basket_open_to_collect">Ready to check off in Basket</string>
+    <string name="home_buy_again_label">BUY AGAIN</string>
+    <string name="home_buy_again_body">Pick up where your confirmed purchases left off.</string>
+    <string name="home_buy_again">Buy again</string>
+    <string name="home_buy_again_description">Open confirmed purchases to choose an exact product to buy again</string>
+    <string name="home_flow_search">Search</string>
+    <string name="home_flow_basket">Basket</string>
+    <string name="home_flow_shop">Shop</string>
 
     <string name="production_home_items_title">Your shopping list</string>
     <string name="production_home_unavailable_title">Shopping plan unavailable</string>
@@ -350,9 +367,9 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="basket_items_title">ITEMS IN THIS BASKET</string>
     <string name="basket_unresolved_title">UNRESOLVED ITEMS — FINISH ON HOME</string>
 
-    <string name="saved_eyebrow">SAVED</string>
-    <string name="saved_title">Manage saved choices.</string>
-    <string name="saved_body">Review or manage the products and stores you choose to remember here.</string>
+    <string name="saved_eyebrow">YOU</string>
+    <string name="saved_title">Your ValuePilot</string>
+    <string name="saved_body">Saved products, purchases and watches stay private on this device.</string>
     <string name="saved_footnote">Saved choices are local preferences only. They do not confirm current price, stock, promotions, availability or travel.</string>
     <string name="saved_clear_all_confirmation_title">Clear all saved choices?</string>
     <string name="saved_clear_all_confirmation_body">This removes every saved product and store from ValuePilot on this device.</string>

@@ -87,6 +87,24 @@ class ArgentinaLiveSearchSurfaceTest {
     }
 
     @Test
+    fun `stale release uses calm update copy instead of raw release language`() {
+        val state = ArgentinaLiveSearchSurfacePresenter.from(
+            ArgentinaLiveSearchState.Unavailable(
+                8,
+                "yerba",
+                ArgentinaBackendContract.FailureCode.STALE_RELEASE
+            ),
+            area
+        )
+
+        assertEquals(ArgentinaLiveSearchSurfaceMode.STALE_RELEASE, state.mode)
+        assertTrue(state.statusMessage.contains("Search unavailable"))
+        assertTrue(state.statusMessage.contains("Latest product data is being updated"))
+        assertTrue(state.statusMessage.contains("Try again"))
+        assertFalse(state.statusMessage.contains("no longer current"))
+    }
+
+    @Test
     fun `surface caveat does not authorize price or availability claims`() {
         val state = ArgentinaLiveSearchSurfacePresenter.from(
             ArgentinaLiveSearchState.Results(1, "yerba", presentation), area

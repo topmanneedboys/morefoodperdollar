@@ -302,16 +302,16 @@ class SavedStapleShellIntegrationBoundaryTest {
             "src/main/res/values/strings.xml"
         ).readSourceText()
 
-        assertTrue(strings.contains("Manage saved choices."))
+        assertTrue(strings.contains("Your ValuePilot"))
         assertTrue(
             strings.contains(
-                "Review or manage the products and stores you choose to remember here."
+                "Saved products, purchases and watches stay private on this device."
             )
         )
-        assertFalse(strings.contains("Your confirmed choices."))
+        assertFalse(strings.contains("Manage saved choices."))
         assertFalse(
             strings.contains(
-                "Review exact products and stores you chose to remember."
+                "Your confirmed choices."
             )
         )
     }

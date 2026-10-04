@@ -112,6 +112,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var shellScrollView: ScrollView
     private lateinit var bottomNavArea: View
     private lateinit var bottomNavigation: BottomNavigationView
+    private lateinit var shellBrand: TextView
+    private lateinit var shellTagline: TextView
     private lateinit var screenHeaderCard: View
     private lateinit var screenBackAction: MaterialButton
     private lateinit var screenEyebrow: TextView
@@ -222,6 +224,8 @@ class MainActivity : AppCompatActivity() {
         shellScrollView = findViewById(R.id.shellScrollView)
         bottomNavArea = findViewById(R.id.bottomNavArea)
         bottomNavigation = findViewById(R.id.bottomNavigation)
+        shellBrand = findViewById(R.id.shellBrand)
+        shellTagline = findViewById(R.id.shellTagline)
         screenHeaderCard = findViewById(R.id.screenHeaderCard)
         screenBackAction = findViewById(R.id.screenBackAction)
         screenEyebrow = findViewById(R.id.screenEyebrow)
@@ -479,6 +483,8 @@ class MainActivity : AppCompatActivity() {
             homeExperience.onShopAgain = null
             homeExperience.onSharePlan = null
             homeExperience.onTogglePriceWatch = null
+            homeExperience.onOpenSearch = null
+            homeExperience.onOpenBasket = null
         }
         if (::basketExperience.isInitialized) {
             basketExperience.onAction = null
@@ -620,6 +626,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun configureHomeUi() {
+        homeExperience.onOpenSearch = {
+            dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.SEARCH))
+        }
+        homeExperience.onOpenBasket = {
+            dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.BASKET))
+        }
         homeExperience.onQueryChanged = { rawQuery ->
             homeSessionState =
                 PracticalShoppingHomeSession.queryChanged(homeSessionState, rawQuery)
@@ -682,6 +694,7 @@ class MainActivity : AppCompatActivity() {
         homeExperience.onCompare = { openComparison() }
         homeExperience.onReviewPrivateMemory = { reviewPrivatePriceHistory() }
         homeExperience.onOpenConfirmedPurchaseHistory = {
+            dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED))
             dispatch(AppShellIntent.OpenConfirmedPurchaseHistory)
         }
         homeExperience.onExportPrivateMemory = { exportPrivatePriceHistory() }
@@ -2312,6 +2325,13 @@ class MainActivity : AppCompatActivity() {
         // above the primary shopping workspace.
         screenHeaderCard.visibility =
             if (state.route == AppRoute.HOME) View.GONE else View.VISIBLE
+        // The brand promise belongs to the landing surface. Secondary routes use their
+        // task title instead of repeating marketing copy above every workflow.
+        shellTagline.visibility = if (state.route == AppRoute.HOME) View.VISIBLE else View.GONE
+        sourcesLicencesButton.visibility =
+            if (state.route == AppRoute.SAVED) View.VISIBLE else View.GONE
+        dataStatusButton.visibility =
+            if (state.route == AppRoute.SAVED) View.VISIBLE else View.GONE
         primaryAction.visibility = if (copy.showCompareAction) View.VISIBLE else View.GONE
 
         val homeVisible = state.selectedPrimaryTab == AppPrimaryTab.HOME
@@ -2438,9 +2458,9 @@ class MainActivity : AppCompatActivity() {
             when (state.mode) {
                 ArgentinaLiveSearchSurfaceMode.RESULTS -> ValuePilotPalette.color("#374151")
                 ArgentinaLiveSearchSurfaceMode.AUTHORIZATION_UNAVAILABLE,
-                ArgentinaLiveSearchSurfaceMode.STALE_RELEASE,
                 ArgentinaLiveSearchSurfaceMode.TIMEOUT,
                 ArgentinaLiveSearchSurfaceMode.TEMPORARILY_UNAVAILABLE -> ValuePilotPalette.color("#B42318")
+                ArgentinaLiveSearchSurfaceMode.STALE_RELEASE -> ValuePilotPalette.color("#92400E")
                 else -> ValuePilotPalette.color("#6B7280")
             }
         )
@@ -2802,7 +2822,9 @@ class MainActivity : AppCompatActivity() {
         val distance = tripTripInput("Driving distance (km, max 3 decimals)", tripPlannerState.drivingDistanceMetres?.let { BigDecimal.valueOf(it).movePointLeft(3).stripTrailingZeros().toPlainString() }.orEmpty())
         val consumption = tripTripInput("Fuel consumption (ml per 100 km)", tripPlannerState.fuelConsumptionMilliLitresPer100Km?.toString().orEmpty())
         val fuel = tripTripInput("Fuel price per litre", tripPlannerState.fuelPrice?.let { formatTripMoney(it) }.orEmpty())
-        val currency = tripTripInput("Currency code", tripPlannerState.fuelPrice?.currencyCode ?: "CAD")
+        // Argentina is the active launch context. This is only the empty-form hint;
+        // a persisted or explicitly entered personal currency is preserved unchanged.
+        val currency = tripTripInput("Currency code", tripPlannerState.fuelPrice?.currencyCode ?: "ARS")
         val toll = tripTripInput("Tolls (optional)", tripPlannerState.tolls?.let { formatTripMoney(it) }.orEmpty())
         val parking = tripTripInput("Parking (optional)", tripPlannerState.parking?.let { formatTripMoney(it) }.orEmpty())
         body.addView(TextView(this).apply {

@@ -13,6 +13,7 @@ import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.view.doOnLayout
 import com.google.android.material.button.MaterialButton
@@ -76,6 +77,8 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val sharePlanOwnerControls = mutableListOf<View>()
     private val purchaseHistoryOwnerControls = mutableListOf<View>()
     private val priceWatchOwnerControls = mutableListOf<View>()
+    private val homeSearchOwnerControls = mutableListOf<View>()
+    private val homeBasketOwnerControls = mutableListOf<View>()
 
     private var hasRenderedState = false
     private var lastRenderedSubmitEnabled = false
@@ -240,6 +243,24 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
             }
         }
 
+    /** Opens the primary Search tab without changing Home/session state. */
+    var onOpenSearch: (() -> Unit)? = null
+        set(value) {
+            field = value
+            homeSearchOwnerControls.forEach { control ->
+                control.isEnabled = value != null && hasRenderedState
+            }
+        }
+
+    /** Opens the primary Basket tab without changing Home/session state. */
+    var onOpenBasket: (() -> Unit)? = null
+        set(value) {
+            field = value
+            homeBasketOwnerControls.forEach { control ->
+                control.isEnabled = value != null && hasRenderedState
+            }
+        }
+
     private var suppressInputCallback = false
     private var extraStopSettingsExpanded = false
     private var currentExtraStopSettingsNotice: String? = null
@@ -269,6 +290,102 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         )
         endIconMode = TextInputLayout.END_ICON_CLEAR_TEXT
         addView(input)
+    }
+
+    private val homePurpose = line(
+        context.getString(R.string.home_purpose),
+        17f,
+        ValuePilotDesignTokens.Colors.TEXT_PRIMARY,
+        true
+    )
+    private val homeFlow = LinearLayout(context).apply {
+        orientation = HORIZONTAL
+        gravity = android.view.Gravity.CENTER_VERTICAL
+        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 14)
+    }
+    private val homeSearchButton = ValuePilotProgrammaticButton.filled(context).apply {
+        homeSearchOwnerControls += this
+        text = context.getString(R.string.home_search_products)
+        contentDescription = context.getString(R.string.home_search_products_description)
+        textSize = 16f
+        layoutParams = fullWidth(dp(54), 16)
+        isEnabled = false
+        setOnClickListener { onOpenSearch?.invoke() }
+    }
+    private val homeHeroCard = ValuePilotProductCard(context).apply {
+        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 0)
+        addView(
+            column().apply {
+                addView(homePurpose)
+                addView(homeFlow)
+                addView(homeSearchButton)
+            }
+        )
+    }
+
+    private val activeBasketCount = line(
+        "",
+        27f,
+        ValuePilotDesignTokens.Colors.TEXT_PRIMARY,
+        true
+    ).apply {
+        accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+    }
+    private val activeBasketSummary = line(
+        "",
+        13f,
+        ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
+        topPadding = 4
+    )
+    private val activeBasketProgress = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
+        max = 100
+        isIndeterminate = false
+        layoutParams = fullWidth(dp(8), 12)
+        visibility = GONE
+    }
+    private val activeBasketOpenButton = ValuePilotProgrammaticButton.filled(context).apply {
+        homeBasketOwnerControls += this
+        text = context.getString(R.string.home_open_basket)
+        contentDescription = context.getString(R.string.home_open_basket_description)
+        textSize = 15f
+        layoutParams = fullWidth(dp(50), 12)
+        isEnabled = false
+        setOnClickListener { onOpenBasket?.invoke() }
+    }
+    private val activeBasketCard = ValuePilotProductCard(context).apply {
+        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 12)
+        addView(
+            column().apply {
+                addView(line(context.getString(R.string.home_basket_label), 11f, ValuePilotDesignTokens.Colors.PRIMARY_DARK, true))
+                addView(activeBasketCount.apply { setPadding(0, dp(5), 0, 0) })
+                addView(activeBasketSummary)
+                addView(activeBasketProgress)
+                addView(activeBasketOpenButton)
+            }
+        )
+        visibility = GONE
+    }
+
+    private val buyAgainCard = ValuePilotProductCard(context).apply {
+        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 12)
+        addView(
+            column().apply {
+                addView(line(context.getString(R.string.home_buy_again_label), 11f, ValuePilotDesignTokens.Colors.PRIMARY_DARK, true))
+                addView(line(context.getString(R.string.home_buy_again_body), 15f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, true, 6))
+                addView(
+                    ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
+                        purchaseHistoryOwnerControls += this
+                        text = context.getString(R.string.home_buy_again)
+                        contentDescription = context.getString(R.string.home_buy_again_description)
+                        textSize = 14f
+                        layoutParams = fullWidth(dp(48), 12)
+                        isEnabled = false
+                        setOnClickListener { onOpenConfirmedPurchaseHistory?.invoke() }
+                    }
+                )
+            }
+        )
+        visibility = GONE
     }
 
     private val commandCenterListPill = commandCenterPill()
@@ -463,6 +580,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         ValuePilotDesignTokens.Typography.LABEL_SP,
         ValuePilotDesignTokens.Colors.TEXT_SECONDARY
     )
+    private val sampleCardView = sampleCard()
     private val goodPriceActionButton = goodPriceButton()
     private val privateMemoryReviewActionButton = privateMemoryReviewButton()
     private val privateMemoryExportActionButton = privateMemoryExportButton()
@@ -482,6 +600,9 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         submitOwnerControls += submitButton
         extraStopOwnerControls += extraStopSettingsButton
 
+        addView(homeHeroCard)
+        addView(activeBasketCard)
+        addView(buyAgainCard)
         addView(commandCenterCard)
         addView(inputLayout)
         addView(submitButton)
@@ -497,7 +618,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         addView(message)
         addView(privateIdentityHeading)
         addView(privateIdentityCard)
-        addView(sampleCard())
+        addView(sampleCardView)
         addView(privateMemorySummary)
         addView(privateMemoryHighlightsCard)
         addView(privateMemoryReviewActionButton)
@@ -518,6 +639,8 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         itemsHeading.visibility = GONE
         privateIdentityHeading.visibility = GONE
         privateIdentityCard.visibility = GONE
+        sampleCardView.visibility = GONE
+        commandCenterCard.visibility = GONE
         refinementCard.visibility = GONE
         unknownCard.visibility = GONE
         extraStopSettingsCard.visibility = GONE
@@ -600,6 +723,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         goodPriceOwnerControls.forEach { control ->
             control.isEnabled = onGoodPrice != null && hasRenderedState
         }
+        renderModernHome(state)
     }
 
     /** Shows a user-triggered external-photo failure on the visible Home surface. */
@@ -789,6 +913,94 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
             }
         }
         privateMemoryHighlightsCard.visibility = VISIBLE
+    }
+
+    /**
+     * Applies the new consumer Home hierarchy to the existing immutable projection.
+     * The older planner controls remain mounted for compatibility and are deliberately
+     * hidden until an active basket needs the existing editor/refinement workflow.
+     */
+    private fun renderModernHome(state: PracticalShoppingHomeRenderState) {
+        val presentation = PracticalShoppingHomePresentationPolicy.from(state)
+        if (homeFlow.childCount == 0) {
+            homeFlow.addView(line(context.getString(R.string.home_flow_search), 12f, ValuePilotDesignTokens.Colors.PRIMARY_DARK, true))
+            homeFlow.addView(line("→", 16f, ValuePilotDesignTokens.Colors.TEXT_MUTED, true, 0).apply { setPadding(dp(8), 0, dp(8), 0) })
+            homeFlow.addView(line(context.getString(R.string.home_flow_basket), 12f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, true))
+            homeFlow.addView(line("→", 16f, ValuePilotDesignTokens.Colors.TEXT_MUTED, true, 0).apply { setPadding(dp(8), 0, dp(8), 0) })
+            homeFlow.addView(line(context.getString(R.string.home_flow_shop), 12f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, true))
+        }
+        homeHeroCard.visibility = VISIBLE
+        homePurpose.visibility = if (presentation.showWelcomePurpose) VISIBLE else GONE
+        homeFlow.visibility = if (presentation.showWelcomePurpose) VISIBLE else GONE
+        homeSearchButton.isEnabled = onOpenSearch != null && hasRenderedState
+
+        activeBasketCard.visibility = if (presentation.showActiveBasket) VISIBLE else GONE
+        activeBasketCount.text =
+            if (presentation.itemCount == 1) {
+                context.getString(R.string.home_basket_one_item)
+            } else {
+                context.getString(R.string.home_basket_item_count, presentation.itemCount)
+            }
+        activeBasketSummary.text =
+            if (presentation.collectibleIdentityCount > 0) {
+                context.getString(
+                    R.string.home_basket_collected,
+                    presentation.collectedIdentityCount,
+                    presentation.collectibleIdentityCount
+                )
+            } else {
+                context.getString(R.string.home_basket_open_to_collect)
+            }
+        presentation.collectionProgress?.let { progress ->
+            activeBasketProgress.progress = (progress * 100f).toInt().coerceIn(0, 100)
+            activeBasketProgress.visibility = VISIBLE
+        } ?: run {
+            activeBasketProgress.progress = 0
+            activeBasketProgress.visibility = GONE
+        }
+        activeBasketOpenButton.isEnabled = onOpenBasket != null && hasRenderedState
+
+        buyAgainCard.visibility = if (presentation.showBuyAgain) VISIBLE else GONE
+        purchaseHistoryOwnerControls.forEach { control ->
+            control.isEnabled =
+                presentation.showBuyAgain && onOpenConfirmedPurchaseHistory != null && hasRenderedState
+        }
+
+        // First-time and returning Home never show the old planner dashboard or any
+        // empty advanced module. Active-basket users retain the editor and clarification
+        // rows, while results/price tools stay in Basket or product context.
+        commandCenterCard.visibility = GONE
+        fastActionsHeading.visibility = GONE
+        compareActionButton.visibility = GONE
+        goodPriceActionButton.visibility = GONE
+        quickAddHeading.visibility = GONE
+        quickAddGroup.visibility = GONE
+        privateIdentityHeading.visibility = GONE
+        privateIdentityCard.visibility = GONE
+        sampleCardView.visibility = GONE
+        privateMemorySummary.visibility = GONE
+        privateMemoryHighlightsCard.visibility = GONE
+        privateMemoryReviewActionButton.visibility = GONE
+        privateMemoryExportActionButton.visibility = GONE
+        privateMemoryForgetActionButton.visibility = GONE
+        privateMemoryNotice.visibility = GONE
+        shopAgainActionButton.visibility = GONE
+        sharePlanActionButton.visibility = GONE
+        extraStopSettingsButton.visibility = GONE
+        extraStopSettingsCard.visibility = GONE
+        noCoverageSummary.visibility = GONE
+        resultContainer.visibility =
+            if (presentation.showBasketEditor && state.result != null) VISIBLE else GONE
+
+        inputLayout.visibility = if (presentation.showBasketEditor) VISIBLE else GONE
+        submitButton.visibility = if (presentation.showBasketEditor) VISIBLE else GONE
+        message.visibility = if (presentation.showBasketEditor) message.visibility else GONE
+        itemsHeading.visibility = if (presentation.showBasketEditor) itemsHeading.visibility else GONE
+        itemsContainer.visibility = if (presentation.showBasketEditor) VISIBLE else GONE
+        refinementCard.visibility =
+            if (presentation.showBasketEditor && state.refinement != null) VISIBLE else GONE
+        unknownCard.visibility =
+            if (presentation.showBasketEditor && state.unknownItems.isNotEmpty()) VISIBLE else GONE
     }
 
     private fun renderItems(items: List<PracticalShoppingHomeItemRenderState>) {

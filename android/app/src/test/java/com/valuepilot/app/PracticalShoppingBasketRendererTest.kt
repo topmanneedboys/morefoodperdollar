@@ -113,7 +113,7 @@ class PracticalShoppingBasketRendererTest {
         assertNull(basket.noCoverageSummary)
         assertSame(home.items, basket.items)
         assertEquals(home.extraStopSettings.summary, basket.extraStopRuleText)
-        assertEquals("Basket 10.28 CAD", basket.result?.primary?.basketCostText)
+        assertEquals("Basket 10.28 ARS", basket.result?.primary?.basketCostText)
         assertTrue(basket.collectionEnabled)
         assertTrue(basket.collectionScopeId?.isNotBlank() == true)
         assertEquals(
@@ -212,7 +212,7 @@ class PracticalShoppingBasketRendererTest {
         assertEquals(PracticalShoppingBasketStatus.PLANNED, basket.status)
         assertSame(home.result, basket.result)
         assertNull(basket.noCoverageSummary)
-        assertEquals("Known subtotal 4.49 CAD", basket.result?.primary?.basketCostText)
+        assertEquals("Known subtotal 4.49 ARS", basket.result?.primary?.basketCostText)
         assertEquals("Missing price: Coffee", basket.result?.primary?.missingItemsText)
         assertTrue(basket.collectionEnabled)
         assertEquals(

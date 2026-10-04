@@ -148,7 +148,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
                 ArgentinaBackendContract.FailureCode.STALE_RELEASE,
                 ArgentinaBackendContract.FailureCode.RELEASE_MISMATCH ->
                     ArgentinaLiveSearchSurfaceMode.STALE_RELEASE to
-                        "This release is no longer current. Try again later."
+                        "Search unavailable. Latest product data is being updated. Try again."
                 ArgentinaBackendContract.FailureCode.TIMEOUT ->
                     ArgentinaLiveSearchSurfaceMode.TIMEOUT to
                         "Search took too long. Try again."

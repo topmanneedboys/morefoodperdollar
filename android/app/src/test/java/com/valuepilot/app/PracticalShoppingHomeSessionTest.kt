@@ -226,7 +226,7 @@ class PracticalShoppingHomeSessionTest {
             restored.ui.items.map { it.name }
         )
         assertEquals("Example Grocer East", restored.ui.result?.primary?.storeName)
-        assertEquals("Basket 18.77 CAD", restored.ui.result?.primary?.basketCostText)
+        assertEquals("Basket 18.77 ARS", restored.ui.result?.primary?.basketCostText)
     }
 
     @Test
@@ -278,7 +278,7 @@ class PracticalShoppingHomeSessionTest {
             LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.ONE_CAD,
             restored.ui.extraStopMinimumSavingsChoice
         )
-        assertEquals("Could save 2.50 CAD", restored.ui.result?.secondStop?.savingsText)
+        assertEquals("Could save 2.50 ARS", restored.ui.result?.secondStop?.savingsText)
     }
 
     @Test

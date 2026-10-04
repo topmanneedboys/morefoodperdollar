@@ -48,12 +48,12 @@ class LocalSamplePracticalShoppingDemoTest {
         assertNull(state.chickenClarification)
         assertTrue(state.unknownItems.isEmpty())
         assertEquals("Example Grocer East", primary.storeName)
-        assertEquals("Basket 20.77 CAD", primary.basketCostText)
+        assertEquals("Basket 20.77 ARS", primary.basketCostText)
         assertEquals("3 of 3 items priced", primary.coverageText)
         assertNull(result.secondStop)
         assertEquals(
             "Another stop is not worth it: your current rule requires at least " +
-                "15.00 CAD savings and caps extra travel at 10 min and 5 km.",
+                "15.00 ARS savings and caps extra travel at 10 min and 5 km.",
             result.secondaryMessage
         )
     }
@@ -68,7 +68,7 @@ class LocalSamplePracticalShoppingDemoTest {
         assertEquals(listOf("Chicken breast", "Eggs", "Milk"), state.items.map { it.name })
         assertNull(state.chickenClarification)
         assertEquals("Example Grocer East", primary.storeName)
-        assertEquals("Basket 24.27 CAD", primary.basketCostText)
+        assertEquals("Basket 24.27 ARS", primary.basketCostText)
         assertEquals("3 of 3 items priced", primary.coverageText)
     }
 
@@ -81,7 +81,7 @@ class LocalSamplePracticalShoppingDemoTest {
         assertEquals(LocalSamplePracticalShoppingDemo.Status.RESULT, state.status)
         assertEquals(listOf("Eggs", "Milk"), state.items.map { it.name })
         assertEquals("2 of 2 items priced", primary.coverageText)
-        assertEquals("Basket 10.28 CAD", primary.basketCostText)
+        assertEquals("Basket 10.28 ARS", primary.basketCostText)
     }
 
     @Test
@@ -93,7 +93,7 @@ class LocalSamplePracticalShoppingDemoTest {
             assertEquals(LocalSamplePracticalShoppingDemo.Status.RESULT, state.status)
             assertEquals(listOf("Eggs", "Milk"), state.items.map { it.name })
             assertTrue(state.unknownItems.isEmpty())
-            assertEquals("Basket 10.28 CAD", primary.basketCostText)
+            assertEquals("Basket 10.28 ARS", primary.basketCostText)
         }
     }
 
@@ -115,7 +115,7 @@ class LocalSamplePracticalShoppingDemoTest {
         assertEquals("Milk", state.query)
         assertEquals(listOf("Milk"), state.items.map { it.name })
         assertEquals("Example Grocer East", primary.storeName)
-        assertEquals("Basket 5.99 CAD", primary.basketCostText)
+        assertEquals("Basket 5.99 ARS", primary.basketCostText)
         assertEquals("1 of 1 item priced", primary.coverageText)
     }
 
@@ -135,7 +135,7 @@ class LocalSamplePracticalShoppingDemoTest {
         assertEquals(listOf("Eggs", "Milk"), model.ui.items.map { it.name })
         assertNull(model.selectedChicken)
         assertEquals(LocalSamplePracticalShoppingDemo.Status.RESULT, model.ui.status)
-        assertEquals("Basket 10.28 CAD", requireNotNull(model.ui.result?.primary).basketCostText)
+        assertEquals("Basket 10.28 ARS", requireNotNull(model.ui.result?.primary).basketCostText)
     }
 
     @Test
@@ -164,7 +164,7 @@ class LocalSamplePracticalShoppingDemoTest {
         assertEquals(listOf("Eggs", "Milk"), state.items.map { it.name })
         assertTrue(state.unknownItems.isEmpty())
         assertEquals(LocalSamplePracticalShoppingDemo.Status.RESULT, state.status)
-        assertEquals("Basket 10.28 CAD", primary.basketCostText)
+        assertEquals("Basket 10.28 ARS", primary.basketCostText)
     }
 
     @Test
@@ -227,7 +227,7 @@ class LocalSamplePracticalShoppingDemoTest {
         assertEquals(LocalSamplePracticalShoppingDemo.Status.RESULT, state.status)
         assertEquals("Your best practical shop", result.headline)
         assertEquals("Sample Market West", primary.storeName)
-        assertEquals("Basket 12.27 CAD", primary.basketCostText)
+        assertEquals("Basket 12.27 ARS", primary.basketCostText)
         assertEquals("3 of 3 items priced", primary.coverageText)
         assertNull(primary.notice)
         assertFalse(primary.basketCostText.startsWith("Known subtotal"))
@@ -242,7 +242,7 @@ class LocalSamplePracticalShoppingDemoTest {
         assertEquals(LocalSamplePracticalShoppingDemo.Status.RESULT, state.status)
         assertEquals(listOf("Eggs", "Coffee"), state.items.map { it.name })
         assertEquals("Best option with the prices we know", result.headline)
-        assertEquals("Known subtotal 4.49 CAD", primary.basketCostText)
+        assertEquals("Known subtotal 4.49 ARS", primary.basketCostText)
         assertEquals("1 of 2 items priced", primary.coverageText)
         assertEquals("Missing price: Coffee", primary.missingItemsText)
         assertEquals(
@@ -258,11 +258,11 @@ class LocalSamplePracticalShoppingDemoTest {
         val result = requireNotNull(state.result)
         val primary = requireNotNull(result.primary)
 
-        assertEquals("Basket 10.28 CAD", primary.basketCostText)
+        assertEquals("Basket 10.28 ARS", primary.basketCostText)
         assertNull(result.secondStop)
         assertEquals(
             "Another stop is not worth it: your current rule requires at least " +
-                "15.00 CAD savings and caps extra travel at 10 min and 5 km.",
+                "15.00 ARS savings and caps extra travel at 10 min and 5 km.",
             result.secondaryMessage
         )
     }
@@ -295,8 +295,8 @@ class LocalSamplePracticalShoppingDemoTest {
             "Then planned stop at Example Grocer East: Milk, Bread, Basmati rice, Chicken breast",
             secondStop.addedItemsText
         )
-        assertEquals("Could save 2.50 CAD", secondStop.savingsText)
-        assertEquals("Combined basket 43.04 CAD", secondStop.combinedBasketCostText)
+        assertEquals("Could save 2.50 ARS", secondStop.savingsText)
+        assertEquals("Combined basket 43.04 ARS", secondStop.combinedBasketCostText)
 
         model =
             PracticalShoppingHomeSession.chooseExtraStopMinimumSavings(
@@ -308,7 +308,7 @@ class LocalSamplePracticalShoppingDemoTest {
         assertNull(highThresholdResult.secondStop)
         assertEquals(
             "Another stop is not worth it: your current rule requires at least " +
-                "25.00 CAD savings and caps extra travel at 10 min and 5 km.",
+                "25.00 ARS savings and caps extra travel at 10 min and 5 km.",
             highThresholdResult.secondaryMessage
         )
     }

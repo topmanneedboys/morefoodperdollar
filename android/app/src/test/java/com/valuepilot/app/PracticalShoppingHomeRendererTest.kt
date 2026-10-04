@@ -73,9 +73,9 @@ class PracticalShoppingHomeRendererTest {
         assertFalse(rendered.privateMemoryExportActionVisible)
         assertFalse(rendered.privateMemoryForgetActionVisible)
         assertFalse(rendered.extraStopSettings.visible)
-        assertEquals("Extra-stop rule · Save at least 15.00 CAD", rendered.extraStopSettings.summary)
+        assertEquals("Extra-stop rule · Save at least 15.00 ARS", rendered.extraStopSettings.summary)
         assertEquals(
-            listOf("1.00 CAD", "15.00 CAD", "25.00 CAD"),
+            listOf("1.00 ARS", "15.00 ARS", "25.00 ARS"),
             rendered.extraStopSettings.choices.map { it.label }
         )
         assertEquals(
@@ -215,13 +215,13 @@ class PracticalShoppingHomeRendererTest {
         assertTrue(rendered.shopAgainVisible)
         assertEquals("Your best practical shop", rendered.result?.headline)
         assertEquals("Example Grocer East", rendered.result?.primary?.storeName)
-        assertEquals("Basket 18.77 CAD", rendered.result?.primary?.basketCostText)
+        assertEquals("Basket 18.77 ARS", rendered.result?.primary?.basketCostText)
         assertEquals(
             listOf("Example Grocer East", "Example Grocer East", "Example Grocer East"),
             rendered.items.map { it.storeAssignment }
         )
         assertEquals(
-            listOf("8.49 CAD", "4.29 CAD", "5.99 CAD"),
+            listOf("8.49 ARS", "4.29 ARS", "5.99 ARS"),
             rendered.items.map { it.plannedPriceText }
         )
         assertNull(rendered.refinement)
@@ -243,11 +243,11 @@ class PracticalShoppingHomeRendererTest {
         assertFalse(rendered.quickAddVisible)
         assertTrue(rendered.extraStopSettings.visible)
         assertTrue(rendered.shopAgainVisible)
-        assertEquals("Known subtotal 4.49 CAD", rendered.result?.primary?.basketCostText)
+        assertEquals("Known subtotal 4.49 ARS", rendered.result?.primary?.basketCostText)
         assertEquals("Missing price: Coffee", rendered.result?.primary?.missingItemsText)
         assertEquals(listOf("Sample Market North", null), rendered.items.map { it.storeAssignment })
         assertEquals(
-            listOf("4.49 CAD", null),
+            listOf("4.49 ARS", null),
             rendered.items.map { it.plannedPriceText }
         )
         assertEquals(
@@ -261,7 +261,7 @@ class PracticalShoppingHomeRendererTest {
         )
         assertTrue(rendered.extraStopSettings.visible)
         assertEquals(
-            "Extra-stop rule · Save at least 15.00 CAD · Not evaluated yet",
+            "Extra-stop rule · Save at least 15.00 ARS · Not evaluated yet",
             rendered.extraStopSettings.summary
         )
         assertEquals(
@@ -282,7 +282,7 @@ class PracticalShoppingHomeRendererTest {
 
         assertTrue(rendered.extraStopSettings.visible)
         assertEquals(
-            "Extra-stop rule · Save at least 15.00 CAD",
+            "Extra-stop rule · Save at least 15.00 ARS",
             rendered.extraStopSettings.summary
         )
         assertNull(rendered.extraStopSettings.notice)
@@ -406,9 +406,9 @@ class PracticalShoppingHomeRendererTest {
         val rendered = PracticalShoppingHomeRenderer.render(model.ui)
 
         assertTrue(rendered.extraStopSettings.visible)
-        assertEquals("Extra-stop rule · Save at least 25.00 CAD", rendered.extraStopSettings.summary)
+        assertEquals("Extra-stop rule · Save at least 25.00 ARS", rendered.extraStopSettings.summary)
         val selected = rendered.extraStopSettings.choices.single { it.selected }
-        assertEquals("25.00 CAD", selected.label)
+        assertEquals("25.00 ARS", selected.label)
         assertEquals(
             LocalSamplePracticalShoppingDemo.ExtraStopMinimumSavingsChoice.TWENTY_FIVE_CAD,
             selected.choice
@@ -417,7 +417,7 @@ class PracticalShoppingHomeRendererTest {
 
     @Test
     fun extraStopSettingsDescriptionNamesTheProgressiveDisclosureDirection() {
-        val summary = "Extra-stop rule · Save at least 15.00 CAD"
+        val summary = "Extra-stop rule · Save at least 15.00 ARS"
 
         assertEquals(
             "Show extra-stop rule settings. $summary",
@@ -431,7 +431,7 @@ class PracticalShoppingHomeRendererTest {
 
     @Test
     fun incompleteExtraStopSettingsDescriptionKeepsEvaluationBoundaryExplicit() {
-        val summary = "Extra-stop rule · Save at least 15.00 CAD"
+        val summary = "Extra-stop rule · Save at least 15.00 ARS"
         val notice =
             "Another stop is not evaluated until every requested item has a usable price."
 

@@ -26,6 +26,8 @@ private val IGNORED_LIST_TOKENS = setOf("and", "&")
 object LocalSamplePracticalShoppingDemo {
 
     internal const val MAX_QUERY_CHARACTERS = 240
+    /** The offline fixture is shown inside the Argentina launch experience. */
+    internal const val SAMPLE_CURRENCY = "ARS"
     private const val MAX_STORED_DEMO_QUERY_LENGTH = MAX_QUERY_CHARACTERS + 1
 
     private data class SampleItem(
@@ -61,9 +63,11 @@ object LocalSamplePracticalShoppingDemo {
         val label: String,
         internal val minimumSavings: Money
     ) {
-        ONE_CAD("1.00 CAD", Money.parse("1.00", "CAD")),
-        FIFTEEN_CAD("15.00 CAD", Money.parse("15.00", "CAD")),
-        TWENTY_FIVE_CAD("25.00 CAD", Money.parse("25.00", "CAD"));
+        // Keep the enum names for durable preference compatibility. The old names
+        // were implementation history, not user-entered currency evidence.
+        ONE_CAD("1.00 ARS", Money.parse("1.00", SAMPLE_CURRENCY)),
+        FIFTEEN_CAD("15.00 ARS", Money.parse("15.00", SAMPLE_CURRENCY)),
+        TWENTY_FIVE_CAD("25.00 ARS", Money.parse("25.00", SAMPLE_CURRENCY));
 
         companion object {
             val DEFAULT = FIFTEEN_CAD
@@ -784,7 +788,7 @@ object LocalSamplePracticalShoppingDemo {
     }
 
     private fun exactTotal(prices: List<Money>): Money =
-        prices.fold(Money(0L, "CAD")) { total, price -> total + price }
+        prices.fold(Money(0L, SAMPLE_CURRENCY)) { total, price -> total + price }
 
     private fun unknownEvidence(itemCount: Int): ShoppingPlanEvidenceSummary =
         ShoppingPlanEvidenceSummary(
@@ -794,7 +798,7 @@ object LocalSamplePracticalShoppingDemo {
         )
 
     private fun prices(vararg entries: Pair<SampleItem, String>): Map<ShoppingItemKey, Money> =
-        entries.associate { (item, decimal) -> item.key to Money.parse(decimal, "CAD") }
+        entries.associate { (item, decimal) -> item.key to Money.parse(decimal, SAMPLE_CURRENCY) }
 
     private fun chickenItem(
         suffix: String,
