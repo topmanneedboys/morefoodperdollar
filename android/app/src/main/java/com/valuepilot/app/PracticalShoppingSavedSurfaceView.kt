@@ -2,7 +2,6 @@ package com.valuepilot.app
 
 import android.content.Context
 import android.content.res.ColorStateList
-import android.graphics.Color
 import android.graphics.Typeface
 import android.util.AttributeSet
 import android.util.TypedValue
@@ -14,7 +13,6 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.card.MaterialCardView
 
 /**
  * Replaceable physical renderer for the Saved surface.
@@ -185,12 +183,9 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
         watchActionDescription: String? = null
     ): View {
         val card =
-            MaterialCardView(context).apply {
-                radius = dp(18).toFloat()
-                cardElevation = 0f
-                setCardBackgroundColor(ValuePilotPalette.color("#FFFFFF"))
-                strokeColor = ValuePilotPalette.color("#E5E7EB")
-                strokeWidth = dp(1)
+            ValuePilotProductCard(context).apply {
+                setCardBackgroundColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE))
+                strokeColor = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.OUTLINE)
                 layoutParams =
                     LayoutParams(
                         LayoutParams.MATCH_PARENT,
@@ -219,6 +214,9 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
                 topPadding = 5
             )
         )
+        // The useful next step remains visible. Destructive and less-frequent
+        // actions stay behind an explicit disclosure so a saved product reads
+        // as a calm personal list rather than a toolbar of equal-weight verbs.
         secondaryAction?.let { typedAction ->
             body.addView(
                 actionButton(
@@ -230,27 +228,60 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
                 )
             )
         }
-        watchAction?.let { typedAction ->
-            body.addView(
-                actionButton(
-                    label = requireNotNull(watchActionLabel),
-                    action = typedAction,
-                    destructive = false,
-                    compact = true,
-                    contentDescription = requireNotNull(watchActionDescription)
+        if (watchAction != null || action != null) {
+            val moreActions = LinearLayout(context).apply {
+                orientation = VERTICAL
+                visibility = View.GONE
+            }
+            val moreButton = MaterialButton(context).apply {
+                ownerBoundButtons += this
+                text = "More for this item"
+                contentDescription = "Show price-watch and removal actions for $title"
+                setAllCaps(false)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                cornerRadius = dp(14)
+                strokeWidth = dp(1)
+                strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D8CFC6"))
+                backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFDF9"))
+                setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.PRIMARY_DARK))
+                insetTop = 0
+                insetBottom = 0
+                minHeight = dp(44)
+                isEnabled = onAction != null
+                setOnClickListener {
+                    val expanded = moreActions.visibility != View.VISIBLE
+                    moreActions.visibility = if (expanded) View.VISIBLE else View.GONE
+                    text = if (expanded) "Hide extra actions" else "More for this item"
+                    ValuePilotMotion.reveal(moreActions, animate = expanded)
+                }
+                layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+                    topMargin = dp(8)
+                }
+            }
+            watchAction?.let { typedAction ->
+                moreActions.addView(
+                    actionButton(
+                        label = requireNotNull(watchActionLabel),
+                        action = typedAction,
+                        destructive = false,
+                        compact = true,
+                        contentDescription = requireNotNull(watchActionDescription)
+                    )
                 )
-            )
-        }
-        action?.let { typedAction ->
-            body.addView(
-                actionButton(
-                    label = requireNotNull(actionLabel),
-                    action = typedAction,
-                    destructive = true,
-                    compact = true,
-                    contentDescription = requireNotNull(actionDescription)
+            }
+            action?.let { typedAction ->
+                moreActions.addView(
+                    actionButton(
+                        label = requireNotNull(actionLabel),
+                        action = typedAction,
+                        destructive = true,
+                        compact = true,
+                        contentDescription = requireNotNull(actionDescription)
+                    )
                 )
-            )
+            }
+            body.addView(moreButton)
+            body.addView(moreActions)
         }
 
         card.addView(body)

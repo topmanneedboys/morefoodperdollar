@@ -4,11 +4,10 @@ import android.content.Context
 import android.graphics.Typeface
 import android.util.AttributeSet
 import android.util.TypedValue
-import android.view.View
+import android.view.Gravity
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.card.MaterialCardView
 
 /** Replaceable renderer for private confirmed-purchase history. */
 internal class ConfirmedPurchaseHistorySurfaceView @JvmOverloads constructor(
@@ -17,104 +16,195 @@ internal class ConfirmedPurchaseHistorySurfaceView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : LinearLayout(context, attrs, defStyleAttr) {
 
+    private val headlineView = textLine("", 22f, "#111827", bold = true)
+    private val guidanceView = textLine("", 14f, "#4B5563", topPadding = 8)
+    private val noticeView = textLine("", 13f, "#92400E", topPadding = 10)
+    private val rowsContainer = LinearLayout(context).apply {
+        orientation = VERTICAL
+        layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
+    }
+    private val rowViews = LinkedHashMap<String, PurchaseRow>()
+
     var onAction: ((ConfirmedPurchaseHistoryUiAction) -> Unit)? = null
+        set(value) {
+            field = value
+            rowViews.values.forEach { it.updateEnabled() }
+        }
     var onPriceWatchAction: ((PriceWatchUiAction.ToggleWatch) -> Unit)? = null
+        set(value) {
+            field = value
+            rowViews.values.forEach { it.updateEnabled() }
+        }
 
     init {
         orientation = VERTICAL
         visibility = GONE
         isSaveEnabled = false
+        addView(headlineView)
+        addView(guidanceView)
+        addView(noticeView)
+        addView(rowsContainer)
     }
 
     fun render(state: ConfirmedPurchaseHistorySurfaceState) {
-        removeAllViews()
-        addView(textLine(state.headline, 22f, "#111827", bold = true))
-        addView(textLine(state.guidance, 14f, "#4B5563", topPadding = 8))
-        state.notice?.let { addView(textLine(it, 13f, "#92400E", topPadding = 10)) }
-        when (state.mode) {
-            ConfirmedPurchaseHistorySurfaceMode.EMPTY,
-            ConfirmedPurchaseHistorySurfaceMode.UNAVAILABLE -> Unit
+        headlineView.text = state.headline
+        guidanceView.text = state.guidance
+        noticeView.text = state.notice.orEmpty()
+        noticeView.visibility = if (state.notice == null) GONE else VISIBLE
 
-            ConfirmedPurchaseHistorySurfaceMode.CONTENT ->
-                state.rows.forEach { row -> addView(rowCard(row)) }
-        }
-    }
-
-    private fun rowCard(row: ConfirmedPurchaseHistoryRow): View {
-        val body = LinearLayout(context).apply {
-            orientation = VERTICAL
-            setPadding(dp(16), dp(15), dp(16), dp(13))
-        }
-        body.addView(textLine(row.title, 17f, "#111827", bold = true))
-        body.addView(textLine(row.details, 12f, "#4B5563", topPadding = 6))
-        row.priceWatchAction?.let { body.addView(priceWatchButton(it)) }
-        body.addView(
-            actionButton(
-                label = "Repeat purchase",
-                description = "Add ${row.title} to your private Home list for a new plan",
-                action = row.repeatAction
-            )
-        )
-        body.addView(
-            actionButton(
-                label = "Correct",
-                description = "Correct confirmed purchase ${row.title}",
-                action = row.editAction
-            )
-        )
-        body.addView(
-            actionButton(
-                label = "Delete",
-                description = "Delete confirmed purchase ${row.title}",
-                action = row.deleteAction,
-                destructive = true
-            )
-        )
-        return MaterialCardView(context).apply {
-            radius = dp(18).toFloat()
-            cardElevation = 0f
-            setCardBackgroundColor(ValuePilotPalette.color("#FFFFFF"))
-            strokeColor = ValuePilotPalette.color("#E5E7EB")
-            strokeWidth = dp(1)
-            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
-                topMargin = dp(12)
-            }
-            addView(body)
-        }
-    }
-
-    private fun priceWatchButton(action: PriceWatchUiAction.ToggleWatch): MaterialButton =
-        MaterialButton(context).apply {
-            text = if (action.watched) "Unwatch" else "Watch price"
-            contentDescription =
-                if (action.watched) {
-                    "Stop watching ${action.displayName}; private history is retained"
-                } else {
-                    "Watch exact product ${action.displayName} privately"
+        val rows =
+            if (state.mode == ConfirmedPurchaseHistorySurfaceMode.CONTENT) state.rows else emptyList()
+        val desiredIds = rows.map { it.purchaseId }.toSet()
+        rowViews.keys
+            .filterNot(desiredIds::contains)
+            .toList()
+            .forEach { purchaseId ->
+                rowViews.remove(purchaseId)?.let { row ->
+                    row.dispose()
+                    rowsContainer.removeView(row.root)
                 }
+            }
+        rows.forEachIndexed { index, rowState ->
+            val row = rowViews[rowState.purchaseId] ?: PurchaseRow(rowState).also {
+                rowViews[rowState.purchaseId] = it
+                ValuePilotMotion.reveal(it.root)
+            }
+            row.update(rowState)
+            val currentIndex = rowsContainer.indexOfChild(row.root)
+            if (currentIndex != index) {
+                if (currentIndex >= 0) rowsContainer.removeViewAt(currentIndex)
+                rowsContainer.addView(row.root, index.coerceAtMost(rowsContainer.childCount))
+            }
+        }
+    }
+
+    private inner class PurchaseRow(initial: ConfirmedPurchaseHistoryRow) {
+        val root = ValuePilotProductCard(context).apply {
+            setCardBackgroundColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE))
+            strokeColor = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.OUTLINE)
+            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(ValuePilotDesignTokens.Spacing.SM_DP)
+            }
+        }
+        private val body = LinearLayout(context).apply {
+            orientation = VERTICAL
+            setPadding(dp(16), dp(15), dp(16), dp(15))
+        }
+        private val title = textLine("", 17f, "#111827", bold = true)
+        private val details = textLine("", 12f, "#4B5563", topPadding = 6)
+        private val repeatButton = actionButton(
+            label = "Repeat purchase",
+            description = "Add this exact confirmed purchase to your private Home list for a new plan"
+        )
+        private val moreButton = MaterialButton(context).apply {
+            text = "More for this purchase"
+            contentDescription = "Show correction, delete and price-watch actions for this purchase"
+            isAllCaps = false
+            minHeight = dp(44)
+            gravity = Gravity.CENTER
+            setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.PRIMARY_DARK))
+            setOnClickListener { setMoreExpanded(!moreExpanded) }
+            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(8)
+            }
+        }
+        private val moreActions = LinearLayout(context).apply {
+            orientation = VERTICAL
+            visibility = GONE
+        }
+        private val watchButton = MaterialButton(context).apply {
             isAllCaps = false
             minHeight = dp(44)
             setTextColor(ValuePilotPalette.color("#1D4ED8"))
-            setOnClickListener { onPriceWatchAction?.invoke(action) }
             layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
-                topMargin = dp(6)
+                topMargin = dp(5)
             }
         }
+        private val editButton = actionButton(
+            label = "Correct",
+            description = "Correct this confirmed purchase"
+        )
+        private val deleteButton = actionButton(
+            label = "Delete",
+            description = "Delete this private confirmed purchase",
+            destructive = true
+        )
+        private var current = initial
+        private var moreExpanded = false
+
+        init {
+            body.addView(title)
+            body.addView(details)
+            body.addView(repeatButton)
+            body.addView(moreButton)
+            moreActions.addView(watchButton)
+            moreActions.addView(editButton)
+            moreActions.addView(deleteButton)
+            body.addView(moreActions)
+            root.addView(body)
+            update(initial)
+        }
+
+        fun update(next: ConfirmedPurchaseHistoryRow) {
+            current = next
+            title.text = next.title
+            details.text = next.details
+            repeatButton.setOnClickListener { onAction?.invoke(current.repeatAction) }
+            editButton.setOnClickListener { onAction?.invoke(current.editAction) }
+            deleteButton.setOnClickListener { onAction?.invoke(current.deleteAction) }
+            val watch = next.priceWatchAction
+            watchButton.visibility = if (watch == null) GONE else VISIBLE
+            watch?.let { action ->
+                watchButton.text = if (action.watched) "Unwatch price" else "Watch price"
+                watchButton.contentDescription =
+                    if (action.watched) {
+                        "Stop watching ${action.displayName}; private history is retained"
+                    } else {
+                        "Watch exact product ${action.displayName} privately"
+                    }
+                watchButton.setOnClickListener { onPriceWatchAction?.invoke(action) }
+            }
+            updateEnabled()
+        }
+
+        fun updateEnabled() {
+            repeatButton.isEnabled = onAction != null
+            editButton.isEnabled = onAction != null
+            deleteButton.isEnabled = onAction != null
+            watchButton.isEnabled = onPriceWatchAction != null
+            moreButton.isEnabled = onAction != null || onPriceWatchAction != null
+        }
+
+        fun dispose() {
+            root.animate().cancel()
+            moreActions.animate().cancel()
+        }
+
+        private fun setMoreExpanded(expanded: Boolean) {
+            moreExpanded = expanded
+            moreActions.visibility = if (expanded) VISIBLE else GONE
+            moreButton.text = if (expanded) "Hide extra actions" else "More for this purchase"
+            ValuePilotMotion.reveal(moreActions, animate = expanded)
+        }
+    }
 
     private fun actionButton(
         label: String,
         description: String,
-        action: ConfirmedPurchaseHistoryUiAction,
         destructive: Boolean = false
     ): MaterialButton = MaterialButton(context).apply {
         text = label
         contentDescription = description
         isAllCaps = false
         minHeight = dp(44)
-        setTextColor(ValuePilotPalette.color(if (destructive) "#A63D32" else "#8F3620"))
-        setOnClickListener { onAction?.invoke(action) }
+        setTextColor(
+            ValuePilotPalette.color(
+                if (destructive) ValuePilotDesignTokens.Colors.ERROR
+                else ValuePilotDesignTokens.Colors.PRIMARY_DARK
+            )
+        )
         layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp(6)
+            topMargin = dp(5)
         }
     }
 

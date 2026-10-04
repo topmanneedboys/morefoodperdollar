@@ -140,10 +140,24 @@ purchase confirmation, Price Watch, Trip Planner and Decision projections remain
 the authoritative boundaries; no new pricing, store, trip or purchase logic was
 introduced.
 
+## Stage 5 Personal shopping area
+
+Saved identities, confirmed purchases and Price Watch now share the same calm
+personal-card language. Each row reuses its stable identity key, keeps its
+primary next step visible, and places correction, removal, target and history
+details behind an explicit More action. This keeps the personal area useful at
+a glance without hiding the exact private facts or turning them into live offers.
+
+The Saved-owned routes retain their existing typed projectors, stores and
+unknown-state copy. The app shell now preserves the personal scroll position
+when Saved, purchase history or Price Watch refreshes, rotates, or returns from
+another route. This is presentation state only; it does not change purchase,
+observation, watch, price or ranking authority.
+
 ## Deliberately not migrated yet
 
-Saved, History, Price Watch, Trip Planner, Compare, Good Price and
-the standalone capture surfaces still use their existing renderers. They remain
-functional and are intentionally deferred to later bounded migration stages.
+Trip Planner, Compare, Good Price and the standalone capture surfaces still use
+their existing renderers. They remain functional and are intentionally deferred
+to later bounded migration stages.
 Search was not redesigned in Stage 2. No new catalog, provider, network,
 ranking or business logic was introduced here.

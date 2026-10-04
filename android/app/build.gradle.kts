@@ -11,8 +11,8 @@ android {
         applicationId = "com.valuepilot.app"
         minSdk = 23
         targetSdk = 36
-        versionCode = 10121
-        versionName = "101.1.20"
+        versionCode = 10122
+        versionName = "101.1.21"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
