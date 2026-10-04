@@ -175,10 +175,31 @@ surface uses shared cards, spacing, touch targets, content descriptions and
 bounded reveal motion; it does not add a new store, price, ranking, persistence,
 network or location authority.
 
+## Stage 7 Compare, Good Price and capture consolidation
+
+Compare now uses the shared warm card language for its projected status and
+exact product rows. Comparable products keep their exact price, package quantity
+and unit-rate facts visible; a winner is shown only when the existing evaluator
+has a valid comparable result. Blocked products and incomplete names move behind
+an explicit details action instead of competing with the main comparison.
+
+Good Price now makes its evidence basis visible in the answer itself: “this exact
+price only” when no matching history exists, or “your private history” when the
+existing exact-memory assessment supplies context. The longer disclosure is
+progressive, and the answer remains explicitly personal context rather than a
+live market or store claim.
+
+Photo, barcode and shared-content adapters remain user-triggered and local. The
+manual Compare flow is primary; photo/barcode helpers are grouped in a secondary
+capture card below the comparison result. Barcode and share review surfaces use
+the same warm card/action treatment. No Accessibility overlay, OCR, barcode,
+share, price, ranking, provider or network authority moved into presentation
+code.
+
 ## Deliberately not migrated yet
 
-Compare, Good Price and the standalone capture surfaces still use their existing
-renderers. They remain functional and are intentionally deferred to later
-bounded migration stages.
+No major consumer-facing shopping surface remains on the old visual language.
+The optional Accessibility settings/scanner internals remain deliberately
+adapter/diagnostic surfaces, secondary to Home and the shopping workspace.
 Search was not redesigned in Stage 2. No new catalog, provider, network,
 ranking or business logic was introduced here.

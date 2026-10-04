@@ -8,6 +8,32 @@ Updated: 2026-10-04 00:00 UTC
 > rail and private/provider-neutral evidence; see
 > `LEGACY_CANADIAN_DATA_SOURCE_CLEANUP.md`.
 
+## Unified Stage 7 legacy-surface consolidation checkpoint — 2026-10-04
+
+The bounded Compare / Good Price / capture presentation slice is complete on
+`work/valuepilot-confirmed-purchases` at implementation commit
+`a19b1edb00fc4eb2370876a2eccd0bfbf27a1eba`. Compare uses shared cards and
+progressive details while preserving exact evaluator output and suppressing
+unsupported winners. Good Price visibly labels its basis as the exact entered
+price only or matching private history; its longer evidence explanation is
+progressively disclosed and remains non-live personal context.
+
+Photo, barcode and shared-content adapters remain user-triggered and local. The
+manual Compare path is primary, capture helpers sit below its result, and the
+barcode/share review surfaces use the same warm cards and actions. Optional
+Accessibility capture remains secondary adapter functionality. No new business,
+price, quantity, ranking, provider, network or overlay authority was added.
+
+VersionCode `10124` / versionName `101.1.23`; local release AAB:
+`android/app/build/outputs/bundle/release/app-release.aab`, 35,026,755 bytes,
+SHA-256 `735948BA159D77356E3CC2C72BC56C26866441C22F581B120CE91C5F487BB2A5`.
+
+Exact-head local verification is green: 411 shared-core tests, 1,650 Android
+JVM tests, debug/release lint, debug/release builds, release bundle,
+`git diff --check`, and privacy inspection. INTERNET remains intentional;
+ACCESS_NETWORK_STATE and background location are absent. The AAB is unsigned;
+no signing, Play upload, phone installation or GitHub Actions retry was done.
+
 ## Unified Trip Planner decision presentation checkpoint — 2026-10-04
 
 The bounded Trip Planner presentation slice is complete on

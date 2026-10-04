@@ -7,6 +7,35 @@ Updated: 2026-10-04 00:00 UTC
 > for provenance only. They are not shipped assets or active runtime sources;
 > see `LEGACY_CANADIAN_DATA_SOURCE_CLEANUP.md`.
 
+## Unified Stage 7 legacy-surface consolidation checkpoint — 2026-10-04
+
+The bounded Compare / Good Price / capture presentation slice is complete on
+`work/valuepilot-confirmed-purchases` at implementation commit
+`a19b1edb00fc4eb2370876a2eccd0bfbf27a1eba`. Compare now uses shared cards,
+exact projected product facts and progressive details for blocked/incomplete
+rows. Good Price exposes whether its answer uses only the exact entered price or
+matching private history, with the longer evidence disclosure behind one action.
+
+Photo, barcode and share adapters remain local and user-triggered. Manual
+comparison is visually primary; photo/barcode tools are grouped below the
+comparison result, and barcode/share review screens use the same warm card and
+button treatment. Optional Accessibility capture remains secondary adapter
+functionality. No business, price, quantity, ranking, provider, network or
+overlay authority moved into Views.
+
+The candidate is versionCode `10124` / versionName `101.1.23`, package
+`com.valuepilot.app`. The local release AAB is at
+`android/app/build/outputs/bundle/release/app-release.aab`, size 35,026,755
+bytes, SHA-256
+`735948BA159D77356E3CC2C72BC56C26866441C22F581B120CE91C5F487BB2A5`.
+
+Exact-head local verification for the implementation is green: 411 shared-core
+tests, 1,650 Android JVM tests, debug/release lint, debug/release builds,
+release bundle, `git diff --check`, and privacy inspection. INTERNET remains the
+existing intentional permission; ACCESS_NETWORK_STATE and background location
+remain absent. The AAB is unsigned; no signing, Play upload, phone installation
+or GitHub Actions retry was performed.
+
 ## Unified Trip Planner decision presentation checkpoint — 2026-10-04
 
 The bounded Trip Planner presentation slice is complete on
