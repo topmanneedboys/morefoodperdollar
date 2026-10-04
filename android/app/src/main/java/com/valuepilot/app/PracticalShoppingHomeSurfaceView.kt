@@ -1,8 +1,6 @@
 package com.valuepilot.app
 
 import android.content.Context
-import android.content.res.ColorStateList
-import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.graphics.Rect
 import android.graphics.Typeface
@@ -64,6 +62,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val unknownRemovalOwnerControls = mutableListOf<View>()
     private val privateIdentityRemovalOwnerControls = mutableListOf<View>()
     private val privateIdentityPhotoOwnerControls = mutableListOf<View>()
+    private val itemPriceWatchOwnerControls = mutableListOf<View>()
     private val itemDetailsOwnerControls = mutableListOf<View>()
     private val observedPriceOwnerControls = mutableListOf<View>()
     private val chickenChoiceOwnerControls = mutableListOf<View>()
@@ -81,6 +80,9 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private var hasRenderedState = false
     private var lastRenderedSubmitEnabled = false
     private var lastRenderedQuickAddVisible = false
+    // Keep unchanged item rows mounted so an unrelated projected update does not
+    // reset scroll position or accessibility focus in a long Home list.
+    private var lastRenderedItems: List<PracticalShoppingHomeItemRenderState>? = null
     private var projectedResultVisible = false
     private var lastCommandCenterSignature: String? = null
 
@@ -176,6 +178,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         set(value) {
             field = value
             priceWatchOwnerControls.forEach { control -> control.isEnabled = value != null }
+            itemPriceWatchOwnerControls.forEach { control -> control.isEnabled = value != null }
         }
     var onCompare: (() -> Unit)? = null
         set(value) {
@@ -257,7 +260,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val inputLayout = TextInputLayout(context).apply {
         boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
         hint = context.getString(R.string.home_list_hint)
-        setBoxBackgroundColor(ValuePilotPalette.color("#FFFFFF"))
+        setBoxBackgroundColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE))
         setBoxCornerRadii(
             dp(18).toFloat(),
             dp(18).toFloat(),
@@ -296,28 +299,19 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         addView(commandCenterListPill)
         addView(commandCenterStatusPill)
     }
-    private val commandCenterHistoryButton = MaterialButton(context).apply {
+    private val commandCenterHistoryButton = ValuePilotProgrammaticButton.outlined(
+        context,
+        compact = true
+    ).apply {
         purchaseHistoryOwnerControls += this
         text = context.getString(R.string.home_repeat_purchase)
         contentDescription = context.getString(R.string.home_repeat_purchase_description)
-        isAllCaps = false
         textSize = 13f
-        minHeight = dp(ValuePilotDesignTokens.TouchTarget.COMPACT_MINIMUM_DP)
-        minimumHeight = dp(ValuePilotDesignTokens.TouchTarget.COMPACT_MINIMUM_DP)
         minWidth = 0
         minimumWidth = 0
         insetTop = 0
         insetBottom = 0
         setPadding(dp(10), 0, dp(10), 0)
-        cornerRadius = dp(ValuePilotDesignTokens.Shape.CONTROL_RADIUS_DP)
-        strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(
-            ValuePilotPalette.color(ValuePilotDesignTokens.Colors.OUTLINE)
-        )
-        setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.PRIMARY_DARK))
-        backgroundTintList = ColorStateList.valueOf(
-            ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE)
-        )
         layoutParams = fullWidth(dp(ValuePilotDesignTokens.TouchTarget.COMPACT_MINIMUM_DP), 10)
         visibility = GONE
         isEnabled = false
@@ -337,13 +331,11 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
 
     private var appliedQueryCharacterLimit: Int? = null
 
-    private val submitButton = MaterialButton(context).apply {
+    private val submitButton = ValuePilotProgrammaticButton.filled(context).apply {
         text = context.getString(R.string.home_plan_action)
         // Fail closed until the first immutable render state supplies readiness.
         isEnabled = false
-        isAllCaps = false
         textSize = 16f
-        cornerRadius = dp(16)
         layoutParams = fullWidth(dp(54), 12)
     }
 
@@ -351,11 +343,21 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     // Home action. They are still owner-driven navigation controls; this
     // heading only makes their purpose discoverable before a long result is
     // rendered below the list.
-    private val fastActionsHeading = line("", 13f, "#374151", true).apply {
+    private val fastActionsHeading = line(
+        "",
+        ValuePilotDesignTokens.Typography.LABEL_SP,
+        ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
+        true
+    ).apply {
         setPadding(dp(2), dp(14), dp(2), 0)
     }
 
-    private val quickAddHeading = line("", 13f, "#374151", true).apply {
+    private val quickAddHeading = line(
+        "",
+        ValuePilotDesignTokens.Typography.LABEL_SP,
+        ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
+        true
+    ).apply {
         setPadding(dp(2), dp(12), dp(2), 0)
         visibility = GONE
     }
@@ -368,7 +370,11 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         visibility = GONE
     }
 
-    private val message = line("", 14f, "#6B7280").apply {
+    private val message = line(
+        "",
+        ValuePilotDesignTokens.Typography.BODY_SP,
+        ValuePilotDesignTokens.Colors.TEXT_MUTED
+    ).apply {
         setPadding(dp(2), dp(14), dp(2), 0)
         // Refinement and validation feedback changes after user actions. Let
         // assistive technology hear the new immutable message without making
@@ -381,23 +387,34 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     private val privateIdentityHeading = heading(context.getString(R.string.home_private_identity_title))
     private val privateIdentityBody = column()
     private val privateIdentityCard =
-        card("#EFF6FF", "#BFDBFE", 12, privateIdentityBody)
+        card(
+            ValuePilotDesignTokens.Colors.SURFACE_ACCENT,
+            ValuePilotDesignTokens.Colors.OUTLINE,
+            12,
+            privateIdentityBody
+        )
 
     private val refinementBody = column()
-    private val refinementCard = card("#FFFBEB", "#FDE68A", 16, refinementBody)
+    private val refinementCard =
+        card(
+            ValuePilotDesignTokens.Colors.WARNING_SURFACE,
+            ValuePilotDesignTokens.Colors.WARNING_OUTLINE,
+            16,
+            refinementBody
+        )
 
     private val unknownBody = column()
-    private val unknownCard = card("#FFF7ED", "#FED7AA", 12, unknownBody)
+    private val unknownCard =
+        card(
+            ValuePilotDesignTokens.Colors.WARNING_SURFACE,
+            ValuePilotDesignTokens.Colors.WARNING_OUTLINE,
+            12,
+            unknownBody
+        )
 
     private val resultContainer = PracticalShoppingPlanResultSurfaceView(context)
-    private val extraStopSettingsButton = MaterialButton(context).apply {
-        isAllCaps = false
+    private val extraStopSettingsButton = ValuePilotProgrammaticButton.outlined(context).apply {
         textSize = 14f
-        cornerRadius = dp(16)
-        strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
-        setTextColor(ValuePilotPalette.color("#374151"))
-        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(dp(50), 12)
         setOnClickListener {
             extraStopSettingsExpanded = !extraStopSettingsExpanded
@@ -407,23 +424,45 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     }
     private val extraStopSettingsBody = column()
     private val extraStopSettingsCard =
-        card("#F9FAFB", "#E5E7EB", 8, extraStopSettingsBody)
+        card(
+            ValuePilotDesignTokens.Colors.SURFACE_SUBTLE,
+            ValuePilotDesignTokens.Colors.OUTLINE,
+            8,
+            extraStopSettingsBody
+        )
     private val shopAgainActionButton = shopAgainButton()
     private val sharePlanActionButton = sharePlanButton()
-    private val privateMemorySummary = line("", 13f, "#6B7280").apply {
+    private val privateMemorySummary = line(
+        "",
+        ValuePilotDesignTokens.Typography.LABEL_SP,
+        ValuePilotDesignTokens.Colors.TEXT_MUTED
+    ).apply {
         accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         visibility = GONE
     }
     private val privateMemoryHighlightsBody = column()
     private val privateMemoryHighlightsCard =
-        card("#EFF6FF", "#BFDBFE", 8, privateMemoryHighlightsBody).apply {
+        card(
+            ValuePilotDesignTokens.Colors.SURFACE_ACCENT,
+            ValuePilotDesignTokens.Colors.OUTLINE,
+            8,
+            privateMemoryHighlightsBody
+        ).apply {
             visibility = GONE
         }
-    private val privateMemoryNotice = line("", 13f, "#92400E").apply {
+    private val privateMemoryNotice = line(
+        "",
+        ValuePilotDesignTokens.Typography.LABEL_SP,
+        ValuePilotDesignTokens.Colors.WARNING
+    ).apply {
         accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         visibility = GONE
     }
-    private val sampleNotice = line("", 13f, "#374151")
+    private val sampleNotice = line(
+        "",
+        ValuePilotDesignTokens.Typography.LABEL_SP,
+        ValuePilotDesignTokens.Colors.TEXT_SECONDARY
+    )
     private val goodPriceActionButton = goodPriceButton()
     private val privateMemoryReviewActionButton = privateMemoryReviewButton()
     private val privateMemoryExportActionButton = privateMemoryExportButton()
@@ -509,13 +548,17 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     }
 
     fun render(state: PracticalShoppingHomeRenderState) {
-        itemRemovalOwnerControls.clear()
+        val itemProjectionChanged = lastRenderedItems != state.items
         unknownRemovalOwnerControls.clear()
         privateIdentityRemovalOwnerControls.clear()
         privateIdentityPhotoOwnerControls.clear()
         priceWatchOwnerControls.clear()
-        itemDetailsOwnerControls.clear()
-        observedPriceOwnerControls.clear()
+        if (itemProjectionChanged) {
+            itemRemovalOwnerControls.clear()
+            itemPriceWatchOwnerControls.clear()
+            itemDetailsOwnerControls.clear()
+            observedPriceOwnerControls.clear()
+        }
         chickenChoiceOwnerControls.clear()
         quickAddOwnerControls.clear()
         extraStopChoiceOwnerControls.clear()
@@ -749,11 +792,13 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     }
 
     private fun renderItems(items: List<PracticalShoppingHomeItemRenderState>) {
-        itemsContainer.removeAllViews()
         itemsHeading.visibility = if (items.isEmpty()) GONE else VISIBLE
+        if (lastRenderedItems == items) return
+        itemsContainer.removeAllViews()
         items.forEach { item ->
             itemsContainer.addView(itemRow(item))
         }
+        lastRenderedItems = items
     }
 
     private fun renderCommandCenter(state: PracticalShoppingHomeRenderState) {
@@ -875,7 +920,10 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                     enabled = onRemovePrivateIdentity != null,
                     ownerControls = privateIdentityRemovalOwnerControls
                 ).apply {
-                    layoutParams = fullWidth(dp(40), 5)
+                    layoutParams = fullWidth(
+                        dp(ValuePilotDesignTokens.TouchTarget.COMPACT_MINIMUM_DP),
+                        5
+                    )
                 }
             )
         }
@@ -883,30 +931,23 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
 
     private fun privateIdentityPhotoButton(
         identity: PracticalShoppingHomePrivateIdentityRenderState
-    ): MaterialButton = MaterialButton(context).apply {
+    ): MaterialButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
         privateIdentityPhotoOwnerControls += this
         text = context.getString(R.string.home_private_identity_photos)
         contentDescription = context.getString(
             R.string.home_private_identity_photos_description,
             identity.displayName
         )
-        isAllCaps = false
         textSize = 13f
-        minHeight = dp(40)
-        minimumHeight = dp(40)
         minWidth = 0
         minimumWidth = 0
         insetTop = 0
         insetBottom = 0
         isEnabled = onOpenPrivateIdentityPhotos != null
         setPadding(dp(10), 0, dp(10), 0)
-        strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#BFDBFE"))
-        setTextColor(ValuePilotPalette.color("#1D4ED8"))
-        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = LinearLayout.LayoutParams(
             LayoutParams.WRAP_CONTENT,
-            dp(40)
+            LayoutParams.WRAP_CONTENT
         ).apply { leftMargin = dp(8) }
         setOnClickListener { onOpenPrivateIdentityPhotos?.invoke(identity.identityKey) }
     }
@@ -992,7 +1033,8 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
                             displayName = item.name,
                             brand = null,
                             packageQuantityLabel = item.detail,
-                            watched = item.watched
+                            watched = item.watched,
+                            ownerControls = itemPriceWatchOwnerControls
                         )
                     )
                     item.savedExactProductNotice?.let { notice ->
@@ -1099,9 +1141,10 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         displayName: String,
         brand: String?,
         packageQuantityLabel: String?,
-        watched: Boolean
-    ): MaterialButton = MaterialButton(context).apply {
-        priceWatchOwnerControls += this
+        watched: Boolean,
+        ownerControls: MutableList<View> = priceWatchOwnerControls
+    ): MaterialButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
+        ownerControls += this
         text = if (watched) "Unwatch" else "Watch price"
         contentDescription =
             if (watched) {
@@ -1109,10 +1152,11 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
             } else {
                 "Watch exact product $displayName privately"
             }
-        isAllCaps = false
         textSize = 13f
-        minHeight = dp(40)
         minWidth = 0
+        minimumWidth = 0
+        insetTop = 0
+        insetBottom = 0
         isEnabled = onTogglePriceWatch != null
         setOnClickListener {
             onTogglePriceWatch?.invoke(
@@ -1134,14 +1178,11 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         description: String,
         enabled: Boolean,
         ownerControls: MutableList<View>? = null
-    ): MaterialButton = MaterialButton(context).apply {
+    ): MaterialButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
         ownerControls?.add(this)
         text = label
         contentDescription = description
-        isAllCaps = false
         textSize = 14f
-        minHeight = dp(40)
-        minimumHeight = dp(40)
         minWidth = 0
         minimumWidth = 0
         insetTop = 0
@@ -1150,7 +1191,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         setPadding(dp(8), 0, dp(8), 0)
         layoutParams = LinearLayout.LayoutParams(
             LayoutParams.WRAP_CONTENT,
-            dp(40)
+            LayoutParams.WRAP_CONTENT
         ).apply { leftMargin = dp(4) }
         setOnClickListener { onDetails() }
     }
@@ -1161,27 +1202,21 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         enabled: Boolean,
         ownerControls: MutableList<View>? = null
     ): MaterialButton =
-        MaterialButton(context).apply {
+        ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
             ownerControls?.add(this)
             text = context.getString(R.string.home_remove_item)
             contentDescription = description
-            isAllCaps = false
             textSize = 14f
-            minHeight = dp(40)
-            minimumHeight = dp(40)
             minWidth = 0
             minimumWidth = 0
             insetTop = 0
             insetBottom = 0
             isEnabled = enabled
             setPadding(dp(10), 0, dp(10), 0)
-            strokeWidth = dp(1)
-            strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D8CFC6"))
-            setTextColor(ValuePilotPalette.color("#5F5148"))
-            backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFDF9"))
+            setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.TEXT_SECONDARY))
             layoutParams = LinearLayout.LayoutParams(
                 LayoutParams.WRAP_CONTENT,
-                dp(40)
+                LayoutParams.WRAP_CONTENT
             ).apply { leftMargin = dp(8) }
             setOnClickListener { onRemove() }
         }
@@ -1332,42 +1367,41 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     }
 
     private fun sampleCard(): View =
-        card("#F0FDF4", "#BBF7D0", 20).apply {
+        card(
+            ValuePilotDesignTokens.Colors.SUCCESS_SURFACE,
+            ValuePilotDesignTokens.Colors.SUCCESS_OUTLINE,
+            20
+        ).apply {
             addView(
                 column().apply {
-                    addView(line(context.getString(R.string.home_sample_badge), 11f, "#047857", true))
+                    addView(
+                        line(
+                            context.getString(R.string.home_sample_badge),
+                            11f,
+                            ValuePilotDesignTokens.Colors.SUCCESS,
+                            true
+                        )
+                    )
                     sampleNotice.setPadding(0, dp(4), 0, 0)
                     addView(sampleNotice)
                 }
             )
         }
 
-    private fun compareButton(): MaterialButton = MaterialButton(context).apply {
+    private fun compareButton(): MaterialButton = ValuePilotProgrammaticButton.outlined(context).apply {
         text = context.getString(R.string.home_compare_secondary)
-        isAllCaps = false
         textSize = 14f
-        cornerRadius = dp(16)
-        strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
-        setTextColor(ValuePilotPalette.color("#374151"))
-        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(dp(50), 12)
         // Keep the owner-driven comparison route inert until its callback is attached.
         isEnabled = false
         setOnClickListener { onCompare?.invoke() }
     }
 
-    private fun shopAgainButton(): MaterialButton = MaterialButton(context).apply {
+    private fun shopAgainButton(): MaterialButton = ValuePilotProgrammaticButton.outlined(context).apply {
         shopAgainOwnerControls += this
         text = context.getString(R.string.home_shop_again)
         contentDescription = context.getString(R.string.home_shop_again_description)
-        isAllCaps = false
         textSize = 14f
-        cornerRadius = dp(16)
-        strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
-        setTextColor(ValuePilotPalette.color("#374151"))
-        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(dp(50), 12)
         // Keep this repeat-use action inert until the owner attaches and a
         // completed immutable result is rendered.
@@ -1375,86 +1409,56 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         setOnClickListener { onShopAgain?.invoke() }
     }
 
-    private fun sharePlanButton(): MaterialButton = MaterialButton(context).apply {
+    private fun sharePlanButton(): MaterialButton = ValuePilotProgrammaticButton.outlined(context).apply {
         sharePlanOwnerControls += this
         text = context.getString(R.string.home_share_plan)
         contentDescription = context.getString(R.string.home_share_plan_description)
-        isAllCaps = false
         textSize = 14f
-        cornerRadius = dp(16)
-        strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
-        setTextColor(ValuePilotPalette.color("#374151"))
-        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(dp(50), 8)
         // Sharing is an explicit owner-driven action over an already-projected result.
         isEnabled = false
         setOnClickListener { onSharePlan?.invoke() }
     }
 
-    private fun goodPriceButton(): MaterialButton = MaterialButton(context).apply {
+    private fun goodPriceButton(): MaterialButton = ValuePilotProgrammaticButton.outlined(context).apply {
         goodPriceOwnerControls += this
         text = context.getString(R.string.home_good_price_secondary)
-        isAllCaps = false
         textSize = 14f
-        cornerRadius = dp(16)
-        strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
-        setTextColor(ValuePilotPalette.color("#374151"))
-        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(dp(50), 12)
         // Keep the owner-driven price question inert until its callback is attached.
         isEnabled = false
         setOnClickListener { onGoodPrice?.invoke() }
     }
 
-    private fun privateMemoryReviewButton(): MaterialButton = MaterialButton(context).apply {
+    private fun privateMemoryReviewButton(): MaterialButton = ValuePilotProgrammaticButton.outlined(context).apply {
         privateMemoryReviewOwnerControls += this
         text = context.getString(R.string.home_private_memory_review)
         contentDescription = context.getString(R.string.home_private_memory_review_description)
-        isAllCaps = false
         textSize = 14f
-        cornerRadius = dp(16)
-        strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
-        setTextColor(ValuePilotPalette.color("#374151"))
-        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(dp(50), 8)
         // Keep the owner-driven history route inert until its callback is attached.
         isEnabled = false
         setOnClickListener { onReviewPrivateMemory?.invoke() }
     }
 
-    private fun privateMemoryExportButton(): MaterialButton = MaterialButton(context).apply {
+    private fun privateMemoryExportButton(): MaterialButton = ValuePilotProgrammaticButton.outlined(context).apply {
         privateMemoryExportOwnerControls += this
         text = context.getString(R.string.home_private_memory_export)
         contentDescription =
             context.getString(R.string.home_private_memory_export_description)
-        isAllCaps = false
         textSize = 14f
-        cornerRadius = dp(16)
-        strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
-        setTextColor(ValuePilotPalette.color("#374151"))
-        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(dp(50), 4)
         // Keep the owner-driven export route inert until its callback is attached.
         isEnabled = false
         setOnClickListener { onExportPrivateMemory?.invoke() }
     }
 
-    private fun privateMemoryForgetButton(): MaterialButton = MaterialButton(context).apply {
+    private fun privateMemoryForgetButton(): MaterialButton = ValuePilotProgrammaticButton.outlined(context).apply {
         privateMemoryForgetOwnerControls += this
         text = context.getString(R.string.home_private_memory_forget)
         contentDescription =
             context.getString(R.string.home_private_memory_forget_description)
-        isAllCaps = false
         textSize = 14f
-        cornerRadius = dp(16)
-        strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
-        setTextColor(ValuePilotPalette.color("#374151"))
-        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(dp(50), 4)
         // Keep the owner-driven removal route inert until its callback is attached.
         isEnabled = false

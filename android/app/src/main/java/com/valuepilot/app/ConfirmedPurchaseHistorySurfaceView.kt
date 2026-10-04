@@ -16,9 +16,24 @@ internal class ConfirmedPurchaseHistorySurfaceView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : LinearLayout(context, attrs, defStyleAttr) {
 
-    private val headlineView = textLine("", 22f, "#111827", bold = true)
-    private val guidanceView = textLine("", 14f, "#4B5563", topPadding = 8)
-    private val noticeView = textLine("", 13f, "#92400E", topPadding = 10)
+    private val headlineView = textLine(
+        "",
+        ValuePilotDesignTokens.Typography.TITLE_SP - 4f,
+        ValuePilotDesignTokens.Colors.TEXT_PRIMARY,
+        bold = true
+    )
+    private val guidanceView = textLine(
+        "",
+        ValuePilotDesignTokens.Typography.LABEL_SP + 1f,
+        ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
+        topPadding = 8
+    )
+    private val noticeView = textLine(
+        "",
+        ValuePilotDesignTokens.Typography.LABEL_SP,
+        ValuePilotDesignTokens.Colors.WARNING,
+        topPadding = 10
+    )
     private val rowsContainer = LinearLayout(context).apply {
         orientation = VERTICAL
         layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
@@ -90,19 +105,16 @@ internal class ConfirmedPurchaseHistorySurfaceView @JvmOverloads constructor(
             orientation = VERTICAL
             setPadding(dp(16), dp(15), dp(16), dp(15))
         }
-        private val title = textLine("", 17f, "#111827", bold = true)
-        private val details = textLine("", 12f, "#4B5563", topPadding = 6)
+        private val title = textLine("", 17f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true)
+        private val details = textLine("", 12f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 6)
         private val repeatButton = actionButton(
             label = "Repeat purchase",
             description = "Add this exact confirmed purchase to your private Home list for a new plan"
         )
-        private val moreButton = MaterialButton(context).apply {
+        private val moreButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
             text = "More for this purchase"
             contentDescription = "Show correction, delete and price-watch actions for this purchase"
-            isAllCaps = false
-            minHeight = dp(44)
             gravity = Gravity.CENTER
-            setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.PRIMARY_DARK))
             setOnClickListener { setMoreExpanded(!moreExpanded) }
             layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
                 topMargin = dp(8)
@@ -112,10 +124,7 @@ internal class ConfirmedPurchaseHistorySurfaceView @JvmOverloads constructor(
             orientation = VERTICAL
             visibility = GONE
         }
-        private val watchButton = MaterialButton(context).apply {
-            isAllCaps = false
-            minHeight = dp(44)
-            setTextColor(ValuePilotPalette.color("#1D4ED8"))
+        private val watchButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
             layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
                 topMargin = dp(5)
             }
@@ -192,17 +201,13 @@ internal class ConfirmedPurchaseHistorySurfaceView @JvmOverloads constructor(
         label: String,
         description: String,
         destructive: Boolean = false
-    ): MaterialButton = MaterialButton(context).apply {
+    ): MaterialButton = ValuePilotProgrammaticButton.outlined(
+        context,
+        compact = false,
+        destructive = destructive
+    ).apply {
         text = label
         contentDescription = description
-        isAllCaps = false
-        minHeight = dp(44)
-        setTextColor(
-            ValuePilotPalette.color(
-                if (destructive) ValuePilotDesignTokens.Colors.ERROR
-                else ValuePilotDesignTokens.Colors.PRIMARY_DARK
-            )
-        )
         layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
             topMargin = dp(5)
         }

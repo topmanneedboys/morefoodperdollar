@@ -16,8 +16,18 @@ internal class PriceWatchSurfaceView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : LinearLayout(context, attrs, defStyleAttr) {
 
-    private val headlineView = textLine("", 22f, "#111827", bold = true)
-    private val guidanceView = textLine("", 14f, "#4B5563", topPadding = 8)
+    private val headlineView = textLine(
+        "",
+        ValuePilotDesignTokens.Typography.TITLE_SP - 4f,
+        ValuePilotDesignTokens.Colors.TEXT_PRIMARY,
+        bold = true
+    )
+    private val guidanceView = textLine(
+        "",
+        ValuePilotDesignTokens.Typography.LABEL_SP + 1f,
+        ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
+        topPadding = 8
+    )
     private val rowsContainer = LinearLayout(context).apply {
         orientation = VERTICAL
         layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
@@ -80,22 +90,19 @@ internal class PriceWatchSurfaceView @JvmOverloads constructor(
             orientation = VERTICAL
             setPadding(dp(16), dp(15), dp(16), dp(15))
         }
-        private val title = textLine("", 17f, "#111827", bold = true)
-        private val packageText = textLine("", 12f, "#4B5563", topPadding = 5)
-        private val targetText = textLine("", 13f, "#374151", topPadding = 5)
-        private val currentOfferText = textLine("", 12f, "#92400E", topPadding = 5)
-        private val historySummary = textLine("", 12f, "#6B7280", topPadding = 8)
+        private val title = textLine("", 17f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true)
+        private val packageText = textLine("", 12f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 5)
+        private val targetText = textLine("", 13f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 5)
+        private val currentOfferText = textLine("", 12f, ValuePilotDesignTokens.Colors.WARNING, topPadding = 5)
+        private val historySummary = textLine("", 12f, ValuePilotDesignTokens.Colors.TEXT_MUTED, topPadding = 8)
         private val addObservationButton = actionButton(
             label = "Add personal price",
             description = "Record a private price observation for this exact product"
         )
-        private val moreButton = MaterialButton(context).apply {
+        private val moreButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
             text = "More for this product"
             contentDescription = "Show price history, target and watch actions for this product"
-            isAllCaps = false
-            minHeight = dp(44)
             gravity = Gravity.CENTER
-            setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.PRIMARY_DARK))
             setOnClickListener { setMoreExpanded(!moreExpanded) }
             layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
                 topMargin = dp(8)
@@ -191,12 +198,34 @@ internal class PriceWatchSurfaceView @JvmOverloads constructor(
         heading: String,
         lines: List<PriceWatchHistoryLine>
     ) {
-        body.addView(textLine(heading, 13f, "#374151", bold = true, topPadding = 10))
+        body.addView(
+            textLine(
+                heading,
+                ValuePilotDesignTokens.Typography.LABEL_SP,
+                ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
+                bold = true,
+                topPadding = 10
+            )
+        )
         if (lines.isEmpty()) {
-            body.addView(textLine("None recorded", 12f, "#6B7280", topPadding = 3))
+            body.addView(
+                textLine(
+                    "None recorded",
+                    12f,
+                    ValuePilotDesignTokens.Colors.TEXT_MUTED,
+                    topPadding = 3
+                )
+            )
         } else {
             lines.take(12).forEach { line ->
-                body.addView(textLine(line.asText(), 12f, "#4B5563", topPadding = 3))
+                body.addView(
+                    textLine(
+                        line.asText(),
+                        12f,
+                        ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
+                        topPadding = 3
+                    )
+                )
                 if (line.sourceText == "Personal price observation") {
                     body.addView(
                         actionButton(
@@ -218,7 +247,14 @@ internal class PriceWatchSurfaceView @JvmOverloads constructor(
                 }
             }
             if (lines.size > 12) {
-                body.addView(textLine("Older records remain stored privately.", 12f, "#6B7280", topPadding = 3))
+                body.addView(
+                    textLine(
+                        "Older records remain stored privately.",
+                        12f,
+                        ValuePilotDesignTokens.Colors.TEXT_MUTED,
+                        topPadding = 3
+                    )
+                )
             }
         }
     }
@@ -229,17 +265,13 @@ internal class PriceWatchSurfaceView @JvmOverloads constructor(
         action: PriceWatchUiAction? = null,
         destructive: Boolean = false,
         compact: Boolean = false
-    ): MaterialButton = MaterialButton(context).apply {
+    ): MaterialButton = ValuePilotProgrammaticButton.outlined(
+        context,
+        compact = compact,
+        destructive = destructive
+    ).apply {
         text = label
         contentDescription = description
-        isAllCaps = false
-        minHeight = dp(if (compact) 40 else 44)
-        setTextColor(
-            ValuePilotPalette.color(
-                if (destructive) ValuePilotDesignTokens.Colors.ERROR
-                else ValuePilotDesignTokens.Colors.PRIMARY_DARK
-            )
-        )
         action?.let { typedAction -> setOnClickListener { onAction?.invoke(typedAction) } }
         layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
             topMargin = dp(5)

@@ -1,7 +1,6 @@
 package com.valuepilot.app
 
 import android.content.Context
-import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.util.AttributeSet
 import android.util.TypedValue
@@ -12,7 +11,6 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
-import com.google.android.material.button.MaterialButton
 
 /**
  * Replaceable physical renderer for the Saved surface.
@@ -202,7 +200,7 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
             textLine(
                 value = title,
                 sizeSp = 17f,
-                textColor = "#111827",
+                textColor = ValuePilotDesignTokens.Colors.TEXT_PRIMARY,
                 bold = true
             )
         )
@@ -210,7 +208,7 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
             textLine(
                 value = supportingText,
                 sizeSp = 12f,
-                textColor = "#6B7280",
+                textColor = ValuePilotDesignTokens.Colors.TEXT_MUTED,
                 topPadding = 5
             )
         )
@@ -233,20 +231,12 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
                 orientation = VERTICAL
                 visibility = View.GONE
             }
-            val moreButton = MaterialButton(context).apply {
+            val moreButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
                 ownerBoundButtons += this
                 text = "More for this item"
                 contentDescription = "Show price-watch and removal actions for $title"
-                setAllCaps(false)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-                cornerRadius = dp(14)
-                strokeWidth = dp(1)
-                strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D8CFC6"))
-                backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFDF9"))
                 setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.PRIMARY_DARK))
-                insetTop = 0
-                insetBottom = 0
-                minHeight = dp(44)
                 isEnabled = onAction != null
                 setOnClickListener {
                     val expanded = moreActions.visibility != View.VISIBLE
@@ -292,7 +282,7 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
-            setTextColor(ValuePilotPalette.color("#111827"))
+            setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.TEXT_PRIMARY))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
         }
 
@@ -300,7 +290,7 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
         TextView(context).apply {
             text = value
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            setTextColor(ValuePilotPalette.color("#374151"))
+            setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.TEXT_SECONDARY))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             setPadding(0, dp(20), 0, 0)
         }
@@ -324,9 +314,9 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
             sizeSp = 13f,
             textColor =
                 when (mode) {
-                    PracticalShoppingSavedSurfaceMode.ERROR -> "#B91C1C"
-                    PracticalShoppingSavedSurfaceMode.DEGRADED -> "#92400E"
-                    else -> "#4B5563"
+                    PracticalShoppingSavedSurfaceMode.ERROR -> ValuePilotDesignTokens.Colors.ERROR
+                    PracticalShoppingSavedSurfaceMode.DEGRADED -> ValuePilotDesignTokens.Colors.WARNING
+                    else -> ValuePilotDesignTokens.Colors.TEXT_SECONDARY
                 },
             topPadding = 12
         ).apply {
@@ -340,7 +330,7 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
         textLine(
             value = value,
             sizeSp = 13f,
-            textColor = "#92400E",
+            textColor = ValuePilotDesignTokens.Colors.WARNING,
             topPadding = 10
         ).apply {
             // An unresolved display-metadata warning is projected state, not a
@@ -353,7 +343,7 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
         textLine(
             value = value,
             sizeSp = 15f,
-            textColor = "#4B5563",
+            textColor = ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
             topPadding = 18
         )
 
@@ -365,26 +355,15 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
         contentDescription: String? = null,
         onClick: (() -> Unit)? = null
     ): Button =
-        MaterialButton(context).apply {
+        ValuePilotProgrammaticButton.outlined(
+            context,
+            compact = compact,
+            destructive = destructive
+        ).apply {
             ownerBoundButtons += this
             text = label
             this.contentDescription = contentDescription
-            setAllCaps(false)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, if (compact) 13f else 14f)
-            cornerRadius = dp(14)
-            strokeWidth = dp(1)
-            strokeColor =
-                ColorStateList.valueOf(
-                    ValuePilotPalette.color(if (destructive) "#E2B8AE" else "#D8CFC6")
-                )
-            backgroundTintList =
-                ColorStateList.valueOf(ValuePilotPalette.color("#FFFDF9"))
-            setTextColor(
-                ValuePilotPalette.color(if (destructive) "#A63D32" else "#8F3620")
-            )
-            insetTop = 0
-            insetBottom = 0
-            minHeight = dp(if (compact) 44 else 52)
             isEnabled = onAction != null
             setOnClickListener { onClick?.invoke() ?: onAction?.invoke(action) }
             layoutParams =

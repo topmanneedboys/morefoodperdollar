@@ -2,7 +2,6 @@ package com.valuepilot.app
 
 import android.content.Context
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.util.AttributeSet
@@ -310,7 +309,7 @@ internal class ProductStoreMapSurfaceView @JvmOverloads constructor(
 
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
-            paint.color = Color.rgb(234, 215, 204)
+            paint.color = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE_SUBTLE)
             paint.strokeWidth = 2f
             val inset = 24f
             val width = width.toFloat()
@@ -337,7 +336,7 @@ internal class ProductStoreMapSurfaceView @JvmOverloads constructor(
                     }
                 )
                 canvas.drawCircle(x.toFloat(), y.toFloat(), if (selected) 13f else 9f, paint)
-                paint.color = Color.WHITE
+                paint.color = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.ON_PRIMARY)
                 paint.textSize = 11f
                 paint.textAlign = Paint.Align.CENTER
                 canvas.drawText((index + 1).toString(), x.toFloat(), y.toFloat() + 4f, paint)

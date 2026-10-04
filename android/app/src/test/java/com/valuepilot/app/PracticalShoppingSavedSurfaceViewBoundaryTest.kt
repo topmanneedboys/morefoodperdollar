@@ -74,10 +74,10 @@ class PracticalShoppingSavedSurfaceViewBoundaryTest {
     fun saved_actions_use_the_shared_warm_outlined_button_surface() {
         val source = source().readText()
 
-        assertTrue(source.contains("MaterialButton(context).apply"))
-        assertTrue(source.contains("backgroundTintList"))
-        assertTrue(source.contains("strokeColor"))
-        assertTrue(source.contains("minHeight = dp(if (compact) 44 else 52)"))
+        assertTrue(source.contains("ValuePilotProgrammaticButton.outlined"))
+        assertTrue(source.contains("compact = compact"))
+        assertTrue(source.contains("destructive = destructive"))
+        assertFalse(source.contains("MaterialButton(context).apply"))
     }
 
     @Test

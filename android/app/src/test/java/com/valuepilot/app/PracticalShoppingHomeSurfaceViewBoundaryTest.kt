@@ -124,7 +124,8 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
         val source = source().readText()
 
         listOf(
-            "private val quickAddHeading = line(\"\", 13f, \"#374151\", true)",
+            "private val quickAddHeading = line(",
+            "ValuePilotDesignTokens.Colors.TEXT_SECONDARY",
             "private val quickAddGroup = ChipGroup(context)",
             "addView(quickAddHeading)",
             "addView(quickAddGroup)",
@@ -175,7 +176,11 @@ class PracticalShoppingHomeSurfaceViewBoundaryTest {
         assertTrue("Item actions must stack below the full-width label", source.contains("orientation = VERTICAL"))
         assertTrue("Item actions need a comfortable full-width touch target", source.contains("layoutParams = fullWidth(dp(48), 6)"))
         assertTrue("Item labels must remain readable beside no controls", source.contains("addView(line(label, 15f"))
-        assertTrue("Remove must be visually secondary to the primary item action", source.contains("backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color(\"#FFFDF9\"))"))
+        assertTrue(
+            "Remove must be visually secondary to the primary item action",
+            source.contains("ValuePilotProgrammaticButton.outlined(context, compact = true)") &&
+                source.contains("ValuePilotDesignTokens.Colors.TEXT_SECONDARY")
+        )
     }
 
     @Test

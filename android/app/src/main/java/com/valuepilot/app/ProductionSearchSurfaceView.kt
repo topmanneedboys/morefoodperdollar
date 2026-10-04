@@ -1,14 +1,12 @@
 package com.valuepilot.app
 
 import android.content.Context
-import android.graphics.Color
 import android.graphics.Typeface
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.google.android.material.card.MaterialCardView
 
 /**
  * Physically separate, inactive-by-default renderer for production Search state.
@@ -68,7 +66,7 @@ class ProductionSearchSurfaceView @JvmOverloads constructor(
         TextView(context).apply {
             text = textValue
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
-            setTextColor(ValuePilotPalette.color("#111827"))
+            setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.TEXT_PRIMARY))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
         }
 
@@ -76,21 +74,30 @@ class ProductionSearchSurfaceView @JvmOverloads constructor(
         TextView(context).apply {
             text = textValue
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            setTextColor(ValuePilotPalette.color("#374151"))
+            setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.TEXT_SECONDARY))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             setPadding(0, dp(18), 0, 0)
         }
 
     private fun resultCard(row: ProductionSearchRowUiState): View {
         val card =
-            MaterialCardView(context).apply {
-                radius = dp(18).toFloat()
-                cardElevation = 0f
+            ValuePilotProductCard(context).apply {
                 setCardBackgroundColor(
-                    ValuePilotPalette.color(if (row.bestValue) "#ECFDF5" else "#FFFFFF")
+                    ValuePilotPalette.color(
+                        if (row.bestValue) {
+                            ValuePilotDesignTokens.Colors.SUCCESS_SURFACE
+                        } else {
+                            ValuePilotDesignTokens.Colors.SURFACE
+                        }
+                    )
                 )
-                strokeColor = ValuePilotPalette.color(if (row.bestValue) "#A7F3D0" else "#E5E7EB")
-                strokeWidth = dp(1)
+                strokeColor = ValuePilotPalette.color(
+                    if (row.bestValue) {
+                        ValuePilotDesignTokens.Colors.SUCCESS_OUTLINE
+                    } else {
+                        ValuePilotDesignTokens.Colors.OUTLINE
+                    }
+                )
                 layoutParams =
                     LayoutParams(
                         LayoutParams.MATCH_PARENT,
@@ -113,7 +120,11 @@ class ProductionSearchSurfaceView @JvmOverloads constructor(
                         context.getString(R.string.rank_number, row.valueRank)
                     },
                 sizeSp = 12f,
-                textColor = if (row.bestValue) "#047857" else "#6B7280",
+                textColor = if (row.bestValue) {
+                    ValuePilotDesignTokens.Colors.SUCCESS
+                } else {
+                    ValuePilotDesignTokens.Colors.TEXT_MUTED
+                },
                 bold = true
             )
         )
@@ -121,7 +132,7 @@ class ProductionSearchSurfaceView @JvmOverloads constructor(
             textLine(
                 value = row.name,
                 sizeSp = 18f,
-                textColor = "#111827",
+                textColor = ValuePilotDesignTokens.Colors.TEXT_PRIMARY,
                 bold = true,
                 topPadding = 5
             )
@@ -130,7 +141,7 @@ class ProductionSearchSurfaceView @JvmOverloads constructor(
             textLine(
                 value = listOfNotNull(row.priceText, row.referencePriceText).joinToString("  •  "),
                 sizeSp = 15f,
-                textColor = "#374151",
+                textColor = ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
                 topPadding = 7
             )
         )
@@ -138,7 +149,7 @@ class ProductionSearchSurfaceView @JvmOverloads constructor(
             textLine(
                 value = "${row.quantityText}  •  ${row.unitRateText}",
                 sizeSp = 16f,
-                textColor = "#111827",
+                textColor = ValuePilotDesignTokens.Colors.TEXT_PRIMARY,
                 bold = true,
                 topPadding = 7
             )
@@ -147,7 +158,7 @@ class ProductionSearchSurfaceView @JvmOverloads constructor(
             textLine(
                 value = row.offerScopeText,
                 sizeSp = 12f,
-                textColor = "#6B7280",
+                textColor = ValuePilotDesignTokens.Colors.TEXT_MUTED,
                 topPadding = 6
             )
         )
@@ -155,7 +166,7 @@ class ProductionSearchSurfaceView @JvmOverloads constructor(
             textLine(
                 value = "${row.availabilityText}  •  ${row.freshnessText}",
                 sizeSp = 12f,
-                textColor = "#6B7280",
+                textColor = ValuePilotDesignTokens.Colors.TEXT_MUTED,
                 topPadding = 3
             )
         )
@@ -163,7 +174,7 @@ class ProductionSearchSurfaceView @JvmOverloads constructor(
             textLine(
                 value = row.sourceSummary,
                 sizeSp = 12f,
-                textColor = "#6B7280",
+                textColor = ValuePilotDesignTokens.Colors.TEXT_MUTED,
                 topPadding = 8
             )
         )
@@ -176,7 +187,7 @@ class ProductionSearchSurfaceView @JvmOverloads constructor(
         TextView(context).apply {
             text = textValue
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setTextColor(ValuePilotPalette.color("#92400E"))
+            setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.WARNING))
             setPadding(dp(2), dp(16), dp(2), 0)
         }
 
