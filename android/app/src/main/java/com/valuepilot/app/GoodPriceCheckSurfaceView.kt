@@ -1,14 +1,13 @@
 package com.valuepilot.app
 
 import android.content.Context
-import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.google.android.material.card.MaterialCardView
 
 /**
  * Physical renderer for the good-price question. It receives immutable consumer content only;
@@ -24,21 +23,93 @@ internal class GoodPriceCheckSurfaceView @JvmOverloads constructor(
         orientation = VERTICAL
         accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
     }
-    private val messageTitle = line("", 20f, "#111827", true)
-    private val messageGuidance = line("", 14f, "#4B5563", topPadding = 6)
-    private val resultContainer = bareColumn().apply {
+    private val messageTitle = textLine("", 20f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true)
+    private val messageGuidance = textLine(
+        "",
+        ValuePilotDesignTokens.Typography.BODY_SP,
+        ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
+        topPadding = ValuePilotDesignTokens.Spacing.XS_DP
+    )
+    private val messageCard = ValuePilotProductCard(context).apply {
+        layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.SM_DP)
+        addView(LinearLayout(context).apply {
+            orientation = VERTICAL
+            setPadding(dp(16), dp(15), dp(16), dp(15))
+            addView(messageTitle)
+            addView(messageGuidance)
+        })
+    }
+    private val resultContainer = LinearLayout(context).apply {
+        orientation = VERTICAL
         accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
     }
+    private val resultHeadline = textLine("", 22f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true)
+    private val resultPriceMode = textLine(
+        "",
+        ValuePilotDesignTokens.Typography.LABEL_SP,
+        ValuePilotDesignTokens.Colors.TEXT_MUTED,
+        topPadding = ValuePilotDesignTokens.Spacing.XXS_DP
+    )
+    private val answerCard = ValuePilotProductCard(context).apply {
+        layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.SM_DP)
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+    }
+    private val answerBody = LinearLayout(context).apply {
+        orientation = VERTICAL
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        setPadding(dp(16), dp(15), dp(16), dp(15))
+    }
+    private val answerBasis = evidenceChip("This exact price only")
+    private val answerTitle = textLine("", 19f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true)
+    private val answerProduct = textLine("", 17f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true, topPadding = 12)
+    private val answerFacts = textLine("", 14f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 7)
+    private val answerUnitRate = textLine("", 17f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true, topPadding = 7)
+    private val answerGuidance = textLine("", ValuePilotDesignTokens.Typography.BODY_SP, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 10)
+    private val historyCard = ValuePilotProductCard(context).apply {
+        layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.XS_DP)
+        visibility = GONE
+    }
+    private val historyText = textLine("", 13f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY)
+    private val disclosureButton = ValuePilotProgrammaticButton.outlined(context).apply {
+        text = "What this means"
+        contentDescription = "Show what evidence this price answer uses"
+        layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.SM_DP)
+    }
+    private val disclosureText = textLine(
+        "",
+        12f,
+        ValuePilotDesignTokens.Colors.TEXT_MUTED,
+        topPadding = ValuePilotDesignTokens.Spacing.XS_DP
+    ).apply { visibility = GONE }
+    private var disclosureExpanded = false
 
     init {
         orientation = VERTICAL
         isSaveEnabled = false
-        messageContainer.addView(messageTitle)
-        messageContainer.addView(messageGuidance)
+        messageContainer.addView(messageCard)
         addView(messageContainer)
         addView(resultContainer)
+        answerBody.addView(answerBasis)
+        answerBody.addView(answerTitle)
+        answerBody.addView(answerProduct)
+        answerBody.addView(answerFacts)
+        answerBody.addView(answerUnitRate)
+        answerBody.addView(answerGuidance)
+        answerCard.addView(answerBody)
+        resultContainer.addView(resultHeadline)
+        resultContainer.addView(resultPriceMode)
+        resultContainer.addView(answerCard)
+        historyCard.addView(LinearLayout(context).apply {
+            orientation = VERTICAL
+            setPadding(dp(16), dp(13), dp(16), dp(13))
+            addView(historyText)
+        })
+        resultContainer.addView(historyCard)
+        resultContainer.addView(disclosureButton)
+        resultContainer.addView(disclosureText)
         messageContainer.visibility = GONE
         resultContainer.visibility = GONE
+        disclosureButton.setOnClickListener { setDisclosureExpanded(!disclosureExpanded) }
     }
 
     override fun render(content: GoodPriceCheckScreenContent) {
@@ -57,103 +128,70 @@ internal class GoodPriceCheckSurfaceView @JvmOverloads constructor(
 
     private fun renderResult(state: GoodPriceCheckUiState) {
         messageContainer.visibility = GONE
-        resultContainer.removeAllViews()
-        resultContainer.addView(line(state.headline, 22f, "#111827", true))
-        resultContainer.addView(line(state.priceModeText, 13f, "#6B7280", topPadding = 4))
-        resultContainer.addView(
-            card(
-                background = answerBackground(state.answerTone),
-                stroke = answerStroke(state.answerTone),
-                topMargin = 14
-            ).apply {
-                // Expose the complete projected answer as one coherent node. The visible child
-                // labels are decorative for assistive technology so the same facts are not
-                // announced repeatedly or in an ambiguous order.
-                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
-                contentDescription = goodPriceAnswerCardContentDescription(state)
-                addView(
-                    column().apply {
-                        importantForAccessibility =
-                            View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
-                        addView(line(state.answerTitle, 19f, "#111827", true))
-                        addView(
-                            line(
-                                state.productName,
-                                17f,
-                                "#111827",
-                                true,
-                                topPadding = 12
-                            )
-                        )
-                        addView(
-                            line(
-                                "${state.priceText}  •  ${state.quantityText}",
-                                14f,
-                                "#374151",
-                                topPadding = 7
-                            )
-                        )
-                        addView(line(state.unitRateText, 17f, "#111827", true, 7))
-                        addView(line(state.answerGuidance, 14f, "#374151", topPadding = 10))
-                    }
-                )
-            }
-        )
-        state.historyText?.let { history ->
-            resultContainer.addView(
-                card("#F9FAFB", "#E5E7EB", 10).apply {
-                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
-                    contentDescription = history
-                    addView(
-                        column().apply {
-                            importantForAccessibility =
-                                View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
-                            addView(line(history, 13f, "#374151"))
-                        }
-                    )
-                }
-            )
-        }
-        resultContainer.addView(line(state.disclosure, 12f, "#6B7280", topPadding = 12))
         resultContainer.visibility = VISIBLE
+        resultHeadline.text = state.headline
+        resultPriceMode.text = state.priceModeText
+        answerCard.setCardBackgroundColor(ValuePilotPalette.color(answerBackground(state.answerTone)))
+        answerCard.strokeColor = ValuePilotPalette.color(answerStroke(state.answerTone))
+        answerCard.contentDescription = goodPriceAnswerCardContentDescription(state)
+        answerBasis.text = if (state.historyText == null) "Evidence: this exact price only" else "Evidence: your private history"
+        answerBasis.contentDescription = answerBasis.text
+        answerTitle.text = state.answerTitle
+        answerProduct.text = state.productName
+        answerFacts.text = "${state.priceText}  •  ${state.quantityText}"
+        answerUnitRate.text = state.unitRateText
+        answerGuidance.text = state.answerGuidance
+        val history = state.historyText
+        if (history == null) {
+            historyCard.visibility = GONE
+        } else {
+            historyText.text = history
+            historyCard.contentDescription = history
+            historyCard.visibility = VISIBLE
+        }
+        disclosureText.text = state.disclosure
+        setDisclosureExpanded(false)
+        ValuePilotMotion.reveal(answerCard, animate = true)
+    }
+
+    private fun setDisclosureExpanded(expanded: Boolean) {
+        disclosureExpanded = expanded
+        disclosureText.visibility = if (expanded) VISIBLE else GONE
+        disclosureButton.text = if (expanded) "Hide what this means" else "What this means"
+        disclosureButton.contentDescription =
+            if (expanded) "Hide what evidence this price answer uses" else "Show what evidence this price answer uses"
+        if (expanded) ValuePilotMotion.reveal(disclosureText)
+    }
+
+    private fun evidenceChip(value: String): TextView = TextView(context).apply {
+        text = value
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+        setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.PRIMARY_DARK))
+        setPadding(dp(10), dp(7), dp(10), dp(7))
+        background = GradientDrawable().apply {
+            cornerRadius = dp(14).toFloat()
+            setColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE_SUBTLE))
+        }
+        layoutParams = LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
+            bottomMargin = dp(8)
+        }
     }
 
     private fun answerBackground(tone: GoodPriceCheckAnswerTone): String =
         when (tone) {
-            GoodPriceCheckAnswerTone.POSITIVE -> "#ECFDF5"
-            GoodPriceCheckAnswerTone.NEUTRAL -> "#F9FAFB"
-            GoodPriceCheckAnswerTone.CAUTION -> "#FFFBEB"
+            GoodPriceCheckAnswerTone.POSITIVE -> ValuePilotDesignTokens.Colors.SUCCESS_SURFACE
+            GoodPriceCheckAnswerTone.NEUTRAL -> ValuePilotDesignTokens.Colors.SURFACE
+            GoodPriceCheckAnswerTone.CAUTION -> ValuePilotDesignTokens.Colors.WARNING_SURFACE
         }
 
     private fun answerStroke(tone: GoodPriceCheckAnswerTone): String =
         when (tone) {
-            GoodPriceCheckAnswerTone.POSITIVE -> "#A7F3D0"
-            GoodPriceCheckAnswerTone.NEUTRAL -> "#E5E7EB"
-            GoodPriceCheckAnswerTone.CAUTION -> "#FDE68A"
+            GoodPriceCheckAnswerTone.POSITIVE -> ValuePilotDesignTokens.Colors.SUCCESS_OUTLINE
+            GoodPriceCheckAnswerTone.NEUTRAL -> ValuePilotDesignTokens.Colors.OUTLINE
+            GoodPriceCheckAnswerTone.CAUTION -> ValuePilotDesignTokens.Colors.WARNING_OUTLINE
         }
 
-    private fun card(
-        background: String,
-        stroke: String,
-        topMargin: Int
-    ): MaterialCardView = MaterialCardView(context).apply {
-        radius = dp(18).toFloat()
-        cardElevation = 0f
-        setCardBackgroundColor(ValuePilotPalette.color(background))
-        strokeColor = ValuePilotPalette.color(stroke)
-        strokeWidth = dp(1)
-        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, topMargin)
-    }
-
-    private fun bareColumn(): LinearLayout = LinearLayout(context).apply {
-        orientation = VERTICAL
-    }
-
-    private fun column(): LinearLayout = bareColumn().apply {
-        setPadding(dp(16), dp(15), dp(16), dp(15))
-    }
-
-    private fun line(
+    private fun textLine(
         value: String,
         sizeSp: Float,
         color: String,
@@ -167,8 +205,10 @@ internal class GoodPriceCheckSurfaceView @JvmOverloads constructor(
         if (topPadding > 0) setPadding(0, dp(topPadding), 0, 0)
     }
 
-    private fun fullWidth(height: Int, topMargin: Int): LayoutParams =
-        LayoutParams(LayoutParams.MATCH_PARENT, height).apply { this.topMargin = dp(topMargin) }
+    private fun fullWidth(topMargin: Int): LayoutParams =
+        LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+            this.topMargin = dp(topMargin)
+        }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 }

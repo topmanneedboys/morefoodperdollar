@@ -1,14 +1,12 @@
 package com.valuepilot.app
 
 import android.content.Context
-import android.graphics.Color
 import android.graphics.Typeface
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.google.android.material.card.MaterialCardView
 
 /**
  * Replaceable Android renderer for Compare Here.
@@ -22,32 +20,73 @@ class CompareHereSurfaceView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : LinearLayout(context, attrs, defStyleAttr), CompareHereSurfaceRenderer {
 
-    private val headline = line("", 24f, "#111827", true)
-    private val priceMode = line("", 13f, "#6B7280", topPadding = 4)
-    private val statusTitle = line("", 18f, "#111827", true, 18).apply {
+    private val headline = textLine("", 24f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true)
+    private val priceMode = textLine(
+        "",
+        ValuePilotDesignTokens.Typography.LABEL_SP,
+        ValuePilotDesignTokens.Colors.TEXT_MUTED,
+        topPadding = ValuePilotDesignTokens.Spacing.XXS_DP
+    )
+    private val statusTitle = textLine(
+        "",
+        18f,
+        ValuePilotDesignTokens.Colors.TEXT_PRIMARY,
+        bold = true
+    ).apply {
         // Comparison readiness and evaluated-result status change after the
         // user's typed action. Announce the projected status without moving
         // any comparison or ranking authority into this View.
         accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
     }
-    private val guidance = line("", 14f, "#374151", topPadding = 5)
+    private val guidance = textLine(
+        "",
+        ValuePilotDesignTokens.Typography.BODY_SP,
+        ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
+        topPadding = ValuePilotDesignTokens.Spacing.XS_DP
+    )
+    private val statusCardBody = LinearLayout(context).apply {
+        orientation = VERTICAL
+        setPadding(
+            dp(ValuePilotDesignTokens.Spacing.MD_DP),
+            dp(15),
+            dp(ValuePilotDesignTokens.Spacing.MD_DP),
+            dp(15)
+        )
+        addView(statusTitle)
+        addView(guidance)
+    }
+    private val statusCard = ValuePilotProductCard(context).apply {
+        layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.SM_DP)
+        addView(statusCardBody)
+    }
     private val rowsContainer = bareColumn()
-    private val blockedContainer = bareColumn()
-    private val notice = line("", 12f, "#92400E", topPadding = 12)
+    private val blockedContainer = bareColumn().apply { visibility = GONE }
+    private val notice = textLine(
+        "",
+        12f,
+        ValuePilotDesignTokens.Colors.WARNING,
+        topPadding = ValuePilotDesignTokens.Spacing.SM_DP
+    ).apply { visibility = GONE }
+    private val detailsButton = ValuePilotProgrammaticButton.outlined(context).apply {
+        text = "Show comparison details"
+        contentDescription = "Show products that need more information"
+        layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.SM_DP)
+        visibility = GONE
+    }
+    private var detailsExpanded = false
+    private var renderedOnce = false
 
     init {
         orientation = VERTICAL
         isSaveEnabled = false
-
         addView(headline)
         addView(priceMode)
-        addView(statusTitle)
-        addView(guidance)
+        addView(statusCard)
         addView(rowsContainer)
+        addView(detailsButton)
         addView(blockedContainer)
         addView(notice)
-
-        notice.visibility = GONE
+        detailsButton.setOnClickListener { setDetailsExpanded(!detailsExpanded) }
     }
 
     override fun render(state: CompareHereUiState) {
@@ -56,6 +95,8 @@ class CompareHereSurfaceView @JvmOverloads constructor(
         statusTitle.text = state.statusTitle
         statusTitle.setTextColor(statusColor(state.status))
         guidance.text = state.guidance
+        statusCard.setCardBackgroundColor(ValuePilotPalette.color(statusBackground(state.status)))
+        statusCard.strokeColor = ValuePilotPalette.color(statusStroke(state.status))
 
         renderExactRows(state.rows)
         renderBlockedRows(state.blockedRows)
@@ -63,16 +104,35 @@ class CompareHereSurfaceView @JvmOverloads constructor(
         val noticeText = state.notice
         if (noticeText == null) {
             notice.text = ""
-            notice.visibility = GONE
         } else {
             notice.text = noticeText
-            notice.visibility = VISIBLE
         }
+
+        val hasAdditionalDetails = state.blockedRows.isNotEmpty() || noticeText != null
+        detailsButton.visibility = if (hasAdditionalDetails) VISIBLE else GONE
+        if (!hasAdditionalDetails) {
+            setDetailsExpanded(false)
+        } else {
+            detailsButton.text = if (detailsExpanded) "Hide comparison details" else "Show comparison details"
+            detailsButton.contentDescription =
+                if (detailsExpanded) {
+                    "Hide products that need more information"
+                } else {
+                    "Show products that need more information"
+                }
+            blockedContainer.visibility = if (detailsExpanded) VISIBLE else GONE
+            notice.visibility = if (detailsExpanded && noticeText != null) VISIBLE else GONE
+        }
+        renderedOnce = true
     }
 
     private fun renderExactRows(rows: List<CompareHereUiRow>) {
         rowsContainer.removeAllViews()
-        rows.forEach { row -> rowsContainer.addView(exactCard(row)) }
+        rows.forEach { row ->
+            val view = exactCard(row)
+            rowsContainer.addView(view)
+            ValuePilotMotion.reveal(view, animate = renderedOnce)
+        }
     }
 
     private fun renderBlockedRows(rows: List<CompareHereBlockedUiRow>) {
@@ -82,9 +142,17 @@ class CompareHereSurfaceView @JvmOverloads constructor(
 
     private fun exactCard(row: CompareHereUiRow): View =
         card(
-            background = if (row.bestValue) "#ECFDF5" else "#F9FAFB",
-            stroke = if (row.bestValue) "#A7F3D0" else "#E5E7EB",
-            topMargin = 12
+            background = if (row.bestValue) {
+                ValuePilotDesignTokens.Colors.SUCCESS_SURFACE
+            } else {
+                ValuePilotDesignTokens.Colors.SURFACE
+            },
+            stroke = if (row.bestValue) {
+                ValuePilotDesignTokens.Colors.SUCCESS_OUTLINE
+            } else {
+                ValuePilotDesignTokens.Colors.OUTLINE
+            },
+            topMargin = ValuePilotDesignTokens.Spacing.SM_DP
         ).apply {
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
             contentDescription = compareHereExactCardContentDescription(row)
@@ -96,33 +164,53 @@ class CompareHereSurfaceView @JvmOverloads constructor(
                         View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
                     row.valueRank?.let { rank ->
                         addView(
-                            line(
+                            textLine(
                                 value = if (row.bestValue) "Best value" else "Value rank #$rank",
                                 sizeSp = 12f,
-                                color = if (row.bestValue) "#047857" else "#6B7280",
+                                color = if (row.bestValue) {
+                                    ValuePilotDesignTokens.Colors.SUCCESS
+                                } else {
+                                    ValuePilotDesignTokens.Colors.TEXT_MUTED
+                                },
                                 bold = true
                             )
                         )
                     }
-                    addView(line(row.title, 18f, "#111827", true, 5))
                     addView(
-                        line(
+                        textLine(
+                            row.title,
+                            18f,
+                            ValuePilotDesignTokens.Colors.TEXT_PRIMARY,
+                            bold = true,
+                            topPadding = 5
+                        )
+                    )
+                    addView(
+                        textLine(
                             "${row.priceText}  •  ${row.quantityText}",
                             14f,
-                            "#374151",
+                            ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
                             topPadding = 6
                         )
                     )
-                    addView(line(row.unitRateText, 16f, "#111827", true, 7))
+                    addView(
+                        textLine(
+                            row.unitRateText,
+                            16f,
+                            ValuePilotDesignTokens.Colors.TEXT_PRIMARY,
+                            bold = true,
+                            topPadding = 7
+                        )
+                    )
                 }
             )
         }
 
     private fun blockedCard(row: CompareHereBlockedUiRow): View =
         card(
-            background = "#FFFBEB",
-            stroke = "#FDE68A",
-            topMargin = 10
+            background = ValuePilotDesignTokens.Colors.SURFACE_ACCENT,
+            stroke = ValuePilotDesignTokens.Colors.WARNING_OUTLINE,
+            topMargin = ValuePilotDesignTokens.Spacing.XS_DP
         ).apply {
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
             contentDescription = compareHereBlockedCardContentDescription(row)
@@ -132,45 +220,94 @@ class CompareHereSurfaceView @JvmOverloads constructor(
                     // node while preserving the visible explanation.
                     importantForAccessibility =
                         View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
-                    addView(line("Needs information", 11f, "#92400E", true))
-                    addView(line(row.title, 17f, "#111827", true, 5))
-                    addView(line(row.reasonText, 13f, "#92400E", topPadding = 5))
+                    addView(
+                        textLine(
+                            "Needs information",
+                            11f,
+                            ValuePilotDesignTokens.Colors.WARNING,
+                            bold = true
+                        )
+                    )
+                    addView(
+                        textLine(
+                            row.title,
+                            17f,
+                            ValuePilotDesignTokens.Colors.TEXT_PRIMARY,
+                            bold = true,
+                            topPadding = 5
+                        )
+                    )
+                    addView(
+                        textLine(
+                            row.reasonText,
+                            13f,
+                            ValuePilotDesignTokens.Colors.WARNING,
+                            topPadding = 5
+                        )
+                    )
                 }
             )
         }
 
+    private fun setDetailsExpanded(expanded: Boolean) {
+        detailsExpanded = expanded
+        blockedContainer.visibility = if (expanded) VISIBLE else GONE
+        notice.visibility = if (expanded && notice.text.isNotBlank()) VISIBLE else GONE
+        if (expanded) ValuePilotMotion.reveal(blockedContainer)
+        detailsButton.text = if (expanded) "Hide comparison details" else "Show comparison details"
+        detailsButton.contentDescription =
+            if (expanded) "Hide products that need more information" else "Show products that need more information"
+    }
+
     private fun statusColor(status: CompareHereUiStatus): Int =
         ValuePilotPalette.color(
             when (status) {
-                CompareHereUiStatus.READY -> "#047857"
-                CompareHereUiStatus.NOT_ENOUGH_DATA -> "#92400E"
-                CompareHereUiStatus.INCOMPATIBLE_DIMENSIONS -> "#B42318"
-                CompareHereUiStatus.DISPLAY_METADATA_INCOMPLETE -> "#B42318"
+                CompareHereUiStatus.READY -> ValuePilotDesignTokens.Colors.SUCCESS
+                CompareHereUiStatus.NOT_ENOUGH_DATA -> ValuePilotDesignTokens.Colors.WARNING
+                CompareHereUiStatus.INCOMPATIBLE_DIMENSIONS,
+                CompareHereUiStatus.DISPLAY_METADATA_INCOMPLETE -> ValuePilotDesignTokens.Colors.ERROR
             }
         )
+
+    private fun statusBackground(status: CompareHereUiStatus): String =
+        when (status) {
+            CompareHereUiStatus.READY -> ValuePilotDesignTokens.Colors.SUCCESS_SURFACE
+            CompareHereUiStatus.NOT_ENOUGH_DATA,
+            CompareHereUiStatus.INCOMPATIBLE_DIMENSIONS,
+            CompareHereUiStatus.DISPLAY_METADATA_INCOMPLETE -> ValuePilotDesignTokens.Colors.WARNING_SURFACE
+        }
+
+    private fun statusStroke(status: CompareHereUiStatus): String =
+        when (status) {
+            CompareHereUiStatus.READY -> ValuePilotDesignTokens.Colors.SUCCESS_OUTLINE
+            CompareHereUiStatus.NOT_ENOUGH_DATA,
+            CompareHereUiStatus.INCOMPATIBLE_DIMENSIONS,
+            CompareHereUiStatus.DISPLAY_METADATA_INCOMPLETE -> ValuePilotDesignTokens.Colors.WARNING_OUTLINE
+        }
 
     private fun card(
         background: String,
         stroke: String,
         topMargin: Int
-    ): MaterialCardView = MaterialCardView(context).apply {
-        radius = dp(18).toFloat()
-        cardElevation = 0f
+    ): ValuePilotProductCard = ValuePilotProductCard(context).apply {
         setCardBackgroundColor(ValuePilotPalette.color(background))
         strokeColor = ValuePilotPalette.color(stroke)
         strokeWidth = dp(1)
-        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, topMargin)
+        layoutParams = fullWidth(topMargin)
     }
 
-    private fun bareColumn(): LinearLayout = LinearLayout(context).apply {
-        orientation = VERTICAL
-    }
+    private fun bareColumn(): LinearLayout = LinearLayout(context).apply { orientation = VERTICAL }
 
     private fun column(): LinearLayout = bareColumn().apply {
-        setPadding(dp(16), dp(15), dp(16), dp(15))
+        setPadding(
+            dp(ValuePilotDesignTokens.Spacing.MD_DP),
+            dp(15),
+            dp(ValuePilotDesignTokens.Spacing.MD_DP),
+            dp(15)
+        )
     }
 
-    private fun line(
+    private fun textLine(
         value: String,
         sizeSp: Float,
         color: String,
@@ -184,8 +321,10 @@ class CompareHereSurfaceView @JvmOverloads constructor(
         if (topPadding > 0) setPadding(0, dp(topPadding), 0, 0)
     }
 
-    private fun fullWidth(height: Int, topMargin: Int): LayoutParams =
-        LayoutParams(LayoutParams.MATCH_PARENT, height).apply { this.topMargin = dp(topMargin) }
+    private fun fullWidth(topMargin: Int): LayoutParams =
+        LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+            this.topMargin = dp(topMargin)
+        }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 }

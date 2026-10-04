@@ -7,7 +7,6 @@ import android.content.pm.PackageManager
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
@@ -1204,10 +1203,10 @@ class ComparisonActivity : AppCompatActivity() {
 
             background = GradientDrawable().apply {
                 cornerRadius = dp(14).toFloat()
-                setColor(ValuePilotPalette.color("#F9FAFB"))
+                setColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE))
                 setStroke(
                     dp(1),
-                    ValuePilotPalette.color("#D1D5DB")
+                    ValuePilotPalette.color(ValuePilotDesignTokens.Colors.OUTLINE)
                 )
             }
         }
@@ -1221,7 +1220,7 @@ class ComparisonActivity : AppCompatActivity() {
                 TypedValue.COMPLEX_UNIT_SP,
                 14f
             )
-            setTextColor(ValuePilotPalette.color("#374151"))
+            setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.TEXT_SECONDARY))
             setTypeface(
                 Typeface.DEFAULT,
                 Typeface.BOLD
@@ -1254,8 +1253,8 @@ class ComparisonActivity : AppCompatActivity() {
                 TypedValue.COMPLEX_UNIT_SP,
                 16f
             )
-            setTextColor(ValuePilotPalette.color("#111827"))
-            setHintTextColor(ValuePilotPalette.color("#9CA3AF"))
+            setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.TEXT_PRIMARY))
+            setHintTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.TEXT_MUTED))
             setPadding(
                 0,
                 dp(8),
@@ -1819,16 +1818,16 @@ class ComparisonActivity : AppCompatActivity() {
                             it.assessment == CompareHerePriceMemoryAssessment.HIGHER_THAN_LAST
                     }
                 ) {
-                    ValuePilotPalette.color("#92400E")
+                    ValuePilotPalette.color(ValuePilotDesignTokens.Colors.WARNING)
                 } else {
-                    ValuePilotPalette.color("#047857")
+                    ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SUCCESS)
                 }
             )
             privateMemoryStatus.visibility = View.VISIBLE
             clearPrivateMemoryButton.visibility = View.VISIBLE
         } else {
             privateMemoryStatus.text = getString(R.string.compare_memory_error)
-            privateMemoryStatus.setTextColor(ValuePilotPalette.color("#92400E"))
+            privateMemoryStatus.setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.WARNING))
             privateMemoryStatus.visibility = View.VISIBLE
             clearPrivateMemoryButton.visibility = View.VISIBLE
         }
@@ -2003,9 +2002,9 @@ class ComparisonActivity : AppCompatActivity() {
 
         scannerStatus.setTextColor(
             if (enabled) {
-                ValuePilotPalette.color("#047857")
+                ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SUCCESS)
             } else {
-                ValuePilotPalette.color("#6B7280")
+                ValuePilotPalette.color(ValuePilotDesignTokens.Colors.TEXT_MUTED)
             }
         )
     }

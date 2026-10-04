@@ -28,9 +28,19 @@ class CompareHereManualScreenView @JvmOverloads constructor(
         // block without moving route or comparison authority into the View.
         accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
     }
-    private val messageTitle = textView(18f, "#111827", true)
-    private val messageGuidance = textView(14f, "#4B5563", false, topPadding = 5)
-    private val rejectedCount = textView(13f, "#92400E", true, topPadding = 7)
+    private val messageTitle = textView(18f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, true)
+    private val messageGuidance = textView(
+        ValuePilotDesignTokens.Typography.BODY_SP,
+        ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
+        false,
+        topPadding = ValuePilotDesignTokens.Spacing.XXS_DP
+    )
+    private val rejectedCount = textView(
+        ValuePilotDesignTokens.Typography.LABEL_SP,
+        ValuePilotDesignTokens.Colors.WARNING,
+        true,
+        topPadding = ValuePilotDesignTokens.Spacing.XS_DP
+    )
     private val rejectedGuidanceContainer = LinearLayout(context).apply {
         orientation = VERTICAL
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
@@ -84,8 +94,8 @@ class CompareHereManualScreenView @JvmOverloads constructor(
         content.rejectedProductGuidance.forEach { guidance ->
             rejectedGuidanceContainer.addView(
                 textView(
-                    13f,
-                    "#92400E",
+                    ValuePilotDesignTokens.Typography.LABEL_SP,
+                    ValuePilotDesignTokens.Colors.WARNING,
                     false,
                     topPadding = 4
                 ).apply {

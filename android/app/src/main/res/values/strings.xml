@@ -10,6 +10,8 @@
     <string name="product_input_instructions">Put the product name, package size and current price in the same box. To compare member prices, add a clearly labeled member price too. Use a concrete currency such as CA$ or US$ instead of a bare $. Blank lines inside a product are fine.</string>
     <string name="compare_capture_photo">Take a price photo</string>
     <string name="compare_import_photo">Import a price photo</string>
+    <string name="compare_capture_tools_title">Optional ways to add product facts</string>
+    <string name="compare_capture_tools_body">Manual entries stay the clearest path. A photo or barcode only suggests editable text; review the package quantity and price before comparing.</string>
     <string name="compare_photo_ready">Take or choose a shelf-label or product photo. OCR only proposes text; review every entry before comparing.</string>
     <string name="compare_photo_processing">Reading the photo on this device…</string>
     <string name="compare_photo_cancelled">Photo import cancelled. Your existing entries are unchanged.</string>
@@ -82,9 +84,9 @@
     <string name="best_value_rank">#%1$d  Best value</string>
     <string name="rank_number">#%1$d</string>
 
-    <string name="optional_live_scanner">Optional live scanner</string>
+    <string name="optional_live_scanner">Optional capture tools</string>
 
-    <string name="optional_live_scanner_body">The standalone comparison above does not require Accessibility access. If you want experimental live capture from another shopping app, you can enable the optional scanner here.</string>
+    <string name="optional_live_scanner_body">The comparison above works without Accessibility access. This optional adapter can suggest visible text from another shopping app, but it is not the ValuePilot shopping foundation and never proves price, stock or availability.</string>
 
     <string name="checking_status">Checking optional scanner status…</string>
     <string name="scanner_on">Optional live scanner: ON</string>

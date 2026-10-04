@@ -54,7 +54,11 @@ internal object ValuePilotDesignTokens {
         const val OUTLINE = "#D8CFC6"
         const val OUTLINE_DESTRUCTIVE = "#E2B8AE"
         const val SUCCESS = "#2F6F59"
+        const val SUCCESS_SURFACE = "#EAF4EE"
+        const val SUCCESS_OUTLINE = "#C9E1D1"
         const val WARNING = "#9A5B16"
+        const val WARNING_SURFACE = "#FFF1E8"
+        const val WARNING_OUTLINE = "#E8CDBF"
         const val ERROR = "#A63D32"
     }
 }
