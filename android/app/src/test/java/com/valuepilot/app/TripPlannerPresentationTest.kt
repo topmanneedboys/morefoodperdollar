@@ -65,6 +65,13 @@ class TripPlannerPresentationTest {
         assertEquals(TripPlannerSurfaceMode.CALCULATED, state.mode)
         assertTrue(state.canCalculate)
         assertTrue(state.tripCostText.contains("2.70 CAD"))
+        assertTrue(state.tripCostHeadline.contains("2.70 CAD"))
+        assertTrue(state.tripCostDetail.contains("manual"))
+        assertTrue(state.breakEvenText.contains("2.70 CAD"))
+        assertTrue(state.evidenceChips.any { it.label == "Current unknown" })
+        assertTrue(state.destinationReady)
+        assertTrue(state.originReady)
+        assertTrue(state.assumptionsReady)
         assertTrue(state.savingsText.contains("UNKNOWN"))
         assertFalse(state.savingsText.contains("$"))
         assertTrue(state.directionsAvailable)
@@ -112,6 +119,9 @@ class TripPlannerPresentationTest {
 
         assertTrue(projected.decisionText.contains("unknown"))
         assertTrue(projected.decisionText.contains("authorized live offer"))
+        assertTrue(projected.decisionHeadline.contains("evidence"))
+        assertTrue(projected.decisionDetail.contains("authorized current"))
+        assertTrue(projected.evidenceChips.isNotEmpty())
     }
 
     @Test
@@ -124,6 +134,8 @@ class TripPlannerPresentationTest {
         )
         assertEquals(TripPlannerSurfaceMode.UNAVAILABLE, state.mode)
         assertTrue(state.tripCostText.contains("unknown"))
+        assertTrue(state.breakEvenText.contains("unavailable"))
+        assertTrue(state.evidenceChips.any { it.label == "Current unknown" && it.count == 1 })
         assertFalse(state.canCalculate)
     }
 

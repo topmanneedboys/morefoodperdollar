@@ -98,6 +98,7 @@ class MainActivity : AppCompatActivity() {
     private var searchScrollY = 0
     private var basketScrollY = 0
     private var personalScrollY = 0
+    private var tripPlannerScrollY = 0
     private var googlePhotoViewerLaunchInFlight = false
     private var renderedSearchMatches:
         List<PracticalShoppingSearchIdentityPresentation.Match>? = null
@@ -211,6 +212,7 @@ class MainActivity : AppCompatActivity() {
     private var searchRouteActive = false
     private var basketRouteActive = false
     private var personalRouteActive = false
+    private var tripPlannerRouteActive = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -279,6 +281,7 @@ class MainActivity : AppCompatActivity() {
         searchScrollY = savedInstanceState?.getInt(STATE_SEARCH_SCROLL_Y, 0)?.coerceAtLeast(0) ?: 0
         basketScrollY = savedInstanceState?.getInt(STATE_BASKET_SCROLL_Y, 0)?.coerceAtLeast(0) ?: 0
         personalScrollY = savedInstanceState?.getInt(STATE_PERSONAL_SCROLL_Y, 0)?.coerceAtLeast(0) ?: 0
+        tripPlannerScrollY = savedInstanceState?.getInt(STATE_TRIP_PLANNER_SCROLL_Y, 0)?.coerceAtLeast(0) ?: 0
         productMapSelectedKey = savedInstanceState?.getString(STATE_PRODUCT_MAP_SELECTED_KEY)
         productMapSelectedLabel = savedInstanceState?.getString(STATE_PRODUCT_MAP_SELECTED_LABEL)
         argentinaSearchHost = ArgentinaLiveSearchSurfaceHost.createProduction(
@@ -410,11 +413,13 @@ class MainActivity : AppCompatActivity() {
         if (searchRouteActive) searchScrollY = shellScrollView.scrollY.coerceAtLeast(0)
         if (basketRouteActive) basketScrollY = shellScrollView.scrollY.coerceAtLeast(0)
         if (personalRouteActive) personalScrollY = shellScrollView.scrollY.coerceAtLeast(0)
+        if (tripPlannerRouteActive) tripPlannerScrollY = shellScrollView.scrollY.coerceAtLeast(0)
         outState.putString(STATE_SEARCH_QUERY, searchQuery)
         outState.putBoolean(STATE_SEARCH_WAS_SUBMITTED, searchWasSubmitted)
         outState.putInt(STATE_SEARCH_SCROLL_Y, searchScrollY)
         outState.putInt(STATE_BASKET_SCROLL_Y, basketScrollY)
         outState.putInt(STATE_PERSONAL_SCROLL_Y, personalScrollY)
+        outState.putInt(STATE_TRIP_PLANNER_SCROLL_Y, tripPlannerScrollY)
         outState.putString(STATE_PRODUCT_MAP_SELECTED_KEY, productMapSelectedKey)
         outState.putString(STATE_PRODUCT_MAP_SELECTED_LABEL, productMapSelectedLabel)
         super.onSaveInstanceState(outState)
@@ -2248,6 +2253,13 @@ class MainActivity : AppCompatActivity() {
             personalScrollY = shellScrollView.scrollY.coerceAtLeast(0)
         }
         personalRouteActive = personalVisible
+        val tripPlannerVisible = state.route == AppRoute.TRIP_PLANNER
+        if (tripPlannerVisible && tripPlannerRouteActive) {
+            tripPlannerScrollY = shellScrollView.scrollY.coerceAtLeast(0)
+        } else if (!tripPlannerVisible && tripPlannerRouteActive) {
+            tripPlannerScrollY = shellScrollView.scrollY.coerceAtLeast(0)
+        }
+        tripPlannerRouteActive = tripPlannerVisible
         if (state.route == AppRoute.COMPARE) {
             savedExperience.onRouteVisibilityChanged(false)
             return
@@ -2255,7 +2267,6 @@ class MainActivity : AppCompatActivity() {
 
         val historyVisible = state.route == AppRoute.CONFIRMED_PURCHASE_HISTORY
         val priceWatchVisible = state.route == AppRoute.PRICE_WATCHES
-        val tripPlannerVisible = state.route == AppRoute.TRIP_PLANNER
         val copy =
             if (historyVisible) {
                 ScreenCopy(
@@ -2346,7 +2357,10 @@ class MainActivity : AppCompatActivity() {
         if (personalVisible) {
             restorePersonalScrollPosition()
         }
-        if (tripPlannerVisible) renderTripPlanner()
+        if (tripPlannerVisible) {
+            renderTripPlanner()
+            restoreTripPlannerScrollPosition()
+        }
         savedStapleLaunchExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
         savedObservedPriceLaunchExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
         observedPriceSavedSelectionExperience.visibility =
@@ -2899,6 +2913,13 @@ class MainActivity : AppCompatActivity() {
         val targetY = personalScrollY.coerceAtLeast(0)
         shellScrollView.post {
             if (personalRouteActive) shellScrollView.scrollTo(0, targetY)
+        }
+    }
+
+    private fun restoreTripPlannerScrollPosition() {
+        val targetY = tripPlannerScrollY.coerceAtLeast(0)
+        shellScrollView.post {
+            if (tripPlannerRouteActive) shellScrollView.scrollTo(0, targetY)
         }
     }
 
@@ -3803,6 +3824,7 @@ class MainActivity : AppCompatActivity() {
         private const val STATE_SEARCH_SCROLL_Y = "app_shell.search_scroll_y"
         private const val STATE_BASKET_SCROLL_Y = "app_shell.basket_scroll_y"
         private const val STATE_PERSONAL_SCROLL_Y = "app_shell.personal_scroll_y"
+        private const val STATE_TRIP_PLANNER_SCROLL_Y = "app_shell.trip_planner_scroll_y"
         private const val STATE_PRODUCT_MAP_SELECTED_KEY = "app_shell.product_map_selected_key"
         private const val STATE_PRODUCT_MAP_SELECTED_LABEL = "app_shell.product_map_selected_label"
     }
