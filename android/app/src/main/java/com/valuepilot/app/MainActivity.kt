@@ -113,6 +113,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bottomNavArea: View
     private lateinit var bottomNavigation: BottomNavigationView
     private lateinit var screenHeaderCard: View
+    private lateinit var screenBackAction: MaterialButton
     private lateinit var screenEyebrow: TextView
     private lateinit var screenTitle: TextView
     private lateinit var screenBody: TextView
@@ -222,6 +223,7 @@ class MainActivity : AppCompatActivity() {
         bottomNavArea = findViewById(R.id.bottomNavArea)
         bottomNavigation = findViewById(R.id.bottomNavigation)
         screenHeaderCard = findViewById(R.id.screenHeaderCard)
+        screenBackAction = findViewById(R.id.screenBackAction)
         screenEyebrow = findViewById(R.id.screenEyebrow)
         screenTitle = findViewById(R.id.screenTitle)
         screenBody = findViewById(R.id.screenBody)
@@ -345,6 +347,7 @@ class MainActivity : AppCompatActivity() {
         )
 
         primaryAction.setOnClickListener { openComparison() }
+        screenBackAction.setOnClickListener { dispatch(AppShellIntent.NavigateBack) }
         sourcesLicencesButton.setOnClickListener { showSourcesLicences() }
         dataStatusButton.setOnClickListener { showDataStatus() }
 
@@ -2299,6 +2302,11 @@ class MainActivity : AppCompatActivity() {
         screenTitle.text = copy.title
         screenBody.text = copy.body
         screenFootnote.text = copy.footnote
+        screenBackAction.visibility =
+            if (state.canNavigateBack) View.VISIBLE else View.GONE
+        screenBackAction.isEnabled = state.canNavigateBack
+        screenBackAction.contentDescription =
+            getString(R.string.shell_back_description)
         // Home has its own compact command center. Keeping the long route
         // header for secondary destinations avoids repeating the same copy
         // above the primary shopping workspace.

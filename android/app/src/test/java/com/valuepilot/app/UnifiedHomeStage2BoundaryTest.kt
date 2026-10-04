@@ -40,6 +40,16 @@ class UnifiedHomeStage2BoundaryTest {
         assertTrue(layout.contains("android:id=\"@+id/screenHeaderCard\""))
     }
 
+    @Test
+    fun secondary_routes_expose_the_existing_typed_back_action() {
+        val activity = source("MainActivity.kt")
+        val layout = source("res/layout/activity_shell.xml")
+        assertTrue(activity.contains("screenBackAction.setOnClickListener { dispatch(AppShellIntent.NavigateBack) }"))
+        assertTrue(activity.contains("if (state.canNavigateBack) View.VISIBLE else View.GONE"))
+        assertTrue(layout.contains("android:id=\"@+id/screenBackAction\""))
+        assertTrue(layout.contains("@string/shell_back_description"))
+    }
+
     private fun source(name: String): String {
         var directory = File(System.getProperty("user.dir") ?: error("user.dir unavailable"))
         repeat(8) {
