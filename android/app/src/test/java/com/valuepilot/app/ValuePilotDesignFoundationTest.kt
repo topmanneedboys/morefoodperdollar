@@ -35,6 +35,16 @@ class ValuePilotDesignFoundationTest {
         assertTrue(source.contains("onAction?.invoke(action)"))
     }
 
+    @Test
+    fun `search uses the shared product card surface`() {
+        val activity = source("MainActivity.kt")
+        val card = source("ValuePilotProductCard.kt")
+        assertTrue(activity.contains("ValuePilotProductCard(this)"))
+        assertTrue(card.contains("ValuePilotDesignTokens.Shape.CARD_RADIUS_DP"))
+        assertTrue(card.contains("ValuePilotDesignTokens.Colors.SURFACE_ACCENT"))
+        assertTrue(card.contains("importantForAccessibility"))
+    }
+
     private fun source(name: String): String {
         var directory = File(System.getProperty("user.dir") ?: error("user.dir unavailable"))
         repeat(8) {

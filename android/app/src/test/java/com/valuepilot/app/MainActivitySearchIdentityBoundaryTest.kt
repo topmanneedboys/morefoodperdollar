@@ -70,7 +70,7 @@ class MainActivitySearchIdentityBoundaryTest {
         assertTrue(card.contains("search_identity_package_size"))
         assertTrue(card.contains("picturePlaceholder"))
         assertTrue(card.contains("minHeight = dp(48)"))
-        assertTrue(card.contains("#FFF1E8"))
+        assertTrue(card.contains("ValuePilotProductCard(this)"))
     }
 
     @Test

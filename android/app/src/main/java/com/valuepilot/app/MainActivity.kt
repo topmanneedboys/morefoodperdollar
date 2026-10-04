@@ -36,7 +36,6 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.card.MaterialCardView
 import com.google.android.material.chip.Chip
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -2854,12 +2853,7 @@ class MainActivity : AppCompatActivity() {
         onTogglePriceWatch: (PriceWatchUiAction.ToggleWatch) -> Unit
     ): View {
         val mapEligible = ArgentinaProductStoreMapAdapter.canQuery(match)
-        val card = MaterialCardView(this).apply {
-            radius = dp(18).toFloat()
-            cardElevation = 0f
-            setCardBackgroundColor(ValuePilotPalette.color("#FFF1E8"))
-            strokeColor = ValuePilotPalette.color("#E8CDBF")
-            strokeWidth = dp(1)
+        val card = ValuePilotProductCard(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
