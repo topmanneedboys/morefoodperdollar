@@ -154,10 +154,31 @@ when Saved, purchase history or Price Watch refreshes, rotates, or returns from
 another route. This is presentation state only; it does not change purchase,
 observation, watch, price or ranking authority.
 
+## Stage 6 Trip Planner decision presentation
+
+Trip Planner now uses the same calm card hierarchy as the primary shopping
+surfaces. The first screen shows the Basket coverage, the selected destination
+and origin, the exact manual trip-cost estimate, and a plain-language
+break-even statement. Assumptions remain visibly separate from evidence; no
+route, inventory, cheapest-store or current-savings claim is added.
+
+The decision projection is presented as a readable headline plus four compact
+evidence chips: usable current lines, history/personal context, current
+unknowns, and lines needing review. The existing decision status and blocker
+facts remain authoritative. “Why this answer” progressively reveals the exact
+assumptions and evidence text, while “More trip actions” keeps secondary store,
+origin, directions, preferred-store and clear actions available without
+cluttering the primary path. The View still emits only typed actions.
+
+Trip Planner scroll position is saved across route changes and recreation. The
+surface uses shared cards, spacing, touch targets, content descriptions and
+bounded reveal motion; it does not add a new store, price, ranking, persistence,
+network or location authority.
+
 ## Deliberately not migrated yet
 
-Trip Planner, Compare, Good Price and the standalone capture surfaces still use
-their existing renderers. They remain functional and are intentionally deferred
-to later bounded migration stages.
+Compare, Good Price and the standalone capture surfaces still use their existing
+renderers. They remain functional and are intentionally deferred to later
+bounded migration stages.
 Search was not redesigned in Stage 2. No new catalog, provider, network,
 ranking or business logic was introduced here.

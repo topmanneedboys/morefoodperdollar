@@ -1,12 +1,42 @@
 # ValuePilot Continuation Checkpoint
 
-Updated: 2026-09-29 04:30 UTC
+Updated: 2026-10-04 00:00 UTC
 
 > Current cleanup boundary (2026-09-29): Canadian catalog, store-directory,
 > Open Prices and Rakuten/Jamieson references in this historical checkpoint are
 > not active runtime sources. The shipped app now uses the Argentina identity
 > rail and private/provider-neutral evidence; see
 > `LEGACY_CANADIAN_DATA_SOURCE_CLEANUP.md`.
+
+## Unified Trip Planner decision presentation checkpoint — 2026-10-04
+
+The bounded Trip Planner presentation slice is complete on
+`work/valuepilot-confirmed-purchases` at commit
+`2522538e91c7447971d28655cc8aec16aee1afaa`. Existing trip-cost and whole-basket
+decision projectors remain the only authority. The route now presents Basket
+coverage, destination/origin, exact manual trip cost, a plain-language
+break-even threshold and compact evidence chips for usable current,
+history/personal, current unknown and needs-review lines. Unknown and
+incompatible evidence remains explicit; no current-price, inventory, cheapest-
+store or savings claim is inferred.
+
+One primary next action is visible at a time. Secondary trip actions and exact
+assumptions/details are progressively disclosed. Shared card/touch/accessibility
+patterns and bounded reveal motion are reused, and the app shell preserves
+Trip Planner scroll position across route changes and recreation. The View emits
+typed actions only; no new business, store, price, ranking, network, location or
+persistence authority was introduced.
+
+VersionCode `10123` / versionName `101.1.22`; local release AAB:
+`android/app/build/outputs/bundle/release/app-release.aab`, 35,023,894 bytes,
+SHA-256 `25808575EB3B864A3D6A32C8A3F606C3310CAA5B228805F74EA7314BA8B300ED`.
+
+Exact-head local verification is green: 411 shared-core tests, 1,645 Android
+JVM tests, debug/release lint, debug/release builds, release bundle,
+`git diff --check`, and privacy inspection. INTERNET remains intentional;
+ACCESS_NETWORK_STATE and background location are absent. Foreground location
+remains the existing optional user-triggered permission. The AAB is unsigned;
+no signing, Play upload, phone installation or GitHub Actions retry was done.
 
 ## Unified personal shopping area checkpoint — 2026-10-04
 

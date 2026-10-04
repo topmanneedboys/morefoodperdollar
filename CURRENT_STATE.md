@@ -1,11 +1,45 @@
 # Current state
 
-Updated: 2026-09-29 04:30 UTC
+Updated: 2026-10-04 00:00 UTC
 
 > Current cleanup boundary (2026-09-29): historical Canadian catalog,
 > store-directory, Open Prices and Rakuten/Jamieson entries below are retained
 > for provenance only. They are not shipped assets or active runtime sources;
 > see `LEGACY_CANADIAN_DATA_SOURCE_CLEANUP.md`.
+
+## Unified Trip Planner decision presentation checkpoint — 2026-10-04
+
+The bounded Trip Planner presentation slice is complete on
+`work/valuepilot-confirmed-purchases` at commit
+`2522538e91c7447971d28655cc8aec16aee1afaa`. The existing trip-cost and whole-
+basket decision projectors remain authoritative. Trip Planner now presents a
+calm Basket coverage card, destination/origin and exact manual trip-cost card,
+plain-language break-even guidance, and four evidence chips for usable current,
+history/personal, current unknown and needs-review lines. Assumptions remain
+separate from verified evidence, and unknown or incompatible data stays
+explicitly unknown.
+
+The primary path exposes one next action at a time; secondary store, origin,
+location, assumptions, preferred-store, directions and clear actions are behind
+progressive disclosure. “Why this answer” reveals the existing exact detail,
+and the app shell preserves Trip Planner scroll position across route changes and
+recreation. Shared cards, spacing, touch targets, content descriptions and
+bounded reveal motion are reused. No planner, ranking, price, store, network,
+location or persistence authority moved into the View.
+
+The candidate is versionCode `10123` / versionName `101.1.22`, package
+`com.valuepilot.app`. The local release AAB is at
+`android/app/build/outputs/bundle/release/app-release.aab`, size 35,023,894
+bytes, SHA-256
+`25808575EB3B864A3D6A32C8A3F606C3310CAA5B228805F74EA7314BA8B300ED`.
+
+Exact-head local verification is green: 411 shared-core tests, 1,645 Android
+JVM tests, debug/release lint, debug/release builds, release bundle,
+`git diff --check`, and privacy inspection. INTERNET remains the existing
+intentional permission; ACCESS_NETWORK_STATE and background location remain
+absent. Foreground location remains the existing optional, user-triggered
+permission. The AAB is unsigned, and no signing, Play upload, phone
+installation or GitHub Actions retry was performed.
 
 ## Unified personal shopping area checkpoint — 2026-10-04
 
