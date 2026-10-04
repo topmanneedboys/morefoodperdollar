@@ -8,6 +8,29 @@ Updated: 2026-09-29 04:30 UTC
 > rail and private/provider-neutral evidence; see
 > `LEGACY_CANADIAN_DATA_SOURCE_CLEANUP.md`.
 
+## Unified personal shopping area checkpoint — 2026-10-04
+
+The bounded Saved / confirmed-purchase-history / Price Watch presentation slice
+is complete on `work/valuepilot-confirmed-purchases` at commit
+`1348ed26da204b23d49295ec549b8f6153755bb8`. Existing projectors, typed actions
+and private stores remain the only data authority. The three personal surfaces
+now share `ValuePilotProductCard`, stable keyed row reuse, a single visible
+primary action, and progressive More disclosure for secondary/destructive
+actions and personal history. Unknown current offers remain unknown.
+
+The app shell preserves personal scroll position across Saved, History and Price
+Watch refreshes, route changes and recreation. No pricing, identity, provider,
+ranking, persistence, network or View authority was added. VersionCode `10122`
+/ versionName `101.1.21`; local AAB:
+`android/app/build/outputs/bundle/release/app-release.aab`, 35,016,030 bytes,
+SHA-256 `31068E7538CCBF8DDCC78E8386BC34BEFDF459A20CD2DCFBD38CC63BD7F3EDC3`.
+
+Exact-head local verification is green: 411 shared-core tests, 1,642 Android
+JVM tests, debug/release lint, debug/release builds, release bundle,
+`git diff --check`, and privacy inspection. INTERNET remains intentional;
+ACCESS_NETWORK_STATE and background location are absent. No signing, Play
+upload, phone installation or GitHub Actions retry was performed.
+
 ## Exact product-to-nearby-store map checkpoint — 2026-09-29
 
 The bounded Search → View on map milestone is complete locally on
