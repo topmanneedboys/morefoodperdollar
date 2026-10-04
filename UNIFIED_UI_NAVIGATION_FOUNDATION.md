@@ -21,6 +21,21 @@ and Staple Watch are Saved-owned contextual routes. Trip Planner is Basket-owned
 Product → Nearby Store Map is a product-context dialog reached from an exact
 Search identity; it is not a fifth tab.
 
+The complete contextual route inventory is:
+
+- `OBSERVED_PRICE_SAVED_SELECTION` → `OBSERVED_PRICE_CONFIRMATION_DRAFT`
+  for selecting a Saved identity and entering a private observation.
+- `STAPLE_WATCH_SETUP` → `STAPLE_WATCH_POLICY` for the private watch policy
+  flow.
+- `CONFIRMED_PURCHASE_HISTORY` and `PRICE_WATCHES` for private history views.
+- `TRIP_PLANNER` for Basket-owned manual trip assumptions.
+- `COMPARE` for the standalone comparison activity handoff, returning to its
+  originating primary tab.
+
+Other explicit activity/surface entry points—Good Price, barcode capture,
+Share to ValuePilot, and the optional Accessibility/OCR tools—remain secondary
+workflows rather than bottom-navigation destinations.
+
 ## State contract
 
 - The shell reducer owns only typed route/tab transitions; business and
@@ -35,6 +50,20 @@ Search identity; it is not a fifth tab.
   callbacks and return to the originating primary context.
 - Back closes a contextual dialog first, then reduces a child route to its
   owner (Trip Planner → Basket; Saved-owned routes → Saved; Compare → origin).
+
+## Performance and accessibility contract
+
+- Search remains bounded by its existing page/candidate limits and retains the
+  existing rendered-match identity guard, so an unchanged result set is not
+  rebuilt merely because another tab was selected.
+- New product cards and context actions use stable opaque callbacks rather than
+  reconstructing identity from display text; secondary actions are bounded to
+  three and use minimum 48dp touch targets.
+- The disclosure control and every secondary action have explicit labels for
+  screen readers. The foundation introduces no mandatory animation and keeps
+  existing large-text-compatible TextView layouts intact.
+- A later list-performance migration can replace the current vertical surfaces
+  with a bounded keyed list without moving business logic into views.
 
 ## Foundation added in this milestone
 
