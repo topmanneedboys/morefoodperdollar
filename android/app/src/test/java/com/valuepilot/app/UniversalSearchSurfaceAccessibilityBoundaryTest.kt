@@ -21,7 +21,8 @@ class UniversalSearchSurfaceAccessibilityBoundaryTest {
         assertTrue(activity.contains("searchStatus.text = state.statusMessage"))
         assertTrue(activity.contains("importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES"))
         assertTrue(activity.contains("contentDescription ="))
-        assertTrue(activity.contains("Argentina SEPA identity result"))
+        assertTrue(activity.contains("search_identity_no_current_price"))
+        assertTrue(activity.contains("More actions"))
         assertTrue(activity.contains("importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS"))
     }
 

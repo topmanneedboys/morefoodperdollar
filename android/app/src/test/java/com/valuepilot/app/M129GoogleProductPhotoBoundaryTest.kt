@@ -73,7 +73,7 @@ class M129GoogleProductPhotoBoundaryTest {
         val basket = source("src/main/java/com/valuepilot/app/PracticalShoppingBasketSurfaceView.kt").readText()
         val strings = source("src/main/res/values/strings.xml").readText()
 
-        assertTrue(main.contains("search_identity_photo_disclosure"))
+        assertTrue(main.contains("search_identity_view_photos_description"))
         assertTrue(home.contains("onOpenPrivateIdentityPhotos"))
         assertTrue(home.contains("home_private_identity_photos_description"))
         assertTrue(basket.contains("onOpenPrivateIdentityPhotos"))

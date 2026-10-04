@@ -20,10 +20,10 @@ class MainActivitySearchIdentityBoundaryTest {
             "searchAreaLabel",
             "PracticalShoppingSearchIdentityPresentation.Match",
             "packageQuantityLabel",
-            "openComparisonWithSharedText(match.displayName)",
+            "SearchResultCardPresentationPolicy.project",
             "addSearchIdentityToHome",
             "search_identity_add_home_draft",
-            "Argentina SEPA identity result",
+            "search_identity_no_current_price",
             "searchResultsCount",
             "R.plurals.search_results_count"
         ).forEach { required ->
@@ -32,7 +32,7 @@ class MainActivitySearchIdentityBoundaryTest {
         assertTrue(layout.contains("android:id=\"@+id/searchAreaLabel\""))
         assertTrue(layout.contains("android:id=\"@+id/searchResultsCount\""))
         assertTrue(strings.contains("package size appears only when the source supplies it explicitly"))
-        assertTrue(strings.contains("Showing %1\$d matching identity suggestions."))
+        assertTrue(strings.contains("%1\$d results"))
         assertFalse(strings.contains("not live prices, stock, availability, package quantities"))
         assertFalse(layout.contains("@+id/searchIdentityButton"))
         assertFalse(activity.contains("LocalSampleProductSearchProvider"))
@@ -62,13 +62,13 @@ class MainActivitySearchIdentityBoundaryTest {
         ).forEach { forbidden ->
             assertFalse("Identity card must not own $forbidden", card.contains(forbidden, ignoreCase = true))
         }
-        assertTrue(card.contains("caveat"))
-        assertTrue(card.contains("openComparisonWithSharedText"))
-        assertTrue(card.contains("search_identity_open_compare"))
+        assertTrue(card.contains("SearchResultCardPresentationPolicy.project"))
+        assertTrue(card.contains("search_identity_no_current_price"))
         assertTrue(card.contains("search_identity_add_home_draft"))
-        assertTrue(card.contains("search_identity_no_verified_picture"))
         assertTrue(card.contains("search_identity_package_size"))
-        assertTrue(card.contains("picturePlaceholder"))
+        assertTrue(card.contains("ValuePilotProductContextMenu(this)"))
+        assertFalse(card.contains("search_identity_source"))
+        assertFalse(card.contains("search_identity_open_compare"))
         assertTrue(card.contains("minHeight = dp(48)"))
         assertTrue(card.contains("ValuePilotProductCard(this)"))
     }

@@ -55,7 +55,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
             areaLabel = area.label,
             mode = ArgentinaLiveSearchSurfaceMode.IDLE,
             generation = generation,
-            statusMessage = "Search a product in the qualified Argentina area.",
+            statusMessage = "Search products to find an exact identity.",
             caveat = IDENTITY_CAVEAT
         )
 
@@ -92,9 +92,9 @@ internal object ArgentinaLiveSearchSurfacePresenter {
                     query = state.query,
                     statusMessage =
                         if (state.previousPresentation == null) {
-                            "Searching Argentina product identities…"
+                            "Searching…"
                         } else {
-                            "Loading more matching identities…"
+                            "Loading more results…"
                         },
                     presentation = state.previousPresentation,
                     caveat = IDENTITY_CAVEAT
@@ -115,7 +115,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
                     mode = ArgentinaLiveSearchSurfaceMode.NO_MATCHES,
                     generation = state.generation,
                     query = state.query,
-                    statusMessage = "No matching product identity was found in this release.",
+                    statusMessage = "No products found. Try another search.",
                     presentation = state.presentation,
                     caveat = IDENTITY_CAVEAT
                 )
@@ -125,12 +125,9 @@ internal object ArgentinaLiveSearchSurfacePresenter {
 
     private fun resultStatus(presentation: PracticalShoppingSearchIdentityPresentation): String =
         when {
-            presentation.limitReached ->
-                "Product identities found. This release reached the bounded result limit."
-            presentation.hasMore ->
-                "Product identities found. More matching identities are available."
-            else ->
-                "Product identities found. No more matching identities were returned in this release."
+            presentation.limitReached -> "Results ready."
+            presentation.hasMore -> "Results ready."
+            else -> "Results ready."
         }
 
     private fun unavailable(
@@ -144,20 +141,20 @@ internal object ArgentinaLiveSearchSurfacePresenter {
                 ArgentinaBackendContract.FailureCode.UNAUTHORIZED,
                 ArgentinaBackendContract.FailureCode.FORBIDDEN ->
                     ArgentinaLiveSearchSurfaceMode.AUTHORIZATION_UNAVAILABLE to
-                        "Live Search is not authorized on this build yet."
+                        "Search unavailable. Try again."
                 ArgentinaBackendContract.FailureCode.STALE_RELEASE,
                 ArgentinaBackendContract.FailureCode.RELEASE_MISMATCH ->
                     ArgentinaLiveSearchSurfaceMode.STALE_RELEASE to
-                        "Search unavailable. Latest product data is being updated. Try again."
+                        "Search unavailable.\nLatest product data is being updated."
                 ArgentinaBackendContract.FailureCode.TIMEOUT ->
                     ArgentinaLiveSearchSurfaceMode.TIMEOUT to
-                        "Search took too long. Try again."
+                        "Search unavailable. Try again."
                 ArgentinaBackendContract.FailureCode.SERVICE_UNAVAILABLE ->
                     ArgentinaLiveSearchSurfaceMode.TEMPORARILY_UNAVAILABLE to
-                        "Live Search is temporarily unavailable. Try again."
+                        "Search unavailable. Try again."
                 else ->
                     ArgentinaLiveSearchSurfaceMode.TEMPORARILY_UNAVAILABLE to
-                        "Live Search is temporarily unavailable. Try again."
+                        "Search unavailable. Try again."
             }
         return ArgentinaLiveSearchSurfaceState(
             areaLabel = area.label,

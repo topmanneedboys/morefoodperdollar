@@ -131,10 +131,10 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="nav_basket">Basket</string>
     <string name="nav_saved">You</string>
 
-    <string name="product_context_more_actions">More product actions</string>
-    <string name="product_context_more_actions_description">Show secondary actions for this product</string>
-    <string name="product_context_hide_actions">Hide product actions</string>
-    <string name="product_context_hide_actions_description">Hide secondary actions for this product</string>
+    <string name="product_context_more_actions">More</string>
+    <string name="product_context_more_actions_description">Show more actions for this product</string>
+    <string name="product_context_hide_actions">Hide</string>
+    <string name="product_context_hide_actions_description">Hide more actions for this product</string>
 
     <string name="confirmed_purchase_history_open">Confirmed purchases</string>
     <string name="confirmed_purchase_history_title">Confirmed purchases</string>
@@ -305,9 +305,9 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="search_body">Type a product or tap a quick search. ValuePilot will show identity suggestions from the qualified Argentina release.</string>
     <string name="search_footnote">This user-triggered search is identity-only. It does not claim current prices, package quantities, stock, store availability, promotions or ranking.</string>
 
-    <string name="search_hint">Try yerba, milk, rice or another product</string>
-    <string name="search_action">Search Argentina products</string>
-    <string name="search_again">Search again</string>
+    <string name="search_hint">Search products</string>
+    <string name="search_action">Search products</string>
+    <string name="search_again">Try again</string>
     <string name="search_quick_title">Try a product search</string>
     <string name="search_quick_eggs">yerba</string>
     <string name="search_quick_milk">milk</string>
@@ -322,36 +322,38 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="search_identity_select">Choose a name to review in Scan &amp; compare. This catalog does not confirm quantity, price or availability.</string>
     <string name="search_identity_open_compare">Open in Scan &amp; compare</string>
     <string name="search_identity_open_compare_description">Put the selected identity name into Scan &amp; compare for review. This does not confirm quantity, price or availability.</string>
-    <string name="search_identity_add_home_draft">Save to private Home list</string>
-    <string name="search_identity_add_home_draft_description">Save %1$s as a private Home shopping-list identity. This does not confirm price, store, stock or availability.</string>
-    <string name="search_identity_remove_home_draft">Remove from private Home list</string>
-    <string name="search_identity_remove_home_draft_description">Remove the exact private Home identity %1$s. This changes only your device-private list.</string>
-    <string name="search_identity_add_home_failed">That identity could not be saved safely to your private Home list. Nothing was changed.</string>
+    <string name="search_identity_add_home_draft">Add to basket</string>
+    <string name="search_identity_add_home_draft_description">Add exact product %1$s to your private Basket. Price and availability remain unknown.</string>
+    <string name="search_identity_remove_home_draft">Remove from basket</string>
+    <string name="search_identity_remove_home_draft_description">Remove exact product %1$s from your private Basket. Nothing else changes.</string>
+    <string name="search_identity_add_home_failed">That product could not be added safely. Nothing changed.</string>
     <string name="search_identity_no_verified_picture">No verified product picture available</string>
     <string name="search_identity_photo_disclosure">Google Images results are unverified and do not change this product identity.</string>
-    <string name="search_identity_view_photos">See product photos</string>
+    <string name="search_identity_view_photos">Photos</string>
     <string name="search_identity_view_photos_description">Open unverified Google Images results for %1$s. ValuePilot does not verify, download or use these images as product proof.</string>
-    <string name="search_identity_view_map">View on map</string>
+    <string name="search_identity_view_map">Nearby</string>
     <string name="search_identity_view_map_description">View qualified Argentina SEPA stores for the exact product identity %1$s. Distance is approximate straight-line distance; stock remains unknown.</string>
-    <string name="search_identity_view_history">View purchase history</string>
+    <string name="search_identity_view_history">History</string>
     <string name="search_identity_view_history_description">Open confirmed private purchase history for the exact product identity %1$s. This does not create or change a purchase.</string>
+    <string name="search_identity_watch">Watch</string>
+    <string name="search_identity_watching">Watching</string>
     <string name="search_identity_browser_unavailable">A browser could not open Google Images. Nothing was changed.</string>
     <string name="search_identity_browser_fallback_title">Open Google Images full screen?</string>
     <string name="search_identity_browser_fallback_message">This browser could not open the requested resizable partial tab. Open Google Images full screen instead? Your ValuePilot list stays unchanged.</string>
     <string name="search_identity_browser_fallback_open">Open full screen</string>
     <string name="search_identity_browser_fallback_cancel">Keep ValuePilot open</string>
-    <string name="search_identity_package_size">Package size: %1$s</string>
+    <string name="search_identity_package_size">Quantity: %1$s</string>
     <string name="search_area_label">Search area: %1$s</string>
-    <string name="search_identity_match_label">Match: %1$s</string>
+    <string name="search_identity_no_current_price">No current price</string>
     <string name="search_identity_source">Source: Argentina SEPA / Precios Claros qualified release</string>
-    <string name="search_load_more">Load more matching identities</string>
-    <string name="search_load_more_description">Load the next bounded page of Argentina product identity suggestions. This does not add prices or availability.</string>
-    <string name="search_results_end">No more matching identities were returned in this release.</string>
-    <string name="search_results_limit_reached">This release reached ValuePilot’s bounded identity-result limit. No price or availability is implied.</string>
-    <string name="search_results_title">Product identities</string>
+    <string name="search_load_more">More results</string>
+    <string name="search_load_more_description">Load more product results</string>
+    <string name="search_results_end">No more results.</string>
+    <string name="search_results_limit_reached">No more results are available in this release.</string>
+    <string name="search_results_title">Results</string>
     <plurals name="search_results_count">
-        <item quantity="one">Showing %1$d matching identity suggestion.</item>
-        <item quantity="other">Showing %1$d matching identity suggestions.</item>
+        <item quantity="one">%1$d result</item>
+        <item quantity="other">%1$d results</item>
     </plurals>
 
     <string name="production_search_results_title">Shopping comparison results</string>

@@ -100,7 +100,7 @@ class ArgentinaLiveSearchSurfaceTest {
         assertEquals(ArgentinaLiveSearchSurfaceMode.STALE_RELEASE, state.mode)
         assertTrue(state.statusMessage.contains("Search unavailable"))
         assertTrue(state.statusMessage.contains("Latest product data is being updated"))
-        assertTrue(state.statusMessage.contains("Try again"))
+        assertFalse(state.statusMessage.contains("Try again"))
         assertFalse(state.statusMessage.contains("no longer current"))
     }
 

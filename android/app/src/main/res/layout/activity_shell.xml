@@ -186,24 +186,29 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
+                    android:visibility="gone"
                      android:textColor="@color/vp_text_secondary"
                     android:textSize="13sp"
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/searchQuickTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="20dp"
                     android:text="@string/search_quick_title"
+                    android:visibility="gone"
                      android:textColor="@color/vp_text_secondary"
                     android:textSize="13sp"
                     android:textStyle="bold" />
 
                 <HorizontalScrollView
+                    android:id="@+id/searchQuickActions"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:clipToPadding="false"
+                    android:visibility="gone"
                     android:scrollbars="none">
 
                     <com.google.android.material.chip.ChipGroup
@@ -252,9 +257,11 @@
                 </HorizontalScrollView>
 
                 <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/searchIdentityBoundaryCard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
+                    android:visibility="gone"
                      app:cardBackgroundColor="@color/vp_surface_subtle"
                     app:cardCornerRadius="16dp"
                     app:cardElevation="0dp"

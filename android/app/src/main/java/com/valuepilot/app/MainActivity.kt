@@ -2324,7 +2324,11 @@ class MainActivity : AppCompatActivity() {
         // header for secondary destinations avoids repeating the same copy
         // above the primary shopping workspace.
         screenHeaderCard.visibility =
-            if (state.route == AppRoute.HOME) View.GONE else View.VISIBLE
+            if (state.route == AppRoute.HOME || state.route == AppRoute.SEARCH) {
+                View.GONE
+            } else {
+                View.VISIBLE
+            }
         // The brand promise belongs to the landing surface. Secondary routes use their
         // task title instead of repeating marketing copy above every workflow.
         shellTagline.visibility = if (state.route == AppRoute.HOME) View.VISIBLE else View.GONE
@@ -2468,7 +2472,15 @@ class MainActivity : AppCompatActivity() {
             if (state.mode == ArgentinaLiveSearchSurfaceMode.LOADING) View.VISIBLE else View.GONE
 
         searchButton.setText(
-            if (state.requiresRevalidation) R.string.search_again else R.string.search_action
+            when {
+                state.requiresRevalidation -> R.string.search_again
+                state.mode == ArgentinaLiveSearchSurfaceMode.STALE_RELEASE ||
+                    state.mode == ArgentinaLiveSearchSurfaceMode.TIMEOUT ||
+                    state.mode == ArgentinaLiveSearchSurfaceMode.TEMPORARILY_UNAVAILABLE ||
+                    state.mode == ArgentinaLiveSearchSurfaceMode.AUTHORIZATION_UNAVAILABLE ->
+                    R.string.search_again
+                else -> R.string.search_action
+            }
         )
 
         searchButton.isEnabled =
@@ -2490,7 +2502,6 @@ class MainActivity : AppCompatActivity() {
                 searchResultsContainer.addView(
                     createSearchResultView(
                         match = match,
-                        caveat = state.caveat,
                         onAddToHome = ::addSearchIdentityToHome,
                         onToggleHome = ::toggleSearchIdentityInHome,
                         onOpenPhotos = ::openGoogleProductPhotos,
@@ -2955,7 +2966,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun createSearchResultView(
         match: PracticalShoppingSearchIdentityPresentation.Match,
-        caveat: String,
         onAddToHome: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
         onToggleHome: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
         onOpenPhotos: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
@@ -2972,15 +2982,22 @@ class MainActivity : AppCompatActivity() {
         val homeSaved = homeSessionState.privateIdentities.any { identity ->
             identity.identityKey == match.identityKey
         }
+        val cardPresentation = SearchResultCardPresentationPolicy.project(
+            match = match,
+            mapEligible = mapEligible,
+            historyAvailable = historyAvailable,
+            saved = homeSaved,
+            watched = watched
+        )
+        val privateIdentity = PracticalShoppingPrivateIdentity.fromSearchMatch(match)
         val card = ValuePilotProductCard(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { topMargin = dp(12) }
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
-            isClickable = true
-            isFocusable = true
-            setOnClickListener { openComparisonWithSharedText(match.displayName) }
+            isClickable = false
+            isFocusable = false
             contentDescription =
                 listOfNotNull(
                     match.displayName,
@@ -2989,20 +3006,15 @@ class MainActivity : AppCompatActivity() {
                         getString(R.string.search_identity_package_size, it)
                     },
                     match.matchLabel,
-                    "Argentina SEPA identity result",
-                    getString(R.string.search_identity_no_verified_picture),
-                    getString(R.string.search_identity_photo_disclosure),
-                    caveat,
-                    "Tap to review this name in Scan and compare",
-                    if (mapEligible) "View exact product stores on map" else null,
-                    if (historyAvailable) "Open confirmed purchase history" else null,
-                    getString(
-                        if (homeSaved) {
-                            R.string.search_identity_remove_home_draft
-                        } else {
-                            R.string.search_identity_add_home_draft
-                        }
-                    )
+                    getString(R.string.search_identity_no_current_price),
+                    if (cardPresentation.primaryAction == SearchResultPrimaryAction.REMOVE_FROM_BASKET) {
+                        getString(R.string.search_identity_remove_home_draft)
+                    } else if (cardPresentation.primaryAction == SearchResultPrimaryAction.ADD_TO_BASKET) {
+                        getString(R.string.search_identity_add_home_draft)
+                    } else {
+                        null
+                    },
+                    "More actions"
                 ).joinToString(". ") { it.trim().trimEnd('.', '!', '?') } + "."
         }
 
@@ -3021,16 +3033,6 @@ class MainActivity : AppCompatActivity() {
             setTextColor(ValuePilotPalette.color("#111827"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
             setPadding(0, dp(5), 0, 0)
-        }
-
-        val picturePlaceholder = TextView(this).apply {
-            text = getString(R.string.search_identity_no_verified_picture)
-            gravity = Gravity.CENTER
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setTextColor(ValuePilotPalette.color("#6B7280"))
-            setBackgroundColor(ValuePilotPalette.color("#FFF8F4"))
-            minHeight = dp(72)
-            setPadding(dp(12), dp(10), dp(12), dp(10))
         }
 
         val brand = match.brand?.let { brandName ->
@@ -3052,50 +3054,27 @@ class MainActivity : AppCompatActivity() {
         }
 
         val matchLabel = TextView(this).apply {
-            text = getString(R.string.search_identity_match_label, match.matchLabel)
+            text = match.matchLabel
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setTextColor(ValuePilotPalette.color("#6B7280"))
             setPadding(0, dp(8), 0, 0)
         }
 
-        val source = TextView(this).apply {
-            text = getString(R.string.search_identity_source)
-            gravity = Gravity.START
+        val priceState = TextView(this).apply {
+            text = getString(R.string.search_identity_no_current_price)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setTextColor(ValuePilotPalette.color("#6B7280"))
-            setPadding(0, dp(9), 0, 0)
+            setTextColor(ValuePilotPalette.color("#92400E"))
+            setPadding(0, dp(8), 0, 0)
         }
 
-        body.addView(picturePlaceholder)
         body.addView(name)
         brand?.let(body::addView)
         packageQuantity?.let(body::addView)
         body.addView(matchLabel)
-        TextView(this).apply {
-            text = caveat
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setTextColor(ValuePilotPalette.color("#92400E"))
-            setPadding(0, dp(7), 0, 0)
-        }.also(body::addView)
-        body.addView(source)
-        TextView(this).apply {
-            text = getString(R.string.search_identity_photo_disclosure)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setTextColor(ValuePilotPalette.color("#6B7280"))
-            setPadding(0, dp(7), 0, 0)
-        }.also(body::addView)
-        TextView(this).apply {
-            text = getString(R.string.search_identity_open_compare)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            setTextColor(ValuePilotPalette.color("#8F3620"))
-            setTypeface(Typeface.DEFAULT, Typeface.BOLD)
-            minHeight = dp(48)
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dp(10), 0, 0)
-        }.also(body::addView)
+        body.addView(priceState)
         val addHomeButton = MaterialButton(this).apply {
             text = getString(
-                if (homeSaved) {
+                if (cardPresentation.primaryAction == SearchResultPrimaryAction.REMOVE_FROM_BASKET) {
                     R.string.search_identity_remove_home_draft
                 } else {
                     R.string.search_identity_add_home_draft
@@ -3117,6 +3096,12 @@ class MainActivity : AppCompatActivity() {
                 },
                 match.displayName
             )
+            visibility =
+                if (cardPresentation.primaryAction == SearchResultPrimaryAction.NONE) {
+                    View.GONE
+                } else {
+                    View.VISIBLE
+                }
             setOnClickListener {
                 if (homeSaved) onToggleHome(match) else onAddToHome(match)
             }
@@ -3128,11 +3113,11 @@ class MainActivity : AppCompatActivity() {
                 FrameLayout.LayoutParams.WRAP_CONTENT
             )
         }
-        val privateIdentity = PracticalShoppingPrivateIdentity.fromSearchMatch(match)
         val contextActions = ValuePilotProductContextMenu(this).apply {
             setActions(
                 buildList {
-                    privateIdentity?.let { identity ->
+                    if (cardPresentation.showPhotos) {
+                        val identity = requireNotNull(privateIdentity)
                         add(
                             ValuePilotProductContextAction(
                                 kind = ValuePilotProductContextActionKind.PHOTO,
@@ -3147,7 +3132,13 @@ class MainActivity : AppCompatActivity() {
                     add(
                         ValuePilotProductContextAction(
                             kind = ValuePilotProductContextActionKind.WATCH,
-                            label = if (watched) "Unwatch" else "Watch price",
+                            label = getString(
+                                if (cardPresentation.watching) {
+                                    R.string.search_identity_watching
+                                } else {
+                                    R.string.search_identity_watch
+                                }
+                            ),
                             contentDescription =
                                 if (watched) {
                                     "Stop watching ${match.displayName}; private history is retained"
@@ -3156,7 +3147,7 @@ class MainActivity : AppCompatActivity() {
                                 }
                         )
                     )
-                    if (mapEligible) {
+                    if (cardPresentation.showNearby) {
                         add(
                             ValuePilotProductContextAction(
                                 kind = ValuePilotProductContextActionKind.MAP,
@@ -3168,7 +3159,7 @@ class MainActivity : AppCompatActivity() {
                             )
                         )
                     }
-                    if (historyAvailable) {
+                    if (cardPresentation.showHistory) {
                         add(
                             ValuePilotProductContextAction(
                                 kind = ValuePilotProductContextActionKind.HISTORY,
@@ -3201,7 +3192,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
         content.addView(body)
-        // Saving to the private Home list remains the one obvious shopping action.
+        // Adding/removing is the one obvious product action. Everything else is
+        // progressive disclosure inside the shared More control.
         content.addView(addHomeButton)
         content.addView(contextActions)
         card.addView(content)
