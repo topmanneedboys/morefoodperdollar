@@ -155,6 +155,50 @@ class PracticalShoppingBasketRendererTest {
     }
 
     @Test
+    fun basketSummaryProjectsCountsStoreAndTripContextWithoutReplanning() {
+        val planned =
+            PracticalShoppingBasketRenderer.render(
+                PracticalShoppingHomeRenderer.render(
+                    PracticalShoppingHomeSession.submit(
+                        LocalSamplePracticalShoppingDemo.initialModel(),
+                        "eggs milk"
+                    ).ui
+                )
+            )
+        val state =
+            planned.copy(
+                items = planned.items.map { item -> item.copy(storeAssignment = "Sample Market") },
+                unknownItems = listOf("Tea"),
+                extraStopRuleText = "One stop remains the default.",
+                privateIdentityItems =
+                    listOf(
+                        PracticalShoppingBasketPrivateIdentityRenderState(
+                            identityKey = "sepa:yerba:1",
+                            displayName = "Yerba Mate",
+                            brand = null,
+                            sourceLabel = "Argentina SEPA",
+                            packageQuantityLabel = "1 kg",
+                            collected = false
+                        )
+                    )
+            )
+
+        val summary =
+            practicalShoppingBasketSummaryProjection(
+                state = state,
+                collectedCount = 1,
+                eligibleCount = 2
+            )
+
+        assertEquals(3, summary.itemCount)
+        assertEquals("3 items in this basket", summary.itemSummary)
+        assertEquals("1 of 2 collected", summary.collectedSummary)
+        assertEquals("Planned stop: Sample Market", summary.storeSummary)
+        assertEquals("Trip context: One stop remains the default.", summary.tripSummary)
+        assertEquals("1 saved private item", summary.privateChecklistSummary)
+    }
+
+    @Test
     fun incompleteKnownSubtotalAndMissingPriceRemainNonCheckable() {
         val model =
             PracticalShoppingHomeSession.submit(

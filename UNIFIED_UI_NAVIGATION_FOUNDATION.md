@@ -117,9 +117,32 @@ Opening context or the map does not invalidate Search; returning through the
 same primary route restores the saved scroll position. Map and context
 disclosures use the shared motion helper and collapse after an action.
 
+## Stage 4 Basket
+
+Basket now presents the active shopping mission through the same warm
+`ValuePilotProductCard` language as Home and Search. Its summary card keeps the
+item count, collected progress, planned-stop context, optional trip-rule context
+and the next Home/Trip action together without moving any decision authority
+into the View. Unknown items remain counted and visibly unresolved.
+
+Sample-planned rows are reconciled by stable `ShoppingItemKey` instances rather
+than rebuilding the whole list after a check-off. The primary row action is
+the local collected mark; the card's secondary purchase and Price Watch actions
+are progressively disclosed. Collected is intentionally rendered as a local
+shopping-session state and never as a confirmed purchase. Private Search
+identities use the same card treatment, keep their exact-key Watch/photo/
+purchase actions behind disclosure, and expose Watch status without showing a
+full history inline.
+
+Basket scroll position is saved independently from Search and restored when the
+Basket route is reopened. Existing progress scopes, durable private identities,
+purchase confirmation, Price Watch, Trip Planner and Decision projections remain
+the authoritative boundaries; no new pricing, store, trip or purchase logic was
+introduced.
+
 ## Deliberately not migrated yet
 
-Basket, Saved, History, Price Watch, Trip Planner, Compare, Good Price and
+Saved, History, Price Watch, Trip Planner, Compare, Good Price and
 the standalone capture surfaces still use their existing renderers. They remain
 functional and are intentionally deferred to later bounded migration stages.
 Search was not redesigned in Stage 2. No new catalog, provider, network,

@@ -96,6 +96,7 @@ class MainActivity : AppCompatActivity() {
     private var searchQuery = ""
     private var searchWasSubmitted = false
     private var searchScrollY = 0
+    private var basketScrollY = 0
     private var googlePhotoViewerLaunchInFlight = false
     private var renderedSearchMatches:
         List<PracticalShoppingSearchIdentityPresentation.Match>? = null
@@ -207,6 +208,7 @@ class MainActivity : AppCompatActivity() {
     private var tripStorePickerDialog: AlertDialog? = null
     private var suppressSearchInputCallback = false
     private var searchRouteActive = false
+    private var basketRouteActive = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -273,6 +275,7 @@ class MainActivity : AppCompatActivity() {
         searchQuery = savedInstanceState?.getString(STATE_SEARCH_QUERY).orEmpty()
         searchWasSubmitted = savedInstanceState?.getBoolean(STATE_SEARCH_WAS_SUBMITTED) == true
         searchScrollY = savedInstanceState?.getInt(STATE_SEARCH_SCROLL_Y, 0)?.coerceAtLeast(0) ?: 0
+        basketScrollY = savedInstanceState?.getInt(STATE_BASKET_SCROLL_Y, 0)?.coerceAtLeast(0) ?: 0
         productMapSelectedKey = savedInstanceState?.getString(STATE_PRODUCT_MAP_SELECTED_KEY)
         productMapSelectedLabel = savedInstanceState?.getString(STATE_PRODUCT_MAP_SELECTED_LABEL)
         argentinaSearchHost = ArgentinaLiveSearchSurfaceHost.createProduction(
@@ -402,9 +405,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (searchRouteActive) searchScrollY = shellScrollView.scrollY.coerceAtLeast(0)
+        if (basketRouteActive) basketScrollY = shellScrollView.scrollY.coerceAtLeast(0)
         outState.putString(STATE_SEARCH_QUERY, searchQuery)
         outState.putBoolean(STATE_SEARCH_WAS_SUBMITTED, searchWasSubmitted)
         outState.putInt(STATE_SEARCH_SCROLL_Y, searchScrollY)
+        outState.putInt(STATE_BASKET_SCROLL_Y, basketScrollY)
         outState.putString(STATE_PRODUCT_MAP_SELECTED_KEY, productMapSelectedKey)
         outState.putString(STATE_PRODUCT_MAP_SELECTED_LABEL, productMapSelectedLabel)
         super.onSaveInstanceState(outState)
@@ -2221,6 +2226,13 @@ class MainActivity : AppCompatActivity() {
             searchScrollY = shellScrollView.scrollY.coerceAtLeast(0)
         }
         searchRouteActive = searchVisible
+        val basketVisible =
+            state.selectedPrimaryTab == AppPrimaryTab.BASKET && state.route == AppRoute.BASKET
+        val enteringBasket = basketVisible && !basketRouteActive
+        if (!basketVisible && basketRouteActive) {
+            basketScrollY = shellScrollView.scrollY.coerceAtLeast(0)
+        }
+        basketRouteActive = basketVisible
         if (state.route == AppRoute.COMPARE) {
             savedExperience.onRouteVisibilityChanged(false)
             return
@@ -2272,9 +2284,11 @@ class MainActivity : AppCompatActivity() {
         homeExperience.visibility = if (homeVisible) View.VISIBLE else View.GONE
         if (homeVisible) renderHome()
 
-        val basketVisible = state.selectedPrimaryTab == AppPrimaryTab.BASKET && state.route == AppRoute.BASKET
         basketExperience.visibility = if (basketVisible) View.VISIBLE else View.GONE
-        if (state.selectedPrimaryTab == AppPrimaryTab.BASKET) renderHome()
+        if (state.selectedPrimaryTab == AppPrimaryTab.BASKET) {
+            renderHome()
+            if (enteringBasket) restoreBasketScrollPosition()
+        }
 
         searchExperience.visibility = if (searchVisible) View.VISIBLE else View.GONE
 
@@ -2853,6 +2867,13 @@ class MainActivity : AppCompatActivity() {
         val targetY = searchScrollY.coerceAtLeast(0)
         shellScrollView.post {
             if (searchRouteActive) shellScrollView.scrollTo(0, targetY)
+        }
+    }
+
+    private fun restoreBasketScrollPosition() {
+        val targetY = basketScrollY.coerceAtLeast(0)
+        shellScrollView.post {
+            if (basketRouteActive) shellScrollView.scrollTo(0, targetY)
         }
     }
 
@@ -3755,6 +3776,7 @@ class MainActivity : AppCompatActivity() {
         private const val STATE_SEARCH_QUERY = "app_shell.search_query"
         private const val STATE_SEARCH_WAS_SUBMITTED = "app_shell.search_was_submitted"
         private const val STATE_SEARCH_SCROLL_Y = "app_shell.search_scroll_y"
+        private const val STATE_BASKET_SCROLL_Y = "app_shell.basket_scroll_y"
         private const val STATE_PRODUCT_MAP_SELECTED_KEY = "app_shell.product_map_selected_key"
         private const val STATE_PRODUCT_MAP_SELECTED_LABEL = "app_shell.product_map_selected_label"
     }

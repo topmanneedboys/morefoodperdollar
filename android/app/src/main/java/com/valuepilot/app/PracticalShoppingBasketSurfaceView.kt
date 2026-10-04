@@ -2,7 +2,6 @@ package com.valuepilot.app
 
 import android.content.Context
 import android.content.res.ColorStateList
-import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.os.Parcelable
@@ -13,8 +12,8 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.card.MaterialCardView
 import com.valuepilot.core.ConfirmedPurchaseIdentityOrigin
+import com.valuepilot.core.ShoppingItemKey
 
 sealed interface PracticalShoppingBasketUiAction {
     data object OpenHome : PracticalShoppingBasketUiAction
@@ -31,6 +30,55 @@ sealed interface PracticalShoppingBasketUiAction {
         val plannedPriceText: String?,
         val identityOrigin: ConfirmedPurchaseIdentityOrigin
     ) : PracticalShoppingBasketUiAction
+}
+
+/** Presentation-only summary assembled from the already-projected Basket state. */
+internal data class PracticalShoppingBasketSummaryProjection(
+    val itemCount: Int,
+    val itemSummary: String,
+    val collectedSummary: String,
+    val storeSummary: String?,
+    val tripSummary: String?,
+    val privateChecklistSummary: String?
+)
+
+internal fun practicalShoppingBasketSummaryProjection(
+    state: PracticalShoppingBasketRenderState,
+    collectedCount: Int,
+    eligibleCount: Int
+): PracticalShoppingBasketSummaryProjection {
+    val itemCount = state.items.size + state.unknownItems.size
+    val itemSummary =
+        if (itemCount == 1) "1 item in this basket" else "$itemCount items in this basket"
+    val collectedSummary =
+        if (eligibleCount > 0) {
+            "$collectedCount of $eligibleCount collected"
+        } else {
+            "Collection starts when a usable plan is available"
+        }
+    val stores = state.items.mapNotNull { it.storeAssignment }.distinct()
+    val storeSummary =
+        when (stores.size) {
+            0 -> null
+            1 -> "Planned stop: ${stores.single()}"
+            else -> "Planned stops: ${stores.take(2).joinToString()}" +
+                if (stores.size > 2) " + ${stores.size - 2} more" else ""
+        }
+    val tripSummary =
+        state.extraStopRuleText?.let { "Trip context: $it" }
+            ?: state.extraStopRuleNotice?.let { "Trip context: $it" }
+    val privateChecklistSummary =
+        state.privateIdentityItems.size.takeIf { it > 0 }?.let { count ->
+            if (count == 1) "1 saved private item" else "$count saved private items"
+        }
+    return PracticalShoppingBasketSummaryProjection(
+        itemCount = itemCount,
+        itemSummary = itemSummary,
+        collectedSummary = collectedSummary,
+        storeSummary = storeSummary,
+        tripSummary = tripSummary,
+        privateChecklistSummary = privateChecklistSummary
+    )
 }
 
 /**
@@ -102,36 +150,58 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
 
     private val priceWatchOwnerControls = mutableListOf<View>()
 
-    private val headline = line("", 22f, "#111827", true)
-    private val guidance = line("", 14f, "#4B5563", topPadding = 8)
-    private val noCoverageSummary = line("", 13f, "#92400E", true, 8).apply {
+    private val headline = line(
+        "",
+        ValuePilotDesignTokens.Typography.TITLE_SP,
+        ValuePilotDesignTokens.Colors.TEXT_PRIMARY,
+        true
+    )
+    private val guidance = line(
+        "",
+        ValuePilotDesignTokens.Typography.BODY_SP,
+        ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
+        topPadding = ValuePilotDesignTokens.Spacing.XS_DP
+    )
+    private val noCoverageSummary = line(
+        "",
+        ValuePilotDesignTokens.Typography.LABEL_SP,
+        ValuePilotDesignTokens.Colors.WARNING,
+        true,
+        ValuePilotDesignTokens.Spacing.XS_DP
+    ).apply {
         // This aggregate is already projected by Home and only clarifies the
         // existing no-coverage state. Announce it without giving the View any
         // pricing or planning authority.
         accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
     }
-    private val collectionProgress = line("", 13f, "#374151", true, 16).apply {
+    private val collectionProgress = line(
+        "",
+        ValuePilotDesignTokens.Typography.LABEL_SP,
+        ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
+        true,
+        ValuePilotDesignTokens.Spacing.MD_DP
+    ).apply {
         // Foreground check-off changes after each typed local action. Announce
         // the projected progress politely without granting the View order or
         // shopping-decision authority.
         accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
     }
-    private val collectionNotice = line("", 12f, "#6B7280", topPadding = 4).apply {
+    private val collectionNotice = line(
+        "",
+        12f,
+        ValuePilotDesignTokens.Colors.TEXT_MUTED,
+        topPadding = ValuePilotDesignTokens.Spacing.XXS_DP
+    ).apply {
         // This projected safety disclosure appears when foreground check-off
         // becomes available. Announce it politely without granting the View
         // order, plan, or shopping-decision authority.
         accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
     }
-    private val clearCollectionButton = MaterialButton(context).apply {
+    private val clearCollectionButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
         text = "Clear check-off"
         contentDescription = "Clear collected item marks"
         isAllCaps = false
         textSize = 13f
-        cornerRadius = dp(14)
-        strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
-        setTextColor(ValuePilotPalette.color("#374151"))
-        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 6)
         setOnClickListener {
             progressState = PracticalShoppingBasketProgressSession.clearCollected(progressState)
@@ -143,18 +213,36 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         }
     }
     private val privateIdentityHeading =
-        line("PRIVATE SEARCH CHECKLIST", 13f, "#1D4ED8", true, 16)
-    private val privateIdentityProgress = line("", 13f, "#1E3A8A", true, 6).apply {
+        line(
+            "PRIVATE SEARCH CHECKLIST",
+            ValuePilotDesignTokens.Typography.LABEL_SP,
+            ValuePilotDesignTokens.Colors.PRIMARY_DARK,
+            true,
+            ValuePilotDesignTokens.Spacing.MD_DP
+        )
+    private val privateIdentityProgress = line(
+        "",
+        ValuePilotDesignTokens.Typography.LABEL_SP,
+        ValuePilotDesignTokens.Colors.PRIMARY_DARK,
+        true,
+        ValuePilotDesignTokens.Spacing.XS_DP
+    ).apply {
         accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
     }
     private val privateIdentityNotice =
         line(
             "Saved identities are a local checklist only; they do not confirm price, store, stock, availability or purchase.",
             12f,
-            "#374151",
+            ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
             topPadding = 5
         )
-    private val privateIdentityPhotoError = line("", 13f, "#B42318", true, 8).apply {
+    private val privateIdentityPhotoError = line(
+        "",
+        ValuePilotDesignTokens.Typography.LABEL_SP,
+        ValuePilotDesignTokens.Colors.ERROR,
+        true,
+        ValuePilotDesignTokens.Spacing.XS_DP
+    ).apply {
         accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
         visibility = GONE
@@ -162,42 +250,114 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     private val privateIdentityRows = column(padded = false)
     private val privateIdentityBody = column()
     private val privateIdentityCard =
-        card("#EFF6FF", "#BFDBFE", 12, privateIdentityBody)
+        card(
+            ValuePilotDesignTokens.Colors.SURFACE,
+            ValuePilotDesignTokens.Colors.OUTLINE,
+            ValuePilotDesignTokens.Spacing.MD_DP,
+            privateIdentityBody
+        )
     private val itemsHeading =
-        line(context.getString(R.string.basket_items_title), 13f, "#374151", true, 18)
+        line(
+            context.getString(R.string.basket_items_title),
+            ValuePilotDesignTokens.Typography.LABEL_SP,
+            ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
+            true,
+            ValuePilotDesignTokens.Spacing.LG_DP
+        )
     private val itemsContainer = column(padded = false)
     private val unresolvedBody = column()
-    private val unresolvedCard = card("#FFF7ED", "#FED7AA", 12, unresolvedBody)
+    private val unresolvedCard = card(
+        ValuePilotDesignTokens.Colors.SURFACE_SUBTLE,
+        ValuePilotDesignTokens.Colors.OUTLINE_DESTRUCTIVE,
+        ValuePilotDesignTokens.Spacing.MD_DP,
+        unresolvedBody
+    )
     private val planResult = PracticalShoppingPlanResultSurfaceView(context)
-    private val extraStopRule = line("", 13f, "#374151", topPadding = 12)
-    private val extraStopRuleNotice = line("", 12f, "#92400E", topPadding = 4)
-    private val sampleNotice = line("", 13f, "#374151", topPadding = 4)
-    private val actionButton = MaterialButton(context).apply {
-        isAllCaps = false
-        textSize = 15f
-        cornerRadius = dp(16)
-        strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
-        setTextColor(ValuePilotPalette.color("#374151"))
-        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
-        layoutParams = fullWidth(dp(52), 16)
+    private val extraStopRule = line(
+        "",
+        ValuePilotDesignTokens.Typography.LABEL_SP,
+        ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
+        topPadding = ValuePilotDesignTokens.Spacing.SM_DP
+    )
+    private val extraStopRuleNotice = line(
+        "",
+        12f,
+        ValuePilotDesignTokens.Colors.WARNING,
+        topPadding = ValuePilotDesignTokens.Spacing.XXS_DP
+    )
+    private val sampleNotice = line(
+        "",
+        ValuePilotDesignTokens.Typography.LABEL_SP,
+        ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
+        topPadding = ValuePilotDesignTokens.Spacing.XXS_DP
+    )
+    private val actionButton = ValuePilotProgrammaticButton.filled(context).apply {
+        textSize = ValuePilotDesignTokens.Typography.BODY_SP
+        layoutParams = fullWidth(dp(56), ValuePilotDesignTokens.Spacing.MD_DP)
         // Keep the replaceable navigation control inert until its typed owner is attached.
         isEnabled = false
         setOnClickListener { onAction?.invoke(PracticalShoppingBasketUiAction.OpenHome) }
     }
-    private val tripPlannerButton = MaterialButton(context).apply {
+    private val tripPlannerButton = ValuePilotProgrammaticButton.outlined(context).apply {
         text = "Plan this trip"
         contentDescription = "Plan a manual trip for the current Basket"
-        isAllCaps = false
-        textSize = 15f
-        cornerRadius = dp(16)
-        strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
-        setTextColor(ValuePilotPalette.color("#374151"))
-        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(dp(52), 8)
         isEnabled = false
         setOnClickListener { onOpenTripPlanner?.invoke() }
+    }
+
+    private val summaryItemCount = line(
+        "",
+        18f,
+        ValuePilotDesignTokens.Colors.TEXT_PRIMARY,
+        true,
+        ValuePilotDesignTokens.Spacing.SM_DP
+    )
+    private val summaryStore = line(
+        "",
+        ValuePilotDesignTokens.Typography.LABEL_SP,
+        ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
+        topPadding = ValuePilotDesignTokens.Spacing.XXS_DP
+    )
+    private val summaryTrip = line(
+        "",
+        ValuePilotDesignTokens.Typography.LABEL_SP,
+        ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
+        topPadding = ValuePilotDesignTokens.Spacing.XXS_DP
+    )
+    private val summaryPrivate = line(
+        "",
+        ValuePilotDesignTokens.Typography.LABEL_SP,
+        ValuePilotDesignTokens.Colors.PRIMARY_DARK,
+        topPadding = ValuePilotDesignTokens.Spacing.XXS_DP
+    )
+    private val basketSummaryBody = column().apply {
+        addView(
+            line(
+                "ACTIVE SHOPPING MISSION",
+                11f,
+                ValuePilotDesignTokens.Colors.PRIMARY_DARK,
+                true
+            )
+        )
+        addView(headline)
+        addView(summaryItemCount)
+        addView(guidance)
+        addView(summaryStore)
+        addView(summaryTrip)
+        addView(summaryPrivate)
+        addView(noCoverageSummary)
+        addView(collectionProgress)
+        addView(collectionNotice)
+        addView(clearCollectionButton)
+        addView(actionButton)
+        addView(tripPlannerButton)
+    }
+    private val basketSummaryCard = ValuePilotProductCard(context).apply {
+        setCardBackgroundColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE))
+        strokeColor = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.OUTLINE)
+        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 0)
+        addView(basketSummaryBody)
     }
 
     private var progressState = PracticalShoppingBasketProgressSession.initial()
@@ -206,6 +366,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     private var pendingRestoredCollectionScopeId: String? = null
     private var pendingRestoredCollectionScopePresent = false
     private val privateIdentityRowsByKey = LinkedHashMap<String, PrivateIdentityRow>()
+    private val basketItemRowsByKey = LinkedHashMap<ShoppingItemKey, BasketItemRow>()
 
     init {
         orientation = VERTICAL
@@ -217,23 +378,19 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         privateIdentityBody.addView(privateIdentityHeadingSeparator())
         privateIdentityBody.addView(privateIdentityRows)
         addView(sampleCard())
+        addView(basketSummaryCard)
+        addView(planResult)
         addView(privateIdentityCard)
-        addView(headline.apply { setPadding(0, dp(20), 0, 0) })
-        addView(guidance)
-        addView(noCoverageSummary)
-        addView(collectionProgress)
-        addView(collectionNotice)
-        addView(clearCollectionButton)
         addView(itemsHeading)
         addView(itemsContainer)
         addView(unresolvedCard)
-        addView(planResult)
         addView(extraStopRule)
         addView(extraStopRuleNotice)
-        addView(tripPlannerButton)
-        addView(actionButton)
-        collectionProgress.visibility = GONE
+        summaryStore.visibility = GONE
+        summaryTrip.visibility = GONE
+        summaryPrivate.visibility = GONE
         noCoverageSummary.visibility = GONE
+        collectionProgress.visibility = GONE
         collectionNotice.visibility = GONE
         clearCollectionButton.visibility = GONE
         itemsHeading.visibility = GONE
@@ -269,6 +426,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
 
         headline.text = state.headline
         guidance.text = state.guidance
+        renderSummary(state)
         noCoverageSummary.text = state.noCoverageSummary.orEmpty()
         noCoverageSummary.visibility =
             if (state.noCoverageSummary == null) GONE else VISIBLE
@@ -291,6 +449,23 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         extraStopRuleNotice.text = state.extraStopRuleNotice.orEmpty()
         extraStopRuleNotice.visibility =
             if (state.extraStopRuleNotice == null) GONE else VISIBLE
+    }
+
+    private fun renderSummary(state: PracticalShoppingBasketRenderState) {
+        val summary =
+            practicalShoppingBasketSummaryProjection(
+                state = state,
+                collectedCount = progressState.collectedItemKeys.size,
+                eligibleCount = progressState.eligibleItemKeys.size
+            )
+        summaryItemCount.text = summary.itemSummary
+        summaryStore.text = summary.storeSummary.orEmpty()
+        summaryStore.visibility = if (summary.storeSummary == null) GONE else VISIBLE
+        summaryTrip.text = summary.tripSummary.orEmpty()
+        summaryTrip.visibility = if (summary.tripSummary == null) GONE else VISIBLE
+        summaryPrivate.text = summary.privateChecklistSummary.orEmpty()
+        summaryPrivate.visibility =
+            if (summary.privateChecklistSummary == null) GONE else VISIBLE
     }
 
     /**
@@ -355,25 +530,15 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         state.collectibleItemKeys
 
     private fun renderCollectionProgress(state: PracticalShoppingBasketRenderState) {
-        when {
-            state.collectionEnabled -> {
-                val itemLabel =
-                    if (state.result?.primary?.missingItemsText == null) {
-                        "planned items"
-                    } else {
-                        "priced items"
-                    }
-                collectionProgress.text =
-                    "${progressState.collectedItemKeys.size} of " +
-                        "${progressState.eligibleItemKeys.size} $itemLabel collected"
-                collectionProgress.visibility = VISIBLE
-            }
-
-            else -> {
-                collectionProgress.text = ""
-                collectionProgress.visibility = GONE
-            }
-        }
+        val summary =
+            practicalShoppingBasketSummaryProjection(
+                state = state,
+                collectedCount = progressState.collectedItemKeys.size,
+                eligibleCount = progressState.eligibleItemKeys.size
+            )
+        collectionProgress.text = summary.collectedSummary
+        collectionProgress.visibility =
+            if (state.status == PracticalShoppingBasketStatus.PLANNED) VISIBLE else GONE
     }
 
     private fun renderCollectionResetControl() {
@@ -389,6 +554,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             privateIdentityPhotoError.text = ""
             privateIdentityPhotoError.visibility = GONE
             privateIdentityRows.removeAllViews()
+            privateIdentityRowsByKey.values.forEach(PrivateIdentityRow::dispose)
             privateIdentityRowsByKey.clear()
             priceWatchOwnerControls.clear()
             renderPrivateIdentityProgress()
@@ -409,7 +575,10 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             .filterNot(desiredKeys::contains)
             .toList()
             .forEach { identityKey ->
-                privateIdentityRowsByKey.remove(identityKey)?.root?.let(privateIdentityRows::removeView)
+                privateIdentityRowsByKey.remove(identityKey)?.let { row ->
+                    row.dispose()
+                    privateIdentityRows.removeView(row.root)
+                }
             }
 
         identities.forEachIndexed { index, identity ->
@@ -437,17 +606,31 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     }
 
     private inner class PrivateIdentityRow(identity: PracticalShoppingBasketPrivateIdentityRenderState) {
-        val root = column(padded = false).apply {
-            layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 0)
+        val root = ValuePilotProductCard(context).apply {
+            setCardBackgroundColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE))
+            strokeColor = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.OUTLINE)
+            layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, ValuePilotDesignTokens.Spacing.XS_DP)
         }
+        private val body = column(padded = true)
         private val toggle = privateIdentityButton(identity)
-        private val brand = line("", 12f, "#374151", topPadding = 2)
-        private val packageQuantity = line("", 12f, "#374151", topPadding = 2)
-        private val source = line("", 12f, "#374151", topPadding = 2)
-        private val notice = line("", 12f, "#6B7280", topPadding = 2)
+        private val brand = line("", 12f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 2)
+        private val packageQuantity = line("", 12f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 2)
+        private val source = line("", 12f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 2)
+        private val notice = line("", 12f, ValuePilotDesignTokens.Colors.TEXT_MUTED, topPadding = 2)
+        private val watchContext = line("", 12f, ValuePilotDesignTokens.Colors.PRIMARY_DARK, true, 4)
+        private val moreActions = column(padded = false).apply {
+            visibility = GONE
+        }
+        private val moreButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
+            text = "More for this item"
+            contentDescription = "Show more actions for this private item"
+            layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, ValuePilotDesignTokens.Spacing.XS_DP)
+            setOnClickListener { setMoreExpanded(!moreExpanded) }
+        }
         private val photo = privateIdentityPhotoButton(identity)
         private val priceWatch = privateIdentityPriceWatchButton(identity)
         private val purchase = privateIdentityPurchaseButton(identity)
+        private var moreExpanded = false
         private var displayName = identity.displayName
         var collected: Boolean = identity.collected
             private set
@@ -456,14 +639,18 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             brand.visibility = GONE
             packageQuantity.visibility = GONE
             source.visibility = GONE
-            root.addView(toggle)
-            root.addView(brand)
-            root.addView(packageQuantity)
-            root.addView(source)
-            root.addView(notice)
-            root.addView(priceWatch)
-            root.addView(photo)
-            root.addView(purchase)
+            body.addView(toggle)
+            body.addView(brand)
+            body.addView(packageQuantity)
+            body.addView(source)
+            body.addView(notice)
+            body.addView(watchContext)
+            body.addView(moreButton)
+            moreActions.addView(priceWatch)
+            moreActions.addView(photo)
+            moreActions.addView(purchase)
+            body.addView(moreActions)
+            root.addView(body)
             update(identity)
         }
 
@@ -474,6 +661,35 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
                 "Mark ${identity.displayName} as " +
                     (if (identity.collected) "not collected" else "collected") +
                     ". This is only a local shopping checklist mark."
+            toggle.setTextColor(
+                ValuePilotPalette.color(
+                    if (identity.collected) {
+                        ValuePilotDesignTokens.Colors.SUCCESS
+                    } else {
+                        ValuePilotDesignTokens.Colors.PRIMARY_DARK
+                    }
+                )
+            )
+            toggle.strokeColor =
+                ColorStateList.valueOf(
+                    ValuePilotPalette.color(
+                        if (identity.collected) {
+                            ValuePilotDesignTokens.Colors.SUCCESS
+                        } else {
+                            ValuePilotDesignTokens.Colors.OUTLINE
+                        }
+                    )
+                )
+            toggle.backgroundTintList =
+                ColorStateList.valueOf(
+                    ValuePilotPalette.color(
+                        if (identity.collected) {
+                            ValuePilotDesignTokens.Colors.SURFACE_SUBTLE
+                        } else {
+                            ValuePilotDesignTokens.Colors.SURFACE
+                        }
+                    )
+                )
             toggle.isEnabled = onPrivateIdentityToggle != null
             brand.text = identity.brand?.let { "Brand: $it" }.orEmpty()
             brand.visibility = if (identity.brand == null) GONE else VISIBLE
@@ -483,6 +699,8 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             source.text = identity.sourceLabel?.let { "Source: $it" }.orEmpty()
             source.visibility = if (identity.sourceLabel == null) GONE else VISIBLE
             notice.text = identity.notice
+            watchContext.text = if (identity.watched) "Price Watch is active for this exact identity" else ""
+            watchContext.visibility = if (identity.watched) VISIBLE else GONE
             photo.contentDescription = context.getString(
                 R.string.home_private_identity_photos_description,
                 identity.displayName
@@ -500,21 +718,62 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
                 "Mark $displayName as " +
                     (if (nextCollected) "not collected" else "collected") +
                     ". This is only a local shopping checklist mark."
+            toggle.setTextColor(
+                ValuePilotPalette.color(
+                    if (nextCollected) {
+                        ValuePilotDesignTokens.Colors.SUCCESS
+                    } else {
+                        ValuePilotDesignTokens.Colors.PRIMARY_DARK
+                    }
+                )
+            )
+            toggle.strokeColor =
+                ColorStateList.valueOf(
+                    ValuePilotPalette.color(
+                        if (nextCollected) {
+                            ValuePilotDesignTokens.Colors.SUCCESS
+                        } else {
+                            ValuePilotDesignTokens.Colors.OUTLINE
+                        }
+                    )
+                )
+            toggle.backgroundTintList =
+                ColorStateList.valueOf(
+                    ValuePilotPalette.color(
+                        if (nextCollected) {
+                            ValuePilotDesignTokens.Colors.SURFACE_SUBTLE
+                        } else {
+                            ValuePilotDesignTokens.Colors.SURFACE
+                        }
+                    )
+                )
+            ValuePilotMotion.reveal(toggle)
             collected = nextCollected
+        }
+
+        private fun setMoreExpanded(expanded: Boolean) {
+            moreExpanded = expanded
+            moreActions.visibility = if (expanded) VISIBLE else GONE
+            moreButton.text = if (expanded) "Hide item actions" else "More for this item"
+            moreButton.contentDescription =
+                if (expanded) {
+                    "Hide more actions for this private item"
+                } else {
+                    "Show more actions for this private item"
+                }
+            ValuePilotMotion.reveal(moreActions, animate = expanded)
+        }
+
+        fun dispose() {
+            priceWatchOwnerControls.remove(priceWatch)
         }
     }
 
     private fun privateIdentityButton(
         identity: PracticalShoppingBasketPrivateIdentityRenderState
-    ): MaterialButton = MaterialButton(context).apply {
-        isAllCaps = false
+    ): MaterialButton = ValuePilotProgrammaticButton.outlined(context).apply {
         textSize = 14f
         gravity = Gravity.START or Gravity.CENTER_VERTICAL
-        cornerRadius = dp(14)
-        strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#93C5FD"))
-        setTextColor(ValuePilotPalette.color("#1E3A8A"))
-        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 7)
         minHeight = dp(52)
         text = "${if (identity.collected) "✓" else "○"} ${identity.displayName}"
@@ -528,47 +787,29 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
 
     private fun privateIdentityPhotoButton(
         identity: PracticalShoppingBasketPrivateIdentityRenderState
-    ): MaterialButton = MaterialButton(context).apply {
+    ): MaterialButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
         text = context.getString(R.string.search_identity_view_photos)
         contentDescription = context.getString(
             R.string.home_private_identity_photos_description,
             identity.displayName
         )
-        isAllCaps = false
         textSize = 13f
-        minHeight = dp(40)
-        minimumHeight = dp(40)
         minWidth = 0
         minimumWidth = 0
-        insetTop = 0
-        insetBottom = 0
         isEnabled = onOpenPrivateIdentityPhotos != null
         setPadding(dp(10), 0, dp(10), 0)
-        strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#BFDBFE"))
-        setTextColor(ValuePilotPalette.color("#1D4ED8"))
-        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 5)
         setOnClickListener { onOpenPrivateIdentityPhotos?.invoke(identity.identityKey) }
     }
 
     private fun privateIdentityPriceWatchButton(
         identity: PracticalShoppingBasketPrivateIdentityRenderState
-    ): MaterialButton = MaterialButton(context).apply {
+    ): MaterialButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
         priceWatchOwnerControls += this
-        isAllCaps = false
         textSize = 13f
-        minHeight = dp(40)
-        minimumHeight = dp(40)
         minWidth = 0
         minimumWidth = 0
-        insetTop = 0
-        insetBottom = 0
         setPadding(dp(10), 0, dp(10), 0)
-        strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#BFDBFE"))
-        setTextColor(ValuePilotPalette.color("#1D4ED8"))
-        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 5)
         updatePriceWatch(identity)
         setOnClickListener {
@@ -599,22 +840,13 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
 
     private fun privateIdentityPurchaseButton(
         identity: PracticalShoppingBasketPrivateIdentityRenderState
-    ): MaterialButton = MaterialButton(context).apply {
+    ): MaterialButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
         text = "Confirm purchase"
         contentDescription = "Confirm a purchase of ${identity.displayName}"
-        isAllCaps = false
         textSize = 13f
-        minHeight = dp(40)
-        minimumHeight = dp(40)
         minWidth = 0
         minimumWidth = 0
-        insetTop = 0
-        insetBottom = 0
         setPadding(dp(10), 0, dp(10), 0)
-        strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#A7F3D0"))
-        setTextColor(ValuePilotPalette.color("#047857"))
-        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
         layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 5)
         isEnabled = onConfirmPurchase != null
         setOnClickListener {
@@ -634,39 +866,183 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     private fun privateIdentityHeadingSeparator(): View =
         View(context).apply {
             layoutParams = fullWidth(dp(1), 5)
-            setBackgroundColor(ValuePilotPalette.color("#BFDBFE"))
+            setBackgroundColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.OUTLINE))
         }
 
     private fun renderItems(state: PracticalShoppingBasketRenderState) {
-        itemsContainer.removeAllViews()
         itemsHeading.visibility = if (state.items.isEmpty()) GONE else VISIBLE
-        state.items.forEach { item ->
-            if (item.key in progressState.eligibleItemKeys) {
-                val collected = item.key in progressState.collectedItemKeys
-                itemsContainer.addView(
-                    column(padded = false).apply {
-                        addView(collectionButton(item, collected))
-                        addView(purchaseButton(item))
-                        addItemDetails(item, this, state.collectionEnabled)
-                    }
-                )
-            } else {
-                itemsContainer.addView(
-                    column(padded = false).apply {
-                        addView(
-                            line(
-                                "• ${item.name}  •  ${item.detail}",
-                                14f,
-                                "#374151",
-                                topPadding = 7
-                            )
-                        )
-                        addView(purchaseButton(item))
-                        addItemDetails(item, this, state.collectionEnabled)
-                    }
-                )
+        val desiredKeys = state.items.map { it.key }.toSet()
+        basketItemRowsByKey.keys
+            .filterNot(desiredKeys::contains)
+            .toList()
+            .forEach { itemKey ->
+                basketItemRowsByKey.remove(itemKey)?.let { row ->
+                    itemsContainer.removeView(row.root)
+                }
+            }
+
+        state.items.forEachIndexed { index, item ->
+            val row =
+                basketItemRowsByKey[item.key]
+                    ?: BasketItemRow(item).also { basketItemRowsByKey[item.key] = it }
+            row.update(
+                item = item,
+                eligible = item.key in progressState.eligibleItemKeys,
+                collected = item.key in progressState.collectedItemKeys,
+                collectionEnabled = state.collectionEnabled
+            )
+            val currentIndex = itemsContainer.indexOfChild(row.root)
+            if (currentIndex != index) {
+                if (currentIndex >= 0) itemsContainer.removeViewAt(currentIndex)
+                itemsContainer.addView(row.root, index.coerceAtMost(itemsContainer.childCount))
             }
         }
+    }
+
+    /** Keyed product row that updates in place so a check-off never rebuilds the list. */
+    private inner class BasketItemRow(initialItem: PracticalShoppingHomeItemRenderState) {
+        val root = ValuePilotProductCard(context).apply {
+            setCardBackgroundColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE))
+            strokeColor = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.OUTLINE)
+            layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, ValuePilotDesignTokens.Spacing.XS_DP)
+        }
+        private val body = column()
+        private val identity = line(
+            "",
+            16f,
+            ValuePilotDesignTokens.Colors.TEXT_PRIMARY,
+            true
+        )
+        private val quantity = line(
+            "",
+            ValuePilotDesignTokens.Typography.LABEL_SP,
+            ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
+            topPadding = ValuePilotDesignTokens.Spacing.XXS_DP
+        )
+        private val secondaryActions = column(padded = false).apply {
+            visibility = GONE
+        }
+        private val moreButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
+            text = "More for this item"
+            contentDescription = "Show more actions for this basket item"
+            layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, ValuePilotDesignTokens.Spacing.XS_DP)
+            setOnClickListener { setMoreExpanded(!moreExpanded) }
+        }
+        private val collectionButton = ValuePilotProgrammaticButton.outlined(context).apply {
+            textSize = ValuePilotDesignTokens.Typography.BODY_SP
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            layoutParams = fullWidth(dp(52), ValuePilotDesignTokens.Spacing.SM_DP)
+        }
+        private var currentItem = initialItem
+        private var currentCollected = false
+        private var moreExpanded = false
+        private val purchaseButton = purchaseButton { currentItem }
+        private val details = column(padded = false)
+
+        init {
+            body.addView(identity)
+            body.addView(quantity)
+            body.addView(collectionButton)
+            body.addView(details)
+            body.addView(moreButton)
+            secondaryActions.addView(purchaseButton)
+            body.addView(secondaryActions)
+            root.addView(body)
+            collectionButton.setOnClickListener {
+                progressState =
+                    PracticalShoppingBasketProgressSession.toggle(
+                        progressState,
+                        currentItem.key
+                    )
+                lastRenderState?.let { state ->
+                    renderCollectionProgress(state)
+                    renderSummary(state)
+                    renderCollectionResetControl()
+                    renderItems(state)
+                }
+            }
+        }
+
+        fun update(
+            item: PracticalShoppingHomeItemRenderState,
+            eligible: Boolean,
+            collected: Boolean,
+            collectionEnabled: Boolean
+        ) {
+            val collectedChanged = currentCollected != collected
+            currentItem = item
+            identity.text = item.name
+            quantity.text = item.detail
+            collectionButton.text =
+                when {
+                    !eligible -> "Not ready to collect"
+                    collected -> "✓  Collected"
+                    else -> "○  Collect this item"
+                }
+            collectionButton.contentDescription =
+                if (eligible) {
+                    practicalShoppingBasketCollectionActionDescription(item, collected)
+                } else {
+                    "${item.name} is not ready to collect because a usable price is not available."
+                }
+            collectionButton.isEnabled = eligible && collectionEnabled
+            collectionButton.setTextColor(
+                ValuePilotPalette.color(
+                    if (collected) {
+                        ValuePilotDesignTokens.Colors.SUCCESS
+                    } else {
+                        ValuePilotDesignTokens.Colors.PRIMARY_DARK
+                    }
+                )
+            )
+            collectionButton.strokeColor =
+                ColorStateList.valueOf(
+                    ValuePilotPalette.color(
+                        if (collected) {
+                            ValuePilotDesignTokens.Colors.SUCCESS
+                        } else {
+                            ValuePilotDesignTokens.Colors.OUTLINE
+                        }
+                    )
+                )
+            collectionButton.backgroundTintList =
+                ColorStateList.valueOf(
+                    ValuePilotPalette.color(
+                        if (collected) {
+                            ValuePilotDesignTokens.Colors.SURFACE_SUBTLE
+                        } else {
+                            ValuePilotDesignTokens.Colors.SURFACE
+                        }
+                    )
+                )
+            root.strokeColor = ValuePilotPalette.color(
+                if (collected) {
+                    ValuePilotDesignTokens.Colors.SUCCESS
+                } else {
+                    ValuePilotDesignTokens.Colors.OUTLINE
+                }
+            )
+            root.cardElevation = if (collected) dp(1).toFloat() else 0f
+            details.removeAllViews()
+            addItemDetails(item, details, collectionEnabled)
+            purchaseButton.isEnabled = onConfirmPurchase != null
+            currentCollected = collected
+            if (collectedChanged) ValuePilotMotion.reveal(root)
+        }
+
+        private fun setMoreExpanded(expanded: Boolean) {
+            moreExpanded = expanded
+            secondaryActions.visibility = if (expanded) VISIBLE else GONE
+            moreButton.text = if (expanded) "Hide item actions" else "More for this item"
+            moreButton.contentDescription =
+                if (expanded) {
+                    "Hide more actions for this basket item"
+                } else {
+                    "Show more actions for this basket item"
+                }
+            ValuePilotMotion.reveal(secondaryActions, animate = expanded)
+        }
+
     }
 
     private fun addItemDetails(
@@ -674,12 +1050,22 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         container: LinearLayout,
         collectionEnabled: Boolean
     ) {
+        item.savedExactProductNotice?.let { notice ->
+            container.addView(
+                line(
+                    notice,
+                    12f,
+                    ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
+                    topPadding = ValuePilotDesignTokens.Spacing.XXS_DP
+                )
+            )
+        }
         item.storeAssignment?.let { store ->
             container.addView(
                 line(
                     practicalShoppingPlannedStoreLabel(store),
                     12f,
-                    "#374151",
+                    ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
                     topPadding = 2
                 )
             )
@@ -687,132 +1073,93 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
                 line(
                     PRACTICAL_SHOPPING_PLANNED_STORE_NOTICE,
                     12f,
-                    "#6B7280",
+                    ValuePilotDesignTokens.Colors.TEXT_MUTED,
                     topPadding = 2
                 )
             )
         }
         item.plannedPriceText?.let { price ->
-            container.addView(line("Included in plan: $price", 12f, "#374151", topPadding = 2))
+            container.addView(
+                line(
+                    "Included in plan: $price",
+                    12f,
+                    ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
+                    topPadding = 2
+                )
+            )
         }
         item.plannedPriceNotice?.let { notice ->
-            container.addView(line(notice, 12f, "#6B7280", topPadding = 2))
+            container.addView(
+                line(notice, 12f, ValuePilotDesignTokens.Colors.TEXT_MUTED, topPadding = 2)
+            )
+        }
+        item.personalHistoryNotice?.let { notice ->
+            container.addView(
+                line(
+                    notice,
+                    12f,
+                    ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
+                    topPadding = ValuePilotDesignTokens.Spacing.XXS_DP
+                )
+            )
         }
         if (collectionEnabled && item.storeAssignment == null) {
             container.addView(
                 line(
                     "No usable price yet — not ready to collect",
                     12f,
-                    "#92400E",
+                    ValuePilotDesignTokens.Colors.WARNING,
                     topPadding = 2
                 )
             )
         }
         if (!collectionEnabled) {
             item.priceCoverageNotice?.let { notice ->
-                container.addView(line(notice, 12f, "#92400E", topPadding = 2))
+                container.addView(
+                    line(notice, 12f, ValuePilotDesignTokens.Colors.WARNING, topPadding = 2)
+                )
             }
         }
-        container.addView(line(item.requestDetailsSummary, 12f, "#6B7280", topPadding = 2))
+        container.addView(
+            line(
+                item.requestDetailsSummary,
+                12f,
+                ValuePilotDesignTokens.Colors.TEXT_MUTED,
+                topPadding = 2
+            )
+        )
         item.requestDetailsNotice?.let { notice ->
-            container.addView(line(notice, 12f, "#92400E", topPadding = 2))
+            container.addView(
+                line(notice, 12f, ValuePilotDesignTokens.Colors.WARNING, topPadding = 2)
+            )
         }
     }
 
-    private fun collectionButton(
-        item: PracticalShoppingHomeItemRenderState,
-        collected: Boolean
-    ): MaterialButton = MaterialButton(context).apply {
-        isAllCaps = false
-        textSize = 14f
-        gravity = Gravity.START or Gravity.CENTER_VERTICAL
-        cornerRadius = dp(14)
-        strokeWidth = dp(1)
-        strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#D1D5DB"))
-        setTextColor(ValuePilotPalette.color("#374151"))
-        backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
-        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 7)
-        text = "${if (collected) "✓" else "○"} ${item.name}  •  ${item.detail}"
-        contentDescription = practicalShoppingBasketCollectionActionDescription(item, collected)
+    private fun purchaseButton(
+        itemProvider: () -> PracticalShoppingHomeItemRenderState
+    ): MaterialButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
+        text = "Confirm purchase"
+        contentDescription = "Confirm the purchase of this basket item"
+        textSize = 13f
+        minWidth = 0
+        minimumWidth = 0
+        setPadding(dp(10), 0, dp(10), 0)
+        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 5)
+        isEnabled = onConfirmPurchase != null
         setOnClickListener {
-            progressState = PracticalShoppingBasketProgressSession.toggle(progressState, item.key)
-            lastRenderState?.let { state ->
-                renderCollectionProgress(state)
-                renderItems(state)
-            }
+            val item = itemProvider()
+            onConfirmPurchase?.invoke(
+                PracticalShoppingBasketUiAction.ConfirmPurchase(
+                    productIdentityKey = item.key.value,
+                    displayName = item.name,
+                    brand = null,
+                    packageQuantityLabel = item.detail,
+                    plannedPriceText = item.plannedPriceText,
+                    identityOrigin = ConfirmedPurchaseIdentityOrigin.HOME_BASKET
+                )
+            )
         }
     }
-
-    private fun purchaseButton(item: PracticalShoppingHomeItemRenderState): MaterialButton =
-        MaterialButton(context).apply {
-            text = "Confirm purchase"
-            contentDescription = "Confirm a purchase of ${item.name}"
-            isAllCaps = false
-            textSize = 13f
-            minHeight = dp(40)
-            minimumHeight = dp(40)
-            minWidth = 0
-            minimumWidth = 0
-            insetTop = 0
-            insetBottom = 0
-            setPadding(dp(10), 0, dp(10), 0)
-            strokeWidth = dp(1)
-            strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#A7F3D0"))
-            setTextColor(ValuePilotPalette.color("#047857"))
-            backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
-            layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 5)
-            isEnabled = onConfirmPurchase != null
-            setOnClickListener {
-                onConfirmPurchase?.invoke(
-                    PracticalShoppingBasketUiAction.ConfirmPurchase(
-                        productIdentityKey = item.key.value,
-                        displayName = item.name,
-                        brand = null,
-                        packageQuantityLabel = item.detail,
-                        plannedPriceText = item.plannedPriceText,
-                        identityOrigin = ConfirmedPurchaseIdentityOrigin.HOME_BASKET
-                    )
-                )
-            }
-        }
-
-    private fun priceWatchButton(item: PracticalShoppingHomeItemRenderState): MaterialButton =
-        MaterialButton(context).apply {
-            priceWatchOwnerControls += this
-            text = if (item.watched) "Unwatch" else "Watch price"
-            contentDescription =
-                if (item.watched) {
-                    "Stop watching ${item.name}; private history is retained"
-                } else {
-                    "Watch exact product ${item.name} privately"
-                }
-            isAllCaps = false
-            textSize = 13f
-            minHeight = dp(40)
-            minimumHeight = dp(40)
-            minWidth = 0
-            minimumWidth = 0
-            insetTop = 0
-            insetBottom = 0
-            setPadding(dp(10), 0, dp(10), 0)
-            strokeWidth = dp(1)
-            strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#BFDBFE"))
-            setTextColor(ValuePilotPalette.color("#1D4ED8"))
-            backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#FFFFFF"))
-            layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 5)
-            isEnabled = onTogglePriceWatch != null
-            setOnClickListener {
-                onTogglePriceWatch?.invoke(
-                    PriceWatchUiAction.ToggleWatch(
-                        productIdentityKey = item.key.value,
-                        displayName = item.name,
-                        brand = null,
-                        packageQuantityLabel = item.detail,
-                        watched = item.watched
-                    )
-                )
-            }
-        }
 
     private fun renderUnknownItems(items: List<String>) {
         unresolvedBody.removeAllViews()
@@ -824,25 +1171,31 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             line(
                 context.getString(R.string.basket_unresolved_title),
                 13f,
-                "#92400E",
+                ValuePilotDesignTokens.Colors.WARNING,
                 true
             )
         )
         items.forEach { item ->
-            unresolvedBody.addView(line("• $item", 14f, "#92400E", topPadding = 7))
+            unresolvedBody.addView(
+                line("• $item", 14f, ValuePilotDesignTokens.Colors.WARNING, topPadding = 7)
+            )
         }
         unresolvedCard.visibility = VISIBLE
     }
 
     private fun sampleCard(): View =
-        card("#F0FDF4", "#BBF7D0", 0).apply {
+        card(
+            ValuePilotDesignTokens.Colors.SURFACE_SUBTLE,
+            ValuePilotDesignTokens.Colors.OUTLINE,
+            0
+        ).apply {
             addView(
                 column().apply {
                     addView(
                         line(
                             context.getString(R.string.home_sample_badge),
                             11f,
-                            "#047857",
+                            ValuePilotDesignTokens.Colors.SUCCESS,
                             true
                         )
                     )
@@ -856,7 +1209,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         stroke: String,
         topMargin: Int,
         body: View? = null
-    ): MaterialCardView = MaterialCardView(context).apply {
+    ): ValuePilotProductCard = ValuePilotProductCard(context).apply {
         radius = dp(18).toFloat()
         cardElevation = 0f
         setCardBackgroundColor(ValuePilotPalette.color(background))

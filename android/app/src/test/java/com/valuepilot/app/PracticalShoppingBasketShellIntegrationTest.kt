@@ -24,7 +24,7 @@ class PracticalShoppingBasketShellIntegrationTest {
         )
         assertTrue(
             source.contains(
-                "val basketVisible = state.selectedPrimaryTab == AppPrimaryTab.BASKET"
+                "val basketVisible =\n            state.selectedPrimaryTab == AppPrimaryTab.BASKET"
             )
         )
         assertTrue(

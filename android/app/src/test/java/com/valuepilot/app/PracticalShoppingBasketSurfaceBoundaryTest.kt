@@ -40,7 +40,7 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
         assertTrue(source.contains("state.extraStopRuleNotice == null"))
         assertTrue(source.contains("state.collectionNotice == null"))
         assertTrue(source.contains("No usable price yet — not ready to collect"))
-        assertTrue(source.contains("addItemDetails(item, this, state.collectionEnabled)"))
+        assertTrue(source.contains("addItemDetails(item, details, collectionEnabled)"))
         assertTrue(source.contains("practicalShoppingBasketCollectionActionDescription(item, collected)"))
         assertFalse(source.contains("Check-off starts for items with usable planned price coverage."))
         assertTrue(renderer.contains("source.result.itemStoreAssignments"))
@@ -62,6 +62,60 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
                 "Basket View must not gain shopping authority through $forbidden",
                 source.contains(forbidden, ignoreCase = true)
             )
+        }
+    }
+
+    @Test
+    fun basketUsesUnifiedSummaryCardsAndKeyedProductRows() {
+        val source = source("PracticalShoppingBasketSurfaceView.kt").readSourceText()
+
+        listOf(
+            "practicalShoppingBasketSummaryProjection",
+            "private val basketSummaryCard = ValuePilotProductCard(context)",
+            "private val basketItemRowsByKey = LinkedHashMap<ShoppingItemKey, BasketItemRow>()",
+            "private inner class BasketItemRow",
+            "ValuePilotMotion.reveal(root)",
+            "More for this item",
+            "state.items.map { it.key }.toSet()",
+            "item.personalHistoryNotice",
+            "item.savedExactProductNotice"
+        ).forEach { required ->
+            assertTrue("Missing unified Basket presentation boundary $required", source.contains(required))
+        }
+        assertFalse(source.contains("itemsContainer.removeAllViews()"))
+    }
+
+    @Test
+    fun basketSecondaryActionsAreProgressivelyDisclosedAndPurchaseIsIntentional() {
+        val source = source("PracticalShoppingBasketSurfaceView.kt").readSourceText()
+
+        listOf(
+            "private val secondaryActions = column(padded = false).apply",
+            "secondaryActions.visibility = if (expanded) VISIBLE else GONE",
+            "setMoreExpanded(!moreExpanded)",
+            "ValuePilotMotion.reveal(secondaryActions, animate = expanded)",
+            "ConfirmPurchase(",
+            "PriceWatchUiAction.ToggleWatch("
+        ).forEach { required ->
+            assertTrue("Missing progressive Basket action boundary $required", source.contains(required))
+        }
+    }
+
+    @Test
+    fun basketScrollPositionIsSavedPerBasketRouteWithoutChangingBusinessState() {
+        val source = File(
+            requireNotNull(System.getProperty("user.dir")),
+            "src/main/java/com/valuepilot/app/MainActivity.kt"
+        ).readSourceText()
+
+        listOf(
+            "private var basketScrollY = 0",
+            "private var basketRouteActive = false",
+            "STATE_BASKET_SCROLL_Y",
+            "restoreBasketScrollPosition()",
+            "if (basketRouteActive) basketScrollY = shellScrollView.scrollY.coerceAtLeast(0)"
+        ).forEach { required ->
+            assertTrue("Missing Basket state-preservation boundary $required", source.contains(required))
         }
     }
 
