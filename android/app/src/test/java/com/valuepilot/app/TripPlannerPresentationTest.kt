@@ -143,6 +143,7 @@ class TripPlannerPresentationTest {
                         productEvidenceKey = "yerba",
                         productName = "Yerba Mate",
                         brand = "Mate",
+                        storeKey = "store-mercado",
                         storeName = "Mercado",
                         packageCount = 1,
                         packageQuantityLabel = "1 kg",

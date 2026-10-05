@@ -152,6 +152,15 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             tripPlannerButton.isEnabled = value != null && hasRenderedState
         }
 
+    /** Opens a qualified plan store in the exact product/store map context. */
+    var onOpenArgentinaPlanStore: ((String) -> Unit)? = null
+        set(value) {
+            field = value
+            for (index in 0 until argentinaPlanStoreActions.childCount) {
+                argentinaPlanStoreActions.getChildAt(index).isEnabled = value != null
+            }
+        }
+
     /** Opens contextual product details while preserving the Basket route. */
     var onOpenProduct: ((PracticalShoppingHomeItemRenderState) -> Unit)? = null
         set(value) {
@@ -453,9 +462,11 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         ValuePilotDesignTokens.Colors.TEXT_PRIMARY,
         topPadding = ValuePilotDesignTokens.Spacing.XS_DP
     )
+    private val argentinaPlanStoreActions = column(padded = false)
     private val argentinaPlanBody = column().apply {
         addView(argentinaPlanTitle)
         addView(argentinaPlanDetails)
+        addView(argentinaPlanStoreActions)
     }
     private val argentinaPlanCard = card(
         ValuePilotDesignTokens.Colors.SURFACE,
@@ -506,6 +517,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         extraStopRuleNotice.visibility = GONE
         privateIdentityCard.visibility = GONE
         argentinaPlanCard.visibility = GONE
+        argentinaPlanStoreActions.visibility = GONE
         privateIdentityPlanButton.visibility = GONE
         recordPurchaseButton.visibility = GONE
         detailsToggle.visibility = GONE
@@ -604,6 +616,8 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         if (plan == null) {
             argentinaPlanCard.visibility = GONE
             argentinaPlanDetails.text = ""
+            argentinaPlanStoreActions.removeAllViews()
+            argentinaPlanStoreActions.visibility = GONE
             return
         }
         argentinaPlanCard.visibility = VISIBLE
@@ -630,6 +644,24 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             append("\n\n").append(plan.notice)
         }
         argentinaPlanDetails.contentDescription = argentinaPlanDetails.text
+        argentinaPlanStoreActions.removeAllViews()
+        val openStore = onOpenArgentinaPlanStore
+        if (openStore != null && plan.stores.isNotEmpty()) {
+            plan.stores.forEach { store ->
+                argentinaPlanStoreActions.addView(
+                    ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
+                        text = "Open ${store.storeName}"
+                        contentDescription = "Open ${store.storeName} in the exact product store map"
+                        isAllCaps = false
+                        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 6)
+                        setOnClickListener { openStore(store.storeKey) }
+                    }
+                )
+            }
+            argentinaPlanStoreActions.visibility = VISIBLE
+        } else {
+            argentinaPlanStoreActions.visibility = GONE
+        }
     }
 
     /**

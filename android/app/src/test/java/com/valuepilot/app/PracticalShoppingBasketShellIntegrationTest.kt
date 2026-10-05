@@ -18,6 +18,8 @@ class PracticalShoppingBasketShellIntegrationTest {
         )
         assertTrue(source.contains("basketExperience = findViewById(R.id.basketExperience)"))
         assertTrue(source.contains("basketExperience.onPlanPrivateIdentities = ::requestPrivateBasketPlan"))
+        assertTrue(source.contains("basketExperience.onOpenArgentinaPlanStore = ::openArgentinaPlanStore"))
+        assertTrue(source.contains("selectedStoreKey = storeKey"))
         assertTrue(
             source.contains(
                 "basketExperience.render(PracticalShoppingBasketRenderer.render(homeState))"

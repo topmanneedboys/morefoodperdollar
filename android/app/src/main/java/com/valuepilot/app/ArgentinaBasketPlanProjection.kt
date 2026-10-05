@@ -18,6 +18,7 @@ internal data class ArgentinaBasketPlanLineProjection(
     val productEvidenceKey: String,
     val productName: String,
     val brand: String?,
+    val storeKey: String,
     val storeName: String,
     val packageCount: Int,
     val packageQuantityLabel: String,
@@ -39,6 +40,23 @@ internal data class ArgentinaBasketPlanLineProjection(
     }
 }
 
+/** Exact store identity retained so Basket actions can open the same map evidence. */
+internal data class ArgentinaBasketPlanStoreProjection(
+    val storeKey: String,
+    val storeName: String,
+    val addressLabel: String?,
+    val latitude: String,
+    val longitude: String
+) {
+    init {
+        require(storeKey.isNotBlank())
+        require(storeName.isNotBlank())
+        require(addressLabel == null || addressLabel.isNotBlank())
+        require(latitude.isNotBlank())
+        require(longitude.isNotBlank())
+    }
+}
+
 internal data class ArgentinaBasketPlanProjection(
     val status: ArgentinaBasketPlanStatus,
     val headline: String,
@@ -48,6 +66,7 @@ internal data class ArgentinaBasketPlanProjection(
     val evaluatedPlanSummary: String? = null,
     val coverageText: String,
     val storeSummary: String?,
+    val stores: List<ArgentinaBasketPlanStoreProjection> = emptyList(),
     val notice: String,
     val releaseDate: String,
     val lines: List<ArgentinaBasketPlanLineProjection>,
@@ -59,6 +78,8 @@ internal data class ArgentinaBasketPlanProjection(
         require(notice.isNotBlank())
         require(releaseDate.matches(Regex("[0-9]{4}-[0-9]{2}-[0-9]{2}")))
         require(lines.size <= ArgentinaBackendContract.MAX_PLAN_LINES)
+        require(stores.size <= ArgentinaBackendContract.MAX_STORES)
+        require(stores.map { it.storeKey }.distinct().size == stores.size)
         require(missingIdentityNames.none(String::isBlank))
         require(missingIdentityNames.size <= ArgentinaBackendContract.MAX_LINES)
         require((status == ArgentinaBasketPlanStatus.NO_CURRENT_PLAN) == (planType == null && lines.isEmpty()))
@@ -92,6 +113,7 @@ internal object ArgentinaBasketPlanProjector {
                 evaluatedPlanSummary = null,
                 coverageText = "No exact current price evidence was returned.",
                 storeSummary = null,
+                stores = emptyList(),
                 notice = "$SOURCE release ${response.common.releaseDate}; unknown prices remain unknown.",
                 releaseDate = response.common.releaseDate,
                 lines = emptyList(),
@@ -105,6 +127,7 @@ internal object ArgentinaBasketPlanProjector {
                 productEvidenceKey = line.productEvidenceKey,
                 productName = line.productName.ifBlank { requestNames[line.lineId] ?: line.lineId },
                 brand = line.brand,
+                storeKey = line.storeKey,
                 storeName = line.storeName,
                 packageCount = line.packageCount,
                 packageQuantityLabel = quantityLabel(line.packageQuantity),
@@ -141,6 +164,19 @@ internal object ArgentinaBasketPlanProjector {
         val evaluatedPlanSummary = evaluatedPlans.joinToString(" | ") { plan ->
             "${plan.type}: ${moneyText(plan.total)} at ${plan.stores.joinToString { it.storeName }}"
         }.take(512).takeIf { it.isNotBlank() }
+        val stores = selected.stores
+            .distinctBy { it.storeKey }
+            .sortedBy { it.storeKey }
+            .take(ArgentinaBackendContract.MAX_STORES)
+            .map { store ->
+                ArgentinaBasketPlanStoreProjection(
+                    storeKey = store.storeKey,
+                    storeName = store.storeName,
+                    addressLabel = addressLabel(store.address),
+                    latitude = store.latitude,
+                    longitude = store.longitude
+                )
+            }
         return ArgentinaBasketPlanProjection(
             status = if (complete) ArgentinaBasketPlanStatus.CURRENT_COMPLETE else ArgentinaBasketPlanStatus.CURRENT_PARTIAL,
             headline = if (complete) "Current listed-price plan" else "Current price coverage is incomplete",
@@ -150,6 +186,7 @@ internal object ArgentinaBasketPlanProjector {
             evaluatedPlanSummary = evaluatedPlanSummary,
             coverageText = "${lines.size} of ${selected.lines.size + selected.missingLineIds.size} requested items have exact price evidence",
             storeSummary = selected.stores.map { it.storeName }.distinct().joinToString().takeIf { it.isNotBlank() },
+            stores = stores,
             notice = buildString {
                 append("$SOURCE release ")
                 append(response.common.releaseDate)
@@ -171,6 +208,13 @@ internal object ArgentinaBasketPlanProjector {
 
     private fun moneyText(money: ArgentinaBackendContract.Money): String =
         "${money.currency} ${money.amount}"
+
+    private fun addressLabel(address: Map<String, String>): String? =
+        address.toSortedMap()
+            .filter { (key, value) -> key.isNotBlank() && value.isNotBlank() }
+            .entries
+            .joinToString(", ") { (key, value) -> "$key: $value" }
+            .takeIf { it.isNotBlank() }
 
     private fun coreMoneyOrNull(money: ArgentinaBackendContract.Money): Money? = runCatching {
         val fractionDigits = maxOf(2, money.decimal.scale()).also { require(it <= 6) }

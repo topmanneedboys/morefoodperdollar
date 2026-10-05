@@ -1100,6 +1100,7 @@ class MainActivity : AppCompatActivity() {
         }
         basketExperience.onTogglePriceWatch = ::handleTogglePriceWatch
         basketExperience.onOpenTripPlanner = { dispatch(AppShellIntent.OpenTripPlanner) }
+        basketExperience.onOpenArgentinaPlanStore = ::openArgentinaPlanStore
         basketExperience.onOpenProduct = { item ->
             ValuePilotCompactUi.showSheet(
                 context = this,
@@ -1113,6 +1114,35 @@ class MainActivity : AppCompatActivity() {
                 ).joinToString("\n").ifBlank { "Product details are available only where the current plan provides them." }
             )
         }
+    }
+
+    /** Reopens one backend-plan store through the same exact product/store map path. */
+    private fun openArgentinaPlanStore(storeKey: String) {
+        val response = privateBasketPlanResponse ?: return
+        val selectedPlan = response.result.bestSensibleChoice.selectedPlan
+            ?: response.result.cheapestUpToTwoStores
+            ?: response.result.cheapestSingleStore
+            ?: response.result.cheapestPerLineUnboundedStores
+            ?: return
+        val line = selectedPlan.lines.firstOrNull { it.storeKey == storeKey }
+            ?: return
+        val identity = homeSessionState.privateIdentities.firstOrNull {
+            it.identityKey == line.productEvidenceKey
+        } ?: return
+        val match = PracticalShoppingSearchIdentityPresentation.Match(
+            displayName = identity.displayName,
+            brand = identity.brand,
+            matchLabel = "Saved exact identity",
+            packageQuantityLabel = identity.packageQuantityLabel,
+            sourceLabel = identity.sourceLabel,
+            identityKey = identity.identityKey,
+            qualifiedOffers = identity.qualifiedOffers
+        )
+        openProductStoreMap(
+            match = match,
+            cachedResponse = response,
+            selectedStoreKey = storeKey
+        )
     }
 
     /**

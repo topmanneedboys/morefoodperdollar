@@ -139,6 +139,9 @@ class ArgentinaProductStoreMapTest {
         assertEquals("Listed total · ARS 12.50", projection.totalText)
         assertTrue(projection.notice.contains("availability remains unknown"))
         assertEquals(listOf("product-yerba"), projection.lines.map { it.productEvidenceKey })
+        assertEquals(listOf("store-a"), projection.lines.map { it.storeKey })
+        assertEquals(listOf("store-a"), projection.stores.map { it.storeKey })
+        assertEquals("city: Buenos Aires, street: Calle 1", projection.stores.single().addressLabel)
         assertEquals("ARS 12.50/item", projection.lines.single().unitPriceText)
         assertTrue(projection.evaluatedPlanSummary?.contains("SINGLE_STORE") == true)
     }
