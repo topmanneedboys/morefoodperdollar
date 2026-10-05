@@ -107,6 +107,8 @@ class MainActivity : AppCompatActivity() {
     private var productMapDialog: AlertDialog? = null
     private var productMapRequestId = 0L
     private var privateBasketPlanRequestId = 0L
+    /** Latest bounded backend plan for the exact in-memory private identity set. */
+    private var privateBasketPlanResponse: ArgentinaBackendContract.ShopResponse? = null
     private var productMapSelectedKey: String? = null
     private var productMapSelectedLabel: String? = null
     private var productMapContext: ProductMapContext? = null
@@ -796,7 +798,16 @@ class MainActivity : AppCompatActivity() {
         if (revealResult) {
             homeExperience.revealProjectedResult()
         }
-        basketExperience.render(PracticalShoppingBasketRenderer.render(homeState))
+        if (privateBasketPlanResponse == null) {
+            basketExperience.render(PracticalShoppingBasketRenderer.render(homeState))
+        } else {
+            basketExperience.render(
+                state = PracticalShoppingBasketRenderer.render(homeState),
+                argentinaPlan = privateBasketPlanResponse?.let { response ->
+                    ArgentinaBasketPlanProjector.project(response, homeSessionState.privateIdentities)
+                }
+            )
+        }
         if (shellState.route == AppRoute.TRIP_PLANNER) {
             renderTripPlanner()
         }
@@ -1112,6 +1123,8 @@ class MainActivity : AppCompatActivity() {
     private fun requestPrivateBasketPlan() {
         val identities = homeSessionState.privateIdentities
         if (identities.isEmpty()) return
+        privateBasketPlanResponse = null
+        renderHome()
         val requestId = Math.addExact(privateBasketPlanRequestId, 1L)
         privateBasketPlanRequestId = requestId
         val eligible = identities.mapNotNull { identity ->
@@ -1175,6 +1188,8 @@ class MainActivity : AppCompatActivity() {
                     return@post
                 }
                 val decision = result.value.result
+                privateBasketPlanResponse = result.value
+                renderHome()
                 val selected = decision.bestSensibleChoice.selectedPlan
                 val body = buildString {
                     if (selected == null) {
@@ -2971,20 +2986,30 @@ class MainActivity : AppCompatActivity() {
     private fun renderTripPlanner() {
         if (!::tripPlannerExperience.isInitialized) return
         val basket = currentTripBasketSnapshot()
+        // Once an exact Argentina plan is available, do not overlay the
+        // fictional/sample Home decision on top of it. The existing bridge is
+        // retained for the local sample path only.
         val decision =
-            ShoppingDecisionTripPlannerBridge.evaluate(
-                home = homeSessionState,
-                trip = tripPlannerState,
-                purchases = confirmedPurchaseHistoryState.purchases,
-                priceWatchState = priceWatchState
-            )
+            if (privateBasketPlanResponse == null) {
+                ShoppingDecisionTripPlannerBridge.evaluate(
+                    home = homeSessionState,
+                    trip = tripPlannerState,
+                    purchases = confirmedPurchaseHistoryState.purchases,
+                    priceWatchState = priceWatchState
+                )
+            } else {
+                null
+            }
         tripPlannerExperience.render(
             TripPlannerProjector.project(
                 state = tripPlannerState,
                 basket = basket,
                 directoryAvailable = false,
                 unavailable = tripPlannerLoadIssue != null,
-                decision = decision
+                decision = decision,
+                argentinaPlan = privateBasketPlanResponse?.let { response ->
+                    ArgentinaBasketPlanProjector.project(response, homeSessionState.privateIdentities)
+                }
             ),
             preferred = tripPlannerState.preferredStoreKey != null &&
                 tripPlannerState.preferredStoreKey == tripPlannerState.destination?.storeKey
@@ -3691,6 +3716,10 @@ class MainActivity : AppCompatActivity() {
             return
         }
         homeSessionState = nextState
+        // The backend plan is scoped to the exact saved identity set. A
+        // Search add/remove invalidates it rather than showing prices for a
+        // different Basket.
+        privateBasketPlanResponse = null
         authorizePrivateListPersistence()
         renderHome()
         renderedSearchMatches = null
@@ -3743,6 +3772,14 @@ class MainActivity : AppCompatActivity() {
                 }
                 dialog.show()
             }
+
+        // Search already carries a bounded, exact-key offer rail.  Render it
+        // directly so Map does not issue a duplicate shop request or present
+        // a different evidence snapshot than the result the shopper selected.
+        if (match.qualifiedOffers.isNotEmpty()) {
+            renderProductMapResponse(surface, mapContext)
+            return
+        }
 
         if (cachedResponse != null) {
             renderProductMapResponse(surface, mapContext)
@@ -3806,9 +3843,14 @@ class MainActivity : AppCompatActivity() {
         surface: ProductStoreMapSurfaceView,
         mapContext: ProductMapContext
     ) {
-        val response = mapContext.response ?: return
-        val mapResult = ArgentinaProductStoreMapAdapter.query(
-            response,
+        val mapResult = mapContext.response?.let { response ->
+            ArgentinaProductStoreMapAdapter.query(
+                response,
+                mapContext.match,
+                mapContext.originCoordinate
+            )
+        } ?: ArgentinaProductStoreMapAdapter.query(
+            mapContext.match.qualifiedOffers,
             mapContext.match,
             mapContext.originCoordinate
         )
@@ -3885,13 +3927,14 @@ class MainActivity : AppCompatActivity() {
         val coordinate = location?.let {
             ProductStoreMapCoordinate.parse(it.latitude.toString(), it.longitude.toString())
         }
-        if (response == null || coordinate == null) {
+        if ((response == null && match.qualifiedOffers.isEmpty()) || coordinate == null) {
             Toast.makeText(this, "Location not available; showing the CABA search area.", Toast.LENGTH_LONG).show()
             return
         }
         productMapContext?.origin = ProductStoreMapOrigin.ONE_SHOT_LOCATION
         productMapContext?.originCoordinate = coordinate
-        val result = ArgentinaProductStoreMapAdapter.query(response, match, coordinate)
+        val result = response?.let { ArgentinaProductStoreMapAdapter.query(it, match, coordinate) }
+            ?: ArgentinaProductStoreMapAdapter.query(match.qualifiedOffers, match, coordinate)
         productMapContext?.let { context ->
             context.response = response
             surface.render(
@@ -4031,6 +4074,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         homeSessionState = nextState
+        privateBasketPlanResponse = null
         if (nextState != previousState) {
             authorizePrivateListPersistence()
         }
@@ -4057,6 +4101,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         homeSessionState = nextState
+        privateBasketPlanResponse = null
         authorizePrivateListPersistence()
         dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.HOME))
         renderHome()

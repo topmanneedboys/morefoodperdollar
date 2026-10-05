@@ -3,16 +3,18 @@ package com.valuepilot.app
 /**
  * A shopper-selected identity from Search, kept separate from planner items.
  *
- * This is intentionally identity-only. It carries no price, store, stock,
- * availability, ranking or freshness authority. Nullable metadata stays
- * nullable when the source did not provide it.
+ * The durable identity remains separate from price authority. A Search result
+ * may attach a bounded in-memory offer preview for the current session; the
+ * persistence codec intentionally omits that preview so a restart cannot turn
+ * old evidence into a current claim.
  */
 data class PracticalShoppingPrivateIdentity(
     val identityKey: String,
     val displayName: String,
     val brand: String? = null,
     val sourceLabel: String? = null,
-    val packageQuantityLabel: String? = null
+    val packageQuantityLabel: String? = null,
+    val qualifiedOffers: List<ArgentinaBackendContract.SearchOffer> = emptyList()
 ) {
     init {
         require(identityKey.isNotBlank())
@@ -25,6 +27,8 @@ data class PracticalShoppingPrivateIdentity(
         require(sourceLabel == null || sourceLabel.length <= MAX_SOURCE_LABEL_LENGTH)
         require(packageQuantityLabel == null || packageQuantityLabel.isNotBlank())
         require(packageQuantityLabel == null || packageQuantityLabel.length <= MAX_PACKAGE_QUANTITY_LENGTH)
+        require(qualifiedOffers.size <= ArgentinaBackendContract.MAX_SEARCH_OFFERS_PER_IDENTITY)
+        require(qualifiedOffers.all { it.productEvidenceKey == identityKey })
     }
 
     companion object {
@@ -45,7 +49,8 @@ data class PracticalShoppingPrivateIdentity(
                 displayName = match.displayName,
                 brand = match.brand,
                 sourceLabel = match.sourceLabel,
-                packageQuantityLabel = match.packageQuantityLabel
+                packageQuantityLabel = match.packageQuantityLabel,
+                qualifiedOffers = match.qualifiedOffers
             )
         }
     }

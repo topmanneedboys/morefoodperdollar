@@ -71,6 +71,127 @@ class ArgentinaProductStoreMapTest {
         assertEquals(1, result.excludedCoordinateCount)
     }
 
+    @Test
+    fun attachedSearchOffersRenderWithoutASecondShopResponse() {
+        val selected = match("product-yerba", "4006381333931")
+        val result = ArgentinaProductStoreMapAdapter.query(
+            offers = listOf(
+                searchOffer("product-yerba", "search-offer", "store-search")
+            ),
+            selected = selected,
+            origin = null
+        )
+
+        assertEquals(ProductStoreMapResultStatus.READY, result.status)
+        assertEquals(listOf("store-search"), result.pins.map { it.storeKey.value })
+        assertEquals("search-offer", result.pins.single().relationshipKey)
+        assertEquals(true, result.pins.single().availabilityUnknown)
+    }
+
+    @Test
+    fun attachedSearchOfferWithAnotherIdentityCannotLeakIntoTheSelectedMap() {
+        val selected = match("product-yerba", "4006381333931")
+        val result = ArgentinaProductStoreMapAdapter.query(
+            offers = listOf(
+                searchOffer("other-product", "other-offer", "store-other")
+            ),
+            selected = selected,
+            origin = null
+        )
+
+        assertEquals(ProductStoreMapResultStatus.NO_EXACT_RELATIONSHIP, result.status)
+        assertTrue(result.pins.isEmpty())
+    }
+
+    @Test
+    fun searchOfferPreviewSurvivesTheInMemorySearchToBasketHandoff() {
+        val selected = match("product-yerba", "4006381333931").copy(
+            qualifiedOffers = listOf(searchOffer("product-yerba", "search-offer", "store-search"))
+        )
+        val identity = requireNotNull(PracticalShoppingPrivateIdentity.fromSearchMatch(selected))
+
+        assertEquals(selected.identityKey, identity.identityKey)
+        assertEquals(listOf("search-offer"), identity.qualifiedOffers.map { it.offerKey })
+    }
+
+    @Test
+    fun basketPlanProjectionKeepsCompleteListedTotalExplicit() {
+        val response = response(
+            plans = listOf(
+                plan(line("product-yerba", "offer-a", "store-a"), store("store-a"))
+            )
+        )
+        val projection = ArgentinaBasketPlanProjector.project(
+            response,
+            listOf(
+                PracticalShoppingPrivateIdentity(
+                    identityKey = "product-yerba",
+                    displayName = "Yerba Mate",
+                    sourceLabel = "Argentina SEPA / Precios Claros",
+                    packageQuantityLabel = "1 kg"
+                )
+            )
+        )
+
+        assertEquals(ArgentinaBasketPlanStatus.CURRENT_COMPLETE, projection.status)
+        assertEquals("Listed total · ARS 12.50", projection.totalText)
+        assertTrue(projection.notice.contains("availability remains unknown"))
+        assertEquals(listOf("product-yerba"), projection.lines.map { it.productEvidenceKey })
+        assertEquals("ARS 12.50/item", projection.lines.single().unitPriceText)
+        assertTrue(projection.evaluatedPlanSummary?.contains("SINGLE_STORE") == true)
+    }
+
+    @Test
+    fun basketPlanProjectionNeverTurnsMissingLinesIntoAZeroTotal() {
+        val complete = plan(line("product-yerba", "offer-a", "store-a"), store("store-a"))
+        val partial = complete.copy(
+            completePriceEvidence = false,
+            missingLineIds = listOf("line-missing")
+        )
+        val request = response(listOf(complete)).result.request.copy(
+            items = listOf(
+                ArgentinaBackendContract.RequestItem("line-offer-a", "Yerba Mate", "1", "kg", "product-yerba"),
+                ArgentinaBackendContract.RequestItem("line-missing", "Tea", "1", "count", "tea")
+            )
+        )
+        val response = response(listOf(partial)).copy(
+            result = response(listOf(partial)).result.copy(request = request)
+        )
+        val projection = ArgentinaBasketPlanProjector.project(response, emptyList())
+
+        assertEquals(ArgentinaBasketPlanStatus.CURRENT_PARTIAL, projection.status)
+        assertEquals("Known subtotal · ARS 12.50", projection.totalText)
+        assertTrue(projection.missingIdentityNames.contains("Tea"))
+        assertTrue(projection.lines.none { it.productEvidenceKey == "tea" })
+    }
+
+    private fun searchOffer(product: String, offer: String, store: String) =
+        ArgentinaBackendContract.SearchOffer(
+            offerKey = offer,
+            productEvidenceKey = product,
+            storeKey = store,
+            storeName = store,
+            storeAddress = mapOf("city" to "Buenos Aires"),
+            storeLatitude = "-34.601",
+            storeLongitude = "-58.381",
+            distanceKm = "1.2",
+            listPrice = money("12.50"),
+            referencePrice = null,
+            quantity = quantity(),
+            quantityStatus = "KNOWN",
+            unitPrice = null,
+            unitPriceBasis = null,
+            releaseDate = "2026-09-06",
+            freshnessStatus = ArgentinaBackendContract.Freshness.FRESH,
+            availability = ArgentinaBackendContract.Availability.UNKNOWN,
+            provenance = ArgentinaBackendContract.Provenance(
+                provider = "ARGENTINA_SEPA_PRECIOS_CLAROS",
+                releaseDate = "2026-09-06",
+                freshnessStatus = ArgentinaBackendContract.Freshness.FRESH,
+                source = "Precios Claros"
+            )
+        )
+
     private fun match(key: String, gtin: String?) =
         PracticalShoppingSearchIdentityPresentation.Match(
             displayName = "Yerba Mate",

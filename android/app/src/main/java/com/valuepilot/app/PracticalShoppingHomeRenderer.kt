@@ -110,7 +110,7 @@ data class PracticalShoppingHomeItemRenderState(
     }
 }
 
-/** Identity-only row for the shopper's separate private Home list. */
+/** Private Home row with an optional bounded Search evidence preview. */
 data class PracticalShoppingHomePrivateIdentityRenderState(
     val identityKey: String,
     val displayName: String,
@@ -119,7 +119,8 @@ data class PracticalShoppingHomePrivateIdentityRenderState(
     val packageQuantityLabel: String?,
     val notice: String,
     /** Whether this exact private Search identity is currently watched. */
-    val watched: Boolean = false
+    val watched: Boolean = false,
+    val qualifiedOffers: List<ArgentinaBackendContract.SearchOffer> = emptyList()
 ) {
     init {
         require(identityKey.isNotBlank())
@@ -128,6 +129,8 @@ data class PracticalShoppingHomePrivateIdentityRenderState(
         require(sourceLabel == null || sourceLabel.isNotBlank())
         require(packageQuantityLabel == null || packageQuantityLabel.isNotBlank())
         require(notice.isNotBlank())
+        require(qualifiedOffers.size <= ArgentinaBackendContract.MAX_SEARCH_OFFERS_PER_IDENTITY)
+        require(qualifiedOffers.all { it.productEvidenceKey == identityKey })
     }
 }
 
@@ -492,7 +495,8 @@ object PracticalShoppingHomeRenderer {
                             sourceLabel = identity.sourceLabel,
                             packageQuantityLabel = identity.packageQuantityLabel,
                             notice = PRIVATE_IDENTITY_NOTICE,
-                            watched = identity.identityKey in watchedProductIdentityKeys
+                            watched = identity.identityKey in watchedProductIdentityKeys,
+                            qualifiedOffers = identity.qualifiedOffers
                         )
                     },
             privateIdentityCollectedKeys =

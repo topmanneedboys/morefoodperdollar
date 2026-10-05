@@ -123,6 +123,48 @@ class TripPlannerPresentationTest {
     }
 
     @Test
+    fun `backend listed-price plan feeds trip cost without claiming savings`() {
+        val projected = TripPlannerProjector.project(
+            state = completeTrip(),
+            basket = basket(planned = 0, privateItems = 1, unknown = 0, revision = "argentina-plan"),
+            directoryAvailable = false,
+            argentinaPlan = ArgentinaBasketPlanProjection(
+                status = ArgentinaBasketPlanStatus.CURRENT_COMPLETE,
+                headline = "Current listed-price plan",
+                planType = "SINGLE_STORE",
+                totalText = "Listed total · ARS 12.50",
+                merchandiseTotal = Money.parse("12.50", "CAD"),
+                coverageText = "1 of 1 requested items have exact price evidence",
+                storeSummary = "Mercado",
+                notice = "Published prices do not establish live shelf inventory; availability remains unknown.",
+                releaseDate = "2026-09-06",
+                lines = listOf(
+                    ArgentinaBasketPlanLineProjection(
+                        productEvidenceKey = "yerba",
+                        productName = "Yerba Mate",
+                        brand = "Mate",
+                        storeName = "Mercado",
+                        packageCount = 1,
+                        packageQuantityLabel = "1 kg",
+                        lineTotalText = "ARS 12.50",
+                        freshnessText = "Fresh qualified release",
+                        availabilityText = "Availability unknown"
+                    )
+                ),
+                missingIdentityNames = emptyList()
+            )
+        )
+
+        assertEquals(TripPlannerSurfaceMode.CALCULATED, projected.mode)
+        assertEquals("CAD 2.70", projected.tripCostAmount)
+        assertEquals("Unknown", projected.saveAtLeastAmount)
+        assertEquals("Current listed prices available", projected.decisionHeadline)
+        assertTrue(projected.detailLines.any { it.contains("Listed total") })
+        assertTrue(projected.detailLines.any { it.contains("Estimated shopping total · CAD 15.20") })
+        assertTrue(projected.currentSavingsSupport.contains("second current store"))
+    }
+
+    @Test
     fun `conflicting prices are concise and do not force a winner`() {
         val trip = completeTrip()
         val projected = TripPlannerProjector.project(

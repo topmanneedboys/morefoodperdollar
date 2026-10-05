@@ -15,7 +15,7 @@ enum class PracticalShoppingBasketStatus {
     PLANNED
 }
 
-/** Identity-only private Basket row. It carries no price, store or availability authority. */
+/** Private Basket row with an optional bounded Search evidence preview. */
 data class PracticalShoppingBasketPrivateIdentityRenderState(
     val identityKey: String,
     val displayName: String,
@@ -24,7 +24,9 @@ data class PracticalShoppingBasketPrivateIdentityRenderState(
     val packageQuantityLabel: String?,
     val collected: Boolean,
     val notice: String = PracticalShoppingHomeRenderer.PRIVATE_IDENTITY_NOTICE,
-    val watched: Boolean = false
+    val watched: Boolean = false,
+    /** Null means the row is identity-only for this session. */
+    val pricePreviewText: String? = null
 ) {
     init {
         require(identityKey.isNotBlank())
@@ -33,6 +35,7 @@ data class PracticalShoppingBasketPrivateIdentityRenderState(
         require(sourceLabel == null || sourceLabel.isNotBlank())
         require(packageQuantityLabel == null || packageQuantityLabel.isNotBlank())
         require(notice.isNotBlank())
+        require(pricePreviewText == null || pricePreviewText.isNotBlank())
     }
 }
 
@@ -229,7 +232,10 @@ object PracticalShoppingBasketRenderer {
                             packageQuantityLabel = identity.packageQuantityLabel,
                             collected =
                                 identity.identityKey in source.privateIdentityCollectedKeys,
-                            watched = identity.watched
+                            watched = identity.watched,
+                            pricePreviewText = identity.qualifiedOffers.firstOrNull()?.let { offer ->
+                                "Listed ${offer.listPrice.currency} ${offer.listPrice.amount} at ${offer.storeName}; availability unknown"
+                            }
                         )
                     }
         )

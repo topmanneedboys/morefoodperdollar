@@ -441,6 +441,28 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         basketDetailsBody
     )
     private val sampleCardView = sampleCard()
+    private val argentinaPlanTitle = line(
+        "CURRENT PRICE CHECK",
+        ValuePilotDesignTokens.Typography.LABEL_SP,
+        ValuePilotDesignTokens.Colors.PRIMARY_DARK,
+        true
+    )
+    private val argentinaPlanDetails = line(
+        "",
+        ValuePilotDesignTokens.Typography.BODY_SP,
+        ValuePilotDesignTokens.Colors.TEXT_PRIMARY,
+        topPadding = ValuePilotDesignTokens.Spacing.XS_DP
+    )
+    private val argentinaPlanBody = column().apply {
+        addView(argentinaPlanTitle)
+        addView(argentinaPlanDetails)
+    }
+    private val argentinaPlanCard = card(
+        ValuePilotDesignTokens.Colors.SURFACE,
+        ValuePilotDesignTokens.Colors.OUTLINE,
+        ValuePilotDesignTokens.Spacing.MD_DP,
+        argentinaPlanBody
+    )
 
     private var progressState = PracticalShoppingBasketProgressSession.initial()
     private var lastRenderState: PracticalShoppingBasketRenderState? = null
@@ -467,6 +489,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         addView(itemsContainer)
         addView(sampleCardView)
         addView(privateIdentityCard)
+        addView(argentinaPlanCard)
         addView(detailsToggle)
         addView(basketDetailsCard)
         summaryStore.visibility = GONE
@@ -482,6 +505,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         extraStopRule.visibility = GONE
         extraStopRuleNotice.visibility = GONE
         privateIdentityCard.visibility = GONE
+        argentinaPlanCard.visibility = GONE
         privateIdentityPlanButton.visibility = GONE
         recordPurchaseButton.visibility = GONE
         detailsToggle.visibility = GONE
@@ -489,6 +513,13 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     }
 
     fun render(state: PracticalShoppingBasketRenderState) {
+        render(state, null)
+    }
+
+    internal fun render(
+        state: PracticalShoppingBasketRenderState,
+        argentinaPlan: ArgentinaBasketPlanProjection?
+    ) {
         hasRenderedState = true
         lastRenderState = state
         pendingRestoredDetailsExpanded?.let { restored ->
@@ -540,6 +571,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             if (presentation.showTripAction) VISIBLE else GONE
         tripPlannerButton.isEnabled = onOpenTripPlanner != null && hasRenderedState
         renderPrivateIdentities(state.privateIdentityItems)
+        renderArgentinaPlan(argentinaPlan)
         renderCollectionProgress(state, presentation)
         collectionNotice.text = state.collectionNotice.orEmpty()
         renderCollectionResetControl()
@@ -566,6 +598,38 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         summaryStore.contentDescription = summary.storeSummary
         summaryTrip.contentDescription = summary.tripSummary
         summaryPrivate.contentDescription = summary.privateChecklistSummary
+    }
+
+    private fun renderArgentinaPlan(plan: ArgentinaBasketPlanProjection?) {
+        if (plan == null) {
+            argentinaPlanCard.visibility = GONE
+            argentinaPlanDetails.text = ""
+            return
+        }
+        argentinaPlanCard.visibility = VISIBLE
+        argentinaPlanTitle.text = when (plan.status) {
+            ArgentinaBasketPlanStatus.CURRENT_COMPLETE -> "CURRENT LISTED-PRICE PLAN"
+            ArgentinaBasketPlanStatus.CURRENT_PARTIAL -> "CURRENT PRICE COVERAGE"
+            ArgentinaBasketPlanStatus.NO_CURRENT_PLAN -> "CURRENT PRICE CHECK"
+        }
+        argentinaPlanDetails.text = buildString {
+            append(plan.headline)
+            append("\n")
+            plan.totalText?.let { append(it).append("\n") }
+            append(plan.coverageText)
+            plan.storeSummary?.let { append("\nStores · ").append(it) }
+            plan.evaluatedPlanSummary?.let { append("\nEvaluated plans · ").append(it) }
+            plan.lines.forEach { line ->
+                append("\n• ").append(line.productName)
+                line.brand?.let { append(" · ").append(it) }
+                append(" · ").append(line.lineTotalText)
+                line.unitPriceText?.let { append(" · ").append(it) }
+                append(" · ").append(line.storeName)
+                append(" · ").append(line.availabilityText)
+            }
+            append("\n\n").append(plan.notice)
+        }
+        argentinaPlanDetails.contentDescription = argentinaPlanDetails.text
     }
 
     /**
@@ -812,6 +876,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         }
         private val body = column(padded = true)
         private val toggle = privateIdentityButton(identity)
+        private val pricePreview = line("", 12f, ValuePilotDesignTokens.Colors.PRIMARY_DARK, true, topPadding = 3)
         private val brand = line("", 12f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 2)
         private val packageQuantity = line("", 12f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 2)
         private val source = line("", 12f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 2)
@@ -840,6 +905,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             source.visibility = GONE
             notice.visibility = GONE
             body.addView(toggle)
+            body.addView(pricePreview)
             body.addView(brand)
             body.addView(packageQuantity)
             body.addView(source)
@@ -891,6 +957,9 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
                     )
                 )
             toggle.isEnabled = onPrivateIdentityToggle != null
+            pricePreview.text = identity.pricePreviewText.orEmpty()
+            pricePreview.contentDescription = identity.pricePreviewText
+            pricePreview.visibility = if (identity.pricePreviewText != null) VISIBLE else GONE
             brand.text = identity.brand?.let { "Brand: $it" }.orEmpty()
             brand.visibility = if (moreExpanded && identity.brand != null) VISIBLE else GONE
             packageQuantity.text = identity.packageQuantityLabel?.let { "Package: $it" }.orEmpty()

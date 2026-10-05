@@ -32,7 +32,40 @@ internal object ArgentinaProductStoreMapAdapter {
     fun canQuery(selected: PracticalShoppingSearchIdentityPresentation.Match): Boolean =
         selected.sourceLabel == SOURCE_FALLBACK &&
             selected.identityKey.isNotBlank() &&
-            explicitPackageQuantity(selected.packageQuantityLabel) != null
+            (selected.qualifiedOffers.isNotEmpty() ||
+                explicitPackageQuantity(selected.packageQuantityLabel) != null)
+
+    /**
+     * Builds the map index directly from the bounded Search evidence already
+     * attached to this exact identity.  A second shop request is unnecessary
+     * when Search has supplied current offer/store evidence, and skipping it
+     * also keeps the map action faithful to the evidence the shopper saw.
+     */
+    fun indexFor(
+        offers: List<ArgentinaBackendContract.SearchOffer>,
+        selected: PracticalShoppingSearchIdentityPresentation.Match
+    ): ProductStoreMapIndex {
+        require(offers.size <= ArgentinaBackendContract.MAX_SEARCH_OFFERS_PER_IDENTITY)
+        val evidence = offers.mapNotNull { offer ->
+            if (offer.productEvidenceKey != selected.identityKey) return@mapNotNull null
+            val coordinate = ProductStoreMapCoordinate.parse(offer.storeLatitude, offer.storeLongitude)
+                ?.takeIf(::isBroadlyArgentinian)
+            ProductStoreMapEvidence(
+                relationshipKey = offer.offerKey,
+                productEvidenceKey = offer.productEvidenceKey,
+                gtin = selected.gtin,
+                storeKey = com.valuepilot.core.ShoppingStoreKey(offer.storeKey),
+                storeName = offer.storeName,
+                addressLabel = addressLabel(offer.storeAddress),
+                coordinate = coordinate,
+                releaseDate = offer.releaseDate,
+                freshness = offer.freshnessStatus.toMapFreshness(),
+                price = moneyOrNull(offer.listPrice),
+                sourceLabel = offer.provenance.provider.ifBlank { SOURCE_FALLBACK }
+            )
+        }
+        return ProductStoreMapIndex.build(evidence.take(ProductStoreMapIndex.MAX_RECORDS + 1))
+    }
 
     fun indexFor(
         response: ArgentinaBackendContract.ShopResponse,
@@ -85,6 +118,19 @@ internal object ArgentinaProductStoreMapAdapter {
         origin: ProductStoreMapCoordinate?
     ): ProductStoreMapResult =
         indexFor(response, selected).query(
+            ProductStoreMapQuery(
+                productEvidenceKey = selected.identityKey,
+                gtin = selected.gtin,
+                origin = origin
+            )
+        )
+
+    fun query(
+        offers: List<ArgentinaBackendContract.SearchOffer>,
+        selected: PracticalShoppingSearchIdentityPresentation.Match,
+        origin: ProductStoreMapCoordinate?
+    ): ProductStoreMapResult =
+        indexFor(offers, selected).query(
             ProductStoreMapQuery(
                 productEvidenceKey = selected.identityKey,
                 gtin = selected.gtin,

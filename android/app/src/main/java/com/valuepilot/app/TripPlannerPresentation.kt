@@ -5,6 +5,7 @@ import com.valuepilot.core.ShoppingDecisionBlocker
 import com.valuepilot.core.ShoppingDecisionScenarioResult
 import com.valuepilot.core.ShoppingDecisionScenarioStatus
 import com.valuepilot.core.TripCostInput
+import com.valuepilot.core.TripCostCalculator
 import com.valuepilot.core.TripCostResult
 import com.valuepilot.core.TripDistanceBasis
 import java.math.BigDecimal
@@ -98,12 +99,18 @@ internal object TripPlannerProjector {
         basket: TripPlannerBasketSnapshot,
         directoryAvailable: Boolean,
         unavailable: Boolean = false,
-        decision: ShoppingDecisionScenarioResult? = null
+        decision: ShoppingDecisionScenarioResult? = null,
+        argentinaPlan: ArgentinaBasketPlanProjection? = null
     ): TripPlannerSurfaceState {
         if (unavailable || state == null) return unavailableState(basket)
 
         val hasBasket = basket.totalVisibleItemCount > 0
+        // The backend plan already contains the authoritative exact listed
+        // prices.  Trip cost is the only value calculated here, using the
+        // existing shared-core calculator and the shopper's explicit inputs.
+        // No backend release timestamp is manufactured as an observation time.
         val result = decision?.tripCost
+            ?: argentinaPlan?.let { state.costInputOrNull()?.let(TripCostCalculator::calculate) }
         val mode =
             when {
                 !hasBasket -> TripPlannerSurfaceMode.EMPTY_BASKET
@@ -115,9 +122,17 @@ internal object TripPlannerProjector {
         val destinationReady = destination != null
         val originReady = state.origin != null
         val assumptionsReady = input != null
-        val decisionCopy = decisionCopy(decision)
+        val decisionCopy =
+            argentinaPlan?.let(::argentinaDecisionCopy) ?: decisionCopy(decision)
         val costCopy = costCopy(result)
-        val breakEven = decision?.breakEvenSavingsRequired
+        val breakEven =
+            if (argentinaPlan != null) {
+                // Without a second current store scenario there is no savings
+                // claim.  Trip cost remains the input needed to evaluate one.
+                null
+            } else {
+                decision?.breakEvenSavingsRequired
+            }
 
         return TripPlannerSurfaceState(
             mode = mode,
@@ -135,11 +150,16 @@ internal object TripPlannerProjector {
                 "Trip cost needed first."
             },
             currentSavingsAmount = "Unknown",
-            currentSavingsSupport = currentSavingsSupport(decision),
+            currentSavingsSupport =
+                if (argentinaPlan != null) {
+                    "A second current store plan is needed to calculate savings."
+                } else {
+                    currentSavingsSupport(decision)
+                },
             decisionHeadline = decisionCopy.headline,
             decisionDetail = decisionCopy.detail,
             decisionTone = decisionCopy.tone,
-            detailLines = detailLines(state, basket, result, decision),
+            detailLines = detailLines(state, basket, result, decision, argentinaPlan),
             destinationReady = destinationReady,
             originReady = originReady,
             assumptionsReady = assumptionsReady,
@@ -220,6 +240,28 @@ internal object TripPlannerProjector {
         val tone: TripPlannerDecisionTone
     )
 
+    private fun argentinaDecisionCopy(plan: ArgentinaBasketPlanProjection): DecisionCopy =
+        when (plan.status) {
+            ArgentinaBasketPlanStatus.CURRENT_COMPLETE ->
+                DecisionCopy(
+                    headline = "Current listed prices available",
+                    detail = "${plan.coverageText}. This plan does not establish live shelf inventory or rank another store.",
+                    tone = TripPlannerDecisionTone.POSITIVE
+                )
+            ArgentinaBasketPlanStatus.CURRENT_PARTIAL ->
+                DecisionCopy(
+                    headline = "Current price coverage is incomplete",
+                    detail = "${plan.coverageText}. Missing prices stay unknown; ValuePilot will not call this a complete basket.",
+                    tone = TripPlannerDecisionTone.WARNING
+                )
+            ArgentinaBasketPlanStatus.NO_CURRENT_PLAN ->
+                DecisionCopy(
+                    headline = "Need more current prices",
+                    detail = "No exact current price plan was returned for this Basket. Availability remains unknown.",
+                    tone = TripPlannerDecisionTone.UNKNOWN
+                )
+        }
+
     private fun decisionCopy(decision: ShoppingDecisionScenarioResult?): DecisionCopy {
         if (decision == null) {
             return DecisionCopy(
@@ -291,7 +333,8 @@ internal object TripPlannerProjector {
         state: TripPlannerState,
         basket: TripPlannerBasketSnapshot,
         result: TripCostResult?,
-        decision: ShoppingDecisionScenarioResult?
+        decision: ShoppingDecisionScenarioResult?,
+        argentinaPlan: ArgentinaBasketPlanProjection? = null
     ): List<String> = buildList {
         add(basketSummary(basket))
         add(
@@ -313,6 +356,21 @@ internal object TripPlannerProjector {
         )
         add(state.costInputOrNull()?.let(::assumptionsSummary) ?: "Trip details · not complete")
         result?.let { add("Estimated total · ${formatMoney(it.total)}") }
+        argentinaPlan?.let { plan ->
+            add(plan.headline)
+            plan.totalText?.let { add(it) }
+            val trip = result?.total
+            val merchandise = plan.merchandiseTotal
+            if (trip != null && merchandise != null && sameMoneySpec(trip, merchandise)) {
+                add("Estimated shopping total · ${formatMoney(merchandise + trip)}")
+            } else if (merchandise != null) {
+                add("Products · ${formatMoney(merchandise)}")
+                add("Estimated shopping total · Unknown until trip currency matches")
+            }
+            plan.evaluatedPlanSummary?.let { add("Evaluated plans · $it") }
+            add(plan.coverageText)
+            add("Published prices only · availability unknown")
+        }
         decision?.let { add(currentSavingsSupport(it)) }
     }.take(8)
 
@@ -337,4 +395,7 @@ internal object TripPlannerProjector {
             .movePointLeft(money.fractionDigits)
             .setScale(money.fractionDigits)
             .toPlainString()
+
+    private fun sameMoneySpec(left: Money, right: Money): Boolean =
+        left.currencyCode == right.currencyCode && left.fractionDigits == right.fractionDigits
 }
