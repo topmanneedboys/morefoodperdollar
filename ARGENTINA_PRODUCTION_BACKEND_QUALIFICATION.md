@@ -77,3 +77,37 @@ alternative evidence were reused; dense diagnostics remain explicitly
 This report records the already-proven 128 logical partition / 32 physical
 pack mobile winner as preserved. No new data design or Android networking was
 introduced by the report finalization.
+
+## 2026-10-05 production activation checkpoint
+
+The immutable, previously verified October 1 candidate was activated without
+redownloading or reparsing the national source:
+
+- release: `argentina-sepa-2026-10-01-21fd4955b01ba648-routing-v1-search-v2`
+- source: `2026-10-01`, SHA-256
+  `21fd4955b01ba648d480227369f5c823f1f76e4485a484d848ec4c1b2c7ba1fc`
+- archive evidence: `CANDIDATE_VERIFIED`, complete manifest, 1,163 immutable
+  content-addressed objects (861,301,154 bytes)
+- runtime mirrors: `valuepilot-argentina-runtime-us-east4` and
+  `valuepilot-argentina-runtime-southamerica-east1`
+- active pointers: both point to the October 1 release; both preserve
+  September 25 as `previousReleaseId` and `lastKnownGoodReleaseId` was set to
+  the candidate only after both CAS writes succeeded
+- authenticated smoke: both regions returned `FRESH`, the candidate release
+  ID, `androidNetworkingAuthorized=true`, and `/v1/search` returned five
+  matches with `hasMore=true` and `nextPage=1` for `arroz`
+- measured direct `/v1/search` request time: 3,287 ms (US) and 2,870 ms (SA)
+
+The promotion receipt is stored at
+`gs://valuepilot-argentina-release-control/control/automated-promotions/argentina-sepa-2026-10-01-21fd4955b01ba648-routing-v1-search-v2.json`.
+The September 25 pointer bytes were retained as the rollback target. No raw
+SEPA ZIP, national data, image, or Android asset was committed or shipped.
+
+The acquisition controller now keeps one bounded pending workflow identity
+across Argentina date boundaries, accepts nullable non-terminal Workflows
+payloads, and promotes only a terminal `CANDIDATE_VERIFIED` result through
+two-region CAS, authenticated smoke, and compensating rollback. GitHub's last
+recorded scheduled acquisition run is October 2; the workflow remains active,
+but the Actions API shows no emitted schedule event after that date. This is
+recorded as a scheduler-delivery gap, not as a source or backend qualification
+failure; no duplicate national build was started.
