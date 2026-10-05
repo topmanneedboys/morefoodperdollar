@@ -26,7 +26,8 @@ class PersonalShoppingSurfaceBoundaryTest {
         assertTrue(history.contains("text = \"More\""))
         assertTrue(watch.contains("private val rowViews = LinkedHashMap<String, WatchRow>()"))
         assertTrue(watch.contains("text = \"More\""))
-        assertTrue(watch.contains("No private purchase or price history recorded yet."))
+        assertTrue(watch.contains("Last paid: \${latest.priceText}"))
+        assertTrue(watch.contains("Last observed: \${latest.priceText}"))
         assertFalse(history.contains("removeAllViews()"))
         assertFalse(watch.contains("rowsContainer.removeAllViews()"))
     }

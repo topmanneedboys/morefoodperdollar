@@ -152,6 +152,12 @@ internal class PriceWatchSurfaceView @JvmOverloads constructor(
             targetText.text = next.targetText
             currentOfferText.text = next.currentOfferText
             historySummary.text = historySummary(next)
+            historySummary.visibility =
+                if (next.purchaseHistory.isNotEmpty() || next.personalHistory.isNotEmpty()) {
+                    VISIBLE
+                } else {
+                    GONE
+                }
             addObservationButton.setOnClickListener {
                 onAction?.invoke(current.addObservationAction)
             }
@@ -184,14 +190,19 @@ internal class PriceWatchSurfaceView @JvmOverloads constructor(
     }
 
     private fun historySummary(row: PriceWatchRow): String {
-        val purchaseCount = row.purchaseHistory.size
-        val observationCount = row.personalHistory.size
-        return when {
-            purchaseCount == 0 && observationCount == 0 ->
-                "No private purchase or price history recorded yet."
-            else ->
-                "$purchaseCount confirmed purchase${if (purchaseCount == 1) "" else "s"} · " +
-                    "$observationCount personal observation${if (observationCount == 1) "" else "s"}"
+        val latest =
+            (row.purchaseHistory + row.personalHistory)
+                .sortedWith(
+                    compareBy<PriceWatchHistoryLine> { it.dateText == "Date unknown" }
+                        .thenByDescending { it.dateText }
+                        .thenBy { it.recordId }
+                )
+                .firstOrNull()
+                ?: return ""
+        return when (latest.sourceText) {
+            "Confirmed purchase" -> "Last paid: ${latest.priceText}"
+            "Personal price observation" -> "Last observed: ${latest.priceText}"
+            else -> latest.priceText
         }
     }
 

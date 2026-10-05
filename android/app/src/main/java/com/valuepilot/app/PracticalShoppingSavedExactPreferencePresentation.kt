@@ -152,7 +152,7 @@ object PracticalShoppingSavedExactPreferenceUiProjector {
                     } else {
                         PracticalShoppingSavedProductUiRow(
                             title = label,
-                            supportingText = "Exact product choice",
+                                supportingText = "Package size unknown",
                             action =
                                 PracticalShoppingSavedExactPreferenceUiAction.DeleteProduct(
                                     preference.itemKey

@@ -1675,6 +1675,9 @@ class MainActivity : AppCompatActivity() {
                 PracticalShoppingSavedSurfaceAction.OpenSearch ->
                     dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.SEARCH))
 
+                is PracticalShoppingSavedSurfaceAction.AddToHome ->
+                    addSavedProductToHome(action)
+
                 is PracticalShoppingSavedSurfaceAction.CheckProductPrice ->
                     openGoodPriceForSavedProduct(action.displayName)
 
@@ -3555,6 +3558,30 @@ class MainActivity : AppCompatActivity() {
         if (nextState != previousState) {
             authorizePrivateListPersistence()
         }
+        dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.HOME))
+        renderHome()
+    }
+
+    private fun addSavedProductToHome(action: PracticalShoppingSavedSurfaceAction.AddToHome) {
+        val previousState = homeSessionState
+        val identity =
+            PracticalShoppingPrivateIdentity(
+                identityKey = action.identityKey,
+                displayName = action.displayName
+            )
+        val nextState = PracticalShoppingHomeSession.addPrivateIdentity(previousState, identity)
+        if (nextState == previousState) {
+            val message =
+                if (previousState.privateIdentities.any { it.identityKey == action.identityKey }) {
+                    "That product is already in Home."
+                } else {
+                    "Home is full; the saved product was not added."
+                }
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+            return
+        }
+        homeSessionState = nextState
+        authorizePrivateListPersistence()
         dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.HOME))
         renderHome()
     }

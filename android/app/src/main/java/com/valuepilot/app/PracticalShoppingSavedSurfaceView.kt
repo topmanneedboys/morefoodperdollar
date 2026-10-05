@@ -32,6 +32,7 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
 
     private val ownerBoundButtons = mutableListOf<Button>()
     private var clearAllConfirmationDialog: AlertDialog? = null
+    private var lastRenderedState: PracticalShoppingSavedSurfaceState? = null
 
     var onAction: ((PracticalShoppingSavedSurfaceAction) -> Unit)? = null
         set(value) {
@@ -68,6 +69,11 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
     }
 
     override fun render(state: PracticalShoppingSavedSurfaceState) {
+        // Shell renders can repeat while the user scrolls or returns from a contextual route.
+        // Avoid rebuilding up to the bounded Saved rows when the immutable projection did not
+        // change; the other personal surfaces use the same keyed/stable-render principle.
+        if (lastRenderedState == state) return
+        lastRenderedState = state
         // A fresh projection supersedes any confirmation tied to the previous
         // projection. Do not leave a detached or stale dialog actionable.
         clearAllConfirmationDialog?.dismiss()
@@ -205,7 +211,7 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
         action: PracticalShoppingSavedSurfaceAction.Preference?,
         actionLabel: String?,
         actionDescription: String?,
-        secondaryAction: PracticalShoppingSavedSurfaceAction.CheckProductPrice?,
+        secondaryAction: PracticalShoppingSavedSurfaceAction?,
         secondaryActionLabel: String?,
         secondaryActionDescription: String?,
         watchAction: PracticalShoppingSavedSurfaceAction.TogglePriceWatch? = null,

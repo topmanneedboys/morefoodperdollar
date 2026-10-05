@@ -27,6 +27,19 @@ sealed interface PracticalShoppingSavedSurfaceAction {
     /** Opens the existing Search route without manufacturing a saved identity. */
     data object OpenSearch : PracticalShoppingSavedSurfaceAction
 
+    /** Adds one already-saved exact identity to Home without creating price or stock facts. */
+    data class AddToHome(
+        val identityKey: String,
+        val displayName: String
+    ) : PracticalShoppingSavedSurfaceAction {
+        init {
+            require(identityKey.isNotBlank())
+            require(displayName.isNotBlank())
+            require(displayName.length <= MAX_SAVED_SURFACE_ACTION_DISPLAY_NAME_LENGTH)
+            require(displayName.none { character -> Character.isISOControl(character.code) })
+        }
+    }
+
     /**
      * Starts the existing Good Price workflow with a bounded display-only name prefill.
      *
@@ -68,7 +81,7 @@ data class PracticalShoppingSavedSurfaceProductRow(
     val action: PracticalShoppingSavedSurfaceAction.Preference?,
     val actionLabel: String?,
     val actionDescription: String?,
-    val secondaryAction: PracticalShoppingSavedSurfaceAction.CheckProductPrice? = null,
+    val secondaryAction: PracticalShoppingSavedSurfaceAction? = null,
     val secondaryActionLabel: String? = null,
     val secondaryActionDescription: String? = null,
     val watchAction: PracticalShoppingSavedSurfaceAction.TogglePriceWatch? = null,
@@ -308,17 +321,31 @@ object PracticalShoppingSavedSurfaceProjector {
                         },
                     secondaryAction =
                         if (interactionsEnabled) {
-                            PracticalShoppingSavedSurfaceAction.CheckProductPrice(
+                            row.productIdentityKey?.let { identityKey ->
+                                PracticalShoppingSavedSurfaceAction.AddToHome(
+                                    identityKey = identityKey,
+                                    displayName = row.title
+                                )
+                            } ?: PracticalShoppingSavedSurfaceAction.CheckProductPrice(
                                 itemKey = row.action.itemKey,
                                 displayName = row.title
                             )
                         } else {
                             null
                         },
-                    secondaryActionLabel = if (interactionsEnabled) "Check price" else null,
+                    secondaryActionLabel =
+                        if (interactionsEnabled) {
+                            if (row.productIdentityKey == null) "Check price" else "Add"
+                        } else {
+                            null
+                        },
                     secondaryActionDescription =
                         if (interactionsEnabled) {
-                            "Check a price for ${row.title}; package quantity and price are still required"
+                            if (row.productIdentityKey == null) {
+                                "Check a price for ${row.title}; package quantity and price are still required"
+                            } else {
+                                "Add exact saved product ${row.title} to your private Home list"
+                            }
                         } else {
                             null
                         },

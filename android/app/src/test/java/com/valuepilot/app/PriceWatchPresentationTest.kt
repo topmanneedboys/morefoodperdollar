@@ -44,6 +44,7 @@ class PriceWatchPresentationTest {
         assertEquals(1, row.purchaseHistory.size)
         assertEquals(1, row.personalHistory.size)
         assertEquals("No current offer", row.currentOfferText)
+        assertEquals("Private watches on this device. Current offers remain unknown.", state.guidance)
         assertEquals(key, row.toggleAction.productIdentityKey)
     }
 

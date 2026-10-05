@@ -148,6 +148,51 @@ class PracticalShoppingSavedSurfaceProjectorTest {
     }
 
     @Test
+    fun `saved product with exact identity gets one typed add action`() {
+        val projection =
+            PracticalShoppingSavedExactPreferenceUiProjection(
+                state =
+                    PracticalShoppingSavedExactPreferenceUiState(
+                        headline = "Saved",
+                        productRows =
+                            listOf(
+                                PracticalShoppingSavedProductUiRow(
+                                    title = "Coffee",
+                                    supportingText = "Exact product choice",
+                                    action = deleteProduct,
+                                    productIdentityKey = "gtin:000123"
+                                )
+                            ),
+                        storeRows = emptyList(),
+                        unresolvedDisplayNameCount = 0,
+                        notice = null,
+                        emptyMessage = null,
+                        clearAllAction = PracticalShoppingSavedExactPreferenceUiAction.ClearAll
+                    ),
+                unresolvedProductKeys = emptyList(),
+                unresolvedStoreKeys = emptyList()
+            )
+
+        val row =
+            PracticalShoppingSavedSurfaceProjector.project(
+                lifecycle(
+                    status = PracticalShoppingSavedLifecycleStatus.READY,
+                    projection = projection
+                )
+            ).productRows.single()
+
+        assertEquals(
+            PracticalShoppingSavedSurfaceAction.AddToHome(
+                identityKey = "gtin:000123",
+                displayName = "Coffee"
+            ),
+            row.secondaryAction
+        )
+        assertEquals("Add", row.secondaryActionLabel)
+        assertTrue(row.secondaryActionDescription?.contains("private Home") == true)
+    }
+
+    @Test
     fun `empty ready projection is a real empty state with no clear action`() {
         val surface =
             PracticalShoppingSavedSurfaceProjector.project(

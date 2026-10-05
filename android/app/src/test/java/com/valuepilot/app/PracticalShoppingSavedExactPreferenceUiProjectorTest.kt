@@ -37,7 +37,7 @@ class PracticalShoppingSavedExactPreferenceUiProjectorTest {
 
         assertEquals("Saved", projection.state.headline)
         assertEquals("Large Eggs 12 Pack", projection.state.productRows.single().title)
-        assertEquals("Exact product choice", projection.state.productRows.single().supportingText)
+        assertEquals("Package size unknown", projection.state.productRows.single().supportingText)
         assertEquals(
             PracticalShoppingSavedExactPreferenceUiAction.DeleteProduct(eggs),
             projection.state.productRows.single().action
