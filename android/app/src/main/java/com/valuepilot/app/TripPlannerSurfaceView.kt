@@ -2,10 +2,8 @@ package com.valuepilot.app
 
 import android.content.Context
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.util.TypedValue
-import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -22,112 +20,138 @@ internal sealed interface TripPlannerUiAction {
     data object Clear : TripPlannerUiAction
 }
 
-/** Presentation-only Trip Planner surface; all facts and actions arrive from immutable state. */
+/** Presentation-only Trip surface. It owns layout and taps, never trip or decision authority. */
 internal class TripPlannerSurfaceView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
 ) : LinearLayout(context, attrs, defStyleAttr) {
 
-    private val headline = textLine("", 22f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true)
+    private val headline = textLine("", 24f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true)
     private val guidance = textLine("", 14f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, top = 8)
-    private val basketSummary = card().apply {
+    private val basketSummary = textLine("", 14f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, top = 14)
+    private val storeSummary = textLine("", 14f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, top = 4)
+
+    private val tripDetailsCard = card().apply {
         addView(cardColumn().apply {
-            addView(textLine("Basket coverage", 13f, ValuePilotDesignTokens.Colors.TEXT_MUTED, bold = true))
-            addView(textLineView(""))
-        })
-    }
-    private val basketSummaryText = (basketSummary.getChildAt(0) as LinearLayout).getChildAt(1) as TextView
-    private val tripCard = card().apply {
-        addView(cardColumn().apply {
-            addView(textLine("Trip overview", 13f, ValuePilotDesignTokens.Colors.TEXT_MUTED, bold = true))
-            addView(textLineView(""))
-            addView(textLineView(""))
-            addView(textLineView(""))
-            addView(textLineView(""))
-            addView(textLineView(""))
-        })
-    }
-    private val tripCardBody = tripCard.getChildAt(0) as LinearLayout
-    private val destinationText = tripCardBody.getChildAt(1) as TextView
-    private val originText = tripCardBody.getChildAt(2) as TextView
-    private val tripCostHeadline = tripCardBody.getChildAt(3) as TextView
-    private val tripCostDetail = tripCardBody.getChildAt(4) as TextView
-    private val breakEvenText = tripCardBody.getChildAt(5) as TextView
-    private val evidenceCard = card().apply {
-        addView(cardColumn().apply {
-            addView(textLineView(""))
-            addView(textLineView(""))
-            addView(LinearLayout(context).apply {
-                orientation = HORIZONTAL
-                tag = "evidence-chips"
+            addView(label("Trip details"))
+            addView(textLine("", 14f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, top = 5))
+            addView(ValuePilotProgrammaticButton.outlined(context).apply {
+                text = "Edit"
+                contentDescription = "Edit distance, fuel use, fuel price, tolls and parking"
+                layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.XS_DP)
+                setOnClickListener { onAction?.invoke(TripPlannerUiAction.EditTripAssumptions) }
+                tag = "edit-trip-details"
             })
         })
     }
-    private val evidenceCardBody = evidenceCard.getChildAt(0) as LinearLayout
-    private val decisionHeadline = evidenceCardBody.getChildAt(0) as TextView
-    private val decisionDetail = evidenceCardBody.getChildAt(1) as TextView
-    private val evidenceChips = evidenceCardBody.getChildAt(2) as LinearLayout
+    private val tripDetailsBody = tripDetailsCard.getChildAt(0) as LinearLayout
+    private val tripDetailsSummary = tripDetailsBody.getChildAt(1) as TextView
+    private val editTripDetailsButton = tripDetailsBody.getChildAt(2) as MaterialButton
+
+    private val tripCostCard = card().apply {
+        addView(cardColumn().apply {
+            addView(label("Trip cost"))
+            addView(textLine("", 30f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true, top = 5))
+            addView(textLine("", 14f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, top = 4))
+        })
+    }
+    private val tripCostBody = tripCostCard.getChildAt(0) as LinearLayout
+    private val tripCostAmount = tripCostBody.getChildAt(1) as TextView
+    private val tripCostSupport = tripCostBody.getChildAt(2) as TextView
+
+    private val breakEvenCard = card().apply {
+        addView(cardColumn().apply {
+            addView(label("Save at least"))
+            addView(textLine("", 24f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true, top = 5))
+            addView(textLine("", 14f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, top = 4))
+        })
+    }
+    private val breakEvenBody = breakEvenCard.getChildAt(0) as LinearLayout
+    private val saveAtLeastAmount = breakEvenBody.getChildAt(1) as TextView
+    private val saveAtLeastSupport = breakEvenBody.getChildAt(2) as TextView
+
+    private val savingsCard = card().apply {
+        addView(cardColumn().apply {
+            addView(label("Current savings"))
+            addView(textLine("", 22f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true, top = 5))
+            addView(textLine("", 14f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, top = 4))
+        })
+    }
+    private val savingsBody = savingsCard.getChildAt(0) as LinearLayout
+    private val currentSavingsAmount = savingsBody.getChildAt(1) as TextView
+    private val currentSavingsSupport = savingsBody.getChildAt(2) as TextView
+
+    private val decisionCard = card().apply {
+        addView(cardColumn().apply {
+            addView(label("For this decision"))
+            addView(textLine("", 19f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true, top = 5))
+            addView(textLine("", 14f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, top = 4))
+        })
+    }
+    private val decisionBody = decisionCard.getChildAt(0) as LinearLayout
+    private val decisionHeadline = decisionBody.getChildAt(1) as TextView
+    private val decisionDetail = decisionBody.getChildAt(2) as TextView
+
     private val detailsButton = ValuePilotProgrammaticButton.outlined(context).apply {
-        text = "Why this answer"
-        contentDescription = "Show the trip assumptions and shopping evidence details"
-        layoutParams = fullWidth(top = ValuePilotDesignTokens.Spacing.SM_DP)
+        text = "Why?"
+        contentDescription = "Show the trip details and price context"
+        layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.SM_DP)
         setOnClickListener { setDetailsExpanded(!detailsExpanded) }
     }
     private val detailsContainer = LinearLayout(context).apply {
         orientation = VERTICAL
         visibility = GONE
-        layoutParams = fullWidth(top = ValuePilotDesignTokens.Spacing.XS_DP)
+        layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.XS_DP)
     }
-    private val detailLines = mutableListOf<TextView>()
     private val primaryButton = ValuePilotProgrammaticButton.filled(context).apply {
-        layoutParams = fullWidth(top = ValuePilotDesignTokens.Spacing.LG_DP)
+        layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.LG_DP)
     }
     private val moreActionsButton = ValuePilotProgrammaticButton.outlined(context).apply {
         text = "More trip actions"
-        contentDescription = "Show store, origin, directions and trip actions"
-        layoutParams = fullWidth(top = ValuePilotDesignTokens.Spacing.XS_DP)
+        contentDescription = "Show store, starting point, directions and trip actions"
+        layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.XS_DP)
         setOnClickListener { setActionsExpanded(!actionsExpanded) }
     }
     private val actionsContainer = LinearLayout(context).apply {
         orientation = VERTICAL
         visibility = GONE
-        layoutParams = fullWidth(top = ValuePilotDesignTokens.Spacing.XS_DP)
+        layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.XS_DP)
     }
     private val actionButtons = mutableListOf<MaterialButton>()
     private val chooseDestinationButton = outlinedAction(
-        "Choose destination store",
-        "Choose the exact destination store for this private trip scenario",
+        "Choose store",
+        "Choose the store for this trip",
         TripPlannerUiAction.ChooseDestinationStore
     )
     private val setOriginButton = outlinedAction(
-        "Set starting point",
-        "Enter a private starting point for this trip scenario",
+        "Add starting point",
+        "Enter a private starting point for this trip",
         TripPlannerUiAction.SetManualOrigin
     )
     private val locationButton = outlinedAction(
-        "Use foreground location",
-        "Use one foreground location reading for this trip session; no background tracking",
+        "Use my location once",
+        "Use one foreground location reading for this trip; no background tracking",
         TripPlannerUiAction.UseForegroundLocation
     )
     private val assumptionsButton = outlinedAction(
-        "Enter driving assumptions",
-        "Enter manual distance, fuel consumption, fuel price, tolls and parking",
+        "Edit trip details",
+        "Edit distance, fuel use, fuel price, tolls and parking",
         TripPlannerUiAction.EditTripAssumptions
     )
     private val preferredButton = outlinedAction(
         "",
-        "Save or remove this store as the private preferred store",
+        "Save or remove this store as a preferred store",
         TripPlannerUiAction.TogglePreferredStore
     )
     private val directionsButton = outlinedAction(
-        "Open external directions",
-        "Open an external directions app for this selected store; route facts remain outside ValuePilot",
+        "Directions",
+        "Open an external directions app for this store",
         TripPlannerUiAction.OpenDirections
     )
     private val clearButton = outlinedAction(
-        "Clear trip scenario",
-        "Clear the saved trip scenario without changing Basket, purchases or Price Watch",
+        "Clear trip",
+        "Clear the saved trip details without changing Basket or purchase history",
         TripPlannerUiAction.Clear,
         destructive = true
     )
@@ -140,6 +164,7 @@ internal class TripPlannerSurfaceView @JvmOverloads constructor(
         set(value) {
             field = value
             primaryButton.isEnabled = value != null && primaryAction != null
+            editTripDetailsButton.isEnabled = value != null
             moreActionsButton.isEnabled = value != null
             actionButtons.forEach { it.isEnabled = value != null }
         }
@@ -151,8 +176,12 @@ internal class TripPlannerSurfaceView @JvmOverloads constructor(
         addView(headline)
         addView(guidance)
         addView(basketSummary)
-        addView(tripCard)
-        addView(evidenceCard)
+        addView(storeSummary)
+        addView(tripDetailsCard)
+        addView(tripCostCard)
+        addView(breakEvenCard)
+        addView(savingsCard)
+        addView(decisionCard)
         addView(detailsButton)
         addView(detailsContainer)
         addView(primaryButton)
@@ -165,15 +194,10 @@ internal class TripPlannerSurfaceView @JvmOverloads constructor(
         actionsContainer.addView(preferredButton)
         actionsContainer.addView(directionsButton)
         actionsContainer.addView(clearButton)
-        detailLines += textLineView("")
-        detailLines += textLineView("")
-        detailLines += textLineView("")
-        detailLines += textLineView("")
-        detailLines += textLineView("")
-        detailLines.forEach(detailsContainer::addView)
         actionButtons += chooseDestinationButton
         actionButtons += setOriginButton
         actionButtons += locationButton
+        actionButtons += editTripDetailsButton
         actionButtons += assumptionsButton
         actionButtons += preferredButton
         actionButtons += directionsButton
@@ -182,83 +206,63 @@ internal class TripPlannerSurfaceView @JvmOverloads constructor(
 
     fun render(state: TripPlannerSurfaceState, preferred: Boolean) {
         headline.text = state.headline
+        headline.contentDescription = state.headline
         guidance.text = state.guidance
-        basketSummaryText.text = state.basketText
-        destinationText.text = state.destinationText
-        originText.text = state.originText
-        tripCostHeadline.text = state.tripCostHeadline
-        tripCostHeadline.setTextSize(
-            TypedValue.COMPLEX_UNIT_SP,
-            if (state.mode == TripPlannerSurfaceMode.CALCULATED) 20f else 16f
-        )
-        tripCostHeadline.setTypeface(Typeface.DEFAULT, Typeface.BOLD)
-        tripCostDetail.text = state.tripCostDetail
-        breakEvenText.text = state.breakEvenText
+        basketSummary.text = state.basketSummary
+        basketSummary.contentDescription = state.basketSummary
+        storeSummary.text = state.storeSummary
+        storeSummary.contentDescription = state.storeSummary
+        tripDetailsSummary.text = state.assumptionsSummary
+        tripDetailsSummary.contentDescription = state.assumptionsSummary
+        editTripDetailsButton.isEnabled = onAction != null && state.mode != TripPlannerSurfaceMode.UNAVAILABLE
+        tripCostAmount.text = state.tripCostAmount
+        tripCostAmount.contentDescription = "Trip cost: ${state.tripCostAmount}"
+        tripCostSupport.text = state.tripCostSupport
+        tripCostSupport.contentDescription = state.tripCostSupport
+        saveAtLeastAmount.text = state.saveAtLeastAmount
+        saveAtLeastAmount.contentDescription = "Save at least: ${state.saveAtLeastAmount}"
+        saveAtLeastSupport.text = state.saveAtLeastSupport
+        currentSavingsAmount.text = state.currentSavingsAmount
+        currentSavingsAmount.contentDescription = "Current savings: ${state.currentSavingsAmount}"
+        currentSavingsSupport.text = state.currentSavingsSupport
         decisionHeadline.text = state.decisionHeadline
-        decisionHeadline.setTextColor(
-            ValuePilotPalette.color(
-                if (state.mode == TripPlannerSurfaceMode.CALCULATED) {
-                    ValuePilotDesignTokens.Colors.TEXT_PRIMARY
-                } else {
-                    ValuePilotDesignTokens.Colors.WARNING
-                }
-            )
-        )
+        decisionHeadline.setTextColor(ValuePilotPalette.color(decisionColor(state.decisionTone)))
+        decisionHeadline.contentDescription = state.decisionHeadline
         decisionDetail.text = state.decisionDetail
-        renderEvidenceChips(state.evidenceChips)
-        detailLines[0].text = state.destinationText
-        detailLines[1].text = state.originText
-        detailLines[2].text = state.assumptionsText
-        detailLines[3].text = state.tripCostText
-        detailLines[4].text = state.savingsText
+        renderDetails(state.detailLines)
 
         primaryAction = primaryActionFor(state)
+        primaryButton.visibility = if (primaryAction == null) GONE else VISIBLE
         primaryButton.text = primaryLabelFor(state)
         primaryButton.contentDescription = primaryDescriptionFor(state)
         primaryButton.isEnabled = onAction != null && primaryAction != null
         primaryButton.setOnClickListener { primaryAction?.let { onAction?.invoke(it) } }
-        preferredButton.text = if (preferred) "Remove preferred store" else "Use destination as preferred store"
+        preferredButton.text = if (preferred) "Remove preferred store" else "Save this store"
         directionsButton.visibility = if (state.directionsAvailable) VISIBLE else GONE
         moreActionsButton.visibility = if (state.mode == TripPlannerSurfaceMode.UNAVAILABLE) GONE else VISIBLE
         detailsButton.visibility = if (state.mode == TripPlannerSurfaceMode.UNAVAILABLE) GONE else VISIBLE
         moreActionsButton.isEnabled = onAction != null
         actionButtons.forEach { it.isEnabled = onAction != null }
+
         if (!hasRenderedState) {
-            ValuePilotMotion.reveal(tripCard, animate = false)
-            ValuePilotMotion.reveal(evidenceCard, animate = false)
+            ValuePilotMotion.reveal(tripCostCard, animate = false)
+            ValuePilotMotion.reveal(decisionCard, animate = false)
             hasRenderedState = true
         } else {
-            ValuePilotMotion.reveal(tripCard)
-            ValuePilotMotion.reveal(evidenceCard)
+            ValuePilotMotion.reveal(tripCostCard)
+            ValuePilotMotion.reveal(decisionCard)
         }
     }
 
-    private fun renderEvidenceChips(chips: List<TripPlannerEvidenceChip>) {
-        evidenceChips.removeAllViews()
-        chips.forEach { chip ->
-            val chipView = TextView(context).apply {
-                text = "${chip.count} ${chip.label}"
-                contentDescription = "${chip.count} ${chip.label}"
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-                setTextColor(ValuePilotPalette.color(chipTextColor(chip.tone)))
-                setPadding(dp(10), dp(7), dp(10), dp(7))
-                background = GradientDrawable().apply {
-                    cornerRadius = dp(14).toFloat()
-                    setColor(ValuePilotPalette.color(chipBackgroundColor(chip.tone)))
-                }
-                layoutParams = LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply {
-                    marginEnd = dp(6)
-                    topMargin = dp(10)
-                }
-            }
-            evidenceChips.addView(chipView)
-        }
+    private fun renderDetails(lines: List<String>) {
+        detailsContainer.removeAllViews()
+        lines.forEach { detailsContainer.addView(textLine(it, 13f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, top = 6)) }
     }
 
     private fun setDetailsExpanded(expanded: Boolean) {
         detailsExpanded = expanded
         detailsContainer.visibility = if (expanded) VISIBLE else GONE
-        detailsButton.text = if (expanded) "Hide answer details" else "Why this answer"
+        detailsButton.text = if (expanded) "Hide details" else "Why?"
         ValuePilotMotion.reveal(detailsContainer, animate = expanded)
     }
 
@@ -271,7 +275,9 @@ internal class TripPlannerSurfaceView @JvmOverloads constructor(
 
     private fun primaryActionFor(state: TripPlannerSurfaceState): TripPlannerUiAction? =
         when {
-            state.mode == TripPlannerSurfaceMode.UNAVAILABLE || state.mode == TripPlannerSurfaceMode.EMPTY_BASKET -> null
+            state.mode == TripPlannerSurfaceMode.UNAVAILABLE ||
+                state.mode == TripPlannerSurfaceMode.EMPTY_BASKET ||
+                state.mode == TripPlannerSurfaceMode.CALCULATED -> null
             !state.destinationReady -> TripPlannerUiAction.ChooseDestinationStore
             !state.originReady -> TripPlannerUiAction.SetManualOrigin
             !state.assumptionsReady -> TripPlannerUiAction.EditTripAssumptions
@@ -280,22 +286,22 @@ internal class TripPlannerSurfaceView @JvmOverloads constructor(
 
     private fun primaryLabelFor(state: TripPlannerSurfaceState): String =
         when (primaryActionFor(state)) {
-            TripPlannerUiAction.ChooseDestinationStore -> "Choose destination store"
-            TripPlannerUiAction.SetManualOrigin -> "Set starting point"
-            TripPlannerUiAction.EditTripAssumptions -> "Enter driving assumptions"
-            TripPlannerUiAction.Calculate -> if (state.mode == TripPlannerSurfaceMode.CALCULATED) "Recalculate trip cost" else "Calculate trip cost"
-            null -> if (state.mode == TripPlannerSurfaceMode.EMPTY_BASKET) "Add items in Basket first" else "Trip details unavailable"
+            TripPlannerUiAction.ChooseDestinationStore -> "Choose store"
+            TripPlannerUiAction.SetManualOrigin -> "Add starting point"
+            TripPlannerUiAction.EditTripAssumptions -> "Add trip details"
+            TripPlannerUiAction.Calculate -> "Calculate trip cost"
+            null -> if (state.mode == TripPlannerSurfaceMode.EMPTY_BASKET) "Add items in Basket first" else "Trip unavailable"
             else -> "Continue"
         }
 
     private fun primaryDescriptionFor(state: TripPlannerSurfaceState): String =
         when (primaryActionFor(state)) {
-            TripPlannerUiAction.ChooseDestinationStore -> "Choose the exact destination store for this private trip scenario"
-            TripPlannerUiAction.SetManualOrigin -> "Enter a private starting point for this trip scenario"
-            TripPlannerUiAction.EditTripAssumptions -> "Enter manual distance, fuel consumption, fuel price, tolls and parking"
-            TripPlannerUiAction.Calculate -> "Calculate the exact manual trip cost"
+            TripPlannerUiAction.ChooseDestinationStore -> "Choose the store for this trip"
+            TripPlannerUiAction.SetManualOrigin -> "Add a private starting point for this trip"
+            TripPlannerUiAction.EditTripAssumptions -> "Add distance, fuel use, fuel price and optional costs"
+            TripPlannerUiAction.Calculate -> "Calculate the exact trip cost from your saved details"
             null -> if (state.mode == TripPlannerSurfaceMode.EMPTY_BASKET) "Add items to Basket before planning a trip" else "Trip details are unavailable"
-            else -> "Continue the private trip scenario"
+            else -> "Continue this trip"
         }
 
     private fun outlinedAction(
@@ -306,14 +312,14 @@ internal class TripPlannerSurfaceView @JvmOverloads constructor(
     ): MaterialButton = ValuePilotProgrammaticButton.outlined(context, destructive = destructive).apply {
         text = label
         contentDescription = description
-        layoutParams = fullWidth(top = ValuePilotDesignTokens.Spacing.XS_DP)
+        layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.XS_DP)
         setOnClickListener { onAction?.invoke(action) }
     }
 
     private fun card(): ValuePilotProductCard = ValuePilotProductCard(context).apply {
         setCardBackgroundColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE))
         strokeColor = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.OUTLINE)
-        layoutParams = fullWidth(top = ValuePilotDesignTokens.Spacing.SM_DP)
+        layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.SM_DP)
     }
 
     private fun cardColumn(): LinearLayout = LinearLayout(context).apply {
@@ -321,8 +327,8 @@ internal class TripPlannerSurfaceView @JvmOverloads constructor(
         setPadding(dp(16), dp(15), dp(16), dp(15))
     }
 
-    private fun textLineView(value: String): TextView =
-        textLine(value, 13f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, top = 6)
+    private fun label(value: String): TextView =
+        textLine(value, 13f, ValuePilotDesignTokens.Colors.TEXT_MUTED, bold = true)
 
     private fun textLine(
         value: String,
@@ -343,20 +349,12 @@ internal class TripPlannerSurfaceView @JvmOverloads constructor(
             topMargin = dp(top)
         }
 
-    private fun chipTextColor(tone: TripPlannerEvidenceTone): String =
+    private fun decisionColor(tone: TripPlannerDecisionTone): String =
         when (tone) {
-            TripPlannerEvidenceTone.POSITIVE -> ValuePilotDesignTokens.Colors.SUCCESS
-            TripPlannerEvidenceTone.NEUTRAL -> ValuePilotDesignTokens.Colors.PRIMARY_DARK
-            TripPlannerEvidenceTone.WARNING -> ValuePilotDesignTokens.Colors.WARNING
-            TripPlannerEvidenceTone.UNKNOWN -> ValuePilotDesignTokens.Colors.TEXT_SECONDARY
-        }
-
-    private fun chipBackgroundColor(tone: TripPlannerEvidenceTone): String =
-        when (tone) {
-            TripPlannerEvidenceTone.POSITIVE -> "#E9F3ED"
-            TripPlannerEvidenceTone.NEUTRAL -> ValuePilotDesignTokens.Colors.SURFACE_ACCENT
-            TripPlannerEvidenceTone.WARNING -> "#FFF2DC"
-            TripPlannerEvidenceTone.UNKNOWN -> ValuePilotDesignTokens.Colors.SURFACE_SUBTLE
+            TripPlannerDecisionTone.POSITIVE -> ValuePilotDesignTokens.Colors.SUCCESS
+            TripPlannerDecisionTone.WARNING -> ValuePilotDesignTokens.Colors.WARNING
+            TripPlannerDecisionTone.NEUTRAL,
+            TripPlannerDecisionTone.UNKNOWN -> ValuePilotDesignTokens.Colors.TEXT_PRIMARY
         }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()

@@ -2347,10 +2347,10 @@ class MainActivity : AppCompatActivity() {
                 )
             } else if (tripPlannerVisible) {
                 ScreenCopy(
-                    eyebrow = "PRIVATE TRIP PLANNER",
-                    title = "Plan this trip",
-                    body = "Use the current Basket, a selected store and your own driving assumptions to estimate trip cost.",
-                    footnote = "Manual estimate only. No road route, live offer, stock or savings recommendation is connected.",
+                    eyebrow = "TRIP",
+                    title = "Is this trip worth it?",
+                    body = "See the trip cost, what you would need to save, and what current prices support.",
+                    footnote = "Your distance and vehicle details are entered by you; this is not a road route.",
                     showCompareAction = false
                 )
             } else {
@@ -2740,7 +2740,7 @@ class MainActivity : AppCompatActivity() {
             setPadding(dp(4), dp(4), dp(4), 0)
         }
         val manualLayout = TextInputLayout(this).apply {
-            hint = "Private store name (optional)"
+            hint = "Store name (optional)"
             layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) }
         }
         val manualInput = TextInputEditText(this).apply {
@@ -2749,16 +2749,16 @@ class MainActivity : AppCompatActivity() {
         }
         manualLayout.addView(manualInput)
         body.addView(TextView(this).apply {
-            text = "Enter a private store name. A name does not confirm price, stock or availability."
+            text = "Enter the store for this trip. A name does not confirm price or availability."
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setTextColor(ValuePilotPalette.color("#6B7280"))
         })
         body.addView(manualLayout)
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Choose destination store")
+            .setTitle("Choose store")
             .setView(body)
             .setNegativeButton(R.string.cancel, null)
-            .setPositiveButton("Use private name", null)
+            .setPositiveButton("Use store", null)
             .create()
         tripStorePickerDialog = dialog
         dialog.setOnDismissListener { if (tripStorePickerDialog === dialog) tripStorePickerDialog = null }
@@ -2766,7 +2766,7 @@ class MainActivity : AppCompatActivity() {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val selection = TripStoreSelectionAdapter.privateEntry(manualInput.text?.toString().orEmpty())
                 if (selection == null) {
-                    manualLayout.error = "Enter a private store name"
+                    manualLayout.error = "Enter a store name"
                     return@setOnClickListener
                 }
                 manualLayout.error = null
@@ -2791,8 +2791,8 @@ class MainActivity : AppCompatActivity() {
             setText(tripPlannerState.origin?.takeIf { it.kind == TripOriginKind.MANUAL }?.label.orEmpty())
         }
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Starting point")
-            .setMessage("This label is private context only. ValuePilot does not geocode it or infer a driving route.")
+            .setTitle("Add starting point")
+            .setMessage("This is a private starting point label. ValuePilot does not geocode it or infer a driving route.")
             .setView(input)
             .setNegativeButton(R.string.cancel, null)
             .setPositiveButton("Save", null)
@@ -2893,8 +2893,8 @@ class MainActivity : AppCompatActivity() {
         val roundTrip = android.widget.RadioButton(this).apply { id = View.generateViewId(); text = "Round-trip distance (entered one way)" }
         val additional = android.widget.RadioButton(this).apply { id = View.generateViewId(); text = "Additional driving distance (already total)" }
         basisGroup.addView(roundTrip); basisGroup.addView(additional)
-        val distance = tripTripInput("Driving distance (km, max 3 decimals)", tripPlannerState.drivingDistanceMetres?.let { BigDecimal.valueOf(it).movePointLeft(3).stripTrailingZeros().toPlainString() }.orEmpty())
-        val consumption = tripTripInput("Fuel consumption (ml per 100 km)", tripPlannerState.fuelConsumptionMilliLitresPer100Km?.toString().orEmpty())
+        val distance = tripTripInput("Distance (km, max 3 decimals)", tripPlannerState.drivingDistanceMetres?.let { BigDecimal.valueOf(it).movePointLeft(3).stripTrailingZeros().toPlainString() }.orEmpty())
+        val consumption = tripTripInput("Fuel use (ml per 100 km)", tripPlannerState.fuelConsumptionMilliLitresPer100Km?.toString().orEmpty())
         val fuel = tripTripInput("Fuel price per litre", tripPlannerState.fuelPrice?.let { formatTripMoney(it) }.orEmpty())
         // Argentina is the active launch context. This is only the empty-form hint;
         // a persisted or explicitly entered personal currency is preserved unchanged.
@@ -2902,7 +2902,7 @@ class MainActivity : AppCompatActivity() {
         val toll = tripTripInput("Tolls (optional)", tripPlannerState.tolls?.let { formatTripMoney(it) }.orEmpty())
         val parking = tripTripInput("Parking (optional)", tripPlannerState.parking?.let { formatTripMoney(it) }.orEmpty())
         body.addView(TextView(this).apply {
-            text = "All values are your entered assumptions. ValuePilot does not turn them into a verified road route."
+            text = "These are your entries. ValuePilot does not turn them into a verified road route."
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setTextColor(ValuePilotPalette.color("#6B7280"))
         })
@@ -2914,7 +2914,7 @@ class MainActivity : AppCompatActivity() {
             else -> roundTrip.isChecked = true
         }
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Driving assumptions")
+            .setTitle("Trip details")
             .setView(body)
             .setNegativeButton(R.string.cancel, null)
             .setPositiveButton("Save", null)

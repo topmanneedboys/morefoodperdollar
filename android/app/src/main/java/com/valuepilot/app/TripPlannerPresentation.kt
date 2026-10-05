@@ -1,9 +1,12 @@
 package com.valuepilot.app
 
-import com.valuepilot.core.TripBasketEconomics
+import com.valuepilot.core.Money
+import com.valuepilot.core.ShoppingDecisionBlocker
+import com.valuepilot.core.ShoppingDecisionScenarioResult
+import com.valuepilot.core.ShoppingDecisionScenarioStatus
+import com.valuepilot.core.TripCostInput
 import com.valuepilot.core.TripCostResult
-import com.valuepilot.core.TripCostCalculator
-import com.valuepilot.core.TripBasketSavingsStatus
+import com.valuepilot.core.TripDistanceBasis
 import java.math.BigDecimal
 
 internal data class TripPlannerBasketSnapshot(
@@ -30,41 +33,34 @@ internal enum class TripPlannerSurfaceMode {
     UNAVAILABLE
 }
 
-internal enum class TripPlannerEvidenceTone {
+internal enum class TripPlannerDecisionTone {
     POSITIVE,
     NEUTRAL,
     WARNING,
     UNKNOWN
 }
 
-internal data class TripPlannerEvidenceChip(
-    val label: String,
-    val count: Int,
-    val tone: TripPlannerEvidenceTone
-) {
-    init {
-        require(label.isNotBlank())
-        require(count >= 0)
-    }
-}
-
+/**
+ * Consumer-ready Trip state. The projector only translates the existing trip state and the
+ * already-evaluated decision result; it does not calculate, persist, or rank anything.
+ */
 internal data class TripPlannerSurfaceState(
     val mode: TripPlannerSurfaceMode,
     val headline: String,
     val guidance: String,
-    val basketText: String,
-    val destinationText: String,
-    val originText: String,
-    val assumptionsText: String,
-    val tripCostText: String,
-    val savingsText: String,
-    val decisionText: String = "Shopping decision unavailable until an exact store is selected.",
-    val tripCostHeadline: String,
-    val tripCostDetail: String,
-    val breakEvenText: String,
+    val basketSummary: String,
+    val storeSummary: String,
+    val assumptionsSummary: String,
+    val tripCostAmount: String,
+    val tripCostSupport: String,
+    val saveAtLeastAmount: String,
+    val saveAtLeastSupport: String,
+    val currentSavingsAmount: String,
+    val currentSavingsSupport: String,
     val decisionHeadline: String,
     val decisionDetail: String,
-    val evidenceChips: List<TripPlannerEvidenceChip>,
+    val decisionTone: TripPlannerDecisionTone,
+    val detailLines: List<String>,
     val destinationReady: Boolean,
     val originReady: Boolean,
     val assumptionsReady: Boolean,
@@ -76,21 +72,22 @@ internal data class TripPlannerSurfaceState(
         listOf(
             headline,
             guidance,
-            basketText,
-            destinationText,
-            originText,
-            assumptionsText,
-            tripCostText,
-            savingsText,
-            decisionText,
-            tripCostHeadline,
-            tripCostDetail,
-            breakEvenText,
+            basketSummary,
+            storeSummary,
+            assumptionsSummary,
+            tripCostAmount,
+            tripCostSupport,
+            saveAtLeastAmount,
+            saveAtLeastSupport,
+            currentSavingsAmount,
+            currentSavingsSupport,
             decisionHeadline,
             decisionDetail,
             basketRevision
         ).forEach { require(it.isNotBlank()) }
-        require(evidenceChips.isNotEmpty())
+        require(detailLines.isNotEmpty())
+        require(detailLines.size <= 8)
+        require(detailLines.all { it.isNotBlank() })
         require(mode != TripPlannerSurfaceMode.CALCULATED || canCalculate)
     }
 }
@@ -101,242 +98,243 @@ internal object TripPlannerProjector {
         basket: TripPlannerBasketSnapshot,
         directoryAvailable: Boolean,
         unavailable: Boolean = false,
-        decision: com.valuepilot.core.ShoppingDecisionScenarioResult? = null
+        decision: ShoppingDecisionScenarioResult? = null
     ): TripPlannerSurfaceState {
-        if (unavailable || state == null) {
-            return TripPlannerSurfaceState(
-                mode = TripPlannerSurfaceMode.UNAVAILABLE,
-                headline = "Trip planner unavailable",
-                guidance = "ValuePilot could not safely read the private trip draft. Existing data was not replaced.",
-                basketText = basketText(basket),
-                destinationText = "Destination store unavailable",
-                originText = "Starting point unavailable",
-                assumptionsText = "Trip assumptions unavailable",
-                tripCostText = "Trip cost unknown",
-                savingsText = unknownSavingsText(),
-                decisionText = decision?.let(ShoppingDecisionTripPlannerBridge::summary)
-                    ?: "Shopping decision unavailable because the private trip draft could not be read.",
-                tripCostHeadline = "Trip cost unavailable",
-                tripCostDetail = "The private trip draft could not be read safely; existing data was preserved.",
-                breakEvenText = "Break-even threshold unavailable until a readable trip cost exists.",
-                decisionHeadline = "Not enough evidence to recommend a store",
-                decisionDetail = "ValuePilot cannot make a stronger shopping decision until the private trip draft is readable.",
-                evidenceChips = unavailableEvidenceChips(basket),
-                destinationReady = false,
-                originReady = false,
-                assumptionsReady = false,
-                directionsAvailable = false,
-                canCalculate = false,
-                basketRevision = basket.revision
-            )
-        }
-        val input = state.costInputOrNull()
+        if (unavailable || state == null) return unavailableState(basket)
+
         val hasBasket = basket.totalVisibleItemCount > 0
-        val ready = hasBasket && state.destination != null && state.origin != null && input != null
-        val result = if (ready) runCatching { TripCostCalculator.calculate(input) }.getOrNull() else null
+        val result = decision?.tripCost
         val mode =
             when {
                 !hasBasket -> TripPlannerSurfaceMode.EMPTY_BASKET
                 result != null -> TripPlannerSurfaceMode.CALCULATED
                 else -> TripPlannerSurfaceMode.NEEDS_INPUT
             }
-        val decisionPresentation = decisionPresentation(decision, result, basket)
+        val destination = state.destination
+        val input = state.costInputOrNull()
+        val destinationReady = destination != null
+        val originReady = state.origin != null
+        val assumptionsReady = input != null
+        val decisionCopy = decisionCopy(decision)
+        val costCopy = costCopy(result)
+        val breakEven = decision?.breakEvenSavingsRequired
+
         return TripPlannerSurfaceState(
             mode = mode,
-            headline = if (result == null) "Plan your trip" else "Trip cost estimate",
-            guidance = guidance(mode, directoryAvailable),
-            basketText = basketText(basket),
-            destinationText = state.destination?.let(::storeText) ?: "Choose a destination store",
-            originText = state.origin?.let { "Starting point: ${it.label} (${it.kind.name.lowercase().replace('_', ' ')})" }
-                ?: "Starting point: not entered",
-            assumptionsText = input?.let(::assumptionsText) ?: "Enter driving distance, fuel use and fuel price",
-            tripCostText = result?.let(::costText) ?: "Trip cost: unknown until complete assumptions are entered",
-            savingsText = unknownSavingsText(),
-            decisionText = decision?.let(ShoppingDecisionTripPlannerBridge::summary)
-                ?: "Shopping decision unavailable until an exact destination store is selected.",
-            tripCostHeadline = decisionPresentation.tripCostHeadline,
-            tripCostDetail = decisionPresentation.tripCostDetail,
-            breakEvenText = decisionPresentation.breakEvenText,
-            decisionHeadline = decisionPresentation.decisionHeadline,
-            decisionDetail = decisionPresentation.decisionDetail,
-            evidenceChips = evidenceChips(decision, basket),
-            destinationReady = state.destination != null,
-            originReady = state.origin != null,
-            assumptionsReady = input != null,
-            directionsAvailable = state.destination?.let { it.latitudeE7 != null && it.longitudeE7 != null } == true,
-            canCalculate = ready,
+            headline = destination?.let { "Trip to ${it.displayName}" } ?: "Plan your trip",
+            guidance = guidance(mode, destinationReady, originReady, assumptionsReady, directoryAvailable),
+            basketSummary = basketSummary(basket),
+            storeSummary = destination?.let { "Store · ${it.displayName}" } ?: "Store · not selected",
+            assumptionsSummary = input?.let(::assumptionsSummary) ?: "Trip details · not complete",
+            tripCostAmount = costCopy.amount,
+            tripCostSupport = costCopy.support,
+            saveAtLeastAmount = breakEven?.let(::formatMoney) ?: "Unknown",
+            saveAtLeastSupport = if (breakEven != null) {
+                "Another store would need to save more than this trip cost."
+            } else {
+                "Trip cost needed first."
+            },
+            currentSavingsAmount = "Unknown",
+            currentSavingsSupport = currentSavingsSupport(decision),
+            decisionHeadline = decisionCopy.headline,
+            decisionDetail = decisionCopy.detail,
+            decisionTone = decisionCopy.tone,
+            detailLines = detailLines(state, basket, result, decision),
+            destinationReady = destinationReady,
+            originReady = originReady,
+            assumptionsReady = assumptionsReady,
+            directionsAvailable = destination?.let { it.latitudeE7 != null && it.longitudeE7 != null } == true,
+            canCalculate = result != null,
             basketRevision = basket.revision
         )
     }
 
-    private fun guidance(mode: TripPlannerSurfaceMode, directoryAvailable: Boolean): String =
+    private fun unavailableState(basket: TripPlannerBasketSnapshot): TripPlannerSurfaceState =
+        TripPlannerSurfaceState(
+            mode = TripPlannerSurfaceMode.UNAVAILABLE,
+            headline = "Trip unavailable",
+            guidance = "Your saved trip details could not be read safely. Nothing was replaced.",
+            basketSummary = basketSummary(basket),
+            storeSummary = "Store · unavailable",
+            assumptionsSummary = "Trip details · unavailable",
+            tripCostAmount = "Unknown",
+            tripCostSupport = "Add trip details to estimate the cost.",
+            saveAtLeastAmount = "Unknown",
+            saveAtLeastSupport = "Trip cost needed first.",
+            currentSavingsAmount = "Unknown",
+            currentSavingsSupport = "Not enough current prices.",
+            decisionHeadline = "Need more current prices",
+            decisionDetail = "Trip details are unavailable, so ValuePilot cannot make a stronger comparison.",
+            decisionTone = TripPlannerDecisionTone.UNKNOWN,
+            detailLines = listOf(
+                "Your saved trip details could not be read safely.",
+                "Existing data was preserved."
+            ),
+            destinationReady = false,
+            originReady = false,
+            assumptionsReady = false,
+            directionsAvailable = false,
+            canCalculate = false,
+            basketRevision = basket.revision
+        )
+
+    private fun guidance(
+        mode: TripPlannerSurfaceMode,
+        destinationReady: Boolean,
+        originReady: Boolean,
+        assumptionsReady: Boolean,
+        directoryAvailable: Boolean
+    ): String =
         when (mode) {
-            TripPlannerSurfaceMode.EMPTY_BASKET -> "Add something to Basket first. This planner always reads the current Basket; it does not copy or replace it."
-            TripPlannerSurfaceMode.NEEDS_INPUT ->
-                if (directoryAvailable) {
-                    "Choose a store and enter your own route and vehicle assumptions. Automatic road routing is not connected."
-                } else {
-                    "No bundled store directory is shipped. You can still enter a private destination store and manual route assumptions."
-                }
-            TripPlannerSurfaceMode.CALCULATED -> "Manual trip estimate only. Distance and vehicle assumptions are entered by you; no route fact or live price is implied."
+            TripPlannerSurfaceMode.EMPTY_BASKET -> "Add items in Basket first."
+            TripPlannerSurfaceMode.CALCULATED -> "Distance and vehicle details come from you; this is not a road route."
             TripPlannerSurfaceMode.UNAVAILABLE -> ""
+            TripPlannerSurfaceMode.NEEDS_INPUT ->
+                when {
+                    !destinationReady && directoryAvailable -> "Choose a store to see the trip cost."
+                    !destinationReady -> "Choose a store to see the trip cost."
+                    !originReady -> "Add a starting point to keep this estimate personal."
+                    !assumptionsReady -> "Add trip details to estimate fuel and other costs."
+                    else -> "Complete the trip details to see the estimate."
+                }
         }
 
-    private fun basketText(basket: TripPlannerBasketSnapshot): String =
-        "Current Basket: ${basket.plannedItemCount} planned items, ${basket.privateIdentityCount} private identities, ${basket.unknownItemCount} unresolved items."
+    private fun basketSummary(basket: TripPlannerBasketSnapshot): String =
+        "Basket · ${basket.totalVisibleItemCount} ${if (basket.totalVisibleItemCount == 1) "item" else "items"}"
 
-    private fun storeText(store: TripStoreSelection): String =
-        buildString {
-            append("Destination: ")
-            append(store.displayName)
-            store.addressLabel?.let { append(" · ").append(it) }
-            append(" · ").append(store.sourceLabel)
-        }
+    private data class CostCopy(val amount: String, val support: String)
 
-    private fun assumptionsText(input: com.valuepilot.core.TripCostInput): String =
-        "${input.distanceBasis.name.replace('_', ' ')} ${formatDistance(input.drivingDistanceMetres)} · ${input.fuelConsumptionMilliLitresPer100Km} ml/100 km · fuel ${formatMoney(input.fuelPricePerLitre)}"
+    private fun costCopy(result: TripCostResult?): CostCopy =
+        result?.let {
+            val components = buildList {
+                add("Fuel")
+                if (it.tolls.minorUnits > 0L) add("tolls")
+                if (it.parking.minorUnits > 0L) add("parking")
+            }
+            CostCopy(formatMoney(it.total), components.joinToString(" + "))
+        } ?: CostCopy("Unknown", "Add trip details to estimate the cost.")
 
-    private fun costText(result: TripCostResult): String =
-        "Trip total: ${formatMoney(result.total)} · fuel ${formatMoney(result.fuelCost)} · tolls ${formatMoney(result.tolls)} · parking ${formatMoney(result.parking)}"
-
-    private fun unknownSavingsText(): String =
-        when (TripBasketEconomics().status) {
-            TripBasketSavingsStatus.UNKNOWN_NO_AUTHORIZED_CURRENT_OFFERS ->
-                "Basket savings: UNKNOWN — no authorized current retailer offers are connected. Trip cost is not a savings recommendation."
-            TripBasketSavingsStatus.KNOWN_COMPARABLE_OFFERS -> "Basket savings available"
-        }
-
-    private data class DecisionPresentation(
-        val tripCostHeadline: String,
-        val tripCostDetail: String,
-        val breakEvenText: String,
-        val decisionHeadline: String,
-        val decisionDetail: String
+    private data class DecisionCopy(
+        val headline: String,
+        val detail: String,
+        val tone: TripPlannerDecisionTone
     )
 
-    private fun decisionPresentation(
-        decision: com.valuepilot.core.ShoppingDecisionScenarioResult?,
-        result: TripCostResult?,
-        basket: TripPlannerBasketSnapshot
-    ): DecisionPresentation {
-        val total = result?.total
-        val tripCostHeadline =
-            total?.let { "About ${formatMoney(it)} for this trip" }
-                ?: "Trip cost not ready"
-        val tripCostDetail =
-            result?.let {
-                "Estimate from your manual distance and vehicle assumptions · " +
-                    "${formatDistance(it.effectiveDrivingDistanceMetres)} total driving"
-            } ?: "Complete the destination, starting point and driving assumptions to calculate this estimate."
-        val breakEvenText =
-            decision?.breakEvenSavingsRequired?.let {
-                "You would need at least ${formatMoney(it)} in additional Basket savings to break even."
-            } ?: total?.let {
-                "You would need at least ${formatMoney(it)} in additional Basket savings to break even."
-            } ?: "Break-even threshold appears after the trip cost is known."
-        val status = decision?.status
-        val decisionHeadline =
-            when (status) {
-                com.valuepilot.core.ShoppingDecisionScenarioStatus.CURRENT_COMPLETE ->
-                    "Current basket coverage is complete"
-                com.valuepilot.core.ShoppingDecisionScenarioStatus.CURRENT_PARTIAL ->
-                    "Some current prices are missing"
-                com.valuepilot.core.ShoppingDecisionScenarioStatus.HISTORICAL_ONLY ->
-                    "Historical context only"
-                com.valuepilot.core.ShoppingDecisionScenarioStatus.TARGET_ONLY ->
-                    "A target is not a current offer"
-                com.valuepilot.core.ShoppingDecisionScenarioStatus.UNKNOWN,
-                null -> "Not enough current evidence to recommend a store"
-            }
-        val decisionDetail =
-            when (status) {
-                com.valuepilot.core.ShoppingDecisionScenarioStatus.CURRENT_COMPLETE ->
-                    "Every evaluated Basket line has a comparable current amount, but ValuePilot still does not rank stores."
-                com.valuepilot.core.ShoppingDecisionScenarioStatus.CURRENT_PARTIAL ->
-                    "Some current amounts are calculable, while missing, conflicted or non-comparable lines remain unknown."
-                com.valuepilot.core.ShoppingDecisionScenarioStatus.HISTORICAL_ONLY ->
-                    "Personal or historical records can add context, but they are not today's store prices."
-                com.valuepilot.core.ShoppingDecisionScenarioStatus.TARGET_ONLY ->
-                    "A private watch target can guide you, but it cannot prove a current saving."
-                com.valuepilot.core.ShoppingDecisionScenarioStatus.UNKNOWN,
-                null ->
-                    if (basket.unknownItemCount > 0) {
-                        "Current price evidence is unknown for part of this Basket; availability and savings are not inferred."
-                    } else {
-                        "No authorized current retailer offer is connected, so ValuePilot will not claim a cheapest store."
-                    }
-            }
-        return DecisionPresentation(
-            tripCostHeadline = tripCostHeadline,
-            tripCostDetail = tripCostDetail,
-            breakEvenText = breakEvenText,
-            decisionHeadline = decisionHeadline,
-            decisionDetail = decisionDetail
-        )
-    }
-
-    private fun evidenceChips(
-        decision: com.valuepilot.core.ShoppingDecisionScenarioResult?,
-        basket: TripPlannerBasketSnapshot
-    ): List<TripPlannerEvidenceChip> {
-        if (decision == null) return unavailableEvidenceChips(basket)
-        val historicalKinds = setOf(
-            com.valuepilot.core.ShoppingDecisionEvidenceClass.HISTORICAL_RETAILER_OBSERVATION,
-            com.valuepilot.core.ShoppingDecisionEvidenceClass.SHOPPER_CONFIRMED_PURCHASE_PRICE,
-            com.valuepilot.core.ShoppingDecisionEvidenceClass.PERSONAL_PRICE_OBSERVATION
-        )
-        val incompatibleBlockers = setOf(
-            com.valuepilot.core.ShoppingDecisionBlocker.BASKET_QUANTITY_UNKNOWN,
-            com.valuepilot.core.ShoppingDecisionBlocker.OFFER_QUANTITY_UNKNOWN,
-            com.valuepilot.core.ShoppingDecisionBlocker.QUANTITY_UNIT_MISMATCH,
-            com.valuepilot.core.ShoppingDecisionBlocker.MULTIPLE_CURRENT_OFFERS_CONFLICT,
-            com.valuepilot.core.ShoppingDecisionBlocker.CURRENCY_NOT_COMPARABLE,
-            com.valuepilot.core.ShoppingDecisionBlocker.ARITHMETIC_OVERFLOW
-        )
-        val historical = decision.lines.count { line -> line.evidenceClasses.any(historicalKinds::contains) }
-        val unknownCurrent = decision.lines.count { it.currentAmount == null } + basket.unknownItemCount
-        val incompatible = decision.lines.count { line -> line.blockers.any(incompatibleBlockers::contains) }
-        return listOf(
-            TripPlannerEvidenceChip(
-                label = "Usable current",
-                count = decision.calculableCurrentLineCount,
-                tone = if (decision.calculableCurrentLineCount > 0) TripPlannerEvidenceTone.POSITIVE else TripPlannerEvidenceTone.UNKNOWN
-            ),
-            TripPlannerEvidenceChip(
-                label = "History / personal",
-                count = historical,
-                tone = if (historical > 0) TripPlannerEvidenceTone.NEUTRAL else TripPlannerEvidenceTone.UNKNOWN
-            ),
-            TripPlannerEvidenceChip(
-                label = "Current unknown",
-                count = unknownCurrent,
-                tone = if (unknownCurrent > 0) TripPlannerEvidenceTone.UNKNOWN else TripPlannerEvidenceTone.POSITIVE
-            ),
-            TripPlannerEvidenceChip(
-                label = "Needs review",
-                count = incompatible,
-                tone = if (incompatible > 0) TripPlannerEvidenceTone.WARNING else TripPlannerEvidenceTone.POSITIVE
+    private fun decisionCopy(decision: ShoppingDecisionScenarioResult?): DecisionCopy {
+        if (decision == null) {
+            return DecisionCopy(
+                headline = "Need more current prices",
+                detail = "Complete the trip details and ValuePilot will show what the available price evidence supports.",
+                tone = TripPlannerDecisionTone.UNKNOWN
             )
-        )
+        }
+        val conflict = decision.lines.any {
+            ShoppingDecisionBlocker.MULTIPLE_CURRENT_OFFERS_CONFLICT in it.blockers
+        }
+        if (conflict) {
+            return DecisionCopy(
+                headline = "Prices conflict",
+                detail = "The available prices disagree, so ValuePilot will not force a winner.",
+                tone = TripPlannerDecisionTone.WARNING
+            )
+        }
+        val stale = decision.lines.any {
+            ShoppingDecisionBlocker.CURRENT_OFFER_NOT_FRESH in it.blockers
+        }
+        if (stale) {
+            return DecisionCopy(
+                headline = "Need more current prices",
+                detail = "Some available prices are out of date, so they are not used as current savings.",
+                tone = TripPlannerDecisionTone.UNKNOWN
+            )
+        }
+        return when (decision.status) {
+            ShoppingDecisionScenarioStatus.CURRENT_COMPLETE ->
+                DecisionCopy(
+                    headline = "Current prices available",
+                    detail = "This store has complete current amounts for the Basket. Savings still need a current comparison.",
+                    tone = TripPlannerDecisionTone.POSITIVE
+                )
+            ShoppingDecisionScenarioStatus.CURRENT_PARTIAL,
+            ShoppingDecisionScenarioStatus.HISTORICAL_ONLY,
+            ShoppingDecisionScenarioStatus.TARGET_ONLY,
+            ShoppingDecisionScenarioStatus.UNKNOWN ->
+                DecisionCopy(
+                    headline = "Need more current prices",
+                    detail = when (decision.status) {
+                        ShoppingDecisionScenarioStatus.HISTORICAL_ONLY ->
+                            "Past or personal prices add context, but they are not today's store prices."
+                        ShoppingDecisionScenarioStatus.TARGET_ONLY ->
+                            "A target price is useful for watching, but it is not a current store price."
+                        ShoppingDecisionScenarioStatus.CURRENT_PARTIAL ->
+                            "Some Basket prices are current, but others are still missing."
+                        else -> "Not enough current price evidence is available for a reliable comparison."
+                    },
+                    tone = TripPlannerDecisionTone.UNKNOWN
+                )
+        }
     }
 
-    private fun unavailableEvidenceChips(basket: TripPlannerBasketSnapshot): List<TripPlannerEvidenceChip> =
-        listOf(
-            TripPlannerEvidenceChip("Usable current", 0, TripPlannerEvidenceTone.UNKNOWN),
-            TripPlannerEvidenceChip("History / personal", 0, TripPlannerEvidenceTone.NEUTRAL),
-            TripPlannerEvidenceChip(
-                "Current unknown",
-                basket.totalVisibleItemCount,
-                TripPlannerEvidenceTone.UNKNOWN
-            ),
-            TripPlannerEvidenceChip("Needs review", 0, TripPlannerEvidenceTone.WARNING)
+    private fun currentSavingsSupport(decision: ShoppingDecisionScenarioResult?): String =
+        when {
+            decision == null -> "Not enough current prices."
+            decision.lines.any { ShoppingDecisionBlocker.MULTIPLE_CURRENT_OFFERS_CONFLICT in it.blockers } -> "Prices conflict."
+            decision.status == ShoppingDecisionScenarioStatus.CURRENT_COMPLETE ->
+                "A second current store is needed to calculate savings."
+            decision.status == ShoppingDecisionScenarioStatus.HISTORICAL_ONLY ||
+                decision.status == ShoppingDecisionScenarioStatus.TARGET_ONLY ->
+                "Only past or target prices are available."
+            else -> "Not enough current prices."
+        }
+
+    private fun detailLines(
+        state: TripPlannerState,
+        basket: TripPlannerBasketSnapshot,
+        result: TripCostResult?,
+        decision: ShoppingDecisionScenarioResult?
+    ): List<String> = buildList {
+        add(basketSummary(basket))
+        add(
+            state.destination?.let { destination ->
+                buildString {
+                    append("Store · ").append(destination.displayName)
+                    destination.addressLabel?.let { append(" · ").append(it) }
+                }
+            } ?: "Store · not selected"
         )
+        add(
+            state.origin?.let { origin ->
+                if (origin.kind.name == "FOREGROUND_LOCATION") {
+                    "Starting point · one foreground location reading"
+                } else {
+                    "Starting point · ${origin.label} · entered manually"
+                }
+            } ?: "Starting point · not added"
+        )
+        add(state.costInputOrNull()?.let(::assumptionsSummary) ?: "Trip details · not complete")
+        result?.let { add("Estimated total · ${formatMoney(it.total)}") }
+        decision?.let { add(currentSavingsSupport(it)) }
+    }.take(8)
 
-    private fun formatDistance(metres: Long): String =
-        BigDecimal.valueOf(metres).movePointLeft(3).stripTrailingZeros().toPlainString() + " km entered"
+    private fun assumptionsSummary(input: TripCostInput): String {
+        val distance = BigDecimal.valueOf(input.drivingDistanceMetres)
+            .movePointLeft(3)
+            .stripTrailingZeros()
+            .toPlainString()
+        val consumption = BigDecimal.valueOf(input.fuelConsumptionMilliLitresPer100Km)
+            .movePointLeft(3)
+            .stripTrailingZeros()
+            .toPlainString()
+        val basis = when (input.distanceBasis) {
+            TripDistanceBasis.ROUND_TRIP -> "one-way distance · round trip"
+            TripDistanceBasis.ADDITIONAL_DRIVING -> "additional driving"
+        }
+        return "Trip details · $distance km $basis · $consumption L/100 km · ${formatMoney(input.fuelPricePerLitre)}/L"
+    }
 
-    private fun formatMoney(money: com.valuepilot.core.Money): String =
-        BigDecimal.valueOf(money.minorUnits)
+    private fun formatMoney(money: Money): String =
+        "${money.currencyCode} " + BigDecimal.valueOf(money.minorUnits)
             .movePointLeft(money.fractionDigits)
-            .toPlainString() + " " + money.currencyCode
+            .setScale(money.fractionDigits)
+            .toPlainString()
 }
