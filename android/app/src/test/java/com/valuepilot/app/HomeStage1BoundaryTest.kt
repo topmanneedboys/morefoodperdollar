@@ -15,7 +15,8 @@ class HomeStage1BoundaryTest {
         assertTrue(source.contains("AppShellIntent.SelectPrimary(AppPrimaryTab.SEARCH)"))
         assertTrue(source.contains("homeExperience.onOpenBasket"))
         assertTrue(source.contains("AppShellIntent.SelectPrimary(AppPrimaryTab.BASKET)"))
-        assertTrue(source.contains("if (state.route == AppRoute.SAVED) View.VISIBLE else View.GONE"))
+        assertTrue(source.contains("settingsExperience.visibility = if (settingsVisible) View.VISIBLE else View.GONE"))
+        assertTrue(source.contains("val savedVisible = state.route == AppRoute.SAVED"))
         assertTrue(layout.contains("android:id=\"@+id/shellTagline\""))
     }
 

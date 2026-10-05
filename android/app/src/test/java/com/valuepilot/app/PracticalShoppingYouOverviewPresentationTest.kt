@@ -61,11 +61,13 @@ class PracticalShoppingYouOverviewPresentationTest {
         val actions = setOf(
             PracticalShoppingYouOverviewAction.OpenBought,
             PracticalShoppingYouOverviewAction.OpenSaved,
-            PracticalShoppingYouOverviewAction.OpenWatching
+            PracticalShoppingYouOverviewAction.OpenWatching,
+            PracticalShoppingYouOverviewAction.OpenSettings
         )
-        assertEquals(3, actions.size)
+        assertEquals(4, actions.size)
         assertTrue(actions.contains(PracticalShoppingYouOverviewAction.OpenBought))
         assertTrue(actions.contains(PracticalShoppingYouOverviewAction.OpenSaved))
         assertTrue(actions.contains(PracticalShoppingYouOverviewAction.OpenWatching))
+        assertTrue(actions.contains(PracticalShoppingYouOverviewAction.OpenSettings))
     }
 }

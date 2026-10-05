@@ -8,65 +8,49 @@ import java.io.File
 class MainActivitySourcesLicencesBoundaryTest {
 
     @Test
-    fun `shell exposes a clearly labelled source disclosure action`() {
+    fun `settings owns sources and licence navigation instead of the Saved landing surface`() {
         val layout = source("src/main/res/layout/activity_shell.xml").readText()
-        val start = layout.indexOf("android:id=\"@+id/sourcesLicencesButton\"")
-        val end = layout.indexOf("/>", start)
-
-        assertTrue("Sources and licences action must exist", start >= 0)
-        assertTrue("Sources and licences action must be a complete view block", end > start)
-        val block = layout.substring(start, end)
-        assertTrue(block.contains("android:text=\"@string/sources_licences\""))
-        assertTrue(block.contains("android:textAllCaps=\"false\""))
-        assertTrue(
-            "Disclosure must remain below the screen-specific footnote",
-            layout.indexOf("android:id=\"@+id/screenFootnote\"") < start
-        )
+        assertTrue(layout.contains("android:id=\"@+id/settingsExperience\""))
+        assertFalse(layout.contains("sourcesLicencesButton"))
+        assertFalse(layout.contains("dataStatusButton"))
     }
 
     @Test
-    fun `foreground activity owns only the presentation dialog`() {
+    fun `activity routes Settings actions through the shell`() {
         val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
-        val strings = source("src/main/res/values/strings.xml").readText()
-
         listOf(
-            "private lateinit var sourcesLicencesButton: MaterialButton",
-            "sourcesLicencesButton = findViewById(R.id.sourcesLicencesButton)",
-            "sourcesLicencesButton.setOnClickListener { showSourcesLicences() }",
-            "private fun showSourcesLicences()",
-            "AlertDialog.Builder(this)",
-            ".setTitle(R.string.sources_licences_title)",
-            ".setMessage(R.string.sources_licences_body)",
-            ".setPositiveButton(android.R.string.ok, null)"
+            "settingsExperience.onAction = ::handleSettingsAction",
+            "private fun handleSettingsAction(action: PracticalShoppingSettingsAction)",
+            "AppShellIntent.OpenSettingsDataSources",
+            "AppShellIntent.OpenSettingsLicences",
+            "AppShellIntent.OpenSettingsTechnicalDetails",
+            "PracticalShoppingSettingsPresentation.page("
         ).forEach { required ->
-            assertTrue("Expected source disclosure presentation boundary: $required", activity.contains(required))
+            assertTrue("Expected Settings boundary: $required", activity.contains(required))
         }
-
         listOf(
-            "not live retailer offers",
-            "fictional sample data",
-            "Search cards are source-attributed product identity suggestions only",
-            "authorized current-offer feed",
-            "No flyer content is copied here",
-            "No bundled product catalogue is shipped",
-            "No Canadian store directory is shipped"
-        ).forEach { required ->
-            assertTrue("Expected truthful disclosure copy: $required", strings.contains(required))
-        }
-
-        assertFalse(
-            "Search identity results must not be described as fictional demo cards",
-            strings.contains("Home and Search cards are clearly labelled fictional")
-        )
-
-        listOf(
-            "PracticalShoppingPlanner",
-            "Money.parse",
-            "HttpURLConnection",
             "startActivity(Intent.ACTION_VIEW",
-            "INTERNET"
+            "PracticalShoppingPlanner",
+            "Money.parse"
         ).forEach { forbidden ->
-            assertFalse("Source disclosure must not own business/network authority: $forbidden", activity.contains(forbidden))
+            assertFalse("Settings must not own business/network authority: $forbidden", activity.contains(forbidden))
+        }
+    }
+
+    @Test
+    fun `licence page preserves dataset attribution and external photo boundary`() {
+        val presentation = source(
+            "src/main/java/com/valuepilot/app/PracticalShoppingSettingsPresentation.kt"
+        ).readText()
+        listOf(
+            "Precios Claros",
+            "datos.gob.ar",
+            "Creative Commons Attribution 4.0",
+            "retailer logos",
+            "Google Images",
+            "not copied"
+        ).forEach { required ->
+            assertTrue("Expected attribution boundary: $required", presentation.contains(required))
         }
     }
 

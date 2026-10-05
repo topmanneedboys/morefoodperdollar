@@ -23,4 +23,5 @@ internal sealed interface PracticalShoppingYouOverviewAction {
     data object OpenBought : PracticalShoppingYouOverviewAction
     data object OpenSaved : PracticalShoppingYouOverviewAction
     data object OpenWatching : PracticalShoppingYouOverviewAction
+    data object OpenSettings : PracticalShoppingYouOverviewAction
 }

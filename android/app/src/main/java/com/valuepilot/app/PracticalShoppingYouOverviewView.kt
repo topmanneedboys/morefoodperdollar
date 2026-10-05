@@ -37,11 +37,19 @@ internal class PracticalShoppingYouOverviewView @JvmOverloads constructor(
         layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
     }
     private val actionButtons = mutableListOf<MaterialButton>()
+    private val settingsButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
+        text = "Settings"
+        contentDescription = "Open Settings"
+        layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+            topMargin = dp(14)
+        }
+    }
 
     var onAction: ((PracticalShoppingYouOverviewAction) -> Unit)? = null
         set(value) {
             field = value
             actionButtons.forEach { it.isEnabled = value != null }
+            settingsButton.isEnabled = value != null
         }
 
     init {
@@ -51,11 +59,14 @@ internal class PracticalShoppingYouOverviewView @JvmOverloads constructor(
         addView(headingView)
         addView(bodyView)
         addView(cards)
+        settingsButton.setOnClickListener { onAction?.invoke(PracticalShoppingYouOverviewAction.OpenSettings) }
+        addView(settingsButton)
     }
 
     fun render(state: PracticalShoppingYouOverviewState) {
         actionButtons.clear()
         cards.removeAllViews()
+        settingsButton.isEnabled = onAction != null
         overviewCard(
             title = "Bought",
             count = state.boughtCount,

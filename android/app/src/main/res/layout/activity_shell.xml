@@ -386,6 +386,13 @@
                 android:layout_marginTop="18dp"
                 android:visibility="gone" />
 
+            <com.valuepilot.app.PracticalShoppingSettingsView
+                android:id="@+id/settingsExperience"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:visibility="gone" />
+
             <com.valuepilot.app.PracticalShoppingSavedSurfaceView
                 android:id="@+id/savedExperience"
                 android:layout_width="match_parent"
@@ -535,28 +542,6 @@
                 android:lineSpacingExtra="2dp"
                  android:textColor="@color/vp_text_muted"
                 android:textSize="13sp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/sourcesLicencesButton"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="12dp"
-                android:text="@string/sources_licences"
-                android:textAllCaps="false"
-                android:textSize="15sp"
-                app:cornerRadius="16dp"
-                 style="@style/Widget.ValuePilot.Button.Outlined" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/dataStatusButton"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:layout_marginTop="8dp"
-                android:text="@string/data_status"
-                android:textAllCaps="false"
-                android:textSize="15sp"
-                app:cornerRadius="16dp"
-                 style="@style/Widget.ValuePilot.Button.Outlined" />
 
         </LinearLayout>
 

@@ -99,6 +99,7 @@ class MainActivity : AppCompatActivity() {
     private var searchScrollY = 0
     private var basketScrollY = 0
     private var personalScrollY = 0
+    private var settingsScrollY = 0
     private var tripPlannerScrollY = 0
     private var googlePhotoViewerLaunchInFlight = false
     private var renderedSearchMatches:
@@ -124,8 +125,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var screenBody: TextView
     private lateinit var screenFootnote: TextView
     private lateinit var primaryAction: Button
-    private lateinit var sourcesLicencesButton: MaterialButton
-    private lateinit var dataStatusButton: MaterialButton
     private lateinit var homeExperience: PracticalShoppingHomeSurfaceView
     private lateinit var basketExperience: PracticalShoppingBasketSurfaceView
     private lateinit var tripPlannerExperience: TripPlannerSurfaceView
@@ -141,6 +140,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var searchLoadMoreButton: MaterialButton
     private lateinit var searchResultsEnd: TextView
     private lateinit var youOverviewExperience: PracticalShoppingYouOverviewView
+    private lateinit var settingsExperience: PracticalShoppingSettingsView
     private lateinit var savedExperience: PracticalShoppingSavedSurfaceView
     private lateinit var confirmedPurchaseHistoryButton: MaterialButton
     private lateinit var confirmedPurchaseHistoryExperience: ConfirmedPurchaseHistorySurfaceView
@@ -204,7 +204,6 @@ class MainActivity : AppCompatActivity() {
     private var homeSavedExactProductContext: PracticalShoppingHomeSavedExactProductContext? = null
     private var homeShareCard: PracticalShoppingHomeShareCard? = null
     private var homeShareDialog: AlertDialog? = null
-    private var dataStatusDialog: AlertDialog? = null
     private var privatePriceHistoryDialog: AlertDialog? = null
     private var privatePriceHistoryClearDialog: AlertDialog? = null
     private var privatePriceHistoryExportDialog: AlertDialog? = null
@@ -219,6 +218,7 @@ class MainActivity : AppCompatActivity() {
     private var searchRouteActive = false
     private var basketRouteActive = false
     private var personalRouteActive = false
+    private var settingsRouteActive = false
     private var tripPlannerRouteActive = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -237,8 +237,6 @@ class MainActivity : AppCompatActivity() {
         screenBody = findViewById(R.id.screenBody)
         screenFootnote = findViewById(R.id.screenFootnote)
         primaryAction = findViewById(R.id.primaryAction)
-        sourcesLicencesButton = findViewById(R.id.sourcesLicencesButton)
-        dataStatusButton = findViewById(R.id.dataStatusButton)
         homeExperience = findViewById(R.id.homeExperience)
         basketExperience = findViewById(R.id.basketExperience)
         tripPlannerExperience = findViewById(R.id.tripPlannerExperience)
@@ -254,6 +252,7 @@ class MainActivity : AppCompatActivity() {
         searchLoadMoreButton = findViewById(R.id.searchLoadMoreButton)
         searchResultsEnd = findViewById(R.id.searchResultsEnd)
         youOverviewExperience = findViewById(R.id.youOverviewExperience)
+        settingsExperience = findViewById(R.id.settingsExperience)
         savedExperience = findViewById(R.id.savedExperience)
         confirmedPurchaseHistoryButton = findViewById(R.id.confirmedPurchaseHistoryButton)
         confirmedPurchaseHistoryExperience = findViewById(R.id.confirmedPurchaseHistoryExperience)
@@ -292,6 +291,7 @@ class MainActivity : AppCompatActivity() {
         searchScrollY = savedInstanceState?.getInt(STATE_SEARCH_SCROLL_Y, 0)?.coerceAtLeast(0) ?: 0
         basketScrollY = savedInstanceState?.getInt(STATE_BASKET_SCROLL_Y, 0)?.coerceAtLeast(0) ?: 0
         personalScrollY = savedInstanceState?.getInt(STATE_PERSONAL_SCROLL_Y, 0)?.coerceAtLeast(0) ?: 0
+        settingsScrollY = savedInstanceState?.getInt(STATE_SETTINGS_SCROLL_Y, 0)?.coerceAtLeast(0) ?: 0
         tripPlannerScrollY = savedInstanceState?.getInt(STATE_TRIP_PLANNER_SCROLL_Y, 0)?.coerceAtLeast(0) ?: 0
         productMapSelectedKey = savedInstanceState?.getString(STATE_PRODUCT_MAP_SELECTED_KEY)
         productMapSelectedLabel = savedInstanceState?.getString(STATE_PRODUCT_MAP_SELECTED_LABEL)
@@ -319,8 +319,12 @@ class MainActivity : AppCompatActivity() {
 
                 PracticalShoppingYouOverviewAction.OpenWatching ->
                     dispatch(AppShellIntent.OpenPriceWatches)
+
+                PracticalShoppingYouOverviewAction.OpenSettings ->
+                    dispatch(AppShellIntent.OpenSettings)
             }
         }
+        settingsExperience.onAction = ::handleSettingsAction
         confirmedPurchaseHistoryButton.setOnClickListener {
             dispatch(AppShellIntent.OpenConfirmedPurchaseHistory)
         }
@@ -357,6 +361,13 @@ class MainActivity : AppCompatActivity() {
                         shellState.route == AppRoute.STAPLE_WATCH_POLICY ||
                         shellState.route == AppRoute.CONFIRMED_PURCHASE_HISTORY ||
                         shellState.route == AppRoute.PRICE_WATCHES ||
+                        shellState.route == AppRoute.SETTINGS ||
+                        shellState.route == AppRoute.SETTINGS_PREFERENCES ||
+                        shellState.route == AppRoute.SETTINGS_DATA_PRIVACY ||
+                        shellState.route == AppRoute.SETTINGS_DATA_SOURCES ||
+                        shellState.route == AppRoute.SETTINGS_ABOUT ||
+                        shellState.route == AppRoute.SETTINGS_LICENCES ||
+                        shellState.route == AppRoute.SETTINGS_TECHNICAL_DETAILS ||
                         shellState.route == AppRoute.TRIP_PLANNER
                     ) {
                         dispatch(AppShellIntent.NavigateBack)
@@ -371,8 +382,6 @@ class MainActivity : AppCompatActivity() {
 
         primaryAction.setOnClickListener { openComparison() }
         screenBackAction.setOnClickListener { dispatch(AppShellIntent.NavigateBack) }
-        sourcesLicencesButton.setOnClickListener { showSourcesLicences() }
-        dataStatusButton.setOnClickListener { showDataStatus() }
 
         bottomNavigation.selectedItemId = menuIdFor(shellState.selectedPrimaryTab)
         renderShell(shellState)
@@ -443,12 +452,14 @@ class MainActivity : AppCompatActivity() {
         if (searchRouteActive) searchScrollY = shellScrollView.scrollY.coerceAtLeast(0)
         if (basketRouteActive) basketScrollY = shellScrollView.scrollY.coerceAtLeast(0)
         if (personalRouteActive) personalScrollY = shellScrollView.scrollY.coerceAtLeast(0)
+        if (settingsRouteActive) settingsScrollY = shellScrollView.scrollY.coerceAtLeast(0)
         if (tripPlannerRouteActive) tripPlannerScrollY = shellScrollView.scrollY.coerceAtLeast(0)
         outState.putString(STATE_SEARCH_QUERY, searchQuery)
         outState.putBoolean(STATE_SEARCH_WAS_SUBMITTED, searchWasSubmitted)
         outState.putInt(STATE_SEARCH_SCROLL_Y, searchScrollY)
         outState.putInt(STATE_BASKET_SCROLL_Y, basketScrollY)
         outState.putInt(STATE_PERSONAL_SCROLL_Y, personalScrollY)
+        outState.putInt(STATE_SETTINGS_SCROLL_Y, settingsScrollY)
         outState.putInt(STATE_TRIP_PLANNER_SCROLL_Y, tripPlannerScrollY)
         outState.putString(STATE_PRODUCT_MAP_SELECTED_KEY, productMapSelectedKey)
         outState.putString(STATE_PRODUCT_MAP_SELECTED_LABEL, productMapSelectedLabel)
@@ -464,8 +475,6 @@ class MainActivity : AppCompatActivity() {
         if (::argentinaSearchHost.isInitialized) {
             argentinaSearchHost.close()
         }
-        dataStatusDialog?.dismiss()
-        dataStatusDialog = null
         privatePriceHistoryDialog?.dismiss()
         privatePriceHistoryDialog = null
         privatePriceHistoryClearDialog?.dismiss()
@@ -526,6 +535,9 @@ class MainActivity : AppCompatActivity() {
         }
         if (::tripPlannerExperience.isInitialized) {
             tripPlannerExperience.onAction = null
+        }
+        if (::settingsExperience.isInitialized) {
+            settingsExperience.onAction = null
         }
         if (::savedRouteCoordinator.isInitialized) {
             savedExperience.onAction = null
@@ -800,8 +812,6 @@ class MainActivity : AppCompatActivity() {
 
         homePrivateMemoryState = next
         homePrivateMemoryLoadIssue = nextIssue
-        dataStatusDialog?.dismiss()
-        dataStatusDialog = null
         privatePriceHistoryDialog?.dismiss()
         privatePriceHistoryDialog = null
         privatePriceHistoryClearDialog?.dismiss()
@@ -815,6 +825,9 @@ class MainActivity : AppCompatActivity() {
                 shellState.route != AppRoute.COMPARE
         ) {
             renderHome()
+        }
+        if (::settingsExperience.isInitialized && isSettingsRoute(shellState.route)) {
+            renderSettings(shellState.route)
         }
     }
 
@@ -2118,32 +2131,26 @@ class MainActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    private fun showSourcesLicences() {
-        AlertDialog.Builder(this)
-            .setTitle(R.string.sources_licences_title)
-            .setMessage(R.string.sources_licences_body)
-            .setPositiveButton(android.R.string.ok, null)
-            .show()
-    }
+    private fun handleSettingsAction(action: PracticalShoppingSettingsAction) {
+        when (action) {
+            PracticalShoppingSettingsAction.OpenPreferences ->
+                dispatch(AppShellIntent.OpenSettingsPreferences)
 
-    private fun showDataStatus() {
-        dataStatusDialog?.dismiss()
-        val presentation =
-            PracticalShoppingDataStatusPresentation.from(
-                privateMemory = homePrivateMemoryState,
-                privateMemoryAvailable = homePrivateMemoryLoadIssue == null
-            )
-        val dialog =
-            AlertDialog.Builder(this)
-                .setTitle(R.string.data_status_title)
-                .setMessage(presentation.message)
-                .setPositiveButton(android.R.string.ok, null)
-                .create()
-        dialog.setOnDismissListener {
-            if (dataStatusDialog === dialog) dataStatusDialog = null
+            PracticalShoppingSettingsAction.OpenDataPrivacy ->
+                dispatch(AppShellIntent.OpenSettingsDataPrivacy)
+
+            PracticalShoppingSettingsAction.OpenDataSources ->
+                dispatch(AppShellIntent.OpenSettingsDataSources)
+
+            PracticalShoppingSettingsAction.OpenAbout ->
+                dispatch(AppShellIntent.OpenSettingsAbout)
+
+            PracticalShoppingSettingsAction.OpenLicences ->
+                dispatch(AppShellIntent.OpenSettingsLicences)
+
+            PracticalShoppingSettingsAction.OpenTechnicalDetails ->
+                dispatch(AppShellIntent.OpenSettingsTechnicalDetails)
         }
-        dataStatusDialog = dialog
-        dialog.show()
     }
 
     private fun openGoodPriceCheck() {
@@ -2286,6 +2293,7 @@ class MainActivity : AppCompatActivity() {
         }
         val searchVisible =
             state.route == AppRoute.SEARCH && state.selectedPrimaryTab == AppPrimaryTab.SEARCH
+        val settingsVisible = isSettingsRoute(state.route)
         if (!searchVisible && productMapDialog?.isShowing == true) {
             productMapDialog?.dismiss()
             productMapDialog = null
@@ -2303,6 +2311,13 @@ class MainActivity : AppCompatActivity() {
             basketScrollY = shellScrollView.scrollY.coerceAtLeast(0)
         }
         basketRouteActive = basketVisible
+        if (settingsVisible && settingsRouteActive) {
+            settingsScrollY = shellScrollView.scrollY.coerceAtLeast(0)
+        } else if (!settingsVisible && settingsRouteActive) {
+            settingsScrollY = shellScrollView.scrollY.coerceAtLeast(0)
+        }
+        val enteringSettings = settingsVisible && !settingsRouteActive
+        settingsRouteActive = settingsVisible
         val personalVisible =
             state.route == AppRoute.SAVED ||
                 state.route == AppRoute.CONFIRMED_PURCHASE_HISTORY ||
@@ -2322,6 +2337,7 @@ class MainActivity : AppCompatActivity() {
         tripPlannerRouteActive = tripPlannerVisible
         youOverviewExperience.visibility = View.GONE
         if (state.route == AppRoute.COMPARE) {
+            settingsExperience.visibility = View.GONE
             savedExperience.onRouteVisibilityChanged(false)
             return
         }
@@ -2353,6 +2369,8 @@ class MainActivity : AppCompatActivity() {
                     footnote = "Your distance and vehicle details are entered by you; this is not a road route.",
                     showCompareAction = false
                 )
+            } else if (settingsVisible) {
+                settingsScreenCopy(state.route)
             } else {
                 copyFor(state.selectedPrimaryTab)
             }
@@ -2377,10 +2395,6 @@ class MainActivity : AppCompatActivity() {
         // The brand promise belongs to the landing surface. Secondary routes use their
         // task title instead of repeating marketing copy above every workflow.
         shellTagline.visibility = if (state.route == AppRoute.HOME) View.VISIBLE else View.GONE
-        sourcesLicencesButton.visibility =
-            if (state.route == AppRoute.SAVED) View.VISIBLE else View.GONE
-        dataStatusButton.visibility =
-            if (state.route == AppRoute.SAVED) View.VISIBLE else View.GONE
         primaryAction.visibility = if (copy.showCompareAction) View.VISIBLE else View.GONE
 
         val homeVisible = state.selectedPrimaryTab == AppPrimaryTab.HOME
@@ -2409,6 +2423,15 @@ class MainActivity : AppCompatActivity() {
         val staplePolicyVisible = state.route == AppRoute.STAPLE_WATCH_POLICY
         youOverviewExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
         if (savedVisible) renderYouOverview()
+        settingsExperience.visibility = if (settingsVisible) View.VISIBLE else View.GONE
+        if (settingsVisible) {
+            renderSettings(state.route)
+            if (enteringSettings) {
+                shellScrollView.post { if (settingsRouteActive) shellScrollView.scrollTo(0, 0) }
+            } else {
+                restoreSettingsScrollPosition()
+            }
+        }
         savedExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
         confirmedPurchaseHistoryButton.visibility = View.GONE
         confirmedPurchaseHistoryExperience.visibility = if (historyVisible) View.VISIBLE else View.GONE
@@ -2636,6 +2659,115 @@ class MainActivity : AppCompatActivity() {
                 watchingCount = priceWatchState.watches.size
             )
         )
+    }
+
+    private fun isSettingsRoute(route: AppRoute): Boolean =
+        route == AppRoute.SETTINGS ||
+            route == AppRoute.SETTINGS_PREFERENCES ||
+            route == AppRoute.SETTINGS_DATA_PRIVACY ||
+            route == AppRoute.SETTINGS_DATA_SOURCES ||
+            route == AppRoute.SETTINGS_ABOUT ||
+            route == AppRoute.SETTINGS_LICENCES ||
+            route == AppRoute.SETTINGS_TECHNICAL_DETAILS
+
+    private fun settingsPageFor(route: AppRoute): PracticalShoppingSettingsPage =
+        when (route) {
+            AppRoute.SETTINGS -> PracticalShoppingSettingsPage.LANDING
+            AppRoute.SETTINGS_PREFERENCES -> PracticalShoppingSettingsPage.PREFERENCES
+            AppRoute.SETTINGS_DATA_PRIVACY -> PracticalShoppingSettingsPage.DATA_PRIVACY
+            AppRoute.SETTINGS_DATA_SOURCES -> PracticalShoppingSettingsPage.DATA_SOURCES
+            AppRoute.SETTINGS_ABOUT -> PracticalShoppingSettingsPage.ABOUT
+            AppRoute.SETTINGS_LICENCES -> PracticalShoppingSettingsPage.LICENCES
+            AppRoute.SETTINGS_TECHNICAL_DETAILS -> PracticalShoppingSettingsPage.TECHNICAL_DETAILS
+            else -> error("Not a Settings route: $route")
+        }
+
+    private fun settingsScreenCopy(route: AppRoute): ScreenCopy =
+        when (route) {
+            AppRoute.SETTINGS ->
+                ScreenCopy(
+                    eyebrow = "SETTINGS",
+                    title = "Settings",
+                    body = "Change the few things that matter beyond the shopping flow.",
+                    footnote = "Your shopping data remains on this device in this build.",
+                    showCompareAction = false
+                )
+
+            AppRoute.SETTINGS_PREFERENCES ->
+                ScreenCopy(
+                    eyebrow = "SETTINGS",
+                    title = "Preferences",
+                    body = "Choices that shape your plan stay close to the shopping decisions they affect.",
+                    footnote = "There are no account or sync controls here.",
+                    showCompareAction = false
+                )
+
+            AppRoute.SETTINGS_DATA_PRIVACY ->
+                ScreenCopy(
+                    eyebrow = "SETTINGS",
+                    title = "Data & privacy",
+                    body = "Your personal shopping memory is separate from public product evidence.",
+                    footnote = "Manage personal records where you created them.",
+                    showCompareAction = false
+                )
+
+            AppRoute.SETTINGS_DATA_SOURCES ->
+                ScreenCopy(
+                    eyebrow = "SETTINGS",
+                    title = "Data sources",
+                    body = "See what each source can—and cannot—tell you.",
+                    footnote = "A source label never turns unknown data into a current offer.",
+                    showCompareAction = false
+                )
+
+            AppRoute.SETTINGS_ABOUT ->
+                ScreenCopy(
+                    eyebrow = "ABOUT",
+                    title = "About ValuePilot",
+                    body = "A calm private workspace for understanding a basket and the evidence behind it.",
+                    footnote = "Version ${BuildConfig.VERSION_NAME}.",
+                    showCompareAction = false
+                )
+
+            AppRoute.SETTINGS_LICENCES ->
+                ScreenCopy(
+                    eyebrow = "ABOUT",
+                    title = "Licences & attribution",
+                    body = "Source attribution and legal notices for the data and services ValuePilot references.",
+                    footnote = "Attribution is kept here so shopping surfaces stay focused.",
+                    showCompareAction = false
+                )
+
+            AppRoute.SETTINGS_TECHNICAL_DETAILS ->
+                ScreenCopy(
+                    eyebrow = "ABOUT",
+                    title = "Technical details",
+                    body = "Support-level data status and evidence boundaries.",
+                    footnote = "These details do not change shopping decisions.",
+                    showCompareAction = false
+                )
+
+            else -> error("Not a Settings route: $route")
+        }
+
+    private fun renderSettings(route: AppRoute) {
+        settingsExperience.render(
+            PracticalShoppingSettingsPresentation.page(
+                page = settingsPageFor(route),
+                versionName = BuildConfig.VERSION_NAME,
+                dataStatus =
+                    PracticalShoppingDataStatusPresentation.from(
+                        privateMemory = homePrivateMemoryState,
+                        privateMemoryAvailable = homePrivateMemoryLoadIssue == null
+                    )
+            )
+        )
+    }
+
+    private fun restoreSettingsScrollPosition() {
+        shellScrollView.post {
+            if (settingsRouteActive) shellScrollView.scrollTo(0, settingsScrollY.coerceAtLeast(0))
+        }
     }
 
     private fun refreshTripPlannerState() {
@@ -4015,6 +4147,7 @@ class MainActivity : AppCompatActivity() {
         private const val STATE_SEARCH_SCROLL_Y = "app_shell.search_scroll_y"
         private const val STATE_BASKET_SCROLL_Y = "app_shell.basket_scroll_y"
         private const val STATE_PERSONAL_SCROLL_Y = "app_shell.personal_scroll_y"
+        private const val STATE_SETTINGS_SCROLL_Y = "app_shell.settings_scroll_y"
         private const val STATE_TRIP_PLANNER_SCROLL_Y = "app_shell.trip_planner_scroll_y"
         private const val STATE_PRODUCT_MAP_SELECTED_KEY = "app_shell.product_map_selected_key"
         private const val STATE_PRODUCT_MAP_SELECTED_LABEL = "app_shell.product_map_selected_label"
