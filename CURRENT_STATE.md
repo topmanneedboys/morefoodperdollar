@@ -7,6 +7,30 @@ Updated: 2026-10-04 00:00 UTC
 > for provenance only. They are not shipped assets or active runtime sources;
 > see `LEGACY_CANADIAN_DATA_SOURCE_CLEANUP.md`.
 
+## Wave 2 compact consumer UI checkpoint — 2026-10-04
+
+The compact/fluid presentation pass is complete on
+`work/valuepilot-confirmed-purchases` at commit
+`a75fda8b9ffb73b48d79de9b235d64686fb64852`. Home, Search, Basket and You now share compact rows, bounded overflow,
+contextual sheets, a restrained status treatment and one obvious primary
+action. Map, Trip, Compare, Good Price, Settings, Saved, purchase history and
+Price Watch use the same quieter tokenized surfaces and progressive disclosure.
+The product, price, evidence, purchase, ranking, navigation and privacy
+boundaries remain unchanged; no new feature, provider, permission, network or
+backend work was added. The design decisions and limitations are documented in
+`COMPACT_CONSUMER_UI_AUDIT.md`.
+
+Local verification is green: 411 shared-core tests, 1,723 Android JVM tests,
+debug/release lint, debug/release builds, release bundle, `git diff --check`,
+and the existing privacy boundary (INTERNET intentional; no
+ACCESS_NETWORK_STATE). The unsigned release AAB is at
+`android/app/build/outputs/bundle/release/app-release.aab`, 35,063,231 bytes,
+SHA-256 `9F8BFAB0F5DCD24F8F88134C94D58571A8E89BB4106F5A6A5183DA14F1E41AD9`.
+The app remains versionCode `10125` / versionName `101.1.24`; no signing,
+Play upload, device install, data clear, uninstall or STALE_RELEASE repair was
+performed. A fresh Motorola comparison is still required for final visual,
+large-text, sheet-ergonomics, marker-readability and performance judgment.
+
 ## Unified Stage 7 legacy-surface consolidation checkpoint — 2026-10-04
 
 The bounded Compare / Good Price / capture presentation slice is complete on
