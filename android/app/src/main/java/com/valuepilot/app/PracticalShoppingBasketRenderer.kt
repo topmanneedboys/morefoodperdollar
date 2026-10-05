@@ -152,7 +152,7 @@ object PracticalShoppingBasketRenderer {
                     "Search for products to start your list."
                 PracticalShoppingBasketStatus.NEEDS_ATTENTION ->
                     if (draftReadyForPlanning) {
-                        "Your list is ready to plan. Return to Home and tap Plan my shop to see the sample result."
+                        "Your list is ready. Return to Home and tap Plan my shop to review the sample result."
                     } else {
                         source.message ?: "Finish the items that need attention on Home."
                     }

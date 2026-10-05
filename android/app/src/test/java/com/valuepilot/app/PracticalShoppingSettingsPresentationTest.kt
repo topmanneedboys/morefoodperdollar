@@ -39,10 +39,10 @@ class PracticalShoppingSettingsPresentationTest {
     fun `about exposes version and licences below the landing surface`() {
         val about = PracticalShoppingSettingsPresentation.page(
             page = PracticalShoppingSettingsPage.ABOUT,
-            versionName = "101.1.23"
+            versionName = "101.1.24"
         )
 
-        assertTrue(about.rows.any { it.title == "Version" && it.summary == "101.1.23" })
+        assertTrue(about.rows.any { it.title == "Version" && it.summary == "101.1.24" })
         assertTrue(about.rows.any { it.action == PracticalShoppingSettingsAction.OpenLicences })
     }
 

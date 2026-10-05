@@ -69,7 +69,7 @@ class PracticalShoppingBasketRendererTest {
         assertEquals(PracticalShoppingBasketStatus.NEEDS_ATTENTION, basket.status)
         assertEquals("Plan this list on Home", basket.headline)
         assertEquals(
-            "Your list is ready to plan. Return to Home and tap Plan my shop to see the sample result.",
+            "Your list is ready. Return to Home and tap Plan my shop to review the sample result.",
             basket.guidance
         )
         assertEquals("Plan this list on Home", basket.actionLabel)
@@ -194,7 +194,7 @@ class PracticalShoppingBasketRendererTest {
         assertEquals(4, summary.itemCount)
         assertEquals("4 products", summary.itemSummary)
         assertEquals("1 of 2 collected", summary.collectedSummary)
-        assertEquals("📍 Sample Market", summary.storeSummary)
+        assertEquals("Store: Sample Market", summary.storeSummary)
         assertEquals("Trip: One stop remains the default.", summary.tripSummary)
         assertEquals("1 saved product", summary.privateChecklistSummary)
     }

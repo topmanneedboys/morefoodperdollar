@@ -75,7 +75,7 @@ class PracticalShoppingPrivatePriceHistoryPresentationTest {
         assertTrue(row.packageText.contains("1 items"))
         assertEquals("Current price", row.priceBasisText)
         assertTrue(row.latestObservedText.contains("UTC"))
-        assertTrue(row.sourceText.contains("Scan & compare"))
+        assertTrue(row.sourceText.contains("Compare"))
         assertTrue(row.sourceText.contains("Is this a good price?"))
         assertTrue(presentation.message.contains("Whole Milk"))
         assertTrue(presentation.message.contains("not live store prices"))

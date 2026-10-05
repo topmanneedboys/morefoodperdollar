@@ -64,8 +64,8 @@ internal fun practicalShoppingBasketSummaryProjection(
     val storeSummary =
         when (stores.size) {
             0 -> null
-            1 -> "📍 ${stores.single()}"
-            else -> "📍 ${stores.take(2).joinToString()}" +
+            1 -> "Store: ${stores.single()}"
+            else -> "Stores: ${stores.take(2).joinToString()}" +
                 if (stores.size > 2) " + ${stores.size - 2} more" else ""
         }
     val tripSummary =
@@ -870,7 +870,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             source.visibility = if (moreExpanded && identity.sourceLabel != null) VISIBLE else GONE
             notice.text = identity.notice
             notice.visibility = if (moreExpanded) VISIBLE else GONE
-            watchContext.text = if (identity.watched) "Price Watch is active for this exact identity" else ""
+            watchContext.text = if (identity.watched) "Watching this exact product" else ""
             watchContext.visibility = if (moreExpanded && identity.watched) VISIBLE else GONE
             photo.contentDescription = context.getString(
                 R.string.home_private_identity_photos_description,

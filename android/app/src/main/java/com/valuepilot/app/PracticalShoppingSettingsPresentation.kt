@@ -50,7 +50,7 @@ internal sealed interface PracticalShoppingSettingsAction {
 }
 
 internal object PracticalShoppingSettingsPresentation {
-    const val DEFAULT_VERSION = "101.1.23"
+    const val DEFAULT_VERSION = "101.1.24"
 
     fun page(
         page: PracticalShoppingSettingsPage,

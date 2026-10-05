@@ -254,7 +254,7 @@ internal data class PracticalShoppingPrivatePriceHistoryPresentation(
         private fun sourceLabel(source: CompareHerePrivatePriceMemorySource): String =
             when (source) {
                 CompareHerePrivatePriceMemorySource.CONFIRMED_COMPARE_HERE ->
-                    "Scan & compare"
+                    "Compare"
 
                 CompareHerePrivatePriceMemorySource.CONFIRMED_GOOD_PRICE_CHECK ->
                     "Is this a good price?"

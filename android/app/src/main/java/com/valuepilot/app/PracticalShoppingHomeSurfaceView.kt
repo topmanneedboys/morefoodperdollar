@@ -1019,15 +1019,15 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         val primary = state.result?.primary
         commandCenterTitle.text =
             when {
-                primary != null -> "Your projected plan is ready"
+                primary != null -> "Your shop plan is ready"
                 itemCount > 0 -> "Your list is ready"
-                privateCount > 0 -> "Your private list is ready"
+                privateCount > 0 -> "Your saved list is ready"
                 else -> "Start with your list"
             }
         commandCenterSummary.text =
             when {
                 primary != null ->
-                    "${primary.coverageText} · Review the evidence below before you shop."
+                    "${primary.coverageText} · Check the details below before you shop."
                 itemCount > 0 ->
                     "Check the list, then choose Plan my shop for the next step."
                 privateCount > 0 ->
@@ -1037,15 +1037,15 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
             }
         commandCenterListPill.text =
             if (itemCount == 0) {
-                "No planned items"
+                "No items yet"
             } else if (itemCount == 1) {
-                "1 planned item"
+                "1 item"
             } else {
-                "$itemCount planned items"
+                "$itemCount items"
             }
         commandCenterStatusPill.text =
             when {
-                primary != null -> "Plan ready"
+                primary != null -> "Ready to shop"
                 state.result != null -> "Coverage needs review"
                 privateCount > 0 -> "$privateCount private saved"
                 else -> "No plan yet"

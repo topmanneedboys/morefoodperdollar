@@ -32,9 +32,9 @@ class PracticalShoppingHomePersonalHistoryTest {
             )
 
         assertEquals(
-            "Private comparison history: 2 observations on this device. " +
+            "Saved price history: 2 observations on this device. " +
                 "Home shows matching context only; package and promotion details may differ. " +
-                "This is not live store pricing. Open Scan & compare prices to review it.",
+                "This is not live store pricing. Open Compare to review it.",
             summary
         )
         val rendered =
@@ -180,7 +180,7 @@ class PracticalShoppingHomePersonalHistoryTest {
             )
 
         assertEquals(
-            "Private comparison history: 2 observations for this name. " +
+            "Saved price history: 2 observations for this name. " +
                 "Package and promotion details may differ; not live store pricing.",
             notice
         )
@@ -250,14 +250,14 @@ class PracticalShoppingHomePersonalHistoryTest {
 
         assertSame(sourceResult, rendered.result)
         assertEquals(
-            "Private comparison history: 1 observation on this device. " +
+            "Saved price history: 1 observation on this device. " +
                 "Home shows matching context only; package and promotion details may differ. " +
-                "This is not live store pricing. Open Scan & compare prices to review it.\n" +
+                "This is not live store pricing. Open Compare to review it.\n" +
                 "Name-matched personal history: 1 of 2 list items. This is not current-price coverage.",
             rendered.privateMemorySummary
         )
         assertEquals(
-            listOf(null, "Private comparison history: 1 observation for this name. " +
+            listOf(null, "Saved price history: 1 observation for this name. " +
                 "Package and promotion details may differ; not live store pricing."),
             rendered.items.map { it.personalHistoryNotice }
         )
@@ -300,7 +300,7 @@ class PracticalShoppingHomePersonalHistoryTest {
             )
         )
 
-        assertTrue(summary.startsWith("Private comparison history: 1 observation"))
+        assertTrue(summary.startsWith("Saved price history: 1 observation"))
         assertTrue(!summary.contains("Name-matched personal history"))
     }
 

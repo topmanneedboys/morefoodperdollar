@@ -29,9 +29,9 @@ internal object PracticalShoppingHomePersonalHistory {
         if (observationCount == 0) return null
 
         val noun = if (observationCount == 1) "observation" else "observations"
-        val summary = "Private comparison history: $observationCount $noun on this device. " +
+        val summary = "Saved price history: $observationCount $noun on this device. " +
             "Home shows matching context only; package and promotion details may differ. " +
-            "This is not live store pricing. Open Scan & compare prices to review it."
+            "This is not live store pricing. Open Compare to review it."
 
         val distinctNames =
             requestedItemNames
@@ -122,7 +122,7 @@ internal object PracticalShoppingHomePersonalHistory {
 
     private fun genericNotice(observationCount: Int): String {
         val noun = if (observationCount == 1) "observation" else "observations"
-        return "Private comparison history: $observationCount $noun for this name. " +
+        return "Saved price history: $observationCount $noun for this name. " +
             "Package and promotion details may differ; not live store pricing."
     }
 
