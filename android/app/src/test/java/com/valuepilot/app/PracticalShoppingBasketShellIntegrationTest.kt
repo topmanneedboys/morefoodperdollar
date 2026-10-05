@@ -37,6 +37,11 @@ class PracticalShoppingBasketShellIntegrationTest {
                 "dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.HOME))"
             )
         )
+        assertTrue(
+            source.contains(
+                "dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.SEARCH))"
+            )
+        )
         assertFalse(source.contains("PracticalShoppingPlanner("))
         assertFalse(source.contains("Money.parse"))
     }

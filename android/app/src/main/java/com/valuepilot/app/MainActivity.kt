@@ -995,6 +995,8 @@ class MainActivity : AppCompatActivity() {
             when (action) {
                 PracticalShoppingBasketUiAction.OpenHome ->
                     dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.HOME))
+                PracticalShoppingBasketUiAction.OpenSearch ->
+                    dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.SEARCH))
                 PracticalShoppingBasketUiAction.OpenTripPlanner ->
                     dispatch(AppShellIntent.OpenTripPlanner)
                 is PracticalShoppingBasketUiAction.ConfirmPurchase ->

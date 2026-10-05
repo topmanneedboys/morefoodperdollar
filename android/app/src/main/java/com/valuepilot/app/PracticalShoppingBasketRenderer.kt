@@ -122,14 +122,17 @@ object PracticalShoppingBasketRenderer {
         val status =
             when {
                 source.result != null -> PracticalShoppingBasketStatus.PLANNED
-                source.query.isBlank() && source.items.isEmpty() && source.unknownItems.isEmpty() ->
+                source.query.isBlank() &&
+                    source.items.isEmpty() &&
+                    source.unknownItems.isEmpty() &&
+                    source.privateIdentityItems.isEmpty() ->
                     PracticalShoppingBasketStatus.EMPTY
                 else -> PracticalShoppingBasketStatus.NEEDS_ATTENTION
             }
 
         val headline =
             when (status) {
-                PracticalShoppingBasketStatus.EMPTY -> "No basket planned yet"
+                PracticalShoppingBasketStatus.EMPTY -> "Your basket is empty"
                 PracticalShoppingBasketStatus.NEEDS_ATTENTION ->
                     if (draftReadyForPlanning) {
                         "Plan this list on Home"
@@ -146,7 +149,7 @@ object PracticalShoppingBasketRenderer {
         val guidance =
             when (status) {
                 PracticalShoppingBasketStatus.EMPTY ->
-                    "Build your shopping list on Home, then its plan will appear here."
+                    "Search for products to start your list."
                 PracticalShoppingBasketStatus.NEEDS_ATTENTION ->
                     if (draftReadyForPlanning) {
                         "Your list is ready to plan. Return to Home and tap Plan my shop to see the sample result."
@@ -205,7 +208,7 @@ object PracticalShoppingBasketRenderer {
             collectionScopeId = collectionScopeId,
             actionLabel =
                 if (status == PracticalShoppingBasketStatus.EMPTY) {
-                    "Build my basket on Home"
+                    "Search products"
                 } else if (draftReadyForPlanning) {
                     "Plan this list on Home"
                 } else {

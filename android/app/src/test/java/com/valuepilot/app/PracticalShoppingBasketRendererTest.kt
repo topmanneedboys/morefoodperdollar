@@ -21,7 +21,7 @@ class PracticalShoppingBasketRendererTest {
         val basket = PracticalShoppingBasketRenderer.render(home)
 
         assertEquals(PracticalShoppingBasketStatus.EMPTY, basket.status)
-        assertEquals("No basket planned yet", basket.headline)
+        assertEquals("Your basket is empty", basket.headline)
         assertTrue(basket.items.isEmpty())
         assertTrue(basket.unknownItems.isEmpty())
         assertNull(basket.result)
@@ -29,7 +29,7 @@ class PracticalShoppingBasketRendererTest {
         assertNull(basket.extraStopRuleText)
         assertFalse(basket.collectionEnabled)
         assertNull(basket.collectionNotice)
-        assertEquals("Build my basket on Home", basket.actionLabel)
+        assertEquals("Search products", basket.actionLabel)
         assertSame(home.items, basket.items)
         assertSame(home.unknownItems, basket.unknownItems)
     }
@@ -146,6 +146,7 @@ class PracticalShoppingBasketRendererTest {
 
         val basket = PracticalShoppingBasketRenderer.render(home)
 
+        assertEquals(PracticalShoppingBasketStatus.NEEDS_ATTENTION, basket.status)
         assertEquals(listOf(first.identityKey, second.identityKey), basket.privateIdentityItems.map { it.identityKey })
         assertEquals(listOf(false, true), basket.privateIdentityItems.map { it.collected })
         assertEquals("Yerba Mate", basket.privateIdentityItems.first().displayName)
@@ -190,12 +191,12 @@ class PracticalShoppingBasketRendererTest {
                 eligibleCount = 2
             )
 
-        assertEquals(3, summary.itemCount)
-        assertEquals("3 items in this basket", summary.itemSummary)
+        assertEquals(4, summary.itemCount)
+        assertEquals("4 products", summary.itemSummary)
         assertEquals("1 of 2 collected", summary.collectedSummary)
-        assertEquals("Planned stop: Sample Market", summary.storeSummary)
-        assertEquals("Trip context: One stop remains the default.", summary.tripSummary)
-        assertEquals("1 saved private item", summary.privateChecklistSummary)
+        assertEquals("📍 Sample Market", summary.storeSummary)
+        assertEquals("Trip: One stop remains the default.", summary.tripSummary)
+        assertEquals("1 saved product", summary.privateChecklistSummary)
     }
 
     @Test

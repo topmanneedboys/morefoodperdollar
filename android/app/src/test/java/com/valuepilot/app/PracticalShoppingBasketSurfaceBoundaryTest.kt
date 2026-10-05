@@ -17,8 +17,9 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
         assertTrue(source.contains("planResult.render(state.result, state.sampleNotice)"))
         assertTrue(source.contains("sampleNotice.text = state.sampleNotice"))
         assertTrue(source.contains("noCoverageSummary.text = state.noCoverageSummary.orEmpty()"))
-        assertTrue(source.contains("state.noCoverageSummary == null"))
+        assertTrue(source.contains("state?.noCoverageSummary != null"))
         assertTrue(source.contains("PracticalShoppingBasketUiAction.OpenHome"))
+        assertTrue(source.contains("PracticalShoppingBasketUiAction.OpenSearch"))
         assertTrue(source.contains("isEnabled = false"))
         assertTrue(source.contains("actionButton.isEnabled = onAction != null"))
         assertTrue(source.contains("item.requestDetailsSummary"))
@@ -37,8 +38,8 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
         assertTrue(source.contains("collectionNotice.text = state.collectionNotice.orEmpty()"))
         assertTrue(source.contains("extraStopRuleNotice.text = state.extraStopRuleNotice.orEmpty()"))
         assertTrue(source.contains("private val noCoverageSummary"))
-        assertTrue(source.contains("state.extraStopRuleNotice == null"))
-        assertTrue(source.contains("state.collectionNotice == null"))
+        assertTrue(source.contains("state?.extraStopRuleNotice != null"))
+        assertTrue(source.contains("state?.collectionNotice != null"))
         assertTrue(source.contains("No usable price yet — not ready to collect"))
         assertTrue(source.contains("addItemDetails(item, details, collectionEnabled)"))
         assertTrue(source.contains("practicalShoppingBasketCollectionActionDescription(item, collected)"))
@@ -75,7 +76,7 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
             "private val basketItemRowsByKey = LinkedHashMap<ShoppingItemKey, BasketItemRow>()",
             "private inner class BasketItemRow",
             "ValuePilotMotion.reveal(root)",
-            "More for this item",
+            "text = \"More\"",
             "state.items.map { it.key }.toSet()",
             "item.personalHistoryNotice",
             "item.savedExactProductNotice"
@@ -83,6 +84,26 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
             assertTrue("Missing unified Basket presentation boundary $required", source.contains(required))
         }
         assertFalse(source.contains("itemsContainer.removeAllViews()"))
+    }
+
+    @Test
+    fun basketFirstViewportUsesGraphicalProgressAndKeepsAdvancedContentSecondary() {
+        val source = source("PracticalShoppingBasketSurfaceView.kt").readSourceText()
+
+        listOf(
+            "private val collectionProgressBar = ProgressBar(",
+            "private val recordPurchaseButton",
+            "private val detailsToggle",
+            "private val basketDetailsCard",
+            "renderDetailsVisibility(presentation)",
+            "SAVED_DETAILS_EXPANDED",
+            "details.visibility = if (moreExpanded) VISIBLE else GONE"
+        ).forEach { required ->
+            assertTrue("Missing Stage 3 Basket hierarchy boundary $required", source.contains(required))
+        }
+        assertTrue(source.indexOf("addView(itemsContainer)") < source.indexOf("addView(basketDetailsCard)"))
+        assertTrue(source.contains("text = \"Record purchase\""))
+        assertTrue(source.contains("nothing is recorded automatically"))
     }
 
     @Test
@@ -128,7 +149,8 @@ class PracticalShoppingBasketSurfaceBoundaryTest {
             "actionButton.isEnabled = value != null && hasRenderedState",
             "hasRenderedState = true",
             "actionButton.isEnabled = onAction != null && hasRenderedState",
-            "setOnClickListener { onAction?.invoke(PracticalShoppingBasketUiAction.OpenHome) }"
+            "PracticalShoppingBasketUiAction.OpenHome",
+            "PracticalShoppingBasketUiAction.OpenSearch"
         ).forEach { required ->
             assertTrue("Expected live Basket owner invalidation binding $required", source.contains(required))
         }
