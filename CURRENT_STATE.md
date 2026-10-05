@@ -20,7 +20,7 @@ boundaries remain unchanged; no new feature, provider, permission, network or
 backend work was added. The design decisions and limitations are documented in
 `COMPACT_CONSUMER_UI_AUDIT.md`.
 
-Local verification is green: 411 shared-core tests, 1,723 Android JVM tests,
+Local verification is green: 411 shared-core tests, 1,724 Android JVM tests,
 debug/release lint, debug/release builds, release bundle, `git diff --check`,
 and the existing privacy boundary (INTERNET intentional; no
 ACCESS_NETWORK_STATE). The unsigned release AAB is at

@@ -150,6 +150,18 @@ class CompactConsumerUiBoundaryTest {
         assertTrue(goodPrice.contains("NORMAL_COMPONENT_RADIUS_DP"))
     }
 
+    @Test
+    fun compact_controls_keep_large_text_and_recreation_boundaries() {
+        val components = source("ValuePilotCompactComponents.kt")
+        val activity = source("MainActivity.kt")
+
+        assertTrue(components.contains("MINIMUM_DP"))
+        assertTrue(components.contains("maxLines = 2"))
+        assertTrue(components.contains("ValuePilotDesignTokens.Typography.LABEL_SP"))
+        assertTrue(activity.contains("AppShellStateRestoration.restore"))
+        assertTrue(activity.contains("STATE_PERSONAL_SCROLL_Y"))
+    }
+
     private fun source(name: String): String =
         File("src/main/java/com/valuepilot/app/$name").readText()
 
