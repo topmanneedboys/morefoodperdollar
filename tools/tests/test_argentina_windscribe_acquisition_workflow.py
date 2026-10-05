@@ -137,7 +137,7 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
         self.assertIn("The GitHub runner will not wait for the multi-hour Cloud Build", text)
         self.assertIn('"upstreamChangeEvidence": preflight.get("upstreamChangeEvidence")', text)
 
-    def test_reconciliation_job_describes_and_records_async_shadow_without_promotion(self) -> None:
+    def test_reconciliation_job_describes_and_records_async_shadow_then_guarded_promotion(self) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")
         reconcile = text.index("  reconcile-shadow:")
         section = text[reconcile:]
@@ -151,7 +151,8 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
         self.assertIn("reconcile-shadow-state", section)
         self.assertIn("SHADOW_PENDING", (ROOT / "tools" / "argentina_acquisition_schedule_control_v2.py").read_text(encoding="utf-8"))
         self.assertIn("Alert on terminal SHADOW failure", section)
-        self.assertIn("Active/canary pointer writes by reconciler: 0", section)
+        self.assertIn("Promote the verified candidate with CAS, smoke checks, and rollback", section)
+        self.assertIn("Active/canary pointer writes by reconciler: deferred to guarded promotion", section)
         self.assertNotIn("AUTO_ACTIVATE", section)
         self.assertNotIn("STAGE_CANARY", section)
 
