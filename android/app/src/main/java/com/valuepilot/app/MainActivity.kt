@@ -107,6 +107,8 @@ class MainActivity : AppCompatActivity() {
     private var productMapRequestId = 0L
     private var productMapSelectedKey: String? = null
     private var productMapSelectedLabel: String? = null
+    private var productMapContext: ProductMapContext? = null
+    private var reopenProductMapAfterTrip = false
     private var pendingProductMapLocation: (() -> Unit)? = null
 
     private lateinit var shellRoot: View
@@ -2241,8 +2243,20 @@ class MainActivity : AppCompatActivity() {
     private fun dispatch(intent: AppShellIntent) {
         val next = AppShellReducer.reduce(shellState, intent)
         if (next == shellState) return
+        val shouldReopenMap =
+            intent == AppShellIntent.NavigateBack &&
+                shellState.route == AppRoute.TRIP_PLANNER &&
+                next.route == AppRoute.BASKET &&
+                reopenProductMapAfterTrip
         shellState = next
         renderShell(next)
+        if (shouldReopenMap) {
+            reopenProductMapAfterTrip = false
+            // The map was entered from Search. Restore that contextual owner before
+            // reopening the dialog so closing it returns to the same query/results.
+            dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.SEARCH))
+            mainHandler.post(::reopenProductMap)
+        }
     }
 
     private fun renderShell(state: AppShellState) {
@@ -2860,7 +2874,7 @@ class MainActivity : AppCompatActivity() {
             if (grantResults.any { it == PackageManager.PERMISSION_GRANTED }) {
                 pending?.invoke()
             } else {
-                Toast.makeText(this, "Location was not granted; the CABA search-area map remains available.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Location not used; showing the CABA search area.", Toast.LENGTH_SHORT).show()
             }
         } else if (requestCode == FOREGROUND_LOCATION_REQUEST && grantResults.any { it == PackageManager.PERMISSION_GRANTED }) {
             captureForegroundLocation()
@@ -3294,21 +3308,39 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openProductStoreMap(
-        match: PracticalShoppingSearchIdentityPresentation.Match
+        match: PracticalShoppingSearchIdentityPresentation.Match,
+        cachedResponse: ArgentinaBackendContract.ShopResponse? = null,
+        origin: ProductStoreMapOrigin = ProductStoreMapOrigin.CABA_FALLBACK,
+        originCoordinate: ProductStoreMapCoordinate? = null,
+        selectedStoreKey: String? = null
     ) {
         productMapSelectedKey = match.identityKey
         productMapSelectedLabel = match.displayName
+        val fallbackCoordinate = ProductStoreMapCoordinate.parse(
+            argentinaLaunchArea.latitude,
+            argentinaLaunchArea.longitude
+        )
+        val mapContext =
+            ProductMapContext(
+                match = match,
+                response = cachedResponse,
+                origin = origin,
+                originCoordinate = originCoordinate ?: fallbackCoordinate,
+                selectedStoreKey = selectedStoreKey
+            )
+        productMapContext = mapContext
         val surface = ProductStoreMapSurfaceView(this)
-        surface.showLoading(match.displayName)
+        surface.showLoading(match.displayName, match.packageQuantityLabel)
         surface.onClose = {
             productMapDialog?.dismiss()
             productMapDialog = null
             pendingProductMapLocation = null
+            reopenProductMapAfterTrip = false
         }
-        surface.onSelectStore = ::selectProductMapStore
-        var latestResponse: ArgentinaBackendContract.ShopResponse? = null
+        surface.onTripCost = ::selectProductMapStore
+        surface.onDirections = ::openProductMapDirections
         surface.onUseForegroundLocation = {
-            useProductMapForegroundLocation(surface, match) { latestResponse }
+            useProductMapForegroundLocation(surface, match) { mapContext.response }
         }
         productMapDialog?.dismiss()
         productMapDialog = AlertDialog.Builder(this)
@@ -3321,6 +3353,11 @@ class MainActivity : AppCompatActivity() {
                 }
                 dialog.show()
             }
+
+        if (cachedResponse != null) {
+            renderProductMapResponse(surface, mapContext)
+            return
+        }
 
         val requestId = Math.addExact(productMapRequestId, 1L)
         productMapRequestId = requestId
@@ -3363,29 +3400,48 @@ class MainActivity : AppCompatActivity() {
             mainHandler.post {
                 if (requestId != productMapRequestId || isFinishing || isDestroyed) return@post
                 if (productMapDialog == null || !productMapDialog!!.isShowing) return@post
-                val result = outcome.getOrNull()
-                when (result) {
+                when (val result = outcome.getOrNull()) {
                     is ArgentinaBackendBridgeResult.Success -> {
-                        latestResponse = result.value
-                        val origin = ProductStoreMapCoordinate.parse(
-                            argentinaLaunchArea.latitude,
-                            argentinaLaunchArea.longitude
-                        )
-                        val mapResult = ArgentinaProductStoreMapAdapter.query(result.value, match, origin)
-                        surface.render(
-                            match.displayName,
-                            mapResult,
-                            "the qualified CABA search-area center (not device location)"
-                        )
+                        mapContext.response = result.value
+                        renderProductMapResponse(surface, mapContext)
                     }
-                    else -> {
-                        surface.showFailure(
-                            "Store map is unavailable right now. Search is unchanged; no price or stock claim was inferred."
-                        )
-                    }
+
+                    else -> surface.showFailure(match.displayName, match.packageQuantityLabel)
                 }
             }
         }
+    }
+
+    private fun renderProductMapResponse(
+        surface: ProductStoreMapSurfaceView,
+        mapContext: ProductMapContext
+    ) {
+        val response = mapContext.response ?: return
+        val mapResult = ArgentinaProductStoreMapAdapter.query(
+            response,
+            mapContext.match,
+            mapContext.originCoordinate
+        )
+        surface.render(
+            ProductStoreMapProjector.project(
+                productName = mapContext.match.displayName,
+                packageQuantityLabel = mapContext.match.packageQuantityLabel,
+                result = mapResult,
+                origin = mapContext.origin
+            )
+        )
+        surface.restoreSelectedStore(mapContext.selectedStoreKey)
+    }
+
+    private fun reopenProductMap() {
+        val mapContext = productMapContext ?: return
+        openProductStoreMap(
+            match = mapContext.match,
+            cachedResponse = mapContext.response,
+            origin = mapContext.origin,
+            originCoordinate = mapContext.originCoordinate,
+            selectedStoreKey = mapContext.selectedStoreKey
+        )
     }
 
     private fun useProductMapForegroundLocation(
@@ -3422,7 +3478,7 @@ class MainActivity : AppCompatActivity() {
         val fineGranted = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val coarseGranted = checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         if (!TripPlannerLocationPolicy.hasForegroundPermission(fineGranted, coarseGranted)) {
-            Toast.makeText(this, "Location was not granted; the CABA search-area map remains available.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Location not used; showing the CABA search area.", Toast.LENGTH_SHORT).show()
             return
         }
         val manager = getSystemService(LOCATION_SERVICE) as? LocationManager
@@ -3440,14 +3496,27 @@ class MainActivity : AppCompatActivity() {
             ProductStoreMapCoordinate.parse(it.latitude.toString(), it.longitude.toString())
         }
         if (response == null || coordinate == null) {
-            Toast.makeText(this, "No recent foreground location is available; the CABA search-area map remains available.", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Location not available; showing the CABA search area.", Toast.LENGTH_LONG).show()
             return
         }
+        productMapContext?.origin = ProductStoreMapOrigin.ONE_SHOT_LOCATION
+        productMapContext?.originCoordinate = coordinate
         val result = ArgentinaProductStoreMapAdapter.query(response, match, coordinate)
-        surface.render(match.displayName, result, "one foreground location reading")
+        productMapContext?.let { context ->
+            context.response = response
+            surface.render(
+                ProductStoreMapProjector.project(
+                    productName = match.displayName,
+                    packageQuantityLabel = match.packageQuantityLabel,
+                    result = result,
+                    origin = ProductStoreMapOrigin.ONE_SHOT_LOCATION
+                )
+            )
+        }
     }
 
     private fun selectProductMapStore(pin: com.valuepilot.core.ProductStoreMapPin) {
+        productMapContext?.selectedStoreKey = pin.storeKey.value
         val selection =
             TripStoreSelection(
                 storeKey = pin.storeKey,
@@ -3461,11 +3530,29 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "That store could not be saved; the map remains unchanged.", Toast.LENGTH_SHORT).show()
             return
         }
+        reopenProductMapAfterTrip = true
         productMapDialog?.dismiss()
         productMapDialog = null
         pendingProductMapLocation = null
         dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.BASKET))
         dispatch(AppShellIntent.OpenTripPlanner)
+    }
+
+    private fun openProductMapDirections(pin: com.valuepilot.core.ProductStoreMapPin) {
+        val latitude = BigDecimal.valueOf(pin.coordinate.latitudeE7.toLong())
+            .movePointLeft(7)
+            .toPlainString()
+        val longitude = BigDecimal.valueOf(pin.coordinate.longitudeE7.toLong())
+            .movePointLeft(7)
+            .toPlainString()
+        val uri = Uri.parse(
+            "geo:$latitude,$longitude?q=$latitude,$longitude(${Uri.encode(pin.storeName)})"
+        )
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(this, "Directions are unavailable on this device.", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun openGoogleProductPhotos(
@@ -3891,6 +3978,14 @@ class MainActivity : AppCompatActivity() {
         val body: String,
         val footnote: String,
         val showCompareAction: Boolean
+    )
+
+    private data class ProductMapContext(
+        val match: PracticalShoppingSearchIdentityPresentation.Match,
+        var response: ArgentinaBackendContract.ShopResponse?,
+        var origin: ProductStoreMapOrigin,
+        var originCoordinate: ProductStoreMapCoordinate?,
+        var selectedStoreKey: String?
     )
 
     companion object {
