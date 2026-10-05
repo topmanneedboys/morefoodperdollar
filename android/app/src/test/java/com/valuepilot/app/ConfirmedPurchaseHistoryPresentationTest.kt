@@ -5,6 +5,7 @@ import com.valuepilot.core.ConfirmedPurchaseConfirmationInput
 import com.valuepilot.core.ConfirmedPurchaseIdentityOrigin
 import com.valuepilot.core.ConfirmedPurchase
 import com.valuepilot.core.Money
+import com.valuepilot.core.QuantityNormalization
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -21,6 +22,7 @@ class ConfirmedPurchaseHistoryPresentationTest {
                         productIdentityKey = "item-1",
                         identityOrigin = ConfirmedPurchaseIdentityOrigin.HOME_BASKET,
                         displayName = "Bread",
+                        quantity = QuantityNormalization.count(1),
                         amountPaid = Money.parse("3.49", "CAD"),
                         explicitlyConfirmed = true
                     )
@@ -34,6 +36,7 @@ class ConfirmedPurchaseHistoryPresentationTest {
 
         assertEquals(ConfirmedPurchaseHistorySurfaceMode.CONTENT, projected.mode)
         assertEquals("Bread", projected.rows.single().title)
+        assertTrue(projected.rows.single().details.contains("Quantity 1 count"))
         assertTrue(projected.rows.single().details.contains("Paid 3.49 CAD"))
         assertTrue(projected.guidance.contains("Not live offers"))
     }

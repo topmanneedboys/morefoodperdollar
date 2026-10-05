@@ -395,6 +395,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putString(STATE_PRIMARY_TAB, shellState.selectedPrimaryTab.name)
+        outState.putString(
+            STATE_ROUTE,
+            AppShellStateRestoration.restorableRoute(shellState).name
+        )
 
         val homeSnapshot = PracticalShoppingHomeSession.snapshot(homeSessionState)
         outState.putString(STATE_HOME_QUERY, homeSnapshot.query)
@@ -565,14 +569,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun restoreShellState(savedInstanceState: Bundle?): AppShellState {
-        val savedTab = savedInstanceState
-            ?.getString(STATE_PRIMARY_TAB)
-            ?.let { runCatching { AppPrimaryTab.valueOf(it) }.getOrNull() }
-            ?: AppPrimaryTab.HOME
-
-        return AppShellReducer.reduce(
-            AppShellState.initial(),
-            AppShellIntent.SelectPrimary(savedTab)
+        return AppShellStateRestoration.restore(
+            primaryTabName = savedInstanceState?.getString(STATE_PRIMARY_TAB),
+            routeName = savedInstanceState?.getString(STATE_ROUTE)
         )
     }
 
@@ -3901,6 +3900,7 @@ class MainActivity : AppCompatActivity() {
         private const val GOOGLE_PHOTO_INITIAL_HEIGHT_PERCENT = 65
         private const val GOOGLE_PHOTO_MIN_INITIAL_HEIGHT_DP = 320
         private const val STATE_PRIMARY_TAB = "app_shell.primary_tab"
+        private const val STATE_ROUTE = "app_shell.route"
         private const val STATE_HOME_QUERY = "app_shell.home_query"
         private const val STATE_HOME_WAS_SUBMITTED = "app_shell.home_was_submitted"
         private const val STATE_HOME_CHICKEN_CHOICE = "app_shell.home_chicken_choice"

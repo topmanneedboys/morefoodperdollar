@@ -370,9 +370,9 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="basket_unresolved_title">UNRESOLVED ITEMS — FINISH ON HOME</string>
 
     <string name="saved_eyebrow">YOU</string>
-    <string name="saved_title">Your ValuePilot</string>
-    <string name="saved_body">Saved products, purchases and watches stay private on this device.</string>
-    <string name="saved_footnote">Saved choices are local preferences only. They do not confirm current price, stock, promotions, availability or travel.</string>
+    <string name="saved_title">You</string>
+    <string name="saved_body">Your saved products, purchases and watches stay private on this device.</string>
+    <string name="saved_footnote">Private choices only. No live price or stock is implied.</string>
     <string name="saved_clear_all_confirmation_title">Clear all saved choices?</string>
     <string name="saved_clear_all_confirmation_body">This removes every saved product and store from ValuePilot on this device.</string>
     <string name="saved_clear_all_confirmation_confirm">Clear all</string>

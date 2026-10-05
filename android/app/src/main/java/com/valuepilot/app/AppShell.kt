@@ -353,3 +353,61 @@ object AppShellReducer {
                 AppRoute.SAVED
         }
 }
+
+/**
+ * Reconstructs only shell routes whose state is complete enough to survive an Android
+ * recreation. Primary tabs are always safe to restore. The two stable You subroutes are
+ * restored only when Saved was the selected tab; transient drafts and external workflows
+ * intentionally fall back to the Saved landing surface instead of showing an incomplete
+ * screen with missing inputs.
+ */
+object AppShellStateRestoration {
+
+    fun restore(
+        primaryTabName: String?,
+        routeName: String?
+    ): AppShellState {
+        val tab =
+            primaryTabName
+                ?.let { runCatching { AppPrimaryTab.valueOf(it) }.getOrNull() }
+                ?: AppPrimaryTab.HOME
+        val base =
+            AppShellReducer.reduce(
+                AppShellState.initial(),
+                AppShellIntent.SelectPrimary(tab)
+            )
+        if (tab != AppPrimaryTab.SAVED) return base
+
+        return when (
+            routeName?.let { runCatching { AppRoute.valueOf(it) }.getOrNull() }
+        ) {
+            AppRoute.CONFIRMED_PURCHASE_HISTORY ->
+                AppShellReducer.reduce(base, AppShellIntent.OpenConfirmedPurchaseHistory)
+
+            AppRoute.PRICE_WATCHES ->
+                AppShellReducer.reduce(base, AppShellIntent.OpenPriceWatches)
+
+            else ->
+                base
+        }
+    }
+
+    /**
+     * Returns the route worth placing in an instance-state bundle. Drafts, dialogs,
+     * comparison and external workflows are deliberately represented by their safe primary
+     * tab on the next recreation.
+     */
+    fun restorableRoute(state: AppShellState): AppRoute =
+        if (
+            state.selectedPrimaryTab == AppPrimaryTab.SAVED &&
+            state.route in setOf(
+                AppRoute.SAVED,
+                AppRoute.CONFIRMED_PURCHASE_HISTORY,
+                AppRoute.PRICE_WATCHES
+            )
+        ) {
+            state.route
+        } else {
+            AppShellReducer.routeFor(state.selectedPrimaryTab)
+        }
+}

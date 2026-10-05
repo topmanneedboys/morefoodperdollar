@@ -117,9 +117,9 @@ internal object PriceWatchProjector {
             headline = "Watching",
             guidance =
                 if (rows.isEmpty()) {
-                    "Nothing watched yet. Watch an exact product from Search, Home, Basket, Saved or Bought."
+                    "Nothing watched yet. Add from Search or Saved."
                 } else {
-                    "Private watches on this device. Current offers remain unknown."
+                    "Private watch. No current offer is known."
                 },
             rows = rows
         )

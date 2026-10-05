@@ -71,7 +71,9 @@ class PersonalShoppingSurfaceBoundaryTest {
             "if (personalRouteActive) personalScrollY = shellScrollView.scrollY.coerceAtLeast(0)",
             "restorePersonalScrollPosition()",
             "state.route == AppRoute.CONFIRMED_PURCHASE_HISTORY",
-            "state.route == AppRoute.PRICE_WATCHES"
+            "state.route == AppRoute.PRICE_WATCHES",
+            "STATE_ROUTE",
+            "AppShellStateRestoration.restore"
         ).forEach { required -> assertTrue(activity.contains(required)) }
     }
 

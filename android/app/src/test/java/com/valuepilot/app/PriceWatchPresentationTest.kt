@@ -44,7 +44,7 @@ class PriceWatchPresentationTest {
         assertEquals(1, row.purchaseHistory.size)
         assertEquals(1, row.personalHistory.size)
         assertEquals("No current offer", row.currentOfferText)
-        assertEquals("Private watches on this device. Current offers remain unknown.", state.guidance)
+        assertEquals("Private watch. No current offer is known.", state.guidance)
         assertEquals(key, row.toggleAction.productIdentityKey)
     }
 
@@ -55,6 +55,9 @@ class PriceWatchPresentationTest {
             PriceWatchProjector.project(PriceWatchState(watches = listOf(watch)), emptyList(), false)
         assertEquals("Package quantity unknown", content.rows.single().packageText)
         assertTrue(content.rows.single().purchaseHistory.isEmpty())
+
+        val empty = PriceWatchProjector.project(PriceWatchState.empty(), emptyList(), false)
+        assertEquals("Nothing watched yet. Add from Search or Saved.", empty.guidance)
 
         val unavailable = PriceWatchProjector.project(null, emptyList(), true)
         assertEquals(PriceWatchSurfaceMode.UNAVAILABLE, unavailable.mode)

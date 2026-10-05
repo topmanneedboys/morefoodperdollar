@@ -85,7 +85,9 @@ internal object ConfirmedPurchaseHistoryProjector {
         watchedProductIdentityKeys: Set<String>
     ): ConfirmedPurchaseHistoryRow {
         val fields = mutableListOf<String>()
-        purchase.quantity?.let { fields += "Quantity recorded" } ?: fields.add("Quantity unknown")
+        purchase.quantity?.let { quantity ->
+            fields += "Quantity ${PriceWatchProjector.formatQuantity(quantity)}"
+        } ?: fields.add("Quantity unknown")
         purchase.amountPaid?.let { amount ->
             fields += "Paid ${formatMoney(amount)}"
         } ?: fields.add("Price unknown")
