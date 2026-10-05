@@ -43,7 +43,7 @@ class PriceWatchPresentationTest {
         val row = state.rows.single()
         assertEquals(1, row.purchaseHistory.size)
         assertEquals(1, row.personalHistory.size)
-        assertTrue(row.currentOfferText.contains("No current offer available"))
+        assertEquals("No current offer", row.currentOfferText)
         assertEquals(key, row.toggleAction.productIdentityKey)
     }
 

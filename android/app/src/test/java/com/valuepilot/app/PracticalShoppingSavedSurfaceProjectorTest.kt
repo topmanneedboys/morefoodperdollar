@@ -48,7 +48,7 @@ class PracticalShoppingSavedSurfaceProjectorTest {
             )
 
         assertEquals(PracticalShoppingSavedSurfaceMode.IDLE, surface.mode)
-        assertEquals("Saved choices", surface.headline)
+        assertEquals("Saved", surface.headline)
         assertEquals(PracticalShoppingSavedSurfaceAction.Refresh, surface.refreshAction)
         assertFalse(surface.progressVisible)
         assertTrue(surface.productRows.isEmpty())
@@ -69,7 +69,7 @@ class PracticalShoppingSavedSurfaceProjectorTest {
 
         assertEquals(PracticalShoppingSavedSurfaceMode.LOADING, surface.mode)
         assertTrue(surface.progressVisible)
-        assertEquals("Loading saved choices…", surface.statusMessage)
+        assertEquals("Loading saved…", surface.statusMessage)
         assertNull(surface.refreshAction)
         assertNull(surface.clearAllAction)
     }
@@ -158,11 +158,13 @@ class PracticalShoppingSavedSurfaceProjectorTest {
             )
 
         assertEquals(PracticalShoppingSavedSurfaceMode.EMPTY, surface.mode)
-        assertEquals("No saved choices yet.", surface.emptyMessage)
+        assertEquals("Nothing saved yet.", surface.emptyMessage)
+        assertEquals(PracticalShoppingSavedSurfaceAction.OpenSearch, surface.emptyAction)
+        assertEquals("Search products", surface.emptyActionLabel)
         assertTrue(surface.productRows.isEmpty())
         assertTrue(surface.storeRows.isEmpty())
         assertNull(surface.clearAllAction)
-        assertEquals(PracticalShoppingSavedSurfaceAction.Refresh, surface.refreshAction)
+        assertNull(surface.refreshAction)
     }
 
     @Test
@@ -226,7 +228,7 @@ class PracticalShoppingSavedSurfaceProjectorTest {
             )
 
         assertEquals(PracticalShoppingSavedSurfaceMode.UPDATING, surface.mode)
-        assertEquals("Updating saved choices…", surface.statusMessage)
+        assertEquals("Updating saved…", surface.statusMessage)
         assertTrue(surface.progressVisible)
         assertEquals("Free-range eggs", surface.productRows.single().title)
         assertNull(surface.productRows.single().action)
@@ -376,7 +378,7 @@ class PracticalShoppingSavedSurfaceProjectorTest {
                     storeRows = emptyList(),
                     unresolvedDisplayNameCount = 0,
                     notice = null,
-                    emptyMessage = "No saved choices yet.",
+                    emptyMessage = "Nothing saved yet.",
                     clearAllAction = null
                 ),
             unresolvedProductKeys = emptyList(),

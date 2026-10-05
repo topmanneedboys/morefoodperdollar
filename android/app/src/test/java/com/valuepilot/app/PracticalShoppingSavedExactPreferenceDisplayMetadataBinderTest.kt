@@ -160,7 +160,7 @@ class PracticalShoppingSavedExactPreferenceDisplayMetadataBinderTest {
                 metadata = result.metadata
             )
         assertTrue(projection.state.productRows.isEmpty())
-        assertEquals("No saved choices yet.", projection.state.emptyMessage)
+        assertEquals("Nothing saved yet.", projection.state.emptyMessage)
     }
 
     @Test

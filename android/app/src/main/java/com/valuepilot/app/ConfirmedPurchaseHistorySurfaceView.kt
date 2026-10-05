@@ -108,11 +108,11 @@ internal class ConfirmedPurchaseHistorySurfaceView @JvmOverloads constructor(
         private val title = textLine("", 17f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true)
         private val details = textLine("", 12f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 6)
         private val repeatButton = actionButton(
-            label = "Repeat purchase",
+            label = "Buy again",
             description = "Add this exact confirmed purchase to your private Home list for a new plan"
         )
         private val moreButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
-            text = "More for this purchase"
+            text = "More"
             contentDescription = "Show correction, delete and price-watch actions for this purchase"
             gravity = Gravity.CENTER
             setOnClickListener { setMoreExpanded(!moreExpanded) }
@@ -192,7 +192,7 @@ internal class ConfirmedPurchaseHistorySurfaceView @JvmOverloads constructor(
         private fun setMoreExpanded(expanded: Boolean) {
             moreExpanded = expanded
             moreActions.visibility = if (expanded) VISIBLE else GONE
-            moreButton.text = if (expanded) "Hide extra actions" else "More for this purchase"
+            moreButton.text = if (expanded) "Hide" else "More"
             ValuePilotMotion.reveal(moreActions, animate = expanded)
         }
     }

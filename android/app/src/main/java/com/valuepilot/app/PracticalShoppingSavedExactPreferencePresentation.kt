@@ -204,14 +204,14 @@ object PracticalShoppingSavedExactPreferenceUiProjector {
         val unresolvedCount = unresolvedProducts.size + unresolvedStores.size
         val state =
             PracticalShoppingSavedExactPreferenceUiState(
-                headline = "Saved choices",
+                headline = "Saved",
                 productRows = productRows,
                 storeRows = storeRows,
                 unresolvedDisplayNameCount = unresolvedCount,
                 notice = unresolvedNotice(unresolvedCount),
                 emptyMessage =
                     if (totalSaved == 0) {
-                        "No saved choices yet."
+                        "Nothing saved yet."
                     } else {
                         null
                     },

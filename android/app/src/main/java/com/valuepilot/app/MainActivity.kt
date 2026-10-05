@@ -82,6 +82,7 @@ class MainActivity : AppCompatActivity() {
     }
     private var priceWatchState = PriceWatchState.empty()
     private var priceWatchLoadIssue: PriceWatchStoreIssue? = null
+    private var savedProductCount = 0
     private val tripPlannerStore by lazy(LazyThreadSafetyMode.NONE) {
         AndroidTripPlannerStore(applicationContext)
     }
@@ -137,6 +138,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var searchResultsContainer: LinearLayout
     private lateinit var searchLoadMoreButton: MaterialButton
     private lateinit var searchResultsEnd: TextView
+    private lateinit var youOverviewExperience: PracticalShoppingYouOverviewView
     private lateinit var savedExperience: PracticalShoppingSavedSurfaceView
     private lateinit var confirmedPurchaseHistoryButton: MaterialButton
     private lateinit var confirmedPurchaseHistoryExperience: ConfirmedPurchaseHistorySurfaceView
@@ -249,6 +251,7 @@ class MainActivity : AppCompatActivity() {
         searchResultsContainer = findViewById(R.id.searchResultsContainer)
         searchLoadMoreButton = findViewById(R.id.searchLoadMoreButton)
         searchResultsEnd = findViewById(R.id.searchResultsEnd)
+        youOverviewExperience = findViewById(R.id.youOverviewExperience)
         savedExperience = findViewById(R.id.savedExperience)
         confirmedPurchaseHistoryButton = findViewById(R.id.confirmedPurchaseHistoryButton)
         confirmedPurchaseHistoryExperience = findViewById(R.id.confirmedPurchaseHistoryExperience)
@@ -302,6 +305,20 @@ class MainActivity : AppCompatActivity() {
         tripPlannerExperience.onAction = ::handleTripPlannerAction
         configureSearchUi()
         configureSavedUi()
+        youOverviewExperience.onAction = { action ->
+            when (action) {
+                PracticalShoppingYouOverviewAction.OpenBought ->
+                    dispatch(AppShellIntent.OpenConfirmedPurchaseHistory)
+
+                PracticalShoppingYouOverviewAction.OpenSaved ->
+                    savedExperience.post {
+                        shellScrollView.smoothScrollTo(0, savedExperience.top.coerceAtLeast(0))
+                    }
+
+                PracticalShoppingYouOverviewAction.OpenWatching ->
+                    dispatch(AppShellIntent.OpenPriceWatches)
+            }
+        }
         confirmedPurchaseHistoryButton.setOnClickListener {
             dispatch(AppShellIntent.OpenConfirmedPurchaseHistory)
         }
@@ -1443,7 +1460,10 @@ class MainActivity : AppCompatActivity() {
         val savedPresenter =
             PracticalShoppingSavedSurfacePresenter(
                 renderer = savedExperience,
-                watchedProductIdentityKeys = ::watchedProductIdentityKeys
+                watchedProductIdentityKeys = ::watchedProductIdentityKeys,
+                onProductCount = { count ->
+                    savedProductCount = count
+                }
             )
         val stapleLaunchPresenter =
             PracticalShoppingSavedStapleLaunchPresenter(savedStapleLaunchExperience)
@@ -1625,6 +1645,9 @@ class MainActivity : AppCompatActivity() {
                 savedPresenter.render(state)
                 stapleLaunchPresenter.render(state)
                 observedPriceLaunchPresenter.render(state)
+                if (::youOverviewExperience.isInitialized && shellState.route == AppRoute.SAVED) {
+                    renderYouOverview()
+                }
             }
         val savedSnapshotObserver =
             PracticalShoppingSavedValidatedSnapshotObserver { snapshot ->
@@ -1649,6 +1672,9 @@ class MainActivity : AppCompatActivity() {
 
         savedExperience.onAction = { action ->
             when (action) {
+                PracticalShoppingSavedSurfaceAction.OpenSearch ->
+                    dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.SEARCH))
+
                 is PracticalShoppingSavedSurfaceAction.CheckProductPrice ->
                     openGoodPriceForSavedProduct(action.displayName)
 
@@ -2278,6 +2304,7 @@ class MainActivity : AppCompatActivity() {
             tripPlannerScrollY = shellScrollView.scrollY.coerceAtLeast(0)
         }
         tripPlannerRouteActive = tripPlannerVisible
+        youOverviewExperience.visibility = View.GONE
         if (state.route == AppRoute.COMPARE) {
             savedExperience.onRouteVisibilityChanged(false)
             return
@@ -2288,18 +2315,18 @@ class MainActivity : AppCompatActivity() {
         val copy =
             if (historyVisible) {
                 ScreenCopy(
-                    eyebrow = "PRIVATE HISTORY",
-                    title = getString(R.string.confirmed_purchase_history_title),
-                    body = "Review purchases you explicitly confirmed on this device. This is not live pricing or store inventory.",
-                    footnote = "Repeat adds the identity to your private Home list; it never recreates a purchase automatically.",
+                    eyebrow = "BOUGHT",
+                    title = "Bought",
+                    body = "Purchases you explicitly confirmed on this device.",
+                    footnote = "Not live pricing or store inventory.",
                     showCompareAction = false
                 )
             } else if (priceWatchVisible) {
                 ScreenCopy(
-                    eyebrow = "PRIVATE PRICE WATCH",
-                    title = "Price Watch",
-                    body = "Keep exact products together with your private purchase history and personal price notes.",
-                    footnote = "No authorized live retailer source is connected, so current offers remain unknown.",
+                    eyebrow = "WATCHING",
+                    title = "Watching",
+                    body = "Exact products you want to check again later.",
+                    footnote = "No current offer is claimed unless authorized evidence exists.",
                     showCompareAction = false
                 )
             } else if (tripPlannerVisible) {
@@ -2326,7 +2353,7 @@ class MainActivity : AppCompatActivity() {
         // header for secondary destinations avoids repeating the same copy
         // above the primary shopping workspace.
         screenHeaderCard.visibility =
-            if (state.route == AppRoute.HOME || state.route == AppRoute.SEARCH) {
+            if (state.route == AppRoute.HOME || state.route == AppRoute.SEARCH || state.route == AppRoute.SAVED) {
                 View.GONE
             } else {
                 View.VISIBLE
@@ -2364,10 +2391,12 @@ class MainActivity : AppCompatActivity() {
             state.route == AppRoute.OBSERVED_PRICE_CONFIRMATION_DRAFT
         val stapleSetupVisible = state.route == AppRoute.STAPLE_WATCH_SETUP
         val staplePolicyVisible = state.route == AppRoute.STAPLE_WATCH_POLICY
+        youOverviewExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
+        if (savedVisible) renderYouOverview()
         savedExperience.visibility = if (savedVisible) View.VISIBLE else View.GONE
-        confirmedPurchaseHistoryButton.visibility = if (savedVisible) View.VISIBLE else View.GONE
+        confirmedPurchaseHistoryButton.visibility = View.GONE
         confirmedPurchaseHistoryExperience.visibility = if (historyVisible) View.VISIBLE else View.GONE
-        priceWatchButton.visibility = if (savedVisible) View.VISIBLE else View.GONE
+        priceWatchButton.visibility = View.GONE
         priceWatchExperience.visibility = if (priceWatchVisible) View.VISIBLE else View.GONE
         tripPlannerExperience.visibility = if (tripPlannerVisible) View.VISIBLE else View.GONE
         if (historyVisible) {
@@ -2554,6 +2583,9 @@ class MainActivity : AppCompatActivity() {
         val loaded = confirmedPurchaseStore.load()
         confirmedPurchaseHistoryState = loaded.state ?: ConfirmedPurchaseHistoryState.empty()
         confirmedPurchaseHistoryLoadIssue = loaded.issue
+        if (::youOverviewExperience.isInitialized && shellState.route == AppRoute.SAVED) {
+            renderYouOverview()
+        }
     }
 
     private fun refreshPriceWatchState() {
@@ -2562,6 +2594,9 @@ class MainActivity : AppCompatActivity() {
         if (nextState == priceWatchState && loaded.issue == priceWatchLoadIssue) return
         priceWatchState = nextState
         priceWatchLoadIssue = loaded.issue
+        if (::youOverviewExperience.isInitialized && shellState.route == AppRoute.SAVED) {
+            renderYouOverview()
+        }
         renderedSearchMatches = null
         if (::homeExperience.isInitialized && shellState.route != AppRoute.COMPARE) {
             renderHome()
@@ -2575,6 +2610,16 @@ class MainActivity : AppCompatActivity() {
                 )
             )
         }
+    }
+
+    private fun renderYouOverview() {
+        youOverviewExperience.render(
+            PracticalShoppingYouOverviewState(
+                boughtCount = confirmedPurchaseHistoryState.purchases.size,
+                savedCount = savedProductCount,
+                watchingCount = priceWatchState.watches.size
+            )
+        )
     }
 
     private fun refreshTripPlannerState() {

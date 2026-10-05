@@ -98,6 +98,17 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
 
         state.emptyMessage?.let { message -> addView(emptyMessage(message)) }
 
+        state.emptyAction?.let { action ->
+            addView(
+                actionButton(
+                    label = requireNotNull(state.emptyActionLabel),
+                    action = action,
+                    destructive = false,
+                    contentDescription = "Search products to save"
+                )
+            )
+        }
+
         state.refreshAction?.let { action ->
             addView(
                 actionButton(
@@ -109,7 +120,26 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
         }
 
         state.clearAllAction?.let { action ->
-            addView(
+            val moreActions = LinearLayout(context).apply {
+                orientation = VERTICAL
+                visibility = View.GONE
+            }
+            val moreButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
+                ownerBoundButtons += this
+                text = "More options"
+                contentDescription = "Show additional saved-list options"
+                isEnabled = onAction != null
+                setOnClickListener {
+                    val expanded = moreActions.visibility != View.VISIBLE
+                    moreActions.visibility = if (expanded) View.VISIBLE else View.GONE
+                    text = if (expanded) "Hide options" else "More options"
+                    ValuePilotMotion.reveal(moreActions, animate = expanded)
+                }
+                layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+                    topMargin = dp(12)
+                }
+            }
+            moreActions.addView(
                 actionButton(
                     label = requireNotNull(state.clearAllActionLabel),
                     action = action,
@@ -117,6 +147,8 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
                     onClick = { showClearAllConfirmation(action) }
                 )
             )
+            addView(moreButton)
+            addView(moreActions)
         }
     }
 
@@ -233,15 +265,15 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
             }
             val moreButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
                 ownerBoundButtons += this
-                text = "More for this item"
-                contentDescription = "Show price-watch and removal actions for $title"
+                text = "More"
+                contentDescription = "Show additional actions for $title"
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
                 setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.PRIMARY_DARK))
                 isEnabled = onAction != null
                 setOnClickListener {
                     val expanded = moreActions.visibility != View.VISIBLE
                     moreActions.visibility = if (expanded) View.VISIBLE else View.GONE
-                    text = if (expanded) "Hide extra actions" else "More for this item"
+                    text = if (expanded) "Hide" else "More"
                     ValuePilotMotion.reveal(moreActions, animate = expanded)
                 }
                 layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {

@@ -379,6 +379,13 @@
 
             </LinearLayout>
 
+            <com.valuepilot.app.PracticalShoppingYouOverviewView
+                android:id="@+id/youOverviewExperience"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:visibility="gone" />
+
             <com.valuepilot.app.PracticalShoppingSavedSurfaceView
                 android:id="@+id/savedExperience"
                 android:layout_width="match_parent"

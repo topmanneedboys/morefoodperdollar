@@ -14,14 +14,15 @@ fun interface PracticalShoppingSavedSurfaceRenderer {
  */
 class PracticalShoppingSavedSurfacePresenter(
     private val renderer: PracticalShoppingSavedSurfaceRenderer,
-    private val watchedProductIdentityKeys: () -> Set<String> = { emptySet() }
+    private val watchedProductIdentityKeys: () -> Set<String> = { emptySet() },
+    private val onProductCount: (Int) -> Unit = {}
 ) : PracticalShoppingSavedLifecycleRenderer {
     override fun render(state: PracticalShoppingSavedLifecycleState) {
-        renderer.render(
-            PracticalShoppingSavedSurfaceProjector.project(
-                lifecycle = state,
-                watchedProductIdentityKeys = watchedProductIdentityKeys()
-            )
+        val projection = PracticalShoppingSavedSurfaceProjector.project(
+            lifecycle = state,
+            watchedProductIdentityKeys = watchedProductIdentityKeys()
         )
+        onProductCount(projection.productRows.size)
+        renderer.render(projection)
     }
 }

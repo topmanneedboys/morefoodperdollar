@@ -24,6 +24,9 @@ private const val MAX_SAVED_SURFACE_ACTION_DISPLAY_NAME_LENGTH = 160
 sealed interface PracticalShoppingSavedSurfaceAction {
     data object Refresh : PracticalShoppingSavedSurfaceAction
 
+    /** Opens the existing Search route without manufacturing a saved identity. */
+    data object OpenSearch : PracticalShoppingSavedSurfaceAction
+
     /**
      * Starts the existing Good Price workflow with a bounded display-only name prefill.
      *
@@ -127,6 +130,8 @@ data class PracticalShoppingSavedSurfaceState(
     val progressVisible: Boolean,
     val refreshAction: PracticalShoppingSavedSurfaceAction.Refresh?,
     val refreshActionLabel: String?,
+    val emptyAction: PracticalShoppingSavedSurfaceAction? = null,
+    val emptyActionLabel: String? = null,
     val clearAllAction: PracticalShoppingSavedSurfaceAction.Preference?,
     val clearAllActionLabel: String?
 ) {
@@ -140,8 +145,10 @@ data class PracticalShoppingSavedSurfaceState(
         require(emptyMessage == null || emptyMessage.isNotBlank())
         require(statusMessage == null || statusMessage.isNotBlank())
         require((refreshAction != null) == (refreshActionLabel != null))
+        require((emptyAction != null) == (emptyActionLabel != null))
         require((clearAllAction != null) == (clearAllActionLabel != null))
         require(refreshActionLabel == null || refreshActionLabel.isNotBlank())
+        require(emptyActionLabel == null || emptyActionLabel.isNotBlank())
         require(clearAllActionLabel == null || clearAllActionLabel.isNotBlank())
         require(
             progressVisible ==
@@ -187,23 +194,23 @@ object PracticalShoppingSavedSurfaceProjector {
             PracticalShoppingSavedLifecycleStatus.IDLE ->
                 base(
                     mode = PracticalShoppingSavedSurfaceMode.IDLE,
-                    statusMessage = "Saved choices are ready to load.",
+                    statusMessage = "Saved is ready to load.",
                     refreshAction = PracticalShoppingSavedSurfaceAction.Refresh,
-                    refreshActionLabel = "Load saved choices"
+                    refreshActionLabel = "Load saved"
                 )
 
             PracticalShoppingSavedLifecycleStatus.LOADING ->
                 if (lifecycle.projection == null) {
                     base(
                         mode = PracticalShoppingSavedSurfaceMode.LOADING,
-                        statusMessage = "Loading saved choices…",
+                        statusMessage = "Loading saved…",
                         progressVisible = true
                     )
                 } else {
                     fromProjection(
                         projection = lifecycle.projection,
                         mode = PracticalShoppingSavedSurfaceMode.REFRESHING,
-                        statusMessage = "Refreshing saved choices…",
+                        statusMessage = "Refreshing saved…",
                         progressVisible = true,
                         interactionsEnabled = false
                     )
@@ -228,13 +235,13 @@ object PracticalShoppingSavedSurfaceProjector {
                     fromProjection(
                         projection = projection,
                         mode = PracticalShoppingSavedSurfaceMode.UPDATING,
-                        statusMessage = "Updating saved choices…",
+                        statusMessage = "Updating saved…",
                         progressVisible = true,
                         interactionsEnabled = false
                     )
                 } ?: base(
                     mode = PracticalShoppingSavedSurfaceMode.UPDATING,
-                    statusMessage = "Updating saved choices…",
+                    statusMessage = "Updating saved…",
                     progressVisible = true
                 )
 
@@ -381,8 +388,20 @@ object PracticalShoppingSavedSurfaceProjector {
             emptyMessage = state.emptyMessage,
             statusMessage = statusMessage,
             progressVisible = progressVisible,
-            refreshAction = refreshAction,
-            refreshActionLabel = refreshActionLabel,
+            refreshAction = refreshAction.takeUnless { mode == PracticalShoppingSavedSurfaceMode.EMPTY },
+            refreshActionLabel = refreshActionLabel.takeUnless { mode == PracticalShoppingSavedSurfaceMode.EMPTY },
+            emptyAction =
+                if (mode == PracticalShoppingSavedSurfaceMode.EMPTY && interactionsEnabled) {
+                    PracticalShoppingSavedSurfaceAction.OpenSearch
+                } else {
+                    null
+                },
+            emptyActionLabel =
+                if (mode == PracticalShoppingSavedSurfaceMode.EMPTY && interactionsEnabled) {
+                    "Search products"
+                } else {
+                    null
+                },
             clearAllAction = clearAll,
             clearAllActionLabel = if (clearAll == null) null else "Clear all"
         )
@@ -398,7 +417,7 @@ object PracticalShoppingSavedSurfaceProjector {
         require((refreshAction != null) == (refreshActionLabel != null))
         return PracticalShoppingSavedSurfaceState(
             mode = mode,
-            headline = "Saved choices",
+            headline = "Saved",
             productSectionTitle = null,
             productRows = emptyList(),
             storeSectionTitle = null,
@@ -409,6 +428,8 @@ object PracticalShoppingSavedSurfaceProjector {
             progressVisible = progressVisible,
             refreshAction = refreshAction,
             refreshActionLabel = refreshActionLabel,
+            emptyAction = null,
+            emptyActionLabel = null,
             clearAllAction = null,
             clearAllActionLabel = null
         )

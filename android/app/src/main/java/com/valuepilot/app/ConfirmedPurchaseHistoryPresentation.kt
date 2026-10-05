@@ -58,9 +58,9 @@ internal object ConfirmedPurchaseHistoryProjector {
         if (unavailable || state == null) {
             return ConfirmedPurchaseHistorySurfaceState(
                 mode = ConfirmedPurchaseHistorySurfaceMode.UNAVAILABLE,
-                headline = "Purchase history unavailable",
-                guidance = "ValuePilot could not safely read your private purchase history. Existing records were not replaced.",
-                notice = "Try again after returning to Saved.",
+                headline = "Bought unavailable",
+                guidance = "Private purchases could not be read safely. Existing records were preserved.",
+                notice = "Try again.",
                 rows = emptyList()
             )
         }
@@ -69,11 +69,11 @@ internal object ConfirmedPurchaseHistoryProjector {
         }
         return ConfirmedPurchaseHistorySurfaceState(
             mode = if (rows.isEmpty()) ConfirmedPurchaseHistorySurfaceMode.EMPTY else ConfirmedPurchaseHistorySurfaceMode.CONTENT,
-            headline = "Confirmed purchases",
+            headline = "Bought",
             guidance = if (rows.isEmpty()) {
-                "Confirm a purchase from a Basket item when you are ready. Check-off alone never creates a purchase."
+                "Nothing bought yet. Confirm a purchase from Basket when you are ready."
             } else {
-                "Private history on this device. These are purchases you explicitly confirmed, not live offers or observed shelf prices."
+                "Purchases you confirmed here. Not live offers or observed shelf prices."
             },
             notice = null,
             rows = rows

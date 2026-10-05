@@ -35,7 +35,7 @@ class PracticalShoppingSavedExactPreferenceUiProjectorTest {
                     )
             )
 
-        assertEquals("Saved choices", projection.state.headline)
+        assertEquals("Saved", projection.state.headline)
         assertEquals("Large Eggs 12 Pack", projection.state.productRows.single().title)
         assertEquals("Exact product choice", projection.state.productRows.single().supportingText)
         assertEquals(
@@ -201,7 +201,7 @@ class PracticalShoppingSavedExactPreferenceUiProjectorTest {
         assertTrue(projection.state.storeRows.isEmpty())
         assertEquals(0, projection.state.unresolvedDisplayNameCount)
         assertNull(projection.state.notice)
-        assertEquals("No saved choices yet.", projection.state.emptyMessage)
+        assertEquals("Nothing saved yet.", projection.state.emptyMessage)
         assertNull(projection.state.clearAllAction)
     }
 

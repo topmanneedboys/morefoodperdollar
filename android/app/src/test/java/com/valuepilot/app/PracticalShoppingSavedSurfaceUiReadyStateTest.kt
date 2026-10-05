@@ -25,7 +25,7 @@ class PracticalShoppingSavedSurfaceUiReadyStateTest {
                 )
             )
 
-        assertEquals("Load saved choices", idle.refreshActionLabel)
+        assertEquals("Load saved", idle.refreshActionLabel)
         assertEquals("Try again", error.refreshActionLabel)
     }
 

@@ -13,7 +13,7 @@ class SearchStage2BoundaryTest {
         val layout = source("src/main/res/layout/activity_shell.xml")
         val strings = source("src/main/res/values/strings.xml")
 
-        assertTrue(activity.contains("state.route == AppRoute.HOME || state.route == AppRoute.SEARCH"))
+        assertTrue(activity.contains("state.route == AppRoute.HOME || state.route == AppRoute.SEARCH || state.route == AppRoute.SAVED"))
         assertTrue(layout.contains("android:id=\"@+id/searchQuickActions\""))
         assertTrue(layout.contains("android:id=\"@+id/searchIdentityBoundaryCard\""))
         assertTrue(layout.contains("android:id=\"@+id/searchAreaLabel\""))

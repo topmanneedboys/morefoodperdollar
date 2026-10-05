@@ -189,7 +189,7 @@ class PracticalShoppingSavedExperienceCoordinatorTest {
         assertTrue(reloaded.accepted)
         assertTrue(requireNotNull(reloaded.projection).state.productRows.isEmpty())
         assertEquals(listOf(eggs), reloaded.staleDisplayProductKeys)
-        assertEquals("No saved choices yet.", reloaded.projection?.state?.emptyMessage)
+        assertEquals("Nothing saved yet.", reloaded.projection?.state?.emptyMessage)
     }
 
     @Test
@@ -223,7 +223,7 @@ class PracticalShoppingSavedExperienceCoordinatorTest {
         val reloaded = PracticalShoppingSavedExperienceCoordinator.load(exactStore, displayStore)
         assertTrue(reloaded.accepted)
         assertEquals(listOf(eggs), reloaded.staleDisplayProductKeys)
-        assertEquals("No saved choices yet.", reloaded.projection?.state?.emptyMessage)
+        assertEquals("Nothing saved yet.", reloaded.projection?.state?.emptyMessage)
     }
 
     private fun exactState(

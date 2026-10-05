@@ -94,14 +94,16 @@ internal class PriceWatchSurfaceView @JvmOverloads constructor(
         private val packageText = textLine("", 12f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 5)
         private val targetText = textLine("", 13f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 5)
         private val currentOfferText = textLine("", 12f, ValuePilotDesignTokens.Colors.WARNING, topPadding = 5)
-        private val historySummary = textLine("", 12f, ValuePilotDesignTokens.Colors.TEXT_MUTED, topPadding = 8)
+        private val historySummary = textLine("", 12f, ValuePilotDesignTokens.Colors.TEXT_MUTED, topPadding = 8).apply {
+            visibility = GONE
+        }
         private val addObservationButton = actionButton(
             label = "Add personal price",
             description = "Record a private price observation for this exact product"
         )
         private val moreButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
-            text = "More for this product"
-            contentDescription = "Show price history, target and watch actions for this product"
+            text = "More"
+            contentDescription = "Show price history, personal price and watch actions for this product"
             gravity = Gravity.CENTER
             setOnClickListener { setMoreExpanded(!moreExpanded) }
             layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
@@ -133,8 +135,8 @@ internal class PriceWatchSurfaceView @JvmOverloads constructor(
             body.addView(targetText)
             body.addView(currentOfferText)
             body.addView(historySummary)
-            body.addView(addObservationButton)
             body.addView(moreButton)
+            moreActions.addView(addObservationButton)
             moreActions.addView(historyContainer)
             moreActions.addView(targetButton)
             moreActions.addView(toggleButton)
@@ -176,7 +178,7 @@ internal class PriceWatchSurfaceView @JvmOverloads constructor(
         private fun setMoreExpanded(expanded: Boolean) {
             moreExpanded = expanded
             moreActions.visibility = if (expanded) VISIBLE else GONE
-            moreButton.text = if (expanded) "Hide extra details" else "More for this product"
+            moreButton.text = if (expanded) "Hide" else "More"
             ValuePilotMotion.reveal(moreActions, animate = expanded)
         }
     }

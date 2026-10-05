@@ -97,8 +97,8 @@ internal object PriceWatchProjector {
         if (unavailable || state == null) {
             return PriceWatchSurfaceState(
                 mode = PriceWatchSurfaceMode.UNAVAILABLE,
-                headline = "Price Watch unavailable",
-                guidance = "ValuePilot could not safely read your private watches. Existing data was not replaced.",
+                headline = "Watching unavailable",
+                guidance = "Private watches could not be read safely. Existing data was preserved.",
                 rows = emptyList()
             )
         }
@@ -114,12 +114,12 @@ internal object PriceWatchProjector {
                 }
         return PriceWatchSurfaceState(
             mode = if (rows.isEmpty()) PriceWatchSurfaceMode.EMPTY else PriceWatchSurfaceMode.CONTENT,
-            headline = "Price Watch",
+            headline = "Watching",
             guidance =
                 if (rows.isEmpty()) {
-                    "Watch an exact product from Search, Home, Basket, Saved or purchase history."
+                    "Nothing watched yet. Watch an exact product from Search, Home, Basket, Saved or Bought."
                 } else {
-                    "Private watches on this device. No approved live-price source is connected, so current offers remain unknown."
+                    "Private watches on this device. Current offers remain unknown."
                 },
             rows = rows
         )
@@ -143,7 +143,7 @@ internal object PriceWatchProjector {
             title = watch.displayName,
             packageText = watch.packageQuantityLabel?.let { "Package: $it" } ?: "Package quantity unknown",
             targetText = watch.targetPrice?.let { "Target: ${formatMoney(it)}" } ?: "No target price set",
-            currentOfferText = "No current offer available — no authorized live source is connected.",
+            currentOfferText = "No current offer",
             purchaseHistory = purchaseLines,
             personalHistory = personalLines,
             toggleAction =
