@@ -9,7 +9,7 @@ class PracticalShoppingBasketShellIntegrationTest {
 
     @Test
     fun shellBindsBasketToTheExistingHomeProjectionAndExactBasketRoute() {
-        val source = activitySource().readText()
+        val source = activitySource().readText().replace("\r\n", "\n")
 
         assertTrue(
             source.contains(
@@ -17,6 +17,7 @@ class PracticalShoppingBasketShellIntegrationTest {
             )
         )
         assertTrue(source.contains("basketExperience = findViewById(R.id.basketExperience)"))
+        assertTrue(source.contains("basketExperience.onPlanPrivateIdentities = ::requestPrivateBasketPlan"))
         assertTrue(
             source.contains(
                 "basketExperience.render(PracticalShoppingBasketRenderer.render(homeState))"
@@ -24,7 +25,7 @@ class PracticalShoppingBasketShellIntegrationTest {
         )
         assertTrue(
             source.contains(
-                "val basketVisible =\n            state.selectedPrimaryTab == AppPrimaryTab.BASKET"
+                "val basketVisible =\n            state.selectedPrimaryTab == AppPrimaryTab.BASKET && state.route == AppRoute.BASKET"
             )
         )
         assertTrue(

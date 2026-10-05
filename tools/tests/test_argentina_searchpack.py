@@ -112,6 +112,26 @@ class ArgentinaSearchPackTests(unittest.TestCase):
         self.assertEqual(values[0][0]["productEvidenceKey"], "arroz-key")
         self.assertEqual(values[0][0]["partitionId"], "p-explicit")
 
+    def test_search_many_preserves_structured_identity_fields_for_bounded_offer_preview(self) -> None:
+        rows = [{
+            "productEvidenceKey": "yerba-key",
+            "name": "Yerba 500 g",
+            "brand": "Fixture",
+            "providerProductId": "provider-1",
+            "gtinStatus": "VALID",
+            "gtin": "7790000000001",
+            "quantity": {"value": "500", "unit": "g"},
+            "quantityStatus": "KNOWN",
+            "canonicalSearchAliases": [],
+            "partitionId": "p-explicit",
+        }]
+        values = _manager_for_rows(rows).region("ar-caba").search_many(("yerba",))
+
+        self.assertEqual(values[0][0]["providerProductId"], "provider-1")
+        self.assertEqual(values[0][0]["gtinStatus"], "VALID")
+        self.assertEqual(values[0][0]["quantity"], {"value": "500", "unit": "g"})
+        self.assertEqual(values[0][0]["quantityStatus"], "KNOWN")
+
     def test_search_many_rejects_missing_or_invalid_partition_identity(self) -> None:
         source, release_id = _fixture_workspace([{
             "productEvidenceKey": "arroz-key",

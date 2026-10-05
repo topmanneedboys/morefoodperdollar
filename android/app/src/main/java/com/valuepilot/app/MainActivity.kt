@@ -106,6 +106,7 @@ class MainActivity : AppCompatActivity() {
         List<PracticalShoppingSearchIdentityPresentation.Match>? = null
     private var productMapDialog: AlertDialog? = null
     private var productMapRequestId = 0L
+    private var privateBasketPlanRequestId = 0L
     private var productMapSelectedKey: String? = null
     private var productMapSelectedLabel: String? = null
     private var productMapContext: ProductMapContext? = null
@@ -526,6 +527,7 @@ class MainActivity : AppCompatActivity() {
         if (::basketExperience.isInitialized) {
             basketExperience.onAction = null
             basketExperience.onPrivateIdentityToggle = null
+            basketExperience.onPlanPrivateIdentities = null
             basketExperience.onOpenPrivateIdentityPhotos = null
             basketExperience.onConfirmPurchase = null
             basketExperience.onTogglePriceWatch = null
@@ -1048,6 +1050,7 @@ class MainActivity : AppCompatActivity() {
                     openConfirmedPurchaseDialog(action)
             }
         }
+        basketExperience.onPlanPrivateIdentities = ::requestPrivateBasketPlan
         basketExperience.onPrivateIdentityToggle = { identityKey ->
             val previousState = homeSessionState
             val nextState =
@@ -1098,6 +1101,106 @@ class MainActivity : AppCompatActivity() {
                     item.personalHistoryNotice
                 ).joinToString("\n").ifBlank { "Product details are available only where the current plan provides them." }
             )
+        }
+    }
+
+    /**
+     * Runs one bounded exact-key planner request for Search identities saved in
+     * Basket.  Identity-only entries stay visible and are reported as missing;
+     * no package quantity is inferred from a product title.
+     */
+    private fun requestPrivateBasketPlan() {
+        val identities = homeSessionState.privateIdentities
+        if (identities.isEmpty()) return
+        val requestId = Math.addExact(privateBasketPlanRequestId, 1L)
+        privateBasketPlanRequestId = requestId
+        val eligible = identities.mapNotNull { identity ->
+            ArgentinaProductStoreMapAdapter.explicitPackageQuantity(identity.packageQuantityLabel)
+                ?.let { quantity -> identity to quantity }
+        }.take(ArgentinaBackendContract.MAX_LINES)
+        val omitted = identities.size - eligible.size
+        if (eligible.isEmpty()) {
+            ValuePilotCompactUi.showSheet(
+                context = this,
+                title = "Current price check",
+                subtitle = "No exact package quantities",
+                bodyText = "These saved products remain identity-only because the source did not provide a structured package quantity. ValuePilot will not infer one from the product name."
+            )
+            return
+        }
+        Toast.makeText(this, "Checking current listed prices…", Toast.LENGTH_SHORT).show()
+        searchExecutor.submit {
+            val outcome = runCatching {
+                val transport = ValuePilotArgentinaEdgeTransportFactory.create()
+                val status = ArgentinaBackendConsumerBridge(transport, null).status()
+                val statusValue = (status as? ArgentinaBackendBridgeResult.Success)?.value
+                    ?: error("The qualified Argentina release is unavailable.")
+                if (
+                    statusValue.freshness != ArgentinaBackendContract.Freshness.FRESH ||
+                        !statusValue.backendCodeQualified ||
+                        !statusValue.androidNetworkingAuthorized
+                ) {
+                    error("The qualified Argentina release is not authorized for this request.")
+                }
+                val expected = ArgentinaBackendContract.ExpectedRelease(
+                    releaseId = statusValue.releaseId ?: error("The qualified release has no id."),
+                    releaseDate = statusValue.releaseDate ?: error("The qualified release has no date.")
+                )
+                val request = ArgentinaBackendContract.ShopRequest(
+                    latitude = argentinaLaunchArea.latitude,
+                    longitude = argentinaLaunchArea.longitude,
+                    radiusKm = argentinaLaunchArea.radiusKm,
+                    items = eligible.mapIndexed { index, (identity, quantity) ->
+                        ArgentinaBackendContract.RequestItem(
+                            lineId = "saved-${index + 1}",
+                            query = identity.displayName,
+                            amount = quantity.first,
+                            unit = quantity.second,
+                            productEvidenceKey = identity.identityKey
+                        )
+                    }
+                )
+                ArgentinaBackendConsumerBridge(transport, expected).shop(request)
+            }
+            mainHandler.post {
+                if (requestId != privateBasketPlanRequestId || isFinishing || isDestroyed) return@post
+                val result = outcome.getOrNull()
+                if (result !is ArgentinaBackendBridgeResult.Success) {
+                    ValuePilotCompactUi.showSheet(
+                        context = this,
+                        title = "Current price check unavailable",
+                        subtitle = "Basket unchanged",
+                        bodyText = "The qualified current-price service could not complete this request. Saved identities remain on this device; no price or stock claim was made."
+                    )
+                    return@post
+                }
+                val decision = result.value.result
+                val selected = decision.bestSensibleChoice.selectedPlan
+                val body = buildString {
+                    if (selected == null) {
+                        append("No complete current-price plan was found for the exact saved identities.\n")
+                        append("Unknown or missing price evidence stays unknown.")
+                    } else {
+                        append("Planner result: ").append(selected.type).append("\n")
+                        append("Listed total: ").append(selected.total.currency).append(" ").append(selected.total.amount).append("\n")
+                        append("Stores: ").append(selected.stores.joinToString { it.storeName }).append("\n")
+                        append("Priced lines: ").append(selected.lines.size).append(" of ").append(eligible.size).append("\n")
+                        if (selected.missingLineIds.isNotEmpty()) {
+                            append("Missing price evidence remains for ").append(selected.missingLineIds.size).append(" item(s).\n")
+                        }
+                        append("Availability is unknown; a published price is not proof of stock.")
+                    }
+                    if (omitted > 0) {
+                        append("\n\n").append(omitted).append(" saved item(s) were not sent because package quantity was unknown or the request bound was reached.")
+                    }
+                }
+                ValuePilotCompactUi.showSheet(
+                    context = this,
+                    title = "Current price check",
+                    subtitle = "Exact Search identities",
+                    bodyText = body
+                )
+            }
         }
     }
 
@@ -3239,6 +3342,24 @@ class MainActivity : AppCompatActivity() {
         onTogglePriceWatch: (PriceWatchUiAction.ToggleWatch) -> Unit
     ): View {
         val mapEligible = ArgentinaProductStoreMapAdapter.canQuery(match)
+        val primaryOffer = match.qualifiedOffers.firstOrNull()
+        val priceSummary = primaryOffer?.let { offer ->
+            buildString {
+                append(offer.listPrice.currency)
+                append(" ")
+                append(offer.listPrice.amount)
+                append(" at ")
+                append(offer.storeName)
+                offer.unitPrice?.let { unit ->
+                    append(" · ")
+                    append(unit.currency)
+                    append(" ")
+                    append(unit.amount)
+                    offer.unitPriceBasis?.let { basis -> append("/").append(basis) }
+                }
+                append(" · stock unknown")
+            }
+        }
         val historyAvailable =
             confirmedPurchaseHistoryState.purchases.any { purchase ->
                 purchase.productIdentityKey == match.identityKey
@@ -3273,7 +3394,7 @@ class MainActivity : AppCompatActivity() {
                         getString(R.string.search_identity_package_size, it)
                     },
                     match.matchLabel,
-                    getString(R.string.search_identity_no_current_price),
+                    priceSummary ?: getString(R.string.search_identity_no_current_price),
                     if (cardPresentation.primaryAction == SearchResultPrimaryAction.REMOVE_FROM_BASKET) {
                         getString(R.string.search_identity_remove_home_draft)
                     } else if (cardPresentation.primaryAction == SearchResultPrimaryAction.ADD_TO_BASKET) {
@@ -3329,9 +3450,14 @@ class MainActivity : AppCompatActivity() {
         }
 
         val priceState = TextView(this).apply {
-            text = getString(R.string.search_identity_no_current_price)
+            text = priceSummary ?: getString(R.string.search_identity_no_current_price)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, ValuePilotDesignTokens.Typography.CAPTION_SP)
-            setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.WARNING))
+            setTextColor(
+                ValuePilotPalette.color(
+                    if (primaryOffer == null) ValuePilotDesignTokens.Colors.WARNING
+                    else ValuePilotDesignTokens.Colors.TEXT_SECONDARY
+                )
+            )
             setPadding(0, dp(4), 0, 0)
         }
 
@@ -3503,7 +3629,7 @@ class MainActivity : AppCompatActivity() {
                 context = this,
                 title = match.displayName,
                 subtitle = listOfNotNull(match.brand, match.packageQuantityLabel).joinToString(" · ").takeIf { it.isNotBlank() },
-                bodyText = "No current price is claimed for this product identity.",
+                bodyText = priceSummary ?: "No current price is claimed for this product identity.",
                 actions = buildList {
                     add(
                         ValuePilotCompactUi.SheetAction(

@@ -132,6 +132,13 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     /** Typed owner action for the separate private Search-identity checklist. */
     var onPrivateIdentityToggle: ((String) -> Unit)? = null
 
+    /** Runs one bounded exact-key backend plan for the saved Search identities. */
+    var onPlanPrivateIdentities: (() -> Unit)? = null
+        set(value) {
+            field = value
+            privateIdentityPlanButton.isEnabled = value != null && hasRenderedState
+        }
+
     /** Opens only the user-requested, unverified external photo search. */
     var onOpenPrivateIdentityPhotos: ((String) -> Unit)? = null
 
@@ -273,6 +280,15 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
             topPadding = 5
         )
+    private val privateIdentityPlanButton = ValuePilotProgrammaticButton.outlined(context).apply {
+        text = "Check current prices"
+        contentDescription = "Check current listed prices for saved exact products"
+        isAllCaps = false
+        textSize = 13f
+        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, ValuePilotDesignTokens.Spacing.XS_DP)
+        isEnabled = false
+        setOnClickListener { onPlanPrivateIdentities?.invoke() }
+    }
     private val privateIdentityPhotoError = line(
         "",
         ValuePilotDesignTokens.Typography.LABEL_SP,
@@ -443,6 +459,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         privateIdentityBody.addView(privateIdentityHeading)
         privateIdentityBody.addView(privateIdentityProgress)
         privateIdentityBody.addView(privateIdentityNotice)
+        privateIdentityBody.addView(privateIdentityPlanButton)
         privateIdentityBody.addView(privateIdentityPhotoError)
         privateIdentityBody.addView(privateIdentityHeadingSeparator())
         privateIdentityBody.addView(privateIdentityRows)
@@ -465,6 +482,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         extraStopRule.visibility = GONE
         extraStopRuleNotice.visibility = GONE
         privateIdentityCard.visibility = GONE
+        privateIdentityPlanButton.visibility = GONE
         recordPurchaseButton.visibility = GONE
         detailsToggle.visibility = GONE
         basketDetailsCard.visibility = GONE
@@ -727,6 +745,8 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         identities: List<PracticalShoppingBasketPrivateIdentityRenderState>
     ) {
         privateIdentityCard.visibility = if (identities.isEmpty()) GONE else VISIBLE
+        privateIdentityPlanButton.visibility = if (identities.isEmpty()) GONE else VISIBLE
+        privateIdentityPlanButton.isEnabled = onPlanPrivateIdentities != null && hasRenderedState
         if (identities.isEmpty()) {
             privateIdentityPhotoError.text = ""
             privateIdentityPhotoError.visibility = GONE

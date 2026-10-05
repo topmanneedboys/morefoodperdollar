@@ -35,7 +35,7 @@ try:
         normalize_text as input_normalize_text,
         split_shopping_lines,
     )
-    from tools.shopping_intelligence_engine import ShoppingIntelligenceError, ShoppingRequest
+    from tools.shopping_intelligence_engine import ExactMoney, ExactQuantity, ShoppingIntelligenceError, ShoppingRequest, decimal_text
     from tools.verify_argentina_sepa_micro_partition_mobile import decode_member_bytes
 except ModuleNotFoundError:  # pragma: no cover - direct module invocation
     from argentina_national_routing import RoutingPoint, load_national_routing
@@ -57,7 +57,7 @@ except ModuleNotFoundError:  # pragma: no cover - direct module invocation
         normalize_text as input_normalize_text,
         split_shopping_lines,
     )
-    from shopping_intelligence_engine import ShoppingIntelligenceError, ShoppingRequest
+    from shopping_intelligence_engine import ExactMoney, ExactQuantity, ShoppingIntelligenceError, ShoppingRequest, decimal_text
     from verify_argentina_sepa_micro_partition_mobile import decode_member_bytes
 
 from .artifacts import FilesystemReleaseArtifactStore, ManifestReleaseArtifactStore, ReleaseArtifactError, ReleaseArtifactStore
@@ -74,6 +74,10 @@ MAX_SEARCH_CACHE_ENTRIES = 512
 # service determine whether another bounded page exists without exposing an
 # unbounded search result or changing the tighter planner limits below.
 MAX_DISCOVERY_PRODUCT_LIMIT = 31
+# Search carries only a bounded, nearest-first price evidence preview.  The
+# complete store set remains available through the exact-key /v1/shop path.
+MAX_DISCOVERY_OFFERS_PER_PRODUCT = 8
+MAX_DISCOVERY_OFFERS_TOTAL = 128
 MAX_INPUT_CANDIDATE_CACHE_ENTRIES = 8
 MAX_INPUT_CANDIDATE_UNION = INPUT_MAX_LINES * INPUT_MAX_CANDIDATES
 MAX_SMALL_CATALOG_FALLBACK_RECORDS = 2_048
@@ -722,7 +726,7 @@ class ArgentinaBackendReader:
             or any(not isinstance(token, str) or not token for token in matched)
         ):
             raise BackendQueryError("discovery candidate is invalid")
-        return {
+        result = {
             "productEvidenceKey": key,
             "name": name,
             "brand": value.get("brand") if isinstance(value.get("brand"), str) else None,
@@ -730,6 +734,14 @@ class ArgentinaBackendReader:
             "score": score,
             "matchedTokens": list(matched),
         }
+        # SearchPack docstore records retain the provider's structured identity
+        # fields.  Keep them when present so the consumer can display an
+        # explicit package size and the offer rail can calculate unit value;
+        # never infer these fields from the product title.
+        for field_name in ("providerProductId", "gtinStatus", "quantity", "quantityStatus"):
+            if field_name in value and value.get(field_name) is not None:
+                result[field_name] = value.get(field_name)
+        return result
 
     @staticmethod
     def _discovery_sort_key(value: Mapping[str, Any]) -> tuple[Any, ...]:
@@ -742,6 +754,77 @@ class ArgentinaBackendReader:
             tuple(value.get("matchedTokens") or ()),
         )
 
+    def _rank_discovery_region(
+        self,
+        query: str,
+        region_id: str,
+        *,
+        product_limit: int,
+        metrics: RequestMetrics,
+    ) -> tuple[Mapping[str, Any], ...]:
+        """Read one bounded regional identity window in stable order."""
+
+        search_started = time.perf_counter()
+        searchpack = self._searchpack_for_region(region_id)
+        if searchpack is not None:
+            stats = SearchPackStats()
+            try:
+                ranked = searchpack.region(region_id).search_many(
+                    (query,),
+                    product_limit=product_limit,
+                    candidate_bound=MAX_CANDIDATES,
+                    stats=stats,
+                )
+            except SearchPackError as exc:
+                raise BackendQueryError(f"SearchPack discovery failed for {region_id}") from exc
+            self._merge_searchpack_metrics(metrics, stats)
+            values = ranked[0] if ranked else ()
+        else:
+            contract = self.router.contract(region_id)
+            cache_key = (region_id, query, product_limit)
+            discovery_cache = getattr(self, "_discovery_cache", None)
+            if not isinstance(discovery_cache, OrderedDict):
+                discovery_cache = OrderedDict(discovery_cache or {})
+                self._discovery_cache = discovery_cache
+            cached = discovery_cache.get(cache_key)
+            if cached is not None:
+                discovery_cache.move_to_end(cache_key)
+                values = cached
+            else:
+                try:
+                    _raw, scored = _search_candidates_many(
+                        contract,
+                        (query,),
+                        product_limit=product_limit,
+                        max_candidates=MAX_CANDIDATES,
+                    )
+                except (ArgentinaSepaQueryError, ValueError, OSError) as exc:
+                    raise BackendQueryError(f"discovery search failed for {region_id}") from exc
+                values = tuple(item.as_dict() for item in (scored[0] if scored else ()))
+                if len(discovery_cache) >= MAX_SEARCH_CACHE_ENTRIES:
+                    discovery_cache.popitem(last=False)
+                discovery_cache[cache_key] = values
+        metrics.regional_search_ms += (time.perf_counter() - search_started) * 1000
+        return tuple(value if isinstance(value, Mapping) else {} for value in values)
+
+    def _discover_ranked_values(
+        self,
+        query: str,
+        *,
+        region_ids: Sequence[str],
+        product_limit: int,
+        metrics: RequestMetrics,
+    ) -> tuple[dict[str, Any], ...]:
+        merged: dict[str, dict[str, Any]] = {}
+        for region_id in sorted({value for value in region_ids if isinstance(value, str) and value}):
+            for value in self._rank_discovery_region(query, region_id, product_limit=product_limit, metrics=metrics):
+                candidate = self._discovery_candidate(value)
+                key = candidate["productEvidenceKey"]
+                previous = merged.get(key)
+                if previous is None or self._discovery_sort_key(candidate) < self._discovery_sort_key(previous):
+                    merged[key] = candidate
+        return tuple(sorted(merged.values(), key=self._discovery_sort_key)[:product_limit])
+
     def discover(
         self,
         query: str,
@@ -749,15 +832,7 @@ class ArgentinaBackendReader:
         region_ids: Sequence[str],
         product_limit: int = 5,
     ) -> tuple[tuple[dict[str, Any], ...], RequestMetrics]:
-        """Return location-scoped product discovery without identity resolution.
-
-        The caller has already routed the request.  Each selected region uses
-        the SearchPack v2 index-native ranker with the normal 100,000-record
-        safety bound (never the 256-record exact-identity horizon).  A legacy
-        routing release is supported through its existing bounded scorer as a
-        compatibility path; SearchPack-enabled releases never open the
-        regional search corpus.
-        """
+        """Return bounded location-scoped identity discovery."""
 
         if not isinstance(query, str) or not query.strip() or len(query) > 96:
             raise BackendQueryError("query must contain 1-96 characters")
@@ -766,61 +841,164 @@ class ArgentinaBackendReader:
         selected = tuple(sorted({value for value in region_ids if isinstance(value, str) and value}))
         metrics = RequestMetrics(regions_queried=list(selected))
         started = time.perf_counter()
+        ordered = self._discover_ranked_values(query, region_ids=selected, product_limit=product_limit, metrics=metrics)
+        metrics.total_ms = (time.perf_counter() - started) * 1000
+        return ordered, metrics
+
+    @staticmethod
+    def _search_unit_price(product: Mapping[str, Any], offer: Mapping[str, Any]) -> dict[str, str] | None:
+        """Calculate an exact, clearly based unit price from structured fields."""
+
+        if product.get("quantityStatus") != "KNOWN":
+            return None
+        quantity = product.get("quantity")
+        list_price = offer.get("listPrice")
+        if not isinstance(quantity, Mapping) or not isinstance(list_price, Mapping):
+            return None
+        try:
+            package = ExactQuantity.from_provider(quantity.get("value"), quantity.get("unit"))
+            price = ExactMoney.parse(list_price.get("amount"), currency="ARS", positive=True)
+        except (ShoppingIntelligenceError, TypeError, ValueError):
+            return None
+        if package.base_amount <= 0:
+            return None
+        if package.dimension == "MASS":
+            basis = Decimal("100")
+            label = "100 g"
+        elif package.dimension == "VOLUME":
+            basis = Decimal("100")
+            label = "100 ml"
+        else:
+            basis = Decimal("1")
+            label = "1 count"
+        return {"amount": decimal_text(price.amount * basis / package.base_amount), "currency": price.currency, "basis": label}
+
+    @classmethod
+    def _public_search_offer(
+        cls,
+        offer: Mapping[str, Any],
+        product: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        result = {
+            "offerKey": offer.get("offerKey"),
+            "productEvidenceKey": offer.get("productEvidenceKey"),
+            "storeKey": offer.get("storeKey"),
+            "storeName": offer.get("storeName"),
+            "storeAddress": offer.get("storeAddress"),
+            "storeLatitude": offer.get("storeLatitude"),
+            "storeLongitude": offer.get("storeLongitude"),
+            "distanceKm": offer.get("distanceKm"),
+            "distanceSemantics": "STRAIGHT_LINE_HAVERSINE",
+            "listPrice": offer.get("listPrice"),
+            "referencePrice": offer.get("referencePrice"),
+            "quantity": product.get("quantity"),
+            "quantityStatus": product.get("quantityStatus"),
+            "unitPrice": cls._search_unit_price(product, offer),
+            "releaseDate": offer.get("releaseDate"),
+            "freshnessStatus": offer.get("freshnessStatus"),
+            "availability": "UNKNOWN",
+            "promotions": offer.get("promotions", []),
+            "provenance": {
+                "provider": "ARGENTINA_SEPA_PRECIOS_CLAROS",
+                "releaseDate": offer.get("releaseDate"),
+                "freshnessStatus": offer.get("freshnessStatus"),
+            },
+        }
+        return result
+
+    def discover_with_offers(
+        self,
+        query: str,
+        *,
+        selections: Sequence[RegionSelection],
+        latitude: Decimal,
+        longitude: Decimal,
+        radius_km: Decimal,
+        product_limit: int = 5,
+    ) -> tuple[tuple[dict[str, Any], ...], RequestMetrics]:
+        """Return identities plus a bounded current-price evidence preview.
+
+        SearchPack ranking is performed once per routed region, then the
+        already-selected micro-partitions are read once per region.  No
+        product causes a separate network/object-store request.  The exact
+        /v1/shop path remains the authority for a complete basket or map view.
+        """
+
+        if not isinstance(query, str) or not query.strip() or len(query) > 96:
+            raise BackendQueryError("query must contain 1-96 characters")
+        if not isinstance(product_limit, int) or not 1 <= product_limit <= MAX_DISCOVERY_PRODUCT_LIMIT:
+            raise BackendQueryError("product limit is invalid")
+        ordered_regions = tuple(sorted((selection for selection in selections), key=lambda item: item.region_id))
+        metrics = RequestMetrics(regions_queried=[selection.region_id for selection in ordered_regions])
+        started = time.perf_counter()
+        region_values: dict[str, tuple[Mapping[str, Any], ...]] = {}
         merged: dict[str, dict[str, Any]] = {}
-        for region_id in selected:
-            search_started = time.perf_counter()
-            searchpack = self._searchpack_for_region(region_id)
-            if searchpack is not None:
-                stats = SearchPackStats()
-                try:
-                    ranked = searchpack.region(region_id).search_many(
-                        (query,),
-                        product_limit=product_limit,
-                        candidate_bound=MAX_CANDIDATES,
-                        stats=stats,
-                    )
-                except SearchPackError as exc:
-                    raise BackendQueryError(f"SearchPack discovery failed for {region_id}") from exc
-                self._merge_searchpack_metrics(metrics, stats)
-                values = ranked[0] if ranked else ()
-            else:
-                contract = self.router.contract(region_id)
-                cache_key = (region_id, query, product_limit)
-                discovery_cache = getattr(self, "_discovery_cache", None)
-                if not isinstance(discovery_cache, OrderedDict):
-                    discovery_cache = OrderedDict(discovery_cache or {})
-                    self._discovery_cache = discovery_cache
-                cached = discovery_cache.get(cache_key)
-                if cached is not None:
-                    discovery_cache.move_to_end(cache_key)
-                    values = cached
-                else:
-                    try:
-                        _raw, scored = _search_candidates_many(
-                            contract,
-                            (query,),
-                            product_limit=product_limit,
-                            max_candidates=MAX_CANDIDATES,
-                        )
-                    except (ArgentinaSepaQueryError, ValueError, OSError) as exc:
-                        raise BackendQueryError(f"discovery search failed for {region_id}") from exc
-                    values = tuple(item.as_dict() for item in (scored[0] if scored else ()))
-                    if len(discovery_cache) >= MAX_SEARCH_CACHE_ENTRIES:
-                        discovery_cache.popitem(last=False)
-                    discovery_cache[cache_key] = values
-            metrics.regional_search_ms += (time.perf_counter() - search_started) * 1000
+        for selection in ordered_regions:
+            values = self._rank_discovery_region(query, selection.region_id, product_limit=product_limit, metrics=metrics)
+            region_values[selection.region_id] = values
             for value in values:
-                if not isinstance(value, Mapping):
-                    as_dict = getattr(value, "as_dict", None)
-                    value = as_dict() if callable(as_dict) else {}
                 candidate = self._discovery_candidate(value)
                 key = candidate["productEvidenceKey"]
                 previous = merged.get(key)
                 if previous is None or self._discovery_sort_key(candidate) < self._discovery_sort_key(previous):
                     merged[key] = candidate
         ordered = tuple(sorted(merged.values(), key=self._discovery_sort_key)[:product_limit])
+        selected_keys = {candidate["productEvidenceKey"] for candidate in ordered}
+        offers_by_product: dict[str, list[dict[str, Any]]] = {}
+        offer_sort_key = lambda value: (float(value["distanceKm"]), str(value["storeKey"]), int(value["__offerSortId"]))
+        for selection in ordered_regions:
+            values = tuple(value for value in region_values.get(selection.region_id, ()) if value.get("productEvidenceKey") in selected_keys)
+            # Legacy releases expose discovery identities without the immutable
+            # partition locator required for a safe offer read.  Preserve the
+            # identity result and leave its price evidence explicitly empty;
+            # never fall back to a corpus scan or guessed offer lookup.
+            values = tuple(
+                value for value in values
+                if isinstance(value.get("partitionId"), str) and bool(value.get("partitionId"))
+            )
+            if not values:
+                continue
+            contract = self.router.contract(selection.region_id)
+            plan = self._plan(contract, (query,), product_limit=product_limit, values_by_query=(values,))
+            products = {str(value["productEvidenceKey"]): value for value in values}
+            stores = self.router.stores(selection.region_id)
+            records: list[Mapping[str, Any]] = []
+            for partition_records in self._load_members(selection.region_id, plan.slices, metrics):
+                records.extend(partition_records)
+            for raw_offer in records:
+                product_key = raw_offer.get("productEvidenceKey")
+                if product_key not in products or raw_offer.get("freshnessStatus") != "FRESH":
+                    continue
+                store = stores.get(raw_offer.get("storeKey"))
+                if store is None or raw_offer.get("storeKey") not in selection.store_keys or store.get("geoStatus") != "VALID":
+                    continue
+                distance = straight_line_distance_km(latitude, longitude, store["latitude"], store["longitude"])
+                if distance > float(radius_km) + 1e-9:
+                    continue
+                projected = self._public_search_offer(_offer_result(raw_offer, products[product_key], store, distance), products[product_key])
+                if not isinstance(projected.get("offerKey"), str) or not isinstance(projected.get("listPrice"), Mapping):
+                    continue
+                bucket = offers_by_product.setdefault(str(product_key), [])
+                bucket.append({**projected, "__offerSortId": raw_offer.get("offerId")})
+                bucket.sort(key=offer_sort_key)
+                del bucket[MAX_DISCOVERY_OFFERS_PER_PRODUCT:]
+        result: list[dict[str, Any]] = []
+        total_offers = 0
+        for candidate in ordered:
+            key = candidate["productEvidenceKey"]
+            offers = offers_by_product.get(key, [])
+            remaining = max(0, MAX_DISCOVERY_OFFERS_TOTAL - total_offers)
+            selected_offers = []
+            for value in offers[:remaining]:
+                public_offer = dict(value)
+                public_offer.pop("__offerSortId", None)
+                selected_offers.append(public_offer)
+            total_offers += len(selected_offers)
+            value = dict(candidate)
+            value["qualifiedOffers"] = selected_offers
+            result.append(value)
         metrics.total_ms = (time.perf_counter() - started) * 1000
-        return ordered, metrics
+        return tuple(result), metrics
 
     def _plan(
         self,

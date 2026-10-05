@@ -3,12 +3,10 @@ package com.valuepilot.app
 /**
  * Immutable presentation for Search's qualified identity rail.
  *
- * The Argentina identity rail contributes names and optional brands only. It
- * may also carry an explicitly validated package
- * quantity, but this presentation carries no price, store, availability,
- * freshness or ranking authority. A later action may hand the selected name
- * to Scan & compare, but that route still requires the shopper to review and
- * supply exact evidence.
+ * The Argentina rail contributes exact identities and may attach a bounded,
+ * source-labelled current-price preview. The preview is evidence only: it
+ * carries no stock, availability or ranking authority. A later action still
+ * uses the exact identity key through the shared planner/store path.
  */
 internal data class PracticalShoppingSearchIdentityPresentation(
     val query: String,
@@ -30,7 +28,9 @@ internal data class PracticalShoppingSearchIdentityPresentation(
         val sourceLabel: String? = null,
         val identityKey: String = displayName,
         /** The source-validated GTIN, when the exact identity supplied one. */
-        val gtin: String? = null
+        val gtin: String? = null,
+        /** Bounded exact current-price evidence, when the backend supplied it. */
+        val qualifiedOffers: List<ArgentinaBackendContract.SearchOffer> = emptyList()
     ) {
         init {
             require(displayName.isNotBlank())
@@ -42,6 +42,8 @@ internal data class PracticalShoppingSearchIdentityPresentation(
             require(sourceLabel == null || sourceLabel.length <= 160)
             require(identityKey.isNotBlank())
             require(gtin == null || gtin.matches(Regex("[0-9]{8}|[0-9]{12}|[0-9]{13}|[0-9]{14}")))
+            require(qualifiedOffers.size <= ArgentinaBackendContract.MAX_SEARCH_OFFERS_PER_IDENTITY)
+            require(qualifiedOffers.all { it.productEvidenceKey == identityKey })
         }
     }
 
@@ -57,7 +59,7 @@ internal data class PracticalShoppingSearchIdentityPresentation(
         require(!hasMore || nextPage != null || limitReached)
     }
 
-    /** Dialog-safe summary that keeps the identity-only boundary visible. */
+    /** Dialog-safe summary that keeps the evidence boundary visible. */
     val summaryMessage: String
         get() = buildString {
             append(notice)

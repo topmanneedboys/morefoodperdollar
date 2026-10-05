@@ -32,6 +32,7 @@ object ArgentinaBackendContract {
     const val MAX_LINES = 10
     const val MAX_MATCHES = 32
     const val MAX_PRODUCT_CANDIDATES = 128
+    const val MAX_SEARCH_OFFERS_PER_IDENTITY = 8
     const val MAX_STORES = 2
     const val MAX_PLAN_LINES = 10
     const val MAX_FRONTIER_PLANS = 64
@@ -191,7 +192,30 @@ object ArgentinaBackendContract {
         val providerProductId: String?,
         val gtin: String?,
         val gtinStatus: String?,
-        val quantity: Quantity?
+        val quantity: Quantity?,
+        /** Optional bounded current-price evidence attached to discovery. */
+        val qualifiedOffers: List<SearchOffer> = emptyList()
+    )
+
+    data class SearchOffer(
+        val offerKey: String,
+        val productEvidenceKey: String,
+        val storeKey: String,
+        val storeName: String,
+        val storeAddress: Map<String, String>,
+        val storeLatitude: String,
+        val storeLongitude: String,
+        val distanceKm: String,
+        val listPrice: Money,
+        val referencePrice: Money?,
+        val quantity: Quantity?,
+        val quantityStatus: String?,
+        val unitPrice: Money?,
+        val unitPriceBasis: String?,
+        val releaseDate: String,
+        val freshnessStatus: Freshness,
+        val availability: Availability,
+        val provenance: Provenance
     )
 
     data class SearchMatch(
@@ -529,11 +553,11 @@ object ArgentinaBackendContract {
                 invalid("discovery matches must contain flat product identities")
             }
             matches = emptyList()
-            identityCandidates = parseProductCandidates(rawMatches)
+            identityCandidates = parseProductCandidates(rawMatches, common.releaseDate)
             if (pagination != null && pagination.pageSize != SEARCH_PAGE_SIZE) invalid("discovery pagination page size is invalid")
         } else {
             if (pagination != null) invalid("non-discovery search cannot contain pagination")
-            matches = parseSearchMatches(rawMatches)
+            matches = parseSearchMatches(rawMatches, common.releaseDate)
             identityCandidates = matches.flatMap { it.productCandidates }
         }
 
@@ -702,7 +726,7 @@ object ArgentinaBackendContract {
         return EvidenceSemantics(Availability.UNKNOWN, distance, promotions, notInventory)
     }
 
-    private fun parseSearchMatches(array: JSONArray): List<SearchMatch> {
+    private fun parseSearchMatches(array: JSONArray, expectedReleaseDate: String? = null): List<SearchMatch> {
         boundedArray(array, MAX_MATCHES, "matches")
         val seenLines = mutableSetOf<String>()
         return (0 until array.length()).map { index ->
@@ -710,17 +734,17 @@ object ArgentinaBackendContract {
             val lineId = requiredId(match, "lineId", 240)
             if (!seenLines.add(lineId)) invalid("duplicate search line id")
             val query = boundedQuery(requiredString(match, "query", MAX_QUERY_CHARS), "match query")
-            val candidates = parseProductCandidates(requiredArray(match, "productCandidates"))
+            val candidates = parseProductCandidates(requiredArray(match, "productCandidates"), expectedReleaseDate)
             SearchMatch(lineId, query, candidates)
         }
     }
 
-    private fun parseProductCandidates(array: JSONArray): List<ProductIdentity> {
+    private fun parseProductCandidates(array: JSONArray, expectedReleaseDate: String? = null): List<ProductIdentity> {
         boundedArray(array, MAX_PRODUCT_CANDIDATES, "productCandidates")
         val byKey = linkedMapOf<String, ProductIdentity>()
         repeat(array.length()) { index ->
             val candidate = array.get(index) as? JSONObject ?: invalid("product candidate must be an object")
-            val parsed = parseProductIdentity(candidate)
+            val parsed = parseProductIdentity(candidate, expectedReleaseDate)
             val previous = byKey[parsed.productEvidenceKey]
             if (previous != null && previous != parsed) invalid("conflicting product identity evidence")
             if (!byKey.containsKey(parsed.productEvidenceKey)) {
@@ -730,21 +754,90 @@ object ArgentinaBackendContract {
         return byKey.values.toList()
     }
 
-    private fun parseProductIdentity(root: JSONObject): ProductIdentity {
+    private fun parseProductIdentity(root: JSONObject, expectedReleaseDate: String? = null): ProductIdentity {
         val key = requiredId(root, "productEvidenceKey", 256)
         val name = requiredText(root, "name", 512)
         val brand = optionalString(root, "brand", 160)
         val providerProductId = optionalString(root, "providerProductId", 160)
         val gtin = optionalString(root, "gtin", 14)
         val gtinStatus = optionalString(root, "gtinStatus", 32)
-        if (gtinStatus != null && gtinStatus !in setOf("VALID", "INVALID", "UNKNOWN")) invalid("unsupported gtinStatus")
+        if (gtinStatus != null && gtinStatus !in setOf("VALID", "INVALID", "INVALID_OR_NOT_GTIN", "UNKNOWN")) invalid("unsupported gtinStatus")
         if (gtinStatus == "VALID") {
             if (gtin == null || !GTIN_PATTERN.matches(gtin) || !validGtin(gtin)) invalid("invalid checksum-valid GTIN")
         } else if (gtin != null && (!GTIN_PATTERN.matches(gtin) || !validGtin(gtin))) {
             invalid("invalid GTIN evidence")
         }
         val quantity = optionalProductQuantity(root, "quantity")
-        return ProductIdentity(key, name, brand, providerProductId, gtin, gtinStatus, quantity)
+        val qualifiedOffers =
+            if (!root.has("qualifiedOffers") || root.isNull("qualifiedOffers")) {
+                emptyList()
+            } else {
+                parseQualifiedOffers(requiredArray(root, "qualifiedOffers"), key, expectedReleaseDate)
+            }
+        return ProductIdentity(key, name, brand, providerProductId, gtin, gtinStatus, quantity, qualifiedOffers)
+    }
+
+    private fun parseQualifiedOffers(
+        array: JSONArray,
+        productKey: String,
+        expectedReleaseDate: String? = null
+    ): List<SearchOffer> {
+        boundedArray(array, MAX_SEARCH_OFFERS_PER_IDENTITY, "qualifiedOffers")
+        val seen = mutableSetOf<String>()
+        return (0 until array.length()).map { index ->
+            val raw = array.get(index) as? JSONObject ?: invalid("qualified offer must be an object")
+            val offerKey = requiredId(raw, "offerKey", 320)
+            if (!seen.add(offerKey)) invalid("duplicate qualified offer key")
+            val offerProductKey = requiredId(raw, "productEvidenceKey", 256)
+            if (offerProductKey != productKey) invalid("qualified offer product key disagrees")
+            val storeKey = requiredId(raw, "storeKey", 320)
+            val storeName = requiredText(raw, "storeName", 240)
+            val address = optionalStringMap(raw, "storeAddress", MAX_ADDRESS_ENTRIES, MAX_ADDRESS_VALUE_CHARS).orEmpty()
+            val latitude = requiredDecimalString(raw, "storeLatitude", nonNegative = false)
+            validateCoordinate(latitude, "qualified offer store latitude", -90, 90)
+            val longitude = requiredDecimalString(raw, "storeLongitude", nonNegative = false)
+            validateCoordinate(longitude, "qualified offer store longitude", -180, 180)
+            val distance = requiredDecimalString(raw, "distanceKm", nonNegative = true)
+            val listPrice = parseMoney(requiredObject(raw, "listPrice"), "qualified offer listPrice", positive = true, expectedCurrency = "ARS")
+            val referencePrice = if (!raw.has("referencePrice") || raw.isNull("referencePrice")) null else parseMoney(requiredObject(raw, "referencePrice"), "qualified offer referencePrice", positive = true, expectedCurrency = "ARS")
+            val quantity = optionalProductQuantity(raw, "quantity")
+            val quantityStatus = optionalString(raw, "quantityStatus", 32)
+            if (quantityStatus != null && quantityStatus !in setOf("KNOWN", "UNKNOWN", "UNSPECIFIED")) invalid("unsupported qualified offer quantityStatus")
+            val unitPrice = if (!raw.has("unitPrice") || raw.isNull("unitPrice")) null else parseMoney(requiredObject(raw, "unitPrice"), "qualified offer unitPrice", positive = true, expectedCurrency = "ARS")
+            val unitPriceBasis = optionalString(raw, "unitPriceBasis", 32)
+                ?: raw.optJSONObject("unitPrice")?.optString("basis")?.takeIf { it.isNotBlank() }
+            val releaseDate = requiredString(raw, "releaseDate", 32)
+            parseDate(releaseDate, "qualified offer releaseDate")
+            if (expectedReleaseDate != null && releaseDate != expectedReleaseDate) {
+                invalid("qualified offer releaseDate differs from response release")
+            }
+            val freshness = requiredFreshness(raw, "freshnessStatus")
+            val availability = requiredAvailability(raw, "availability")
+            if (freshness != Freshness.FRESH) invalid("qualified offer freshness must be FRESH")
+            if (availability != Availability.UNKNOWN) invalid("qualified offer availability must remain UNKNOWN")
+            val provenanceRoot = requiredObject(raw, "provenance")
+            val provenance = parseProvenance(provenanceRoot, releaseDate)
+            SearchOffer(
+                offerKey = offerKey,
+                productEvidenceKey = offerProductKey,
+                storeKey = storeKey,
+                storeName = storeName,
+                storeAddress = address,
+                storeLatitude = latitude,
+                storeLongitude = longitude,
+                distanceKm = distance,
+                listPrice = listPrice,
+                referencePrice = referencePrice,
+                quantity = quantity,
+                quantityStatus = quantityStatus,
+                unitPrice = unitPrice,
+                unitPriceBasis = unitPriceBasis,
+                releaseDate = releaseDate,
+                freshnessStatus = freshness,
+                availability = availability,
+                provenance = provenance
+            )
+        }
     }
 
     /**

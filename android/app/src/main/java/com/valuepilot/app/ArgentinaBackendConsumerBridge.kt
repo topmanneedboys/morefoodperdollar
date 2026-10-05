@@ -81,7 +81,7 @@ internal data class ArgentinaBackendFailureMetadata(
     }
 }
 
-/** One identity-only search response ready for the existing Search seam. */
+/** One bounded Search response ready for the existing Search seam. */
 internal data class ArgentinaBackendSearchPresentation(
     val response: ArgentinaBackendContract.SearchResponse,
     val identity: PracticalShoppingSearchIdentityPresentation
@@ -477,7 +477,7 @@ private object ArgentinaBackendInputMapper {
 private object ArgentinaBackendIdentityMapper {
     private const val SOURCE_LABEL = "Argentina SEPA / Precios Claros"
     private const val NOTICE_PREFIX =
-        "Argentina SEPA / Precios Claros identity suggestions from the qualified release"
+        "Argentina SEPA / Precios Claros results from the qualified release"
 
     fun toPresentation(
         response: ArgentinaBackendContract.SearchResponse
@@ -498,7 +498,8 @@ private object ArgentinaBackendIdentityMapper {
                         packageQuantityLabel = candidate.quantity?.let(::productQuantityLabel),
                         sourceLabel = SOURCE_LABEL,
                         identityKey = candidate.productEvidenceKey,
-                        gtin = candidate.gtin
+                        gtin = candidate.gtin,
+                        qualifiedOffers = candidate.qualifiedOffers
                     )
             }
         }
@@ -511,7 +512,11 @@ private object ArgentinaBackendIdentityMapper {
             query = response.originalQuery.trim(),
             matches = matches,
             evaluatedCandidateCount = maxOf(evaluated, matches.size),
-            notice = "$NOTICE_PREFIX ${response.common.releaseDate} only — no current prices, stock, availability or freshness are implied; package size is shown only when explicitly supplied by the source.",
+            notice = if (matches.any { it.qualifiedOffers.isNotEmpty() }) {
+                "$NOTICE_PREFIX ${response.common.releaseDate}; listed prices and stores appear only where exact fresh offer evidence is attached. Stock and availability remain unknown."
+            } else {
+                "$NOTICE_PREFIX ${response.common.releaseDate} only — no current prices, stock, availability or freshness is implied; package size is shown only when explicitly supplied by the source."
+            },
             page = pagination?.page ?: 0,
             hasMore = pagination?.hasMore == true,
             nextPage = pagination?.nextPage,
@@ -727,7 +732,7 @@ private object ArgentinaBackendHomeMapper {
     }
 }
 
-/** Search ordering gate for identity-only backend responses. */
+/** Search ordering gate for bounded backend Search responses. */
 internal data class ArgentinaBackendSearchRefreshState(
     val latestGeneration: Long? = null,
     val presentation: PracticalShoppingSearchIdentityPresentation? = null
@@ -752,8 +757,8 @@ internal data class ArgentinaBackendSearchRefreshDecision(
 
 /**
  * Same generation semantics as the existing production Search gate, kept
- * separate because identity-only backend results are not priced core evidence
- * and must not be forced through a ranking projection.
+ * separate because Search previews are not priced core evidence and must not
+ * be forced through a ranking projection.
  */
 internal object ArgentinaBackendSearchRefreshGate {
     fun applySnapshot(

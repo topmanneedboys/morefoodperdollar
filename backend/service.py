@@ -138,7 +138,7 @@ class BackendService:
         return request_id, handle, decision, metrics
 
     @staticmethod
-    def _route_ids(reader: ArgentinaBackendReader, payload: Mapping[str, Any]) -> tuple[str, ...]:
+    def _route_selections(reader: ArgentinaBackendReader, payload: Mapping[str, Any]):
         try:
             latitude = Decimal(str(payload.get("latitude")))
             longitude = Decimal(str(payload.get("longitude")))
@@ -146,9 +146,13 @@ class BackendService:
         except (InvalidOperation, TypeError, ValueError) as exc:
             raise BackendQueryError("latitude, longitude and radiusKm must be numeric") from exc
         try:
-            return tuple(selection.region_id for selection in reader.router.route(latitude=latitude, longitude=longitude, radius_km=radius))
+            return tuple(reader.router.route(latitude=latitude, longitude=longitude, radius_km=radius))
         except (BackendQueryError, ValueError) as exc:
             raise BackendQueryError(str(exc)) from exc
+
+    @classmethod
+    def _route_ids(cls, reader: ArgentinaBackendReader, payload: Mapping[str, Any]) -> tuple[str, ...]:
+        return tuple(selection.region_id for selection in cls._route_selections(reader, payload))
 
     @staticmethod
     def _response_size(response: dict[str, Any]) -> int:
@@ -304,10 +308,23 @@ class BackendService:
         started = time.perf_counter()
         handle = self.release_manager.pin(require_fresh=True)
         reader = self._reader(handle)
-        regions = self._route_ids(reader, payload)
+        selections = self._route_selections(reader, payload)
+        regions = tuple(selection.region_id for selection in selections)
         offset = page * DISCOVERY_PAGE_SIZE
         window_limit = min(offset + DISCOVERY_PAGE_SIZE + 1, MAX_DISCOVERY_PRODUCT_LIMIT)
-        candidates, metrics = reader.discover(query, region_ids=regions, product_limit=window_limit)
+        discover_with_offers = getattr(reader, "discover_with_offers", None)
+        if callable(discover_with_offers):
+            candidates, metrics = discover_with_offers(
+                query,
+                selections=selections,
+                latitude=Decimal(str(payload.get("latitude"))),
+                longitude=Decimal(str(payload.get("longitude"))),
+                radius_km=Decimal(str(payload.get("radiusKm"))),
+                product_limit=window_limit,
+            )
+        else:
+            # Compatibility for older test doubles and pre-wiring readers.
+            candidates, metrics = reader.discover(query, region_ids=regions, product_limit=window_limit)
         has_more = len(candidates) > offset + DISCOVERY_PAGE_SIZE
         limit_reached = has_more and page == DISCOVERY_MAX_PAGE
         visible_candidates = candidates[offset:offset + DISCOVERY_PAGE_SIZE]
@@ -339,6 +356,7 @@ class BackendService:
             "evidenceSemantics": {
                 "availability": "UNKNOWN",
                 "distance": "STRAIGHT_LINE_HAVERSINE_ONLY",
+                "qualifiedCurrentPriceEvidence": True,
                 "pricePublicationIsNotInventory": True,
             },
             "diagnostics": {

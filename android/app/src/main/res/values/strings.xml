@@ -110,9 +110,9 @@
 
     <string name="sources_licences">Sources &amp; licences</string>
     <string name="sources_licences_title">Sources &amp; licences</string>
-    <string name="sources_licences_body">User-triggered Argentina Search is source-attributed identity evidence only. No bundled product catalogue is shipped. No Canadian store directory is shipped. It does not prove a current price, package quantity, store stock, location or availability.
+    <string name="sources_licences_body">User-triggered Argentina Search is source-attributed exact identity evidence and may include a bounded preview of a qualified fresh listed price, package quantity and store. No bundled product catalogue is shipped. No Canadian store directory is shipped. A listed price does not prove store stock or availability.
 
-Prices and comparisons you enter or confirm stay private on this device. They are personal observations, not live retailer offers. Home planner cards are clearly labelled fictional sample data and must not be read as retailer data. Search cards are source-attributed product identity suggestions only; they do not provide current prices, stock, availability or Best Value rankings.
+Prices and comparisons you enter or confirm stay private on this device. They are personal observations, not live retailer offers. Home planner cards are clearly labelled fictional sample data and must not be read as retailer data. Search cards show source-attributed identities; any listed price/store preview is bounded evidence, not stock, availability or a Best Value ranking.
 
 Confirmed purchases are separate, explicit private records on this device. They do not become live offers, stock, ranking inputs or proof for another shopper. Comparison price memory remains a separate private historical feature.
 
@@ -303,7 +303,7 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="search_eyebrow">PRODUCT SEARCH • IDENTITY ONLY</string>
     <string name="search_title">What are you shopping for?</string>
     <string name="search_body">Type a product or tap a quick search. ValuePilot will show product identities from Argentina’s public catalog.</string>
-    <string name="search_footnote">This user-triggered search is identity-only. It does not claim current prices, package quantities, stock, store availability, promotions or ranking.</string>
+    <string name="search_footnote">This user-triggered search returns exact identities and may show a qualified listed price/store preview when fresh evidence is available. It never claims stock, store availability or a Best Value ranking; package size appears only when explicitly supplied.</string>
 
     <string name="search_hint">Search products</string>
     <string name="search_action">Search products</string>
@@ -315,7 +315,7 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="search_quick_rice">tomato</string>
     <string name="search_quick_pizza">coffee</string>
     <string name="search_identity_badge">PUBLIC ARGENTINA CATALOG</string>
-    <string name="search_identity_notice">Product identities only. Results are not live prices, stock, availability or Best Value rankings; package size appears only when the source supplies it explicitly.</string>
+    <string name="search_identity_notice">Exact product identities may include a qualified listed price preview and store. A listed price is not stock or availability, and it is not a Best Value ranking; package size appears only when the source supplies it explicitly.</string>
     <string name="search_identity_dialog_title">Product identities for “%1$s”</string>
     <string name="search_identity_loading">Searching product identities…</string>
     <string name="search_identity_unavailable">Product search is unavailable right now. Nothing was changed.</string>

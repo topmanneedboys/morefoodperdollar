@@ -1238,7 +1238,7 @@ class SearchPackRegion:
                 partition_id = raw.get("partitionId")
                 if not isinstance(partition_id, str) or not partition_id:
                     raise SearchPackError("ranked docstore partition identity is invalid")
-                query_values.append({
+                projected = {
                     "productEvidenceKey": key,
                     "name": name,
                     "brand": raw.get("brand") if isinstance(raw.get("brand"), str) else None,
@@ -1246,7 +1246,15 @@ class SearchPackRegion:
                     "partitionId": partition_id,
                     "score": score,
                     "matchedTokens": list(matched),
-                })
+                }
+                # Carry only source-supplied structured identity fields into
+                # the bounded Search projection.  These fields let the
+                # backend attach exact package/price evidence without a
+                # second per-product lookup; no quantity is inferred here.
+                for field_name in ("providerProductId", "gtinStatus", "quantity", "quantityStatus"):
+                    if field_name in raw and raw.get(field_name) is not None:
+                        projected[field_name] = raw.get(field_name)
+                query_values.append(projected)
             values.append(tuple(query_values))
         return tuple(values)
 

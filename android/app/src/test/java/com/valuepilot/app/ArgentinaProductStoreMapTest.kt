@@ -47,6 +47,12 @@ class ArgentinaProductStoreMapTest {
                 match("offline-display-name", null).copy(sourceLabel = null)
             )
         )
+        assertEquals(
+            false,
+            ArgentinaProductStoreMapAdapter.canQuery(
+                match("product-unknown-quantity", null).copy(packageQuantityLabel = null)
+            )
+        )
     }
 
     @Test

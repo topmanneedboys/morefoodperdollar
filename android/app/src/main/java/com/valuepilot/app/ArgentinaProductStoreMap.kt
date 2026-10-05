@@ -30,7 +30,9 @@ internal object ArgentinaProductStoreMapAdapter {
     private const val ARGENTINA_MAX_LONGITUDE_E7 = -536_000_000
 
     fun canQuery(selected: PracticalShoppingSearchIdentityPresentation.Match): Boolean =
-        selected.sourceLabel == SOURCE_FALLBACK && selected.identityKey.isNotBlank()
+        selected.sourceLabel == SOURCE_FALLBACK &&
+            selected.identityKey.isNotBlank() &&
+            explicitPackageQuantity(selected.packageQuantityLabel) != null
 
     fun indexFor(
         response: ArgentinaBackendContract.ShopResponse,

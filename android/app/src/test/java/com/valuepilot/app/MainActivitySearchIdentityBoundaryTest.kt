@@ -43,7 +43,7 @@ class MainActivitySearchIdentityBoundaryTest {
     }
 
     @Test
-    fun `identity cards do not expose price ranking or availability authority`() {
+    fun `identity cards may show bounded prices but do not expose ranking or availability authority`() {
         val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
             .replace("\r\n", "\n")
         val cardStart = activity.indexOf("private fun createSearchResultView(")
@@ -52,7 +52,6 @@ class MainActivitySearchIdentityBoundaryTest {
         assertTrue(cardEnd > cardStart)
         val card = activity.substring(cardStart, cardEnd)
         listOf(
-            "priceSummary",
             "metricLabel",
             "best_value",
             "rank",
@@ -63,6 +62,9 @@ class MainActivitySearchIdentityBoundaryTest {
             assertFalse("Identity card must not own $forbidden", card.contains(forbidden, ignoreCase = true))
         }
         assertTrue(card.contains("SearchResultCardPresentationPolicy.project"))
+        assertTrue(card.contains("qualifiedOffers"))
+        assertTrue(card.contains("offer.listPrice"))
+        assertTrue(card.contains("stock unknown"))
         assertTrue(card.contains("search_identity_no_current_price"))
         assertTrue(card.contains("search_identity_add_home_draft"))
         assertTrue(card.contains("search_identity_package_size"))

@@ -1,0 +1,178 @@
+from __future__ import annotations
+
+from decimal import Decimal
+from types import SimpleNamespace
+import unittest
+
+from backend.reader import ArgentinaBackendReader, RegionSelection
+from backend.service import BackendService
+
+
+class SearchEvidenceTests(unittest.TestCase):
+    class _ReleaseManager:
+        def __init__(self) -> None:
+            self.handle = SimpleNamespace(
+                release_id="fixture-release",
+                release_date="2026-10-01",
+                freshness_status="FRESH",
+            )
+
+        def pin(self, *, require_fresh: bool = True):
+            del require_fresh
+            return self.handle
+
+    class _Reader:
+        def __init__(self) -> None:
+            self.router = SimpleNamespace(
+                route=lambda **_kwargs: (RegionSelection("ar-caba", ("store-1",)),)
+            )
+
+        def discover_with_offers(self, query, *, selections, latitude, longitude, radius_km, product_limit):
+            del latitude, longitude, radius_km
+            self.args = (query, selections, product_limit)
+            return (
+                ({
+                    "productEvidenceKey": "product-1",
+                    "name": query,
+                    "brand": "Fixture",
+                    "gtin": None,
+                    "score": 100,
+                    "matchedTokens": [query],
+                    "qualifiedOffers": [{
+                        "offerKey": "offer-1",
+                        "productEvidenceKey": "product-1",
+                        "storeKey": "store-1",
+                        "storeName": "Fixture Market",
+                        "storeAddress": {"street": "Calle 1"},
+                        "storeLatitude": "-34.60",
+                        "storeLongitude": "-58.38",
+                        "distanceKm": "1.000000",
+                        "distanceSemantics": "STRAIGHT_LINE_HAVERSINE",
+                        "listPrice": {"amount": "2500.00", "currency": "ARS"},
+                        "referencePrice": None,
+                        "quantity": {"value": "500", "unit": "g"},
+                        "quantityStatus": "KNOWN",
+                        "unitPrice": {"amount": "500", "currency": "ARS", "basis": "100 g"},
+                        "releaseDate": "2026-10-01",
+                        "freshnessStatus": "FRESH",
+                        "availability": "UNKNOWN",
+                        "promotions": [],
+                        "provenance": {
+                            "provider": "ARGENTINA_SEPA_PRECIOS_CLAROS",
+                            "releaseDate": "2026-10-01",
+                            "freshnessStatus": "FRESH",
+                        },
+                    }],
+                },),
+                SimpleNamespace(
+                    regions_queried=["ar-caba"],
+                    as_dict=lambda: {"regionsQueried": ["ar-caba"]},
+                ),
+            )
+
+    def test_discovery_offer_preview_is_exact_bounded_and_unknown_inventory(self) -> None:
+        reader = ArgentinaBackendReader.__new__(ArgentinaBackendReader)
+        candidate = {
+            "productEvidenceKey": "ar-sepa-product:1:7790000000001",
+            "name": "Yerba Fixture 500 g",
+            "brand": "Fixture",
+            "gtin": None,
+            "score": 100,
+            "matchedTokens": ["yerba"],
+            "partitionId": "partition-yerba",
+            "quantity": {"value": "500", "unit": "g"},
+            "quantityStatus": "KNOWN",
+        }
+        raw_offer = {
+            "offerKey": "ar-caba-offer:1",
+            "offerId": 1,
+            "productEvidenceKey": candidate["productEvidenceKey"],
+            "storeKey": "ar-sepa-store:1:1:1",
+            "listPrice": {"amount": "2500.00", "currency": "ARS"},
+            "referencePrice": None,
+            "packageProvenance": {"sha256": "a" * 64, "name": "fixture.zip"},
+            "sourceRow": 7,
+            "providerUpdateTime": None,
+            "releaseDate": "2026-10-01",
+            "freshnessStatus": "FRESH",
+            "availability": "UNKNOWN",
+            "promotions": [],
+        }
+        store = {
+            "name": "Fixture Market",
+            "type": "GROCERY",
+            "address": {"street": "Calle 1"},
+            "locality": "CABA",
+            "province": "C",
+            "latitude": "-34.6037",
+            "longitude": "-58.3816",
+            "geoStatus": "VALID",
+        }
+        reader.router = SimpleNamespace(
+            contract=lambda _region: SimpleNamespace(region=SimpleNamespace(region_id="ar-caba")),
+            stores=lambda _region: {raw_offer["storeKey"]: store},
+        )
+        reader._rank_discovery_region = lambda *_args, **_kwargs: (candidate,)
+        reader._plan = lambda *_args, **_kwargs: SimpleNamespace(slices=({"partitionId": "partition-yerba"},))
+        reader._load_members = lambda _region, _slices, _metrics: [[raw_offer]]
+
+        values, metrics = reader.discover_with_offers(
+            "yerba",
+            selections=(RegionSelection("ar-caba", (raw_offer["storeKey"],)),),
+            latitude=Decimal("-34.6037"),
+            longitude=Decimal("-58.3816"),
+            radius_km=Decimal("5"),
+            product_limit=5,
+        )
+
+        self.assertEqual(metrics.regions_queried, ["ar-caba"])
+        self.assertEqual(len(values), 1)
+        self.assertEqual(values[0]["productEvidenceKey"], candidate["productEvidenceKey"])
+        offer = values[0]["qualifiedOffers"][0]
+        self.assertEqual(offer["listPrice"], {"amount": "2500.00", "currency": "ARS"})
+        self.assertEqual(offer["unitPrice"], {"amount": "500", "currency": "ARS", "basis": "100 g"})
+        self.assertEqual(offer["availability"], "UNKNOWN")
+        self.assertEqual(offer["provenance"]["provider"], "ARGENTINA_SEPA_PRECIOS_CLAROS")
+
+    def test_missing_partition_keeps_identity_without_guessing_price(self) -> None:
+        reader = ArgentinaBackendReader.__new__(ArgentinaBackendReader)
+        candidate = {
+            "productEvidenceKey": "legacy-product",
+            "name": "Legacy Fixture",
+            "brand": None,
+            "gtin": None,
+            "score": 1,
+            "matchedTokens": ["legacy"],
+        }
+        reader.router = SimpleNamespace()
+        reader._rank_discovery_region = lambda *_args, **_kwargs: (candidate,)
+        values, _metrics = reader.discover_with_offers(
+            "legacy",
+            selections=(RegionSelection("ar-caba", ("store-1",)),),
+            latitude=Decimal("-34"),
+            longitude=Decimal("-58"),
+            radius_km=Decimal("5"),
+        )
+        self.assertEqual(values[0]["qualifiedOffers"], [])
+
+    def test_service_exposes_bounded_offer_preview_without_internal_sort_fields(self) -> None:
+        reader = self._Reader()
+        service = BackendService("", release_manager=self._ReleaseManager())
+        service._reader = lambda _handle: reader
+
+        response = service.search({
+            "latitude": "-34.60",
+            "longitude": "-58.38",
+            "radiusKm": "5",
+            "query": "yerba",
+        })
+
+        offer = response["matches"][0]["qualifiedOffers"][0]
+        self.assertEqual(offer["listPrice"], {"amount": "2500.00", "currency": "ARS"})
+        self.assertEqual(offer["availability"], "UNKNOWN")
+        self.assertNotIn("__offerSortId", offer)
+        self.assertTrue(response["evidenceSemantics"]["qualifiedCurrentPriceEvidence"])
+
+
+if __name__ == "__main__":
+    unittest.main()

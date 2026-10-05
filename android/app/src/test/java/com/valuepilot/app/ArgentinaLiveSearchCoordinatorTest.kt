@@ -534,6 +534,65 @@ class ArgentinaLiveSearchCoordinatorTest {
         coordinator.close()
     }
 
+    @Test
+    fun pagedSearchKeepsQualifiedOfferWhenLaterPageAddsEvidenceForExistingIdentity() {
+        val identityKey = "product-shared"
+        val firstPage = discoverySearchJson(page = 0, start = 0, count = 1, hasMore = true)
+            .let { JSONObject(it).apply {
+                val matches = getJSONArray("matches")
+                matches.getJSONObject(0)
+                    .put("productEvidenceKey", identityKey)
+            }.toString() }
+        val secondPage = discoverySearchJson(page = 1, start = 1, count = 1, hasMore = false)
+            .let { JSONObject(it).apply {
+                val matches = getJSONArray("matches")
+                val candidate = matches.getJSONObject(0)
+                candidate.put("productEvidenceKey", identityKey)
+                candidate.put("qualifiedOffers", JSONArray().put(
+                    JSONObject()
+                        .put("offerKey", "offer-shared")
+                        .put("productEvidenceKey", identityKey)
+                        .put("storeKey", "store-1")
+                        .put("storeName", "Fixture Market")
+                        .put("storeAddress", JSONObject())
+                        .put("storeLatitude", "-34.60")
+                        .put("storeLongitude", "-58.38")
+                        .put("distanceKm", "1")
+                        .put("listPrice", JSONObject().put("amount", "12.50").put("currency", "ARS"))
+                        .put("referencePrice", JSONObject.NULL)
+                        .put("quantity", JSONObject().put("value", "500").put("unit", "g"))
+                        .put("quantityStatus", "KNOWN")
+                        .put("unitPrice", JSONObject().put("amount", "2.50").put("currency", "ARS").put("basis", "100 g"))
+                        .put("releaseDate", RELEASE_DATE)
+                        .put("freshnessStatus", "FRESH")
+                        .put("availability", "UNKNOWN")
+                        .put("provenance", JSONObject()
+                            .put("provider", "ARGENTINA_SEPA_PRECIOS_CLAROS")
+                            .put("releaseDate", RELEASE_DATE)
+                            .put("freshnessStatus", "FRESH"))
+                ))
+            }.toString() }
+        val transport = RecordingTransport(
+            statusBody = statusJson(),
+            searchBody = firstPage,
+            searchBodyByPage = mapOf(0 to firstPage, 1 to secondPage)
+        )
+        val states = mutableListOf<ArgentinaLiveSearchState>()
+        val executor = QueuedExecutor()
+        val coordinator = ArgentinaLiveSearchCoordinator(transport, executor, states::add)
+
+        coordinator.submit("yerba", context)
+        executor.runNext()
+        assertTrue((coordinator.state() as ArgentinaLiveSearchState.Results).presentation.matches.single().qualifiedOffers.isEmpty())
+        coordinator.loadMore()
+        executor.runNext()
+
+        val match = (coordinator.state() as ArgentinaLiveSearchState.Results).presentation.matches.single()
+        assertEquals(identityKey, match.identityKey)
+        assertEquals("offer-shared", match.qualifiedOffers.single().offerKey)
+        coordinator.close()
+    }
+
     private class QueuedExecutor : Executor {
         private val tasks = ArrayDeque<Runnable>()
 
