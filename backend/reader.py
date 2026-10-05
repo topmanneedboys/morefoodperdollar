@@ -873,6 +873,39 @@ class ArgentinaBackendReader:
             label = "1 count"
         return {"amount": decimal_text(price.amount * basis / package.base_amount), "currency": price.currency, "basis": label}
 
+    @staticmethod
+    def _offer_matches_identity(offer: Mapping[str, Any], product: Mapping[str, Any]) -> bool:
+        """Reject explicit offer metadata that conflicts with the selected identity.
+
+        Most qualified partition records carry only the immutable
+        ``productEvidenceKey``.  Some provider adapters may additionally carry
+        a provider id, GTIN, or package quantity on the offer row.  Those
+        fields are evidence, not decoration: if they disagree with the
+        selected product identity, the price must not be projected onto that
+        identity.  Missing optional fields remain unknown and are tolerated.
+        """
+
+        if offer.get("productEvidenceKey") != product.get("productEvidenceKey"):
+            return False
+        for field_name in ("providerProductId", "gtin"):
+            observed = offer.get(field_name)
+            expected = product.get(field_name)
+            if observed is not None and expected is not None and str(observed) != str(expected):
+                return False
+
+        observed_quantity = offer.get("quantity")
+        expected_quantity = product.get("quantity")
+        if observed_quantity is None or expected_quantity is None:
+            return True
+        if not isinstance(observed_quantity, Mapping) or not isinstance(expected_quantity, Mapping):
+            return False
+        try:
+            observed = ExactQuantity.from_provider(observed_quantity.get("value"), observed_quantity.get("unit"))
+            expected = ExactQuantity.from_provider(expected_quantity.get("value"), expected_quantity.get("unit"))
+        except (ShoppingIntelligenceError, TypeError, ValueError):
+            return False
+        return observed.dimension == expected.dimension and observed.base_amount == expected.base_amount
+
     @classmethod
     def _public_search_offer(
         cls,
@@ -969,13 +1002,16 @@ class ArgentinaBackendReader:
                 product_key = raw_offer.get("productEvidenceKey")
                 if product_key not in products or raw_offer.get("freshnessStatus") != "FRESH":
                     continue
+                product = products[product_key]
+                if not self._offer_matches_identity(raw_offer, product):
+                    continue
                 store = stores.get(raw_offer.get("storeKey"))
                 if store is None or raw_offer.get("storeKey") not in selection.store_keys or store.get("geoStatus") != "VALID":
                     continue
                 distance = straight_line_distance_km(latitude, longitude, store["latitude"], store["longitude"])
                 if distance > float(radius_km) + 1e-9:
                     continue
-                projected = self._public_search_offer(_offer_result(raw_offer, products[product_key], store, distance), products[product_key])
+                projected = self._public_search_offer(_offer_result(raw_offer, product, store, distance), product)
                 if not isinstance(projected.get("offerKey"), str) or not isinstance(projected.get("listPrice"), Mapping):
                     continue
                 bucket = offers_by_product.setdefault(str(product_key), [])
@@ -1498,7 +1534,7 @@ class ArgentinaBackendReader:
                 store_key = raw_offer.get("storeKey")
                 product = products.get(product_key)
                 store = stores.get(store_key)
-                if product is None or store is None or store_key not in selection.store_keys or store.get("geoStatus") != "VALID":
+                if product is None or not self._offer_matches_identity(raw_offer, product) or store is None or store_key not in selection.store_keys or store.get("geoStatus") != "VALID":
                     continue
                 distance = straight_line_distance_km(normalized.latitude, normalized.longitude, store["latitude"], store["longitude"])
                 if distance > float(normalized.radius_km) + 1e-9:

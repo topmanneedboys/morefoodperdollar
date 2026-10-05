@@ -155,6 +155,78 @@ class SearchEvidenceTests(unittest.TestCase):
         )
         self.assertEqual(values[0]["qualifiedOffers"], [])
 
+    def test_offer_metadata_conflict_cannot_inherit_selected_identity_price(self) -> None:
+        reader = ArgentinaBackendReader.__new__(ArgentinaBackendReader)
+        candidate = {
+            "productEvidenceKey": "product-1",
+            "providerProductId": "provider-1",
+            "gtin": "7791234567895",
+            "name": "Yerba Fixture 500 g",
+            "brand": "Fixture",
+            "score": 100,
+            "matchedTokens": ["yerba"],
+            "partitionId": "partition-yerba",
+            "quantity": {"value": "500", "unit": "g"},
+            "quantityStatus": "KNOWN",
+        }
+        store = {
+            "name": "Fixture Market",
+            "type": "GROCERY",
+            "address": {"street": "Calle 1"},
+            "locality": "CABA",
+            "province": "C",
+            "latitude": "-34.6037",
+            "longitude": "-58.3816",
+            "geoStatus": "VALID",
+        }
+
+        def offer(offer_id: int, **overrides):
+            value = {
+                "offerKey": f"offer-{offer_id}",
+                "offerId": offer_id,
+                "productEvidenceKey": "product-1",
+                "storeKey": "store-1",
+                "listPrice": {"amount": "2500.00", "currency": "ARS"},
+                "referencePrice": None,
+                "packageProvenance": {"sha256": "a" * 64, "name": "fixture.zip"},
+                "sourceRow": offer_id,
+                "providerUpdateTime": None,
+                "releaseDate": "2026-10-01",
+                "freshnessStatus": "FRESH",
+                "availability": "UNKNOWN",
+                "promotions": [],
+            }
+            value.update(overrides)
+            return value
+
+        valid = offer(
+            1,
+            providerProductId="provider-1",
+            gtin="7791234567895",
+            quantity={"value": "500", "unit": "g"},
+        )
+        wrong_gtin = offer(2, gtin="7791234567894")
+        wrong_package = offer(3, quantity={"value": "1", "unit": "kg"})
+        wrong_product = offer(4, productEvidenceKey="product-2")
+        reader.router = SimpleNamespace(
+            contract=lambda _region: SimpleNamespace(region=SimpleNamespace(region_id="ar-caba")),
+            stores=lambda _region: {"store-1": store},
+        )
+        reader._rank_discovery_region = lambda *_args, **_kwargs: (candidate,)
+        reader._plan = lambda *_args, **_kwargs: SimpleNamespace(slices=({"partitionId": "partition-yerba"},))
+        reader._load_members = lambda _region, _slices, _metrics: [[valid, wrong_gtin, wrong_package, wrong_product]]
+
+        values, _metrics = reader.discover_with_offers(
+            "yerba",
+            selections=(RegionSelection("ar-caba", ("store-1",)),),
+            latitude=Decimal("-34.6037"),
+            longitude=Decimal("-58.3816"),
+            radius_km=Decimal("5"),
+            product_limit=5,
+        )
+
+        self.assertEqual([offer["offerKey"] for offer in values[0]["qualifiedOffers"]], ["offer-1"])
+
     def test_service_exposes_bounded_offer_preview_without_internal_sort_fields(self) -> None:
         reader = self._Reader()
         service = BackendService("", release_manager=self._ReleaseManager())
