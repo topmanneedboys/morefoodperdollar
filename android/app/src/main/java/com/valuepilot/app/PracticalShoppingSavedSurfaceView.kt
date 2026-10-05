@@ -221,7 +221,9 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
         val card =
             ValuePilotProductCard(context).apply {
                 setCardBackgroundColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE))
-                strokeColor = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.OUTLINE)
+                radius = dp(ValuePilotDesignTokens.Shape.NORMAL_COMPONENT_RADIUS_DP).toFloat()
+                strokeColor = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.DIVIDER)
+                strokeWidth = 0
                 layoutParams =
                     LayoutParams(
                         LayoutParams.MATCH_PARENT,
@@ -232,7 +234,12 @@ class PracticalShoppingSavedSurfaceView @JvmOverloads constructor(
         val body =
             LinearLayout(context).apply {
                 orientation = VERTICAL
-                setPadding(dp(16), dp(15), dp(16), dp(13))
+                setPadding(
+                    dp(ValuePilotDesignTokens.Spacing.SM_DP),
+                    dp(ValuePilotDesignTokens.Spacing.SM_DP),
+                    dp(ValuePilotDesignTokens.Spacing.SM_DP),
+                    dp(ValuePilotDesignTokens.Spacing.SM_DP)
+                )
             }
         body.addView(
             textLine(

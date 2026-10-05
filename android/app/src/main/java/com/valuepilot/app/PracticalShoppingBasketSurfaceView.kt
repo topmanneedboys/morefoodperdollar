@@ -145,6 +145,13 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             tripPlannerButton.isEnabled = value != null && hasRenderedState
         }
 
+    /** Opens contextual product details while preserving the Basket route. */
+    var onOpenProduct: ((PracticalShoppingHomeItemRenderState) -> Unit)? = null
+        set(value) {
+            field = value
+            productOwnerControls.forEach { control -> control.isClickable = value != null }
+        }
+
     /** Toggles the same exact private Price Watch identity used by Home and Search. */
     var onTogglePriceWatch: ((PriceWatchUiAction.ToggleWatch) -> Unit)? = null
         set(value) {
@@ -153,6 +160,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         }
 
     private val priceWatchOwnerControls = mutableListOf<View>()
+    private val productOwnerControls = mutableListOf<View>()
 
     private val headline = line(
         "",
@@ -393,7 +401,8 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     }
     private val basketSummaryCard = ValuePilotProductCard(context).apply {
         setCardBackgroundColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE))
-        strokeColor = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.OUTLINE)
+        strokeColor = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.DIVIDER)
+        radius = dp(ValuePilotDesignTokens.Shape.NORMAL_COMPONENT_RADIUS_DP).toFloat()
         layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 0)
         addView(basketSummaryBody)
     }
@@ -501,6 +510,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         renderSummary(state)
         noCoverageSummary.text = state.noCoverageSummary.orEmpty()
         sampleNotice.text = state.sampleNotice
+        sampleCardView.contentDescription = state.sampleNotice
         sampleCardView.visibility =
             if (!presentation.isEmpty && state.sampleNotice.isNotBlank()) VISIBLE else GONE
         actionButton.text = state.actionLabel
@@ -1057,6 +1067,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             .toList()
             .forEach { itemKey ->
                 basketItemRowsByKey.remove(itemKey)?.let { row ->
+                    row.dispose()
                     itemsContainer.removeView(row.root)
                 }
             }
@@ -1083,10 +1094,20 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     private inner class BasketItemRow(initialItem: PracticalShoppingHomeItemRenderState) {
         val root = ValuePilotProductCard(context).apply {
             setCardBackgroundColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE))
-            strokeColor = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.OUTLINE)
-            layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, ValuePilotDesignTokens.Spacing.XS_DP)
+            strokeColor = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.DIVIDER)
+            radius = dp(ValuePilotDesignTokens.Shape.NORMAL_COMPONENT_RADIUS_DP).toFloat()
+            layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, ValuePilotDesignTokens.Spacing.XXS_DP)
         }
-        private val body = column()
+        private val body = LinearLayout(context).apply {
+            orientation = HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(8), dp(6), dp(4), dp(6))
+        }
+        private val identityBody = LinearLayout(context).apply {
+            orientation = VERTICAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
+        }
         private val identity = line(
             "",
             16f,
@@ -1103,15 +1124,26 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             visibility = GONE
         }
         private val moreButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
-            text = "More"
+            text = "⋯"
             contentDescription = "Show more actions for this basket item"
-            layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, ValuePilotDesignTokens.Spacing.XS_DP)
+            minWidth = dp(ValuePilotDesignTokens.TouchTarget.MINIMUM_DP)
+            minimumWidth = dp(ValuePilotDesignTokens.TouchTarget.MINIMUM_DP)
+            layoutParams = LayoutParams(
+                dp(ValuePilotDesignTokens.TouchTarget.MINIMUM_DP),
+                dp(ValuePilotDesignTokens.TouchTarget.MINIMUM_DP)
+            )
             setOnClickListener { setMoreExpanded(!moreExpanded) }
         }
         private val collectionButton = ValuePilotProgrammaticButton.outlined(context).apply {
             textSize = ValuePilotDesignTokens.Typography.BODY_SP
-            gravity = Gravity.START or Gravity.CENTER_VERTICAL
-            layoutParams = fullWidth(dp(52), ValuePilotDesignTokens.Spacing.SM_DP)
+            gravity = Gravity.CENTER
+            minWidth = dp(ValuePilotDesignTokens.TouchTarget.MINIMUM_DP)
+            minimumWidth = dp(ValuePilotDesignTokens.TouchTarget.MINIMUM_DP)
+            setPadding(0, 0, 0, 0)
+            layoutParams = LayoutParams(
+                dp(ValuePilotDesignTokens.TouchTarget.MINIMUM_DP),
+                dp(ValuePilotDesignTokens.TouchTarget.MINIMUM_DP)
+            )
         }
         private var currentItem = initialItem
         private var currentCollected = false
@@ -1120,14 +1152,17 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         private val details = column(padded = false)
 
         init {
-            body.addView(identity)
-            body.addView(quantity)
             body.addView(collectionButton)
-            body.addView(details)
+            identityBody.addView(identity)
+            identityBody.addView(quantity)
+            body.addView(identityBody)
             body.addView(moreButton)
-            secondaryActions.addView(purchaseButton)
-            body.addView(secondaryActions)
             root.addView(body)
+            root.addView(details)
+            secondaryActions.addView(purchaseButton)
+            root.addView(secondaryActions)
+            productOwnerControls += identityBody
+            identityBody.setOnClickListener { onOpenProduct?.invoke(currentItem) }
             collectionButton.setOnClickListener {
                 progressState =
                     PracticalShoppingBasketProgressSession.toggle(
@@ -1161,11 +1196,14 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             currentItem = item
             identity.text = item.name
             quantity.text = item.detail
+            identityBody.contentDescription =
+                listOf(item.name, item.detail).joinToString(". ") + ". Open product details."
+            identityBody.isClickable = onOpenProduct != null
             collectionButton.text =
                 when {
-                    !eligible -> "Not ready to collect"
-                    collected -> "✓  Collected"
-                    else -> "○  Collect this item"
+                    !eligible -> "—"
+                    collected -> "✓"
+                    else -> "○"
                 }
             collectionButton.contentDescription =
                 if (eligible) {
@@ -1230,7 +1268,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
             moreExpanded = expanded
             details.visibility = if (expanded) VISIBLE else GONE
             secondaryActions.visibility = if (expanded) VISIBLE else GONE
-            moreButton.text = if (expanded) "Hide" else "More"
+            moreButton.text = if (expanded) "×" else "⋯"
             moreButton.contentDescription =
                 if (expanded) {
                     "Hide more actions for this basket item"
@@ -1241,6 +1279,10 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
         }
 
         fun isCollected(): Boolean = currentCollected
+
+        fun dispose() {
+            productOwnerControls.remove(identityBody)
+        }
 
         fun revealPurchaseAction() {
             setMoreExpanded(true)
@@ -1389,24 +1431,16 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
     }
 
     private fun sampleCard(): View =
-        card(
-            ValuePilotDesignTokens.Colors.SURFACE_SUBTLE,
-            ValuePilotDesignTokens.Colors.OUTLINE,
-            0
-        ).apply {
-            addView(
-                column().apply {
-                    addView(
-                        line(
-                            context.getString(R.string.home_sample_badge),
-                            11f,
-                            ValuePilotDesignTokens.Colors.SUCCESS,
-                            true
-                        )
-                    )
-                    addView(sampleNotice)
-                }
-            )
+        LinearLayout(context).apply {
+            orientation = HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, ValuePilotDesignTokens.Spacing.XS_DP)
+            val badge = ValuePilotCompactUi.statusChip(context, "DEMO DATA")
+            badge.contentDescription = "Demo data. The sample notice is not a live retailer claim."
+            addView(badge)
+            // Keep the detailed notice available to accessibility without
+            // forcing a repeated paragraph into the first Basket viewport.
+            contentDescription = sampleNotice.text
         }
 
     private fun card(
@@ -1426,7 +1460,7 @@ class PracticalShoppingBasketSurfaceView @JvmOverloads constructor(
 
     private fun column(padded: Boolean = true): LinearLayout = LinearLayout(context).apply {
         orientation = VERTICAL
-        if (padded) setPadding(dp(16), dp(15), dp(16), dp(15))
+        if (padded) setPadding(dp(12), dp(11), dp(12), dp(11))
     }
 
     private fun line(

@@ -131,6 +131,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var searchExperience: View
     private lateinit var searchInput: TextInputEditText
     private lateinit var searchButton: MaterialButton
+    private lateinit var searchAboutResultsButton: MaterialButton
+    private lateinit var searchIdentityBoundaryCard: View
     private lateinit var searchAreaLabel: TextView
     private lateinit var searchStatus: TextView
     private lateinit var searchProgress: ProgressBar
@@ -243,6 +245,8 @@ class MainActivity : AppCompatActivity() {
         searchExperience = findViewById(R.id.searchExperience)
         searchInput = findViewById(R.id.searchInput)
         searchButton = findViewById(R.id.searchButton)
+        searchAboutResultsButton = findViewById(R.id.searchAboutResultsButton)
+        searchIdentityBoundaryCard = findViewById(R.id.searchIdentityBoundaryCard)
         searchAreaLabel = findViewById(R.id.searchAreaLabel)
         searchStatus = findViewById(R.id.searchStatus)
         searchProgress = findViewById(R.id.searchProgress)
@@ -517,6 +521,7 @@ class MainActivity : AppCompatActivity() {
             homeExperience.onTogglePriceWatch = null
             homeExperience.onOpenSearch = null
             homeExperience.onOpenBasket = null
+            homeExperience.onOpenDemoInfo = null
         }
         if (::basketExperience.isInitialized) {
             basketExperience.onAction = null
@@ -525,6 +530,7 @@ class MainActivity : AppCompatActivity() {
             basketExperience.onConfirmPurchase = null
             basketExperience.onTogglePriceWatch = null
             basketExperience.onOpenTripPlanner = null
+            basketExperience.onOpenProduct = null
         }
         if (::confirmedPurchaseHistoryExperience.isInitialized) {
             confirmedPurchaseHistoryExperience.onAction = null
@@ -661,6 +667,14 @@ class MainActivity : AppCompatActivity() {
         }
         homeExperience.onOpenBasket = {
             dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.BASKET))
+        }
+        homeExperience.onOpenDemoInfo = {
+            ValuePilotCompactUi.showSheet(
+                context = this,
+                title = "Demo data",
+                subtitle = "Offline fictional sample",
+                bodyText = "This sample helps preview the shopping flow. It is not a live retailer price, stock or availability claim."
+            )
         }
         homeExperience.onQueryChanged = { rawQuery ->
             homeSessionState =
@@ -1072,6 +1086,19 @@ class MainActivity : AppCompatActivity() {
         }
         basketExperience.onTogglePriceWatch = ::handleTogglePriceWatch
         basketExperience.onOpenTripPlanner = { dispatch(AppShellIntent.OpenTripPlanner) }
+        basketExperience.onOpenProduct = { item ->
+            ValuePilotCompactUi.showSheet(
+                context = this,
+                title = item.name,
+                subtitle = item.detail,
+                bodyText = listOfNotNull(
+                    item.storeAssignment?.let(::practicalShoppingPlannedStoreLabel),
+                    item.plannedPriceText?.let { "Included in plan: $it" },
+                    item.plannedPriceNotice,
+                    item.personalHistoryNotice
+                ).joinToString("\n").ifBlank { "Product details are available only where the current plan provides them." }
+            )
+        }
     }
 
     /**
@@ -1463,6 +1490,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         searchButton.setOnClickListener { submitArgentinaSearch() }
+        searchAboutResultsButton.setOnClickListener { openSearchAboutResults() }
         searchLoadMoreButton.setOnClickListener { argentinaSearchHost.loadMore() }
 
         quickSearchEntries().forEach { (chipId, query) ->
@@ -2378,6 +2406,21 @@ class MainActivity : AppCompatActivity() {
         screenTitle.text = copy.title
         screenBody.text = copy.body
         screenFootnote.text = copy.footnote
+        // Keep a small route anchor only on the surfaces whose own compact
+        // content does not carry a separate header. Contextual routes already
+        // have their task title in screenHeaderCard, so repeating the brand
+        // above them would spend the first viewport on chrome.
+        shellBrand.text = when (state.route) {
+            AppRoute.HOME -> getString(R.string.app_name)
+            AppRoute.SEARCH -> "Search"
+            AppRoute.SAVED -> "You"
+            else -> ""
+        }
+        shellBrand.visibility = if (
+            state.route == AppRoute.HOME ||
+                state.route == AppRoute.SEARCH ||
+                state.route == AppRoute.SAVED
+        ) View.VISIBLE else View.GONE
         screenBackAction.visibility =
             if (state.canNavigateBack) View.VISIBLE else View.GONE
         screenBackAction.isEnabled = state.canNavigateBack
@@ -2552,11 +2595,28 @@ class MainActivity : AppCompatActivity() {
                 else -> R.string.search_action
             }
         )
+        searchButton.visibility =
+            if (
+                state.requiresRevalidation ||
+                    state.mode == ArgentinaLiveSearchSurfaceMode.STALE_RELEASE ||
+                    state.mode == ArgentinaLiveSearchSurfaceMode.TIMEOUT ||
+                    state.mode == ArgentinaLiveSearchSurfaceMode.TEMPORARILY_UNAVAILABLE ||
+                    state.mode == ArgentinaLiveSearchSurfaceMode.AUTHORIZATION_UNAVAILABLE
+            ) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
 
         searchButton.isEnabled =
             state.mode != ArgentinaLiveSearchSurfaceMode.LOADING &&
                 searchQuery.trim().isNotBlank() &&
                 searchQuery.length <= ArgentinaBackendContract.MAX_QUERY_CHARS
+        // The precise identity-only boundary belongs in one contextual sheet,
+        // not a paragraph that pushes every result below the fold.
+        searchIdentityBoundaryCard.visibility = View.GONE
+        searchAboutResultsButton.visibility =
+            if (searchQuery.trim().isNotBlank()) View.VISIBLE else View.GONE
         quickSearchEntries().forEach { (chipId, _) ->
             findViewById<Chip>(chipId).isEnabled =
                 state.mode != ArgentinaLiveSearchSurfaceMode.LOADING
@@ -2615,6 +2675,15 @@ class MainActivity : AppCompatActivity() {
                 presentation != null && presentation.matches.isNotEmpty() -> getString(R.string.search_results_end)
                 else -> ""
             }
+    }
+
+    private fun openSearchAboutResults() {
+        ValuePilotCompactUi.showSheet(
+            context = this,
+            title = "About these results",
+            subtitle = "Exact product identity only",
+            bodyText = getString(R.string.search_identity_notice)
+        )
     }
 
     /** Reads only the bounded device-private confirmed-purchase document. */
@@ -3189,10 +3258,13 @@ class MainActivity : AppCompatActivity() {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = dp(12) }
+            ).apply { topMargin = dp(8) }
+            radius = dp(ValuePilotDesignTokens.Shape.NORMAL_COMPONENT_RADIUS_DP).toFloat()
+            setCardBackgroundColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE))
+            strokeColor = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.DIVIDER)
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
-            isClickable = false
-            isFocusable = false
+            isClickable = true
+            isFocusable = true
             contentDescription =
                 listOfNotNull(
                     match.displayName,
@@ -3215,7 +3287,8 @@ class MainActivity : AppCompatActivity() {
 
         val body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(15), dp(16), dp(15))
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            setPadding(dp(12), dp(10), dp(8), dp(10))
             // Keep the projected text as one card-level announcement. The explicit
             // Home action is added as a sibling below this decorative summary so it
             // remains available to keyboard and assistive-technology users.
@@ -3224,42 +3297,42 @@ class MainActivity : AppCompatActivity() {
 
         val name = TextView(this).apply {
             text = match.displayName
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-            setTextColor(ValuePilotPalette.color("#111827"))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, ValuePilotDesignTokens.Typography.PRIMARY_SP)
+            setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.TEXT_PRIMARY))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
-            setPadding(0, dp(5), 0, 0)
+            maxLines = 2
         }
 
         val brand = match.brand?.let { brandName ->
             TextView(this).apply {
                 text = brandName
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-                setTextColor(ValuePilotPalette.color("#374151"))
-                setPadding(0, dp(7), 0, 0)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, ValuePilotDesignTokens.Typography.SECONDARY_SP)
+                setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.TEXT_SECONDARY))
+                setPadding(0, dp(3), 0, 0)
             }
         }
 
         val packageQuantity = match.packageQuantityLabel?.let { quantityLabel ->
             TextView(this).apply {
                 text = getString(R.string.search_identity_package_size, quantityLabel)
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-                setTextColor(ValuePilotPalette.color("#374151"))
-                setPadding(0, dp(7), 0, 0)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, ValuePilotDesignTokens.Typography.LABEL_SP)
+                setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.TEXT_SECONDARY))
+                setPadding(0, dp(3), 0, 0)
             }
         }
 
         val matchLabel = TextView(this).apply {
             text = match.matchLabel
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setTextColor(ValuePilotPalette.color("#6B7280"))
-            setPadding(0, dp(8), 0, 0)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, ValuePilotDesignTokens.Typography.CAPTION_SP)
+            setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.TEXT_MUTED))
+            setPadding(0, dp(4), 0, 0)
         }
 
         val priceState = TextView(this).apply {
             text = getString(R.string.search_identity_no_current_price)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setTextColor(ValuePilotPalette.color("#92400E"))
-            setPadding(0, dp(8), 0, 0)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, ValuePilotDesignTokens.Typography.CAPTION_SP)
+            setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.WARNING))
+            setPadding(0, dp(4), 0, 0)
         }
 
         body.addView(name)
@@ -3267,21 +3340,16 @@ class MainActivity : AppCompatActivity() {
         packageQuantity?.let(body::addView)
         body.addView(matchLabel)
         body.addView(priceState)
-        val addHomeButton = MaterialButton(this).apply {
-            text = getString(
-                if (cardPresentation.primaryAction == SearchResultPrimaryAction.REMOVE_FROM_BASKET) {
-                    R.string.search_identity_remove_home_draft
-                } else {
-                    R.string.search_identity_add_home_draft
-                }
-            )
-            isAllCaps = false
+        val addHomeButton = ValuePilotProgrammaticButton.outlined(this, compact = true).apply {
+            text = if (homeSaved) "Added" else "Add"
+            textSize = 13f
             minHeight = dp(48)
             layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                dp(ValuePilotDesignTokens.TouchTarget.MINIMUM_DP)
             ).apply {
-                setMargins(dp(16), dp(6), dp(16), dp(12))
+                leftMargin = dp(4)
+                rightMargin = dp(4)
             }
             contentDescription = getString(
                 if (homeSaved) {
@@ -3302,7 +3370,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
         val content = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT
@@ -3385,13 +3454,76 @@ class MainActivity : AppCompatActivity() {
                     ValuePilotProductContextActionKind.HISTORY -> onOpenHistory(match)
                 }
             }
+            // The compact overflow below is the visible entry point on the row.
+            // Keep this shared action model attached for compatibility with the
+            // existing boundary, while the sheet owns the uncluttered display.
+            visibility = View.GONE
+        }
+        val overflowButton = ValuePilotCompactUi.overflowButton(
+            this,
+            "More actions for ${match.displayName}"
+        ) {
+            val sheetActions = buildList {
+                if (cardPresentation.showPhotos && privateIdentity != null) {
+                    add(ValuePilotCompactUi.SheetAction("Photos") { onOpenPhotos(match) })
+                }
+                add(
+                    ValuePilotCompactUi.SheetAction(
+                        if (watched) "Stop watching" else "Watch price",
+                        onClick = {
+                            onTogglePriceWatch(
+                                PriceWatchUiAction.ToggleWatch(
+                                    productIdentityKey = match.identityKey,
+                                    displayName = match.displayName,
+                                    brand = match.brand,
+                                    packageQuantityLabel = match.packageQuantityLabel,
+                                    watched = watched
+                                )
+                            )
+                        }
+                    )
+                )
+                if (cardPresentation.showNearby) add(ValuePilotCompactUi.SheetAction("Nearby stores") { onOpenMap(match) })
+                if (cardPresentation.showHistory) add(ValuePilotCompactUi.SheetAction("Purchase history") { onOpenHistory(match) })
+            }
+            ValuePilotCompactUi.showSheet(
+                context = this,
+                title = match.displayName,
+                subtitle = "More actions",
+                actions = sheetActions
+            )
         }
         content.addView(body)
         // Adding/removing is the one obvious product action. Everything else is
-        // progressive disclosure inside the shared More control.
+        // progressive disclosure inside the compact overflow control.
         content.addView(addHomeButton)
-        content.addView(contextActions)
+        content.addView(overflowButton)
+        content.setOnClickListener {
+            ValuePilotCompactUi.showSheet(
+                context = this,
+                title = match.displayName,
+                subtitle = listOfNotNull(match.brand, match.packageQuantityLabel).joinToString(" · ").takeIf { it.isNotBlank() },
+                bodyText = "No current price is claimed for this product identity.",
+                actions = buildList {
+                    add(
+                        ValuePilotCompactUi.SheetAction(
+                            label = if (homeSaved) "Remove from Basket" else "Add to Basket",
+                            contentDescription = if (homeSaved) {
+                                getString(R.string.search_identity_remove_home_draft_description, match.displayName)
+                            } else {
+                                getString(R.string.search_identity_add_home_draft_description, match.displayName)
+                            },
+                            onClick = { if (homeSaved) onToggleHome(match) else onAddToHome(match) }
+                        )
+                    )
+                    if (cardPresentation.showHistory) {
+                        add(ValuePilotCompactUi.SheetAction("Purchase history") { onOpenHistory(match) })
+                    }
+                }
+            )
+        }
         card.addView(content)
+        card.addView(contextActions)
         return card
     }
 

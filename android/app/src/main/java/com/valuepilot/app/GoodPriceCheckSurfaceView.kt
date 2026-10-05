@@ -31,9 +31,15 @@ internal class GoodPriceCheckSurfaceView @JvmOverloads constructor(
     )
     private val messageCard = ValuePilotProductCard(context).apply {
         layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.SM_DP)
+        radius = dp(ValuePilotDesignTokens.Shape.NORMAL_COMPONENT_RADIUS_DP).toFloat()
         addView(LinearLayout(context).apply {
             orientation = VERTICAL
-            setPadding(dp(16), dp(15), dp(16), dp(15))
+            setPadding(
+                dp(ValuePilotDesignTokens.Spacing.SM_DP),
+                dp(ValuePilotDesignTokens.Spacing.SM_DP),
+                dp(ValuePilotDesignTokens.Spacing.SM_DP),
+                dp(ValuePilotDesignTokens.Spacing.SM_DP)
+            )
             addView(messageTitle)
             addView(messageGuidance)
         })
@@ -51,12 +57,18 @@ internal class GoodPriceCheckSurfaceView @JvmOverloads constructor(
     )
     private val answerCard = ValuePilotProductCard(context).apply {
         layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.SM_DP)
+        radius = dp(ValuePilotDesignTokens.Shape.NORMAL_COMPONENT_RADIUS_DP).toFloat()
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
     }
     private val answerBody = LinearLayout(context).apply {
         orientation = VERTICAL
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
-        setPadding(dp(16), dp(15), dp(16), dp(15))
+        setPadding(
+            dp(ValuePilotDesignTokens.Spacing.MD_DP),
+            dp(ValuePilotDesignTokens.Spacing.SM_DP),
+            dp(ValuePilotDesignTokens.Spacing.MD_DP),
+            dp(ValuePilotDesignTokens.Spacing.SM_DP)
+        )
     }
     private val answerContext = textLine("", 12f, ValuePilotDesignTokens.Colors.TEXT_MUTED)
     private val answerPrice = textLine("", 30f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true, topPadding = 8)
@@ -67,11 +79,12 @@ internal class GoodPriceCheckSurfaceView @JvmOverloads constructor(
     private val answerGuidance = textLine("", ValuePilotDesignTokens.Typography.BODY_SP, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 10)
     private val historyCard = ValuePilotProductCard(context).apply {
         layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.XS_DP)
+        radius = dp(ValuePilotDesignTokens.Shape.NORMAL_COMPONENT_RADIUS_DP).toFloat()
         visibility = GONE
     }
     private val historyLabel = textLine("Your recorded prices", 12f, ValuePilotDesignTokens.Colors.TEXT_MUTED, bold = true)
     private val historyText = textLine("", 13f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 5)
-    private val disclosureButton = ValuePilotProgrammaticButton.outlined(context).apply {
+    private val disclosureButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
         text = "Why?"
         contentDescription = "Show why this price answer is personal context"
         layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.SM_DP)
@@ -103,7 +116,12 @@ internal class GoodPriceCheckSurfaceView @JvmOverloads constructor(
         resultContainer.addView(answerCard)
         historyCard.addView(LinearLayout(context).apply {
             orientation = VERTICAL
-            setPadding(dp(16), dp(13), dp(16), dp(13))
+            setPadding(
+                dp(ValuePilotDesignTokens.Spacing.SM_DP),
+                dp(ValuePilotDesignTokens.Spacing.SM_DP),
+                dp(ValuePilotDesignTokens.Spacing.SM_DP),
+                dp(ValuePilotDesignTokens.Spacing.SM_DP)
+            )
             addView(historyLabel)
             addView(historyText)
         })

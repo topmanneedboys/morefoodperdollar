@@ -1,18 +1,19 @@
 package com.valuepilot.app
 
 import android.content.Context
-import android.graphics.Typeface
 import android.util.AttributeSet
 import android.util.TypedValue
+import android.graphics.Typeface
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.google.android.material.button.MaterialButton
+import android.content.res.ColorStateList
 
 /**
- * Calm first viewport for the You tab. This is deliberately a renderer only: it receives
- * bounded counts and emits typed route intents, while the shell and existing projectors keep
- * ownership of personal data and business rules.
+ * Compact personal hub for the You tab. Counts are bounded summaries only;
+ * the existing Bought, Saved and Watching routes remain the owners of their
+ * product facts.
  */
 internal class PracticalShoppingYouOverviewView @JvmOverloads constructor(
     context: Context,
@@ -20,30 +21,37 @@ internal class PracticalShoppingYouOverviewView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : LinearLayout(context, attrs, defStyleAttr) {
 
-    private val headingView = textLine(
-        value = "You",
-        sizeSp = 22f,
-        color = ValuePilotDesignTokens.Colors.TEXT_PRIMARY,
-        bold = true
-    )
-    private val bodyView = textLine(
-        value = "Your private shopping memory, kept on this device.",
-        sizeSp = 13f,
-        color = ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
-        topPadding = 5
-    )
-    private val cards = LinearLayout(context).apply {
-        orientation = VERTICAL
-        layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
+    private val headingView = textLine("You", 24f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, true)
+    private val privacyChip = ValuePilotCompactUi.statusChip(context, "Private on this device").apply {
+        layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
+            topMargin = dp(6)
+        }
+        contentDescription = "Private shopping memory stays on this device"
     }
-    private val actionButtons = mutableListOf<MaterialButton>()
-    private val settingsButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
-        text = "Settings"
-        contentDescription = "Open Settings"
+    private val selector = LinearLayout(context).apply {
+        orientation = HORIZONTAL
         layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
             topMargin = dp(14)
         }
     }
+    private val selectedSummary = LinearLayout(context).apply {
+        orientation = VERTICAL
+        layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+            topMargin = dp(14)
+        }
+    }
+    private val selectedTitle = textLine("", 18f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, true)
+    private val selectedSupporting = textLine("", 14f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 4)
+    private val actionButtons = mutableListOf<MaterialButton>()
+    private val settingsButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
+        text = "Settings"
+        contentDescription = "Open Settings"
+        layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
+            topMargin = dp(16)
+        }
+    }
+
+    private var selected = Collection.BOUGHT
 
     var onAction: ((PracticalShoppingYouOverviewAction) -> Unit)? = null
         set(value) {
@@ -57,97 +65,105 @@ internal class PracticalShoppingYouOverviewView @JvmOverloads constructor(
         visibility = View.GONE
         isSaveEnabled = false
         addView(headingView)
-        addView(bodyView)
-        addView(cards)
+        addView(privacyChip)
+        addView(selector)
+        selectedSummary.addView(selectedTitle)
+        selectedSummary.addView(selectedSupporting)
+        addView(selectedSummary)
         settingsButton.setOnClickListener { onAction?.invoke(PracticalShoppingYouOverviewAction.OpenSettings) }
         addView(settingsButton)
     }
 
     fun render(state: PracticalShoppingYouOverviewState) {
         actionButtons.clear()
-        cards.removeAllViews()
+        if (selected == Collection.BOUGHT && state.boughtCount == 0 && state.savedCount > 0) {
+            selected = Collection.SAVED
+        }
         settingsButton.isEnabled = onAction != null
-        overviewCard(
-            title = "Bought",
-            count = state.boughtCount,
-            emptyLabel = "Nothing bought yet",
-            actionLabel = "Open Bought",
-            actionDescription = "Open your confirmed purchases",
-            action = PracticalShoppingYouOverviewAction.OpenBought
-        ).let(cards::addView)
-        overviewCard(
-            title = "Saved",
-            count = state.savedCount,
-            emptyLabel = "Nothing saved yet",
-            actionLabel = "Review Saved",
-            actionDescription = "Review your saved products and stores",
-            action = PracticalShoppingYouOverviewAction.OpenSaved
-        ).let(cards::addView)
-        overviewCard(
-            title = "Watching",
-            count = state.watchingCount,
-            emptyLabel = "Nothing watched yet",
-            actionLabel = "Open Watching",
-            actionDescription = "Open your private price watches",
-            action = PracticalShoppingYouOverviewAction.OpenWatching
-        ).let(cards::addView)
-    }
-
-    private fun overviewCard(
-        title: String,
-        count: Int,
-        emptyLabel: String,
-        actionLabel: String,
-        actionDescription: String,
-        action: PracticalShoppingYouOverviewAction
-    ): View {
-        val card = ValuePilotProductCard(context).apply {
-            setCardBackgroundColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE))
-            strokeColor = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.OUTLINE)
-            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+        selector.removeAllViews()
+        listOf(
+            segment("Bought", state.boughtCount, Collection.BOUGHT, PracticalShoppingYouOverviewAction.OpenBought),
+            segment("Saved", state.savedCount, Collection.SAVED, PracticalShoppingYouOverviewAction.OpenSaved),
+            segment("Watching", state.watchingCount, Collection.WATCHING, PracticalShoppingYouOverviewAction.OpenWatching)
+        ).forEach {
+            actionButtons += it
+            selector.addView(it)
+        }
+        val title: String
+        val count: Int
+        val empty: String
+        val action: PracticalShoppingYouOverviewAction
+        val description: String
+        when (selected) {
+            Collection.BOUGHT -> {
+                title = "Bought"
+                count = state.boughtCount
+                empty = "Nothing bought yet"
+                action = PracticalShoppingYouOverviewAction.OpenBought
+                description = "Open your confirmed purchases"
+            }
+            Collection.SAVED -> {
+                title = "Saved"
+                count = state.savedCount
+                empty = "Nothing saved yet"
+                action = PracticalShoppingYouOverviewAction.OpenSaved
+                description = "Review your saved products"
+            }
+            Collection.WATCHING -> {
+                title = "Watching"
+                count = state.watchingCount
+                empty = "Nothing watched yet"
+                action = PracticalShoppingYouOverviewAction.OpenWatching
+                description = "Open your private price watches"
+            }
+        }
+        selectedTitle.text = title
+        selectedSupporting.text = if (count == 0) empty else "$count item${if (count == 1) "" else "s"}"
+        val actionButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
+            text = when (selected) {
+                Collection.BOUGHT -> "Open Bought"
+                Collection.SAVED -> "Review Saved"
+                Collection.WATCHING -> "Open Watching"
+            }
+            contentDescription = description
+            isEnabled = onAction != null
+            layoutParams = LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
                 topMargin = dp(10)
             }
-            contentDescription = "$title: ${if (count == 0) emptyLabel else "$count item${if (count == 1) "" else "s"}"}"
-        }
-        val body = LinearLayout(context).apply {
-            orientation = VERTICAL
-            setPadding(dp(16), dp(14), dp(16), dp(13))
-        }
-        body.addView(
-            textLine(
-                value = title,
-                sizeSp = 17f,
-                color = ValuePilotDesignTokens.Colors.TEXT_PRIMARY,
-                bold = true
-            )
-        )
-        body.addView(
-            textLine(
-                value = if (count == 0) emptyLabel else "$count",
-                sizeSp = if (count == 0) 13f else 25f,
-                color = if (count == 0) {
-                    ValuePilotDesignTokens.Colors.TEXT_SECONDARY
-                } else {
-                    ValuePilotDesignTokens.Colors.PRIMARY_DARK
-                },
-                bold = count > 0,
-                topPadding = 5
-            )
-        )
-        val button = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
-            text = actionLabel
-            contentDescription = actionDescription
-            isEnabled = onAction != null
             setOnClickListener { onAction?.invoke(action) }
-            layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
-                topMargin = dp(8)
-            }
         }
-        actionButtons += button
-        body.addView(button)
-        card.addView(body)
-        return card
+        actionButtons += actionButton
+        selectedSummary.removeViews(2, selectedSummary.childCount - 2)
+        selectedSummary.addView(actionButton)
     }
+
+    private fun segment(
+        label: String,
+        count: Int,
+        collection: Collection,
+        action: PracticalShoppingYouOverviewAction
+    ): MaterialButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
+        text = "$label $count"
+        contentDescription = "$label, $count item${if (count == 1) "" else "s"}"
+        layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply {
+            rightMargin = dp(4)
+        }
+        isEnabled = onAction != null
+        setOnClickListener {
+            selected = collection
+            onAction?.invoke(action)
+        }
+        if (selected == collection) {
+            backgroundTintList = ColorStateList.valueOf(
+                ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE_ACCENT)
+            )
+            strokeColor = ColorStateList.valueOf(
+                ValuePilotPalette.color(ValuePilotDesignTokens.Colors.PRIMARY)
+            )
+        }
+    }
+
+    private enum class Collection { BOUGHT, SAVED, WATCHING }
 
     private fun textLine(
         value: String,

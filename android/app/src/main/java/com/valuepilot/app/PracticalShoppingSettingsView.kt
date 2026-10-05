@@ -7,7 +7,6 @@ import android.util.TypedValue
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.google.android.material.button.MaterialButton
 
 /** Renderer-only Settings/About surface. */
 internal class PracticalShoppingSettingsView @JvmOverloads constructor(
@@ -21,12 +20,12 @@ internal class PracticalShoppingSettingsView @JvmOverloads constructor(
         layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
     }
 
-    private val actionButtons = mutableListOf<MaterialButton>()
+    private val actionControls = mutableListOf<View>()
 
     var onAction: ((PracticalShoppingSettingsAction) -> Unit)? = null
         set(value) {
             field = value
-            actionButtons.forEach { it.isEnabled = value != null }
+            actionControls.forEach { it.isEnabled = value != null }
         }
 
     init {
@@ -38,7 +37,7 @@ internal class PracticalShoppingSettingsView @JvmOverloads constructor(
 
     fun render(state: PracticalShoppingSettingsState) {
         content.removeAllViews()
-        actionButtons.clear()
+        actionControls.clear()
         state.detail?.let { detail ->
             content.addView(
                 textLine(
@@ -50,61 +49,47 @@ internal class PracticalShoppingSettingsView @JvmOverloads constructor(
                 )
             )
         }
-        state.rows.forEach { row -> content.addView(rowView(row)) }
+        state.rows.forEachIndexed { index, row ->
+            content.addView(rowView(row))
+            if (index < state.rows.lastIndex) {
+                content.addView(ValuePilotCompactUi.divider(context))
+            }
+        }
     }
 
     private fun rowView(row: PracticalShoppingSettingsRow): View {
-        val card = ValuePilotProductCard(context).apply {
-            setCardBackgroundColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE))
-            strokeColor = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.OUTLINE)
+        val action = row.action
+        val arrow = TextView(context).apply {
+            text = if (action == null) "" else "›"
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 24f)
+            setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.TEXT_MUTED))
+            gravity = android.view.Gravity.CENTER
+            minWidth = dp(ValuePilotDesignTokens.TouchTarget.MINIMUM_DP)
+            minHeight = dp(ValuePilotDesignTokens.TouchTarget.MINIMUM_DP)
+            contentDescription = if (action == null) "" else "Open ${row.title}"
+            importantForAccessibility = if (action == null) {
+                View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            } else {
+                View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }
+        }
+        val compactRow = ValuePilotCompactRow(context).apply {
             layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
-                topMargin = dp(10)
+                topMargin = dp(2)
             }
-            contentDescription = "${row.title}: ${row.summary}"
-        }
-        val body = LinearLayout(context).apply {
-            orientation = VERTICAL
-            setPadding(dp(16), dp(14), dp(16), dp(13))
-        }
-        body.addView(
-            textLine(
-                value = row.title,
-                sizeSp = 17f,
-                color = ValuePilotDesignTokens.Colors.TEXT_PRIMARY,
-                bold = true
-            )
-        )
-        body.addView(
-            textLine(
-                value = row.summary,
-                sizeSp = 14f,
-                color = ValuePilotDesignTokens.Colors.TEXT_SECONDARY,
-                topPadding = 5,
-                lineSpacing = 1.08f
-            )
-        )
-        row.action?.let { action ->
-            val button = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
-                text = when (action) {
-                    PracticalShoppingSettingsAction.OpenPreferences -> "Open Preferences"
-                    PracticalShoppingSettingsAction.OpenDataPrivacy -> "Open Data & privacy"
-                    PracticalShoppingSettingsAction.OpenDataSources -> "Open Data sources"
-                    PracticalShoppingSettingsAction.OpenAbout -> "Open About"
-                    PracticalShoppingSettingsAction.OpenLicences -> "Open Licences & attribution"
-                    PracticalShoppingSettingsAction.OpenTechnicalDetails -> "Open Technical details"
+            bind(
+                primaryText = row.title,
+                secondaryText = row.summary,
+                trailingView = if (action == null) null else arrow,
+                bodyDescription = "${row.title}: ${row.summary}",
+                onBodyClick = action?.let { selected ->
+                    { onAction?.invoke(selected) }
                 }
-                contentDescription = text
-                isEnabled = onAction != null
-                setOnClickListener { onAction?.invoke(action) }
-                layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
-                    topMargin = dp(9)
-                }
-            }
-            actionButtons += button
-            body.addView(button)
+            )
+            isEnabled = onAction != null || action == null
         }
-        card.addView(body)
-        return card
+        actionControls += compactRow
+        return compactRow
     }
 
     private fun textLine(

@@ -57,6 +57,8 @@ class CompareHereSurfaceView @JvmOverloads constructor(
     }
     private val statusCard = ValuePilotProductCard(context).apply {
         layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.SM_DP)
+        radius = dp(ValuePilotDesignTokens.Shape.NORMAL_COMPONENT_RADIUS_DP).toFloat()
+        cardElevation = 0f
         addView(statusCardBody)
     }
     private val rowsContainer = bareColumn()
@@ -67,7 +69,7 @@ class CompareHereSurfaceView @JvmOverloads constructor(
         ValuePilotDesignTokens.Colors.WARNING,
         topPadding = ValuePilotDesignTokens.Spacing.SM_DP
     ).apply { visibility = GONE }
-    private val detailsButton = ValuePilotProgrammaticButton.outlined(context).apply {
+    private val detailsButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
         text = "Why?"
         contentDescription = "Show why some choices cannot be compared"
         layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.SM_DP)
@@ -291,6 +293,8 @@ class CompareHereSurfaceView @JvmOverloads constructor(
         stroke: String,
         topMargin: Int
     ): ValuePilotProductCard = ValuePilotProductCard(context).apply {
+        radius = dp(ValuePilotDesignTokens.Shape.NORMAL_COMPONENT_RADIUS_DP).toFloat()
+        cardElevation = 0f
         setCardBackgroundColor(ValuePilotPalette.color(background))
         strokeColor = ValuePilotPalette.color(stroke)
         strokeWidth = dp(1)
@@ -301,10 +305,10 @@ class CompareHereSurfaceView @JvmOverloads constructor(
 
     private fun column(): LinearLayout = bareColumn().apply {
         setPadding(
-            dp(ValuePilotDesignTokens.Spacing.MD_DP),
-            dp(15),
-            dp(ValuePilotDesignTokens.Spacing.MD_DP),
-            dp(15)
+            dp(ValuePilotDesignTokens.Spacing.SM_DP),
+            dp(ValuePilotDesignTokens.Spacing.SM_DP),
+            dp(ValuePilotDesignTokens.Spacing.SM_DP),
+            dp(ValuePilotDesignTokens.Spacing.SM_DP)
         )
     }
 

@@ -261,6 +261,9 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
             }
         }
 
+    /** Opens the concise demo-data explanation without adding provenance to the Home viewport. */
+    var onOpenDemoInfo: (() -> Unit)? = null
+
     private var suppressInputCallback = false
     private var extraStopSettingsExpanded = false
     private var currentExtraStopSettingsNotice: String? = null
@@ -303,19 +306,23 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         gravity = android.view.Gravity.CENTER_VERTICAL
         layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 14)
     }
-    private val homeSearchButton = ValuePilotProgrammaticButton.filled(context).apply {
+    private val homeSearchButton = ValuePilotProgrammaticButton.filled(context, compact = true).apply {
         homeSearchOwnerControls += this
         text = context.getString(R.string.home_search_products)
         contentDescription = context.getString(R.string.home_search_products_description)
-        textSize = 16f
-        layoutParams = fullWidth(dp(54), 16)
+        textSize = 15f
+        layoutParams = fullWidth(dp(ValuePilotDesignTokens.TouchTarget.MINIMUM_DP), 8)
         isEnabled = false
         setOnClickListener { onOpenSearch?.invoke() }
     }
     private val homeHeroCard = ValuePilotProductCard(context).apply {
         layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 0)
+        radius = 0f
+        strokeWidth = 0
+        setCardBackgroundColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.BACKGROUND))
         addView(
             column().apply {
+                setPadding(0, dp(4), 0, 0)
                 addView(homePurpose)
                 addView(homeFlow)
                 addView(homeSearchButton)
@@ -323,9 +330,19 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         )
     }
 
+    private val homeDemoBadge = ValuePilotCompactUi.statusChip(context, "DEMO DATA").apply {
+        layoutParams = LinearLayout.LayoutParams(
+            LayoutParams.WRAP_CONTENT,
+            LayoutParams.WRAP_CONTENT
+        ).apply { topMargin = dp(8) }
+        visibility = GONE
+        isFocusable = true
+        setOnClickListener { onOpenDemoInfo?.invoke() }
+    }
+
     private val activeBasketCount = line(
         "",
-        27f,
+        22f,
         ValuePilotDesignTokens.Colors.TEXT_PRIMARY,
         true
     ).apply {
@@ -348,16 +365,20 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         text = context.getString(R.string.home_open_basket)
         contentDescription = context.getString(R.string.home_open_basket_description)
         textSize = 15f
-        layoutParams = fullWidth(dp(50), 12)
+        layoutParams = fullWidth(dp(ValuePilotDesignTokens.TouchTarget.COMPACT_MINIMUM_DP), 8)
         isEnabled = false
         setOnClickListener { onOpenBasket?.invoke() }
     }
     private val activeBasketCard = ValuePilotProductCard(context).apply {
-        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 12)
+        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 8)
+        radius = dp(ValuePilotDesignTokens.Shape.NORMAL_COMPONENT_RADIUS_DP).toFloat()
+        setCardBackgroundColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE))
+        strokeColor = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.DIVIDER)
         addView(
             column().apply {
+                setPadding(dp(12), dp(10), dp(12), dp(10))
                 addView(line(context.getString(R.string.home_basket_label), 11f, ValuePilotDesignTokens.Colors.PRIMARY_DARK, true))
-                addView(activeBasketCount.apply { setPadding(0, dp(5), 0, 0) })
+                addView(activeBasketCount.apply { setPadding(0, dp(3), 0, 0) })
                 addView(activeBasketSummary)
                 addView(activeBasketProgress)
                 addView(activeBasketOpenButton)
@@ -367,7 +388,10 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     }
 
     private val buyAgainCard = ValuePilotProductCard(context).apply {
-        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 12)
+        layoutParams = fullWidth(LayoutParams.WRAP_CONTENT, 8)
+        radius = dp(ValuePilotDesignTokens.Shape.NORMAL_COMPONENT_RADIUS_DP).toFloat()
+        setCardBackgroundColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE))
+        strokeColor = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.DIVIDER)
         addView(
             column().apply {
                 addView(line(context.getString(R.string.home_buy_again_label), 11f, ValuePilotDesignTokens.Colors.PRIMARY_DARK, true))
@@ -601,6 +625,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         extraStopOwnerControls += extraStopSettingsButton
 
         addView(homeHeroCard)
+        addView(homeDemoBadge)
         addView(activeBasketCard)
         addView(buyAgainCard)
         addView(commandCenterCard)
@@ -931,8 +956,14 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         }
         homeHeroCard.visibility = VISIBLE
         homePurpose.visibility = if (presentation.showWelcomePurpose) VISIBLE else GONE
-        homeFlow.visibility = if (presentation.showWelcomePurpose) VISIBLE else GONE
+        // The Search → Basket → Shop relationship is now implicit in the
+        // compact controls; avoid spending the first viewport on a tutorial row.
+        homeFlow.visibility = GONE
         homeSearchButton.isEnabled = onOpenSearch != null && hasRenderedState
+        homeDemoBadge.visibility = if (state.sampleNotice.isNotBlank()) VISIBLE else GONE
+        homeDemoBadge.contentDescription =
+            state.sampleNotice.takeIf { it.isNotBlank() }
+                ?.let { "Demo data. $it" }
 
         activeBasketCard.visibility = if (presentation.showActiveBasket) VISIBLE else GONE
         activeBasketCount.text =
@@ -960,7 +991,10 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
         }
         activeBasketOpenButton.isEnabled = onOpenBasket != null && hasRenderedState
 
-        buyAgainCard.visibility = if (presentation.showBuyAgain) VISIBLE else GONE
+        // A returning user gets one contextual insight at a time. An active
+        // basket takes precedence over the repeat-purchase prompt.
+        buyAgainCard.visibility =
+            if (presentation.showBuyAgain && !presentation.showActiveBasket) VISIBLE else GONE
         purchaseHistoryOwnerControls.forEach { control ->
             control.isEnabled =
                 presentation.showBuyAgain && onOpenConfirmedPurchaseHistory != null && hasRenderedState
@@ -1714,7 +1748,7 @@ class PracticalShoppingHomeSurfaceView @JvmOverloads constructor(
     }
 
     private fun column(): LinearLayout = bareColumn().apply {
-        setPadding(dp(16), dp(15), dp(16), dp(15))
+                setPadding(dp(12), dp(10), dp(12), dp(10))
     }
 
     private fun line(

@@ -37,7 +37,7 @@ internal class ProductStoreMapSurfaceView @JvmOverloads constructor(
 
     private val content = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(dp(4), dp(4), dp(4), dp(ValuePilotDesignTokens.Spacing.MD_DP))
+        setPadding(0, dp(4), 0, dp(ValuePilotDesignTokens.Spacing.MD_DP))
     }
     private val eyebrow = textLine(
         value = "NEARBY STORES",
@@ -78,7 +78,9 @@ internal class ProductStoreMapSurfaceView @JvmOverloads constructor(
         topPadding = 7
     )
     private val mapFrame = FrameLayout(context).apply {
-        layoutParams = FrameLayout.LayoutParams(-1, dp(244))
+        // The map owns the useful viewport; the store list and selected-store
+        // context stay below it as progressive disclosure.
+        layoutParams = FrameLayout.LayoutParams(-1, dp(320))
         setBackgroundColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE_SUBTLE))
         contentDescription = "Store map"
     }
@@ -86,6 +88,9 @@ internal class ProductStoreMapSurfaceView @JvmOverloads constructor(
         layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
             topMargin = dp(ValuePilotDesignTokens.Spacing.MD_DP)
         }
+        radius = dp(ValuePilotDesignTokens.Shape.NORMAL_COMPONENT_RADIUS_DP).toFloat()
+        strokeWidth = 0
+        setCardBackgroundColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE_SUBTLE))
         addView(mapFrame)
     }
     private val mapCaption = textLine(
@@ -106,7 +111,7 @@ internal class ProductStoreMapSurfaceView @JvmOverloads constructor(
             topMargin = dp(ValuePilotDesignTokens.Spacing.SM_DP)
         }
     }
-    private val foregroundLocationButton = ValuePilotProgrammaticButton.outlined(context).apply {
+    private val foregroundLocationButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
         text = "Use my location"
         layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
             topMargin = dp(ValuePilotDesignTokens.Spacing.LG_DP)
@@ -115,7 +120,7 @@ internal class ProductStoreMapSurfaceView @JvmOverloads constructor(
             "Use one foreground location reading to sort nearby stores approximately; no background tracking"
         setOnClickListener { onUseForegroundLocation?.invoke() }
     }
-    private val closeButton = ValuePilotProgrammaticButton.outlined(context).apply {
+    private val closeButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
         text = "Back to Search"
         contentDescription = "Return to Search without changing the selected product"
         layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
@@ -256,15 +261,18 @@ internal class ProductStoreMapSurfaceView @JvmOverloads constructor(
                 body.addView(textLine(price, 12f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 4))
             }
             val actions = LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
                 setPadding(0, dp(8), 0, 0)
             }
             actions.addView(
-                ValuePilotProgrammaticButton.filled(context).apply {
+                ValuePilotProgrammaticButton.filled(context, compact = true).apply {
                     text = "Trip cost"
                     contentDescription = "Open Trip Planner for ${pin.storeName}"
                     isEnabled = onTripCost != null
-                    layoutParams = LinearLayout.LayoutParams(-1, -2)
+                    layoutParams = LinearLayout.LayoutParams(0, -2, 1f).apply {
+                        marginEnd = dp(4)
+                    }
                     setOnClickListener { onTripCost?.invoke(pin) }
                 }
             )
@@ -273,7 +281,9 @@ internal class ProductStoreMapSurfaceView @JvmOverloads constructor(
                     text = "Directions"
                     contentDescription = "Open external directions for ${pin.storeName}"
                     isEnabled = onDirections != null
-                    layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) }
+                    layoutParams = LinearLayout.LayoutParams(0, -2, 1f).apply {
+                        marginStart = dp(4)
+                    }
                     setOnClickListener { onDirections?.invoke(pin) }
                 }
             )

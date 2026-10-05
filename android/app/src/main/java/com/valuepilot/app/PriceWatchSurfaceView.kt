@@ -81,14 +81,21 @@ internal class PriceWatchSurfaceView @JvmOverloads constructor(
     private inner class WatchRow(initial: PriceWatchRow) {
         val root = ValuePilotProductCard(context).apply {
             setCardBackgroundColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE))
-            strokeColor = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.OUTLINE)
+            radius = dp(ValuePilotDesignTokens.Shape.NORMAL_COMPONENT_RADIUS_DP).toFloat()
+            strokeColor = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.DIVIDER)
+            strokeWidth = 0
             layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
                 topMargin = dp(ValuePilotDesignTokens.Spacing.SM_DP)
             }
         }
         private val body = LinearLayout(context).apply {
             orientation = VERTICAL
-            setPadding(dp(16), dp(15), dp(16), dp(15))
+            setPadding(
+                dp(ValuePilotDesignTokens.Spacing.SM_DP),
+                dp(ValuePilotDesignTokens.Spacing.SM_DP),
+                dp(ValuePilotDesignTokens.Spacing.SM_DP),
+                dp(ValuePilotDesignTokens.Spacing.SM_DP)
+            )
         }
         private val title = textLine("", 17f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true)
         private val packageText = textLine("", 12f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 5)

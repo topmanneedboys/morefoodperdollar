@@ -36,7 +36,7 @@ internal class TripPlannerSurfaceView @JvmOverloads constructor(
         addView(cardColumn().apply {
             addView(label("Trip details"))
             addView(textLine("", 14f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, top = 5))
-            addView(ValuePilotProgrammaticButton.outlined(context).apply {
+            addView(ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
                 text = "Edit"
                 contentDescription = "Edit distance, fuel use, fuel price, tolls and parking"
                 layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.XS_DP)
@@ -82,6 +82,13 @@ internal class TripPlannerSurfaceView @JvmOverloads constructor(
     private val currentSavingsAmount = savingsBody.getChildAt(1) as TextView
     private val currentSavingsSupport = savingsBody.getChildAt(2) as TextView
 
+    /** The two supporting metrics share one quiet strip instead of two stacked cards. */
+    private val metricsRow = LinearLayout(context).apply {
+        orientation = HORIZONTAL
+        gravity = android.view.Gravity.CENTER_VERTICAL
+        layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.SM_DP)
+    }
+
     private val decisionCard = card().apply {
         addView(cardColumn().apply {
             addView(label("For this decision"))
@@ -93,7 +100,7 @@ internal class TripPlannerSurfaceView @JvmOverloads constructor(
     private val decisionHeadline = decisionBody.getChildAt(1) as TextView
     private val decisionDetail = decisionBody.getChildAt(2) as TextView
 
-    private val detailsButton = ValuePilotProgrammaticButton.outlined(context).apply {
+    private val detailsButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
         text = "Why?"
         contentDescription = "Show the trip details and price context"
         layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.SM_DP)
@@ -107,7 +114,7 @@ internal class TripPlannerSurfaceView @JvmOverloads constructor(
     private val primaryButton = ValuePilotProgrammaticButton.filled(context).apply {
         layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.LG_DP)
     }
-    private val moreActionsButton = ValuePilotProgrammaticButton.outlined(context).apply {
+    private val moreActionsButton = ValuePilotProgrammaticButton.outlined(context, compact = true).apply {
         text = "More trip actions"
         contentDescription = "Show store, starting point, directions and trip actions"
         layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.XS_DP)
@@ -179,8 +186,15 @@ internal class TripPlannerSurfaceView @JvmOverloads constructor(
         addView(storeSummary)
         addView(tripDetailsCard)
         addView(tripCostCard)
-        addView(breakEvenCard)
-        addView(savingsCard)
+        breakEvenCard.layoutParams = LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply {
+            marginEnd = dp(ValuePilotDesignTokens.Spacing.XS_DP)
+        }
+        savingsCard.layoutParams = LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply {
+            marginStart = dp(ValuePilotDesignTokens.Spacing.XS_DP)
+        }
+        metricsRow.addView(breakEvenCard)
+        metricsRow.addView(savingsCard)
+        addView(metricsRow)
         addView(decisionCard)
         addView(detailsButton)
         addView(detailsContainer)
@@ -317,14 +331,20 @@ internal class TripPlannerSurfaceView @JvmOverloads constructor(
     }
 
     private fun card(): ValuePilotProductCard = ValuePilotProductCard(context).apply {
+        radius = dp(ValuePilotDesignTokens.Shape.NORMAL_COMPONENT_RADIUS_DP).toFloat()
         setCardBackgroundColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE))
-        strokeColor = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.OUTLINE)
+        strokeColor = ValuePilotPalette.color(ValuePilotDesignTokens.Colors.DIVIDER)
         layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.SM_DP)
     }
 
     private fun cardColumn(): LinearLayout = LinearLayout(context).apply {
         orientation = VERTICAL
-        setPadding(dp(16), dp(15), dp(16), dp(15))
+        setPadding(
+            dp(ValuePilotDesignTokens.Spacing.SM_DP),
+            dp(ValuePilotDesignTokens.Spacing.SM_DP),
+            dp(ValuePilotDesignTokens.Spacing.SM_DP),
+            dp(ValuePilotDesignTokens.Spacing.SM_DP)
+        )
     }
 
     private fun label(value: String): TextView =

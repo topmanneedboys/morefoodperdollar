@@ -3,6 +3,8 @@ package com.valuepilot.app
 import android.content.Context
 import android.util.AttributeSet
 import android.widget.LinearLayout
+import android.view.Gravity
+import android.widget.TextView
 
 /**
  * Secondary product actions revealed on demand.
@@ -35,11 +37,17 @@ internal class ValuePilotProductContextMenu @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : LinearLayout(context, attrs, defStyleAttr) {
 
-    private val disclosureButton =
-        ValuePilotProgrammaticButton.outlined(context).apply {
-            isAllCaps = false
-            setOnClickListener { setExpanded(!expanded) }
-        }
+    private val disclosureButton = TextView(context).apply {
+        text = "⋯"
+        setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 22f)
+        setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.TEXT_PRIMARY))
+        gravity = Gravity.CENTER
+        minWidth = dp(ValuePilotDesignTokens.TouchTarget.MINIMUM_DP)
+        minHeight = dp(ValuePilotDesignTokens.TouchTarget.MINIMUM_DP)
+        isFocusable = true
+        isClickable = true
+        setOnClickListener { setExpanded(!expanded) }
+    }
 
     private val actionsContainer = LinearLayout(context).apply {
         orientation = VERTICAL
@@ -103,10 +111,7 @@ internal class ValuePilotProductContextMenu @JvmOverloads constructor(
 
     private fun updateDisclosurePresentation() {
         disclosureButton.text =
-            context.getString(
-                if (expanded) R.string.product_context_hide_actions
-                else R.string.product_context_more_actions
-            )
+            if (expanded) "×" else "⋯"
         disclosureButton.contentDescription =
             context.getString(
                 if (expanded) R.string.product_context_hide_actions_description
@@ -114,6 +119,7 @@ internal class ValuePilotProductContextMenu @JvmOverloads constructor(
             )
         disclosureButton.visibility = if (actions.isEmpty()) GONE else VISIBLE
         disclosureButton.minimumHeight = dp(ValuePilotDesignTokens.TouchTarget.MINIMUM_DP)
+        disclosureButton.minimumWidth = dp(ValuePilotDesignTokens.TouchTarget.MINIMUM_DP)
         contentDescription = disclosureButton.contentDescription
     }
 

@@ -16,27 +16,41 @@ internal object ValuePilotDesignTokens {
         const val LG_DP = 20
         const val XL_DP = 24
         const val XXL_DP = 32
+        const val SCREEN_HORIZONTAL_DP = 20
+        const val ROW_VERTICAL_DP = 8
+        const val SECTION_DP = 24
     }
 
     object Shape {
+        const val SMALL_RADIUS_DP = 10
         const val CONTROL_RADIUS_DP = 14
+        const val NORMAL_COMPONENT_RADIUS_DP = 14
         const val CARD_RADIUS_DP = 18
         const val SURFACE_RADIUS_DP = 20
+        const val SHEET_RADIUS_DP = 24
     }
 
     object TouchTarget {
         const val MINIMUM_DP = 48
         const val COMPACT_MINIMUM_DP = 44
+        const val ICON_DP = 24
     }
 
     object Typography {
         const val BODY_SP = 15f
         const val LABEL_SP = 13f
         const val TITLE_SP = 26f
+        const val SECTION_SP = 20f
+        const val PRIMARY_SP = 16f
+        const val SECONDARY_SP = 14f
+        const val CAPTION_SP = 12f
+        const val EMPHASIS_NUMBER_SP = 32f
     }
 
     object Motion {
+        const val MICRO_DURATION_MS = 140L
         const val DISCLOSURE_DURATION_MS = 180L
+        const val ROUTE_DURATION_MS = 240L
     }
 
     object Colors {
@@ -60,5 +74,6 @@ internal object ValuePilotDesignTokens {
         const val WARNING_SURFACE = "#FFF1E8"
         const val WARNING_OUTLINE = "#E8CDBF"
         const val ERROR = "#A63D32"
+        const val DIVIDER = "#E7DED5"
     }
 }
