@@ -85,6 +85,8 @@ class ArgentinaProductStoreMapTest {
         assertEquals(ProductStoreMapResultStatus.READY, result.status)
         assertEquals(listOf("store-search"), result.pins.map { it.storeKey.value })
         assertEquals("search-offer", result.pins.single().relationshipKey)
+        assertEquals(com.valuepilot.core.Money.parse("2.50", "ARS"), result.pins.single().unitPrice)
+        assertEquals("100 g", result.pins.single().unitPriceBasis)
         assertEquals(true, result.pins.single().availabilityUnknown)
     }
 
@@ -179,8 +181,8 @@ class ArgentinaProductStoreMapTest {
             referencePrice = null,
             quantity = quantity(),
             quantityStatus = "KNOWN",
-            unitPrice = null,
-            unitPriceBasis = null,
+            unitPrice = money("2.50"),
+            unitPriceBasis = "100 g",
             releaseDate = "2026-09-06",
             freshnessStatus = ArgentinaBackendContract.Freshness.FRESH,
             availability = ArgentinaBackendContract.Availability.UNKNOWN,

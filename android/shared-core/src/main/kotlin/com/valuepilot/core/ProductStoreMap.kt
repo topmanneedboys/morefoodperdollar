@@ -66,6 +66,8 @@ data class ProductStoreMapEvidence(
     val releaseDate: String?,
     val freshness: ProductStoreMapFreshness,
     val price: Money?,
+    val unitPrice: Money? = null,
+    val unitPriceBasis: String? = null,
     val sourceLabel: String,
     val availabilityUnknown: Boolean = true
 ) {
@@ -79,6 +81,9 @@ data class ProductStoreMapEvidence(
         require(sourceLabel.isNotBlank() && sourceLabel.length <= 240)
         require(availabilityUnknown) { "Map evidence must not infer inventory from price publication" }
         price?.let { require(it.minorUnits >= 0L) }
+        unitPrice?.let { require(it.minorUnits >= 0L) }
+        require(unitPrice == null || !unitPriceBasis.isNullOrBlank())
+        require(unitPriceBasis == null || unitPriceBasis.length <= 32)
     }
 
     private companion object {
@@ -107,6 +112,8 @@ data class ProductStoreMapPin(
     val releaseDate: String?,
     val freshness: ProductStoreMapFreshness,
     val price: Money?,
+    val unitPrice: Money? = null,
+    val unitPriceBasis: String? = null,
     val priceConflict: Boolean,
     val approximateDistanceMetres: Long?,
     val sourceLabel: String,
@@ -115,6 +122,8 @@ data class ProductStoreMapPin(
     init {
         require(availabilityUnknown)
         require(approximateDistanceMetres == null || approximateDistanceMetres >= 0L)
+        require(unitPrice == null || !unitPriceBasis.isNullOrBlank())
+        require(unitPriceBasis == null || unitPriceBasis.length <= 32)
     }
 }
 
@@ -209,6 +218,12 @@ class ProductStoreMapIndex private constructor(
         val prices = values.mapNotNull { it.price }.distinct()
         val price = prices.singleOrNull()
         val conflict = prices.size > 1
+        val unitPrices = values.mapNotNull { value ->
+            value.unitPrice?.let { unit -> unit to value.unitPriceBasis }
+        }.distinct()
+        val unitPriceValue = unitPrices.singleOrNull()
+        val unitPrice = unitPriceValue?.first
+        val unitPriceBasis = unitPriceValue?.second
         val coordinate = requireNotNull(first.coordinate)
         return ProductStoreMapPin(
             relationshipKey = first.relationshipKey,
@@ -226,6 +241,8 @@ class ProductStoreMapIndex private constructor(
                 ProductStoreMapFreshness.UNKNOWN
             },
             price = price,
+            unitPrice = unitPrice,
+            unitPriceBasis = unitPriceBasis,
             priceConflict = conflict,
             approximateDistanceMetres = origin?.let { haversineMetres(it, coordinate) },
             sourceLabel = first.sourceLabel

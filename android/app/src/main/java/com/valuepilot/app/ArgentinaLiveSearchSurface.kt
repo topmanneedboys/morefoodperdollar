@@ -2,7 +2,7 @@ package com.valuepilot.app
 
 import android.util.Log
 
-/** Renderer-owned modes for the visible, identity-only Argentina Search. */
+/** Renderer-owned modes for the visible Argentina Search evidence rail. */
 internal enum class ArgentinaLiveSearchSurfaceMode {
     IDLE,
     LOADING,
@@ -44,8 +44,10 @@ internal data class ArgentinaLiveSearchSurfaceState(
 }
 
 internal object ArgentinaLiveSearchSurfacePresenter {
-    private const val IDENTITY_CAVEAT =
+    private const val IDENTITY_ONLY_CAVEAT =
         "Identity suggestions only. No current price, stock, availability or ranking is confirmed; package size appears only when the source supplies it explicitly."
+    private const val QUALIFIED_EVIDENCE_CAVEAT =
+        "Listed price, store and unit evidence appears only where the qualified source supplied it for this exact identity. Price publication is not stock or availability, and no ranking claim is made."
 
     fun initial(
         area: ArgentinaQualifiedLaunchArea,
@@ -56,7 +58,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
             mode = ArgentinaLiveSearchSurfaceMode.IDLE,
             generation = generation,
             statusMessage = "Search products to find an exact identity.",
-            caveat = IDENTITY_CAVEAT
+            caveat = IDENTITY_ONLY_CAVEAT
         )
 
     fun revalidationRequired(
@@ -73,7 +75,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
             generation = generation,
             query = query,
             statusMessage = "Your previous Search needs a fresh check. Tap Search again.",
-            caveat = IDENTITY_CAVEAT,
+            caveat = IDENTITY_ONLY_CAVEAT,
             requiresRevalidation = true
         )
     }
@@ -97,7 +99,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
                             "Loading more results…"
                         },
                     presentation = state.previousPresentation,
-                    caveat = IDENTITY_CAVEAT
+                    caveat = caveatFor(state.previousPresentation)
                 )
             is ArgentinaLiveSearchState.Results ->
                 ArgentinaLiveSearchSurfaceState(
@@ -107,7 +109,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
                     query = state.query,
                     statusMessage = resultStatus(state.presentation),
                     presentation = state.presentation,
-                    caveat = IDENTITY_CAVEAT
+                    caveat = caveatFor(state.presentation)
                 )
             is ArgentinaLiveSearchState.Empty ->
                 ArgentinaLiveSearchSurfaceState(
@@ -117,7 +119,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
                     query = state.query,
                     statusMessage = "No products found. Try another search.",
                     presentation = state.presentation,
-                    caveat = IDENTITY_CAVEAT
+                    caveat = caveatFor(state.presentation)
                 )
             is ArgentinaLiveSearchState.Unavailable ->
                 unavailable(state, area)
@@ -163,9 +165,18 @@ internal object ArgentinaLiveSearchSurfacePresenter {
             query = state.query,
             statusMessage = message,
             presentation = state.previousPresentation,
-            caveat = IDENTITY_CAVEAT
+            caveat = caveatFor(state.previousPresentation)
         )
     }
+
+    private fun caveatFor(
+        presentation: PracticalShoppingSearchIdentityPresentation?
+    ): String =
+        if (presentation?.matches?.any { it.qualifiedOffers.isNotEmpty() } == true) {
+            QUALIFIED_EVIDENCE_CAVEAT
+        } else {
+            IDENTITY_ONLY_CAVEAT
+        }
 }
 
 /** Thin lifecycle/action host between MainActivity and the coordinator. */

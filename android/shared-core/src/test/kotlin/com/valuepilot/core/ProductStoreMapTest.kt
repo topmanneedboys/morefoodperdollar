@@ -72,6 +72,21 @@ class ProductStoreMapTest {
     }
 
     @Test
+    fun unitPriceEvidenceFollowsTheExactStorePin() {
+        val index = ProductStoreMapIndex.build(
+            listOf(
+                evidence("offer-a", "milk", null, "store-a", -346000000, -584000000)
+                    .copy(unitPrice = Money.parse("3.20", "ARS"), unitPriceBasis = "L")
+            )
+        )
+
+        val pin = index.query(ProductStoreMapQuery("milk")).pins.single()
+
+        assertEquals(Money.parse("3.20", "ARS"), pin.unitPrice)
+        assertEquals("L", pin.unitPriceBasis)
+    }
+
+    @Test
     fun malformedInputIsRejectedBeforeIndexing() {
         assertFailsWith<IllegalArgumentException> {
             ProductStoreMapIndex.build(

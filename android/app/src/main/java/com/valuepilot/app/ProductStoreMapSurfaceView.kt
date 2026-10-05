@@ -235,6 +235,8 @@ internal class ProductStoreMapSurfaceView @JvmOverloads constructor(
             contentDescription = buildString {
                 append("Selected store: ").append(pin.storeName)
                 ProductStoreMapProjector.distanceLabel(pin, origin)?.let { append(". ").append(it) }
+                ProductStoreMapProjector.priceLabel(pin)?.let { append(". ").append(it) }
+                ProductStoreMapProjector.unitPriceLabel(pin)?.let { append(". ").append(it) }
                 append(". Availability unknown")
             }
             val body = LinearLayout(context).apply {
@@ -259,6 +261,9 @@ internal class ProductStoreMapSurfaceView @JvmOverloads constructor(
             body.addView(textLine(ProductStoreMapProjector.freshnessLabel(pin.freshness), 12f, ValuePilotDesignTokens.Colors.TEXT_MUTED, topPadding = 6))
             ProductStoreMapProjector.priceLabel(pin)?.let { price ->
                 body.addView(textLine(price, 12f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 4))
+            }
+            ProductStoreMapProjector.unitPriceLabel(pin)?.let { unitPrice ->
+                body.addView(textLine(unitPrice, 12f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 3))
             }
             val actions = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL

@@ -1,12 +1,6 @@
 package com.valuepilot.app
 
-import com.valuepilot.core.BaseUnit
-import com.valuepilot.core.DeterministicValueMath
 import com.valuepilot.core.Money
-import com.valuepilot.core.NormalizedQuantity
-import com.valuepilot.core.Offer
-import com.valuepilot.core.RateUnit
-import java.math.RoundingMode
 /**
  * Consumer-safe projection of the existing Argentina planner response.
  *
@@ -115,7 +109,7 @@ internal object ArgentinaBasketPlanProjector {
                 packageCount = line.packageCount,
                 packageQuantityLabel = quantityLabel(line.packageQuantity),
                 lineTotalText = moneyText(line.lineTotal),
-                unitPriceText = unitPriceText(line.packagePrice, line.packageQuantity),
+                unitPriceText = ArgentinaExactUnitPriceMath.text(line.packagePrice, line.packageQuantity),
                 freshnessText = when (line.freshnessStatus) {
                     ArgentinaBackendContract.Freshness.FRESH -> "Fresh qualified release"
                     ArgentinaBackendContract.Freshness.STALE -> "Older release · not current"
@@ -183,43 +177,4 @@ internal object ArgentinaBasketPlanProjector {
         Money.parse(money.amount, money.currency, fractionDigits)
     }.getOrNull()
 
-    /** Reuses shared-core exact unit math; unknown/unsupported quantities stay unpriced. */
-    private fun unitPriceText(
-        money: ArgentinaBackendContract.Money,
-        quantity: ArgentinaBackendContract.Quantity
-    ): String? = runCatching {
-        val normalized = normalizedQuantity(quantity) ?: return null
-        val fractionDigits = maxOf(2, money.decimal.scale()).also { require(it <= 6) }
-        val exactMoney = Money.parse(money.amount, money.currency, fractionDigits)
-        val rate = DeterministicValueMath.pricePerBaseUnit(
-            offer = Offer(current = exactMoney),
-            quantity = normalized
-        )
-        val amount = java.math.BigDecimal.valueOf(rate.currencyMicrosPerUnit)
-            .movePointLeft(6)
-            .setScale(2, RoundingMode.HALF_UP)
-            .toPlainString()
-        "${rate.currencyCode} $amount/${rateUnitLabel(rate.unit)}"
-    }.getOrNull()
-
-    private fun normalizedQuantity(quantity: ArgentinaBackendContract.Quantity): NormalizedQuantity? {
-        val unit = when (quantity.dimension) {
-            "MASS" -> BaseUnit.GRAM
-            "VOLUME" -> BaseUnit.MILLILITRE
-            "COUNT" -> BaseUnit.COUNT
-            else -> return null
-        }
-        val micros = java.math.BigDecimal(quantity.baseAmount)
-            .movePointRight(6)
-            .longValueExact()
-        return NormalizedQuantity(micros, unit)
-    }
-
-    private fun rateUnitLabel(unit: RateUnit): String =
-        when (unit) {
-            RateUnit.KILOGRAM -> "kg"
-            RateUnit.LITRE -> "L"
-            RateUnit.ITEM -> "item"
-            RateUnit.SQUARE_INCH -> "in²"
-        }
 }

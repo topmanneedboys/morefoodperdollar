@@ -5,6 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.math.BigDecimal
 
 class ArgentinaLiveSearchSurfaceTest {
     private val area = ArgentinaQualifiedLaunchAreas.BuenosAiresCaba
@@ -112,6 +113,51 @@ class ArgentinaLiveSearchSurfaceTest {
         assertTrue(state.caveat.contains("No current price"))
         assertTrue(state.caveat.contains("stock"))
         assertTrue(state.caveat.contains("ranking"))
+    }
+
+    @Test
+    fun `surface caveat acknowledges qualified listed evidence without claiming inventory`() {
+        val offer = ArgentinaBackendContract.SearchOffer(
+            offerKey = "offer-1",
+            productEvidenceKey = "identity-1",
+            storeKey = "store-1",
+            storeName = "Fixture Market",
+            storeAddress = emptyMap(),
+            storeLatitude = "-34.60",
+            storeLongitude = "-58.38",
+            distanceKm = "1",
+            listPrice = ArgentinaBackendContract.Money("12.50", "ARS", BigDecimal("12.50")),
+            referencePrice = null,
+            quantity = ArgentinaBackendContract.Quantity("MASS", "500", "g", "500", "g"),
+            quantityStatus = "KNOWN",
+            unitPrice = ArgentinaBackendContract.Money("2.50", "ARS", BigDecimal("2.50")),
+            unitPriceBasis = "100 g",
+            releaseDate = "2026-09-06",
+            freshnessStatus = ArgentinaBackendContract.Freshness.FRESH,
+            availability = ArgentinaBackendContract.Availability.UNKNOWN,
+            provenance = ArgentinaBackendContract.Provenance(
+                provider = "ARGENTINA_SEPA_PRECIOS_CLAROS",
+                releaseDate = "2026-09-06",
+                freshnessStatus = ArgentinaBackendContract.Freshness.FRESH,
+                source = null
+            )
+        )
+        val enriched = presentation.copy(
+            matches = listOf(
+                presentation.matches.single().copy(
+                    identityKey = "identity-1",
+                    qualifiedOffers = listOf(offer)
+                )
+            )
+        )
+
+        val state = ArgentinaLiveSearchSurfacePresenter.from(
+            ArgentinaLiveSearchState.Results(1, "yerba", enriched), area
+        )
+
+        assertTrue(state.caveat.contains("Listed price"))
+        assertTrue(state.caveat.contains("availability"))
+        assertFalse(state.caveat.contains("No current price"))
     }
 
     @Test

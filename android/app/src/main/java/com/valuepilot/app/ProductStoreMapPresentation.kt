@@ -147,15 +147,35 @@ internal object ProductStoreMapProjector {
 
     fun priceLabel(pin: ProductStoreMapPin): String? =
         if (pin.priceConflict) {
-            "Conflicting reported prices"
+            "Conflicting ${priceEvidenceLabel(pin).removeSuffix(" price").lowercase()} prices"
         } else {
             pin.price?.let { price ->
-                "Reported price · ${price.currencyCode} ${
+                "${priceEvidenceLabel(pin)} · ${price.currencyCode} ${
                     BigDecimal.valueOf(price.minorUnits)
                         .movePointLeft(price.fractionDigits)
                         .setScale(price.fractionDigits, RoundingMode.UNNECESSARY)
                         .toPlainString()
                 }"
             }
+        }
+
+    fun unitPriceLabel(pin: ProductStoreMapPin): String? =
+        pin.unitPrice?.let { price ->
+            val basis = pin.unitPriceBasis ?: return@let null
+            "Unit price · ${price.currencyCode} ${
+                BigDecimal.valueOf(price.minorUnits)
+                    .movePointLeft(price.fractionDigits)
+                    .setScale(price.fractionDigits, RoundingMode.UNNECESSARY)
+                    .toPlainString()
+            }/$basis"
+        }
+
+    private fun priceEvidenceLabel(pin: ProductStoreMapPin): String =
+        if (pin.sourceLabel.contains("ARGENTINA_SEPA", ignoreCase = true) ||
+            pin.sourceLabel.contains("PRECIOS CLAROS", ignoreCase = true)
+        ) {
+            "Listed price"
+        } else {
+            "Reported price"
         }
 }

@@ -61,6 +61,8 @@ internal object ArgentinaProductStoreMapAdapter {
                 releaseDate = offer.releaseDate,
                 freshness = offer.freshnessStatus.toMapFreshness(),
                 price = moneyOrNull(offer.listPrice),
+                unitPrice = offer.unitPrice?.let(::moneyOrNull),
+                unitPriceBasis = offer.unitPriceBasis,
                 sourceLabel = offer.provenance.provider.ifBlank { SOURCE_FALLBACK }
             )
         }
@@ -89,6 +91,7 @@ internal object ArgentinaProductStoreMapAdapter {
                     val store = stores[line.storeKey] ?: return@mapNotNull null
                     val coordinate = ProductStoreMapCoordinate.parse(store.latitude, store.longitude)
                         ?.takeIf(::isBroadlyArgentinian)
+                    val unitPrice = ArgentinaExactUnitPriceMath.from(line.packagePrice, line.packageQuantity)
                     ProductStoreMapEvidence(
                         relationshipKey = line.offerKey,
                         productEvidenceKey = line.productEvidenceKey,
@@ -100,6 +103,8 @@ internal object ArgentinaProductStoreMapAdapter {
                         releaseDate = line.provenance.releaseDate,
                         freshness = line.freshnessStatus.toMapFreshness(),
                         price = moneyOrNull(line.packagePrice),
+                        unitPrice = unitPrice?.money,
+                        unitPriceBasis = unitPrice?.basis,
                         sourceLabel = line.provenance.provider.ifBlank { SOURCE_FALLBACK }
                     )
                 }

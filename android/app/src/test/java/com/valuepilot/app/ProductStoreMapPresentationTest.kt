@@ -21,7 +21,9 @@ class ProductStoreMapPresentationTest {
             storeName = "Supermercado Yerba",
             distanceMetres = 1_420L,
             freshness = ProductStoreMapFreshness.FRESH,
-            price = Money.parse("12.50", "ARS")
+            price = Money.parse("12.50", "ARS"),
+            unitPrice = Money.parse("12.50", "ARS"),
+            unitPriceBasis = "kg"
         )
         val state = ProductStoreMapProjector.project(
             productName = "Playadito Yerba Mate",
@@ -38,7 +40,8 @@ class ProductStoreMapPresentationTest {
             "≈ 1.4 km from CABA search area",
             ProductStoreMapProjector.distanceLabel(pin, ProductStoreMapOrigin.CABA_FALLBACK)
         )
-        assertEquals("Reported price · ARS 12.50", ProductStoreMapProjector.priceLabel(pin))
+        assertEquals("Listed price · ARS 12.50", ProductStoreMapProjector.priceLabel(pin))
+        assertEquals("Unit price · ARS 12.50/kg", ProductStoreMapProjector.unitPriceLabel(pin))
         assertTrue(state.support.contains("Availability is unknown"))
     }
 
@@ -94,7 +97,7 @@ class ProductStoreMapPresentationTest {
             priceConflict = true
         )
 
-        assertEquals("Conflicting reported prices", ProductStoreMapProjector.priceLabel(pin))
+        assertEquals("Conflicting listed prices", ProductStoreMapProjector.priceLabel(pin))
         assertEquals(null, ProductStoreMapProjector.distanceLabel(pin, ProductStoreMapOrigin.ONE_SHOT_LOCATION))
     }
 
@@ -116,7 +119,9 @@ class ProductStoreMapPresentationTest {
         distanceMetres: Long?,
         freshness: ProductStoreMapFreshness,
         price: Money?,
-        priceConflict: Boolean = false
+        priceConflict: Boolean = false,
+        unitPrice: Money? = null,
+        unitPriceBasis: String? = null
     ) = com.valuepilot.core.ProductStoreMapPin(
         relationshipKey = "relationship-$storeKey",
         productEvidenceKey = "product-key",
@@ -127,6 +132,8 @@ class ProductStoreMapPresentationTest {
         releaseDate = "2026-09-06",
         freshness = freshness,
         price = price,
+        unitPrice = unitPrice,
+        unitPriceBasis = unitPriceBasis,
         priceConflict = priceConflict,
         approximateDistanceMetres = distanceMetres,
         sourceLabel = "Precios Claros"
