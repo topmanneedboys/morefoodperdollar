@@ -37,7 +37,7 @@ class CompareHereUiProjectorTest {
 
         val state = projection.state
         assertEquals(CompareHereUiStatus.READY, state.status)
-        assertEquals("Best value", state.statusTitle)
+        assertEquals("Better value", state.statusTitle)
         assertEquals(listOf("Large Milk", "Small Milk"), state.rows.map { it.title })
         assertEquals(listOf(1, 2), state.rows.map { it.valueRank })
         assertTrue(state.rows.first().bestValue)
@@ -62,8 +62,7 @@ class CompareHereUiProjectorTest {
             ).state
 
         assertEquals(
-            "Lower exact unit price wins within this comparison. " +
-                "Best value is about 11.1% lower per unit than the next-best option.",
+            "The lower unit price is the better value.",
             state.guidance
         )
     }
@@ -83,12 +82,11 @@ class CompareHereUiProjectorTest {
             ).state
 
         assertEquals(CompareHereUiStatus.READY, state.status)
-        assertEquals("Best value tie", state.statusTitle)
+        assertEquals("Same value", state.statusTitle)
         assertEquals(listOf(1, 1), state.rows.map { it.valueRank })
         assertTrue(state.rows.all { it.bestValue })
         assertEquals(
-            "These options tie at the lowest exact unit price. " +
-                "Lower exact unit price wins within this comparison.",
+            "These choices have the same unit value.",
             state.guidance
         )
     }
@@ -108,11 +106,11 @@ class CompareHereUiProjectorTest {
             ).state
 
         assertEquals(CompareHereUiStatus.DISPLAY_METADATA_INCOMPLETE, state.status)
-        assertEquals("Product names needed", state.statusTitle)
+        assertEquals("Can't compare yet", state.statusTitle)
         assertEquals(listOf("Small Milk"), state.rows.map { it.title })
         assertTrue(state.rows.all { it.valueRank == null && !it.bestValue })
         assertEquals(1, state.omittedDisplayNameCount)
-        assertEquals("1 product name could not be shown safely.", state.notice)
+        assertEquals("Some product names could not be shown.", state.notice)
     }
 
     @Test
@@ -218,16 +216,13 @@ class CompareHereUiProjectorTest {
             ).state
 
         assertEquals(CompareHereUiStatus.NOT_ENOUGH_DATA, state.status)
-        assertEquals("Need more exact information", state.statusTitle)
-        assertEquals(
-            "Add at least two products with an exact current price and package quantity.",
-            state.guidance
-        )
+        assertEquals("Can't compare yet", state.statusTitle)
+        assertEquals("Add an exact price and package size for each choice.", state.guidance)
         assertEquals(listOf("Known Milk"), state.rows.map { it.title })
         assertNull(state.rows.single().valueRank)
         assertFalse(state.rows.single().bestValue)
         assertEquals(listOf("Unknown Milk"), state.blockedRows.map { it.title })
-        assertEquals("Package quantity needed", state.blockedRows.single().reasonText)
+        assertEquals("Package size unknown", state.blockedRows.single().reasonText)
     }
 
     @Test
@@ -249,7 +244,7 @@ class CompareHereUiProjectorTest {
         assertEquals(listOf("Large Milk"), state.rows.filter { it.bestValue }.map { it.title })
         assertTrue(state.blockedRows.isEmpty())
         assertEquals(1, state.omittedDisplayNameCount)
-        assertEquals("1 product name could not be shown safely.", state.notice)
+        assertEquals("Some product names could not be shown.", state.notice)
     }
 
     @Test
@@ -302,11 +297,7 @@ class CompareHereUiProjectorTest {
 
         assertEquals(CompareHereUiStatus.NOT_ENOUGH_DATA, state.status)
         assertEquals("Member prices", state.priceModeText)
-        assertEquals(
-            "Add at least two products with an exact member price and package quantity. " +
-                "Current prices are not used as substitutes.",
-            state.guidance
-        )
+        assertEquals("Add an exact member price and package size for each choice.", state.guidance)
         assertTrue(state.rows.isEmpty())
         assertEquals(
             listOf("Member price unavailable", "Member price unavailable"),
@@ -329,8 +320,8 @@ class CompareHereUiProjectorTest {
             ).state
 
         assertEquals(CompareHereUiStatus.INCOMPATIBLE_DIMENSIONS, state.status)
-        assertEquals("Cannot rank these together", state.statusTitle)
-        assertEquals("These products use incompatible quantity units.", state.guidance)
+        assertEquals("Can't compare yet", state.statusTitle)
+        assertEquals("Different sizes or units.", state.guidance)
         assertEquals(2, state.rows.size)
         assertTrue(state.rows.all { it.valueRank == null && !it.bestValue })
     }

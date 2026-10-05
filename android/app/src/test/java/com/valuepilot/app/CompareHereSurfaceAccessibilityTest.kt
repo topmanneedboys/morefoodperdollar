@@ -20,10 +20,7 @@ class CompareHereSurfaceAccessibilityTest {
                 bestValue = true
             )
 
-        assertEquals(
-            "Best value. Large Milk. 7.00 CAD. 1000 g. 7.00 CAD/kg.",
-            compareHereExactCardContentDescription(row)
-        )
+        assertEquals("Better value. Large Milk. 7.00 CAD. 1000 g. 7.00 CAD/kg.", compareHereExactCardContentDescription(row))
     }
 
     @Test
@@ -31,11 +28,11 @@ class CompareHereSurfaceAccessibilityTest {
         val row =
             CompareHereBlockedUiRow(
                 title = "Unknown Milk",
-                reasonText = "Package quantity needed"
+                reasonText = "Package size unknown"
             )
 
         assertEquals(
-            "Needs information. Unknown Milk. Package quantity needed.",
+            "Can't compare yet. Unknown Milk. Package size unknown.",
             compareHereBlockedCardContentDescription(row)
         )
     }
@@ -45,7 +42,7 @@ class CompareHereSurfaceAccessibilityTest {
         val source = source().readSourceText()
 
         assertTrue(source.contains("accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE"))
-        assertTrue(source.contains("contentDescription = compareHereExactCardContentDescription(row)"))
+        assertTrue(source.contains("contentDescription = compareHereExactCardContentDescription(row, sameValue)"))
         assertTrue(source.contains("contentDescription = compareHereBlockedCardContentDescription(row)"))
         assertTrue(
             source.contains(

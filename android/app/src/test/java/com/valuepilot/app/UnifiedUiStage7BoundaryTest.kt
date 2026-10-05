@@ -16,9 +16,9 @@ class UnifiedUiStage7BoundaryTest {
             "ValuePilotProductCard",
             "ValuePilotProgrammaticButton.outlined",
             "ValuePilotMotion.reveal",
-            "Show comparison details",
+            "Why?",
             "accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE",
-            "contentDescription = compareHereExactCardContentDescription(row)",
+            "contentDescription = compareHereExactCardContentDescription(row, sameValue)",
             "contentDescription = compareHereBlockedCardContentDescription(row)"
         ).forEach { required ->
             assertTrue("Compare presentation should contain $required", source.contains(required))
@@ -37,14 +37,14 @@ class UnifiedUiStage7BoundaryTest {
     }
 
     @Test
-    fun `good price makes evidence basis visible and keeps detail disclosure`() {
+    fun `good price keeps personal context visible and detail disclosure`() {
         val source = source("GoodPriceCheckSurfaceView.kt").readText()
 
         listOf(
             "ValuePilotProductCard",
-            "Evidence: this exact price only",
-            "Evidence: your private history",
-            "What this means",
+            "No matching history yet",
+            "Your recorded prices",
+            "Why?",
             "ValuePilotMotion.reveal",
             "goodPriceAnswerCardContentDescription(state)",
             "View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS"

@@ -284,66 +284,67 @@ internal object GoodPriceCheckRouteCoordinator {
         when (insight.assessment) {
             CompareHerePriceMemoryAssessment.NO_MATCHING_HISTORY ->
                 Triple(
-                    "Not enough evidence yet to know whether this is unusually good.",
-                    "No matching personal history is available for this exact package yet.",
+                    "Not enough history",
+                    "Record prices or purchases to compare later.",
                     GoodPriceCheckAnswerTone.NEUTRAL
                 )
 
             CompareHerePriceMemoryAssessment.LOWER_THAN_LAST ->
                 Triple(
-                    "Below your last remembered price",
+                    "Lower than your last recorded price",
                     lowerRateGuidance(
                         currentRate = currentRate,
                         referenceRate = requireNotNull(insight.lastRate),
-                        referenceDescription = "your last matching observation"
+                        referenceDescription = "your last recorded price",
+                        suffix = "This is personal context, not a market guarantee."
                     ),
                     GoodPriceCheckAnswerTone.POSITIVE
                 )
 
             CompareHerePriceMemoryAssessment.SAME_AS_LAST ->
                 Triple(
-                    "Matches your last remembered price",
-                    "This matches your last matching observation. ValuePilot cannot call it unusually good from this evidence alone.",
+                    "Around your usual price",
+                    "This matches your last matching price.",
                     GoodPriceCheckAnswerTone.NEUTRAL
                 )
 
             CompareHerePriceMemoryAssessment.HIGHER_THAN_LAST ->
                 Triple(
-                    "Above your last remembered price",
+                    "Higher than your last recorded price",
                     higherRateGuidance(
                         currentRate = currentRate,
                         referenceRate = requireNotNull(insight.lastRate),
-                        referenceDescription = "your last matching observation"
+                        referenceDescription = "your last recorded price"
                     ),
                     GoodPriceCheckAnswerTone.CAUTION
                 )
 
             CompareHerePriceMemoryAssessment.BELOW_PERSONAL_RANGE ->
                 Triple(
-                    "Below your remembered range",
+                    "Below your recent range",
                     lowerRateGuidance(
                         currentRate = currentRate,
                         referenceRate = requireNotNull(insight.minimumRate),
-                        referenceDescription = "your previous personal low",
-                        suffix = "It looks better for you, but it is not a live-market guarantee."
+                        referenceDescription = "your recent low",
+                        suffix = "This is personal context, not a market guarantee."
                     ),
                     GoodPriceCheckAnswerTone.POSITIVE
                 )
 
             CompareHerePriceMemoryAssessment.WITHIN_PERSONAL_RANGE ->
                 Triple(
-                    "Within your remembered range",
-                    "This falls inside your matching personal history. ValuePilot does not have enough evidence to call it unusually good.",
+                    "Around your usual price",
+                    "This is within your recent matching range.",
                     GoodPriceCheckAnswerTone.NEUTRAL
                 )
 
             CompareHerePriceMemoryAssessment.ABOVE_PERSONAL_RANGE ->
                 Triple(
-                    "Above your remembered range",
+                    "Higher than your recent range",
                     higherRateGuidance(
                         currentRate = currentRate,
                         referenceRate = requireNotNull(insight.maximumRate),
-                        referenceDescription = "your previous personal high",
+                        referenceDescription = "your recent high",
                         suffix = "Check the package and promotion details before deciding."
                     ),
                     GoodPriceCheckAnswerTone.CAUTION
@@ -352,9 +353,9 @@ internal object GoodPriceCheckRouteCoordinator {
 
     private fun disclosureFor(assessment: CompareHerePriceMemoryAssessment): String =
         if (assessment == CompareHerePriceMemoryAssessment.NO_MATCHING_HISTORY) {
-            "Not live store pricing. No matching personal history yet; this answer uses this exact price only."
+            "No matching history yet. This uses the exact price you entered; it is not live store pricing."
         } else {
-            "Not live store pricing. Personal history matches exact package quantity, currency, price basis, and promotion terms."
+            "This uses your exact package, currency and personal price history. It is not live store pricing."
         }
 
     private fun lowerRateGuidance(

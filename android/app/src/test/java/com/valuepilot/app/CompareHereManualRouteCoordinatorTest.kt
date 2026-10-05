@@ -136,7 +136,7 @@ class CompareHereManualRouteCoordinatorTest {
         assertEquals(listOf("Known Milk"), comparison.rows.map { it.title })
         assertNull(comparison.rows.single().valueRank)
         assertEquals(listOf("Range Milk"), comparison.blockedRows.map { it.title })
-        assertEquals("Package quantity needed", comparison.blockedRows.single().reasonText)
+        assertEquals("Package size unknown", comparison.blockedRows.single().reasonText)
         assertNull(state.shareCard)
     }
 

@@ -2,7 +2,6 @@ package com.valuepilot.app
 
 import android.content.Context
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
@@ -59,20 +58,22 @@ internal class GoodPriceCheckSurfaceView @JvmOverloads constructor(
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         setPadding(dp(16), dp(15), dp(16), dp(15))
     }
-    private val answerBasis = evidenceChip("This exact price only")
-    private val answerTitle = textLine("", 19f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true)
-    private val answerProduct = textLine("", 17f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true, topPadding = 12)
-    private val answerFacts = textLine("", 14f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 7)
-    private val answerUnitRate = textLine("", 17f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true, topPadding = 7)
+    private val answerContext = textLine("", 12f, ValuePilotDesignTokens.Colors.TEXT_MUTED)
+    private val answerPrice = textLine("", 30f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true, topPadding = 8)
+    private val answerProduct = textLine("", 17f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true, topPadding = 6)
+    private val answerFacts = textLine("", 14f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 6)
+    private val answerTitle = textLine("", 19f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true, topPadding = 10)
+    private val answerUnitRate = textLine("", 16f, ValuePilotDesignTokens.Colors.TEXT_PRIMARY, bold = true, topPadding = 7)
     private val answerGuidance = textLine("", ValuePilotDesignTokens.Typography.BODY_SP, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 10)
     private val historyCard = ValuePilotProductCard(context).apply {
         layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.XS_DP)
         visibility = GONE
     }
-    private val historyText = textLine("", 13f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY)
+    private val historyLabel = textLine("Your recorded prices", 12f, ValuePilotDesignTokens.Colors.TEXT_MUTED, bold = true)
+    private val historyText = textLine("", 13f, ValuePilotDesignTokens.Colors.TEXT_SECONDARY, topPadding = 5)
     private val disclosureButton = ValuePilotProgrammaticButton.outlined(context).apply {
-        text = "What this means"
-        contentDescription = "Show what evidence this price answer uses"
+        text = "Why?"
+        contentDescription = "Show why this price answer is personal context"
         layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.SM_DP)
     }
     private val disclosureText = textLine(
@@ -89,10 +90,11 @@ internal class GoodPriceCheckSurfaceView @JvmOverloads constructor(
         messageContainer.addView(messageCard)
         addView(messageContainer)
         addView(resultContainer)
-        answerBody.addView(answerBasis)
-        answerBody.addView(answerTitle)
+        answerBody.addView(answerContext)
+        answerBody.addView(answerPrice)
         answerBody.addView(answerProduct)
         answerBody.addView(answerFacts)
+        answerBody.addView(answerTitle)
         answerBody.addView(answerUnitRate)
         answerBody.addView(answerGuidance)
         answerCard.addView(answerBody)
@@ -102,6 +104,7 @@ internal class GoodPriceCheckSurfaceView @JvmOverloads constructor(
         historyCard.addView(LinearLayout(context).apply {
             orientation = VERTICAL
             setPadding(dp(16), dp(13), dp(16), dp(13))
+            addView(historyLabel)
             addView(historyText)
         })
         resultContainer.addView(historyCard)
@@ -134,11 +137,12 @@ internal class GoodPriceCheckSurfaceView @JvmOverloads constructor(
         answerCard.setCardBackgroundColor(ValuePilotPalette.color(answerBackground(state.answerTone)))
         answerCard.strokeColor = ValuePilotPalette.color(answerStroke(state.answerTone))
         answerCard.contentDescription = goodPriceAnswerCardContentDescription(state)
-        answerBasis.text = if (state.historyText == null) "Evidence: this exact price only" else "Evidence: your private history"
-        answerBasis.contentDescription = answerBasis.text
+        answerContext.text = if (state.historyText == null) "No matching history yet" else "Your recorded prices"
+        answerContext.contentDescription = answerContext.text
+        answerPrice.text = state.priceText
         answerTitle.text = state.answerTitle
         answerProduct.text = state.productName
-        answerFacts.text = "${state.priceText}  •  ${state.quantityText}"
+        answerFacts.text = state.quantityText
         answerUnitRate.text = state.unitRateText
         answerGuidance.text = state.answerGuidance
         val history = state.historyText
@@ -146,7 +150,7 @@ internal class GoodPriceCheckSurfaceView @JvmOverloads constructor(
             historyCard.visibility = GONE
         } else {
             historyText.text = history
-            historyCard.contentDescription = history
+            historyCard.contentDescription = "Your recorded prices. $history"
             historyCard.visibility = VISIBLE
         }
         disclosureText.text = state.disclosure
@@ -157,24 +161,10 @@ internal class GoodPriceCheckSurfaceView @JvmOverloads constructor(
     private fun setDisclosureExpanded(expanded: Boolean) {
         disclosureExpanded = expanded
         disclosureText.visibility = if (expanded) VISIBLE else GONE
-        disclosureButton.text = if (expanded) "Hide what this means" else "What this means"
+        disclosureButton.text = if (expanded) "Hide details" else "Why?"
         disclosureButton.contentDescription =
-            if (expanded) "Hide what evidence this price answer uses" else "Show what evidence this price answer uses"
+            if (expanded) "Hide price details" else "Show why this price answer is personal context"
         if (expanded) ValuePilotMotion.reveal(disclosureText)
-    }
-
-    private fun evidenceChip(value: String): TextView = TextView(context).apply {
-        text = value
-        setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-        setTextColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.PRIMARY_DARK))
-        setPadding(dp(10), dp(7), dp(10), dp(7))
-        background = GradientDrawable().apply {
-            cornerRadius = dp(14).toFloat()
-            setColor(ValuePilotPalette.color(ValuePilotDesignTokens.Colors.SURFACE_SUBTLE))
-        }
-        layoutParams = LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
-            bottomMargin = dp(8)
-        }
     }
 
     private fun answerBackground(tone: GoodPriceCheckAnswerTone): String =

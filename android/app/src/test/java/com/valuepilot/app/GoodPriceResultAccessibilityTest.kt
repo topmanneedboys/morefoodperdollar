@@ -15,18 +15,18 @@ class GoodPriceResultAccessibilityTest {
                 priceText = "6.49 CAD",
                 quantityText = "4 L",
                 unitRateText = "1.6225 CAD/L",
-                answerTitle = "Below your last remembered price",
+                answerTitle = "Lower than your last recorded price",
                 answerGuidance =
-                    "This is about 8.0% lower per unit than your last matching observation.",
+                    "This is about 8.0% lower per unit than your last matching price.",
                 answerTone = GoodPriceCheckAnswerTone.POSITIVE,
                 historyText = "Last matching observation: 7.05 CAD for 4 L.",
                 disclosure =
-                    "Not live store pricing. Personal history matches exact package quantity, currency, price basis, and promotion terms."
+                    "This uses your exact package, currency and personal price history. It is not live store pricing."
             )
 
         assertEquals(
-            "Price you entered. Below your last remembered price. Whole milk. 6.49 CAD. " +
-                "4 L. 1.6225 CAD/L. This is about 8.0% lower per unit than your last matching observation.",
+            "Price you entered. Lower than your last recorded price. Whole milk. 6.49 CAD. " +
+                "4 L. 1.6225 CAD/L. This is about 8.0% lower per unit than your last matching price.",
             goodPriceAnswerCardContentDescription(state)
         )
     }

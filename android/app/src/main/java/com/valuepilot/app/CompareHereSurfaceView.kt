@@ -68,8 +68,8 @@ class CompareHereSurfaceView @JvmOverloads constructor(
         topPadding = ValuePilotDesignTokens.Spacing.SM_DP
     ).apply { visibility = GONE }
     private val detailsButton = ValuePilotProgrammaticButton.outlined(context).apply {
-        text = "Show comparison details"
-        contentDescription = "Show products that need more information"
+        text = "Why?"
+        contentDescription = "Show why some choices cannot be compared"
         layoutParams = fullWidth(ValuePilotDesignTokens.Spacing.SM_DP)
         visibility = GONE
     }
@@ -98,7 +98,8 @@ class CompareHereSurfaceView @JvmOverloads constructor(
         statusCard.setCardBackgroundColor(ValuePilotPalette.color(statusBackground(state.status)))
         statusCard.strokeColor = ValuePilotPalette.color(statusStroke(state.status))
 
-        renderExactRows(state.rows)
+        val sameValue = state.status == CompareHereUiStatus.READY && state.rows.count { it.bestValue } > 1
+        renderExactRows(state.rows, sameValue)
         renderBlockedRows(state.blockedRows)
 
         val noticeText = state.notice
@@ -113,12 +114,12 @@ class CompareHereSurfaceView @JvmOverloads constructor(
         if (!hasAdditionalDetails) {
             setDetailsExpanded(false)
         } else {
-            detailsButton.text = if (detailsExpanded) "Hide comparison details" else "Show comparison details"
+            detailsButton.text = if (detailsExpanded) "Hide details" else "Why?"
             detailsButton.contentDescription =
                 if (detailsExpanded) {
-                    "Hide products that need more information"
+                    "Hide comparison details"
                 } else {
-                    "Show products that need more information"
+                    "Show why some choices cannot be compared"
                 }
             blockedContainer.visibility = if (detailsExpanded) VISIBLE else GONE
             notice.visibility = if (detailsExpanded && noticeText != null) VISIBLE else GONE
@@ -126,10 +127,10 @@ class CompareHereSurfaceView @JvmOverloads constructor(
         renderedOnce = true
     }
 
-    private fun renderExactRows(rows: List<CompareHereUiRow>) {
+    private fun renderExactRows(rows: List<CompareHereUiRow>, sameValue: Boolean) {
         rowsContainer.removeAllViews()
         rows.forEach { row ->
-            val view = exactCard(row)
+            val view = exactCard(row, sameValue)
             rowsContainer.addView(view)
             ValuePilotMotion.reveal(view, animate = renderedOnce)
         }
@@ -140,7 +141,7 @@ class CompareHereSurfaceView @JvmOverloads constructor(
         rows.forEach { row -> blockedContainer.addView(blockedCard(row)) }
     }
 
-    private fun exactCard(row: CompareHereUiRow): View =
+    private fun exactCard(row: CompareHereUiRow, sameValue: Boolean): View =
         card(
             background = if (row.bestValue) {
                 ValuePilotDesignTokens.Colors.SUCCESS_SURFACE
@@ -155,17 +156,17 @@ class CompareHereSurfaceView @JvmOverloads constructor(
             topMargin = ValuePilotDesignTokens.Spacing.SM_DP
         ).apply {
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
-            contentDescription = compareHereExactCardContentDescription(row)
+            contentDescription = compareHereExactCardContentDescription(row, sameValue)
             addView(
                 column().apply {
                     // The card exposes one complete projected summary. Hide
                     // decorative child labels to avoid repeated announcements.
                     importantForAccessibility =
                         View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
-                    row.valueRank?.let { rank ->
+                    rowBadge(row, sameValue)?.let { badge ->
                         addView(
                             textLine(
-                                value = if (row.bestValue) "Best value" else "Value rank #$rank",
+                                value = badge,
                                 sizeSp = 12f,
                                 color = if (row.bestValue) {
                                     ValuePilotDesignTokens.Colors.SUCCESS
@@ -222,7 +223,7 @@ class CompareHereSurfaceView @JvmOverloads constructor(
                         View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
                     addView(
                         textLine(
-                            "Needs information",
+                            "Can't compare yet",
                             11f,
                             ValuePilotDesignTokens.Colors.WARNING,
                             bold = true
@@ -254,9 +255,9 @@ class CompareHereSurfaceView @JvmOverloads constructor(
         blockedContainer.visibility = if (expanded) VISIBLE else GONE
         notice.visibility = if (expanded && notice.text.isNotBlank()) VISIBLE else GONE
         if (expanded) ValuePilotMotion.reveal(blockedContainer)
-        detailsButton.text = if (expanded) "Hide comparison details" else "Show comparison details"
+        detailsButton.text = if (expanded) "Hide details" else "Why?"
         detailsButton.contentDescription =
-            if (expanded) "Hide products that need more information" else "Show products that need more information"
+            if (expanded) "Hide comparison details" else "Show why some choices cannot be compared"
     }
 
     private fun statusColor(status: CompareHereUiStatus): Int =
@@ -335,7 +336,25 @@ private fun accessibilitySummary(parts: List<String>): String =
 internal fun compareHereExactCardContentDescription(row: CompareHereUiRow): String =
     accessibilitySummary(
         listOfNotNull(
-            row.valueRank?.let { rank -> if (row.bestValue) "Best value" else "Value rank #$rank" },
+            row.valueRank?.let { if (row.bestValue) "Better value" else null },
+            row.title,
+            row.priceText,
+            row.quantityText,
+            row.unitRateText
+        )
+    )
+
+internal fun compareHereExactCardContentDescription(
+    row: CompareHereUiRow,
+    sameValue: Boolean
+): String =
+    accessibilitySummary(
+        listOfNotNull(
+            when {
+                !row.bestValue -> null
+                sameValue -> "Same value"
+                else -> "Better value"
+            },
             row.title,
             row.priceText,
             row.quantityText,
@@ -344,4 +363,11 @@ internal fun compareHereExactCardContentDescription(row: CompareHereUiRow): Stri
     )
 
 internal fun compareHereBlockedCardContentDescription(row: CompareHereBlockedUiRow): String =
-    accessibilitySummary(listOf("Needs information", row.title, row.reasonText))
+    accessibilitySummary(listOf("Can't compare yet", row.title, row.reasonText))
+
+private fun rowBadge(row: CompareHereUiRow, sameValue: Boolean): String? =
+    when {
+        !row.bestValue -> null
+        sameValue -> "Same value"
+        else -> "Better value"
+    }

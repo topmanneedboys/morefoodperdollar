@@ -31,17 +31,14 @@ class GoodPriceCheckRouteCoordinatorTest {
         assertEquals("4000 mL", result.quantityText)
         assertEquals("1.6225 CAD/L", result.unitRateText)
         assertEquals(
-            "Not enough evidence yet to know whether this is unusually good.",
+            "Not enough history",
             result.answerTitle
         )
-        assertEquals(
-            "No matching personal history is available for this exact package yet.",
-            result.answerGuidance
-        )
+        assertEquals("Record prices or purchases to compare later.", result.answerGuidance)
         assertEquals(GoodPriceCheckAnswerTone.NEUTRAL, result.answerTone)
         assertNull(result.historyText)
         assertEquals(
-            "Not live store pricing. No matching personal history yet; this answer uses this exact price only.",
+            "No matching history yet. This uses the exact price you entered; it is not live store pricing.",
             result.disclosure
         )
         assertFalse(result.disclosure.contains("history matches"))
@@ -76,10 +73,10 @@ class GoodPriceCheckRouteCoordinatorTest {
             )
 
         val result = requireNotNull(second.state.result)
-        assertEquals("Below your last remembered price", result.answerTitle)
+        assertEquals("Lower than your last recorded price", result.answerTitle)
         assertEquals(GoodPriceCheckAnswerTone.POSITIVE, result.answerTone)
         assertTrue(result.answerGuidance.contains("about 13.4% lower per unit"))
-        assertTrue(result.disclosure.contains("Personal history matches exact package quantity"))
+        assertTrue(result.disclosure.contains("exact package, currency and personal price history"))
         assertTrue(result.historyText.orEmpty().contains("Personal history: 2 observations"))
         assertTrue(result.historyText.orEmpty().contains("lowest 1.6225 CAD/L"))
         assertEquals(
@@ -107,7 +104,7 @@ class GoodPriceCheckRouteCoordinatorTest {
 
         val result = requireNotNull(replay.state.result)
         assertEquals(
-            "Not enough evidence yet to know whether this is unusually good.",
+            "Not enough history",
             result.answerTitle
         )
         assertNull(result.historyText)
@@ -131,7 +128,7 @@ class GoodPriceCheckRouteCoordinatorTest {
             )
 
         val result = requireNotNull(second.state.result)
-        assertEquals("Above your last remembered price", result.answerTitle)
+        assertEquals("Higher than your last recorded price", result.answerTitle)
         assertEquals(GoodPriceCheckAnswerTone.CAUTION, result.answerTone)
         assertTrue(result.answerGuidance.contains("about 15.4% higher per unit"))
     }
@@ -156,7 +153,7 @@ class GoodPriceCheckRouteCoordinatorTest {
 
         assertEquals(GoodPriceCheckRouteStatus.NEEDS_EXACT_INFORMATION, evaluation.state.status)
         assertEquals("Need an exact price and package", evaluation.state.title)
-        assertTrue(evaluation.state.guidance.contains("Package quantity needed"))
+        assertTrue(evaluation.state.guidance.contains("Package size unknown"))
         assertNull(evaluation.privateMemoryCapture)
     }
 

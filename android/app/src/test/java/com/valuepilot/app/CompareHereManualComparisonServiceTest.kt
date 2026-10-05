@@ -63,7 +63,7 @@ class CompareHereManualComparisonServiceTest {
         assertNull(state.rows.single().valueRank)
         assertFalse(state.rows.single().bestValue)
         assertEquals(listOf("Range Milk"), state.blockedRows.map { it.title })
-        assertEquals("Package quantity needed", state.blockedRows.single().reasonText)
+        assertEquals("Package size unknown", state.blockedRows.single().reasonText)
     }
 
     @Test

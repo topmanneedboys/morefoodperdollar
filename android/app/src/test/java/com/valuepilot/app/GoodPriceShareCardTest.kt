@@ -54,7 +54,7 @@ class GoodPriceShareCardTest {
         val card = requireNotNull(second.state.shareCard)
         assertFalse(card.text.contains("Secret Coffee"))
         assertFalse(card.text.contains("Personal history"))
-        assertFalse(card.preview.contains("Below your last remembered price"))
+        assertFalse(card.preview.contains("Lower than your last recorded price"))
     }
 
     @Test
@@ -67,7 +67,7 @@ class GoodPriceShareCardTest {
                 priceText = "6.49\u0000 CAD",
                 quantityText = "4000 mL",
                 unitRateText = "1.6225 CAD/L",
-                answerTitle = "Not enough evidence yet to know whether this is unusually good.",
+                answerTitle = "Not enough history",
                 answerGuidance = "Personal context is limited.",
                 answerTone = GoodPriceCheckAnswerTone.NEUTRAL,
                 historyText = null,

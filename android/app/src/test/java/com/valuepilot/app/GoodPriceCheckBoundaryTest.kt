@@ -43,7 +43,7 @@ class GoodPriceCheckBoundaryTest {
             "goodPriceAnswerCardContentDescription(state)",
             "importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES",
             "View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS",
-            "contentDescription = history"
+            "historyCard.contentDescription = \"Your recorded prices."
         ).forEach { required -> assertTrue(source.contains(required)) }
         listOf(
             "GoodPriceCheckRouteCoordinator",

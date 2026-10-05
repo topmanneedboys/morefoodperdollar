@@ -14,7 +14,6 @@ import com.valuepilot.core.NormalizedQuantity
 import com.valuepilot.core.RateUnit
 import com.valuepilot.core.UnitRate
 import java.math.BigDecimal
-import java.math.RoundingMode
 
 private const val MAX_COMPARE_HERE_DISPLAY_METADATA = 32
 private const val MAX_COMPARE_HERE_RAW_LABEL_LENGTH = 500
@@ -205,7 +204,7 @@ object CompareHereUiProjector {
         return CompareHereUiProjection(
             state =
                 CompareHereUiState(
-                    headline = "Compare here",
+                    headline = "Compare choices",
                     priceModeText = priceModeText(result.priceSelection),
                     status = uiStatus,
                     statusTitle = statusTitle(uiStatus, result),
@@ -228,11 +227,11 @@ object CompareHereUiProjector {
     ): String =
         when (status) {
             CompareHereUiStatus.READY ->
-                if (result.bestValueCandidateIds.size > 1) "Best value tie" else "Best value"
+                if (result.bestValueCandidateIds.size > 1) "Same value" else "Better value"
 
-            CompareHereUiStatus.NOT_ENOUGH_DATA -> "Need more exact information"
-            CompareHereUiStatus.INCOMPATIBLE_DIMENSIONS -> "Cannot rank these together"
-            CompareHereUiStatus.DISPLAY_METADATA_INCOMPLETE -> "Product names needed"
+            CompareHereUiStatus.NOT_ENOUGH_DATA,
+            CompareHereUiStatus.INCOMPATIBLE_DIMENSIONS,
+            CompareHereUiStatus.DISPLAY_METADATA_INCOMPLETE -> "Can't compare yet"
         }
 
     private fun guidance(
@@ -247,67 +246,41 @@ object CompareHereUiProjector {
                 selectedPriceGuidance(result.priceSelection)
 
             CompareHereUiStatus.DISPLAY_METADATA_INCOMPLETE ->
-                "Some product names cannot be shown safely, so no winner is displayed."
+                "Some product names are missing."
 
             CompareHereUiStatus.INCOMPATIBLE_DIMENSIONS ->
                 incompatibleGuidance(result.comparisonIssues)
         }
 
     /**
-     * Adds an immediate, deterministic payoff to a completed comparison without creating a new
-     * ranking rule. The rates and order already came from the exact core evaluator; this only
-     * formats the relative gap for the shopper. Ties deliberately do not claim an advantage.
+     * Gives a short shopper-facing explanation after the exact core evaluator has decided the
+     * result. This only describes the existing winner or tie; it never creates a new ranking rule.
      */
     private fun readyGuidance(result: CompareHereComparisonResult): String {
         if (result.bestValueCandidateIds.size != 1) {
-            return "These options tie at the lowest exact unit price. Lower exact unit price wins within this comparison."
+            return "These choices have the same unit value."
         }
-
-        val best = result.rankedCandidates.firstOrNull()?.candidate?.rate
-        val nextBest =
-            result.rankedCandidates
-                .firstOrNull { it.valueRank == 2 }
-                ?.candidate
-                ?.rate
-        if (best == null || nextBest == null || best.currencyMicrosPerUnit >= nextBest.currencyMicrosPerUnit) {
-            return "Lower exact unit price wins within this comparison."
-        }
-
-        val percentage =
-            BigDecimal.valueOf(nextBest.currencyMicrosPerUnit - best.currencyMicrosPerUnit)
-                .multiply(BigDecimal.valueOf(100L))
-                .divide(
-                    BigDecimal.valueOf(nextBest.currencyMicrosPerUnit),
-                    1,
-                    RoundingMode.HALF_UP
-                )
-        return if (percentage.signum() > 0) {
-            "Lower exact unit price wins within this comparison. Best value is about " +
-                "${percentage.toPlainString()}% lower per unit than the next-best option."
-        } else {
-            "Lower exact unit price wins within this comparison."
-        }
+        return "The lower unit price is the better value."
     }
 
     private fun selectedPriceGuidance(selection: CompareHerePriceSelection): String =
         when (selection) {
             CompareHerePriceSelection.CURRENT ->
-                "Add at least two products with an exact current price and package quantity."
+                "Add an exact price and package size for each choice."
 
             CompareHerePriceSelection.MEMBER ->
-                "Add at least two products with an exact member price and package quantity. " +
-                    "Current prices are not used as substitutes."
+                "Add an exact member price and package size for each choice."
         }
 
     private fun incompatibleGuidance(issues: Set<CompareHereComparisonIssue>): String =
         when (issues) {
             setOf(CompareHereComparisonIssue.MIXED_CURRENCIES) ->
-                "These prices use different currencies."
+                "Different currencies."
 
             setOf(CompareHereComparisonIssue.MIXED_RATE_UNITS) ->
-                "These products use incompatible quantity units."
+                "Different sizes or units."
 
-            else -> "These products use different currencies and quantity units."
+            else -> "Different currencies and units."
         }
 
     private fun blockerText(
@@ -319,26 +292,26 @@ object CompareHereUiProjector {
             .joinToString(separator = " · ") { blocker ->
                 when (blocker) {
                     CompareHereCandidateBlocker.COMPARISON_INTENT_MISMATCH ->
-                        "Not part of this comparison"
+                        "Not part of these choices"
 
                     CompareHereCandidateBlocker.QUANTITY_UNKNOWN ->
-                        "Package quantity needed"
+                        "Package size unknown"
 
                     CompareHereCandidateBlocker.SELECTED_PRICE_UNAVAILABLE ->
                         if (priceSelection == CompareHerePriceSelection.MEMBER) {
                             "Member price unavailable"
                         } else {
-                            "Selected price unavailable"
+                            "Price unavailable"
                         }
 
                     CompareHereCandidateBlocker.NON_POSITIVE_SELECTED_PRICE ->
-                        "Price must be greater than zero"
+                        "Price unavailable"
 
                     CompareHereCandidateBlocker.UNIT_RATE_NOT_POSITIVE ->
-                        "Unit rate cannot be represented safely"
+                        "Unit value unavailable"
 
                     CompareHereCandidateBlocker.ARITHMETIC_OVERFLOW ->
-                        "Values are too large to compare safely"
+                        "Can't compare safely"
                 }
             }
 
@@ -351,8 +324,7 @@ object CompareHereUiProjector {
     private fun omittedNotice(count: Int): String? =
         when (count) {
             0 -> null
-            1 -> "1 product name could not be shown safely."
-            else -> "$count product names could not be shown safely."
+            else -> "Some product names could not be shown."
         }
 }
 
