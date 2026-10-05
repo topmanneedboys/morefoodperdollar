@@ -60,6 +60,9 @@ DAILY_STATE_POLICY_VERSION = "valuepilot-argentina-daily-state-policy-v2"
 LEGACY_DAILY_STATE_SCHEMA_VERSION = "valuepilot-argentina-daily-state-v1"
 LEGACY_DAILY_STATE_POLICY_VERSION = "valuepilot-argentina-daily-state-policy-v1"
 DAILY_STATE_EVENT_MAX = 128
+PENDING_WORKFLOW_KEY = "control/pending-workflow.json"
+PENDING_WORKFLOW_SCHEMA_VERSION = "valuepilot-argentina-pending-workflow-v1"
+PENDING_WORKFLOW_STATES = frozenset({"SHADOW_STARTED", "SHADOW_PENDING", "SHADOW_SUCCEEDED", "SHADOW_FAILED"})
 LATE_CHECK_POLICY = "DISCOVERY_PLUS_RECOVERY"
 ACTIVE_RELEASE_MAX_AGE_DAYS = DEFAULT_MAX_RELEASE_AGE_DAYS
 FRESHNESS_WARNING_WINDOW_DAYS = 2
@@ -115,6 +118,84 @@ def daily_state_event_prefix(argentina_day: str) -> str:
     except (TypeError, ValueError) as exc:
         raise AcquisitionScheduleError("Argentina date is invalid", code="INVALID_CONTROL_STATE") from exc
     return f"{DAILY_STATE_EVENT_PREFIX}/{day}/"
+
+
+def _validate_pending_workflow(value: Mapping[str, Any]) -> None:
+    if value.get("schemaVersion") != PENDING_WORKFLOW_SCHEMA_VERSION:
+        raise AcquisitionScheduleError("pending workflow schema is invalid", code="INVALID_CONTROL_STATE")
+    if value.get("state") not in PENDING_WORKFLOW_STATES:
+        raise AcquisitionScheduleError("pending workflow state is invalid", code="INVALID_CONTROL_STATE")
+    for field in ("argentinaDate", "candidateReleaseId", "sourceReleaseDate", "sourceSha256", "reservationId", "workflowExecution"):
+        if not isinstance(value.get(field), str) or not value[field].strip():
+            raise AcquisitionScheduleError(f"pending workflow {field} is invalid", code="INVALID_CONTROL_STATE")
+    try:
+        _dt.date.fromisoformat(value["argentinaDate"])
+        _base._release_date(value["sourceReleaseDate"])
+        _base._sha(value["sourceSha256"], field="pending workflow source SHA-256")
+    except (TypeError, ValueError) as exc:
+        raise AcquisitionScheduleError("pending workflow identity is invalid", code="INVALID_CONTROL_STATE") from exc
+    for field in ("createdAt", "updatedAt"):
+        if not isinstance(value.get(field), str):
+            raise AcquisitionScheduleError(f"pending workflow {field} is invalid", code="INVALID_CONTROL_STATE")
+        _base._timestamp(value[field], field=f"pendingWorkflow.{field}")
+    if len(_base.canonical_bytes(dict(value))) > _base.MAX_CONTROL_BYTES:
+        raise AcquisitionScheduleError("pending workflow exceeds bound", code="INVALID_CONTROL_STATE")
+
+
+def read_pending_workflow(*, store: ObjectStore) -> dict[str, Any] | None:
+    value = _base._read_store_json(store, PENDING_WORKFLOW_KEY)
+    if value is None:
+        return None
+    _validate_pending_workflow(value)
+    return dict(value)
+
+
+def write_pending_workflow(
+    *,
+    store: ObjectStore,
+    argentina_day: str,
+    candidate_release_id: str,
+    source_release_date: str,
+    source_sha256: str,
+    reservation_id: str,
+    workflow_execution: str,
+    state: str,
+    created_at: str,
+    updated_at: str,
+) -> dict[str, Any]:
+    value = {
+        "schemaVersion": PENDING_WORKFLOW_SCHEMA_VERSION,
+        "policyVersion": DAILY_STATE_POLICY_VERSION,
+        "argentinaDate": argentina_day,
+        "candidateReleaseId": candidate_release_id,
+        "sourceReleaseDate": source_release_date,
+        "sourceSha256": source_sha256,
+        "reservationId": reservation_id,
+        "workflowExecution": workflow_execution,
+        "state": state,
+        "createdAt": created_at,
+        "updatedAt": updated_at,
+    }
+    _validate_pending_workflow(value)
+    current = read_pending_workflow(store=store)
+    if current is not None:
+        identity = ("argentinaDate", "candidateReleaseId", "sourceReleaseDate", "sourceSha256", "reservationId", "workflowExecution")
+        if any(current.get(field) != value.get(field) for field in identity):
+            raise AcquisitionScheduleError("pending workflow identity conflicts", code="CONTROL_CONFLICT")
+        value["createdAt"] = current["createdAt"]
+        # A terminal state is never downgraded by a late scheduled run.
+        if current.get("state") in {"SHADOW_SUCCEEDED", "SHADOW_FAILED"} and state not in {"SHADOW_SUCCEEDED", "SHADOW_FAILED"}:
+            return current
+    raw = _base.canonical_bytes(value) + b"\n"
+    try:
+        metadata = store.head(PENDING_WORKFLOW_KEY) if current is not None else None
+        store.compare_and_swap(PENDING_WORKFLOW_KEY, raw, expected_etag=metadata.etag if metadata else None)
+    except ObjectStoreError as exc:
+        raise AcquisitionScheduleError("pending workflow write failed", code="CONTROL_STORE_UNAVAILABLE") from exc
+    stored = read_pending_workflow(store=store)
+    if stored is None:
+        raise AcquisitionScheduleError("pending workflow disappeared after write", code="CONTROL_STORE_UNAVAILABLE")
+    return stored
 
 
 def _validate_daily_state(value: Mapping[str, Any], argentina_day: str) -> None:
@@ -805,6 +886,25 @@ def record_shadow_state(
     )
     if result is None:
         raise AcquisitionScheduleError("SHADOW state could not be recorded", code="INVALID_CONTROL_STATE")
+    source = resolution.get("source")
+    if workflow_execution and reservation_id and isinstance(source, Mapping):
+        candidate = result.get("candidateReleaseId") or source.get("candidateReleaseId")
+        source_date = source.get("releaseDate")
+        source_sha = source.get("sha256")
+        if all(isinstance(item, str) and item for item in (candidate, source_date, source_sha)):
+            created_at = str(result.get("updatedAt") or recorded_at or result.get("observedAt"))
+            write_pending_workflow(
+                store=store,
+                argentina_day=str(result["argentinaDate"]),
+                candidate_release_id=str(candidate),
+                source_release_date=str(source_date),
+                source_sha256=str(source_sha),
+                reservation_id=reservation_id,
+                workflow_execution=workflow_execution,
+                state=status,
+                created_at=created_at,
+                updated_at=created_at,
+            )
     return result
 
 
@@ -847,6 +947,30 @@ def _workflow_payload(value: Any, *, label: str) -> dict[str, Any] | None:
             code="INVALID_CONTROL_STATE",
         )
     return value_map
+
+
+def _read_optional_json_file(path: Path | str | None, *, label: str) -> dict[str, Any] | None:
+    """Read gcloud's nullable result/error envelope without treating null as corruption."""
+
+    if path is None:
+        return None
+    try:
+        raw = Path(path).read_bytes()
+    except OSError as exc:
+        raise AcquisitionScheduleError(f"{label} is unavailable", code="INVALID_CONTROL_STATE") from exc
+    if not raw or len(raw) > _base.MAX_CONTROL_BYTES:
+        raise AcquisitionScheduleError(f"{label} size is invalid", code="INVALID_CONTROL_STATE")
+    if raw.strip() == b"null":
+        return None
+    try:
+        value = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise AcquisitionScheduleError(f"{label} is invalid JSON", code="INVALID_CONTROL_STATE") from exc
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise AcquisitionScheduleError(f"{label} is invalid", code="INVALID_CONTROL_STATE")
+    return value
 
 
 def _shadow_result_for_record(
@@ -923,6 +1047,20 @@ def read_shadow_state(*, store: ObjectStore, argentina_day: str) -> dict[str, An
 
     state = read_daily_state(store=store, argentina_day=argentina_day)
     if state is None:
+        pending = read_pending_workflow(store=store)
+        if pending is not None and pending.get("state") in {"SHADOW_STARTED", "SHADOW_PENDING"}:
+            return {
+                "schemaVersion": DAILY_STATE_SCHEMA_VERSION,
+                "policyVersion": DAILY_STATE_POLICY_VERSION,
+                "argentinaDate": pending["argentinaDate"],
+                "requestedArgentinaDate": argentina_day,
+                "status": pending["state"],
+                "workflowExecution": pending["workflowExecution"],
+                "buildReservationId": pending["reservationId"],
+                "candidateReleaseId": pending["candidateReleaseId"],
+                "updatedAt": pending["updatedAt"],
+                "crossDayPending": pending["argentinaDate"] != argentina_day,
+            }
         return {
             "schemaVersion": DAILY_STATE_SCHEMA_VERSION,
             "policyVersion": DAILY_STATE_POLICY_VERSION,
@@ -1360,12 +1498,12 @@ def _main(argv: Sequence[str] | None = None) -> int:
             return 0
         if args.command == "reconcile-shadow-state":
             workflow_result = (
-                _base._read_json_file(args.workflow_result, label="workflow result")
+                _read_optional_json_file(args.workflow_result, label="workflow result")
                 if args.workflow_result
                 else None
             )
             workflow_error = (
-                _base._read_json_file(args.workflow_error, label="workflow error")
+                _read_optional_json_file(args.workflow_error, label="workflow error")
                 if args.workflow_error
                 else None
             )
@@ -1420,6 +1558,8 @@ __all__ = [
     "DAILY_STATE_PREFIX",
     "LATE_CHECK_POLICY",
     "LATE_RECHECK_PREFIX",
+    "PENDING_WORKFLOW_KEY",
+    "PENDING_WORKFLOW_SCHEMA_VERSION",
     "POLICY_VERSION",
     "SCHEMA_VERSION",
     "finalize_download_observation",
@@ -1427,10 +1567,12 @@ __all__ = [
     "daily_state_key",
     "metadata_change_evidence",
     "preflight_observation",
+    "read_pending_workflow",
     "read_shadow_state",
     "read_daily_state",
     "reconcile_shadow_state",
     "record_shadow_state",
     "reserve_build_attempt",
+    "write_pending_workflow",
     "upstream_outage_result",
 ]

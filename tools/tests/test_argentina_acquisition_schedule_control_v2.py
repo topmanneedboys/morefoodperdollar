@@ -27,9 +27,11 @@ from tools.argentina_acquisition_schedule_control_v2 import (
     preflight_observation,
     reconcile_shadow_state,
     read_daily_state,
+    read_pending_workflow,
     read_shadow_state,
     record_shadow_state,
     reserve_build_attempt,
+    write_pending_workflow,
     upstream_outage_result,
     _write_daily_state,
 )
@@ -569,6 +571,74 @@ class ArgentinaAcquisitionScheduleControlV2Tests(unittest.TestCase):
         self.assertEqual(pending["status"], "SHADOW_PENDING")
         self.assertEqual(pending["reconciliationStatus"], "PENDING")
         self.assertEqual(read_daily_state(store=self.store, argentina_day="2026-09-15")["status"], "SHADOW_STARTED")
+
+    def test_pending_workflow_is_recoverable_after_midnight_without_duplicate_identity(self) -> None:
+        resolution = self._record_primary_no_change()
+        resolution["candidateReleaseId"] = "argentina-sepa-2026-09-15-1234567890abcdef-routing-v1-search-v2"
+        started = record_shadow_state(
+            resolution=resolution,
+            store=self.store,
+            status="SHADOW_STARTED",
+            workflow_execution="execution-cross-midnight",
+            reservation_id="reservation-cross-midnight",
+            recorded_at="2026-09-15T23:59:00Z",
+        )
+        self.assertEqual(started["status"], "SHADOW_STARTED")
+        recovered = read_shadow_state(store=self.store, argentina_day="2026-09-16")
+        self.assertEqual(recovered["status"], "SHADOW_STARTED")
+        self.assertTrue(recovered["crossDayPending"])
+        self.assertEqual(recovered["argentinaDate"], "2026-09-15")
+        self.assertEqual(recovered["workflowExecution"], "execution-cross-midnight")
+        pending = read_pending_workflow(store=self.store)
+        self.assertEqual(pending["candidateReleaseId"], resolution["candidateReleaseId"])
+        with self.assertRaises(AcquisitionScheduleError) as conflict:
+            write_pending_workflow(
+                store=self.store,
+                argentina_day="2026-09-15",
+                candidate_release_id="different-candidate",
+                source_release_date="2026-09-15",
+                source_sha256="a" * 64,
+                reservation_id="reservation-cross-midnight",
+                workflow_execution="execution-cross-midnight",
+                state="SHADOW_STARTED",
+                created_at="2026-09-15T23:59:00Z",
+                updated_at="2026-09-16T00:01:00Z",
+            )
+        self.assertEqual(conflict.exception.code, "CONTROL_CONFLICT")
+
+    def test_nullable_workflow_payload_is_accepted_while_execution_is_active(self) -> None:
+        resolution = self._record_primary_no_change()
+        resolution["candidateReleaseId"] = "argentina-sepa-2026-09-15-1234567890abcdef-routing-v1-search-v2"
+        record_shadow_state(
+            resolution=resolution,
+            store=self.store,
+            status="SHADOW_STARTED",
+            workflow_execution="execution-null-result",
+            reservation_id="reservation-null-result",
+            recorded_at="2026-09-15T17:00:00Z",
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            result_path = Path(directory) / "result.json"
+            error_path = Path(directory) / "error.json"
+            result_path.write_text("null\n", encoding="utf-8")
+            error_path.write_text("null\n", encoding="utf-8")
+            with patch.object(schedule_control, "_gcs_store", return_value=self.store):
+                exit_code = schedule_control._main(
+                    [
+                        "reconcile-shadow-state",
+                        "--argentina-day", "2026-09-15",
+                        "--workflow-execution", "execution-null-result",
+                        "--execution-state", "RUNNING",
+                        "--workflow-result", str(result_path),
+                        "--workflow-error", str(error_path),
+                        "--recorded-at", "2026-09-15T17:05:00Z",
+                        "--archive-bucket", "fixture",
+                        "--output", str(Path(directory) / "output.json"),
+                    ]
+                )
+                output = json.loads((Path(directory) / "output.json").read_text(encoding="utf-8"))
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(output["status"], "SHADOW_PENDING")
 
     def test_shadow_reconciliation_records_only_verified_write_free_success(self) -> None:
         resolution = self._record_primary_no_change()

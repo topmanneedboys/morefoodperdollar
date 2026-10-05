@@ -580,10 +580,10 @@ jobs:
           rm -rf "${LOCAL_ARCHIVE}"
 
   reconcile-shadow:
-    # This job is deliberately separate from acquisition.  It performs one
-    # bounded read of the asynchronous Cloud Workflow and records only the
-    # terminal SHADOW result; it never starts another national build and never
-    # writes an ACTIVE or CANARY pointer.
+    # This job is deliberately separate from acquisition. It performs one
+    # bounded read of the exact asynchronous Cloud Workflow, records the
+    # terminal SHADOW result, and then runs the guarded automated promotion
+    # controller. It never starts another national build.
     # Serialize it after the handoff so it cannot read the previous day's
     # state while the acquisition job is still recording today's execution.
     # always() keeps recovery reconciliation available when acquisition fails.
@@ -597,6 +597,11 @@ jobs:
     env:
       GCP_PROJECT_ID: ${{ vars.VALUEPILOT_GCP_PROJECT_ID }}
       ARCHIVE_BUCKET: ${{ vars.VALUEPILOT_ARGENTINA_ARCHIVE_BUCKET }}
+      CONTROL_BUCKET: ${{ vars.VALUEPILOT_ARGENTINA_CONTROL_BUCKET }}
+      ACTIVE_BUCKET: ${{ vars.VALUEPILOT_ARGENTINA_ACTIVE_BUCKET }}
+      SA_ACTIVE_BUCKET: ${{ vars.VALUEPILOT_ARGENTINA_SA_ACTIVE_BUCKET || 'valuepilot-argentina-runtime-southamerica-east1' }}
+      US_BACKEND_URL: ${{ vars.VALUEPILOT_ARGENTINA_US_BACKEND_URL || 'https://valuepilot-argentina-us-east4-m72bv57hrq-uk.a.run.app' }}
+      SA_BACKEND_URL: ${{ vars.VALUEPILOT_ARGENTINA_SA_BACKEND_URL || 'https://valuepilot-argentina-sa-east1-m72bv57hrq-rj.a.run.app' }}
       RELEASE_WORKFLOW_NAME: ${{ vars.VALUEPILOT_ARGENTINA_WORKFLOW_NAME }}
       RELEASE_WORKFLOW_LOCATION: ${{ vars.VALUEPILOT_ARGENTINA_WORKFLOW_LOCATION }}
       WIF_PROVIDER: ${{ vars.VALUEPILOT_GCP_WIF_PROVIDER }}
@@ -647,8 +652,12 @@ jobs:
             --output "${RUNNER_TEMP}/valuepilot-shadow-state.json"
           status="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["status"])' "${RUNNER_TEMP}/valuepilot-shadow-state.json")"
           workflow_execution="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8")).get("workflowExecution") or "")' "${RUNNER_TEMP}/valuepilot-shadow-state.json")"
+          state_argentina_day="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8")).get("argentinaDate") or "")' "${RUNNER_TEMP}/valuepilot-shadow-state.json")"
+          candidate_release="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8")).get("candidateReleaseId") or "")' "${RUNNER_TEMP}/valuepilot-shadow-state.json")"
           echo "status=${status}" >> "${GITHUB_OUTPUT}"
           echo "workflow_execution=${workflow_execution}" >> "${GITHUB_OUTPUT}"
+          echo "state_argentina_day=${state_argentina_day}" >> "${GITHUB_OUTPUT}"
+          echo "candidate_release=${candidate_release}" >> "${GITHUB_OUTPUT}"
           echo "Persisted SHADOW state: ${status} (${workflow_execution:-none})"
 
       - name: Finish cleanly when no SHADOW is awaiting reconciliation
@@ -701,7 +710,7 @@ jobs:
         if: steps.state.outputs.status == 'SHADOW_STARTED'
         shell: bash
         env:
-          ARGENTINA_DAY: ${{ steps.state.outputs.argentina_day }}
+          ARGENTINA_DAY: ${{ steps.state.outputs.state_argentina_day }}
           WORKFLOW_EXECUTION: ${{ steps.state.outputs.workflow_execution }}
           EXECUTION_STATE: ${{ steps.execution.outputs.execution_state }}
         run: |
@@ -729,7 +738,53 @@ jobs:
             echo "- Cloud Workflow state: ${EXECUTION_STATE}"
             echo "- Durable state: ${status} (${reconciliation})"
             echo "- Reason: ${reason:-none}"
-            echo "- Active/canary pointer writes by reconciler: 0"
+            echo "- Active/canary pointer writes by reconciler: deferred to guarded promotion"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Promote the verified candidate with CAS, smoke checks, and rollback
+        if: steps.reconcile.outputs.status == 'SHADOW_SUCCEEDED'
+        shell: bash
+        env:
+          CANDIDATE_RELEASE: ${{ steps.state.outputs.candidate_release }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${CANDIDATE_RELEASE}" ]]; then
+            echo "::error::Verified SHADOW state did not carry a candidate release identity."
+            exit 2
+          fi
+          manifest_file="${RUNNER_TEMP}/valuepilot-candidate-manifest.json"
+          current_file="${RUNNER_TEMP}/valuepilot-current-pointer.json"
+          gcloud storage cat "gs://${ARCHIVE_BUCKET}/releases/${CANDIDATE_RELEASE}/manifest.json" > "${manifest_file}"
+          gcloud storage cat "gs://${ACTIVE_BUCKET}/control/active.json" > "${current_file}"
+          release_date="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["source"]["releaseDate"])' "${manifest_file}")"
+          source_sha="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["source"]["sha256"])' "${manifest_file}")"
+          expected_current="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["releaseId"])' "${current_file}")"
+          export VALUEPILOT_SMOKE_ID_TOKEN="$(gcloud auth print-identity-token)"
+          python -m tools.argentina_archived_release_promotion \
+            --release-id "${CANDIDATE_RELEASE}" \
+            --expected-current-release-id "${expected_current}" \
+            --release-date "${release_date}" \
+            --source-sha256 "${source_sha}" \
+            --archive-bucket "${ARCHIVE_BUCKET}" \
+            --us-bucket "${ACTIVE_BUCKET}" \
+            --sa-bucket "${SA_ACTIVE_BUCKET}" \
+            --project "${GCP_PROJECT_ID}" \
+            --smoke-url "${US_BACKEND_URL}" \
+            --smoke-url "${SA_BACKEND_URL}" \
+            --service-update "valuepilot-argentina-us-east4:us-east4" \
+            --service-update "valuepilot-argentina-sa-east1:southamerica-east1" \
+            --control-bucket "${CONTROL_BUCKET}" \
+            --output "${RUNNER_TEMP}/valuepilot-promotion.json"
+          unset VALUEPILOT_SMOKE_ID_TOKEN
+          promotion_status="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["status"])' "${RUNNER_TEMP}/valuepilot-promotion.json")"
+          echo "Automated promotion: ${promotion_status} (${CANDIDATE_RELEASE})"
+          {
+            echo "### Argentina automated promotion"
+            echo "- Candidate: ${CANDIDATE_RELEASE}"
+            echo "- Status: ${promotion_status}"
+            echo "- Regions: us-east4 and southamerica-east1"
+            echo "- Activation: CAS pointers followed by authenticated ready/status/search smoke"
+            echo "- Rollback: exact prior pointer bytes on failure"
           } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Alert on terminal SHADOW failure
