@@ -74,6 +74,14 @@ class MainActivity : AppCompatActivity() {
     private val argentinaLaunchArea = ArgentinaQualifiedLaunchAreas.BuenosAiresCaba
     private var searchQuery = ""
     private var qualifiedOfferPlanRequestId = 0L
+    private var privateBasketPlanRequestId = 0L
+    private var privateBasketPlan: ArgentinaPrivateBasketPlanProjection? = null
+    private var privateBasketTripResult: ArgentinaPrivateTripCostResult? = null
+    private var privateBasketError: String? = null
+    private val privateBasketOfferEvidence = linkedMapOf<
+        String,
+        List<ArgentinaBackendContract.SearchOffer>
+    >()
 
     private lateinit var shellRoot: View
     private lateinit var bottomNavArea: View
@@ -87,6 +95,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var dataStatusButton: MaterialButton
     private lateinit var homeExperience: PracticalShoppingHomeSurfaceView
     private lateinit var basketExperience: PracticalShoppingBasketSurfaceView
+    private lateinit var qualifiedBasketExperience: ArgentinaPrivateBasketSurfaceView
     private lateinit var searchExperience: View
     private lateinit var searchInput: TextInputEditText
     private lateinit var searchButton: MaterialButton
@@ -190,6 +199,7 @@ class MainActivity : AppCompatActivity() {
         dataStatusButton = findViewById(R.id.dataStatusButton)
         homeExperience = findViewById(R.id.homeExperience)
         basketExperience = findViewById(R.id.basketExperience)
+        qualifiedBasketExperience = findViewById(R.id.qualifiedBasketExperience)
         searchExperience = findViewById(R.id.searchExperience)
         searchInput = findViewById(R.id.searchInput)
         searchButton = findViewById(R.id.searchButton)
@@ -301,6 +311,9 @@ class MainActivity : AppCompatActivity() {
             STATE_HOME_EXTRA_STOP_MINIMUM_SAVINGS,
             homeSnapshot.extraStopMinimumSavingsChoice.name
         )
+        PracticalShoppingHomeSessionStoreCodec
+            .encodePrivateIdentities(homeSnapshot.privateIdentities)
+            ?.let { encoded -> outState.putString(STATE_HOME_PRIVATE_IDENTITIES, encoded) }
         homeSnapshot.requestDetailsLifecycleState?.let { encoded ->
             outState.putByteArray(STATE_HOME_REQUEST_DETAILS, encoded)
         }
@@ -353,6 +366,7 @@ class MainActivity : AppCompatActivity() {
             homeExperience.onQuickAdd = null
             homeExperience.onRemoveItem = null
             homeExperience.onRemoveUnknownItem = null
+            homeExperience.onRemovePrivateIdentity = null
             homeExperience.onFindOfflineCatalogMatch = null
             homeExperience.onChooseExactProduct = null
             homeExperience.onChickenChoice = null
@@ -369,6 +383,9 @@ class MainActivity : AppCompatActivity() {
         }
         if (::basketExperience.isInitialized) {
             basketExperience.onAction = null
+        }
+        if (::qualifiedBasketExperience.isInitialized) {
+            qualifiedBasketExperience.onAction = null
         }
         if (::savedRouteCoordinator.isInitialized) {
             savedExperience.onAction = null
@@ -458,6 +475,19 @@ class MainActivity : AppCompatActivity() {
                 homePreferenceStore.loadExtraStopMinimumSavingsChoice()
             }
 
+        // A lifecycle bundle may contain a newer Home query snapshot but omit the
+        // identity-only private-list field (for example when it was saved before
+        // the first Search handoff). Never decode that omission as an empty list:
+        // read the durable list instead so renderHome() cannot erase it.
+        val privateIdentities =
+            if (savedInstanceState?.containsKey(STATE_HOME_PRIVATE_IDENTITIES) == true) {
+                PracticalShoppingHomeSessionStoreCodec.decodePrivateIdentities(
+                    savedInstanceState.getString(STATE_HOME_PRIVATE_IDENTITIES)
+                )
+            } else {
+                homeSessionStore.load()?.privateIdentities.orEmpty()
+            }
+
         return PracticalShoppingHomeSession.restoreState(
             PracticalShoppingHomeSession.Snapshot(
                 query = savedInstanceState?.getString(STATE_HOME_QUERY).orEmpty(),
@@ -465,7 +495,8 @@ class MainActivity : AppCompatActivity() {
                 chickenChoice = choice,
                 extraStopMinimumSavingsChoice = extraStopMinimumSavingsChoice,
                 requestDetailsLifecycleState =
-                    savedInstanceState?.getByteArray(STATE_HOME_REQUEST_DETAILS)
+                    savedInstanceState?.getByteArray(STATE_HOME_REQUEST_DETAILS),
+                privateIdentities = privateIdentities
             )
         )
     }
@@ -491,6 +522,17 @@ class MainActivity : AppCompatActivity() {
         homeExperience.onRemoveUnknownItem = { token ->
             homeSessionState =
                 PracticalShoppingHomeSession.removeUnknownItem(homeSessionState, token)
+            renderHome()
+        }
+        homeExperience.onRemovePrivateIdentity = { identityKey ->
+            privateBasketOfferEvidence.remove(identityKey)
+            privateBasketPlan = null
+            privateBasketError = null
+            homeSessionState =
+                PracticalShoppingHomeSession.removePrivateIdentity(
+                    homeSessionState,
+                    identityKey
+                )
             renderHome()
         }
         homeExperience.onFindOfflineCatalogMatch = { token ->
@@ -552,7 +594,8 @@ class MainActivity : AppCompatActivity() {
                     } else {
                         PracticalShoppingHomePrivateMemoryStatus.UNAVAILABLE
                     },
-                savedExactProductContext = homeSavedExactProductContext
+                savedExactProductContext = homeSavedExactProductContext,
+                privateIdentities = homeSessionState.privateIdentities
             )
         // A render invalidates any pending share preview. This prevents a dialog opened for an
         // earlier list/result from sending text after the Home projection has changed.
@@ -575,6 +618,15 @@ class MainActivity : AppCompatActivity() {
             homeExperience.revealProjectedResult()
         }
         basketExperience.render(PracticalShoppingBasketRenderer.render(homeState))
+        qualifiedBasketExperience.render(
+            ArgentinaPrivateBasketRenderer.render(
+                identities = homeSessionState.privateIdentities,
+                offersByIdentity = privateBasketOfferEvidence,
+                plan = privateBasketPlan,
+                tripResult = privateBasketTripResult,
+                errorNotice = privateBasketError
+            )
+        )
     }
 
     private fun dismissHomeShareDialog() {
@@ -1190,6 +1242,30 @@ class MainActivity : AppCompatActivity() {
             when (action) {
                 PracticalShoppingBasketUiAction.OpenHome ->
                     dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.HOME))
+            }
+        }
+        qualifiedBasketExperience.onAction = { action ->
+            when (action) {
+                ArgentinaPrivateBasketUiAction.PlanBasket -> requestPrivateBasketPlan()
+                ArgentinaPrivateBasketUiAction.OpenSearch ->
+                    dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.SEARCH))
+                ArgentinaPrivateBasketUiAction.EditTripAssumptions -> showPrivateTripAssumptions()
+                is ArgentinaPrivateBasketUiAction.OpenStore ->
+                    openQualifiedStoreMap(
+                        action.store.storeName,
+                        action.store.latitude,
+                        action.store.longitude
+                    )
+                is ArgentinaPrivateBasketUiAction.Remove -> {
+                    privateBasketOfferEvidence.remove(action.identityKey)
+                    privateBasketPlan = null
+                    privateBasketError = null
+                    homeSessionState = PracticalShoppingHomeSession.removePrivateIdentity(
+                        homeSessionState,
+                        action.identityKey
+                    )
+                    renderHome()
+                }
             }
         }
     }
@@ -2042,7 +2118,11 @@ class MainActivity : AppCompatActivity() {
         if (homeVisible) renderHome()
 
         val basketVisible = state.selectedPrimaryTab == AppPrimaryTab.BASKET
+        val privateBasketVisible = basketVisible && homeSessionState.privateIdentities.isNotEmpty()
         basketExperience.visibility = if (basketVisible) View.VISIBLE else View.GONE
+        if (privateBasketVisible) basketExperience.visibility = View.GONE
+        qualifiedBasketExperience.visibility =
+            if (privateBasketVisible) View.VISIBLE else View.GONE
         if (basketVisible) renderHome()
 
         searchExperience.visibility = if (searchVisible) View.VISIBLE else View.GONE
@@ -2189,7 +2269,7 @@ class MainActivity : AppCompatActivity() {
     private fun createSearchResultView(
         match: PracticalShoppingSearchIdentityPresentation.Match,
         caveat: String,
-        onAddToHome: (String) -> Unit
+        onAddToHome: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit
     ): View {
         val primaryOffer = match.qualifiedOffers.firstOrNull()
         val offerSummary = primaryOffer?.let(ArgentinaQualifiedOfferPresentation::summary)
@@ -2355,7 +2435,7 @@ class MainActivity : AppCompatActivity() {
                 R.string.search_identity_add_home_draft_description,
                 match.displayName
             )
-            setOnClickListener { onAddToHome(match.displayName) }
+            setOnClickListener { onAddToHome(match) }
         }
         card.addView(body)
         card.addView(addHomeButton)
@@ -2459,16 +2539,154 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun addSearchIdentityToHome(displayName: String) {
-        val previousQuery = homeSessionState.model.ui.query
-        val nextState = PracticalShoppingHomeSession.addIdentityDraft(homeSessionState, displayName)
-        if (nextState.model.ui.query == previousQuery) {
+    private fun addSearchIdentityToHome(
+        match: PracticalShoppingSearchIdentityPresentation.Match
+    ) {
+        val identity = PracticalShoppingPrivateIdentity.fromSearchMatch(match)
+        if (identity == null) {
             searchStatus.text = getString(R.string.search_identity_add_home_failed)
             return
         }
+        val previousCount = homeSessionState.privateIdentities.size
+        val nextState = PracticalShoppingHomeSession.addPrivateIdentity(homeSessionState, identity)
+        if (nextState.privateIdentities.size == previousCount &&
+            nextState.privateIdentities.none { it.identityKey == identity.identityKey }
+        ) {
+            searchStatus.text = getString(R.string.search_identity_add_home_failed)
+            return
+        }
+        privateBasketOfferEvidence[identity.identityKey] = match.qualifiedOffers
+        privateBasketPlan = null
+        privateBasketError = null
         homeSessionState = nextState
         dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.HOME))
         renderHome()
+    }
+
+    /** Runs exactly one qualified /v1/shop request for the bounded private basket. */
+    private fun requestPrivateBasketPlan() {
+        val built = ArgentinaPrivateBasketRequestBuilder.build(
+            identities = homeSessionState.privateIdentities,
+            offersByIdentity = privateBasketOfferEvidence,
+            area = argentinaLaunchArea
+        )
+        privateBasketPlan = null
+        privateBasketError = if (built.unresolvedIdentityKeys.isNotEmpty()) {
+            "${built.unresolvedIdentityKeys.size} selected item(s) still have unknown price evidence."
+        } else {
+            null
+        }
+        renderHome()
+        val request = built.request ?: return
+        val requestId = Math.addExact(privateBasketPlanRequestId, 1L)
+        privateBasketPlanRequestId = requestId
+        Toast.makeText(this, "Planning your private basket…", Toast.LENGTH_SHORT).show()
+        searchExecutor.submit {
+            val outcome = runCatching {
+                val transport = ValuePilotArgentinaEdgeTransportFactory.create()
+                val statusResult = ArgentinaBackendConsumerBridge(transport, null).status()
+                val status = (statusResult as? ArgentinaBackendBridgeResult.Success)?.value
+                    ?: error("The qualified Argentina release is unavailable.")
+                if (
+                    status.freshness != ArgentinaBackendContract.Freshness.FRESH ||
+                        !status.backendCodeQualified ||
+                        !status.androidNetworkingAuthorized
+                ) {
+                    error("The qualified Argentina release is not authorized for this request.")
+                }
+                val expected = ArgentinaBackendContract.ExpectedRelease(
+                    releaseId = status.releaseId ?: error("The qualified release has no id."),
+                    releaseDate = status.releaseDate ?: error("The qualified release has no date.")
+                )
+                ArgentinaBackendConsumerBridge(transport, expected).shop(request)
+            }
+            mainHandler.post {
+                if (requestId != privateBasketPlanRequestId || isFinishing || isDestroyed) return@post
+                val result = outcome.getOrNull()
+                if (result !is ArgentinaBackendBridgeResult.Success) {
+                    privateBasketError = "The basket plan could not be refreshed; prices remain unknown."
+                    renderHome()
+                    return@post
+                }
+                privateBasketPlan = ArgentinaPrivateBasketPlanProjector.project(
+                    response = result.value,
+                    identities = homeSessionState.privateIdentities
+                )
+                privateBasketError = null
+                renderHome()
+            }
+        }
+    }
+
+    private fun showPrivateTripAssumptions() {
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(8), dp(4), dp(8), 0)
+        }
+        fun decimalField(label: String, initial: String): TextInputEditText {
+            val layout = TextInputLayout(this).apply {
+                hint = label
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = dp(8) }
+            }
+            val edit = TextInputEditText(this).apply {
+                setText(initial)
+                inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+                maxLines = 1
+            }
+            layout.addView(edit)
+            container.addView(layout)
+            return edit
+        }
+        val distance = decimalField("One-way driving distance (km)", "0")
+        val consumption = decimalField("Fuel consumption (L/100 km)", "8")
+        val fuelPrice = decimalField("Fuel price (ARS/L)", "0")
+        val tolls = decimalField("Tolls (ARS)", "0")
+        val parking = decimalField("Parking (ARS)", "0")
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Trip assumptions")
+            .setMessage("Manual estimate only. ValuePilot does not infer a driving route or use straight-line distance as a route.")
+            .setView(container)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton("Calculate", null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                try {
+                    privateBasketTripResult = ArgentinaPrivateTripCostCalculator.calculate(
+                        ArgentinaPrivateTripCostInput(
+                            oneWayDrivingKm = ArgentinaPrivateTripCostCalculator.parseDecimal(
+                                distance.text?.toString().orEmpty(), "distance"
+                            ),
+                            fuelConsumptionLitresPer100Km = ArgentinaPrivateTripCostCalculator.parseDecimal(
+                                consumption.text?.toString().orEmpty(), "fuel consumption"
+                            ),
+                            fuelPricePerLitre = ArgentinaPrivateTripCostCalculator.parseDecimal(
+                                fuelPrice.text?.toString().orEmpty(), "fuel price"
+                            ),
+                            tolls = ArgentinaPrivateTripCostCalculator.parseDecimal(
+                                tolls.text?.toString().orEmpty(), "tolls"
+                            ),
+                            parking = ArgentinaPrivateTripCostCalculator.parseDecimal(
+                                parking.text?.toString().orEmpty(), "parking"
+                            )
+                        )
+                    )
+                    dialog.dismiss()
+                    renderHome()
+                } catch (error: IllegalArgumentException) {
+                    Toast.makeText(
+                        this,
+                        error.message ?: "Enter valid trip assumptions.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+        dialog.show()
     }
 
     private fun copyFor(tab: AppPrimaryTab): ScreenCopy =
@@ -2530,6 +2748,7 @@ class MainActivity : AppCompatActivity() {
         private const val STATE_HOME_EXTRA_STOP_MINIMUM_SAVINGS =
             "app_shell.home_extra_stop_minimum_savings"
         private const val STATE_HOME_REQUEST_DETAILS = "app_shell.home_request_details"
+        private const val STATE_HOME_PRIVATE_IDENTITIES = "app_shell.home_private_identities"
         private const val STATE_HOME_DETAILS_ITEM_KEY = "app_shell.home_details_item_key"
         private const val STATE_HOME_DETAILS_PACKAGE_COUNT = "app_shell.home_details_package_count"
         private const val STATE_HOME_DETAILS_BRAND = "app_shell.home_details_brand"
