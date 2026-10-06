@@ -51,7 +51,7 @@ def _provider_quantity(raw_offer: Mapping[str, Any]) -> ExactQuantity | None:
         return None
 
 
-def _offer_from_provider(raw_offer: Mapping[str, Any]) -> OfferEvidence:
+def _offer_from_provider(raw_offer: Mapping[str, Any], *, expected_release_date: str) -> OfferEvidence:
     list_price = raw_offer.get("listPrice")
     if not isinstance(list_price, Mapping) or list_price.get("currency") != ARS:
         raise ShoppingIntelligenceError("Argentina offer currency is not ARS")
@@ -78,7 +78,7 @@ def _offer_from_provider(raw_offer: Mapping[str, Any]) -> OfferEvidence:
         "providerUpdateTime": raw_offer.get("providerUpdateTime"),
         "freshnessStatus": raw_offer.get("freshnessStatus"),
     }
-    if provenance["releaseDate"] != RELEASE_DATE:
+    if provenance["releaseDate"] != expected_release_date:
         raise ShoppingIntelligenceError("Argentina offer release date is not the qualified release")
     store_name = raw_offer.get("storeName")
     product_name = raw_offer.get("name")
@@ -118,6 +118,7 @@ def evaluate_argentina_request(
     max_candidates: int = 100_000,
     max_offers: int = 100_000,
     policy: BestValuePolicy | Mapping[str, Any] | None = None,
+    expected_release_date: str | None = None,
 ) -> dict[str, Any]:
     """Evaluate a structured request against one verified Argentina region."""
 
@@ -139,6 +140,7 @@ def evaluate_argentina_request(
         normalized_request,
         provider_result,
         policy=normalized_policy,
+        expected_release_date=expected_release_date,
     )
 
 
@@ -148,6 +150,7 @@ def evaluate_argentina_provider_result(
     provider_result: Mapping[str, Any],
     *,
     policy: BestValuePolicy | Mapping[str, Any] | None = None,
+    expected_release_date: str | None = None,
 ) -> dict[str, Any]:
     """Evaluate one already-fetched provider result without querying again.
 
@@ -158,6 +161,9 @@ def evaluate_argentina_provider_result(
 
     normalized_request = request if isinstance(request, ShoppingRequest) else ShoppingRequest.from_mapping(request)
     normalized_policy = policy if isinstance(policy, BestValuePolicy) or policy is None else BestValuePolicy.from_mapping(policy)
+    qualified_release_date = RELEASE_DATE if expected_release_date is None else expected_release_date
+    if not isinstance(qualified_release_date, str) or not qualified_release_date:
+        raise ShoppingIntelligenceError("qualified release date is invalid")
     raw_items = provider_result.get("items")
     if not isinstance(raw_items, list) or len(raw_items) != len(normalized_request.lines):
         raise ShoppingIntelligenceError("Argentina provider response does not preserve request line order")
@@ -189,7 +195,7 @@ def evaluate_argentina_provider_result(
                 rejected["unknownQuantity"] += 1
                 continue
             try:
-                line_offers.append(_offer_from_provider(raw_offer))
+                line_offers.append(_offer_from_provider(raw_offer, expected_release_date=qualified_release_date))
             except (KeyError, TypeError, ValueError, ShoppingIntelligenceError):
                 rejected["invalidPrice"] += 1
         offers_by_line[line.line_id] = line_offers
@@ -205,7 +211,7 @@ def evaluate_argentina_provider_result(
     return {
         "schemaVersion": ARGENTINA_ENGINE_SCHEMA_VERSION,
         "provider": ARGENTINA_PROVIDER,
-        "releaseDate": RELEASE_DATE,
+        "releaseDate": qualified_release_date,
         "regionId": region_id,
         "productionUiAuthorized": False,
         "androidNetworkingAuthorized": False,

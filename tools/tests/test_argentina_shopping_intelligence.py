@@ -3,10 +3,10 @@ from __future__ import annotations
 from unittest.mock import patch
 import unittest
 
-from tools.argentina_shopping_intelligence import evaluate_argentina_request
+from tools.argentina_shopping_intelligence import evaluate_argentina_provider_result, evaluate_argentina_request
 
 
-def _raw_offer(*, offer_id: int, product: str, store: str, name: str, amount: str, quantity: dict[str, str] | None, quantity_status: str = "KNOWN", currency: str = "ARS", freshness: str = "FRESH") -> dict[str, object]:
+def _raw_offer(*, offer_id: int, product: str, store: str, name: str, amount: str, quantity: dict[str, str] | None, quantity_status: str = "KNOWN", currency: str = "ARS", freshness: str = "FRESH", release_date: str = "2026-09-06") -> dict[str, object]:
     return {
         "offerKey": f"ar-sepa-offer:ar-caba:{offer_id}",
         "offerId": offer_id,
@@ -23,7 +23,7 @@ def _raw_offer(*, offer_id: int, product: str, store: str, name: str, amount: st
         "listPrice": {"amount": amount, "currency": currency},
         "quantity": quantity,
         "quantityStatus": quantity_status,
-        "releaseDate": "2026-09-06",
+        "releaseDate": release_date,
         "freshnessStatus": freshness,
         "availability": "UNKNOWN",
         "promotions": [{"slot": 1, "price": {"amount": "1.00", "currency": "ARS"}, "condition": "loyalty", "eligibility": "UNKNOWN"}],
@@ -34,6 +34,41 @@ def _raw_offer(*, offer_id: int, product: str, store: str, name: str, amount: st
 
 
 class ArgentinaShoppingIntelligenceAdapterTest(unittest.TestCase):
+    def test_adapter_uses_pinned_release_date_for_production_candidate(self) -> None:
+        provider_result = {
+            "items": [
+                {
+                    "productCandidates": [{"productEvidenceKey": "product:rice"}],
+                    "offers": [
+                        _raw_offer(
+                            offer_id=1,
+                            product="product:rice",
+                            store="store:a",
+                            name="Rice title",
+                            amount="1200.00",
+                            quantity={"value": "1", "unit": "KG"},
+                            release_date="2026-10-01",
+                        )
+                    ],
+                }
+            ],
+            "queryPlan": {"partitionIds": ["p001"]},
+        }
+        result = evaluate_argentina_provider_result(
+            "national",
+            {
+                "latitude": "-34.60",
+                "longitude": "-58.40",
+                "radiusKm": "10",
+                "items": [{"query": "arroz", "amount": "1", "unit": "kg"}],
+            },
+            provider_result,
+            expected_release_date="2026-10-01",
+        )
+        self.assertEqual(result["releaseDate"], "2026-10-01")
+        self.assertEqual(result["decision"]["diagnostics"]["providerOffersReturned"], 1)
+        self.assertIsNotNone(result["decision"]["cheapestSingleStore"])
+
     def test_adapter_translates_qualified_evidence_without_inference(self) -> None:
         provider_result = {
             "items": [

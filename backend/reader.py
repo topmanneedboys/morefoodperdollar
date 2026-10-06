@@ -1563,7 +1563,9 @@ class ArgentinaBackendReader:
         provider_result = {"items": provider_items, "queryPlan": {"regions": regional_plans, "profile": self.release.profile}}
         engine_start = time.perf_counter()
         try:
-            decision = evaluate_argentina_provider_result("national", normalized, provider_result)
+            qualified_release_date = getattr(self.release, "release_date", None)
+            evaluator_kwargs = {"expected_release_date": qualified_release_date} if isinstance(qualified_release_date, str) and qualified_release_date else {}
+            decision = evaluate_argentina_provider_result("national", normalized, provider_result, **evaluator_kwargs)
         except (ShoppingIntelligenceError, ValueError) as exc:
             raise BackendQueryError(str(exc)) from exc
         metrics.engine_ms = (time.perf_counter() - engine_start) * 1000
