@@ -29,6 +29,9 @@ ANDROID_NETWORKING_SCOPE_ENV = "VALUEPILOT_ANDROID_NETWORKING_SCOPE"
 ANDROID_NETWORKING_RELEASE_ID_ENV = "VALUEPILOT_ANDROID_NETWORKING_RELEASE_ID"
 ANDROID_NETWORKING_RELEASE_DATE_ENV = "VALUEPILOT_ANDROID_NETWORKING_RELEASE_DATE"
 ANDROID_NETWORKING_SCOPE = "identity-search"
+PRODUCTION_ANDROID_UI_AUTHORIZED_ENV = "VALUEPILOT_PRODUCTION_ANDROID_UI_AUTHORIZED"
+PRODUCTION_ANDROID_UI_SCOPE_ENV = "VALUEPILOT_PRODUCTION_ANDROID_UI_SCOPE"
+PRODUCTION_ANDROID_UI_SCOPE = "qualified-offers"
 DISCOVERY_PAGE_SIZE = 5
 DISCOVERY_MAX_PAGE = 5
 
@@ -51,6 +54,23 @@ def _android_networking_authorized(status: Mapping[str, Any]) -> bool:
         and configured_release_id == status.get("releaseId")
         and configured_release_date == status.get("releaseDate")
     )
+
+
+def _production_android_ui_authorized(status: Mapping[str, Any]) -> bool:
+    """Authorize qualified offer exposure only for an explicit release gate.
+
+    Identity discovery has a narrower ``identity-search`` authorization.  A
+    separate operator-controlled gate is required before Search may expose
+    current price/store evidence to the Android UI.  The gate is deliberately
+    release-scoped through the same release id/date variables used by the
+    identity authorization, and defaults to false.
+    """
+
+    if os.environ.get(PRODUCTION_ANDROID_UI_AUTHORIZED_ENV, "").strip().lower() != "true":
+        return False
+    if os.environ.get(PRODUCTION_ANDROID_UI_SCOPE_ENV, "") != PRODUCTION_ANDROID_UI_SCOPE:
+        return False
+    return _android_networking_authorized(status)
 
 
 def _strip_internal(value: Any) -> Any:
@@ -216,10 +236,10 @@ class BackendService:
             "apiContractVersion": "valuepilot-argentina-backend-http-v1",
             "backendCodeQualified": True,
             "liveCloudDeploymentVerified": False,
-            "productionAndroidUiAuthorized": False,
             "automatedOfficialAcquisitionProven": False,
         })
         value["androidNetworkingAuthorized"] = _android_networking_authorized(value)
+        value["productionAndroidUiAuthorized"] = _production_android_ui_authorized(value)
         return value
 
     def shop(self, payload: Mapping[str, Any], *, correlation_id: str | None = None) -> dict[str, Any]:
@@ -308,6 +328,14 @@ class BackendService:
         started = time.perf_counter()
         handle = self.release_manager.pin(require_fresh=True)
         reader = self._reader(handle)
+        authorization_status = {
+            "service": "ready",
+            "releaseId": handle.release_id,
+            "releaseDate": handle.release_date,
+            "freshness": handle.freshness_status,
+            "backendCodeQualified": True,
+        }
+        production_android_ui_authorized = _production_android_ui_authorized(authorization_status)
         selections = self._route_selections(reader, payload)
         regions = tuple(selection.region_id for selection in selections)
         offset = page * DISCOVERY_PAGE_SIZE
@@ -325,6 +353,20 @@ class BackendService:
         else:
             # Compatibility for older test doubles and pre-wiring readers.
             candidates, metrics = reader.discover(query, region_ids=regions, product_limit=window_limit)
+        if not production_android_ui_authorized:
+            # Identity discovery remains available under the narrower
+            # identity-search authorization, but current price/store evidence
+            # must not cross into the Android UI before the explicit production
+            # gate is enabled for this exact release.
+            candidates = tuple(
+                {
+                    **dict(candidate),
+                    "qualifiedOffers": [],
+                }
+                if isinstance(candidate, Mapping) and "qualifiedOffers" in candidate
+                else candidate
+                for candidate in candidates
+            )
         has_more = len(candidates) > offset + DISCOVERY_PAGE_SIZE
         limit_reached = has_more and page == DISCOVERY_MAX_PAGE
         visible_candidates = candidates[offset:offset + DISCOVERY_PAGE_SIZE]
@@ -356,7 +398,7 @@ class BackendService:
             "evidenceSemantics": {
                 "availability": "UNKNOWN",
                 "distance": "STRAIGHT_LINE_HAVERSINE_ONLY",
-                "qualifiedCurrentPriceEvidence": True,
+                "qualifiedCurrentPriceEvidence": production_android_ui_authorized,
                 "pricePublicationIsNotInventory": True,
             },
             "diagnostics": {

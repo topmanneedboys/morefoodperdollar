@@ -1,11 +1,22 @@
 from __future__ import annotations
 
 from decimal import Decimal
+import os
 from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 from backend.reader import ArgentinaBackendReader, RegionSelection
-from backend.service import BackendService
+from backend.service import (
+    ANDROID_NETWORKING_AUTHORIZED_ENV,
+    ANDROID_NETWORKING_RELEASE_DATE_ENV,
+    ANDROID_NETWORKING_RELEASE_ID_ENV,
+    ANDROID_NETWORKING_SCOPE_ENV,
+    PRODUCTION_ANDROID_UI_AUTHORIZED_ENV,
+    PRODUCTION_ANDROID_UI_SCOPE,
+    PRODUCTION_ANDROID_UI_SCOPE_ENV,
+    BackendService,
+)
 
 
 class SearchEvidenceTests(unittest.TestCase):
@@ -232,18 +243,44 @@ class SearchEvidenceTests(unittest.TestCase):
         service = BackendService("", release_manager=self._ReleaseManager())
         service._reader = lambda _handle: reader
 
-        response = service.search({
-            "latitude": "-34.60",
-            "longitude": "-58.38",
-            "radiusKm": "5",
-            "query": "yerba",
-        })
+        environment = {
+            ANDROID_NETWORKING_AUTHORIZED_ENV: "true",
+            ANDROID_NETWORKING_SCOPE_ENV: "identity-search",
+            ANDROID_NETWORKING_RELEASE_ID_ENV: "fixture-release",
+            ANDROID_NETWORKING_RELEASE_DATE_ENV: "2026-10-01",
+            PRODUCTION_ANDROID_UI_AUTHORIZED_ENV: "true",
+            PRODUCTION_ANDROID_UI_SCOPE_ENV: PRODUCTION_ANDROID_UI_SCOPE,
+        }
+        with patch.dict(os.environ, environment, clear=True):
+            response = service.search({
+                "latitude": "-34.60",
+                "longitude": "-58.38",
+                "radiusKm": "5",
+                "query": "yerba",
+            })
 
         offer = response["matches"][0]["qualifiedOffers"][0]
         self.assertEqual(offer["listPrice"], {"amount": "2500.00", "currency": "ARS"})
         self.assertEqual(offer["availability"], "UNKNOWN")
         self.assertNotIn("__offerSortId", offer)
         self.assertTrue(response["evidenceSemantics"]["qualifiedCurrentPriceEvidence"])
+
+    def test_search_keeps_identity_but_strips_offers_without_production_ui_gate(self) -> None:
+        reader = self._Reader()
+        service = BackendService("", release_manager=self._ReleaseManager())
+        service._reader = lambda _handle: reader
+
+        with patch.dict(os.environ, {}, clear=True):
+            response = service.search({
+                "latitude": "-34.60",
+                "longitude": "-58.38",
+                "radiusKm": "5",
+                "query": "yerba",
+            })
+
+        self.assertEqual(response["matches"][0]["productEvidenceKey"], "product-1")
+        self.assertEqual(response["matches"][0]["qualifiedOffers"], [])
+        self.assertFalse(response["evidenceSemantics"]["qualifiedCurrentPriceEvidence"])
 
 
 if __name__ == "__main__":
