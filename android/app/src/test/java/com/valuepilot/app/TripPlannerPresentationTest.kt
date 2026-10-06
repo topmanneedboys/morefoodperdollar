@@ -166,6 +166,32 @@ class TripPlannerPresentationTest {
     }
 
     @Test
+    fun `partial backend plan labels trip total as known prices only`() {
+        val projected = TripPlannerProjector.project(
+            state = completeTrip(),
+            basket = basket(planned = 0, privateItems = 2, unknown = 0, revision = "argentina-partial-plan"),
+            directoryAvailable = false,
+            argentinaPlan = ArgentinaBasketPlanProjection(
+                status = ArgentinaBasketPlanStatus.CURRENT_PARTIAL,
+                headline = "Current price coverage is incomplete",
+                planType = "SINGLE_STORE",
+                totalText = "Known subtotal · ARS 12.50",
+                merchandiseTotal = Money.parse("12.50", "CAD"),
+                coverageText = "1 of 2 requested items have exact price evidence",
+                storeSummary = "Mercado",
+                notice = "Missing prices stay unknown; availability remains unknown.",
+                releaseDate = "2026-09-06",
+                lines = emptyList(),
+                missingIdentityNames = listOf("Tea")
+            )
+        )
+
+        assertEquals(TripPlannerSurfaceMode.CALCULATED, projected.mode)
+        assertTrue(projected.detailLines.any { it.contains("Estimated total for known prices · CAD 15.20") })
+        assertTrue(projected.detailLines.none { it.contains("Estimated shopping total · CAD 15.20") })
+    }
+
+    @Test
     fun `conflicting prices are concise and do not force a winner`() {
         val trip = completeTrip()
         val projected = TripPlannerProjector.project(

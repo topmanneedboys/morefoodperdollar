@@ -362,10 +362,20 @@ internal object TripPlannerProjector {
             val trip = result?.total
             val merchandise = plan.merchandiseTotal
             if (trip != null && merchandise != null && sameMoneySpec(trip, merchandise)) {
-                add("Estimated shopping total · ${formatMoney(merchandise + trip)}")
+                val totalLabel = when (plan.status) {
+                    ArgentinaBasketPlanStatus.CURRENT_COMPLETE -> "Estimated shopping total"
+                    ArgentinaBasketPlanStatus.CURRENT_PARTIAL -> "Estimated total for known prices"
+                    ArgentinaBasketPlanStatus.NO_CURRENT_PLAN -> "Estimated shopping total"
+                }
+                add("$totalLabel · ${formatMoney(merchandise + trip)}")
             } else if (merchandise != null) {
                 add("Products · ${formatMoney(merchandise)}")
-                add("Estimated shopping total · Unknown until trip currency matches")
+                val totalLabel = when (plan.status) {
+                    ArgentinaBasketPlanStatus.CURRENT_COMPLETE -> "Estimated shopping total"
+                    ArgentinaBasketPlanStatus.CURRENT_PARTIAL -> "Known-price total"
+                    ArgentinaBasketPlanStatus.NO_CURRENT_PLAN -> "Estimated shopping total"
+                }
+                add("$totalLabel · Unknown until trip currency matches")
             }
             plan.evaluatedPlanSummary?.let { add("Evaluated plans · $it") }
             add(plan.coverageText)
