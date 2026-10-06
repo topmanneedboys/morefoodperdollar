@@ -37,6 +37,10 @@ class ArgentinaBackendConsumerBridgeTest {
         val searchSuccess = search as ArgentinaBackendBridgeResult.Success
         assertEquals("exact barcode", searchSuccess.value.identity.matches.single().matchLabel)
         assertEquals("1 kg", searchSuccess.value.identity.matches.single().packageQuantityLabel)
+        assertEquals(
+            "Argentina SEPA / Precios Claros",
+            searchSuccess.value.identity.matches.single().sourceLabel
+        )
 
         val interpreted = bridge.interpretPresentation(ArgentinaBackendContract.InterpretRequest("1 kg yerba"))
         assertTrue(interpreted is ArgentinaBackendBridgeResult.Success)
@@ -397,6 +401,43 @@ class ArgentinaBackendConsumerBridgeTest {
                 (result as ArgentinaBackendBridgeResult.Failure).code
             )
         }
+    }
+
+    @Test
+    fun shopRequestPreservesExactSearchIdentityAcrossJsonBoundary() {
+        val transport =
+            InMemoryArgentinaBackendTransport(
+                mapOf(
+                    ArgentinaBackendConsumerBridge.SHOP_ENDPOINT to
+                        response(200, shopJson(itemCount = 1))
+                )
+            )
+        val request =
+            shopRequest(1).copy(
+                items = listOf(
+                    ArgentinaBackendContract.RequestItem(
+                        lineId = "line-1",
+                        query = "Yerba Mate Canarias 500 g",
+                        amount = "500",
+                        unit = "g",
+                        productEvidenceKey = "ar-sepa-product:10:7790742192103"
+                    )
+                )
+            )
+
+        val result = ArgentinaBackendConsumerBridge(transport, release).shop(request)
+
+        assertTrue(result.toString(), result is ArgentinaBackendBridgeResult.Success)
+        val body =
+            JSONObject(
+                requireNotNull(
+                    transport.calls.single {
+                        it.endpoint == ArgentinaBackendConsumerBridge.SHOP_ENDPOINT
+                    }.requestBody
+                )
+            )
+        val item = body.getJSONArray("items").getJSONObject(0)
+        assertEquals("ar-sepa-product:10:7790742192103", item.getString("productEvidenceKey"))
     }
 
     @Test

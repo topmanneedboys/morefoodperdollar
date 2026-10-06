@@ -8,6 +8,76 @@ import org.junit.Test
 
 class PracticalShoppingHomeSessionTest {
 
+    private fun identity(
+        key: String,
+        name: String = "Yerba Mate",
+        brand: String? = "Marca",
+        source: String? = "Argentina SEPA / Precios Claros",
+        quantity: String? = "1 kg"
+    ) = PracticalShoppingPrivateIdentity(
+        identityKey = key,
+        displayName = name,
+        brand = brand,
+        sourceLabel = source,
+        packageQuantityLabel = quantity
+    )
+
+    @Test
+    fun privateSearchIdentityIsRetainedWithoutChangingFictionalPlanner() {
+        val initial = PracticalShoppingHomeSession.initialState()
+        val withIdentity =
+            PracticalShoppingHomeSession.addPrivateIdentity(initial, identity("sepa:yerba:1"))
+
+        assertEquals(initial.model, withIdentity.model)
+        assertEquals(listOf("sepa:yerba:1"), withIdentity.privateIdentities.map { it.identityKey })
+        assertEquals("Yerba Mate", withIdentity.privateIdentities.single().displayName)
+    }
+
+    @Test
+    fun exactKeyDeduplicatesButDistinctVariantsRemainSeparate() {
+        val first = identity("sepa:yerba:1", quantity = "1 kg")
+        val sameKeyDifferentMetadata = identity("sepa:yerba:1", quantity = "500 g")
+        val variant = identity("sepa:yerba:2", quantity = "500 g")
+
+        val withFirst = PracticalShoppingHomeSession.addPrivateIdentity(
+            PracticalShoppingHomeSession.initialState(),
+            first
+        )
+        val deduped = PracticalShoppingHomeSession.addPrivateIdentity(withFirst, sameKeyDifferentMetadata)
+        val withVariant = PracticalShoppingHomeSession.addPrivateIdentity(deduped, variant)
+
+        assertEquals(withFirst, deduped)
+        assertEquals(listOf(first, variant), withVariant.privateIdentities)
+    }
+
+    @Test
+    fun snapshotRestorePreservesMissingMetadataAndRemovalIsExact() {
+        val sourceMissing = identity(
+            key = "sepa:unknown-size",
+            name = "Product without size",
+            brand = null,
+            source = "Argentina SEPA / Precios Claros",
+            quantity = null
+        )
+        val state = PracticalShoppingHomeSession.addPrivateIdentity(
+            PracticalShoppingHomeSession.queryChanged(
+                PracticalShoppingHomeSession.initialState(),
+                "milk"
+            ),
+            sourceMissing
+        )
+
+        val restored = PracticalShoppingHomeSession.restoreState(
+            PracticalShoppingHomeSession.snapshot(state)
+        )
+        assertEquals("milk", restored.model.ui.query)
+        assertEquals(listOf(sourceMissing), restored.privateIdentities)
+
+        val removed = PracticalShoppingHomeSession.removePrivateIdentity(restored, sourceMissing.identityKey)
+        assertTrue(removed.privateIdentities.isEmpty())
+        assertEquals(restored.model, removed.model)
+    }
+
     @Test
     fun typedButUnsubmittedQueryRestoresAsIdleDraft() {
         var model = LocalSamplePracticalShoppingDemo.initialModel()

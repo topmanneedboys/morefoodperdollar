@@ -11,6 +11,38 @@ import org.junit.Test
 class PracticalShoppingHomeRendererTest {
 
     @Test
+    fun privateIdentityRowsAreSeparateFromSampleItemsAndCarryTheUncertaintyNotice() {
+        val identity =
+            PracticalShoppingPrivateIdentity(
+                identityKey = "sepa:yerba:1",
+                displayName = "Yerba Mate",
+                brand = "Marca",
+                sourceLabel = "Argentina SEPA / Precios Claros",
+                packageQuantityLabel = "1 kg"
+            )
+        val source =
+            PracticalShoppingHomeSession.submit(
+                PracticalShoppingHomeSession.initialState(),
+                "eggs milk"
+            )
+        val state =
+            PracticalShoppingHomeSession.addPrivateIdentity(source, identity)
+        val rendered =
+            PracticalShoppingHomeRenderer.render(
+                state.model.ui,
+                requestDetails = state.requestDetails.details,
+                privateIdentities = state.privateIdentities
+            )
+
+        assertEquals(listOf("Eggs", "Milk"), rendered.items.map { it.name })
+        assertEquals(listOf("sepa:yerba:1"), rendered.privateIdentityItems.map { it.identityKey })
+        assertEquals("Yerba Mate", rendered.privateIdentityItems.single().displayName)
+        assertEquals("1 kg", rendered.privateIdentityItems.single().packageQuantityLabel)
+        assertTrue(rendered.privateIdentityItems.single().notice.contains("no current price"))
+        assertNull(rendered.items.first().priceCoverageNotice)
+    }
+
+    @Test
     fun blankDraftStaysSimpleAndCannotSubmit() {
         val rendered =
             PracticalShoppingHomeRenderer.render(
