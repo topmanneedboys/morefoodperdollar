@@ -514,6 +514,9 @@ class MainActivity : AppCompatActivity() {
             renderHome()
         }
         homeExperience.onRemovePrivateIdentity = { identityKey ->
+            privateBasketOfferEvidence.remove(identityKey)
+            privateBasketPlan = null
+            privateBasketError = null
             homeSessionState =
                 PracticalShoppingHomeSession.removePrivateIdentity(
                     homeSessionState,

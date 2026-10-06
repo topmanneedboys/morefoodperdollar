@@ -65,6 +65,8 @@ class ArgentinaPrivateBasketPlanTest {
         assertEquals("Known subtotal · ARS 10.00", projection.totalText)
         assertEquals(listOf("Rice"), projection.missingIdentityNames)
         assertEquals("Availability unknown", projection.lines.first().availabilityText)
+        assertEquals(1, projection.mapMarkers.size)
+        assertEquals("store-1", projection.mapMarkers.single().storeKey)
         assertTrue(projection.notice.contains("availability remains unknown"))
     }
 

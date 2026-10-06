@@ -77,6 +77,30 @@ class ArgentinaPrivateBasketSurfaceView @JvmOverloads constructor(
                 button.isEnabled = onAction != null
                 body.addView(button)
             }
+            if (plan.mapMarkers.isNotEmpty()) {
+                body.addView(text("Store map context", 15f, "#111827", true, 16))
+                body.addView(
+                    text(
+                        "Exact store markers from the selected plan; coordinates are source evidence, not a driving route.",
+                        12f,
+                        "#6B7280",
+                        false,
+                        4
+                    )
+                )
+                plan.mapMarkers.forEach { marker ->
+                    body.addView(
+                        text(
+                            "• ${marker.storeName} · ${marker.productName} · ${marker.priceText}\n" +
+                                "  storeKey ${marker.storeKey} · ${marker.latitude}, ${marker.longitude}",
+                            13f,
+                            "#374151",
+                            false,
+                            7
+                        )
+                    )
+                }
+            }
             body.addView(text(plan.notice, 12f, "#6B7280", false, 8))
         }
     }

@@ -141,6 +141,28 @@ data class ArgentinaPrivateBasketStoreProjection(
     }
 }
 
+data class ArgentinaPrivateBasketMapMarkerProjection(
+    val storeKey: String,
+    val storeName: String,
+    val latitude: String,
+    val longitude: String,
+    val productEvidenceKey: String,
+    val productName: String,
+    val priceText: String
+) {
+    init {
+        listOf(
+            storeKey,
+            storeName,
+            latitude,
+            longitude,
+            productEvidenceKey,
+            productName,
+            priceText
+        ).forEach { require(it.isNotBlank()) }
+    }
+}
+
 data class ArgentinaPrivateBasketPlanProjection(
     val status: ArgentinaPrivateBasketPlanStatus,
     val headline: String,
@@ -149,6 +171,7 @@ data class ArgentinaPrivateBasketPlanProjection(
     val lines: List<ArgentinaPrivateBasketLineProjection>,
     val missingIdentityNames: List<String>,
     val stores: List<ArgentinaPrivateBasketStoreProjection>,
+    val mapMarkers: List<ArgentinaPrivateBasketMapMarkerProjection>,
     val notice: String,
     val releaseDate: String
 ) {
@@ -159,6 +182,7 @@ data class ArgentinaPrivateBasketPlanProjection(
         require(lines.size <= ArgentinaBackendContract.MAX_LINES)
         require(missingIdentityNames.none(String::isBlank))
         require(stores.size <= ArgentinaBackendContract.MAX_STORES)
+        require(mapMarkers.size <= ArgentinaBackendContract.MAX_PLAN_LINES)
         require(notice.isNotBlank())
         require(releaseDate.matches(Regex("[0-9]{4}-[0-9]{2}-[0-9]{2}")))
     }
@@ -187,6 +211,7 @@ internal object ArgentinaPrivateBasketPlanProjector {
                 },
                 missingIdentityNames = identities.map(PracticalShoppingPrivateIdentity::displayName),
                 stores = emptyList(),
+                mapMarkers = emptyList(),
                 notice = "$SOURCE release ${response.common.releaseDate}; unknown prices remain unknown.",
                 releaseDate = response.common.releaseDate
             )
@@ -231,6 +256,19 @@ internal object ArgentinaPrivateBasketPlanProjector {
                         .takeIf(String::isNotBlank)
                 )
             }
+        val storeByKey = selected.stores.associateBy { it.storeKey }
+        val mapMarkers = selected.lines.mapNotNull { line ->
+            val store = storeByKey[line.storeKey] ?: return@mapNotNull null
+            ArgentinaPrivateBasketMapMarkerProjection(
+                storeKey = store.storeKey,
+                storeName = store.storeName,
+                latitude = store.latitude,
+                longitude = store.longitude,
+                productEvidenceKey = line.productEvidenceKey,
+                productName = line.productName,
+                priceText = "${line.packagePrice.currency} ${line.packagePrice.amount}"
+            )
+        }.take(ArgentinaBackendContract.MAX_PLAN_LINES)
         return ArgentinaPrivateBasketPlanProjection(
             status = if (complete) {
                 ArgentinaPrivateBasketPlanStatus.CURRENT_COMPLETE
@@ -247,6 +285,7 @@ internal object ArgentinaPrivateBasketPlanProjector {
             lines = lines,
             missingIdentityNames = missing,
             stores = stores,
+            mapMarkers = mapMarkers,
             notice = buildString {
                 append("$SOURCE release ")
                 append(response.common.releaseDate)
