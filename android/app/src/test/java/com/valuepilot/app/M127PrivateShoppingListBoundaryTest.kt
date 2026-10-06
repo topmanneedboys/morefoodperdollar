@@ -41,6 +41,15 @@ class M127PrivateShoppingListBoundaryTest {
         assertTrue(store.contains("encodePrivateIdentities(snapshot.privateIdentities)"))
     }
 
+    @Test
+    fun partialLifecycleBundleCannotTurnDurablePrivateListIntoEmptyState() {
+        val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
+            .replace("\r\n", "\n")
+        assertTrue(activity.contains("savedInstanceState?.containsKey(STATE_HOME_PRIVATE_IDENTITIES) == true"))
+        assertTrue(activity.contains("homeSessionStore.load()?.privateIdentities.orEmpty()"))
+        assertTrue(activity.contains("Never decode that omission as an empty list"))
+    }
+
     private fun source(relativePath: String): File {
         var directory = File(System.getProperty("user.dir") ?: error("user.dir unavailable"))
         repeat(8) {

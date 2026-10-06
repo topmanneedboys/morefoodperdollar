@@ -474,6 +474,19 @@ class MainActivity : AppCompatActivity() {
                 homePreferenceStore.loadExtraStopMinimumSavingsChoice()
             }
 
+        // A lifecycle bundle may contain a newer Home query snapshot but omit the
+        // identity-only private-list field (for example when it was saved before
+        // the first Search handoff). Never decode that omission as an empty list:
+        // read the durable list instead so renderHome() cannot erase it.
+        val privateIdentities =
+            if (savedInstanceState?.containsKey(STATE_HOME_PRIVATE_IDENTITIES) == true) {
+                PracticalShoppingHomeSessionStoreCodec.decodePrivateIdentities(
+                    savedInstanceState.getString(STATE_HOME_PRIVATE_IDENTITIES)
+                )
+            } else {
+                homeSessionStore.load()?.privateIdentities.orEmpty()
+            }
+
         return PracticalShoppingHomeSession.restoreState(
             PracticalShoppingHomeSession.Snapshot(
                 query = savedInstanceState?.getString(STATE_HOME_QUERY).orEmpty(),
@@ -482,10 +495,7 @@ class MainActivity : AppCompatActivity() {
                 extraStopMinimumSavingsChoice = extraStopMinimumSavingsChoice,
                 requestDetailsLifecycleState =
                     savedInstanceState?.getByteArray(STATE_HOME_REQUEST_DETAILS),
-                privateIdentities =
-                    PracticalShoppingHomeSessionStoreCodec.decodePrivateIdentities(
-                        savedInstanceState?.getString(STATE_HOME_PRIVATE_IDENTITIES)
-                    )
+                privateIdentities = privateIdentities
             )
         )
     }
