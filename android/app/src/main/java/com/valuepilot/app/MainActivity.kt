@@ -76,6 +76,7 @@ class MainActivity : AppCompatActivity() {
     private var qualifiedOfferPlanRequestId = 0L
     private var privateBasketPlanRequestId = 0L
     private var privateBasketPlan: ArgentinaPrivateBasketPlanProjection? = null
+    private var privateBasketTripResult: ArgentinaPrivateTripCostResult? = null
     private var privateBasketError: String? = null
     private val privateBasketOfferEvidence = linkedMapOf<
         String,
@@ -622,6 +623,7 @@ class MainActivity : AppCompatActivity() {
                 identities = homeSessionState.privateIdentities,
                 offersByIdentity = privateBasketOfferEvidence,
                 plan = privateBasketPlan,
+                tripResult = privateBasketTripResult,
                 errorNotice = privateBasketError
             )
         )
@@ -1247,6 +1249,7 @@ class MainActivity : AppCompatActivity() {
                 ArgentinaPrivateBasketUiAction.PlanBasket -> requestPrivateBasketPlan()
                 ArgentinaPrivateBasketUiAction.OpenSearch ->
                     dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.SEARCH))
+                ArgentinaPrivateBasketUiAction.EditTripAssumptions -> showPrivateTripAssumptions()
                 is ArgentinaPrivateBasketUiAction.OpenStore ->
                     openQualifiedStoreMap(
                         action.store.storeName,
@@ -2613,6 +2616,77 @@ class MainActivity : AppCompatActivity() {
                 renderHome()
             }
         }
+    }
+
+    private fun showPrivateTripAssumptions() {
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(8), dp(4), dp(8), 0)
+        }
+        fun decimalField(label: String, initial: String): TextInputEditText {
+            val layout = TextInputLayout(this).apply {
+                hint = label
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = dp(8) }
+            }
+            val edit = TextInputEditText(this).apply {
+                setText(initial)
+                inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+                maxLines = 1
+            }
+            layout.addView(edit)
+            container.addView(layout)
+            return edit
+        }
+        val distance = decimalField("One-way driving distance (km)", "0")
+        val consumption = decimalField("Fuel consumption (L/100 km)", "8")
+        val fuelPrice = decimalField("Fuel price (ARS/L)", "0")
+        val tolls = decimalField("Tolls (ARS)", "0")
+        val parking = decimalField("Parking (ARS)", "0")
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Trip assumptions")
+            .setMessage("Manual estimate only. ValuePilot does not infer a driving route or use straight-line distance as a route.")
+            .setView(container)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton("Calculate", null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                try {
+                    privateBasketTripResult = ArgentinaPrivateTripCostCalculator.calculate(
+                        ArgentinaPrivateTripCostInput(
+                            oneWayDrivingKm = ArgentinaPrivateTripCostCalculator.parseDecimal(
+                                distance.text?.toString().orEmpty(), "distance"
+                            ),
+                            fuelConsumptionLitresPer100Km = ArgentinaPrivateTripCostCalculator.parseDecimal(
+                                consumption.text?.toString().orEmpty(), "fuel consumption"
+                            ),
+                            fuelPricePerLitre = ArgentinaPrivateTripCostCalculator.parseDecimal(
+                                fuelPrice.text?.toString().orEmpty(), "fuel price"
+                            ),
+                            tolls = ArgentinaPrivateTripCostCalculator.parseDecimal(
+                                tolls.text?.toString().orEmpty(), "tolls"
+                            ),
+                            parking = ArgentinaPrivateTripCostCalculator.parseDecimal(
+                                parking.text?.toString().orEmpty(), "parking"
+                            )
+                        )
+                    )
+                    dialog.dismiss()
+                    renderHome()
+                } catch (error: IllegalArgumentException) {
+                    Toast.makeText(
+                        this,
+                        error.message ?: "Enter valid trip assumptions.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+        dialog.show()
     }
 
     private fun copyFor(tab: AppPrimaryTab): ScreenCopy =

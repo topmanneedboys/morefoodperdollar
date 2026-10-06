@@ -13,6 +13,7 @@ import com.google.android.material.card.MaterialCardView
 sealed interface ArgentinaPrivateBasketUiAction {
     data object PlanBasket : ArgentinaPrivateBasketUiAction
     data object OpenSearch : ArgentinaPrivateBasketUiAction
+    data object EditTripAssumptions : ArgentinaPrivateBasketUiAction
     data class OpenStore(val store: ArgentinaPrivateBasketStoreProjection) : ArgentinaPrivateBasketUiAction
     data class Remove(val identityKey: String) : ArgentinaPrivateBasketUiAction
 }
@@ -62,7 +63,7 @@ class ArgentinaPrivateBasketSurfaceView @JvmOverloads constructor(
             body.addView(text("Selected products", 13f, "#374151", true, 18))
             state.lines.forEach { line -> body.addView(lineCard(line)) }
         }
-        state.plan?.let { plan ->
+            state.plan?.let { plan ->
             body.addView(text(plan.totalText ?: plan.headline, 21f, "#111827", true, 18))
             body.addView(text(plan.coverageText, 13f, "#374151", false, 5))
             plan.stores.forEach { store ->
@@ -103,6 +104,26 @@ class ArgentinaPrivateBasketSurfaceView @JvmOverloads constructor(
             }
             body.addView(text(plan.notice, 12f, "#6B7280", false, 8))
         }
+        body.addView(text("Trip context", 15f, "#111827", true, 18))
+        body.addView(
+            text(
+                state.tripSummaryText
+                    ?: "Trip cost unknown until you enter one-way driving distance, fuel, tolls and parking.",
+                13f,
+                "#374151",
+                false,
+                5
+            )
+        )
+        val tripButton = MaterialButton(context).apply {
+            text = "Enter trip assumptions"
+            isAllCaps = false
+            minHeight = dp(46)
+            contentDescription = "Enter manual driving, fuel, toll and parking assumptions"
+            setOnClickListener { onAction?.invoke(ArgentinaPrivateBasketUiAction.EditTripAssumptions) }
+        }
+        tripButton.isEnabled = onAction != null
+        body.addView(tripButton)
     }
 
     private fun lineCard(line: ArgentinaPrivateBasketLineProjection): View =
@@ -167,6 +188,7 @@ data class ArgentinaPrivateBasketRenderState(
     val canPlan: Boolean,
     val lines: List<ArgentinaPrivateBasketLineProjection>,
     val plan: ArgentinaPrivateBasketPlanProjection?,
+    val tripSummaryText: String? = null,
     val errorNotice: String? = null
 )
 
@@ -175,6 +197,7 @@ internal object ArgentinaPrivateBasketRenderer {
         identities: List<PracticalShoppingPrivateIdentity>,
         offersByIdentity: Map<String, List<ArgentinaBackendContract.SearchOffer>>,
         plan: ArgentinaPrivateBasketPlanProjection?,
+        tripResult: ArgentinaPrivateTripCostResult? = null,
         errorNotice: String? = null
     ): ArgentinaPrivateBasketRenderState {
         val lines = identities.map { identity ->
@@ -224,6 +247,7 @@ internal object ArgentinaPrivateBasketRenderer {
             canPlan = canPlan,
             lines = lines,
             plan = plan,
+            tripSummaryText = tripResult?.displayText(),
             errorNotice = errorNotice
         )
     }
