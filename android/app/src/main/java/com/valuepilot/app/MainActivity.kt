@@ -74,6 +74,13 @@ class MainActivity : AppCompatActivity() {
     private val argentinaLaunchArea = ArgentinaQualifiedLaunchAreas.BuenosAiresCaba
     private var searchQuery = ""
     private var qualifiedOfferPlanRequestId = 0L
+    private var privateBasketPlanRequestId = 0L
+    private var privateBasketPlan: ArgentinaPrivateBasketPlanProjection? = null
+    private var privateBasketError: String? = null
+    private val privateBasketOfferEvidence = linkedMapOf<
+        String,
+        List<ArgentinaBackendContract.SearchOffer>
+    >()
 
     private lateinit var shellRoot: View
     private lateinit var bottomNavArea: View
@@ -87,6 +94,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var dataStatusButton: MaterialButton
     private lateinit var homeExperience: PracticalShoppingHomeSurfaceView
     private lateinit var basketExperience: PracticalShoppingBasketSurfaceView
+    private lateinit var qualifiedBasketExperience: ArgentinaPrivateBasketSurfaceView
     private lateinit var searchExperience: View
     private lateinit var searchInput: TextInputEditText
     private lateinit var searchButton: MaterialButton
@@ -190,6 +198,7 @@ class MainActivity : AppCompatActivity() {
         dataStatusButton = findViewById(R.id.dataStatusButton)
         homeExperience = findViewById(R.id.homeExperience)
         basketExperience = findViewById(R.id.basketExperience)
+        qualifiedBasketExperience = findViewById(R.id.qualifiedBasketExperience)
         searchExperience = findViewById(R.id.searchExperience)
         searchInput = findViewById(R.id.searchInput)
         searchButton = findViewById(R.id.searchButton)
@@ -373,6 +382,9 @@ class MainActivity : AppCompatActivity() {
         }
         if (::basketExperience.isInitialized) {
             basketExperience.onAction = null
+        }
+        if (::qualifiedBasketExperience.isInitialized) {
+            qualifiedBasketExperience.onAction = null
         }
         if (::savedRouteCoordinator.isInitialized) {
             savedExperience.onAction = null
@@ -592,6 +604,14 @@ class MainActivity : AppCompatActivity() {
             homeExperience.revealProjectedResult()
         }
         basketExperience.render(PracticalShoppingBasketRenderer.render(homeState))
+        qualifiedBasketExperience.render(
+            ArgentinaPrivateBasketRenderer.render(
+                identities = homeSessionState.privateIdentities,
+                offersByIdentity = privateBasketOfferEvidence,
+                plan = privateBasketPlan,
+                errorNotice = privateBasketError
+            )
+        )
     }
 
     private fun dismissHomeShareDialog() {
@@ -1207,6 +1227,29 @@ class MainActivity : AppCompatActivity() {
             when (action) {
                 PracticalShoppingBasketUiAction.OpenHome ->
                     dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.HOME))
+            }
+        }
+        qualifiedBasketExperience.onAction = { action ->
+            when (action) {
+                ArgentinaPrivateBasketUiAction.PlanBasket -> requestPrivateBasketPlan()
+                ArgentinaPrivateBasketUiAction.OpenSearch ->
+                    dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.SEARCH))
+                is ArgentinaPrivateBasketUiAction.OpenStore ->
+                    openQualifiedStoreMap(
+                        action.store.storeName,
+                        action.store.latitude,
+                        action.store.longitude
+                    )
+                is ArgentinaPrivateBasketUiAction.Remove -> {
+                    privateBasketOfferEvidence.remove(action.identityKey)
+                    privateBasketPlan = null
+                    privateBasketError = null
+                    homeSessionState = PracticalShoppingHomeSession.removePrivateIdentity(
+                        homeSessionState,
+                        action.identityKey
+                    )
+                    renderHome()
+                }
             }
         }
     }
@@ -2059,7 +2102,11 @@ class MainActivity : AppCompatActivity() {
         if (homeVisible) renderHome()
 
         val basketVisible = state.selectedPrimaryTab == AppPrimaryTab.BASKET
+        val privateBasketVisible = basketVisible && homeSessionState.privateIdentities.isNotEmpty()
         basketExperience.visibility = if (basketVisible) View.VISIBLE else View.GONE
+        if (privateBasketVisible) basketExperience.visibility = View.GONE
+        qualifiedBasketExperience.visibility =
+            if (privateBasketVisible) View.VISIBLE else View.GONE
         if (basketVisible) renderHome()
 
         searchExperience.visibility = if (searchVisible) View.VISIBLE else View.GONE
@@ -2492,9 +2539,67 @@ class MainActivity : AppCompatActivity() {
             searchStatus.text = getString(R.string.search_identity_add_home_failed)
             return
         }
+        privateBasketOfferEvidence[identity.identityKey] = match.qualifiedOffers
+        privateBasketPlan = null
+        privateBasketError = null
         homeSessionState = nextState
         dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.HOME))
         renderHome()
+    }
+
+    /** Runs exactly one qualified /v1/shop request for the bounded private basket. */
+    private fun requestPrivateBasketPlan() {
+        val built = ArgentinaPrivateBasketRequestBuilder.build(
+            identities = homeSessionState.privateIdentities,
+            offersByIdentity = privateBasketOfferEvidence,
+            area = argentinaLaunchArea
+        )
+        privateBasketPlan = null
+        privateBasketError = if (built.unresolvedIdentityKeys.isNotEmpty()) {
+            "${built.unresolvedIdentityKeys.size} selected item(s) still have unknown price evidence."
+        } else {
+            null
+        }
+        renderHome()
+        val request = built.request ?: return
+        val requestId = Math.addExact(privateBasketPlanRequestId, 1L)
+        privateBasketPlanRequestId = requestId
+        Toast.makeText(this, "Planning your private basket…", Toast.LENGTH_SHORT).show()
+        searchExecutor.submit {
+            val outcome = runCatching {
+                val transport = ValuePilotArgentinaEdgeTransportFactory.create()
+                val statusResult = ArgentinaBackendConsumerBridge(transport, null).status()
+                val status = (statusResult as? ArgentinaBackendBridgeResult.Success)?.value
+                    ?: error("The qualified Argentina release is unavailable.")
+                if (
+                    status.freshness != ArgentinaBackendContract.Freshness.FRESH ||
+                        !status.backendCodeQualified ||
+                        !status.androidNetworkingAuthorized
+                ) {
+                    error("The qualified Argentina release is not authorized for this request.")
+                }
+                val expected = ArgentinaBackendContract.ExpectedRelease(
+                    releaseId = status.releaseId ?: error("The qualified release has no id."),
+                    releaseDate = status.releaseDate ?: error("The qualified release has no date.")
+                )
+                ArgentinaBackendConsumerBridge(transport, expected).shop(request)
+            }
+            mainHandler.post {
+                if (requestId != privateBasketPlanRequestId || isFinishing || isDestroyed) return@post
+                val result = outcome.getOrNull()
+                if (result !is ArgentinaBackendBridgeResult.Success) {
+                    privateBasketError = "The basket plan could not be refreshed; prices remain unknown."
+                    renderHome()
+                    return@post
+                }
+                privateBasketPlan = ArgentinaPrivateBasketPlanProjector.project(
+                    response = result.value,
+                    identities = homeSessionState.privateIdentities
+                )
+                privateBasketError = null
+                renderHome()
+            }
+        }
     }
 
     private fun copyFor(tab: AppPrimaryTab): ScreenCopy =
