@@ -17,7 +17,7 @@ from .reader import (
     BackendQueryError,
     CurrentPriceEvidenceUnavailable,
 )
-from .release import ReleaseError, ReleaseManager
+from .release import ReleaseError, ReleaseManager, qualified_offer_artifacts_available
 
 LOGGER = logging.getLogger("valuepilot.backend")
 MAX_REQUEST_BYTES = 16 * 1024
@@ -29,6 +29,9 @@ ANDROID_NETWORKING_SCOPE_ENV = "VALUEPILOT_ANDROID_NETWORKING_SCOPE"
 ANDROID_NETWORKING_RELEASE_ID_ENV = "VALUEPILOT_ANDROID_NETWORKING_RELEASE_ID"
 ANDROID_NETWORKING_RELEASE_DATE_ENV = "VALUEPILOT_ANDROID_NETWORKING_RELEASE_DATE"
 ANDROID_NETWORKING_SCOPE = "identity-search"
+PRODUCTION_ANDROID_UI_AUTHORIZED_ENV = "VALUEPILOT_PRODUCTION_ANDROID_UI_AUTHORIZED"
+PRODUCTION_ANDROID_UI_SCOPE_ENV = "VALUEPILOT_PRODUCTION_ANDROID_UI_SCOPE"
+PRODUCTION_ANDROID_UI_SCOPE = "qualified-offers"
 DISCOVERY_PAGE_SIZE = 5
 DISCOVERY_MAX_PAGE = 5
 
@@ -51,6 +54,25 @@ def _android_networking_authorized(status: Mapping[str, Any]) -> bool:
         and configured_release_id == status.get("releaseId")
         and configured_release_date == status.get("releaseDate")
     )
+
+
+def _production_android_ui_authorized(status: Mapping[str, Any]) -> bool:
+    """Authorize qualified offer exposure only for an explicit release gate.
+
+    Identity discovery has a narrower ``identity-search`` authorization.  A
+    separate operator-controlled gate is required before Search may expose
+    current price/store evidence to the Android UI.  The gate is deliberately
+    release-scoped through the same release id/date variables used by the
+    identity authorization, and defaults to false.
+    """
+
+    if os.environ.get(PRODUCTION_ANDROID_UI_AUTHORIZED_ENV, "").strip().lower() != "true":
+        return False
+    if os.environ.get(PRODUCTION_ANDROID_UI_SCOPE_ENV, "") != PRODUCTION_ANDROID_UI_SCOPE:
+        return False
+    if status.get("qualifiedOfferEvidenceAvailable") is not True:
+        return False
+    return _android_networking_authorized(status)
 
 
 def _strip_internal(value: Any) -> Any:
@@ -109,15 +131,36 @@ class BackendService:
             result[line_id] = key
         return result or None
 
-    def _execute(self, payload: Mapping[str, Any], *, correlation_id: str | None = None):
+    @staticmethod
+    def _trusted_keys_from_shop_payload(payload: Mapping[str, Any]) -> dict[str, str] | None:
+        """Carry only explicit Search-selected identities into direct /shop."""
+
+        items = payload.get("items")
+        if not isinstance(items, list):
+            return None
+        trusted: dict[str, str] = {}
+        for index, item in enumerate(items):
+            if not isinstance(item, Mapping):
+                return None
+            supplied_line_id = item.get("lineId")
+            line_id = supplied_line_id if supplied_line_id is not None else f"item-{index + 1}"
+            product_key = item.get("productEvidenceKey")
+            if product_key is None:
+                continue
+            if not isinstance(line_id, str) or not line_id or not isinstance(product_key, str) or not product_key:
+                raise BackendQueryError("trusted product identity is invalid")
+            trusted[line_id] = product_key
+        return trusted or None
+
+    def _execute(self, payload: Mapping[str, Any], *, correlation_id: str | None = None, trusted_product_keys: Mapping[str, str] | None = None):
         request_id = correlation_id or str(uuid.uuid4())
         handle = self.release_manager.pin(require_fresh=True)
         reader = self._reader(handle)
-        decision, metrics = reader.query(payload)
+        decision, metrics = reader.query(payload, trusted_product_keys=trusted_product_keys)
         return request_id, handle, decision, metrics
 
     @staticmethod
-    def _route_ids(reader: ArgentinaBackendReader, payload: Mapping[str, Any]) -> tuple[str, ...]:
+    def _route_selections(reader: ArgentinaBackendReader, payload: Mapping[str, Any]):
         try:
             latitude = Decimal(str(payload.get("latitude")))
             longitude = Decimal(str(payload.get("longitude")))
@@ -125,9 +168,13 @@ class BackendService:
         except (InvalidOperation, TypeError, ValueError) as exc:
             raise BackendQueryError("latitude, longitude and radiusKm must be numeric") from exc
         try:
-            return tuple(selection.region_id for selection in reader.router.route(latitude=latitude, longitude=longitude, radius_km=radius))
+            return tuple(reader.router.route(latitude=latitude, longitude=longitude, radius_km=radius))
         except (BackendQueryError, ValueError) as exc:
             raise BackendQueryError(str(exc)) from exc
+
+    @classmethod
+    def _route_ids(cls, reader: ArgentinaBackendReader, payload: Mapping[str, Any]) -> tuple[str, ...]:
+        return tuple(selection.region_id for selection in cls._route_selections(reader, payload))
 
     @staticmethod
     def _response_size(response: dict[str, Any]) -> int:
@@ -191,10 +238,10 @@ class BackendService:
             "apiContractVersion": "valuepilot-argentina-backend-http-v1",
             "backendCodeQualified": True,
             "liveCloudDeploymentVerified": False,
-            "productionAndroidUiAuthorized": False,
             "automatedOfficialAcquisitionProven": False,
         })
         value["androidNetworkingAuthorized"] = _android_networking_authorized(value)
+        value["productionAndroidUiAuthorized"] = _production_android_ui_authorized(value)
         return value
 
     def shop(self, payload: Mapping[str, Any], *, correlation_id: str | None = None) -> dict[str, Any]:
@@ -202,7 +249,11 @@ class BackendService:
         started = time.perf_counter()
         handle = None
         try:
-            request_id, handle, decision, metrics = self._execute(payload, correlation_id=request_id)
+            request_id, handle, decision, metrics = self._execute(
+                payload,
+                correlation_id=request_id,
+                trusted_product_keys=self._trusted_keys_from_shop_payload(payload),
+            )
         except CurrentPriceEvidenceUnavailable:
             LOGGER.info("request=%s release=%s result=current_evidence_unavailable", request_id, getattr(handle, "release_id", None))
             raise
@@ -279,10 +330,48 @@ class BackendService:
         started = time.perf_counter()
         handle = self.release_manager.pin(require_fresh=True)
         reader = self._reader(handle)
-        regions = self._route_ids(reader, payload)
+        authorization_status = {
+            "service": "ready",
+            "releaseId": handle.release_id,
+            "releaseDate": handle.release_date,
+            "freshness": handle.freshness_status,
+            "backendCodeQualified": True,
+            "qualifiedOfferEvidenceAvailable": qualified_offer_artifacts_available(
+                getattr(getattr(handle, "artifacts", None), "manifest", {}) or {}
+            ),
+        }
+        production_android_ui_authorized = _production_android_ui_authorized(authorization_status)
+        selections = self._route_selections(reader, payload)
+        regions = tuple(selection.region_id for selection in selections)
         offset = page * DISCOVERY_PAGE_SIZE
         window_limit = min(offset + DISCOVERY_PAGE_SIZE + 1, MAX_DISCOVERY_PRODUCT_LIMIT)
-        candidates, metrics = reader.discover(query, region_ids=regions, product_limit=window_limit)
+        discover_with_offers = getattr(reader, "discover_with_offers", None)
+        if callable(discover_with_offers):
+            candidates, metrics = discover_with_offers(
+                query,
+                selections=selections,
+                latitude=Decimal(str(payload.get("latitude"))),
+                longitude=Decimal(str(payload.get("longitude"))),
+                radius_km=Decimal(str(payload.get("radiusKm"))),
+                product_limit=window_limit,
+            )
+        else:
+            # Compatibility for older test doubles and pre-wiring readers.
+            candidates, metrics = reader.discover(query, region_ids=regions, product_limit=window_limit)
+        if not production_android_ui_authorized:
+            # Identity discovery remains available under the narrower
+            # identity-search authorization, but current price/store evidence
+            # must not cross into the Android UI before the explicit production
+            # gate is enabled for this exact release.
+            candidates = tuple(
+                {
+                    **dict(candidate),
+                    "qualifiedOffers": [],
+                }
+                if isinstance(candidate, Mapping) and "qualifiedOffers" in candidate
+                else candidate
+                for candidate in candidates
+            )
         has_more = len(candidates) > offset + DISCOVERY_PAGE_SIZE
         limit_reached = has_more and page == DISCOVERY_MAX_PAGE
         visible_candidates = candidates[offset:offset + DISCOVERY_PAGE_SIZE]
@@ -314,6 +403,7 @@ class BackendService:
             "evidenceSemantics": {
                 "availability": "UNKNOWN",
                 "distance": "STRAIGHT_LINE_HAVERSINE_ONLY",
+                "qualifiedCurrentPriceEvidence": production_android_ui_authorized,
                 "pricePublicationIsNotInventory": True,
             },
             "diagnostics": {
