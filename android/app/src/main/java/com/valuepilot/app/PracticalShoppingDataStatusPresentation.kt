@@ -80,14 +80,14 @@ internal data class PracticalShoppingDataStatusPresentation(
                     "${String.format(Locale.ROOT, "%,d", BUNDLED_IDENTITY_RECORD_COUNT)} Canada-labelled product names in the offline identity catalogue. Names only — this is not proof of GTA or Metro Vancouver availability, price, package size, stock or availability.",
                 privateObservations = privateText,
                 currentOffers =
-                    "None included. There is no authorized live-offer feed. Unknown prices stay unknown.",
+                    "Qualified current listed-price previews may appear in the user-triggered Argentina Search when the signed release and freshness checks pass. Unknown prices stay unknown; a listed price is not stock or availability.",
                 storeDirectory = directoryText,
                 flyers =
                     "None included. Flyer content is not copied or treated as a current offer.",
                 connectivity =
-                    "No background syncing. Only the user-triggered Argentina identity Search may use the secured connection; it does not supply prices or stock.",
+                    "No background syncing. Only the user-triggered Argentina Search may use the secured connection; it may supply bounded qualified price/store evidence, never stock or availability.",
                 demoData =
-                    "Home examples are fictional sample data. Search identities are source-attributed names, not current offers or Best Value decisions."
+                    "Home examples are fictional sample data. Search identities and any attached offer preview are source-attributed evidence, not Best Value decisions."
             )
         }
 

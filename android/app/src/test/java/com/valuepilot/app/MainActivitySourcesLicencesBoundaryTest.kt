@@ -48,9 +48,9 @@ class MainActivitySourcesLicencesBoundaryTest {
             "offline search only",
             "not live retailer offers",
             "fictional sample data",
-            "Search cards are source-attributed product identity suggestions only",
-            "authorized current-offer feed",
-            "No flyer content is copied here"
+            "Search cards show source-attributed identities",
+            "Qualified Argentina listed-price evidence",
+            "does not copy flyer content"
         ).forEach { required ->
             assertTrue("Expected truthful disclosure copy: $required", strings.contains(required))
         }

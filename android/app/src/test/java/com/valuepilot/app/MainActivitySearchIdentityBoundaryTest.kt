@@ -8,7 +8,7 @@ import java.io.File
 class MainActivitySearchIdentityBoundaryTest {
 
     @Test
-    fun `visible Search is Argentina identity-only and supports Compare handoff`() {
+    fun `visible Search keeps exact identities and qualified evidence bounded`() {
         val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
             .replace("\r\n", "\n")
         val layout = source("src/main/res/layout/activity_shell.xml").readText()
@@ -43,7 +43,7 @@ class MainActivitySearchIdentityBoundaryTest {
     }
 
     @Test
-    fun `identity cards do not expose price ranking or availability authority`() {
+    fun `qualified cards expose evidence without ranking or availability authority`() {
         val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
             .replace("\r\n", "\n")
         val cardStart = activity.indexOf("private fun createSearchResultView(")
@@ -52,15 +52,19 @@ class MainActivitySearchIdentityBoundaryTest {
         assertTrue(cardEnd > cardStart)
         val card = activity.substring(cardStart, cardEnd)
         listOf(
-            "priceSummary",
-            "metricLabel",
+            "offerSummary",
+            "qualifiedOffers",
+            "showQualifiedOfferDetails",
             "best_value",
             "rank",
             "inventory",
-            "availability",
             "merchant availability"
         ).forEach { forbidden ->
-            assertFalse("Identity card must not own $forbidden", card.contains(forbidden, ignoreCase = true))
+            if (forbidden == "best_value" || forbidden == "rank" || forbidden == "inventory" || forbidden == "merchant availability") {
+                assertFalse("Search card must not own $forbidden", card.contains(forbidden, ignoreCase = true))
+            } else {
+                assertTrue("Search card must expose $forbidden", card.contains(forbidden))
+            }
         }
         assertTrue(card.contains("caveat"))
         assertTrue(card.contains("openComparisonWithSharedText"))

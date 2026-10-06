@@ -6,14 +6,13 @@ import com.valuepilot.core.OfflineCatalogMatchKind
 import com.valuepilot.core.OfflineCatalogSnapshotManifest
 
 /**
- * Immutable presentation for Search's real, offline identity rail.
+ * Immutable presentation for Search's exact identity rail.
  *
  * The bundled catalog contributes names and optional brands only. The
- * Argentina identity rail may also carry an explicitly validated package
- * quantity, but this presentation carries no price, store, availability,
- * freshness or ranking authority. A later action may hand the selected name
- * to Scan & compare, but that route still requires the shopper to review and
- * supply exact evidence.
+ * The offline identity rail contributes names and optional brands only. The
+ * qualified Argentina rail may attach a bounded, source-labelled current
+ * offer preview. The preview is evidence only: it carries no stock,
+ * availability or ranking authority.
  */
 internal data class PracticalShoppingSearchIdentityPresentation(
     val query: String,
@@ -31,7 +30,13 @@ internal data class PracticalShoppingSearchIdentityPresentation(
         val matchLabel: String,
         /** Exact structured package quantity when the source supplied one. */
         val packageQuantityLabel: String? = null,
-        val identityKey: String = displayName
+        /** Source attribution supplied by the identity rail, when available. */
+        val sourceLabel: String? = null,
+        val identityKey: String = displayName,
+        /** The source-validated GTIN, when the exact identity supplied one. */
+        val gtin: String? = null,
+        /** Bounded exact current-price evidence, when the backend supplied it. */
+        val qualifiedOffers: List<ArgentinaBackendContract.SearchOffer> = emptyList()
     ) {
         init {
             require(displayName.isNotBlank())
@@ -39,7 +44,12 @@ internal data class PracticalShoppingSearchIdentityPresentation(
             require(matchLabel.isNotBlank())
             require(packageQuantityLabel == null || packageQuantityLabel.isNotBlank())
             require(packageQuantityLabel == null || packageQuantityLabel.length <= 64)
+            require(sourceLabel == null || sourceLabel.isNotBlank())
+            require(sourceLabel == null || sourceLabel.length <= 160)
             require(identityKey.isNotBlank())
+            require(gtin == null || gtin.matches(Regex("[0-9]{8}|[0-9]{12}|[0-9]{13}|[0-9]{14}")))
+            require(qualifiedOffers.size <= ArgentinaBackendContract.MAX_SEARCH_OFFERS_PER_IDENTITY)
+            require(qualifiedOffers.all { it.productEvidenceKey == identityKey })
         }
     }
 
@@ -55,7 +65,7 @@ internal data class PracticalShoppingSearchIdentityPresentation(
         require(!hasMore || nextPage != null || limitReached)
     }
 
-    /** Dialog-safe summary that keeps the identity-only boundary visible. */
+    /** Dialog-safe summary that keeps the evidence boundary visible. */
     val summaryMessage: String
         get() = buildString {
             append(notice)
@@ -69,8 +79,8 @@ internal data class PracticalShoppingSearchIdentityPresentation(
         get() = buildString {
             append(summaryMessage)
             if (matches.isEmpty()) {
-                append("\nNo matching product identity was found in this bundled snapshot.")
-                append(" This does not mean the product is unavailable; it only means this snapshot had no match.")
+                append("\nNo matching product identity was returned by the qualified source.")
+                append(" This does not mean the product is unavailable; it only means this request had no match.")
             } else {
                 append("\n\n")
                 matches.forEachIndexed { index, match ->

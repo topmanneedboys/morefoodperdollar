@@ -43,7 +43,7 @@ class MainActivityDataStatusBoundaryTest {
             "data_status",
             "ValuePilot data status",
             "Open Food Facts",
-            "No flyer content is copied here"
+            "does not copy flyer content"
         ).forEach { required ->
             assertTrue("Expected truthful status/disclosure copy: $required", strings.contains(required))
         }
@@ -64,7 +64,7 @@ class MainActivityDataStatusBoundaryTest {
         val source = source("src/main/java/com/valuepilot/app/PracticalShoppingDataStatusPresentation.kt").readText()
 
         listOf(
-            "None included. There is no authorized live-offer feed",
+            "Qualified current listed-price previews may appear",
             "Unknown prices stay unknown",
             "Not available in this build",
             "Flyer content is not copied",

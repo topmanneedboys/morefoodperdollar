@@ -4,6 +4,7 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -21,6 +22,7 @@ import android.widget.CheckBox
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -71,6 +73,7 @@ class MainActivity : AppCompatActivity() {
     private var argentinaSearchSurfaceState: ArgentinaLiveSearchSurfaceState? = null
     private val argentinaLaunchArea = ArgentinaQualifiedLaunchAreas.BuenosAiresCaba
     private var searchQuery = ""
+    private var qualifiedOfferPlanRequestId = 0L
 
     private lateinit var shellRoot: View
     private lateinit var bottomNavArea: View
@@ -2188,6 +2191,8 @@ class MainActivity : AppCompatActivity() {
         caveat: String,
         onAddToHome: (String) -> Unit
     ): View {
+        val primaryOffer = match.qualifiedOffers.firstOrNull()
+        val offerSummary = primaryOffer?.let(ArgentinaQualifiedOfferPresentation::summary)
         val card = MaterialCardView(this).apply {
             radius = dp(18).toFloat()
             cardElevation = 0f
@@ -2211,6 +2216,7 @@ class MainActivity : AppCompatActivity() {
                     },
                     match.matchLabel,
                     "Argentina SEPA identity result",
+                    offerSummary,
                     getString(R.string.search_identity_no_verified_picture),
                     caveat,
                     "Tap to review this name in Scan and compare",
@@ -2270,6 +2276,15 @@ class MainActivity : AppCompatActivity() {
             setPadding(0, dp(8), 0, 0)
         }
 
+        val offerState = offerSummary?.let { summary ->
+            TextView(this).apply {
+                text = summary
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                setTextColor(ValuePilotPalette.color("#374151"))
+                setPadding(0, dp(8), 0, 0)
+            }
+        }
+
         val source = TextView(this).apply {
             text = getString(R.string.search_identity_source)
             gravity = Gravity.START
@@ -2283,6 +2298,7 @@ class MainActivity : AppCompatActivity() {
         brand?.let(body::addView)
         packageQuantity?.let(body::addView)
         body.addView(matchLabel)
+        offerState?.let(body::addView)
         TextView(this).apply {
             text = caveat
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
@@ -2299,6 +2315,32 @@ class MainActivity : AppCompatActivity() {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, dp(10), 0, 0)
         }.also(body::addView)
+        primaryOffer?.let { offer ->
+            val detailsButton = MaterialButton(this).apply {
+                text = getString(R.string.search_identity_view_offer)
+                isAllCaps = false
+                minHeight = dp(48)
+                contentDescription = getString(
+                    R.string.search_identity_view_offer_description,
+                    offer.storeName
+                )
+                setOnClickListener { showQualifiedOfferDetails(offer) }
+            }
+            body.addView(detailsButton)
+            if (offer.quantity != null) {
+                val planButton = MaterialButton(this).apply {
+                    text = getString(R.string.search_identity_plan_offer)
+                    isAllCaps = false
+                    minHeight = dp(48)
+                    contentDescription = getString(
+                        R.string.search_identity_plan_offer_description,
+                        match.displayName
+                    )
+                    setOnClickListener { requestQualifiedOfferPlan(match) }
+                }
+                body.addView(planButton)
+            }
+        }
         val addHomeButton = MaterialButton(this).apply {
             text = getString(R.string.search_identity_add_home_draft)
             isAllCaps = false
@@ -2318,6 +2360,103 @@ class MainActivity : AppCompatActivity() {
         card.addView(body)
         card.addView(addHomeButton)
         return card
+    }
+
+    private fun showQualifiedOfferDetails(offer: ArgentinaBackendContract.SearchOffer) {
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.search_identity_offer_details_title, offer.storeName))
+            .setMessage(ArgentinaQualifiedOfferPresentation.details(offer))
+            .setNeutralButton(R.string.search_identity_open_store_map) { _, _ ->
+                openQualifiedStoreMap(offer.storeName, offer.storeLatitude, offer.storeLongitude)
+            }
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
+    private fun requestQualifiedOfferPlan(
+        match: PracticalShoppingSearchIdentityPresentation.Match
+    ) {
+        val request = ArgentinaQualifiedOfferPlan.request(match, argentinaLaunchArea)
+        if (request == null) {
+            showQualifiedOfferDetails(match.qualifiedOffers.firstOrNull() ?: return)
+            return
+        }
+        val requestId = Math.addExact(qualifiedOfferPlanRequestId, 1L)
+        qualifiedOfferPlanRequestId = requestId
+        Toast.makeText(this, R.string.search_identity_plan_loading, Toast.LENGTH_SHORT).show()
+        searchExecutor.submit {
+            val outcome = runCatching {
+                val transport = ValuePilotArgentinaEdgeTransportFactory.create()
+                val statusResult = ArgentinaBackendConsumerBridge(transport, null).status()
+                val status = (statusResult as? ArgentinaBackendBridgeResult.Success)?.value
+                    ?: error("The qualified Argentina release is unavailable.")
+                if (
+                    status.freshness != ArgentinaBackendContract.Freshness.FRESH ||
+                        !status.backendCodeQualified ||
+                        !status.androidNetworkingAuthorized
+                ) {
+                    error("The qualified Argentina release is not authorized for this request.")
+                }
+                val expected = ArgentinaBackendContract.ExpectedRelease(
+                    releaseId = status.releaseId ?: error("The qualified release has no id."),
+                    releaseDate = status.releaseDate ?: error("The qualified release has no date.")
+                )
+                ArgentinaBackendConsumerBridge(transport, expected).shop(request)
+            }
+            mainHandler.post {
+                if (requestId != qualifiedOfferPlanRequestId || isFinishing || isDestroyed) return@post
+                val result = outcome.getOrNull()
+                if (result !is ArgentinaBackendBridgeResult.Success) {
+                    AlertDialog.Builder(this)
+                        .setTitle(R.string.search_identity_plan_unavailable_title)
+                        .setMessage(R.string.search_identity_plan_unavailable_message)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
+                    return@post
+                }
+                showQualifiedOfferPlan(result.value.result)
+            }
+        }
+    }
+
+    private fun showQualifiedOfferPlan(decision: ArgentinaBackendContract.ShoppingDecision) {
+        val selected = decision.bestSensibleChoice.selectedPlan
+        val body = buildString {
+            if (selected == null) {
+                append("No complete current-price plan was found.\n")
+                append("Unknown or missing price evidence stays unknown.")
+            } else {
+                append("Listed total: ")
+                    .append(selected.total.currency).append(' ').append(selected.total.amount).append('\n')
+                append("Store(s): ").append(selected.stores.joinToString { it.storeName }).append('\n')
+                append("Priced lines: ").append(selected.lines.size).append('\n')
+                if (selected.missingLineIds.isNotEmpty()) {
+                    append("Missing price evidence: ").append(selected.missingLineIds.size).append('\n')
+                }
+                append("Availability is UNKNOWN; a published price is not proof of stock.")
+            }
+        }
+        val builder = AlertDialog.Builder(this)
+            .setTitle(R.string.search_identity_plan_title)
+            .setMessage(body)
+            .setPositiveButton(android.R.string.ok, null)
+        selected?.stores?.firstOrNull()?.let { store ->
+            builder.setNeutralButton(R.string.search_identity_open_store_map) { _, _ ->
+                openQualifiedStoreMap(store.storeName, store.latitude, store.longitude)
+            }
+        }
+        builder.show()
+    }
+
+    private fun openQualifiedStoreMap(storeName: String, latitude: String, longitude: String) {
+        val uri = Uri.parse(
+            "geo:$latitude,$longitude?q=$latitude,$longitude(${Uri.encode(storeName)})"
+        )
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(this, R.string.search_identity_map_unavailable, Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun addSearchIdentityToHome(displayName: String) {
