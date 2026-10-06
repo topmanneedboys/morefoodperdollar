@@ -115,9 +115,9 @@
 
 The bundled store directory uses a separately attributed OpenStreetMap snapshot under ODbL-1.0. Source: https://www.openstreetmap.org/copyright • licence: https://opendatacommons.org/licenses/odbl/1-0/. It contains source-listed GTA and Metro Vancouver locations only. A location row does not prove that a store carries an item, has stock, or has a current price.
 
-Prices and comparisons you enter or confirm stay private on this device. They are personal observations, not live retailer offers. Home planner cards are clearly labelled fictional sample data and must not be read as retailer data. Search cards are source-attributed product identity suggestions only; they do not provide current prices, stock, availability or Best Value rankings.
+Prices and comparisons you enter or confirm stay private on this device. They are personal observations, not live retailer offers. Home planner cards are clearly labelled fictional sample data and must not be read as retailer data. Search cards show source-attributed identities; any listed price/store preview is bounded evidence, not stock, availability or a Best Value ranking.
 
-This build does not include an authorized current-offer feed. No flyer content is copied here. Source rights and attribution are reviewed before any future dataset is activated.</string>
+This build does not copy flyer content here. Qualified Argentina listed-price evidence is shown only when the signed release, freshness and source checks pass. Source rights and attribution remain explicit before any future dataset is activated.</string>
 
     <string name="data_status">Data status</string>
     <string name="data_status_title">ValuePilot data status</string>
@@ -303,10 +303,10 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="barcode_camera_permission_denied">Camera access was not granted. You can import a barcode photo instead.</string>
     <string name="barcode_camera_unavailable">This device has no available camera. You can import a barcode photo instead.</string>
 
-    <string name="search_eyebrow">ARGENTINA LIVE SEARCH • IDENTITY ONLY</string>
+    <string name="search_eyebrow">ARGENTINA LIVE SEARCH • QUALIFIED EVIDENCE</string>
     <string name="search_title">What are you shopping for?</string>
     <string name="search_body">Type a product or tap a quick search. ValuePilot will show identity suggestions from the qualified Argentina release.</string>
-    <string name="search_footnote">This user-triggered search is identity-only. It does not claim current prices, package quantities, stock, store availability, promotions or ranking.</string>
+    <string name="search_footnote">This user-triggered search returns exact identities and may show a qualified listed price/store preview when fresh evidence is available. It never claims stock, store availability or a Best Value ranking; package size appears only when explicitly supplied.</string>
 
     <string name="search_hint">Try yerba, milk, rice or another product</string>
     <string name="search_action">Search Argentina products</string>
@@ -317,17 +317,28 @@ This build does not include an authorized current-offer feed. No flyer content i
     <string name="search_quick_rice">tomato</string>
     <string name="search_quick_pizza">coffee</string>
     <string name="search_identity_badge">QUALIFIED ARGENTINA IDENTITY RELEASE</string>
-    <string name="search_identity_notice">Product identities only. Results are not live prices, stock, availability or Best Value rankings; package size appears only when the source supplies it explicitly.</string>
-    <string name="search_identity_dialog_title">Offline product identities for “%1$s”</string>
-    <string name="search_identity_loading">Checking the signed offline identity catalog…</string>
-    <string name="search_identity_unavailable">Offline product identity search is unavailable right now. Nothing was changed.</string>
-    <string name="search_identity_select">Choose a name to review in Scan &amp; compare. This catalog does not confirm quantity, price or availability.</string>
+    <string name="search_identity_notice">Exact product identities may include a qualified listed price preview and store. A listed price is not stock or availability, and it is not a Best Value ranking; package size appears only when the source supplies it explicitly.</string>
+    <string name="search_identity_dialog_title">Argentina product results for “%1$s”</string>
+    <string name="search_identity_loading">Checking the qualified Argentina release…</string>
+    <string name="search_identity_unavailable">Qualified Argentina product search is unavailable right now. Nothing was changed.</string>
+    <string name="search_identity_select">Choose an exact identity to review in Scan &amp; compare. A listed price preview appears only when the qualified source supplies it; stock and availability remain unknown.</string>
     <string name="search_identity_open_compare">Open in Scan &amp; compare</string>
     <string name="search_identity_open_compare_description">Put the selected identity name into Scan &amp; compare for review. This does not confirm quantity, price or availability.</string>
     <string name="search_identity_add_home_draft">Add to Home draft</string>
     <string name="search_identity_add_home_draft_description">Add %1$s to your private Home list as an unresolved draft item. This does not confirm quantity, price, stock or availability.</string>
     <string name="search_identity_add_home_failed">That identity could not be added to the bounded Home draft. The list was not changed.</string>
     <string name="search_identity_no_verified_picture">No verified product picture available</string>
+    <string name="search_identity_view_offer">View listed offer</string>
+    <string name="search_identity_view_offer_description">View the exact listed price and store evidence for %1$s. Stock and availability remain unknown.</string>
+    <string name="search_identity_offer_details_title">Listed offer at %1$s</string>
+    <string name="search_identity_plan_offer">Plan this exact item</string>
+    <string name="search_identity_plan_offer_description">Ask the qualified planner for a current listed-price plan for %1$s. Stock and availability remain unknown.</string>
+    <string name="search_identity_plan_loading">Checking the qualified listed-price plan…</string>
+    <string name="search_identity_plan_title">Current listed-price plan</string>
+    <string name="search_identity_plan_unavailable_title">Plan unavailable</string>
+    <string name="search_identity_plan_unavailable_message">The qualified current-price service could not complete this request. Nothing was changed and no stock or availability claim was made.</string>
+    <string name="search_identity_open_store_map">Open store map</string>
+    <string name="search_identity_map_unavailable">No map app is available for this store. The exact store coordinates remain in the evidence details.</string>
     <string name="search_identity_package_size">Package size: %1$s</string>
     <string name="search_area_label">Search area: %1$s</string>
     <string name="search_identity_match_label">Match: %1$s</string>

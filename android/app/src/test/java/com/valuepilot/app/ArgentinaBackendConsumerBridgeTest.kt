@@ -346,6 +346,87 @@ class ArgentinaBackendConsumerBridgeTest {
     }
 
     @Test
+    fun searchCarriesExactCurrentOfferPreviewWithoutClaimingInventory() {
+        val offer = qualifiedOffer()
+        val candidate = productIdentity().put("qualifiedOffers", JSONArray().put(offer))
+        val body =
+            JSONObject(searchJson())
+                .put("resolution", "DISCOVERY")
+                .put("input", JSONObject.NULL)
+                .put("matches", JSONArray().put(candidate))
+                .toString()
+
+        val result =
+            ArgentinaBackendConsumerBridge(
+                InMemoryArgentinaBackendTransport(
+                    mapOf(ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT to response(200, body))
+                ),
+                release
+            ).searchPresentation(searchRequest())
+
+        assertTrue(result is ArgentinaBackendBridgeResult.Success)
+        val match = (result as ArgentinaBackendBridgeResult.Success).value.identity.matches.single()
+        assertEquals("12.50", match.qualifiedOffers.single().listPrice.amount)
+        assertEquals("1.25", match.qualifiedOffers.single().unitPrice!!.amount)
+        assertEquals("100 g", match.qualifiedOffers.single().unitPriceBasis)
+        assertEquals(ArgentinaBackendContract.Availability.UNKNOWN, match.qualifiedOffers.single().availability)
+        assertTrue(match.qualifiedOffers.single().provenance.provider.contains("ARGENTINA_SEPA"))
+        assertTrue((result.value.identity.notice).contains("listed prices"))
+    }
+
+    @Test
+    fun searchRejectsStaleOrStockClaimsInQualifiedOfferPreview() {
+        for ((field, value) in listOf("freshnessStatus" to "STALE", "availability" to "IN_STOCK")) {
+            val offer = qualifiedOffer().put(field, value)
+            val body =
+                JSONObject(searchJson())
+                    .put("resolution", "DISCOVERY")
+                    .put("input", JSONObject.NULL)
+                    .put("matches", JSONArray().put(productIdentity().put("qualifiedOffers", JSONArray().put(offer))))
+                    .toString()
+            val result =
+                ArgentinaBackendConsumerBridge(
+                    InMemoryArgentinaBackendTransport(
+                        mapOf(ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT to response(200, body))
+                    ),
+                    release
+                ).searchPresentation(searchRequest())
+            assertTrue("$field must be rejected", result is ArgentinaBackendBridgeResult.Failure)
+            assertEquals(
+                ArgentinaBackendContract.FailureCode.CONTRACT_INVALID,
+                (result as ArgentinaBackendBridgeResult.Failure).code
+            )
+        }
+    }
+
+    @Test
+    fun searchRejectsUnitPriceWhenQualifiedQuantityIsUnknown() {
+        val offer = qualifiedOffer()
+            .put("quantity", JSONObject.NULL)
+            .put("quantityStatus", "UNKNOWN")
+        val body =
+            JSONObject(searchJson())
+                .put("resolution", "DISCOVERY")
+                .put("input", JSONObject.NULL)
+                .put("matches", JSONArray().put(productIdentity().put("qualifiedOffers", JSONArray().put(offer))))
+                .toString()
+
+        val result =
+            ArgentinaBackendConsumerBridge(
+                InMemoryArgentinaBackendTransport(
+                    mapOf(ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT to response(200, body))
+                ),
+                release
+            ).searchPresentation(searchRequest())
+
+        assertTrue(result is ArgentinaBackendBridgeResult.Failure)
+        assertEquals(
+            ArgentinaBackendContract.FailureCode.CONTRACT_INVALID,
+            (result as ArgentinaBackendBridgeResult.Failure).code
+        )
+    }
+
+    @Test
     fun discoverySearchAcceptsBoundedDiagnosticArraysFromLiveBackend() {
         val body =
             JSONObject(searchJson())
@@ -709,6 +790,36 @@ class ArgentinaBackendConsumerBridgeTest {
             .put("gtin", "4006381333931")
             .put("gtinStatus", "VALID")
             .put("quantity", JSONObject().put("value", "1").put("unit", "kg"))
+
+    private fun qualifiedOffer(
+        freshness: String = "FRESH",
+        availability: String = "UNKNOWN"
+    ) =
+        JSONObject()
+            .put("offerKey", "offer-yerba")
+            .put("productEvidenceKey", "product-yerba")
+            .put("storeKey", "store-1")
+            .put("storeName", "Mercado Central")
+            .put("storeAddress", JSONObject().put("city", "Buenos Aires"))
+            .put("storeLatitude", "-34.601")
+            .put("storeLongitude", "-58.381")
+            .put("distanceKm", "1.2")
+            .put("listPrice", money("12.50"))
+            .put("referencePrice", JSONObject.NULL)
+            .put("quantity", JSONObject().put("value", "1").put("unit", "kg"))
+            .put("quantityStatus", "KNOWN")
+            .put("unitPrice", money("1.25").put("basis", "100 g"))
+            .put("releaseDate", RELEASE_DATE)
+            .put("freshnessStatus", freshness)
+            .put("availability", availability)
+            .put("promotions", JSONArray())
+            .put(
+                "provenance",
+                JSONObject()
+                    .put("provider", "ARGENTINA_SEPA_PRECIOS_CLAROS")
+                    .put("releaseDate", RELEASE_DATE)
+                    .put("freshnessStatus", freshness)
+            )
 
     private fun store(index: Int) =
         JSONObject()

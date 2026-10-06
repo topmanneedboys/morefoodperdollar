@@ -96,6 +96,20 @@ class ArgentinaLiveSearchSurfaceTest {
     }
 
     @Test
+    fun `surface caveat acknowledges attached listed evidence without implying stock`() {
+        val withOffer = presentation.copy(
+            matches = listOf(presentation.matches.single().copy(qualifiedOffers = listOf(testOffer())))
+        )
+        val state = ArgentinaLiveSearchSurfacePresenter.from(
+            ArgentinaLiveSearchState.Results(1, "yerba", withOffer), area
+        )
+
+        assertTrue(state.caveat.contains("listed prices"))
+        assertTrue(state.caveat.contains("Stock"))
+        assertTrue(state.caveat.contains("unknown"))
+    }
+
+    @Test
     fun `main thread render gate drops a queued callback from an older query`() {
         val gate = ArgentinaLiveSearchMainThreadRenderGate()
         val rendered = mutableListOf<ArgentinaLiveSearchSurfaceState>()
@@ -120,4 +134,30 @@ class ArgentinaLiveSearchSurfaceTest {
         assertEquals(5L, rendered.single().generation)
         assertEquals(6L, ArgentinaLiveSearchSurfacePresenter.from(ArgentinaLiveSearchState.Idle(6), area).generation)
     }
+
+    private fun testOffer() = ArgentinaBackendContract.SearchOffer(
+        offerKey = "offer-a",
+        productEvidenceKey = "Yerba Mate",
+        storeKey = "store-a",
+        storeName = "Store A",
+        storeAddress = emptyMap(),
+        storeLatitude = "-34.6",
+        storeLongitude = "-58.4",
+        distanceKm = "1",
+        listPrice = ArgentinaBackendContract.Money("12.50", "ARS", java.math.BigDecimal("12.50")),
+        referencePrice = null,
+        quantity = null,
+        quantityStatus = "UNKNOWN",
+        unitPrice = null,
+        unitPriceBasis = null,
+        releaseDate = "2026-09-06",
+        freshnessStatus = ArgentinaBackendContract.Freshness.FRESH,
+        availability = ArgentinaBackendContract.Availability.UNKNOWN,
+        provenance = ArgentinaBackendContract.Provenance(
+            provider = "ARGENTINA_SEPA_PRECIOS_CLAROS",
+            releaseDate = "2026-09-06",
+            freshnessStatus = ArgentinaBackendContract.Freshness.FRESH,
+            source = "Precios Claros"
+        )
+    )
 }

@@ -77,7 +77,7 @@ internal data class ArgentinaLiveSearchSuccessMetadata(
     }
 }
 
-/** Renderer-ready identity-only state for the future live Search surface. */
+/** Renderer-ready bounded evidence state for the live Search surface. */
 internal sealed interface ArgentinaLiveSearchState {
     data class Idle(val generation: Long) : ArgentinaLiveSearchState
 
@@ -109,8 +109,8 @@ internal sealed interface ArgentinaLiveSearchState {
 }
 
 /**
- * User-triggered application-edge coordinator for identity-only Argentina
- * Search. It owns lifecycle and release pinning, not parsing, ranking, or UI.
+ * User-triggered application-edge coordinator for Argentina Search. It owns
+ * lifecycle and release pinning, not parsing, ranking, or UI.
  */
 internal class ArgentinaLiveSearchCoordinator(
     private val transport: ArgentinaBackendTransport,
@@ -480,7 +480,12 @@ internal class ArgentinaLiveSearchCoordinator(
         if (previous == null) return incoming
         val merged = LinkedHashMap<String, PracticalShoppingSearchIdentityPresentation.Match>()
         (previous.matches + incoming.matches).forEach { match ->
-            if (!merged.containsKey(match.identityKey)) merged[match.identityKey] = match
+            val existing = merged[match.identityKey]
+            when {
+                existing == null -> merged[match.identityKey] = match
+                existing.qualifiedOffers.isEmpty() && match.qualifiedOffers.isNotEmpty() ->
+                    merged[match.identityKey] = match
+            }
         }
         return incoming.copy(
             matches = merged.values.toList(),

@@ -2,7 +2,7 @@ package com.valuepilot.app
 
 import android.util.Log
 
-/** Renderer-owned modes for the visible, identity-only Argentina Search. */
+/** Renderer-owned modes for the visible, qualified Argentina Search. */
 internal enum class ArgentinaLiveSearchSurfaceMode {
     IDLE,
     LOADING,
@@ -72,7 +72,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
                             "Loading more matching identities…"
                         },
                     presentation = state.previousPresentation,
-                    caveat = IDENTITY_CAVEAT
+                    caveat = caveatFor(state.previousPresentation)
                 )
             is ArgentinaLiveSearchState.Results ->
                 ArgentinaLiveSearchSurfaceState(
@@ -82,7 +82,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
                     query = state.query,
                     statusMessage = resultStatus(state.presentation),
                     presentation = state.presentation,
-                    caveat = IDENTITY_CAVEAT
+                    caveat = caveatFor(state.presentation)
                 )
             is ArgentinaLiveSearchState.Empty ->
                 ArgentinaLiveSearchSurfaceState(
@@ -92,7 +92,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
                     query = state.query,
                     statusMessage = "No matching product identity was found in this release.",
                     presentation = state.presentation,
-                    caveat = IDENTITY_CAVEAT
+                    caveat = caveatFor(state.presentation)
                 )
             is ArgentinaLiveSearchState.Unavailable ->
                 unavailable(state, area)
@@ -100,12 +100,27 @@ internal object ArgentinaLiveSearchSurfacePresenter {
 
     private fun resultStatus(presentation: PracticalShoppingSearchIdentityPresentation): String =
         when {
+            presentation.matches.any { it.qualifiedOffers.isNotEmpty() } && presentation.limitReached ->
+                "Qualified product identities and listed-price evidence found. This release reached the bounded result limit."
+            presentation.matches.any { it.qualifiedOffers.isNotEmpty() } && presentation.hasMore ->
+                "Qualified product identities and listed-price evidence found. More matching identities are available."
+            presentation.matches.any { it.qualifiedOffers.isNotEmpty() } ->
+                "Qualified product identities and listed-price evidence found. No more matching identities were returned in this release."
             presentation.limitReached ->
                 "Product identities found. This release reached the bounded result limit."
             presentation.hasMore ->
                 "Product identities found. More matching identities are available."
             else ->
                 "Product identities found. No more matching identities were returned in this release."
+        }
+
+    private fun caveatFor(
+        presentation: PracticalShoppingSearchIdentityPresentation?
+    ): String =
+        if (presentation?.matches?.any { it.qualifiedOffers.isNotEmpty() } == true) {
+            "Exact fresh listed prices and stores appear only where the qualified source attached them. Stock, pickup, delivery and Best Value ranking remain unknown."
+        } else {
+            IDENTITY_CAVEAT
         }
 
     private fun unavailable(
@@ -141,7 +156,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
             query = state.query,
             statusMessage = message,
             presentation = state.previousPresentation,
-            caveat = IDENTITY_CAVEAT
+            caveat = caveatFor(state.previousPresentation)
         )
     }
 }
