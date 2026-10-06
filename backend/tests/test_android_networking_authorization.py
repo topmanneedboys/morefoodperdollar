@@ -9,6 +9,9 @@ from backend.service import (
     ANDROID_NETWORKING_RELEASE_DATE_ENV,
     ANDROID_NETWORKING_RELEASE_ID_ENV,
     ANDROID_NETWORKING_SCOPE_ENV,
+    PRODUCTION_ANDROID_UI_AUTHORIZED_ENV,
+    PRODUCTION_ANDROID_UI_SCOPE,
+    PRODUCTION_ANDROID_UI_SCOPE_ENV,
     BackendService,
 )
 
@@ -20,6 +23,7 @@ class FakeReleaseManager:
             "releaseId": "sepa-2026-09-06",
             "releaseDate": "2026-09-06",
             "freshness": "FRESH",
+            "qualifiedOfferEvidenceAvailable": False,
             **overrides,
         }
 
@@ -48,6 +52,39 @@ class AndroidNetworkingAuthorizationTests(unittest.TestCase):
             value = self.service().status()
         self.assertTrue(value["androidNetworkingAuthorized"])
         self.assertFalse(value["productionAndroidUiAuthorized"])
+
+    def test_qualified_offer_ui_requires_a_separate_release_scoped_gate(self):
+        environment = {
+            ANDROID_NETWORKING_AUTHORIZED_ENV: "true",
+            ANDROID_NETWORKING_SCOPE_ENV: "identity-search",
+            ANDROID_NETWORKING_RELEASE_ID_ENV: "sepa-2026-09-06",
+            ANDROID_NETWORKING_RELEASE_DATE_ENV: "2026-09-06",
+            PRODUCTION_ANDROID_UI_AUTHORIZED_ENV: "true",
+            PRODUCTION_ANDROID_UI_SCOPE_ENV: PRODUCTION_ANDROID_UI_SCOPE,
+        }
+        with patch.dict(os.environ, environment, clear=True):
+            value = self.service(FakeReleaseManager(qualifiedOfferEvidenceAvailable=True)).status()
+        self.assertTrue(value["androidNetworkingAuthorized"])
+        self.assertTrue(value["productionAndroidUiAuthorized"])
+
+    def test_qualified_offer_ui_gate_fails_closed_on_scope_or_release_mismatch(self):
+        base = {
+            ANDROID_NETWORKING_AUTHORIZED_ENV: "true",
+            ANDROID_NETWORKING_SCOPE_ENV: "identity-search",
+            ANDROID_NETWORKING_RELEASE_ID_ENV: "sepa-2026-09-06",
+            ANDROID_NETWORKING_RELEASE_DATE_ENV: "2026-09-06",
+            PRODUCTION_ANDROID_UI_AUTHORIZED_ENV: "true",
+            PRODUCTION_ANDROID_UI_SCOPE_ENV: PRODUCTION_ANDROID_UI_SCOPE,
+        }
+        for overrides in (
+            {PRODUCTION_ANDROID_UI_SCOPE_ENV: "identity-search"},
+            {ANDROID_NETWORKING_RELEASE_ID_ENV: "other-release"},
+            {PRODUCTION_ANDROID_UI_AUTHORIZED_ENV: "false"},
+        ):
+            environment = {**base, **overrides}
+            with self.subTest(overrides=overrides), patch.dict(os.environ, environment, clear=True):
+                value = self.service().status()
+                self.assertFalse(value["productionAndroidUiAuthorized"])
 
     def test_malformed_or_mismatched_configuration_fails_closed(self):
         cases = [

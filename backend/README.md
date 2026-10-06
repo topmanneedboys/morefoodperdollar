@@ -38,3 +38,28 @@ Availability is always `UNKNOWN` for SEPA prices. A stale release fails closed
 with `CURRENT_PRICE_EVIDENCE_UNAVAILABLE`; it is never presented as today's
 price. The existing 128/32 mobile contract remains intact for a future optional
 offline feature and is not replaced by the server profile.
+
+## Production Android offer gate
+
+Identity Search and qualified current-price evidence have separate release
+gates. The backend keeps `productionAndroidUiAuthorized=false` unless all of
+the following are explicitly configured for the same active release:
+
+```text
+VALUEPILOT_ANDROID_NETWORKING_AUTHORIZED=true
+VALUEPILOT_ANDROID_NETWORKING_SCOPE=identity-search
+VALUEPILOT_ANDROID_NETWORKING_RELEASE_ID=<active release id>
+VALUEPILOT_ANDROID_NETWORKING_RELEASE_DATE=<active release date>
+VALUEPILOT_PRODUCTION_ANDROID_UI_AUTHORIZED=true
+VALUEPILOT_PRODUCTION_ANDROID_UI_SCOPE=qualified-offers
+```
+
+The pinned release must also declare the immutable `valuepilot-argentina-
+searchpack-v2` artifact and a non-empty logical/physical offer-partition
+profile. A configuration toggle cannot authorize an identity-only release.
+
+Without the second gate, `/v1/search` may return exact identities and bounded
+pagination but strips any qualified offer preview. This prevents an
+unverified production Android UI from presenting price or store evidence while
+preserving the already-authorized identity-search path. The gate is not
+enabled by default and does not perform deployment or promotion.

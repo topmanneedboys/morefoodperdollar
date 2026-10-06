@@ -14,6 +14,33 @@ from .artifacts import FilesystemReleaseArtifactStore, ManifestReleaseArtifactSt
 from .object_store import LocalFilesystemObjectStore, ObjectStore, ObjectStoreError, validate_key
 
 
+def qualified_offer_artifacts_available(manifest: Mapping[str, Any]) -> bool:
+    """Return whether a manifest declares the bounded exact-offer contract.
+
+    The runtime must not authorize current-price evidence merely because an
+    operator set an environment variable.  The immutable release itself must
+    carry the SearchPack metadata and the 1024/32 offer-partition profile used
+    by the bounded reader.
+    """
+
+    profile = manifest.get("backendProfile") if isinstance(manifest, Mapping) else None
+    search = manifest.get("searchPackArtifact") if isinstance(manifest, Mapping) else None
+    if not isinstance(profile, Mapping) or not isinstance(search, Mapping):
+        return False
+    logical = profile.get("logicalPartitionCount")
+    physical = profile.get("physicalPackCount")
+    regions = search.get("regions")
+    return (
+        isinstance(logical, int)
+        and logical > 0
+        and isinstance(physical, int)
+        and physical > 0
+        and search.get("schemaVersion") == "valuepilot-argentina-searchpack-v2"
+        and isinstance(regions, list)
+        and bool(regions)
+    )
+
+
 class ReleaseError(RuntimeError):
     pass
 
@@ -235,7 +262,8 @@ class ReleaseManager:
     def status(self) -> dict[str, Any]:
         try:
             handle = self._handle()
-            return {"service": "ready", "releaseId": handle.release_id, "releaseDate": handle.release_date, "freshness": handle.freshness_status, "profile": dict(handle.profile)}
+            manifest = getattr(handle.artifacts, "manifest", None)
+            return {"service": "ready", "releaseId": handle.release_id, "releaseDate": handle.release_date, "freshness": handle.freshness_status, "profile": dict(handle.profile), "qualifiedOfferEvidenceAvailable": qualified_offer_artifacts_available(manifest or {})}
         except ReleaseError as exc:
             return {"service": "not_ready", "error": str(exc)}
 
@@ -271,4 +299,4 @@ class SafePublisher:
             return {"releaseId": release_id, "uploadedObjects": uploaded, "activePointer": active_key}
 
 
-__all__ = ["ReleaseError", "ReleaseHandle", "ReleaseManager", "SafePublisher"]
+__all__ = ["ReleaseError", "ReleaseHandle", "ReleaseManager", "SafePublisher", "qualified_offer_artifacts_available"]

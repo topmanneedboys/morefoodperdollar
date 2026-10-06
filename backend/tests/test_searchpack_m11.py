@@ -15,7 +15,7 @@ from unittest.mock import patch
 from backend.artifacts import ManifestReleaseArtifactStore
 from backend.object_store import LocalFilesystemObjectStore, ObjectMetadata
 from backend.cache import VerifiedEvidenceCache
-from backend.reader import ArgentinaBackendReader, MAX_OFFER_PARTITION_CONCURRENCY, RegionSelection, RequestMetrics
+from backend.reader import ArgentinaBackendReader, BackendQueryError, MAX_OFFER_PARTITION_CONCURRENCY, RegionSelection, RequestMetrics
 from backend.service import BackendService
 from tools.argentina_searchpack import MAX_RANK_WORKERS, SearchPackLookup, SearchPackManager, SearchPackStats, _CHUNK_STRUCT, _TERM_STRUCT
 from tools.argentina_searchpack import SearchPackError
@@ -541,6 +541,46 @@ class SearchPackM11Tests(unittest.TestCase):
         }
         service.shop(payload)
         self.assertIsNone(reader.trusted_calls[-1])
+
+    def test_public_shop_accepts_only_explicit_search_selected_product_key(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+        payload = {
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "items": [{
+                "lineId": "item-1",
+                "query": "arroz",
+                "amount": "1",
+                "unit": "count",
+                "productEvidenceKey": "search-selected-key",
+            }],
+        }
+        service.shop(payload)
+        self.assertEqual(reader.trusted_calls[-1], {"item-1": "search-selected-key"})
+
+    def test_public_shop_rejects_empty_explicit_line_id_for_trusted_identity(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+        payload = {
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "items": [{
+                "lineId": "",
+                "query": "arroz",
+                "amount": "1",
+                "unit": "count",
+                "productEvidenceKey": "search-selected-key",
+            }],
+        }
+        with self.assertRaises(BackendQueryError):
+            service.shop(payload)
 
 
 class _LatencyStore:
