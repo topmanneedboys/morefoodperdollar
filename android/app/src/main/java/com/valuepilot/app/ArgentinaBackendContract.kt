@@ -45,6 +45,7 @@ object ArgentinaBackendContract {
 
     private val DECIMAL_PATTERN = Regex("-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?")
     private val ID_PATTERN = Regex("[A-Za-z0-9_.:-]{1,320}")
+    private val PLAN_ID_PATTERN = Regex("[A-Za-z0-9_.:+-]{1,700}")
     private val DATE_PATTERN = Regex("[0-9]{4}-[0-9]{2}-[0-9]{2}")
     private val GTIN_PATTERN = Regex("[0-9]{8}|[0-9]{12}|[0-9]{13}|[0-9]{14}")
 
@@ -991,9 +992,30 @@ object ArgentinaBackendContract {
         if (itemsArray.length() == 0) invalid("shopping request must contain at least one item")
         val items = (0 until itemsArray.length()).map { index ->
             val item = itemsArray.get(index) as? JSONObject ?: invalid("shopping request item must be an object")
-            parseRequestItem(item)
+            parseDecisionRequestItem(item)
         }
         return ShoppingRequest(latitude, longitude, radius, items)
+    }
+
+    /**
+     * The shared shopping engine serializes its internal request quantities as
+     * an explicit normalized `requestedQuantity` object.  The Android request
+     * model historically used the input-shaped `amount`/`unit` pair.  Accept
+     * either representation at this response boundary, but never derive one
+     * from product text or guess a unit: both paths require explicit quantity
+     * evidence and retain the optional exact product identity key.
+     */
+    private fun parseDecisionRequestItem(root: JSONObject): RequestItem {
+        if (root.has("amount") || root.has("unit")) {
+            return parseRequestItem(root)
+        }
+        val lineId = requiredId(root, "lineId", 240)
+        val query = boundedQuery(requiredString(root, "query", MAX_QUERY_CHARS), "item query")
+        val quantity = parseQuantity(requiredObject(root, "requestedQuantity"), "requestedQuantity", allowZero = false)
+        val productKey = optionalString(root, "productEvidenceKey", 256)?.also {
+            if (!ID_PATTERN.matches(it)) invalid("property productEvidenceKey is not a bounded identifier")
+        }
+        return RequestItem(lineId, query, quantity.amount, quantity.unit, productKey)
     }
 
     private fun parseRequestItem(root: JSONObject): RequestItem {
@@ -1021,7 +1043,7 @@ object ArgentinaBackendContract {
     private fun parsePlan(root: JSONObject, releaseDate: String): Plan {
         val type = requiredString(root, "type", 64)
         if (type !in setOf("SINGLE_STORE", "TWO_STORE", "REFERENCE_LOWER_BOUND")) invalid("unsupported plan type")
-        val planId = requiredId(root, "planId", 320)
+        val planId = requiredPlanId(root)
         val storeCount = requiredInt(root, "storeCount", 1, MAX_STORES)
         val storeKeys = parseStringArray(requiredArray(root, "storeKeys"), MAX_STORES, 320, "storeKeys")
         if (storeKeys.size != storeCount || storeKeys.distinct().size != storeKeys.size) invalid("plan store count/keys disagree")
@@ -1331,6 +1353,12 @@ object ArgentinaBackendContract {
     private fun requiredId(root: JSONObject, name: String, maxChars: Int): String {
         val value = requiredText(root, name, maxChars)
         if (!ID_PATTERN.matches(value)) invalid("property $name is not a bounded identifier")
+        return value
+    }
+
+    private fun requiredPlanId(root: JSONObject): String {
+        val value = requiredText(root, "planId", 700)
+        if (!PLAN_ID_PATTERN.matches(value)) invalid("property planId is not a bounded identifier")
         return value
     }
 

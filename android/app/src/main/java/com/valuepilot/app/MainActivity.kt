@@ -12,6 +12,7 @@ import android.text.Editable
 import android.text.InputFilter
 import android.text.InputType
 import android.text.TextWatcher
+import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -2469,7 +2470,12 @@ class MainActivity : AppCompatActivity() {
                 val transport = ValuePilotArgentinaEdgeTransportFactory.create()
                 val statusResult = ArgentinaBackendConsumerBridge(transport, null).status()
                 val status = (statusResult as? ArgentinaBackendBridgeResult.Success)?.value
-                    ?: error("The qualified Argentina release is unavailable.")
+                    ?: run {
+                        (statusResult as? ArgentinaBackendBridgeResult.Failure)?.let {
+                            recordBackendFailure("qualified-offer-status", it)
+                        }
+                        error("The qualified Argentina release is unavailable.")
+                    }
                 if (
                     status.freshness != ArgentinaBackendContract.Freshness.FRESH ||
                         !status.backendCodeQualified ||
@@ -2487,6 +2493,9 @@ class MainActivity : AppCompatActivity() {
                 if (requestId != qualifiedOfferPlanRequestId || isFinishing || isDestroyed) return@post
                 val result = outcome.getOrNull()
                 if (result !is ArgentinaBackendBridgeResult.Success) {
+                    (result as? ArgentinaBackendBridgeResult.Failure)?.let {
+                        recordBackendFailure("qualified-offer-shop", it)
+                    }
                     AlertDialog.Builder(this)
                         .setTitle(R.string.search_identity_plan_unavailable_title)
                         .setMessage(R.string.search_identity_plan_unavailable_message)
@@ -2586,7 +2595,12 @@ class MainActivity : AppCompatActivity() {
                 val transport = ValuePilotArgentinaEdgeTransportFactory.create()
                 val statusResult = ArgentinaBackendConsumerBridge(transport, null).status()
                 val status = (statusResult as? ArgentinaBackendBridgeResult.Success)?.value
-                    ?: error("The qualified Argentina release is unavailable.")
+                    ?: run {
+                        (statusResult as? ArgentinaBackendBridgeResult.Failure)?.let {
+                            recordBackendFailure("private-basket-status", it)
+                        }
+                        error("The qualified Argentina release is unavailable.")
+                    }
                 if (
                     status.freshness != ArgentinaBackendContract.Freshness.FRESH ||
                         !status.backendCodeQualified ||
@@ -2604,6 +2618,9 @@ class MainActivity : AppCompatActivity() {
                 if (requestId != privateBasketPlanRequestId || isFinishing || isDestroyed) return@post
                 val result = outcome.getOrNull()
                 if (result !is ArgentinaBackendBridgeResult.Success) {
+                    (result as? ArgentinaBackendBridgeResult.Failure)?.let {
+                        recordBackendFailure("private-basket-shop", it)
+                    }
                     privateBasketError = "The basket plan could not be refreshed; prices remain unknown."
                     renderHome()
                     return@post
@@ -2616,6 +2633,22 @@ class MainActivity : AppCompatActivity() {
                 renderHome()
             }
         }
+    }
+
+    /** Log only bounded backend failure metadata; never log request bodies or tokens. */
+    private fun recordBackendFailure(
+        operation: String,
+        failure: ArgentinaBackendBridgeResult.Failure
+    ) {
+        val metadata = failure.metadata
+        Log.w(
+            BACKEND_FAILURE_TAG,
+            "operation=$operation code=${failure.code} " +
+                "httpStatus=${metadata?.httpStatus ?: "unknown"} " +
+                "requestId=${metadata?.requestId ?: "unknown"} " +
+                "releaseId=${metadata?.releaseId ?: "unknown"} " +
+                "releaseDate=${metadata?.releaseDate ?: "unknown"}"
+        )
     }
 
     private fun showPrivateTripAssumptions() {
@@ -2741,6 +2774,7 @@ class MainActivity : AppCompatActivity() {
     )
 
     companion object {
+        private const val BACKEND_FAILURE_TAG = "ValuePilotBackend"
         private const val STATE_PRIMARY_TAB = "app_shell.primary_tab"
         private const val STATE_HOME_QUERY = "app_shell.home_query"
         private const val STATE_HOME_WAS_SUBMITTED = "app_shell.home_was_submitted"
