@@ -404,6 +404,55 @@ class ArgentinaBackendConsumerBridgeTest {
     }
 
     @Test
+    fun shopAcceptsSharedEngineNormalizedRequestQuantities() {
+        val root = JSONObject(shopJson(itemCount = 1))
+        val requestItem =
+            root
+                .getJSONObject("result")
+                .getJSONObject("decision")
+                .getJSONObject("request")
+                .getJSONArray("items")
+                .getJSONObject(0)
+        requestItem.remove("amount")
+        requestItem.remove("unit")
+        requestItem.put("productEvidenceKey", "product-1")
+        requestItem.put("requestedQuantity", quantity())
+
+        val parsed = ArgentinaBackendContract.parseShop(root.toString(), release)
+        val parsedItem = parsed.result.request.items.single()
+        assertEquals("1", parsedItem.amount)
+        assertEquals("count", parsedItem.unit)
+        assertEquals("product-1", parsedItem.productEvidenceKey)
+    }
+
+    @Test
+    fun shopAcceptsDeterministicTwoStorePlanIdentity() {
+        val root = JSONObject(
+            shopJson(
+                itemCount = 2,
+                planType = "TWO_STORE",
+                storeCount = 2,
+                compositePlanId = true
+            )
+        )
+        val decision =
+            root
+                .getJSONObject("result")
+                .getJSONObject("decision")
+        val twoStorePlan = decision.getJSONObject("cheapestSingleStore")
+        decision.put("cheapestSingleStore", JSONObject.NULL)
+        decision.put("cheapestTwoStoreCombination", twoStorePlan)
+
+        val parsed =
+            ArgentinaBackendContract.parseShop(
+                root.toString(),
+                release
+            )
+
+        assertEquals("TWO_STORE:store-1+store-2", parsed.result.cheapestTwoStoreCombination?.planId)
+    }
+
+    @Test
     fun shopRequestPreservesExactSearchIdentityAcrossJsonBoundary() {
         val transport =
             InMemoryArgentinaBackendTransport(
@@ -713,7 +762,8 @@ class ArgentinaBackendConsumerBridgeTest {
         storeCount: Int = 1,
         freshness: String = "FRESH",
         promotion: Boolean = false,
-        duplicateOfferKey: Boolean = false
+        duplicateOfferKey: Boolean = false,
+        compositePlanId: Boolean = false
     ): String {
         val items = (1..itemCount).map { index ->
             JSONObject()
@@ -734,7 +784,10 @@ class ArgentinaBackendConsumerBridgeTest {
                 }
                 JSONObject()
                     .put("type", planType)
-                    .put("planId", "plan-$itemCount")
+                    .put(
+                        "planId",
+                        if (compositePlanId) "TWO_STORE:store-1+store-2" else "plan-$itemCount"
+                    )
                     .put("storeCount", storeCount)
                     .put("storeKeys", JSONArray((1..storeCount).map { "store-$it" }))
                     .put("stores", stores)
