@@ -79,6 +79,7 @@ class MainActivity : AppCompatActivity() {
     private var privateBasketPlan: ArgentinaPrivateBasketPlanProjection? = null
     private var privateBasketTripResult: ArgentinaPrivateTripCostResult? = null
     private var privateBasketError: String? = null
+    private var qualifiedStoreMapDialog: AlertDialog? = null
     private val privateBasketOfferEvidence = linkedMapOf<
         String,
         List<ArgentinaBackendContract.SearchOffer>
@@ -346,6 +347,8 @@ class MainActivity : AppCompatActivity() {
         cancelOfflineCatalogLookup()
         offlineCatalogDialog?.dismiss()
         offlineCatalogDialog = null
+        qualifiedStoreMapDialog?.dismiss()
+        qualifiedStoreMapDialog = null
         pendingExactProductLabel = null
         pendingExactProductItemKey = null
         if (::argentinaSearchHost.isInitialized) {
@@ -1262,12 +1265,12 @@ class MainActivity : AppCompatActivity() {
                 ArgentinaPrivateBasketUiAction.OpenSearch ->
                     dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.SEARCH))
                 ArgentinaPrivateBasketUiAction.EditTripAssumptions -> showPrivateTripAssumptions()
-                is ArgentinaPrivateBasketUiAction.OpenStore ->
-                    openQualifiedStoreMap(
-                        action.store.storeName,
-                        action.store.latitude,
-                        action.store.longitude
+                is ArgentinaPrivateBasketUiAction.OpenStore -> showQualifiedStoreMapContext(
+                    ArgentinaQualifiedStoreMapContextPresentation.fromStore(
+                        action.store,
+                        privateBasketPlan?.mapMarkers.orEmpty()
                     )
+                )
                 is ArgentinaPrivateBasketUiAction.Remove -> {
                     privateBasketOfferEvidence.remove(action.identityKey)
                     privateBasketPlan = null
@@ -2416,7 +2419,7 @@ class MainActivity : AppCompatActivity() {
                     R.string.search_identity_view_offer_description,
                     offer.storeName
                 )
-                setOnClickListener { showQualifiedOfferDetails(offer) }
+                setOnClickListener { showQualifiedOfferDetails(offer, match.displayName) }
             }
             body.addView(detailsButton)
             if (offer.quantity != null) {
@@ -2454,12 +2457,17 @@ class MainActivity : AppCompatActivity() {
         return card
     }
 
-    private fun showQualifiedOfferDetails(offer: ArgentinaBackendContract.SearchOffer) {
+    private fun showQualifiedOfferDetails(
+        offer: ArgentinaBackendContract.SearchOffer,
+        productName: String = offer.productEvidenceKey
+    ) {
         AlertDialog.Builder(this)
             .setTitle(getString(R.string.search_identity_offer_details_title, offer.storeName))
             .setMessage(ArgentinaQualifiedOfferPresentation.details(offer))
             .setNeutralButton(R.string.search_identity_open_store_map) { _, _ ->
-                openQualifiedStoreMap(offer.storeName, offer.storeLatitude, offer.storeLongitude)
+                showQualifiedStoreMapContext(
+                    ArgentinaQualifiedStoreMapContextPresentation.fromOffer(offer, productName)
+                )
             }
             .setPositiveButton(android.R.string.ok, null)
             .show()
@@ -2470,7 +2478,10 @@ class MainActivity : AppCompatActivity() {
     ) {
         val request = ArgentinaQualifiedOfferPlan.request(match, argentinaLaunchArea)
         if (request == null) {
-            showQualifiedOfferDetails(match.qualifiedOffers.firstOrNull() ?: return)
+            showQualifiedOfferDetails(
+                match.qualifiedOffers.firstOrNull() ?: return,
+                match.displayName
+            )
             return
         }
         val requestId = Math.addExact(qualifiedOfferPlanRequestId, 1L)
@@ -2520,12 +2531,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showQualifiedOfferPlan(decision: ArgentinaBackendContract.ShoppingDecision) {
-        val selected = decision.bestSensibleChoice.selectedPlan
+        val policySelected = decision.bestSensibleChoice.selectedPlan
+        val selected = ArgentinaQualifiedOfferPlan.presentationPlan(decision)
         val body = buildString {
             if (selected == null) {
                 append("No complete current-price plan was found.\n")
                 append("Unknown or missing price evidence stays unknown.")
             } else {
+                if (policySelected == null) {
+                    append("Complete single-store listed-price plan; no Best Value policy was requested.\n")
+                }
                 append("Listed total: ")
                     .append(selected.total.currency).append(' ').append(selected.total.amount).append('\n')
                 append("Store(s): ").append(selected.stores.joinToString { it.storeName }).append('\n')
@@ -2542,13 +2557,55 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton(android.R.string.ok, null)
         selected?.stores?.firstOrNull()?.let { store ->
             builder.setNeutralButton(R.string.search_identity_open_store_map) { _, _ ->
-                openQualifiedStoreMap(store.storeName, store.latitude, store.longitude)
+                showQualifiedStoreMapContext(
+                    ArgentinaQualifiedStoreMapContextPresentation.fromStore(
+                        ArgentinaPrivateBasketStoreProjection(
+                            storeKey = store.storeKey,
+                            storeName = store.storeName,
+                            latitude = store.latitude,
+                            longitude = store.longitude,
+                            addressLabel = store.address.toSortedMap().entries
+                                .filter { (key, value) -> key.isNotBlank() && value.isNotBlank() }
+                                .joinToString(", ") { (key, value) -> "$key: $value" }
+                                .takeIf(String::isNotBlank)
+                        ),
+                        ArgentinaQualifiedStoreMapContextPresentation.markersFromPlan(selected)
+                    )
+                )
             }
         }
         builder.show()
     }
 
-    private fun openQualifiedStoreMap(storeName: String, latitude: String, longitude: String) {
+    private fun showQualifiedStoreMapContext(context: ArgentinaQualifiedStoreMapContext) {
+        qualifiedStoreMapDialog?.dismiss()
+        val builder = AlertDialog.Builder(this)
+            .setTitle(R.string.qualified_store_context_title)
+            .setMessage(ArgentinaQualifiedStoreMapContextPresentation.message(context))
+            .setPositiveButton(android.R.string.ok, null)
+        if (context.latitude != null && context.longitude != null) {
+            builder.setNeutralButton(R.string.qualified_store_context_external_map, null)
+        }
+        val dialog = builder.create()
+        dialog.setOnShowListener {
+            if (context.latitude != null && context.longitude != null) {
+                dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                    openExternalStoreMap(
+                        context.storeName,
+                        context.latitude,
+                        context.longitude
+                    )
+                }
+            }
+        }
+        dialog.setOnDismissListener {
+            if (qualifiedStoreMapDialog === dialog) qualifiedStoreMapDialog = null
+        }
+        qualifiedStoreMapDialog = dialog
+        dialog.show()
+    }
+
+    private fun openExternalStoreMap(storeName: String, latitude: String, longitude: String) {
         val uri = Uri.parse(
             "geo:$latitude,$longitude?q=$latitude,$longitude(${Uri.encode(storeName)})"
         )

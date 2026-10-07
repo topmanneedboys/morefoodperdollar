@@ -68,11 +68,11 @@ class ArgentinaPrivateBasketSurfaceView @JvmOverloads constructor(
             body.addView(text(plan.coverageText, 13f, "#374151", false, 5))
             plan.stores.forEach { store ->
                 val button = MaterialButton(context).apply {
-                    text = "Open ${store.storeName} in Maps"
+                    text = "View ${store.storeName} store context"
                     isAllCaps = false
                     minHeight = dp(46)
                     gravity = Gravity.START or Gravity.CENTER_VERTICAL
-                    contentDescription = "Open ${store.storeName} in Maps"
+                    contentDescription = "View ${store.storeName} store context"
                     setOnClickListener { onAction?.invoke(ArgentinaPrivateBasketUiAction.OpenStore(store)) }
                 }
                 button.isEnabled = onAction != null

@@ -341,8 +341,10 @@ This build does not copy flyer content here. Qualified Argentina listed-price ev
     <string name="search_identity_plan_title">Current listed-price plan</string>
     <string name="search_identity_plan_unavailable_title">Plan unavailable</string>
     <string name="search_identity_plan_unavailable_message">The qualified current-price service could not complete this request. Nothing was changed and no stock or availability claim was made.</string>
-    <string name="search_identity_open_store_map">Open store map</string>
+    <string name="search_identity_open_store_map">View store context</string>
     <string name="search_identity_map_unavailable">No map app is available for this store. The exact store coordinates remain in the evidence details.</string>
+    <string name="qualified_store_context_title">Store map context</string>
+    <string name="qualified_store_context_external_map">Open external map</string>
     <string name="search_identity_package_size">Package size: %1$s</string>
     <string name="search_area_label">Search area: %1$s</string>
     <string name="search_identity_match_label">Match: %1$s</string>
