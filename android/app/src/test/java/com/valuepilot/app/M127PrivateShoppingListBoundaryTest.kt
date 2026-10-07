@@ -38,7 +38,9 @@ class M127PrivateShoppingListBoundaryTest {
         assertTrue(session.contains("if (state.privateIdentities.any { it.identityKey == identity.identityKey }) return state"))
         assertTrue(session.contains("privateIdentities = normalizedPrivateIdentities"))
         assertTrue(store.contains("KEY_PRIVATE_IDENTITIES"))
-        assertTrue(store.contains("encodePrivateIdentities(snapshot.privateIdentities)"))
+        assertTrue(store.contains("encodePrivateIdentities("))
+        assertTrue(store.contains("EMPTY_PRIVATE_IDENTITIES_ENCODING"))
+        assertTrue(store.contains("Preserve an unreadable record"))
     }
 
     @Test
@@ -46,8 +48,9 @@ class M127PrivateShoppingListBoundaryTest {
         val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
             .replace("\r\n", "\n")
         assertTrue(activity.contains("savedInstanceState?.containsKey(STATE_HOME_PRIVATE_IDENTITIES) == true"))
-        assertTrue(activity.contains("homeSessionStore.load()?.privateIdentities.orEmpty()"))
-        assertTrue(activity.contains("Never decode that omission as an empty list"))
+        assertTrue(activity.contains("homeSessionStore.hasPrivateIdentityRecord()"))
+        assertTrue(activity.contains("resolvePrivateIdentities("))
+        assertTrue(activity.contains("record is authoritative"))
     }
 
     private fun source(relativePath: String): File {

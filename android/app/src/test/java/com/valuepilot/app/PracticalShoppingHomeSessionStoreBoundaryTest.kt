@@ -17,7 +17,9 @@ class PracticalShoppingHomeSessionStoreBoundaryTest {
             "ShoppingRequestDetailsCodec.maximumEncodedBytes",
             "Base64.decode(encoded, Base64.DEFAULT)",
             "Base64.encodeToString(bytes, Base64.NO_WRAP)",
-            "editor.remove(KEY_REQUEST_DETAILS)"
+            "editor.remove(KEY_REQUEST_DETAILS)",
+            "hasPrivateIdentityRecord",
+            "isValidPrivateIdentitiesEncoding"
         ).forEach { required ->
             assertTrue("Expected local Home session boundary $required", source.contains(required))
         }
