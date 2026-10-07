@@ -81,7 +81,9 @@ object PracticalShoppingHomeSessionStoreCodec {
         }
         val prefix = "$PRIVATE_IDENTITIES_VERSION:"
         if (!encoded.startsWith(prefix)) return emptyList()
-        val entries = encoded.removePrefix(prefix).split(';')
+        val payload = encoded.removePrefix(prefix)
+        if (payload.isEmpty()) return emptyList()
+        val entries = payload.split(';')
         if (entries.isEmpty() || entries.size > PracticalShoppingPrivateIdentity.MAX_COUNT) {
             return emptyList()
         }
@@ -114,6 +116,32 @@ object PracticalShoppingHomeSessionStoreCodec {
             emptyList()
         }
     }
+
+    /** A canonical encoding check used before a failed read can be replaced by a save. */
+    fun isValidPrivateIdentitiesEncoding(encoded: String): Boolean {
+        if (encoded == EMPTY_PRIVATE_IDENTITIES_ENCODING) return true
+        val decoded = decodePrivateIdentities(encoded)
+        return decoded.isNotEmpty() && encodePrivateIdentities(decoded) == encoded
+    }
+
+    /**
+     * Selects the private list for lifecycle restoration without allowing an older bundle to
+     * replace a durable list. A present durable record is authoritative, including the explicit
+     * empty sentinel used after the user removes the last identity.
+     */
+    fun resolvePrivateIdentities(
+        savedInstanceStateContainsPrivateIdentities: Boolean,
+        savedInstanceStatePrivateIdentities: List<PracticalShoppingPrivateIdentity>,
+        durablePrivateIdentityRecordPresent: Boolean,
+        durablePrivateIdentities: List<PracticalShoppingPrivateIdentity>
+    ): List<PracticalShoppingPrivateIdentity> =
+        if (durablePrivateIdentityRecordPresent) {
+            durablePrivateIdentities
+        } else if (savedInstanceStateContainsPrivateIdentities) {
+            savedInstanceStatePrivateIdentities
+        } else {
+            durablePrivateIdentities
+        }
 
     private fun encodeField(value: String?): String =
         value?.let {
@@ -149,6 +177,7 @@ object PracticalShoppingHomeSessionStoreCodec {
         if (value.isEmpty()) null else decodeField(value, maxLength, required = true)
 
     private const val PRIVATE_IDENTITIES_VERSION = "v1"
+    const val EMPTY_PRIVATE_IDENTITIES_ENCODING = "v1:"
     private const val MAX_PRIVATE_IDENTITIES_ENCODED_LENGTH = 400_000
     private const val HEX_DIGITS = "0123456789abcdef"
 }
@@ -156,6 +185,9 @@ object PracticalShoppingHomeSessionStoreCodec {
 interface PracticalShoppingHomeSessionStore {
 
     fun load(): PracticalShoppingHomeSession.Snapshot?
+
+    /** True when the durable store has an explicit private-list record, including empty. */
+    fun hasPrivateIdentityRecord(): Boolean = false
 
     fun save(snapshot: PracticalShoppingHomeSession.Snapshot)
 
@@ -190,6 +222,9 @@ class AndroidPracticalShoppingHomeSessionStore(context: Context) :
         )
     }
 
+    override fun hasPrivateIdentityRecord(): Boolean =
+        preferences.contains(KEY_PRIVATE_IDENTITIES)
+
     override fun save(snapshot: PracticalShoppingHomeSession.Snapshot) {
         val editor =
             preferences
@@ -204,10 +239,31 @@ class AndroidPracticalShoppingHomeSessionStore(context: Context) :
                     )
                 )
 
-        PracticalShoppingHomeSessionStoreCodec
-            .encodePrivateIdentities(snapshot.privateIdentities)
-            ?.let { encoded -> editor.putString(KEY_PRIVATE_IDENTITIES, encoded) }
-            ?: editor.remove(KEY_PRIVATE_IDENTITIES)
+        val existingPrivateIdentities = preferences.getString(KEY_PRIVATE_IDENTITIES, null)
+        val encodedPrivateIdentities =
+            PracticalShoppingHomeSessionStoreCodec.encodePrivateIdentities(
+                snapshot.privateIdentities
+            )
+        when {
+            encodedPrivateIdentities != null ->
+                editor.putString(KEY_PRIVATE_IDENTITIES, encodedPrivateIdentities)
+            existingPrivateIdentities == null ->
+                editor.putString(
+                    KEY_PRIVATE_IDENTITIES,
+                    PracticalShoppingHomeSessionStoreCodec.EMPTY_PRIVATE_IDENTITIES_ENCODING
+                )
+            !PracticalShoppingHomeSessionStoreCodec.isValidPrivateIdentitiesEncoding(
+                existingPrivateIdentities
+            ) -> {
+                // Preserve an unreadable record for diagnostics instead of silently replacing it
+                // with an empty list during the first render after a failed read.
+            }
+            else ->
+                editor.putString(
+                    KEY_PRIVATE_IDENTITIES,
+                    PracticalShoppingHomeSessionStoreCodec.EMPTY_PRIVATE_IDENTITIES_ENCODING
+                )
+        }
 
         snapshot.requestDetailsLifecycleState?.let { bytes ->
             editor.putString(

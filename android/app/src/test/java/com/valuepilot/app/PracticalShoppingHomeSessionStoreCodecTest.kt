@@ -11,6 +11,7 @@ import com.valuepilot.core.ShoppingRequestDetailsCodec
 import com.valuepilot.core.ShoppingRequestedQuantity
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -136,6 +137,53 @@ class PracticalShoppingHomeSessionStoreCodecTest {
     }
 
     @Test
+    fun explicitEmptyPrivateIdentityRecordRoundTripsWithoutLookingMissing() {
+        val encoded = PracticalShoppingHomeSessionStoreCodec.EMPTY_PRIVATE_IDENTITIES_ENCODING
+
+        assertTrue(PracticalShoppingHomeSessionStoreCodec.isValidPrivateIdentitiesEncoding(encoded))
+        assertTrue(
+            PracticalShoppingHomeSessionStoreCodec
+                .decodePrivateIdentities(encoded)
+                .isEmpty()
+        )
+    }
+
+    @Test
+    fun durablePrivateListWinsOverStaleLifecycleListAndExplicitRemovalStaysRemoved() {
+        val stale = privateIdentity.copy(identityKey = "sepa:stale")
+        val newer = privateIdentity.copy(identityKey = "sepa:newer")
+
+        assertEquals(
+            listOf(newer),
+            PracticalShoppingHomeSessionStoreCodec.resolvePrivateIdentities(
+                savedInstanceStateContainsPrivateIdentities = true,
+                savedInstanceStatePrivateIdentities = listOf(stale),
+                durablePrivateIdentityRecordPresent = true,
+                durablePrivateIdentities = listOf(newer)
+            )
+        )
+        assertTrue(
+            PracticalShoppingHomeSessionStoreCodec
+                .resolvePrivateIdentities(
+                    savedInstanceStateContainsPrivateIdentities = true,
+                    savedInstanceStatePrivateIdentities = listOf(stale),
+                    durablePrivateIdentityRecordPresent = true,
+                    durablePrivateIdentities = emptyList()
+                )
+                .isEmpty()
+        )
+        assertEquals(
+            listOf(stale),
+            PracticalShoppingHomeSessionStoreCodec.resolvePrivateIdentities(
+                savedInstanceStateContainsPrivateIdentities = true,
+                savedInstanceStatePrivateIdentities = listOf(stale),
+                durablePrivateIdentityRecordPresent = false,
+                durablePrivateIdentities = emptyList()
+            )
+        )
+    }
+
+    @Test
     fun malformedPrivateIdentityStorageFailsClosedWithoutAffectingTheHomeEnvelope() {
         val decoded =
             requireNotNull(
@@ -151,5 +199,10 @@ class PracticalShoppingHomeSessionStoreCodecTest {
 
         assertEquals("milk", decoded.query)
         assertTrue(decoded.privateIdentities.isEmpty())
+        assertFalse(
+            PracticalShoppingHomeSessionStoreCodec.isValidPrivateIdentitiesEncoding(
+                "v1:not-valid"
+            )
+        )
     }
 }

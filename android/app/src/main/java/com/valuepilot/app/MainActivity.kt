@@ -476,18 +476,29 @@ class MainActivity : AppCompatActivity() {
                 homePreferenceStore.loadExtraStopMinimumSavingsChoice()
             }
 
-        // A lifecycle bundle may contain a newer Home query snapshot but omit the
-        // identity-only private-list field (for example when it was saved before
-        // the first Search handoff). Never decode that omission as an empty list:
-        // read the durable list instead so renderHome() cannot erase it.
-        val privateIdentities =
-            if (savedInstanceState?.containsKey(STATE_HOME_PRIVATE_IDENTITIES) == true) {
+        // A lifecycle bundle can contain an older but valid-looking private list. The durable
+        // record is authoritative, including an explicit empty record after removal, so the
+        // first render cannot write stale lifecycle state back over the user's current list.
+        val durableHomeSnapshot = homeSessionStore.load()
+        val savedPrivateIdentitiesPresent =
+            savedInstanceState?.containsKey(STATE_HOME_PRIVATE_IDENTITIES) == true
+        val savedPrivateIdentitiesEncoding =
+            savedInstanceState?.getString(STATE_HOME_PRIVATE_IDENTITIES)
+        val savedPrivateIdentities =
+            if (savedPrivateIdentitiesPresent) {
                 PracticalShoppingHomeSessionStoreCodec.decodePrivateIdentities(
-                    savedInstanceState.getString(STATE_HOME_PRIVATE_IDENTITIES)
+                    savedPrivateIdentitiesEncoding
                 )
             } else {
-                homeSessionStore.load()?.privateIdentities.orEmpty()
+                emptyList()
             }
+        val privateIdentities =
+            PracticalShoppingHomeSessionStoreCodec.resolvePrivateIdentities(
+                savedInstanceStateContainsPrivateIdentities = savedPrivateIdentitiesPresent,
+                savedInstanceStatePrivateIdentities = savedPrivateIdentities,
+                durablePrivateIdentityRecordPresent = homeSessionStore.hasPrivateIdentityRecord(),
+                durablePrivateIdentities = durableHomeSnapshot?.privateIdentities.orEmpty()
+            )
 
         return PracticalShoppingHomeSession.restoreState(
             PracticalShoppingHomeSession.Snapshot(
