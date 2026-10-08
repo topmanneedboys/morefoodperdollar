@@ -48,7 +48,10 @@ class MainActivityVisualSystemBoundaryTest {
             "vp_text_primary",
             "vp_text_secondary",
             "vp_text_muted",
-            "vp_outline"
+            "vp_outline",
+            "vp_accent",
+            "vp_accent_soft",
+            "vp_search_surface"
         ).forEach { required ->
             assertTrue("Expected palette color: $required", colors.contains("name=\"$required\""))
         }

@@ -313,7 +313,11 @@ This build does not copy flyer content here. Qualified Argentina listed-price ev
     <string name="search_footnote">This user-triggered search returns exact identities and may show a qualified listed price/store preview when fresh evidence is available. It never claims stock, store availability or a Best Value ranking; package size appears only when explicitly supplied.</string>
 
     <string name="search_hint">Try yerba, milk, rice or another product</string>
+    <string name="search_screen_title">Search</string>
+    <string name="search_screen_subtitle">Find a product by name or brand</string>
     <string name="search_action">Search Argentina products</string>
+    <string name="search_action_short">Search</string>
+    <string name="search_results_about">About results</string>
     <string name="search_quick_title">Try a product search</string>
     <string name="search_quick_eggs">yerba</string>
     <string name="search_quick_milk">milk</string>
@@ -329,13 +333,16 @@ This build does not copy flyer content here. Qualified Argentina listed-price ev
     <string name="search_identity_open_compare">Open in Scan &amp; compare</string>
     <string name="search_identity_open_compare_description">Put the selected identity name into Scan &amp; compare for review. This does not confirm quantity, price or availability.</string>
     <string name="search_identity_add_home_draft">Save to private Home list</string>
+    <string name="search_identity_add_short">Add</string>
     <string name="search_identity_add_home_draft_description">Save %1$s as a private Home shopping-list identity. This does not confirm price, store, stock or availability.</string>
     <string name="search_identity_add_home_failed">That identity could not be saved safely to your private Home list. Nothing was changed.</string>
     <string name="search_identity_no_verified_picture">No verified product picture available</string>
     <string name="search_identity_view_offer">View listed offer</string>
+    <string name="search_identity_details_short">Details</string>
     <string name="search_identity_view_offer_description">View the exact listed price and store evidence for %1$s. Stock and availability remain unknown.</string>
     <string name="search_identity_offer_details_title">Listed offer at %1$s</string>
     <string name="search_identity_plan_offer">Plan this exact item</string>
+    <string name="search_identity_plan_short">Plan</string>
     <string name="search_identity_plan_offer_description">Ask the qualified planner for a current listed-price plan for %1$s. Stock and availability remain unknown.</string>
     <string name="search_identity_plan_loading">Checking the qualified listed-price plan…</string>
     <string name="search_identity_plan_title">Current listed-price plan</string>
@@ -346,9 +353,15 @@ This build does not copy flyer content here. Qualified Argentina listed-price ev
     <string name="qualified_store_context_title">Store map context</string>
     <string name="qualified_store_context_external_map">Open external map</string>
     <string name="search_identity_package_size">Package size: %1$s</string>
+    <string name="search_identity_unit_rate_unavailable">Unit rate unavailable</string>
+    <string name="search_identity_availability_unknown">availability unknown</string>
+    <string name="search_identity_price_unavailable">Price unavailable</string>
+    <string name="search_identity_store_context_unavailable">Store context unavailable</string>
     <string name="search_area_label">Search area: %1$s</string>
     <string name="search_identity_match_label">Match: %1$s</string>
     <string name="search_identity_source">Source: Argentina SEPA / Precios Claros qualified release</string>
+    <string name="search_identity_source_short">SEPA listed price</string>
+    <string name="search_identity_source_identity_only">SEPA identity only</string>
     <string name="search_load_more">Load more matching identities</string>
     <string name="search_load_more_description">Load the next bounded page of Argentina product identity suggestions. This does not add prices or availability.</string>
     <string name="search_results_end">No more matching identities were returned in this release.</string>
