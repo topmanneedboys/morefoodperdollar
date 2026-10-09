@@ -32,6 +32,10 @@ import com.valuepilot.app.StapleWatchSavedIdentitySelectionAction
 import com.valuepilot.app.StapleWatchSavedSelectionUiState
 import com.valuepilot.app.StapleWatchSavedSelectionUiStatus
 
+internal fun requiresClassicStapleWatchHandoff(
+    capability: StapleWatchForegroundFactCheckCapability
+): Boolean = capability == StapleWatchForegroundFactCheckCapability.NOT_CONFIGURED
+
 @Composable
 internal fun ValuePilotNextStapleWatchSetupScreen(
     state: StapleWatchSavedSelectionUiState?,
@@ -40,6 +44,9 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
     onOpenLegacyStapleWatch: () -> Unit,
     onBack: () -> Unit
 ) {
+    val classicHandoffRequired =
+        state?.let { requiresClassicStapleWatchHandoff(it.factCheckCapability) } == true
+
     PremiumColumn {
         item(key = "staple-watch-intro") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {
@@ -56,7 +63,11 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 EvidenceFootnote(
-                    "This setup only records temporary identity choices. It does not produce current prices, a route, a savings decision, or an alert."
+                    if (classicHandoffRequired) {
+                        "Current-price and savings checks are still in the classic app. This Compose preview does not save a Watch list."
+                    } else {
+                        "This setup only records temporary identity choices. It does not produce current prices, a route, a savings decision, or an alert."
+                    }
                 )
             }
         }
@@ -65,14 +76,25 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
             item(key = "staple-watch-loading") {
                 LoadingRow("Checking your saved products and stores…")
             }
+        } else if (classicHandoffRequired) {
+            item(key = "staple-watch-legacy-handoff") {
+                ActionCard(
+                    eyebrow = "NOT IN COMPOSE YET",
+                    title = "Continue with the existing Watch flow",
+                    detail = "Current-price and savings checks have not moved into Compose. Open Saved in the classic app, then choose Watch My Staples. This preview has not saved a watch list or temporary selections.",
+                    actionLabel = "Open classic Saved & Watch tools",
+                    onClick = onOpenLegacyStapleWatch
+                )
+            }
+
+            item(key = "staple-watch-back") {
+                SecondaryActionButton(label = "Back to Saved", onClick = onBack)
+            }
         } else {
             item(key = "staple-watch-selection-summary") {
                 WatchSetupProgressCard(
                     state = state,
                     status = when {
-                        state.factCheckCapability == StapleWatchForegroundFactCheckCapability.NOT_CONFIGURED &&
-                            state.status == StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK ->
-                            "CHECKS UNAVAILABLE"
                         state.status == StapleWatchSavedSelectionUiStatus.DISPLAY_METADATA_INCOMPLETE ->
                             "REFRESH NAMES"
                         state.status == StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK ->
@@ -107,18 +129,6 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
             state.factResolutionProgress?.let { progress ->
                 item(key = "staple-watch-fact-progress") {
                     FactResolutionCard(progress)
-                }
-            }
-
-            if (state.factCheckCapability == StapleWatchForegroundFactCheckCapability.NOT_CONFIGURED) {
-                item(key = "staple-watch-legacy-handoff") {
-                    ActionCard(
-                        eyebrow = "CLASSIC WATCH FLOW",
-                        title = "Continue with the existing Watch tools",
-                        detail = "Current price and savings checks have not moved into Compose yet. Open Saved in the classic app, then choose Watch My Staples. The temporary selections here will not carry over.",
-                        actionLabel = "Open classic Saved & Watch tools",
-                        onClick = onOpenLegacyStapleWatch
-                    )
                 }
             }
 
