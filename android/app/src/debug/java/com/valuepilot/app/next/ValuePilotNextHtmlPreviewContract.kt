@@ -17,6 +17,22 @@ internal data class ValuePilotNextHtmlNativeSearchRequest(
     val query: String
 )
 
+internal object ValuePilotNextHtmlNativeSavedReadRequest
+
+internal data class ValuePilotNextHtmlNativeSaveRequest(
+    val identityKey: String,
+    val displayName: String,
+    val brand: String?,
+    val matchLabel: String,
+    val packageQuantityLabel: String?,
+    val sourceLabel: String,
+    val gtin: String?
+)
+
+internal data class ValuePilotNextHtmlNativeRemoveRequest(
+    val identityKey: String
+)
+
 internal data class ValuePilotNextHtmlNativePhotoRequest(
     val brand: String?,
     val name: String,
@@ -132,6 +148,76 @@ internal object ValuePilotNextHtmlPreviewContract {
             containsControlCharacter(query)
         ) return null
         return ValuePilotNextHtmlNativeSearchRequest(query)
+    }
+
+    /** Requests the identity-only Saved surface from the isolated Kotlin journey. */
+    fun parseNativeSavedReadMessage(rawMessage: String?): ValuePilotNextHtmlNativeSavedReadRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 256) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        return if (json.optString("type") == "READ_NATIVE_SAVED") {
+            ValuePilotNextHtmlNativeSavedReadRequest
+        } else {
+            null
+        }
+    }
+
+    /**
+     * Parses a save request carrying the exact identity fields rendered by
+     * native Search. The Activity still matches the identity against the
+     * current Kotlin presentation before persisting it.
+     */
+    fun parseNativeSaveMessage(rawMessage: String?): ValuePilotNextHtmlNativeSaveRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 4_096) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        if (json.optString("type") != "SAVE_VALUEPILOT_IDENTITY") return null
+        val identityKey = json.optString("identityKey").trim()
+        val displayName = json.optString("displayName").trim()
+        val brand = json.optString("brand").trim().takeIf { it.isNotEmpty() }
+        val matchLabel = json.optString("matchLabel").trim()
+        val packageQuantityLabel = json.optString("packageQuantityLabel")
+            .trim()
+            .takeIf { it.isNotEmpty() }
+        val sourceLabel = json.optString("sourceLabel").trim()
+        val gtin = json.optString("gtin").trim().takeIf { it.isNotEmpty() }
+        if (
+            identityKey.isBlank() || identityKey.length > 256 ||
+            displayName.isBlank() || displayName.length > 512 ||
+            brand != null && brand.length > 160 ||
+            matchLabel.isBlank() || matchLabel.length > 96 ||
+            packageQuantityLabel != null && packageQuantityLabel.length > 64 ||
+            sourceLabel.isBlank() || sourceLabel.length > 160 ||
+            gtin != null && !gtin.matches(Regex("[0-9]{8}|[0-9]{12}|[0-9]{13}|[0-9]{14}"))
+        ) return null
+        val values = listOfNotNull(
+            identityKey,
+            displayName,
+            brand,
+            matchLabel,
+            packageQuantityLabel,
+            sourceLabel,
+            gtin
+        )
+        if (values.any(::containsControlCharacter)) return null
+        return ValuePilotNextHtmlNativeSaveRequest(
+            identityKey = identityKey,
+            displayName = displayName,
+            brand = brand,
+            matchLabel = matchLabel,
+            packageQuantityLabel = packageQuantityLabel,
+            sourceLabel = sourceLabel,
+            gtin = gtin
+        )
+    }
+
+    fun parseNativeRemoveMessage(rawMessage: String?): ValuePilotNextHtmlNativeRemoveRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 1_024) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        if (json.optString("type") != "REMOVE_VALUEPILOT_IDENTITY") return null
+        val identityKey = json.optString("identityKey").trim()
+        if (identityKey.isBlank() || identityKey.length > 256 || containsControlCharacter(identityKey)) {
+            return null
+        }
+        return ValuePilotNextHtmlNativeRemoveRequest(identityKey)
     }
 
     /**

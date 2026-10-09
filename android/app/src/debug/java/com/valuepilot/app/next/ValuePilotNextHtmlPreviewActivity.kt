@@ -210,6 +210,24 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                         startNativeSearch(nativeSearch.query)
                         return
                     }
+                    if (ValuePilotNextHtmlPreviewContract
+                            .parseNativeSavedReadMessage(message.data) != null
+                    ) {
+                        sendNativeSavedState()
+                        return
+                    }
+                    val nativeSave = ValuePilotNextHtmlPreviewContract
+                        .parseNativeSaveMessage(message.data)
+                    if (nativeSave != null) {
+                        saveNativeIdentity(nativeSave)
+                        return
+                    }
+                    val nativeRemove = ValuePilotNextHtmlPreviewContract
+                        .parseNativeRemoveMessage(message.data)
+                    if (nativeRemove != null) {
+                        removeNativeIdentity(nativeRemove.identityKey)
+                        return
+                    }
                     val nativePhoto = ValuePilotNextHtmlPreviewContract
                         .parseNativeGoogleImagesMessage(message.data)
                     if (nativePhoto != null) {
@@ -234,6 +252,41 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         journey.queryChanged(query)
         journey.submitSearch(query)
         handler.post(nativeSearchPoll)
+    }
+
+    private fun sendNativeSavedState(action: String? = null) {
+        if (!::journey.isInitialized || !::webView.isInitialized) return
+        journey.refreshPrivateIdentitiesFromStore()
+        val payload = ValuePilotNextHtmlNativeSearchBridge.encodeSaved(
+            identities = journey.uiState.privateIdentities,
+            action = action
+        )
+        webView.evaluateJavascript(
+            "window.ValuePilotHtmlPreview && window.ValuePilotHtmlPreview.receiveNativeSaved($payload)",
+            null
+        )
+    }
+
+    private fun saveNativeIdentity(request: ValuePilotNextHtmlNativeSaveRequest) {
+        val candidate = journey.uiState.search.presentation
+            ?.matches
+            ?.firstOrNull { it.identityKey == request.identityKey }
+        val exact = candidate?.takeIf { match ->
+            match.displayName == request.displayName &&
+                match.brand == request.brand &&
+                match.matchLabel == request.matchLabel &&
+                match.packageQuantityLabel == request.packageQuantityLabel &&
+                match.sourceLabel == request.sourceLabel &&
+                match.gtin == request.gtin
+        }
+        val result = exact?.let(journey::addSearchMatch)
+            ?: AddPrivateIdentityResult.SOURCE_UNAVAILABLE
+        sendNativeSavedState("SAVE_${result.name}")
+    }
+
+    private fun removeNativeIdentity(identityKey: String) {
+        val removed = journey.removePrivateIdentity(identityKey)
+        sendNativeSavedState(if (removed) "REMOVE_SUCCESS" else "REMOVE_MISSING")
     }
 
     private fun installBackHandling() {

@@ -135,4 +135,65 @@ class ValuePilotNextHtmlPreviewContractTest {
             )
         )
     }
+
+    @Test
+    fun acceptsNativeSavedReadAndStrictIdentityActions() {
+        assertTrue(
+            ValuePilotNextHtmlPreviewContract
+                .parseNativeSavedReadMessage("{\"type\":\"READ_NATIVE_SAVED\"}") != null
+        )
+        val save = requireNotNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeSaveMessage(
+                "{" +
+                    "\"type\":\"SAVE_VALUEPILOT_IDENTITY\"," +
+                    "\"identityKey\":\"gtin-123\"," +
+                    "\"displayName\":\"Leche Entera\"," +
+                    "\"brand\":\"Armonía\"," +
+                    "\"matchLabel\":\"exact name\"," +
+                    "\"packageQuantityLabel\":\"1.000 ml\"," +
+                    "\"sourceLabel\":\"qualified Argentina source\"," +
+                    "\"gtin\":\"12345678\"" +
+                    "}"
+            )
+        )
+        assertEquals("gtin-123", save.identityKey)
+        assertEquals("qualified Argentina source", save.sourceLabel)
+        assertEquals(
+            "gtin-123",
+            requireNotNull(
+                ValuePilotNextHtmlPreviewContract.parseNativeRemoveMessage(
+                    "{\"type\":\"REMOVE_VALUEPILOT_IDENTITY\",\"identityKey\":\"gtin-123\"}"
+                )
+            ).identityKey
+        )
+    }
+
+    @Test
+    fun rejectsNativeSavedIdentitySpoofingAndControls() {
+        assertTrue(
+            ValuePilotNextHtmlPreviewContract
+                .parseNativeSavedReadMessage("{\"type\":\"READ_NATIVE_SAVED\",\"extra\":true}") != null
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeSaveMessage(
+                "{" +
+                    "\"type\":\"SAVE_VALUEPILOT_IDENTITY\"," +
+                    "\"identityKey\":\"x\"," +
+                    "\"displayName\":\"Leche\"," +
+                    "\"matchLabel\":\"exact name\"," +
+                    "\"sourceLabel\":\"\"" +
+                    "}"
+            )
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeRemoveMessage(
+                "{\"type\":\"REMOVE_VALUEPILOT_IDENTITY\",\"identityKey\":\"x\\u0001\"}"
+            )
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeSavedReadMessage(
+                "{\"type\":\"READ_NATIVE_SEARCH\"}"
+            )
+        )
+    }
 }
