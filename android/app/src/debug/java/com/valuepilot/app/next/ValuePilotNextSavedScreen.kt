@@ -195,24 +195,16 @@ internal fun ValuePilotSavedScreen(
             )
         }
 
-        stapleLaunch?.title?.let { title ->
-            item(key = "saved-staple-watch-launch") {
-                if (stapleLaunch.action != null) {
-                    ActionCard(
-                        eyebrow = "RECURRING STAPLES",
-                        title = title,
-                        detail = stapleLaunch.supportingText
-                            ?: "Choose the saved staples you return to most.",
-                        actionLabel = stapleLaunch.actionLabel ?: "Set up Watch My Staples",
-                        onClick = onOpenStapleWatch
-                    )
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
-                        Text(title, style = MaterialTheme.typography.titleMedium)
-                        stapleLaunch.notice?.let { EvidenceNotice(it) }
-                    }
-                }
-            }
+        item(key = "saved-staple-watch-launch") {
+            ActionCard(
+                eyebrow = "RECURRING STAPLES",
+                title = stapleLaunch?.title ?: "Watch My Staples",
+                detail = stapleLaunch?.supportingText
+                    ?: stapleLaunch?.notice
+                    ?: "Review the saved product and store requirements for recurring staples.",
+                actionLabel = stapleLaunch?.actionLabel ?: "Review setup requirements",
+                onClick = onOpenStapleWatch
+            )
         }
 
         item(key = "saved-legacy-tools") {

@@ -76,6 +76,29 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
             item(key = "staple-watch-loading") {
                 LoadingRow("Checking your saved products and stores…")
             }
+        } else if (
+            state.productRows.size < MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF ||
+                state.storeRows.isEmpty()
+        ) {
+            item(key = "staple-watch-missing-saved-choices") {
+                ActionCard(
+                    eyebrow = "SAVED CHOICES NEEDED",
+                    title = when {
+                        state.productRows.size < MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF &&
+                            state.storeRows.isEmpty() -> "Save products and a store first."
+                        state.productRows.size < MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF ->
+                            "Save two products first."
+                        else -> "Save a usual store first."
+                    },
+                    detail = state.guidance,
+                    actionLabel = "Open classic Saved",
+                    onClick = onOpenLegacyStapleWatch
+                )
+            }
+
+            item(key = "staple-watch-back") {
+                SecondaryActionButton(label = "Back to Saved", onClick = onBack)
+            }
         } else if (classicHandoffRequired) {
             item(key = "staple-watch-legacy-handoff") {
                 ActionCard(
@@ -107,22 +130,6 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
             state.notice?.let { message ->
                 item(key = "staple-watch-notice") {
                     EvidenceNotice(text = message, isError = state.selectedDisplayNameBlockerCount > 0)
-                }
-            }
-
-            if (state.productRows.isEmpty() || state.storeRows.isEmpty()) {
-                item(key = "staple-watch-missing-saved-choices") {
-                    EmptyStateCard(
-                        eyebrow = "SAVED CHOICES CHANGED",
-                        title = if (state.productRows.isEmpty()) {
-                            "Save named products to continue."
-                        } else {
-                            "Save a named store to continue."
-                        },
-                        detail = "Watch My Staples needs at least two named products and one named store.",
-                        actionLabel = "Back to Saved",
-                        onAction = onBack
-                    )
                 }
             }
 
