@@ -59,6 +59,7 @@ class ValuePilotNextActivity : AppCompatActivity() {
                     onShareCompareHereResult = ::shareCompareHereResult,
                     onOpenStoreMap = ::openStoreMap,
                     onStartGoodPriceBarcodeScan = ::startGoodPriceBarcodeScan,
+                    onOpenLegacyStapleWatch = ::openSavedTools,
                     onOpenSavedTools = ::openSavedTools,
                     onSharePrivatePriceHistory = ::sharePrivatePriceHistory,
                     onShareGoodPriceResult = ::shareGoodPriceResult

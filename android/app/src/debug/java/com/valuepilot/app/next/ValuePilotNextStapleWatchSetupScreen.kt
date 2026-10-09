@@ -37,6 +37,7 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
     state: StapleWatchSavedSelectionUiState?,
     onAction: (StapleWatchSavedIdentitySelectionAction) -> Unit,
     onContinue: (StapleWatchSavedIdentityHandoffUiAction) -> Unit,
+    onOpenLegacyStapleWatch: () -> Unit,
     onBack: () -> Unit
 ) {
     PremiumColumn {
@@ -106,6 +107,18 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
             state.factResolutionProgress?.let { progress ->
                 item(key = "staple-watch-fact-progress") {
                     FactResolutionCard(progress)
+                }
+            }
+
+            if (state.factCheckCapability == StapleWatchForegroundFactCheckCapability.NOT_CONFIGURED) {
+                item(key = "staple-watch-legacy-handoff") {
+                    ActionCard(
+                        eyebrow = "FULL STAPLE WATCH",
+                        title = "Continue in the established flow",
+                        detail = "Foreground checks and switch planning run in the existing Saved experience. These setup choices are temporary; open Saved and choose Watch My Staples to continue.",
+                        actionLabel = "Open Saved tools",
+                        onClick = onOpenLegacyStapleWatch
+                    )
                 }
             }
 

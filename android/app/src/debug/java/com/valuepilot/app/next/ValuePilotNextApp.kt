@@ -164,6 +164,7 @@ internal fun ValuePilotNextApp(
     onShareCompareHereResult: (com.valuepilot.app.CompareHereShareCard) -> Boolean,
     onOpenStoreMap: (com.valuepilot.app.ArgentinaPrivateBasketStoreProjection) -> Boolean,
     onStartGoodPriceBarcodeScan: () -> Unit,
+    onOpenLegacyStapleWatch: () -> Unit,
     onOpenSavedTools: () -> Unit,
     onSharePrivatePriceHistory: (String) -> Boolean,
     onShareGoodPriceResult: (com.valuepilot.app.GoodPriceShareCard) -> Boolean
@@ -572,6 +573,7 @@ internal fun ValuePilotNextApp(
                                         state = ui.stapleWatchSetup,
                                         onAction = journey::onStapleWatchSetupAction,
                                         onContinue = journey::onStapleWatchSetupContinue,
+                                        onOpenLegacyStapleWatch = onOpenLegacyStapleWatch,
                                         onBack = ::navigateBack
                                     )
 
