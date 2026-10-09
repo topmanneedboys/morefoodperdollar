@@ -137,7 +137,7 @@ internal object ValuePilotSemanticColors {
     fun error(): Color = MaterialTheme.colorScheme.error
 }
 
-private val LightScheme = lightColorScheme(
+internal val ValuePilotLightColorScheme = lightColorScheme(
     primary = ValuePilotPalette.brand,
     onPrimary = Color.White,
     primaryContainer = Color(0xFFF4D9CF),
@@ -162,7 +162,7 @@ private val LightScheme = lightColorScheme(
     onErrorContainer = Color(0xFF4C1713)
 )
 
-private val DarkScheme = darkColorScheme(
+internal val ValuePilotDarkColorScheme = darkColorScheme(
     primary = Color(0xFFFFA27E),
     onPrimary = Color(0xFF421D12),
     primaryContainer = Color(0xFF783B27),
@@ -258,7 +258,7 @@ internal fun ValuePilotNextTheme(
         LocalValuePilotSpacingScale provides valuePilotSpacingScaleFor(density)
     ) {
         MaterialTheme(
-            colorScheme = if (darkTheme) DarkScheme else LightScheme,
+            colorScheme = if (darkTheme) ValuePilotDarkColorScheme else ValuePilotLightColorScheme,
             typography = ValuePilotTypography,
             shapes = ValuePilotShapes,
             content = content
