@@ -25,6 +25,10 @@ internal data class ValuePilotNextUiPreferences(
     val density: ValuePilotNextDensity = ValuePilotNextDensity.COMFORTABLE
 )
 
+internal fun shouldOfferPresentationPreferenceReset(
+    preferences: ValuePilotNextUiPreferences
+): Boolean = preferences != ValuePilotNextUiPreferences()
+
 internal object ValuePilotNextUiPreferencesCodec {
     fun decode(
         appearance: String?,

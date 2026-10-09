@@ -659,6 +659,9 @@ internal fun ValuePilotNextApp(
                                             presentationPreferences.copy(density = density)
                                         )
                                     },
+                                    onResetPreferences = {
+                                        onPresentationPreferencesChanged(ValuePilotNextUiPreferences())
+                                    },
                                     onBack = ::navigateBack
                                 )
 

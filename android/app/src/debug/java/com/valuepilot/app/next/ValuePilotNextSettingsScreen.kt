@@ -14,10 +14,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 
@@ -27,6 +30,7 @@ internal fun ValuePilotNextSettingsScreen(
     onAppearanceSelected: (ValuePilotNextAppearance) -> Unit,
     onMotionSelected: (ValuePilotNextMotionPreference) -> Unit,
     onDensitySelected: (ValuePilotNextDensity) -> Unit,
+    onResetPreferences: () -> Unit,
     onBack: () -> Unit
 ) {
     PremiumColumn {
@@ -123,6 +127,22 @@ internal fun ValuePilotNextSettingsScreen(
                         selected = preferences.density == ValuePilotNextDensity.COMPACT,
                         onClick = { onDensitySelected(ValuePilotNextDensity.COMPACT) }
                     )
+                }
+            }
+        }
+
+        if (shouldOfferPresentationPreferenceReset(preferences)) {
+            item(key = "settings-reset-preferences") {
+                TextButton(
+                    onClick = onResetPreferences,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
+                        .semantics {
+                            contentDescription = "Restore default appearance, motion, and display density"
+                        }
+                ) {
+                    Text("Restore default experience")
                 }
             }
         }

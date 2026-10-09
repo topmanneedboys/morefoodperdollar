@@ -45,6 +45,16 @@ class ValuePilotNextUiPreferencesTest {
     }
 
     @Test
+    fun `preference reset is offered only after a choice differs from defaults`() {
+        assertFalse(shouldOfferPresentationPreferenceReset(ValuePilotNextUiPreferences()))
+        assertTrue(
+            shouldOfferPresentationPreferenceReset(
+                ValuePilotNextUiPreferences(density = ValuePilotNextDensity.COMPACT)
+            )
+        )
+    }
+
+    @Test
     fun `compact spacing preserves touch targets while fitting more content`() {
         val comfortable = valuePilotSpacingScaleFor(ValuePilotNextDensity.COMFORTABLE)
         val compact = valuePilotSpacingScaleFor(ValuePilotNextDensity.COMPACT)
