@@ -759,7 +759,9 @@ private fun JourneyTopBar(
         if (canGoBack) {
             androidx.compose.material3.TextButton(
                 onClick = onBack,
-                modifier = Modifier.size(ValuePilotSpacing.minimumTouchTarget)
+                modifier = Modifier
+                    .size(ValuePilotSpacing.minimumTouchTarget)
+                    .semantics { contentDescription = "Back" }
             ) {
                 Text("‹", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
             }
@@ -803,8 +805,9 @@ private fun JourneyTopBar(
             modifier = Modifier
                 .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
                 .widthIn(min = 64.dp)
+                .semantics { contentDescription = "Exit preview and return to the classic app" }
         ) {
-            Text("Current", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Exit", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
