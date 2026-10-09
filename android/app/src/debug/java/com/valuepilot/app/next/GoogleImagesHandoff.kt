@@ -21,7 +21,8 @@ internal object GoogleImagesHandoff {
         brand = match.brand,
         packageQuantity = match.packageQuantityLabel,
         packageType = packageTypeLabel,
-        argentinaArea = areaLabel
+        argentinaArea = areaLabel,
+        gtin = match.gtin
     )
 
     fun queryFor(
@@ -29,18 +30,27 @@ internal object GoogleImagesHandoff {
         brand: String?,
         packageQuantity: String?,
         packageType: String?,
-        argentinaArea: String?
+        argentinaArea: String?,
+        gtin: String? = null
     ): String? {
         val name = cleanField(productName, NAME_LIMIT) ?: return null
         val area = argentinaContext(argentinaArea)
-        val fields = listOfNotNull(
+        val productFields = listOfNotNull(
             name,
             cleanField(brand, BRAND_LIMIT),
             cleanField(packageQuantity, QUANTITY_LIMIT),
-            cleanField(packageType, PACKAGE_TYPE_LIMIT),
-            cleanField(area, AREA_LIMIT)
+            cleanField(packageType, PACKAGE_TYPE_LIMIT)
         )
-        return fields.joinToString(" ").take(MAX_QUERY_LENGTH).takeIf(String::isNotBlank)
+        val areaField = requireNotNull(cleanField(area, AREA_LIMIT))
+        val gtinField = cleanField(gtin, GTIN_LIMIT)
+            ?.takeIf(GTIN_PATTERN::matches)
+            ?.let { "EAN $it" }
+        val baseFields = productFields + areaField
+        val exactIdentityFields = productFields + listOfNotNull(gtinField) + areaField
+        val fields = if (
+            gtinField != null && exactIdentityFields.joinToString(" ").length <= MAX_QUERY_LENGTH
+        ) exactIdentityFields else baseFields
+        return fields.joinToString(" ").takeIf(String::isNotBlank)
     }
 
     fun urlFor(
@@ -76,9 +86,11 @@ internal object GoogleImagesHandoff {
     private const val BRAND_LIMIT = 36
     private const val QUANTITY_LIMIT = 28
     private const val PACKAGE_TYPE_LIMIT = 24
+    private const val GTIN_LIMIT = 14
     private const val AREA_LIMIT = 28
     private const val AREA_INPUT_LIMIT = 64
     private const val AREA_BASE_LIMIT = 16
+    private val GTIN_PATTERN = Regex("[0-9]{8}|[0-9]{12}|[0-9]{13}|[0-9]{14}")
     private val WHITESPACE = Regex("\\s+")
 }
 

@@ -461,6 +461,20 @@ internal fun ValuePilotNextApp(
                                         submitSearch()
                                     },
                                     onLoadMore = journey::loadMoreSearchResults,
+                                    onAddToBasket = { match ->
+                                        when (journey.addSearchMatch(match)) {
+                                            AddPrivateIdentityResult.ADDED ->
+                                                notify("Producto agregado a tu canasta privada.")
+                                            AddPrivateIdentityResult.REFRESHED ->
+                                                notify("Actualizamos la evidencia de Search para este producto.")
+                                            AddPrivateIdentityResult.SOURCE_UNAVAILABLE ->
+                                                notify("Este resultado no tiene una identidad de fuente calificada para guardar.")
+                                            AddPrivateIdentityResult.BASKET_LIMIT ->
+                                                notify("Tu canasta privada alcanzó el límite de productos.")
+                                            AddPrivateIdentityResult.PERSISTENCE_UNAVAILABLE ->
+                                                notify("No se pudo guardar la identidad en la canasta.")
+                                        }
+                                    },
                                     onOpenMatch = { match ->
                                         selectedIdentityKey = match.identityKey
                                         navigate(NextDestination.PRODUCT_DETAIL)

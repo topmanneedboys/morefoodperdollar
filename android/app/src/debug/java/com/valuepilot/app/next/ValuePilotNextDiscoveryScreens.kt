@@ -247,6 +247,7 @@ internal fun ValuePilotSearchScreen(
     onSubmit: () -> Unit,
     onLoadMore: () -> Unit,
     onOpenMatch: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
+    onAddToBasket: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
     onOpenGoogleImages: (PracticalShoppingSearchIdentityPresentation.Match, String) -> Unit,
     onShowDesignFixture: () -> Unit
 ) {
@@ -347,6 +348,7 @@ internal fun ValuePilotSearchScreen(
                     match = ValuePilotNextLayoutFixture.match,
                     isDesignFixture = true,
                     onClick = { onOpenMatch(ValuePilotNextLayoutFixture.match) },
+                    onAddToBasket = {},
                     onOpenGoogleImages = {
                         onOpenGoogleImages(ValuePilotNextLayoutFixture.match, state.areaLabel)
                     }
@@ -387,6 +389,7 @@ internal fun ValuePilotSearchScreen(
                     match = match,
                     isDesignFixture = false,
                     onClick = { onOpenMatch(match) },
+                    onAddToBasket = { onAddToBasket(match) },
                     onOpenGoogleImages = { onOpenGoogleImages(match, state.areaLabel) }
                 )
             }
@@ -585,13 +588,17 @@ private fun SearchResultCard(
     match: PracticalShoppingSearchIdentityPresentation.Match,
     isDesignFixture: Boolean,
     onClick: () -> Unit,
+    onAddToBasket: () -> Unit,
     onOpenGoogleImages: () -> Unit
 ) {
     val currentOffer = match.qualifiedOffers.firstOrNull {
         it.freshnessStatus == ArgentinaBackendContract.Freshness.FRESH
     }
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { contentDescription = "Ver detalles de ${match.displayName}" },
         shape = RoundedCornerShape(15.dp),
         color = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -599,71 +606,51 @@ private fun SearchResultCard(
     ) {
         Column(
             modifier = Modifier.padding(13.dp),
-            verticalArrangement = Arrangement.spacedBy(9.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(
-                        match.displayName,
-                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 15.sp, lineHeight = 20.sp),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    listOfNotNull(match.brand, match.packageQuantityLabel)
-                        .takeIf { it.isNotEmpty() }
-                        ?.joinToString(" · ")
-                        ?.let {
-                            Text(
-                                it,
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, lineHeight = 15.sp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                }
-                if (currentOffer != null) {
-                    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                        Text("PRECIO PUBLICADO", style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        SearchPriceLabel(currentOffer)
-                    }
-                }
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(7.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 SearchMatchPill(if (isDesignFixture) "MUESTRA DE DISEÑO" else localizedMatchLabel(match.matchLabel))
-                if (currentOffer != null) SearchFreshnessLabel(true)
-                else Text(
-                    if (match.qualifiedOffers.isNotEmpty()) "Precio no actual" else "Solo identidad",
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                match.packageQuantityLabel?.let { EvidencePill(it, MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant) }
             }
-            if (currentOffer != null) {
-                val unit = currentOffer.unitPrice?.let { value ->
-                    val basis = currentOffer.unitPriceBasis?.takeIf(String::isNotBlank)
-                    value.currency + " " + value.amount + (basis?.let { " / " + it } ?: "")
-                }
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
-                    listOfNotNull(currentOffer.storeName, unit).joinToString("  ·  "),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(9.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.58f))
-                        .padding(horizontal = 9.dp, vertical = 7.dp),
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    match.displayName,
+                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, lineHeight = 21.sp),
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
+                match.brand?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, lineHeight = 15.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            if (currentOffer != null) {
+                SearchOfferPricePanel(currentOffer)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        currentOffer.storeName,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    SearchFreshnessLabel(true)
+                }
             } else if (!isDesignFixture && match.qualifiedOffers.isNotEmpty()) {
                 Text(
                     "La fuente no confirma un precio actual.",
@@ -671,13 +658,76 @@ private fun SearchResultCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                CompactOutlineAction("Ver detalles", Modifier.weight(0.85f), onClick)
-                GoogleImagesAction(match, onOpenGoogleImages, Modifier.weight(1.15f))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                GoogleImagesAction(match, onOpenGoogleImages, Modifier.weight(1f))
+                AddToBasketAction(
+                    match = match,
+                    enabled = !isDesignFixture && !match.sourceLabel.isNullOrBlank(),
+                    onClick = onAddToBasket,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchOfferPricePanel(offer: ArgentinaBackendContract.SearchOffer) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.62f),
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val unitPrice = offer.unitPrice
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    if (unitPrice == null) "PRECIO PUBLICADO" else "PRECIO UNITARIO NORMALIZADO",
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp, letterSpacing = 0.45.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (unitPrice == null) {
+                    Text(
+                        "${offer.listPrice.currency} ${offer.listPrice.amount}",
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, lineHeight = 22.sp),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                } else {
+                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(
+                            "${unitPrice.currency} ${unitPrice.amount}",
+                            style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, lineHeight = 22.sp),
+                            color = MaterialTheme.colorScheme.tertiary
+                        )
+                        offer.unitPriceBasis?.takeIf(String::isNotBlank)?.let {
+                            Text(
+                                "/ $it",
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+            if (unitPrice != null) {
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        "PRECIO PUBLICADO",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp, letterSpacing = 0.35.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        "${offer.listPrice.currency} ${offer.listPrice.amount}",
+                        style = MaterialTheme.typography.titleSmall.copy(fontSize = 13.sp),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
         }
     }
@@ -709,20 +759,28 @@ private fun GoogleImagesAction(
 }
 
 @Composable
-private fun CompactOutlineAction(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun AddToBasketAction(
+    match: PracticalShoppingSearchIdentityPresentation.Match,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Surface(
         onClick = onClick,
-        modifier = modifier.heightIn(min = 48.dp),
+        enabled = enabled,
+        modifier = modifier
+            .heightIn(min = 48.dp)
+            .semantics { contentDescription = "Agregar ${match.displayName} a tu canasta privada" },
         shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = if (enabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
     ) {
-        androidx.compose.foundation.layout.Box(
+        Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 7.dp, vertical = 7.dp),
-            contentAlignment = Alignment.Center
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(label, style = MaterialTheme.typography.labelLarge.copy(fontSize = 11.sp))
+            Text("＋  Agregar", style = MaterialTheme.typography.labelLarge.copy(fontSize = 11.sp), maxLines = 1)
         }
     }
 }

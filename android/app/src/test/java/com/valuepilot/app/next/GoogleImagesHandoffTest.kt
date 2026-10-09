@@ -29,6 +29,29 @@ class GoogleImagesHandoffTest {
     }
 
     @Test
+    fun queryIncludesSourceValidatedGtinWhenItFitsWithoutDroppingArgentinaContext() {
+        val identifiedMatch = match.copy(gtin = "7791234567898")
+        val query = requireNotNull(GoogleImagesHandoff.queryFor(identifiedMatch, "CABA"))
+
+        assertEquals("Yerba Mate, Miércoles Marca 1 kg EAN 7791234567898 CABA, Argentina", query)
+        assertTrue(query.contains(identifiedMatch.gtin!!))
+
+        val boundedQuery = requireNotNull(
+            GoogleImagesHandoff.queryFor(
+                productName = "N".repeat(136),
+                brand = "B".repeat(36),
+                packageQuantity = "Q".repeat(28),
+                packageType = "P".repeat(24),
+                argentinaArea = "CABA",
+                gtin = "7791234567898"
+            )
+        )
+        assertTrue(boundedQuery.endsWith("CABA, Argentina"))
+        assertFalse(boundedQuery.contains("EAN 7791234567898"))
+        assertTrue(boundedQuery.length <= GoogleImagesHandoff.MAX_QUERY_LENGTH)
+    }
+
+    @Test
     fun queryIncludesThePackageTypeOnlyWhenTheCallerHasAnExplicitValue() {
         val query = requireNotNull(
             GoogleImagesHandoff.queryFor(
