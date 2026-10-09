@@ -56,4 +56,39 @@ class ValuePilotNextHtmlPreviewContractTest {
             ).startsWith("https://www.google.com/")
         )
     }
+    @Test
+    fun acceptsSupportedPreviewLanguages() {
+        assertEquals(
+            "en",
+            ValuePilotNextHtmlPreviewContract
+                .parseSetLanguageMessage("{\"type\":\"SET_LANGUAGE\",\"language\":\"en\"}")
+                ?.language
+        )
+        assertEquals(
+            "es-AR",
+            ValuePilotNextHtmlPreviewContract
+                .parseSetLanguageMessage("{\"type\":\"SET_LANGUAGE\",\"language\":\"es-AR\"}")
+                ?.language
+        )
+    }
+
+    @Test
+    fun rejectsUnknownLanguageMessagesAndOversizedPayloads() {
+        assertNull(ValuePilotNextHtmlPreviewContract.parseSetLanguageMessage(null))
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseSetLanguageMessage(
+                "{\"type\":\"SET_LANGUAGE\",\"language\":\"fr\"}"
+            )
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseSetLanguageMessage(
+                "{\"type\":\"SET_LANGUAGE\",\"language\":\"en\"}" + " ".repeat(256)
+            )
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseSetLanguageMessage(
+                "{\"type\":\"OPEN_GOOGLE_IMAGES\",\"language\":\"en\"}"
+            )
+        )
+    }
 }

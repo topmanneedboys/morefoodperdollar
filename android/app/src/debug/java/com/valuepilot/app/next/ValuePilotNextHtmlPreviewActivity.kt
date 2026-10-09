@@ -33,6 +33,9 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private lateinit var assetLoader: WebViewAssetLoader
     private val handler = Handler(Looper.getMainLooper())
+    private val previewPreferences by lazy {
+        getSharedPreferences(PREVIEW_PREFERENCES_NAME, MODE_PRIVATE)
+    }
     private var googleImagesLaunchInFlight = false
 
     private val googleImagesLauncher =
@@ -118,6 +121,18 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
     }
 
     private fun secureWebViewClient(): WebViewClientCompat = object : WebViewClientCompat() {
+        override fun onPageFinished(view: WebView, url: String) {
+            super.onPageFinished(view, url)
+            if (url != ASSET_INDEX_URL) return
+            val language = previewPreferences.getString(PREF_LANGUAGE, null)
+                ?.takeIf { it == "en" || it == "es-AR" }
+                ?: return
+            view.evaluateJavascript(
+                "window.ValuePilotHtmlPreview && window.ValuePilotHtmlPreview.setLanguage('$language')",
+                null
+            )
+        }
+
         override fun shouldInterceptRequest(
             view: WebView,
             request: WebResourceRequest
@@ -151,6 +166,14 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                     replyProxy: JavaScriptReplyProxy
                 ) {
                     if (!isMainFrame || sourceOrigin.toString() != ASSET_ORIGIN) return
+                    val language = ValuePilotNextHtmlPreviewContract
+                        .parseSetLanguageMessage(message.data)
+                    if (language != null) {
+                        previewPreferences.edit()
+                            .putString(PREF_LANGUAGE, language.language)
+                            .apply()
+                        return
+                    }
                     val request = ValuePilotNextHtmlPreviewContract
                         .parseOpenGoogleImagesMessage(message.data)
                         ?: return
@@ -248,5 +271,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         const val INITIAL_HEIGHT_PERCENT = 65
         const val MIN_INITIAL_HEIGHT_DP = 320
         const val THEME_SYNC_INTERVAL_MS = 300L
+        const val PREVIEW_PREFERENCES_NAME = "valuepilot_next_html_preview"
+        const val PREF_LANGUAGE = "language"
     }
 }

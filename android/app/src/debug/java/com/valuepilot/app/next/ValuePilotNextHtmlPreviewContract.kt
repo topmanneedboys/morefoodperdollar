@@ -9,6 +9,10 @@ internal data class ValuePilotNextHtmlPhotoRequest(
     val query: String
 )
 
+internal data class ValuePilotNextHtmlLanguageRequest(
+    val language: String
+)
+
 internal data class ValuePilotNextHtmlProduct(
     val productId: String,
     val brand: String,
@@ -79,6 +83,17 @@ internal object ValuePilotNextHtmlPreviewContract {
         val expected = productsById[productId]?.query ?: return null
         if (query != expected) return null
         return ValuePilotNextHtmlPhotoRequest(productId, query)
+    }
+
+    fun parseSetLanguageMessage(rawMessage: String?): ValuePilotNextHtmlLanguageRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 256) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        if (json.optString("type") != "SET_LANGUAGE") return null
+        return when (json.optString("language")) {
+            "en" -> ValuePilotNextHtmlLanguageRequest("en")
+            "es-AR" -> ValuePilotNextHtmlLanguageRequest("es-AR")
+            else -> null
+        }
     }
 
     fun urlFor(request: ValuePilotNextHtmlPhotoRequest): String =
