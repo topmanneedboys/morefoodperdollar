@@ -85,6 +85,20 @@ internal enum class NextDestination(val primaryTab: AppPrimaryTab?) {
     SETTINGS(null)
 }
 
+/**
+ * Opens a fresh observed-price draft without restoring text from a previous use of the same
+ * saveable destination. The active attempt still keeps its form state across configuration change.
+ */
+internal fun prepareAndOpenObservedPriceConfirmation(
+    prepare: () -> Boolean,
+    resetSavedFormState: () -> Unit,
+    navigate: () -> Unit
+) {
+    if (!prepare()) return
+    resetSavedFormState()
+    navigate()
+}
+
 internal fun primaryTabForNextDestination(
     destination: NextDestination,
     originDestination: NextDestination? = null
@@ -654,9 +668,19 @@ internal fun ValuePilotNextApp(
                                         onContinueToConfirmation = {
                                             journey.currentObservedPricePrefillAttemptOrNull()
                                                 ?.let { attempt ->
-                                                    if (journey.prepareObservedPriceConfirmation(attempt)) {
-                                                        navigate(NextDestination.OBSERVED_PRICE_CONFIRMATION)
-                                                    }
+                                                    prepareAndOpenObservedPriceConfirmation(
+                                                        prepare = {
+                                                            journey.prepareObservedPriceConfirmation(attempt)
+                                                        },
+                                                        resetSavedFormState = {
+                                                            destinationStateHolder.removeState(
+                                                                NextDestination.OBSERVED_PRICE_CONFIRMATION.name
+                                                            )
+                                                        },
+                                                        navigate = {
+                                                            navigate(NextDestination.OBSERVED_PRICE_CONFIRMATION)
+                                                        }
+                                                    )
                                                 }
                                         },
                                         onBackToSaved = ::navigateBack

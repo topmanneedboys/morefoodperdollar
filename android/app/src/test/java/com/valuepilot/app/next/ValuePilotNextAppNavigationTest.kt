@@ -45,4 +45,36 @@ class ValuePilotNextAppNavigationTest {
             )
         )
     }
+
+    @Test
+    fun `a fresh observed price attempt clears old form state before opening`() {
+        val events = mutableListOf<String>()
+
+        prepareAndOpenObservedPriceConfirmation(
+            prepare = {
+                events += "prepare"
+                true
+            },
+            resetSavedFormState = { events += "reset" },
+            navigate = { events += "navigate" }
+        )
+
+        assertEquals(listOf("prepare", "reset", "navigate"), events)
+    }
+
+    @Test
+    fun `a rejected observed price attempt preserves current form state`() {
+        val events = mutableListOf<String>()
+
+        prepareAndOpenObservedPriceConfirmation(
+            prepare = {
+                events += "prepare"
+                false
+            },
+            resetSavedFormState = { events += "reset" },
+            navigate = { events += "navigate" }
+        )
+
+        assertEquals(listOf("prepare"), events)
+    }
 }
