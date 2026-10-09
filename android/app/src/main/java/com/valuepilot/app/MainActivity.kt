@@ -317,12 +317,29 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
 
+        if (BuildConfig.DEBUG) refreshPrivateIdentitiesFromNext()
         refreshHomePrivateMemory()
 
         if (comparisonActivityOpen && shellState.route == AppRoute.COMPARE) {
             comparisonActivityOpen = false
             dispatch(AppShellIntent.NavigateBack)
         }
+    }
+
+    /**
+     * ValuePilot Next shares the established durable identity-only basket. Price evidence remains
+     * session-only, so returning from the debug journey clears any older in-memory plan evidence.
+     */
+    private fun refreshPrivateIdentitiesFromNext() {
+        if (!::homeExperience.isInitialized || !homeSessionStore.hasPrivateIdentityRecord()) return
+        val durableIdentities = homeSessionStore.load()?.privateIdentities ?: return
+        if (durableIdentities == homeSessionState.privateIdentities) return
+
+        homeSessionState = homeSessionState.copy(privateIdentities = durableIdentities)
+        privateBasketOfferEvidence.clear()
+        privateBasketPlan = null
+        privateBasketError = null
+        renderHome()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
