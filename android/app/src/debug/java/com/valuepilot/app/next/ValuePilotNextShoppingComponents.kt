@@ -46,6 +46,19 @@ internal fun PremiumColumn(content: LazyListScope.() -> Unit) {
     }
 }
 
+/** Compact editorial column used by the Stitch-aligned Home, Search and detail screens. */
+@Composable
+internal fun ValuePilotDiscoveryColumn(content: LazyListScope.() -> Unit) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        LazyColumn(
+            modifier = Modifier.widthIn(max = 760.dp).fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            content = content
+        )
+    }
+}
+
 @Composable
 internal fun SectionHeading(eyebrow: String, title: String) {
     androidx.compose.foundation.layout.Column(

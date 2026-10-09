@@ -14,6 +14,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.browser.customtabs.CustomTabsClient
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.getValue
@@ -47,6 +48,10 @@ class ValuePilotNextActivity : AppCompatActivity() {
                 gtin.isNullOrBlank() -> journey.onGoodPriceBarcodeScanUnavailable()
                 else -> journey.lookupGoodPriceBarcode(gtin)
             }
+        }
+    private val googleImagesCustomTabLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            googleImagesLaunchInFlight = false
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -170,11 +175,19 @@ class ValuePilotNextActivity : AppCompatActivity() {
                 CustomTabsIntent.ACTIVITY_HEIGHT_ADJUSTABLE
             )
             .build()
+        partialTab.intent.data = uri
+        CustomTabsClient.getPackageName(this, null)?.let(partialTab.intent::setPackage)
         try {
-            partialTab.launchUrl(this, uri)
+            // Chrome only applies the partial-tab height when the Custom Tab is
+            // launched for a result (or through an explicit Custom Tabs session).
+            // The result callback leaves this Activity's product and Search state
+            // alive when the browser closes.
+            googleImagesCustomTabLauncher.launch(partialTab.intent)
         } catch (_: ActivityNotFoundException) {
+            googleImagesLaunchInFlight = false
             showGoogleImagesFallback(uri)
         } catch (_: SecurityException) {
+            googleImagesLaunchInFlight = false
             showGoogleImagesFallback(uri)
         }
     }

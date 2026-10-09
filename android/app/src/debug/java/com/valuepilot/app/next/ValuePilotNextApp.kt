@@ -393,6 +393,7 @@ internal fun ValuePilotNextApp(
                 ) {
                     JourneyTopBar(
                         destination = currentDestination,
+                        areaLabel = ui.search.areaLabel,
                         canGoBack = routeStack.size > 1,
                         onBack = ::navigateBack,
                         onOpenSettings = { navigate(NextDestination.SETTINGS) },
@@ -760,97 +761,91 @@ internal fun ValuePilotNextApp(
 @Composable
 private fun JourneyTopBar(
     destination: NextDestination,
+    areaLabel: String,
     canGoBack: Boolean,
     onBack: () -> Unit,
     onOpenSettings: () -> Unit,
     onExitPreview: () -> Unit
 ) {
-    val title = when (destination) {
-        NextDestination.HOME -> "ValuePilot"
-        NextDestination.SEARCH -> "Buscar"
-        NextDestination.BASKET -> "Canasta"
-        NextDestination.SAVED -> "Guardados"
-        NextDestination.GOOD_PRICE_CHECK -> "Buen precio"
-        NextDestination.STAPLE_WATCH_SETUP -> "Mis esenciales"
-        NextDestination.PRIVATE_PRICE_HISTORY -> "Historial de precios"
-        NextDestination.COMPARE -> "Comparar productos"
-        NextDestination.SETTINGS -> "Ajustes"
-        NextDestination.OBSERVED_PRICE_SELECTION -> "Precio observado"
-        NextDestination.OBSERVED_PRICE_CONFIRMATION -> "Confirmar precio"
-        NextDestination.PRODUCT_DETAIL -> "Producto"
-        NextDestination.SHOPPING_DECISION -> "Decisión de compra"
-        NextDestination.TRIP_PLANNER -> "Plan de viaje"
-        NextDestination.MAP_HANDOFF -> "Contexto de tienda"
+    val primaryDestination = destination in setOf(
+        NextDestination.HOME,
+        NextDestination.SEARCH,
+        NextDestination.BASKET,
+        NextDestination.SAVED
+    )
+    val title = when {
+        primaryDestination -> "ValuePilot"
+        destination == NextDestination.PRODUCT_DETAIL -> "Detalle del producto"
+        else -> when (destination) {
+            NextDestination.GOOD_PRICE_CHECK -> "Buen precio"
+            NextDestination.STAPLE_WATCH_SETUP -> "Mis esenciales"
+            NextDestination.PRIVATE_PRICE_HISTORY -> "Historial de precios"
+            NextDestination.COMPARE -> "Comparar productos"
+            NextDestination.SETTINGS -> "Ajustes"
+            NextDestination.OBSERVED_PRICE_SELECTION -> "Precio observado"
+            NextDestination.OBSERVED_PRICE_CONFIRMATION -> "Confirmar precio"
+            NextDestination.SHOPPING_DECISION -> "Decisión de compra"
+            NextDestination.TRIP_PLANNER -> "Plan de viaje"
+            NextDestination.MAP_HANDOFF -> "Contexto de tienda"
+            else -> "ValuePilot"
+        }
     }
-    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-        val compact = usesCompactJourneyTopBar(maxWidth, LocalDensity.current.fontScale)
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(
-                    horizontal = if (compact) ValuePilotSpacing.medium else ValuePilotSpacing.xLarge,
-                    vertical = ValuePilotSpacing.small
-                ),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(
-                if (compact) ValuePilotSpacing.small else ValuePilotSpacing.medium
-            )
-        ) {
-            if (canGoBack) {
-                IconButton(
-                    onClick = onBack,
-                    modifier = Modifier
-                        .size(ValuePilotSpacing.minimumTouchTarget)
-                        .semantics { contentDescription = "Back" }
-                ) {
-                    Text("‹", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
-                }
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(androidx.compose.foundation.shape.CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("V", color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.titleLarge)
-                }
-            }
-
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Text(title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
-                if (!compact) {
-                    Text(
-                        "SHOPPING INTELLIGENCE",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.tertiary,
-                        fontSize = 10.sp
-                    )
-                }
-            }
-            if (destination != NextDestination.SETTINGS) {
-                IconButton(
-                    onClick = onOpenSettings,
-                    modifier = Modifier
-                        .size(ValuePilotSpacing.minimumTouchTarget)
-                        .semantics { contentDescription = "Open settings" }
-                ) {
-                    Text(
-                        "⚙",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            androidx.compose.material3.TextButton(
-                onClick = onExitPreview,
-                modifier = Modifier
-                    .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
-                    .widthIn(min = 64.dp)
-                    .semantics { contentDescription = "Exit preview and return to the classic app" }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 46.dp)
+            .padding(horizontal = 14.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(9.dp)
+    ) {
+        if (canGoBack) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.size(42.dp).semantics { contentDescription = "Volver" }
             ) {
-                Text("Salir", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("‹", style = MaterialTheme.typography.headlineMedium.copy(fontSize = 28.sp), color = MaterialTheme.colorScheme.onSurface)
             }
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(MaterialTheme.colorScheme.primary),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("V", color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.titleMedium.copy(fontSize = 15.sp))
+            }
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(0.dp)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = 15.sp, lineHeight = 19.sp),
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1
+            )
+            Text(
+                areaLabel.uppercase(),
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp, lineHeight = 11.sp),
+                color = MaterialTheme.colorScheme.tertiary,
+                maxLines = 1
+            )
+        }
+        if (destination != NextDestination.SETTINGS) {
+            IconButton(
+                onClick = onOpenSettings,
+                modifier = Modifier.size(40.dp).semantics { contentDescription = "Abrir ajustes" }
+            ) {
+                Text("⚙", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        androidx.compose.material3.TextButton(
+            onClick = onExitPreview,
+            modifier = Modifier
+                .heightIn(min = 40.dp)
+                .widthIn(min = 42.dp)
+                .semantics { contentDescription = "Salir de la vista previa y volver a la aplicación original" }
+        ) {
+            Text("Salir", style = MaterialTheme.typography.labelLarge.copy(fontSize = 10.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -860,29 +855,43 @@ private fun ValuePilotNavigationBar(
     selectedTab: AppPrimaryTab,
     onSelectTab: (AppPrimaryTab) -> Unit
 ) {
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = ValuePilotElevation.flat
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom)),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.82f),
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
-        primaryDestinations.forEach { destination ->
-            NavigationBarItem(
-                selected = selectedTab == destination.tab,
-                onClick = { onSelectTab(destination.tab) },
-                icon = {
-                    androidx.compose.material3.Icon(
-                        painter = painterResource(destination.iconResource),
-                        contentDescription = null
-                    )
-                },
-                label = { Text(destination.label) },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            )
+        Row(
+            modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(3.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            primaryDestinations.forEach { destination ->
+                val selected = selectedTab == destination.tab
+                Surface(
+                    onClick = { onSelectTab(destination.tab) },
+                    modifier = Modifier.weight(1f).heightIn(min = 50.dp),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+                    color = if (selected) MaterialTheme.colorScheme.surface else Color.Transparent,
+                    contentColor = if (selected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        androidx.compose.material3.Icon(
+                            painter = painterResource(destination.iconResource),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(destination.label, style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, lineHeight = 11.sp), maxLines = 1)
+                    }
+                }
+            }
         }
     }
 }
