@@ -29,13 +29,16 @@ import com.valuepilot.app.PracticalShoppingSavedSurfaceMode
 import com.valuepilot.app.PracticalShoppingSavedSurfaceProductRow
 import com.valuepilot.app.PracticalShoppingSavedSurfaceState
 import com.valuepilot.app.PracticalShoppingSavedSurfaceStoreRow
+import com.valuepilot.app.PracticalShoppingSavedStapleLaunchUiState
 
 @Composable
 internal fun ValuePilotSavedScreen(
     state: PracticalShoppingSavedSurfaceState,
+    stapleLaunch: PracticalShoppingSavedStapleLaunchUiState?,
     onAction: (PracticalShoppingSavedSurfaceAction) -> Unit,
     onCheckPrice: (String) -> Unit,
     onSearch: () -> Unit,
+    onOpenStapleWatch: () -> Unit,
     onRecordObservedPrice: () -> Unit,
     onOpenSavedTools: () -> Unit
 ) {
@@ -95,10 +98,30 @@ internal fun ValuePilotSavedScreen(
             )
         }
 
+        stapleLaunch?.title?.let { title ->
+            item(key = "saved-staple-watch-launch") {
+                if (stapleLaunch.action != null) {
+                    ActionCard(
+                        eyebrow = "RECURRING STAPLES",
+                        title = title,
+                        detail = stapleLaunch.supportingText
+                            ?: "Choose the saved staples you return to most.",
+                        actionLabel = stapleLaunch.actionLabel ?: "Set up Watch My Staples",
+                        onClick = onOpenStapleWatch
+                    )
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
+                        Text(title, style = MaterialTheme.typography.titleMedium)
+                        stapleLaunch.notice?.let { EvidenceNotice(it) }
+                    }
+                }
+            }
+        }
+
         item(key = "saved-legacy-tools") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
                 Text(
-                    "Staple Watch and personal price history still open in the existing ValuePilot screens.",
+                    "Personal price history still opens in the existing ValuePilot screens.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

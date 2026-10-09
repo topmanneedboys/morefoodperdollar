@@ -69,6 +69,7 @@ private enum class NextDestination(val primaryTab: AppPrimaryTab?) {
     SEARCH(AppPrimaryTab.SEARCH),
     BASKET(AppPrimaryTab.BASKET),
     SAVED(AppPrimaryTab.SAVED),
+    STAPLE_WATCH_SETUP(null),
     OBSERVED_PRICE_SELECTION(null),
     OBSERVED_PRICE_CONFIRMATION(null),
     PRODUCT_DETAIL(null),
@@ -162,7 +163,8 @@ internal fun ValuePilotNextApp(
     val currentDestination = routeStack.lastOrNull() ?: NextDestination.HOME
     val savedDestinationVisible =
         currentDestination == NextDestination.SAVED ||
-            currentDestination == NextDestination.OBSERVED_PRICE_SELECTION
+            currentDestination == NextDestination.OBSERVED_PRICE_SELECTION ||
+            currentDestination == NextDestination.STAPLE_WATCH_SETUP
     DisposableEffect(savedDestinationVisible) {
         if (savedDestinationVisible) journey.onSavedRouteVisibilityChanged(true)
         onDispose {
@@ -193,6 +195,17 @@ internal fun ValuePilotNextApp(
             }
         }
     }
+    val stapleWatchSetupVisible = currentDestination == NextDestination.STAPLE_WATCH_SETUP
+    DisposableEffect(stapleWatchSetupVisible) {
+        if (stapleWatchSetupVisible) {
+            journey.onStapleWatchSetupRouteVisibilityChanged(true)
+        }
+        onDispose {
+            if (stapleWatchSetupVisible) {
+                journey.onStapleWatchSetupRouteVisibilityChanged(false)
+            }
+        }
+    }
     val selectedMapOffer = remember(ui.search.presentation, selectedMapOfferKey) {
         ui.search.presentation?.matches
             ?.asSequence()
@@ -208,6 +221,7 @@ internal fun ValuePilotNextApp(
         val tab = destination.primaryTab ?: when (destination) {
             NextDestination.OBSERVED_PRICE_SELECTION -> AppPrimaryTab.SAVED
             NextDestination.OBSERVED_PRICE_CONFIRMATION -> AppPrimaryTab.SAVED
+            NextDestination.STAPLE_WATCH_SETUP -> AppPrimaryTab.SAVED
             NextDestination.PRODUCT_DETAIL -> AppPrimaryTab.SEARCH
             NextDestination.SHOPPING_DECISION,
             NextDestination.TRIP_PLANNER,
@@ -480,14 +494,26 @@ internal fun ValuePilotNextApp(
 
                                 NextDestination.SAVED -> ValuePilotSavedScreen(
                                     state = ui.saved,
+                                    stapleLaunch = ui.stapleWatchLaunch,
                                     onAction = journey::onSavedSurfaceAction,
                                     onCheckPrice = onCheckSavedPrice,
                                     onSearch = { selectPrimary(NextDestination.SEARCH) },
+                                    onOpenStapleWatch = {
+                                        navigate(NextDestination.STAPLE_WATCH_SETUP)
+                                    },
                                     onRecordObservedPrice = {
                                         navigate(NextDestination.OBSERVED_PRICE_SELECTION)
                                     },
                                     onOpenSavedTools = onOpenSavedTools
                                 )
+
+                                NextDestination.STAPLE_WATCH_SETUP ->
+                                    ValuePilotNextStapleWatchSetupScreen(
+                                        state = ui.stapleWatchSetup,
+                                        onAction = journey::onStapleWatchSetupAction,
+                                        onContinue = journey::onStapleWatchSetupContinue,
+                                        onBack = ::navigateBack
+                                    )
 
                                 NextDestination.OBSERVED_PRICE_SELECTION ->
                                     ValuePilotObservedPriceSelectionScreen(
@@ -558,6 +584,7 @@ private fun JourneyTopBar(
         NextDestination.SEARCH -> "Search"
         NextDestination.BASKET -> "Your basket"
         NextDestination.SAVED -> "Saved"
+        NextDestination.STAPLE_WATCH_SETUP -> "Watch My Staples"
         NextDestination.OBSERVED_PRICE_SELECTION -> "Observed price"
         NextDestination.OBSERVED_PRICE_CONFIRMATION -> "Price confirmation"
         NextDestination.PRODUCT_DETAIL -> "Product detail"

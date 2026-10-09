@@ -29,14 +29,26 @@ import com.valuepilot.app.PracticalShoppingHomeSession
 import com.valuepilot.app.PracticalShoppingPrivateIdentity
 import com.valuepilot.app.PracticalShoppingSearchIdentityPresentation
 import com.valuepilot.app.PracticalShoppingSavedAndroidSession
+import com.valuepilot.app.PracticalShoppingSavedLifecycleRenderer
 import com.valuepilot.app.PracticalShoppingSavedLifecycleController
 import com.valuepilot.app.PracticalShoppingSavedRouteCoordinator
+import com.valuepilot.app.PracticalShoppingSavedStapleLaunchPresenter
+import com.valuepilot.app.PracticalShoppingSavedStapleLaunchRenderer
+import com.valuepilot.app.PracticalShoppingSavedStapleLaunchUiState
 import com.valuepilot.app.PracticalShoppingSavedSurfaceAction
 import com.valuepilot.app.PracticalShoppingSavedSurfacePresenter
 import com.valuepilot.app.PracticalShoppingSavedSurfaceProjector
 import com.valuepilot.app.PracticalShoppingSavedSurfaceRenderer
 import com.valuepilot.app.PracticalShoppingSavedSurfaceState
 import com.valuepilot.app.PracticalShoppingSavedValidatedSnapshotObserver
+import com.valuepilot.app.StapleWatchForegroundFactCheckCapability
+import com.valuepilot.app.StapleWatchSavedIdentityHandoffUiAction
+import com.valuepilot.app.StapleWatchSavedIdentitySelectionAction
+import com.valuepilot.app.StapleWatchSavedSelectionRouteSession
+import com.valuepilot.app.StapleWatchSavedSelectionSurfacePresenter
+import com.valuepilot.app.StapleWatchSavedSelectionSurfaceRenderer
+import com.valuepilot.app.StapleWatchSavedSelectionUiState
+import com.valuepilot.app.StapleWatchSavedSetupCompositionCoordinator
 import com.valuepilot.app.UserObservedPriceSavedPrefillHandoffAttempt
 import com.valuepilot.app.UserObservedPriceSavedPrefillHandoffAttemptObserver
 import com.valuepilot.app.UserObservedPriceSavedPrefillHandoffUiProjector
@@ -69,6 +81,8 @@ internal data class ValuePilotNextJourneyUiState(
         PracticalShoppingSavedSurfaceProjector.project(
             PracticalShoppingSavedLifecycleController().initialState()
         ),
+    val stapleWatchLaunch: PracticalShoppingSavedStapleLaunchUiState? = null,
+    val stapleWatchSetup: StapleWatchSavedSelectionUiState? = null,
     val observedPriceSelection: UserObservedPriceSavedSelectionUiState? = null,
     val observedPricePrefillResult: UserObservedPriceSavedPrefillHandoffUiState? = null,
     val observedPriceConfirmation: ValuePilotNextObservedPriceConfirmationUiState? = null,
@@ -95,6 +109,7 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
     private var applicationContext: Context? = null
     private var searchHost: ArgentinaLiveSearchSurfaceHost? = null
     private var savedRouteCoordinator: PracticalShoppingSavedRouteCoordinator? = null
+    private var stapleWatchSetupCoordinator: StapleWatchSavedSetupCompositionCoordinator? = null
     private var observedPriceSelectionCoordinator:
         UserObservedPriceSavedSelectionCompositionCoordinator? = null
     private var observedPricePrefillAttempt: UserObservedPriceSavedPrefillHandoffAttempt? = null
@@ -136,6 +151,20 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
             UserObservedPriceSavedSelectionSurfacePresenter(
                 UserObservedPriceSavedSelectionSurfaceRenderer(::publishObservedPriceSelection)
             )
+        val stapleWatchSetupPresenter =
+            StapleWatchSavedSelectionSurfacePresenter(
+                factCheckCapability = StapleWatchForegroundFactCheckCapability.NOT_CONFIGURED,
+                renderer = StapleWatchSavedSelectionSurfaceRenderer(::publishStapleWatchSetup)
+            )
+        stapleWatchSetupCoordinator =
+            StapleWatchSavedSetupCompositionCoordinator(
+                sessionFactory = { snapshot ->
+                    StapleWatchSavedSelectionRouteSession(
+                        initialSnapshot = snapshot,
+                        presenter = stapleWatchSetupPresenter
+                    )
+                }
+            )
         observedPriceSelectionCoordinator =
             UserObservedPriceSavedSelectionCompositionCoordinator(
                 prefillHandoffAttemptObserver =
@@ -152,12 +181,22 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
                     PracticalShoppingSavedSurfacePresenter(
                         PracticalShoppingSavedSurfaceRenderer(::publishSavedSurface)
                     )
+                val stapleLaunchPresenter =
+                    PracticalShoppingSavedStapleLaunchPresenter(
+                        PracticalShoppingSavedStapleLaunchRenderer(::publishStapleWatchLaunch)
+                    )
+                val compositeRenderer =
+                    PracticalShoppingSavedLifecycleRenderer { state ->
+                        renderer.render(state)
+                        stapleLaunchPresenter.render(state)
+                    }
                 PracticalShoppingSavedAndroidSession.create(
                     context = requireNotNull(applicationContext),
-                    renderer = renderer,
+                    renderer = compositeRenderer,
                     snapshotObserver =
                         PracticalShoppingSavedValidatedSnapshotObserver { snapshot ->
                             observedPriceSelectionCoordinator?.onSnapshot(snapshot)
+                            stapleWatchSetupCoordinator?.onSnapshot(snapshot)
                         }
                 )
             }
@@ -187,6 +226,24 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
         if (!initialized || cleared) return
         check(Looper.myLooper() == Looper.getMainLooper())
         savedRouteCoordinator?.onSurfaceAction(action)
+    }
+
+    fun onStapleWatchSetupRouteVisibilityChanged(visible: Boolean) {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        stapleWatchSetupCoordinator?.onRouteVisibilityChanged(visible)
+    }
+
+    fun onStapleWatchSetupAction(action: StapleWatchSavedIdentitySelectionAction) {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        stapleWatchSetupCoordinator?.onSurfaceAction(action)
+    }
+
+    fun onStapleWatchSetupContinue(action: StapleWatchSavedIdentityHandoffUiAction) {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        stapleWatchSetupCoordinator?.onContinueAction(action)
     }
 
     fun onObservedPriceSelectionRouteVisibilityChanged(visible: Boolean) {
@@ -292,6 +349,22 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
     private fun publishSavedSurface(state: PracticalShoppingSavedSurfaceState) {
         val publish = {
             if (!cleared) uiState = uiState.copy(saved = state)
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) publish()
+        else mainHandler.post(publish)
+    }
+
+    private fun publishStapleWatchLaunch(state: PracticalShoppingSavedStapleLaunchUiState) {
+        val publish = {
+            if (!cleared) uiState = uiState.copy(stapleWatchLaunch = state)
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) publish()
+        else mainHandler.post(publish)
+    }
+
+    private fun publishStapleWatchSetup(state: StapleWatchSavedSelectionUiState) {
+        val publish = {
+            if (!cleared) uiState = uiState.copy(stapleWatchSetup = state)
         }
         if (Looper.myLooper() == Looper.getMainLooper()) publish()
         else mainHandler.post(publish)
@@ -575,6 +648,8 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
         planRequestId = Math.addExact(planRequestId, 1L)
         savedRouteCoordinator?.close()
         savedRouteCoordinator = null
+        stapleWatchSetupCoordinator?.close()
+        stapleWatchSetupCoordinator = null
         observedPriceSelectionCoordinator?.close()
         observedPriceSelectionCoordinator = null
         observedPricePrefillAttempt = null

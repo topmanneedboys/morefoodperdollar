@@ -5,9 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -26,7 +24,6 @@ import androidx.compose.ui.unit.dp
 import com.valuepilot.app.UserObservedPriceConfirmationActionUiState
 import com.valuepilot.app.UserObservedPriceConfirmationDraftMissingField
 import com.valuepilot.app.UserObservedPriceConfirmationDraftProofContentSelectionPresentation
-import com.valuepilot.app.UserObservedPriceConfirmationDraftUiStatus
 import com.valuepilot.app.UserProvidedPriceProofType
 
 @Composable
