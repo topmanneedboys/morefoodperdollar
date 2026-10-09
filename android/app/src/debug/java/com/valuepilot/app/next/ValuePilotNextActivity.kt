@@ -2,8 +2,11 @@ package com.valuepilot.app.next
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.database.ContentObserver
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.DisposableEffect
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModelProvider
 import com.valuepilot.app.AndroidUserObservedPriceProofContentPicker
@@ -57,7 +61,30 @@ class ValuePilotNextActivity : AppCompatActivity() {
             var presentationPreferences by remember {
                 mutableStateOf(uiPreferencesStore.load())
             }
-            val systemReducedMotion = remember { systemAnimationsDisabled() }
+            var systemReducedMotion by remember { mutableStateOf(systemAnimationsDisabled()) }
+            DisposableEffect(contentResolver) {
+                val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
+                    override fun onChange(selfChange: Boolean) {
+                        systemReducedMotion = systemAnimationsDisabled()
+                    }
+
+                    override fun onChange(selfChange: Boolean, uri: Uri?) {
+                        systemReducedMotion = systemAnimationsDisabled()
+                    }
+                }
+                contentResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.ANIMATOR_DURATION_SCALE),
+                    false,
+                    observer
+                )
+                contentResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.TRANSITION_ANIMATION_SCALE),
+                    false,
+                    observer
+                )
+                systemReducedMotion = systemAnimationsDisabled()
+                onDispose { contentResolver.unregisterContentObserver(observer) }
+            }
             ValuePilotNextTheme(
                 darkTheme = ValuePilotNextUiPreferencesCodec.resolvesDarkTheme(
                     appearance = presentationPreferences.appearance,
