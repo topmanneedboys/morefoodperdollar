@@ -2,15 +2,19 @@ package com.valuepilot.app.next
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -18,11 +22,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.valuepilot.app.MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF
+import com.valuepilot.app.StapleWatchForegroundFactCheckCapability
 import com.valuepilot.app.StapleWatchFactResolutionUiState
 import com.valuepilot.app.StapleWatchSavedIdentityHandoffUiAction
 import com.valuepilot.app.StapleWatchSavedIdentitySelectionAction
 import com.valuepilot.app.StapleWatchSavedSelectionUiState
+import com.valuepilot.app.StapleWatchSavedSelectionUiStatus
 
 @Composable
 internal fun ValuePilotNextStapleWatchSetupScreen(
@@ -58,13 +66,17 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
             }
         } else {
             item(key = "staple-watch-selection-summary") {
-                SummaryCard(
-                    eyebrow = "YOUR WATCH LIST",
-                    title = state.selectionSummary,
-                    detail = if (state.usualStoreSelected) {
-                        "Usual store selected"
-                    } else {
-                        "Choose one usual store"
+                WatchSetupProgressCard(
+                    state = state,
+                    status = when {
+                        state.factCheckCapability == StapleWatchForegroundFactCheckCapability.NOT_CONFIGURED &&
+                            state.status == StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK ->
+                            "CHECKS UNAVAILABLE"
+                        state.status == StapleWatchSavedSelectionUiStatus.DISPLAY_METADATA_INCOMPLETE ->
+                            "REFRESH NAMES"
+                        state.status == StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK ->
+                            "READY FOR CHECK"
+                        else -> "SETUP IN PROGRESS"
                     }
                 )
             }
@@ -101,7 +113,10 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
                 item(key = "staple-watch-products-heading") {
                     SectionHeading("CHOOSE YOUR STAPLES", title)
                 }
-                items(state.productRows) { row ->
+                items(
+                    items = state.productRows,
+                    key = { row -> row.action.itemKey.value }
+                ) { row ->
                     StapleChoiceCard(
                         title = row.title,
                         selected = row.watched,
@@ -153,6 +168,117 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
 
             item(key = "staple-watch-back") {
                 SecondaryActionButton(label = "Back to Saved", onClick = onBack)
+            }
+        }
+    }
+}
+
+@Composable
+private fun WatchSetupProgressCard(
+    state: StapleWatchSavedSelectionUiState,
+    status: String
+) {
+    val hasEnoughStaples = state.watchedItemCount >= MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.36f)
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = ValuePilotElevation.flat)
+    ) {
+        Column(
+            modifier = Modifier.padding(ValuePilotSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
+                Eyebrow("YOUR WATCH LIST")
+                Text(
+                    state.selectionSummary,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
+                SetupRequirementRow(
+                    label = "Choose at least $MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF staples",
+                    detail = if (hasEnoughStaples) {
+                        "${state.watchedItemCount} selected · minimum met"
+                    } else {
+                        "${state.watchedItemCount} selected · $MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF required"
+                    },
+                    complete = hasEnoughStaples
+                )
+                SetupRequirementRow(
+                    label = "Choose your usual store",
+                    detail = if (state.usualStoreSelected) "Store selected" else "One saved store required",
+                    complete = state.usualStoreSelected
+                )
+            }
+
+            EvidencePill(
+                text = status,
+                container = if (status == "READY FOR CHECK") {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                } else {
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0.75f)
+                },
+                content = if (status == "READY FOR CHECK") {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun SetupRequirementRow(
+    label: String,
+    detail: String,
+    complete: Boolean
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = ValuePilotSpacing.medium, vertical = ValuePilotSpacing.small),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = if (complete) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = if (complete) MaterialTheme.colorScheme.onPrimary
+                else MaterialTheme.colorScheme.onSurfaceVariant
+            ) {
+                Box(
+                    modifier = Modifier.size(30.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        if (complete) "✓" else "·",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(label, style = MaterialTheme.typography.titleSmall)
+                Text(
+                    detail,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
