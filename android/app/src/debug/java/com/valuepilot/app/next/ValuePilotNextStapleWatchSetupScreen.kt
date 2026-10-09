@@ -113,10 +113,10 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
             if (state.factCheckCapability == StapleWatchForegroundFactCheckCapability.NOT_CONFIGURED) {
                 item(key = "staple-watch-legacy-handoff") {
                     ActionCard(
-                        eyebrow = "FULL STAPLE WATCH",
-                        title = "Continue in the established flow",
-                        detail = "Foreground checks and switch planning run in the existing Saved experience. These setup choices are temporary; open Saved and choose Watch My Staples to continue.",
-                        actionLabel = "Open Saved tools",
+                        eyebrow = "SAVED TOOLS",
+                        title = "Need to change a product or store?",
+                        detail = "Return to the existing Saved screen to update your choices. Watch My Staples selections here are temporary.",
+                        actionLabel = "Open existing Saved tools",
                         onClick = onOpenLegacyStapleWatch
                     )
                 }
