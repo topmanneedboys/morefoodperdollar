@@ -332,7 +332,7 @@ internal fun ValuePilotNextGoodPriceScreen(
         }
 
         item(key = "good-price-back") {
-            SecondaryActionButton(label = "Back to Saved", onClick = onBack)
+            SecondaryActionButton(label = "Back", onClick = onBack)
         }
     }
 }

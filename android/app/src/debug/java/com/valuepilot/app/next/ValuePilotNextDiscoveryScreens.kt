@@ -47,6 +47,8 @@ internal fun ValuePilotHomeScreen(
     areaLabel: String,
     onSearch: () -> Unit,
     onBasket: () -> Unit,
+    onGoodPriceCheck: () -> Unit,
+    onTripPlanner: () -> Unit,
     onCompare: () -> Unit
 ) {
     PremiumColumn {
@@ -131,6 +133,34 @@ internal fun ValuePilotHomeScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+        item(key = "home-manual-tools-heading") {
+            Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
+                Eyebrow("MANUAL SHOPPING TOOLS")
+                Text(
+                    "Use the details you observed.",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
+        }
+        item(key = "home-good-price-check") {
+            ActionCard(
+                eyebrow = "PERSONAL PRICE CHECK",
+                title = "Compare the value in a pack.",
+                detail = "Enter the exact package quantity and shelf price you saw. The calculation uses only your entries.",
+                actionLabel = "Check a shelf price",
+                onClick = onGoodPriceCheck
+            )
+        }
+        item(key = "home-trip-planner") {
+            ActionCard(
+                eyebrow = "MANUAL TRIP ESTIMATE",
+                title = "Add the cost of getting there.",
+                detail = "Enter your own driving distance, fuel use, fuel price, tolls and parking. No route or fuel price is inferred.",
+                actionLabel = "Estimate trip cost",
+                onClick = onTripPlanner
+            )
         }
         item(key = "home-compare") {
             TextButton(

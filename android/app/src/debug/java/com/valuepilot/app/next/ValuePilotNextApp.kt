@@ -437,6 +437,11 @@ internal fun ValuePilotNextApp(
                                     areaLabel = ui.search.areaLabel,
                                     onSearch = { navigate(NextDestination.SEARCH) },
                                     onBasket = { selectPrimary(NextDestination.BASKET) },
+                                    onGoodPriceCheck = {
+                                        journey.openGoodPriceForNewCheck()
+                                        navigate(NextDestination.GOOD_PRICE_CHECK)
+                                    },
+                                    onTripPlanner = { navigate(NextDestination.TRIP_PLANNER) },
                                     onCompare = { navigate(NextDestination.COMPARE) }
                                 )
 
@@ -539,6 +544,7 @@ internal fun ValuePilotNextApp(
                                         tripFuelPrice = fuelPrice
                                         tripTolls = tolls
                                         tripParking = parking
+                                        journey.clearTripCalculation()
                                     },
                                     onCalculate = journey::calculateTrip,
                                     onMap = {

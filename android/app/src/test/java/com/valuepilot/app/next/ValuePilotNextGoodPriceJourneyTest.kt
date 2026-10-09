@@ -39,6 +39,25 @@ class ValuePilotNextGoodPriceJourneyTest {
     }
 
     @Test
+    fun `new home price check starts blank and preserves private observations`() {
+        val store = InMemoryPriceMemoryStore()
+        val states = mutableListOf<ValuePilotNextGoodPriceUiState>()
+        val journey = ValuePilotNextGoodPriceJourney(store, states::add) { 100L }
+
+        journey.onDraftChanged("Whole Milk\nCA$6.49\n4 L")
+        journey.checkPrice()
+        assertEquals(1, store.state.entries.size)
+
+        journey.openForNewCheck()
+
+        assertEquals("", states.last().rawBlock)
+        assertEquals(GoodPriceCheckRouteStatus.NEEDS_PRODUCT, states.last().route.status)
+        assertNull(states.last().route.result)
+        assertEquals(1, store.state.entries.size)
+        assertTrue(states.last().canClearMemory)
+    }
+
+    @Test
     fun `member price selection does not fall back or create a memory entry`() {
         val store = InMemoryPriceMemoryStore()
         val states = mutableListOf<ValuePilotNextGoodPriceUiState>()

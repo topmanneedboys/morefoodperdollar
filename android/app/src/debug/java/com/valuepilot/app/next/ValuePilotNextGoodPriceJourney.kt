@@ -83,6 +83,17 @@ internal class ValuePilotNextGoodPriceJourney(
         publish(state)
     }
 
+    fun openForNewCheck() {
+        invalidateBarcodeFlow()
+        state =
+            ValuePilotNextGoodPriceUiState(
+                memoryNotice = unavailableNoticeIfNeeded(),
+                memoryUnavailable = memoryIssue != null,
+                canClearMemory = privateMemory.entries.isNotEmpty() || memoryIssue != null
+            )
+        publish(state)
+    }
+
     fun onDraftChanged(rawBlock: String) {
         invalidateBarcodeFlow()
         state =

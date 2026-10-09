@@ -411,7 +411,10 @@ internal fun ValuePilotTripPlannerScreen(
             }
         }
         item(key = "trip-basket-summary") {
-            EvidenceNotice(plan?.totalText ?: "Basket price evidence is not available.")
+            EvidenceNotice(
+                plan?.totalText
+                    ?: "No basket plan is attached. This estimate uses only the distance and vehicle costs you enter."
+            )
         }
         item(key = "trip-fields") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {

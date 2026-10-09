@@ -277,6 +277,12 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
         goodPriceJourney?.openFromSaved(displayName)
     }
 
+    fun openGoodPriceForNewCheck() {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        goodPriceJourney?.openForNewCheck()
+    }
+
     fun onGoodPriceDraftChanged(rawBlock: String) {
         if (!initialized || cleared) return
         check(Looper.myLooper() == Looper.getMainLooper())
@@ -830,10 +836,31 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
                 )
             )
         } catch (error: IllegalArgumentException) {
-            uiState = uiState.copy(tripError = error.message ?: "Enter valid trip assumptions.")
+            val message = error.message ?: "Enter valid trip assumptions."
+            uiState = uiState.copy(
+                tripResult = null,
+                tripError = message,
+                basket = renderBasket(uiState.privateIdentities, uiState.plan, null, uiState.planError)
+            )
         } catch (error: IllegalStateException) {
-            uiState = uiState.copy(tripError = error.message ?: "Enter valid trip assumptions.")
+            val message = error.message ?: "Enter valid trip assumptions."
+            uiState = uiState.copy(
+                tripResult = null,
+                tripError = message,
+                basket = renderBasket(uiState.privateIdentities, uiState.plan, null, uiState.planError)
+            )
         }
+    }
+
+    fun clearTripCalculation() {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        if (uiState.tripResult == null && uiState.tripError == null) return
+        uiState = uiState.copy(
+            tripResult = null,
+            tripError = null,
+            basket = renderBasket(uiState.privateIdentities, uiState.plan, null, uiState.planError)
+        )
     }
 
     private fun persistPrivateIdentities(
