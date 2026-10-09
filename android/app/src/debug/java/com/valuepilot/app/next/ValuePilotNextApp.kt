@@ -69,6 +69,7 @@ private enum class NextDestination(val primaryTab: AppPrimaryTab?) {
     SEARCH(AppPrimaryTab.SEARCH),
     BASKET(AppPrimaryTab.BASKET),
     SAVED(AppPrimaryTab.SAVED),
+    GOOD_PRICE_CHECK(null),
     STAPLE_WATCH_SETUP(null),
     PRIVATE_PRICE_HISTORY(null),
     OBSERVED_PRICE_SELECTION(null),
@@ -135,9 +136,10 @@ internal fun ValuePilotNextApp(
     onExitPreview: () -> Unit,
     onOpenComparison: () -> Unit,
     onOpenStoreMap: (com.valuepilot.app.ArgentinaPrivateBasketStoreProjection) -> Boolean,
-    onCheckSavedPrice: (String) -> Unit,
+    onOpenLegacyGoodPrice: (String) -> Unit,
     onOpenSavedTools: () -> Unit,
-    onSharePrivatePriceHistory: (String) -> Boolean
+    onSharePrivatePriceHistory: (String) -> Boolean,
+    onShareGoodPriceResult: (com.valuepilot.app.GoodPriceShareCard) -> Boolean
 ) {
     val ui = journey.uiState
     var shellState by rememberSaveable(stateSaver = appShellStateSaver) {
@@ -235,6 +237,7 @@ internal fun ValuePilotNextApp(
         val tab = destination.primaryTab ?: when (destination) {
             NextDestination.OBSERVED_PRICE_SELECTION -> AppPrimaryTab.SAVED
             NextDestination.OBSERVED_PRICE_CONFIRMATION -> AppPrimaryTab.SAVED
+            NextDestination.GOOD_PRICE_CHECK -> AppPrimaryTab.SAVED
             NextDestination.STAPLE_WATCH_SETUP -> AppPrimaryTab.SAVED
             NextDestination.PRIVATE_PRICE_HISTORY -> AppPrimaryTab.SAVED
             NextDestination.PRODUCT_DETAIL -> AppPrimaryTab.SEARCH
@@ -511,7 +514,10 @@ internal fun ValuePilotNextApp(
                                     state = ui.saved,
                                     stapleLaunch = ui.stapleWatchLaunch,
                                     onAction = journey::onSavedSurfaceAction,
-                                    onCheckPrice = onCheckSavedPrice,
+                                    onCheckPrice = { displayName ->
+                                        journey.openGoodPriceFromSaved(displayName)
+                                        navigate(NextDestination.GOOD_PRICE_CHECK)
+                                    },
                                     onSearch = { selectPrimary(NextDestination.SEARCH) },
                                     onOpenStapleWatch = {
                                         navigate(NextDestination.STAPLE_WATCH_SETUP)
@@ -524,6 +530,23 @@ internal fun ValuePilotNextApp(
                                     },
                                     onOpenSavedTools = onOpenSavedTools
                                 )
+
+                                NextDestination.GOOD_PRICE_CHECK ->
+                                    ValuePilotNextGoodPriceScreen(
+                                        state = ui.goodPrice,
+                                        onDraftChanged = journey::onGoodPriceDraftChanged,
+                                        onPriceSelectionChanged = journey::onGoodPricePriceSelectionChanged,
+                                        onCheck = journey::checkGoodPrice,
+                                        onClearDraft = journey::clearGoodPriceDraft,
+                                        onClearPrivateMemory = journey::clearGoodPricePrivateMemory,
+                                        onOpenLegacyGoodPrice = onOpenLegacyGoodPrice,
+                                        onShare = { card ->
+                                            if (!onShareGoodPriceResult(card)) {
+                                                notify("No sharing app is available.")
+                                            }
+                                        },
+                                        onBack = ::navigateBack
+                                    )
 
                                 NextDestination.STAPLE_WATCH_SETUP ->
                                     ValuePilotNextStapleWatchSetupScreen(
@@ -618,6 +641,7 @@ private fun JourneyTopBar(
         NextDestination.SEARCH -> "Search"
         NextDestination.BASKET -> "Your basket"
         NextDestination.SAVED -> "Saved"
+        NextDestination.GOOD_PRICE_CHECK -> "Good Price"
         NextDestination.STAPLE_WATCH_SETUP -> "Watch My Staples"
         NextDestination.PRIVATE_PRICE_HISTORY -> "Price history"
         NextDestination.OBSERVED_PRICE_SELECTION -> "Observed price"

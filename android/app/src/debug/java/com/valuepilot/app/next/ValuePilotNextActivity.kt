@@ -16,6 +16,7 @@ import com.valuepilot.app.ArgentinaPrivateBasketStoreProjection
 import com.valuepilot.app.ComparisonActivity
 import com.valuepilot.app.DebugNextSavedToolsHandoff
 import com.valuepilot.app.GoodPriceActivity
+import com.valuepilot.app.GoodPriceShareCard
 import com.valuepilot.app.MainActivity
 
 /** Debug-only owner for the production-backed Compose shopping journey. */
@@ -45,9 +46,10 @@ class ValuePilotNextActivity : AppCompatActivity() {
                         startActivity(Intent(this, ComparisonActivity::class.java))
                     },
                     onOpenStoreMap = ::openStoreMap,
-                    onCheckSavedPrice = ::openGoodPriceForSavedProduct,
+                    onOpenLegacyGoodPrice = ::openLegacyGoodPrice,
                     onOpenSavedTools = ::openSavedTools,
-                    onSharePrivatePriceHistory = ::sharePrivatePriceHistory
+                    onSharePrivatePriceHistory = ::sharePrivatePriceHistory,
+                    onShareGoodPriceResult = ::shareGoodPriceResult
                 )
             }
         }
@@ -58,6 +60,7 @@ class ValuePilotNextActivity : AppCompatActivity() {
         if (::journey.isInitialized) {
             journey.refreshPrivateIdentitiesFromStore()
             journey.refreshPrivatePriceHistory()
+            journey.refreshGoodPricePrivateMemory()
         }
     }
 
@@ -80,7 +83,7 @@ class ValuePilotNextActivity : AppCompatActivity() {
         }
     }
 
-    private fun openGoodPriceForSavedProduct(displayName: String) {
+    private fun openLegacyGoodPrice(displayName: String) {
         startActivity(
             Intent(this, GoodPriceActivity::class.java).putExtra(
                 GoodPriceActivity.EXTRA_PRODUCT_NAME,
@@ -112,6 +115,25 @@ class ValuePilotNextActivity : AppCompatActivity() {
                 Intent.createChooser(
                     sendIntent,
                     getString(com.valuepilot.app.R.string.home_private_memory_export_send)
+                )
+            )
+            true
+        } catch (_: ActivityNotFoundException) {
+            false
+        }
+    }
+
+    private fun shareGoodPriceResult(card: GoodPriceShareCard): Boolean {
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, card.title)
+            putExtra(Intent.EXTRA_TEXT, card.text)
+        }
+        return try {
+            startActivity(
+                Intent.createChooser(
+                    sendIntent,
+                    "Share price calculation"
                 )
             )
             true

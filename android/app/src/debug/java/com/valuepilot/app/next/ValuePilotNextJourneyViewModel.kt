@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.valuepilot.app.AndroidPracticalShoppingHomeSessionStore
+import com.valuepilot.app.CompareHerePrivatePriceMemoryAndroidStore
 import com.valuepilot.app.ArgentinaBackendBridgeResult
 import com.valuepilot.app.ArgentinaBackendContract
 import com.valuepilot.app.ArgentinaBackendConsumerBridge
@@ -87,6 +88,7 @@ internal data class ValuePilotNextJourneyUiState(
     val observedPricePrefillResult: UserObservedPriceSavedPrefillHandoffUiState? = null,
     val observedPriceConfirmation: ValuePilotNextObservedPriceConfirmationUiState? = null,
     val privatePriceHistory: ValuePilotNextPrivatePriceHistoryUiState? = null,
+    val goodPrice: ValuePilotNextGoodPriceUiState = ValuePilotNextGoodPriceUiState(),
     val plan: ArgentinaPrivateBasketPlanProjection? = null,
     val planLoading: Boolean = false,
     val planError: String? = null,
@@ -117,6 +119,7 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
     private var observedPriceConfirmationJourney: ValuePilotNextObservedPriceConfirmationJourney? = null
     private var observedPriceProofPickerRequest: (() -> Unit)? = null
     private var privatePriceHistoryJourney: ValuePilotNextPrivatePriceHistoryJourney? = null
+    private var goodPriceJourney: ValuePilotNextGoodPriceJourney? = null
     private var initialized = false
     private var cleared = false
     private var planRequestId = 0L
@@ -154,6 +157,13 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
                 context = requireNotNull(applicationContext),
                 publish = { next ->
                     if (!cleared) uiState = uiState.copy(privatePriceHistory = next)
+                }
+            )
+        goodPriceJourney =
+            ValuePilotNextGoodPriceJourney(
+                memoryStore = CompareHerePrivatePriceMemoryAndroidStore(requireNotNull(applicationContext)),
+                publish = { next ->
+                    if (!cleared) uiState = uiState.copy(goodPrice = next)
                 }
             )
         val observedPriceSelectionPresenter =
@@ -235,6 +245,48 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
         if (!initialized || cleared) return
         check(Looper.myLooper() == Looper.getMainLooper())
         savedRouteCoordinator?.onSurfaceAction(action)
+    }
+
+    fun openGoodPriceFromSaved(displayName: String) {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        goodPriceJourney?.openFromSaved(displayName)
+    }
+
+    fun onGoodPriceDraftChanged(rawBlock: String) {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        goodPriceJourney?.onDraftChanged(rawBlock)
+    }
+
+    fun onGoodPricePriceSelectionChanged(selection: com.valuepilot.core.CompareHerePriceSelection) {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        goodPriceJourney?.onPriceSelectionChanged(selection)
+    }
+
+    fun checkGoodPrice() {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        goodPriceJourney?.checkPrice()
+    }
+
+    fun clearGoodPriceDraft() {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        goodPriceJourney?.clearDraft()
+    }
+
+    fun clearGoodPricePrivateMemory() {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        goodPriceJourney?.clearPrivateMemory()
+    }
+
+    fun refreshGoodPricePrivateMemory() {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        goodPriceJourney?.refreshPrivateMemory()
     }
 
     fun onStapleWatchSetupRouteVisibilityChanged(visible: Boolean) {
