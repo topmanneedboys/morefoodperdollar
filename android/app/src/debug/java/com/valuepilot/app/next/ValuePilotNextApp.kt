@@ -70,6 +70,7 @@ private enum class NextDestination(val primaryTab: AppPrimaryTab?) {
     BASKET(AppPrimaryTab.BASKET),
     SAVED(AppPrimaryTab.SAVED),
     STAPLE_WATCH_SETUP(null),
+    PRIVATE_PRICE_HISTORY(null),
     OBSERVED_PRICE_SELECTION(null),
     OBSERVED_PRICE_CONFIRMATION(null),
     PRODUCT_DETAIL(null),
@@ -135,7 +136,8 @@ internal fun ValuePilotNextApp(
     onOpenComparison: () -> Unit,
     onOpenStoreMap: (com.valuepilot.app.ArgentinaPrivateBasketStoreProjection) -> Boolean,
     onCheckSavedPrice: (String) -> Unit,
-    onOpenSavedTools: () -> Unit
+    onOpenSavedTools: () -> Unit,
+    onSharePrivatePriceHistory: (String) -> Boolean
 ) {
     val ui = journey.uiState
     var shellState by rememberSaveable(stateSaver = appShellStateSaver) {
@@ -162,9 +164,10 @@ internal fun ValuePilotNextApp(
     val keyboard = LocalSoftwareKeyboardController.current
     val currentDestination = routeStack.lastOrNull() ?: NextDestination.HOME
     val savedDestinationVisible =
-        currentDestination == NextDestination.SAVED ||
+            currentDestination == NextDestination.SAVED ||
             currentDestination == NextDestination.OBSERVED_PRICE_SELECTION ||
-            currentDestination == NextDestination.STAPLE_WATCH_SETUP
+            currentDestination == NextDestination.STAPLE_WATCH_SETUP ||
+            currentDestination == NextDestination.PRIVATE_PRICE_HISTORY
     DisposableEffect(savedDestinationVisible) {
         if (savedDestinationVisible) journey.onSavedRouteVisibilityChanged(true)
         onDispose {
@@ -206,6 +209,17 @@ internal fun ValuePilotNextApp(
             }
         }
     }
+    val privatePriceHistoryVisible = currentDestination == NextDestination.PRIVATE_PRICE_HISTORY
+    DisposableEffect(privatePriceHistoryVisible) {
+        if (privatePriceHistoryVisible) {
+            journey.onPrivatePriceHistoryRouteVisibilityChanged(true)
+        }
+        onDispose {
+            if (privatePriceHistoryVisible) {
+                journey.onPrivatePriceHistoryRouteVisibilityChanged(false)
+            }
+        }
+    }
     val selectedMapOffer = remember(ui.search.presentation, selectedMapOfferKey) {
         ui.search.presentation?.matches
             ?.asSequence()
@@ -222,6 +236,7 @@ internal fun ValuePilotNextApp(
             NextDestination.OBSERVED_PRICE_SELECTION -> AppPrimaryTab.SAVED
             NextDestination.OBSERVED_PRICE_CONFIRMATION -> AppPrimaryTab.SAVED
             NextDestination.STAPLE_WATCH_SETUP -> AppPrimaryTab.SAVED
+            NextDestination.PRIVATE_PRICE_HISTORY -> AppPrimaryTab.SAVED
             NextDestination.PRODUCT_DETAIL -> AppPrimaryTab.SEARCH
             NextDestination.SHOPPING_DECISION,
             NextDestination.TRIP_PLANNER,
@@ -501,6 +516,9 @@ internal fun ValuePilotNextApp(
                                     onOpenStapleWatch = {
                                         navigate(NextDestination.STAPLE_WATCH_SETUP)
                                     },
+                                    onOpenPrivatePriceHistory = {
+                                        navigate(NextDestination.PRIVATE_PRICE_HISTORY)
+                                    },
                                     onRecordObservedPrice = {
                                         navigate(NextDestination.OBSERVED_PRICE_SELECTION)
                                     },
@@ -512,6 +530,22 @@ internal fun ValuePilotNextApp(
                                         state = ui.stapleWatchSetup,
                                         onAction = journey::onStapleWatchSetupAction,
                                         onContinue = journey::onStapleWatchSetupContinue,
+                                        onBack = ::navigateBack
+                                    )
+
+                                NextDestination.PRIVATE_PRICE_HISTORY ->
+                                    ValuePilotNextPrivatePriceHistoryScreen(
+                                        state = ui.privatePriceHistory,
+                                        onRefresh = journey::refreshPrivatePriceHistory,
+                                        onForget = journey::forgetPrivatePriceObservation,
+                                        onClearAll = journey::clearPrivatePriceHistory,
+                                        onExport = { preview ->
+                                            val text = journey.exportPrivatePriceHistoryForShare(preview)
+                                            if (text != null && !onSharePrivatePriceHistory(text)) {
+                                                journey.reportPrivatePriceHistoryShareUnavailable()
+                                            }
+                                        },
+                                        onOpenComparison = onOpenComparison,
                                         onBack = ::navigateBack
                                     )
 
@@ -585,6 +619,7 @@ private fun JourneyTopBar(
         NextDestination.BASKET -> "Your basket"
         NextDestination.SAVED -> "Saved"
         NextDestination.STAPLE_WATCH_SETUP -> "Watch My Staples"
+        NextDestination.PRIVATE_PRICE_HISTORY -> "Price history"
         NextDestination.OBSERVED_PRICE_SELECTION -> "Observed price"
         NextDestination.OBSERVED_PRICE_CONFIRMATION -> "Price confirmation"
         NextDestination.PRODUCT_DETAIL -> "Product detail"

@@ -46,7 +46,8 @@ class ValuePilotNextActivity : AppCompatActivity() {
                     },
                     onOpenStoreMap = ::openStoreMap,
                     onCheckSavedPrice = ::openGoodPriceForSavedProduct,
-                    onOpenSavedTools = ::openSavedTools
+                    onOpenSavedTools = ::openSavedTools,
+                    onSharePrivatePriceHistory = ::sharePrivatePriceHistory
                 )
             }
         }
@@ -54,7 +55,10 @@ class ValuePilotNextActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (::journey.isInitialized) journey.refreshPrivateIdentitiesFromStore()
+        if (::journey.isInitialized) {
+            journey.refreshPrivateIdentitiesFromStore()
+            journey.refreshPrivatePriceHistory()
+        }
     }
 
     override fun onDestroy() {
@@ -92,6 +96,28 @@ class ValuePilotNextActivity : AppCompatActivity() {
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         )
         finish()
+    }
+
+    private fun sharePrivatePriceHistory(text: String): Boolean {
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(
+                Intent.EXTRA_SUBJECT,
+                getString(com.valuepilot.app.R.string.home_private_memory_export_subject)
+            )
+            putExtra(Intent.EXTRA_TEXT, text)
+        }
+        return try {
+            startActivity(
+                Intent.createChooser(
+                    sendIntent,
+                    getString(com.valuepilot.app.R.string.home_private_memory_export_send)
+                )
+            )
+            true
+        } catch (_: ActivityNotFoundException) {
+            false
+        }
     }
 
     private fun systemAnimationsDisabled(): Boolean =

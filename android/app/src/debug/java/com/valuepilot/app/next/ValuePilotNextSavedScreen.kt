@@ -39,6 +39,7 @@ internal fun ValuePilotSavedScreen(
     onCheckPrice: (String) -> Unit,
     onSearch: () -> Unit,
     onOpenStapleWatch: () -> Unit,
+    onOpenPrivatePriceHistory: () -> Unit,
     onRecordObservedPrice: () -> Unit,
     onOpenSavedTools: () -> Unit
 ) {
@@ -98,6 +99,16 @@ internal fun ValuePilotSavedScreen(
             )
         }
 
+        item(key = "saved-private-price-history") {
+            ActionCard(
+                eyebrow = "ON THIS DEVICE",
+                title = "Your private price history",
+                detail = "Review past comparison observations and manage the copy stored on this device. They are not live store prices.",
+                actionLabel = "Review price history",
+                onClick = onOpenPrivatePriceHistory
+            )
+        }
+
         stapleLaunch?.title?.let { title ->
             item(key = "saved-staple-watch-launch") {
                 if (stapleLaunch.action != null) {
@@ -121,7 +132,7 @@ internal fun ValuePilotSavedScreen(
         item(key = "saved-legacy-tools") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
                 Text(
-                    "Personal price history still opens in the existing ValuePilot screens.",
+                    "Need the earlier Saved experience? You can still open it here.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
