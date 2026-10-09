@@ -22,6 +22,12 @@ internal object DebugNextSavedToolsHandoff {
     ): Boolean =
         debugBuild && action == ACTION_OPEN_SAVED_TOOLS
 
+    fun savedToolsPrimaryTabOrNull(
+        debugBuild: Boolean,
+        action: String?
+    ): AppPrimaryTab? =
+        if (shouldOpenSavedTools(debugBuild, action)) AppPrimaryTab.SAVED else null
+
     fun shouldOpenObservedPriceConfirmation(
         debugBuild: Boolean,
         action: String?

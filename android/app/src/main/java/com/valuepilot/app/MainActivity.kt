@@ -246,17 +246,16 @@ class MainActivity : AppCompatActivity() {
 
         installSystemBarInsets()
         shellState = restoreShellState(savedInstanceState)
-        if (
-            savedInstanceState == null &&
-                DebugNextSavedToolsHandoff.shouldOpenSavedTools(
-                    debugBuild = BuildConfig.DEBUG,
-                    action = intent?.action
+        if (savedInstanceState == null) {
+            DebugNextSavedToolsHandoff.savedToolsPrimaryTabOrNull(
+                debugBuild = BuildConfig.DEBUG,
+                action = intent?.action
+            )?.let { savedToolsTab ->
+                shellState = AppShellReducer.reduce(
+                    shellState,
+                    AppShellIntent.SelectPrimary(savedToolsTab)
                 )
-        ) {
-            shellState = AppShellReducer.reduce(
-                shellState,
-                AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED)
-            )
+            }
         }
         homeSessionState = restoreHomeState(savedInstanceState)
         refreshHomePrivateMemory()
@@ -2168,14 +2167,13 @@ class MainActivity : AppCompatActivity() {
     private fun handleDebugNextHandoff(source: Intent) {
         if (!BuildConfig.DEBUG) return
 
-        if (
-            DebugNextSavedToolsHandoff.shouldOpenSavedTools(
-                debugBuild = true,
-                action = source.action
-            )
-        ) {
-            dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED))
-            bottomNavigation.selectedItemId = menuIdFor(AppPrimaryTab.SAVED)
+        val savedToolsTab = DebugNextSavedToolsHandoff.savedToolsPrimaryTabOrNull(
+            debugBuild = true,
+            action = source.action
+        )
+        if (savedToolsTab != null) {
+            dispatch(AppShellIntent.SelectPrimary(savedToolsTab))
+            bottomNavigation.selectedItemId = menuIdFor(savedToolsTab)
             return
         }
 
