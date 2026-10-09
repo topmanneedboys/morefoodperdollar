@@ -56,8 +56,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import com.valuepilot.app.AppPrimaryTab
@@ -84,6 +86,9 @@ internal enum class NextDestination(val primaryTab: AppPrimaryTab?) {
     COMPARE(null),
     SETTINGS(null)
 }
+
+internal fun usesCompactJourneyTopBar(availableWidth: Dp, fontScale: Float): Boolean =
+    availableWidth < 380.dp || fontScale >= 1.2f
 
 /**
  * Opens a fresh observed-price draft without restoring text from a previous use of the same
@@ -749,65 +754,75 @@ private fun JourneyTopBar(
         NextDestination.TRIP_PLANNER -> "Trip planner"
         NextDestination.MAP_HANDOFF -> "Store context"
     }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = ValuePilotSpacing.xLarge, vertical = ValuePilotSpacing.small),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)
-    ) {
-        if (canGoBack) {
-            androidx.compose.material3.TextButton(
-                onClick = onBack,
-                modifier = Modifier
-                    .size(ValuePilotSpacing.minimumTouchTarget)
-                    .semantics { contentDescription = "Back" }
-            ) {
-                Text("‹", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
-            }
-        } else {
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .clip(androidx.compose.foundation.shape.CircleShape)
-                    .background(MaterialTheme.colorScheme.primary),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("V", color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.titleLarge)
-            }
-        }
-
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-            Text(title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
-            Text(
-                "SHOPPING INTELLIGENCE",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.tertiary,
-                fontSize = 10.sp
-            )
-        }
-        if (destination != NextDestination.SETTINGS) {
-            IconButton(
-                onClick = onOpenSettings,
-                modifier = Modifier
-                    .size(ValuePilotSpacing.minimumTouchTarget)
-                    .semantics { contentDescription = "Open settings" }
-            ) {
-                Text(
-                    "⚙",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-        androidx.compose.material3.TextButton(
-            onClick = onExitPreview,
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val compact = usesCompactJourneyTopBar(maxWidth, LocalDensity.current.fontScale)
+        Row(
             modifier = Modifier
-                .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
-                .widthIn(min = 64.dp)
-                .semantics { contentDescription = "Exit preview and return to the classic app" }
+                .fillMaxWidth()
+                .padding(
+                    horizontal = if (compact) ValuePilotSpacing.medium else ValuePilotSpacing.xLarge,
+                    vertical = ValuePilotSpacing.small
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(
+                if (compact) ValuePilotSpacing.small else ValuePilotSpacing.medium
+            )
         ) {
-            Text("Exit", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (canGoBack) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .size(ValuePilotSpacing.minimumTouchTarget)
+                        .semantics { contentDescription = "Back" }
+                ) {
+                    Text("‹", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("V", color = MaterialTheme.colorScheme.onPrimary, style = MaterialTheme.typography.titleLarge)
+                }
+            }
+
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text(title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
+                if (!compact) {
+                    Text(
+                        "SHOPPING INTELLIGENCE",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        fontSize = 10.sp
+                    )
+                }
+            }
+            if (destination != NextDestination.SETTINGS) {
+                IconButton(
+                    onClick = onOpenSettings,
+                    modifier = Modifier
+                        .size(ValuePilotSpacing.minimumTouchTarget)
+                        .semantics { contentDescription = "Open settings" }
+                ) {
+                    Text(
+                        "⚙",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            androidx.compose.material3.TextButton(
+                onClick = onExitPreview,
+                modifier = Modifier
+                    .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
+                    .widthIn(min = 64.dp)
+                    .semantics { contentDescription = "Exit preview and return to the classic app" }
+            ) {
+                Text("Exit", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }
