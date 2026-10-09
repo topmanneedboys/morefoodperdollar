@@ -2,6 +2,7 @@ package com.valuepilot.app
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
@@ -96,6 +97,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var screenBody: TextView
     private lateinit var screenFootnote: TextView
     private lateinit var primaryAction: Button
+    private lateinit var previewNextAction: MaterialButton
     private lateinit var sourcesLicencesButton: MaterialButton
     private lateinit var dataStatusButton: MaterialButton
     private lateinit var homeExperience: PracticalShoppingHomeSurfaceView
@@ -201,6 +203,7 @@ class MainActivity : AppCompatActivity() {
         screenBody = findViewById(R.id.screenBody)
         screenFootnote = findViewById(R.id.screenFootnote)
         primaryAction = findViewById(R.id.primaryAction)
+        previewNextAction = findViewById(R.id.previewNextAction)
         sourcesLicencesButton = findViewById(R.id.sourcesLicencesButton)
         dataStatusButton = findViewById(R.id.dataStatusButton)
         homeExperience = findViewById(R.id.homeExperience)
@@ -287,6 +290,22 @@ class MainActivity : AppCompatActivity() {
         )
 
         primaryAction.setOnClickListener { openComparison() }
+        previewNextAction.visibility =
+            if ((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+                View.VISIBLE
+            } else {
+                View.GONE
+        }
+        previewNextAction.setOnClickListener {
+            if ((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+                startActivity(
+                    Intent().setClassName(
+                        packageName,
+                        "com.valuepilot.app.next.ValuePilotNextActivity"
+                    )
+                )
+            }
+        }
         sourcesLicencesButton.setOnClickListener { showSourcesLicences() }
         dataStatusButton.setOnClickListener { showDataStatus() }
 

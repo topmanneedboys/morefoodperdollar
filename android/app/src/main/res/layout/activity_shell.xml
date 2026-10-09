@@ -98,6 +98,21 @@
                         android:textSize="15sp"
                         app:cornerRadius="16dp" />
 
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/previewNextAction"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="10dp"
+                        android:text="@string/preview_next_ui"
+                        android:textAllCaps="false"
+                        android:textColor="?attr/colorPrimary"
+                        android:textSize="15sp"
+                        android:visibility="gone"
+                        app:backgroundTint="?attr/colorSurface"
+                        app:cornerRadius="16dp"
+                        app:strokeColor="?attr/colorPrimary"
+                        app:strokeWidth="1dp" />
+
                 </LinearLayout>
 
                 </com.google.android.material.card.MaterialCardView>

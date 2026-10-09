@@ -2,6 +2,7 @@
     <string name="app_name">ValuePilot</string>
 
     <string name="app_tagline">Compare the real cost. Build the smarter basket.</string>
+    <string name="preview_next_ui">Preview ValuePilot Next</string>
 
     <string name="standalone_intro">Enter each product in its own box, then confirm they are like-for-like alternatives. ValuePilot compares exact package size and price facts on-device and refuses to rank when those facts are not safe enough.</string>
 
