@@ -2,6 +2,7 @@ package com.valuepilot.app.next
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,10 +20,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import com.valuepilot.app.CompareHereManualDraftActionEvaluator
 import com.valuepilot.app.CompareHereManualDraftReadiness
 import com.valuepilot.app.CompareHereManualInputAdapter
@@ -31,6 +34,11 @@ import com.valuepilot.app.CompareHereManualRouteStatus
 import com.valuepilot.app.CompareHereUiStatus
 import com.valuepilot.app.CompareHereShareCard
 import com.valuepilot.core.CompareHerePriceSelection
+
+internal fun usesCompactComparePriceBasisChoices(
+    availableWidth: Dp,
+    fontScale: Float
+): Boolean = availableWidth < 420.dp || fontScale >= 1.2f
 
 @Composable
 internal fun ValuePilotNextCompareHereScreen(
@@ -77,17 +85,38 @@ internal fun ValuePilotNextCompareHereScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
-                    FilterChip(
-                        selected = state.priceSelection == CompareHerePriceSelection.CURRENT,
-                        onClick = { onPriceSelectionChanged(CompareHerePriceSelection.CURRENT) },
-                        label = { Text("Current shelf price") }
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val compact = usesCompactComparePriceBasisChoices(
+                        maxWidth,
+                        LocalDensity.current.fontScale
                     )
-                    FilterChip(
-                        selected = state.priceSelection == CompareHerePriceSelection.MEMBER,
-                        onClick = { onPriceSelectionChanged(CompareHerePriceSelection.MEMBER) },
-                        label = { Text("Member price") }
-                    )
+                    if (compact) {
+                        Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
+                            FilterChip(
+                                selected = state.priceSelection == CompareHerePriceSelection.CURRENT,
+                                onClick = { onPriceSelectionChanged(CompareHerePriceSelection.CURRENT) },
+                                label = { Text("Current shelf price") }
+                            )
+                            FilterChip(
+                                selected = state.priceSelection == CompareHerePriceSelection.MEMBER,
+                                onClick = { onPriceSelectionChanged(CompareHerePriceSelection.MEMBER) },
+                                label = { Text("Member price") }
+                            )
+                        }
+                    } else {
+                        Row(horizontalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
+                            FilterChip(
+                                selected = state.priceSelection == CompareHerePriceSelection.CURRENT,
+                                onClick = { onPriceSelectionChanged(CompareHerePriceSelection.CURRENT) },
+                                label = { Text("Current shelf price") }
+                            )
+                            FilterChip(
+                                selected = state.priceSelection == CompareHerePriceSelection.MEMBER,
+                                onClick = { onPriceSelectionChanged(CompareHerePriceSelection.MEMBER) },
+                                label = { Text("Member price") }
+                            )
+                        }
+                    }
                 }
             }
         }
