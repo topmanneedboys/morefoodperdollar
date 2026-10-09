@@ -53,9 +53,10 @@ class ValuePilotNextActivity : AppCompatActivity() {
                     journey = journey,
                     reducedMotion = systemAnimationsDisabled(),
                     onExitPreview = ::finish,
-                    onOpenComparison = {
+                    onOpenLegacyComparisonTools = {
                         startActivity(Intent(this, ComparisonActivity::class.java))
                     },
+                    onShareCompareHereResult = ::shareCompareHereResult,
                     onOpenStoreMap = ::openStoreMap,
                     onStartGoodPriceBarcodeScan = ::startGoodPriceBarcodeScan,
                     onOpenSavedTools = ::openSavedTools,
@@ -147,6 +148,25 @@ class ValuePilotNextActivity : AppCompatActivity() {
                 Intent.createChooser(
                     sendIntent,
                     "Share price calculation"
+                )
+            )
+            true
+        } catch (_: ActivityNotFoundException) {
+            false
+        }
+    }
+
+    private fun shareCompareHereResult(card: com.valuepilot.app.CompareHereShareCard): Boolean {
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, card.title)
+            putExtra(Intent.EXTRA_TEXT, card.text)
+        }
+        return try {
+            startActivity(
+                Intent.createChooser(
+                    sendIntent,
+                    "Share comparison result"
                 )
             )
             true

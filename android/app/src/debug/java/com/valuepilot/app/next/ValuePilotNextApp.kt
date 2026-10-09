@@ -64,7 +64,7 @@ import com.valuepilot.app.AppShellState
 import com.valuepilot.app.R
 import kotlinx.coroutines.launch
 
-private enum class NextDestination(val primaryTab: AppPrimaryTab?) {
+internal enum class NextDestination(val primaryTab: AppPrimaryTab?) {
     HOME(AppPrimaryTab.HOME),
     SEARCH(AppPrimaryTab.SEARCH),
     BASKET(AppPrimaryTab.BASKET),
@@ -77,7 +77,33 @@ private enum class NextDestination(val primaryTab: AppPrimaryTab?) {
     PRODUCT_DETAIL(null),
     SHOPPING_DECISION(null),
     TRIP_PLANNER(null),
-    MAP_HANDOFF(null)
+    MAP_HANDOFF(null),
+    COMPARE(null)
+}
+
+internal fun primaryTabForNextDestination(
+    destination: NextDestination,
+    originDestination: NextDestination? = null
+): AppPrimaryTab {
+    if (destination == NextDestination.COMPARE) {
+        val origin = originDestination?.takeIf { it != NextDestination.COMPARE }
+            ?: NextDestination.HOME
+        return primaryTabForNextDestination(origin)
+    }
+    destination.primaryTab?.let { return it }
+    return when (destination) {
+        NextDestination.GOOD_PRICE_CHECK,
+        NextDestination.STAPLE_WATCH_SETUP,
+        NextDestination.PRIVATE_PRICE_HISTORY,
+        NextDestination.OBSERVED_PRICE_SELECTION,
+        NextDestination.OBSERVED_PRICE_CONFIRMATION -> AppPrimaryTab.SAVED
+        NextDestination.PRODUCT_DETAIL -> AppPrimaryTab.SEARCH
+        NextDestination.SHOPPING_DECISION,
+        NextDestination.TRIP_PLANNER,
+        NextDestination.MAP_HANDOFF -> AppPrimaryTab.BASKET
+        NextDestination.COMPARE -> AppPrimaryTab.HOME
+        else -> AppPrimaryTab.HOME
+    }
 }
 
 private data class PrimaryDestination(
@@ -134,7 +160,8 @@ internal fun ValuePilotNextApp(
     journey: ValuePilotNextJourneyViewModel,
     reducedMotion: Boolean,
     onExitPreview: () -> Unit,
-    onOpenComparison: () -> Unit,
+    onOpenLegacyComparisonTools: () -> Unit,
+    onShareCompareHereResult: (com.valuepilot.app.CompareHereShareCard) -> Boolean,
     onOpenStoreMap: (com.valuepilot.app.ArgentinaPrivateBasketStoreProjection) -> Boolean,
     onStartGoodPriceBarcodeScan: () -> Unit,
     onOpenSavedTools: () -> Unit,
@@ -234,18 +261,8 @@ internal fun ValuePilotNextApp(
     }
 
     fun syncSelectedTab(destination: NextDestination) {
-        val tab = destination.primaryTab ?: when (destination) {
-            NextDestination.OBSERVED_PRICE_SELECTION -> AppPrimaryTab.SAVED
-            NextDestination.OBSERVED_PRICE_CONFIRMATION -> AppPrimaryTab.SAVED
-            NextDestination.GOOD_PRICE_CHECK -> AppPrimaryTab.SAVED
-            NextDestination.STAPLE_WATCH_SETUP -> AppPrimaryTab.SAVED
-            NextDestination.PRIVATE_PRICE_HISTORY -> AppPrimaryTab.SAVED
-            NextDestination.PRODUCT_DETAIL -> AppPrimaryTab.SEARCH
-            NextDestination.SHOPPING_DECISION,
-            NextDestination.TRIP_PLANNER,
-            NextDestination.MAP_HANDOFF -> AppPrimaryTab.BASKET
-            else -> AppPrimaryTab.HOME
-        }
+        val origin = currentDestination.takeIf { destination == NextDestination.COMPARE }
+        val tab = primaryTabForNextDestination(destination, origin)
         if (shellState.selectedPrimaryTab != tab) {
             shellState = AppShellReducer.reduce(shellState, AppShellIntent.SelectPrimary(tab))
         }
@@ -388,7 +405,7 @@ internal fun ValuePilotNextApp(
                                     areaLabel = ui.search.areaLabel,
                                     onSearch = { navigate(NextDestination.SEARCH) },
                                     onBasket = { selectPrimary(NextDestination.BASKET) },
-                                    onCompare = onOpenComparison
+                                    onCompare = { navigate(NextDestination.COMPARE) }
                                 )
 
                                 NextDestination.SEARCH -> ValuePilotSearchScreen(
@@ -570,9 +587,27 @@ internal fun ValuePilotNextApp(
                                                 journey.reportPrivatePriceHistoryShareUnavailable()
                                             }
                                         },
-                                        onOpenComparison = onOpenComparison,
+                                        onOpenComparison = { navigate(NextDestination.COMPARE) },
                                         onBack = ::navigateBack
                                     )
+
+                                NextDestination.COMPARE -> ValuePilotNextCompareHereScreen(
+                                    state = ui.compareHere,
+                                    onProductChanged = journey::onCompareHereProductChanged,
+                                    onAddProduct = journey::onCompareHereProductAdded,
+                                    onRemoveProduct = journey::onCompareHereProductRemoved,
+                                    onPriceSelectionChanged = journey::onCompareHerePriceSelectionChanged,
+                                    onLikeForLikeChanged = journey::onCompareHereLikeForLikeChanged,
+                                    onCompare = journey::compareHere,
+                                    onClear = journey::clearCompareHereDraft,
+                                    onShare = { card ->
+                                        if (!onShareCompareHereResult(card)) {
+                                            notify("No sharing app is available.")
+                                        }
+                                    },
+                                    onOpenCaptureTools = onOpenLegacyComparisonTools,
+                                    onBack = ::navigateBack
+                                )
 
                                 NextDestination.OBSERVED_PRICE_SELECTION ->
                                     ValuePilotObservedPriceSelectionScreen(
@@ -646,6 +681,7 @@ private fun JourneyTopBar(
         NextDestination.GOOD_PRICE_CHECK -> "Good Price"
         NextDestination.STAPLE_WATCH_SETUP -> "Watch My Staples"
         NextDestination.PRIVATE_PRICE_HISTORY -> "Price history"
+        NextDestination.COMPARE -> "Compare products"
         NextDestination.OBSERVED_PRICE_SELECTION -> "Observed price"
         NextDestination.OBSERVED_PRICE_CONFIRMATION -> "Price confirmation"
         NextDestination.PRODUCT_DETAIL -> "Product detail"

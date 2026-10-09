@@ -4,6 +4,7 @@ import android.content.Context
 import com.valuepilot.app.CompareHerePrivatePriceMemoryAndroidStore
 import com.valuepilot.app.CompareHerePrivatePriceMemoryState
 import com.valuepilot.app.CompareHerePrivatePriceMemoryStoreIssue
+import com.valuepilot.app.CompareHerePrivatePriceMemoryStore
 import com.valuepilot.app.PracticalShoppingPrivatePriceHistoryExport
 import com.valuepilot.app.PracticalShoppingPrivatePriceHistoryExportIssue
 import com.valuepilot.app.PracticalShoppingPrivatePriceHistoryForgetPresentation
@@ -27,9 +28,10 @@ internal data class ValuePilotNextPrivatePriceHistoryUiState(
 /** Debug Compose route over the existing device-only private comparison-history store. */
 internal class ValuePilotNextPrivatePriceHistoryJourney(
     context: Context,
-    private val publish: (ValuePilotNextPrivatePriceHistoryUiState?) -> Unit
+    private val publish: (ValuePilotNextPrivatePriceHistoryUiState?) -> Unit,
+    memoryStore: CompareHerePrivatePriceMemoryStore? = null
 ) {
-    private val store = CompareHerePrivatePriceMemoryAndroidStore(
+    private val store = memoryStore ?: CompareHerePrivatePriceMemoryAndroidStore(
         context.applicationContext ?: context
     )
     private var routeVisible = false

@@ -100,6 +100,7 @@ internal data class ValuePilotNextJourneyUiState(
     val planError: String? = null,
     val tripResult: ArgentinaPrivateTripCostResult? = null,
     val tripError: String? = null,
+    val compareHere: ValuePilotNextCompareHereUiState = ValuePilotNextCompareHereUiState(),
     val actionNotice: String? = null
 )
 
@@ -126,6 +127,8 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
     private var observedPriceConfirmationJourney: ValuePilotNextObservedPriceConfirmationJourney? = null
     private var observedPriceProofPickerRequest: (() -> Unit)? = null
     private var privatePriceHistoryJourney: ValuePilotNextPrivatePriceHistoryJourney? = null
+    private var compareHereJourney: ValuePilotNextCompareHereJourney? = null
+    private var compareHereMemoryStore: CompareHerePrivatePriceMemoryAndroidStore? = null
     private var goodPriceJourney: ValuePilotNextGoodPriceJourney? = null
     @Volatile
     private var goodPriceBarcodeDiscoverySession: BundledOfflineCatalogDiscoverySession? = null
@@ -154,6 +157,8 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
         initialized = true
         applicationContext = context.applicationContext ?: context
         store = AndroidPracticalShoppingHomeSessionStore(requireNotNull(applicationContext))
+        compareHereMemoryStore =
+            CompareHerePrivatePriceMemoryAndroidStore(requireNotNull(applicationContext))
         observedPriceConfirmationJourney =
             ValuePilotNextObservedPriceConfirmationJourney(
                 context = requireNotNull(applicationContext),
@@ -167,11 +172,20 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
                 context = requireNotNull(applicationContext),
                 publish = { next ->
                     if (!cleared) uiState = uiState.copy(privatePriceHistory = next)
+                },
+                memoryStore = requireNotNull(compareHereMemoryStore)
+            )
+        compareHereJourney =
+            ValuePilotNextCompareHereJourney(
+                context = requireNotNull(applicationContext),
+                memoryStore = requireNotNull(compareHereMemoryStore),
+                publish = { next ->
+                    if (!cleared) uiState = uiState.copy(compareHere = next)
                 }
             )
         goodPriceJourney =
             ValuePilotNextGoodPriceJourney(
-                memoryStore = CompareHerePrivatePriceMemoryAndroidStore(requireNotNull(applicationContext)),
+                memoryStore = requireNotNull(compareHereMemoryStore),
                 publish = { next ->
                     if (!cleared) uiState = uiState.copy(goodPrice = next)
                 }
@@ -389,6 +403,48 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
         if (!initialized || cleared) return
         check(Looper.myLooper() == Looper.getMainLooper())
         privatePriceHistoryJourney?.onRouteVisibilityChanged(visible)
+    }
+
+    fun onCompareHereProductChanged(index: Int, value: String) {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        compareHereJourney?.onProductChanged(index, value)
+    }
+
+    fun onCompareHereProductAdded() {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        compareHereJourney?.addProduct()
+    }
+
+    fun onCompareHereProductRemoved(index: Int) {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        compareHereJourney?.removeProduct(index)
+    }
+
+    fun onCompareHerePriceSelectionChanged(selection: com.valuepilot.core.CompareHerePriceSelection) {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        compareHereJourney?.onPriceSelectionChanged(selection)
+    }
+
+    fun onCompareHereLikeForLikeChanged(confirmed: Boolean) {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        compareHereJourney?.onLikeForLikeChanged(confirmed)
+    }
+
+    fun compareHere() {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        compareHereJourney?.compare()
+    }
+
+    fun clearCompareHereDraft() {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        compareHereJourney?.clearDraft()
     }
 
     fun refreshPrivatePriceHistory() {
@@ -834,6 +890,9 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
         observedPriceProofPickerRequest = null
         privatePriceHistoryJourney?.close()
         privatePriceHistoryJourney = null
+        compareHereJourney?.close()
+        compareHereJourney = null
+        compareHereMemoryStore = null
         goodPriceBarcodeExecutor.shutdownNow()
         goodPriceBarcodeDiscoverySession?.close()
         goodPriceBarcodeDiscoverySession = null
