@@ -25,6 +25,7 @@ android {
 
     buildTypes {
         getByName("debug") {
+            applicationIdSuffix = ".nextpreview"
             buildConfigField("boolean", "M12_3_QUALIFICATION_PROBE", "false")
         }
         getByName("release") {
@@ -33,6 +34,11 @@ android {
             buildConfigField("boolean", "M12_3_QUALIFICATION_PROBE", "false")
         }
     }
+}
+
+// Keep the isolated Compose preview independent of the production Firebase app identity.
+tasks.matching { it.name == "processDebugGoogleServices" }.configureEach {
+    enabled = false
 }
 
 dependencies {
