@@ -3,6 +3,7 @@ package com.valuepilot.app.next
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -25,15 +26,20 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.valuepilot.app.ArgentinaBackendContract
 import com.valuepilot.app.ArgentinaLiveSearchSurfaceMode
 import com.valuepilot.app.ArgentinaLiveSearchSurfaceState
 import com.valuepilot.app.PracticalShoppingSearchIdentityPresentation
+
+internal fun usesCompactDiscoveryContent(availableWidth: Dp, fontScale: Float): Boolean =
+    availableWidth < 420.dp || fontScale >= 1.2f
 
 @Composable
 internal fun ValuePilotHomeScreen(
@@ -211,24 +217,31 @@ internal fun ValuePilotSearchScreen(
         val matches = presentation?.matches.orEmpty()
         if (matches.isNotEmpty()) {
             item(key = "search-results-heading") {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.Bottom,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
-                        Eyebrow("MATCHING IDENTITIES")
-                        Text(
-                            matches.size.toString() + " result" + if (matches.size == 1) "" else "s",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val compact = usesCompactDiscoveryContent(maxWidth, LocalDensity.current.fontScale)
+                    if (compact) {
+                        Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
+                            SearchResultsCount(matches.size)
+                            Text(
+                                "Page " + ((presentation?.page ?: 0) + 1),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.Bottom,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            SearchResultsCount(matches.size)
+                            Text(
+                                "Page " + ((presentation?.page ?: 0) + 1),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
-                    Text(
-                        "Page " + ((presentation?.page ?: 0) + 1),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
             items(matches, key = { it.identityKey }) { match ->
@@ -247,6 +260,18 @@ internal fun ValuePilotSearchScreen(
                 EvidenceFootnote(state.caveat)
             }
         }
+    }
+}
+
+@Composable
+private fun SearchResultsCount(count: Int) {
+    Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
+        Eyebrow("MATCHING IDENTITIES")
+        Text(
+            count.toString() + " result" + if (count == 1) "" else "s",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground
+        )
     }
 }
 
@@ -324,79 +349,121 @@ private fun SearchResultCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = ValuePilotElevation.flat)
     ) {
-        Column(
-            modifier = Modifier.padding(ValuePilotSpacing.large),
-            verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium),
-                verticalAlignment = Alignment.Top
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val compact = usesCompactDiscoveryContent(maxWidth, LocalDensity.current.fontScale)
+            Column(
+                modifier = Modifier.padding(ValuePilotSpacing.large),
+                verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)
             ) {
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
+                if (compact) {
+                    Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
+                        SearchIdentitySummary(match)
+                        currentOffer?.let { SearchPriceLabel(it, Modifier.align(Alignment.End)) }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        SearchIdentitySummary(match, Modifier.weight(1f))
+                        currentOffer?.let { SearchPriceLabel(it) }
+                    }
+                }
+                if (compact) {
+                    Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
+                        SearchMatchPill(match.matchLabel)
+                        SearchFreshnessLabel(currentOffer != null)
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        SearchMatchPill(match.matchLabel)
+                        SearchFreshnessLabel(currentOffer != null)
+                    }
+                }
+                if (currentOffer != null) {
+                    val unit = currentOffer.unitPrice?.let { value ->
+                        val basis = currentOffer.unitPriceBasis?.takeIf(String::isNotBlank)
+                        value.currency + " " + value.amount + (basis?.let { " / " + it } ?: "")
+                    }
                     Text(
-                        match.displayName,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface
+                        listOfNotNull(unit, currentOffer.storeName, "Availability unknown").joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    listOfNotNull(match.brand, match.packageQuantityLabel)
-                        .takeIf { it.isNotEmpty() }
-                        ?.joinToString(" · ")
-                        ?.let {
-                            Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                }
-                currentOffer?.let { offer ->
+                } else {
                     Text(
-                        offer.listPrice.currency + " " + offer.listPrice.amount,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        if (match.qualifiedOffers.isNotEmpty()) {
+                            "Price evidence is not fresh enough to show as current."
+                        } else {
+                            "No current price or store offer is attached to this identity."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                Text("Open product details", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                EvidencePill(
-                    match.matchLabel.uppercase(),
-                    MaterialTheme.colorScheme.primaryContainer,
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                Text(
-                    if (currentOffer != null) "Fresh listed-price evidence" else "Identity match",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (currentOffer != null) MaterialTheme.colorScheme.secondary
-                    else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            if (currentOffer != null) {
-                val unit = currentOffer.unitPrice?.let { value ->
-                    val basis = currentOffer.unitPriceBasis?.takeIf(String::isNotBlank)
-                    value.currency + " " + value.amount + (basis?.let { " / " + it } ?: "")
-                }
-                Text(
-                    listOfNotNull(unit, currentOffer.storeName, "Availability unknown").joinToString(" · "),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                Text(
-                    if (match.qualifiedOffers.isNotEmpty()) {
-                        "Price evidence is not fresh enough to show as current."
-                    } else {
-                        "No current price or store offer is attached to this identity."
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Text("Open product details", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         }
     }
+}
+
+@Composable
+private fun SearchIdentitySummary(
+    match: PracticalShoppingSearchIdentityPresentation.Match,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
+        Text(
+            match.displayName,
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        listOfNotNull(match.brand, match.packageQuantityLabel)
+            .takeIf { it.isNotEmpty() }
+            ?.joinToString(" · ")
+            ?.let {
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+    }
+}
+
+@Composable
+private fun SearchPriceLabel(
+    offer: ArgentinaBackendContract.SearchOffer,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        offer.listPrice.currency + " " + offer.listPrice.amount,
+        modifier = modifier,
+        style = MaterialTheme.typography.titleLarge,
+        color = MaterialTheme.colorScheme.onBackground,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis
+    )
+}
+
+@Composable
+private fun SearchMatchPill(matchLabel: String) {
+    EvidencePill(
+        matchLabel.uppercase(),
+        MaterialTheme.colorScheme.primaryContainer,
+        MaterialTheme.colorScheme.onPrimaryContainer
+    )
+}
+
+@Composable
+private fun SearchFreshnessLabel(hasFreshPrice: Boolean) {
+    Text(
+        if (hasFreshPrice) "Fresh listed-price evidence" else "Identity match",
+        style = MaterialTheme.typography.labelMedium,
+        color = if (hasFreshPrice) MaterialTheme.colorScheme.secondary
+        else MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }
 
 @Composable
@@ -440,17 +507,27 @@ internal fun ValuePilotProductDetailScreen(
                         ?.let {
                             Text(it, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                    Row(horizontalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
-                        EvidencePill(
-                            match.matchLabel.uppercase(),
-                            MaterialTheme.colorScheme.primaryContainer,
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        EvidencePill(
-                            match.sourceLabel ?: "UNVERIFIED SOURCE",
-                            MaterialTheme.colorScheme.surfaceVariant,
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    BoxWithConstraints(Modifier.fillMaxWidth()) {
+                        val compact = usesCompactDiscoveryContent(maxWidth, LocalDensity.current.fontScale)
+                        if (compact) {
+                            Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
+                                SearchMatchPill(match.matchLabel)
+                                EvidencePill(
+                                    match.sourceLabel ?: "UNVERIFIED SOURCE",
+                                    MaterialTheme.colorScheme.surfaceVariant,
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        } else {
+                            Row(horizontalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
+                                SearchMatchPill(match.matchLabel)
+                                EvidencePill(
+                                    match.sourceLabel ?: "UNVERIFIED SOURCE",
+                                    MaterialTheme.colorScheme.surfaceVariant,
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                     Text(
                         "Product identity, package quantity and listed-price evidence are separate facts. Missing package or price information is not filled in.",
@@ -513,68 +590,91 @@ private fun OfferEvidenceCard(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = ValuePilotElevation.flat)
     ) {
-        Column(
-            modifier = Modifier.padding(ValuePilotSpacing.large),
-            verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val compact = usesCompactDiscoveryContent(maxWidth, LocalDensity.current.fontScale)
+            Column(
+                modifier = Modifier.padding(ValuePilotSpacing.large),
+                verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)
             ) {
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
-                    Eyebrow(if (fresh) "FRESH LISTED PRICE" else "NOT CURRENT")
-                    Text(
-                        offer.listPrice.currency + " " + offer.listPrice.amount,
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                if (compact) {
+                    Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
+                        Eyebrow(if (fresh) "FRESH LISTED PRICE" else "NOT CURRENT")
+                        Text(
+                            offer.listPrice.currency + " " + offer.listPrice.amount,
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        OfferFreshnessPill(offer, fresh)
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
+                            Eyebrow(if (fresh) "FRESH LISTED PRICE" else "NOT CURRENT")
+                            Text(
+                                offer.listPrice.currency + " " + offer.listPrice.amount,
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        OfferFreshnessPill(offer, fresh)
+                    }
                 }
+                Text(offer.storeName, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                offer.quantity?.let {
+                    Text(
+                        "Package " + it.amount + " " + it.unit,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } ?: Text("Package quantity unknown", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                offer.unitPrice?.let { unit ->
+                    val basis = offer.unitPriceBasis?.takeIf(String::isNotBlank)
+                    Text(
+                        "Unit price  " + unit.currency + " " + unit.amount + (basis?.let { " / " + it } ?: ""),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                } ?: Text("Unit price not supplied by this offer", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 EvidencePill(
-                    offer.freshnessStatus.name.replace('_', ' '),
-                    if (fresh) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.errorContainer,
-                    if (fresh) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onErrorContainer
+                    "AVAILABILITY UNKNOWN",
+                    MaterialTheme.colorScheme.surfaceVariant,
+                    MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-            Text(offer.storeName, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-            offer.quantity?.let {
                 Text(
-                    "Package " + it.amount + " " + it.unit,
-                    style = MaterialTheme.typography.bodyMedium,
+                    offer.provenance.provider + " · release " + offer.releaseDate,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            } ?: Text("Package quantity unknown", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            offer.unitPrice?.let { unit ->
-                val basis = offer.unitPriceBasis?.takeIf(String::isNotBlank)
                 Text(
-                    "Unit price  " + unit.currency + " " + unit.amount + (basis?.let { " / " + it } ?: ""),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.secondary
+                    "A published price does not confirm stock, pickup, delivery or a best-value ranking.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            } ?: Text("Unit price not supplied by this offer", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            EvidencePill(
-                "AVAILABILITY UNKNOWN",
-                MaterialTheme.colorScheme.surfaceVariant,
-                MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                offer.provenance.provider + " · release " + offer.releaseDate,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                "A published price does not confirm stock, pickup, delivery or a best-value ranking.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            if (validCoordinates) {
-                TextButton(
-                    onClick = onOpenMapContext,
-                    modifier = Modifier.heightIn(min = ValuePilotSpacing.minimumTouchTarget)
-                ) {
-                    Text("View source store context")
+                if (validCoordinates) {
+                    TextButton(
+                        onClick = onOpenMapContext,
+                        modifier = Modifier.heightIn(min = ValuePilotSpacing.minimumTouchTarget)
+                    ) {
+                        Text("View source store context")
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun OfferFreshnessPill(
+    offer: ArgentinaBackendContract.SearchOffer,
+    fresh: Boolean
+) {
+    EvidencePill(
+        offer.freshnessStatus.name.replace('_', ' '),
+        if (fresh) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.errorContainer,
+        if (fresh) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onErrorContainer
+    )
 }
