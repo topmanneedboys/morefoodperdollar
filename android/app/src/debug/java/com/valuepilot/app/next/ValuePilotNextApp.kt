@@ -66,6 +66,7 @@ import com.valuepilot.app.AppPrimaryTab
 import com.valuepilot.app.AppShellIntent
 import com.valuepilot.app.AppShellReducer
 import com.valuepilot.app.AppShellState
+import com.valuepilot.app.PracticalShoppingSearchIdentityPresentation
 import com.valuepilot.app.R
 import kotlinx.coroutines.launch
 
@@ -140,10 +141,10 @@ private data class PrimaryDestination(
 )
 
 private val primaryDestinations = listOf(
-    PrimaryDestination(AppPrimaryTab.HOME, NextDestination.HOME, "Home", R.drawable.ic_vp_home),
-    PrimaryDestination(AppPrimaryTab.SEARCH, NextDestination.SEARCH, "Search", R.drawable.ic_vp_search),
-    PrimaryDestination(AppPrimaryTab.BASKET, NextDestination.BASKET, "Basket", R.drawable.ic_vp_basket),
-    PrimaryDestination(AppPrimaryTab.SAVED, NextDestination.SAVED, "Saved", R.drawable.ic_vp_saved)
+    PrimaryDestination(AppPrimaryTab.HOME, NextDestination.HOME, "Inicio", R.drawable.ic_vp_home),
+    PrimaryDestination(AppPrimaryTab.SEARCH, NextDestination.SEARCH, "Buscar", R.drawable.ic_vp_search),
+    PrimaryDestination(AppPrimaryTab.BASKET, NextDestination.BASKET, "Canasta", R.drawable.ic_vp_basket),
+    PrimaryDestination(AppPrimaryTab.SAVED, NextDestination.SAVED, "Guardados", R.drawable.ic_vp_saved)
 )
 
 private val destinationStackSaver = listSaver<List<NextDestination>, String>(
@@ -189,6 +190,7 @@ internal fun ValuePilotNextApp(
     onPresentationPreferencesChanged: (ValuePilotNextUiPreferences) -> Unit,
     onExitPreview: () -> Unit,
     onOpenLegacyComparisonTools: () -> Unit,
+    onOpenGoogleImages: (PracticalShoppingSearchIdentityPresentation.Match, String) -> Unit,
     onShareCompareHereResult: (com.valuepilot.app.CompareHereShareCard) -> Boolean,
     onOpenStoreMap: (com.valuepilot.app.ArgentinaPrivateBasketStoreProjection) -> Boolean,
     onStartGoodPriceBarcodeScan: () -> Unit,
@@ -204,6 +206,7 @@ internal fun ValuePilotNextApp(
         mutableStateOf(listOf(NextDestination.HOME))
     }
     var selectedIdentityKey by rememberSaveable { mutableStateOf<String?>(null) }
+    var showDesignFixture by rememberSaveable { mutableStateOf(false) }
     var selectedMapOfferKey by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedMapProductName by rememberSaveable { mutableStateOf<String?>(null) }
     var query by rememberSaveable { mutableStateOf(ui.query) }
@@ -447,22 +450,39 @@ internal fun ValuePilotNextApp(
                                 NextDestination.SEARCH -> ValuePilotSearchScreen(
                                     query = query,
                                     state = ui.search,
-                                    onQueryChanged = ::onQueryChanged,
-                                    onSubmit = ::submitSearch,
+                                    showDesignFixture = showDesignFixture,
+                                    onQueryChanged = { updated ->
+                                        showDesignFixture = false
+                                        onQueryChanged(updated)
+                                    },
+                                    onSubmit = {
+                                        showDesignFixture = false
+                                        submitSearch()
+                                    },
                                     onLoadMore = journey::loadMoreSearchResults,
                                     onOpenMatch = { match ->
                                         selectedIdentityKey = match.identityKey
                                         navigate(NextDestination.PRODUCT_DETAIL)
-                                    }
+                                    },
+                                    onOpenGoogleImages = onOpenGoogleImages,
+                                    onShowDesignFixture = { showDesignFixture = true }
                                 )
 
                                 NextDestination.PRODUCT_DETAIL -> {
-                                    val match = ui.search.presentation?.matches
-                                        ?.firstOrNull { it.identityKey == selectedIdentityKey }
+                                    val isDesignFixture =
+                                        selectedIdentityKey == ValuePilotNextLayoutFixture.IDENTITY_KEY
+                                    val match = if (isDesignFixture) {
+                                        ValuePilotNextLayoutFixture.match
+                                    } else {
+                                        ui.search.presentation?.matches
+                                            ?.firstOrNull { it.identityKey == selectedIdentityKey }
+                                    }
                                     ValuePilotProductDetailScreen(
                                         match = match,
                                         isSearchLoading = ui.search.mode ==
                                             com.valuepilot.app.ArgentinaLiveSearchSurfaceMode.LOADING,
+                                        isDesignFixture = isDesignFixture,
+                                        areaLabel = ui.search.areaLabel,
                                         onAddToBasket = { selected ->
                                             when (journey.addSearchMatch(selected)) {
                                                 AddPrivateIdentityResult.ADDED -> {
@@ -482,6 +502,7 @@ internal fun ValuePilotNextApp(
                                             }
                                         },
                                         onSearchAgain = { selectPrimary(NextDestination.SEARCH) },
+                                        onOpenGoogleImages = onOpenGoogleImages,
                                         onOpenMapContext = { offer ->
                                             val context =
                                                 com.valuepilot.app.ArgentinaQualifiedStoreMapContextPresentation
@@ -746,20 +767,20 @@ private fun JourneyTopBar(
 ) {
     val title = when (destination) {
         NextDestination.HOME -> "ValuePilot"
-        NextDestination.SEARCH -> "Search"
-        NextDestination.BASKET -> "Your basket"
-        NextDestination.SAVED -> "Saved"
-        NextDestination.GOOD_PRICE_CHECK -> "Good Price"
-        NextDestination.STAPLE_WATCH_SETUP -> "Watch My Staples"
-        NextDestination.PRIVATE_PRICE_HISTORY -> "Price history"
-        NextDestination.COMPARE -> "Compare products"
-        NextDestination.SETTINGS -> "Settings"
-        NextDestination.OBSERVED_PRICE_SELECTION -> "Observed price"
-        NextDestination.OBSERVED_PRICE_CONFIRMATION -> "Price confirmation"
-        NextDestination.PRODUCT_DETAIL -> "Product detail"
-        NextDestination.SHOPPING_DECISION -> "Shopping decision"
-        NextDestination.TRIP_PLANNER -> "Trip planner"
-        NextDestination.MAP_HANDOFF -> "Store context"
+        NextDestination.SEARCH -> "Buscar"
+        NextDestination.BASKET -> "Canasta"
+        NextDestination.SAVED -> "Guardados"
+        NextDestination.GOOD_PRICE_CHECK -> "Buen precio"
+        NextDestination.STAPLE_WATCH_SETUP -> "Mis esenciales"
+        NextDestination.PRIVATE_PRICE_HISTORY -> "Historial de precios"
+        NextDestination.COMPARE -> "Comparar productos"
+        NextDestination.SETTINGS -> "Ajustes"
+        NextDestination.OBSERVED_PRICE_SELECTION -> "Precio observado"
+        NextDestination.OBSERVED_PRICE_CONFIRMATION -> "Confirmar precio"
+        NextDestination.PRODUCT_DETAIL -> "Producto"
+        NextDestination.SHOPPING_DECISION -> "Decisión de compra"
+        NextDestination.TRIP_PLANNER -> "Plan de viaje"
+        NextDestination.MAP_HANDOFF -> "Contexto de tienda"
     }
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val compact = usesCompactJourneyTopBar(maxWidth, LocalDensity.current.fontScale)
@@ -828,7 +849,7 @@ private fun JourneyTopBar(
                     .widthIn(min = 64.dp)
                     .semantics { contentDescription = "Exit preview and return to the classic app" }
             ) {
-                Text("Exit", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Salir", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

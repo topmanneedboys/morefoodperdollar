@@ -37,10 +37,10 @@ internal fun PremiumColumn(content: LazyListScope.() -> Unit) {
         LazyColumn(
             modifier = Modifier.widthIn(max = 760.dp).fillMaxSize(),
             contentPadding = PaddingValues(
-                horizontal = ValuePilotSpacing.xxLarge,
-                vertical = ValuePilotSpacing.xLarge
+                horizontal = ValuePilotSpacing.large,
+                vertical = ValuePilotSpacing.large
             ),
-            verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xLarge),
+            verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xxLarge),
             content = content
         )
     }

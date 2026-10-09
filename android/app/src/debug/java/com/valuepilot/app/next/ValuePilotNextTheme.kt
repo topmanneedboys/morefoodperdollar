@@ -11,23 +11,25 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.valuepilot.app.R
 
 /** ValuePilot's original warm, editorial palette. */
 internal object ValuePilotPalette {
     val brand = Color(0xFFB64F34)
     val ink = Color(0xFF262722)
-    val mutedInk = Color(0xFF5F625B)
+    val mutedInk = Color(0xFF5D5E58)
     val ivory = Color(0xFFF6F3EC)
-    val paper = Color(0xFFFFFCF6)
-    val line = Color(0xFFE2DCD1)
-    val green = Color(0xFF315F50)
-    val positive = Color(0xFF23664F)
+    val paper = Color(0xFFFFFFFF)
+    val line = Color(0xFFE4DFD3)
+    val green = Color(0xFF3D6B52)
+    val positive = Color(0xFF3D6B52)
     val warning = Color(0xFF8C570B)
     val error = Color(0xFFAC3329)
 }
@@ -138,21 +140,23 @@ internal object ValuePilotSemanticColors {
 }
 
 internal val ValuePilotLightColorScheme = lightColorScheme(
-    primary = ValuePilotPalette.brand,
+    primary = Color(0xFF11120E),
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFF4D9CF),
-    onPrimaryContainer = Color(0xFF4E2418),
-    secondary = ValuePilotPalette.green,
+    primaryContainer = ValuePilotPalette.ink,
+    onPrimaryContainer = Color(0xFFFAF8F3),
+    secondary = Color(0xFFA13F26),
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFDCEBE3),
-    onSecondaryContainer = Color(0xFF183A30),
-    tertiary = Color(0xFF79542D),
+    secondaryContainer = Color(0xFFF8ECE8),
+    onSecondaryContainer = Color(0xFF741F08),
+    tertiary = ValuePilotPalette.positive,
     onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFE9F0EB),
+    onTertiaryContainer = Color(0xFF214F38),
     background = ValuePilotPalette.ivory,
     onBackground = ValuePilotPalette.ink,
     surface = ValuePilotPalette.paper,
     onSurface = ValuePilotPalette.ink,
-    surfaceVariant = Color(0xFFECE7DD),
+    surfaceVariant = Color(0xFFEFEBE1),
     onSurfaceVariant = ValuePilotPalette.mutedInk,
     outline = Color(0xFF817B70),
     outlineVariant = ValuePilotPalette.line,
@@ -163,21 +167,23 @@ internal val ValuePilotLightColorScheme = lightColorScheme(
 )
 
 internal val ValuePilotDarkColorScheme = darkColorScheme(
-    primary = Color(0xFFFFA27E),
-    onPrimary = Color(0xFF421D12),
-    primaryContainer = Color(0xFF783B27),
-    onPrimaryContainer = Color(0xFFFFDBCE),
-    secondary = Color(0xFF9FD2BD),
-    onSecondary = Color(0xFF17392F),
-    secondaryContainer = Color(0xFF31584A),
-    onSecondaryContainer = Color(0xFFBCE9D5),
-    tertiary = Color(0xFFE3C19A),
-    onTertiary = Color(0xFF402D16),
-    background = Color(0xFF1B1D19),
+    primary = Color(0xFFF3F0E8),
+    onPrimary = Color(0xFF1C1C18),
+    primaryContainer = Color(0xFF3A3B35),
+    onPrimaryContainer = Color(0xFFF3F0E8),
+    secondary = Color(0xFFFFA184),
+    onSecondary = Color(0xFF36170D),
+    secondaryContainer = Color(0xFF713B2C),
+    onSecondaryContainer = Color(0xFFFFD9CC),
+    tertiary = Color(0xFF9FD2B6),
+    onTertiary = Color(0xFF17392A),
+    tertiaryContainer = Color(0xFF284D3A),
+    onTertiaryContainer = Color(0xFFC0E9D0),
+    background = Color(0xFF1C1C18),
     onBackground = Color(0xFFF1EEE6),
-    surface = Color(0xFF232620),
+    surface = Color(0xFF262722),
     onSurface = Color(0xFFF1EEE6),
-    surfaceVariant = Color(0xFF343830),
+    surfaceVariant = Color(0xFF34352F),
     onSurfaceVariant = Color(0xFFC6C4BA),
     outline = Color(0xFF96978D),
     outlineVariant = Color(0xFF484B43),
@@ -187,65 +193,92 @@ internal val ValuePilotDarkColorScheme = darkColorScheme(
     onErrorContainer = Color(0xFFFFDAD4)
 )
 
+private val ValuePilotJakartaSans = FontFamily(
+    Font(R.font.plus_jakarta_sans_variable, FontWeight.Normal),
+    Font(R.font.plus_jakarta_sans_variable, FontWeight.Medium),
+    Font(R.font.plus_jakarta_sans_variable, FontWeight.SemiBold),
+    Font(R.font.plus_jakarta_sans_variable, FontWeight.Bold)
+)
+
 private val ValuePilotTypography = Typography(
     displayLarge = TextStyle(
-        fontFamily = FontFamily.Serif,
-        fontWeight = FontWeight.SemiBold,
+        fontFamily = ValuePilotJakartaSans,
+        fontWeight = FontWeight.Bold,
         fontSize = 36.sp,
-        lineHeight = 42.sp,
-        letterSpacing = (-0.7).sp
+        lineHeight = 44.sp,
+        letterSpacing = (-1.08).sp
     ),
     headlineLarge = TextStyle(
-        fontFamily = FontFamily.Serif,
-        fontWeight = FontWeight.SemiBold,
+        fontFamily = ValuePilotJakartaSans,
+        fontWeight = FontWeight.Bold,
         fontSize = 30.sp,
-        lineHeight = 36.sp,
-        letterSpacing = (-0.35).sp
+        lineHeight = 38.sp,
+        letterSpacing = (-0.75).sp
     ),
     headlineMedium = TextStyle(
-        fontFamily = FontFamily.Serif,
+        fontFamily = ValuePilotJakartaSans,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 25.sp,
-        lineHeight = 31.sp,
-        letterSpacing = (-0.2).sp
+        fontSize = 24.sp,
+        lineHeight = 32.sp,
+        letterSpacing = (-0.48).sp
     ),
     titleLarge = TextStyle(
+        fontFamily = ValuePilotJakartaSans,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 20.sp,
-        lineHeight = 26.sp
+        fontSize = 18.sp,
+        lineHeight = 24.sp,
+        letterSpacing = (-0.27).sp
     ),
     titleMedium = TextStyle(
+        fontFamily = ValuePilotJakartaSans,
         fontWeight = FontWeight.SemiBold,
         fontSize = 16.sp,
-        lineHeight = 22.sp
+        lineHeight = 22.sp,
+        letterSpacing = (-0.16).sp
     ),
     bodyLarge = TextStyle(
+        fontFamily = ValuePilotJakartaSans,
         fontSize = 16.sp,
         lineHeight = 24.sp
     ),
     bodyMedium = TextStyle(
+        fontFamily = ValuePilotJakartaSans,
         fontSize = 14.sp,
-        lineHeight = 21.sp
+        lineHeight = 20.sp
+    ),
+    bodySmall = TextStyle(
+        fontFamily = ValuePilotJakartaSans,
+        fontSize = 12.sp,
+        lineHeight = 16.sp
     ),
     labelLarge = TextStyle(
+        fontFamily = ValuePilotJakartaSans,
         fontWeight = FontWeight.SemiBold,
         fontSize = 14.sp,
         lineHeight = 20.sp
     ),
     labelMedium = TextStyle(
-        fontWeight = FontWeight.Bold,
+        fontFamily = ValuePilotJakartaSans,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 12.sp,
         lineHeight = 16.sp,
-        letterSpacing = 0.65.sp
+        letterSpacing = 0.24.sp
+    ),
+    labelSmall = TextStyle(
+        fontFamily = ValuePilotJakartaSans,
+        fontWeight = FontWeight.Bold,
+        fontSize = 11.sp,
+        lineHeight = 14.sp,
+        letterSpacing = 0.44.sp
     )
 )
 
 private val ValuePilotShapes = Shapes(
-    extraSmall = RoundedCornerShape(6.dp),
-    small = RoundedCornerShape(12.dp),
-    medium = RoundedCornerShape(18.dp),
-    large = RoundedCornerShape(24.dp),
-    extraLarge = RoundedCornerShape(32.dp)
+    extraSmall = RoundedCornerShape(4.dp),
+    small = RoundedCornerShape(8.dp),
+    medium = RoundedCornerShape(12.dp),
+    large = RoundedCornerShape(16.dp),
+    extraLarge = RoundedCornerShape(24.dp)
 )
 
 @Composable

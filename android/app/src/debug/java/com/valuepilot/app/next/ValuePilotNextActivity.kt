@@ -8,10 +8,13 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,11 +31,13 @@ import com.valuepilot.app.ComparisonActivity
 import com.valuepilot.app.DebugNextSavedToolsHandoff
 import com.valuepilot.app.GoodPriceShareCard
 import com.valuepilot.app.MainActivity
+import com.valuepilot.app.PracticalShoppingSearchIdentityPresentation
 
 /** Debug-only owner for the production-backed Compose shopping journey. */
 class ValuePilotNextActivity : AppCompatActivity() {
     private lateinit var journey: ValuePilotNextJourneyViewModel
     private var observedPriceProofPicker: AndroidUserObservedPriceProofContentPicker? = null
+    private var googleImagesLaunchInFlight = false
     private val goodPriceBarcodeCaptureLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (!::journey.isInitialized) return@registerForActivityResult
@@ -107,6 +112,7 @@ class ValuePilotNextActivity : AppCompatActivity() {
                     onOpenLegacyComparisonTools = {
                         startActivity(Intent(this, ComparisonActivity::class.java))
                     },
+                    onOpenGoogleImages = ::openGoogleImages,
                     onShareCompareHereResult = ::shareCompareHereResult,
                     onOpenStoreMap = ::openStoreMap,
                     onStartGoodPriceBarcodeScan = ::startGoodPriceBarcodeScan,
@@ -120,6 +126,7 @@ class ValuePilotNextActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        googleImagesLaunchInFlight = false
         if (::journey.isInitialized) {
             journey.refreshPrivateIdentitiesFromStore()
             journey.refreshPrivatePriceHistory()
@@ -145,6 +152,60 @@ class ValuePilotNextActivity : AppCompatActivity() {
             false
         }
     }
+
+    private fun openGoogleImages(
+        match: PracticalShoppingSearchIdentityPresentation.Match,
+        areaLabel: String
+    ) {
+        if (googleImagesLaunchInFlight) return
+        val uri = GoogleImagesHandoff.urlFor(match, areaLabel)?.toUri() ?: run {
+            Toast.makeText(this, "No se pudo preparar la búsqueda de imágenes.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        googleImagesLaunchInFlight = true
+        val partialTab = CustomTabsIntent.Builder()
+            .setShowTitle(true)
+            .setInitialActivityHeightPx(
+                googleImagesInitialHeightPx(),
+                CustomTabsIntent.ACTIVITY_HEIGHT_ADJUSTABLE
+            )
+            .build()
+        try {
+            partialTab.launchUrl(this, uri)
+        } catch (_: ActivityNotFoundException) {
+            showGoogleImagesFallback(uri)
+        } catch (_: SecurityException) {
+            showGoogleImagesFallback(uri)
+        }
+    }
+
+    private fun showGoogleImagesFallback(uri: Uri) {
+        googleImagesLaunchInFlight = false
+        AlertDialog.Builder(this)
+            .setTitle("Google Images")
+            .setMessage("El navegador no pudo abrir la pestaña parcial. ¿Querés abrir la página en pantalla completa?")
+            .setNegativeButton("Cancelar", null)
+            .setPositiveButton("Abrir navegador") { _, _ -> launchGoogleImagesFullScreen(uri) }
+            .show()
+    }
+
+    private fun launchGoogleImagesFullScreen(uri: Uri) {
+        googleImagesLaunchInFlight = true
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
+        } catch (_: ActivityNotFoundException) {
+            googleImagesLaunchInFlight = false
+            Toast.makeText(this, "No hay un navegador disponible.", Toast.LENGTH_SHORT).show()
+        } catch (_: SecurityException) {
+            googleImagesLaunchInFlight = false
+            Toast.makeText(this, "No se pudo abrir Google Images.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun googleImagesInitialHeightPx(): Int = maxOf(
+        resources.displayMetrics.heightPixels * GOOGLE_IMAGES_INITIAL_HEIGHT_PERCENT / 100,
+        (GOOGLE_IMAGES_MIN_INITIAL_HEIGHT_DP * resources.displayMetrics.density).toInt()
+    )
 
     private fun startGoodPriceBarcodeScan() {
         journey.onGoodPriceBarcodeScanRequested()
@@ -238,4 +299,9 @@ class ValuePilotNextActivity : AppCompatActivity() {
                 1f
             ) == 0f
         }.getOrDefault(false)
+
+    private companion object {
+        const val GOOGLE_IMAGES_INITIAL_HEIGHT_PERCENT = 65
+        const val GOOGLE_IMAGES_MIN_INITIAL_HEIGHT_DP = 320
+    }
 }
