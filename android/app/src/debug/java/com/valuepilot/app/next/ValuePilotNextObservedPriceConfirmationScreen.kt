@@ -9,12 +9,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -26,6 +32,7 @@ import com.valuepilot.app.UserObservedPriceConfirmationDraftMissingField
 import com.valuepilot.app.UserObservedPriceConfirmationDraftProofContentSelectionPresentation
 import com.valuepilot.app.UserProvidedPriceProofType
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ValuePilotNextObservedPriceConfirmationScreen(
     state: ValuePilotNextObservedPriceConfirmationUiState?,
@@ -43,6 +50,38 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
     var utcOffsetText by rememberSaveable { mutableStateOf("") }
     var artifactIdText by rememberSaveable { mutableStateOf("") }
     var proofTypeName by rememberSaveable { mutableStateOf("") }
+    var showDatePicker by rememberSaveable { mutableStateOf(false) }
+
+    if (showDatePicker) {
+        val datePickerState = key(dateText) {
+            rememberDatePickerState(
+                initialSelectedDateMillis = ValuePilotObservedDatePickerFormat.toEpochMillis(dateText)
+            )
+        }
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { selectedDate ->
+                            dateText = ValuePilotObservedDatePickerFormat.fromEpochMillis(selectedDate)
+                        }
+                        showDatePicker = false
+                    },
+                    enabled = datePickerState.selectedDateMillis != null
+                ) {
+                    Text("Use date")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
 
     PremiumColumn {
         item(key = "observed-price-confirmation-intro") {
@@ -125,7 +164,12 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
                         label = { Text("Date") },
                         placeholder = { Text("YYYY-MM-DD") },
                         singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii)
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
+                        trailingIcon = {
+                            TextButton(onClick = { showDatePicker = true }) {
+                                Text("Choose")
+                            }
+                        }
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
                         OutlinedTextField(
