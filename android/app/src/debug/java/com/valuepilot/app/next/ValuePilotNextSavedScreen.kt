@@ -31,6 +31,19 @@ import com.valuepilot.app.PracticalShoppingSavedSurfaceState
 import com.valuepilot.app.PracticalShoppingSavedSurfaceStoreRow
 import com.valuepilot.app.PracticalShoppingSavedStapleLaunchUiState
 
+internal data class ValuePilotNextPurchaseHistoryAvailabilityPresentation(
+    val eyebrow: String,
+    val title: String,
+    val detail: String
+)
+
+internal fun valuePilotNextPurchaseHistoryAvailabilityPresentation() =
+    ValuePilotNextPurchaseHistoryAvailabilityPresentation(
+        eyebrow = "PURCHASE HISTORY · UNAVAILABLE",
+        title = "Purchase history is not available in this preview.",
+        detail = "No purchase or receipt source is connected. Private price history tracks price observations you entered; it does not record what you bought."
+    )
+
 @Composable
 internal fun ValuePilotSavedScreen(
     state: PracticalShoppingSavedSurfaceState,
@@ -195,6 +208,12 @@ internal fun ValuePilotSavedScreen(
             )
         }
 
+        item(key = "saved-purchase-history-unavailable") {
+            PurchaseHistoryUnavailableCard(
+                presentation = valuePilotNextPurchaseHistoryAvailabilityPresentation()
+            )
+        }
+
         item(key = "saved-staple-watch-launch") {
             ActionCard(
                 eyebrow = "RECURRING STAPLES",
@@ -214,6 +233,38 @@ internal fun ValuePilotSavedScreen(
                 detail = "Open the existing Saved screen for management tools that have not moved into Compose yet.",
                 actionLabel = "Open existing Saved tools",
                 onClick = onOpenSavedTools
+            )
+        }
+    }
+}
+
+@Composable
+private fun PurchaseHistoryUnavailableCard(
+    presentation: ValuePilotNextPurchaseHistoryAvailabilityPresentation
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = ValuePilotElevation.flat)
+    ) {
+        Column(
+            modifier = Modifier.padding(ValuePilotSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)
+        ) {
+            Eyebrow(presentation.eyebrow)
+            Text(
+                presentation.title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                presentation.detail,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

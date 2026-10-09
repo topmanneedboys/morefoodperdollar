@@ -216,10 +216,14 @@ internal fun ValuePilotNextGoodPriceScreen(
                     .fillMaxWidth()
                     .focusRequester(draftFocusRequester),
                 label = { Text("Product, package and price") },
-                placeholder = { Text(stringResource(R.string.good_price_input_hint)) },
-                supportingText = { Text(stringResource(R.string.good_price_input_body)) },
-                minLines = 4,
-                maxLines = 8,
+                placeholder = { Text("Product name\nExact package quantity\nObserved price + currency") },
+                supportingText = {
+                    Text(
+                        "Use one line each for the product, exact package quantity, and price with currency. This is your observation, not a live store offer."
+                    )
+                },
+                minLines = 3,
+                maxLines = 6,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Text,
                     imeAction = ImeAction.Done
