@@ -17,6 +17,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.browser.customtabs.CustomTabsClient
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.core.view.WindowCompat
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -95,11 +96,18 @@ class ValuePilotNextActivity : AppCompatActivity() {
                 systemReducedMotion = systemAnimationsDisabled()
                 onDispose { contentResolver.unregisterContentObserver(observer) }
             }
+            val darkTheme = ValuePilotNextUiPreferencesCodec.resolvesDarkTheme(
+                appearance = presentationPreferences.appearance,
+                systemDarkTheme = isSystemInDarkTheme()
+            )
+            DisposableEffect(darkTheme) {
+                val systemBars = WindowCompat.getInsetsController(window, window.decorView)
+                systemBars.isAppearanceLightStatusBars = !darkTheme
+                systemBars.isAppearanceLightNavigationBars = !darkTheme
+                onDispose { }
+            }
             ValuePilotNextTheme(
-                darkTheme = ValuePilotNextUiPreferencesCodec.resolvesDarkTheme(
-                    appearance = presentationPreferences.appearance,
-                    systemDarkTheme = isSystemInDarkTheme()
-                ),
+                darkTheme = darkTheme,
                 density = presentationPreferences.density
             ) {
                 ValuePilotNextApp(

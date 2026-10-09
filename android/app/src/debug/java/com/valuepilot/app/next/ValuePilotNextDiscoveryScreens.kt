@@ -4,14 +4,17 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -859,7 +862,8 @@ internal fun ValuePilotProductDetailScreen(
     onOpenGoogleImages: (PracticalShoppingSearchIdentityPresentation.Match, String) -> Unit,
     onOpenMapContext: (ArgentinaBackendContract.SearchOffer) -> Unit
 ) {
-    ValuePilotDiscoveryColumn {
+    Column(modifier = Modifier.fillMaxSize()) {
+        ValuePilotDiscoveryColumn(modifier = Modifier.weight(1f)) {
         if (match == null) {
             item(key = "product-detail-unavailable") {
                 if (isSearchLoading) {
@@ -1003,22 +1007,93 @@ internal fun ValuePilotProductDetailScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            } else {
-                item(key = "product-detail-add") {
-                    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                        PrimaryDiscoveryAction(
-                            label = "Añadir a tu canasta privada",
-                            onClick = { onAddToBasket(match) },
-                            enabled = !match.sourceLabel.isNullOrBlank()
-                        )
-                        Text(
-                            "Se guarda la identidad con fuente. El precio se vuelve a revisar antes de decidir.",
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp, lineHeight = 14.sp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+            }
+        }
+        }
+        match?.let {
+            ProductDetailStickyActions(
+                match = it,
+                areaLabel = areaLabel,
+                isDesignFixture = isDesignFixture,
+                onAddToBasket = { onAddToBasket(it) },
+                onOpenGoogleImages = { onOpenGoogleImages(it, areaLabel) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProductDetailStickyActions(
+    match: PracticalShoppingSearchIdentityPresentation.Match,
+    areaLabel: String,
+    isDesignFixture: Boolean,
+    onAddToBasket: () -> Unit,
+    onOpenGoogleImages: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        tonalElevation = 1.dp
+    ) {
+        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Row(
+                modifier = Modifier
+                    .widthIn(max = 760.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 9.dp),
+                horizontalArrangement = Arrangement.spacedBy(9.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (isDesignFixture) {
+                    PrimaryDiscoveryAction(
+                        label = "Ver en Google Images",
+                        onClick = onOpenGoogleImages,
+                        modifier = Modifier.weight(1f)
+                    )
+                } else {
+                    ProductDetailGoogleImagesAction(
+                        match = match,
+                        areaLabel = areaLabel,
+                        onClick = onOpenGoogleImages
+                    )
+                    PrimaryDiscoveryAction(
+                        label = "Añadir a tu canasta privada",
+                        onClick = onAddToBasket,
+                        enabled = !match.sourceLabel.isNullOrBlank(),
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ProductDetailGoogleImagesAction(
+    match: PracticalShoppingSearchIdentityPresentation.Match,
+    areaLabel: String,
+    onClick: () -> Unit
+) {
+    val query = GoogleImagesHandoff.queryFor(match, areaLabel)
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .size(52.dp)
+            .semantics {
+                contentDescription = query?.let { "Ver en Google Images. Búsqueda: $it" }
+                    ?: "Ver en Google Images: ${match.displayName}"
+            },
+        shape = RoundedCornerShape(13.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = MaterialTheme.colorScheme.onSurface
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                painter = painterResource(R.drawable.ic_vp_image_search),
+                contentDescription = null,
+                modifier = Modifier.size(22.dp)
+            )
         }
     }
 }
@@ -1041,11 +1116,16 @@ private fun CompactEvidenceNotice(text: String) {
 }
 
 @Composable
-private fun PrimaryDiscoveryAction(label: String, onClick: () -> Unit, enabled: Boolean = true) {
+private fun PrimaryDiscoveryAction(
+    label: String,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier
+) {
     Surface(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+        modifier = modifier.fillMaxWidth().heightIn(min = 48.dp),
         shape = RoundedCornerShape(11.dp),
         color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
         contentColor = if (enabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
