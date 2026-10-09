@@ -4,14 +4,18 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -23,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.valuepilot.app.PracticalShoppingSavedSurfaceAction
 import com.valuepilot.app.PracticalShoppingSavedSurfaceMode
@@ -89,13 +94,13 @@ internal fun ValuePilotSavedScreen(
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {
                 Eyebrow("YOUR SHOPPING MEMORY")
                 Text(
-                    "The products and stores you return to.",
+                    "The products and stores\nyou return to.",
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     "Keep useful choices close. Saved names help you find them again; they are not live prices or current offers.",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -144,13 +149,7 @@ internal fun ValuePilotSavedScreen(
 
         state.emptyMessage?.let { message ->
             item(key = "saved-empty") {
-                EmptyStateCard(
-                    eyebrow = "A GOOD PLACE TO START",
-                    title = "Build a personal shortlist.",
-                    detail = message,
-                    actionLabel = "Search products",
-                    onAction = onSearch
-                )
+                SavedShortlistCard(detail = message, onSearch = onSearch)
             }
         }
 
@@ -184,11 +183,18 @@ internal fun ValuePilotSavedScreen(
         }
 
         item(key = "saved-tools-heading") {
-            SectionHeading("PERSONAL TOOLS", "Put your saved choices to work")
+            Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
+                Eyebrow("PERSONAL TOOLS")
+                Text(
+                    "Put your saved choices to work.",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
         }
 
         item(key = "saved-existing-tools") {
-            ActionCard(
+            SavedToolCard(
                 eyebrow = "PERSONAL PRICE MEMORY",
                 title = "Record a price you saw",
                 detail = "Choose a saved product and exact saved store, then add your observed price and proof.",
@@ -198,7 +204,7 @@ internal fun ValuePilotSavedScreen(
         }
 
         item(key = "saved-private-price-history") {
-            ActionCard(
+            SavedToolCard(
                 eyebrow = "ON THIS DEVICE",
                 title = "Your private price history",
                 detail = "Review past comparison observations and manage the copy stored on this device. They are not live store prices.",
@@ -214,7 +220,7 @@ internal fun ValuePilotSavedScreen(
         }
 
         item(key = "saved-staple-watch-launch") {
-            ActionCard(
+            SavedToolCard(
                 eyebrow = "RECURRING STAPLES",
                 title = stapleLaunch?.title ?: "Watch My Staples",
                 detail = stapleLaunch?.supportingText
@@ -224,7 +230,114 @@ internal fun ValuePilotSavedScreen(
                 onClick = onOpenStapleWatch
             )
         }
+    }
+}
 
+@Composable
+private fun SavedShortlistCard(
+    detail: String,
+    onSearch: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = ValuePilotElevation.flat)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(ValuePilotSpacing.xxLarge),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)
+        ) {
+            Text(
+                "⌑",
+                style = MaterialTheme.typography.displaySmall,
+                color = MaterialTheme.colorScheme.secondary,
+                fontWeight = FontWeight.Light
+            )
+            Eyebrow("A GOOD PLACE TO START")
+            Text(
+                "Build a personal shortlist.",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                detail,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            PrimaryActionButton(label = "Search products", onClick = onSearch)
+        }
+    }
+}
+
+@Composable
+private fun SavedToolCard(
+    eyebrow: String,
+    title: String,
+    detail: String,
+    actionLabel: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = ValuePilotElevation.flat)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(ValuePilotSpacing.large),
+            verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)
+                ) {
+                    Eyebrow(eyebrow)
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                Text(
+                    "→",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            }
+            Text(
+                detail,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            TextButton(
+                onClick = onClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(actionLabel)
+                    Text("→", color = MaterialTheme.colorScheme.secondary)
+                }
+            }
+        }
     }
 }
 
@@ -234,7 +347,7 @@ private fun PurchaseHistoryUnavailableCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
+        shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
         ),
@@ -243,9 +356,26 @@ private fun PurchaseHistoryUnavailableCard(
     ) {
         Column(
             modifier = Modifier.padding(ValuePilotSpacing.large),
-            verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)
+            verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)
         ) {
-            Eyebrow(presentation.eyebrow)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Eyebrow(presentation.eyebrow)
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
+                ) {
+                    Text(
+                        "NOT CONNECTED",
+                        modifier = Modifier.padding(horizontal = ValuePilotSpacing.small, vertical = ValuePilotSpacing.xSmall),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
             Text(
                 presentation.title,
                 style = MaterialTheme.typography.titleMedium,
@@ -270,15 +400,16 @@ private fun SavedProductCard(
         title = row.title,
         supportingText = row.supportingText,
         actions = {
-            Column(
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall),
-                horizontalAlignment = Alignment.End
+                horizontalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 row.secondaryAction?.let { action ->
                     TextButton(
                         onClick = { onCheckPrice(action) },
                         modifier = Modifier
+                            .weight(1f)
                             .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
                             .semantics {
                                 contentDescription = row.secondaryActionDescription
@@ -293,6 +424,7 @@ private fun SavedProductCard(
                     TextButton(
                         onClick = { onRemove(action) },
                         modifier = Modifier
+                            .weight(1f)
                             .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
                             .semantics {
                                 contentDescription = row.actionDescription
@@ -321,7 +453,7 @@ private fun SavedStoreCard(
                 TextButton(
                     onClick = { onRemove(action) },
                     modifier = Modifier
-                        .align(Alignment.End)
+                        .fillMaxWidth()
                         .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
                         .semantics {
                             contentDescription = row.actionDescription
@@ -329,7 +461,13 @@ private fun SavedStoreCard(
                                 ?: "Remove saved store"
                         }
                 ) {
-                    Text(row.actionLabel ?: "Remove")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(row.actionLabel ?: "Remove")
+                        Text("→", color = MaterialTheme.colorScheme.secondary)
+                    }
                 }
             }
         }
@@ -344,7 +482,7 @@ private fun SavedChoiceCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
+        shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         elevation = CardDefaults.cardElevation(defaultElevation = ValuePilotElevation.flat)
@@ -353,14 +491,37 @@ private fun SavedChoiceCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(ValuePilotSpacing.large),
-            verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)
+            verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)
         ) {
-            Text(title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
-            Text(
-                supportingText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)
+                ) {
+                    Text(title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+                    Text(
+                        supportingText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f)
+                ) {
+                    Text(
+                        "SAVED",
+                        modifier = Modifier.padding(horizontal = ValuePilotSpacing.small, vertical = ValuePilotSpacing.xSmall),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+            Spacer(Modifier.size(ValuePilotSpacing.xSmall))
             actions()
         }
     }

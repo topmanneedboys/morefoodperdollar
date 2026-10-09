@@ -47,6 +47,14 @@ class ValuePilotNextAppNavigationTest {
     }
 
     @Test
+    fun `a Saved handoff starts with Saved selected`() {
+        assertEquals(
+            AppPrimaryTab.SAVED,
+            initialShellStateForNextDestination(NextDestination.SAVED).selectedPrimaryTab
+        )
+    }
+
+    @Test
     fun `a fresh observed price attempt clears old form state before opening`() {
         val events = mutableListOf<String>()
 

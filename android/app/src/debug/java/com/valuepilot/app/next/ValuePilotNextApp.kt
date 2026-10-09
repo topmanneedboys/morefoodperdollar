@@ -133,6 +133,13 @@ internal fun primaryTabForNextDestination(
     }
 }
 
+internal fun initialShellStateForNextDestination(
+    destination: NextDestination
+): AppShellState =
+    AppShellState.initial().copy(
+        selectedPrimaryTab = primaryTabForNextDestination(destination)
+    )
+
 private data class PrimaryDestination(
     val tab: AppPrimaryTab,
     val destination: NextDestination,
@@ -201,7 +208,7 @@ internal fun ValuePilotNextApp(
 ) {
     val ui = journey.uiState
     var shellState by rememberSaveable(stateSaver = appShellStateSaver) {
-        mutableStateOf(AppShellState.initial())
+        mutableStateOf(initialShellStateForNextDestination(startDestination))
     }
     var routeStack by rememberSaveable(stateSaver = destinationStackSaver) {
         mutableStateOf(listOf(startDestination))
