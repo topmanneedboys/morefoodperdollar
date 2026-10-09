@@ -130,17 +130,13 @@ internal fun ValuePilotSavedScreen(
         }
 
         item(key = "saved-legacy-tools") {
-            Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
-                Text(
-                    "Need the earlier Saved experience? You can still open it here.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                SecondaryActionButton(
-                    label = "Open remaining Saved tools",
-                    onClick = onOpenSavedTools
-                )
-            }
+            ActionCard(
+                eyebrow = "STILL IN THE CLASSIC APP",
+                title = "More Saved tools",
+                detail = "Open the existing Saved screen for management tools that have not moved into Compose yet.",
+                actionLabel = "Open existing Saved tools",
+                onClick = onOpenSavedTools
+            )
         }
 
         if (state.progressVisible) {
