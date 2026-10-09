@@ -89,56 +89,6 @@ internal fun ValuePilotSavedScreen(
             }
         }
 
-        item(key = "saved-existing-tools") {
-            ActionCard(
-                eyebrow = "PERSONAL PRICE MEMORY",
-                title = "Record a price you saw",
-                detail = "Choose a saved product and exact saved store, then add your observed price and proof.",
-                actionLabel = "Start price confirmation",
-                onClick = onRecordObservedPrice
-            )
-        }
-
-        item(key = "saved-private-price-history") {
-            ActionCard(
-                eyebrow = "ON THIS DEVICE",
-                title = "Your private price history",
-                detail = "Review past comparison observations and manage the copy stored on this device. They are not live store prices.",
-                actionLabel = "Review price history",
-                onClick = onOpenPrivatePriceHistory
-            )
-        }
-
-        stapleLaunch?.title?.let { title ->
-            item(key = "saved-staple-watch-launch") {
-                if (stapleLaunch.action != null) {
-                    ActionCard(
-                        eyebrow = "RECURRING STAPLES",
-                        title = title,
-                        detail = stapleLaunch.supportingText
-                            ?: "Choose the saved staples you return to most.",
-                        actionLabel = stapleLaunch.actionLabel ?: "Set up Watch My Staples",
-                        onClick = onOpenStapleWatch
-                    )
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
-                        Text(title, style = MaterialTheme.typography.titleMedium)
-                        stapleLaunch.notice?.let { EvidenceNotice(it) }
-                    }
-                }
-            }
-        }
-
-        item(key = "saved-legacy-tools") {
-            ActionCard(
-                eyebrow = "STILL IN THE CLASSIC APP",
-                title = "More Saved tools",
-                detail = "Open the existing Saved screen for management tools that have not moved into Compose yet.",
-                actionLabel = "Open existing Saved tools",
-                onClick = onOpenSavedTools
-            )
-        }
-
         if (state.progressVisible) {
             item(key = "saved-progress") {
                 LoadingRow(state.statusMessage ?: "Updating saved choices…")
@@ -219,6 +169,60 @@ internal fun ValuePilotSavedScreen(
                     Text("Clear all saved choices", color = MaterialTheme.colorScheme.error)
                 }
             }
+        }
+
+        item(key = "saved-tools-heading") {
+            SectionHeading("PERSONAL TOOLS", "Put your saved choices to work")
+        }
+
+        item(key = "saved-existing-tools") {
+            ActionCard(
+                eyebrow = "PERSONAL PRICE MEMORY",
+                title = "Record a price you saw",
+                detail = "Choose a saved product and exact saved store, then add your observed price and proof.",
+                actionLabel = "Start price confirmation",
+                onClick = onRecordObservedPrice
+            )
+        }
+
+        item(key = "saved-private-price-history") {
+            ActionCard(
+                eyebrow = "ON THIS DEVICE",
+                title = "Your private price history",
+                detail = "Review past comparison observations and manage the copy stored on this device. They are not live store prices.",
+                actionLabel = "Review price history",
+                onClick = onOpenPrivatePriceHistory
+            )
+        }
+
+        stapleLaunch?.title?.let { title ->
+            item(key = "saved-staple-watch-launch") {
+                if (stapleLaunch.action != null) {
+                    ActionCard(
+                        eyebrow = "RECURRING STAPLES",
+                        title = title,
+                        detail = stapleLaunch.supportingText
+                            ?: "Choose the saved staples you return to most.",
+                        actionLabel = stapleLaunch.actionLabel ?: "Set up Watch My Staples",
+                        onClick = onOpenStapleWatch
+                    )
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
+                        Text(title, style = MaterialTheme.typography.titleMedium)
+                        stapleLaunch.notice?.let { EvidenceNotice(it) }
+                    }
+                }
+            }
+        }
+
+        item(key = "saved-legacy-tools") {
+            ActionCard(
+                eyebrow = "STILL IN THE CLASSIC APP",
+                title = "More Saved tools",
+                detail = "Open the existing Saved screen for management tools that have not moved into Compose yet.",
+                actionLabel = "Open existing Saved tools",
+                onClick = onOpenSavedTools
+            )
         }
     }
 }
