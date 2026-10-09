@@ -108,6 +108,24 @@ class MainActivitySearchIdentityBoundaryTest {
     }
 
     @Test
+    fun `Search card body and actions share a vertical content column`() {
+        val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
+            .replace("\r\n", "\n")
+        val cardStart = activity.indexOf("private fun createSearchResultView(")
+        val cardEnd = activity.indexOf("private fun showQualifiedOfferDetails", cardStart)
+        assertTrue(cardStart >= 0)
+        assertTrue(cardEnd > cardStart)
+        val card = activity.substring(cardStart, cardEnd)
+
+        assertTrue(card.contains("LinearLayout(this).apply {"))
+        assertTrue(card.contains("orientation = LinearLayout.VERTICAL"))
+        assertTrue(card.contains("addView(body)"))
+        assertTrue(card.contains("addView(actions)"))
+        assertFalse(card.contains("card.addView(body)"))
+        assertFalse(card.contains("card.addView(actions)"))
+    }
+
+    @Test
     fun `Search route hides generic shell chrome without changing route state`() {
         val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
             .replace("\r\n", "\n")

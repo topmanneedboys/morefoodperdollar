@@ -17,6 +17,7 @@ import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
@@ -2525,8 +2526,18 @@ class MainActivity : AppCompatActivity() {
             setOnClickListener { onAddToHome(match) }
         }
         actions.addView(addHomeButton)
-        card.addView(body)
-        card.addView(actions)
+        // MaterialCardView is a FrameLayout. Keep the evidence body and its
+        // actions in one vertical content column so action controls never
+        // stack over long product names or price text.
+        LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            addView(body)
+            addView(actions)
+        }.also(card::addView)
         return card
     }
 
