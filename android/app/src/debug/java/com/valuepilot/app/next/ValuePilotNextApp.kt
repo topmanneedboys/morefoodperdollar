@@ -131,7 +131,8 @@ internal fun ValuePilotNextApp(
     onExitPreview: () -> Unit,
     onOpenComparison: () -> Unit,
     onOpenStoreMap: (com.valuepilot.app.ArgentinaPrivateBasketStoreProjection) -> Boolean,
-    onCheckSavedPrice: (String) -> Unit
+    onCheckSavedPrice: (String) -> Unit,
+    onOpenSavedTools: () -> Unit
 ) {
     val ui = journey.uiState
     var shellState by rememberSaveable(stateSaver = appShellStateSaver) {
@@ -443,7 +444,8 @@ internal fun ValuePilotNextApp(
                                     state = ui.saved,
                                     onAction = journey::onSavedSurfaceAction,
                                     onCheckPrice = onCheckSavedPrice,
-                                    onSearch = { selectPrimary(NextDestination.SEARCH) }
+                                    onSearch = { selectPrimary(NextDestination.SEARCH) },
+                                    onOpenSavedTools = onOpenSavedTools
                                 )
                             }
                             }

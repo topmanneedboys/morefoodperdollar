@@ -244,6 +244,18 @@ class MainActivity : AppCompatActivity() {
 
         installSystemBarInsets()
         shellState = restoreShellState(savedInstanceState)
+        if (
+            savedInstanceState == null &&
+                DebugNextSavedToolsHandoff.shouldOpenSavedTools(
+                    debugBuild = BuildConfig.DEBUG,
+                    action = intent?.action
+                )
+        ) {
+            shellState = AppShellReducer.reduce(
+                shellState,
+                AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED)
+            )
+        }
         homeSessionState = restoreHomeState(savedInstanceState)
         refreshHomePrivateMemory()
         searchQuery = savedInstanceState?.getString(STATE_SEARCH_QUERY).orEmpty()
@@ -312,6 +324,19 @@ class MainActivity : AppCompatActivity() {
         bottomNavigation.selectedItemId = menuIdFor(shellState.selectedPrimaryTab)
         renderShell(shellState)
         restoreHomeItemDetailsDialog(savedInstanceState)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (
+            DebugNextSavedToolsHandoff.shouldOpenSavedTools(
+                debugBuild = BuildConfig.DEBUG,
+                action = intent.action
+            )
+        ) {
+            dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED))
+        }
     }
 
     override fun onResume() {

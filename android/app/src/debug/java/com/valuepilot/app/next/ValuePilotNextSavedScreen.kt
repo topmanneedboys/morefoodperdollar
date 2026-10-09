@@ -35,7 +35,8 @@ internal fun ValuePilotSavedScreen(
     state: PracticalShoppingSavedSurfaceState,
     onAction: (PracticalShoppingSavedSurfaceAction) -> Unit,
     onCheckPrice: (String) -> Unit,
-    onSearch: () -> Unit
+    onSearch: () -> Unit,
+    onOpenSavedTools: () -> Unit
 ) {
     var confirmClearAll by remember { mutableStateOf(false) }
 
@@ -81,6 +82,16 @@ internal fun ValuePilotSavedScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+
+        item(key = "saved-existing-tools") {
+            ActionCard(
+                eyebrow = "MORE IN VALUEPILOT",
+                title = "Price history and Staple Watch",
+                detail = "These tools still open in the existing ValuePilot screens.",
+                actionLabel = "Open price tools",
+                onClick = onOpenSavedTools
+            )
         }
 
         if (state.progressVisible) {
