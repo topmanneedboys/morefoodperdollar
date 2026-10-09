@@ -20,6 +20,7 @@ import androidx.browser.customtabs.CustomTabsClient
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.view.WindowCompat
 import androidx.core.net.toUri
+import androidx.lifecycle.ViewModelProvider
 import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewAssetLoader
@@ -32,11 +33,36 @@ import java.io.ByteArrayInputStream
 class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private lateinit var assetLoader: WebViewAssetLoader
+    private lateinit var journey: ValuePilotNextJourneyViewModel
     private val handler = Handler(Looper.getMainLooper())
     private val previewPreferences by lazy {
         getSharedPreferences(PREVIEW_PREFERENCES_NAME, MODE_PRIVATE)
     }
     private var googleImagesLaunchInFlight = false
+    private var nativeSearchQuery: String? = null
+    private var nativeSearchInitialGeneration = -1L
+    private var nativeSearchDeadlineMillis = 0L
+
+    private val nativeSearchPoll = object : Runnable {
+        override fun run() {
+            if (!::webView.isInitialized || !::journey.isInitialized) return
+            val query = nativeSearchQuery ?: return
+            val search = journey.uiState.search
+            val completed =
+                search.query.trim() == query &&
+                    search.generation > nativeSearchInitialGeneration &&
+                    search.mode != com.valuepilot.app.ArgentinaLiveSearchSurfaceMode.LOADING
+            if (completed || System.currentTimeMillis() >= nativeSearchDeadlineMillis) {
+                nativeSearchQuery = null
+                webView.evaluateJavascript(
+                    "window.ValuePilotHtmlPreview && window.ValuePilotHtmlPreview.receiveNativeSearch(${ValuePilotNextHtmlNativeSearchBridge.encode(search)})",
+                    null
+                )
+                return
+            }
+            handler.postDelayed(this, NATIVE_SEARCH_POLL_INTERVAL_MS)
+        }
+    }
 
     private val googleImagesLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -57,6 +83,8 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        journey = ViewModelProvider(this)[ValuePilotNextJourneyViewModel::class.java]
+        journey.start(applicationContext)
         WindowCompat.setDecorFitsSystemWindows(window, true)
         applySystemBars(darkTheme = false)
 
@@ -95,6 +123,8 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         handler.removeCallbacks(themeSync)
+        handler.removeCallbacks(nativeSearchPoll)
+        nativeSearchQuery = null
         if (::webView.isInitialized) {
             webView.stopLoading()
             webView.removeAllViews()
@@ -174,6 +204,18 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                             .apply()
                         return
                     }
+                    val nativeSearch = ValuePilotNextHtmlPreviewContract
+                        .parseNativeSearchMessage(message.data)
+                    if (nativeSearch != null) {
+                        startNativeSearch(nativeSearch.query)
+                        return
+                    }
+                    val nativePhoto = ValuePilotNextHtmlPreviewContract
+                        .parseNativeGoogleImagesMessage(message.data)
+                    if (nativePhoto != null) {
+                        openGoogleImages(nativePhoto)
+                        return
+                    }
                     val request = ValuePilotNextHtmlPreviewContract
                         .parseOpenGoogleImagesMessage(message.data)
                         ?: return
@@ -181,6 +223,17 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                 }
             }
         )
+    }
+
+    private fun startNativeSearch(query: String) {
+        if (!::journey.isInitialized) return
+        handler.removeCallbacks(nativeSearchPoll)
+        nativeSearchQuery = query
+        nativeSearchInitialGeneration = journey.uiState.search.generation
+        nativeSearchDeadlineMillis = System.currentTimeMillis() + NATIVE_SEARCH_TIMEOUT_MS
+        journey.queryChanged(query)
+        journey.submitSearch(query)
+        handler.post(nativeSearchPoll)
     }
 
     private fun installBackHandling() {
@@ -205,6 +258,17 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
     private fun openGoogleImages(request: ValuePilotNextHtmlPhotoRequest) {
         if (googleImagesLaunchInFlight) return
         val uri = ValuePilotNextHtmlPreviewContract.urlFor(request).toUri()
+        openGoogleImages(uri)
+    }
+
+    private fun openGoogleImages(request: ValuePilotNextHtmlNativePhotoRequest) {
+        if (googleImagesLaunchInFlight) return
+        val uri = ValuePilotNextHtmlPreviewContract.urlFor(request).toUri()
+        openGoogleImages(uri)
+    }
+
+    private fun openGoogleImages(uri: Uri) {
+        if (googleImagesLaunchInFlight) return
         googleImagesLaunchInFlight = true
         val customTab = CustomTabsIntent.Builder()
             .setShowTitle(true)
@@ -271,6 +335,8 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         const val INITIAL_HEIGHT_PERCENT = 65
         const val MIN_INITIAL_HEIGHT_DP = 320
         const val THEME_SYNC_INTERVAL_MS = 300L
+        const val NATIVE_SEARCH_POLL_INTERVAL_MS = 120L
+        const val NATIVE_SEARCH_TIMEOUT_MS = 20_000L
         const val PREVIEW_PREFERENCES_NAME = "valuepilot_next_html_preview"
         const val PREF_LANGUAGE = "language"
     }

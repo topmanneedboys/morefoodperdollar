@@ -91,4 +91,48 @@ class ValuePilotNextHtmlPreviewContractTest {
             )
         )
     }
+
+    @Test
+    fun acceptsOnlyBoundedNativeSearchQueries() {
+        assertEquals(
+            "leche entera",
+            ValuePilotNextHtmlPreviewContract
+                .parseNativeSearchMessage(
+                    "{\"type\":\"SEARCH_VALUEPILOT\",\"query\":\" leche entera \"}"
+                )
+                ?.query
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeSearchMessage(
+                "{\"type\":\"SEARCH_VALUEPILOT\",\"query\":\"\u0001\"}"
+            )
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeSearchMessage(
+                "{\"type\":\"SEARCH_VALUEPILOT\",\"query\":\"${"x".repeat(97)}\"}"
+            )
+        )
+    }
+
+    @Test
+    fun buildsNativeGoogleImagesQueriesFromIdentityFields() {
+        val request = requireNotNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeGoogleImagesMessage(
+                "{\"type\":\"OPEN_GOOGLE_IMAGES_NATIVE\",\"brand\":\"Armonía\",\"name\":\"Leche Entera\",\"quantity\":\"1.000 ml\"}"
+            )
+        )
+        assertEquals(
+            "Armonía Leche Entera 1.000 ml envase Argentina",
+            request.query
+        )
+        assertTrue(
+            ValuePilotNextHtmlPreviewContract.urlFor(request)
+                .contains("Armon%C3%ADa%20Leche%20Entera")
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeGoogleImagesMessage(
+                "{\"type\":\"OPEN_GOOGLE_IMAGES_NATIVE\",\"name\":\"\"}"
+            )
+        )
+    }
 }

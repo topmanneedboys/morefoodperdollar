@@ -13,6 +13,25 @@ internal data class ValuePilotNextHtmlLanguageRequest(
     val language: String
 )
 
+internal data class ValuePilotNextHtmlNativeSearchRequest(
+    val query: String
+)
+
+internal data class ValuePilotNextHtmlNativePhotoRequest(
+    val brand: String?,
+    val name: String,
+    val quantity: String?
+) {
+    val query: String
+        get() = listOfNotNull(
+            brand?.trim()?.takeIf { it.isNotEmpty() },
+            name.trim().takeIf { it.isNotEmpty() },
+            quantity?.trim()?.takeIf { it.isNotEmpty() },
+            "envase",
+            "Argentina"
+        ).joinToString(" ")
+}
+
 internal data class ValuePilotNextHtmlProduct(
     val productId: String,
     val brand: String,
@@ -23,7 +42,7 @@ internal data class ValuePilotNextHtmlProduct(
         get() = listOf(brand, name, quantity, "envase", "Argentina").joinToString(" ")
 }
 
-/** Native boundary for the supplied HTML prototype's single external action. */
+/** Native boundary for the supplied HTML prototype's external and Search actions. */
 internal object ValuePilotNextHtmlPreviewContract {
     const val GOOGLE_IMAGES_HOST = "www.google.com"
     const val MAX_QUERY_LENGTH = 240
@@ -96,7 +115,49 @@ internal object ValuePilotNextHtmlPreviewContract {
         }
     }
 
+    /**
+     * Parses the explicit opt-in from the HTML preview to the existing Kotlin
+     * Search surface. The preview never sends arbitrary URLs or backend data;
+     * it only supplies the bounded user query and the native surface applies
+     * its normal release, App Check and evidence rules.
+     */
+    fun parseNativeSearchMessage(rawMessage: String?): ValuePilotNextHtmlNativeSearchRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 1_024) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        if (json.optString("type") != "SEARCH_VALUEPILOT") return null
+        val query = json.optString("query").trim()
+        if (
+            query.isBlank() ||
+            query.length > 96 ||
+            containsControlCharacter(query)
+        ) return null
+        return ValuePilotNextHtmlNativeSearchRequest(query)
+    }
+
+    /**
+     * Native Search identities can be outside the six visual fixtures. Keep
+     * the same strict query construction while allowing the real identity
+     * fields returned by the Kotlin shopping engine.
+     */
+    fun parseNativeGoogleImagesMessage(rawMessage: String?): ValuePilotNextHtmlNativePhotoRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 1_024) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        if (json.optString("type") != "OPEN_GOOGLE_IMAGES_NATIVE") return null
+        val brand = json.optString("brand").trim().takeIf { it.isNotEmpty() }
+        val name = json.optString("name").trim()
+        val quantity = json.optString("quantity").trim().takeIf { it.isNotEmpty() }
+        if (name.isBlank() || name.length > 160) return null
+        if (brand != null && brand.length > 120) return null
+        if (quantity != null && quantity.length > 64) return null
+        val request = ValuePilotNextHtmlNativePhotoRequest(brand, name, quantity)
+        if (request.query.length > MAX_QUERY_LENGTH || containsControlCharacter(request.query)) return null
+        return request
+    }
+
     fun urlFor(request: ValuePilotNextHtmlPhotoRequest): String =
+        "https://$GOOGLE_IMAGES_HOST/search?tbm=isch&q=${encodeQuery(request.query)}"
+
+    fun urlFor(request: ValuePilotNextHtmlNativePhotoRequest): String =
         "https://$GOOGLE_IMAGES_HOST/search?tbm=isch&q=${encodeQuery(request.query)}"
 
     fun productFor(productId: String): ValuePilotNextHtmlProduct? = productsById[productId]
