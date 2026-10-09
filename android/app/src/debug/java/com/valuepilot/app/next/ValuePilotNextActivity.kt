@@ -62,7 +62,8 @@ class ValuePilotNextActivity : AppCompatActivity() {
                 darkTheme = ValuePilotNextUiPreferencesCodec.resolvesDarkTheme(
                     appearance = presentationPreferences.appearance,
                     systemDarkTheme = isSystemInDarkTheme()
-                )
+                ),
+                density = presentationPreferences.density
             ) {
                 ValuePilotNextApp(
                     journey = journey,

@@ -7,10 +7,13 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,18 +32,76 @@ internal object ValuePilotPalette {
     val error = Color(0xFFAC3329)
 }
 
-/** Four-point spacing rhythm, with room for dense price details and comfortable browsing. */
+internal data class ValuePilotSpacingScale(
+    val hairline: Dp,
+    val xSmall: Dp,
+    val small: Dp,
+    val medium: Dp,
+    val large: Dp,
+    val xLarge: Dp,
+    val xxLarge: Dp,
+    val section: Dp,
+    val page: Dp,
+    val minimumTouchTarget: Dp
+)
+
+private val ComfortableSpacing = ValuePilotSpacingScale(
+    hairline = 1.dp,
+    xSmall = 4.dp,
+    small = 8.dp,
+    medium = 12.dp,
+    large = 16.dp,
+    xLarge = 20.dp,
+    xxLarge = 24.dp,
+    section = 32.dp,
+    page = 40.dp,
+    minimumTouchTarget = 48.dp
+)
+
+private val CompactSpacing = ValuePilotSpacingScale(
+    hairline = 1.dp,
+    xSmall = 3.dp,
+    small = 6.dp,
+    medium = 9.dp,
+    large = 12.dp,
+    xLarge = 16.dp,
+    xxLarge = 18.dp,
+    section = 24.dp,
+    page = 30.dp,
+    minimumTouchTarget = 48.dp
+)
+
+internal fun valuePilotSpacingScaleFor(density: ValuePilotNextDensity): ValuePilotSpacingScale =
+    when (density) {
+        ValuePilotNextDensity.COMFORTABLE -> ComfortableSpacing
+        ValuePilotNextDensity.COMPACT -> CompactSpacing
+    }
+
+private val LocalValuePilotSpacingScale =
+    staticCompositionLocalOf { valuePilotSpacingScaleFor(ValuePilotNextDensity.COMFORTABLE) }
+
+/** Compact mode tightens content spacing while preserving Android's 48 dp touch target. */
 internal object ValuePilotSpacing {
-    val hairline = 1.dp
-    val xSmall = 4.dp
-    val small = 8.dp
-    val medium = 12.dp
-    val large = 16.dp
-    val xLarge = 20.dp
-    val xxLarge = 24.dp
-    val section = 32.dp
-    val page = 40.dp
-    val minimumTouchTarget = 48.dp
+    val hairline: Dp
+        @Composable get() = LocalValuePilotSpacingScale.current.hairline
+    val xSmall: Dp
+        @Composable get() = LocalValuePilotSpacingScale.current.xSmall
+    val small: Dp
+        @Composable get() = LocalValuePilotSpacingScale.current.small
+    val medium: Dp
+        @Composable get() = LocalValuePilotSpacingScale.current.medium
+    val large: Dp
+        @Composable get() = LocalValuePilotSpacingScale.current.large
+    val xLarge: Dp
+        @Composable get() = LocalValuePilotSpacingScale.current.xLarge
+    val xxLarge: Dp
+        @Composable get() = LocalValuePilotSpacingScale.current.xxLarge
+    val section: Dp
+        @Composable get() = LocalValuePilotSpacingScale.current.section
+    val page: Dp
+        @Composable get() = LocalValuePilotSpacingScale.current.page
+    val minimumTouchTarget: Dp
+        @Composable get() = LocalValuePilotSpacingScale.current.minimumTouchTarget
 }
 
 internal object ValuePilotElevation {
@@ -190,12 +251,17 @@ private val ValuePilotShapes = Shapes(
 @Composable
 internal fun ValuePilotNextTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    density: ValuePilotNextDensity = ValuePilotNextDensity.COMFORTABLE,
     content: @Composable () -> Unit
 ) {
-    MaterialTheme(
-        colorScheme = if (darkTheme) DarkScheme else LightScheme,
-        typography = ValuePilotTypography,
-        shapes = ValuePilotShapes,
-        content = content
-    )
+    CompositionLocalProvider(
+        LocalValuePilotSpacingScale provides valuePilotSpacingScaleFor(density)
+    ) {
+        MaterialTheme(
+            colorScheme = if (darkTheme) DarkScheme else LightScheme,
+            typography = ValuePilotTypography,
+            shapes = ValuePilotShapes,
+            content = content
+        )
+    }
 }

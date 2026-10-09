@@ -26,6 +26,7 @@ internal fun ValuePilotNextSettingsScreen(
     preferences: ValuePilotNextUiPreferences,
     onAppearanceSelected: (ValuePilotNextAppearance) -> Unit,
     onMotionSelected: (ValuePilotNextMotionPreference) -> Unit,
+    onDensitySelected: (ValuePilotNextDensity) -> Unit,
     onBack: () -> Unit
 ) {
     PremiumColumn {
@@ -38,7 +39,7 @@ internal fun ValuePilotNextSettingsScreen(
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    "Choose an appearance and motion level. These preferences affect the Compose experience only.",
+                    "Choose an appearance, motion level, and display density. These preferences affect the Compose experience only.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -103,9 +104,32 @@ internal fun ValuePilotNextSettingsScreen(
             }
         }
 
+        item(key = "settings-density") {
+            Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
+                SectionHeading("DISPLAY DENSITY", "Choose how much fits on screen")
+                Column(
+                    modifier = Modifier.selectableGroup(),
+                    verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)
+                ) {
+                    SettingChoiceRow(
+                        title = "Comfortable",
+                        detail = "Keep the current generous spacing.",
+                        selected = preferences.density == ValuePilotNextDensity.COMFORTABLE,
+                        onClick = { onDensitySelected(ValuePilotNextDensity.COMFORTABLE) }
+                    )
+                    SettingChoiceRow(
+                        title = "Compact",
+                        detail = "Fit more cards while keeping touch targets comfortable.",
+                        selected = preferences.density == ValuePilotNextDensity.COMPACT,
+                        onClick = { onDensitySelected(ValuePilotNextDensity.COMPACT) }
+                    )
+                }
+            }
+        }
+
         item(key = "settings-accessibility-note") {
             EvidenceFootnote(
-                "Text size follows Android display settings. Shopping prices, saved data, and evidence are not changed here."
+                "Text size follows Android display settings. Compact spacing does not shrink touch targets. Shopping prices, saved data, and evidence are not changed here."
             )
         }
 

@@ -635,6 +635,11 @@ internal fun ValuePilotNextApp(
                                             presentationPreferences.copy(motion = motion)
                                         )
                                     },
+                                    onDensitySelected = { density ->
+                                        onPresentationPreferencesChanged(
+                                            presentationPreferences.copy(density = density)
+                                        )
+                                    },
                                     onBack = ::navigateBack
                                 )
 

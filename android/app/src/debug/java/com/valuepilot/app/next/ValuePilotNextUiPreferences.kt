@@ -14,16 +14,27 @@ internal enum class ValuePilotNextMotionPreference {
     FULL
 }
 
+internal enum class ValuePilotNextDensity {
+    COMFORTABLE,
+    COMPACT
+}
+
 internal data class ValuePilotNextUiPreferences(
     val appearance: ValuePilotNextAppearance = ValuePilotNextAppearance.SYSTEM,
-    val motion: ValuePilotNextMotionPreference = ValuePilotNextMotionPreference.SYSTEM
+    val motion: ValuePilotNextMotionPreference = ValuePilotNextMotionPreference.SYSTEM,
+    val density: ValuePilotNextDensity = ValuePilotNextDensity.COMFORTABLE
 )
 
 internal object ValuePilotNextUiPreferencesCodec {
-    fun decode(appearance: String?, motion: String?): ValuePilotNextUiPreferences =
+    fun decode(
+        appearance: String?,
+        motion: String?,
+        density: String? = null
+    ): ValuePilotNextUiPreferences =
         ValuePilotNextUiPreferences(
             appearance = appearance.toEnumOrNull() ?: ValuePilotNextAppearance.SYSTEM,
-            motion = motion.toEnumOrNull() ?: ValuePilotNextMotionPreference.SYSTEM
+            motion = motion.toEnumOrNull() ?: ValuePilotNextMotionPreference.SYSTEM,
+            density = density.toEnumOrNull() ?: ValuePilotNextDensity.COMFORTABLE
         )
 
     fun resolvesDarkTheme(
@@ -61,13 +72,15 @@ internal class ValuePilotNextUiPreferencesStore(context: Context) {
     fun load(): ValuePilotNextUiPreferences =
         ValuePilotNextUiPreferencesCodec.decode(
             appearance = preferences.getString(KEY_APPEARANCE, null),
-            motion = preferences.getString(KEY_MOTION, null)
+            motion = preferences.getString(KEY_MOTION, null),
+            density = preferences.getString(KEY_DENSITY, null)
         )
 
     fun save(value: ValuePilotNextUiPreferences) {
         preferences.edit()
             .putString(KEY_APPEARANCE, value.appearance.name)
             .putString(KEY_MOTION, value.motion.name)
+            .putString(KEY_DENSITY, value.density.name)
             .apply()
     }
 
@@ -75,5 +88,6 @@ internal class ValuePilotNextUiPreferencesStore(context: Context) {
         const val PREFERENCES_NAME = "valuepilot_next_presentation_v1"
         const val KEY_APPEARANCE = "appearance"
         const val KEY_MOTION = "motion"
+        const val KEY_DENSITY = "density"
     }
 }

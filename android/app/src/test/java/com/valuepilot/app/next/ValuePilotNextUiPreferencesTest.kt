@@ -1,5 +1,6 @@
 package com.valuepilot.app.next
 
+import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -15,8 +16,44 @@ class ValuePilotNextUiPreferencesTest {
         )
         assertEquals(
             ValuePilotNextUiPreferences(),
-            ValuePilotNextUiPreferencesCodec.decode(appearance = "BROKEN", motion = "UNKNOWN")
+            ValuePilotNextUiPreferencesCodec.decode(
+                appearance = "BROKEN",
+                motion = "UNKNOWN",
+                density = "WIDE"
+            )
         )
+    }
+
+    @Test
+    fun `density preference decodes compact and comfortable values`() {
+        assertEquals(
+            ValuePilotNextDensity.COMPACT,
+            ValuePilotNextUiPreferencesCodec.decode(
+                appearance = null,
+                motion = null,
+                density = "COMPACT"
+            ).density
+        )
+        assertEquals(
+            ValuePilotNextDensity.COMFORTABLE,
+            ValuePilotNextUiPreferencesCodec.decode(
+                appearance = null,
+                motion = null,
+                density = null
+            ).density
+        )
+    }
+
+    @Test
+    fun `compact spacing preserves touch targets while fitting more content`() {
+        val comfortable = valuePilotSpacingScaleFor(ValuePilotNextDensity.COMFORTABLE)
+        val compact = valuePilotSpacingScaleFor(ValuePilotNextDensity.COMPACT)
+
+        assertTrue(compact.page < comfortable.page)
+        assertTrue(compact.section < comfortable.section)
+        assertTrue(compact.medium < comfortable.medium)
+        assertEquals(48.dp, comfortable.minimumTouchTarget)
+        assertEquals(comfortable.minimumTouchTarget, compact.minimumTouchTarget)
     }
 
     @Test
