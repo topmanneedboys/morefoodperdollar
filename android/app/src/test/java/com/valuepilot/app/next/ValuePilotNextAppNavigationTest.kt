@@ -27,4 +27,22 @@ class ValuePilotNextAppNavigationTest {
             )
         )
     }
+
+    @Test
+    fun `Settings keeps the originating tab selected`() {
+        assertEquals(
+            AppPrimaryTab.SAVED,
+            primaryTabForNextDestination(
+                destination = NextDestination.SETTINGS,
+                originDestination = NextDestination.PRIVATE_PRICE_HISTORY
+            )
+        )
+        assertEquals(
+            AppPrimaryTab.HOME,
+            primaryTabForNextDestination(
+                destination = NextDestination.SETTINGS,
+                originDestination = NextDestination.HOME
+            )
+        )
+    }
 }

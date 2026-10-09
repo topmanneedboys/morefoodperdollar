@@ -9,6 +9,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModelProvider
 import com.valuepilot.app.AndroidUserObservedPriceProofContentPicker
@@ -46,12 +51,30 @@ class ValuePilotNextActivity : AppCompatActivity() {
                 contentSource = AndroidUserObservedPriceProofContentSource(contentResolver),
                 onReadResult = journey::onObservedPriceProofContentReadResult
             ).also { picker -> journey.attachObservedPriceProofPicker(picker::launch) }
+        val uiPreferencesStore = ValuePilotNextUiPreferencesStore(applicationContext)
 
         setContent {
-            ValuePilotNextTheme {
+            var presentationPreferences by remember {
+                mutableStateOf(uiPreferencesStore.load())
+            }
+            val systemReducedMotion = remember { systemAnimationsDisabled() }
+            ValuePilotNextTheme(
+                darkTheme = ValuePilotNextUiPreferencesCodec.resolvesDarkTheme(
+                    appearance = presentationPreferences.appearance,
+                    systemDarkTheme = isSystemInDarkTheme()
+                )
+            ) {
                 ValuePilotNextApp(
                     journey = journey,
-                    reducedMotion = systemAnimationsDisabled(),
+                    reducedMotion = ValuePilotNextUiPreferencesCodec.resolvesReducedMotion(
+                        preference = presentationPreferences.motion,
+                        systemReducedMotion = systemReducedMotion
+                    ),
+                    presentationPreferences = presentationPreferences,
+                    onPresentationPreferencesChanged = { updated ->
+                        uiPreferencesStore.save(updated)
+                        presentationPreferences = updated
+                    },
                     onExitPreview = ::finish,
                     onOpenLegacyComparisonTools = {
                         startActivity(Intent(this, ComparisonActivity::class.java))

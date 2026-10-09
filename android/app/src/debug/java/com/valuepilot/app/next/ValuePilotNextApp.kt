@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -53,6 +54,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalFocusManager
@@ -78,15 +81,18 @@ internal enum class NextDestination(val primaryTab: AppPrimaryTab?) {
     SHOPPING_DECISION(null),
     TRIP_PLANNER(null),
     MAP_HANDOFF(null),
-    COMPARE(null)
+    COMPARE(null),
+    SETTINGS(null)
 }
 
 internal fun primaryTabForNextDestination(
     destination: NextDestination,
     originDestination: NextDestination? = null
 ): AppPrimaryTab {
-    if (destination == NextDestination.COMPARE) {
-        val origin = originDestination?.takeIf { it != NextDestination.COMPARE }
+    if (destination == NextDestination.COMPARE || destination == NextDestination.SETTINGS) {
+        val origin = originDestination?.takeIf {
+            it != NextDestination.COMPARE && it != NextDestination.SETTINGS
+        }
             ?: NextDestination.HOME
         return primaryTabForNextDestination(origin)
     }
@@ -102,6 +108,7 @@ internal fun primaryTabForNextDestination(
         NextDestination.TRIP_PLANNER,
         NextDestination.MAP_HANDOFF -> AppPrimaryTab.BASKET
         NextDestination.COMPARE -> AppPrimaryTab.HOME
+        NextDestination.SETTINGS -> AppPrimaryTab.HOME
         else -> AppPrimaryTab.HOME
     }
 }
@@ -159,6 +166,8 @@ private val appShellStateSaver = listSaver<AppShellState, String>(
 internal fun ValuePilotNextApp(
     journey: ValuePilotNextJourneyViewModel,
     reducedMotion: Boolean,
+    presentationPreferences: ValuePilotNextUiPreferences,
+    onPresentationPreferencesChanged: (ValuePilotNextUiPreferences) -> Unit,
     onExitPreview: () -> Unit,
     onOpenLegacyComparisonTools: () -> Unit,
     onShareCompareHereResult: (com.valuepilot.app.CompareHereShareCard) -> Boolean,
@@ -262,7 +271,9 @@ internal fun ValuePilotNextApp(
     }
 
     fun syncSelectedTab(destination: NextDestination) {
-        val origin = currentDestination.takeIf { destination == NextDestination.COMPARE }
+        val origin = currentDestination.takeIf {
+            destination == NextDestination.COMPARE || destination == NextDestination.SETTINGS
+        }
         val tab = primaryTabForNextDestination(destination, origin)
         if (shellState.selectedPrimaryTab != tab) {
             shellState = AppShellReducer.reduce(shellState, AppShellIntent.SelectPrimary(tab))
@@ -363,6 +374,7 @@ internal fun ValuePilotNextApp(
                         destination = currentDestination,
                         canGoBack = routeStack.size > 1,
                         onBack = ::navigateBack,
+                        onOpenSettings = { navigate(NextDestination.SETTINGS) },
                         onExitPreview = onExitPreview
                     )
 
@@ -611,6 +623,21 @@ internal fun ValuePilotNextApp(
                                     onBack = ::navigateBack
                                 )
 
+                                NextDestination.SETTINGS -> ValuePilotNextSettingsScreen(
+                                    preferences = presentationPreferences,
+                                    onAppearanceSelected = { appearance ->
+                                        onPresentationPreferencesChanged(
+                                            presentationPreferences.copy(appearance = appearance)
+                                        )
+                                    },
+                                    onMotionSelected = { motion ->
+                                        onPresentationPreferencesChanged(
+                                            presentationPreferences.copy(motion = motion)
+                                        )
+                                    },
+                                    onBack = ::navigateBack
+                                )
+
                                 NextDestination.OBSERVED_PRICE_SELECTION ->
                                     ValuePilotObservedPriceSelectionScreen(
                                         savedState = ui.saved,
@@ -673,6 +700,7 @@ private fun JourneyTopBar(
     destination: NextDestination,
     canGoBack: Boolean,
     onBack: () -> Unit,
+    onOpenSettings: () -> Unit,
     onExitPreview: () -> Unit
 ) {
     val title = when (destination) {
@@ -684,6 +712,7 @@ private fun JourneyTopBar(
         NextDestination.STAPLE_WATCH_SETUP -> "Watch My Staples"
         NextDestination.PRIVATE_PRICE_HISTORY -> "Price history"
         NextDestination.COMPARE -> "Compare products"
+        NextDestination.SETTINGS -> "Settings"
         NextDestination.OBSERVED_PRICE_SELECTION -> "Observed price"
         NextDestination.OBSERVED_PRICE_CONFIRMATION -> "Price confirmation"
         NextDestination.PRODUCT_DETAIL -> "Product detail"
@@ -725,6 +754,20 @@ private fun JourneyTopBar(
                 color = MaterialTheme.colorScheme.tertiary,
                 fontSize = 10.sp
             )
+        }
+        if (destination != NextDestination.SETTINGS) {
+            IconButton(
+                onClick = onOpenSettings,
+                modifier = Modifier
+                    .size(ValuePilotSpacing.minimumTouchTarget)
+                    .semantics { contentDescription = "Open settings" }
+            ) {
+                Text(
+                    "⚙",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         androidx.compose.material3.TextButton(
             onClick = onExitPreview,
