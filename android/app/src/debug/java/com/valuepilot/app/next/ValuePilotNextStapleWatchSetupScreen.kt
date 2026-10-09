@@ -113,10 +113,10 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
             if (state.factCheckCapability == StapleWatchForegroundFactCheckCapability.NOT_CONFIGURED) {
                 item(key = "staple-watch-legacy-handoff") {
                     ActionCard(
-                        eyebrow = "SAVED TOOLS",
-                        title = "Need to change a product or store?",
-                        detail = "Return to the existing Saved screen to update your choices. Watch My Staples selections here are temporary.",
-                        actionLabel = "Open existing Saved tools",
+                        eyebrow = "CLASSIC WATCH FLOW",
+                        title = "Continue with the existing Watch tools",
+                        detail = "Current price and savings checks have not moved into Compose yet. Open Saved in the classic app, then choose Watch My Staples. The temporary selections here will not carry over.",
+                        actionLabel = "Open classic Saved & Watch tools",
                         onClick = onOpenLegacyStapleWatch
                     )
                 }
