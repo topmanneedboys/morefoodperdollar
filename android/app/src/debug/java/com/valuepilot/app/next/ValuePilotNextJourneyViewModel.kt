@@ -28,6 +28,14 @@ import com.valuepilot.app.ArgentinaLiveSearchDiagnostics
 import com.valuepilot.app.PracticalShoppingHomeSession
 import com.valuepilot.app.PracticalShoppingPrivateIdentity
 import com.valuepilot.app.PracticalShoppingSearchIdentityPresentation
+import com.valuepilot.app.PracticalShoppingSavedAndroidSession
+import com.valuepilot.app.PracticalShoppingSavedLifecycleController
+import com.valuepilot.app.PracticalShoppingSavedRouteCoordinator
+import com.valuepilot.app.PracticalShoppingSavedSurfaceAction
+import com.valuepilot.app.PracticalShoppingSavedSurfacePresenter
+import com.valuepilot.app.PracticalShoppingSavedSurfaceProjector
+import com.valuepilot.app.PracticalShoppingSavedSurfaceRenderer
+import com.valuepilot.app.PracticalShoppingSavedSurfaceState
 import com.valuepilot.app.ValuePilotArgentinaEdgeTransportFactory
 import java.util.concurrent.Executors
 
@@ -45,6 +53,10 @@ internal data class ValuePilotNextJourneyUiState(
     val search: ArgentinaLiveSearchSurfaceState,
     val privateIdentities: List<PracticalShoppingPrivateIdentity>,
     val basket: ArgentinaPrivateBasketRenderState,
+    val saved: PracticalShoppingSavedSurfaceState =
+        PracticalShoppingSavedSurfaceProjector.project(
+            PracticalShoppingSavedLifecycleController().initialState()
+        ),
     val plan: ArgentinaPrivateBasketPlanProjection? = null,
     val planLoading: Boolean = false,
     val planError: String? = null,
@@ -54,9 +66,9 @@ internal data class ValuePilotNextJourneyUiState(
 )
 
 /**
- * Keeps the qualified Search coordinator and transient price evidence alive across Activity
- * recreation. Durable state is limited to the existing private identity list; offer evidence
- * remains session-only and is never written into Home preferences.
+ * Keeps the qualified Search and Saved lifecycle owners alive across Activity recreation.
+ * Search offer evidence remains session-only; persisted private identities and Saved choices
+ * continue to use their established stores.
  */
 internal class ValuePilotNextJourneyViewModel : ViewModel() {
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -65,7 +77,9 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
     private val offerEvidence = linkedMapOf<String, List<ArgentinaBackendContract.SearchOffer>>()
 
     private var store: AndroidPracticalShoppingHomeSessionStore? = null
+    private var applicationContext: Context? = null
     private var searchHost: ArgentinaLiveSearchSurfaceHost? = null
+    private var savedRouteCoordinator: PracticalShoppingSavedRouteCoordinator? = null
     private var initialized = false
     private var cleared = false
     private var planRequestId = 0L
@@ -88,7 +102,19 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
         if (initialized || cleared) return
         check(Looper.myLooper() == Looper.getMainLooper())
         initialized = true
-        store = AndroidPracticalShoppingHomeSessionStore(context.applicationContext)
+        applicationContext = context.applicationContext ?: context
+        store = AndroidPracticalShoppingHomeSessionStore(requireNotNull(applicationContext))
+        savedRouteCoordinator =
+            PracticalShoppingSavedRouteCoordinator {
+                val renderer =
+                    PracticalShoppingSavedSurfacePresenter(
+                        PracticalShoppingSavedSurfaceRenderer(::publishSavedSurface)
+                    )
+                PracticalShoppingSavedAndroidSession.create(
+                    context = requireNotNull(applicationContext),
+                    renderer = renderer
+                )
+            }
         val identities = store?.load()?.privateIdentities.orEmpty()
         uiState = uiState.copy(
             privateIdentities = identities,
@@ -103,6 +129,26 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
             if (Looper.myLooper() == Looper.getMainLooper()) publish()
             else mainHandler.post(publish)
         }
+    }
+
+    fun onSavedRouteVisibilityChanged(visible: Boolean) {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        savedRouteCoordinator?.onRouteVisibilityChanged(visible)
+    }
+
+    fun onSavedSurfaceAction(action: PracticalShoppingSavedSurfaceAction) {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        savedRouteCoordinator?.onSurfaceAction(action)
+    }
+
+    private fun publishSavedSurface(state: PracticalShoppingSavedSurfaceState) {
+        val publish = {
+            if (!cleared) uiState = uiState.copy(saved = state)
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) publish()
+        else mainHandler.post(publish)
     }
 
     fun refreshPrivateIdentitiesFromStore() {
@@ -361,6 +407,9 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
     override fun onCleared() {
         cleared = true
         planRequestId = Math.addExact(planRequestId, 1L)
+        savedRouteCoordinator?.close()
+        savedRouteCoordinator = null
+        applicationContext = null
         searchHost?.close()
         searchHost = null
         planExecutor.shutdownNow()

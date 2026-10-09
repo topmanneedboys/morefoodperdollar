@@ -12,6 +12,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModelProvider
 import com.valuepilot.app.ArgentinaPrivateBasketStoreProjection
 import com.valuepilot.app.ComparisonActivity
+import com.valuepilot.app.GoodPriceActivity
 
 /** Debug-only owner for the production-backed Compose shopping journey. */
 class ValuePilotNextActivity : ComponentActivity() {
@@ -32,7 +33,8 @@ class ValuePilotNextActivity : ComponentActivity() {
                     onOpenComparison = {
                         startActivity(Intent(this, ComparisonActivity::class.java))
                     },
-                    onOpenStoreMap = ::openStoreMap
+                    onOpenStoreMap = ::openStoreMap,
+                    onCheckSavedPrice = ::openGoodPriceForSavedProduct
                 )
             }
         }
@@ -53,6 +55,15 @@ class ValuePilotNextActivity : ComponentActivity() {
         } catch (_: ActivityNotFoundException) {
             false
         }
+    }
+
+    private fun openGoodPriceForSavedProduct(displayName: String) {
+        startActivity(
+            Intent(this, GoodPriceActivity::class.java).putExtra(
+                GoodPriceActivity.EXTRA_PRODUCT_NAME,
+                displayName
+            )
+        )
     }
 
     private fun systemAnimationsDisabled(): Boolean =

@@ -635,21 +635,6 @@ private fun StoreContextCard(
     }
 }
 
-@Composable
-internal fun ValuePilotSavedScreen(onReturn: () -> Unit) {
-    PremiumColumn {
-        item(key = "saved-status") {
-            EmptyStateCard(
-                eyebrow = "SAVED FEATURES",
-                title = "Your existing saved tools remain in the current app.",
-                detail = "Saved identities, private price observations and Staple Watch are not part of this Stage 2 shopping slice.",
-                actionLabel = "Return to current app",
-                onAction = onReturn
-            )
-        }
-    }
-}
-
 private fun ArgentinaQualifiedStoreMapContext.asStoreProjection():
     ArgentinaPrivateBasketStoreProjection? {
     val validLatitude = latitude ?: return null

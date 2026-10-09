@@ -38,6 +38,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -129,7 +130,8 @@ internal fun ValuePilotNextApp(
     reducedMotion: Boolean,
     onExitPreview: () -> Unit,
     onOpenComparison: () -> Unit,
-    onOpenStoreMap: (com.valuepilot.app.ArgentinaPrivateBasketStoreProjection) -> Boolean
+    onOpenStoreMap: (com.valuepilot.app.ArgentinaPrivateBasketStoreProjection) -> Boolean,
+    onCheckSavedPrice: (String) -> Unit
 ) {
     val ui = journey.uiState
     var shellState by rememberSaveable(stateSaver = appShellStateSaver) {
@@ -155,6 +157,13 @@ internal fun ValuePilotNextApp(
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val currentDestination = routeStack.lastOrNull() ?: NextDestination.HOME
+    val savedDestinationVisible = currentDestination == NextDestination.SAVED
+    DisposableEffect(savedDestinationVisible) {
+        if (savedDestinationVisible) journey.onSavedRouteVisibilityChanged(true)
+        onDispose {
+            if (savedDestinationVisible) journey.onSavedRouteVisibilityChanged(false)
+        }
+    }
     val selectedMapOffer = remember(ui.search.presentation, selectedMapOfferKey) {
         ui.search.presentation?.matches
             ?.asSequence()
@@ -431,7 +440,10 @@ internal fun ValuePilotNextApp(
                                 )
 
                                 NextDestination.SAVED -> ValuePilotSavedScreen(
-                                    onReturn = onExitPreview
+                                    state = ui.saved,
+                                    onAction = journey::onSavedSurfaceAction,
+                                    onCheckPrice = onCheckSavedPrice,
+                                    onSearch = { selectPrimary(NextDestination.SEARCH) }
                                 )
                             }
                             }
