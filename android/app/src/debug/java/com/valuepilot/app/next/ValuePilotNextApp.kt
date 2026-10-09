@@ -70,6 +70,7 @@ private enum class NextDestination(val primaryTab: AppPrimaryTab?) {
     BASKET(AppPrimaryTab.BASKET),
     SAVED(AppPrimaryTab.SAVED),
     OBSERVED_PRICE_SELECTION(null),
+    OBSERVED_PRICE_CONFIRMATION(null),
     PRODUCT_DETAIL(null),
     SHOPPING_DECISION(null),
     TRIP_PLANNER(null),
@@ -133,9 +134,7 @@ internal fun ValuePilotNextApp(
     onOpenComparison: () -> Unit,
     onOpenStoreMap: (com.valuepilot.app.ArgentinaPrivateBasketStoreProjection) -> Boolean,
     onCheckSavedPrice: (String) -> Unit,
-    onOpenSavedTools: () -> Unit,
-    onOpenObservedPriceConfirmation:
-        (com.valuepilot.app.UserObservedPriceSavedPrefillHandoffAttempt) -> Unit
+    onOpenSavedTools: () -> Unit
 ) {
     val ui = journey.uiState
     var shellState by rememberSaveable(stateSaver = appShellStateSaver) {
@@ -182,6 +181,18 @@ internal fun ValuePilotNextApp(
             }
         }
     }
+    val observedPriceConfirmationVisible =
+        currentDestination == NextDestination.OBSERVED_PRICE_CONFIRMATION
+    DisposableEffect(observedPriceConfirmationVisible) {
+        if (observedPriceConfirmationVisible) {
+            journey.onObservedPriceConfirmationRouteVisibilityChanged(true)
+        }
+        onDispose {
+            if (observedPriceConfirmationVisible) {
+                journey.onObservedPriceConfirmationRouteVisibilityChanged(false)
+            }
+        }
+    }
     val selectedMapOffer = remember(ui.search.presentation, selectedMapOfferKey) {
         ui.search.presentation?.matches
             ?.asSequence()
@@ -196,6 +207,7 @@ internal fun ValuePilotNextApp(
     fun syncSelectedTab(destination: NextDestination) {
         val tab = destination.primaryTab ?: when (destination) {
             NextDestination.OBSERVED_PRICE_SELECTION -> AppPrimaryTab.SAVED
+            NextDestination.OBSERVED_PRICE_CONFIRMATION -> AppPrimaryTab.SAVED
             NextDestination.PRODUCT_DETAIL -> AppPrimaryTab.SEARCH
             NextDestination.SHOPPING_DECISION,
             NextDestination.TRIP_PLANNER,
@@ -208,6 +220,11 @@ internal fun ValuePilotNextApp(
     }
 
     fun selectPrimary(destination: NextDestination) {
+        if (currentDestination == NextDestination.OBSERVED_PRICE_CONFIRMATION &&
+            destination != NextDestination.OBSERVED_PRICE_CONFIRMATION
+        ) {
+            journey.cancelObservedPriceConfirmation()
+        }
         transitionDirection = 1
         syncSelectedTab(destination)
         routeStack = listOf(destination)
@@ -224,6 +241,9 @@ internal fun ValuePilotNextApp(
 
     fun navigateBack() {
         transitionDirection = -1
+        if (currentDestination == NextDestination.OBSERVED_PRICE_CONFIRMATION) {
+            journey.cancelObservedPriceConfirmation()
+        }
         if (routeStack.size > 1) {
             routeStack = routeStack.dropLast(1)
             syncSelectedTab(routeStack.last())
@@ -479,9 +499,24 @@ internal fun ValuePilotNextApp(
                                         onSavedAction = journey::onSavedSurfaceAction,
                                         onContinueToConfirmation = {
                                             journey.currentObservedPricePrefillAttemptOrNull()
-                                                ?.let(onOpenObservedPriceConfirmation)
+                                                ?.let { attempt ->
+                                                    if (journey.prepareObservedPriceConfirmation(attempt)) {
+                                                        navigate(NextDestination.OBSERVED_PRICE_CONFIRMATION)
+                                                    }
+                                                }
                                         },
                                         onBackToSaved = ::navigateBack
+                                    )
+
+                                NextDestination.OBSERVED_PRICE_CONFIRMATION ->
+                                    ValuePilotNextObservedPriceConfirmationScreen(
+                                        state = ui.observedPriceConfirmation,
+                                        onSetPrice = journey::onObservedPriceConfirmationPriceInput,
+                                        onSetObservedAt = journey::onObservedPriceConfirmationTimeInput,
+                                        onSetProofReference = journey::onObservedPriceConfirmationProofReferenceInput,
+                                        onSelectProof = journey::onObservedPriceConfirmationProofSelectionRequested,
+                                        onSubmit = journey::onObservedPriceConfirmationSubmitRequested,
+                                        onBack = ::navigateBack
                                     )
                             }
                             }
@@ -524,6 +559,7 @@ private fun JourneyTopBar(
         NextDestination.BASKET -> "Your basket"
         NextDestination.SAVED -> "Saved"
         NextDestination.OBSERVED_PRICE_SELECTION -> "Observed price"
+        NextDestination.OBSERVED_PRICE_CONFIRMATION -> "Price confirmation"
         NextDestination.PRODUCT_DETAIL -> "Product detail"
         NextDestination.SHOPPING_DECISION -> "Shopping decision"
         NextDestination.TRIP_PLANNER -> "Trip planner"

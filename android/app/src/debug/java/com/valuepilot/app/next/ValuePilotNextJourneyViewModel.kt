@@ -47,6 +47,7 @@ import com.valuepilot.app.UserObservedPriceSavedSelectionRouteSession
 import com.valuepilot.app.UserObservedPriceSavedSelectionSurfacePresenter
 import com.valuepilot.app.UserObservedPriceSavedSelectionSurfaceRenderer
 import com.valuepilot.app.UserObservedPriceSavedSelectionUiState
+import com.valuepilot.app.UserObservedPriceProofContentReadResult
 import com.valuepilot.app.ValuePilotArgentinaEdgeTransportFactory
 import java.util.concurrent.Executors
 
@@ -70,6 +71,7 @@ internal data class ValuePilotNextJourneyUiState(
         ),
     val observedPriceSelection: UserObservedPriceSavedSelectionUiState? = null,
     val observedPricePrefillResult: UserObservedPriceSavedPrefillHandoffUiState? = null,
+    val observedPriceConfirmation: ValuePilotNextObservedPriceConfirmationUiState? = null,
     val plan: ArgentinaPrivateBasketPlanProjection? = null,
     val planLoading: Boolean = false,
     val planError: String? = null,
@@ -96,6 +98,8 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
     private var observedPriceSelectionCoordinator:
         UserObservedPriceSavedSelectionCompositionCoordinator? = null
     private var observedPricePrefillAttempt: UserObservedPriceSavedPrefillHandoffAttempt? = null
+    private var observedPriceConfirmationJourney: ValuePilotNextObservedPriceConfirmationJourney? = null
+    private var observedPriceProofPickerRequest: (() -> Unit)? = null
     private var initialized = false
     private var cleared = false
     private var planRequestId = 0L
@@ -120,6 +124,14 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
         initialized = true
         applicationContext = context.applicationContext ?: context
         store = AndroidPracticalShoppingHomeSessionStore(requireNotNull(applicationContext))
+        observedPriceConfirmationJourney =
+            ValuePilotNextObservedPriceConfirmationJourney(
+                context = requireNotNull(applicationContext),
+                requestProofSelection = { observedPriceProofPickerRequest?.invoke() },
+                publish = { next ->
+                    if (!cleared) uiState = uiState.copy(observedPriceConfirmation = next)
+                }
+            )
         val observedPriceSelectionPresenter =
             UserObservedPriceSavedSelectionSurfacePresenter(
                 UserObservedPriceSavedSelectionSurfaceRenderer(::publishObservedPriceSelection)
@@ -206,6 +218,75 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
     fun currentObservedPricePrefillAttemptOrNull(): UserObservedPriceSavedPrefillHandoffAttempt? {
         if (!initialized || cleared) return null
         return observedPricePrefillAttempt?.takeIf { it.accepted }
+    }
+
+    fun prepareObservedPriceConfirmation(
+        attempt: UserObservedPriceSavedPrefillHandoffAttempt
+    ): Boolean {
+        if (!initialized || cleared) return false
+        check(Looper.myLooper() == Looper.getMainLooper())
+        return observedPriceConfirmationJourney?.prepare(attempt) == true
+    }
+
+    fun onObservedPriceConfirmationRouteVisibilityChanged(visible: Boolean) {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        observedPriceConfirmationJourney?.onRouteVisibilityChanged(visible)
+    }
+
+    fun cancelObservedPriceConfirmation() {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        observedPriceConfirmationJourney?.cancel()
+    }
+
+    fun onObservedPriceConfirmationPriceInput(amountText: String, currencyCodeText: String) {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        observedPriceConfirmationJourney?.onPriceInput(amountText, currencyCodeText)
+    }
+
+    fun onObservedPriceConfirmationTimeInput(
+        dateText: String,
+        timeText: String,
+        utcOffsetText: String
+    ) {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        observedPriceConfirmationJourney?.onObservedAtInput(dateText, timeText, utcOffsetText)
+    }
+
+    fun onObservedPriceConfirmationProofReferenceInput(
+        artifactId: String,
+        proofType: com.valuepilot.app.UserProvidedPriceProofType?
+    ) {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        observedPriceConfirmationJourney?.onProofReferenceInput(artifactId, proofType)
+    }
+
+    fun onObservedPriceConfirmationProofSelectionRequested() {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        observedPriceConfirmationJourney?.onProofSelectionRequested()
+    }
+
+    fun onObservedPriceProofContentReadResult(result: UserObservedPriceProofContentReadResult) {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        observedPriceConfirmationJourney?.onProofContentReadResult(result)
+    }
+
+    fun onObservedPriceConfirmationSubmitRequested() {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        observedPriceConfirmationJourney?.onSubmitRequested()
+    }
+
+    fun attachObservedPriceProofPicker(request: (() -> Unit)?) {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        observedPriceProofPickerRequest = request
     }
 
     private fun publishSavedSurface(state: PracticalShoppingSavedSurfaceState) {
@@ -497,6 +578,9 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
         observedPriceSelectionCoordinator?.close()
         observedPriceSelectionCoordinator = null
         observedPricePrefillAttempt = null
+        observedPriceConfirmationJourney?.close()
+        observedPriceConfirmationJourney = null
+        observedPriceProofPickerRequest = null
         applicationContext = null
         searchHost?.close()
         searchHost = null
