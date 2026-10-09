@@ -40,6 +40,29 @@ import com.valuepilot.app.ArgentinaQualifiedStoreMapContextPresentation
 import com.valuepilot.app.PracticalShoppingSearchIdentityPresentation
 import java.math.BigDecimal
 
+internal data class ValuePilotNextBasketIntroPresentation(
+    val title: String,
+    val detail: String?
+)
+
+internal fun valuePilotNextBasketIntroPresentation(
+    itemCount: Int,
+    hasMissingPriceEvidence: Boolean
+): ValuePilotNextBasketIntroPresentation = when {
+    itemCount <= 0 -> ValuePilotNextBasketIntroPresentation(
+        title = "Your basket is ready for its first item.",
+        detail = "Add exact product identities. Prices appear only when fresh evidence is available; availability remains unknown."
+    )
+    hasMissingPriceEvidence -> ValuePilotNextBasketIntroPresentation(
+        title = "Your basket, with price gaps made clear.",
+        detail = null
+    )
+    else -> ValuePilotNextBasketIntroPresentation(
+        title = "Your basket, with evidence attached.",
+        detail = null
+    )
+}
+
 @Composable
 internal fun ValuePilotBasketScreen(
     basket: ArgentinaPrivateBasketRenderState,
@@ -50,15 +73,19 @@ internal fun ValuePilotBasketScreen(
 ) {
     PremiumColumn {
         item(key = "basket-intro") {
+            val intro = valuePilotNextBasketIntroPresentation(
+                itemCount = basket.lines.size,
+                hasMissingPriceEvidence = basket.lines.any { it.missing }
+            )
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {
                 Eyebrow("PRIVATE SHOPPING LIST")
                 Text(
-                    "Your basket, with evidence attached.",
+                    intro.title,
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    basket.evidenceNotice,
+                    intro.detail ?: basket.evidenceNotice,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
