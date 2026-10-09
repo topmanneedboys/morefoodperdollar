@@ -54,6 +54,7 @@ dependencies {
     debugImplementation(composeBom)
     debugImplementation("androidx.activity:activity-compose:1.13.0")
     debugImplementation("androidx.browser:browser:1.8.0")
+    debugImplementation("androidx.webkit:webkit:1.14.0")
     debugImplementation("androidx.lifecycle:lifecycle-viewmodel-android:2.9.4")
     debugImplementation("androidx.compose.animation:animation")
     debugImplementation("androidx.compose.foundation:foundation")

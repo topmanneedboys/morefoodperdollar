@@ -10,13 +10,13 @@ class ValuePilotNextTopBarAccessibilityTest {
     fun `back and exit controls have clear spoken labels`() {
         val source = appSource()
 
-        assertTrue(source.contains("contentDescription = \"Back\""))
+        assertTrue(source.contains("contentDescription = \"Volver\""))
         assertTrue(
             source.contains(
-                "contentDescription = \"Exit preview and return to the classic app\""
+                "contentDescription = \"Salir de la vista previa y volver a la aplicación original\""
             )
         )
-        assertTrue(source.contains("Text(\"Exit\", style = MaterialTheme.typography.labelLarge"))
+        assertTrue(source.contains("Text(\"Salir\""))
     }
 
     private fun appSource(): String {

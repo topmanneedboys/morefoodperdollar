@@ -1,0 +1,252 @@
+package com.valuepilot.app.next
+
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.graphics.Color
+import android.net.Uri
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.ViewGroup
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.browser.customtabs.CustomTabsClient
+import androidx.browser.customtabs.CustomTabsIntent
+import androidx.core.view.WindowCompat
+import androidx.core.net.toUri
+import androidx.webkit.JavaScriptReplyProxy
+import androidx.webkit.WebMessageCompat
+import androidx.webkit.WebViewAssetLoader
+import androidx.webkit.WebViewClientCompat
+import androidx.webkit.WebViewCompat
+import androidx.webkit.WebViewFeature
+import java.io.ByteArrayInputStream
+
+/** Debug-only host for the supplied Stitch HTML prototype. */
+class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
+    private lateinit var webView: WebView
+    private lateinit var assetLoader: WebViewAssetLoader
+    private val handler = Handler(Looper.getMainLooper())
+    private var googleImagesLaunchInFlight = false
+
+    private val googleImagesLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            googleImagesLaunchInFlight = false
+        }
+
+    private val themeSync = object : Runnable {
+        override fun run() {
+            if (!::webView.isInitialized || isFinishing || isDestroyed) return
+            webView.evaluateJavascript(
+                "document.documentElement.classList.contains('dark')"
+            ) { result ->
+                applySystemBars(result == "true")
+            }
+            handler.postDelayed(this, THEME_SYNC_INTERVAL_MS)
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, true)
+        applySystemBars(darkTheme = false)
+
+        assetLoader = WebViewAssetLoader.Builder()
+            .addPathHandler(
+                "/assets/",
+                WebViewAssetLoader.AssetsPathHandler(this)
+            )
+            .build()
+
+        webView = WebView(this).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            setBackgroundColor(Color.rgb(252, 249, 242))
+            configureSecureSettings(settings)
+            webViewClient = secureWebViewClient()
+        }
+        setContentView(webView)
+        registerRestrictedPhotoBridge()
+        installBackHandling()
+        webView.loadUrl(ASSET_INDEX_URL)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        handler.removeCallbacks(themeSync)
+        handler.post(themeSync)
+    }
+
+    override fun onPause() {
+        handler.removeCallbacks(themeSync)
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacks(themeSync)
+        if (::webView.isInitialized) {
+            webView.stopLoading()
+            webView.removeAllViews()
+            webView.destroy()
+        }
+        super.onDestroy()
+    }
+
+    private fun configureSecureSettings(settings: WebSettings) {
+        settings.javaScriptEnabled = true
+        settings.domStorageEnabled = false
+        settings.databaseEnabled = false
+        settings.allowFileAccess = false
+        settings.allowContentAccess = false
+        settings.allowFileAccessFromFileURLs = false
+        settings.allowUniversalAccessFromFileURLs = false
+        settings.setGeolocationEnabled(false)
+        settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+        settings.mediaPlaybackRequiresUserGesture = true
+        settings.setSupportMultipleWindows(false)
+        settings.javaScriptCanOpenWindowsAutomatically = false
+        settings.saveFormData = false
+        settings.textZoom = 100
+    }
+
+    private fun secureWebViewClient(): WebViewClientCompat = object : WebViewClientCompat() {
+        override fun shouldInterceptRequest(
+            view: WebView,
+            request: WebResourceRequest
+        ): WebResourceResponse? {
+            val uri = request.url
+            return if (isTrustedAssetUri(uri)) {
+                assetLoader.shouldInterceptRequest(uri)
+            } else {
+                blockedResponse()
+            }
+        }
+
+        override fun shouldOverrideUrlLoading(
+            view: WebView,
+            request: WebResourceRequest
+        ): Boolean = !isTrustedAssetUri(request.url)
+    }
+
+    private fun registerRestrictedPhotoBridge() {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) return
+        WebViewCompat.addWebMessageListener(
+            webView,
+            "ValuePilotHost",
+            setOf(ASSET_ORIGIN),
+            object : WebViewCompat.WebMessageListener {
+                override fun onPostMessage(
+                    view: WebView,
+                    message: WebMessageCompat,
+                    sourceOrigin: Uri,
+                    isMainFrame: Boolean,
+                    replyProxy: JavaScriptReplyProxy
+                ) {
+                    if (!isMainFrame || sourceOrigin.toString() != ASSET_ORIGIN) return
+                    val request = ValuePilotNextHtmlPreviewContract
+                        .parseOpenGoogleImagesMessage(message.data)
+                        ?: return
+                    openGoogleImages(request)
+                }
+            }
+        )
+    }
+
+    private fun installBackHandling() {
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    if (!::webView.isInitialized) {
+                        finish()
+                        return
+                    }
+                    webView.evaluateJavascript(
+                        "window.ValuePilotHtmlPreview && window.ValuePilotHtmlPreview.back()"
+                    ) { result ->
+                        if (result != "true") finish()
+                    }
+                }
+            }
+        )
+    }
+
+    private fun openGoogleImages(request: ValuePilotNextHtmlPhotoRequest) {
+        if (googleImagesLaunchInFlight) return
+        val uri = ValuePilotNextHtmlPreviewContract.urlFor(request).toUri()
+        googleImagesLaunchInFlight = true
+        val customTab = CustomTabsIntent.Builder()
+            .setShowTitle(true)
+            .setInitialActivityHeightPx(
+                initialActivityHeightPx(),
+                CustomTabsIntent.ACTIVITY_HEIGHT_ADJUSTABLE
+            )
+            .build()
+            .also { tab ->
+                tab.intent.data = uri
+                CustomTabsClient.getPackageName(this, null)?.let(tab.intent::setPackage)
+            }
+        try {
+            googleImagesLauncher.launch(customTab.intent)
+        } catch (_: ActivityNotFoundException) {
+            googleImagesLaunchInFlight = false
+            launchFullScreenFallback(uri)
+        } catch (_: SecurityException) {
+            googleImagesLaunchInFlight = false
+            launchFullScreenFallback(uri)
+        }
+    }
+
+    private fun launchFullScreenFallback(uri: Uri) {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(this, "No hay un navegador disponible.", Toast.LENGTH_SHORT).show()
+        } catch (_: SecurityException) {
+            Toast.makeText(this, "No se pudo abrir Google Images.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun initialActivityHeightPx(): Int = maxOf(
+        resources.displayMetrics.heightPixels * INITIAL_HEIGHT_PERCENT / 100,
+        (MIN_INITIAL_HEIGHT_DP * resources.displayMetrics.density).toInt()
+    )
+
+    private fun applySystemBars(darkTheme: Boolean) {
+        val background = if (darkTheme) Color.rgb(22, 23, 20) else Color.rgb(252, 249, 242)
+        window.statusBarColor = background
+        window.navigationBarColor = background
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !darkTheme
+            isAppearanceLightNavigationBars = !darkTheme
+        }
+    }
+
+    private fun isTrustedAssetUri(uri: Uri): Boolean =
+        uri.scheme == "https" &&
+            uri.host == ASSET_HOST &&
+            uri.path?.startsWith("/assets/valuepilot_next_html/") == true
+
+    private fun blockedResponse(): WebResourceResponse = WebResourceResponse(
+        "text/plain",
+        "UTF-8",
+        ByteArrayInputStream(ByteArray(0))
+    )
+
+    private companion object {
+        const val ASSET_HOST = "appassets.androidplatform.net"
+        const val ASSET_ORIGIN = "https://appassets.androidplatform.net"
+        const val ASSET_INDEX_URL = "https://appassets.androidplatform.net/assets/valuepilot_next_html/index.html"
+        const val INITIAL_HEIGHT_PERCENT = 65
+        const val MIN_INITIAL_HEIGHT_DP = 320
+        const val THEME_SYNC_INTERVAL_MS = 300L
+    }
+}

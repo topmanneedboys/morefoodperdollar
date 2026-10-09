@@ -4,5 +4,14 @@
         <activity
             android:name=".next.ValuePilotNextActivity"
             android:exported="false" />
+        <activity
+            android:name=".next.ValuePilotNextHtmlPreviewActivity"
+            android:exported="true"
+            android:label="@string/preview_next_html_ui">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
     </application>
 </manifest>

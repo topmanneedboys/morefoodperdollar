@@ -3,6 +3,7 @@ package com.valuepilot.app.next
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -12,10 +13,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -30,6 +35,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,6 +57,8 @@ import com.valuepilot.app.ArgentinaLiveSearchSurfaceMode
 import com.valuepilot.app.ArgentinaLiveSearchSurfaceState
 import com.valuepilot.app.PracticalShoppingSearchIdentityPresentation
 import com.valuepilot.app.R
+import java.text.NumberFormat
+import java.util.Locale
 
 internal fun usesCompactDiscoveryContent(availableWidth: Dp, fontScale: Float): Boolean =
     availableWidth < 420.dp || fontScale >= 1.2f
@@ -254,6 +265,21 @@ internal fun ValuePilotSearchScreen(
     onOpenGoogleImages: (PracticalShoppingSearchIdentityPresentation.Match, String) -> Unit,
     onShowDesignFixture: () -> Unit
 ) {
+    var selectedStoreName by rememberSaveable(query) { mutableStateOf<String?>(null) }
+    var sortByLowestUnitPrice by rememberSaveable(query) { mutableStateOf(false) }
+    val presentation = state.presentation
+    val matches = presentation?.matches.orEmpty()
+    val filterOptions = searchResultFilterOptions(matches)
+    val activeStoreName = selectedStoreName?.takeIf { name ->
+        filterOptions.stores.any { it.storeName.equals(name, ignoreCase = true) }
+    }
+    val visibleMatches = filterAndSortSearchMatches(
+        matches = matches,
+        selectedStoreName = activeStoreName,
+        sortByLowestUnitPrice = sortByLowestUnitPrice,
+        comparableBasis = filterOptions.comparableUnitPriceBasis
+    )
+
     ValuePilotDiscoveryColumn {
         item(key = "search-intro") {
             Row(
@@ -310,6 +336,19 @@ internal fun ValuePilotSearchScreen(
             }
         }
 
+        if (matches.isNotEmpty() && (filterOptions.stores.isNotEmpty() || filterOptions.comparableUnitPriceBasis != null)) {
+            item(key = "search-current-offer-filters") {
+                SearchCurrentOfferFilters(
+                    stores = filterOptions.stores,
+                    selectedStoreName = activeStoreName,
+                    onStoreSelected = { selectedStoreName = it },
+                    comparableBasis = filterOptions.comparableUnitPriceBasis,
+                    sortByLowestUnitPrice = sortByLowestUnitPrice,
+                    onSortByLowestUnitPriceChanged = { sortByLowestUnitPrice = it }
+                )
+            }
+        }
+
         if (isSearchUnavailable(state.mode) &&
             state.presentation?.matches.isNullOrEmpty()
         ) {
@@ -340,8 +379,6 @@ internal fun ValuePilotSearchScreen(
             }
         }
 
-        val presentation = state.presentation
-        val matches = presentation?.matches.orEmpty()
         if (showDesignFixture) {
             item(key = "layout-fixture-label") {
                 EvidenceNotice("MUESTRA LOCAL · no proviene de Search. Sin precio, tienda ni disponibilidad.")
@@ -364,7 +401,7 @@ internal fun ValuePilotSearchScreen(
                     val compact = usesCompactDiscoveryContent(maxWidth, LocalDensity.current.fontScale)
                     if (compact) {
                         Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
-                            SearchResultsCount(matches.size)
+                            SearchResultsCount(visibleMatches.size)
                             Text(
                                 "Página " + ((presentation?.page ?: 0) + 1),
                                 style = MaterialTheme.typography.labelMedium,
@@ -377,7 +414,7 @@ internal fun ValuePilotSearchScreen(
                             verticalAlignment = Alignment.Bottom,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            SearchResultsCount(matches.size)
+                            SearchResultsCount(visibleMatches.size)
                             Text(
                                 "Página " + ((presentation?.page ?: 0) + 1),
                                 style = MaterialTheme.typography.labelMedium,
@@ -387,13 +424,30 @@ internal fun ValuePilotSearchScreen(
                     }
                 }
             }
-            items(matches, key = { it.identityKey }) { match ->
+            if (visibleMatches.isEmpty()) {
+                item(key = "search-empty-filter-result") {
+                    EmptyStateCard(
+                        eyebrow = "FILTROS DE BÚSQUEDA",
+                        title = "No hay resultados con esta sucursal.",
+                        detail = "Elegí otra sucursal para volver a ver las identidades encontradas.",
+                        actionLabel = "Ver todas las sucursales",
+                        onAction = { selectedStoreName = null }
+                    )
+                }
+            }
+            items(visibleMatches, key = { it.identityKey }) { match ->
                 SearchResultCard(
                     match = match,
                     isDesignFixture = false,
                     onClick = { onOpenMatch(match) },
                     onAddToBasket = { onAddToBasket(match) },
-                    onOpenGoogleImages = { onOpenGoogleImages(match, state.areaLabel) }
+                    onOpenGoogleImages = { onOpenGoogleImages(match, state.areaLabel) },
+                    preferredOffer = preferredSearchOffer(
+                        match = match,
+                        selectedStoreName = activeStoreName,
+                        sortByLowestUnitPrice = sortByLowestUnitPrice,
+                        comparableBasis = filterOptions.comparableUnitPriceBasis
+                    )
                 )
             }
             if (state.mode == ArgentinaLiveSearchSurfaceMode.LOADING) {
@@ -410,6 +464,88 @@ internal fun ValuePilotSearchScreen(
             }
         }
     }
+}
+
+@Composable
+private fun SearchCurrentOfferFilters(
+    stores: List<SearchStoreFilterOption>,
+    selectedStoreName: String?,
+    onStoreSelected: (String?) -> Unit,
+    comparableBasis: ComparableCurrentUnitPriceBasis?,
+    sortByLowestUnitPrice: Boolean,
+    onSortByLowestUnitPriceChanged: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(7.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        comparableBasis?.let { basis ->
+            SearchFilterChip(
+                label = lowestUnitPriceLabel(basis.unitBasis),
+                selected = sortByLowestUnitPrice,
+                onClick = { onSortByLowestUnitPriceChanged(!sortByLowestUnitPrice) },
+                accessibleLabel = "Ordenar por precio unitario más bajo"
+            )
+        }
+        if (stores.isNotEmpty()) {
+            SearchFilterChip(
+                label = "Todas",
+                selected = selectedStoreName == null,
+                onClick = { onStoreSelected(null) },
+                accessibleLabel = "Mostrar ofertas de todas las sucursales"
+            )
+            stores.forEach { store ->
+                SearchFilterChip(
+                    label = store.storeName,
+                    selected = selectedStoreName.equals(store.storeName, ignoreCase = true),
+                    onClick = {
+                        onStoreSelected(
+                            if (selectedStoreName.equals(store.storeName, ignoreCase = true)) null else store.storeName
+                        )
+                    },
+                    accessibleLabel = "Filtrar por ${store.storeName}"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchFilterChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    accessibleLabel: String
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
+            .semantics {
+                contentDescription = accessibleLabel
+            },
+        shape = RoundedCornerShape(50),
+        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    ) {
+        Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), contentAlignment = Alignment.Center) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium.copy(fontSize = 10.sp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+private fun lowestUnitPriceLabel(unitBasis: String): String = when (unitBasis.lowercase()) {
+    "l", "lt", "liter", "litre" -> "Menor $/L"
+    "kg", "kilogram" -> "Menor $/kg"
+    else -> "Menor /$unitBasis"
 }
 
 @Composable
@@ -592,9 +728,10 @@ private fun SearchResultCard(
     isDesignFixture: Boolean,
     onClick: () -> Unit,
     onAddToBasket: () -> Unit,
-    onOpenGoogleImages: () -> Unit
+    onOpenGoogleImages: () -> Unit,
+    preferredOffer: ArgentinaBackendContract.SearchOffer? = null
 ) {
-    val currentOffer = match.qualifiedOffers.firstOrNull {
+    val currentOffer = preferredOffer ?: match.qualifiedOffers.firstOrNull {
         it.freshnessStatus == ArgentinaBackendContract.Freshness.FRESH
     }
     Surface(
@@ -888,7 +1025,9 @@ internal fun ValuePilotProductDetailScreen(
         } else {
             if (isDesignFixture) {
                 item(key = "product-detail-fixture-disclosure") {
-                    CompactEvidenceNotice("MUESTRA LOCAL · no proviene de Search ni se guardará en tus datos.")
+                    CompactEvidenceNotice(
+                        "MUESTRA LOCAL · no proviene de Search ni se guardará en tus datos. Los importes ilustrativos son ficticios."
+                    )
                 }
             }
             item(key = "product-detail-identity") {
@@ -930,7 +1069,11 @@ internal fun ValuePilotProductDetailScreen(
                         }
                     }
                     Text(
-                        if (isDesignFixture) "La muestra no incluye marca, precio ni tipo de envase." else "La identidad no confirma precio, stock ni disponibilidad.",
+                        if (isDesignFixture) {
+                            "Marca y tipo de envase no incluidos. El rango es solo una demostración visual."
+                        } else {
+                            "La identidad no confirma precio, stock ni disponibilidad."
+                        },
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, lineHeight = 15.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -981,16 +1124,27 @@ internal fun ValuePilotProductDetailScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Eyebrow("PRECIOS Y TIENDAS")
                     Text(
-                        if (match.qualifiedOffers.isEmpty()) "Precio actual no informado" else "Precios relevados",
+                        if (isDesignFixture) "Rango unitario ilustrativo" else if (match.qualifiedOffers.isEmpty()) "Precio actual no informado" else "Precios relevados",
                         style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
                         color = MaterialTheme.colorScheme.onBackground
                     )
                 }
             }
+            if (isDesignFixture) {
+                item(key = "product-detail-fixture-price-range") {
+                    ProductOfferPriceRangeCard(ValuePilotDesignPreviewPriceRange, isDesignFixture = true)
+                }
+            } else {
+                currentOfferPriceRange(match.qualifiedOffers)?.let { range ->
+                    item(key = "product-detail-current-price-range") {
+                        ProductOfferPriceRangeCard(range, isDesignFixture = false)
+                    }
+                }
+            }
             if (match.qualifiedOffers.isEmpty()) {
                 item(key = "product-detail-no-offer") {
                     CompactEvidenceNotice(
-                        if (isDesignFixture) "Muestra de diseño: no hay precio ni tienda asociados."
+                        if (isDesignFixture) "Valores ficticios solo para probar el diseño; no son ofertas ni precios actuales."
                         else "No hay evidencia de precio actual asociada a esta identidad."
                     )
                 }
@@ -1019,6 +1173,157 @@ internal fun ValuePilotProductDetailScreen(
                 onOpenGoogleImages = { onOpenGoogleImages(it, areaLabel) }
             )
         }
+    }
+}
+
+@Composable
+private fun ProductOfferPriceRangeCard(
+    range: CurrentOfferPriceRange,
+    isDesignFixture: Boolean
+) {
+    val format = NumberFormat.getNumberInstance(Locale.forLanguageTag("es-AR")).apply {
+        maximumFractionDigits = 2
+        minimumFractionDigits = 0
+    }
+    val minimum = format.format(range.minimum)
+    val median = format.format(range.median)
+    val maximum = format.format(range.maximum)
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(15.dp),
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(13.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+                Eyebrow(if (isDesignFixture) "EJEMPLO VISUAL · VALORES FICTICIOS" else "OFERTAS RECIENTES")
+                if (!isDesignFixture) {
+                    Text(
+                        "${range.offerCount}",
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Text(
+                if (isDesignFixture) "Comparación por unidad" else "Rango entre ofertas publicadas",
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp, lineHeight = 18.sp),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            OfferRangeTrack(range.medianPosition)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                OfferRangePoint(
+                    title = "Mínimo",
+                    currency = range.currency,
+                    amount = minimum,
+                    basis = range.unitBasis,
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.Start
+                )
+                OfferRangePoint(
+                    title = "Mediana",
+                    currency = range.currency,
+                    amount = median,
+                    basis = range.unitBasis,
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                )
+                OfferRangePoint(
+                    title = "Máximo",
+                    currency = range.currency,
+                    amount = maximum,
+                    basis = range.unitBasis,
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.End
+                )
+            }
+            Text(
+                if (isDesignFixture) {
+                    "Importes ficticios para validar el diseño. No corresponden a una tienda ni a precios actuales."
+                } else {
+                    "Resume solo ofertas recientes con la misma unidad. El precio publicado no confirma stock ni disponibilidad."
+                },
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp, lineHeight = 13.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun OfferRangeTrack(medianPosition: Float) {
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxWidth().height(14.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(3.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.outlineVariant)
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(medianPosition)
+                .height(3.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.secondaryContainer)
+        )
+        Box(
+            modifier = Modifier
+                .offset(x = (maxWidth - 12.dp) * medianPosition)
+                .size(12.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary)
+        )
+    }
+}
+
+@Composable
+private fun OfferRangePoint(
+    title: String,
+    currency: String,
+    amount: String,
+    basis: String,
+    modifier: Modifier,
+    horizontalAlignment: Alignment.Horizontal
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = horizontalAlignment,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Text(
+            title,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            "$currency $amount",
+            style = MaterialTheme.typography.titleSmall.copy(fontSize = 11.sp, lineHeight = 14.sp),
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            "/ $basis",
+            style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
