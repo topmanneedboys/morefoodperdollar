@@ -37,4 +37,26 @@ class DebugNextSavedToolsHandoffTest {
             )
         )
     }
+
+    @Test
+    fun observedPriceConfirmationHandoffIsDebugOnly() {
+        assertTrue(
+            DebugNextSavedToolsHandoff.shouldOpenObservedPriceConfirmation(
+                debugBuild = true,
+                action = DebugNextSavedToolsHandoff.ACTION_OPEN_OBSERVED_PRICE_CONFIRMATION
+            )
+        )
+        assertFalse(
+            DebugNextSavedToolsHandoff.shouldOpenObservedPriceConfirmation(
+                debugBuild = false,
+                action = DebugNextSavedToolsHandoff.ACTION_OPEN_OBSERVED_PRICE_CONFIRMATION
+            )
+        )
+        assertFalse(
+            DebugNextSavedToolsHandoff.shouldOpenObservedPriceConfirmation(
+                debugBuild = true,
+                action = DebugNextSavedToolsHandoff.ACTION_OPEN_SAVED_TOOLS
+            )
+        )
+    }
 }

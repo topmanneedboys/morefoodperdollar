@@ -69,6 +69,7 @@ private enum class NextDestination(val primaryTab: AppPrimaryTab?) {
     SEARCH(AppPrimaryTab.SEARCH),
     BASKET(AppPrimaryTab.BASKET),
     SAVED(AppPrimaryTab.SAVED),
+    OBSERVED_PRICE_SELECTION(null),
     PRODUCT_DETAIL(null),
     SHOPPING_DECISION(null),
     TRIP_PLANNER(null),
@@ -132,7 +133,9 @@ internal fun ValuePilotNextApp(
     onOpenComparison: () -> Unit,
     onOpenStoreMap: (com.valuepilot.app.ArgentinaPrivateBasketStoreProjection) -> Boolean,
     onCheckSavedPrice: (String) -> Unit,
-    onOpenSavedTools: () -> Unit
+    onOpenSavedTools: () -> Unit,
+    onOpenObservedPriceConfirmation:
+        (com.valuepilot.app.UserObservedPriceSavedPrefillHandoffAttempt) -> Unit
 ) {
     val ui = journey.uiState
     var shellState by rememberSaveable(stateSaver = appShellStateSaver) {
@@ -158,11 +161,25 @@ internal fun ValuePilotNextApp(
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val currentDestination = routeStack.lastOrNull() ?: NextDestination.HOME
-    val savedDestinationVisible = currentDestination == NextDestination.SAVED
+    val savedDestinationVisible =
+        currentDestination == NextDestination.SAVED ||
+            currentDestination == NextDestination.OBSERVED_PRICE_SELECTION
     DisposableEffect(savedDestinationVisible) {
         if (savedDestinationVisible) journey.onSavedRouteVisibilityChanged(true)
         onDispose {
             if (savedDestinationVisible) journey.onSavedRouteVisibilityChanged(false)
+        }
+    }
+    val observedPriceSelectionVisible =
+        currentDestination == NextDestination.OBSERVED_PRICE_SELECTION
+    DisposableEffect(observedPriceSelectionVisible) {
+        if (observedPriceSelectionVisible) {
+            journey.onObservedPriceSelectionRouteVisibilityChanged(true)
+        }
+        onDispose {
+            if (observedPriceSelectionVisible) {
+                journey.onObservedPriceSelectionRouteVisibilityChanged(false)
+            }
         }
     }
     val selectedMapOffer = remember(ui.search.presentation, selectedMapOfferKey) {
@@ -178,6 +195,7 @@ internal fun ValuePilotNextApp(
 
     fun syncSelectedTab(destination: NextDestination) {
         val tab = destination.primaryTab ?: when (destination) {
+            NextDestination.OBSERVED_PRICE_SELECTION -> AppPrimaryTab.SAVED
             NextDestination.PRODUCT_DETAIL -> AppPrimaryTab.SEARCH
             NextDestination.SHOPPING_DECISION,
             NextDestination.TRIP_PLANNER,
@@ -445,8 +463,26 @@ internal fun ValuePilotNextApp(
                                     onAction = journey::onSavedSurfaceAction,
                                     onCheckPrice = onCheckSavedPrice,
                                     onSearch = { selectPrimary(NextDestination.SEARCH) },
+                                    onRecordObservedPrice = {
+                                        navigate(NextDestination.OBSERVED_PRICE_SELECTION)
+                                    },
                                     onOpenSavedTools = onOpenSavedTools
                                 )
+
+                                NextDestination.OBSERVED_PRICE_SELECTION ->
+                                    ValuePilotObservedPriceSelectionScreen(
+                                        savedState = ui.saved,
+                                        selection = ui.observedPriceSelection,
+                                        prefillResult = ui.observedPricePrefillResult,
+                                        onSelectionAction = journey::onObservedPriceSelectionAction,
+                                        onCheckPrefill = journey::onCheckObservedPricePrefill,
+                                        onSavedAction = journey::onSavedSurfaceAction,
+                                        onContinueToConfirmation = {
+                                            journey.currentObservedPricePrefillAttemptOrNull()
+                                                ?.let(onOpenObservedPriceConfirmation)
+                                        },
+                                        onBackToSaved = ::navigateBack
+                                    )
                             }
                             }
                         }
@@ -487,6 +523,7 @@ private fun JourneyTopBar(
         NextDestination.SEARCH -> "Search"
         NextDestination.BASKET -> "Your basket"
         NextDestination.SAVED -> "Saved"
+        NextDestination.OBSERVED_PRICE_SELECTION -> "Observed price"
         NextDestination.PRODUCT_DETAIL -> "Product detail"
         NextDestination.SHOPPING_DECISION -> "Shopping decision"
         NextDestination.TRIP_PLANNER -> "Trip planner"

@@ -36,6 +36,17 @@ import com.valuepilot.app.PracticalShoppingSavedSurfacePresenter
 import com.valuepilot.app.PracticalShoppingSavedSurfaceProjector
 import com.valuepilot.app.PracticalShoppingSavedSurfaceRenderer
 import com.valuepilot.app.PracticalShoppingSavedSurfaceState
+import com.valuepilot.app.PracticalShoppingSavedValidatedSnapshotObserver
+import com.valuepilot.app.UserObservedPriceSavedPrefillHandoffAttempt
+import com.valuepilot.app.UserObservedPriceSavedPrefillHandoffAttemptObserver
+import com.valuepilot.app.UserObservedPriceSavedPrefillHandoffUiProjector
+import com.valuepilot.app.UserObservedPriceSavedPrefillHandoffUiState
+import com.valuepilot.app.UserObservedPriceSavedSelectionAction
+import com.valuepilot.app.UserObservedPriceSavedSelectionCompositionCoordinator
+import com.valuepilot.app.UserObservedPriceSavedSelectionRouteSession
+import com.valuepilot.app.UserObservedPriceSavedSelectionSurfacePresenter
+import com.valuepilot.app.UserObservedPriceSavedSelectionSurfaceRenderer
+import com.valuepilot.app.UserObservedPriceSavedSelectionUiState
 import com.valuepilot.app.ValuePilotArgentinaEdgeTransportFactory
 import java.util.concurrent.Executors
 
@@ -57,6 +68,8 @@ internal data class ValuePilotNextJourneyUiState(
         PracticalShoppingSavedSurfaceProjector.project(
             PracticalShoppingSavedLifecycleController().initialState()
         ),
+    val observedPriceSelection: UserObservedPriceSavedSelectionUiState? = null,
+    val observedPricePrefillResult: UserObservedPriceSavedPrefillHandoffUiState? = null,
     val plan: ArgentinaPrivateBasketPlanProjection? = null,
     val planLoading: Boolean = false,
     val planError: String? = null,
@@ -80,6 +93,9 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
     private var applicationContext: Context? = null
     private var searchHost: ArgentinaLiveSearchSurfaceHost? = null
     private var savedRouteCoordinator: PracticalShoppingSavedRouteCoordinator? = null
+    private var observedPriceSelectionCoordinator:
+        UserObservedPriceSavedSelectionCompositionCoordinator? = null
+    private var observedPricePrefillAttempt: UserObservedPriceSavedPrefillHandoffAttempt? = null
     private var initialized = false
     private var cleared = false
     private var planRequestId = 0L
@@ -104,6 +120,20 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
         initialized = true
         applicationContext = context.applicationContext ?: context
         store = AndroidPracticalShoppingHomeSessionStore(requireNotNull(applicationContext))
+        val observedPriceSelectionPresenter =
+            UserObservedPriceSavedSelectionSurfacePresenter(
+                UserObservedPriceSavedSelectionSurfaceRenderer(::publishObservedPriceSelection)
+            )
+        observedPriceSelectionCoordinator =
+            UserObservedPriceSavedSelectionCompositionCoordinator(
+                prefillHandoffAttemptObserver =
+                    UserObservedPriceSavedPrefillHandoffAttemptObserver(::publishObservedPricePrefillAttempt)
+            ) { snapshot ->
+                UserObservedPriceSavedSelectionRouteSession(
+                    initialSnapshot = snapshot,
+                    presenter = observedPriceSelectionPresenter
+                )
+            }
         savedRouteCoordinator =
             PracticalShoppingSavedRouteCoordinator {
                 val renderer =
@@ -112,7 +142,11 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
                     )
                 PracticalShoppingSavedAndroidSession.create(
                     context = requireNotNull(applicationContext),
-                    renderer = renderer
+                    renderer = renderer,
+                    snapshotObserver =
+                        PracticalShoppingSavedValidatedSnapshotObserver { snapshot ->
+                            observedPriceSelectionCoordinator?.onSnapshot(snapshot)
+                        }
                 )
             }
         val identities = store?.load()?.privateIdentities.orEmpty()
@@ -143,9 +177,60 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
         savedRouteCoordinator?.onSurfaceAction(action)
     }
 
+    fun onObservedPriceSelectionRouteVisibilityChanged(visible: Boolean) {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        observedPriceSelectionCoordinator?.onRouteVisibilityChanged(visible)
+        if (!visible) {
+            observedPricePrefillAttempt = null
+            uiState = uiState.copy(observedPricePrefillResult = null)
+        }
+    }
+
+    fun onObservedPriceSelectionAction(action: UserObservedPriceSavedSelectionAction) {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        observedPricePrefillAttempt = null
+        uiState = uiState.copy(observedPricePrefillResult = null)
+        observedPriceSelectionCoordinator?.onSurfaceAction(action)
+    }
+
+    fun onCheckObservedPricePrefill(
+        action: com.valuepilot.app.UserObservedPriceSavedPrefillCheckUiAction
+    ) {
+        if (!initialized || cleared) return
+        check(Looper.myLooper() == Looper.getMainLooper())
+        observedPriceSelectionCoordinator?.onCheckPrefillAction(action)
+    }
+
+    fun currentObservedPricePrefillAttemptOrNull(): UserObservedPriceSavedPrefillHandoffAttempt? {
+        if (!initialized || cleared) return null
+        return observedPricePrefillAttempt?.takeIf { it.accepted }
+    }
+
     private fun publishSavedSurface(state: PracticalShoppingSavedSurfaceState) {
         val publish = {
             if (!cleared) uiState = uiState.copy(saved = state)
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) publish()
+        else mainHandler.post(publish)
+    }
+
+    private fun publishObservedPriceSelection(state: UserObservedPriceSavedSelectionUiState) {
+        val publish = {
+            if (!cleared) uiState = uiState.copy(observedPriceSelection = state)
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) publish()
+        else mainHandler.post(publish)
+    }
+
+    private fun publishObservedPricePrefillAttempt(
+        attempt: UserObservedPriceSavedPrefillHandoffAttempt
+    ) {
+        observedPricePrefillAttempt = attempt.takeIf { it.accepted }
+        val result = UserObservedPriceSavedPrefillHandoffUiProjector.project(attempt)
+        val publish = {
+            if (!cleared) uiState = uiState.copy(observedPricePrefillResult = result)
         }
         if (Looper.myLooper() == Looper.getMainLooper()) publish()
         else mainHandler.post(publish)
@@ -409,6 +494,9 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
         planRequestId = Math.addExact(planRequestId, 1L)
         savedRouteCoordinator?.close()
         savedRouteCoordinator = null
+        observedPriceSelectionCoordinator?.close()
+        observedPriceSelectionCoordinator = null
+        observedPricePrefillAttempt = null
         applicationContext = null
         searchHost?.close()
         searchHost = null

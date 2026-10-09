@@ -36,6 +36,7 @@ internal fun ValuePilotSavedScreen(
     onAction: (PracticalShoppingSavedSurfaceAction) -> Unit,
     onCheckPrice: (String) -> Unit,
     onSearch: () -> Unit,
+    onRecordObservedPrice: () -> Unit,
     onOpenSavedTools: () -> Unit
 ) {
     var confirmClearAll by remember { mutableStateOf(false) }
@@ -86,12 +87,26 @@ internal fun ValuePilotSavedScreen(
 
         item(key = "saved-existing-tools") {
             ActionCard(
-                eyebrow = "MORE IN VALUEPILOT",
-                title = "Price history and Staple Watch",
-                detail = "These tools still open in the existing ValuePilot screens.",
-                actionLabel = "Open price tools",
-                onClick = onOpenSavedTools
+                eyebrow = "PERSONAL PRICE MEMORY",
+                title = "Record a price you saw",
+                detail = "Choose a saved product and exact saved store, then add your observed price and proof.",
+                actionLabel = "Start price confirmation",
+                onClick = onRecordObservedPrice
             )
+        }
+
+        item(key = "saved-legacy-tools") {
+            Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
+                Text(
+                    "Staple Watch and personal price history still open in the existing ValuePilot screens.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                SecondaryActionButton(
+                    label = "Open remaining Saved tools",
+                    onClick = onOpenSavedTools
+                )
+            }
         }
 
         if (state.progressVisible) {

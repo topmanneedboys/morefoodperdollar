@@ -39,7 +39,9 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.valuepilot.core.OfflineCatalogDiscoveryResult
+import com.valuepilot.core.PracticalShoppingStoreIdentityScope
 import com.valuepilot.core.ShoppingItemKey
+import com.valuepilot.core.ShoppingStoreKey
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 
@@ -321,6 +323,8 @@ class MainActivity : AppCompatActivity() {
         sourcesLicencesButton.setOnClickListener { showSourcesLicences() }
         dataStatusButton.setOnClickListener { showDataStatus() }
 
+        if (savedInstanceState == null) handleDebugNextHandoff(intent)
+
         bottomNavigation.selectedItemId = menuIdFor(shellState.selectedPrimaryTab)
         renderShell(shellState)
         restoreHomeItemDetailsDialog(savedInstanceState)
@@ -329,14 +333,7 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (
-            DebugNextSavedToolsHandoff.shouldOpenSavedTools(
-                debugBuild = BuildConfig.DEBUG,
-                action = intent.action
-            )
-        ) {
-            dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED))
-        }
+        handleDebugNextHandoff(intent)
     }
 
     override fun onResume() {
@@ -2166,6 +2163,90 @@ class MainActivity : AppCompatActivity() {
         if (next == shellState) return
         shellState = next
         renderShell(next)
+    }
+
+    private fun handleDebugNextHandoff(source: Intent) {
+        if (!BuildConfig.DEBUG) return
+
+        if (
+            DebugNextSavedToolsHandoff.shouldOpenSavedTools(
+                debugBuild = true,
+                action = source.action
+            )
+        ) {
+            dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED))
+            bottomNavigation.selectedItemId = menuIdFor(AppPrimaryTab.SAVED)
+            return
+        }
+
+        if (
+            !DebugNextSavedToolsHandoff.shouldOpenObservedPriceConfirmation(
+                debugBuild = true,
+                action = source.action
+            )
+        ) {
+            return
+        }
+
+        val attempt = observedPricePrefillAttemptFrom(source) ?: return
+        dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED))
+        dispatch(AppShellIntent.OpenObservedPriceSavedSelection)
+        observedPriceConfirmationDraftRouteCoordinator.onAttempt(attempt)
+        bottomNavigation.selectedItemId = menuIdFor(AppPrimaryTab.SAVED)
+    }
+
+    private fun observedPricePrefillAttemptFrom(
+        source: Intent
+    ): UserObservedPriceSavedPrefillHandoffAttempt? {
+        val itemKeyValue =
+            source.getStringExtra(DebugNextSavedToolsHandoff.EXTRA_ITEM_KEY)
+                ?.takeIf(String::isNotBlank)
+                ?: return null
+        val storeKeyValue =
+            source.getStringExtra(DebugNextSavedToolsHandoff.EXTRA_STORE_KEY)
+                ?.takeIf(String::isNotBlank)
+                ?: return null
+        val rawGtin =
+            source.getStringExtra(DebugNextSavedToolsHandoff.EXTRA_RAW_GTIN)
+                ?.takeIf(String::isNotBlank)
+                ?: return null
+        val productName =
+            source.getStringExtra(DebugNextSavedToolsHandoff.EXTRA_PRODUCT_NAME)
+                ?.takeIf(String::isNotBlank)
+                ?: return null
+        val merchantKey =
+            source.getStringExtra(DebugNextSavedToolsHandoff.EXTRA_STORE_MERCHANT_KEY)
+                ?.takeIf(String::isNotBlank)
+                ?: return null
+        val channelKey =
+            source.getStringExtra(DebugNextSavedToolsHandoff.EXTRA_STORE_CHANNEL_KEY)
+                ?.takeIf(String::isNotBlank)
+                ?: return null
+        val storeDisplayName =
+            source.getStringExtra(DebugNextSavedToolsHandoff.EXTRA_STORE_DISPLAY_NAME)
+                ?.takeIf(String::isNotBlank)
+                ?: return null
+        val prefill =
+            runCatching {
+                UserObservedPriceSavedPrefill(
+                    itemKey = ShoppingItemKey(itemKeyValue),
+                    storeKey = ShoppingStoreKey(storeKeyValue),
+                    rawGtin = rawGtin,
+                    productName = productName,
+                    storeScope =
+                        PracticalShoppingStoreIdentityScope(
+                            merchantKey = merchantKey,
+                            locationKey = source.getStringExtra(
+                                DebugNextSavedToolsHandoff.EXTRA_STORE_LOCATION_KEY
+                            ),
+                            commerceChannelKey = channelKey
+                        ),
+                    storeDisplayName = storeDisplayName
+                )
+            }.getOrNull()
+                ?: return null
+
+        return UserObservedPriceSavedPrefillHandoffAttempt(prefill = prefill)
     }
 
     private fun renderShell(state: AppShellState) {
