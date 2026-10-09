@@ -166,6 +166,10 @@ class ValuePilotNextHtmlPreviewContractTest {
                 )
             ).identityKey
         )
+        assertTrue(
+            ValuePilotNextHtmlPreviewContract
+                .parseNativeSavedToolsMessage("{\"type\":\"OPEN_NATIVE_SAVED_TOOLS\"}") != null
+        )
     }
 
     @Test
@@ -193,6 +197,11 @@ class ValuePilotNextHtmlPreviewContractTest {
         assertNull(
             ValuePilotNextHtmlPreviewContract.parseNativeSavedReadMessage(
                 "{\"type\":\"READ_NATIVE_SEARCH\"}"
+            )
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeSavedToolsMessage(
+                "{\"type\":\"OPEN_NATIVE_SAVED\"}"
             )
         )
     }

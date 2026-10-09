@@ -19,6 +19,8 @@ internal data class ValuePilotNextHtmlNativeSearchRequest(
 
 internal object ValuePilotNextHtmlNativeSavedReadRequest
 
+internal object ValuePilotNextHtmlNativeSavedToolsRequest
+
 internal data class ValuePilotNextHtmlNativeSaveRequest(
     val identityKey: String,
     val displayName: String,
@@ -164,6 +166,16 @@ internal object ValuePilotNextHtmlPreviewContract {
         val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
         return if (json.optString("type") == "READ_NATIVE_SAVED") {
             ValuePilotNextHtmlNativeSavedReadRequest
+        } else {
+            null
+        }
+    }
+
+    fun parseNativeSavedToolsMessage(rawMessage: String?): ValuePilotNextHtmlNativeSavedToolsRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 256) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        return if (json.optString("type") == "OPEN_NATIVE_SAVED_TOOLS") {
+            ValuePilotNextHtmlNativeSavedToolsRequest
         } else {
             null
         }

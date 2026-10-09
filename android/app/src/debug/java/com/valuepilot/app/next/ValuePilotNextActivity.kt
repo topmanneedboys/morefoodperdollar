@@ -60,6 +60,13 @@ class ValuePilotNextActivity : AppCompatActivity() {
         enableEdgeToEdge()
         journey = ViewModelProvider(this)[ValuePilotNextJourneyViewModel::class.java]
         journey.start(applicationContext)
+        val startDestination = if (
+            intent.getStringExtra(EXTRA_START_DESTINATION) == "SAVED"
+        ) {
+            NextDestination.SAVED
+        } else {
+            NextDestination.HOME
+        }
         observedPriceProofPicker =
             AndroidUserObservedPriceProofContentPicker(
                 activity = this,
@@ -112,6 +119,7 @@ class ValuePilotNextActivity : AppCompatActivity() {
             ) {
                 ValuePilotNextApp(
                     journey = journey,
+                    startDestination = startDestination,
                     reducedMotion = ValuePilotNextUiPreferencesCodec.resolvesReducedMotion(
                         preference = presentationPreferences.motion,
                         systemReducedMotion = systemReducedMotion
@@ -321,7 +329,8 @@ class ValuePilotNextActivity : AppCompatActivity() {
             ) == 0f
         }.getOrDefault(false)
 
-    private companion object {
+    companion object {
+        internal const val EXTRA_START_DESTINATION = "valuepilot.next.start_destination"
         const val GOOGLE_IMAGES_INITIAL_HEIGHT_PERCENT = 65
         const val GOOGLE_IMAGES_MIN_INITIAL_HEIGHT_DP = 320
     }

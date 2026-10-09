@@ -216,6 +216,12 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                         sendNativeSavedState()
                         return
                     }
+                    if (ValuePilotNextHtmlPreviewContract
+                            .parseNativeSavedToolsMessage(message.data) != null
+                    ) {
+                        openNativeSavedTools()
+                        return
+                    }
                     val nativeSave = ValuePilotNextHtmlPreviewContract
                         .parseNativeSaveMessage(message.data)
                     if (nativeSave != null) {
@@ -311,6 +317,13 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         webView.evaluateJavascript(
             "window.ValuePilotHtmlPreview && window.ValuePilotHtmlPreview.receiveNativeTrip($payload)",
             null
+        )
+    }
+
+    private fun openNativeSavedTools() {
+        startActivity(
+            Intent(this, ValuePilotNextActivity::class.java)
+                .putExtra(ValuePilotNextActivity.EXTRA_START_DESTINATION, "SAVED")
         )
     }
 

@@ -185,6 +185,7 @@ private val appShellStateSaver = listSaver<AppShellState, String>(
 @Composable
 internal fun ValuePilotNextApp(
     journey: ValuePilotNextJourneyViewModel,
+    startDestination: NextDestination = NextDestination.HOME,
     reducedMotion: Boolean,
     presentationPreferences: ValuePilotNextUiPreferences,
     onPresentationPreferencesChanged: (ValuePilotNextUiPreferences) -> Unit,
@@ -203,7 +204,7 @@ internal fun ValuePilotNextApp(
         mutableStateOf(AppShellState.initial())
     }
     var routeStack by rememberSaveable(stateSaver = destinationStackSaver) {
-        mutableStateOf(listOf(NextDestination.HOME))
+        mutableStateOf(listOf(startDestination))
     }
     var selectedIdentityKey by rememberSaveable { mutableStateOf<String?>(null) }
     var showDesignFixture by rememberSaveable { mutableStateOf(false) }
