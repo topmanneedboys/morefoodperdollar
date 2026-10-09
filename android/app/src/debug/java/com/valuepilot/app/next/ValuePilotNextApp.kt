@@ -136,7 +136,7 @@ internal fun ValuePilotNextApp(
     onExitPreview: () -> Unit,
     onOpenComparison: () -> Unit,
     onOpenStoreMap: (com.valuepilot.app.ArgentinaPrivateBasketStoreProjection) -> Boolean,
-    onOpenLegacyGoodPrice: (String) -> Unit,
+    onStartGoodPriceBarcodeScan: () -> Unit,
     onOpenSavedTools: () -> Unit,
     onSharePrivatePriceHistory: (String) -> Boolean,
     onShareGoodPriceResult: (com.valuepilot.app.GoodPriceShareCard) -> Boolean
@@ -539,7 +539,9 @@ internal fun ValuePilotNextApp(
                                         onCheck = journey::checkGoodPrice,
                                         onClearDraft = journey::clearGoodPriceDraft,
                                         onClearPrivateMemory = journey::clearGoodPricePrivateMemory,
-                                        onOpenLegacyGoodPrice = onOpenLegacyGoodPrice,
+                                        onScanBarcode = onStartGoodPriceBarcodeScan,
+                                        onChooseBarcodeOption = journey::chooseGoodPriceBarcodeOption,
+                                        onDismissBarcodeChoice = journey::dismissGoodPriceBarcodeChoice,
                                         onShare = { card ->
                                             if (!onShareGoodPriceResult(card)) {
                                                 notify("No sharing app is available.")

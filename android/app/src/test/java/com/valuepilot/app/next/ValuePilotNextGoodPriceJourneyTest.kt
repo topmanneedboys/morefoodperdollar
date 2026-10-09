@@ -6,6 +6,7 @@ import com.valuepilot.app.CompareHerePrivatePriceMemoryState
 import com.valuepilot.app.CompareHerePrivatePriceMemoryStateManager
 import com.valuepilot.app.CompareHerePrivatePriceMemoryStore
 import com.valuepilot.app.CompareHerePrivatePriceMemoryCapture
+import com.valuepilot.app.GoodPriceBarcodeIdentityPresentation
 import com.valuepilot.app.GoodPriceCheckRouteStatus
 import com.valuepilot.core.CompareHerePriceSelection
 import org.junit.Assert.assertEquals
@@ -65,6 +66,53 @@ class ValuePilotNextGoodPriceJourneyTest {
         assertTrue(store.state.entries.isEmpty())
         assertNull(states.last().route.result)
         assertEquals("Private price memory was cleared from this device.", states.last().memoryNotice)
+    }
+
+    @Test
+    fun `one exact barcode match prefills only an editable product name`() {
+        val states = mutableListOf<ValuePilotNextGoodPriceUiState>()
+        val journey = ValuePilotNextGoodPriceJourney(InMemoryPriceMemoryStore(), states::add) { 100L }
+        val requestId = requireNotNull(journey.beginBarcodeLookup("036000291452"))
+
+        journey.onBarcodeLookupCompleted(
+            requestId,
+            GoodPriceBarcodeIdentityPresentation(
+                gtin = "036000291452",
+                options = listOf(GoodPriceBarcodeIdentityPresentation.Option("Whole milk", "Dairyland")),
+                evaluatedCandidateCount = 1
+            )
+        )
+
+        assertEquals("Whole milk", states.last().rawBlock)
+        assertNull(states.last().route.result)
+        assertTrue(states.last().barcodeMessage.orEmpty().contains("package and price"))
+        assertTrue(states.last().barcodeFocusRequestId > 0)
+    }
+
+    @Test
+    fun `multiple barcode matches require selection and preserve the existing draft until confirmed`() {
+        val states = mutableListOf<ValuePilotNextGoodPriceUiState>()
+        val journey = ValuePilotNextGoodPriceJourney(InMemoryPriceMemoryStore(), states::add) { 100L }
+        journey.onDraftChanged("Existing product\nCA$3.00\n500 g")
+        val requestId = requireNotNull(journey.beginBarcodeLookup("036000291452"))
+
+        journey.onBarcodeLookupCompleted(
+            requestId,
+            GoodPriceBarcodeIdentityPresentation(
+                gtin = "036000291452",
+                options = listOf(
+                    GoodPriceBarcodeIdentityPresentation.Option("Whole milk", "Dairyland"),
+                    GoodPriceBarcodeIdentityPresentation.Option("Whole milk", "Example farm")
+                ),
+                evaluatedCandidateCount = 2
+            )
+        )
+
+        assertEquals("Existing product\nCA$3.00\n500 g", states.last().rawBlock)
+        assertTrue(requireNotNull(states.last().barcodeChoice).replacesDraft)
+        journey.chooseBarcodeOption(requestId, 1)
+        assertEquals("Whole milk", states.last().rawBlock)
+        assertNull(states.last().barcodeChoice)
     }
 
     private class InMemoryPriceMemoryStore : CompareHerePrivatePriceMemoryStore {

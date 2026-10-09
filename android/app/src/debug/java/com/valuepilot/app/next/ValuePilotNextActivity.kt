@@ -7,15 +7,16 @@ import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModelProvider
 import com.valuepilot.app.AndroidUserObservedPriceProofContentPicker
 import com.valuepilot.app.AndroidUserObservedPriceProofContentSource
 import com.valuepilot.app.ArgentinaPrivateBasketStoreProjection
+import com.valuepilot.app.BarcodeCaptureActivity
 import com.valuepilot.app.ComparisonActivity
 import com.valuepilot.app.DebugNextSavedToolsHandoff
-import com.valuepilot.app.GoodPriceActivity
 import com.valuepilot.app.GoodPriceShareCard
 import com.valuepilot.app.MainActivity
 
@@ -23,6 +24,16 @@ import com.valuepilot.app.MainActivity
 class ValuePilotNextActivity : AppCompatActivity() {
     private lateinit var journey: ValuePilotNextJourneyViewModel
     private var observedPriceProofPicker: AndroidUserObservedPriceProofContentPicker? = null
+    private val goodPriceBarcodeCaptureLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (!::journey.isInitialized) return@registerForActivityResult
+            val gtin = result.data?.getStringExtra(BarcodeCaptureActivity.EXTRA_GTIN)
+            when {
+                result.resultCode != RESULT_OK -> journey.onGoodPriceBarcodeScanCancelled()
+                gtin.isNullOrBlank() -> journey.onGoodPriceBarcodeScanUnavailable()
+                else -> journey.lookupGoodPriceBarcode(gtin)
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,7 +57,7 @@ class ValuePilotNextActivity : AppCompatActivity() {
                         startActivity(Intent(this, ComparisonActivity::class.java))
                     },
                     onOpenStoreMap = ::openStoreMap,
-                    onOpenLegacyGoodPrice = ::openLegacyGoodPrice,
+                    onStartGoodPriceBarcodeScan = ::startGoodPriceBarcodeScan,
                     onOpenSavedTools = ::openSavedTools,
                     onSharePrivatePriceHistory = ::sharePrivatePriceHistory,
                     onShareGoodPriceResult = ::shareGoodPriceResult
@@ -83,13 +94,15 @@ class ValuePilotNextActivity : AppCompatActivity() {
         }
     }
 
-    private fun openLegacyGoodPrice(displayName: String) {
-        startActivity(
-            Intent(this, GoodPriceActivity::class.java).putExtra(
-                GoodPriceActivity.EXTRA_PRODUCT_NAME,
-                displayName
+    private fun startGoodPriceBarcodeScan() {
+        journey.onGoodPriceBarcodeScanRequested()
+        try {
+            goodPriceBarcodeCaptureLauncher.launch(
+                Intent(this, BarcodeCaptureActivity::class.java)
             )
-        )
+        } catch (_: Exception) {
+            journey.onGoodPriceBarcodeScanUnavailable()
+        }
     }
 
     private fun openSavedTools() {
