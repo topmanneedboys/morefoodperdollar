@@ -33,6 +33,14 @@ internal data class ValuePilotNextHtmlNativeRemoveRequest(
     val identityKey: String
 )
 
+internal data class ValuePilotNextHtmlNativeTripRequest(
+    val oneWayDistance: String,
+    val fuelConsumption: String,
+    val fuelPrice: String,
+    val tolls: String,
+    val parking: String
+)
+
 internal data class ValuePilotNextHtmlNativePhotoRequest(
     val brand: String?,
     val name: String,
@@ -218,6 +226,31 @@ internal object ValuePilotNextHtmlPreviewContract {
             return null
         }
         return ValuePilotNextHtmlNativeRemoveRequest(identityKey)
+    }
+
+    /** Keeps the preview's trip form on the existing deterministic Kotlin calculator. */
+    fun parseNativeTripMessage(rawMessage: String?): ValuePilotNextHtmlNativeTripRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 2_048) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        if (json.optString("type") != "CALCULATE_NATIVE_TRIP") return null
+        val values = listOf(
+            json.optString("oneWayDistance").trim(),
+            json.optString("fuelConsumption").trim(),
+            json.optString("fuelPrice").trim(),
+            json.optString("tolls").trim(),
+            json.optString("parking").trim()
+        )
+        if (
+            values.any { it.isBlank() || it.length > 48 || containsControlCharacter(it) } ||
+            values.any { !it.matches(Regex("[0-9]+(?:\\.[0-9]+)?")) }
+        ) return null
+        return ValuePilotNextHtmlNativeTripRequest(
+            oneWayDistance = values[0],
+            fuelConsumption = values[1],
+            fuelPrice = values[2],
+            tolls = values[3],
+            parking = values[4]
+        )
     }
 
     /**

@@ -196,4 +196,27 @@ class ValuePilotNextHtmlPreviewContractTest {
             )
         )
     }
+
+    @Test
+    fun acceptsBoundedNativeTripInputs() {
+        val request = requireNotNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeTripMessage(
+                "{" +
+                    "\"type\":\"CALCULATE_NATIVE_TRIP\"," +
+                    "\"oneWayDistance\":\"8\"," +
+                    "\"fuelConsumption\":\"7.5\"," +
+                    "\"fuelPrice\":\"1200\"," +
+                    "\"tolls\":\"150\"," +
+                    "\"parking\":\"300\"" +
+                    "}"
+            )
+        )
+        assertEquals("8", request.oneWayDistance)
+        assertEquals("300", request.parking)
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeTripMessage(
+                "{\"type\":\"CALCULATE_NATIVE_TRIP\",\"oneWayDistance\":\"8e3\",\"fuelConsumption\":\"7.5\",\"fuelPrice\":\"1200\",\"tolls\":\"0\",\"parking\":\"0\"}"
+            )
+        )
+    }
 }

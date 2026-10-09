@@ -2,6 +2,7 @@ package com.valuepilot.app.next
 
 import com.valuepilot.app.ArgentinaLiveSearchSurfaceState
 import com.valuepilot.app.ArgentinaBackendContract
+import com.valuepilot.app.ArgentinaPrivateTripCostResult
 import com.valuepilot.app.PracticalShoppingPrivateIdentity
 import org.json.JSONArray
 import org.json.JSONObject
@@ -61,6 +62,27 @@ internal object ValuePilotNextHtmlNativeSearchBridge {
                     )
                 }
             })
+            .toString()
+
+    fun encodeTrip(
+        result: ArgentinaPrivateTripCostResult?,
+        error: String?
+    ): String =
+        JSONObject()
+            .put("type", "NATIVE_TRIP_RESULT")
+            .put("status", if (result != null) "SUCCESS" else "ERROR")
+            .put("error", error ?: JSONObject.NULL)
+            .put(
+                "result",
+                result?.let {
+                    JSONObject()
+                        .put("roundTripKm", it.roundTripKm.toPlainString())
+                        .put("fuelCost", it.fuelCost.toPlainString())
+                        .put("tolls", it.tolls.toPlainString())
+                        .put("parking", it.parking.toPlainString())
+                        .put("total", it.total.toPlainString())
+                } ?: JSONObject.NULL
+            )
             .toString()
 
     private fun JSONArray.putOffer(offer: ArgentinaBackendContract.SearchOffer) {

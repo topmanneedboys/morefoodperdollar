@@ -228,6 +228,12 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                         removeNativeIdentity(nativeRemove.identityKey)
                         return
                     }
+                    val nativeTrip = ValuePilotNextHtmlPreviewContract
+                        .parseNativeTripMessage(message.data)
+                    if (nativeTrip != null) {
+                        calculateNativeTrip(nativeTrip)
+                        return
+                    }
                     val nativePhoto = ValuePilotNextHtmlPreviewContract
                         .parseNativeGoogleImagesMessage(message.data)
                     if (nativePhoto != null) {
@@ -287,6 +293,25 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
     private fun removeNativeIdentity(identityKey: String) {
         val removed = journey.removePrivateIdentity(identityKey)
         sendNativeSavedState(if (removed) "REMOVE_SUCCESS" else "REMOVE_MISSING")
+    }
+
+    private fun calculateNativeTrip(request: ValuePilotNextHtmlNativeTripRequest) {
+        if (!::journey.isInitialized || !::webView.isInitialized) return
+        journey.calculateTrip(
+            oneWayDistance = request.oneWayDistance,
+            fuelConsumption = request.fuelConsumption,
+            fuelPrice = request.fuelPrice,
+            tolls = request.tolls,
+            parking = request.parking
+        )
+        val payload = ValuePilotNextHtmlNativeSearchBridge.encodeTrip(
+            result = journey.uiState.tripResult,
+            error = journey.uiState.tripError
+        )
+        webView.evaluateJavascript(
+            "window.ValuePilotHtmlPreview && window.ValuePilotHtmlPreview.receiveNativeTrip($payload)",
+            null
+        )
     }
 
     private fun installBackHandling() {
