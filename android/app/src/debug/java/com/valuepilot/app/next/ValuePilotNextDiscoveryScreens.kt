@@ -41,6 +41,9 @@ import com.valuepilot.app.PracticalShoppingSearchIdentityPresentation
 internal fun usesCompactDiscoveryContent(availableWidth: Dp, fontScale: Float): Boolean =
     availableWidth < 420.dp || fontScale >= 1.2f
 
+internal fun stacksHomeQuickActions(availableWidth: Dp, fontScale: Float): Boolean =
+    availableWidth < 340.dp || fontScale >= 1.3f
+
 @Composable
 internal fun ValuePilotHomeScreen(
     basketCount: Int,
@@ -53,20 +56,20 @@ internal fun ValuePilotHomeScreen(
 ) {
     PremiumColumn {
         item(key = "home-intro") {
-            Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.large)) {
-                Eyebrow("VALUE, MADE CLEAR")
+            Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {
+                Eyebrow("SHOP WITH CONFIDENCE")
                 Text(
-                    "Shop with the full picture.",
-                    style = MaterialTheme.typography.displayLarge,
+                    "See the full picture.",
+                    style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    "See product identity, listed-price evidence and the cost of getting there as separate, understandable parts of the decision.",
-                    style = MaterialTheme.typography.bodyLarge,
+                    "Compare exact products, listed prices and trip cost, each with its own evidence.",
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 EvidencePill(
-                    "SEARCH AREA  ·  $areaLabel",
+                    "SEARCHING NEAR  ·  $areaLabel",
                     MaterialTheme.colorScheme.secondaryContainer,
                     MaterialTheme.colorScheme.onSecondaryContainer
                 )
@@ -80,20 +83,39 @@ internal fun ValuePilotHomeScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = ValuePilotElevation.flat)
             ) {
                 Column(
-                    modifier = Modifier.padding(ValuePilotSpacing.xxLarge),
+                    modifier = Modifier.padding(ValuePilotSpacing.xLarge),
                     verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)
                 ) {
                     Text(
-                        "Start with an exact product identity.",
+                        "Search exact products.",
                         style = MaterialTheme.typography.headlineMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     Text(
-                        "Search sends a user-triggered request to the qualified Argentina source. Prices appear only when fresh listed-price evidence is attached.",
+                        "Current prices appear only with fresh source evidence.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     PrimaryActionButton("Search products", onSearch)
+                }
+            }
+        }
+        item(key = "home-quick-tools") {
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val stack = stacksHomeQuickActions(maxWidth, LocalDensity.current.fontScale)
+                Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
+                    Eyebrow("QUICK TOOLS")
+                    if (stack) {
+                        Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
+                            HomeQuickAction("Price check", onGoodPriceCheck, Modifier.fillMaxWidth())
+                            HomeQuickAction("Trip estimate", onTripPlanner, Modifier.fillMaxWidth())
+                        }
+                    } else {
+                        Row(horizontalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
+                            HomeQuickAction("Price check", onGoodPriceCheck, Modifier.weight(1f))
+                            HomeQuickAction("Trip estimate", onTripPlanner, Modifier.weight(1f))
+                        }
+                    }
                 }
             }
         }
@@ -106,7 +128,7 @@ internal fun ValuePilotHomeScreen(
                     basketCount.toString() + " selected product" + if (basketCount == 1) "" else "s"
                 },
                 detail = if (basketCount == 0) {
-                    "Add exact identities from Search. Saved identities stay on this device; current offer evidence remains separate and session-only."
+                    "Keep chosen product identities together on this device. Current price evidence stays separate."
                 } else {
                     "Review price coverage, remove items, or request a current multi-store shopping decision."
                 },
@@ -121,46 +143,18 @@ internal fun ValuePilotHomeScreen(
                     .padding(ValuePilotSpacing.small),
                 verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)
             ) {
-                Eyebrow("THE VALUEPILOT PROMISE")
+                Eyebrow("OUR STANDARD")
                 Text(
                     "Unknown stays unknown.",
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    "Package quantity, unit price, source freshness and store context stay visible. A listed price never implies stock or a verified saving.",
-                    style = MaterialTheme.typography.bodyMedium,
+                    "A listed price never implies stock or a verified saving.",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        }
-        item(key = "home-manual-tools-heading") {
-            Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
-                Eyebrow("MANUAL SHOPPING TOOLS")
-                Text(
-                    "Use the details you observed.",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-            }
-        }
-        item(key = "home-good-price-check") {
-            ActionCard(
-                eyebrow = "PERSONAL PRICE CHECK",
-                title = "Compare the value in a pack.",
-                detail = "Enter the exact package quantity and shelf price you saw. The calculation uses only your entries.",
-                actionLabel = "Check a shelf price",
-                onClick = onGoodPriceCheck
-            )
-        }
-        item(key = "home-trip-planner") {
-            ActionCard(
-                eyebrow = "MANUAL TRIP ESTIMATE",
-                title = "Add the cost of getting there.",
-                detail = "Enter your own driving distance, fuel use, fuel price, tolls and parking. No route or fuel price is inferred.",
-                actionLabel = "Estimate trip cost",
-                onClick = onTripPlanner
-            )
         }
         item(key = "home-compare") {
             TextButton(
@@ -169,6 +163,31 @@ internal fun ValuePilotHomeScreen(
             ) {
                 Text("Open the current product comparison")
             }
+        }
+    }
+}
+
+@Composable
+private fun HomeQuickAction(label: String, onClick: () -> Unit, modifier: Modifier) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.heightIn(min = 72.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = ValuePilotElevation.flat)
+    ) {
+        androidx.compose.foundation.layout.Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = ValuePilotSpacing.large, vertical = ValuePilotSpacing.medium),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }

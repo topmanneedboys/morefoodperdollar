@@ -193,7 +193,6 @@ internal fun ValuePilotNextApp(
     onOpenStoreMap: (com.valuepilot.app.ArgentinaPrivateBasketStoreProjection) -> Boolean,
     onStartGoodPriceBarcodeScan: () -> Unit,
     onOpenLegacyStapleWatch: () -> Unit,
-    onOpenSavedTools: () -> Unit,
     onSharePrivatePriceHistory: (String) -> Boolean,
     onShareGoodPriceResult: (com.valuepilot.app.GoodPriceShareCard) -> Boolean
 ) {
@@ -582,8 +581,7 @@ internal fun ValuePilotNextApp(
                                     },
                                     onRecordObservedPrice = {
                                         navigate(NextDestination.OBSERVED_PRICE_SELECTION)
-                                    },
-                                    onOpenSavedTools = onOpenSavedTools
+                                    }
                                 )
 
                                 NextDestination.GOOD_PRICE_CHECK ->

@@ -53,8 +53,7 @@ internal fun ValuePilotSavedScreen(
     onSearch: () -> Unit,
     onOpenStapleWatch: () -> Unit,
     onOpenPrivatePriceHistory: () -> Unit,
-    onRecordObservedPrice: () -> Unit,
-    onOpenSavedTools: () -> Unit
+    onRecordObservedPrice: () -> Unit
 ) {
     var confirmClearAll by remember { mutableStateOf(false) }
 
@@ -226,15 +225,6 @@ internal fun ValuePilotSavedScreen(
             )
         }
 
-        item(key = "saved-legacy-tools") {
-            ActionCard(
-                eyebrow = "STILL IN THE CLASSIC APP",
-                title = "More Saved tools",
-                detail = "Open the existing Saved screen for management tools that have not moved into Compose yet.",
-                actionLabel = "Open existing Saved tools",
-                onClick = onOpenSavedTools
-            )
-        }
     }
 }
 
