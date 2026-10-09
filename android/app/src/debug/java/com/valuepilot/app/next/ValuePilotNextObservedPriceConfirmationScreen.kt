@@ -2,6 +2,7 @@ package com.valuepilot.app.next
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,12 +26,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.valuepilot.app.UserObservedPriceConfirmationActionUiState
 import com.valuepilot.app.UserObservedPriceConfirmationDraftMissingField
 import com.valuepilot.app.UserObservedPriceConfirmationDraftProofContentSelectionPresentation
 import com.valuepilot.app.UserProvidedPriceProofType
+
+internal fun usesCompactObservedPriceConfirmationFields(
+    availableWidth: Dp,
+    fontScale: Float
+): Boolean = availableWidth < 420.dp || fontScale >= 1.2f
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,25 +126,30 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
                     title = "What price did you see?",
                     detail = "Enter the amount and currency exactly as shown. Currency is never inferred from the saved store."
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
-                        OutlinedTextField(
-                            value = amountText,
-                            onValueChange = { amountText = it },
-                            modifier = Modifier.weight(1f),
-                            label = { Text("Amount") },
-                            placeholder = { Text("12.50") },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    BoxWithConstraints(Modifier.fillMaxWidth()) {
+                        val compact = usesCompactObservedPriceConfirmationFields(
+                            maxWidth,
+                            LocalDensity.current.fontScale
                         )
-                        OutlinedTextField(
-                            value = currencyCodeText,
-                            onValueChange = { currencyCodeText = it.uppercase() },
-                            modifier = Modifier.weight(0.72f),
-                            label = { Text("Currency") },
-                            placeholder = { Text("ARS") },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii)
-                        )
+                        if (compact) {
+                            Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
+                                ObservedPriceAmountField(amountText, { amountText = it }, Modifier.fillMaxWidth())
+                                ObservedPriceCurrencyField(
+                                    currencyCodeText,
+                                    { currencyCodeText = it.uppercase() },
+                                    Modifier.fillMaxWidth()
+                                )
+                            }
+                        } else {
+                            Row(horizontalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
+                                ObservedPriceAmountField(amountText, { amountText = it }, Modifier.weight(1f))
+                                ObservedPriceCurrencyField(
+                                    currencyCodeText,
+                                    { currencyCodeText = it.uppercase() },
+                                    Modifier.weight(0.72f)
+                                )
+                            }
+                        }
                     }
                     state.priceInputError?.let { InputError(it) }
                     PrimaryActionButton(
@@ -157,39 +170,62 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
                     title = "When did you see it?",
                     detail = "Use the factual local date and time, then enter its explicit UTC offset. Your device clock and timezone are not used."
                 ) {
-                    OutlinedTextField(
-                        value = dateText,
-                        onValueChange = { dateText = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Date") },
-                        placeholder = { Text("YYYY-MM-DD") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
-                        trailingIcon = {
-                            TextButton(onClick = { showDatePicker = true }) {
-                                Text("Choose")
+                    BoxWithConstraints(Modifier.fillMaxWidth()) {
+                        val compact = usesCompactObservedPriceConfirmationFields(
+                            maxWidth,
+                            LocalDensity.current.fontScale
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
+                            OutlinedTextField(
+                                value = dateText,
+                                onValueChange = { dateText = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("Date") },
+                                placeholder = { Text("YYYY-MM-DD") },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
+                                trailingIcon = if (compact) null else {
+                                    {
+                                        TextButton(onClick = { showDatePicker = true }) {
+                                            Text("Choose")
+                                        }
+                                    }
+                                }
+                            )
+                            if (compact) {
+                                TextButton(
+                                    onClick = { showDatePicker = true },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("Choose date from calendar")
+                                }
                             }
                         }
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
-                        OutlinedTextField(
-                            value = timeText,
-                            onValueChange = { timeText = it },
-                            modifier = Modifier.weight(1f),
-                            label = { Text("Local time") },
-                            placeholder = { Text("HH:MM") },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii)
+                    }
+                    BoxWithConstraints(Modifier.fillMaxWidth()) {
+                        val compact = usesCompactObservedPriceConfirmationFields(
+                            maxWidth,
+                            LocalDensity.current.fontScale
                         )
-                        OutlinedTextField(
-                            value = utcOffsetText,
-                            onValueChange = { utcOffsetText = it },
-                            modifier = Modifier.weight(0.85f),
-                            label = { Text("UTC offset") },
-                            placeholder = { Text("-03:00") },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii)
-                        )
+                        if (compact) {
+                            Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
+                                ObservedPriceLocalTimeField(timeText, { timeText = it }, Modifier.fillMaxWidth())
+                                ObservedPriceUtcOffsetField(
+                                    utcOffsetText,
+                                    { utcOffsetText = it },
+                                    Modifier.fillMaxWidth()
+                                )
+                            }
+                        } else {
+                            Row(horizontalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
+                                ObservedPriceLocalTimeField(timeText, { timeText = it }, Modifier.weight(1f))
+                                ObservedPriceUtcOffsetField(
+                                    utcOffsetText,
+                                    { utcOffsetText = it },
+                                    Modifier.weight(0.85f)
+                                )
+                            }
+                        }
                     }
                     Text(
                         "Accepted time formats: HH:MM or HH:MM:SS. Offset examples: -03:00 or Z.",
@@ -316,6 +352,74 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
             }
         }
     }
+}
+
+@Composable
+private fun ObservedPriceAmountField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        label = { Text("Amount") },
+        placeholder = { Text("12.50") },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+    )
+}
+
+@Composable
+private fun ObservedPriceCurrencyField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        label = { Text("Currency") },
+        placeholder = { Text("ARS") },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii)
+    )
+}
+
+@Composable
+private fun ObservedPriceLocalTimeField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        label = { Text("Local time") },
+        placeholder = { Text("HH:MM") },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii)
+    )
+}
+
+@Composable
+private fun ObservedPriceUtcOffsetField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        label = { Text("UTC offset") },
+        placeholder = { Text("-03:00") },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii)
+    )
 }
 
 @Composable
