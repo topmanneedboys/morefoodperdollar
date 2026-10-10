@@ -97,6 +97,15 @@ class ValuePilotNextHtmlLocalizationTest {
         assertTrue(source.contains("offer?.unitPriceBasis"))
     }
 
+    @Test
+    fun `unknown native enums stay behind localized evidence labels`() {
+        val source = assetSource()
+
+        assertTrue(source.contains("copyKey?copy(copyKey):copy('nativeIdentityOnly')"))
+        assertTrue(source.contains("default:return copy('nativeFreshUnknown')"))
+        assertFalse(source.contains("default:return String(value||copy('nativeFreshUnknown'))"))
+    }
+
     private fun assetSource(): String {
         var directory = File(requireNotNull(System.getProperty("user.dir")))
         repeat(8) {
