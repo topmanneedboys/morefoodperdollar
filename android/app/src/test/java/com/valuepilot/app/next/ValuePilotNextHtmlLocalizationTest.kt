@@ -47,7 +47,7 @@ class ValuePilotNextHtmlLocalizationTest {
 
         assertTrue(
             source.contains(
-                "refreshNativeSaved:()=>{if(!state.nativeSavedEnabled)return false;requestNativeSaved();return true}"
+                "refreshNativeSaved:()=>{if(!state.nativeSavedEnabled||state.nativeSavedPending)return false;requestNativeSaved();return true}"
             )
         )
     }
