@@ -66,9 +66,20 @@ class ValuePilotNextActivity : AppCompatActivity() {
             "STAPLE_WATCH_SETUP" -> NextDestination.STAPLE_WATCH_SETUP
             "PRIVATE_PRICE_HISTORY" -> NextDestination.PRIVATE_PRICE_HISTORY
             "BASKET" -> NextDestination.BASKET
+            "PRODUCT_DETAIL" -> NextDestination.PRODUCT_DETAIL
             "GOOD_PRICE_CHECK" -> NextDestination.GOOD_PRICE_CHECK
             "COMPARE" -> NextDestination.COMPARE
             else -> NextDestination.HOME
+        }
+        val startSearchQuery = intent.getStringExtra(EXTRA_START_SEARCH_QUERY)
+            ?.trim()
+            ?.takeIf { it.isNotBlank() && it.length <= 96 }
+        val startIdentityKey = intent.getStringExtra(EXTRA_START_IDENTITY_KEY)
+            ?.trim()
+            ?.takeIf { it.isNotBlank() && it.length <= 256 }
+        if (startDestination == NextDestination.PRODUCT_DETAIL && startSearchQuery != null) {
+            journey.queryChanged(startSearchQuery)
+            journey.submitSearch(startSearchQuery)
         }
         if (startDestination == NextDestination.GOOD_PRICE_CHECK) {
             intent.getStringExtra(EXTRA_GOOD_PRICE_DISPLAY_NAME)
@@ -129,6 +140,8 @@ class ValuePilotNextActivity : AppCompatActivity() {
                 ValuePilotNextApp(
                     journey = journey,
                     startDestination = startDestination,
+                    initialSelectedIdentityKey = startIdentityKey,
+                    initialQuery = startSearchQuery,
                     reducedMotion = ValuePilotNextUiPreferencesCodec.resolvesReducedMotion(
                         preference = presentationPreferences.motion,
                         systemReducedMotion = systemReducedMotion
@@ -343,6 +356,8 @@ class ValuePilotNextActivity : AppCompatActivity() {
 
     companion object {
         internal const val EXTRA_START_DESTINATION = "valuepilot.next.start_destination"
+        internal const val EXTRA_START_SEARCH_QUERY = "valuepilot.next.start_search_query"
+        internal const val EXTRA_START_IDENTITY_KEY = "valuepilot.next.start_identity_key"
         internal const val EXTRA_GOOD_PRICE_DISPLAY_NAME = "valuepilot.next.good_price_display_name"
         const val GOOGLE_IMAGES_INITIAL_HEIGHT_PERCENT = 65
         const val GOOGLE_IMAGES_MIN_INITIAL_HEIGHT_DP = 320

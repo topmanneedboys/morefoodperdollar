@@ -194,6 +194,8 @@ private val appShellStateSaver = listSaver<AppShellState, String>(
 internal fun ValuePilotNextApp(
     journey: ValuePilotNextJourneyViewModel,
     startDestination: NextDestination = NextDestination.HOME,
+    initialSelectedIdentityKey: String? = null,
+    initialQuery: String? = null,
     reducedMotion: Boolean,
     presentationPreferences: ValuePilotNextUiPreferences,
     language: ValuePilotNextLanguage,
@@ -215,11 +217,11 @@ internal fun ValuePilotNextApp(
     var routeStack by rememberSaveable(stateSaver = destinationStackSaver) {
         mutableStateOf(listOf(startDestination))
     }
-    var selectedIdentityKey by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedIdentityKey by rememberSaveable { mutableStateOf(initialSelectedIdentityKey) }
     var showDesignFixture by rememberSaveable { mutableStateOf(false) }
     var selectedMapOfferKey by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedMapProductName by rememberSaveable { mutableStateOf<String?>(null) }
-    var query by rememberSaveable { mutableStateOf(ui.query) }
+    var query by rememberSaveable { mutableStateOf(initialQuery ?: ui.query) }
     var tripDistance by rememberSaveable { mutableStateOf("") }
     var tripConsumption by rememberSaveable { mutableStateOf("") }
     var tripFuelPrice by rememberSaveable { mutableStateOf("") }

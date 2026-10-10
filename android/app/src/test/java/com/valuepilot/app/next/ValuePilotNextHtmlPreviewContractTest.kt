@@ -115,6 +115,27 @@ class ValuePilotNextHtmlPreviewContractTest {
     }
 
     @Test
+    fun acceptsNativeProductDetailHandoffWithBoundedIdentityAndQuery() {
+        val request = requireNotNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeProductDetailMessage(
+                "{\"type\":\"OPEN_NATIVE_PRODUCT_DETAIL\",\"identityKey\":\"gtin-123\",\"query\":\"leche entera\"}"
+            )
+        )
+        assertEquals("gtin-123", request.identityKey)
+        assertEquals("leche entera", request.query)
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeProductDetailMessage(
+                "{\"type\":\"OPEN_NATIVE_PRODUCT_DETAIL\",\"identityKey\":\"gtin-123\",\"query\":\"leche\\u0001\"}"
+            )
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeProductDetailMessage(
+                "{\"type\":\"OPEN_NATIVE_PRODUCT_DETAIL\",\"identityKey\":\"gtin-123\",\"query\":\"${"x".repeat(97)}\"}"
+            )
+        )
+    }
+
+    @Test
     fun buildsNativeGoogleImagesQueriesFromIdentityFields() {
         val request = requireNotNull(
             ValuePilotNextHtmlPreviewContract.parseNativeGoogleImagesMessage(

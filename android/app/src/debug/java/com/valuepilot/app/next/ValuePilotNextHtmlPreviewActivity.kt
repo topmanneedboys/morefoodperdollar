@@ -208,6 +208,12 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                         startNativeSearch(nativeSearch.query)
                         return
                     }
+                    val nativeProductDetail = ValuePilotNextHtmlPreviewContract
+                        .parseNativeProductDetailMessage(message.data)
+                    if (nativeProductDetail != null) {
+                        openNativeProductDetail(nativeProductDetail)
+                        return
+                    }
                     if (ValuePilotNextHtmlPreviewContract
                             .parseNativeSavedReadMessage(message.data) != null
                     ) {
@@ -360,6 +366,21 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
             Intent(this, ValuePilotNextActivity::class.java)
                 .putExtra(ValuePilotNextActivity.EXTRA_START_DESTINATION, "GOOD_PRICE_CHECK")
                 .putExtra(ValuePilotNextActivity.EXTRA_GOOD_PRICE_DISPLAY_NAME, identity.displayName)
+        )
+    }
+
+    private fun openNativeProductDetail(
+        request: ValuePilotNextHtmlNativeProductDetailRequest
+    ) {
+        val match = journey.uiState.search.presentation?.matches?.firstOrNull {
+            it.identityKey == request.identityKey
+        } ?: return
+        if (journey.uiState.search.query.trim() != request.query) return
+        startActivity(
+            Intent(this, ValuePilotNextActivity::class.java)
+                .putExtra(ValuePilotNextActivity.EXTRA_START_DESTINATION, "PRODUCT_DETAIL")
+                .putExtra(ValuePilotNextActivity.EXTRA_START_SEARCH_QUERY, request.query)
+                .putExtra(ValuePilotNextActivity.EXTRA_START_IDENTITY_KEY, match.identityKey)
         )
     }
 

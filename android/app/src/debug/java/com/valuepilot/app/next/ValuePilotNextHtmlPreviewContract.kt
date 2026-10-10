@@ -34,6 +34,11 @@ internal data class ValuePilotNextHtmlNativeGoodPriceFromSavedRequest(
     val displayName: String
 )
 
+internal data class ValuePilotNextHtmlNativeProductDetailRequest(
+    val identityKey: String,
+    val query: String
+)
+
 internal data class ValuePilotNextHtmlNativeSaveRequest(
     val identityKey: String,
     val displayName: String,
@@ -171,6 +176,23 @@ internal object ValuePilotNextHtmlPreviewContract {
             containsControlCharacter(query)
         ) return null
         return ValuePilotNextHtmlNativeSearchRequest(query)
+    }
+
+    /** Opens native Product Detail only for an identity from the current Search query. */
+    fun parseNativeProductDetailMessage(
+        rawMessage: String?
+    ): ValuePilotNextHtmlNativeProductDetailRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 1_536) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        if (json.optString("type") != "OPEN_NATIVE_PRODUCT_DETAIL") return null
+        val identityKey = json.optString("identityKey").trim()
+        val query = json.optString("query").trim()
+        if (
+            identityKey.isBlank() || identityKey.length > 256 ||
+            query.isBlank() || query.length > 96 ||
+            containsControlCharacter(identityKey) || containsControlCharacter(query)
+        ) return null
+        return ValuePilotNextHtmlNativeProductDetailRequest(identityKey, query)
     }
 
     /** Requests the identity-only Saved surface from the isolated Kotlin journey. */
