@@ -1,5 +1,8 @@
 package com.valuepilot.app.next
 
+import com.valuepilot.app.ArgentinaPrivateBasketLineProjection
+import com.valuepilot.app.ArgentinaPrivateBasketRenderState
+import com.valuepilot.app.PracticalShoppingSearchIdentityPresentation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -250,6 +253,10 @@ class ValuePilotNextHtmlPreviewContractTest {
             ValuePilotNextHtmlPreviewContract
                 .parseNativeBasketMessage("{\"type\":\"OPEN_NATIVE_BASKET\"}") != null
         )
+        assertTrue(
+            ValuePilotNextHtmlPreviewContract
+                .parseNativeBasketPlanMessage("{\"type\":\"REQUEST_NATIVE_BASKET_PLAN\"}") != null
+        )
         val identityOnlySave = requireNotNull(
             ValuePilotNextHtmlPreviewContract.parseNativeSaveMessage(
                 "{" +
@@ -286,6 +293,64 @@ class ValuePilotNextHtmlPreviewContractTest {
         assertEquals("Leche Entera", history.getString("latestDisplayName"))
         assertTrue(!history.has("price"))
         assertTrue(!history.has("storeName"))
+    }
+
+    @Test
+    fun `native product detail payload carries only Kotlin-owned identity and offers`() {
+        val match = PracticalShoppingSearchIdentityPresentation.Match(
+            displayName = "Leche Entera",
+            brand = "Armonía",
+            matchLabel = "exact name",
+            packageQuantityLabel = "1.000 ml",
+            sourceLabel = "qualified Argentina source",
+            identityKey = "identity-123"
+        )
+        val payload = JSONObject(
+            ValuePilotNextHtmlNativeSearchBridge.encodeProductDetail("leche", match)
+        )
+
+        assertEquals("NATIVE_PRODUCT_DETAIL", payload.getString("type"))
+        assertEquals("leche", payload.getString("query"))
+        assertEquals("identity-123", payload.getJSONObject("match").getString("identityKey"))
+        assertEquals(0, payload.getJSONObject("match").getJSONArray("offers").length())
+    }
+
+    @Test
+    fun `saved bridge includes Kotlin basket evidence state without inventing totals`() {
+        val basket = ArgentinaPrivateBasketRenderState(
+            headline = "1 selected product",
+            guidance = "Search for current price evidence.",
+            evidenceNotice = "Prices remain unknown.",
+            actionLabel = "Open Search",
+            canPlan = false,
+            lines = listOf(
+                ArgentinaPrivateBasketLineProjection(
+                    identityKey = "identity-123",
+                    productName = "Leche Entera",
+                    packageQuantityText = "1.000 ml",
+                    packageCount = null,
+                    lineTotalText = null,
+                    storeKey = null,
+                    storeName = null,
+                    availabilityText = "Price evidence unknown",
+                    missing = true
+                )
+            ),
+            plan = null
+        )
+        val payload = JSONObject(
+            ValuePilotNextHtmlNativeSearchBridge.encodeSaved(
+                identities = emptyList(),
+                basket = basket,
+                planLoading = true
+            )
+        )
+        val line = payload.getJSONObject("basket").getJSONArray("lines").getJSONObject(0)
+
+        assertEquals("identity-123", line.getString("identityKey"))
+        assertTrue(line.isNull("lineTotalText"))
+        assertTrue(payload.getJSONObject("basket").getBoolean("planLoading"))
+        assertTrue(payload.getJSONObject("basket").isNull("plan"))
     }
 
     @Test
@@ -347,6 +412,11 @@ class ValuePilotNextHtmlPreviewContractTest {
         assertNull(
             ValuePilotNextHtmlPreviewContract.parseNativeBasketMessage(
                 "{\"type\":\"OPEN_NATIVE_SAVED_TOOLS\"}"
+            )
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeBasketPlanMessage(
+                "{\"type\":\"OPEN_NATIVE_BASKET\"}"
             )
         )
     }

@@ -62,6 +62,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
     private var nativeSearchQuery: String? = null
     private var nativeSearchInitialGeneration = -1L
     private var nativeSearchDeadlineMillis = 0L
+    private var nativeBasketPlanDeadlineMillis = 0L
 
     private val nativeSearchPoll = object : Runnable {
         override fun run() {
@@ -81,6 +82,19 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                 return
             }
             handler.postDelayed(this, NATIVE_SEARCH_POLL_INTERVAL_MS)
+        }
+    }
+
+    private val nativeBasketPlanPoll = object : Runnable {
+        override fun run() {
+            if (!::webView.isInitialized || !::journey.isInitialized) return
+            if (!journey.uiState.planLoading ||
+                System.currentTimeMillis() >= nativeBasketPlanDeadlineMillis
+            ) {
+                sendNativeSavedState()
+                return
+            }
+            handler.postDelayed(this, NATIVE_BASKET_PLAN_POLL_INTERVAL_MS)
         }
     }
 
@@ -163,6 +177,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
     override fun onDestroy() {
         handler.removeCallbacks(themeSync)
         handler.removeCallbacks(nativeSearchPoll)
+        handler.removeCallbacks(nativeBasketPlanPoll)
         nativeSearchQuery = null
         if (::webView.isInitialized) {
             webView.stopLoading()
@@ -285,6 +300,12 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                         openNativeBasket()
                         return
                     }
+                    if (ValuePilotNextHtmlPreviewContract
+                            .parseNativeBasketPlanMessage(message.data) != null
+                    ) {
+                        requestNativeBasketPlan()
+                        return
+                    }
                     val nativeSave = ValuePilotNextHtmlPreviewContract
                         .parseNativeSaveMessage(message.data)
                     if (nativeSave != null) {
@@ -335,7 +356,9 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         val payload = ValuePilotNextHtmlNativeSearchBridge.encodeSaved(
             identities = journey.uiState.privateIdentities,
             action = action,
-            privateHistory = journey.privatePriceHistorySummary()
+            privateHistory = journey.privatePriceHistorySummary(),
+            basket = journey.uiState.basket,
+            planLoading = journey.uiState.planLoading
         )
         webView.evaluateJavascript(
             "window.ValuePilotHtmlPreview && window.ValuePilotHtmlPreview.receiveNativeSaved($payload)",
@@ -363,6 +386,19 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
     private fun removeNativeIdentity(identityKey: String) {
         val removed = journey.removePrivateIdentity(identityKey)
         sendNativeSavedState(if (removed) "REMOVE_SUCCESS" else "REMOVE_MISSING")
+    }
+
+    private fun requestNativeBasketPlan() {
+        if (!::journey.isInitialized || !::webView.isInitialized) return
+        handler.removeCallbacks(nativeBasketPlanPoll)
+        journey.refreshPrivateIdentitiesFromStore()
+        journey.requestBasketPlan()
+        nativeBasketPlanDeadlineMillis =
+            System.currentTimeMillis() + NATIVE_BASKET_PLAN_TIMEOUT_MS
+        sendNativeSavedState()
+        if (journey.uiState.planLoading) {
+            handler.post(nativeBasketPlanPoll)
+        }
     }
 
     private fun calculateNativeTrip(request: ValuePilotNextHtmlNativeTripRequest) {
@@ -438,23 +474,14 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
             sendNativeActionNotice("PRODUCT_DETAIL_STALE")
             return
         }
-        val handoff = ValuePilotNextProductDetailHandoffCodec.encodeOrNull(
-            query = request.query,
-            presentation = presentation,
-            selectedIdentityKey = match.identityKey
+        val payload = ValuePilotNextHtmlNativeSearchBridge.encodeProductDetail(
+            query = request.query.trim(),
+            match = match
         )
-        val intent = Intent(this, ValuePilotNextActivity::class.java)
-                .putExtra(ValuePilotNextActivity.EXTRA_START_DESTINATION, "PRODUCT_DETAIL")
-                .putExtra(
-                    ValuePilotNextActivity.EXTRA_START_SEARCH_QUERY,
-                    request.query.trim()
-                )
-                .putExtra(ValuePilotNextActivity.EXTRA_START_ORIGIN, "SEARCH")
-                .putExtra(ValuePilotNextActivity.EXTRA_START_IDENTITY_KEY, match.identityKey)
-        handoff?.let { payload ->
-            intent.putExtra(ValuePilotNextActivity.EXTRA_PRODUCT_DETAIL_HANDOFF, payload)
-        }
-        startActivity(intent)
+        webView.evaluateJavascript(
+            "window.ValuePilotHtmlPreview && window.ValuePilotHtmlPreview.receiveNativeProductDetail($payload)",
+            null
+        )
     }
 
     private fun sendNativeActionNotice(code: String) {
@@ -633,6 +660,8 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         const val THEME_SYNC_INTERVAL_MS = 300L
         const val NATIVE_SEARCH_POLL_INTERVAL_MS = 120L
         const val NATIVE_SEARCH_TIMEOUT_MS = 20_000L
+        const val NATIVE_BASKET_PLAN_POLL_INTERVAL_MS = 160L
+        const val NATIVE_BASKET_PLAN_TIMEOUT_MS = 20_000L
         const val PREVIEW_PREFERENCES_NAME = "valuepilot_next_html_preview"
         const val PREF_LANGUAGE = "language"
     }

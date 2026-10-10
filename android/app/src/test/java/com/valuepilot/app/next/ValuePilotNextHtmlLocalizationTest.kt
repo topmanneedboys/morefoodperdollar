@@ -112,6 +112,20 @@ class ValuePilotNextHtmlLocalizationTest {
     }
 
     @Test
+    fun `html journey defaults to Kotlin-owned surfaces with fixture fallback`() {
+        val source = assetSource()
+
+        assertTrue(source.contains("nativeSearchEnabled:true"))
+        assertTrue(source.contains("nativeSavedEnabled:true"))
+        assertTrue(source.contains("nativeTripEnabled:true"))
+        assertTrue(source.contains("function receiveNativeProductDetail"))
+        assertTrue(source.contains("function nativeDetail()"))
+        assertTrue(source.contains("function nativeBasket()"))
+        assertTrue(source.contains("case'native-detail-save':requestNativeDetailSave()"))
+        assertTrue(source.contains("receiveNativeProductDetail:(payload)=>{receiveNativeProductDetail(payload);return true}"))
+    }
+
+    @Test
     fun `unknown native enums stay behind localized evidence labels`() {
         val source = assetSource()
 

@@ -21,6 +21,8 @@ internal object ValuePilotNextHtmlNativeSavedReadRequest
 
 internal object ValuePilotNextHtmlNativeBasketRequest
 
+internal object ValuePilotNextHtmlNativeBasketPlanRequest
+
 internal data class ValuePilotNextHtmlNativeSavedToolsRequest(
     val destination: String
 )
@@ -211,6 +213,16 @@ internal object ValuePilotNextHtmlPreviewContract {
         val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
         return if (json.optString("type") == "OPEN_NATIVE_BASKET") {
             ValuePilotNextHtmlNativeBasketRequest
+        } else {
+            null
+        }
+    }
+
+    fun parseNativeBasketPlanMessage(rawMessage: String?): ValuePilotNextHtmlNativeBasketPlanRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 256) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        return if (json.optString("type") == "REQUEST_NATIVE_BASKET_PLAN") {
+            ValuePilotNextHtmlNativeBasketPlanRequest
         } else {
             null
         }

@@ -2,7 +2,9 @@ package com.valuepilot.app.next
 
 import com.valuepilot.app.ArgentinaLiveSearchSurfaceState
 import com.valuepilot.app.ArgentinaBackendContract
+import com.valuepilot.app.ArgentinaPrivateBasketRenderState
 import com.valuepilot.app.ArgentinaPrivateTripCostResult
+import com.valuepilot.app.PracticalShoppingSearchIdentityPresentation
 import com.valuepilot.app.PracticalShoppingPrivateIdentity
 import org.json.JSONArray
 import org.json.JSONObject
@@ -39,28 +41,26 @@ internal object ValuePilotNextHtmlNativeSearchBridge {
             .put("statusMessage", state.statusMessage)
             .put("caveat", state.caveat)
             .put("matches", JSONArray().apply {
-                state.presentation?.matches.orEmpty().forEach { match ->
-                    put(
-                        JSONObject()
-                            .put("identityKey", match.identityKey)
-                            .put("displayName", match.displayName)
-                            .put("brand", match.brand ?: JSONObject.NULL)
-                            .put("matchLabel", match.matchLabel)
-                            .put("packageQuantityLabel", match.packageQuantityLabel ?: JSONObject.NULL)
-                            .put("sourceLabel", match.sourceLabel ?: JSONObject.NULL)
-                            .put("gtin", match.gtin ?: JSONObject.NULL)
-                            .put("offers", JSONArray().apply {
-                                match.qualifiedOffers.forEach { offer -> putOffer(offer) }
-                            })
-                    )
-                }
+                state.presentation?.matches.orEmpty().forEach { match -> put(encodeMatch(match)) }
             })
             .toString()
+
+    fun encodeProductDetail(
+        query: String,
+        match: PracticalShoppingSearchIdentityPresentation.Match
+    ): String = JSONObject()
+        .put("type", "NATIVE_PRODUCT_DETAIL")
+        .put("mode", "READY")
+        .put("query", query)
+        .put("match", encodeMatch(match))
+        .toString()
 
     fun encodeSaved(
         identities: List<PracticalShoppingPrivateIdentity>,
         action: String? = null,
-        privateHistory: ValuePilotNextHtmlPrivateHistorySummary? = null
+        privateHistory: ValuePilotNextHtmlPrivateHistorySummary? = null,
+        basket: ArgentinaPrivateBasketRenderState? = null,
+        planLoading: Boolean = false
     ): String =
         JSONObject()
             .put("type", "NATIVE_SAVED_STATE")
@@ -78,6 +78,10 @@ internal object ValuePilotNextHtmlNativeSearchBridge {
                         .put("latestDisplayName", summary.latestDisplayName ?: JSONObject.NULL)
                 } ?: JSONObject.NULL
             )
+            .put(
+                "basket",
+                basket?.let { encodeBasket(it, planLoading) } ?: JSONObject.NULL
+            )
             .put("items", JSONArray().apply {
                 identities.forEach { identity ->
                     put(
@@ -91,6 +95,62 @@ internal object ValuePilotNextHtmlNativeSearchBridge {
                 }
             })
             .toString()
+
+    private fun encodeMatch(
+        match: PracticalShoppingSearchIdentityPresentation.Match
+    ): JSONObject = JSONObject()
+        .put("identityKey", match.identityKey)
+        .put("displayName", match.displayName)
+        .put("brand", match.brand ?: JSONObject.NULL)
+        .put("matchLabel", match.matchLabel)
+        .put("packageQuantityLabel", match.packageQuantityLabel ?: JSONObject.NULL)
+        .put("sourceLabel", match.sourceLabel ?: JSONObject.NULL)
+        .put("gtin", match.gtin ?: JSONObject.NULL)
+        .put("offers", JSONArray().apply {
+            match.qualifiedOffers.forEach { offer -> putOffer(offer) }
+        })
+
+    private fun encodeBasket(
+        state: ArgentinaPrivateBasketRenderState,
+        planLoading: Boolean
+    ): JSONObject =
+        JSONObject()
+            .put("headline", state.headline)
+            .put("guidance", state.guidance)
+            .put("evidenceNotice", state.evidenceNotice)
+            .put("actionLabel", state.actionLabel)
+            .put("canPlan", state.canPlan)
+            .put("planLoading", planLoading)
+            .put("tripSummaryText", state.tripSummaryText ?: JSONObject.NULL)
+            .put("errorNotice", state.errorNotice ?: JSONObject.NULL)
+            .put("lines", JSONArray().apply {
+                state.lines.forEach { line ->
+                    put(
+                        JSONObject()
+                            .put("identityKey", line.identityKey)
+                            .put("productName", line.productName)
+                            .put("packageQuantityText", line.packageQuantityText)
+                            .put("packageCount", line.packageCount ?: JSONObject.NULL)
+                            .put("lineTotalText", line.lineTotalText ?: JSONObject.NULL)
+                            .put("storeKey", line.storeKey ?: JSONObject.NULL)
+                            .put("storeName", line.storeName ?: JSONObject.NULL)
+                            .put("availabilityText", line.availabilityText)
+                            .put("missing", line.missing)
+                    )
+                }
+            })
+            .put(
+                "plan",
+                state.plan?.let { plan ->
+                    JSONObject()
+                        .put("status", plan.status.name)
+                        .put("headline", plan.headline)
+                        .put("totalText", plan.totalText ?: JSONObject.NULL)
+                        .put("coverageText", plan.coverageText)
+                        .put("notice", plan.notice)
+                        .put("releaseDate", plan.releaseDate)
+                } ?: JSONObject.NULL
+            )
 
     fun encodeTrip(
         result: ArgentinaPrivateTripCostResult?,
