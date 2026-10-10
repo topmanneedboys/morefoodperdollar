@@ -1612,13 +1612,21 @@ private fun ProductDetailGoogleImagesAction(
     onClick: () -> Unit
 ) {
     val query = GoogleImagesHandoff.queryFor(match, areaLabel)
+    val accessibilityDescription = query?.let {
+        valuePilotNextText(
+            "View on Google Images. Search: $it",
+            "Ver en Google Images. Búsqueda: $it"
+        )
+    } ?: valuePilotNextText(
+        "View on Google Images: ${match.displayName}",
+        "Ver en Google Images: ${match.displayName}"
+    )
     Surface(
         onClick = onClick,
         modifier = Modifier
             .size(52.dp)
             .semantics {
-                contentDescription = query?.let { "Ver en Google Images. Búsqueda: $it" }
-                    ?: "Ver en Google Images: ${match.displayName}"
+                contentDescription = accessibilityDescription
             },
         shape = RoundedCornerShape(13.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,

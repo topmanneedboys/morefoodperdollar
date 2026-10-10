@@ -161,7 +161,7 @@ internal fun ValuePilotNextCompareHereScreen(
                         },
                     label = { Text(valuePilotNextText("Option ${index + 1}", "Opción ${index + 1}")) },
                     placeholder = {
-                        Text(valuePilotNextText("For example: Apples, 3 lb, current price CA$5.99", "Ejemplo: manzanas, 3 kg, precio actual $5.990"))
+                        Text(valuePilotNextText("For example: Apples, 3 kg, current price ARS 5,990", "Ejemplo: manzanas, 3 kg, precio actual ARS 5.990"))
                     },
                     minLines = 3,
                     maxLines = 5,

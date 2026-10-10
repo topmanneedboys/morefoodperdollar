@@ -8,7 +8,7 @@ class ValuePilotNextTopBarAccessibilityTest {
 
     @Test
     fun `back and exit controls have clear spoken labels`() {
-        val source = appSource()
+        val source = appSource("ValuePilotNextApp.kt")
 
         assertTrue(
             source.contains(
@@ -24,15 +24,19 @@ class ValuePilotNextTopBarAccessibilityTest {
         assertTrue(source.contains("JourneyLanguageToggle("))
         assertTrue(source.contains("valuePilotNextText(language, \"Language\", \"Idioma\")"))
         assertTrue(source.contains("ValuePilotNextLanguage.SPANISH_AR to \"ES\""))
+
+        val discovery = appSource("ValuePilotNextDiscoveryScreens.kt")
+        assertTrue(discovery.contains("View on Google Images. Search: \$it"))
+        assertTrue(discovery.contains("Ver en Google Images. Búsqueda: \$it"))
     }
 
-    private fun appSource(): String {
+    private fun appSource(fileName: String): String {
         var directory = File(requireNotNull(System.getProperty("user.dir")))
         repeat(8) {
             val candidate =
                 File(
                     directory,
-                    "android/app/src/debug/java/com/valuepilot/app/next/ValuePilotNextApp.kt"
+                    "android/app/src/debug/java/com/valuepilot/app/next/$fileName"
                 )
             if (candidate.isFile) return candidate.readText()
             directory = directory.parentFile ?: return@repeat
