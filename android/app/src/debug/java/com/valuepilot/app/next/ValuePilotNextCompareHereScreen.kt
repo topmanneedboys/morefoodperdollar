@@ -63,14 +63,17 @@ internal fun ValuePilotNextCompareHereScreen(
     PremiumColumn {
         item(key = "compare-here-intro") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {
-                Eyebrow("COMPARE WHAT YOU SAW")
+                Eyebrow(valuePilotNextText("COMPARE WHAT YOU SAW", "COMPARÁ LO QUE VISTE"))
                 Text(
-                    "Find the value in your options.",
+                    valuePilotNextText("Find the value in your options.", "Encontrá el mejor valor entre tus opciones."),
                     style = MaterialTheme.typography.displayLarge,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    "Enter exact shelf details and package sizes. This compares the observations you enter; it does not verify a current store offer.",
+                    valuePilotNextText(
+                        "Enter exact shelf details and package sizes. This compares the observations you enter; it does not verify a current store offer.",
+                        "Ingresá los datos exactos de góndola y los tamaños de envase. Esto compara tus observaciones; no verifica una oferta actual de tienda."
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -79,9 +82,12 @@ internal fun ValuePilotNextCompareHereScreen(
 
         item(key = "compare-price-basis") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
-                SectionHeading("PRICE BASIS", "Choose what to compare")
+                SectionHeading(valuePilotNextText("PRICE BASIS", "BASE DE PRECIO"), valuePilotNextText("Choose what to compare", "Elegí qué comparar"))
                 Text(
-                    "A missing member price stays unranked. A current price is never used in its place.",
+                    valuePilotNextText(
+                        "A missing member price stays unranked. A current price is never used in its place.",
+                        "Un precio de socio faltante queda sin ordenar. Nunca se usa un precio actual en su lugar."
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -95,12 +101,12 @@ internal fun ValuePilotNextCompareHereScreen(
                             FilterChip(
                                 selected = state.priceSelection == CompareHerePriceSelection.CURRENT,
                                 onClick = { onPriceSelectionChanged(CompareHerePriceSelection.CURRENT) },
-                                label = { Text("Current shelf price") }
+                                label = { Text(valuePilotNextText("Current shelf price", "Precio actual de góndola")) }
                             )
                             FilterChip(
                                 selected = state.priceSelection == CompareHerePriceSelection.MEMBER,
                                 onClick = { onPriceSelectionChanged(CompareHerePriceSelection.MEMBER) },
-                                label = { Text("Member price") }
+                                label = { Text(valuePilotNextText("Member price", "Precio de socio")) }
                             )
                         }
                     } else {
@@ -108,12 +114,12 @@ internal fun ValuePilotNextCompareHereScreen(
                             FilterChip(
                                 selected = state.priceSelection == CompareHerePriceSelection.CURRENT,
                                 onClick = { onPriceSelectionChanged(CompareHerePriceSelection.CURRENT) },
-                                label = { Text("Current shelf price") }
+                                label = { Text(valuePilotNextText("Current shelf price", "Precio actual de góndola")) }
                             )
                             FilterChip(
                                 selected = state.priceSelection == CompareHerePriceSelection.MEMBER,
                                 onClick = { onPriceSelectionChanged(CompareHerePriceSelection.MEMBER) },
-                                label = { Text("Member price") }
+                                label = { Text(valuePilotNextText("Member price", "Precio de socio")) }
                             )
                         }
                     }
@@ -123,8 +129,11 @@ internal fun ValuePilotNextCompareHereScreen(
 
         item(key = "compare-products-title") {
             SectionHeading(
-                "PRODUCT DETAILS",
-                "${state.productBlocks.size} comparison ${if (state.productBlocks.size == 1) "entry" else "entries"}"
+                valuePilotNextText("PRODUCT DETAILS", "DETALLES DE PRODUCTO"),
+                state.productBlocks.size.toString() + valuePilotNextText(
+                    if (state.productBlocks.size == 1) " comparison entry" else " comparison entries",
+                    if (state.productBlocks.size == 1) " comparación" else " comparaciones"
+                )
             )
         }
 
@@ -132,6 +141,14 @@ internal fun ValuePilotNextCompareHereScreen(
             items = state.productBlocks,
             key = { index, _ -> "compare-product-$index" }
         ) { index, block ->
+            val productDescription = valuePilotNextText(
+                "Product ${index + 1} name, package, price, and promotion details",
+                "Nombre, envase, precio y promoción del producto ${index + 1}"
+            )
+            val removeDescription = valuePilotNextText(
+                "Remove comparison option ${index + 1}",
+                "Quitar opción de comparación ${index + 1}"
+            )
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
                 OutlinedTextField(
                     value = block,
@@ -139,11 +156,11 @@ internal fun ValuePilotNextCompareHereScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .semantics {
-                            contentDescription = "Product ${index + 1} name, package, price and promotion details"
+                            contentDescription = productDescription
                         },
-                    label = { Text("Option ${index + 1}") },
+                    label = { Text(valuePilotNextText("Option ${index + 1}", "Opción ${index + 1}")) },
                     placeholder = {
-                        Text("For example: Apples, 3 lb, current price CA$5.99")
+                        Text(valuePilotNextText("For example: Apples, 3 lb, current price CA$5.99", "Ejemplo: manzanas, 3 kg, precio actual $5.990"))
                     },
                     minLines = 3,
                     maxLines = 5,
@@ -156,10 +173,10 @@ internal fun ValuePilotNextCompareHereScreen(
                             .align(Alignment.End)
                             .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
                             .semantics {
-                                contentDescription = "Remove comparison option ${index + 1}"
+                                contentDescription = removeDescription
                             }
                     ) {
-                        Text("Remove option", color = MaterialTheme.colorScheme.error)
+                        Text(valuePilotNextText("Remove option", "Quitar opción"), color = MaterialTheme.colorScheme.error)
                     }
                 }
             }
@@ -173,7 +190,7 @@ internal fun ValuePilotNextCompareHereScreen(
                     .fillMaxWidth()
                     .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
             ) {
-                Text("Add another option")
+                Text(valuePilotNextText("Add another option", "Agregar otra opción"))
             }
         }
 
@@ -205,11 +222,14 @@ internal fun ValuePilotNextCompareHereScreen(
                         verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)
                     ) {
                         Text(
-                            "These are like-for-like alternatives",
+                            valuePilotNextText("These are like-for-like alternatives", "Son alternativas comparables"),
                             style = MaterialTheme.typography.titleMedium
                         )
                         Text(
-                            "Confirm only when every option is a substitute you would reasonably choose between. Editing an entry clears this confirmation.",
+                            valuePilotNextText(
+                                "Confirm only when every option is a substitute you would reasonably choose between. Editing an entry clears this confirmation.",
+                                "Confirmá solo cuando todas las opciones sean sustitutos que elegirías razonablemente. Editar una opción borra esta confirmación."
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -221,11 +241,11 @@ internal fun ValuePilotNextCompareHereScreen(
         when (actionState.readiness) {
             CompareHereManualDraftReadiness.ADD_PRODUCTS ->
                 item(key = "compare-readiness") {
-                    EvidenceFootnote("Enter at least two products with an exact package size and price.")
+                    EvidenceFootnote(valuePilotNextText("Enter at least two products with an exact package size and price.", "Ingresá al menos dos productos con tamaño de envase y precio exactos."))
                 }
             CompareHereManualDraftReadiness.CONFIRM_LIKE_FOR_LIKE ->
                 item(key = "compare-readiness") {
-                    EvidenceFootnote("Confirm the products are comparable before requesting an exact-value ranking.")
+                    EvidenceFootnote(valuePilotNextText("Confirm the products are comparable before requesting an exact-value ranking.", "Confirmá que los productos sean comparables antes de pedir un ranking de valor exacto."))
                 }
             CompareHereManualDraftReadiness.READY -> Unit
         }
@@ -235,7 +255,7 @@ internal fun ValuePilotNextCompareHereScreen(
         }
 
         if (state.isComparing) {
-            item(key = "compare-progress") { LoadingRow("Comparing the exact details you entered…") }
+            item(key = "compare-progress") { LoadingRow(valuePilotNextText("Comparing the exact details you entered…", "Comparando los datos exactos que ingresaste…")) }
         }
 
         state.routeState?.let { result ->
@@ -249,7 +269,7 @@ internal fun ValuePilotNextCompareHereScreen(
 
         item(key = "compare-submit") {
             PrimaryActionButton(
-                label = "Compare exact value",
+                label = valuePilotNextText("Compare exact value", "Comparar valor exacto"),
                 onClick = onCompare,
                 enabled = actionState.compareEnabled && !state.isComparing
             )
@@ -257,10 +277,13 @@ internal fun ValuePilotNextCompareHereScreen(
 
         item(key = "compare-capture-handoff") {
             ActionCard(
-                eyebrow = "SCAN OR IMPORT",
-                title = "Start from a barcode or price-label photo",
-                detail = "Open the existing capture tools to suggest product text. You review every suggestion and add the price and package details you see.",
-                actionLabel = "Open capture tools",
+                eyebrow = valuePilotNextText("SCAN OR IMPORT", "ESCANEÁ O IMPORTÁ"),
+                title = valuePilotNextText("Start from a barcode or price-label photo", "Empezá con un código de barras o una foto de etiqueta de precio"),
+                detail = valuePilotNextText(
+                    "Open the existing capture tools to suggest product text. You review every suggestion and add the price and package details you see.",
+                    "Abrí las herramientas existentes para sugerir texto del producto. Revisás cada sugerencia y agregás el precio y los datos del envase que ves."
+                ),
+                actionLabel = valuePilotNextText("Open capture tools", "Abrir herramientas de captura"),
                 onClick = onOpenCaptureTools
             )
         }
@@ -272,12 +295,12 @@ internal fun ValuePilotNextCompareHereScreen(
                     .fillMaxWidth()
                     .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
             ) {
-                Text("Clear comparison")
+                Text(valuePilotNextText("Clear comparison", "Borrar comparación"))
             }
         }
 
         item(key = "compare-back") {
-            SecondaryActionButton("Back", onBack)
+            SecondaryActionButton(valuePilotNextText("Back", "Volver"), onBack)
         }
     }
 }
@@ -300,7 +323,7 @@ private fun CompareHereResultCard(
             modifier = Modifier.padding(ValuePilotSpacing.large),
             verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)
         ) {
-            Eyebrow("COMPARISON RESULT")
+            Eyebrow(valuePilotNextText("COMPARISON RESULT", "RESULTADO DE COMPARACIÓN"))
             Text(routeState.title, style = MaterialTheme.typography.headlineMedium)
             Text(routeState.guidance, style = MaterialTheme.typography.bodyMedium)
 
@@ -309,7 +332,7 @@ private fun CompareHereResultCard(
                     result.rows.firstOrNull { it.bestValue }?.let { best ->
                         Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
                             EvidencePill(
-                                "BEST VALUE",
+                                valuePilotNextText("BEST VALUE", "MEJOR VALOR"),
                                 MaterialTheme.colorScheme.primary,
                                 MaterialTheme.colorScheme.onPrimary
                             )
@@ -328,7 +351,11 @@ private fun CompareHereResultCard(
                         title = row.title,
                         detail = "${row.priceText} · ${row.quantityText}",
                         unitRate = row.unitRateText,
-                        badge = if (row.bestValue) "BEST VALUE" else row.valueRank?.let { "RANK $it" }
+                        badge = if (row.bestValue) {
+                            valuePilotNextText("BEST VALUE", "MEJOR VALOR")
+                        } else {
+                            row.valueRank?.let { valuePilotNextText("RANK $it", "PUESTO $it") }
+                        }
                     )
                 }
                 result.blockedRows.forEach { row ->
@@ -336,7 +363,7 @@ private fun CompareHereResultCard(
                         title = row.title,
                         detail = row.reasonText,
                         unitRate = null,
-                        badge = "UNRANKED"
+                        badge = valuePilotNextText("UNRANKED", "SIN ORDENAR")
                     )
                 }
                 result.notice?.let { EvidenceNotice(it) }
@@ -353,11 +380,14 @@ private fun CompareHereResultCard(
             }
 
             EvidenceFootnote(
-                "This result compares your entered observations. It does not confirm a purchase or a live retailer price."
+                valuePilotNextText(
+                    "This result compares your entered observations. It does not confirm a purchase or a live retailer price.",
+                    "Este resultado compara tus observaciones ingresadas. No confirma una compra ni un precio actual de minorista."
+                )
             )
 
             onShare?.let { action ->
-                SecondaryActionButton("Share privacy-safe result", action)
+                SecondaryActionButton(valuePilotNextText("Share privacy-safe result", "Compartir resultado privado"), action)
             }
         }
     }
@@ -387,11 +417,12 @@ private fun CompareHereResultRow(
                 style = MaterialTheme.typography.titleMedium
             )
             badge?.let {
+                val isBestValue = it == "BEST VALUE" || it == "MEJOR VALOR"
                 EvidencePill(
                     it,
-                    if (it == "BEST VALUE") MaterialTheme.colorScheme.primaryContainer
+                    if (isBestValue) MaterialTheme.colorScheme.primaryContainer
                     else MaterialTheme.colorScheme.surfaceVariant,
-                    if (it == "BEST VALUE") MaterialTheme.colorScheme.onPrimaryContainer
+                    if (isBestValue) MaterialTheme.colorScheme.onPrimaryContainer
                     else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

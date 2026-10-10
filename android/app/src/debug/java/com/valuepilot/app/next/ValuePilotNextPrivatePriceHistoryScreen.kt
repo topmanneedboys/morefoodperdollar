@@ -69,10 +69,13 @@ internal fun ValuePilotNextPrivatePriceHistoryScreen(
     if (showClearAllDialog) {
         AlertDialog(
             onDismissRequest = { showClearAllDialog = false },
-            title = { Text("Clear private history?") },
+            title = { Text(valuePilotNextText("Clear private history?", "¿Borrar el historial privado?")) },
             text = {
                 Text(
-                    "This permanently removes the comparison observations stored on this device. It does not change saved choices, live offers, or shopping plans."
+                    valuePilotNextText(
+                        "This permanently removes the comparison observations stored on this device. It does not change saved choices, live offers, or shopping plans.",
+                        "Esto elimina de forma permanente las observaciones de comparación guardadas en este dispositivo. No cambia elecciones guardadas, ofertas actuales ni planes de compra."
+                    )
                 )
             },
             confirmButton = {
@@ -81,10 +84,10 @@ internal fun ValuePilotNextPrivatePriceHistoryScreen(
                         showClearAllDialog = false
                         onClearAll()
                     }
-                ) { Text("Clear history") }
+                ) { Text(valuePilotNextText("Clear history", "Borrar historial")) }
             },
             dismissButton = {
-                TextButton(onClick = { showClearAllDialog = false }) { Text("Keep history") }
+                TextButton(onClick = { showClearAllDialog = false }) { Text(valuePilotNextText("Keep history", "Conservar historial")) }
             }
         )
     }
@@ -92,7 +95,7 @@ internal fun ValuePilotNextPrivatePriceHistoryScreen(
     if (showExportDialog && state?.exportPreview != null) {
         AlertDialog(
             onDismissRequest = { showExportDialog = false },
-            title = { Text("Review before sharing") },
+            title = { Text(valuePilotNextText("Review before sharing", "Revisá antes de compartir")) },
             text = {
                 Column(
                     modifier = Modifier
@@ -105,7 +108,10 @@ internal fun ValuePilotNextPrivatePriceHistoryScreen(
                         style = MaterialTheme.typography.bodySmall
                     )
                     EvidenceFootnote(
-                        "This copy contains private observations from this device. Review it before choosing a destination. It does not contain store availability or current-offer claims."
+                        valuePilotNextText(
+                            "This copy contains private observations from this device. Review it before choosing a destination. It does not contain store availability or current-offer claims.",
+                            "Esta copia contiene observaciones privadas de este dispositivo. Revisala antes de elegir un destino. No contiene disponibilidad de tienda ni afirmaciones de ofertas actuales."
+                        )
                     )
                 }
             },
@@ -115,10 +121,10 @@ internal fun ValuePilotNextPrivatePriceHistoryScreen(
                         showExportDialog = false
                         onExport(requireNotNull(state.exportPreview))
                     }
-                ) { Text("Choose where to share") }
+                ) { Text(valuePilotNextText("Choose where to share", "Elegir dónde compartir")) }
             },
             dismissButton = {
-                TextButton(onClick = { showExportDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showExportDialog = false }) { Text(valuePilotNextText("Cancel", "Cancelar")) }
             }
         )
     }
@@ -126,14 +132,17 @@ internal fun ValuePilotNextPrivatePriceHistoryScreen(
     PremiumColumn {
         item(key = "private-price-history-intro") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {
-                Eyebrow("PERSONAL PRICE MEMORY")
+                Eyebrow(valuePilotNextText("PERSONAL PRICE MEMORY", "MEMORIA PERSONAL DE PRECIOS"))
                 Text(
-                    "Your private price history",
+                    valuePilotNextText("Your private price history", "Tu historial privado de precios"),
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    "Past comparison observations stored on this device. They are personal context, not live store prices, inventory, retailer offers, or a guarantee.",
+                    valuePilotNextText(
+                        "Past comparison observations stored on this device. They are personal context, not live store prices, inventory, retailer offers, or a guarantee.",
+                        "Observaciones de comparación anteriores guardadas en este dispositivo. Son contexto personal, no precios actuales, inventario, ofertas de minoristas ni una garantía."
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -144,24 +153,24 @@ internal fun ValuePilotNextPrivatePriceHistoryScreen(
             null,
             ValuePilotNextPrivatePriceHistoryStatus.LOADING -> {
                 item(key = "private-price-history-loading") {
-                    LoadingRow("Reading history stored on this device…")
+                    LoadingRow(valuePilotNextText("Reading history stored on this device…", "Leyendo el historial guardado en este dispositivo…"))
                 }
             }
 
             ValuePilotNextPrivatePriceHistoryStatus.UNAVAILABLE -> {
                 item(key = "private-price-history-unavailable") {
                     EmptyStateCard(
-                        eyebrow = "HISTORY UNAVAILABLE",
-                        title = "We couldn't open private history.",
+                        eyebrow = valuePilotNextText("HISTORY UNAVAILABLE", "HISTORIAL NO DISPONIBLE"),
+                        title = valuePilotNextText("We couldn't open private history.", "No pudimos abrir el historial privado."),
                         detail = state.notice
-                            ?: "Try again or open Scan & compare for its recovery options.",
-                        actionLabel = "Try again",
+                            ?: valuePilotNextText("Try again or open Scan & compare for its recovery options.", "Probá de nuevo o abrí Escanear y comparar para ver opciones de recuperación."),
+                        actionLabel = valuePilotNextText("Try again", "Intentar de nuevo"),
                         onAction = onRefresh
                     )
                 }
                 item(key = "private-price-history-recovery") {
                     SecondaryActionButton(
-                        label = "Open Scan & compare",
+                        label = valuePilotNextText("Open Scan & compare", "Abrir Escanear y comparar"),
                         onClick = onOpenComparison
                     )
                 }
@@ -175,11 +184,11 @@ internal fun ValuePilotNextPrivatePriceHistoryScreen(
                 }
                 item(key = "private-price-history-empty") {
                     EmptyStateCard(
-                        eyebrow = "NO OBSERVATIONS YET",
-                        title = "Your history will appear here.",
+                        eyebrow = valuePilotNextText("NO OBSERVATIONS YET", "TODAVÍA NO HAY OBSERVACIONES"),
+                        title = valuePilotNextText("Your history will appear here.", "Tu historial va a aparecer acá."),
                         detail = state.presentation?.intro
-                            ?: "Private comparison observations stay on this device and are not current store offers.",
-                        actionLabel = "Open Scan & compare",
+                            ?: valuePilotNextText("Private comparison observations stay on this device and are not current store offers.", "Las observaciones privadas de comparación quedan en este dispositivo y no son ofertas actuales de tienda."),
+                        actionLabel = valuePilotNextText("Open Scan & compare", "Abrir Escanear y comparar"),
                         onAction = onOpenComparison
                     )
                 }
@@ -203,7 +212,7 @@ internal fun ValuePilotNextPrivatePriceHistoryScreen(
                 if (state.exportPreview != null) {
                     item(key = "private-price-history-export") {
                         SecondaryActionButton(
-                            label = "Review and share a copy",
+                            label = valuePilotNextText("Review and share a copy", "Revisar y compartir una copia"),
                             onClick = { showExportDialog = true }
                         )
                     }
@@ -212,7 +221,7 @@ internal fun ValuePilotNextPrivatePriceHistoryScreen(
                 if (forgetPresentation != null) {
                     item(key = "private-price-history-forget") {
                         SecondaryActionButton(
-                            label = "Forget one observation",
+                            label = valuePilotNextText("Forget one observation", "Olvidar una observación"),
                             onClick = {
                                 selectedObservationId = null
                                 showForgetDialog = true
@@ -228,14 +237,14 @@ internal fun ValuePilotNextPrivatePriceHistoryScreen(
                             .fillMaxWidth()
                             .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
                     ) {
-                        Text("Clear all private history", color = MaterialTheme.colorScheme.error)
+                        Text(valuePilotNextText("Clear all private history", "Borrar todo el historial privado"), color = MaterialTheme.colorScheme.error)
                     }
                 }
             }
         }
 
         item(key = "private-price-history-back") {
-            SecondaryActionButton(label = "Back to Saved", onClick = onBack)
+            SecondaryActionButton(label = valuePilotNextText("Back to Saved", "Volver a Guardados"), onClick = onBack)
         }
     }
 }
@@ -255,12 +264,15 @@ private fun HistorySummaryCard(presentation: PracticalShoppingPrivatePriceHistor
             modifier = Modifier.padding(ValuePilotSpacing.large),
             verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)
         ) {
-            Eyebrow("${presentation.rows.size} EXACT HISTORIES SHOWN")
+            Eyebrow(valuePilotNextText("${presentation.rows.size} EXACT HISTORIES SHOWN", "${presentation.rows.size} HISTORIA(S) EXACTA(S) MOSTRADA(S)"))
             Text(presentation.title, style = MaterialTheme.typography.titleLarge)
             Text(presentation.intro, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (presentation.omittedRowCount > 0) {
                 Text(
-                    "${presentation.omittedRowCount} more exact package histories are stored on this device.",
+                    valuePilotNextText(
+                        "${presentation.omittedRowCount} more exact package histories are stored on this device.",
+                        "Hay ${presentation.omittedRowCount} historias más de envases exactos guardadas en este dispositivo."
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -282,22 +294,27 @@ private fun HistoryRowCard(row: PracticalShoppingPrivatePriceHistoryRow) {
             modifier = Modifier.padding(ValuePilotSpacing.large),
             verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)
         ) {
-            Eyebrow("${row.observationCount} ${if (row.observationCount == 1) "OBSERVATION" else "OBSERVATIONS"} · ${row.sourceText.uppercase()}")
+            Eyebrow(
+                valuePilotNextText(
+                    "${row.observationCount} ${if (row.observationCount == 1) "OBSERVATION" else "OBSERVATIONS"} · ${row.sourceText.uppercase()}",
+                    "${row.observationCount} ${if (row.observationCount == 1) "OBSERVACIÓN" else "OBSERVACIONES"} · ${row.sourceText.uppercase()}"
+                )
+            )
             Text(row.displayName, style = MaterialTheme.typography.titleLarge)
             Text(row.latestPriceText, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
             Text(
-                "Last observed ${row.latestObservedText}",
+                valuePilotNextText("Last observed ${row.latestObservedText}", "Última observación ${row.latestObservedText}"),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Text("Lowest observed · ${row.lowestPriceText}", style = MaterialTheme.typography.bodyMedium)
-            Text("Unit rate · ${row.latestUnitRateText}", style = MaterialTheme.typography.bodyMedium)
-            Text("Observed range · ${row.rangeText}", style = MaterialTheme.typography.bodyMedium)
+            Text(valuePilotNextText("Lowest observed · ${row.lowestPriceText}", "Mínimo observado · ${row.lowestPriceText}"), style = MaterialTheme.typography.bodyMedium)
+            Text(valuePilotNextText("Unit rate · ${row.latestUnitRateText}", "Precio unitario · ${row.latestUnitRateText}"), style = MaterialTheme.typography.bodyMedium)
+            Text(valuePilotNextText("Observed range · ${row.rangeText}", "Rango observado · ${row.rangeText}"), style = MaterialTheme.typography.bodyMedium)
             row.recentMovementText?.let { movement ->
                 Text(movement, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Text(
-                "Package · ${row.packageText} · ${row.priceBasisText}",
+                valuePilotNextText("Package · ${row.packageText} · ${row.priceBasisText}", "Envase · ${row.packageText} · ${row.priceBasisText}"),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -346,9 +363,9 @@ private fun ForgetObservationDialog(
         },
         confirmButton = {
             TextButton(onClick = onConfirm, enabled = selectedObservationId != null) {
-                Text("Forget selected")
+                Text(valuePilotNextText("Forget selected", "Olvidar seleccionada"))
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(valuePilotNextText("Cancel", "Cancelar")) } }
     )
 }

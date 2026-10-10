@@ -47,18 +47,23 @@ internal data class ValuePilotNextBasketIntroPresentation(
 
 internal fun valuePilotNextBasketIntroPresentation(
     itemCount: Int,
-    hasMissingPriceEvidence: Boolean
+    hasMissingPriceEvidence: Boolean,
+    language: ValuePilotNextLanguage = ValuePilotNextLanguage.ENGLISH
 ): ValuePilotNextBasketIntroPresentation = when {
     itemCount <= 0 -> ValuePilotNextBasketIntroPresentation(
-        title = "Your basket is ready for its first item.",
-        detail = "Add exact product identities. Prices appear only when fresh evidence is available; availability remains unknown."
+        title = valuePilotNextText(language, "Your basket is ready for its first item.", "Tu canasta está lista para el primer producto."),
+        detail = valuePilotNextText(
+            language,
+            "Add exact product identities. Prices appear only when fresh evidence is available; availability remains unknown.",
+            "Sumá identidades exactas. Los precios aparecen solo cuando hay evidencia reciente; la disponibilidad sigue sin confirmar."
+        )
     )
     hasMissingPriceEvidence -> ValuePilotNextBasketIntroPresentation(
-        title = "Your basket, with price gaps made clear.",
+        title = valuePilotNextText(language, "Your basket, with price gaps made clear.", "Tu canasta, con los precios faltantes a la vista."),
         detail = null
     )
     else -> ValuePilotNextBasketIntroPresentation(
-        title = "Your basket, with evidence attached.",
+        title = valuePilotNextText(language, "Your basket, with evidence attached.", "Tu canasta, con evidencia adjunta."),
         detail = null
     )
 }
@@ -75,10 +80,11 @@ internal fun ValuePilotBasketScreen(
         item(key = "basket-intro") {
             val intro = valuePilotNextBasketIntroPresentation(
                 itemCount = basket.lines.size,
-                hasMissingPriceEvidence = basket.lines.any { it.missing }
+                hasMissingPriceEvidence = basket.lines.any { it.missing },
+                language = LocalValuePilotNextLanguage.current
             )
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {
-                Eyebrow("PRIVATE SHOPPING LIST")
+                Eyebrow(valuePilotNextText("PRIVATE SHOPPING LIST", "LISTA PRIVADA DE COMPRAS"))
                 Text(
                     intro.title,
                     style = MaterialTheme.typography.headlineLarge,
@@ -94,18 +100,25 @@ internal fun ValuePilotBasketScreen(
         if (basket.lines.isEmpty()) {
             item(key = "basket-empty") {
                 EmptyStateCard(
-                    eyebrow = "READY WHEN YOU ARE",
-                    title = "Start with a product identity.",
-                    detail = "Search results can be saved here. Current prices stay session-only and are never invented for missing evidence.",
-                    actionLabel = "Search products",
+                    eyebrow = valuePilotNextText("READY WHEN YOU ARE", "LISTA CUANDO VOS QUIERAS"),
+                    title = valuePilotNextText("Start with a product identity.", "Empezá con una identidad de producto."),
+                    detail = valuePilotNextText(
+                        "Search results can be saved here. Current prices stay session-only and are never invented for missing evidence.",
+                        "Podés guardar resultados de búsqueda acá. Los precios actuales duran la sesión y nunca se inventan cuando falta evidencia."
+                    ),
+                    actionLabel = valuePilotNextText("Search products", "Buscar productos"),
                     onAction = onSearch
                 )
             }
         } else {
             item(key = "basket-count") {
                 SectionHeading(
-                    "SELECTED PRODUCTS",
-                    basket.lines.size.toString() + " item" + if (basket.lines.size == 1) "" else "s"
+                    valuePilotNextText("SELECTED PRODUCTS", "PRODUCTOS ELEGIDOS"),
+                    basket.lines.size.toString() + if (basket.lines.size == 1) {
+                        valuePilotNextText(" item", " producto")
+                    } else {
+                        valuePilotNextText(" items", " productos")
+                    }
                 )
             }
             items(basket.lines, key = { it.identityKey }) { line ->
@@ -116,22 +129,25 @@ internal fun ValuePilotBasketScreen(
                     basket.errorNotice?.let { EvidenceNotice(it) }
                     PrimaryActionButton(
                         label = when {
-                            planLoading -> "Building your decision…"
-                            basket.canPlan -> "Build shopping decision"
-                            else -> "Search for current price evidence"
+                            planLoading -> valuePilotNextText("Building your decision…", "Armando tu decisión…")
+                            basket.canPlan -> valuePilotNextText("Build shopping decision", "Armar decisión de compra")
+                            else -> valuePilotNextText("Search for current price evidence", "Buscar evidencia de precio actual")
                         },
                         onClick = if (basket.canPlan) onPlan else onSearch,
                         enabled = !planLoading
                     )
                     if (!basket.canPlan) {
                         SecondaryActionButton(
-                            "Review the basket with unknown prices",
+                            valuePilotNextText("Review the basket with unknown prices", "Revisar la canasta con precios desconocidos"),
                             onClick = onPlan,
                             enabled = !planLoading
                         )
                     }
                     Text(
-                        "Only identities with fresh qualified quantity and price evidence are sent for a shopping decision. Other items remain unpriced.",
+                        valuePilotNextText(
+                            "Only identities with fresh qualified quantity and price evidence are sent for a shopping decision. Other items remain unpriced.",
+                            "Solo las identidades con cantidad y precio calificados y recientes pasan a la decisión de compra. Los demás productos quedan sin precio."
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -164,18 +180,22 @@ private fun BasketIdentityCard(
             Text(line.packageQuantityText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (line.missing) {
                 EvidencePill(
-                    "CURRENT PRICE UNKNOWN",
+                    valuePilotNextText("CURRENT PRICE UNKNOWN", "PRECIO ACTUAL DESCONOCIDO"),
                     MaterialTheme.colorScheme.surface,
                     MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    "No fresh eligible price offer is attached to this saved identity.",
+                    valuePilotNextText(
+                        "No fresh eligible price offer is attached to this saved identity.",
+                        "No hay una oferta de precio elegible y reciente asociada a esta identidad guardada."
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
                 Text(
-                    "Listed price  " + (line.lineTotalText ?: "unknown"),
+                    valuePilotNextText("Listed price  ", "Precio publicado  ") +
+                        (line.lineTotalText ?: valuePilotNextText("unknown", "desconocido")),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -183,7 +203,7 @@ private fun BasketIdentityCard(
                     Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 EvidencePill(
-                    "AVAILABILITY UNKNOWN",
+                    valuePilotNextText("AVAILABILITY UNKNOWN", "DISPONIBILIDAD DESCONOCIDA"),
                     MaterialTheme.colorScheme.secondaryContainer,
                     MaterialTheme.colorScheme.onSecondaryContainer
                 )
@@ -192,7 +212,7 @@ private fun BasketIdentityCard(
                 onClick = onRemove,
                 modifier = Modifier.heightIn(min = ValuePilotSpacing.minimumTouchTarget)
             ) {
-                Text("Remove from basket", color = MaterialTheme.colorScheme.error)
+                Text(valuePilotNextText("Remove from basket", "Quitar de la canasta"), color = MaterialTheme.colorScheme.error)
             }
         }
     }
@@ -212,14 +232,17 @@ internal fun ValuePilotShoppingDecisionScreen(
     PremiumColumn {
         item(key = "decision-intro") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {
-                Eyebrow("SHOPPING DECISION")
+                Eyebrow(valuePilotNextText("SHOPPING DECISION", "DECISIÓN DE COMPRA"))
                 Text(
-                    "The basket, as the evidence allows.",
+                    valuePilotNextText("The basket, as the evidence allows.", "La canasta, tal como permite la evidencia."),
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    "Current listed-price totals, unknown coverage and manual trip costs remain separate.",
+                    valuePilotNextText(
+                        "Current listed-price totals, unknown coverage, and manual trip costs remain separate.",
+                        "Los totales de precios publicados, la cobertura desconocida y los costos manuales del viaje permanecen separados."
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -227,16 +250,19 @@ internal fun ValuePilotShoppingDecisionScreen(
         }
         if (planLoading) {
             item(key = "decision-loading") {
-                LoadingRow("Requesting a fresh qualified basket plan")
+                LoadingRow(valuePilotNextText("Requesting a fresh qualified basket plan", "Solicitando un plan de canasta calificado y reciente"))
             }
         }
         if (plan == null && !planLoading) {
             item(key = "decision-unavailable") {
                 EmptyStateCard(
-                    eyebrow = "NO CURRENT PLAN",
-                    title = "No verified basket total is available yet.",
-                    detail = planError ?: "Search items again to attach fresh qualified price and package evidence before planning.",
-                    actionLabel = "Review basket",
+                    eyebrow = valuePilotNextText("NO CURRENT PLAN", "SIN PLAN ACTUAL"),
+                    title = valuePilotNextText("No verified basket total is available yet.", "Todavía no hay un total verificado de la canasta."),
+                    detail = planError ?: valuePilotNextText(
+                        "Search items again to attach fresh qualified price and package evidence before planning.",
+                        "Buscá los productos de nuevo para adjuntar evidencia reciente y calificada de precio y envase antes de planificar."
+                    ),
+                    actionLabel = valuePilotNextText("Review basket", "Revisar canasta"),
                     onAction = onEditBasket
                 )
             }
@@ -244,39 +270,45 @@ internal fun ValuePilotShoppingDecisionScreen(
         if (plan == null) {
             item(key = "decision-trip-without-plan") {
                 ActionCard(
-                    eyebrow = "TRAVEL COST",
-                    title = tripResult?.displayText() ?: "Calculate a trip from your own assumptions.",
-                    detail = "Distance, fuel, toll and parking remain separate from basket prices. ValuePilot does not infer a driving route.",
-                    actionLabel = if (tripResult == null) "Open trip planner" else "Review trip assumptions",
+                    eyebrow = valuePilotNextText("TRAVEL COST", "COSTO DEL VIAJE"),
+                    title = tripResult?.displayText() ?: valuePilotNextText("Calculate a trip from your own assumptions.", "Calculá un viaje con tus propios supuestos."),
+                    detail = valuePilotNextText(
+                        "Distance, fuel, tolls, and parking remain separate from basket prices. ValuePilot does not infer a driving route.",
+                        "La distancia, el combustible, los peajes y el estacionamiento permanecen separados de los precios de la canasta. ValuePilot no infiere una ruta."
+                    ),
+                    actionLabel = if (tripResult == null) valuePilotNextText("Open trip planner", "Abrir planificador de viaje") else valuePilotNextText("Review trip assumptions", "Revisar supuestos del viaje"),
                     onClick = onTripPlanner
                 )
             }
             item(key = "decision-map-without-plan") {
-                SecondaryActionButton("Check for source-backed store locations", onMap)
+                SecondaryActionButton(valuePilotNextText("Check for source-backed store locations", "Buscar ubicaciones de tiendas respaldadas por fuente"), onMap)
             }
         }
         if (plan != null) {
             item(key = "decision-summary") { DecisionSummaryCard(plan) }
             item(key = "decision-lines-heading") {
-                SectionHeading("LINE BY LINE", "What the plan covers")
+                SectionHeading(valuePilotNextText("LINE BY LINE", "LÍNEA POR LÍNEA"), valuePilotNextText("What the plan covers", "Qué cubre el plan"))
             }
             items(plan.lines, key = { it.identityKey }) { line -> DecisionLineCard(line) }
             item(key = "decision-stores") { PlanStoreSummary(plan) }
             item(key = "decision-trip") {
                 ActionCard(
-                    eyebrow = "TRAVEL COST",
-                    title = tripResult?.displayText() ?: "Trip cost is not included yet.",
-                    detail = "Enter your own distance, fuel, toll and parking assumptions. ValuePilot does not infer a driving route.",
-                    actionLabel = if (tripResult == null) "Add trip assumptions" else "Review trip assumptions",
+                    eyebrow = valuePilotNextText("TRAVEL COST", "COSTO DEL VIAJE"),
+                    title = tripResult?.displayText() ?: valuePilotNextText("Trip cost is not included yet.", "El costo del viaje todavía no está incluido."),
+                    detail = valuePilotNextText(
+                        "Enter your own distance, fuel, tolls, and parking assumptions. ValuePilot does not infer a driving route.",
+                        "Ingresá tus propios supuestos de distancia, combustible, peajes y estacionamiento. ValuePilot no infiere una ruta."
+                    ),
+                    actionLabel = if (tripResult == null) valuePilotNextText("Add trip assumptions", "Agregar supuestos del viaje") else valuePilotNextText("Review trip assumptions", "Revisar supuestos del viaje"),
                     onClick = onTripPlanner
                 )
             }
             item(key = "decision-map") {
-                PrimaryActionButton("View store context and map handoff", onMap)
+                PrimaryActionButton(valuePilotNextText("View store context and map handoff", "Ver contexto de tienda y abrir mapa"), onMap)
             }
             item(key = "decision-edit") {
                 TextButton(onClick = onEditBasket, modifier = Modifier.heightIn(min = ValuePilotSpacing.minimumTouchTarget)) {
-                    Text("Edit basket")
+                    Text(valuePilotNextText("Edit basket", "Editar canasta"))
                 }
             }
         }
@@ -300,7 +332,11 @@ private fun DecisionSummaryCard(plan: ArgentinaPrivateBasketPlanProjection) {
             verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)
         ) {
             EvidencePill(
-                if (complete) "COMPLETE PRICE COVERAGE" else "PARTIAL PRICE COVERAGE",
+                if (complete) {
+                    valuePilotNextText("COMPLETE PRICE COVERAGE", "COBERTURA DE PRECIO COMPLETA")
+                } else {
+                    valuePilotNextText("PARTIAL PRICE COVERAGE", "COBERTURA DE PRECIO PARCIAL")
+                },
                 MaterialTheme.colorScheme.surface.copy(alpha = 0.74f),
                 MaterialTheme.colorScheme.onPrimaryContainer
             )
@@ -315,8 +351,11 @@ private fun DecisionSummaryCard(plan: ArgentinaPrivateBasketPlanProjection) {
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
             Text(
-                plan.stores.size.toString() + " selected store" +
-                    (if (plan.stores.size == 1) "" else "s") + " · release " + plan.releaseDate,
+                plan.stores.size.toString() + if (plan.stores.size == 1) {
+                    valuePilotNextText(" selected store", " tienda seleccionada")
+                } else {
+                    valuePilotNextText(" selected stores", " tiendas seleccionadas")
+                } + valuePilotNextText(" · release ", " · publicación ") + plan.releaseDate,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
@@ -364,7 +403,11 @@ private fun DecisionLineCard(line: ArgentinaPrivateBasketLineProjection) {
                 Text(line.productName, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                 Text(line.packageQuantityText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
-                    if (line.missing) "Price evidence unknown" else line.lineTotalText ?: "Listed price unknown",
+                    if (line.missing) {
+                        valuePilotNextText("Price evidence unknown", "Evidencia de precio desconocida")
+                    } else {
+                        line.lineTotalText ?: valuePilotNextText("Listed price unknown", "Precio publicado desconocido")
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (line.missing) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
                 )
@@ -379,9 +422,9 @@ private fun DecisionLineCard(line: ArgentinaPrivateBasketLineProjection) {
 @Composable
 private fun PlanStoreSummary(plan: ArgentinaPrivateBasketPlanProjection) {
     Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {
-        SectionHeading("STORE CHOICES", "Where the listed prices came from")
+        SectionHeading(valuePilotNextText("STORE CHOICES", "ELECCIONES DE TIENDA"), valuePilotNextText("Where the listed prices came from", "De dónde vienen los precios publicados"))
         if (plan.stores.isEmpty()) {
-            EvidenceNotice("No store coordinates were returned with this plan.")
+            EvidenceNotice(valuePilotNextText("No store coordinates were returned with this plan.", "Este plan no devolvió coordenadas de tiendas."))
         } else {
             plan.stores.forEach { store ->
                 Column(
@@ -397,7 +440,10 @@ private fun PlanStoreSummary(plan: ArgentinaPrivateBasketPlanProjection) {
                         Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Text(
-                        "Store context is separate from availability and travel routing.",
+                        valuePilotNextText(
+                            "Store context is separate from availability and travel routing.",
+                            "El contexto de tienda es independiente de la disponibilidad y de la ruta del viaje."
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -424,14 +470,17 @@ internal fun ValuePilotTripPlannerScreen(
     PremiumColumn {
         item(key = "trip-intro") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {
-                Eyebrow("MANUAL TRIP ESTIMATE")
+                Eyebrow(valuePilotNextText("MANUAL TRIP ESTIMATE", "ESTIMACIÓN MANUAL DEL VIAJE"))
                 Text(
-                    "See what the journey adds.",
+                    valuePilotNextText("See what the journey adds.", "Mirá cuánto suma el recorrido."),
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    "Enter a one-way driving distance and your own vehicle costs. ValuePilot does not infer a route or turn straight-line distance into driving distance.",
+                    valuePilotNextText(
+                        "Enter a one-way driving distance and your own vehicle costs. ValuePilot does not infer a route or turn straight-line distance into driving distance.",
+                        "Ingresá una distancia de manejo de ida y tus costos del vehículo. ValuePilot no infiere una ruta ni convierte distancia en línea recta en distancia de manejo."
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -440,34 +489,40 @@ internal fun ValuePilotTripPlannerScreen(
         item(key = "trip-basket-summary") {
             EvidenceNotice(
                 plan?.totalText
-                    ?: "No basket plan is attached. This estimate uses only the distance and vehicle costs you enter."
+                    ?: valuePilotNextText(
+                        "No basket plan is attached. This estimate uses only the distance and vehicle costs you enter.",
+                        "No hay un plan de canasta adjunto. Esta estimación usa solo la distancia y los costos del vehículo que ingreses."
+                    )
             )
         }
         item(key = "trip-fields") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {
-                DecimalInput("One-way driving distance", "km", distance) {
+                DecimalInput(valuePilotNextText("One-way driving distance", "Distancia de manejo de ida"), "km", distance) {
                     onInputChanged(it, consumption, fuelPrice, tolls, parking)
                 }
-                DecimalInput("Fuel consumption", "L / 100 km", consumption) {
+                DecimalInput(valuePilotNextText("Fuel consumption", "Consumo de combustible"), "L / 100 km", consumption) {
                     onInputChanged(distance, it, fuelPrice, tolls, parking)
                 }
-                DecimalInput("Fuel price", "ARS / L", fuelPrice) {
+                DecimalInput(valuePilotNextText("Fuel price", "Precio del combustible"), "ARS / L", fuelPrice) {
                     onInputChanged(distance, consumption, it, tolls, parking)
                 }
-                DecimalInput("Tolls", "ARS · enter 0 if none", tolls) {
+                DecimalInput(valuePilotNextText("Tolls", "Peajes"), valuePilotNextText("ARS · enter 0 if none", "ARS · ingresá 0 si no hay"), tolls) {
                     onInputChanged(distance, consumption, fuelPrice, it, parking)
                 }
-                DecimalInput("Parking", "ARS · enter 0 if none", parking) {
+                DecimalInput(valuePilotNextText("Parking", "Estacionamiento"), valuePilotNextText("ARS · enter 0 if none", "ARS · ingresá 0 si no hay"), parking) {
                     onInputChanged(distance, consumption, fuelPrice, tolls, it)
                 }
                 Text(
-                    "Use a period for decimals. This estimate is separate from the listed basket price.",
+                    valuePilotNextText(
+                        "Use a period for decimals. This estimate is separate from the listed basket price.",
+                        "Usá un punto para los decimales. Esta estimación es independiente del precio publicado de la canasta."
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 tripError?.let { EvidenceNotice(it, isError = true) }
                 PrimaryActionButton(
-                    "Calculate trip cost",
+                    valuePilotNextText("Calculate trip cost", "Calcular costo del viaje"),
                     onClick = { onCalculate(distance, consumption, fuelPrice, tolls, parking) }
                 )
             }
@@ -484,27 +539,27 @@ internal fun ValuePilotTripPlannerScreen(
                         modifier = Modifier.padding(ValuePilotSpacing.xxLarge),
                         verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)
                     ) {
-                        Eyebrow("ESTIMATED TRIP COST")
+                        Eyebrow(valuePilotNextText("ESTIMATED TRIP COST", "COSTO ESTIMADO DEL VIAJE"))
                         Text(
                             "ARS " + result.total.toPlainString(),
                             style = MaterialTheme.typography.displayLarge,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Text(
-                            "Fuel ARS " + result.fuelCost.toPlainString() +
-                                " · tolls ARS " + result.tolls.toPlainString() +
-                                " · parking ARS " + result.parking.toPlainString(),
+                            valuePilotNextText("Fuel ARS ", "Combustible ARS ") + result.fuelCost.toPlainString() +
+                                valuePilotNextText(" · tolls ARS ", " · peajes ARS ") + result.tolls.toPlainString() +
+                                valuePilotNextText(" · parking ARS ", " · estacionamiento ARS ") + result.parking.toPlainString(),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Text(
-                            "Round trip " + result.roundTripKm.toPlainString() +
-                                " km, calculated from your one-way input.",
+                            valuePilotNextText("Round trip ", "Viaje de ida y vuelta de ") + result.roundTripKm.toPlainString() +
+                                valuePilotNextText(" km, calculated from your one-way input.", " km, calculado a partir de tu ingreso de ida."),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Text(
-                            "No route or distance is inferred.",
+                            valuePilotNextText("No route or distance is inferred.", "No se infiere ninguna ruta ni distancia."),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
@@ -513,7 +568,7 @@ internal fun ValuePilotTripPlannerScreen(
             }
         }
         item(key = "trip-map") {
-            SecondaryActionButton("View store map handoff", onMap)
+            SecondaryActionButton(valuePilotNextText("View store map handoff", "Ver contexto de tienda y mapa"), onMap)
         }
     }
 }
@@ -551,14 +606,17 @@ internal fun ValuePilotMapHandoffScreen(
     PremiumColumn {
         item(key = "map-intro") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {
-                Eyebrow("SOURCE-BACKED STORE CONTEXT")
+                Eyebrow(valuePilotNextText("SOURCE-BACKED STORE CONTEXT", "CONTEXTO DE TIENDA CON FUENTE"))
                 Text(
-                    "Take the store context to your map app.",
+                    valuePilotNextText("Take the store context to your map app.", "Llevá el contexto de tienda a tu app de mapas."),
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    "ValuePilot passes valid source coordinates to an external map app. It does not draw a map, infer a route, or confirm store availability.",
+                    valuePilotNextText(
+                        "ValuePilot passes valid source coordinates to an external map app. It does not draw a map, infer a route, or confirm store availability.",
+                        "ValuePilot pasa coordenadas válidas de la fuente a una app de mapas externa. No dibuja un mapa, infiere una ruta ni confirma la disponibilidad de la tienda."
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -574,10 +632,10 @@ internal fun ValuePilotMapHandoffScreen(
                     context = context,
                     detail = listOfNotNull(
                         selectedProductName,
-                        offer.quantity?.let { "Package " + it.amount + " " + it.unit },
+                        offer.quantity?.let { valuePilotNextText("Package ", "Envase ") + it.amount + " " + it.unit },
                         offer.listPrice.currency + " " + offer.listPrice.amount,
-                        "Price evidence " + offer.freshnessStatus.name.lowercase().replace('_', ' '),
-                        "Release " + offer.releaseDate
+                        valuePilotNextText("Price evidence ", "Evidencia de precio ") + offer.freshnessStatus.name.lowercase().replace('_', ' '),
+                        valuePilotNextText("Release ", "Publicación ") + offer.releaseDate
                     ).joinToString(" · "),
                     onOpenMap = context.asStoreProjection()?.let { store -> { onOpenMap(store) } }
                 )
@@ -588,14 +646,17 @@ internal fun ValuePilotMapHandoffScreen(
         if (stores.isEmpty() && selectedOffer == null) {
             item(key = "map-empty") {
                 EmptyStateCard(
-                    eyebrow = "NO STORE COORDINATES",
-                    title = "A map handoff is not available yet.",
-                    detail = "Build a current basket plan to see source-backed store coordinates. No location or route is guessed."
+                    eyebrow = valuePilotNextText("NO STORE COORDINATES", "SIN COORDENADAS DE TIENDA"),
+                    title = valuePilotNextText("A map handoff is not available yet.", "Todavía no se puede abrir el mapa."),
+                    detail = valuePilotNextText(
+                        "Build a current basket plan to see source-backed store coordinates. No location or route is guessed.",
+                        "Armá un plan actual de canasta para ver coordenadas de tiendas respaldadas por fuente. No se adivina ninguna ubicación ni ruta."
+                    )
                 )
             }
         } else if (stores.isNotEmpty()) {
             item(key = "map-plan-heading") {
-                SectionHeading("SELECTED PLAN", "Source locations")
+                SectionHeading(valuePilotNextText("SELECTED PLAN", "PLAN ELEGIDO"), valuePilotNextText("Source locations", "Ubicaciones de la fuente"))
             }
             items(stores, key = { it.storeKey }) { store ->
                 val context = ArgentinaQualifiedStoreMapContextPresentation.fromStore(
@@ -605,7 +666,7 @@ internal fun ValuePilotMapHandoffScreen(
                 val validStore = context.asStoreProjection()
                 val markerSummary = context.markers.joinToString(" · ") {
                     it.productName + " — " + it.priceText
-                }.ifBlank { "No product price marker is attached." }
+                }.ifBlank { valuePilotNextText("No product price marker is attached.", "No hay un marcador de precio de producto adjunto.") }
                 StoreContextCard(
                     context = context,
                     detail = markerSummary,
@@ -615,7 +676,10 @@ internal fun ValuePilotMapHandoffScreen(
         }
         item(key = "map-footnote") {
             EvidenceFootnote(
-                "Coordinates are source evidence only. No route, travel time, stock, pickup, delivery or availability is inferred."
+                valuePilotNextText(
+                    "Coordinates are source evidence only. No route, travel time, stock, pickup, delivery, or availability is inferred.",
+                    "Las coordenadas son solo evidencia de la fuente. No se infieren ruta, tiempo de viaje, stock, retiro, entrega ni disponibilidad."
+                )
             )
         }
     }
@@ -646,17 +710,20 @@ private fun StoreContextCard(
                 context.latitude + ", " + context.longitude
             } else null
             Text(
-                coordinates ?: "Valid coordinates were not supplied.",
+                coordinates ?: valuePilotNextText("Valid coordinates were not supplied.", "No se proporcionaron coordenadas válidas."),
                 style = MaterialTheme.typography.labelLarge,
                 color = if (coordinates == null) MaterialTheme.colorScheme.onSurfaceVariant
                 else MaterialTheme.colorScheme.secondary
             )
             Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (onOpenMap != null) {
-                PrimaryActionButton("Open in map app", onOpenMap)
+                PrimaryActionButton(valuePilotNextText("Open in map app", "Abrir en la app de mapas"), onOpenMap)
             } else {
                 Text(
-                    "External map handoff unavailable without valid source coordinates.",
+                    valuePilotNextText(
+                        "External map handoff unavailable without valid source coordinates.",
+                        "No se puede abrir un mapa externo sin coordenadas válidas de la fuente."
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

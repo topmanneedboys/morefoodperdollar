@@ -50,23 +50,29 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
     PremiumColumn {
         item(key = "staple-watch-intro") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {
-                Eyebrow("RECURRING STAPLES")
+                Eyebrow(valuePilotNextText("RECURRING STAPLES", "ESENCIALES RECURRENTES"))
                 Text(
-                    "Watch My Staples",
+                    valuePilotNextText("Watch My Staples", "Mis esenciales"),
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     state?.guidance
-                        ?: "Choose at least two saved products and a usual store to prepare a future comparison.",
+                        ?: valuePilotNextText("Choose at least two saved products and a usual store to prepare a future comparison.", "Elegí al menos dos productos guardados y una tienda habitual para preparar una comparación futura."),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 EvidenceFootnote(
                     if (classicHandoffRequired) {
-                        "Current-price and savings checks are still in the classic app. This Compose preview does not save a Watch list."
+                        valuePilotNextText(
+                            "Current-price and savings checks are still in the classic app. This Compose preview does not save a Watch list.",
+                            "Los controles de precio actual y ahorro siguen en la app clásica. Esta vista previa Compose no guarda una lista de seguimiento."
+                        )
                     } else {
-                        "This setup only records temporary identity choices. It does not produce current prices, a route, a savings decision, or an alert."
+                        valuePilotNextText(
+                            "This setup only records temporary identity choices. It does not produce current prices, a route, a savings decision, or an alert.",
+                            "Esta configuración solo registra elecciones temporales de identidad. No produce precios actuales, rutas, decisiones de ahorro ni alertas."
+                        )
                     }
                 )
             }
@@ -74,7 +80,7 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
 
         if (state == null) {
             item(key = "staple-watch-loading") {
-                LoadingRow("Checking your saved products and stores…")
+                LoadingRow(valuePilotNextText("Checking your saved products and stores…", "Comprobando tus productos y tiendas guardados…"))
             }
         } else if (
             state.productRows.size < MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF ||
@@ -82,36 +88,39 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
         ) {
             item(key = "staple-watch-missing-saved-choices") {
                 ActionCard(
-                    eyebrow = "SAVED CHOICES NEEDED",
+                    eyebrow = valuePilotNextText("SAVED CHOICES NEEDED", "FALTAN ELECCIONES GUARDADAS"),
                     title = when {
                         state.productRows.size < MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF &&
-                            state.storeRows.isEmpty() -> "Save products and a store first."
+                            state.storeRows.isEmpty() -> valuePilotNextText("Save products and a store first.", "Primero guardá productos y una tienda.")
                         state.productRows.size < MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF ->
-                            "Save two products first."
-                        else -> "Save a usual store first."
+                            valuePilotNextText("Save two products first.", "Primero guardá dos productos.")
+                        else -> valuePilotNextText("Save a usual store first.", "Primero guardá una tienda habitual.")
                     },
                     detail = state.guidance,
-                    actionLabel = "Open classic Saved",
+                    actionLabel = valuePilotNextText("Open classic Saved", "Abrir Guardados clásico"),
                     onClick = onOpenLegacyStapleWatch
                 )
             }
 
             item(key = "staple-watch-back") {
-                SecondaryActionButton(label = "Back to Saved", onClick = onBack)
+                SecondaryActionButton(label = valuePilotNextText("Back to Saved", "Volver a Guardados"), onClick = onBack)
             }
         } else if (classicHandoffRequired) {
             item(key = "staple-watch-legacy-handoff") {
                 ActionCard(
-                    eyebrow = "NOT IN COMPOSE YET",
-                    title = "Continue with the existing Watch flow",
-                    detail = "Current-price and savings checks have not moved into Compose. Open Saved in the classic app, then choose Watch My Staples. This preview has not saved a watch list or temporary selections.",
-                    actionLabel = "Open classic Saved & Watch tools",
+                    eyebrow = valuePilotNextText("NOT IN COMPOSE YET", "TODAVÍA NO ESTÁ EN COMPOSE"),
+                    title = valuePilotNextText("Continue with the existing Watch flow", "Continuar con el flujo existente de Seguimiento"),
+                    detail = valuePilotNextText(
+                        "Current-price and savings checks have not moved into Compose. Open Saved in the classic app, then choose Watch My Staples. This preview has not saved a watch list or temporary selections.",
+                        "Los controles de precio actual y ahorro todavía no pasaron a Compose. Abrí Guardados en la app clásica y elegí Mis esenciales. Esta vista previa no guardó una lista ni selecciones temporales."
+                    ),
+                    actionLabel = valuePilotNextText("Open classic Saved & Watch tools", "Abrir herramientas clásicas de Guardados y Seguimiento"),
                     onClick = onOpenLegacyStapleWatch
                 )
             }
 
             item(key = "staple-watch-back") {
-                SecondaryActionButton(label = "Back to Saved", onClick = onBack)
+                SecondaryActionButton(label = valuePilotNextText("Back to Saved", "Volver a Guardados"), onClick = onBack)
             }
         } else {
             item(key = "staple-watch-selection-summary") {
@@ -119,10 +128,10 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
                     state = state,
                     status = when {
                         state.status == StapleWatchSavedSelectionUiStatus.DISPLAY_METADATA_INCOMPLETE ->
-                            "REFRESH NAMES"
+                            valuePilotNextText("REFRESH NAMES", "ACTUALIZAR NOMBRES")
                         state.status == StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK ->
-                            "READY FOR CHECK"
-                        else -> "SETUP IN PROGRESS"
+                            valuePilotNextText("READY FOR CHECK", "LISTO PARA COMPROBAR")
+                        else -> valuePilotNextText("SETUP IN PROGRESS", "CONFIGURACIÓN EN CURSO")
                     }
                 )
             }
@@ -141,7 +150,7 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
 
             state.productSectionTitle?.let { title ->
                 item(key = "staple-watch-products-heading") {
-                    SectionHeading("CHOOSE YOUR STAPLES", title)
+                    SectionHeading(valuePilotNextText("CHOOSE YOUR STAPLES", "ELEGÍ TUS ESENCIALES"), title)
                 }
                 items(
                     items = state.productRows,
@@ -160,7 +169,7 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
 
             state.storeSectionTitle?.let { title ->
                 item(key = "staple-watch-stores-heading") {
-                    SectionHeading("USUAL STORE", title)
+                    SectionHeading(valuePilotNextText("USUAL STORE", "TIENDA HABITUAL"), title)
                 }
                 items(state.storeRows) { row ->
                     StapleChoiceCard(
@@ -182,7 +191,7 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
                             .fillMaxWidth()
                             .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
                     ) {
-                        Text(state.clearSelectionActionLabel ?: "Clear selections")
+                        Text(state.clearSelectionActionLabel ?: valuePilotNextText("Clear selections", "Borrar elecciones"))
                     }
                 }
             }
@@ -190,14 +199,14 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
             state.continueAction?.let { action ->
                 item(key = "staple-watch-continue") {
                     PrimaryActionButton(
-                        label = state.continueActionLabel ?: "Continue",
+                        label = state.continueActionLabel ?: valuePilotNextText("Continue", "Continuar"),
                         onClick = { onContinue(action) }
                     )
                 }
             }
 
             item(key = "staple-watch-back") {
-                SecondaryActionButton(label = "Back to Saved", onClick = onBack)
+                SecondaryActionButton(label = valuePilotNextText("Back to Saved", "Volver a Guardados"), onClick = onBack)
             }
         }
     }
@@ -209,6 +218,7 @@ private fun WatchSetupProgressCard(
     status: String
 ) {
     val hasEnoughStaples = state.watchedItemCount >= MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF
+    val readyForCheck = state.status == StapleWatchSavedSelectionUiStatus.READY_FOR_FACT_CHECK
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
@@ -223,7 +233,7 @@ private fun WatchSetupProgressCard(
             verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
-                Eyebrow("YOUR WATCH LIST")
+                Eyebrow(valuePilotNextText("YOUR WATCH LIST", "TU LISTA DE SEGUIMIENTO"))
                 Text(
                     state.selectionSummary,
                     style = MaterialTheme.typography.titleLarge,
@@ -233,29 +243,29 @@ private fun WatchSetupProgressCard(
 
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
                 SetupRequirementRow(
-                    label = "Choose at least $MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF staples",
+                    label = valuePilotNextText("Choose at least $MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF staples", "Elegí al menos $MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF esenciales"),
                     detail = if (hasEnoughStaples) {
-                        "${state.watchedItemCount} selected · minimum met"
+                        valuePilotNextText("${state.watchedItemCount} selected · minimum met", "${state.watchedItemCount} elegidos · mínimo cumplido")
                     } else {
-                        "${state.watchedItemCount} selected · $MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF required"
+                        valuePilotNextText("${state.watchedItemCount} selected · $MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF required", "${state.watchedItemCount} elegidos · se necesitan $MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF")
                     },
                     complete = hasEnoughStaples
                 )
                 SetupRequirementRow(
-                    label = "Choose your usual store",
-                    detail = if (state.usualStoreSelected) "Store selected" else "One saved store required",
+                    label = valuePilotNextText("Choose your usual store", "Elegí tu tienda habitual"),
+                    detail = if (state.usualStoreSelected) valuePilotNextText("Store selected", "Tienda elegida") else valuePilotNextText("One saved store required", "Se necesita una tienda guardada"),
                     complete = state.usualStoreSelected
                 )
             }
 
             EvidencePill(
                 text = status,
-                container = if (status == "READY FOR CHECK") {
+                container = if (readyForCheck) {
                     MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                 } else {
                     MaterialTheme.colorScheme.surface.copy(alpha = 0.75f)
                 },
-                content = if (status == "READY FOR CHECK") {
+                content = if (readyForCheck) {
                     MaterialTheme.colorScheme.primary
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant
@@ -356,7 +366,7 @@ private fun StapleChoiceCard(
                 Text(title, style = MaterialTheme.typography.titleMedium)
                 if (selected) {
                     EvidencePill(
-                        text = "SELECTED",
+                        text = valuePilotNextText("SELECTED", "ELEGIDO"),
                         container = MaterialTheme.colorScheme.primaryContainer,
                         content = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -400,13 +410,16 @@ private fun SummaryCard(eyebrow: String, title: String, detail: String) {
 private fun FactResolutionCard(state: StapleWatchFactResolutionUiState) {
     Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
         SummaryCard(
-            eyebrow = "REQUIRED FACT CHECKS",
-            title = "${state.resolvedRequirementCount} of ${state.totalRequirementCount} checks supplied",
+            eyebrow = valuePilotNextText("REQUIRED FACT CHECKS", "COMPROBACIONES NECESARIAS"),
+            title = valuePilotNextText(
+                "${state.resolvedRequirementCount} of ${state.totalRequirementCount} checks supplied",
+                "${state.resolvedRequirementCount} de ${state.totalRequirementCount} comprobaciones aportadas"
+            ),
             detail = state.guidance
         )
         state.unresolvedRequirementLabels.forEach { label ->
             Text(
-                "Still needed · $label",
+                valuePilotNextText("Still needed · $label", "Todavía falta · $label"),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

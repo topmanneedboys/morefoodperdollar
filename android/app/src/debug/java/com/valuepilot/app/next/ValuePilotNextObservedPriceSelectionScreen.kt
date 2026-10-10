@@ -42,26 +42,32 @@ internal fun ValuePilotObservedPriceSelectionScreen(
     PremiumColumn {
         item(key = "observed-price-intro") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {
-                Eyebrow("PERSONAL PRICE MEMORY")
+                Eyebrow(valuePilotNextText("PERSONAL PRICE MEMORY", "MEMORIA PERSONAL DE PRECIOS"))
                 Text(
-                    "Confirm a price you saw",
+                    valuePilotNextText("Confirm a price you saw", "Confirmá un precio que viste"),
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    "Choose one saved product and one exact saved store. You will enter your own observed price and proof in the next step.",
+                    valuePilotNextText(
+                        "Choose one saved product and one exact saved store. You will enter your own observed price and proof in the next step.",
+                        "Elegí un producto guardado y una tienda guardada exacta. En el siguiente paso vas a ingresar tu precio observado y la evidencia."
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 EvidenceFootnote(
-                    "A personal observation is not a retailer-confirmed current offer."
+                    valuePilotNextText(
+                        "A personal observation is not a retailer-confirmed current offer.",
+                        "Una observación personal no es una oferta actual confirmada por un minorista."
+                    )
                 )
             }
         }
 
         if (savedState.progressVisible) {
             item(key = "observed-price-saved-loading") {
-                LoadingRow(savedState.statusMessage ?: "Checking saved choices…")
+                LoadingRow(savedState.statusMessage ?: valuePilotNextText("Checking saved choices…", "Comprobando elecciones guardadas…"))
             }
         } else {
             savedState.statusMessage?.let { message ->
@@ -80,13 +86,13 @@ internal fun ValuePilotObservedPriceSelectionScreen(
                     val refreshAction = savedState.refreshAction
                     item(key = "observed-price-selection-error") {
                         EmptyStateCard(
-                            eyebrow = "SAVED CHOICES NEED A REFRESH",
-                            title = "We couldn't prepare price confirmation.",
+                            eyebrow = valuePilotNextText("SAVED CHOICES NEED A REFRESH", "HAY QUE ACTUALIZAR LAS ELECCIONES GUARDADAS"),
+                            title = valuePilotNextText("We couldn't prepare price confirmation.", "No pudimos preparar la confirmación de precio."),
                             detail = savedState.statusMessage
-                                ?: "Refresh your saved choices and try again.",
+                                ?: valuePilotNextText("Refresh your saved choices and try again.", "Actualizá tus elecciones guardadas y probá de nuevo."),
                             actionLabel = refreshAction?.let {
-                                savedState.refreshActionLabel ?: "Refresh saved choices"
-                            } ?: "Back to Saved",
+                                savedState.refreshActionLabel ?: valuePilotNextText("Refresh saved choices", "Actualizar elecciones guardadas")
+                            } ?: valuePilotNextText("Back to Saved", "Volver a Guardados"),
                             onAction = {
                                 if (refreshAction != null) onSavedAction(refreshAction)
                                 else onBackToSaved()
@@ -95,7 +101,7 @@ internal fun ValuePilotObservedPriceSelectionScreen(
                     }
                 } else {
                     item(key = "observed-price-selection-loading") {
-                        LoadingRow("Preparing your saved choices…")
+                        LoadingRow(valuePilotNextText("Preparing your saved choices…", "Preparando tus elecciones guardadas…"))
                     }
                 }
             }
@@ -103,11 +109,11 @@ internal fun ValuePilotObservedPriceSelectionScreen(
             selection.productRows.isEmpty() && selection.storeRows.isEmpty() -> {
                 item(key = "observed-price-selection-empty") {
                     EmptyStateCard(
-                        eyebrow = "START WITH SAVED CHOICES",
-                        title = "Save a product and store first.",
+                        eyebrow = valuePilotNextText("START WITH SAVED CHOICES", "EMPEZÁ CON ELECCIONES GUARDADAS"),
+                        title = valuePilotNextText("Save a product and store first.", "Primero guardá un producto y una tienda."),
                         detail = selection.notice
-                            ?: "Observed-price confirmation needs one saved product and one exact saved store.",
-                        actionLabel = "Back to Saved",
+                            ?: valuePilotNextText("Observed-price confirmation needs one saved product and one exact saved store.", "La confirmación de precio observado necesita un producto guardado y una tienda guardada exacta."),
+                        actionLabel = valuePilotNextText("Back to Saved", "Volver a Guardados"),
                         onAction = onBackToSaved
                     )
                 }
@@ -122,7 +128,7 @@ internal fun ValuePilotObservedPriceSelectionScreen(
 
                 selection.productSectionTitle?.let { title ->
                     item(key = "observed-price-products-title") {
-                        SectionHeading("PRODUCT", title)
+                        SectionHeading(valuePilotNextText("PRODUCT", "PRODUCTO"), title)
                     }
                 }
                 items(selection.productRows) { row ->
@@ -137,7 +143,7 @@ internal fun ValuePilotObservedPriceSelectionScreen(
 
                 selection.storeSectionTitle?.let { title ->
                     item(key = "observed-price-stores-title") {
-                        SectionHeading("EXACT STORE", title)
+                        SectionHeading(valuePilotNextText("EXACT STORE", "TIENDA EXACTA"), title)
                     }
                 }
                 items(selection.storeRows) { row ->
@@ -154,14 +160,14 @@ internal fun ValuePilotObservedPriceSelectionScreen(
                     val missingProduct = selection.productRows.isEmpty()
                     item(key = "observed-price-missing-saved-choice") {
                         EmptyStateCard(
-                            eyebrow = "ONE MORE SAVED CHOICE",
+                            eyebrow = valuePilotNextText("ONE MORE SAVED CHOICE", "FALTA UNA ELECCIÓN GUARDADA"),
                             title = if (missingProduct) {
-                                "Save a product to continue."
+                                valuePilotNextText("Save a product to continue.", "Guardá un producto para continuar.")
                             } else {
-                                "Save an exact store to continue."
+                                valuePilotNextText("Save an exact store to continue.", "Guardá una tienda exacta para continuar.")
                             },
-                            detail = "Price confirmation needs both a saved product and an exact saved store.",
-                            actionLabel = "Back to Saved",
+                            detail = valuePilotNextText("Price confirmation needs both a saved product and an exact saved store.", "La confirmación de precio necesita un producto guardado y una tienda guardada exacta."),
+                            actionLabel = valuePilotNextText("Back to Saved", "Volver a Guardados"),
                             onAction = onBackToSaved
                         )
                     }
@@ -175,7 +181,7 @@ internal fun ValuePilotObservedPriceSelectionScreen(
                                 .fillMaxWidth()
                                 .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
                         ) {
-                            Text("Clear selected product and store")
+                            Text(valuePilotNextText("Clear selected product and store", "Borrar producto y tienda elegidos"))
                         }
                     }
                 }
@@ -184,7 +190,7 @@ internal fun ValuePilotObservedPriceSelectionScreen(
                     item(key = "observed-price-check-prefill") {
                         PrimaryActionButton(
                             label = selection.checkPrefillActionLabel
-                                ?: "Check saved product and store",
+                                ?: valuePilotNextText("Check saved product and store", "Comprobar producto y tienda guardados"),
                             onClick = { onCheckPrefill(action) },
                             enabled = !savedState.progressVisible
                         )
@@ -205,7 +211,7 @@ internal fun ValuePilotObservedPriceSelectionScreen(
         savedState.refreshAction?.let { action ->
             item(key = "observed-price-refresh-saved") {
                 SecondaryActionButton(
-                    label = savedState.refreshActionLabel ?: "Refresh saved choices",
+                    label = savedState.refreshActionLabel ?: valuePilotNextText("Refresh saved choices", "Actualizar elecciones guardadas"),
                     onClick = { onSavedAction(action) },
                     enabled = !savedState.progressVisible
                 )
@@ -259,7 +265,7 @@ private fun SelectionChoiceCard(
                 )
                 if (selected) {
                     EvidencePill(
-                        text = "SELECTED",
+                        text = valuePilotNextText("SELECTED", "ELEGIDO"),
                         container = MaterialTheme.colorScheme.primaryContainer,
                         content = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -303,7 +309,7 @@ private fun PrefillResultCard(
                 .padding(ValuePilotSpacing.large),
             verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)
         ) {
-            Eyebrow("SAVED IDENTITY CHECK")
+            Eyebrow(valuePilotNextText("SAVED IDENTITY CHECK", "COMPROBACIÓN DE IDENTIDAD GUARDADA"))
             Text(
                 result.headline,
                 style = MaterialTheme.typography.titleLarge,
@@ -321,12 +327,15 @@ private fun PrefillResultCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    "Price and proof entry still opens in the existing ValuePilot screen.",
+                    valuePilotNextText(
+                        "Price and proof entry still opens in the existing ValuePilot screen.",
+                        "El ingreso de precio y evidencia todavía se abre en la pantalla existente de ValuePilot."
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 PrimaryActionButton(
-                    label = "Continue to price confirmation",
+                    label = valuePilotNextText("Continue to price confirmation", "Continuar a la confirmación de precio"),
                     onClick = onContinue
                 )
             }

@@ -37,14 +37,17 @@ internal fun ValuePilotNextSettingsScreen(
     PremiumColumn {
         item(key = "settings-intro") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {
-                Eyebrow("YOUR EXPERIENCE")
+                Eyebrow(valuePilotNextText("YOUR EXPERIENCE", "TU EXPERIENCIA"))
                 Text(
-                    "Make ValuePilot feel right for you.",
+                    valuePilotNextText("Make ValuePilot feel right for you.", "Hacé que ValuePilot se sienta tuyo."),
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    "Choose an appearance, motion level, and display density. These preferences affect the Compose experience only.",
+                    valuePilotNextText(
+                        "Choose an appearance, motion level, and display density. These preferences affect the Compose experience only.",
+                        "Elegí apariencia, movimiento y densidad de pantalla. Estas preferencias afectan solo la experiencia Compose."
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -53,26 +56,26 @@ internal fun ValuePilotNextSettingsScreen(
 
         item(key = "settings-appearance") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
-                SectionHeading("APPEARANCE", "Choose your color scheme")
+                SectionHeading(valuePilotNextText("APPEARANCE", "APARIENCIA"), valuePilotNextText("Choose your color scheme", "Elegí tu esquema de colores"))
                 Column(
                     modifier = Modifier.selectableGroup(),
                     verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)
                 ) {
                     SettingChoiceRow(
-                        title = "Follow device",
-                        detail = "Use your Android light or dark setting.",
+                        title = valuePilotNextText("Follow device", "Seguir dispositivo"),
+                        detail = valuePilotNextText("Use your Android light or dark setting.", "Usar la configuración clara u oscura de Android."),
                         selected = preferences.appearance == ValuePilotNextAppearance.SYSTEM,
                         onClick = { onAppearanceSelected(ValuePilotNextAppearance.SYSTEM) }
                     )
                     SettingChoiceRow(
-                        title = "Light",
-                        detail = "Use the warm, bright ValuePilot palette.",
+                        title = valuePilotNextText("Light", "Claro"),
+                        detail = valuePilotNextText("Use the warm, bright ValuePilot palette.", "Usar la paleta cálida y luminosa de ValuePilot."),
                         selected = preferences.appearance == ValuePilotNextAppearance.LIGHT,
                         onClick = { onAppearanceSelected(ValuePilotNextAppearance.LIGHT) }
                     )
                     SettingChoiceRow(
-                        title = "Dark",
-                        detail = "Use a low-light palette with the same price contrast.",
+                        title = valuePilotNextText("Dark", "Oscuro"),
+                        detail = valuePilotNextText("Use a low-light palette with the same price contrast.", "Usar una paleta de baja luz con el mismo contraste de precios."),
                         selected = preferences.appearance == ValuePilotNextAppearance.DARK,
                         onClick = { onAppearanceSelected(ValuePilotNextAppearance.DARK) }
                     )
@@ -82,26 +85,26 @@ internal fun ValuePilotNextSettingsScreen(
 
         item(key = "settings-motion") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
-                SectionHeading("MOTION", "Keep transitions comfortable")
+                SectionHeading(valuePilotNextText("MOTION", "MOVIMIENTO"), valuePilotNextText("Keep transitions comfortable", "Mantené cómodas las transiciones"))
                 Column(
                     modifier = Modifier.selectableGroup(),
                     verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)
                 ) {
                     SettingChoiceRow(
-                        title = "Follow device",
-                        detail = "Respect Android's animation setting.",
+                        title = valuePilotNextText("Follow device", "Seguir dispositivo"),
+                        detail = valuePilotNextText("Respect Android's animation setting.", "Respetar la configuración de animaciones de Android."),
                         selected = preferences.motion == ValuePilotNextMotionPreference.SYSTEM,
                         onClick = { onMotionSelected(ValuePilotNextMotionPreference.SYSTEM) }
                     )
                     SettingChoiceRow(
-                        title = "Reduce motion",
-                        detail = "Use short fades without sliding transitions.",
+                        title = valuePilotNextText("Reduce motion", "Reducir movimiento"),
+                        detail = valuePilotNextText("Use short fades without sliding transitions.", "Usar fundidos breves sin transiciones deslizantes."),
                         selected = preferences.motion == ValuePilotNextMotionPreference.REDUCED,
                         onClick = { onMotionSelected(ValuePilotNextMotionPreference.REDUCED) }
                     )
                     SettingChoiceRow(
-                        title = "Full motion",
-                        detail = "Use the standard, brief screen transitions.",
+                        title = valuePilotNextText("Full motion", "Movimiento completo"),
+                        detail = valuePilotNextText("Use the standard, brief screen transitions.", "Usar las transiciones de pantalla breves estándar."),
                         selected = preferences.motion == ValuePilotNextMotionPreference.FULL,
                         onClick = { onMotionSelected(ValuePilotNextMotionPreference.FULL) }
                     )
@@ -111,20 +114,20 @@ internal fun ValuePilotNextSettingsScreen(
 
         item(key = "settings-density") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
-                SectionHeading("DISPLAY DENSITY", "Choose how much fits on screen")
+                SectionHeading(valuePilotNextText("DISPLAY DENSITY", "DENSIDAD DE PANTALLA"), valuePilotNextText("Choose how much fits on screen", "Elegí cuánto entra en pantalla"))
                 Column(
                     modifier = Modifier.selectableGroup(),
                     verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)
                 ) {
                     SettingChoiceRow(
-                        title = "Comfortable",
-                        detail = "Keep the current generous spacing.",
+                        title = valuePilotNextText("Comfortable", "Cómoda"),
+                        detail = valuePilotNextText("Keep the current generous spacing.", "Mantener el espaciado generoso actual."),
                         selected = preferences.density == ValuePilotNextDensity.COMFORTABLE,
                         onClick = { onDensitySelected(ValuePilotNextDensity.COMFORTABLE) }
                     )
                     SettingChoiceRow(
-                        title = "Compact",
-                        detail = "Fit more cards while keeping touch targets comfortable.",
+                        title = valuePilotNextText("Compact", "Compacta"),
+                        detail = valuePilotNextText("Fit more cards while keeping touch targets comfortable.", "Mostrar más tarjetas sin reducir los objetivos táctiles."),
                         selected = preferences.density == ValuePilotNextDensity.COMPACT,
                         onClick = { onDensitySelected(ValuePilotNextDensity.COMPACT) }
                     )
@@ -134,26 +137,26 @@ internal fun ValuePilotNextSettingsScreen(
 
         item(key = "settings-language") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
-                SectionHeading("LANGUAGE", "Choose your ValuePilot language")
+                SectionHeading(valuePilotNextText("LANGUAGE", "IDIOMA"), valuePilotNextText("Choose your ValuePilot language", "Elegí el idioma de ValuePilot"))
                 Column(
                     modifier = Modifier.selectableGroup(),
                     verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)
                 ) {
                     SettingChoiceRow(
-                        title = "Follow device",
-                        detail = "Use Spanish on Spanish devices and English otherwise.",
+                        title = valuePilotNextText("Follow device", "Seguir dispositivo"),
+                        detail = valuePilotNextText("Use Spanish on Spanish devices and English otherwise.", "Usar español en dispositivos en español e inglés en los demás."),
                         selected = preferences.language == ValuePilotNextLanguage.SYSTEM,
                         onClick = { onLanguageSelected(ValuePilotNextLanguage.SYSTEM) }
                     )
                     SettingChoiceRow(
-                        title = "English",
-                        detail = "Use English labels while keeping Argentina and ARS.",
+                        title = valuePilotNextText("English", "English"),
+                        detail = valuePilotNextText("Use English labels while keeping Argentina and ARS.", "Usar etiquetas en inglés manteniendo Argentina y ARS."),
                         selected = preferences.language == ValuePilotNextLanguage.ENGLISH,
                         onClick = { onLanguageSelected(ValuePilotNextLanguage.ENGLISH) }
                     )
                     SettingChoiceRow(
-                        title = "Español (Argentina)",
-                        detail = "Usar español argentino con Argentina y ARS.",
+                        title = valuePilotNextText("Spanish (Argentina)", "Español (Argentina)"),
+                        detail = valuePilotNextText("Use Argentine Spanish while keeping Argentina and ARS.", "Usar español argentino con Argentina y ARS."),
                         selected = preferences.language == ValuePilotNextLanguage.SPANISH_AR,
                         onClick = { onLanguageSelected(ValuePilotNextLanguage.SPANISH_AR) }
                     )
@@ -163,28 +166,35 @@ internal fun ValuePilotNextSettingsScreen(
 
         if (shouldOfferPresentationPreferenceReset(preferences)) {
             item(key = "settings-reset-preferences") {
+                val resetDescription = valuePilotNextText(
+                    "Restore default appearance, motion, density, and language",
+                    "Restaurar apariencia, movimiento, densidad e idioma predeterminados"
+                )
                 TextButton(
                     onClick = onResetPreferences,
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
                         .semantics {
-                            contentDescription = "Restore default appearance, motion, density, and language"
+                            contentDescription = resetDescription
                         }
                 ) {
-                    Text("Restore default experience")
+                    Text(valuePilotNextText("Restore default experience", "Restaurar experiencia predeterminada"))
                 }
             }
         }
 
         item(key = "settings-accessibility-note") {
             EvidenceFootnote(
-                "Text size follows Android display settings. Compact spacing does not shrink touch targets. Shopping prices, saved data, and evidence are not changed here."
+                valuePilotNextText(
+                    "Text size follows Android display settings. Compact spacing does not shrink touch targets. Shopping prices, saved data, and evidence are not changed here.",
+                    "El tamaño del texto sigue la configuración de pantalla de Android. El espaciado compacto no reduce los objetivos táctiles. Acá no cambian precios, datos guardados ni evidencia."
+                )
             )
         }
 
         item(key = "settings-back") {
-            SecondaryActionButton("Back", onBack)
+                SecondaryActionButton(valuePilotNextText("Back", "Volver"), onBack)
         }
     }
 }

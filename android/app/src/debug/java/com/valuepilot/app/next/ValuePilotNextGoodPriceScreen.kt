@@ -29,7 +29,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -85,9 +84,12 @@ internal fun ValuePilotNextGoodPriceScreen(
     if (confirmClearMemory) {
         AlertDialog(
             onDismissRequest = { confirmClearMemory = false },
-            title = { Text("Clear private price memory?") },
+            title = { Text(valuePilotNextText("Clear private price memory?", "¿Borrar la memoria privada de precios?")) },
             text = {
-                Text("This clears the comparison observations stored on this device and removes the current answer from view.")
+                Text(valuePilotNextText(
+                    "This clears the comparison observations stored on this device and removes the current answer from view.",
+                    "Esto borra las observaciones de comparación guardadas en este dispositivo y quita la respuesta actual de la vista."
+                ))
             },
             confirmButton = {
                 TextButton(
@@ -95,10 +97,10 @@ internal fun ValuePilotNextGoodPriceScreen(
                         confirmClearMemory = false
                         onClearPrivateMemory()
                     }
-                ) { Text("Clear memory") }
+                ) { Text(valuePilotNextText("Clear memory", "Borrar memoria")) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmClearMemory = false }) { Text("Keep it") }
+                TextButton(onClick = { confirmClearMemory = false }) { Text(valuePilotNextText("Keep it", "Conservarla")) }
             }
         )
     }
@@ -106,18 +108,18 @@ internal fun ValuePilotNextGoodPriceScreen(
     if (showSharePreview && shareCard != null) {
         AlertDialog(
             onDismissRequest = { showSharePreview = false },
-            title = { Text("Review before sharing") },
-            text = { Text(shareCard.preview + "\n\nThis share excludes the product name and private history.") },
+            title = { Text(valuePilotNextText("Review before sharing", "Revisá antes de compartir")) },
+            text = { Text(shareCard.preview + "\n\n" + valuePilotNextText("This share excludes the product name and private history.", "Este envío excluye el nombre del producto y el historial privado.")) },
             confirmButton = {
                 TextButton(
                     onClick = {
                         showSharePreview = false
                         onShare(shareCard)
                     }
-                ) { Text("Share") }
+                ) { Text(valuePilotNextText("Share", "Compartir")) }
             },
             dismissButton = {
-                TextButton(onClick = { showSharePreview = false }) { Text("Cancel") }
+                TextButton(onClick = { showSharePreview = false }) { Text(valuePilotNextText("Cancel", "Cancelar")) }
             }
         )
     }
@@ -128,7 +130,7 @@ internal fun ValuePilotNextGoodPriceScreen(
         }
         AlertDialog(
             onDismissRequest = { onDismissBarcodeChoice(choice.requestId) },
-            title = { Text(stringResource(R.string.good_price_barcode_match_title)) },
+            title = { Text(valuePilotNextText("Identity suggestion from barcode", "Sugerencia de identidad desde el código de barras")) },
             text = {
                 Column(
                     modifier = Modifier
@@ -138,9 +140,15 @@ internal fun ValuePilotNextGoodPriceScreen(
                 ) {
                     Text(
                         if (choice.replacesDraft) {
-                            stringResource(R.string.good_price_barcode_replace_warning)
+                            valuePilotNextText(
+                                "Choosing a name will replace your current price-check draft, including any package or price details.",
+                                "Elegir un nombre reemplazará tu borrador actual de control de precio, incluidos los datos de envase o precio."
+                            )
                         } else {
-                            "Choose the exact catalog name that matches the package. This does not supply a package quantity or price."
+                            valuePilotNextText(
+                                "Choose the exact catalog name that matches the package. This does not supply a package quantity or price.",
+                                "Elegí el nombre exacto del catálogo que coincide con el envase. Esto no aporta cantidad de envase ni precio."
+                            )
                         },
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -173,19 +181,17 @@ internal fun ValuePilotNextGoodPriceScreen(
                     }
                 ) {
                     Text(
-                        stringResource(
-                            if (choice.replacesDraft) {
-                                R.string.good_price_barcode_replace_draft
-                            } else {
-                                R.string.good_price_barcode_use_name
-                            }
-                        )
+                        if (choice.replacesDraft) {
+                            valuePilotNextText("Replace current draft", "Reemplazar borrador actual")
+                        } else {
+                            valuePilotNextText("Use this name", "Usar este nombre")
+                        }
                     )
                 }
             },
             dismissButton = {
                 TextButton(onClick = { onDismissBarcodeChoice(choice.requestId) }) {
-                    Text(stringResource(R.string.cancel))
+                    Text(valuePilotNextText("Cancel", "Cancelar"))
                 }
             }
         )
@@ -194,14 +200,17 @@ internal fun ValuePilotNextGoodPriceScreen(
     PremiumColumn {
         item(key = "good-price-intro") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {
-                Eyebrow("A PERSONAL PRICE CHECK")
+                Eyebrow(valuePilotNextText("A PERSONAL PRICE CHECK", "UN CONTROL DE PRECIO PERSONAL"))
                 Text(
-                    "What did this pack cost?",
+                    valuePilotNextText("What did this pack cost?", "¿Cuánto viste por este envase?"),
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    "Add one product, the exact package quantity, and the price you saw. ValuePilot keeps the calculation grounded in those details.",
+                    valuePilotNextText(
+                        "Add one product, the exact package quantity, and the price you saw. ValuePilot keeps the calculation grounded in those details.",
+                        "Agregá un producto, la cantidad exacta del envase y el precio que viste. ValuePilot mantiene el cálculo basado en esos datos."
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -215,11 +224,14 @@ internal fun ValuePilotNextGoodPriceScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(draftFocusRequester),
-                label = { Text("Product, package and price") },
-                placeholder = { Text("Product name\nExact package quantity\nObserved price + currency") },
+                label = { Text(valuePilotNextText("Product, package and price", "Producto, envase y precio")) },
+                placeholder = { Text(valuePilotNextText("Product name\nExact package quantity\nObserved price + currency", "Nombre del producto\nCantidad exacta del envase\nPrecio observado + moneda")) },
                 supportingText = {
                     Text(
-                        "Use one line each for the product, exact package quantity, and price with currency. This is your observation, not a live store offer."
+                        valuePilotNextText(
+                            "Use one line each for the product, exact package quantity, and price with currency. This is your observation, not a live store offer.",
+                            "Usá una línea para el producto, otra para la cantidad exacta del envase y otra para el precio con moneda. Es tu observación, no una oferta actual de tienda."
+                        )
                     )
                 },
                 minLines = 3,
@@ -235,9 +247,12 @@ internal fun ValuePilotNextGoodPriceScreen(
 
         item(key = "good-price-price-selection") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
-                Text("Which price did you see?", style = MaterialTheme.typography.titleMedium)
+                Text(valuePilotNextText("Which price did you see?", "¿Qué precio viste?"), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    stringResource(R.string.good_price_selection_body),
+                    valuePilotNextText(
+                        "Choose whether this is a regular shelf price or a member price. A missing member price stays unknown; ValuePilot never substitutes a current price.",
+                        "Elegí si es un precio regular de góndola o de socio. Un precio de socio faltante queda desconocido; ValuePilot nunca reemplaza por un precio actual."
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -248,7 +263,7 @@ internal fun ValuePilotNextGoodPriceScreen(
                         onClick = {
                             onPriceSelectionChanged(CompareHerePriceSelection.CURRENT)
                         },
-                        label = { Text(stringResource(R.string.price_selection_current)) }
+                        label = { Text(valuePilotNextText("Current shelf prices", "Precios actuales de góndola")) }
                     )
                     FilterChip(
                         modifier = Modifier.fillMaxWidth(),
@@ -256,7 +271,7 @@ internal fun ValuePilotNextGoodPriceScreen(
                         onClick = {
                             onPriceSelectionChanged(CompareHerePriceSelection.MEMBER)
                         },
-                        label = { Text(stringResource(R.string.price_selection_member)) }
+                        label = { Text(valuePilotNextText("Member prices", "Precios de socio")) }
                     )
                 }
             }
@@ -264,10 +279,10 @@ internal fun ValuePilotNextGoodPriceScreen(
 
         item(key = "good-price-actions") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
-                PrimaryActionButton(label = "Check this price", onClick = ::runCheck)
-                SecondaryActionButton(label = "Clear draft", onClick = onClearDraft)
+                PrimaryActionButton(label = valuePilotNextText("Check this price", "Comprobar este precio"), onClick = ::runCheck)
+                SecondaryActionButton(label = valuePilotNextText("Clear draft", "Borrar borrador"), onClick = onClearDraft)
                 SecondaryActionButton(
-                    label = "Scan a barcode",
+                    label = valuePilotNextText("Scan a barcode", "Escanear código de barras"),
                     onClick = {
                         focusManager.clearFocus()
                         keyboard?.hide()
@@ -275,7 +290,10 @@ internal fun ValuePilotNextGoodPriceScreen(
                     }
                 )
                 Text(
-                    "An exact catalog match suggests an editable name only. Package quantity and price still need your confirmation.",
+                    valuePilotNextText(
+                        "An exact catalog match suggests an editable name only. Package quantity and price still need your confirmation.",
+                        "Una coincidencia exacta de catálogo solo sugiere un nombre editable. La cantidad del envase y el precio todavía necesitan tu confirmación."
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -284,7 +302,7 @@ internal fun ValuePilotNextGoodPriceScreen(
 
         if (state.barcodeBusy) {
             item(key = "good-price-barcode-progress") {
-                LoadingRow(state.barcodeMessage ?: "Looking up an exact catalog name…")
+                LoadingRow(state.barcodeMessage ?: valuePilotNextText("Looking up an exact catalog name…", "Buscando un nombre exacto de catálogo…"))
             }
         } else {
             state.barcodeMessage?.let { message ->
@@ -306,7 +324,7 @@ internal fun ValuePilotNextGoodPriceScreen(
         if (shareCard != null) {
             item(key = "good-price-share") {
                 SecondaryActionButton(
-                    label = "Share this exact calculation",
+                    label = valuePilotNextText("Share this exact calculation", "Compartir este cálculo exacto"),
                     onClick = { showSharePreview = true }
                 )
             }
@@ -325,18 +343,21 @@ internal fun ValuePilotNextGoodPriceScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
-                ) { Text("Clear private price memory", color = MaterialTheme.colorScheme.error) }
+                ) { Text(valuePilotNextText("Clear private price memory", "Borrar memoria privada de precios"), color = MaterialTheme.colorScheme.error) }
             }
         }
 
         item(key = "good-price-disclosure") {
             EvidenceNotice(
-                stringResource(R.string.good_price_privacy)
+                valuePilotNextText(
+                    "Your check and any remembered observation stay on this device. No account or network connection is required.",
+                    "Tu control y cualquier observación recordada quedan en este dispositivo. No se necesita cuenta ni conexión de red."
+                )
             )
         }
 
         item(key = "good-price-back") {
-            SecondaryActionButton(label = "Back", onClick = onBack)
+            SecondaryActionButton(label = valuePilotNextText("Back", "Volver"), onClick = onBack)
         }
     }
 }

@@ -39,6 +39,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -369,10 +370,11 @@ internal fun ValuePilotNextApp(
         navigateBack()
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
+    CompositionLocalProvider(LocalValuePilotNextLanguage provides language) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val expanded = maxWidth >= 760.dp
             val safeInsets =
@@ -442,7 +444,7 @@ internal fun ValuePilotNextApp(
                                         )
                                     )
                             },
-                            label = "ValuePilot shopping journey"
+                            label = valuePilotNextText(language, "ValuePilot shopping journey", "Recorrido de compras ValuePilot")
                         ) { destination ->
                             destinationStateHolder.SaveableStateProvider(destination.name) {
                             when (destination) {
@@ -475,15 +477,15 @@ internal fun ValuePilotNextApp(
                                     onAddToBasket = { match ->
                                         when (journey.addSearchMatch(match)) {
                                             AddPrivateIdentityResult.ADDED ->
-                                                notify("Producto agregado a tu canasta privada.")
+                                                notify(valuePilotNextText(language, "Added to your private basket.", "Producto agregado a tu canasta privada."))
                                             AddPrivateIdentityResult.REFRESHED ->
-                                                notify("Actualizamos la evidencia de Search para este producto.")
+                                                notify(valuePilotNextText(language, "Current Search evidence refreshed for this product.", "Actualizamos la evidencia de Search para este producto."))
                                             AddPrivateIdentityResult.SOURCE_UNAVAILABLE ->
-                                                notify("Este resultado no tiene una identidad de fuente calificada para guardar.")
+                                                notify(valuePilotNextText(language, "This result has no qualified source identity to save.", "Este resultado no tiene una identidad de fuente calificada para guardar."))
                                             AddPrivateIdentityResult.BASKET_LIMIT ->
-                                                notify("Tu canasta privada alcanzó el límite de productos.")
+                                                notify(valuePilotNextText(language, "Your private basket has reached its item limit.", "Tu canasta privada alcanzó el límite de productos."))
                                             AddPrivateIdentityResult.PERSISTENCE_UNAVAILABLE ->
-                                                notify("No se pudo guardar la identidad en la canasta.")
+                                                notify(valuePilotNextText(language, "The private basket could not be saved.", "No se pudo guardar la identidad en la canasta."))
                                         }
                                     },
                                     onOpenMatch = { match ->
@@ -512,19 +514,19 @@ internal fun ValuePilotNextApp(
                                         onAddToBasket = { selected ->
                                             when (journey.addSearchMatch(selected)) {
                                                 AddPrivateIdentityResult.ADDED -> {
-                                                    notify("Added to your private basket.")
+                                                    notify(valuePilotNextText(language, "Added to your private basket.", "Producto agregado a tu canasta privada."))
                                                     selectPrimary(NextDestination.BASKET)
                                                 }
                                                 AddPrivateIdentityResult.REFRESHED -> {
-                                                    notify("Current Search evidence refreshed.")
+                                                    notify(valuePilotNextText(language, "Current Search evidence refreshed.", "Actualizamos la evidencia de Search."))
                                                     selectPrimary(NextDestination.BASKET)
                                                 }
                                                 AddPrivateIdentityResult.SOURCE_UNAVAILABLE ->
-                                                    notify("This result has no qualified source identity to save.")
+                                                    notify(valuePilotNextText(language, "This result has no qualified source identity to save.", "Este resultado no tiene una identidad de fuente calificada para guardar."))
                                                 AddPrivateIdentityResult.BASKET_LIMIT ->
-                                                    notify("Your private basket has reached its item limit.")
+                                                    notify(valuePilotNextText(language, "Your private basket has reached its item limit.", "Tu canasta privada alcanzó el límite de productos."))
                                                 AddPrivateIdentityResult.PERSISTENCE_UNAVAILABLE ->
-                                                    notify("The private basket could not be saved.")
+                                                    notify(valuePilotNextText(language, "The private basket could not be saved.", "No se pudo guardar la identidad en la canasta."))
                                             }
                                         },
                                         onSearchAgain = { selectPrimary(NextDestination.SEARCH) },
@@ -537,9 +539,9 @@ internal fun ValuePilotNextApp(
                                                 selectedMapOfferKey = offer.offerKey
                                                 selectedMapProductName = match?.displayName
                                                 navigate(NextDestination.MAP_HANDOFF)
-                                                notify("Store coordinates are source context, not a route.")
+                                                notify(valuePilotNextText(language, "Store coordinates are source context, not a route.", "Las coordenadas de tienda son contexto de fuente, no una ruta."))
                                             } else {
-                                                notify("This offer has no verified map coordinates.")
+                                                notify(valuePilotNextText(language, "This offer has no verified map coordinates.", "Esta oferta no tiene coordenadas de mapa verificadas."))
                                             }
                                         }
                                     )
@@ -551,7 +553,7 @@ internal fun ValuePilotNextApp(
                                     onSearch = { navigate(NextDestination.SEARCH) },
                                     onRemove = { identityKey ->
                                         if (!journey.removePrivateIdentity(identityKey)) {
-                                            notify("The saved basket could not be updated.")
+                                            notify(valuePilotNextText(language, "The saved basket could not be updated.", "No se pudo actualizar la canasta guardada."))
                                         }
                                     },
                                     onPlan = {
@@ -606,7 +608,7 @@ internal fun ValuePilotNextApp(
                                     selectedProductName = selectedMapProductName,
                                     onOpenMap = { store ->
                                         if (!onOpenStoreMap(store)) {
-                                            notify("No map app is available for this store.")
+                                            notify(valuePilotNextText(language, "No map app is available for this store.", "No hay una app de mapas disponible para esta tienda."))
                                         }
                                     }
                                 )
@@ -645,7 +647,7 @@ internal fun ValuePilotNextApp(
                                         onDismissBarcodeChoice = journey::dismissGoodPriceBarcodeChoice,
                                         onShare = { card ->
                                             if (!onShareGoodPriceResult(card)) {
-                                                notify("No sharing app is available.")
+                                                notify(valuePilotNextText(language, "No sharing app is available.", "No hay una app para compartir disponible."))
                                             }
                                         },
                                         onBack = ::navigateBack
@@ -687,7 +689,7 @@ internal fun ValuePilotNextApp(
                                     onClear = journey::clearCompareHereDraft,
                                     onShare = { card ->
                                         if (!onShareCompareHereResult(card)) {
-                                            notify("No sharing app is available.")
+                                            notify(valuePilotNextText(language, "No sharing app is available.", "No hay una app para compartir disponible."))
                                         }
                                     },
                                     onOpenCaptureTools = onOpenLegacyComparisonTools,
@@ -787,6 +789,7 @@ internal fun ValuePilotNextApp(
                 }
             }
         }
+        }
     }
 }
 
@@ -880,7 +883,13 @@ private fun JourneyTopBar(
             modifier = Modifier
                 .heightIn(min = 40.dp)
                 .widthIn(min = 42.dp)
-                .semantics { contentDescription = "Salir de la vista previa y volver a la aplicación original" }
+                .semantics {
+                    contentDescription = valuePilotNextText(
+                        language,
+                        "Exit the preview and return to the original app",
+                        "Salir de la vista previa y volver a la aplicación original"
+                    )
+                }
         ) {
             Text(
                 valuePilotNextText(language, "Exit", "Salir"),

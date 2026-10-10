@@ -78,12 +78,12 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
                     },
                     enabled = datePickerState.selectedDateMillis != null
                 ) {
-                    Text("Use date")
+                    Text(valuePilotNextText("Use date", "Usar fecha"))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) {
-                    Text("Cancel")
+                    Text(valuePilotNextText("Cancel", "Cancelar"))
                 }
             }
         ) {
@@ -94,14 +94,17 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
     PremiumColumn {
         item(key = "observed-price-confirmation-intro") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {
-                Eyebrow("PERSONAL PRICE MEMORY")
+                Eyebrow(valuePilotNextText("PERSONAL PRICE MEMORY", "MEMORIA PERSONAL DE PRECIOS"))
                 Text(
-                    "Confirm a price you saw",
+                    valuePilotNextText("Confirm a price you saw", "Confirmá un precio que viste"),
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    "Add the amount, when you saw it, and a receipt or price-tag proof. ValuePilot keeps this as your observation; it is not a retailer-confirmed current offer.",
+                    valuePilotNextText(
+                        "Add the amount, when you saw it, and a receipt or price-tag proof. ValuePilot keeps this as your observation; it is not a retailer-confirmed current offer.",
+                        "Agregá el importe, cuándo lo viste y una evidencia de ticket o etiqueta de precio. ValuePilot lo conserva como observación; no es una oferta actual confirmada por un minorista."
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -110,7 +113,7 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
 
         if (state == null) {
             item(key = "observed-price-confirmation-loading") {
-                LoadingRow("Preparing your selected product and store…")
+                LoadingRow(valuePilotNextText("Preparing your selected product and store…", "Preparando tu producto y tienda elegidos…"))
             }
         } else {
             item(key = "observed-price-confirmation-identity") {
@@ -122,9 +125,12 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
 
             item(key = "observed-price-confirmation-price") {
                 ConfirmationSectionCard(
-                    eyebrow = "01 · OBSERVED PRICE",
-                    title = "What price did you see?",
-                    detail = "Enter the amount and currency exactly as shown. Currency is never inferred from the saved store."
+                    eyebrow = valuePilotNextText("01 · OBSERVED PRICE", "01 · PRECIO OBSERVADO"),
+                    title = valuePilotNextText("What price did you see?", "¿Qué precio viste?"),
+                    detail = valuePilotNextText(
+                        "Enter the amount and currency exactly as shown. Currency is never inferred from the saved store.",
+                        "Ingresá el importe y la moneda exactamente como aparecen. La moneda nunca se infiere de la tienda guardada."
+                    )
                 ) {
                     BoxWithConstraints(Modifier.fillMaxWidth()) {
                         val compact = usesCompactObservedPriceConfirmationFields(
@@ -153,22 +159,25 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
                     }
                     state.priceInputError?.let { InputError(it) }
                     PrimaryActionButton(
-                        label = "Set observed price",
+                        label = valuePilotNextText("Set observed price", "Guardar precio observado"),
                         onClick = { onSetPrice(amountText, currencyCodeText) }
                     )
                     DraftFieldStatus(
                         state = state,
                         field = UserObservedPriceConfirmationDraftMissingField.PRICE,
-                        readyLabel = "Observed price set"
+                        readyLabel = valuePilotNextText("Observed price set", "Precio observado guardado")
                     )
                 }
             }
 
             item(key = "observed-price-confirmation-time") {
                 ConfirmationSectionCard(
-                    eyebrow = "02 · OBSERVATION TIME",
-                    title = "When did you see it?",
-                    detail = "Use the factual local date and time, then enter its explicit UTC offset. Your device clock and timezone are not used."
+                    eyebrow = valuePilotNextText("02 · OBSERVATION TIME", "02 · HORA DE OBSERVACIÓN"),
+                    title = valuePilotNextText("When did you see it?", "¿Cuándo lo viste?"),
+                    detail = valuePilotNextText(
+                        "Use the factual local date and time, then enter its explicit UTC offset. Your device clock and timezone are not used.",
+                        "Usá la fecha y hora local reales e ingresá su desfase UTC explícito. No se usan el reloj ni la zona horaria del dispositivo."
+                    )
                 ) {
                     BoxWithConstraints(Modifier.fillMaxWidth()) {
                         val compact = usesCompactObservedPriceConfirmationFields(
@@ -180,14 +189,14 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
                                 value = dateText,
                                 onValueChange = { dateText = it },
                                 modifier = Modifier.fillMaxWidth(),
-                                label = { Text("Date") },
+                                label = { Text(valuePilotNextText("Date", "Fecha")) },
                                 placeholder = { Text("YYYY-MM-DD") },
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
                                 trailingIcon = if (compact) null else {
                                     {
                                         TextButton(onClick = { showDatePicker = true }) {
-                                            Text("Choose")
+                                            Text(valuePilotNextText("Choose", "Elegir"))
                                         }
                                     }
                                 }
@@ -197,7 +206,7 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
                                     onClick = { showDatePicker = true },
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Text("Choose date from calendar")
+                                    Text(valuePilotNextText("Choose date from calendar", "Elegir fecha del calendario"))
                                 }
                             }
                         }
@@ -228,35 +237,41 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
                         }
                     }
                     Text(
-                        "Accepted time formats: HH:MM or HH:MM:SS. Offset examples: -03:00 or Z.",
+                        valuePilotNextText(
+                            "Accepted time formats: HH:MM or HH:MM:SS. Offset examples: -03:00 or Z.",
+                            "Formatos de hora aceptados: HH:MM o HH:MM:SS. Ejemplos de desfase: -03:00 o Z."
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     state.observedAtInputError?.let { InputError(it) }
                     PrimaryActionButton(
-                        label = "Set observation time",
+                        label = valuePilotNextText("Set observation time", "Guardar hora de observación"),
                         onClick = { onSetObservedAt(dateText, timeText, utcOffsetText) }
                     )
                     DraftFieldStatus(
                         state = state,
                         field = UserObservedPriceConfirmationDraftMissingField.OBSERVED_AT,
-                        readyLabel = "Observation time set"
+                        readyLabel = valuePilotNextText("Observation time set", "Hora de observación guardada")
                     )
                 }
             }
 
             item(key = "observed-price-confirmation-proof") {
                 ConfirmationSectionCard(
-                    eyebrow = "03 · PROOF",
-                    title = "Attach your receipt or price tag",
-                    detail = "Give this proof a reference label and choose its type. The file is read only after you select it and stays temporary until you confirm."
+                    eyebrow = valuePilotNextText("03 · PROOF", "03 · EVIDENCIA"),
+                    title = valuePilotNextText("Attach your receipt or price tag", "Adjuntá tu ticket o etiqueta de precio"),
+                    detail = valuePilotNextText(
+                        "Give this proof a reference label and choose its type. The file is read only after you select it and stays temporary until you confirm.",
+                        "Dale una referencia a esta evidencia y elegí su tipo. El archivo se lee solo después de seleccionarlo y permanece temporal hasta que confirmes."
+                    )
                 ) {
                     OutlinedTextField(
                         value = artifactIdText,
                         onValueChange = { artifactIdText = it.take(160) },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Proof reference") },
-                        placeholder = { Text("For example, receipt-sept-1") },
+                        label = { Text(valuePilotNextText("Proof reference", "Referencia de evidencia")) },
+                        placeholder = { Text(valuePilotNextText("For example, receipt-sept-1", "Ejemplo: ticket-sept-1")) },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii)
                     )
@@ -264,17 +279,17 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
                         FilterChip(
                             selected = proofTypeName == UserProvidedPriceProofType.RECEIPT.name,
                             onClick = { proofTypeName = UserProvidedPriceProofType.RECEIPT.name },
-                            label = { Text("Receipt") }
+                            label = { Text(valuePilotNextText("Receipt", "Ticket")) }
                         )
                         FilterChip(
                             selected = proofTypeName == UserProvidedPriceProofType.PRICE_TAG.name,
                             onClick = { proofTypeName = UserProvidedPriceProofType.PRICE_TAG.name },
-                            label = { Text("Price tag") }
+                            label = { Text(valuePilotNextText("Price tag", "Etiqueta de precio")) }
                         )
                     }
                     state.proofReferenceInputError?.let { InputError(it) }
                     PrimaryActionButton(
-                        label = "Set proof details",
+                        label = valuePilotNextText("Set proof details", "Guardar datos de evidencia"),
                         onClick = {
                             val selected = UserProvidedPriceProofType.entries
                                 .firstOrNull { it.name == proofTypeName }
@@ -284,16 +299,16 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
                     DraftFieldStatus(
                         state = state,
                         field = UserObservedPriceConfirmationDraftMissingField.ARTIFACT_ID,
-                        readyLabel = "Proof details set"
+                        readyLabel = valuePilotNextText("Proof details set", "Datos de evidencia guardados")
                     )
                     DraftFieldStatus(
                         state = state,
                         field = UserObservedPriceConfirmationDraftMissingField.PROOF_TYPE,
-                        readyLabel = "Proof type set"
+                        readyLabel = valuePilotNextText("Proof type set", "Tipo de evidencia guardado")
                     )
                     ProofSelectionStatus(state.proofPresentation)
                     SecondaryActionButton(
-                        label = "Choose receipt or price-tag file",
+                        label = valuePilotNextText("Choose receipt or price-tag file", "Elegir archivo de ticket o etiqueta"),
                         onClick = onSelectProof
                     )
                 }
@@ -301,10 +316,10 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
 
             item(key = "observed-price-confirmation-submit") {
                 ConfirmationSectionCard(
-                    eyebrow = "FINAL CHECK",
-                    title = state.draft?.statusTitle ?: "Confirmation details needed",
+                    eyebrow = valuePilotNextText("FINAL CHECK", "COMPROBACIÓN FINAL"),
+                    title = state.draft?.statusTitle ?: valuePilotNextText("Confirmation details needed", "Faltan datos de confirmación"),
                     detail = state.draft?.guidance
-                        ?: "Set the observed price, observation time, and proof details above."
+                        ?: valuePilotNextText("Set the observed price, observation time, and proof details above.", "Guardá arriba el precio observado, la hora de observación y los datos de evidencia."),
                 ) {
                     state.draft?.missingRequirements
                         ?.filterNot { it.field == UserObservedPriceConfirmationDraftMissingField.CONFIRMATION_ID ||
@@ -315,7 +330,7 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
                             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
                                 requirements.forEach { requirement ->
                                     Text(
-                                        "• ${requirement.label} needed",
+                                        "• " + requirement.label + valuePilotNextText(" needed", " necesario"),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -340,7 +355,10 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
                     )
                     Text(
                         state.draft?.notice
-                            ?: "Draft completeness does not mean the confirmation is accepted. Observed prices are not retailer-confirmed current prices.",
+                            ?: valuePilotNextText(
+                                "Draft completeness does not mean the confirmation is accepted. Observed prices are not retailer-confirmed current prices.",
+                                "Completar el borrador no significa que la confirmación haya sido aceptada. Los precios observados no son precios actuales confirmados por minoristas."
+                            ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -348,7 +366,7 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
             }
 
             item(key = "observed-price-confirmation-back") {
-                SecondaryActionButton(label = "Back to saved choices", onClick = onBack)
+                SecondaryActionButton(label = valuePilotNextText("Back to saved choices", "Volver a elecciones guardadas"), onClick = onBack)
             }
         }
     }
@@ -364,7 +382,7 @@ private fun ObservedPriceAmountField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier,
-        label = { Text("Amount") },
+        label = { Text(valuePilotNextText("Amount", "Importe")) },
         placeholder = { Text("12.50") },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
@@ -381,7 +399,7 @@ private fun ObservedPriceCurrencyField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier,
-        label = { Text("Currency") },
+        label = { Text(valuePilotNextText("Currency", "Moneda")) },
         placeholder = { Text("ARS") },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii)
@@ -398,7 +416,7 @@ private fun ObservedPriceLocalTimeField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier,
-        label = { Text("Local time") },
+        label = { Text(valuePilotNextText("Local time", "Hora local")) },
         placeholder = { Text("HH:MM") },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii)
@@ -415,7 +433,7 @@ private fun ObservedPriceUtcOffsetField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier,
-        label = { Text("UTC offset") },
+        label = { Text(valuePilotNextText("UTC offset", "Desfase UTC")) },
         placeholder = { Text("-03:00") },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii)
@@ -435,7 +453,7 @@ private fun ConfirmationIdentityCard(productName: String, storeName: String) {
             modifier = Modifier.padding(ValuePilotSpacing.large),
             verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)
         ) {
-            Eyebrow("SAVED PRODUCT · EXACT STORE")
+            Eyebrow(valuePilotNextText("SAVED PRODUCT · EXACT STORE", "PRODUCTO GUARDADO · TIENDA EXACTA"))
             Text(productName, style = MaterialTheme.typography.titleLarge)
             Text(storeName, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -476,7 +494,7 @@ private fun DraftFieldStatus(
 ) {
     val missing = state.draft?.missingRequirements?.any { it.field == field } ?: true
     Text(
-        if (missing) "Not set yet" else readyLabel,
+        if (missing) valuePilotNextText("Not set yet", "Todavía no guardado") else readyLabel,
         style = MaterialTheme.typography.bodySmall,
         color = if (missing) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
     )
@@ -488,18 +506,18 @@ private fun ProofSelectionStatus(
 ) {
     val message = when (presentation) {
         UserObservedPriceConfirmationDraftProofContentSelectionPresentation.Inactive ->
-            "Proof file not selected"
+            valuePilotNextText("Proof file not selected", "No seleccionaste un archivo de evidencia")
         UserObservedPriceConfirmationDraftProofContentSelectionPresentation.AwaitingSelection ->
-            "Choose an image or PDF to attach as supporting proof."
+            valuePilotNextText("Choose an image or PDF to attach as supporting proof.", "Elegí una imagen o PDF para adjuntar como evidencia.")
         is UserObservedPriceConfirmationDraftProofContentSelectionPresentation.Ready ->
-            "Proof selected · ${presentation.byteLength} bytes held temporarily while this draft is open."
+            valuePilotNextText("Proof selected · ${presentation.byteLength} bytes held temporarily while this draft is open.", "Evidencia seleccionada · ${presentation.byteLength} bytes retenidos temporalmente mientras el borrador está abierto.")
         is UserObservedPriceConfirmationDraftProofContentSelectionPresentation.Rejected ->
             when (presentation.issue) {
-                com.valuepilot.app.UserObservedPriceProofContentReadIssue.UNSUPPORTED_URI -> "This file location is not supported. Choose a local image or PDF."
-                com.valuepilot.app.UserObservedPriceProofContentReadIssue.SOURCE_UNAVAILABLE -> "The selected file could not be opened. Choose another file."
-                com.valuepilot.app.UserObservedPriceProofContentReadIssue.EMPTY_CONTENT -> "The selected file is empty. Choose another file."
-                com.valuepilot.app.UserObservedPriceProofContentReadIssue.INPUT_TOO_LARGE -> "The selected file is too large. Choose a smaller file."
-                com.valuepilot.app.UserObservedPriceProofContentReadIssue.READ_FAILED -> "The selected file could not be read. Choose another file."
+                com.valuepilot.app.UserObservedPriceProofContentReadIssue.UNSUPPORTED_URI -> valuePilotNextText("This file location is not supported. Choose a local image or PDF.", "Esta ubicación no es compatible. Elegí una imagen o PDF local.")
+                com.valuepilot.app.UserObservedPriceProofContentReadIssue.SOURCE_UNAVAILABLE -> valuePilotNextText("The selected file could not be opened. Choose another file.", "No se pudo abrir el archivo seleccionado. Elegí otro.")
+                com.valuepilot.app.UserObservedPriceProofContentReadIssue.EMPTY_CONTENT -> valuePilotNextText("The selected file is empty. Choose another file.", "El archivo seleccionado está vacío. Elegí otro.")
+                com.valuepilot.app.UserObservedPriceProofContentReadIssue.INPUT_TOO_LARGE -> valuePilotNextText("The selected file is too large. Choose a smaller file.", "El archivo seleccionado es demasiado grande. Elegí uno más pequeño.")
+                com.valuepilot.app.UserObservedPriceProofContentReadIssue.READ_FAILED -> valuePilotNextText("The selected file could not be read. Choose another file.", "No se pudo leer el archivo seleccionado. Elegí otro.")
             }
     }
     EvidenceNotice(
