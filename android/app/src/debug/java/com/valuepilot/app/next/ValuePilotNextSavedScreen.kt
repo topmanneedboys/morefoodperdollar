@@ -158,6 +158,7 @@ internal fun ValuePilotSavedScreen(
             items(state.productRows) { row ->
                 SavedProductCard(
                     row = row,
+                    language = language,
                     onCheckPrice = { action -> onCheckPrice(action.displayName) },
                     onRemove = { action -> onAction(action) }
                 )
@@ -172,7 +173,7 @@ internal fun ValuePilotSavedScreen(
                 )
             }
             items(state.storeRows) { row ->
-                SavedStoreCard(row = row, onRemove = onAction)
+                SavedStoreCard(row = row, language = language, onRemove = onAction)
             }
         }
 
@@ -489,6 +490,7 @@ private fun PurchaseHistoryUnavailableCard(
 @Composable
 private fun SavedProductCard(
     row: PracticalShoppingSavedSurfaceProductRow,
+    language: ValuePilotNextLanguage,
     onCheckPrice: (PracticalShoppingSavedSurfaceAction.CheckProductPrice) -> Unit,
     onRemove: (PracticalShoppingSavedSurfaceAction.Preference) -> Unit
 ) {
@@ -510,10 +512,13 @@ private fun SavedProductCard(
                             .semantics {
                                 contentDescription = row.secondaryActionDescription
                                     ?: row.secondaryActionLabel
-                                    ?: "Check price"
+                                    ?: valuePilotNextText(language, "Check price", "Comprobar precio")
                             }
                     ) {
-                        Text(row.secondaryActionLabel ?: "Check price")
+                        Text(
+                            row.secondaryActionLabel
+                                ?: valuePilotNextText(language, "Check price", "Comprobar precio")
+                        )
                     }
                 }
                 row.action?.let { action ->
@@ -525,10 +530,13 @@ private fun SavedProductCard(
                             .semantics {
                                 contentDescription = row.actionDescription
                                     ?: row.actionLabel
-                                    ?: "Remove saved product"
+                                    ?: valuePilotNextText(language, "Remove saved product", "Quitar producto guardado")
                             }
                     ) {
-                        Text(row.actionLabel ?: "Remove")
+                        Text(
+                            row.actionLabel
+                                ?: valuePilotNextText(language, "Remove", "Quitar")
+                        )
                     }
                 }
             }
@@ -539,6 +547,7 @@ private fun SavedProductCard(
 @Composable
 private fun SavedStoreCard(
     row: PracticalShoppingSavedSurfaceStoreRow,
+    language: ValuePilotNextLanguage,
     onRemove: (PracticalShoppingSavedSurfaceAction.Preference) -> Unit
 ) {
     SavedChoiceCard(
@@ -554,14 +563,17 @@ private fun SavedStoreCard(
                         .semantics {
                             contentDescription = row.actionDescription
                                 ?: row.actionLabel
-                                ?: "Remove saved store"
+                                ?: valuePilotNextText(language, "Remove saved store", "Quitar tienda guardada")
                         }
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(row.actionLabel ?: "Remove")
+                        Text(
+                            row.actionLabel
+                                ?: valuePilotNextText(language, "Remove", "Quitar")
+                        )
                         Text("→", color = MaterialTheme.colorScheme.secondary)
                     }
                 }
