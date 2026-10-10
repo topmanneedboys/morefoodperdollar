@@ -98,6 +98,7 @@ class ValuePilotNextHtmlLocalizationTest {
         assertTrue(source.contains("\${nativeCurrency(r.fuelCost)}"))
         assertTrue(source.contains("nativeUnitPrice"))
         assertTrue(source.contains("nativePackagePrice"))
+        assertTrue(source.contains("'provider identity match':'nativeMatchProvider'"))
         assertTrue(source.contains("offer?.unitPriceBasis"))
     }
 

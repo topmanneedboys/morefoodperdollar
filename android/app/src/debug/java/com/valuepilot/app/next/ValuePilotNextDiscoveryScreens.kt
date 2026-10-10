@@ -852,7 +852,7 @@ private fun SearchResultCard(
                     if (isDesignFixture) {
                         valuePilotNextText("DESIGN SAMPLE", "MUESTRA DE DISEÑO")
                     } else {
-                        localizedMatchLabel(match.matchLabel)
+                        valuePilotNextLocalizedMatchLabel(match.matchLabel, language)
                     }
                 )
                 match.packageQuantityLabel?.let {
@@ -1116,19 +1116,26 @@ private fun SearchPriceLabel(
 @Composable
 private fun SearchMatchPill(matchLabel: String) {
     EvidencePill(
-        localizedMatchLabel(matchLabel).uppercase(),
+        matchLabel.uppercase(),
         MaterialTheme.colorScheme.primaryContainer,
         MaterialTheme.colorScheme.onPrimaryContainer
     )
 }
 
-@Composable
-private fun localizedMatchLabel(matchLabel: String): String = when (matchLabel.lowercase()) {
-    "exact barcode" -> valuePilotNextText("exact barcode", "código exacto")
-    "exact name" -> valuePilotNextText("exact name", "nombre exacto")
-    "name match" -> valuePilotNextText("name match", "coincidencia de nombre")
-    "name prefix" -> valuePilotNextText("name prefix", "inicio del nombre")
-    "possible typo match" -> valuePilotNextText("possible typo", "posible error de escritura")
+internal fun valuePilotNextLocalizedMatchLabel(
+    matchLabel: String,
+    language: ValuePilotNextLanguage
+): String = when (matchLabel.lowercase()) {
+    "exact barcode" -> valuePilotNextText(language, "exact barcode", "código exacto")
+    "exact name" -> valuePilotNextText(language, "exact name", "nombre exacto")
+    "name match" -> valuePilotNextText(language, "name match", "coincidencia de nombre")
+    "name prefix" -> valuePilotNextText(language, "name prefix", "inicio del nombre")
+    "possible typo match" -> valuePilotNextText(language, "possible typo", "posible error de escritura")
+    "provider identity match" -> valuePilotNextText(
+        language,
+        "provider identity match",
+        "coincidencia de identidad de fuente"
+    )
     else -> matchLabel
 }
 
@@ -1157,6 +1164,7 @@ internal fun ValuePilotProductDetailScreen(
     onOpenGoogleImages: (PracticalShoppingSearchIdentityPresentation.Match, String) -> Unit,
     onOpenMapContext: (ArgentinaBackendContract.SearchOffer) -> Unit
 ) {
+    val language = LocalValuePilotNextLanguage.current
     Column(modifier = Modifier.fillMaxSize()) {
         ValuePilotDiscoveryColumn(modifier = Modifier.weight(1f)) {
         if (match == null) {
@@ -1247,7 +1255,11 @@ internal fun ValuePilotProductDetailScreen(
                                 color = MaterialTheme.colorScheme.secondary
                             )
                         } else {
-                            Text(localizedMatchLabel(match.matchLabel), style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp), color = MaterialTheme.colorScheme.secondary)
+                            Text(
+                                valuePilotNextLocalizedMatchLabel(match.matchLabel, language),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                color = MaterialTheme.colorScheme.secondary
+                            )
                             match.sourceLabel?.let {
                                 Text("· $it", style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
