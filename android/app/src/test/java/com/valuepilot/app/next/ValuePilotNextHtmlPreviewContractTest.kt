@@ -334,6 +334,61 @@ class ValuePilotNextHtmlPreviewContractTest {
     }
 
     @Test
+    fun acceptsOnly_typed_staple_watch_actions() {
+        assertTrue(
+            ValuePilotNextHtmlPreviewContract
+                .parseNativeStapleWatchReadMessage(
+                    "{\"type\":\"READ_NATIVE_STAPLE_WATCH\"}"
+                ) != null
+        )
+        val product = requireNotNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeStapleWatchActionMessage(
+                "{\"type\":\"SET_NATIVE_STAPLE_PRODUCT\",\"key\":\"item-123\",\"watched\":true}"
+            )
+        )
+        assertEquals("PRODUCT", product.kind)
+        assertEquals("item-123", product.key)
+        assertEquals(true, product.watched)
+        assertEquals(
+            "STORE",
+            requireNotNull(
+                ValuePilotNextHtmlPreviewContract.parseNativeStapleWatchActionMessage(
+                    "{\"type\":\"SELECT_NATIVE_STAPLE_STORE\",\"key\":\"store-123\"}"
+                )
+            ).kind
+        )
+        assertEquals(
+            "CLEAR_SELECTION",
+            requireNotNull(
+                ValuePilotNextHtmlPreviewContract.parseNativeStapleWatchActionMessage(
+                    "{\"type\":\"CLEAR_NATIVE_STAPLE_SELECTION\"}"
+                )
+            ).kind
+        )
+        assertTrue(
+            ValuePilotNextHtmlNativeSearchBridge
+                .encodeStapleWatch(null)
+                .let { JSONObject(it).getString("type") == "NATIVE_STAPLE_WATCH_STATE" }
+        )
+        assertTrue(
+            ValuePilotNextHtmlPreviewContract
+                .parseNativeStapleWatchSubmitMessage(
+                    "{\"type\":\"SUBMIT_NATIVE_STAPLE_WATCH\"}"
+                ) != null
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeStapleWatchActionMessage(
+                "{\"type\":\"SET_NATIVE_STAPLE_PRODUCT\",\"key\":\"item-123\",\"watched\":\"true\"}"
+            )
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeStapleWatchActionMessage(
+                "{\"type\":\"SELECT_NATIVE_STAPLE_STORE\",\"key\":\"store\\u0001\"}"
+            )
+        )
+    }
+
+    @Test
     fun `saved bridge serializes private history without price or store claims`() {
         val payload = JSONObject(
             ValuePilotNextHtmlNativeSearchBridge.encodeSaved(

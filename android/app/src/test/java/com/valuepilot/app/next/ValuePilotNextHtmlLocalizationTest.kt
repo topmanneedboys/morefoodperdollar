@@ -147,6 +147,23 @@ class ValuePilotNextHtmlLocalizationTest {
     }
 
     @Test
+    fun `staple watch and private history routes stay native backed and bilingual`() {
+        val source = assetSource()
+
+        assertTrue(source.contains("stapleWatchTitle:{es:"))
+        assertTrue(source.contains("function nativeStapleWatch(payload)"))
+        assertTrue(source.contains("'staple-watch':stapleWatch"))
+        assertTrue(source.contains("'private-history':privateHistory"))
+        assertTrue(source.contains("READ_NATIVE_STAPLE_WATCH"))
+        assertTrue(source.contains("SET_NATIVE_STAPLE_PRODUCT"))
+        assertTrue(source.contains("SELECT_NATIVE_STAPLE_STORE"))
+        assertTrue(source.contains("receiveNativeStapleWatch:(payload)=>{receiveNativeStapleWatch(payload);return true}"))
+        assertTrue(source.contains("case'open-staple-watch':navigate('staple-watch')"))
+        assertTrue(source.contains("case'open-private-history':navigate('private-history')"))
+        assertFalse(source.contains("safe(setup.status||'')"))
+    }
+
+    @Test
     fun `unknown native enums stay behind localized evidence labels`() {
         val source = assetSource()
 

@@ -52,6 +52,17 @@ internal object ValuePilotNextHtmlNativeObservedPriceProofPickerRequest
 internal object ValuePilotNextHtmlNativeObservedPriceSubmitRequest
 internal object ValuePilotNextHtmlNativeObservedPriceCancelRequest
 
+internal object ValuePilotNextHtmlNativeStapleWatchReadRequest
+
+internal data class ValuePilotNextHtmlNativeStapleWatchActionRequest(
+    val kind: String,
+    val key: String? = null,
+    val watched: Boolean? = null
+)
+
+internal object ValuePilotNextHtmlNativeStapleWatchSubmitRequest
+internal object ValuePilotNextHtmlNativeStapleWatchCancelRequest
+
 internal data class ValuePilotNextHtmlNativeSavedToolsRequest(
     val destination: String
 )
@@ -384,6 +395,94 @@ internal object ValuePilotNextHtmlPreviewContract {
         val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
         return if (json.optString("type") == "CANCEL_NATIVE_OBSERVED_PRICE") {
             ValuePilotNextHtmlNativeObservedPriceCancelRequest
+        } else {
+            null
+        }
+    }
+
+    fun parseNativeStapleWatchReadMessage(
+        rawMessage: String?
+    ): ValuePilotNextHtmlNativeStapleWatchReadRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 256) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        return if (json.optString("type") == "READ_NATIVE_STAPLE_WATCH") {
+            ValuePilotNextHtmlNativeStapleWatchReadRequest
+        } else {
+            null
+        }
+    }
+
+    fun parseNativeStapleWatchActionMessage(
+        rawMessage: String?
+    ): ValuePilotNextHtmlNativeStapleWatchActionRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 1_024) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        return when (json.optString("type")) {
+            "SET_NATIVE_STAPLE_PRODUCT" -> {
+                val key = json.optString("key").trim()
+                val watched =
+                    if (json.has("watched") && !json.isNull("watched") &&
+                        json.get("watched") is Boolean
+                    ) {
+                        json.getBoolean("watched")
+                    } else {
+                        null
+                    }
+                if (
+                    key.isBlank() || key.length > 512 || containsControlCharacter(key) ||
+                    watched == null
+                ) {
+                    null
+                } else {
+                    ValuePilotNextHtmlNativeStapleWatchActionRequest(
+                        kind = "PRODUCT",
+                        key = key,
+                        watched = watched
+                    )
+                }
+            }
+
+            "SELECT_NATIVE_STAPLE_STORE" -> {
+                val key = json.optString("key").trim()
+                if (key.isBlank() || key.length > 512 || containsControlCharacter(key)) {
+                    null
+                } else {
+                    ValuePilotNextHtmlNativeStapleWatchActionRequest(
+                        kind = "STORE",
+                        key = key
+                    )
+                }
+            }
+
+            "CLEAR_NATIVE_STAPLE_STORE" ->
+                ValuePilotNextHtmlNativeStapleWatchActionRequest(kind = "CLEAR_STORE")
+
+            "CLEAR_NATIVE_STAPLE_SELECTION" ->
+                ValuePilotNextHtmlNativeStapleWatchActionRequest(kind = "CLEAR_SELECTION")
+
+            else -> null
+        }
+    }
+
+    fun parseNativeStapleWatchSubmitMessage(
+        rawMessage: String?
+    ): ValuePilotNextHtmlNativeStapleWatchSubmitRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 256) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        return if (json.optString("type") == "SUBMIT_NATIVE_STAPLE_WATCH") {
+            ValuePilotNextHtmlNativeStapleWatchSubmitRequest
+        } else {
+            null
+        }
+    }
+
+    fun parseNativeStapleWatchCancelMessage(
+        rawMessage: String?
+    ): ValuePilotNextHtmlNativeStapleWatchCancelRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 256) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        return if (json.optString("type") == "CANCEL_NATIVE_STAPLE_WATCH") {
+            ValuePilotNextHtmlNativeStapleWatchCancelRequest
         } else {
             null
         }

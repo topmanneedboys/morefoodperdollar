@@ -12,6 +12,11 @@ import com.valuepilot.app.UserObservedPriceSavedProductSelectionUiRow
 import com.valuepilot.app.UserObservedPriceSavedSelectionUiState
 import com.valuepilot.app.UserObservedPriceSavedSelectionAction
 import com.valuepilot.app.UserObservedPriceSavedStoreSelectionUiRow
+import com.valuepilot.app.StapleWatchSavedIdentitySelectionAction
+import com.valuepilot.app.StapleWatchSavedProductSelectionUiRow
+import com.valuepilot.app.StapleWatchSavedSelectionUiState
+import com.valuepilot.app.StapleWatchSavedStoreSelectionUiRow
+import com.valuepilot.app.StapleWatchFactResolutionUiState
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -291,6 +296,93 @@ internal object ValuePilotNextHtmlNativeSearchBridge {
             confirmation?.let { state -> encodeObservedConfirmation(state) } ?: JSONObject.NULL
         )
         .toString()
+
+    /** Encodes only the existing Kotlin Saved-backed Staple Watch setup projection. */
+    fun encodeStapleWatch(
+        state: StapleWatchSavedSelectionUiState?
+    ): String = JSONObject()
+        .put("type", "NATIVE_STAPLE_WATCH_STATE")
+        .put("mode", if (state == null) "UNAVAILABLE" else "READY")
+        .put(
+            "state",
+            state?.let { setup ->
+                JSONObject()
+                    .put("status", setup.status.name)
+                    .put("headline", setup.headline)
+                    .put("guidance", setup.guidance)
+                    .put("selectionSummary", setup.selectionSummary)
+                    .put("productSectionTitle", setup.productSectionTitle ?: JSONObject.NULL)
+                    .put("storeSectionTitle", setup.storeSectionTitle ?: JSONObject.NULL)
+                    .put("watchedItemCount", setup.watchedItemCount)
+                    .put("usualStoreSelected", setup.usualStoreSelected)
+                    .put("unresolvedDisplayNameCount", setup.unresolvedDisplayNameCount)
+                    .put("selectedDisplayNameBlockerCount", setup.selectedDisplayNameBlockerCount)
+                    .put("notice", setup.notice ?: JSONObject.NULL)
+                    .put("continueAvailable", setup.continueAction != null)
+                    .put("continueActionLabel", setup.continueActionLabel ?: JSONObject.NULL)
+                    .put("factCheckCapability", setup.factCheckCapability.name)
+                    .put(
+                        "factResolutionProgress",
+                        setup.factResolutionProgress?.let(::encodeStapleFactProgress)
+                            ?: JSONObject.NULL
+                    )
+                    .put("products", JSONArray().apply {
+                        setup.productRows.forEach { row -> put(encodeStapleProductRow(row)) }
+                    })
+                    .put("stores", JSONArray().apply {
+                        setup.storeRows.forEach { row -> put(encodeStapleStoreRow(row)) }
+                    })
+            } ?: JSONObject.NULL
+        )
+        .toString()
+
+    private fun encodeStapleProductRow(
+        row: StapleWatchSavedProductSelectionUiRow
+    ): JSONObject = JSONObject()
+        .put("title", row.title)
+        .put("watched", row.watched)
+        .put("actionLabel", row.actionLabel)
+        .put("actionDescription", row.actionDescription)
+        .put(
+            "action",
+            JSONObject()
+                .put("kind", "PRODUCT")
+                .put("key", row.action.itemKey.value)
+                .put("watched", row.action.watched)
+        )
+
+    private fun encodeStapleStoreRow(
+        row: StapleWatchSavedStoreSelectionUiRow
+    ): JSONObject {
+        val action = row.action
+        val actionJson = when (action) {
+            is StapleWatchSavedIdentitySelectionAction.SelectUsualStore -> JSONObject()
+                .put("kind", "STORE")
+                .put("key", action.storeKey.value)
+
+            StapleWatchSavedIdentitySelectionAction.ClearUsualStore ->
+                JSONObject().put("kind", "CLEAR_STORE")
+
+            is StapleWatchSavedIdentitySelectionAction.SetProductWatched,
+            StapleWatchSavedIdentitySelectionAction.ClearSelection ->
+                error("Unexpected Staple Watch store action")
+        }
+        return JSONObject()
+            .put("title", row.title)
+            .put("usualStore", row.usualStore)
+            .put("actionLabel", row.actionLabel)
+            .put("actionDescription", row.actionDescription)
+            .put("action", actionJson)
+    }
+
+    private fun encodeStapleFactProgress(
+        progress: StapleWatchFactResolutionUiState
+    ): JSONObject = JSONObject()
+        .put("totalRequirementCount", progress.totalRequirementCount)
+        .put("resolvedRequirementCount", progress.resolvedRequirementCount)
+        .put("unresolvedRequirementLabels", JSONArray(progress.unresolvedRequirementLabels))
+        .put("headline", progress.headline)
+        .put("guidance", progress.guidance)
 
     private fun encodeObservedProductRow(
         row: UserObservedPriceSavedProductSelectionUiRow

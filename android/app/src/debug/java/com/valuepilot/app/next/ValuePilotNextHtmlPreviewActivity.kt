@@ -35,6 +35,8 @@ import com.valuepilot.app.UserObservedPriceProofContentReadResult
 import com.valuepilot.app.UserObservedPriceSavedPrefillCheckUiAction
 import com.valuepilot.app.UserObservedPriceSavedSelectionAction
 import com.valuepilot.app.UserProvidedPriceProofType
+import com.valuepilot.app.StapleWatchSavedIdentityHandoffUiAction
+import com.valuepilot.app.StapleWatchSavedIdentitySelectionAction
 import com.valuepilot.core.ShoppingItemKey
 import com.valuepilot.core.ShoppingStoreKey
 import java.io.ByteArrayInputStream
@@ -74,6 +76,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
     private var nativeObservedPriceDeadlineMillis = 0L
     private var nativeObservedPricePrefillDeadlineMillis = 0L
     private var nativeObservedPricePrefillRequested = false
+    private var nativeStapleWatchDeadlineMillis = 0L
     private var observedPriceProofPicker: AndroidUserObservedPriceProofContentPicker? = null
 
     private val nativeSearchPoll = object : Runnable {
@@ -156,6 +159,20 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
             } else {
                 sendNativeObservedPriceState()
             }
+        }
+    }
+
+    private val nativeStapleWatchPoll = object : Runnable {
+        override fun run() {
+            if (!::webView.isInitialized || !::journey.isInitialized) return
+            if (
+                journey.uiState.stapleWatchSetup != null ||
+                System.currentTimeMillis() >= nativeStapleWatchDeadlineMillis
+            ) {
+                sendNativeStapleWatchState()
+                return
+            }
+            handler.postDelayed(this, NATIVE_STAPLE_WATCH_POLL_INTERVAL_MS)
         }
     }
 
@@ -248,11 +265,13 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         handler.removeCallbacks(nativeObservedPricePoll)
         handler.removeCallbacks(nativeObservedPricePrefillPoll)
         handler.removeCallbacks(nativeObservedPriceConfirmationPoll)
+        handler.removeCallbacks(nativeStapleWatchPoll)
         nativeSearchQuery = null
         nativeObservedPricePrefillRequested = false
         if (::journey.isInitialized) {
             journey.onObservedPriceConfirmationRouteVisibilityChanged(false)
             journey.onObservedPriceSelectionRouteVisibilityChanged(false)
+            journey.onStapleWatchSetupRouteVisibilityChanged(false)
             journey.onSavedRouteVisibilityChanged(false)
             journey.attachObservedPriceProofPicker(null)
         }
@@ -456,6 +475,30 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                         cancelNativeObservedPrice()
                         return
                     }
+                    if (ValuePilotNextHtmlPreviewContract
+                            .parseNativeStapleWatchReadMessage(message.data) != null
+                    ) {
+                        startNativeStapleWatch()
+                        return
+                    }
+                    val stapleWatchAction = ValuePilotNextHtmlPreviewContract
+                        .parseNativeStapleWatchActionMessage(message.data)
+                    if (stapleWatchAction != null) {
+                        applyNativeStapleWatchAction(stapleWatchAction)
+                        return
+                    }
+                    if (ValuePilotNextHtmlPreviewContract
+                            .parseNativeStapleWatchSubmitMessage(message.data) != null
+                    ) {
+                        submitNativeStapleWatch()
+                        return
+                    }
+                    if (ValuePilotNextHtmlPreviewContract
+                            .parseNativeStapleWatchCancelMessage(message.data) != null
+                    ) {
+                        cancelNativeStapleWatch()
+                        return
+                    }
                     val nativeSave = ValuePilotNextHtmlPreviewContract
                         .parseNativeSaveMessage(message.data)
                     if (nativeSave != null) {
@@ -590,6 +633,71 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         journey.cancelObservedPriceConfirmation()
         journey.onObservedPriceConfirmationRouteVisibilityChanged(false)
         sendNativeObservedPriceState()
+    }
+
+    private fun startNativeStapleWatch() {
+        if (!::journey.isInitialized || !::webView.isInitialized) return
+        journey.onSavedRouteVisibilityChanged(true)
+        journey.onStapleWatchSetupRouteVisibilityChanged(true)
+        nativeStapleWatchDeadlineMillis =
+            System.currentTimeMillis() + NATIVE_STAPLE_WATCH_TIMEOUT_MS
+        sendNativeStapleWatchState()
+        handler.removeCallbacks(nativeStapleWatchPoll)
+        handler.post(nativeStapleWatchPoll)
+    }
+
+    private fun sendNativeStapleWatchState() {
+        if (!::journey.isInitialized || !::webView.isInitialized) return
+        val payload = ValuePilotNextHtmlNativeSearchBridge.encodeStapleWatch(
+            journey.uiState.stapleWatchSetup
+        )
+        webView.evaluateJavascript(
+            "window.ValuePilotHtmlPreview && window.ValuePilotHtmlPreview.receiveNativeStapleWatch($payload)",
+            null
+        )
+    }
+
+    private fun applyNativeStapleWatchAction(
+        request: ValuePilotNextHtmlNativeStapleWatchActionRequest
+    ) {
+        if (!::journey.isInitialized) return
+        val action = runCatching {
+            when (request.kind) {
+                "PRODUCT" -> StapleWatchSavedIdentitySelectionAction.SetProductWatched(
+                    itemKey = ShoppingItemKey(requireNotNull(request.key)),
+                    watched = requireNotNull(request.watched)
+                )
+
+                "STORE" -> StapleWatchSavedIdentitySelectionAction.SelectUsualStore(
+                    ShoppingStoreKey(requireNotNull(request.key))
+                )
+
+                "CLEAR_STORE" -> StapleWatchSavedIdentitySelectionAction.ClearUsualStore
+                "CLEAR_SELECTION" -> StapleWatchSavedIdentitySelectionAction.ClearSelection
+                else -> null
+            }
+        }.getOrNull() ?: return
+        journey.onStapleWatchSetupAction(action)
+        sendNativeStapleWatchState()
+    }
+
+    private fun submitNativeStapleWatch() {
+        if (!::journey.isInitialized) return
+        journey.onStapleWatchSetupContinue(StapleWatchSavedIdentityHandoffUiAction.Request)
+        sendNativeStapleWatchState()
+    }
+
+    private fun cancelNativeStapleWatch() {
+        handler.removeCallbacks(nativeStapleWatchPoll)
+        if (::journey.isInitialized) {
+            journey.onStapleWatchSetupRouteVisibilityChanged(false)
+        }
+        if (::webView.isInitialized) {
+            webView.evaluateJavascript(
+                "window.ValuePilotHtmlPreview && window.ValuePilotHtmlPreview.returnToSaved && window.ValuePilotHtmlPreview.returnToSaved()",
+                null
+            )
+        }
     }
 
     private fun onObservedPriceProofReadResult(result: UserObservedPriceProofContentReadResult) {
@@ -896,6 +1004,8 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         const val NATIVE_BASKET_PLAN_TIMEOUT_MS = 20_000L
         const val NATIVE_OBSERVED_PRICE_POLL_INTERVAL_MS = 120L
         const val NATIVE_OBSERVED_PRICE_TIMEOUT_MS = 20_000L
+        const val NATIVE_STAPLE_WATCH_POLL_INTERVAL_MS = 120L
+        const val NATIVE_STAPLE_WATCH_TIMEOUT_MS = 20_000L
         const val PREVIEW_PREFERENCES_NAME = "valuepilot_next_html_preview"
         const val PREF_LANGUAGE = "language"
     }
