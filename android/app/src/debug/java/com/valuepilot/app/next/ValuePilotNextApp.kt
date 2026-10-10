@@ -9,6 +9,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -303,6 +304,11 @@ internal fun ValuePilotNextApp(
         scope.launch { snackbarHostState.showSnackbar(message) }
     }
 
+    fun selectLanguage(next: ValuePilotNextLanguage) {
+        if (presentationPreferences.language == next) return
+        onPresentationPreferencesChanged(presentationPreferences.copy(language = next))
+    }
+
     fun syncSelectedTab(destination: NextDestination) {
         val origin = currentDestination.takeIf {
             destination == NextDestination.COMPARE || destination == NextDestination.SETTINGS
@@ -412,6 +418,7 @@ internal fun ValuePilotNextApp(
                         canGoBack = routeStack.size > 1,
                         onBack = ::navigateBack,
                         onOpenSettings = { navigate(NextDestination.SETTINGS) },
+                        onLanguageSelected = ::selectLanguage,
                         onExitPreview = onExitPreview
                     )
 
@@ -803,6 +810,7 @@ private fun JourneyTopBar(
     canGoBack: Boolean,
     onBack: () -> Unit,
     onOpenSettings: () -> Unit,
+    onLanguageSelected: (ValuePilotNextLanguage) -> Unit,
     onExitPreview: () -> Unit
 ) {
     val primaryDestination = destination in setOf(
@@ -870,6 +878,10 @@ private fun JourneyTopBar(
                 maxLines = 1
             )
         }
+        JourneyLanguageToggle(
+            language = language,
+            onLanguageSelected = onLanguageSelected
+        )
         if (destination != NextDestination.SETTINGS) {
             IconButton(
                 onClick = onOpenSettings,
@@ -898,6 +910,60 @@ private fun JourneyTopBar(
                 style = MaterialTheme.typography.labelLarge.copy(fontSize = 10.sp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+@Composable
+private fun JourneyLanguageToggle(
+    language: ValuePilotNextLanguage,
+    onLanguageSelected: (ValuePilotNextLanguage) -> Unit
+) {
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        modifier = Modifier.semantics {
+            contentDescription = valuePilotNextText(language, "Language", "Idioma")
+        }
+    ) {
+        Row(
+            modifier = Modifier.padding(2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            listOf(
+                ValuePilotNextLanguage.ENGLISH to "EN",
+                ValuePilotNextLanguage.SPANISH_AR to "ES"
+            ).forEach { (option, label) ->
+                val selected = language == option
+                Surface(
+                    onClick = { onLanguageSelected(option) },
+                    modifier = Modifier
+                        .heightIn(min = 36.dp)
+                        .widthIn(min = 30.dp)
+                        .semantics {
+                            contentDescription = if (option == ValuePilotNextLanguage.ENGLISH) {
+                                valuePilotNextText(language, "English", "Inglés")
+                            } else {
+                                valuePilotNextText(language, "Spanish (Argentina)", "Español (Argentina)")
+                            }
+                        },
+                    shape = MaterialTheme.shapes.small,
+                    color = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                    contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
         }
     }
 }

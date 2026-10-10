@@ -21,6 +21,9 @@ class ValuePilotNextTopBarAccessibilityTest {
             )
         )
         assertTrue(source.contains("valuePilotNextText(language, \"Exit\", \"Salir\")"))
+        assertTrue(source.contains("JourneyLanguageToggle("))
+        assertTrue(source.contains("valuePilotNextText(language, \"Language\", \"Idioma\")"))
+        assertTrue(source.contains("ValuePilotNextLanguage.SPANISH_AR to \"ES\""))
     }
 
     private fun appSource(): String {
