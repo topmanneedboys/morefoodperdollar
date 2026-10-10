@@ -2,42 +2,155 @@ package com.valuepilot.app.next
 
 import com.valuepilot.app.ArgentinaBackendContract
 import com.valuepilot.app.PracticalShoppingSearchIdentityPresentation
+import com.valuepilot.core.OfflineCatalogSnapshotManifest
 import java.math.BigDecimal
 import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Bounded, in-process handoff for the selected Search match.
+ * Bounded, in-process handoff for the selected Search presentation.
  *
  * The HTML preview may already have a source-authorized identity and offer
  * evidence when it opens Compose Product Detail. Keeping that snapshot in the
  * explicit Activity extra avoids a second network request and preserves the
- * evidence that the user selected. The receiving Activity still validates the
- * complete payload before using it.
+ * complete Search result context when the user goes back.
  */
 internal data class ValuePilotNextProductDetailHandoff(
     val query: String,
-    val match: PracticalShoppingSearchIdentityPresentation.Match
-)
+    val presentation: PracticalShoppingSearchIdentityPresentation,
+    val selectedIdentityKey: String
+) {
+    init {
+        require(query.isNotBlank())
+        require(presentation.query == query)
+        require(presentation.matches.any { it.identityKey == selectedIdentityKey })
+    }
+
+    val selectedMatch: PracticalShoppingSearchIdentityPresentation.Match
+        get() = presentation.matches.first { it.identityKey == selectedIdentityKey }
+}
 
 internal object ValuePilotNextProductDetailHandoffCodec {
     private const val MAX_PAYLOAD_CHARS = 64 * 1024
+    private const val MAX_QUERY_CHARS = 96
+    private const val MAX_MATCHES = 30
     private const val MAX_DISPLAY_NAME_CHARS = 512
     private const val MAX_IDENTITY_KEY_CHARS = 256
     private const val MAX_MATCH_LABEL_CHARS = 96
     private const val MAX_BRAND_CHARS = 160
     private const val MAX_SOURCE_LABEL_CHARS = 160
     private const val MAX_QUANTITY_LABEL_CHARS = 64
+    private const val MAX_NOTICE_CHARS = 1_024
     private const val MAX_OFFER_STRING_CHARS = 512
     private const val MAX_ADDRESS_ENTRIES = 32
     private const val MAX_ADDRESS_KEY_CHARS = 96
     private const val MAX_ADDRESS_VALUE_CHARS = 512
 
+    /** Compatibility helper for identity-only test fixtures. */
     fun encode(
         query: String,
         match: PracticalShoppingSearchIdentityPresentation.Match
     ): String {
-        require(query.isSafe(MAX_QUANTITY_LABEL_CHARS + 32))
+        val normalizedQuery = query.trim()
+        return encode(
+            query = normalizedQuery,
+            presentation = PracticalShoppingSearchIdentityPresentation(
+                query = normalizedQuery,
+                matches = listOf(match),
+                evaluatedCandidateCount = 1,
+                notice = DEFAULT_NOTICE
+            ),
+            selectedIdentityKey = match.identityKey
+        )
+    }
+
+    fun encode(
+        query: String,
+        presentation: PracticalShoppingSearchIdentityPresentation,
+        selectedIdentityKey: String
+    ): String {
+        val normalizedQuery = query.trim()
+        require(normalizedQuery.isSafe(MAX_QUERY_CHARS))
+        require(presentation.query.trim() == normalizedQuery)
+        val normalizedPresentation =
+            if (presentation.query == normalizedQuery) presentation
+            else presentation.copy(query = normalizedQuery)
+        val handoff = ValuePilotNextProductDetailHandoff(
+            query = normalizedQuery,
+            presentation = normalizedPresentation,
+            selectedIdentityKey = selectedIdentityKey
+        )
+        require(handoff.presentation.matches.size <= MAX_MATCHES)
+        require(handoff.presentation.notice.isSafe(MAX_NOTICE_CHARS))
+        require(handoff.presentation.evaluatedCandidateCount >= handoff.presentation.matches.size)
+        require(
+            handoff.presentation.evaluatedCandidateCount <=
+                OfflineCatalogSnapshotManifest.MAX_TOTAL_RECORDS
+        )
+        require(selectedIdentityKey.isSafe(MAX_IDENTITY_KEY_CHARS))
+        val payload = JSONObject()
+            .put("query", handoff.query)
+            .put("selectedIdentityKey", handoff.selectedIdentityKey)
+            .put("evaluatedCandidateCount", handoff.presentation.evaluatedCandidateCount)
+            .put("notice", handoff.presentation.notice)
+            .put("page", handoff.presentation.page)
+            .put("hasMore", handoff.presentation.hasMore)
+            .put("nextPage", handoff.presentation.nextPage ?: JSONObject.NULL)
+            .put("limitReached", handoff.presentation.limitReached)
+            .put("matches", JSONArray().apply {
+                handoff.presentation.matches.forEach { match -> put(encodeMatch(match)) }
+            })
+            .toString()
+        require(payload.length <= MAX_PAYLOAD_CHARS)
+        return payload
+    }
+
+    fun decode(rawPayload: String?): ValuePilotNextProductDetailHandoff? {
+        if (rawPayload.isNullOrBlank() || rawPayload.length > MAX_PAYLOAD_CHARS) return null
+        return runCatching {
+            val root = JSONObject(rawPayload)
+            val query = root.requiredText("query", MAX_QUERY_CHARS) ?: return null
+            val selectedIdentityKey =
+                root.requiredText("selectedIdentityKey", MAX_IDENTITY_KEY_CHARS) ?: return null
+            val matchesJson = root.optJSONArray("matches") ?: return null
+            if (matchesJson.length() !in 1..MAX_MATCHES) return null
+            val matches = buildList {
+                repeat(matchesJson.length()) { index ->
+                    add(decodeMatch(matchesJson.optJSONObject(index)) ?: return null)
+                }
+            }
+            val evaluatedCandidateCount = root.requiredInt(
+                key = "evaluatedCandidateCount",
+                minimum = matches.size,
+                maximum = OfflineCatalogSnapshotManifest.MAX_TOTAL_RECORDS
+            ) ?: return null
+            val notice = root.requiredText("notice", MAX_NOTICE_CHARS) ?: return null
+            val page = root.requiredInt("page", 0, ArgentinaBackendContract.MAX_SEARCH_PAGE)
+                ?: return null
+            val hasMore = root.requiredBoolean("hasMore") ?: return null
+            val nextPage = root.optionalInt("nextPage", 0, ArgentinaBackendContract.MAX_SEARCH_PAGE)
+            val limitReached = root.requiredBoolean("limitReached") ?: return null
+            val presentation = PracticalShoppingSearchIdentityPresentation(
+                query = query,
+                matches = matches,
+                evaluatedCandidateCount = evaluatedCandidateCount,
+                notice = notice,
+                page = page,
+                hasMore = hasMore,
+                nextPage = nextPage,
+                limitReached = limitReached
+            )
+            ValuePilotNextProductDetailHandoff(
+                query = query,
+                presentation = presentation,
+                selectedIdentityKey = selectedIdentityKey
+            )
+        }.getOrNull()
+    }
+
+    private fun encodeMatch(
+        match: PracticalShoppingSearchIdentityPresentation.Match
+    ): JSONObject {
         require(match.displayName.isSafe(MAX_DISPLAY_NAME_CHARS))
         require(match.identityKey.isSafe(MAX_IDENTITY_KEY_CHARS))
         require(match.matchLabel.isSafe(MAX_MATCH_LABEL_CHARS))
@@ -46,69 +159,16 @@ internal object ValuePilotNextProductDetailHandoffCodec {
         require(match.sourceLabel == null || match.sourceLabel.isSafe(MAX_SOURCE_LABEL_CHARS))
         require(match.qualifiedOffers.size <= ArgentinaBackendContract.MAX_SEARCH_OFFERS_PER_IDENTITY)
         return JSONObject()
-            .put("query", query.trim())
-            .put(
-                "match",
-                JSONObject()
-                    .put("displayName", match.displayName)
-                    .put("brand", match.brand ?: JSONObject.NULL)
-                    .put("matchLabel", match.matchLabel)
-                    .put("packageQuantityLabel", match.packageQuantityLabel ?: JSONObject.NULL)
-                    .put("sourceLabel", match.sourceLabel ?: JSONObject.NULL)
-                    .put("identityKey", match.identityKey)
-                    .put("gtin", match.gtin ?: JSONObject.NULL)
-                    .put("offers", JSONArray().apply {
-                        match.qualifiedOffers.forEach { offer -> putOffer(offer) }
-                    })
-            )
-            .toString()
-            .also { payload -> require(payload.length <= MAX_PAYLOAD_CHARS) }
-    }
-
-    fun decode(rawPayload: String?): ValuePilotNextProductDetailHandoff? {
-        if (rawPayload.isNullOrBlank() || rawPayload.length > MAX_PAYLOAD_CHARS) return null
-        return runCatching {
-            val root = JSONObject(rawPayload)
-            val query = root.requiredText("query", 96) ?: return null
-            val matchJson = root.optJSONObject("match") ?: return null
-            val displayName = matchJson.requiredText("displayName", MAX_DISPLAY_NAME_CHARS)
-                ?: return null
-            val brand = matchJson.optionalText("brand", MAX_BRAND_CHARS)
-            val matchLabel = matchJson.requiredText("matchLabel", MAX_MATCH_LABEL_CHARS)
-                ?: return null
-            val packageQuantityLabel =
-                matchJson.optionalText("packageQuantityLabel", MAX_QUANTITY_LABEL_CHARS)
-            val sourceLabel = matchJson.optionalText("sourceLabel", MAX_SOURCE_LABEL_CHARS)
-            val identityKey = matchJson.requiredText("identityKey", MAX_IDENTITY_KEY_CHARS)
-                ?: return null
-            val gtin = matchJson.optionalText("gtin", 14)
-            if (gtin != null && !gtin.matches(Regex("[0-9]{8}|[0-9]{12}|[0-9]{13}|[0-9]{14}"))) {
-                return null
-            }
-            val offersJson = matchJson.optJSONArray("offers") ?: JSONArray()
-            if (offersJson.length() > ArgentinaBackendContract.MAX_SEARCH_OFFERS_PER_IDENTITY) {
-                return null
-            }
-            val offers = buildList {
-                repeat(offersJson.length()) { index ->
-                    add(decodeOffer(offersJson.optJSONObject(index)) ?: return null)
-                }
-            }
-            if (offers.any { it.productEvidenceKey != identityKey }) return null
-            ValuePilotNextProductDetailHandoff(
-                query = query,
-                match = PracticalShoppingSearchIdentityPresentation.Match(
-                    displayName = displayName,
-                    brand = brand,
-                    matchLabel = matchLabel,
-                    packageQuantityLabel = packageQuantityLabel,
-                    sourceLabel = sourceLabel,
-                    identityKey = identityKey,
-                    gtin = gtin,
-                    qualifiedOffers = offers
-                )
-            )
-        }.getOrNull()
+            .put("displayName", match.displayName)
+            .put("brand", match.brand ?: JSONObject.NULL)
+            .put("matchLabel", match.matchLabel)
+            .put("packageQuantityLabel", match.packageQuantityLabel ?: JSONObject.NULL)
+            .put("sourceLabel", match.sourceLabel ?: JSONObject.NULL)
+            .put("identityKey", match.identityKey)
+            .put("gtin", match.gtin ?: JSONObject.NULL)
+            .put("offers", JSONArray().apply {
+                match.qualifiedOffers.forEach { offer -> putOffer(offer) }
+            })
     }
 
     private fun JSONArray.putOffer(offer: ArgentinaBackendContract.SearchOffer) {
@@ -158,6 +218,41 @@ internal object ValuePilotNextProductDetailHandoffCodec {
             .put("baseUnit", quantity.baseUnit)
             .put("allowZero", quantity.allowZero)
 
+    private fun decodeMatch(json: JSONObject?): PracticalShoppingSearchIdentityPresentation.Match? {
+        if (json == null) return null
+        val displayName = json.requiredText("displayName", MAX_DISPLAY_NAME_CHARS) ?: return null
+        val brand = json.optionalText("brand", MAX_BRAND_CHARS)
+        val matchLabel = json.requiredText("matchLabel", MAX_MATCH_LABEL_CHARS) ?: return null
+        val packageQuantityLabel =
+            json.optionalText("packageQuantityLabel", MAX_QUANTITY_LABEL_CHARS)
+        val sourceLabel = json.optionalText("sourceLabel", MAX_SOURCE_LABEL_CHARS)
+        val identityKey = json.requiredText("identityKey", MAX_IDENTITY_KEY_CHARS) ?: return null
+        val gtin = json.optionalText("gtin", 14)
+        if (gtin != null && !gtin.matches(Regex("[0-9]{8}|[0-9]{12}|[0-9]{13}|[0-9]{14}"))) {
+            return null
+        }
+        val offersJson = json.optJSONArray("offers") ?: JSONArray()
+        if (offersJson.length() > ArgentinaBackendContract.MAX_SEARCH_OFFERS_PER_IDENTITY) {
+            return null
+        }
+        val offers = buildList {
+            repeat(offersJson.length()) { index ->
+                add(decodeOffer(offersJson.optJSONObject(index)) ?: return null)
+            }
+        }
+        if (offers.any { it.productEvidenceKey != identityKey }) return null
+        return PracticalShoppingSearchIdentityPresentation.Match(
+            displayName = displayName,
+            brand = brand,
+            matchLabel = matchLabel,
+            packageQuantityLabel = packageQuantityLabel,
+            sourceLabel = sourceLabel,
+            identityKey = identityKey,
+            gtin = gtin,
+            qualifiedOffers = offers
+        )
+    }
+
     private fun decodeOffer(json: JSONObject?): ArgentinaBackendContract.SearchOffer? {
         if (json == null) return null
         val offerKey = json.requiredText("offerKey", MAX_IDENTITY_KEY_CHARS) ?: return null
@@ -172,20 +267,10 @@ internal object ValuePilotNextProductDetailHandoffCodec {
         val listPrice = decodeMoney(json.optJSONObject("listPrice")) ?: return null
         val referencePriceResult = decodeNullableMoney(json, "referencePrice")
         if (!referencePriceResult.first) return null
-        val referencePrice = referencePriceResult.second
         val quantityResult = decodeNullableQuantity(json, "quantity")
         if (!quantityResult.first) return null
-        val quantity = quantityResult.second
-        val quantityStatus = json.optionalText("quantityStatus", MAX_OFFER_STRING_CHARS)
         val unitPriceResult = decodeNullableMoney(json, "unitPrice")
         if (!unitPriceResult.first) return null
-        val unitPrice = unitPriceResult.second
-        val unitPriceBasis = json.optionalText("unitPriceBasis", MAX_OFFER_STRING_CHARS)
-        val releaseDate = json.requiredText("releaseDate", MAX_OFFER_STRING_CHARS) ?: return null
-        val freshnessStatus = json.enumValue<ArgentinaBackendContract.Freshness>("freshnessStatus")
-            ?: return null
-        val availability = json.enumValue<ArgentinaBackendContract.Availability>("availability")
-            ?: return null
         val provenanceJson = json.optJSONObject("provenance") ?: return null
         val provenance = ArgentinaBackendContract.Provenance(
             provider = provenanceJson.requiredText("provider", MAX_OFFER_STRING_CHARS) ?: return null,
@@ -204,14 +289,16 @@ internal object ValuePilotNextProductDetailHandoffCodec {
             storeLongitude = storeLongitude,
             distanceKm = distanceKm,
             listPrice = listPrice,
-            referencePrice = referencePrice,
-            quantity = quantity,
-            quantityStatus = quantityStatus,
-            unitPrice = unitPrice,
-            unitPriceBasis = unitPriceBasis,
-            releaseDate = releaseDate,
-            freshnessStatus = freshnessStatus,
-            availability = availability,
+            referencePrice = referencePriceResult.second,
+            quantity = quantityResult.second,
+            quantityStatus = json.optionalText("quantityStatus", MAX_OFFER_STRING_CHARS),
+            unitPrice = unitPriceResult.second,
+            unitPriceBasis = json.optionalText("unitPriceBasis", MAX_OFFER_STRING_CHARS),
+            releaseDate = json.requiredText("releaseDate", MAX_OFFER_STRING_CHARS) ?: return null,
+            freshnessStatus = json.enumValue<ArgentinaBackendContract.Freshness>("freshnessStatus")
+                ?: return null,
+            availability = json.enumValue<ArgentinaBackendContract.Availability>("availability")
+                ?: return null,
             provenance = provenance
         )
     }
@@ -281,6 +368,27 @@ internal object ValuePilotNextProductDetailHandoffCodec {
         return value.trim().takeIf { it.isSafe(maxChars) }
     }
 
+    private fun JSONObject.requiredBoolean(key: String): Boolean? =
+        if (!has(key) || isNull(key)) null else opt(key) as? Boolean
+
+    private fun JSONObject.requiredInt(key: String, minimum: Int, maximum: Int): Int? {
+        if (!has(key) || isNull(key)) return null
+        val number = opt(key) as? Number ?: return null
+        val value = number.toLong()
+        if (value !in minimum.toLong()..maximum.toLong() || value.toDouble() != number.toDouble()) {
+            return null
+        }
+        return value.toInt()
+    }
+
+    private fun JSONObject.optionalInt(key: String, minimum: Int, maximum: Int): Int? {
+        if (!has(key) || isNull(key)) return null
+        return requiredInt(key, minimum, maximum)
+    }
+
     private fun String.isSafe(maxChars: Int): Boolean =
         length in 1..maxChars && none { it.code < 0x20 || it.code == 0x7f }
+
+    private const val DEFAULT_NOTICE =
+        "The selected qualified Search identity was restored for Product Detail."
 }

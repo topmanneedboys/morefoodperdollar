@@ -79,8 +79,6 @@ internal enum class AddPrivateIdentityResult {
 }
 
 private const val GOOD_PRICE_BARCODE_MAX_CATALOG_AGE_MILLIS = 8L * 24L * 60L * 60L * 1_000L
-private const val PRODUCT_DETAIL_HANDOFF_NOTICE =
-    "The selected qualified Search identity was restored for Product Detail."
 
 /** Immutable state shared by the debug Compose journey and its existing 10133 providers. */
 internal data class ValuePilotNextJourneyUiState(
@@ -701,18 +699,15 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
      */
     fun restoreProductDetail(
         query: String,
-        match: PracticalShoppingSearchIdentityPresentation.Match
+        presentation: PracticalShoppingSearchIdentityPresentation,
+        selectedIdentityKey: String
     ) {
         if (!initialized || cleared) return
         val normalizedQuery = query.trim()
         if (normalizedQuery.isBlank()) return
+        if (presentation.query != normalizedQuery) return
+        if (presentation.matches.none { it.identityKey == selectedIdentityKey }) return
         val generation = Math.addExact(uiState.search.generation, 1L)
-        val presentation = PracticalShoppingSearchIdentityPresentation(
-            query = normalizedQuery,
-            matches = listOf(match),
-            evaluatedCandidateCount = 1,
-            notice = PRODUCT_DETAIL_HANDOFF_NOTICE
-        )
         val restored = ArgentinaLiveSearchSurfacePresenter.from(
             ArgentinaLiveSearchState.Results(
                 generation = generation,

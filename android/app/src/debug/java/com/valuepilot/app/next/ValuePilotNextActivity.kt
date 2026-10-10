@@ -95,13 +95,17 @@ class ValuePilotNextActivity : AppCompatActivity() {
             ?: intent.getStringExtra(EXTRA_START_SEARCH_QUERY)
             ?.trim()
             ?.takeIf { it.isNotBlank() && it.length <= 96 }
-        val startIdentityKey = productDetailHandoff?.match?.identityKey
+        val startIdentityKey = productDetailHandoff?.selectedIdentityKey
             ?: intent.getStringExtra(EXTRA_START_IDENTITY_KEY)
             ?.trim()
             ?.takeIf { it.isNotBlank() && it.length <= 256 }
         if (startDestination == NextDestination.PRODUCT_DETAIL && startSearchQuery != null) {
             if (productDetailHandoff != null) {
-                journey.restoreProductDetail(startSearchQuery, productDetailHandoff.match)
+                journey.restoreProductDetail(
+                    query = startSearchQuery,
+                    presentation = productDetailHandoff.presentation,
+                    selectedIdentityKey = productDetailHandoff.selectedIdentityKey
+                )
             } else {
                 journey.queryChanged(startSearchQuery)
                 journey.submitSearch(startSearchQuery)

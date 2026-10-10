@@ -379,7 +379,11 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
     private fun openNativeProductDetail(
         request: ValuePilotNextHtmlNativeProductDetailRequest
     ) {
-        val match = journey.uiState.search.presentation?.matches?.firstOrNull {
+        val presentation = journey.uiState.search.presentation ?: run {
+            sendNativeActionNotice("PRODUCT_DETAIL_STALE")
+            return
+        }
+        val match = presentation.matches.firstOrNull {
             it.identityKey == request.identityKey
         } ?: run {
             sendNativeActionNotice("PRODUCT_DETAIL_STALE")
@@ -404,7 +408,11 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                 .putExtra(ValuePilotNextActivity.EXTRA_START_IDENTITY_KEY, match.identityKey)
                 .putExtra(
                     ValuePilotNextActivity.EXTRA_PRODUCT_DETAIL_HANDOFF,
-                    ValuePilotNextProductDetailHandoffCodec.encode(request.query, match)
+                    ValuePilotNextProductDetailHandoffCodec.encode(
+                        query = request.query,
+                        presentation = presentation,
+                        selectedIdentityKey = match.identityKey
+                    )
                 )
         )
     }

@@ -11,21 +11,46 @@ import org.json.JSONObject
 class ValuePilotNextProductDetailHandoffTest {
 
     @Test
-    fun `round trip preserves selected identity and attached offer evidence`() {
+    fun `round trip preserves the full search presentation and selected offer evidence`() {
         val match = sampleMatch()
-        val payload = ValuePilotNextProductDetailHandoffCodec.encode(" leche entera ", match)
+        val otherMatch = PracticalShoppingSearchIdentityPresentation.Match(
+            displayName = "Leche Descremada",
+            brand = "Armonía",
+            matchLabel = "name match",
+            packageQuantityLabel = "1.000 ml",
+            identityKey = "gtin-87654321"
+        )
+        val presentation = PracticalShoppingSearchIdentityPresentation(
+            query = "leche entera",
+            matches = listOf(match, otherMatch),
+            evaluatedCandidateCount = 4,
+            notice = "Qualified identities restored from the current Search result.",
+            page = 1,
+            hasMore = true,
+            nextPage = 2,
+            limitReached = false
+        )
+        val payload = ValuePilotNextProductDetailHandoffCodec.encode(
+            query = " leche entera ",
+            presentation = presentation,
+            selectedIdentityKey = match.identityKey
+        )
 
         val restored = requireNotNull(
             ValuePilotNextProductDetailHandoffCodec.decode(payload)
         )
 
         assertEquals("leche entera", restored.query)
-        assertEquals(match.displayName, restored.match.displayName)
-        assertEquals(match.identityKey, restored.match.identityKey)
-        assertEquals(match.gtin, restored.match.gtin)
-        assertEquals(match.qualifiedOffers, restored.match.qualifiedOffers)
-        assertEquals("ARS", restored.match.qualifiedOffers.single().listPrice.currency)
-        assertEquals("1299.50", restored.match.qualifiedOffers.single().listPrice.amount)
+        assertEquals(match.identityKey, restored.selectedIdentityKey)
+        assertEquals(2, restored.presentation.matches.size)
+        assertEquals(4, restored.presentation.evaluatedCandidateCount)
+        assertEquals(1, restored.presentation.page)
+        assertEquals(2, restored.presentation.nextPage)
+        assertEquals(match.displayName, restored.selectedMatch.displayName)
+        assertEquals(match.gtin, restored.selectedMatch.gtin)
+        assertEquals(match.qualifiedOffers, restored.selectedMatch.qualifiedOffers)
+        assertEquals("ARS", restored.selectedMatch.qualifiedOffers.single().listPrice.currency)
+        assertEquals("1299.50", restored.selectedMatch.qualifiedOffers.single().listPrice.amount)
     }
 
     @Test
@@ -33,7 +58,7 @@ class ValuePilotNextProductDetailHandoffTest {
         val payload = JSONObject(
             ValuePilotNextProductDetailHandoffCodec.encode("leche", sampleMatch())
         )
-        val match = payload.getJSONObject("match")
+        val match = payload.getJSONArray("matches").getJSONObject(0)
         match.getJSONArray("offers")
             .getJSONObject(0)
             .put("productEvidenceKey", "different-identity")
@@ -42,11 +67,7 @@ class ValuePilotNextProductDetailHandoffTest {
         assertNull(ValuePilotNextProductDetailHandoffCodec.decode("{}"))
         assertNull(
             ValuePilotNextProductDetailHandoffCodec.decode(
-                "{" +
-                    "\"query\":\"leche\"," +
-                    "\"match\":{\"displayName\":\"Leche\",\"matchLabel\":\"exact name\"," +
-                    "\"identityKey\":\"leche\",\"offers\":[]}" +
-                    "}" + "x".repeat(65 * 1024)
+                "{\"query\":\"leche\"}" + "x".repeat(65 * 1024)
             )
         )
     }
