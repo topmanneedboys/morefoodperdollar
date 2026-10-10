@@ -397,8 +397,12 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
             sendNativeActionNotice("PRODUCT_DETAIL_STALE")
             return
         }
-        startActivity(
-            Intent(this, ValuePilotNextActivity::class.java)
+        val handoff = ValuePilotNextProductDetailHandoffCodec.encodeOrNull(
+            query = request.query,
+            presentation = presentation,
+            selectedIdentityKey = match.identityKey
+        )
+        val intent = Intent(this, ValuePilotNextActivity::class.java)
                 .putExtra(ValuePilotNextActivity.EXTRA_START_DESTINATION, "PRODUCT_DETAIL")
                 .putExtra(
                     ValuePilotNextActivity.EXTRA_START_SEARCH_QUERY,
@@ -406,15 +410,10 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                 )
                 .putExtra(ValuePilotNextActivity.EXTRA_START_ORIGIN, "SEARCH")
                 .putExtra(ValuePilotNextActivity.EXTRA_START_IDENTITY_KEY, match.identityKey)
-                .putExtra(
-                    ValuePilotNextActivity.EXTRA_PRODUCT_DETAIL_HANDOFF,
-                    ValuePilotNextProductDetailHandoffCodec.encode(
-                        query = request.query,
-                        presentation = presentation,
-                        selectedIdentityKey = match.identityKey
-                    )
-                )
-        )
+        handoff?.let { payload ->
+            intent.putExtra(ValuePilotNextActivity.EXTRA_PRODUCT_DETAIL_HANDOFF, payload)
+        }
+        startActivity(intent)
     }
 
     private fun sendNativeActionNotice(code: String) {

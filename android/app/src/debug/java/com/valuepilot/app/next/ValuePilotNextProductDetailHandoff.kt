@@ -105,6 +105,19 @@ internal object ValuePilotNextProductDetailHandoffCodec {
         return payload
     }
 
+    /**
+     * Returns null when the bounded Activity extra cannot carry the complete
+     * presentation. The caller can then use the legacy query-based restore
+     * path instead of crashing while opening Product Detail.
+     */
+    fun encodeOrNull(
+        query: String,
+        presentation: PracticalShoppingSearchIdentityPresentation,
+        selectedIdentityKey: String
+    ): String? = runCatching {
+        encode(query, presentation, selectedIdentityKey)
+    }.getOrNull()
+
     fun decode(rawPayload: String?): ValuePilotNextProductDetailHandoff? {
         if (rawPayload.isNullOrBlank() || rawPayload.length > MAX_PAYLOAD_CHARS) return null
         return runCatching {
