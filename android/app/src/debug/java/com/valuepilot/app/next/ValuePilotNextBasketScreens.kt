@@ -694,7 +694,15 @@ internal fun ValuePilotMapHandoffScreen(
                             language,
                             offer.listPrice.currency + " " + offer.listPrice.amount
                         ),
-                        valuePilotNextText("Price evidence ", "Evidencia de precio ") + offer.freshnessStatus.name.lowercase().replace('_', ' '),
+                        valuePilotNextText("Price evidence ", "Evidencia de precio ") +
+                            when (offer.freshnessStatus) {
+                                ArgentinaBackendContract.Freshness.FRESH ->
+                                    valuePilotNextText("recent", "reciente")
+                                ArgentinaBackendContract.Freshness.STALE ->
+                                    valuePilotNextText("out of date", "desactualizada")
+                                ArgentinaBackendContract.Freshness.UNKNOWN ->
+                                    valuePilotNextText("unknown", "desconocida")
+                            },
                         valuePilotNextText("Release ", "Publicación ") + offer.releaseDate
                     ).joinToString(" · "),
                     onOpenMap = context.asStoreProjection()?.let { store -> { onOpenMap(store) } }

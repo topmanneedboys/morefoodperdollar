@@ -28,6 +28,8 @@ class ValuePilotNextTopBarAccessibilityTest {
         val discovery = appSource("ValuePilotNextDiscoveryScreens.kt")
         assertTrue(discovery.contains("View on Google Images. Search: \$it"))
         assertTrue(discovery.contains("Ver en Google Images. Búsqueda: \$it"))
+        assertTrue(discovery.contains("valuePilotNextText(\"RECENT\", \"RECIENTE\")"))
+        assertTrue(discovery.contains("valuePilotNextText(\"published\", \"publicación\")"))
     }
 
     private fun appSource(fileName: String): String {

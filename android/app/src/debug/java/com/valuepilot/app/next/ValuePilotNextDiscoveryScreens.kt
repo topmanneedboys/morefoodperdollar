@@ -1762,7 +1762,9 @@ private fun OfferEvidenceCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                "${offer.provenance.provider} · publicación ${offer.releaseDate}",
+                "${offer.provenance.provider} · " +
+                    valuePilotNextText("published", "publicación") +
+                    " ${offer.releaseDate}",
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1792,7 +1794,11 @@ private fun OfferFreshnessPill(
     fresh: Boolean
 ) {
     EvidencePill(
-        if (fresh) "RECIENTE" else "NO ACTUAL",
+        if (fresh) {
+            valuePilotNextText("RECENT", "RECIENTE")
+        } else {
+            valuePilotNextText("NOT CURRENT", "NO ACTUAL")
+        },
         if (fresh) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.errorContainer,
         if (fresh) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onErrorContainer
     )
