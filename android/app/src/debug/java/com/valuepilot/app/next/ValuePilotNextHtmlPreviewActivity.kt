@@ -28,6 +28,14 @@ import androidx.webkit.WebViewClientCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import java.io.ByteArrayInputStream
+import kotlin.math.roundToInt
+
+internal fun valuePilotNextWebTextZoomPercent(fontScale: Float): Int =
+    if (!fontScale.isFinite()) {
+        100
+    } else {
+        (fontScale * 100f).roundToInt().coerceIn(100, 200)
+    }
 
 /** Debug-only host for the supplied Stitch HTML prototype. */
 class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
@@ -138,7 +146,9 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
 
     private fun configureSecureSettings(settings: WebSettings) {
         settings.javaScriptEnabled = true
-        settings.domStorageEnabled = false
+        // The preview stores its language preference in same-origin local storage. Network,
+        // file access, and arbitrary bridge origins remain disabled below.
+        settings.domStorageEnabled = true
         settings.databaseEnabled = false
         settings.allowFileAccess = false
         settings.allowContentAccess = false
@@ -150,7 +160,9 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         settings.setSupportMultipleWindows(false)
         settings.javaScriptCanOpenWindowsAutomatically = false
         settings.saveFormData = false
-        settings.textZoom = 100
+        // Preserve the approved layout at the default scale while honoring larger Android
+        // accessibility font settings instead of pinning the WebView to 100%.
+        settings.textZoom = valuePilotNextWebTextZoomPercent(resources.configuration.fontScale)
     }
 
     private fun secureWebViewClient(): WebViewClientCompat = object : WebViewClientCompat() {
