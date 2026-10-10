@@ -402,7 +402,11 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                 )
                 .putExtra(ValuePilotNextActivity.EXTRA_START_ORIGIN, "SEARCH")
                 .putExtra(ValuePilotNextActivity.EXTRA_START_IDENTITY_KEY, match.identityKey)
-            )
+                .putExtra(
+                    ValuePilotNextActivity.EXTRA_PRODUCT_DETAIL_HANDOFF,
+                    ValuePilotNextProductDetailHandoffCodec.encode(request.query, match)
+                )
+        )
     }
 
     private fun sendNativeActionNotice(code: String) {

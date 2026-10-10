@@ -88,15 +88,24 @@ class ValuePilotNextActivity : AppCompatActivity() {
             "SETTINGS" -> NextDestination.SETTINGS
             else -> null
         }
-        val startSearchQuery = intent.getStringExtra(EXTRA_START_SEARCH_QUERY)
+        val productDetailHandoff = intent
+            .getStringExtra(EXTRA_PRODUCT_DETAIL_HANDOFF)
+            ?.let(ValuePilotNextProductDetailHandoffCodec::decode)
+        val startSearchQuery = productDetailHandoff?.query
+            ?: intent.getStringExtra(EXTRA_START_SEARCH_QUERY)
             ?.trim()
             ?.takeIf { it.isNotBlank() && it.length <= 96 }
-        val startIdentityKey = intent.getStringExtra(EXTRA_START_IDENTITY_KEY)
+        val startIdentityKey = productDetailHandoff?.match?.identityKey
+            ?: intent.getStringExtra(EXTRA_START_IDENTITY_KEY)
             ?.trim()
             ?.takeIf { it.isNotBlank() && it.length <= 256 }
         if (startDestination == NextDestination.PRODUCT_DETAIL && startSearchQuery != null) {
-            journey.queryChanged(startSearchQuery)
-            journey.submitSearch(startSearchQuery)
+            if (productDetailHandoff != null) {
+                journey.restoreProductDetail(startSearchQuery, productDetailHandoff.match)
+            } else {
+                journey.queryChanged(startSearchQuery)
+                journey.submitSearch(startSearchQuery)
+            }
         }
         if (startDestination == NextDestination.GOOD_PRICE_CHECK) {
             intent.getStringExtra(EXTRA_GOOD_PRICE_DISPLAY_NAME)
@@ -401,6 +410,7 @@ class ValuePilotNextActivity : AppCompatActivity() {
         internal const val EXTRA_START_ORIGIN = "valuepilot.next.start_origin"
         internal const val EXTRA_START_SEARCH_QUERY = "valuepilot.next.start_search_query"
         internal const val EXTRA_START_IDENTITY_KEY = "valuepilot.next.start_identity_key"
+        internal const val EXTRA_PRODUCT_DETAIL_HANDOFF = "valuepilot.next.product_detail_handoff"
         internal const val EXTRA_GOOD_PRICE_DISPLAY_NAME = "valuepilot.next.good_price_display_name"
         const val GOOGLE_IMAGES_INITIAL_HEIGHT_PERCENT = 65
         const val GOOGLE_IMAGES_MIN_INITIAL_HEIGHT_DP = 320

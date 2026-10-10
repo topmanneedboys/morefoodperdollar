@@ -18,6 +18,7 @@ import com.valuepilot.app.ArgentinaBackendConsumerBridge
 import com.valuepilot.app.ArgentinaLiveSearchSurfaceHost
 import com.valuepilot.app.ArgentinaLiveSearchSurfacePresenter
 import com.valuepilot.app.ArgentinaLiveSearchSurfaceState
+import com.valuepilot.app.ArgentinaLiveSearchState
 import com.valuepilot.app.ArgentinaPrivateBasketPlanProjection
 import com.valuepilot.app.ArgentinaPrivateBasketPlanProjector
 import com.valuepilot.app.ArgentinaPrivateBasketRenderer
@@ -78,6 +79,8 @@ internal enum class AddPrivateIdentityResult {
 }
 
 private const val GOOD_PRICE_BARCODE_MAX_CATALOG_AGE_MILLIS = 8L * 24L * 60L * 60L * 1_000L
+private const val PRODUCT_DETAIL_HANDOFF_NOTICE =
+    "The selected qualified Search identity was restored for Product Detail."
 
 /** Immutable state shared by the debug Compose journey and its existing 10133 providers. */
 internal data class ValuePilotNextJourneyUiState(
@@ -688,6 +691,37 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
         if (!initialized || cleared) return
         uiState = uiState.copy(query = rawQuery, actionNotice = null)
         searchHost?.submit(rawQuery)
+    }
+
+    /**
+     * Restores the exact Search match selected by the HTML preview without
+     * issuing a second request. The payload came from the current native
+     * Search result and is still projected through the existing Search
+     * presentation, so Product Detail keeps the same evidence semantics.
+     */
+    fun restoreProductDetail(
+        query: String,
+        match: PracticalShoppingSearchIdentityPresentation.Match
+    ) {
+        if (!initialized || cleared) return
+        val normalizedQuery = query.trim()
+        if (normalizedQuery.isBlank()) return
+        val generation = Math.addExact(uiState.search.generation, 1L)
+        val presentation = PracticalShoppingSearchIdentityPresentation(
+            query = normalizedQuery,
+            matches = listOf(match),
+            evaluatedCandidateCount = 1,
+            notice = PRODUCT_DETAIL_HANDOFF_NOTICE
+        )
+        val restored = ArgentinaLiveSearchSurfacePresenter.from(
+            ArgentinaLiveSearchState.Results(
+                generation = generation,
+                query = normalizedQuery,
+                presentation = presentation
+            ),
+            area
+        )
+        uiState = uiState.copy(query = normalizedQuery, search = restored, actionNotice = null)
     }
 
     fun loadMoreSearchResults() {
