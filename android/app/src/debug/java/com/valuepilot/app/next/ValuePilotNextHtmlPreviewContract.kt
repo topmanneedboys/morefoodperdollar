@@ -364,6 +364,10 @@ internal object ValuePilotNextHtmlPreviewContract {
 
     fun productFor(productId: String): ValuePilotNextHtmlProduct? = productsById[productId]
 
+    /** The WebView may retain harmless outer whitespace around the submitted Search query. */
+    fun productDetailQueryMatches(currentQuery: String, requestedQuery: String): Boolean =
+        currentQuery.trim() == requestedQuery.trim()
+
     private fun containsControlCharacter(value: String): Boolean = value.any { it.code < 0x20 || it.code == 0x7f }
 
     private val SUPPORTED_NATIVE_SAVED_DESTINATIONS = setOf(

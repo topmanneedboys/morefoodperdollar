@@ -123,6 +123,18 @@ class ValuePilotNextHtmlPreviewContractTest {
         )
         assertEquals("gtin-123", request.identityKey)
         assertEquals("leche entera", request.query)
+        assertTrue(
+            ValuePilotNextHtmlPreviewContract.productDetailQueryMatches(
+                currentQuery = " leche entera ",
+                requestedQuery = "leche entera"
+            )
+        )
+        assertTrue(
+            !ValuePilotNextHtmlPreviewContract.productDetailQueryMatches(
+                currentQuery = "leche entera",
+                requestedQuery = "arroz"
+            )
+        )
         assertNull(
             ValuePilotNextHtmlPreviewContract.parseNativeProductDetailMessage(
                 "{\"type\":\"OPEN_NATIVE_PRODUCT_DETAIL\",\"identityKey\":\"gtin-123\",\"query\":\"leche\\u0001\"}"
