@@ -114,6 +114,9 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         super.onResume()
         handler.removeCallbacks(themeSync)
         handler.post(themeSync)
+        if (::webView.isInitialized) {
+            handler.post { synchronizeLanguage(webView) }
+        }
     }
 
     override fun onPause() {
@@ -154,13 +157,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         override fun onPageFinished(view: WebView, url: String) {
             super.onPageFinished(view, url)
             if (url != ASSET_INDEX_URL) return
-            val language = previewPreferences.getString(PREF_LANGUAGE, null)
-                ?.takeIf { it == "en" || it == "es-AR" }
-                ?: return
-            view.evaluateJavascript(
-                "window.ValuePilotHtmlPreview && window.ValuePilotHtmlPreview.setLanguage('$language')",
-                null
-            )
+            synchronizeLanguage(view)
         }
 
         override fun shouldInterceptRequest(
@@ -202,6 +199,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                         previewPreferences.edit()
                             .putString(PREF_LANGUAGE, language.language)
                             .apply()
+                        saveNativeLanguagePreference(language.language)
                         return
                     }
                     val nativeSearch = ValuePilotNextHtmlPreviewContract
@@ -325,6 +323,44 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
             Intent(this, ValuePilotNextActivity::class.java)
                 .putExtra(ValuePilotNextActivity.EXTRA_START_DESTINATION, destination)
         )
+    }
+
+    /** Keeps the HTML shell and Compose journeys on the same persisted language choice. */
+    private fun synchronizeLanguage(view: WebView) {
+        val nativeStore = ValuePilotNextUiPreferencesStore(applicationContext)
+        val nativePreferences = nativeStore.load()
+        val language = when (nativePreferences.language) {
+            ValuePilotNextLanguage.ENGLISH -> "en"
+            ValuePilotNextLanguage.SPANISH_AR -> "es-AR"
+            ValuePilotNextLanguage.SYSTEM -> {
+                val resolved = ValuePilotNextUiPreferencesCodec.resolvesLanguage(
+                    nativePreferences.language
+                )
+                if (resolved == ValuePilotNextLanguage.SPANISH_AR) "es-AR" else "en"
+            }
+        }
+        previewPreferences.edit().apply {
+            if (nativePreferences.language == ValuePilotNextLanguage.SYSTEM) {
+                remove(PREF_LANGUAGE)
+            } else {
+                putString(PREF_LANGUAGE, language)
+            }
+        }
+        view.evaluateJavascript(
+            "window.ValuePilotHtmlPreview && window.ValuePilotHtmlPreview.setLanguage('$language')",
+            null
+        )
+    }
+
+    private fun saveNativeLanguagePreference(language: String) {
+        val next = when (language) {
+            "es-AR" -> ValuePilotNextLanguage.SPANISH_AR
+            "en" -> ValuePilotNextLanguage.ENGLISH
+            else -> return
+        }
+        val store = ValuePilotNextUiPreferencesStore(applicationContext)
+        val current = store.load()
+        if (current.language != next) store.save(current.copy(language = next))
     }
 
     private fun installBackHandling() {
