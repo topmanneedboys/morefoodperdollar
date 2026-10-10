@@ -168,6 +168,15 @@ class ValuePilotNextHtmlLocalizationTest {
     }
 
     @Test
+    fun `missing photo panel stays compact while retaining an accessible action`() {
+        val source = styleSource()
+
+        assertTrue(source.contains(".detail-image-placeholder{padding:16px 14px;gap:5px}"))
+        assertTrue(source.contains(".detail-image-placeholder .icon-circle{width:42px;height:42px}"))
+        assertTrue(source.contains(".detail-image-placeholder .btn{min-height:39px"))
+    }
+
+    @Test
     fun `unknown native enums stay behind localized evidence labels`() {
         val source = assetSource()
 
@@ -185,5 +194,16 @@ class ValuePilotNextHtmlLocalizationTest {
             directory = directory.parentFile ?: return@repeat
         }
         error("Could not locate valuepilot_next_html/app.js")
+    }
+
+    private fun styleSource(): String {
+        var directory = File(requireNotNull(System.getProperty("user.dir")))
+        repeat(8) {
+            val candidate =
+                File(directory, "app/src/debug/assets/valuepilot_next_html/styles.css")
+            if (candidate.isFile) return candidate.readText()
+            directory = directory.parentFile ?: return@repeat
+        }
+        error("Could not locate valuepilot_next_html/styles.css")
     }
 }
