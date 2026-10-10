@@ -82,6 +82,17 @@ class ValuePilotNextHtmlLocalizationTest {
         assertTrue(source.contains("\${native?nativePurchaseHistoryUnavailable():''}"))
     }
 
+    @Test
+    fun `native price cards preserve decimal evidence in each language`() {
+        val source = assetSource()
+
+        assertTrue(source.contains("const nativeAmount="))
+        assertTrue(source.contains("offer?.unitPriceAmount??offer?.priceAmount"))
+        assertTrue(source.contains("const decimal=state.language===LANGUAGES.EN?'.':','"))
+        assertTrue(source.contains("const grouping=state.language===LANGUAGES.EN?',':'.'"))
+        assertTrue(source.contains("const formattedAmount=amount==null?null:nativeAmount(amount)"))
+    }
+
     private fun assetSource(): String {
         var directory = File(requireNotNull(System.getProperty("user.dir")))
         repeat(8) {
