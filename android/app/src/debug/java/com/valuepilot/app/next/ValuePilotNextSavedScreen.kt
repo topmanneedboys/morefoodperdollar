@@ -488,6 +488,7 @@ private fun SavedProductCard(
     SavedChoiceCard(
         title = row.title,
         supportingText = valuePilotNextLocalizedDynamicText(language, row.supportingText).orEmpty(),
+        language = language,
         actions = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -548,6 +549,7 @@ private fun SavedStoreCard(
     SavedChoiceCard(
         title = row.title,
         supportingText = valuePilotNextLocalizedDynamicText(language, row.supportingText).orEmpty(),
+        language = language,
         actions = {
             row.action?.let { action ->
                 TextButton(
@@ -583,6 +585,7 @@ private fun SavedStoreCard(
 private fun SavedChoiceCard(
     title: String,
     supportingText: String,
+    language: ValuePilotNextLanguage,
     actions: @Composable ColumnScope.() -> Unit
 ) {
     Card(
@@ -619,7 +622,7 @@ private fun SavedChoiceCard(
                     color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f)
                 ) {
                     Text(
-                        "SAVED",
+                        valuePilotNextText(language, "SAVED", "GUARDADO"),
                         modifier = Modifier.padding(horizontal = ValuePilotSpacing.small, vertical = ValuePilotSpacing.xSmall),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
