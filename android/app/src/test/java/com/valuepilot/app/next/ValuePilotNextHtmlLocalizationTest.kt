@@ -61,6 +61,15 @@ class ValuePilotNextHtmlLocalizationTest {
         assertTrue(source.contains("receiveNativeActionNotice:(payload)=>receiveNativeActionNotice(payload)"))
     }
 
+    @Test
+    fun `demo ribbon accessibility copy follows the selected language`() {
+        val source = assetSource()
+
+        assertTrue(source.contains("demoAria:{es:"))
+        assertTrue(source.contains("document.querySelector('#demoRibbon')"))
+        assertFalse(source.contains("const ariaLabel='Son datos de demostración"))
+    }
+
     private fun assetSource(): String {
         var directory = File(requireNotNull(System.getProperty("user.dir")))
         repeat(8) {
