@@ -420,7 +420,9 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
             }
         }
         view.evaluateJavascript(
-            "window.ValuePilotHtmlPreview && window.ValuePilotHtmlPreview.setLanguage('$language')",
+            "window.ValuePilotHtmlPreview && window.ValuePilotHtmlPreview.setLanguage('$language');" +
+                "window.ValuePilotHtmlPreview && window.ValuePilotHtmlPreview.refreshNativeSaved && " +
+                "window.ValuePilotHtmlPreview.refreshNativeSaved()",
             null
         )
     }

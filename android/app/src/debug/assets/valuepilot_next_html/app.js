@@ -389,6 +389,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.page!=='home'
   language:()=>state.language,
   setLanguage:(language)=>{setLanguage(language,{persist:false});return state.language},
   receiveNativeSearch:(payload)=>{receiveNativeSearch(payload);return true},
+  refreshNativeSaved:()=>{if(!state.nativeSavedEnabled)return false;requestNativeSaved();return true},
    receiveNativeSaved:(payload)=>{receiveNativeSaved(payload);return true},
    receiveNativeTrip:(payload)=>{receiveNativeTrip(payload);return true},
 });

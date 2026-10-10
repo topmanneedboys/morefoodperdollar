@@ -41,6 +41,17 @@ class ValuePilotNextHtmlLocalizationTest {
         assertTrue(source.contains("payload.mode==='TIMEOUT'||payload.mode==='LOADING'"))
     }
 
+    @Test
+    fun `native saved state can refresh after returning from a Kotlin tool`() {
+        val source = assetSource()
+
+        assertTrue(
+            source.contains(
+                "refreshNativeSaved:()=>{if(!state.nativeSavedEnabled)return false;requestNativeSaved();return true}"
+            )
+        )
+    }
+
     private fun assetSource(): String {
         var directory = File(requireNotNull(System.getProperty("user.dir")))
         repeat(8) {
