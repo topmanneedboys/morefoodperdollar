@@ -42,11 +42,25 @@ internal data class ValuePilotNextPurchaseHistoryAvailabilityPresentation(
     val detail: String
 )
 
-internal fun valuePilotNextPurchaseHistoryAvailabilityPresentation() =
+internal fun valuePilotNextPurchaseHistoryAvailabilityPresentation(
+    language: ValuePilotNextLanguage
+) =
     ValuePilotNextPurchaseHistoryAvailabilityPresentation(
-        eyebrow = "PURCHASE HISTORY · UNAVAILABLE",
-        title = "Purchase history is not available in this preview.",
-        detail = "No purchase or receipt source is connected. Private price history tracks price observations you entered; it does not record what you bought."
+        eyebrow = valuePilotNextText(
+            language,
+            "PURCHASE HISTORY · UNAVAILABLE",
+            "HISTORIAL DE COMPRAS · NO DISPONIBLE"
+        ),
+        title = valuePilotNextText(
+            language,
+            "Purchase history is not available in this preview.",
+            "El historial de compras no está disponible en esta vista previa."
+        ),
+        detail = valuePilotNextText(
+            language,
+            "No purchase or receipt source is connected. Private price history tracks price observations you entered; it does not record what you bought.",
+            "No hay una fuente de compras o comprobantes conectada. El historial privado registra precios que ingresaste; no registra lo que compraste."
+        )
     )
 
 @Composable
@@ -278,7 +292,7 @@ internal fun ValuePilotSavedScreen(
         item(key = "saved-purchase-history-unavailable") {
             PurchaseHistoryUnavailableCard(
                 language = language,
-                presentation = valuePilotNextPurchaseHistoryAvailabilityPresentation()
+                presentation = valuePilotNextPurchaseHistoryAvailabilityPresentation(language)
             )
         }
 
@@ -438,11 +452,7 @@ private fun PurchaseHistoryUnavailableCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Eyebrow(
-                    valuePilotNextText(
-                        language,
-                        presentation.eyebrow,
-                        "HISTORIAL DE COMPRAS · NO DISPONIBLE"
-                    )
+                    presentation.eyebrow
                 )
                 Surface(
                     shape = MaterialTheme.shapes.small,
@@ -457,20 +467,12 @@ private fun PurchaseHistoryUnavailableCard(
                 }
             }
             Text(
-                valuePilotNextText(
-                    language,
-                    presentation.title,
-                    "El historial de compras no está disponible en esta vista previa."
-                ),
+                presentation.title,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                valuePilotNextText(
-                    language,
-                    presentation.detail,
-                    "No hay una fuente de compras o comprobantes conectada. El historial privado registra precios que ingresaste; no registra lo que compraste."
-                ),
+                presentation.detail,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
