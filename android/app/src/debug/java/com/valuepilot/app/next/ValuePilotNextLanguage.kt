@@ -612,6 +612,40 @@ internal fun valuePilotNextLocalizedDynamicText(
             )
         text.equals("Private price history", ignoreCase = true) ->
             "Historial privado de precios"
+        text.equals(
+            "History changed since you reviewed the preview. Review the updated copy before sharing.",
+            ignoreCase = true
+        ) -> "El historial cambió desde que revisaste la vista previa. Revisá la copia actualizada antes de compartir."
+        text.equals("That observation changed. History has been refreshed.", ignoreCase = true) ->
+            "Esa observación cambió. El historial se actualizó."
+        text.equals("That private observation was removed from this device.", ignoreCase = true) ->
+            "Esa observación privada se eliminó de este dispositivo."
+        text.equals("Private comparison history was cleared from this device.", ignoreCase = true) ->
+            "El historial privado de comparación se borró de este dispositivo."
+        text.equals("No app is available to share this private history.", ignoreCase = true) ->
+            "No hay una aplicación disponible para compartir este historial privado."
+        text.equals(
+            "This device's private history could not be opened because the saved file is too large. Try again or open Scan & compare for its recovery options.",
+            ignoreCase = true
+        ) -> "No se pudo abrir el historial privado de este dispositivo porque el archivo guardado es demasiado grande. Probá de nuevo o abrí Escanear y comparar para ver opciones de recuperación."
+        text.equals(
+            "This device's private history could not be opened. Try again or open Scan & compare for its recovery options.",
+            ignoreCase = true
+        ) -> "No se pudo abrir el historial privado de este dispositivo. Probá de nuevo o abrí Escanear y comparar para ver opciones de recuperación."
+        text.equals(
+            "This device's private history is unavailable right now. Try again or open Scan & compare for its recovery options.",
+            ignoreCase = true
+        ) -> "El historial privado de este dispositivo no está disponible ahora. Probá de nuevo o abrí Escanear y comparar para ver opciones de recuperación."
+        text.equals("The private history could not be read. Try again.", ignoreCase = true) ->
+            "No se pudo leer el historial privado. Probá de nuevo."
+        text.equals("The change could not be saved. Try again.", ignoreCase = true) ->
+            "No se pudo guardar el cambio. Probá de nuevo."
+        text.equals("There are no observations to share.", ignoreCase = true) ->
+            "No hay observaciones para compartir."
+        text.equals("This history is too large to export as one text copy.", ignoreCase = true) ->
+            "Este historial es demasiado grande para exportarlo como una sola copia de texto."
+        text.equals("This history could not be prepared for sharing.", ignoreCase = true) ->
+            "No se pudo preparar este historial para compartirlo."
         text.equals("Exact package histories", ignoreCase = true) ->
             "Historiales de envases exactos"
         text.equals("Scan & compare", ignoreCase = true) -> "Escanear y comparar"

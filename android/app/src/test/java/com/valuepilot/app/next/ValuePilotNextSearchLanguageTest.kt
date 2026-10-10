@@ -80,6 +80,31 @@ class ValuePilotNextSearchLanguageTest {
     }
 
     @Test
+    fun `private history failure and mutation copy is localized`() {
+        assertEquals(
+            "Esa observación cambió. El historial se actualizó.",
+            valuePilotNextLocalizedDynamicText(
+                ValuePilotNextLanguage.SPANISH_AR,
+                "That observation changed. History has been refreshed."
+            )
+        )
+        assertEquals(
+            "No hay una aplicación disponible para compartir este historial privado.",
+            valuePilotNextLocalizedDynamicText(
+                ValuePilotNextLanguage.SPANISH_AR,
+                "No app is available to share this private history."
+            )
+        )
+        assertEquals(
+            "Este historial es demasiado grande para exportarlo como una sola copia de texto.",
+            valuePilotNextLocalizedDynamicText(
+                ValuePilotNextLanguage.SPANISH_AR,
+                "This history is too large to export as one text copy."
+            )
+        )
+    }
+
+    @Test
     fun `numeric evidence uses Argentine decimal punctuation without changing identifiers`() {
         val unitRate = "1.6225 ARS/L"
         val history = "mínimo 1.6225 ARS/L · máximo 1.75 ARS/L"
