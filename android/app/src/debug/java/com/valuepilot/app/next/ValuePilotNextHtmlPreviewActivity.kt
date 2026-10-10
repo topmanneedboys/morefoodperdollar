@@ -489,9 +489,17 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         try {
             startActivity(Intent(Intent.ACTION_VIEW, uri))
         } catch (_: ActivityNotFoundException) {
-            Toast.makeText(this, "No hay un navegador disponible.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                this,
+                valuePilotNextText(this, "No browser is available.", "No hay un navegador disponible."),
+                Toast.LENGTH_SHORT
+            ).show()
         } catch (_: SecurityException) {
-            Toast.makeText(this, "No se pudo abrir Google Images.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                this,
+                valuePilotNextText(this, "Google Images could not be opened.", "No se pudo abrir Google Images."),
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 

@@ -205,7 +205,15 @@ class ValuePilotNextActivity : AppCompatActivity() {
     ) {
         if (googleImagesLaunchInFlight) return
         val uri = GoogleImagesHandoff.urlFor(match, areaLabel)?.toUri() ?: run {
-            Toast.makeText(this, "No se pudo preparar la búsqueda de imágenes.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                this,
+                valuePilotNextText(
+                    this,
+                    "The image search could not be prepared.",
+                    "No se pudo preparar la búsqueda de imágenes."
+                ),
+                Toast.LENGTH_SHORT
+            ).show()
             return
         }
         googleImagesLaunchInFlight = true
@@ -236,10 +244,18 @@ class ValuePilotNextActivity : AppCompatActivity() {
     private fun showGoogleImagesFallback(uri: Uri) {
         googleImagesLaunchInFlight = false
         AlertDialog.Builder(this)
-            .setTitle("Google Images")
-            .setMessage("El navegador no pudo abrir la pestaña parcial. ¿Querés abrir la página en pantalla completa?")
-            .setNegativeButton("Cancelar", null)
-            .setPositiveButton("Abrir navegador") { _, _ -> launchGoogleImagesFullScreen(uri) }
+            .setTitle(valuePilotNextText(this, "Google Images", "Google Images"))
+            .setMessage(
+                valuePilotNextText(
+                    this,
+                    "The browser could not open the partial tab. Open the page full-screen?",
+                    "El navegador no pudo abrir la pestaña parcial. ¿Querés abrir la página en pantalla completa?"
+                )
+            )
+            .setNegativeButton(valuePilotNextText(this, "Cancel", "Cancelar"), null)
+            .setPositiveButton(
+                valuePilotNextText(this, "Open browser", "Abrir navegador")
+            ) { _, _ -> launchGoogleImagesFullScreen(uri) }
             .show()
     }
 
@@ -249,10 +265,18 @@ class ValuePilotNextActivity : AppCompatActivity() {
             startActivity(Intent(Intent.ACTION_VIEW, uri))
         } catch (_: ActivityNotFoundException) {
             googleImagesLaunchInFlight = false
-            Toast.makeText(this, "No hay un navegador disponible.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                this,
+                valuePilotNextText(this, "No browser is available.", "No hay un navegador disponible."),
+                Toast.LENGTH_SHORT
+            ).show()
         } catch (_: SecurityException) {
             googleImagesLaunchInFlight = false
-            Toast.makeText(this, "No se pudo abrir Google Images.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                this,
+                valuePilotNextText(this, "Google Images could not be opened.", "No se pudo abrir Google Images."),
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 
@@ -313,7 +337,7 @@ class ValuePilotNextActivity : AppCompatActivity() {
             startActivity(
                 Intent.createChooser(
                     sendIntent,
-                    "Share price calculation"
+                    valuePilotNextText(this, "Share price calculation", "Compartir cálculo de precio")
                 )
             )
             true
@@ -332,7 +356,7 @@ class ValuePilotNextActivity : AppCompatActivity() {
             startActivity(
                 Intent.createChooser(
                     sendIntent,
-                    "Share comparison result"
+                    valuePilotNextText(this, "Share comparison result", "Compartir resultado de comparación")
                 )
             )
             true

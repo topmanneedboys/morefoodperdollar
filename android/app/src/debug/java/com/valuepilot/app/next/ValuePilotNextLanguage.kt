@@ -1,5 +1,6 @@
 package com.valuepilot.app.next
 
+import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 
@@ -9,6 +10,19 @@ internal fun valuePilotNextText(
     spanishArgentina: String
 ): String =
     if (language == ValuePilotNextLanguage.SPANISH_AR) spanishArgentina else english
+
+/** Resolves short Activity-owned messages from the same persisted preview preference. */
+internal fun valuePilotNextText(
+    context: Context,
+    english: String,
+    spanishArgentina: String
+): String = valuePilotNextText(
+    language = ValuePilotNextUiPreferencesCodec.resolvesLanguage(
+        ValuePilotNextUiPreferencesStore(context).load().language
+    ),
+    english = english,
+    spanishArgentina = spanishArgentina
+)
 
 /** The single language source used by every native preview surface. */
 internal val LocalValuePilotNextLanguage =
