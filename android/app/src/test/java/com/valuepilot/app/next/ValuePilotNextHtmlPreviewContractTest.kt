@@ -296,6 +296,45 @@ class ValuePilotNextHtmlPreviewContractTest {
     }
 
     @Test
+    fun `saved bridge carries bounded private history rows as read only facts`() {
+        val payload = JSONObject(
+            ValuePilotNextHtmlNativeSearchBridge.encodeSaved(
+                identities = emptyList(),
+                privateHistory = ValuePilotNextHtmlPrivateHistorySummary(
+                    status = "AVAILABLE",
+                    exactHistoryCount = 1,
+                    observationCount = 2,
+                    latestDisplayName = "Leche Entera",
+                    rows = listOf(
+                        ValuePilotNextHtmlPrivateHistoryRow(
+                            displayName = "Leche Entera",
+                            observationCount = 2,
+                            latestPriceText = "1200 ARS",
+                            lowestPriceText = "1100 ARS",
+                            latestUnitRateText = "1200 ARS/L",
+                            rangeText = "1100–1200 ARS/L",
+                            recentMovementText = "Up from previous 1100 ARS/L",
+                            packageText = "1 L",
+                            priceBasisText = "Current price",
+                            latestObservedText = "2026-10-09 10:00 UTC",
+                            sourceText = "Scan & compare",
+                            promotionText = null
+                        )
+                    )
+                )
+            )
+        )
+        val row = payload.getJSONObject("privateHistory").getJSONArray("rows").getJSONObject(0)
+
+        assertEquals("Leche Entera", row.getString("displayName"))
+        assertEquals("1200 ARS", row.getString("latestPriceText"))
+        assertEquals("Current price", row.getString("priceBasisText"))
+        assertEquals("Scan & compare", row.getString("sourceText"))
+        assertTrue(!row.has("storeName"))
+        assertTrue(!row.has("availability"))
+    }
+
+    @Test
     fun `native product detail payload carries only Kotlin-owned identity and offers`() {
         val match = PracticalShoppingSearchIdentityPresentation.Match(
             displayName = "Leche Entera",

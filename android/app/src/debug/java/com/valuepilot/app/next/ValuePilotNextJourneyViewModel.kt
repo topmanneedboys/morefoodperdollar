@@ -467,7 +467,8 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
             return ValuePilotNextHtmlPrivateHistorySummary(
                 status = "UNAVAILABLE",
                 exactHistoryCount = 0,
-                observationCount = 0
+                observationCount = 0,
+                rows = emptyList()
             )
         }
         check(Looper.myLooper() == Looper.getMainLooper())
@@ -475,13 +476,15 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
             ?: return ValuePilotNextHtmlPrivateHistorySummary(
                 status = "UNAVAILABLE",
                 exactHistoryCount = 0,
-                observationCount = 0
+                observationCount = 0,
+                rows = emptyList()
             )
         if (memory.entries.isEmpty()) {
             return ValuePilotNextHtmlPrivateHistorySummary(
                 status = "EMPTY",
                 exactHistoryCount = 0,
-                observationCount = 0
+                observationCount = 0,
+                rows = emptyList()
             )
         }
         val presentation = PracticalShoppingPrivatePriceHistoryPresentation.from(memory)
@@ -490,7 +493,23 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
             status = "AVAILABLE",
             exactHistoryCount = presentation.rows.size,
             observationCount = memory.entries.size,
-            latestDisplayName = latestDisplayName
+            latestDisplayName = latestDisplayName,
+            rows = presentation.rows.map { row ->
+                ValuePilotNextHtmlPrivateHistoryRow(
+                    displayName = row.displayName,
+                    observationCount = row.observationCount,
+                    latestPriceText = row.latestPriceText,
+                    lowestPriceText = row.lowestPriceText,
+                    latestUnitRateText = row.latestUnitRateText,
+                    rangeText = row.rangeText,
+                    recentMovementText = row.recentMovementText,
+                    packageText = row.packageText,
+                    priceBasisText = row.priceBasisText,
+                    latestObservedText = row.latestObservedText,
+                    sourceText = row.sourceText,
+                    promotionText = row.promotionText
+                )
+            }
         )
     }
 

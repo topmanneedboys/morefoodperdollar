@@ -18,7 +18,8 @@ internal data class ValuePilotNextHtmlPrivateHistorySummary(
     val status: String,
     val exactHistoryCount: Int,
     val observationCount: Int,
-    val latestDisplayName: String? = null
+    val latestDisplayName: String? = null,
+    val rows: List<ValuePilotNextHtmlPrivateHistoryRow> = emptyList()
 ) {
     init {
         require(status in setOf("AVAILABLE", "EMPTY", "UNAVAILABLE"))
@@ -28,6 +29,48 @@ internal data class ValuePilotNextHtmlPrivateHistorySummary(
         require(status == "AVAILABLE" || observationCount == 0)
         require(status == "AVAILABLE" || latestDisplayName == null)
         require(latestDisplayName == null || latestDisplayName.isNotBlank())
+        require(rows.size <= 32)
+        require(status == "AVAILABLE" || rows.isEmpty())
+        require(rows.size <= exactHistoryCount)
+    }
+}
+
+/**
+ * Read-only private-history facts crossing into the HTML presentation layer.
+ *
+ * These values are projections of the device-only Kotlin memory. They carry no retailer,
+ * availability, ranking, or current-offer authority. Mutations remain on the existing Kotlin
+ * private-history route.
+ */
+internal data class ValuePilotNextHtmlPrivateHistoryRow(
+    val displayName: String,
+    val observationCount: Int,
+    val latestPriceText: String,
+    val lowestPriceText: String,
+    val latestUnitRateText: String,
+    val rangeText: String,
+    val recentMovementText: String?,
+    val packageText: String,
+    val priceBasisText: String,
+    val latestObservedText: String,
+    val sourceText: String,
+    val promotionText: String?
+) {
+    init {
+        require(displayName.isNotBlank())
+        require(observationCount > 0)
+        listOf(
+            latestPriceText,
+            lowestPriceText,
+            latestUnitRateText,
+            rangeText,
+            packageText,
+            priceBasisText,
+            latestObservedText,
+            sourceText
+        ).forEach { require(it.isNotBlank()) }
+        require(recentMovementText == null || recentMovementText.isNotBlank())
+        require(promotionText == null || promotionText.isNotBlank())
     }
 }
 
@@ -76,6 +119,25 @@ internal object ValuePilotNextHtmlNativeSearchBridge {
                         .put("exactHistoryCount", summary.exactHistoryCount)
                         .put("observationCount", summary.observationCount)
                         .put("latestDisplayName", summary.latestDisplayName ?: JSONObject.NULL)
+                        .put("rows", JSONArray().apply {
+                            summary.rows.forEach { row ->
+                                put(
+                                    JSONObject()
+                                        .put("displayName", row.displayName)
+                                        .put("observationCount", row.observationCount)
+                                        .put("latestPriceText", row.latestPriceText)
+                                        .put("lowestPriceText", row.lowestPriceText)
+                                        .put("latestUnitRateText", row.latestUnitRateText)
+                                        .put("rangeText", row.rangeText)
+                                        .put("recentMovementText", row.recentMovementText ?: JSONObject.NULL)
+                                        .put("packageText", row.packageText)
+                                        .put("priceBasisText", row.priceBasisText)
+                                        .put("latestObservedText", row.latestObservedText)
+                                        .put("sourceText", row.sourceText)
+                                        .put("promotionText", row.promotionText ?: JSONObject.NULL)
+                                )
+                            }
+                        })
                 } ?: JSONObject.NULL
             )
             .put(
