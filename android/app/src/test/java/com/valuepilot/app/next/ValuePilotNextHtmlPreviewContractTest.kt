@@ -189,6 +189,22 @@ class ValuePilotNextHtmlPreviewContractTest {
                 )
             ).destination
         )
+        assertEquals(
+            "GOOD_PRICE_CHECK",
+            requireNotNull(
+                ValuePilotNextHtmlPreviewContract.parseNativeJourneyMessage(
+                    "{\"type\":\"OPEN_NATIVE_JOURNEY\",\"destination\":\"GOOD_PRICE_CHECK\"}"
+                )
+            ).destination
+        )
+        assertEquals(
+            "COMPARE",
+            requireNotNull(
+                ValuePilotNextHtmlPreviewContract.parseNativeJourneyMessage(
+                    "{\"type\":\"OPEN_NATIVE_JOURNEY\",\"destination\":\"COMPARE\"}"
+                )
+            ).destination
+        )
         assertTrue(
             ValuePilotNextHtmlPreviewContract
                 .parseNativeBasketMessage("{\"type\":\"OPEN_NATIVE_BASKET\"}") != null
@@ -230,6 +246,16 @@ class ValuePilotNextHtmlPreviewContractTest {
         assertNull(
             ValuePilotNextHtmlPreviewContract.parseNativeSavedToolsMessage(
                 "{\"type\":\"OPEN_NATIVE_SAVED_TOOLS\",\"destination\":\"OBSERVED_PRICE_CONFIRMATION\"}"
+            )
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeJourneyMessage(
+                "{\"type\":\"OPEN_NATIVE_JOURNEY\",\"destination\":\"OBSERVED_PRICE_CONFIRMATION\"}"
+            )
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeJourneyMessage(
+                "{\"type\":\"OPEN_NATIVE_SAVED_TOOLS\",\"destination\":\"COMPARE\"}"
             )
         )
         assertNull(

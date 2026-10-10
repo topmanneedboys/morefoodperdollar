@@ -66,7 +66,12 @@ class ValuePilotNextActivity : AppCompatActivity() {
             "STAPLE_WATCH_SETUP" -> NextDestination.STAPLE_WATCH_SETUP
             "PRIVATE_PRICE_HISTORY" -> NextDestination.PRIVATE_PRICE_HISTORY
             "BASKET" -> NextDestination.BASKET
+            "GOOD_PRICE_CHECK" -> NextDestination.GOOD_PRICE_CHECK
+            "COMPARE" -> NextDestination.COMPARE
             else -> NextDestination.HOME
+        }
+        if (startDestination == NextDestination.GOOD_PRICE_CHECK) {
+            journey.openGoodPriceForNewCheck()
         }
         observedPriceProofPicker =
             AndroidUserObservedPriceProofContentPicker(

@@ -220,6 +220,12 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                         openNativeSavedTools(nativeSavedTools.destination)
                         return
                     }
+                    val nativeJourney = ValuePilotNextHtmlPreviewContract
+                        .parseNativeJourneyMessage(message.data)
+                    if (nativeJourney != null) {
+                        openNativeJourney(nativeJourney.destination)
+                        return
+                    }
                     if (ValuePilotNextHtmlPreviewContract
                             .parseNativeBasketMessage(message.data) != null
                     ) {
@@ -325,6 +331,13 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
     }
 
     private fun openNativeSavedTools(destination: String) {
+        startActivity(
+            Intent(this, ValuePilotNextActivity::class.java)
+                .putExtra(ValuePilotNextActivity.EXTRA_START_DESTINATION, destination)
+        )
+    }
+
+    private fun openNativeJourney(destination: String) {
         startActivity(
             Intent(this, ValuePilotNextActivity::class.java)
                 .putExtra(ValuePilotNextActivity.EXTRA_START_DESTINATION, destination)

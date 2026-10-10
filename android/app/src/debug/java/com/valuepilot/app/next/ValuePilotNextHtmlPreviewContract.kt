@@ -25,6 +25,10 @@ internal data class ValuePilotNextHtmlNativeSavedToolsRequest(
     val destination: String
 )
 
+internal data class ValuePilotNextHtmlNativeJourneyRequest(
+    val destination: String
+)
+
 internal data class ValuePilotNextHtmlNativeSaveRequest(
     val identityKey: String,
     val displayName: String,
@@ -194,6 +198,16 @@ internal object ValuePilotNextHtmlPreviewContract {
         return ValuePilotNextHtmlNativeSavedToolsRequest(destination)
     }
 
+    /** Opens a supported Compose journey without granting the WebView arbitrary routing. */
+    fun parseNativeJourneyMessage(rawMessage: String?): ValuePilotNextHtmlNativeJourneyRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 256) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        if (json.optString("type") != "OPEN_NATIVE_JOURNEY") return null
+        val destination = json.optString("destination").trim()
+        if (destination !in SUPPORTED_NATIVE_JOURNEY_DESTINATIONS) return null
+        return ValuePilotNextHtmlNativeJourneyRequest(destination)
+    }
+
     /**
      * Parses a save request carrying the exact identity fields rendered by
      * native Search. The Activity still matches the identity against the
@@ -313,6 +327,11 @@ internal object ValuePilotNextHtmlPreviewContract {
         "OBSERVED_PRICE_SELECTION",
         "STAPLE_WATCH_SETUP",
         "PRIVATE_PRICE_HISTORY"
+    )
+
+    private val SUPPORTED_NATIVE_JOURNEY_DESTINATIONS = setOf(
+        "GOOD_PRICE_CHECK",
+        "COMPARE"
     )
 
     private fun encodeQuery(value: String): String =
