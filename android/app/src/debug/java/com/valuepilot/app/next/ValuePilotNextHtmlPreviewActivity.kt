@@ -347,6 +347,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         startActivity(
             Intent(this, ValuePilotNextActivity::class.java)
                 .putExtra(ValuePilotNextActivity.EXTRA_START_DESTINATION, destination)
+                .putExtra(ValuePilotNextActivity.EXTRA_START_ORIGIN, "SAVED")
         )
     }
 
@@ -354,6 +355,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         startActivity(
             Intent(this, ValuePilotNextActivity::class.java)
                 .putExtra(ValuePilotNextActivity.EXTRA_START_DESTINATION, destination)
+                .putExtra(ValuePilotNextActivity.EXTRA_START_ORIGIN, "SAVED")
         )
     }
 
@@ -369,6 +371,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         startActivity(
             Intent(this, ValuePilotNextActivity::class.java)
                 .putExtra(ValuePilotNextActivity.EXTRA_START_DESTINATION, "GOOD_PRICE_CHECK")
+                .putExtra(ValuePilotNextActivity.EXTRA_START_ORIGIN, "SAVED")
                 .putExtra(ValuePilotNextActivity.EXTRA_GOOD_PRICE_DISPLAY_NAME, identity.displayName)
         )
     }
@@ -397,6 +400,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                     ValuePilotNextActivity.EXTRA_START_SEARCH_QUERY,
                     request.query.trim()
                 )
+                .putExtra(ValuePilotNextActivity.EXTRA_START_ORIGIN, "SEARCH")
                 .putExtra(ValuePilotNextActivity.EXTRA_START_IDENTITY_KEY, match.identityKey)
             )
     }

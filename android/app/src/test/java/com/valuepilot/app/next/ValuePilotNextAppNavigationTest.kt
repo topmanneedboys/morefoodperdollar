@@ -55,6 +55,46 @@ class ValuePilotNextAppNavigationTest {
     }
 
     @Test
+    fun `an external Saved tool handoff keeps Saved as the back destination`() {
+        assertEquals(
+            listOf(NextDestination.SAVED, NextDestination.PRIVATE_PRICE_HISTORY),
+            initialRouteStackForNextDestination(
+                destination = NextDestination.PRIVATE_PRICE_HISTORY,
+                originDestination = NextDestination.SAVED
+            )
+        )
+        assertEquals(
+            AppPrimaryTab.SAVED,
+            initialShellStateForNextDestination(
+                destination = NextDestination.COMPARE,
+                originDestination = NextDestination.SAVED
+            ).selectedPrimaryTab
+        )
+    }
+
+    @Test
+    fun `an external Product Detail handoff keeps Search as the back destination`() {
+        assertEquals(
+            listOf(NextDestination.SEARCH, NextDestination.PRODUCT_DETAIL),
+            initialRouteStackForNextDestination(
+                destination = NextDestination.PRODUCT_DETAIL,
+                originDestination = NextDestination.SEARCH
+            )
+        )
+    }
+
+    @Test
+    fun `a duplicate origin does not add an extra route`() {
+        assertEquals(
+            listOf(NextDestination.SAVED),
+            initialRouteStackForNextDestination(
+                destination = NextDestination.SAVED,
+                originDestination = NextDestination.SAVED
+            )
+        )
+    }
+
+    @Test
     fun `a fresh observed price attempt clears old form state before opening`() {
         val events = mutableListOf<String>()
 

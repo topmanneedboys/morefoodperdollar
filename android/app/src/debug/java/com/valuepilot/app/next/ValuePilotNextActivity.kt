@@ -71,6 +71,23 @@ class ValuePilotNextActivity : AppCompatActivity() {
             "COMPARE" -> NextDestination.COMPARE
             else -> NextDestination.HOME
         }
+        val startOriginDestination = when (intent.getStringExtra(EXTRA_START_ORIGIN)) {
+            "HOME" -> NextDestination.HOME
+            "SEARCH" -> NextDestination.SEARCH
+            "BASKET" -> NextDestination.BASKET
+            "SAVED" -> NextDestination.SAVED
+            "GOOD_PRICE_CHECK" -> NextDestination.GOOD_PRICE_CHECK
+            "STAPLE_WATCH_SETUP" -> NextDestination.STAPLE_WATCH_SETUP
+            "PRIVATE_PRICE_HISTORY" -> NextDestination.PRIVATE_PRICE_HISTORY
+            "OBSERVED_PRICE_SELECTION" -> NextDestination.OBSERVED_PRICE_SELECTION
+            "PRODUCT_DETAIL" -> NextDestination.PRODUCT_DETAIL
+            "SHOPPING_DECISION" -> NextDestination.SHOPPING_DECISION
+            "TRIP_PLANNER" -> NextDestination.TRIP_PLANNER
+            "MAP_HANDOFF" -> NextDestination.MAP_HANDOFF
+            "COMPARE" -> NextDestination.COMPARE
+            "SETTINGS" -> NextDestination.SETTINGS
+            else -> null
+        }
         val startSearchQuery = intent.getStringExtra(EXTRA_START_SEARCH_QUERY)
             ?.trim()
             ?.takeIf { it.isNotBlank() && it.length <= 96 }
@@ -140,6 +157,7 @@ class ValuePilotNextActivity : AppCompatActivity() {
                 ValuePilotNextApp(
                     journey = journey,
                     startDestination = startDestination,
+                    initialOriginDestination = startOriginDestination,
                     initialSelectedIdentityKey = startIdentityKey,
                     initialQuery = startSearchQuery,
                     reducedMotion = ValuePilotNextUiPreferencesCodec.resolvesReducedMotion(
@@ -380,6 +398,7 @@ class ValuePilotNextActivity : AppCompatActivity() {
 
     companion object {
         internal const val EXTRA_START_DESTINATION = "valuepilot.next.start_destination"
+        internal const val EXTRA_START_ORIGIN = "valuepilot.next.start_origin"
         internal const val EXTRA_START_SEARCH_QUERY = "valuepilot.next.start_search_query"
         internal const val EXTRA_START_IDENTITY_KEY = "valuepilot.next.start_identity_key"
         internal const val EXTRA_GOOD_PRICE_DISPLAY_NAME = "valuepilot.next.good_price_display_name"

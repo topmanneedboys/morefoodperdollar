@@ -136,11 +136,21 @@ internal fun primaryTabForNextDestination(
 }
 
 internal fun initialShellStateForNextDestination(
-    destination: NextDestination
+    destination: NextDestination,
+    originDestination: NextDestination? = null
 ): AppShellState =
     AppShellState.initial().copy(
-        selectedPrimaryTab = primaryTabForNextDestination(destination)
+        selectedPrimaryTab = primaryTabForNextDestination(destination, originDestination)
     )
+
+internal fun initialRouteStackForNextDestination(
+    destination: NextDestination,
+    originDestination: NextDestination? = null
+): List<NextDestination> =
+    originDestination
+        ?.takeIf { it != destination }
+        ?.let { listOf(it, destination) }
+        ?: listOf(destination)
 
 private data class PrimaryDestination(
     val tab: AppPrimaryTab,
@@ -195,6 +205,7 @@ private val appShellStateSaver = listSaver<AppShellState, String>(
 internal fun ValuePilotNextApp(
     journey: ValuePilotNextJourneyViewModel,
     startDestination: NextDestination = NextDestination.HOME,
+    initialOriginDestination: NextDestination? = null,
     initialSelectedIdentityKey: String? = null,
     initialQuery: String? = null,
     reducedMotion: Boolean,
@@ -213,10 +224,20 @@ internal fun ValuePilotNextApp(
 ) {
     val ui = journey.uiState
     var shellState by rememberSaveable(stateSaver = appShellStateSaver) {
-        mutableStateOf(initialShellStateForNextDestination(startDestination))
+        mutableStateOf(
+            initialShellStateForNextDestination(
+                destination = startDestination,
+                originDestination = initialOriginDestination
+            )
+        )
     }
     var routeStack by rememberSaveable(stateSaver = destinationStackSaver) {
-        mutableStateOf(listOf(startDestination))
+        mutableStateOf(
+            initialRouteStackForNextDestination(
+                destination = startDestination,
+                originDestination = initialOriginDestination
+            )
+        )
     }
     var selectedIdentityKey by rememberSaveable { mutableStateOf(initialSelectedIdentityKey) }
     var showDesignFixture by rememberSaveable { mutableStateOf(false) }
