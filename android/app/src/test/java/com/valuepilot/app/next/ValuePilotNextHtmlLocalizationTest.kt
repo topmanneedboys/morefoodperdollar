@@ -52,6 +52,15 @@ class ValuePilotNextHtmlLocalizationTest {
         )
     }
 
+    @Test
+    fun `stale native actions have localized notices`() {
+        val source = assetSource()
+
+        assertTrue(source.contains("'PRODUCT_DETAIL_STALE':'nativeStaleDetail'"))
+        assertTrue(source.contains("'SAVED_ITEM_STALE':'nativeStaleSaved'"))
+        assertTrue(source.contains("receiveNativeActionNotice:(payload)=>receiveNativeActionNotice(payload)"))
+    }
+
     private fun assetSource(): String {
         var directory = File(requireNotNull(System.getProperty("user.dir")))
         repeat(8) {

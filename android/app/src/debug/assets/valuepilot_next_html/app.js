@@ -99,6 +99,8 @@ const COPY=Object.freeze({
   nativeSavedPersistence:{es:'No se pudo actualizar Guardados.',en:'Saved could not be updated.'},
   nativeSavedRemoved:{es:'Identidad quitada de ValuePilot',en:'Identity removed from ValuePilot'},
   nativeSavedMissing:{es:'La identidad ya no estaba guardada.',en:'That identity was no longer saved.'},
+  nativeStaleDetail:{es:'Ese resultado de búsqueda ya no está disponible. Volvé a buscar.',en:'That Search result is no longer available. Search again.'},
+  nativeStaleSaved:{es:'Ese producto guardado ya no está disponible. Actualizá Guardados.',en:'That saved product is no longer available. Refresh Saved.'},
   openSavedTools:{es:'Abrir herramientas completas de Guardados',en:'Open full Saved tools'},
   openSavedToolsDetail:{es:'Observaciones, Watch y el historial privado siguen en la experiencia Compose de ValuePilot.',en:'Observed prices, Watch and private history remain in the Compose ValuePilot experience.'},
   observedPriceTool:{es:'Registrar un precio observado',en:'Record an observed price'},
@@ -319,6 +321,7 @@ function requestNativeSaved(){state.nativeSavedPending=true;render();try{if(wind
 function enableNativeSaved(){state.nativeSavedEnabled=true;state.nativeSavedState=null;requestNativeSaved()}
 function disableNativeSaved(){state.nativeSavedEnabled=false;state.nativeSavedPending=false;state.nativeSavedState=null;render()}
 function receiveNativeSaved(payload){if(!payload||typeof payload!=='object')return;state.nativeSavedPending=false;state.nativeSavedState=payload;render();if(payload.action)flash(nativeSavedActionMessage(payload.action))}
+function receiveNativeActionNotice(payload){const key={'PRODUCT_DETAIL_STALE':'nativeStaleDetail','SAVED_ITEM_STALE':'nativeStaleSaved'}[String(payload?.code||'')];if(key)flash(copy(key));return Boolean(key)}
 function nativeSavedActionMessage(action){switch(action){case'SAVE_ADDED':return copy('nativeSavedAdded');case'SAVE_REFRESHED':return copy('nativeSavedRefreshed');case'SAVE_SOURCE_UNAVAILABLE':return copy('nativeSavedSourceUnavailable');case'SAVE_BASKET_LIMIT':return copy('nativeSavedLimit');case'SAVE_PERSISTENCE_UNAVAILABLE':return copy('nativeSavedPersistence');case'REMOVE_SUCCESS':return copy('nativeSavedRemoved');case'REMOVE_MISSING':return copy('nativeSavedMissing');default:return copy('nativeSavedPersistence')}}
 function nativeSavedHas(identityKey){return Boolean((state.nativeSavedState?.items||[]).some(item=>item.identityKey===identityKey))}
 function requestNativeSave(id){const product=state.nativeProducts.get(id);const match=product?.match;if(!match)return;try{if(window.ValuePilotHost&&typeof window.ValuePilotHost.postMessage==='function'){window.ValuePilotHost.postMessage(JSON.stringify({type:'SAVE_VALUEPILOT_IDENTITY',identityKey:match.identityKey,displayName:match.displayName,brand:match.brand||'',matchLabel:match.matchLabel,packageQuantityLabel:match.packageQuantityLabel||'',sourceLabel:match.sourceLabel||'',gtin:match.gtin||''}));return}}catch(_){ }flash(copy('nativeSavedPersistence'))}
@@ -390,6 +393,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.page!=='home'
   setLanguage:(language)=>{setLanguage(language,{persist:false});return state.language},
   receiveNativeSearch:(payload)=>{receiveNativeSearch(payload);return true},
   refreshNativeSaved:()=>{if(!state.nativeSavedEnabled||state.nativeSavedPending)return false;requestNativeSaved();return true},
+  receiveNativeActionNotice:(payload)=>receiveNativeActionNotice(payload),
    receiveNativeSaved:(payload)=>{receiveNativeSaved(payload);return true},
    receiveNativeTrip:(payload)=>{receiveNativeTrip(payload);return true},
 });

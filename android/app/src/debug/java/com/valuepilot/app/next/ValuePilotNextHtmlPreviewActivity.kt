@@ -361,7 +361,10 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
     ) {
         val identity = journey.uiState.privateIdentities.firstOrNull {
             it.identityKey == request.identityKey && it.displayName == request.displayName
-        } ?: return
+        } ?: run {
+            sendNativeActionNotice("SAVED_ITEM_STALE")
+            return
+        }
         startActivity(
             Intent(this, ValuePilotNextActivity::class.java)
                 .putExtra(ValuePilotNextActivity.EXTRA_START_DESTINATION, "GOOD_PRICE_CHECK")
@@ -374,12 +377,18 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
     ) {
         val match = journey.uiState.search.presentation?.matches?.firstOrNull {
             it.identityKey == request.identityKey
-        } ?: return
+        } ?: run {
+            sendNativeActionNotice("PRODUCT_DETAIL_STALE")
+            return
+        }
         if (!ValuePilotNextHtmlPreviewContract.productDetailQueryMatches(
                 journey.uiState.search.query,
                 request.query
             )
-        ) return
+        ) {
+            sendNativeActionNotice("PRODUCT_DETAIL_STALE")
+            return
+        }
         startActivity(
             Intent(this, ValuePilotNextActivity::class.java)
                 .putExtra(ValuePilotNextActivity.EXTRA_START_DESTINATION, "PRODUCT_DETAIL")
@@ -388,6 +397,19 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                     request.query.trim()
                 )
                 .putExtra(ValuePilotNextActivity.EXTRA_START_IDENTITY_KEY, match.identityKey)
+            )
+    }
+
+    private fun sendNativeActionNotice(code: String) {
+        if (!::webView.isInitialized) return
+        val safeCode = when (code) {
+            "PRODUCT_DETAIL_STALE",
+            "SAVED_ITEM_STALE" -> code
+            else -> return
+        }
+        webView.evaluateJavascript(
+            "window.ValuePilotHtmlPreview && window.ValuePilotHtmlPreview.receiveNativeActionNotice({code:'$safeCode'})",
+            null
         )
     }
 
