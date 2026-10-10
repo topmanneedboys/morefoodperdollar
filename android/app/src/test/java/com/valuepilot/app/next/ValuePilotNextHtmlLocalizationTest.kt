@@ -133,6 +133,17 @@ class ValuePilotNextHtmlLocalizationTest {
     }
 
     @Test
+    fun `saved mode can re-enter Kotlin surfaces after a search fixture fallback`() {
+        val source = assetSource()
+
+        assertTrue(
+            source.contains(
+                "function enableNativeSaved(){state.nativeSavedEnabled=true;state.nativeSearchEnabled=true;state.nativeSavedState=null;requestNativeSaved()}"
+            )
+        )
+    }
+
+    @Test
     fun `observed price route is native backed and bilingual`() {
         val source = assetSource()
 
