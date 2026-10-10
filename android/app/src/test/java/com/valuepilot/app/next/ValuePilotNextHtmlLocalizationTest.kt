@@ -33,6 +33,14 @@ class ValuePilotNextHtmlLocalizationTest {
         assertTrue(assetSource().contains("const currency=(n)=>'ARS '+money(n)"))
     }
 
+    @Test
+    fun `timed out native search loading state is shown as unavailable`() {
+        val source = assetSource()
+
+        assertTrue(source.contains("case'LOADING':return copy('nativeTimeout')"))
+        assertTrue(source.contains("payload.mode==='TIMEOUT'||payload.mode==='LOADING'"))
+    }
+
     private fun assetSource(): String {
         var directory = File(requireNotNull(System.getProperty("user.dir")))
         repeat(8) {
