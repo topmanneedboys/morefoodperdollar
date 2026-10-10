@@ -273,6 +273,67 @@ class ValuePilotNextHtmlPreviewContractTest {
     }
 
     @Test
+    fun acceptsOnly_bounded_observed_price_messages() {
+        assertTrue(
+            ValuePilotNextHtmlPreviewContract
+                .parseNativeObservedPriceReadMessage(
+                    "{\"type\":\"READ_NATIVE_OBSERVED_PRICE\"}"
+                ) != null
+        )
+        val selection = requireNotNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeObservedPriceSelectionMessage(
+                "{\"type\":\"SELECT_NATIVE_OBSERVED_PRICE\",\"kind\":\"PRODUCT\",\"key\":\"item-123\"}"
+            )
+        )
+        assertEquals("PRODUCT", selection.kind)
+        assertEquals("item-123", selection.key)
+        assertEquals(
+            "ARS",
+            requireNotNull(
+                ValuePilotNextHtmlPreviewContract.parseNativeObservedPriceAmountMessage(
+                    "{\"type\":\"SET_NATIVE_OBSERVED_PRICE\",\"amount\":\"1250,50\",\"currency\":\"ars\"}"
+                )
+            ).currency
+        )
+        assertEquals(
+            "-03:00",
+            requireNotNull(
+                ValuePilotNextHtmlPreviewContract.parseNativeObservedPriceTimeMessage(
+                    "{\"type\":\"SET_NATIVE_OBSERVED_TIME\",\"date\":\"2026-10-09\",\"time\":\"10:30\",\"utcOffset\":\"-03:00\"}"
+                )
+            ).utcOffset
+        )
+        assertEquals(
+            "PRICE_TAG",
+            requireNotNull(
+                ValuePilotNextHtmlPreviewContract.parseNativeObservedPriceProofMessage(
+                    "{\"type\":\"SET_NATIVE_OBSERVED_PROOF\",\"artifactId\":\"proof-1\",\"proofType\":\"PRICE_TAG\"}"
+                )
+            ).proofType
+        )
+        assertTrue(
+            ValuePilotNextHtmlNativeSearchBridge
+                .encodeObservedPrice(null, null, null)
+                .let { JSONObject(it).getString("type") == "NATIVE_OBSERVED_PRICE_STATE" }
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeObservedPriceSelectionMessage(
+                "{\"type\":\"SELECT_NATIVE_OBSERVED_PRICE\",\"kind\":\"PRODUCT\",\"key\":\"x\\u0001\"}"
+            )
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeObservedPriceProofMessage(
+                "{\"type\":\"SET_NATIVE_OBSERVED_PROOF\",\"artifactId\":\"proof-1\",\"proofType\":\"PHOTO\"}"
+            )
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeObservedPriceAmountMessage(
+                "{\"type\":\"SET_NATIVE_OBSERVED_PRICE\",\"amount\":\"1e4\",\"currency\":\"ARS\"}"
+            )
+        )
+    }
+
+    @Test
     fun `saved bridge serializes private history without price or store claims`() {
         val payload = JSONObject(
             ValuePilotNextHtmlNativeSearchBridge.encodeSaved(

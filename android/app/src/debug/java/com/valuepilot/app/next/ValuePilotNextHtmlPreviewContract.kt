@@ -23,6 +23,35 @@ internal object ValuePilotNextHtmlNativeBasketRequest
 
 internal object ValuePilotNextHtmlNativeBasketPlanRequest
 
+internal object ValuePilotNextHtmlNativeObservedPriceReadRequest
+
+internal data class ValuePilotNextHtmlNativeObservedPriceSelectionRequest(
+    val kind: String,
+    val key: String? = null
+)
+
+internal object ValuePilotNextHtmlNativeObservedPricePrefillRequest
+
+internal data class ValuePilotNextHtmlNativeObservedPriceAmountRequest(
+    val amount: String,
+    val currency: String
+)
+
+internal data class ValuePilotNextHtmlNativeObservedPriceTimeRequest(
+    val date: String,
+    val time: String,
+    val utcOffset: String
+)
+
+internal data class ValuePilotNextHtmlNativeObservedPriceProofRequest(
+    val artifactId: String,
+    val proofType: String
+)
+
+internal object ValuePilotNextHtmlNativeObservedPriceProofPickerRequest
+internal object ValuePilotNextHtmlNativeObservedPriceSubmitRequest
+internal object ValuePilotNextHtmlNativeObservedPriceCancelRequest
+
 internal data class ValuePilotNextHtmlNativeSavedToolsRequest(
     val destination: String
 )
@@ -223,6 +252,138 @@ internal object ValuePilotNextHtmlPreviewContract {
         val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
         return if (json.optString("type") == "REQUEST_NATIVE_BASKET_PLAN") {
             ValuePilotNextHtmlNativeBasketPlanRequest
+        } else {
+            null
+        }
+    }
+
+    fun parseNativeObservedPriceReadMessage(
+        rawMessage: String?
+    ): ValuePilotNextHtmlNativeObservedPriceReadRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 256) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        return if (json.optString("type") == "READ_NATIVE_OBSERVED_PRICE") {
+            ValuePilotNextHtmlNativeObservedPriceReadRequest
+        } else {
+            null
+        }
+    }
+
+    fun parseNativeObservedPriceSelectionMessage(
+        rawMessage: String?
+    ): ValuePilotNextHtmlNativeObservedPriceSelectionRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 1_024) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        if (json.optString("type") != "SELECT_NATIVE_OBSERVED_PRICE") return null
+        val kind = json.optString("kind").trim()
+        if (kind !in setOf("PRODUCT", "STORE", "CLEAR_PRODUCT", "CLEAR_STORE", "CLEAR_SELECTION")) {
+            return null
+        }
+        val key = json.optString("key").trim().takeIf { it.isNotEmpty() }
+        if (key != null && (key.length > 512 || containsControlCharacter(key))) return null
+        if (kind == "PRODUCT" || kind == "STORE") {
+            if (key == null) return null
+        } else if (key != null) {
+            return null
+        }
+        return ValuePilotNextHtmlNativeObservedPriceSelectionRequest(kind, key)
+    }
+
+    fun parseNativeObservedPricePrefillMessage(
+        rawMessage: String?
+    ): ValuePilotNextHtmlNativeObservedPricePrefillRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 256) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        return if (json.optString("type") == "REQUEST_NATIVE_OBSERVED_PRICE_PREFILL") {
+            ValuePilotNextHtmlNativeObservedPricePrefillRequest
+        } else {
+            null
+        }
+    }
+
+    fun parseNativeObservedPriceAmountMessage(
+        rawMessage: String?
+    ): ValuePilotNextHtmlNativeObservedPriceAmountRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 512) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        if (json.optString("type") != "SET_NATIVE_OBSERVED_PRICE") return null
+        val amount = json.optString("amount").trim()
+        val currency = json.optString("currency").trim()
+        if (
+            amount.isBlank() || amount.length > 64 || containsControlCharacter(amount) ||
+                !amount.matches(Regex("-?\\d+(?:[.,]\\d+)?")) ||
+            currency.length !in 3..12 || !currency.matches(Regex("[A-Za-z]{3,12}")) ||
+            containsControlCharacter(currency)
+        ) return null
+        return ValuePilotNextHtmlNativeObservedPriceAmountRequest(
+            amount = amount,
+            currency = currency.uppercase()
+        )
+    }
+
+    fun parseNativeObservedPriceTimeMessage(
+        rawMessage: String?
+    ): ValuePilotNextHtmlNativeObservedPriceTimeRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 512) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        if (json.optString("type") != "SET_NATIVE_OBSERVED_TIME") return null
+        val date = json.optString("date").trim()
+        val time = json.optString("time").trim()
+        val utcOffset = json.optString("utcOffset").trim()
+        if (
+            date.isBlank() || date.length > 32 || containsControlCharacter(date) ||
+            time.isBlank() || time.length > 32 || containsControlCharacter(time) ||
+            utcOffset.isBlank() || utcOffset.length > 16 || containsControlCharacter(utcOffset)
+        ) return null
+        return ValuePilotNextHtmlNativeObservedPriceTimeRequest(date, time, utcOffset)
+    }
+
+    fun parseNativeObservedPriceProofMessage(
+        rawMessage: String?
+    ): ValuePilotNextHtmlNativeObservedPriceProofRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 1_024) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        if (json.optString("type") != "SET_NATIVE_OBSERVED_PROOF") return null
+        val artifactId = json.optString("artifactId").trim()
+        val proofType = json.optString("proofType").trim()
+        if (
+            artifactId.isBlank() || artifactId.length > 160 || containsControlCharacter(artifactId) ||
+            proofType !in setOf("RECEIPT", "PRICE_TAG")
+        ) return null
+        return ValuePilotNextHtmlNativeObservedPriceProofRequest(artifactId, proofType)
+    }
+
+    fun parseNativeObservedPriceProofPickerMessage(
+        rawMessage: String?
+    ): ValuePilotNextHtmlNativeObservedPriceProofPickerRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 256) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        return if (json.optString("type") == "SELECT_NATIVE_OBSERVED_PROOF") {
+            ValuePilotNextHtmlNativeObservedPriceProofPickerRequest
+        } else {
+            null
+        }
+    }
+
+    fun parseNativeObservedPriceSubmitMessage(
+        rawMessage: String?
+    ): ValuePilotNextHtmlNativeObservedPriceSubmitRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 256) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        return if (json.optString("type") == "SUBMIT_NATIVE_OBSERVED_PRICE") {
+            ValuePilotNextHtmlNativeObservedPriceSubmitRequest
+        } else {
+            null
+        }
+    }
+
+    fun parseNativeObservedPriceCancelMessage(
+        rawMessage: String?
+    ): ValuePilotNextHtmlNativeObservedPriceCancelRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 256) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        return if (json.optString("type") == "CANCEL_NATIVE_OBSERVED_PRICE") {
+            ValuePilotNextHtmlNativeObservedPriceCancelRequest
         } else {
             null
         }

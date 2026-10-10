@@ -129,6 +129,24 @@ class ValuePilotNextHtmlLocalizationTest {
     }
 
     @Test
+    fun `observed price route is native backed and bilingual`() {
+        val source = assetSource()
+
+        assertTrue(source.contains("observedPriceTitle:{es:"))
+        assertTrue(source.contains("observedConfirmTitle:{es:"))
+        assertTrue(source.contains("function nativeObservedSelection(payload)"))
+        assertTrue(source.contains("function nativeObservedConfirmation(payload)"))
+        assertTrue(source.contains("'observed-price':observedPrice"))
+        assertTrue(source.contains("'observed-confirm':observedConfirm"))
+        assertTrue(source.contains("READ_NATIVE_OBSERVED_PRICE"))
+        assertTrue(source.contains("SET_NATIVE_OBSERVED_PROOF"))
+        assertTrue(source.contains("SUBMIT_NATIVE_OBSERVED_PRICE"))
+        assertTrue(source.contains("case'observed-proof-picker':requestNativeObservedProofPicker()"))
+        assertTrue(source.contains("state.observedPriceForm.amount=e.target.value"))
+        assertTrue(source.contains("receiveNativeObservedPrice:(payload)=>{receiveNativeObservedPrice(payload);return true}"))
+    }
+
+    @Test
     fun `unknown native enums stay behind localized evidence labels`() {
         val source = assetSource()
 

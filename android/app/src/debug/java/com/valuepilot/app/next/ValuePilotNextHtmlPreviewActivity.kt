@@ -29,6 +29,14 @@ import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewClientCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import com.valuepilot.app.AndroidUserObservedPriceProofContentPicker
+import com.valuepilot.app.AndroidUserObservedPriceProofContentSource
+import com.valuepilot.app.UserObservedPriceProofContentReadResult
+import com.valuepilot.app.UserObservedPriceSavedPrefillCheckUiAction
+import com.valuepilot.app.UserObservedPriceSavedSelectionAction
+import com.valuepilot.app.UserProvidedPriceProofType
+import com.valuepilot.core.ShoppingItemKey
+import com.valuepilot.core.ShoppingStoreKey
 import java.io.ByteArrayInputStream
 import kotlin.math.roundToInt
 
@@ -63,6 +71,10 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
     private var nativeSearchInitialGeneration = -1L
     private var nativeSearchDeadlineMillis = 0L
     private var nativeBasketPlanDeadlineMillis = 0L
+    private var nativeObservedPriceDeadlineMillis = 0L
+    private var nativeObservedPricePrefillDeadlineMillis = 0L
+    private var nativeObservedPricePrefillRequested = false
+    private var observedPriceProofPicker: AndroidUserObservedPriceProofContentPicker? = null
 
     private val nativeSearchPoll = object : Runnable {
         override fun run() {
@@ -98,6 +110,55 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         }
     }
 
+    private val nativeObservedPricePoll = object : Runnable {
+        override fun run() {
+            if (!::webView.isInitialized || !::journey.isInitialized) return
+            val ready = journey.uiState.observedPriceSelection != null
+            if (ready || System.currentTimeMillis() >= nativeObservedPriceDeadlineMillis) {
+                sendNativeObservedPriceState()
+                return
+            }
+            handler.postDelayed(this, NATIVE_OBSERVED_PRICE_POLL_INTERVAL_MS)
+        }
+    }
+
+    private val nativeObservedPricePrefillPoll = object : Runnable {
+        override fun run() {
+            if (!::webView.isInitialized || !::journey.isInitialized) return
+            val attempt = journey.currentObservedPricePrefillAttemptOrNull()
+            if (attempt != null) {
+                nativeObservedPricePrefillRequested = false
+                if (journey.prepareObservedPriceConfirmation(attempt)) {
+                    journey.onObservedPriceConfirmationRouteVisibilityChanged(true)
+                }
+                sendNativeObservedPriceState()
+                return
+            }
+            val result = journey.uiState.observedPricePrefillResult
+            if (result != null ||
+                System.currentTimeMillis() >= nativeObservedPricePrefillDeadlineMillis
+            ) {
+                nativeObservedPricePrefillRequested = false
+                sendNativeObservedPriceState()
+                return
+            }
+            handler.postDelayed(this, NATIVE_OBSERVED_PRICE_POLL_INTERVAL_MS)
+        }
+    }
+
+    private val nativeObservedPriceConfirmationPoll = object : Runnable {
+        override fun run() {
+            if (!::webView.isInitialized || !::journey.isInitialized) return
+            if (journey.uiState.observedPriceConfirmation?.action?.status ==
+                com.valuepilot.app.UserObservedPriceConfirmationActionUiState.Status.SUBMITTING
+            ) {
+                handler.postDelayed(this, NATIVE_OBSERVED_PRICE_POLL_INTERVAL_MS)
+            } else {
+                sendNativeObservedPriceState()
+            }
+        }
+    }
+
     private val googleImagesLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             googleImagesLaunchInFlight = false
@@ -119,6 +180,12 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         journey = ViewModelProvider(this)[ValuePilotNextJourneyViewModel::class.java]
         journey.start(applicationContext)
+        journey.onSavedRouteVisibilityChanged(true)
+        observedPriceProofPicker = AndroidUserObservedPriceProofContentPicker(
+            activity = this,
+            contentSource = AndroidUserObservedPriceProofContentSource(contentResolver),
+            onReadResult = ::onObservedPriceProofReadResult
+        ).also { picker -> journey.attachObservedPriceProofPicker(picker::launch) }
         WindowCompat.setDecorFitsSystemWindows(window, true)
 
         assetLoader = WebViewAssetLoader.Builder()
@@ -178,7 +245,19 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         handler.removeCallbacks(themeSync)
         handler.removeCallbacks(nativeSearchPoll)
         handler.removeCallbacks(nativeBasketPlanPoll)
+        handler.removeCallbacks(nativeObservedPricePoll)
+        handler.removeCallbacks(nativeObservedPricePrefillPoll)
+        handler.removeCallbacks(nativeObservedPriceConfirmationPoll)
         nativeSearchQuery = null
+        nativeObservedPricePrefillRequested = false
+        if (::journey.isInitialized) {
+            journey.onObservedPriceConfirmationRouteVisibilityChanged(false)
+            journey.onObservedPriceSelectionRouteVisibilityChanged(false)
+            journey.onSavedRouteVisibilityChanged(false)
+            journey.attachObservedPriceProofPicker(null)
+        }
+        observedPriceProofPicker?.close()
+        observedPriceProofPicker = null
         if (::webView.isInitialized) {
             webView.stopLoading()
             webView.removeAllViews()
@@ -306,6 +385,77 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                         requestNativeBasketPlan()
                         return
                     }
+                    if (ValuePilotNextHtmlPreviewContract
+                            .parseNativeObservedPriceReadMessage(message.data) != null
+                    ) {
+                        startNativeObservedPrice()
+                        return
+                    }
+                    val observedSelection = ValuePilotNextHtmlPreviewContract
+                        .parseNativeObservedPriceSelectionMessage(message.data)
+                    if (observedSelection != null) {
+                        applyNativeObservedPriceSelection(observedSelection)
+                        return
+                    }
+                    if (ValuePilotNextHtmlPreviewContract
+                            .parseNativeObservedPricePrefillMessage(message.data) != null
+                    ) {
+                        requestNativeObservedPricePrefill()
+                        return
+                    }
+                    val observedAmount = ValuePilotNextHtmlPreviewContract
+                        .parseNativeObservedPriceAmountMessage(message.data)
+                    if (observedAmount != null) {
+                        journey.onObservedPriceConfirmationPriceInput(
+                            amountText = observedAmount.amount,
+                            currencyCodeText = observedAmount.currency
+                        )
+                        sendNativeObservedPriceState()
+                        return
+                    }
+                    val observedTime = ValuePilotNextHtmlPreviewContract
+                        .parseNativeObservedPriceTimeMessage(message.data)
+                    if (observedTime != null) {
+                        journey.onObservedPriceConfirmationTimeInput(
+                            dateText = observedTime.date,
+                            timeText = observedTime.time,
+                            utcOffsetText = observedTime.utcOffset
+                        )
+                        sendNativeObservedPriceState()
+                        return
+                    }
+                    val observedProof = ValuePilotNextHtmlPreviewContract
+                        .parseNativeObservedPriceProofMessage(message.data)
+                    if (observedProof != null) {
+                        journey.onObservedPriceConfirmationProofReferenceInput(
+                            artifactId = observedProof.artifactId,
+                            proofType = when (observedProof.proofType) {
+                                "RECEIPT" -> UserProvidedPriceProofType.RECEIPT
+                                "PRICE_TAG" -> UserProvidedPriceProofType.PRICE_TAG
+                                else -> null
+                            }
+                        )
+                        sendNativeObservedPriceState()
+                        return
+                    }
+                    if (ValuePilotNextHtmlPreviewContract
+                            .parseNativeObservedPriceProofPickerMessage(message.data) != null
+                    ) {
+                        observedPriceProofPicker?.launch()
+                        return
+                    }
+                    if (ValuePilotNextHtmlPreviewContract
+                            .parseNativeObservedPriceSubmitMessage(message.data) != null
+                    ) {
+                        submitNativeObservedPrice()
+                        return
+                    }
+                    if (ValuePilotNextHtmlPreviewContract
+                            .parseNativeObservedPriceCancelMessage(message.data) != null
+                    ) {
+                        cancelNativeObservedPrice()
+                        return
+                    }
                     val nativeSave = ValuePilotNextHtmlPreviewContract
                         .parseNativeSaveMessage(message.data)
                     if (nativeSave != null) {
@@ -364,6 +514,88 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
             "window.ValuePilotHtmlPreview && window.ValuePilotHtmlPreview.receiveNativeSaved($payload)",
             null
         )
+    }
+
+    private fun startNativeObservedPrice() {
+        if (!::journey.isInitialized || !::webView.isInitialized) return
+        journey.onSavedRouteVisibilityChanged(true)
+        journey.onObservedPriceSelectionRouteVisibilityChanged(true)
+        nativeObservedPriceDeadlineMillis =
+            System.currentTimeMillis() + NATIVE_OBSERVED_PRICE_TIMEOUT_MS
+        sendNativeObservedPriceState()
+        handler.removeCallbacks(nativeObservedPricePoll)
+        handler.post(nativeObservedPricePoll)
+    }
+
+    private fun sendNativeObservedPriceState() {
+        if (!::journey.isInitialized || !::webView.isInitialized) return
+        val payload = ValuePilotNextHtmlNativeSearchBridge.encodeObservedPrice(
+            selection = journey.uiState.observedPriceSelection,
+            prefill = journey.uiState.observedPricePrefillResult,
+            confirmation = journey.uiState.observedPriceConfirmation
+        )
+        webView.evaluateJavascript(
+            "window.ValuePilotHtmlPreview && window.ValuePilotHtmlPreview.receiveNativeObservedPrice($payload)",
+            null
+        )
+    }
+
+    private fun applyNativeObservedPriceSelection(
+        request: ValuePilotNextHtmlNativeObservedPriceSelectionRequest
+    ) {
+        if (!::journey.isInitialized) return
+        val action = runCatching {
+            when (request.kind) {
+                "PRODUCT" -> UserObservedPriceSavedSelectionAction.SelectProduct(
+                    ShoppingItemKey(requireNotNull(request.key))
+                )
+
+                "STORE" -> UserObservedPriceSavedSelectionAction.SelectStore(
+                    ShoppingStoreKey(requireNotNull(request.key))
+                )
+
+                "CLEAR_PRODUCT" -> UserObservedPriceSavedSelectionAction.ClearProduct
+                "CLEAR_STORE" -> UserObservedPriceSavedSelectionAction.ClearStore
+                "CLEAR_SELECTION" -> UserObservedPriceSavedSelectionAction.ClearSelection
+                else -> null
+            }
+        }.getOrNull() ?: return
+        journey.onObservedPriceSelectionAction(action)
+        sendNativeObservedPriceState()
+    }
+
+    private fun requestNativeObservedPricePrefill() {
+        if (!::journey.isInitialized) return
+        journey.onCheckObservedPricePrefill(UserObservedPriceSavedPrefillCheckUiAction.Request)
+        nativeObservedPricePrefillRequested = true
+        nativeObservedPricePrefillDeadlineMillis =
+            System.currentTimeMillis() + NATIVE_OBSERVED_PRICE_TIMEOUT_MS
+        handler.removeCallbacks(nativeObservedPricePrefillPoll)
+        handler.post(nativeObservedPricePrefillPoll)
+    }
+
+    private fun submitNativeObservedPrice() {
+        if (!::journey.isInitialized) return
+        journey.onObservedPriceConfirmationSubmitRequested()
+        sendNativeObservedPriceState()
+        handler.removeCallbacks(nativeObservedPriceConfirmationPoll)
+        handler.post(nativeObservedPriceConfirmationPoll)
+    }
+
+    private fun cancelNativeObservedPrice() {
+        if (!::journey.isInitialized) return
+        nativeObservedPricePrefillRequested = false
+        handler.removeCallbacks(nativeObservedPricePrefillPoll)
+        handler.removeCallbacks(nativeObservedPriceConfirmationPoll)
+        journey.cancelObservedPriceConfirmation()
+        journey.onObservedPriceConfirmationRouteVisibilityChanged(false)
+        sendNativeObservedPriceState()
+    }
+
+    private fun onObservedPriceProofReadResult(result: UserObservedPriceProofContentReadResult) {
+        if (!::journey.isInitialized) return
+        journey.onObservedPriceProofContentReadResult(result)
+        sendNativeObservedPriceState()
     }
 
     private fun saveNativeIdentity(request: ValuePilotNextHtmlNativeSaveRequest) {
@@ -662,6 +894,8 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         const val NATIVE_SEARCH_TIMEOUT_MS = 20_000L
         const val NATIVE_BASKET_PLAN_POLL_INTERVAL_MS = 160L
         const val NATIVE_BASKET_PLAN_TIMEOUT_MS = 20_000L
+        const val NATIVE_OBSERVED_PRICE_POLL_INTERVAL_MS = 120L
+        const val NATIVE_OBSERVED_PRICE_TIMEOUT_MS = 20_000L
         const val PREVIEW_PREFERENCES_NAME = "valuepilot_next_html_preview"
         const val PREF_LANGUAGE = "language"
     }

@@ -6,6 +6,12 @@ import com.valuepilot.app.ArgentinaPrivateBasketRenderState
 import com.valuepilot.app.ArgentinaPrivateTripCostResult
 import com.valuepilot.app.PracticalShoppingSearchIdentityPresentation
 import com.valuepilot.app.PracticalShoppingPrivateIdentity
+import com.valuepilot.app.UserObservedPriceConfirmationDraftProofContentSelectionPresentation
+import com.valuepilot.app.UserObservedPriceSavedPrefillHandoffUiState
+import com.valuepilot.app.UserObservedPriceSavedProductSelectionUiRow
+import com.valuepilot.app.UserObservedPriceSavedSelectionUiState
+import com.valuepilot.app.UserObservedPriceSavedSelectionAction
+import com.valuepilot.app.UserObservedPriceSavedStoreSelectionUiRow
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -234,6 +240,146 @@ internal object ValuePilotNextHtmlNativeSearchBridge {
                 } ?: JSONObject.NULL
             )
             .toString()
+
+    /** Encodes only renderer-safe Saved selection and confirmation state for the HTML route. */
+    fun encodeObservedPrice(
+        selection: UserObservedPriceSavedSelectionUiState?,
+        prefill: UserObservedPriceSavedPrefillHandoffUiState?,
+        confirmation: ValuePilotNextObservedPriceConfirmationUiState?
+    ): String = JSONObject()
+        .put("type", "NATIVE_OBSERVED_PRICE_STATE")
+        .put(
+            "phase",
+            if (confirmation != null) "CONFIRMATION" else "SELECTION"
+        )
+        .put(
+            "selection",
+            selection?.let { state ->
+                JSONObject()
+                    .put("status", state.status.name)
+                    .put("headline", state.headline)
+                    .put("guidance", state.guidance)
+                    .put("productSectionTitle", state.productSectionTitle ?: JSONObject.NULL)
+                    .put("storeSectionTitle", state.storeSectionTitle ?: JSONObject.NULL)
+                    .put("productSelected", state.productSelected)
+                    .put("storeSelected", state.storeSelected)
+                    .put("unresolvedDisplayNameCount", state.unresolvedDisplayNameCount)
+                    .put("selectedDisplayNameBlockerCount", state.selectedDisplayNameBlockerCount)
+                    .put("notice", state.notice ?: JSONObject.NULL)
+                    .put("checkAvailable", state.checkPrefillAction != null)
+                    .put("products", JSONArray().apply {
+                        state.productRows.forEach { row -> put(encodeObservedProductRow(row)) }
+                    })
+                    .put("stores", JSONArray().apply {
+                        state.storeRows.forEach { row -> put(encodeObservedStoreRow(row)) }
+                    })
+            } ?: JSONObject.NULL
+        )
+        .put(
+            "prefill",
+            prefill?.let { result ->
+                JSONObject()
+                    .put("status", result.status.name)
+                    .put("headline", result.headline)
+                    .put("message", result.message)
+                    .put("productName", result.productName ?: JSONObject.NULL)
+                    .put("storeDisplayName", result.storeDisplayName ?: JSONObject.NULL)
+            } ?: JSONObject.NULL
+        )
+        .put(
+            "confirmation",
+            confirmation?.let { state -> encodeObservedConfirmation(state) } ?: JSONObject.NULL
+        )
+        .toString()
+
+    private fun encodeObservedProductRow(
+        row: UserObservedPriceSavedProductSelectionUiRow
+    ): JSONObject = JSONObject()
+        .put("title", row.title)
+        .put("selected", row.selected)
+        .put("action", encodeObservedSelectionAction(row.action))
+
+    private fun encodeObservedStoreRow(
+        row: UserObservedPriceSavedStoreSelectionUiRow
+    ): JSONObject = JSONObject()
+        .put("title", row.title)
+        .put("selected", row.selected)
+        .put("action", encodeObservedSelectionAction(row.action))
+
+    private fun encodeObservedSelectionAction(
+        action: com.valuepilot.app.UserObservedPriceSavedSelectionAction
+    ): JSONObject = when (action) {
+        is UserObservedPriceSavedSelectionAction.SelectProduct -> JSONObject()
+            .put("kind", "PRODUCT")
+            .put("key", action.itemKey.value)
+
+        UserObservedPriceSavedSelectionAction.ClearProduct -> JSONObject()
+            .put("kind", "CLEAR_PRODUCT")
+
+        is UserObservedPriceSavedSelectionAction.SelectStore -> JSONObject()
+            .put("kind", "STORE")
+            .put("key", action.storeKey.value)
+
+        UserObservedPriceSavedSelectionAction.ClearStore -> JSONObject()
+            .put("kind", "CLEAR_STORE")
+
+        UserObservedPriceSavedSelectionAction.ClearSelection -> JSONObject()
+            .put("kind", "CLEAR_SELECTION")
+    }
+
+    private fun encodeObservedConfirmation(
+        state: ValuePilotNextObservedPriceConfirmationUiState
+    ): JSONObject = JSONObject()
+        .put("productName", state.productName)
+        .put("storeDisplayName", state.storeDisplayName)
+        .put("priceInputError", state.priceInputError ?: JSONObject.NULL)
+        .put("observedAtInputError", state.observedAtInputError ?: JSONObject.NULL)
+        .put("proofReferenceInputError", state.proofReferenceInputError ?: JSONObject.NULL)
+        .put(
+            "draft",
+            state.draft?.let { draft ->
+                JSONObject()
+                    .put("status", draft.status.name)
+                    .put("statusTitle", draft.statusTitle)
+                    .put("guidance", draft.guidance)
+                    .put("notice", draft.notice)
+                    .put("missing", JSONArray().apply {
+                        draft.missingRequirements.forEach { requirement ->
+                            put(
+                                JSONObject()
+                                    .put("field", requirement.field.name)
+                                    .put("label", requirement.label)
+                            )
+                        }
+                    })
+            } ?: JSONObject.NULL
+        )
+        .put(
+            "proof",
+            JSONObject().apply {
+                when (val proof = state.proofPresentation) {
+                    UserObservedPriceConfirmationDraftProofContentSelectionPresentation.Inactive ->
+                        put("status", "INACTIVE")
+
+                    UserObservedPriceConfirmationDraftProofContentSelectionPresentation.AwaitingSelection ->
+                        put("status", "AWAITING_SELECTION")
+
+                    is UserObservedPriceConfirmationDraftProofContentSelectionPresentation.Ready ->
+                        put("status", "READY").put("byteLength", proof.byteLength)
+
+                    is UserObservedPriceConfirmationDraftProofContentSelectionPresentation.Rejected ->
+                        put("status", "REJECTED").put("issue", proof.issue.name)
+                }
+            }
+        )
+        .put(
+            "action",
+            JSONObject()
+                .put("status", state.action.status.name)
+                .put("message", state.action.message)
+                .put("actionLabel", state.action.actionLabel)
+                .put("actionEnabled", state.action.actionEnabled)
+        )
 
     private fun JSONArray.putOffer(offer: ArgentinaBackendContract.SearchOffer) {
         put(
