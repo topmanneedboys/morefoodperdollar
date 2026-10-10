@@ -493,7 +493,12 @@ internal fun ValuePilotSearchScreen(
                 }
             }
             item(key = "search-caveat") {
-                EvidenceFootnote(state.caveat)
+                EvidenceFootnote(
+                    valuePilotNextLocalizedSearchText(
+                        LocalValuePilotNextLanguage.current,
+                        state.caveat
+                    )
+                )
             }
         }
     }
@@ -784,7 +789,10 @@ private fun SearchStatePanel(state: ArgentinaLiveSearchSurfaceState) {
                             "No matching identity was found for this search.",
                             "No hay una identidad coincidente en esta búsqueda."
                         )
-                        else -> state.statusMessage
+                        else -> valuePilotNextLocalizedSearchText(
+                            LocalValuePilotNextLanguage.current,
+                            state.statusMessage
+                        )
                     },
                     style = MaterialTheme.typography.titleSmall.copy(fontSize = 13.sp, lineHeight = 18.sp),
                     color = MaterialTheme.colorScheme.onSurface

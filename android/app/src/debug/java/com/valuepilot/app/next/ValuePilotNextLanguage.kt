@@ -14,6 +14,49 @@ internal fun valuePilotNextText(
 internal val LocalValuePilotNextLanguage =
     staticCompositionLocalOf { ValuePilotNextLanguage.ENGLISH }
 
+/** Localizes renderer-owned Search status and evidence copy without translating data. */
+internal fun valuePilotNextLocalizedSearchText(
+    language: ValuePilotNextLanguage,
+    text: String
+): String {
+    if (language != ValuePilotNextLanguage.SPANISH_AR) return text
+    return when (text) {
+        "Search a product in the qualified Argentina area." ->
+            "Buscá un producto en el área calificada de Argentina."
+        "Searching Argentina product identities…" ->
+            "Buscando identidades de productos de Argentina…"
+        "Loading more matching identities…" ->
+            "Cargando más identidades coincidentes…"
+        "Qualified product identities and listed-price evidence found. This release reached the bounded result limit." ->
+            "Se encontraron identidades calificadas y evidencia de precios publicados. Esta versión alcanzó el límite de resultados."
+        "Qualified product identities and listed-price evidence found. More matching identities are available." ->
+            "Se encontraron identidades calificadas y evidencia de precios publicados. Hay más identidades coincidentes disponibles."
+        "Qualified product identities and listed-price evidence found. No more matching identities were returned in this release." ->
+            "Se encontraron identidades calificadas y evidencia de precios publicados. Esta versión no devolvió más identidades coincidentes."
+        "Product identities found. This release reached the bounded result limit." ->
+            "Se encontraron identidades de productos. Esta versión alcanzó el límite de resultados."
+        "Product identities found. More matching identities are available." ->
+            "Se encontraron identidades de productos. Hay más identidades coincidentes disponibles."
+        "Product identities found. No more matching identities were returned in this release." ->
+            "Se encontraron identidades de productos. Esta versión no devolvió más identidades coincidentes."
+        "No matching product identity was found in this release." ->
+            "No se encontró una identidad de producto coincidente en esta versión."
+        "Live Search is not authorized on this build yet." ->
+            "Live Search todavía no está autorizado en esta compilación."
+        "This release is no longer current. Try again later." ->
+            "Esta versión ya no está vigente. Probá más tarde."
+        "Search took too long. Try again." ->
+            "La búsqueda tardó demasiado. Probá de nuevo."
+        "Live Search is temporarily unavailable. Try again." ->
+            "Live Search no está disponible por ahora. Probá de nuevo."
+        "Identity suggestions only. No current price, stock, availability or ranking is confirmed; package size appears only when the source supplies it explicitly." ->
+            "Solo sugerencias de identidad. No se confirman precio actual, stock, disponibilidad ni ranking; el tamaño del envase aparece únicamente cuando la fuente lo informa de forma explícita."
+        "Exact fresh listed prices and stores appear only where the qualified source attached them. Stock, pickup, delivery and Best Value ranking remain unknown." ->
+            "Los precios publicados recientes y las tiendas exactas aparecen solo cuando la fuente calificada los adjunta. El stock, retiro, entrega y ranking de mejor valor siguen sin conocerse."
+        else -> text
+    }
+}
+
 @Composable
 internal fun valuePilotNextText(
     english: String,
