@@ -31,6 +31,7 @@ import com.valuepilot.app.ArgentinaSearchContextSource
 import com.valuepilot.app.ArgentinaLiveSearchDiagnostics
 import com.valuepilot.app.PracticalShoppingHomeSession
 import com.valuepilot.app.PracticalShoppingPrivateIdentity
+import com.valuepilot.app.PracticalShoppingPrivatePriceHistoryPresentation
 import com.valuepilot.app.PracticalShoppingSearchIdentityPresentation
 import com.valuepilot.app.PracticalShoppingSavedAndroidSession
 import com.valuepilot.app.PracticalShoppingSavedLifecycleRenderer
@@ -457,6 +458,39 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
         if (!initialized || cleared) return
         check(Looper.myLooper() == Looper.getMainLooper())
         privatePriceHistoryJourney?.refresh()
+    }
+
+    /** Read-only summary for the HTML Saved bridge; the existing device-only store remains authoritative. */
+    fun privatePriceHistorySummary(): ValuePilotNextHtmlPrivateHistorySummary {
+        if (!initialized || cleared) {
+            return ValuePilotNextHtmlPrivateHistorySummary(
+                status = "UNAVAILABLE",
+                exactHistoryCount = 0,
+                observationCount = 0
+            )
+        }
+        check(Looper.myLooper() == Looper.getMainLooper())
+        val memory = compareHereMemoryStore?.load()?.state
+            ?: return ValuePilotNextHtmlPrivateHistorySummary(
+                status = "UNAVAILABLE",
+                exactHistoryCount = 0,
+                observationCount = 0
+            )
+        if (memory.entries.isEmpty()) {
+            return ValuePilotNextHtmlPrivateHistorySummary(
+                status = "EMPTY",
+                exactHistoryCount = 0,
+                observationCount = 0
+            )
+        }
+        val presentation = PracticalShoppingPrivatePriceHistoryPresentation.from(memory)
+        val latestDisplayName = memory.entries.maxByOrNull { it.observedAtEpochMillis }?.displayName
+        return ValuePilotNextHtmlPrivateHistorySummary(
+            status = "AVAILABLE",
+            exactHistoryCount = presentation.rows.size,
+            observationCount = memory.entries.size,
+            latestDisplayName = latestDisplayName
+        )
     }
 
     fun forgetPrivatePriceObservation(observationId: String) {

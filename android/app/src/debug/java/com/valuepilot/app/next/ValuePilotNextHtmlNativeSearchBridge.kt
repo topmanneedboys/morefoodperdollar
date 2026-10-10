@@ -12,6 +12,23 @@ import org.json.JSONObject
  * preview. Only identity fields and explicitly attached price evidence cross
  * the WebView boundary; the HTML layer cannot manufacture a successful state.
  */
+internal data class ValuePilotNextHtmlPrivateHistorySummary(
+    val status: String,
+    val exactHistoryCount: Int,
+    val observationCount: Int,
+    val latestDisplayName: String? = null
+) {
+    init {
+        require(status in setOf("AVAILABLE", "EMPTY", "UNAVAILABLE"))
+        require(exactHistoryCount >= 0)
+        require(observationCount >= 0)
+        require(status == "AVAILABLE" || exactHistoryCount == 0)
+        require(status == "AVAILABLE" || observationCount == 0)
+        require(status == "AVAILABLE" || latestDisplayName == null)
+        require(latestDisplayName == null || latestDisplayName.isNotBlank())
+    }
+}
+
 internal object ValuePilotNextHtmlNativeSearchBridge {
     fun encode(state: ArgentinaLiveSearchSurfaceState): String =
         JSONObject()
@@ -42,7 +59,8 @@ internal object ValuePilotNextHtmlNativeSearchBridge {
 
     fun encodeSaved(
         identities: List<PracticalShoppingPrivateIdentity>,
-        action: String? = null
+        action: String? = null,
+        privateHistory: ValuePilotNextHtmlPrivateHistorySummary? = null
     ): String =
         JSONObject()
             .put("type", "NATIVE_SAVED_STATE")
@@ -50,6 +68,16 @@ internal object ValuePilotNextHtmlNativeSearchBridge {
             .put("readOnly", false)
             .put("basketCount", identities.size)
             .put("action", action ?: JSONObject.NULL)
+            .put(
+                "privateHistory",
+                privateHistory?.let { summary ->
+                    JSONObject()
+                        .put("status", summary.status)
+                        .put("exactHistoryCount", summary.exactHistoryCount)
+                        .put("observationCount", summary.observationCount)
+                        .put("latestDisplayName", summary.latestDisplayName ?: JSONObject.NULL)
+                } ?: JSONObject.NULL
+            )
             .put("items", JSONArray().apply {
                 identities.forEach { identity ->
                     put(

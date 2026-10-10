@@ -70,6 +70,18 @@ class ValuePilotNextHtmlLocalizationTest {
         assertFalse(source.contains("const ariaLabel='Son datos de demostración"))
     }
 
+    @Test
+    fun `saved bridge renders localized private history and purchase boundary`() {
+        val source = assetSource()
+
+        assertTrue(source.contains("nativePrivateHistorySummary"))
+        assertTrue(source.contains("nativePurchaseHistoryUnavailable"))
+        assertTrue(source.contains("nativeHistoryAvailable"))
+        assertTrue(source.contains("purchaseHistoryUnavailableTitle"))
+        assertTrue(source.contains("\${native?nativePrivateHistorySummary(state.nativeSavedState):''}"))
+        assertTrue(source.contains("\${native?nativePurchaseHistoryUnavailable():''}"))
+    }
+
     private fun assetSource(): String {
         var directory = File(requireNotNull(System.getProperty("user.dir")))
         repeat(8) {

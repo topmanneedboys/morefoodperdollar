@@ -293,7 +293,8 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         journey.refreshPrivateIdentitiesFromStore()
         val payload = ValuePilotNextHtmlNativeSearchBridge.encodeSaved(
             identities = journey.uiState.privateIdentities,
-            action = action
+            action = action,
+            privateHistory = journey.privatePriceHistorySummary()
         )
         webView.evaluateJavascript(
             "window.ValuePilotHtmlPreview && window.ValuePilotHtmlPreview.receiveNativeSaved($payload)",

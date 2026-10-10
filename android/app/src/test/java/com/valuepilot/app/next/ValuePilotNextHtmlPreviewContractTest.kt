@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.json.JSONObject
 
 class ValuePilotNextHtmlPreviewContractTest {
 
@@ -262,6 +263,29 @@ class ValuePilotNextHtmlPreviewContractTest {
             )
         )
         assertNull(identityOnlySave.sourceLabel)
+    }
+
+    @Test
+    fun `saved bridge serializes private history without price or store claims`() {
+        val payload = JSONObject(
+            ValuePilotNextHtmlNativeSearchBridge.encodeSaved(
+                identities = emptyList(),
+                privateHistory = ValuePilotNextHtmlPrivateHistorySummary(
+                    status = "AVAILABLE",
+                    exactHistoryCount = 2,
+                    observationCount = 3,
+                    latestDisplayName = "Leche Entera"
+                )
+            )
+        )
+        val history = payload.getJSONObject("privateHistory")
+
+        assertEquals("AVAILABLE", history.getString("status"))
+        assertEquals(2, history.getInt("exactHistoryCount"))
+        assertEquals(3, history.getInt("observationCount"))
+        assertEquals("Leche Entera", history.getString("latestDisplayName"))
+        assertTrue(!history.has("price"))
+        assertTrue(!history.has("storeName"))
     }
 
     @Test
