@@ -29,6 +29,15 @@ class ValuePilotNextHtmlLocalizationTest {
     }
 
     @Test
+    fun `language changes restore scroll on every screen`() {
+        val source = assetSource()
+
+        assertTrue(source.contains("const scroll=window.scrollY||document.documentElement.scrollTop"))
+        assertTrue(source.contains("requestAnimationFrame(()=>window.scrollTo({top:scroll,behavior:'auto'}))"))
+        assertFalse(source.contains("if(page==='search')requestAnimationFrame"))
+    }
+
+    @Test
     fun `html sample currency remains explicit ARS in both languages`() {
         assertTrue(assetSource().contains("const currency=(n)=>'ARS '+money(n)"))
     }
