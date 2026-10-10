@@ -166,9 +166,28 @@ class ValuePilotNextHtmlPreviewContractTest {
                 )
             ).identityKey
         )
-        assertTrue(
-            ValuePilotNextHtmlPreviewContract
-                .parseNativeSavedToolsMessage("{\"type\":\"OPEN_NATIVE_SAVED_TOOLS\"}") != null
+        assertEquals(
+            "SAVED",
+            requireNotNull(
+                ValuePilotNextHtmlPreviewContract
+                    .parseNativeSavedToolsMessage("{\"type\":\"OPEN_NATIVE_SAVED_TOOLS\"}")
+            ).destination
+        )
+        assertEquals(
+            "OBSERVED_PRICE_SELECTION",
+            requireNotNull(
+                ValuePilotNextHtmlPreviewContract.parseNativeSavedToolsMessage(
+                    "{\"type\":\"OPEN_NATIVE_SAVED_TOOLS\",\"destination\":\"OBSERVED_PRICE_SELECTION\"}"
+                )
+            ).destination
+        )
+        assertEquals(
+            "PRIVATE_PRICE_HISTORY",
+            requireNotNull(
+                ValuePilotNextHtmlPreviewContract.parseNativeSavedToolsMessage(
+                    "{\"type\":\"OPEN_NATIVE_SAVED_TOOLS\",\"destination\":\"PRIVATE_PRICE_HISTORY\"}"
+                )
+            ).destination
         )
     }
 
@@ -202,6 +221,11 @@ class ValuePilotNextHtmlPreviewContractTest {
         assertNull(
             ValuePilotNextHtmlPreviewContract.parseNativeSavedToolsMessage(
                 "{\"type\":\"OPEN_NATIVE_SAVED\"}"
+            )
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeSavedToolsMessage(
+                "{\"type\":\"OPEN_NATIVE_SAVED_TOOLS\",\"destination\":\"OBSERVED_PRICE_CONFIRMATION\"}"
             )
         )
     }

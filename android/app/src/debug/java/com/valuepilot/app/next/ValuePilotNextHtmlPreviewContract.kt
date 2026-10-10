@@ -19,7 +19,9 @@ internal data class ValuePilotNextHtmlNativeSearchRequest(
 
 internal object ValuePilotNextHtmlNativeSavedReadRequest
 
-internal object ValuePilotNextHtmlNativeSavedToolsRequest
+internal data class ValuePilotNextHtmlNativeSavedToolsRequest(
+    val destination: String
+)
 
 internal data class ValuePilotNextHtmlNativeSaveRequest(
     val identityKey: String,
@@ -174,11 +176,10 @@ internal object ValuePilotNextHtmlPreviewContract {
     fun parseNativeSavedToolsMessage(rawMessage: String?): ValuePilotNextHtmlNativeSavedToolsRequest? {
         if (rawMessage.isNullOrBlank() || rawMessage.length > 256) return null
         val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
-        return if (json.optString("type") == "OPEN_NATIVE_SAVED_TOOLS") {
-            ValuePilotNextHtmlNativeSavedToolsRequest
-        } else {
-            null
-        }
+        if (json.optString("type") != "OPEN_NATIVE_SAVED_TOOLS") return null
+        val destination = json.optString("destination").trim().ifEmpty { "SAVED" }
+        if (destination !in SUPPORTED_NATIVE_SAVED_DESTINATIONS) return null
+        return ValuePilotNextHtmlNativeSavedToolsRequest(destination)
     }
 
     /**
@@ -294,6 +295,13 @@ internal object ValuePilotNextHtmlPreviewContract {
     fun productFor(productId: String): ValuePilotNextHtmlProduct? = productsById[productId]
 
     private fun containsControlCharacter(value: String): Boolean = value.any { it.code < 0x20 || it.code == 0x7f }
+
+    private val SUPPORTED_NATIVE_SAVED_DESTINATIONS = setOf(
+        "SAVED",
+        "OBSERVED_PRICE_SELECTION",
+        "STAPLE_WATCH_SETUP",
+        "PRIVATE_PRICE_HISTORY"
+    )
 
     private fun encodeQuery(value: String): String =
         URLEncoder.encode(value, StandardCharsets.UTF_8.name()).replace("+", "%20")

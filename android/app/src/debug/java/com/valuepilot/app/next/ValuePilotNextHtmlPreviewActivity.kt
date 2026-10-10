@@ -216,10 +216,10 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                         sendNativeSavedState()
                         return
                     }
-                    if (ValuePilotNextHtmlPreviewContract
-                            .parseNativeSavedToolsMessage(message.data) != null
-                    ) {
-                        openNativeSavedTools()
+                    val nativeSavedTools = ValuePilotNextHtmlPreviewContract
+                        .parseNativeSavedToolsMessage(message.data)
+                    if (nativeSavedTools != null) {
+                        openNativeSavedTools(nativeSavedTools.destination)
                         return
                     }
                     val nativeSave = ValuePilotNextHtmlPreviewContract
@@ -320,10 +320,10 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         )
     }
 
-    private fun openNativeSavedTools() {
+    private fun openNativeSavedTools(destination: String) {
         startActivity(
             Intent(this, ValuePilotNextActivity::class.java)
-                .putExtra(ValuePilotNextActivity.EXTRA_START_DESTINATION, "SAVED")
+                .putExtra(ValuePilotNextActivity.EXTRA_START_DESTINATION, destination)
         )
     }
 

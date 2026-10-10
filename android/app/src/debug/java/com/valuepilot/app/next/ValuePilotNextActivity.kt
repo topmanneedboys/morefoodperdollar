@@ -60,12 +60,12 @@ class ValuePilotNextActivity : AppCompatActivity() {
         enableEdgeToEdge()
         journey = ViewModelProvider(this)[ValuePilotNextJourneyViewModel::class.java]
         journey.start(applicationContext)
-        val startDestination = if (
-            intent.getStringExtra(EXTRA_START_DESTINATION) == "SAVED"
-        ) {
-            NextDestination.SAVED
-        } else {
-            NextDestination.HOME
+        val startDestination = when (intent.getStringExtra(EXTRA_START_DESTINATION)) {
+            "SAVED" -> NextDestination.SAVED
+            "OBSERVED_PRICE_SELECTION" -> NextDestination.OBSERVED_PRICE_SELECTION
+            "STAPLE_WATCH_SETUP" -> NextDestination.STAPLE_WATCH_SETUP
+            "PRIVATE_PRICE_HISTORY" -> NextDestination.PRIVATE_PRICE_HISTORY
+            else -> NextDestination.HOME
         }
         observedPriceProofPicker =
             AndroidUserObservedPriceProofContentPicker(
