@@ -19,6 +19,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.browser.customtabs.CustomTabsClient
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.view.WindowCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModelProvider
 import androidx.webkit.JavaScriptReplyProxy
@@ -43,6 +45,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
     private lateinit var assetLoader: WebViewAssetLoader
     private lateinit var journey: ValuePilotNextJourneyViewModel
     private val handler = Handler(Looper.getMainLooper())
+    private var htmlTopInsetPx = 0
     private val previewPreferences by lazy {
         getSharedPreferences(PREVIEW_PREFERENCES_NAME, MODE_PRIVATE)
     }
@@ -94,7 +97,6 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         journey = ViewModelProvider(this)[ValuePilotNextJourneyViewModel::class.java]
         journey.start(applicationContext)
         WindowCompat.setDecorFitsSystemWindows(window, true)
-        applySystemBars(darkTheme = false)
 
         assetLoader = WebViewAssetLoader.Builder()
             .addPathHandler(
@@ -108,11 +110,24 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
+            // Android 15 enforces edge-to-edge for the debug target. Keep the HTML
+            // prototype below the status bar and above the gesture/navigation area
+            // so system chrome never obscures the approved header or bottom nav.
+            clipToPadding = true
             setBackgroundColor(Color.rgb(252, 249, 242))
             configureSecureSettings(settings)
             webViewClient = secureWebViewClient()
         }
+        ViewCompat.setOnApplyWindowInsetsListener(webView) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            htmlTopInsetPx = systemBars.top
+            view.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom)
+            applyHtmlTopInset(webView)
+            insets
+        }
         setContentView(webView)
+        applySystemBars(darkTheme = false)
+        ViewCompat.requestApplyInsets(webView)
         registerRestrictedPhotoBridge()
         installBackHandling()
         webView.loadUrl(ASSET_INDEX_URL)
@@ -169,6 +184,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         override fun onPageFinished(view: WebView, url: String) {
             super.onPageFinished(view, url)
             if (url != ASSET_INDEX_URL) return
+            applyHtmlTopInset(view)
             synchronizeLanguage(view)
         }
 
@@ -575,6 +591,13 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
             isAppearanceLightStatusBars = !darkTheme
             isAppearanceLightNavigationBars = !darkTheme
         }
+    }
+
+    private fun applyHtmlTopInset(view: WebView) {
+        view.evaluateJavascript(
+            "document.documentElement.style.setProperty('--vp-native-top-inset', '${htmlTopInsetPx}px')",
+            null
+        )
     }
 
     private fun isTrustedAssetUri(uri: Uri): Boolean =
