@@ -18,4 +18,12 @@ class ValuePilotNextHtmlPreviewAccessibilityTest {
         assertEquals(100, valuePilotNextWebTextZoomPercent(Float.NaN))
         assertEquals(100, valuePilotNextWebTextZoomPercent(Float.POSITIVE_INFINITY))
     }
+
+    @Test
+    fun `web preview converts physical system insets to css pixels`() {
+        assertEquals(32, valuePilotNextWebCssInsetPx(96, 3f))
+        assertEquals(96, valuePilotNextWebCssInsetPx(96, 1f))
+        assertEquals(96, valuePilotNextWebCssInsetPx(96, 0f))
+        assertEquals(0, valuePilotNextWebCssInsetPx(-1, 3f))
+    }
 }

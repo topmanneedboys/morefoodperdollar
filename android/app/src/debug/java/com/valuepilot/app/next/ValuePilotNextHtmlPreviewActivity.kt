@@ -39,13 +39,22 @@ internal fun valuePilotNextWebTextZoomPercent(fontScale: Float): Int =
         (fontScale * 100f).roundToInt().coerceIn(100, 200)
     }
 
+internal fun valuePilotNextWebCssInsetPx(systemInsetPx: Int, density: Float): Int =
+    if (systemInsetPx <= 0) {
+        0
+    } else if (!density.isFinite() || density <= 0f) {
+        systemInsetPx
+    } else {
+        (systemInsetPx / density).roundToInt()
+    }
+
 /** Debug-only host for the supplied Stitch HTML prototype. */
 class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private lateinit var assetLoader: WebViewAssetLoader
     private lateinit var journey: ValuePilotNextJourneyViewModel
     private val handler = Handler(Looper.getMainLooper())
-    private var htmlTopInsetPx = 0
+    private var htmlTopInsetCssPx = 0
     private val previewPreferences by lazy {
         getSharedPreferences(PREVIEW_PREFERENCES_NAME, MODE_PRIVATE)
     }
@@ -120,7 +129,11 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         }
         ViewCompat.setOnApplyWindowInsetsListener(webView) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            htmlTopInsetPx = systemBars.top
+            // WindowInsets are physical pixels; WebView CSS uses density-scaled pixels.
+            htmlTopInsetCssPx = valuePilotNextWebCssInsetPx(
+                systemBars.top,
+                resources.displayMetrics.density
+            )
             view.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom)
             applyHtmlTopInset(webView)
             insets
@@ -595,7 +608,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
 
     private fun applyHtmlTopInset(view: WebView) {
         view.evaluateJavascript(
-            "document.documentElement.style.setProperty('--vp-native-top-inset', '${htmlTopInsetPx}px')",
+            "document.documentElement.style.setProperty('--vp-native-top-inset', '${htmlTopInsetCssPx}px')",
             null
         )
     }
