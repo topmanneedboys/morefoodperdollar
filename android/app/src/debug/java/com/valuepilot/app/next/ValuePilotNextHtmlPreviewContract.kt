@@ -45,7 +45,7 @@ internal data class ValuePilotNextHtmlNativeSaveRequest(
     val brand: String?,
     val matchLabel: String,
     val packageQuantityLabel: String?,
-    val sourceLabel: String,
+    val sourceLabel: String?,
     val gtin: String?
 )
 
@@ -268,7 +268,7 @@ internal object ValuePilotNextHtmlPreviewContract {
         val packageQuantityLabel = json.optString("packageQuantityLabel")
             .trim()
             .takeIf { it.isNotEmpty() }
-        val sourceLabel = json.optString("sourceLabel").trim()
+        val sourceLabel = json.optString("sourceLabel").trim().takeIf { it.isNotEmpty() }
         val gtin = json.optString("gtin").trim().takeIf { it.isNotEmpty() }
         if (
             identityKey.isBlank() || identityKey.length > 256 ||
@@ -276,7 +276,7 @@ internal object ValuePilotNextHtmlPreviewContract {
             brand != null && brand.length > 160 ||
             matchLabel.isBlank() || matchLabel.length > 96 ||
             packageQuantityLabel != null && packageQuantityLabel.length > 64 ||
-            sourceLabel.isBlank() || sourceLabel.length > 160 ||
+            sourceLabel != null && sourceLabel.length > 160 ||
             gtin != null && !gtin.matches(Regex("[0-9]{8}|[0-9]{12}|[0-9]{13}|[0-9]{14}"))
         ) return null
         val values = listOfNotNull(

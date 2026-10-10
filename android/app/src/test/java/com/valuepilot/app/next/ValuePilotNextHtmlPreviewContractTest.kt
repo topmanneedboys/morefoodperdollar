@@ -237,6 +237,19 @@ class ValuePilotNextHtmlPreviewContractTest {
             ValuePilotNextHtmlPreviewContract
                 .parseNativeBasketMessage("{\"type\":\"OPEN_NATIVE_BASKET\"}") != null
         )
+        val identityOnlySave = requireNotNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeSaveMessage(
+                "{" +
+                    "\"type\":\"SAVE_VALUEPILOT_IDENTITY\"," +
+                    "\"identityKey\":\"identity-only-123\"," +
+                    "\"displayName\":\"Leche Entera\"," +
+                    "\"matchLabel\":\"name match\"," +
+                    "\"packageQuantityLabel\":\"1.000 ml\"," +
+                    "\"sourceLabel\":\"\"" +
+                    "}"
+            )
+        )
+        assertNull(identityOnlySave.sourceLabel)
     }
 
     @Test
@@ -249,10 +262,9 @@ class ValuePilotNextHtmlPreviewContractTest {
             ValuePilotNextHtmlPreviewContract.parseNativeSaveMessage(
                 "{" +
                     "\"type\":\"SAVE_VALUEPILOT_IDENTITY\"," +
-                    "\"identityKey\":\"x\"," +
+                    "\"identityKey\":\"x\u0001\"," +
                     "\"displayName\":\"Leche\"," +
-                    "\"matchLabel\":\"exact name\"," +
-                    "\"sourceLabel\":\"\"" +
+                    "\"matchLabel\":\"exact name\"" +
                     "}"
             )
         )
