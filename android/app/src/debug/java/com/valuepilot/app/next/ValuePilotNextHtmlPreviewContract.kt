@@ -29,6 +29,11 @@ internal data class ValuePilotNextHtmlNativeJourneyRequest(
     val destination: String
 )
 
+internal data class ValuePilotNextHtmlNativeGoodPriceFromSavedRequest(
+    val identityKey: String,
+    val displayName: String
+)
+
 internal data class ValuePilotNextHtmlNativeSaveRequest(
     val identityKey: String,
     val displayName: String,
@@ -206,6 +211,23 @@ internal object ValuePilotNextHtmlPreviewContract {
         val destination = json.optString("destination").trim()
         if (destination !in SUPPORTED_NATIVE_JOURNEY_DESTINATIONS) return null
         return ValuePilotNextHtmlNativeJourneyRequest(destination)
+    }
+
+    /** Starts Good Price from one exact identity already returned by native Saved. */
+    fun parseNativeGoodPriceFromSavedMessage(
+        rawMessage: String?
+    ): ValuePilotNextHtmlNativeGoodPriceFromSavedRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 2_048) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        if (json.optString("type") != "OPEN_NATIVE_GOOD_PRICE_FROM_SAVED") return null
+        val identityKey = json.optString("identityKey").trim()
+        val displayName = json.optString("displayName").trim()
+        if (
+            identityKey.isBlank() || identityKey.length > 256 ||
+            displayName.isBlank() || displayName.length > 512 ||
+            containsControlCharacter(identityKey) || containsControlCharacter(displayName)
+        ) return null
+        return ValuePilotNextHtmlNativeGoodPriceFromSavedRequest(identityKey, displayName)
     }
 
     /**

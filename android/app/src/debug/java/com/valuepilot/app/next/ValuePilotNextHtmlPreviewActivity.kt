@@ -226,6 +226,12 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                         openNativeJourney(nativeJourney.destination)
                         return
                     }
+                    val nativeGoodPriceFromSaved = ValuePilotNextHtmlPreviewContract
+                        .parseNativeGoodPriceFromSavedMessage(message.data)
+                    if (nativeGoodPriceFromSaved != null) {
+                        openNativeGoodPriceFromSaved(nativeGoodPriceFromSaved)
+                        return
+                    }
                     if (ValuePilotNextHtmlPreviewContract
                             .parseNativeBasketMessage(message.data) != null
                     ) {
@@ -341,6 +347,19 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         startActivity(
             Intent(this, ValuePilotNextActivity::class.java)
                 .putExtra(ValuePilotNextActivity.EXTRA_START_DESTINATION, destination)
+        )
+    }
+
+    private fun openNativeGoodPriceFromSaved(
+        request: ValuePilotNextHtmlNativeGoodPriceFromSavedRequest
+    ) {
+        val identity = journey.uiState.privateIdentities.firstOrNull {
+            it.identityKey == request.identityKey && it.displayName == request.displayName
+        } ?: return
+        startActivity(
+            Intent(this, ValuePilotNextActivity::class.java)
+                .putExtra(ValuePilotNextActivity.EXTRA_START_DESTINATION, "GOOD_PRICE_CHECK")
+                .putExtra(ValuePilotNextActivity.EXTRA_GOOD_PRICE_DISPLAY_NAME, identity.displayName)
         )
     }
 

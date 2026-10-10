@@ -205,6 +205,13 @@ class ValuePilotNextHtmlPreviewContractTest {
                 )
             ).destination
         )
+        val goodPriceFromSaved = requireNotNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeGoodPriceFromSavedMessage(
+                "{\"type\":\"OPEN_NATIVE_GOOD_PRICE_FROM_SAVED\",\"identityKey\":\"gtin-123\",\"displayName\":\"Leche Entera\"}"
+            )
+        )
+        assertEquals("gtin-123", goodPriceFromSaved.identityKey)
+        assertEquals("Leche Entera", goodPriceFromSaved.displayName)
         assertTrue(
             ValuePilotNextHtmlPreviewContract
                 .parseNativeBasketMessage("{\"type\":\"OPEN_NATIVE_BASKET\"}") != null
@@ -256,6 +263,16 @@ class ValuePilotNextHtmlPreviewContractTest {
         assertNull(
             ValuePilotNextHtmlPreviewContract.parseNativeJourneyMessage(
                 "{\"type\":\"OPEN_NATIVE_SAVED_TOOLS\",\"destination\":\"COMPARE\"}"
+            )
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeGoodPriceFromSavedMessage(
+                "{\"type\":\"OPEN_NATIVE_GOOD_PRICE_FROM_SAVED\",\"identityKey\":\"gtin-123\",\"displayName\":\"Leche\\u0001\"}"
+            )
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeGoodPriceFromSavedMessage(
+                "{\"type\":\"OPEN_NATIVE_JOURNEY\",\"identityKey\":\"gtin-123\",\"displayName\":\"Leche\"}"
             )
         )
         assertNull(

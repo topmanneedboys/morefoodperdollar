@@ -71,7 +71,10 @@ class ValuePilotNextActivity : AppCompatActivity() {
             else -> NextDestination.HOME
         }
         if (startDestination == NextDestination.GOOD_PRICE_CHECK) {
-            journey.openGoodPriceForNewCheck()
+            intent.getStringExtra(EXTRA_GOOD_PRICE_DISPLAY_NAME)
+                ?.takeIf(String::isNotBlank)
+                ?.let(journey::openGoodPriceFromSaved)
+                ?: journey.openGoodPriceForNewCheck()
         }
         observedPriceProofPicker =
             AndroidUserObservedPriceProofContentPicker(
@@ -340,6 +343,7 @@ class ValuePilotNextActivity : AppCompatActivity() {
 
     companion object {
         internal const val EXTRA_START_DESTINATION = "valuepilot.next.start_destination"
+        internal const val EXTRA_GOOD_PRICE_DISPLAY_NAME = "valuepilot.next.good_price_display_name"
         const val GOOGLE_IMAGES_INITIAL_HEIGHT_PERCENT = 65
         const val GOOGLE_IMAGES_MIN_INITIAL_HEIGHT_DP = 320
     }
