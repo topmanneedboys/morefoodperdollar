@@ -165,6 +165,7 @@ private fun BasketIdentityCard(
     line: ArgentinaPrivateBasketLineProjection,
     onRemove: () -> Unit
 ) {
+    val language = LocalValuePilotNextLanguage.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -180,7 +181,11 @@ private fun BasketIdentityCard(
             verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)
         ) {
             Text(line.productName, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
-            Text(line.packageQuantityText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                valuePilotNextLocalizedFactText(language, line.packageQuantityText),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             if (line.missing) {
                 EvidencePill(
                     valuePilotNextText("CURRENT PRICE UNKNOWN", "PRECIO ACTUAL DESCONOCIDO"),
@@ -198,7 +203,10 @@ private fun BasketIdentityCard(
             } else {
                 Text(
                     valuePilotNextText("Listed price  ", "Precio publicado  ") +
-                        (line.lineTotalText ?: valuePilotNextText("unknown", "desconocido")),
+                        valuePilotNextLocalizedFactText(
+                            language,
+                            line.lineTotalText ?: valuePilotNextText("unknown", "desconocido")
+                        ),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onBackground
                 )
