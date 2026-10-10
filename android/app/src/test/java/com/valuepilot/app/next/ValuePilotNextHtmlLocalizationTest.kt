@@ -18,6 +18,16 @@ class ValuePilotNextHtmlLocalizationTest {
         assertFalse(source.contains("safe(payload.error||'')"))
     }
 
+    @Test
+    fun `trip form values survive html rerenders`() {
+        val source = assetSource()
+
+        assertTrue(source.contains("tripInputs:{distance:'',consumption:'',fuel:'',tolls:'0',parking:'0'}"))
+        assertTrue(source.contains("state.tripInputs[e.target.name]=e.target.value"))
+        assertTrue(source.contains("safe(state.tripInputs.distance)"))
+        assertTrue(source.contains("for(const name of Object.keys(state.tripInputs))"))
+    }
+
     private fun assetSource(): String {
         var directory = File(requireNotNull(System.getProperty("user.dir")))
         repeat(8) {
