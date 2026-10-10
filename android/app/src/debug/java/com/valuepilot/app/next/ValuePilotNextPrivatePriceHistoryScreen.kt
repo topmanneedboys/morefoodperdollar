@@ -293,6 +293,11 @@ private fun HistorySummaryCard(presentation: PracticalShoppingPrivatePriceHistor
 @Composable
 private fun HistoryRowCard(row: PracticalShoppingPrivatePriceHistoryRow) {
     val language = LocalValuePilotNextLanguage.current
+    val latestPriceText = valuePilotNextLocalizedFactText(language, row.latestPriceText)
+    val lowestPriceText = valuePilotNextLocalizedFactText(language, row.lowestPriceText)
+    val latestUnitRateText = valuePilotNextLocalizedFactText(language, row.latestUnitRateText)
+    val rangeText = valuePilotNextLocalizedFactText(language, row.rangeText)
+    val packageText = valuePilotNextLocalizedFactText(language, row.packageText)
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -311,15 +316,15 @@ private fun HistoryRowCard(row: PracticalShoppingPrivatePriceHistoryRow) {
                 )
             )
             Text(row.displayName, style = MaterialTheme.typography.titleLarge)
-            Text(row.latestPriceText, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+            Text(latestPriceText, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
             Text(
                 valuePilotNextText("Last observed ${row.latestObservedText}", "Última observación ${row.latestObservedText}"),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Text(valuePilotNextText("Lowest observed · ${row.lowestPriceText}", "Mínimo observado · ${row.lowestPriceText}"), style = MaterialTheme.typography.bodyMedium)
-            Text(valuePilotNextText("Unit rate · ${row.latestUnitRateText}", "Precio unitario · ${row.latestUnitRateText}"), style = MaterialTheme.typography.bodyMedium)
-            Text(valuePilotNextText("Observed range · ${row.rangeText}", "Rango observado · ${row.rangeText}"), style = MaterialTheme.typography.bodyMedium)
+            Text(valuePilotNextText("Lowest observed · $lowestPriceText", "Mínimo observado · $lowestPriceText"), style = MaterialTheme.typography.bodyMedium)
+            Text(valuePilotNextText("Unit rate · $latestUnitRateText", "Precio unitario · $latestUnitRateText"), style = MaterialTheme.typography.bodyMedium)
+            Text(valuePilotNextText("Observed range · $rangeText", "Rango observado · $rangeText"), style = MaterialTheme.typography.bodyMedium)
             row.recentMovementText?.let { movement ->
                 Text(
                     valuePilotNextLocalizedDynamicText(language, movement).orEmpty(),
@@ -329,8 +334,8 @@ private fun HistoryRowCard(row: PracticalShoppingPrivatePriceHistoryRow) {
             }
             Text(
                 valuePilotNextText(
-                    "Package · ${row.packageText} · ${valuePilotNextLocalizedDynamicText(language, row.priceBasisText).orEmpty()}",
-                    "Envase · ${row.packageText} · ${valuePilotNextLocalizedDynamicText(language, row.priceBasisText).orEmpty()}"
+                    "Package · $packageText · ${valuePilotNextLocalizedDynamicText(language, row.priceBasisText).orEmpty()}",
+                    "Envase · $packageText · ${valuePilotNextLocalizedDynamicText(language, row.priceBasisText).orEmpty()}"
                 ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

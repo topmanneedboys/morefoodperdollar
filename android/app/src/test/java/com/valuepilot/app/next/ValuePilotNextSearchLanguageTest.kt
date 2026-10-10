@@ -78,4 +78,19 @@ class ValuePilotNextSearchLanguageTest {
             )
         )
     }
+
+    @Test
+    fun `numeric evidence uses Argentine decimal punctuation without changing identifiers`() {
+        val unitRate = "1.6225 ARS/L"
+        val history = "mínimo 1.6225 ARS/L · máximo 1.75 ARS/L"
+        val identifier = "GTIN 0123456789012"
+
+        assertEquals(unitRate, valuePilotNextLocalizedFactText(ValuePilotNextLanguage.ENGLISH, unitRate))
+        assertEquals("1,6225 ARS/L", valuePilotNextLocalizedFactText(ValuePilotNextLanguage.SPANISH_AR, unitRate))
+        assertEquals(
+            "mínimo 1,6225 ARS/L · máximo 1,75 ARS/L",
+            valuePilotNextLocalizedFactText(ValuePilotNextLanguage.SPANISH_AR, history)
+        )
+        assertEquals(identifier, valuePilotNextLocalizedFactText(ValuePilotNextLanguage.SPANISH_AR, identifier))
+    }
 }

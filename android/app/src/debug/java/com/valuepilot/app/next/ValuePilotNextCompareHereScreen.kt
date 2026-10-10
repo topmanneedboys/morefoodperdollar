@@ -349,7 +349,7 @@ private fun CompareHereResultCard(
                             )
                             Text(best.title, style = MaterialTheme.typography.titleLarge)
                             Text(
-                                best.unitRateText,
+                                valuePilotNextLocalizedFactText(language, best.unitRateText),
                                 style = MaterialTheme.typography.displaySmall,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -360,8 +360,11 @@ private fun CompareHereResultCard(
                 result.rows.forEach { row ->
                     CompareHereResultRow(
                         title = row.title,
-                        detail = "${row.priceText} · ${row.quantityText}",
-                        unitRate = row.unitRateText,
+                        detail = valuePilotNextLocalizedFactText(
+                            language,
+                            "${row.priceText} · ${row.quantityText}"
+                        ),
+                        unitRate = valuePilotNextLocalizedFactText(language, row.unitRateText),
                         badge = if (row.bestValue) {
                             valuePilotNextText("BEST VALUE", "MEJOR VALOR")
                         } else {

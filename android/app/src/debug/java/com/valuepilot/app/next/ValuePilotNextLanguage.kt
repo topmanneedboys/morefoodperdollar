@@ -71,6 +71,20 @@ internal fun valuePilotNextLocalizedSearchText(
     }
 }
 
+/**
+ * Formats already-computed numeric evidence for the selected language without changing the
+ * underlying value. This is intentionally separate from the dynamic-copy localizer: product
+ * names, identifiers, dates, and source text must never be rewritten as numbers.
+ */
+internal fun valuePilotNextLocalizedFactText(
+    language: ValuePilotNextLanguage,
+    text: String
+): String {
+    if (language != ValuePilotNextLanguage.SPANISH_AR) return text
+    return Regex("(?<![A-Za-z0-9])(-?\\d+\\.\\d+)(?![A-Za-z0-9])")
+        .replace(text) { match -> match.value.replace('.', ',') }
+}
+
 @Composable
 internal fun valuePilotNextText(
     english: String,

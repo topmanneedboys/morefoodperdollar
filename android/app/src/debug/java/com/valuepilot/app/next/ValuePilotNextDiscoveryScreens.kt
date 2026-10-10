@@ -819,6 +819,7 @@ private fun SearchResultCard(
     onOpenGoogleImages: () -> Unit,
     preferredOffer: ArgentinaBackendContract.SearchOffer? = null
 ) {
+    val language = LocalValuePilotNextLanguage.current
     val currentOffer = preferredOffer ?: match.qualifiedOffers.firstOrNull {
         it.freshnessStatus == ArgentinaBackendContract.Freshness.FRESH
     }
@@ -854,7 +855,13 @@ private fun SearchResultCard(
                         localizedMatchLabel(match.matchLabel)
                     }
                 )
-                match.packageQuantityLabel?.let { EvidencePill(it, MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant) }
+                match.packageQuantityLabel?.let {
+                    EvidencePill(
+                        valuePilotNextLocalizedFactText(language, it),
+                        MaterialTheme.colorScheme.surfaceVariant,
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
@@ -916,6 +923,7 @@ private fun SearchResultCard(
 
 @Composable
 private fun SearchOfferPricePanel(offer: ArgentinaBackendContract.SearchOffer) {
+    val language = LocalValuePilotNextLanguage.current
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
@@ -941,14 +949,20 @@ private fun SearchOfferPricePanel(offer: ArgentinaBackendContract.SearchOffer) {
                 )
                 if (unitPrice == null) {
                     Text(
-                        "${offer.listPrice.currency} ${offer.listPrice.amount}",
+                        valuePilotNextLocalizedFactText(
+                            language,
+                            "${offer.listPrice.currency} ${offer.listPrice.amount}"
+                        ),
                         style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, lineHeight = 22.sp),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 } else {
                     Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                         Text(
-                            "${unitPrice.currency} ${unitPrice.amount}",
+                            valuePilotNextLocalizedFactText(
+                                language,
+                                "${unitPrice.currency} ${unitPrice.amount}"
+                            ),
                             style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, lineHeight = 22.sp),
                             color = MaterialTheme.colorScheme.tertiary
                         )
@@ -970,7 +984,10 @@ private fun SearchOfferPricePanel(offer: ArgentinaBackendContract.SearchOffer) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        "${offer.listPrice.currency} ${offer.listPrice.amount}",
+                        valuePilotNextLocalizedFactText(
+                            language,
+                            "${offer.listPrice.currency} ${offer.listPrice.amount}"
+                        ),
                         style = MaterialTheme.typography.titleSmall.copy(fontSize = 13.sp),
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -1058,13 +1075,17 @@ private fun SearchIdentitySummary(
     match: PracticalShoppingSearchIdentityPresentation.Match,
     modifier: Modifier = Modifier
 ) {
+    val language = LocalValuePilotNextLanguage.current
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
         Text(
             match.displayName,
             style = MaterialTheme.typography.titleMedium.copy(fontSize = 15.sp),
             color = MaterialTheme.colorScheme.onSurface
         )
-        listOfNotNull(match.brand, match.packageQuantityLabel)
+        listOfNotNull(
+            match.brand,
+            match.packageQuantityLabel?.let { valuePilotNextLocalizedFactText(language, it) }
+        )
             .takeIf { it.isNotEmpty() }
             ?.joinToString(" · ")
             ?.let {
@@ -1078,8 +1099,12 @@ private fun SearchPriceLabel(
     offer: ArgentinaBackendContract.SearchOffer,
     modifier: Modifier = Modifier
 ) {
+    val language = LocalValuePilotNextLanguage.current
     Text(
-        offer.listPrice.currency + " " + offer.listPrice.amount,
+        valuePilotNextLocalizedFactText(
+            language,
+            offer.listPrice.currency + " " + offer.listPrice.amount
+        ),
         modifier = modifier,
         style = MaterialTheme.typography.titleMedium.copy(fontSize = 15.sp),
         color = MaterialTheme.colorScheme.onBackground,
@@ -1189,7 +1214,11 @@ internal fun ValuePilotProductDetailScreen(
                             )
                         }
                         match.packageQuantityLabel?.let {
-                            EvidencePill(it, MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
+                            EvidencePill(
+                                valuePilotNextLocalizedFactText(LocalValuePilotNextLanguage.current, it),
+                                MaterialTheme.colorScheme.surfaceVariant,
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                         EvidencePill(
                             if (isDesignFixture) {
@@ -1655,6 +1684,7 @@ private fun OfferEvidenceCard(
     offer: ArgentinaBackendContract.SearchOffer,
     onOpenMapContext: () -> Unit
 ) {
+    val language = LocalValuePilotNextLanguage.current
     val fresh = offer.freshnessStatus == ArgentinaBackendContract.Freshness.FRESH
     val latitude = offer.storeLatitude.toBigDecimalOrNull()
     val longitude = offer.storeLongitude.toBigDecimalOrNull()
@@ -1684,7 +1714,10 @@ private fun OfferEvidenceCard(
                         }
                     )
                     Text(
-                        offer.listPrice.currency + " " + offer.listPrice.amount,
+                        valuePilotNextLocalizedFactText(
+                            language,
+                            offer.listPrice.currency + " " + offer.listPrice.amount
+                        ),
                         style = MaterialTheme.typography.headlineMedium.copy(fontSize = 22.sp, lineHeight = 27.sp),
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -1694,7 +1727,8 @@ private fun OfferEvidenceCard(
             Text(offer.storeName, style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp), color = MaterialTheme.colorScheme.onSurface)
             offer.quantity?.let {
                 Text(
-                    valuePilotNextText("Package · ", "Envase · ") + it.amount + " " + it.unit,
+                    valuePilotNextText("Package · ", "Envase · ") +
+                        valuePilotNextLocalizedFactText(language, it.amount + " " + it.unit),
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1706,7 +1740,11 @@ private fun OfferEvidenceCard(
             offer.unitPrice?.let { unit ->
                 val basis = offer.unitPriceBasis?.takeIf(String::isNotBlank)
                 Text(
-                    valuePilotNextText("Unit price  ", "Precio unitario  ") + unit.currency + " " + unit.amount + (basis?.let { " / $it" } ?: ""),
+                    valuePilotNextText("Unit price  ", "Precio unitario  ") +
+                        valuePilotNextLocalizedFactText(
+                            language,
+                            unit.currency + " " + unit.amount + (basis?.let { " / $it" } ?: "")
+                        ),
                     style = MaterialTheme.typography.titleSmall.copy(fontSize = 12.sp),
                     color = MaterialTheme.colorScheme.secondary
                 )

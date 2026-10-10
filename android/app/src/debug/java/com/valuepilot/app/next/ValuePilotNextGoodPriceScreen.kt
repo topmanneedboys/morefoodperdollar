@@ -407,7 +407,12 @@ private fun GoodPriceResultCard(language: ValuePilotNextLanguage, state: GoodPri
     val answerTitle = valuePilotNextLocalizedDynamicText(language, state.answerTitle).orEmpty()
     val answerGuidance = valuePilotNextLocalizedDynamicText(language, state.answerGuidance).orEmpty()
     val historyText = valuePilotNextLocalizedDynamicText(language, state.historyText)
+        ?.let { valuePilotNextLocalizedFactText(language, it) }
     val disclosure = valuePilotNextLocalizedDynamicText(language, state.disclosure).orEmpty()
+    val priceText = valuePilotNextLocalizedFactText(language, state.priceText)
+    val quantityText = valuePilotNextLocalizedFactText(language, state.quantityText)
+    val unitRateText = valuePilotNextLocalizedFactText(language, state.unitRateText)
+    val localizedAnswerGuidance = valuePilotNextLocalizedFactText(language, answerGuidance)
     val (container, content) =
         when (state.answerTone) {
             GoodPriceCheckAnswerTone.POSITIVE ->
@@ -432,10 +437,10 @@ private fun GoodPriceResultCard(language: ValuePilotNextLanguage, state: GoodPri
                                 priceModeText,
                                 answerTitle,
                                 state.productName,
-                                state.priceText,
-                                state.quantityText,
-                                state.unitRateText,
-                                answerGuidance
+                                priceText,
+                                quantityText,
+                                unitRateText,
+                                localizedAnswerGuidance
                             )
                             .joinToString(". ") { value ->
                                 value.trim().trimEnd('.', '!', '?')
@@ -451,9 +456,9 @@ private fun GoodPriceResultCard(language: ValuePilotNextLanguage, state: GoodPri
             ) {
                 Text(answerTitle, style = MaterialTheme.typography.titleLarge, color = content)
                 Text(state.productName, style = MaterialTheme.typography.titleMedium, color = content)
-                Text("${state.priceText}  ·  ${state.quantityText}", color = content)
-                Text(state.unitRateText, style = MaterialTheme.typography.titleLarge, color = content)
-                Text(answerGuidance, style = MaterialTheme.typography.bodyMedium, color = content)
+                Text("$priceText  ·  $quantityText", color = content)
+                Text(unitRateText, style = MaterialTheme.typography.titleLarge, color = content)
+                Text(localizedAnswerGuidance, style = MaterialTheme.typography.bodyMedium, color = content)
             }
         }
         historyText?.let { history ->

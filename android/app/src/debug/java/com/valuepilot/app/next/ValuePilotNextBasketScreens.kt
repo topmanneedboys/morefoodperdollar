@@ -278,7 +278,10 @@ internal fun ValuePilotShoppingDecisionScreen(
                 ActionCard(
                     eyebrow = valuePilotNextText("TRAVEL COST", "COSTO DEL VIAJE"),
                     title = tripResult?.displayText()?.let {
-                        valuePilotNextLocalizedDynamicText(language, it).orEmpty()
+                        valuePilotNextLocalizedFactText(
+                            language,
+                            valuePilotNextLocalizedDynamicText(language, it).orEmpty()
+                        )
                     } ?: valuePilotNextText("Calculate a trip from your own assumptions.", "Calculá un viaje con tus propios supuestos."),
                     detail = valuePilotNextText(
                         "Distance, fuel, tolls, and parking remain separate from basket prices. ValuePilot does not infer a driving route.",
@@ -303,7 +306,10 @@ internal fun ValuePilotShoppingDecisionScreen(
                 ActionCard(
                     eyebrow = valuePilotNextText("TRAVEL COST", "COSTO DEL VIAJE"),
                     title = tripResult?.displayText()?.let {
-                        valuePilotNextLocalizedDynamicText(language, it).orEmpty()
+                        valuePilotNextLocalizedFactText(
+                            language,
+                            valuePilotNextLocalizedDynamicText(language, it).orEmpty()
+                        )
                     } ?: valuePilotNextText("Trip cost is not included yet.", "El costo del viaje todavía no está incluido."),
                     detail = valuePilotNextText(
                         "Enter your own distance, fuel, tolls, and parking assumptions. ValuePilot does not infer a driving route.",
@@ -354,7 +360,10 @@ private fun DecisionSummaryCard(plan: ArgentinaPrivateBasketPlanProjection) {
                 MaterialTheme.colorScheme.onPrimaryContainer
             )
             Text(
-                valuePilotNextLocalizedDynamicText(language, plan.totalText ?: plan.headline).orEmpty(),
+                valuePilotNextLocalizedFactText(
+                    language,
+                    valuePilotNextLocalizedDynamicText(language, plan.totalText ?: plan.headline).orEmpty()
+                ),
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
@@ -568,20 +577,29 @@ internal fun ValuePilotTripPlannerScreen(
                     ) {
                         Eyebrow(valuePilotNextText("ESTIMATED TRIP COST", "COSTO ESTIMADO DEL VIAJE"))
                         Text(
-                            "ARS " + result.total.toPlainString(),
+                            valuePilotNextLocalizedFactText(
+                                language,
+                                "ARS " + result.total.toPlainString()
+                            ),
                             style = MaterialTheme.typography.displayLarge,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Text(
-                            valuePilotNextText("Fuel ARS ", "Combustible ARS ") + result.fuelCost.toPlainString() +
-                                valuePilotNextText(" · tolls ARS ", " · peajes ARS ") + result.tolls.toPlainString() +
-                                valuePilotNextText(" · parking ARS ", " · estacionamiento ARS ") + result.parking.toPlainString(),
+                            valuePilotNextLocalizedFactText(
+                                language,
+                                valuePilotNextText("Fuel ARS ", "Combustible ARS ") + result.fuelCost.toPlainString() +
+                                    valuePilotNextText(" · tolls ARS ", " · peajes ARS ") + result.tolls.toPlainString() +
+                                    valuePilotNextText(" · parking ARS ", " · estacionamiento ARS ") + result.parking.toPlainString()
+                            ),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Text(
-                            valuePilotNextText("Round trip ", "Viaje de ida y vuelta de ") + result.roundTripKm.toPlainString() +
-                                valuePilotNextText(" km, calculated from your one-way input.", " km, calculado a partir de tu ingreso de ida."),
+                            valuePilotNextLocalizedFactText(
+                                language,
+                                valuePilotNextText("Round trip ", "Viaje de ida y vuelta de ") + result.roundTripKm.toPlainString() +
+                                    valuePilotNextText(" km, calculated from your one-way input.", " km, calculado a partir de tu ingreso de ida.")
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
@@ -630,6 +648,7 @@ internal fun ValuePilotMapHandoffScreen(
     selectedProductName: String?,
     onOpenMap: (ArgentinaPrivateBasketStoreProjection) -> Unit
 ) {
+    val language = LocalValuePilotNextLanguage.current
     PremiumColumn {
         item(key = "map-intro") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {
@@ -659,8 +678,14 @@ internal fun ValuePilotMapHandoffScreen(
                     context = context,
                     detail = listOfNotNull(
                         selectedProductName,
-                        offer.quantity?.let { valuePilotNextText("Package ", "Envase ") + it.amount + " " + it.unit },
-                        offer.listPrice.currency + " " + offer.listPrice.amount,
+                        offer.quantity?.let {
+                            valuePilotNextText("Package ", "Envase ") +
+                                valuePilotNextLocalizedFactText(language, it.amount + " " + it.unit)
+                        },
+                        valuePilotNextLocalizedFactText(
+                            language,
+                            offer.listPrice.currency + " " + offer.listPrice.amount
+                        ),
                         valuePilotNextText("Price evidence ", "Evidencia de precio ") + offer.freshnessStatus.name.lowercase().replace('_', ' '),
                         valuePilotNextText("Release ", "Publicación ") + offer.releaseDate
                     ).joinToString(" · "),
@@ -692,7 +717,7 @@ internal fun ValuePilotMapHandoffScreen(
                 )
                 val validStore = context.asStoreProjection()
                 val markerSummary = context.markers.joinToString(" · ") {
-                    it.productName + " — " + it.priceText
+                    it.productName + " — " + valuePilotNextLocalizedFactText(language, it.priceText)
                 }.ifBlank { valuePilotNextText("No product price marker is attached.", "No hay un marcador de precio de producto adjunto.") }
                 StoreContextCard(
                     context = context,
