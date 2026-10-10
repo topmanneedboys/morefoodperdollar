@@ -125,6 +125,9 @@ class ValuePilotNextActivity : AppCompatActivity() {
                         systemReducedMotion = systemReducedMotion
                     ),
                     presentationPreferences = presentationPreferences,
+                    language = ValuePilotNextUiPreferencesCodec.resolvesLanguage(
+                        presentationPreferences.language
+                    ),
                     onPresentationPreferencesChanged = { updated ->
                         uiPreferencesStore.save(updated)
                         presentationPreferences = updated

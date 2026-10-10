@@ -30,6 +30,7 @@ internal fun ValuePilotNextSettingsScreen(
     onAppearanceSelected: (ValuePilotNextAppearance) -> Unit,
     onMotionSelected: (ValuePilotNextMotionPreference) -> Unit,
     onDensitySelected: (ValuePilotNextDensity) -> Unit,
+    onLanguageSelected: (ValuePilotNextLanguage) -> Unit,
     onResetPreferences: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -131,6 +132,35 @@ internal fun ValuePilotNextSettingsScreen(
             }
         }
 
+        item(key = "settings-language") {
+            Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
+                SectionHeading("LANGUAGE", "Choose your ValuePilot language")
+                Column(
+                    modifier = Modifier.selectableGroup(),
+                    verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)
+                ) {
+                    SettingChoiceRow(
+                        title = "Follow device",
+                        detail = "Use Spanish on Spanish devices and English otherwise.",
+                        selected = preferences.language == ValuePilotNextLanguage.SYSTEM,
+                        onClick = { onLanguageSelected(ValuePilotNextLanguage.SYSTEM) }
+                    )
+                    SettingChoiceRow(
+                        title = "English",
+                        detail = "Use English labels while keeping Argentina and ARS.",
+                        selected = preferences.language == ValuePilotNextLanguage.ENGLISH,
+                        onClick = { onLanguageSelected(ValuePilotNextLanguage.ENGLISH) }
+                    )
+                    SettingChoiceRow(
+                        title = "Español (Argentina)",
+                        detail = "Usar español argentino con Argentina y ARS.",
+                        selected = preferences.language == ValuePilotNextLanguage.SPANISH_AR,
+                        onClick = { onLanguageSelected(ValuePilotNextLanguage.SPANISH_AR) }
+                    )
+                }
+            }
+        }
+
         if (shouldOfferPresentationPreferenceReset(preferences)) {
             item(key = "settings-reset-preferences") {
                 TextButton(
@@ -139,7 +169,7 @@ internal fun ValuePilotNextSettingsScreen(
                         .fillMaxWidth()
                         .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
                         .semantics {
-                            contentDescription = "Restore default appearance, motion, and display density"
+                            contentDescription = "Restore default appearance, motion, density, and language"
                         }
                 ) {
                     Text("Restore default experience")

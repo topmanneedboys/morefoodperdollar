@@ -5,6 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Locale
 
 class ValuePilotNextUiPreferencesTest {
 
@@ -41,6 +42,39 @@ class ValuePilotNextUiPreferencesTest {
                 motion = null,
                 density = null
             ).density
+        )
+    }
+
+    @Test
+    fun `language preference defaults by device locale and honors explicit choice`() {
+        assertEquals(
+            ValuePilotNextLanguage.SPANISH_AR,
+            ValuePilotNextUiPreferencesCodec.resolvesLanguage(
+                ValuePilotNextLanguage.SYSTEM,
+                Locale("es", "AR")
+            )
+        )
+        assertEquals(
+            ValuePilotNextLanguage.ENGLISH,
+            ValuePilotNextUiPreferencesCodec.resolvesLanguage(
+                ValuePilotNextLanguage.SYSTEM,
+                Locale.US
+            )
+        )
+        assertEquals(
+            ValuePilotNextLanguage.ENGLISH,
+            ValuePilotNextUiPreferencesCodec.resolvesLanguage(
+                ValuePilotNextLanguage.ENGLISH,
+                Locale("es", "AR")
+            )
+        )
+        assertEquals(
+            ValuePilotNextLanguage.SPANISH_AR,
+            ValuePilotNextUiPreferencesCodec.decode(
+                appearance = null,
+                motion = null,
+                language = "SPANISH_AR"
+            ).language
         )
     }
 

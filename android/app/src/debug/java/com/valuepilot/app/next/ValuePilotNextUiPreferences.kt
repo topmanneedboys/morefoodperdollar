@@ -1,6 +1,7 @@
 package com.valuepilot.app.next
 
 import android.content.Context
+import java.util.Locale
 
 internal enum class ValuePilotNextAppearance {
     SYSTEM,
@@ -19,10 +20,17 @@ internal enum class ValuePilotNextDensity {
     COMPACT
 }
 
+internal enum class ValuePilotNextLanguage {
+    SYSTEM,
+    ENGLISH,
+    SPANISH_AR
+}
+
 internal data class ValuePilotNextUiPreferences(
     val appearance: ValuePilotNextAppearance = ValuePilotNextAppearance.SYSTEM,
     val motion: ValuePilotNextMotionPreference = ValuePilotNextMotionPreference.SYSTEM,
-    val density: ValuePilotNextDensity = ValuePilotNextDensity.COMFORTABLE
+    val density: ValuePilotNextDensity = ValuePilotNextDensity.COMFORTABLE,
+    val language: ValuePilotNextLanguage = ValuePilotNextLanguage.SYSTEM
 )
 
 internal fun shouldOfferPresentationPreferenceReset(
@@ -33,13 +41,31 @@ internal object ValuePilotNextUiPreferencesCodec {
     fun decode(
         appearance: String?,
         motion: String?,
-        density: String? = null
+        density: String? = null,
+        language: String? = null
     ): ValuePilotNextUiPreferences =
         ValuePilotNextUiPreferences(
             appearance = appearance.toEnumOrNull() ?: ValuePilotNextAppearance.SYSTEM,
             motion = motion.toEnumOrNull() ?: ValuePilotNextMotionPreference.SYSTEM,
-            density = density.toEnumOrNull() ?: ValuePilotNextDensity.COMFORTABLE
+            density = density.toEnumOrNull() ?: ValuePilotNextDensity.COMFORTABLE,
+            language = language.toEnumOrNull() ?: ValuePilotNextLanguage.SYSTEM
         )
+
+    fun resolvesLanguage(
+        preference: ValuePilotNextLanguage,
+        systemLocale: Locale = Locale.getDefault()
+    ): ValuePilotNextLanguage =
+        when (preference) {
+            ValuePilotNextLanguage.SYSTEM -> {
+                if (systemLocale.language.equals("es", ignoreCase = true)) {
+                    ValuePilotNextLanguage.SPANISH_AR
+                } else {
+                    ValuePilotNextLanguage.ENGLISH
+                }
+            }
+            ValuePilotNextLanguage.ENGLISH -> ValuePilotNextLanguage.ENGLISH
+            ValuePilotNextLanguage.SPANISH_AR -> ValuePilotNextLanguage.SPANISH_AR
+        }
 
     fun resolvesDarkTheme(
         appearance: ValuePilotNextAppearance,
@@ -77,7 +103,8 @@ internal class ValuePilotNextUiPreferencesStore(context: Context) {
         ValuePilotNextUiPreferencesCodec.decode(
             appearance = preferences.getString(KEY_APPEARANCE, null),
             motion = preferences.getString(KEY_MOTION, null),
-            density = preferences.getString(KEY_DENSITY, null)
+            density = preferences.getString(KEY_DENSITY, null),
+            language = preferences.getString(KEY_LANGUAGE, null)
         )
 
     fun save(value: ValuePilotNextUiPreferences) {
@@ -85,6 +112,7 @@ internal class ValuePilotNextUiPreferencesStore(context: Context) {
             .putString(KEY_APPEARANCE, value.appearance.name)
             .putString(KEY_MOTION, value.motion.name)
             .putString(KEY_DENSITY, value.density.name)
+            .putString(KEY_LANGUAGE, value.language.name)
             .apply()
     }
 
@@ -93,5 +121,6 @@ internal class ValuePilotNextUiPreferencesStore(context: Context) {
         const val KEY_APPEARANCE = "appearance"
         const val KEY_MOTION = "motion"
         const val KEY_DENSITY = "density"
+        const val KEY_LANGUAGE = "language"
     }
 }

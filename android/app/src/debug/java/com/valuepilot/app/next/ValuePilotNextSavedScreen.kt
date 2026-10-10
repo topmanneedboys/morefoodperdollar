@@ -52,6 +52,7 @@ internal fun valuePilotNextPurchaseHistoryAvailabilityPresentation() =
 @Composable
 internal fun ValuePilotSavedScreen(
     state: PracticalShoppingSavedSurfaceState,
+    language: ValuePilotNextLanguage,
     stapleLaunch: PracticalShoppingSavedStapleLaunchUiState?,
     onAction: (PracticalShoppingSavedSurfaceAction) -> Unit,
     onCheckPrice: (String) -> Unit,
@@ -66,9 +67,17 @@ internal fun ValuePilotSavedScreen(
         val clearAction = state.clearAllAction
         AlertDialog(
             onDismissRequest = { confirmClearAll = false },
-            title = { Text("Clear saved choices?") },
+            title = {
+                Text(valuePilotNextText(language, "Clear saved choices?", "¿Borrar elecciones guardadas?"))
+            },
             text = {
-                Text("This removes your saved product and store choices from this device.")
+                Text(
+                    valuePilotNextText(
+                        language,
+                        "This removes your saved product and store choices from this device.",
+                        "Esto elimina de este dispositivo tus productos y tiendas guardados."
+                    )
+                )
             },
             confirmButton = {
                 TextButton(
@@ -78,12 +87,12 @@ internal fun ValuePilotSavedScreen(
                     },
                     enabled = clearAction != null
                 ) {
-                    Text("Clear choices")
+                    Text(valuePilotNextText(language, "Clear choices", "Borrar elecciones"))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { confirmClearAll = false }) {
-                    Text("Keep them")
+                    Text(valuePilotNextText(language, "Keep them", "Conservarlas"))
                 }
             }
         )
@@ -92,14 +101,22 @@ internal fun ValuePilotSavedScreen(
     PremiumColumn {
         item(key = "saved-intro") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {
-                Eyebrow("YOUR SHOPPING MEMORY")
+                Eyebrow(valuePilotNextText(language, "YOUR SHOPPING MEMORY", "TU MEMORIA DE COMPRAS"))
                 Text(
-                    "The products and stores\nyou return to.",
+                    valuePilotNextText(
+                        language,
+                        "The products and stores\nyou return to.",
+                        "Los productos y tiendas\na los que volvés."
+                    ),
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    "Keep useful choices close. Saved names help you find them again; they are not live prices or current offers.",
+                    valuePilotNextText(
+                        language,
+                        "Keep useful choices close. Saved names help you find them again; they are not live prices or current offers.",
+                        "Tené cerca tus elecciones útiles. Los nombres guardados te ayudan a encontrarlas; no son precios en vivo ni ofertas actuales."
+                    ),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -108,7 +125,13 @@ internal fun ValuePilotSavedScreen(
 
         if (state.progressVisible) {
             item(key = "saved-progress") {
-                LoadingRow(state.statusMessage ?: "Updating saved choices…")
+                LoadingRow(
+                    state.statusMessage ?: valuePilotNextText(
+                        language,
+                        "Updating saved choices…",
+                        "Actualizando elecciones guardadas…"
+                    )
+                )
             }
         } else {
             state.statusMessage?.let { message ->
@@ -127,7 +150,10 @@ internal fun ValuePilotSavedScreen(
 
         state.productSectionTitle?.let { title ->
             item(key = "saved-products-heading") {
-                SectionHeading("SAVED PRODUCTS", title)
+                SectionHeading(
+                    valuePilotNextText(language, "SAVED PRODUCTS", "PRODUCTOS GUARDADOS"),
+                    title
+                )
             }
             items(state.productRows) { row ->
                 SavedProductCard(
@@ -140,7 +166,10 @@ internal fun ValuePilotSavedScreen(
 
         state.storeSectionTitle?.let { title ->
             item(key = "saved-stores-heading") {
-                SectionHeading("SAVED STORES", title)
+                SectionHeading(
+                    valuePilotNextText(language, "SAVED STORES", "TIENDAS GUARDADAS"),
+                    title
+                )
             }
             items(state.storeRows) { row ->
                 SavedStoreCard(row = row, onRemove = onAction)
@@ -149,7 +178,11 @@ internal fun ValuePilotSavedScreen(
 
         state.emptyMessage?.let { message ->
             item(key = "saved-empty") {
-                SavedShortlistCard(detail = message, onSearch = onSearch)
+                SavedShortlistCard(
+                    language = language,
+                    detail = localizedSavedMessage(language, message),
+                    onSearch = onSearch
+                )
             }
         }
 
@@ -157,12 +190,18 @@ internal fun ValuePilotSavedScreen(
             item(key = "saved-refresh") {
                 if (state.mode == PracticalShoppingSavedSurfaceMode.ERROR) {
                     PrimaryActionButton(
-                        label = requireNotNull(state.refreshActionLabel),
+                        label = localizedSavedMessage(
+                            language,
+                            requireNotNull(state.refreshActionLabel)
+                        ),
                         onClick = { onAction(action) }
                     )
                 } else {
                     SecondaryActionButton(
-                        label = requireNotNull(state.refreshActionLabel),
+                        label = localizedSavedMessage(
+                            language,
+                            requireNotNull(state.refreshActionLabel)
+                        ),
                         onClick = { onAction(action) }
                     )
                 }
@@ -177,16 +216,27 @@ internal fun ValuePilotSavedScreen(
                         .fillMaxWidth()
                         .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
                 ) {
-                    Text("Clear all saved choices", color = MaterialTheme.colorScheme.error)
+                    Text(
+                        valuePilotNextText(
+                            language,
+                            "Clear all saved choices",
+                            "Borrar todas las elecciones guardadas"
+                        ),
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
             }
         }
 
         item(key = "saved-tools-heading") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
-                Eyebrow("PERSONAL TOOLS")
+                Eyebrow(valuePilotNextText(language, "PERSONAL TOOLS", "HERRAMIENTAS PERSONALES"))
                 Text(
-                    "Put your saved choices to work.",
+                    valuePilotNextText(
+                        language,
+                        "Put your saved choices to work.",
+                        "Usá tus elecciones guardadas."
+                    ),
                     style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -195,46 +245,74 @@ internal fun ValuePilotSavedScreen(
 
         item(key = "saved-existing-tools") {
             SavedToolCard(
-                eyebrow = "PERSONAL PRICE MEMORY",
-                title = "Record a price you saw",
-                detail = "Choose a saved product and exact saved store, then add your observed price and proof.",
-                actionLabel = "Start price confirmation",
+                eyebrow = valuePilotNextText(language, "PERSONAL PRICE MEMORY", "MEMORIA DE PRECIOS PERSONALES"),
+                title = valuePilotNextText(language, "Record a price you saw", "Registrar un precio que viste"),
+                detail = valuePilotNextText(
+                    language,
+                    "Choose a saved product and exact saved store, then add your observed price and proof.",
+                    "Elegí un producto y una tienda exactos guardados; después agregá el precio observado y la evidencia."
+                ),
+                actionLabel = valuePilotNextText(language, "Start price confirmation", "Iniciar confirmación de precio"),
                 onClick = onRecordObservedPrice
             )
         }
 
         item(key = "saved-private-price-history") {
             SavedToolCard(
-                eyebrow = "ON THIS DEVICE",
-                title = "Your private price history",
-                detail = "Review past comparison observations and manage the copy stored on this device. They are not live store prices.",
-                actionLabel = "Review price history",
+                eyebrow = valuePilotNextText(language, "ON THIS DEVICE", "EN ESTE DISPOSITIVO"),
+                title = valuePilotNextText(language, "Your private price history", "Tu historial privado de precios"),
+                detail = valuePilotNextText(
+                    language,
+                    "Review past comparison observations and manage the copy stored on this device. They are not live store prices.",
+                    "Revisá observaciones anteriores y administrá la copia guardada en este dispositivo. No son precios actuales de tiendas."
+                ),
+                actionLabel = valuePilotNextText(language, "Review price history", "Revisar historial de precios"),
                 onClick = onOpenPrivatePriceHistory
             )
         }
 
         item(key = "saved-purchase-history-unavailable") {
             PurchaseHistoryUnavailableCard(
+                language = language,
                 presentation = valuePilotNextPurchaseHistoryAvailabilityPresentation()
             )
         }
 
         item(key = "saved-staple-watch-launch") {
             SavedToolCard(
-                eyebrow = "RECURRING STAPLES",
-                title = stapleLaunch?.title ?: "Watch My Staples",
+                eyebrow = valuePilotNextText(language, "RECURRING STAPLES", "ESENCIALES RECURRENTES"),
+                title = stapleLaunch?.title ?: valuePilotNextText(language, "Watch My Staples", "Mis esenciales"),
                 detail = stapleLaunch?.supportingText
                     ?: stapleLaunch?.notice
-                    ?: "Review the saved product and store requirements for recurring staples.",
-                actionLabel = stapleLaunch?.actionLabel ?: "Review setup requirements",
+                    ?: valuePilotNextText(
+                        language,
+                        "Review the saved product and store requirements for recurring staples.",
+                        "Revisá los requisitos de productos y tienda guardados para tus esenciales recurrentes."
+                    ),
+                actionLabel = stapleLaunch?.actionLabel
+                    ?: valuePilotNextText(language, "Review setup requirements", "Revisar requisitos"),
                 onClick = onOpenStapleWatch
             )
         }
     }
 }
 
+private fun localizedSavedMessage(
+    language: ValuePilotNextLanguage,
+    message: String
+): String {
+    if (language != ValuePilotNextLanguage.SPANISH_AR) return message
+    return when {
+        message.equals("No saved choices yet.", ignoreCase = true) ->
+            "Todavía no hay elecciones guardadas."
+        message.equals("Refresh", ignoreCase = true) -> "Actualizar"
+        else -> message
+    }
+}
+
 @Composable
 private fun SavedShortlistCard(
+    language: ValuePilotNextLanguage,
     detail: String,
     onSearch: () -> Unit
 ) {
@@ -258,9 +336,9 @@ private fun SavedShortlistCard(
                 color = MaterialTheme.colorScheme.secondary,
                 fontWeight = FontWeight.Light
             )
-            Eyebrow("A GOOD PLACE TO START")
+            Eyebrow(valuePilotNextText(language, "A GOOD PLACE TO START", "UN BUEN LUGAR PARA EMPEZAR"))
             Text(
-                "Build a personal shortlist.",
+                valuePilotNextText(language, "Build a personal shortlist.", "Armá tu lista personal."),
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -269,7 +347,10 @@ private fun SavedShortlistCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            PrimaryActionButton(label = "Search products", onClick = onSearch)
+            PrimaryActionButton(
+                label = valuePilotNextText(language, "Search products", "Buscar productos"),
+                onClick = onSearch
+            )
         }
     }
 }
@@ -343,6 +424,7 @@ private fun SavedToolCard(
 
 @Composable
 private fun PurchaseHistoryUnavailableCard(
+    language: ValuePilotNextLanguage,
     presentation: ValuePilotNextPurchaseHistoryAvailabilityPresentation
 ) {
     Card(
@@ -363,13 +445,19 @@ private fun PurchaseHistoryUnavailableCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Eyebrow(presentation.eyebrow)
+                Eyebrow(
+                    valuePilotNextText(
+                        language,
+                        presentation.eyebrow,
+                        "HISTORIAL DE COMPRAS · NO DISPONIBLE"
+                    )
+                )
                 Surface(
                     shape = MaterialTheme.shapes.small,
                     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
                 ) {
                     Text(
-                        "NOT CONNECTED",
+                        valuePilotNextText(language, "NOT CONNECTED", "NO CONECTADO"),
                         modifier = Modifier.padding(horizontal = ValuePilotSpacing.small, vertical = ValuePilotSpacing.xSmall),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -377,12 +465,20 @@ private fun PurchaseHistoryUnavailableCard(
                 }
             }
             Text(
-                presentation.title,
+                valuePilotNextText(
+                    language,
+                    presentation.title,
+                    "El historial de compras no está disponible en esta vista previa."
+                ),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                presentation.detail,
+                valuePilotNextText(
+                    language,
+                    presentation.detail,
+                    "No hay una fuente de compras o comprobantes conectada. El historial privado registra precios que ingresaste; no registra lo que compraste."
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

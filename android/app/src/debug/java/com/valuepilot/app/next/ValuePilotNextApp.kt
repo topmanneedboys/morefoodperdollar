@@ -195,6 +195,7 @@ internal fun ValuePilotNextApp(
     startDestination: NextDestination = NextDestination.HOME,
     reducedMotion: Boolean,
     presentationPreferences: ValuePilotNextUiPreferences,
+    language: ValuePilotNextLanguage,
     onPresentationPreferencesChanged: (ValuePilotNextUiPreferences) -> Unit,
     onExitPreview: () -> Unit,
     onOpenLegacyComparisonTools: () -> Unit,
@@ -386,6 +387,7 @@ internal fun ValuePilotNextApp(
                 if (expanded) {
                     ValuePilotNavigationRail(
                         selectedTab = shellState.selectedPrimaryTab,
+                        language = language,
                         onSelectTab = { tab ->
                             primaryDestinations.firstOrNull { it.tab == tab }?.let {
                                 selectPrimary(it.destination)
@@ -402,6 +404,7 @@ internal fun ValuePilotNextApp(
                     JourneyTopBar(
                         destination = currentDestination,
                         areaLabel = ui.search.areaLabel,
+                        language = language,
                         canGoBack = routeStack.size > 1,
                         onBack = ::navigateBack,
                         onOpenSettings = { navigate(NextDestination.SETTINGS) },
@@ -610,6 +613,7 @@ internal fun ValuePilotNextApp(
 
                                 NextDestination.SAVED -> ValuePilotSavedScreen(
                                     state = ui.saved,
+                                    language = language,
                                     stapleLaunch = ui.stapleWatchLaunch,
                                     onAction = journey::onSavedSurfaceAction,
                                     onCheckPrice = { displayName ->
@@ -707,6 +711,11 @@ internal fun ValuePilotNextApp(
                                             presentationPreferences.copy(density = density)
                                         )
                                     },
+                                    onLanguageSelected = { selectedLanguage ->
+                                        onPresentationPreferencesChanged(
+                                            presentationPreferences.copy(language = selectedLanguage)
+                                        )
+                                    },
                                     onResetPreferences = {
                                         onPresentationPreferencesChanged(ValuePilotNextUiPreferences())
                                     },
@@ -767,6 +776,7 @@ internal fun ValuePilotNextApp(
                     if (!expanded) {
                         ValuePilotNavigationBar(
                             selectedTab = shellState.selectedPrimaryTab,
+                            language = language,
                             onSelectTab = { tab ->
                                 primaryDestinations.firstOrNull { it.tab == tab }?.let {
                                     selectPrimary(it.destination)
@@ -784,6 +794,7 @@ internal fun ValuePilotNextApp(
 private fun JourneyTopBar(
     destination: NextDestination,
     areaLabel: String,
+    language: ValuePilotNextLanguage,
     canGoBack: Boolean,
     onBack: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -797,18 +808,18 @@ private fun JourneyTopBar(
     )
     val title = when {
         primaryDestination -> "ValuePilot"
-        destination == NextDestination.PRODUCT_DETAIL -> "Detalle del producto"
+        destination == NextDestination.PRODUCT_DETAIL -> valuePilotNextText(language, "Product detail", "Detalle del producto")
         else -> when (destination) {
-            NextDestination.GOOD_PRICE_CHECK -> "Buen precio"
-            NextDestination.STAPLE_WATCH_SETUP -> "Mis esenciales"
-            NextDestination.PRIVATE_PRICE_HISTORY -> "Historial de precios"
-            NextDestination.COMPARE -> "Comparar productos"
-            NextDestination.SETTINGS -> "Ajustes"
-            NextDestination.OBSERVED_PRICE_SELECTION -> "Precio observado"
-            NextDestination.OBSERVED_PRICE_CONFIRMATION -> "Confirmar precio"
-            NextDestination.SHOPPING_DECISION -> "Decisión de compra"
-            NextDestination.TRIP_PLANNER -> "Plan de viaje"
-            NextDestination.MAP_HANDOFF -> "Contexto de tienda"
+            NextDestination.GOOD_PRICE_CHECK -> valuePilotNextText(language, "Good price", "Buen precio")
+            NextDestination.STAPLE_WATCH_SETUP -> valuePilotNextText(language, "Watch my staples", "Mis esenciales")
+            NextDestination.PRIVATE_PRICE_HISTORY -> valuePilotNextText(language, "Price history", "Historial de precios")
+            NextDestination.COMPARE -> valuePilotNextText(language, "Compare products", "Comparar productos")
+            NextDestination.SETTINGS -> valuePilotNextText(language, "Settings", "Ajustes")
+            NextDestination.OBSERVED_PRICE_SELECTION -> valuePilotNextText(language, "Observed price", "Precio observado")
+            NextDestination.OBSERVED_PRICE_CONFIRMATION -> valuePilotNextText(language, "Confirm price", "Confirmar precio")
+            NextDestination.SHOPPING_DECISION -> valuePilotNextText(language, "Shopping decision", "Decisión de compra")
+            NextDestination.TRIP_PLANNER -> valuePilotNextText(language, "Trip planner", "Plan de viaje")
+            NextDestination.MAP_HANDOFF -> valuePilotNextText(language, "Store context", "Contexto de tienda")
             else -> "ValuePilot"
         }
     }
@@ -823,7 +834,9 @@ private fun JourneyTopBar(
         if (canGoBack) {
             IconButton(
                 onClick = onBack,
-                modifier = Modifier.size(42.dp).semantics { contentDescription = "Volver" }
+                modifier = Modifier.size(42.dp).semantics {
+                    contentDescription = valuePilotNextText(language, "Back", "Volver")
+                }
             ) {
                 Text("‹", style = MaterialTheme.typography.headlineMedium.copy(fontSize = 28.sp), color = MaterialTheme.colorScheme.onSurface)
             }
@@ -855,7 +868,9 @@ private fun JourneyTopBar(
         if (destination != NextDestination.SETTINGS) {
             IconButton(
                 onClick = onOpenSettings,
-                modifier = Modifier.size(40.dp).semantics { contentDescription = "Abrir ajustes" }
+                modifier = Modifier.size(40.dp).semantics {
+                    contentDescription = valuePilotNextText(language, "Open settings", "Abrir ajustes")
+                }
             ) {
                 Text("⚙", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -867,7 +882,11 @@ private fun JourneyTopBar(
                 .widthIn(min = 42.dp)
                 .semantics { contentDescription = "Salir de la vista previa y volver a la aplicación original" }
         ) {
-            Text("Salir", style = MaterialTheme.typography.labelLarge.copy(fontSize = 10.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                valuePilotNextText(language, "Exit", "Salir"),
+                style = MaterialTheme.typography.labelLarge.copy(fontSize = 10.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -875,6 +894,7 @@ private fun JourneyTopBar(
 @Composable
 private fun ValuePilotNavigationBar(
     selectedTab: AppPrimaryTab,
+    language: ValuePilotNextLanguage,
     onSelectTab: (AppPrimaryTab) -> Unit
 ) {
     Surface(
@@ -910,7 +930,11 @@ private fun ValuePilotNavigationBar(
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )
-                        Text(destination.label, style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, lineHeight = 11.sp), maxLines = 1)
+                        Text(
+                            navigationLabel(destination.tab, language),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, lineHeight = 11.sp),
+                            maxLines = 1
+                        )
                     }
                 }
             }
@@ -921,6 +945,7 @@ private fun ValuePilotNavigationBar(
 @Composable
 private fun ValuePilotNavigationRail(
     selectedTab: AppPrimaryTab,
+    language: ValuePilotNextLanguage,
     onSelectTab: (AppPrimaryTab) -> Unit
 ) {
     NavigationRail(
@@ -938,7 +963,7 @@ private fun ValuePilotNavigationRail(
                         contentDescription = null
                     )
                 },
-                label = { Text(destination.label) },
+                label = { Text(navigationLabel(destination.tab, language)) },
                 alwaysShowLabel = true,
                 colors = NavigationRailItemDefaults.colors(
                     selectedIconColor = MaterialTheme.colorScheme.primary,
@@ -950,4 +975,14 @@ private fun ValuePilotNavigationRail(
             )
         }
     }
+}
+
+private fun navigationLabel(
+    tab: AppPrimaryTab,
+    language: ValuePilotNextLanguage
+): String = when (tab) {
+    AppPrimaryTab.HOME -> valuePilotNextText(language, "Home", "Inicio")
+    AppPrimaryTab.SEARCH -> valuePilotNextText(language, "Search", "Buscar")
+    AppPrimaryTab.BASKET -> valuePilotNextText(language, "Basket", "Canasta")
+    AppPrimaryTab.SAVED -> valuePilotNextText(language, "Saved", "Guardados")
 }
