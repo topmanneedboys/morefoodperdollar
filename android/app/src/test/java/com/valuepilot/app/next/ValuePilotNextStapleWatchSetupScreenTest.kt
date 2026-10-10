@@ -10,16 +10,16 @@ class ValuePilotNextStapleWatchSetupScreenTest {
     @Test
     fun `configured Compose checks keep the setup controls available`() {
         assertFalse(
-            requiresClassicStapleWatchHandoff(
+            requiresClassicStapleWatchFallback(
                 StapleWatchForegroundFactCheckCapability.CONFIGURED
             )
         )
     }
 
     @Test
-    fun `unconfigured Compose checks use the classic handoff`() {
+    fun `unconfigured Compose checks retain a classic fallback`() {
         assertTrue(
-            requiresClassicStapleWatchHandoff(
+            requiresClassicStapleWatchFallback(
                 StapleWatchForegroundFactCheckCapability.NOT_CONFIGURED
             )
         )

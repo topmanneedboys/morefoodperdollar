@@ -32,7 +32,7 @@ import com.valuepilot.app.StapleWatchSavedIdentitySelectionAction
 import com.valuepilot.app.StapleWatchSavedSelectionUiState
 import com.valuepilot.app.StapleWatchSavedSelectionUiStatus
 
-internal fun requiresClassicStapleWatchHandoff(
+internal fun requiresClassicStapleWatchFallback(
     capability: StapleWatchForegroundFactCheckCapability
 ): Boolean = capability == StapleWatchForegroundFactCheckCapability.NOT_CONFIGURED
 
@@ -46,7 +46,7 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
 ) {
     val language = LocalValuePilotNextLanguage.current
     val classicHandoffRequired =
-        state?.let { requiresClassicStapleWatchHandoff(it.factCheckCapability) } == true
+        state?.let { requiresClassicStapleWatchFallback(it.factCheckCapability) } == true
 
     PremiumColumn {
         item(key = "staple-watch-intro") {
@@ -106,23 +106,6 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
             item(key = "staple-watch-back") {
                 SecondaryActionButton(label = valuePilotNextText("Back to Saved", "Volver a Guardados"), onClick = onBack)
             }
-        } else if (classicHandoffRequired) {
-            item(key = "staple-watch-legacy-handoff") {
-                ActionCard(
-                    eyebrow = valuePilotNextText("NOT IN COMPOSE YET", "TODAVÍA NO ESTÁ EN COMPOSE"),
-                    title = valuePilotNextText("Continue with the existing Watch flow", "Continuar con el flujo existente de Seguimiento"),
-                    detail = valuePilotNextText(
-                        "Current-price and savings checks have not moved into Compose. Open Saved in the classic app, then choose Watch My Staples. This preview has not saved a watch list or temporary selections.",
-                        "Los controles de precio actual y ahorro todavía no pasaron a Compose. Abrí Guardados en la app clásica y elegí Mis esenciales. Esta vista previa no guardó una lista ni selecciones temporales."
-                    ),
-                    actionLabel = valuePilotNextText("Open classic Saved & Watch tools", "Abrir herramientas clásicas de Guardados y Seguimiento"),
-                    onClick = onOpenLegacyStapleWatch
-                )
-            }
-
-            item(key = "staple-watch-back") {
-                SecondaryActionButton(label = valuePilotNextText("Back to Saved", "Volver a Guardados"), onClick = onBack)
-            }
         } else {
             item(key = "staple-watch-selection-summary") {
                 WatchSetupProgressCard(
@@ -142,6 +125,27 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
                     EvidenceNotice(
                         text = valuePilotNextLocalizedDynamicText(language, message).orEmpty(),
                         isError = state.selectedDisplayNameBlockerCount > 0
+                    )
+                }
+            }
+
+            if (classicHandoffRequired) {
+                item(key = "staple-watch-fact-source-not-configured") {
+                    ActionCard(
+                        eyebrow = valuePilotNextText("IDENTITY SETUP IN COMPOSE", "CONFIGURACIÓN DE IDENTIDAD EN COMPOSE"),
+                        title = valuePilotNextText(
+                            "Current-price checks are not connected in this preview",
+                            "Los controles de precio actual no están conectados en esta vista previa"
+                        ),
+                        detail = valuePilotNextText(
+                            "Choose your saved staples here to review the setup. The preview does not save a Watch list or produce a savings decision yet. Continue in the existing Watch flow for current-price and evidence checks.",
+                            "Elegí tus esenciales guardados acá para revisar la configuración. La vista previa todavía no guarda una lista ni produce una decisión de ahorro. Continuá en el flujo existente de Seguimiento para comprobar precios actuales y evidencia."
+                        ),
+                        actionLabel = valuePilotNextText(
+                            "Open classic Watch tools",
+                            "Abrir herramientas clásicas de Seguimiento"
+                        ),
+                        onClick = onOpenLegacyStapleWatch
                     )
                 }
             }
