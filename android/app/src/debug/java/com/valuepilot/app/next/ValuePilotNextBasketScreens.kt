@@ -76,6 +76,7 @@ internal fun ValuePilotBasketScreen(
     onRemove: (String) -> Unit,
     onPlan: () -> Unit
 ) {
+    val language = LocalValuePilotNextLanguage.current
     PremiumColumn {
         item(key = "basket-intro") {
             val intro = valuePilotNextBasketIntroPresentation(
@@ -91,7 +92,7 @@ internal fun ValuePilotBasketScreen(
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    intro.detail ?: basket.evidenceNotice,
+                    intro.detail ?: valuePilotNextLocalizedDynamicText(language, basket.evidenceNotice).orEmpty(),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -126,7 +127,9 @@ internal fun ValuePilotBasketScreen(
             }
             item(key = "basket-decision") {
                 Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {
-                    basket.errorNotice?.let { EvidenceNotice(it) }
+                    basket.errorNotice?.let {
+                        EvidenceNotice(valuePilotNextLocalizedDynamicText(language, it).orEmpty())
+                    }
                     PrimaryActionButton(
                         label = when {
                             planLoading -> valuePilotNextText("Building your decision…", "Armando tu decisión…")
@@ -229,6 +232,7 @@ internal fun ValuePilotShoppingDecisionScreen(
     onTripPlanner: () -> Unit,
     onMap: () -> Unit
 ) {
+    val language = LocalValuePilotNextLanguage.current
     PremiumColumn {
         item(key = "decision-intro") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {
@@ -258,7 +262,9 @@ internal fun ValuePilotShoppingDecisionScreen(
                 EmptyStateCard(
                     eyebrow = valuePilotNextText("NO CURRENT PLAN", "SIN PLAN ACTUAL"),
                     title = valuePilotNextText("No verified basket total is available yet.", "Todavía no hay un total verificado de la canasta."),
-                    detail = planError ?: valuePilotNextText(
+                    detail = planError?.let {
+                        valuePilotNextLocalizedDynamicText(language, it).orEmpty()
+                    } ?: valuePilotNextText(
                         "Search items again to attach fresh qualified price and package evidence before planning.",
                         "Buscá los productos de nuevo para adjuntar evidencia reciente y calificada de precio y envase antes de planificar."
                     ),
@@ -271,7 +277,9 @@ internal fun ValuePilotShoppingDecisionScreen(
             item(key = "decision-trip-without-plan") {
                 ActionCard(
                     eyebrow = valuePilotNextText("TRAVEL COST", "COSTO DEL VIAJE"),
-                    title = tripResult?.displayText() ?: valuePilotNextText("Calculate a trip from your own assumptions.", "Calculá un viaje con tus propios supuestos."),
+                    title = tripResult?.displayText()?.let {
+                        valuePilotNextLocalizedDynamicText(language, it).orEmpty()
+                    } ?: valuePilotNextText("Calculate a trip from your own assumptions.", "Calculá un viaje con tus propios supuestos."),
                     detail = valuePilotNextText(
                         "Distance, fuel, tolls, and parking remain separate from basket prices. ValuePilot does not infer a driving route.",
                         "La distancia, el combustible, los peajes y el estacionamiento permanecen separados de los precios de la canasta. ValuePilot no infiere una ruta."
@@ -294,7 +302,9 @@ internal fun ValuePilotShoppingDecisionScreen(
             item(key = "decision-trip") {
                 ActionCard(
                     eyebrow = valuePilotNextText("TRAVEL COST", "COSTO DEL VIAJE"),
-                    title = tripResult?.displayText() ?: valuePilotNextText("Trip cost is not included yet.", "El costo del viaje todavía no está incluido."),
+                    title = tripResult?.displayText()?.let {
+                        valuePilotNextLocalizedDynamicText(language, it).orEmpty()
+                    } ?: valuePilotNextText("Trip cost is not included yet.", "El costo del viaje todavía no está incluido."),
                     detail = valuePilotNextText(
                         "Enter your own distance, fuel, tolls, and parking assumptions. ValuePilot does not infer a driving route.",
                         "Ingresá tus propios supuestos de distancia, combustible, peajes y estacionamiento. ValuePilot no infiere una ruta."
@@ -313,13 +323,16 @@ internal fun ValuePilotShoppingDecisionScreen(
             }
         }
         if (basket.errorNotice != null && basket.errorNotice != planError) {
-            item(key = "decision-basket-note") { EvidenceNotice(basket.errorNotice) }
+            item(key = "decision-basket-note") {
+                EvidenceNotice(valuePilotNextLocalizedDynamicText(language, basket.errorNotice).orEmpty())
+            }
         }
     }
 }
 
 @Composable
 private fun DecisionSummaryCard(plan: ArgentinaPrivateBasketPlanProjection) {
+    val language = LocalValuePilotNextLanguage.current
     val complete = plan.status == ArgentinaPrivateBasketPlanStatus.CURRENT_COMPLETE
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -341,12 +354,12 @@ private fun DecisionSummaryCard(plan: ArgentinaPrivateBasketPlanProjection) {
                 MaterialTheme.colorScheme.onPrimaryContainer
             )
             Text(
-                plan.totalText ?: plan.headline,
+                valuePilotNextLocalizedDynamicText(language, plan.totalText ?: plan.headline).orEmpty(),
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
             Text(
-                plan.coverageText,
+                valuePilotNextLocalizedDynamicText(language, plan.coverageText).orEmpty(),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
@@ -360,7 +373,7 @@ private fun DecisionSummaryCard(plan: ArgentinaPrivateBasketPlanProjection) {
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
             Text(
-                plan.notice,
+                valuePilotNextLocalizedDynamicText(language, plan.notice).orEmpty(),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
@@ -370,6 +383,7 @@ private fun DecisionSummaryCard(plan: ArgentinaPrivateBasketPlanProjection) {
 
 @Composable
 private fun DecisionLineCard(line: ArgentinaPrivateBasketLineProjection) {
+    val language = LocalValuePilotNextLanguage.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -401,12 +415,17 @@ private fun DecisionLineCard(line: ArgentinaPrivateBasketLineProjection) {
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
                 Text(line.productName, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                Text(line.packageQuantityText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    valuePilotNextLocalizedDynamicText(language, line.packageQuantityText).orEmpty(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Text(
                     if (line.missing) {
                         valuePilotNextText("Price evidence unknown", "Evidencia de precio desconocida")
                     } else {
-                        line.lineTotalText ?: valuePilotNextText("Listed price unknown", "Precio publicado desconocido")
+                        valuePilotNextLocalizedDynamicText(language, line.lineTotalText).orEmpty()
+                            .ifBlank { valuePilotNextText("Listed price unknown", "Precio publicado desconocido") }
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (line.missing) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
@@ -467,6 +486,7 @@ internal fun ValuePilotTripPlannerScreen(
     onCalculate: (String, String, String, String, String) -> Unit,
     onMap: () -> Unit
 ) {
+    val language = LocalValuePilotNextLanguage.current
     PremiumColumn {
         item(key = "trip-intro") {
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)) {
@@ -488,7 +508,9 @@ internal fun ValuePilotTripPlannerScreen(
         }
         item(key = "trip-basket-summary") {
             EvidenceNotice(
-                plan?.totalText
+                plan?.totalText?.let {
+                    valuePilotNextLocalizedDynamicText(language, it).orEmpty()
+                }
                     ?: valuePilotNextText(
                         "No basket plan is attached. This estimate uses only the distance and vehicle costs you enter.",
                         "No hay un plan de canasta adjunto. Esta estimación usa solo la distancia y los costos del vehículo que ingreses."
@@ -520,7 +542,12 @@ internal fun ValuePilotTripPlannerScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                tripError?.let { EvidenceNotice(it, isError = true) }
+                tripError?.let {
+                    EvidenceNotice(
+                        valuePilotNextLocalizedDynamicText(language, it).orEmpty(),
+                        isError = true
+                    )
+                }
                 PrimaryActionButton(
                     valuePilotNextText("Calculate trip cost", "Calcular costo del viaje"),
                     onClick = { onCalculate(distance, consumption, fuelPrice, tolls, parking) }

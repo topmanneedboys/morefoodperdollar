@@ -51,6 +51,7 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
     onSubmit: () -> Unit,
     onBack: () -> Unit
 ) {
+    val language = LocalValuePilotNextLanguage.current
     var amountText by rememberSaveable { mutableStateOf("") }
     var currencyCodeText by rememberSaveable { mutableStateOf("") }
     var dateText by rememberSaveable { mutableStateOf("") }
@@ -157,7 +158,9 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
                             }
                         }
                     }
-                    state.priceInputError?.let { InputError(it) }
+                    state.priceInputError?.let {
+                        InputError(valuePilotNextLocalizedDynamicText(language, it).orEmpty())
+                    }
                     PrimaryActionButton(
                         label = valuePilotNextText("Set observed price", "Guardar precio observado"),
                         onClick = { onSetPrice(amountText, currencyCodeText) }
@@ -244,7 +247,9 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    state.observedAtInputError?.let { InputError(it) }
+                    state.observedAtInputError?.let {
+                        InputError(valuePilotNextLocalizedDynamicText(language, it).orEmpty())
+                    }
                     PrimaryActionButton(
                         label = valuePilotNextText("Set observation time", "Guardar hora de observación"),
                         onClick = { onSetObservedAt(dateText, timeText, utcOffsetText) }
@@ -287,7 +292,9 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
                             label = { Text(valuePilotNextText("Price tag", "Etiqueta de precio")) }
                         )
                     }
-                    state.proofReferenceInputError?.let { InputError(it) }
+                    state.proofReferenceInputError?.let {
+                        InputError(valuePilotNextLocalizedDynamicText(language, it).orEmpty())
+                    }
                     PrimaryActionButton(
                         label = valuePilotNextText("Set proof details", "Guardar datos de evidencia"),
                         onClick = {
@@ -317,9 +324,12 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
             item(key = "observed-price-confirmation-submit") {
                 ConfirmationSectionCard(
                     eyebrow = valuePilotNextText("FINAL CHECK", "COMPROBACIÓN FINAL"),
-                    title = state.draft?.statusTitle ?: valuePilotNextText("Confirmation details needed", "Faltan datos de confirmación"),
-                    detail = state.draft?.guidance
-                        ?: valuePilotNextText("Set the observed price, observation time, and proof details above.", "Guardá arriba el precio observado, la hora de observación y los datos de evidencia."),
+                    title = state.draft?.statusTitle?.let {
+                        valuePilotNextLocalizedDynamicText(language, it).orEmpty()
+                    } ?: valuePilotNextText("Confirmation details needed", "Faltan datos de confirmación"),
+                    detail = state.draft?.guidance?.let {
+                        valuePilotNextLocalizedDynamicText(language, it).orEmpty()
+                    } ?: valuePilotNextText("Set the observed price, observation time, and proof details above.", "Guardá arriba el precio observado, la hora de observación y los datos de evidencia."),
                 ) {
                     state.draft?.missingRequirements
                         ?.filterNot { it.field == UserObservedPriceConfirmationDraftMissingField.CONFIRMATION_ID ||
@@ -330,7 +340,11 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
                             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
                                 requirements.forEach { requirement ->
                                     Text(
-                                        "• " + requirement.label + valuePilotNextText(" needed", " necesario"),
+                                        if (language == ValuePilotNextLanguage.SPANISH_AR) {
+                                            "• Falta " + valuePilotNextLocalizedDynamicText(language, requirement.label).orEmpty()
+                                        } else {
+                                            "• " + requirement.label + " needed"
+                                        },
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -338,7 +352,7 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
                             }
                         }
                     Text(
-                        state.action.message,
+                        valuePilotNextLocalizedDynamicText(language, state.action.message).orEmpty(),
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (state.action.status == UserObservedPriceConfirmationActionUiState.Status.CONFIRMED) {
                             MaterialTheme.colorScheme.primary
@@ -347,15 +361,16 @@ internal fun ValuePilotNextObservedPriceConfirmationScreen(
                         }
                     )
                     PrimaryActionButton(
-                        label = state.action.actionLabel,
+                        label = valuePilotNextLocalizedDynamicText(language, state.action.actionLabel).orEmpty(),
                         onClick = onSubmit,
                         enabled = state.submissionFieldsReady &&
                             state.proofPresentation is UserObservedPriceConfirmationDraftProofContentSelectionPresentation.Ready &&
                             state.action.actionEnabled
                     )
                     Text(
-                        state.draft?.notice
-                            ?: valuePilotNextText(
+                        state.draft?.notice?.let {
+                            valuePilotNextLocalizedDynamicText(language, it).orEmpty()
+                        } ?: valuePilotNextText(
                                 "Draft completeness does not mean the confirmation is accepted. Observed prices are not retailer-confirmed current prices.",
                                 "Completar el borrador no significa que la confirmación haya sido aceptada. Los precios observados no son precios actuales confirmados por minoristas."
                             ),

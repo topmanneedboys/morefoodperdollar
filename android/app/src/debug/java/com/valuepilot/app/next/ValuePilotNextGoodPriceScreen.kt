@@ -61,6 +61,7 @@ internal fun ValuePilotNextGoodPriceScreen(
 ) {
     var confirmClearMemory by remember { mutableStateOf(false) }
     var showSharePreview by remember { mutableStateOf(false) }
+    val language = LocalValuePilotNextLanguage.current
     val shareCard = state.route.shareCard
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -302,12 +303,22 @@ internal fun ValuePilotNextGoodPriceScreen(
 
         if (state.barcodeBusy) {
             item(key = "good-price-barcode-progress") {
-                LoadingRow(state.barcodeMessage ?: valuePilotNextText("Looking up an exact catalog name…", "Buscando un nombre exacto de catálogo…"))
+                LoadingRow(
+                    state.barcodeMessage?.let {
+                        valuePilotNextLocalizedDynamicText(language, it).orEmpty()
+                    } ?: valuePilotNextText(
+                        "Looking up an exact catalog name…",
+                        "Buscando un nombre exacto de catálogo…"
+                    )
+                )
             }
         } else {
             state.barcodeMessage?.let { message ->
                 item(key = "good-price-barcode-status") {
-                    EvidenceNotice(message, isError = state.barcodeError)
+                    EvidenceNotice(
+                        valuePilotNextLocalizedDynamicText(language, message).orEmpty(),
+                        isError = state.barcodeError
+                    )
                 }
             }
         }
@@ -315,9 +326,9 @@ internal fun ValuePilotNextGoodPriceScreen(
         item(key = "good-price-result") {
             val result = state.route.result
             if (result == null) {
-                MessageCard(state.route)
+                MessageCard(language, state.route)
             } else {
-                GoodPriceResultCard(result)
+                GoodPriceResultCard(language, result)
             }
         }
 
@@ -332,7 +343,10 @@ internal fun ValuePilotNextGoodPriceScreen(
 
         state.memoryNotice?.let { message ->
             item(key = "good-price-memory-notice") {
-                EvidenceNotice(message, isError = state.memoryUnavailable)
+                EvidenceNotice(
+                    valuePilotNextLocalizedDynamicText(language, message).orEmpty(),
+                    isError = state.memoryUnavailable
+                )
             }
         }
 
@@ -363,7 +377,7 @@ internal fun ValuePilotNextGoodPriceScreen(
 }
 
 @Composable
-private fun MessageCard(state: GoodPriceCheckRouteState) {
+private fun MessageCard(language: ValuePilotNextLanguage, state: GoodPriceCheckRouteState) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -374,14 +388,26 @@ private fun MessageCard(state: GoodPriceCheckRouteState) {
             modifier = Modifier.padding(ValuePilotSpacing.large),
             verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)
         ) {
-            Text(state.title, style = MaterialTheme.typography.titleLarge)
-            Text(state.guidance, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                valuePilotNextLocalizedDynamicText(language, state.title).orEmpty(),
+                style = MaterialTheme.typography.titleLarge
+            )
+            Text(
+                valuePilotNextLocalizedDynamicText(language, state.guidance).orEmpty(),
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
     }
 }
 
 @Composable
-private fun GoodPriceResultCard(state: GoodPriceCheckUiState) {
+private fun GoodPriceResultCard(language: ValuePilotNextLanguage, state: GoodPriceCheckUiState) {
+    val headline = valuePilotNextLocalizedDynamicText(language, state.headline).orEmpty()
+    val priceModeText = valuePilotNextLocalizedDynamicText(language, state.priceModeText).orEmpty()
+    val answerTitle = valuePilotNextLocalizedDynamicText(language, state.answerTitle).orEmpty()
+    val answerGuidance = valuePilotNextLocalizedDynamicText(language, state.answerGuidance).orEmpty()
+    val historyText = valuePilotNextLocalizedDynamicText(language, state.historyText)
+    val disclosure = valuePilotNextLocalizedDynamicText(language, state.disclosure).orEmpty()
     val (container, content) =
         when (state.answerTone) {
             GoodPriceCheckAnswerTone.POSITIVE ->
@@ -395,13 +421,25 @@ private fun GoodPriceResultCard(state: GoodPriceCheckUiState) {
                     MaterialTheme.colorScheme.onSecondaryContainer
         }
     Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)) {
-        Text(state.headline, style = MaterialTheme.typography.titleLarge)
-        Text(state.priceModeText, style = MaterialTheme.typography.bodySmall)
+        Text(headline, style = MaterialTheme.typography.titleLarge)
+        Text(priceModeText, style = MaterialTheme.typography.bodySmall)
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .clearAndSetSemantics {
-                    contentDescription = com.valuepilot.app.goodPriceAnswerCardContentDescription(state)
+                    contentDescription =
+                        listOf(
+                                priceModeText,
+                                answerTitle,
+                                state.productName,
+                                state.priceText,
+                                state.quantityText,
+                                state.unitRateText,
+                                answerGuidance
+                            )
+                            .joinToString(". ") { value ->
+                                value.trim().trimEnd('.', '!', '?')
+                            } + "."
                 },
             shape = MaterialTheme.shapes.large,
             colors = CardDefaults.cardColors(containerColor = container),
@@ -411,18 +449,18 @@ private fun GoodPriceResultCard(state: GoodPriceCheckUiState) {
                 modifier = Modifier.padding(ValuePilotSpacing.large),
                 verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)
             ) {
-                Text(state.answerTitle, style = MaterialTheme.typography.titleLarge, color = content)
+                Text(answerTitle, style = MaterialTheme.typography.titleLarge, color = content)
                 Text(state.productName, style = MaterialTheme.typography.titleMedium, color = content)
                 Text("${state.priceText}  ·  ${state.quantityText}", color = content)
                 Text(state.unitRateText, style = MaterialTheme.typography.titleLarge, color = content)
-                Text(state.answerGuidance, style = MaterialTheme.typography.bodyMedium, color = content)
+                Text(answerGuidance, style = MaterialTheme.typography.bodyMedium, color = content)
             }
         }
-        state.historyText?.let { history ->
+        historyText?.let { history ->
             EvidenceNotice(history)
         }
         Text(
-            state.disclosure,
+            disclosure,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

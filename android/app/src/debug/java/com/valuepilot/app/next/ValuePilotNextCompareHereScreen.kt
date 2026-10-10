@@ -54,6 +54,7 @@ internal fun ValuePilotNextCompareHereScreen(
     onOpenCaptureTools: () -> Unit,
     onBack: () -> Unit
 ) {
+    val language = LocalValuePilotNextLanguage.current
     val actionState =
         CompareHereManualDraftActionEvaluator.evaluate(
             rawBlocks = state.productBlocks,
@@ -251,7 +252,9 @@ internal fun ValuePilotNextCompareHereScreen(
         }
 
         state.notice?.let { message ->
-            item(key = "compare-notice") { EvidenceNotice(message) }
+            item(key = "compare-notice") {
+                EvidenceNotice(valuePilotNextLocalizedDynamicText(language, message).orEmpty())
+            }
         }
 
         if (state.isComparing) {
@@ -261,6 +264,7 @@ internal fun ValuePilotNextCompareHereScreen(
         state.routeState?.let { result ->
             item(key = "compare-result") {
                 CompareHereResultCard(
+                    language = language,
                     routeState = result,
                     onShare = result.shareCard?.let { card -> { onShare(card) } }
                 )
@@ -307,6 +311,7 @@ internal fun ValuePilotNextCompareHereScreen(
 
 @Composable
 private fun CompareHereResultCard(
+    language: ValuePilotNextLanguage,
     routeState: CompareHereManualRouteState,
     onShare: (() -> Unit)?
 ) {
@@ -324,8 +329,14 @@ private fun CompareHereResultCard(
             verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.medium)
         ) {
             Eyebrow(valuePilotNextText("COMPARISON RESULT", "RESULTADO DE COMPARACIÓN"))
-            Text(routeState.title, style = MaterialTheme.typography.headlineMedium)
-            Text(routeState.guidance, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                valuePilotNextLocalizedDynamicText(language, routeState.title).orEmpty(),
+                style = MaterialTheme.typography.headlineMedium
+            )
+            Text(
+                valuePilotNextLocalizedDynamicText(language, routeState.guidance).orEmpty(),
+                style = MaterialTheme.typography.bodyMedium
+            )
 
             routeState.comparisonState?.let { result ->
                 if (result.status == CompareHereUiStatus.READY) {
@@ -361,18 +372,20 @@ private fun CompareHereResultCard(
                 result.blockedRows.forEach { row ->
                     CompareHereResultRow(
                         title = row.title,
-                        detail = row.reasonText,
+                        detail = valuePilotNextLocalizedDynamicText(language, row.reasonText).orEmpty(),
                         unitRate = null,
                         badge = valuePilotNextText("UNRANKED", "SIN ORDENAR")
                     )
                 }
-                result.notice?.let { EvidenceNotice(it) }
+                result.notice?.let {
+                    EvidenceNotice(valuePilotNextLocalizedDynamicText(language, it).orEmpty())
+                }
             }
 
             if (routeState.rejectedProductGuidance.isNotEmpty()) {
                 routeState.rejectedProductGuidance.forEach { guidance ->
                     Text(
-                        guidance,
+                        valuePilotNextLocalizedDynamicText(language, guidance).orEmpty(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
