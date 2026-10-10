@@ -28,6 +28,11 @@ class ValuePilotNextHtmlLocalizationTest {
         assertTrue(source.contains("for(const name of Object.keys(state.tripInputs))"))
     }
 
+    @Test
+    fun `html sample currency remains explicit ARS in both languages`() {
+        assertTrue(assetSource().contains("const currency=(n)=>'ARS '+money(n)"))
+    }
+
     private fun assetSource(): String {
         var directory = File(requireNotNull(System.getProperty("user.dir")))
         repeat(8) {

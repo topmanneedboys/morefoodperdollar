@@ -265,7 +265,7 @@ const initialLanguage=()=>{try{const stored=window.localStorage.getItem(LANGUAGE
 const copy=(key)=>{const value=COPY[key];return value?(state.language===LANGUAGES.EN?value.en:value.es):key};
 const get=(id)=>DEMO_PRODUCTS.find(p=>p.id===id);
 const money=(n)=>new Intl.NumberFormat(state.language===LANGUAGES.EN?'en-US':'es-AR',{maximumFractionDigits:0}).format(n);
-const currency=(n)=>state.language===LANGUAGES.EN?'ARS '+money(n):'$'+money(n);
+const currency=(n)=>'ARS '+money(n);
 const icons=(name)=>`<svg aria-hidden="true"><use href="#i-${name}"></use></svg>`;
 const safe=(value)=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const PRODUCT_LABEL_KEYS=Object.freeze({'Ejemplo de precio bajo':'sampleLabel','Sachet 1 L':'sachetLabel','Variedad liviana':'lightLabel','Tetra Brik':'tetraLabel','Almacén básico':'pantryLabel','Aceites y grasas':'oilsLabel'});
