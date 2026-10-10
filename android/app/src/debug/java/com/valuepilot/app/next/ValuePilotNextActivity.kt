@@ -65,6 +65,7 @@ class ValuePilotNextActivity : AppCompatActivity() {
             "OBSERVED_PRICE_SELECTION" -> NextDestination.OBSERVED_PRICE_SELECTION
             "STAPLE_WATCH_SETUP" -> NextDestination.STAPLE_WATCH_SETUP
             "PRIVATE_PRICE_HISTORY" -> NextDestination.PRIVATE_PRICE_HISTORY
+            "BASKET" -> NextDestination.BASKET
             else -> NextDestination.HOME
         }
         observedPriceProofPicker =

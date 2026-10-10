@@ -189,6 +189,10 @@ class ValuePilotNextHtmlPreviewContractTest {
                 )
             ).destination
         )
+        assertTrue(
+            ValuePilotNextHtmlPreviewContract
+                .parseNativeBasketMessage("{\"type\":\"OPEN_NATIVE_BASKET\"}") != null
+        )
     }
 
     @Test
@@ -226,6 +230,11 @@ class ValuePilotNextHtmlPreviewContractTest {
         assertNull(
             ValuePilotNextHtmlPreviewContract.parseNativeSavedToolsMessage(
                 "{\"type\":\"OPEN_NATIVE_SAVED_TOOLS\",\"destination\":\"OBSERVED_PRICE_CONFIRMATION\"}"
+            )
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeBasketMessage(
+                "{\"type\":\"OPEN_NATIVE_SAVED_TOOLS\"}"
             )
         )
     }
