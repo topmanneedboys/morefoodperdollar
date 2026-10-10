@@ -87,10 +87,14 @@ class ValuePilotNextHtmlLocalizationTest {
         val source = assetSource()
 
         assertTrue(source.contains("const nativeAmount="))
-        assertTrue(source.contains("offer?.unitPriceAmount??offer?.priceAmount"))
+        assertTrue(source.contains("const hasUnitPrice=offer?.unitPriceAmount!=null"))
+        assertTrue(source.contains("const amount=hasUnitPrice?offer.unitPriceAmount:offer?.priceAmount"))
         assertTrue(source.contains("const decimal=state.language===LANGUAGES.EN?'.':','"))
         assertTrue(source.contains("const grouping=state.language===LANGUAGES.EN?',':'.'"))
         assertTrue(source.contains("const formattedAmount=amount==null?null:nativeAmount(amount)"))
+        assertTrue(source.contains("nativeUnitPrice"))
+        assertTrue(source.contains("nativePackagePrice"))
+        assertTrue(source.contains("offer?.unitPriceBasis"))
     }
 
     private fun assetSource(): String {
