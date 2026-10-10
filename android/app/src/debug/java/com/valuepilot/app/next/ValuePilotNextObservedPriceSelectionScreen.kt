@@ -67,13 +67,16 @@ internal fun ValuePilotObservedPriceSelectionScreen(
 
         if (savedState.progressVisible) {
             item(key = "observed-price-saved-loading") {
-                LoadingRow(savedState.statusMessage ?: valuePilotNextText("Checking saved choices…", "Comprobando elecciones guardadas…"))
+                LoadingRow(
+                    valuePilotNextLocalizedDynamicText(LocalValuePilotNextLanguage.current, savedState.statusMessage)
+                        ?: valuePilotNextText("Checking saved choices…", "Comprobando elecciones guardadas…")
+                )
             }
         } else {
             savedState.statusMessage?.let { message ->
                 item(key = "observed-price-saved-status") {
                     EvidenceNotice(
-                        text = message,
+                        text = valuePilotNextLocalizedDynamicText(LocalValuePilotNextLanguage.current, message).orEmpty(),
                         isError = savedState.mode == PracticalShoppingSavedSurfaceMode.ERROR
                     )
                 }
@@ -88,10 +91,15 @@ internal fun ValuePilotObservedPriceSelectionScreen(
                         EmptyStateCard(
                             eyebrow = valuePilotNextText("SAVED CHOICES NEED A REFRESH", "HAY QUE ACTUALIZAR LAS ELECCIONES GUARDADAS"),
                             title = valuePilotNextText("We couldn't prepare price confirmation.", "No pudimos preparar la confirmación de precio."),
-                            detail = savedState.statusMessage
-                                ?: valuePilotNextText("Refresh your saved choices and try again.", "Actualizá tus elecciones guardadas y probá de nuevo."),
+                            detail = valuePilotNextLocalizedDynamicText(
+                                LocalValuePilotNextLanguage.current,
+                                savedState.statusMessage
+                            ) ?: valuePilotNextText("Refresh your saved choices and try again.", "Actualizá tus elecciones guardadas y probá de nuevo."),
                             actionLabel = refreshAction?.let {
-                                savedState.refreshActionLabel ?: valuePilotNextText("Refresh saved choices", "Actualizar elecciones guardadas")
+                                valuePilotNextLocalizedDynamicText(
+                                    LocalValuePilotNextLanguage.current,
+                                    savedState.refreshActionLabel
+                                ) ?: valuePilotNextText("Refresh saved choices", "Actualizar elecciones guardadas")
                             } ?: valuePilotNextText("Back to Saved", "Volver a Guardados"),
                             onAction = {
                                 if (refreshAction != null) onSavedAction(refreshAction)
@@ -111,8 +119,10 @@ internal fun ValuePilotObservedPriceSelectionScreen(
                     EmptyStateCard(
                         eyebrow = valuePilotNextText("START WITH SAVED CHOICES", "EMPEZÁ CON ELECCIONES GUARDADAS"),
                         title = valuePilotNextText("Save a product and store first.", "Primero guardá un producto y una tienda."),
-                        detail = selection.notice
-                            ?: valuePilotNextText("Observed-price confirmation needs one saved product and one exact saved store.", "La confirmación de precio observado necesita un producto guardado y una tienda guardada exacta."),
+                        detail = valuePilotNextLocalizedDynamicText(
+                            LocalValuePilotNextLanguage.current,
+                            selection.notice
+                        ) ?: valuePilotNextText("Observed-price confirmation needs one saved product and one exact saved store.", "La confirmación de precio observado necesita un producto guardado y una tienda guardada exacta."),
                         actionLabel = valuePilotNextText("Back to Saved", "Volver a Guardados"),
                         onAction = onBackToSaved
                     )
@@ -122,36 +132,44 @@ internal fun ValuePilotObservedPriceSelectionScreen(
             else -> {
                 selection.notice?.let { message ->
                     item(key = "observed-price-selection-notice") {
-                        EvidenceNotice(message)
+                    EvidenceNotice(
+                        valuePilotNextLocalizedDynamicText(LocalValuePilotNextLanguage.current, message).orEmpty()
+                    )
                     }
                 }
 
                 selection.productSectionTitle?.let { title ->
                     item(key = "observed-price-products-title") {
-                        SectionHeading(valuePilotNextText("PRODUCT", "PRODUCTO"), title)
+                        SectionHeading(
+                            valuePilotNextText("PRODUCT", "PRODUCTO"),
+                            valuePilotNextLocalizedDynamicText(LocalValuePilotNextLanguage.current, title).orEmpty()
+                        )
                     }
                 }
                 items(selection.productRows) { row ->
                     SelectionChoiceCard(
                         title = row.title,
                         selected = row.selected,
-                        actionLabel = row.actionLabel,
-                        actionDescription = row.actionDescription,
+                        actionLabel = valuePilotNextLocalizedDynamicText(LocalValuePilotNextLanguage.current, row.actionLabel).orEmpty(),
+                        actionDescription = valuePilotNextLocalizedDynamicText(LocalValuePilotNextLanguage.current, row.actionDescription).orEmpty(),
                         onAction = { onSelectionAction(row.action) }
                     )
                 }
 
                 selection.storeSectionTitle?.let { title ->
                     item(key = "observed-price-stores-title") {
-                        SectionHeading(valuePilotNextText("EXACT STORE", "TIENDA EXACTA"), title)
+                        SectionHeading(
+                            valuePilotNextText("EXACT STORE", "TIENDA EXACTA"),
+                            valuePilotNextLocalizedDynamicText(LocalValuePilotNextLanguage.current, title).orEmpty()
+                        )
                     }
                 }
                 items(selection.storeRows) { row ->
                     SelectionChoiceCard(
                         title = row.title,
                         selected = row.selected,
-                        actionLabel = row.actionLabel,
-                        actionDescription = row.actionDescription,
+                        actionLabel = valuePilotNextLocalizedDynamicText(LocalValuePilotNextLanguage.current, row.actionLabel).orEmpty(),
+                        actionDescription = valuePilotNextLocalizedDynamicText(LocalValuePilotNextLanguage.current, row.actionDescription).orEmpty(),
                         onAction = { onSelectionAction(row.action) }
                     )
                 }
@@ -181,7 +199,12 @@ internal fun ValuePilotObservedPriceSelectionScreen(
                                 .fillMaxWidth()
                                 .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
                         ) {
-                            Text(valuePilotNextText("Clear selected product and store", "Borrar producto y tienda elegidos"))
+                            Text(
+                                valuePilotNextLocalizedDynamicText(
+                                    LocalValuePilotNextLanguage.current,
+                                    selection.clearSelectionActionLabel
+                                ) ?: valuePilotNextText("Clear selected product and store", "Borrar producto y tienda elegidos")
+                            )
                         }
                     }
                 }
@@ -189,8 +212,10 @@ internal fun ValuePilotObservedPriceSelectionScreen(
                 selection.checkPrefillAction?.let { action ->
                     item(key = "observed-price-check-prefill") {
                         PrimaryActionButton(
-                            label = selection.checkPrefillActionLabel
-                                ?: valuePilotNextText("Check saved product and store", "Comprobar producto y tienda guardados"),
+                            label = valuePilotNextLocalizedDynamicText(
+                                LocalValuePilotNextLanguage.current,
+                                selection.checkPrefillActionLabel
+                            ) ?: valuePilotNextText("Check saved product and store", "Comprobar producto y tienda guardados"),
                             onClick = { onCheckPrefill(action) },
                             enabled = !savedState.progressVisible
                         )
@@ -211,7 +236,10 @@ internal fun ValuePilotObservedPriceSelectionScreen(
         savedState.refreshAction?.let { action ->
             item(key = "observed-price-refresh-saved") {
                 SecondaryActionButton(
-                    label = savedState.refreshActionLabel ?: valuePilotNextText("Refresh saved choices", "Actualizar elecciones guardadas"),
+                    label = valuePilotNextLocalizedDynamicText(
+                        LocalValuePilotNextLanguage.current,
+                        savedState.refreshActionLabel
+                    ) ?: valuePilotNextText("Refresh saved choices", "Actualizar elecciones guardadas"),
                     onClick = { onSavedAction(action) },
                     enabled = !savedState.progressVisible
                 )
@@ -311,12 +339,12 @@ private fun PrefillResultCard(
         ) {
             Eyebrow(valuePilotNextText("SAVED IDENTITY CHECK", "COMPROBACIÓN DE IDENTIDAD GUARDADA"))
             Text(
-                result.headline,
+                valuePilotNextLocalizedDynamicText(LocalValuePilotNextLanguage.current, result.headline).orEmpty(),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                result.message,
+                valuePilotNextLocalizedDynamicText(LocalValuePilotNextLanguage.current, result.message).orEmpty(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

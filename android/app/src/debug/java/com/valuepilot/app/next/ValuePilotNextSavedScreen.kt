@@ -126,18 +126,19 @@ internal fun ValuePilotSavedScreen(
         if (state.progressVisible) {
             item(key = "saved-progress") {
                 LoadingRow(
-                    state.statusMessage ?: valuePilotNextText(
-                        language,
-                        "Updating saved choices…",
-                        "Actualizando elecciones guardadas…"
-                    )
+                    valuePilotNextLocalizedDynamicText(language, state.statusMessage)
+                        ?: valuePilotNextText(
+                            language,
+                            "Updating saved choices…",
+                            "Actualizando elecciones guardadas…"
+                        )
                 )
             }
         } else {
             state.statusMessage?.let { message ->
                 item(key = "saved-status") {
                     EvidenceNotice(
-                        text = message,
+                        text = valuePilotNextLocalizedDynamicText(language, message).orEmpty(),
                         isError = state.mode == PracticalShoppingSavedSurfaceMode.ERROR
                     )
                 }
@@ -145,14 +146,16 @@ internal fun ValuePilotSavedScreen(
         }
 
         state.notice?.let { message ->
-            item(key = "saved-notice") { EvidenceNotice(message) }
+            item(key = "saved-notice") {
+                EvidenceNotice(valuePilotNextLocalizedDynamicText(language, message).orEmpty())
+            }
         }
 
         state.productSectionTitle?.let { title ->
             item(key = "saved-products-heading") {
                 SectionHeading(
                     valuePilotNextText(language, "SAVED PRODUCTS", "PRODUCTOS GUARDADOS"),
-                    title
+                    valuePilotNextLocalizedDynamicText(language, title).orEmpty()
                 )
             }
             items(state.productRows) { row ->
@@ -169,7 +172,7 @@ internal fun ValuePilotSavedScreen(
             item(key = "saved-stores-heading") {
                 SectionHeading(
                     valuePilotNextText(language, "SAVED STORES", "TIENDAS GUARDADAS"),
-                    title
+                    valuePilotNextLocalizedDynamicText(language, title).orEmpty()
                 )
             }
             items(state.storeRows) { row ->
@@ -181,7 +184,7 @@ internal fun ValuePilotSavedScreen(
             item(key = "saved-empty") {
                 SavedShortlistCard(
                     language = language,
-                    detail = localizedSavedMessage(language, message),
+                    detail = valuePilotNextLocalizedDynamicText(language, message).orEmpty(),
                     onSearch = onSearch
                 )
             }
@@ -191,18 +194,18 @@ internal fun ValuePilotSavedScreen(
             item(key = "saved-refresh") {
                 if (state.mode == PracticalShoppingSavedSurfaceMode.ERROR) {
                     PrimaryActionButton(
-                        label = localizedSavedMessage(
+                        label = valuePilotNextLocalizedDynamicText(
                             language,
                             requireNotNull(state.refreshActionLabel)
-                        ),
+                        ).orEmpty(),
                         onClick = { onAction(action) }
                     )
                 } else {
                     SecondaryActionButton(
-                        label = localizedSavedMessage(
+                        label = valuePilotNextLocalizedDynamicText(
                             language,
                             requireNotNull(state.refreshActionLabel)
-                        ),
+                        ).orEmpty(),
                         onClick = { onAction(action) }
                     )
                 }
@@ -282,32 +285,20 @@ internal fun ValuePilotSavedScreen(
         item(key = "saved-staple-watch-launch") {
             SavedToolCard(
                 eyebrow = valuePilotNextText(language, "RECURRING STAPLES", "ESENCIALES RECURRENTES"),
-                title = stapleLaunch?.title ?: valuePilotNextText(language, "Watch My Staples", "Mis esenciales"),
-                detail = stapleLaunch?.supportingText
-                    ?: stapleLaunch?.notice
+                title = valuePilotNextLocalizedDynamicText(language, stapleLaunch?.title)
+                    ?: valuePilotNextText(language, "Watch My Staples", "Mis esenciales"),
+                detail = valuePilotNextLocalizedDynamicText(language, stapleLaunch?.supportingText)
+                    ?: valuePilotNextLocalizedDynamicText(language, stapleLaunch?.notice)
                     ?: valuePilotNextText(
                         language,
                         "Review the saved product and store requirements for recurring staples.",
                         "Revisá los requisitos de productos y tienda guardados para tus esenciales recurrentes."
                     ),
-                actionLabel = stapleLaunch?.actionLabel
+                actionLabel = valuePilotNextLocalizedDynamicText(language, stapleLaunch?.actionLabel)
                     ?: valuePilotNextText(language, "Review setup requirements", "Revisar requisitos"),
                 onClick = onOpenStapleWatch
             )
         }
-    }
-}
-
-private fun localizedSavedMessage(
-    language: ValuePilotNextLanguage,
-    message: String
-): String {
-    if (language != ValuePilotNextLanguage.SPANISH_AR) return message
-    return when {
-        message.equals("No saved choices yet.", ignoreCase = true) ->
-            "Todavía no hay elecciones guardadas."
-        message.equals("Refresh", ignoreCase = true) -> "Actualizar"
-        else -> message
     }
 }
 
@@ -496,7 +487,7 @@ private fun SavedProductCard(
 ) {
     SavedChoiceCard(
         title = row.title,
-        supportingText = row.supportingText,
+        supportingText = valuePilotNextLocalizedDynamicText(language, row.supportingText).orEmpty(),
         actions = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -510,13 +501,15 @@ private fun SavedProductCard(
                             .weight(1f)
                             .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
                             .semantics {
-                                contentDescription = row.secondaryActionDescription
-                                    ?: row.secondaryActionLabel
+                                contentDescription = valuePilotNextLocalizedDynamicText(
+                                    language,
+                                    row.secondaryActionDescription ?: row.secondaryActionLabel
+                                )
                                     ?: valuePilotNextText(language, "Check price", "Comprobar precio")
                             }
                     ) {
                         Text(
-                            row.secondaryActionLabel
+                            valuePilotNextLocalizedDynamicText(language, row.secondaryActionLabel)
                                 ?: valuePilotNextText(language, "Check price", "Comprobar precio")
                         )
                     }
@@ -528,13 +521,15 @@ private fun SavedProductCard(
                             .weight(1f)
                             .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
                             .semantics {
-                                contentDescription = row.actionDescription
-                                    ?: row.actionLabel
+                                contentDescription = valuePilotNextLocalizedDynamicText(
+                                    language,
+                                    row.actionDescription ?: row.actionLabel
+                                )
                                     ?: valuePilotNextText(language, "Remove saved product", "Quitar producto guardado")
                             }
                     ) {
                         Text(
-                            row.actionLabel
+                            valuePilotNextLocalizedDynamicText(language, row.actionLabel)
                                 ?: valuePilotNextText(language, "Remove", "Quitar")
                         )
                     }
@@ -552,7 +547,7 @@ private fun SavedStoreCard(
 ) {
     SavedChoiceCard(
         title = row.title,
-        supportingText = row.supportingText,
+        supportingText = valuePilotNextLocalizedDynamicText(language, row.supportingText).orEmpty(),
         actions = {
             row.action?.let { action ->
                 TextButton(
@@ -561,8 +556,10 @@ private fun SavedStoreCard(
                         .fillMaxWidth()
                         .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
                         .semantics {
-                            contentDescription = row.actionDescription
-                                ?: row.actionLabel
+                            contentDescription = valuePilotNextLocalizedDynamicText(
+                                language,
+                                row.actionDescription ?: row.actionLabel
+                            )
                                 ?: valuePilotNextText(language, "Remove saved store", "Quitar tienda guardada")
                         }
                 ) {
@@ -571,7 +568,7 @@ private fun SavedStoreCard(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            row.actionLabel
+                            valuePilotNextLocalizedDynamicText(language, row.actionLabel)
                                 ?: valuePilotNextText(language, "Remove", "Quitar")
                         )
                         Text("→", color = MaterialTheme.colorScheme.secondary)

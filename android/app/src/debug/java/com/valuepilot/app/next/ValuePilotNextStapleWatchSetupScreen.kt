@@ -44,6 +44,7 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
     onOpenLegacyStapleWatch: () -> Unit,
     onBack: () -> Unit
 ) {
+    val language = LocalValuePilotNextLanguage.current
     val classicHandoffRequired =
         state?.let { requiresClassicStapleWatchHandoff(it.factCheckCapability) } == true
 
@@ -57,7 +58,7 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    state?.guidance
+                    valuePilotNextLocalizedDynamicText(language, state?.guidance)
                         ?: valuePilotNextText("Choose at least two saved products and a usual store to prepare a future comparison.", "Elegí al menos dos productos guardados y una tienda habitual para preparar una comparación futura."),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -96,7 +97,7 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
                             valuePilotNextText("Save two products first.", "Primero guardá dos productos.")
                         else -> valuePilotNextText("Save a usual store first.", "Primero guardá una tienda habitual.")
                     },
-                    detail = state.guidance,
+                    detail = valuePilotNextLocalizedDynamicText(language, state.guidance).orEmpty(),
                     actionLabel = valuePilotNextText("Open classic Saved", "Abrir Guardados clásico"),
                     onClick = onOpenLegacyStapleWatch
                 )
@@ -138,7 +139,10 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
 
             state.notice?.let { message ->
                 item(key = "staple-watch-notice") {
-                    EvidenceNotice(text = message, isError = state.selectedDisplayNameBlockerCount > 0)
+                    EvidenceNotice(
+                        text = valuePilotNextLocalizedDynamicText(language, message).orEmpty(),
+                        isError = state.selectedDisplayNameBlockerCount > 0
+                    )
                 }
             }
 
@@ -150,7 +154,10 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
 
             state.productSectionTitle?.let { title ->
                 item(key = "staple-watch-products-heading") {
-                    SectionHeading(valuePilotNextText("CHOOSE YOUR STAPLES", "ELEGÍ TUS ESENCIALES"), title)
+                    SectionHeading(
+                        valuePilotNextText("CHOOSE YOUR STAPLES", "ELEGÍ TUS ESENCIALES"),
+                        valuePilotNextLocalizedDynamicText(language, title).orEmpty()
+                    )
                 }
                 items(
                     items = state.productRows,
@@ -159,8 +166,8 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
                     StapleChoiceCard(
                         title = row.title,
                         selected = row.watched,
-                        actionLabel = row.actionLabel,
-                        actionDescription = row.actionDescription,
+                        actionLabel = valuePilotNextLocalizedDynamicText(language, row.actionLabel).orEmpty(),
+                        actionDescription = valuePilotNextLocalizedDynamicText(language, row.actionDescription).orEmpty(),
                         action = row.action,
                         onAction = onAction
                     )
@@ -169,14 +176,17 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
 
             state.storeSectionTitle?.let { title ->
                 item(key = "staple-watch-stores-heading") {
-                    SectionHeading(valuePilotNextText("USUAL STORE", "TIENDA HABITUAL"), title)
+                    SectionHeading(
+                        valuePilotNextText("USUAL STORE", "TIENDA HABITUAL"),
+                        valuePilotNextLocalizedDynamicText(language, title).orEmpty()
+                    )
                 }
                 items(state.storeRows) { row ->
                     StapleChoiceCard(
                         title = row.title,
                         selected = row.usualStore,
-                        actionLabel = row.actionLabel,
-                        actionDescription = row.actionDescription,
+                        actionLabel = valuePilotNextLocalizedDynamicText(language, row.actionLabel).orEmpty(),
+                        actionDescription = valuePilotNextLocalizedDynamicText(language, row.actionDescription).orEmpty(),
                         action = row.action,
                         onAction = onAction
                     )
@@ -191,7 +201,10 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
                             .fillMaxWidth()
                             .heightIn(min = ValuePilotSpacing.minimumTouchTarget)
                     ) {
-                        Text(state.clearSelectionActionLabel ?: valuePilotNextText("Clear selections", "Borrar elecciones"))
+                        Text(
+                            valuePilotNextLocalizedDynamicText(language, state.clearSelectionActionLabel)
+                                ?: valuePilotNextText("Clear selections", "Borrar elecciones")
+                        )
                     }
                 }
             }
@@ -199,7 +212,8 @@ internal fun ValuePilotNextStapleWatchSetupScreen(
             state.continueAction?.let { action ->
                 item(key = "staple-watch-continue") {
                     PrimaryActionButton(
-                        label = state.continueActionLabel ?: valuePilotNextText("Continue", "Continuar"),
+                        label = valuePilotNextLocalizedDynamicText(language, state.continueActionLabel)
+                            ?: valuePilotNextText("Continue", "Continuar"),
                         onClick = { onContinue(action) }
                     )
                 }
@@ -235,7 +249,12 @@ private fun WatchSetupProgressCard(
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
                 Eyebrow(valuePilotNextText("YOUR WATCH LIST", "TU LISTA DE SEGUIMIENTO"))
                 Text(
-                    state.selectionSummary,
+                    valuePilotNextText(
+                        "${state.watchedItemCount} staples selected ($MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF minimum) · " +
+                            if (state.usualStoreSelected) "Usual store selected" else "Usual store not selected",
+                        "${state.watchedItemCount} esenciales elegidos (mínimo $MIN_WATCHED_SAVED_ITEMS_FOR_HANDOFF) · " +
+                            if (state.usualStoreSelected) "Tienda habitual elegida" else "Tienda habitual no elegida"
+                    ),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -408,6 +427,7 @@ private fun SummaryCard(eyebrow: String, title: String, detail: String) {
 
 @Composable
 private fun FactResolutionCard(state: StapleWatchFactResolutionUiState) {
+    val allSupplied = state.resolvedRequirementCount == state.totalRequirementCount
     Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
         SummaryCard(
             eyebrow = valuePilotNextText("REQUIRED FACT CHECKS", "COMPROBACIONES NECESARIAS"),
@@ -415,11 +435,25 @@ private fun FactResolutionCard(state: StapleWatchFactResolutionUiState) {
                 "${state.resolvedRequirementCount} of ${state.totalRequirementCount} checks supplied",
                 "${state.resolvedRequirementCount} de ${state.totalRequirementCount} comprobaciones aportadas"
             ),
-            detail = state.guidance
+            detail = valuePilotNextText(
+                if (allSupplied) {
+                    "All required fact categories are supplied. Policy and display metadata still remain separate before a decision can be shown."
+                } else {
+                    "${state.resolvedRequirementCount} of ${state.totalRequirementCount} required fact checks supplied. No switch decision is available yet."
+                },
+                if (allSupplied) {
+                    "Se aportaron todas las categorías de hechos necesarias. La política y los metadatos visuales siguen separados antes de mostrar una decisión."
+                } else {
+                    "Se aportaron ${state.resolvedRequirementCount} de ${state.totalRequirementCount} comprobaciones necesarias. Todavía no hay una decisión de cambio disponible."
+                }
+            )
         )
         state.unresolvedRequirementLabels.forEach { label ->
             Text(
-                valuePilotNextText("Still needed · $label", "Todavía falta · $label"),
+                valuePilotNextText(
+                    "Still needed · $label",
+                    "Todavía falta · ${valuePilotNextLocalizedDynamicText(LocalValuePilotNextLanguage.current, label).orEmpty()}"
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

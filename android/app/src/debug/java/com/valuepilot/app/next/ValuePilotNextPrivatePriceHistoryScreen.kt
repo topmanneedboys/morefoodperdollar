@@ -39,6 +39,7 @@ internal fun ValuePilotNextPrivatePriceHistoryScreen(
     onOpenComparison: () -> Unit,
     onBack: () -> Unit
 ) {
+    val language = LocalValuePilotNextLanguage.current
     var showForgetDialog by remember { mutableStateOf(false) }
     var selectedObservationId by remember { mutableStateOf<String?>(null) }
     var showClearAllDialog by remember { mutableStateOf(false) }
@@ -162,7 +163,7 @@ internal fun ValuePilotNextPrivatePriceHistoryScreen(
                     EmptyStateCard(
                         eyebrow = valuePilotNextText("HISTORY UNAVAILABLE", "HISTORIAL NO DISPONIBLE"),
                         title = valuePilotNextText("We couldn't open private history.", "No pudimos abrir el historial privado."),
-                        detail = state.notice
+                        detail = valuePilotNextLocalizedDynamicText(language, state.notice)
                             ?: valuePilotNextText("Try again or open Scan & compare for its recovery options.", "Probá de nuevo o abrí Escanear y comparar para ver opciones de recuperación."),
                         actionLabel = valuePilotNextText("Try again", "Intentar de nuevo"),
                         onAction = onRefresh
@@ -179,14 +180,14 @@ internal fun ValuePilotNextPrivatePriceHistoryScreen(
             ValuePilotNextPrivatePriceHistoryStatus.EMPTY -> {
                 state.notice?.let { notice ->
                     item(key = "private-price-history-empty-notice") {
-                        EvidenceNotice(notice)
+                        EvidenceNotice(valuePilotNextLocalizedDynamicText(language, notice).orEmpty())
                     }
                 }
                 item(key = "private-price-history-empty") {
                     EmptyStateCard(
                         eyebrow = valuePilotNextText("NO OBSERVATIONS YET", "TODAVÍA NO HAY OBSERVACIONES"),
                         title = valuePilotNextText("Your history will appear here.", "Tu historial va a aparecer acá."),
-                        detail = state.presentation?.intro
+                        detail = valuePilotNextLocalizedDynamicText(language, state.presentation?.intro)
                             ?: valuePilotNextText("Private comparison observations stay on this device and are not current store offers.", "Las observaciones privadas de comparación quedan en este dispositivo y no son ofertas actuales de tienda."),
                         actionLabel = valuePilotNextText("Open Scan & compare", "Abrir Escanear y comparar"),
                         onAction = onOpenComparison
@@ -197,7 +198,7 @@ internal fun ValuePilotNextPrivatePriceHistoryScreen(
             ValuePilotNextPrivatePriceHistoryStatus.AVAILABLE -> {
                 state.notice?.let { notice ->
                     item(key = "private-price-history-notice") {
-                        EvidenceNotice(notice)
+                        EvidenceNotice(valuePilotNextLocalizedDynamicText(language, notice).orEmpty())
                     }
                 }
                 state.presentation?.let { presentation ->
@@ -251,6 +252,7 @@ internal fun ValuePilotNextPrivatePriceHistoryScreen(
 
 @Composable
 private fun HistorySummaryCard(presentation: PracticalShoppingPrivatePriceHistoryPresentation) {
+    val language = LocalValuePilotNextLanguage.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -265,8 +267,15 @@ private fun HistorySummaryCard(presentation: PracticalShoppingPrivatePriceHistor
             verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)
         ) {
             Eyebrow(valuePilotNextText("${presentation.rows.size} EXACT HISTORIES SHOWN", "${presentation.rows.size} HISTORIA(S) EXACTA(S) MOSTRADA(S)"))
-            Text(presentation.title, style = MaterialTheme.typography.titleLarge)
-            Text(presentation.intro, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                valuePilotNextLocalizedDynamicText(language, presentation.title).orEmpty(),
+                style = MaterialTheme.typography.titleLarge
+            )
+            Text(
+                valuePilotNextLocalizedDynamicText(language, presentation.intro).orEmpty(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             if (presentation.omittedRowCount > 0) {
                 Text(
                     valuePilotNextText(
@@ -283,6 +292,7 @@ private fun HistorySummaryCard(presentation: PracticalShoppingPrivatePriceHistor
 
 @Composable
 private fun HistoryRowCard(row: PracticalShoppingPrivatePriceHistoryRow) {
+    val language = LocalValuePilotNextLanguage.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
@@ -296,8 +306,8 @@ private fun HistoryRowCard(row: PracticalShoppingPrivatePriceHistoryRow) {
         ) {
             Eyebrow(
                 valuePilotNextText(
-                    "${row.observationCount} ${if (row.observationCount == 1) "OBSERVATION" else "OBSERVATIONS"} · ${row.sourceText.uppercase()}",
-                    "${row.observationCount} ${if (row.observationCount == 1) "OBSERVACIÓN" else "OBSERVACIONES"} · ${row.sourceText.uppercase()}"
+                    "${row.observationCount} ${if (row.observationCount == 1) "OBSERVATION" else "OBSERVATIONS"} · ${valuePilotNextLocalizedDynamicText(language, row.sourceText).orEmpty().uppercase()}",
+                    "${row.observationCount} ${if (row.observationCount == 1) "OBSERVACIÓN" else "OBSERVACIONES"} · ${valuePilotNextLocalizedDynamicText(language, row.sourceText).orEmpty().uppercase()}"
                 )
             )
             Text(row.displayName, style = MaterialTheme.typography.titleLarge)
@@ -311,15 +321,26 @@ private fun HistoryRowCard(row: PracticalShoppingPrivatePriceHistoryRow) {
             Text(valuePilotNextText("Unit rate · ${row.latestUnitRateText}", "Precio unitario · ${row.latestUnitRateText}"), style = MaterialTheme.typography.bodyMedium)
             Text(valuePilotNextText("Observed range · ${row.rangeText}", "Rango observado · ${row.rangeText}"), style = MaterialTheme.typography.bodyMedium)
             row.recentMovementText?.let { movement ->
-                Text(movement, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    valuePilotNextLocalizedDynamicText(language, movement).orEmpty(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             Text(
-                valuePilotNextText("Package · ${row.packageText} · ${row.priceBasisText}", "Envase · ${row.packageText} · ${row.priceBasisText}"),
+                valuePilotNextText(
+                    "Package · ${row.packageText} · ${valuePilotNextLocalizedDynamicText(language, row.priceBasisText).orEmpty()}",
+                    "Envase · ${row.packageText} · ${valuePilotNextLocalizedDynamicText(language, row.priceBasisText).orEmpty()}"
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             row.promotionText?.let { promotion ->
-                Text(promotion, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    valuePilotNextLocalizedDynamicText(language, promotion).orEmpty(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -333,9 +354,10 @@ private fun ForgetObservationDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
+    val language = LocalValuePilotNextLanguage.current
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(presentation.title) },
+        title = { Text(valuePilotNextLocalizedDynamicText(language, presentation.title).orEmpty()) },
         text = {
             Column(
                 modifier = Modifier
@@ -343,7 +365,10 @@ private fun ForgetObservationDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)
             ) {
-                Text(presentation.message, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    valuePilotNextLocalizedDynamicText(language, presentation.message).orEmpty(),
+                    style = MaterialTheme.typography.bodySmall
+                )
                 presentation.choices.forEach { choice ->
                     Row(
                         modifier = Modifier
