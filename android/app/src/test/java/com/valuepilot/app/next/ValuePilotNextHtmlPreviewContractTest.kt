@@ -152,6 +152,28 @@ class ValuePilotNextHtmlPreviewContractTest {
     }
 
     @Test
+    fun acceptsOnlyBoundedNativeMapContextRequests() {
+        val request = requireNotNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeMapMessage(
+                "{\"type\":\"OPEN_NATIVE_MAP_CONTEXT\",\"identityKey\":\"identity-123\",\"offerKey\":\"offer-123\",\"query\":\"leche entera\"}"
+            )
+        )
+        assertEquals("identity-123", request.identityKey)
+        assertEquals("offer-123", request.offerKey)
+        assertEquals("leche entera", request.query)
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeMapMessage(
+                "{\"type\":\"OPEN_NATIVE_MAP_CONTEXT\",\"identityKey\":\"identity-123\",\"offerKey\":\"\",\"query\":\"leche\"}"
+            )
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeMapMessage(
+                "{\"type\":\"OPEN_NATIVE_MAP_CONTEXT\",\"identityKey\":\"identity-123\",\"offerKey\":\"offer-123\",\"query\":\"leche\\u0001\"}"
+            )
+        )
+    }
+
+    @Test
     fun buildsNativeGoogleImagesQueriesFromIdentityFields() {
         val request = requireNotNull(
             ValuePilotNextHtmlPreviewContract.parseNativeGoogleImagesMessage(

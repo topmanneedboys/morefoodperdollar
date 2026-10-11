@@ -81,6 +81,12 @@ internal data class ValuePilotNextHtmlNativeProductDetailRequest(
     val query: String
 )
 
+internal data class ValuePilotNextHtmlNativeMapRequest(
+    val identityKey: String,
+    val offerKey: String,
+    val query: String
+)
+
 internal data class ValuePilotNextHtmlNativeSaveRequest(
     val identityKey: String,
     val displayName: String,
@@ -235,6 +241,23 @@ internal object ValuePilotNextHtmlPreviewContract {
             containsControlCharacter(identityKey) || containsControlCharacter(query)
         ) return null
         return ValuePilotNextHtmlNativeProductDetailRequest(identityKey, query)
+    }
+
+    /** Opens only the exact source-backed offer selected in the current Search result. */
+    fun parseNativeMapMessage(rawMessage: String?): ValuePilotNextHtmlNativeMapRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 2_048) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        if (json.optString("type") != "OPEN_NATIVE_MAP_CONTEXT") return null
+        val identityKey = json.optString("identityKey").trim()
+        val offerKey = json.optString("offerKey").trim()
+        val query = json.optString("query").trim()
+        if (
+            identityKey.isBlank() || identityKey.length > 256 ||
+            offerKey.isBlank() || offerKey.length > 512 ||
+            query.isBlank() || query.length > 96 ||
+            listOf(identityKey, offerKey, query).any(::containsControlCharacter)
+        ) return null
+        return ValuePilotNextHtmlNativeMapRequest(identityKey, offerKey, query)
     }
 
     /** Requests the identity-only Saved surface from the isolated Kotlin journey. */

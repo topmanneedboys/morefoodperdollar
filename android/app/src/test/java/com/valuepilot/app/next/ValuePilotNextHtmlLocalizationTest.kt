@@ -99,15 +99,12 @@ class ValuePilotNextHtmlLocalizationTest {
         val source = assetSource()
 
         assertTrue(source.contains("const nativeAmount="))
-        assertTrue(source.contains("const hasUnitPrice=offer?.unitPriceAmount!=null"))
-        assertTrue(source.contains("const amount=hasUnitPrice?offer.unitPriceAmount:offer?.priceAmount"))
+        assertTrue(source.contains("unitValue:offer?.unitPriceAmount!=null?Number(offer.unitPriceAmount):null"))
+        assertTrue(source.contains("packValue:offer?.priceAmount!=null?Number(offer.priceAmount):null"))
         assertTrue(source.contains("const decimal=state.language===LANGUAGES.EN?'.':','"))
         assertTrue(source.contains("const grouping=state.language===LANGUAGES.EN?',':'.'"))
-        assertTrue(source.contains("const formattedAmount=amount==null?null:nativeAmount(amount)"))
         assertTrue(source.contains("const nativeCurrency="))
-        assertTrue(source.contains("const currencyCode=hasUnitPrice?(offer?.unitPriceCurrency||offer?.currency||'ARS')"))
-        assertTrue(source.contains("\${nativeCurrency(r.total)}"))
-        assertTrue(source.contains("\${nativeCurrency(r.fuelCost)}"))
+        assertTrue(source.contains("unitCurrency:offer?.unitPriceCurrency||offer?.currency||'ARS'"))
         assertTrue(source.contains("nativeUnitPrice"))
         assertTrue(source.contains("nativePackagePrice"))
         assertTrue(source.contains("'provider identity match':'nativeMatchProvider'"))
@@ -141,6 +138,45 @@ class ValuePilotNextHtmlLocalizationTest {
                 "function enableNativeSaved(){state.nativeSavedEnabled=true;state.nativeSearchEnabled=true;state.nativeSavedState=null;requestNativeSaved()}"
             )
         )
+    }
+
+    @Test
+    fun `native mode keeps the home shell evidence backed and preserves route context`() {
+        val source = assetSource()
+
+        assertTrue(source.contains("const native=Boolean(state.nativeSavedState&&nativeDataMode())"))
+        assertTrue(source.contains("native?copy('nativeBasketTitle'):copy('demoBasket')"))
+        assertTrue(source.contains("native?copy('nativeEvidence'):(basketCount()?copy('samplePrices'):copy('basketEmptyCopy'))"))
+        assertTrue(source.contains("const parentNav=['home','search','basket','saved'].includes(state.from)?state.from:'search'"))
+        assertTrue(source.contains("navigate(el.dataset.nav,{from:state.page})"))
+        assertTrue(source.contains("navigate('search',{from:'home'})"))
+    }
+
+    @Test
+    fun `maximum density matrix keeps identity pinned and supports evidence actions`() {
+        val source = assetSource()
+
+        assertTrue(source.contains("const MATRIX_DEMO_ROWS=Object.freeze(Array.from({length:1000"))
+        assertTrue(source.contains("function matrixRowsForNative(payload)"))
+        assertTrue(source.contains("class=\"matrix-scroll\""))
+        assertTrue(source.contains("data-action=\"matrix-sort\""))
+        assertTrue(source.contains("id=\"matrixStore\""))
+        assertTrue(source.contains("id=\"matrixSort\""))
+        assertTrue(source.contains("case'native-map':requestNativeMap"))
+        assertTrue(source.contains("case'native-save':requestNativeSave"))
+        assertTrue(source.contains("state.matrixScrollTop"))
+        assertTrue(source.contains("matrixRowsSorted"))
+    }
+
+    @Test
+    fun `matrix styles define sticky identity and unit columns with compact rows`() {
+        val source = styleSource()
+
+        assertTrue(source.contains(".price-matrix .matrix-product{width:164px"))
+        assertTrue(source.contains("position:sticky;left:0"))
+        assertTrue(source.contains(".price-matrix .matrix-unit{width:96px"))
+        assertTrue(source.contains("height:48px"))
+        assertTrue(source.contains("overflow:auto"))
     }
 
     @Test

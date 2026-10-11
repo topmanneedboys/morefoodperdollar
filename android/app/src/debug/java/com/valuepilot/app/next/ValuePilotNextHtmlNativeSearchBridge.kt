@@ -476,6 +476,7 @@ internal object ValuePilotNextHtmlNativeSearchBridge {
     private fun JSONArray.putOffer(offer: ArgentinaBackendContract.SearchOffer) {
         put(
             JSONObject()
+                .put("offerKey", offer.offerKey)
                 .put("storeName", offer.storeName)
                 .put("priceAmount", offer.listPrice.amount)
                 .put("currency", offer.listPrice.currency)

@@ -368,6 +368,12 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                         openNativeProductDetail(nativeProductDetail)
                         return
                     }
+                    val nativeMap = ValuePilotNextHtmlPreviewContract
+                        .parseNativeMapMessage(message.data)
+                    if (nativeMap != null) {
+                        openNativeMapContext(nativeMap)
+                        return
+                    }
                     if (ValuePilotNextHtmlPreviewContract
                             .parseNativeSavedReadMessage(message.data) != null
                     ) {
@@ -824,11 +830,47 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         )
     }
 
+    private fun openNativeMapContext(
+        request: ValuePilotNextHtmlNativeMapRequest
+    ) {
+        if (!::journey.isInitialized) return
+        val presentation = journey.uiState.search.presentation
+        val match = presentation?.matches?.firstOrNull { it.identityKey == request.identityKey }
+        if (match == null || !ValuePilotNextHtmlPreviewContract.productDetailQueryMatches(
+                journey.uiState.search.query,
+                request.query
+            )
+        ) {
+            sendNativeActionNotice("MAP_UNAVAILABLE")
+            return
+        }
+        val offer = match.qualifiedOffers.firstOrNull { it.offerKey == request.offerKey }
+        if (offer == null) {
+            sendNativeActionNotice("MAP_UNAVAILABLE")
+            return
+        }
+        val context = com.valuepilot.app.ArgentinaQualifiedStoreMapContextPresentation
+            .fromOffer(offer, match.displayName)
+        val latitude = context.latitude
+        val longitude = context.longitude
+        if (latitude == null || longitude == null) {
+            sendNativeActionNotice("MAP_UNAVAILABLE")
+            return
+        }
+        val uri = ("geo:$latitude,$longitude?q=$latitude,$longitude(${Uri.encode(context.storeName)})").toUri()
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, uri))
+        } catch (_: ActivityNotFoundException) {
+            sendNativeActionNotice("MAP_UNAVAILABLE")
+        }
+    }
+
     private fun sendNativeActionNotice(code: String) {
         if (!::webView.isInitialized) return
         val safeCode = when (code) {
             "PRODUCT_DETAIL_STALE",
-            "SAVED_ITEM_STALE" -> code
+            "SAVED_ITEM_STALE",
+            "MAP_UNAVAILABLE" -> code
             else -> return
         }
         webView.evaluateJavascript(
