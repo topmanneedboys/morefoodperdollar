@@ -1,14 +1,14 @@
 'use strict';
-/* Stitch visual surface. Sample fixtures stay isolated; the explicit ValuePilot
+/* ValuePilot visual surface. Comparison fixtures stay isolated; the explicit ValuePilot
    Search action can read the existing Kotlin engine without bypassing its
    release, Firebase/App Check or evidence rules. */
 const DEMO_PRODUCTS = Object.freeze([
-  {id:'milk-armonia-1l', brand:'Armonía', name:'Leche Entera Clásica', variant:'UAT larga vida · 3% tenor graso · sachet', quantity:'1.000 ml', unit:'L', liters:1, price:1190, store:'Dia Online · Recoleta', freshness:'Muestra de diseño', label:'Ejemplo de precio bajo'},
-  {id:'milk-serenisima-1l', brand:'La Serenísima', name:'Leche Entera Clásica 3%', variant:'Pasteurizada · sachet refrigerado · 3% tenor graso', quantity:'1.000 ml', unit:'L', liters:1, price:1290, store:'Coto · Almagro', freshness:'Muestra de diseño', label:'Sachet 1 L'},
-  {id:'milk-light-1l', brand:'La Serenísima', name:'Leche Descremada 1%', variant:'Parcialmente descremada · calcio activo · sachet', quantity:'1.000 ml', unit:'L', liters:1, price:1290, store:'Coto · Abasto', freshness:'Muestra de diseño', label:'Variedad liviana'},
-  {id:'milk-ilolay-1l', brand:'Ilolay', name:'Leche Entera Clásica', variant:'Homogeneizada · larga vida · envase Tetra Brik', quantity:'1.000 ml', unit:'L', liters:1, price:1340, store:'Carrefour Express · Palermo', freshness:'Muestra de diseño', label:'Tetra Brik'},
-  {id:'rice-arroz-1kg', brand:'Molinos Ala', name:'Arroz Largo Fino 00000', variant:'Bolsa 1 kg · variedad largo fino', quantity:'1 kg', unit:'kg', liters:1, price:1890, store:'Coto · Almagro', freshness:'Muestra de diseño', label:'Almacén básico'},
-  {id:'oil-oliva-500ml', brand:'Aceite de Oliva', name:'Extra Virgen', variant:'Botella 500 ml · aceite de oliva', quantity:'500 ml', unit:'L', liters:.5, price:7450, store:'Jumbo · Palermo', freshness:'Muestra de diseño', label:'Aceites y grasas'}
+  {id:'milk-armonia-1l', brand:'Armonía', name:'Leche Entera Clásica', variant:'UAT larga vida · 3% tenor graso · sachet', quantity:'1.000 ml', unit:'L', liters:1, price:1190, store:'Dia Online · Recoleta', freshness:'Sin fuente en vivo', label:'Menor precio unitario'},
+  {id:'milk-serenisima-1l', brand:'La Serenísima', name:'Leche Entera Clásica 3%', variant:'Pasteurizada · sachet refrigerado · 3% tenor graso', quantity:'1.000 ml', unit:'L', liters:1, price:1290, store:'Coto · Almagro', freshness:'Sin fuente en vivo', label:'Sachet 1 L'},
+  {id:'milk-light-1l', brand:'La Serenísima', name:'Leche Descremada 1%', variant:'Parcialmente descremada · calcio activo · sachet', quantity:'1.000 ml', unit:'L', liters:1, price:1290, store:'Coto · Abasto', freshness:'Sin fuente en vivo', label:'Variedad liviana'},
+  {id:'milk-ilolay-1l', brand:'Ilolay', name:'Leche Entera Clásica', variant:'Homogeneizada · larga vida · envase Tetra Brik', quantity:'1.000 ml', unit:'L', liters:1, price:1340, store:'Carrefour Express · Palermo', freshness:'Sin fuente en vivo', label:'Tetra Brik'},
+  {id:'rice-arroz-1kg', brand:'Molinos Ala', name:'Arroz Largo Fino 00000', variant:'Bolsa 1 kg · variedad largo fino', quantity:'1 kg', unit:'kg', liters:1, price:1890, store:'Coto · Almagro', freshness:'Sin fuente en vivo', label:'Almacén básico'},
+  {id:'oil-oliva-500ml', brand:'Aceite de Oliva', name:'Extra Virgen', variant:'Botella 500 ml · aceite de oliva', quantity:'500 ml', unit:'L', liters:.5, price:7450, store:'Jumbo · Palermo', freshness:'Sin fuente en vivo', label:'Aceites y grasas'}
 ]);
 const LANGUAGES=Object.freeze({EN:'en',ES_AR:'es-AR'});
 const LANGUAGE_KEY='valuepilot-next-language';
@@ -37,7 +37,7 @@ const COPY=Object.freeze({
   item:{es:'ítem',en:'item'},
   items:{es:'ítems',en:'items'},
   basketTitle:{es:'Tu canasta',en:'Your basket'},
-  samplePrices:{es:'Precios ilustrativos · no verificables',en:'Sample prices · not verifiable'},
+  samplePrices:{es:'Comparación ilustrativa · fuente no disponible',en:'Illustrative comparison · source unavailable'},
   basketEmptyCopy:{es:'Agregá productos para comparar',en:'Add products to compare'},
   viewBasket:{es:'Ver canasta',en:'View basket'},
   tripPlanner:{es:'PLANIFICADOR DE RECORRIDOS',en:'TRIP PLANNER'},
@@ -49,8 +49,8 @@ const COPY=Object.freeze({
   dairy:{es:'Lácteos',en:'Dairy'},
   pantry:{es:'Almacén',en:'Pantry'},
   oils:{es:'Aceites',en:'Oils'},
-  sampleUnitPrices:{es:'Precios unitarios de ejemplo',en:'Sample unit prices'},
-  demoOnly:{es:'Solo demostración',en:'Demo only'},
+  sampleUnitPrices:{es:'Precios unitarios',en:'Unit prices'},
+  demoOnly:{es:'Fuente no disponible',en:'Source unavailable'},
   comparisonNoticeTitle:{es:'FUENTE DE PRECIOS',en:'PRICE SOURCE'},
   comparisonNotice:{es:'La fuente en vivo requiere autorización en esta instalación. La tabla muestra valores comparativos ilustrativos.',en:'The live source requires authorization on this installation. The table shows illustrative comparison values.'},
   nativeSearchTitle:{es:'BÚSQUEDA VALUEPILOT',en:'VALUEPILOT SEARCH'},
@@ -257,7 +257,7 @@ const COPY=Object.freeze({
   nativeJourneyUnavailable:{es:'No se pudo abrir esta herramienta de ValuePilot.',en:'This ValuePilot tool could not be opened.'},
   nativeToolDetail:{es:'Usan tus datos privados guardados y la lógica existente de ValuePilot.',en:'Uses your private saved data and the existing ValuePilot logic.'},
   openNativeBasket:{es:'Abrir la canasta real de ValuePilot',en:'Open the real ValuePilot basket'},
-  openNativeBasketDetail:{es:'Esta canasta de muestra es independiente. Continuá en Compose para usar tu canasta y sus cálculos reales.',en:'This sample basket is separate. Continue in Compose to use your real basket and calculations.'},
+  openNativeBasketDetail:{es:'Esta canasta comparativa es independiente. Continuá en Compose para usar tu canasta y sus cálculos reales.',en:'This comparison basket is separate. Continue in Compose to use your real basket and calculations.'},
   nativeBasketUnavailable:{es:'No se pudo abrir la canasta real.',en:'The real basket could not be opened.'},
   nativeBasketTitle:{es:'CANASTA VALUEPILOT',en:'VALUEPILOT BASKET'},
   nativeBasketIntro:{es:'Identidades y estado persistidos por el motor Kotlin.',en:'Identities and state persisted by the Kotlin engine.'},
@@ -285,14 +285,14 @@ const COPY=Object.freeze({
   result:{es:'resultado',en:'result'},
   results:{es:'resultados',en:'results'},
   comparable:{es:'Por unidad comparable',en:'Comparable unit price'},
-  lowestExample:{es:'↘ Ejemplo con menor $/unidad',en:'↘ Lowest sample unit price'},
-  noMatches:{es:'No hay ejemplos coincidentes',en:'No matching samples'},
-  tryExamples:{es:'Probá «leche», «arroz» o «aceite». Esta pantalla funciona sin conexión a fuentes de precios.',en:'Try “milk”, “rice” or “oil”. This screen works without price sources.'},
-  showExamples:{es:'Ver ejemplos',en:'Show examples'},
-  unitPriceSample:{es:'PRECIO UNITARIO · MUESTRA',en:'UNIT PRICE · SAMPLE'},
+  lowestExample:{es:'↘ Menor $/unidad disponible',en:'↘ Lowest available unit price'},
+  noMatches:{es:'No hay productos coincidentes',en:'No matching products'},
+  tryExamples:{es:'Probá «leche», «arroz» o «aceite». La fuente de precios no está disponible en esta instalación.',en:'Try “milk”, “rice” or “oil”. Price sources are unavailable on this installation.'},
+  showExamples:{es:'Ver comparación',en:'View comparison'},
+  unitPriceSample:{es:'PRECIO UNITARIO · SIN CONFIRMAR',en:'UNIT PRICE · UNCONFIRMED'},
   packageTotal:{es:'Total paquete',en:'Package total'},
-  fictitiousPrice:{es:'Precio ficticio',en:'Sample price'},
-  fictitious:{es:'Ficticio',en:'Sample'},
+  fictitiousPrice:{es:'Valor no confirmado',en:'Unconfirmed value'},
+  fictitious:{es:'Sin confirmar',en:'Unconfirmed'},
   googleImages:{es:'Ver en Google Images',en:'View in Google Images'},
   addPrice:{es:'Sumar',en:'Add'},
   save:{es:'Agregar a',en:'Save to'},
@@ -402,7 +402,7 @@ const COPY=Object.freeze({
   onlyDemo:{es:'Sin fuente en vivo',en:'No live source'},
   addProductAria:{es:'Agregar',en:'Add'},
   removeProductAria:{es:'Quitar de',en:'Remove from'},
-  sampleLabel:{es:'Ejemplo de precio bajo',en:'Lowest sample price'},
+  sampleLabel:{es:'Menor precio unitario',en:'Lowest unit price'},
   sachetLabel:{es:'Sachet 1 L',en:'1 L sachet'},
   lightLabel:{es:'Variedad liviana',en:'Light variety'},
   tetraLabel:{es:'Tetra Brik',en:'Tetra Brik'},
