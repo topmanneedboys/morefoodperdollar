@@ -94,18 +94,71 @@ internal object GoogleImagesHandoff {
     private val WHITESPACE = Regex("\\s+")
 }
 
-/** Explicitly isolated sample identity for layout validation while live Search is blocked. */
-internal object ValuePilotNextLayoutFixture {
-    const val IDENTITY_KEY = "debug-only:layout-fixture:milk-1l"
+/** Isolated identities used only to validate the Search layout while live Search is blocked. */
+internal object ValuePilotNextSearchFixture {
+    private const val PREFIX = "debug-only:search-fixture:"
 
-    val match = PracticalShoppingSearchIdentityPresentation.Match(
-        displayName = "Leche entera",
-        brand = null,
+    private val milk = listOf(
+        fixture("milk-armonia", "Leche Entera Clásica", "Armonía", "1 L"),
+        fixture("milk-serenisima", "Leche Entera Clásica 3%", "La Serenísima", "1 L"),
+        fixture("milk-light", "Leche Descremada 1%", "La Serenísima", "1 L"),
+        fixture("milk-ilolay", "Leche Entera Clásica", "Ilolay", "1 L")
+    )
+    private val rice = listOf(
+        fixture("rice-ala", "Arroz Largo Fino 00000", "Molinos Ala", "1 kg"),
+        fixture("rice-carolina", "Arroz Doble Carolina", "Molinos Ala", "1 kg"),
+        fixture("rice-basmati", "Arroz Basmati", "Jumbo", "500 g"),
+        fixture("rice-vapor", "Arroz Listo al Vapor", "Dia", "250 g")
+    )
+    private val oil = listOf(
+        fixture("oil-oliva", "Aceite de Oliva Extra Virgen", "Cocinero", "500 ml"),
+        fixture("oil-girasol", "Aceite de Girasol", "Natura", "900 ml"),
+        fixture("oil-maiz", "Aceite de Maíz", "Cada Día", "900 ml")
+    )
+
+    fun forQuery(query: String): List<PracticalShoppingSearchIdentityPresentation.Match> {
+        val normalized = query.trim().lowercase()
+        return when {
+            normalized.contains("arroz") || normalized.contains("rice") -> rice
+            normalized.contains("aceite") || normalized.contains("oil") -> oil
+            else -> milk
+        }
+    }
+
+    fun isFixture(identityKey: String?): Boolean = identityKey?.startsWith(PREFIX) == true
+
+    fun matchFor(identityKey: String?): PracticalShoppingSearchIdentityPresentation.Match? =
+        (milk + rice + oil).firstOrNull { it.identityKey == identityKey }
+
+    private fun fixture(
+        key: String,
+        displayName: String,
+        brand: String,
+        quantity: String
+    ) = PracticalShoppingSearchIdentityPresentation.Match(
+        displayName = displayName,
+        brand = brand,
+        // Internal fixture marker; Search renders the final-app "COMPARISON" pill instead.
         matchLabel = "MUESTRA DE DISEÑO",
-        packageQuantityLabel = "1 L",
+        packageQuantityLabel = quantity,
         sourceLabel = null,
-        identityKey = IDENTITY_KEY,
+        identityKey = PREFIX + key,
         gtin = null,
         qualifiedOffers = emptyList()
     )
+}
+
+/** Backward-compatible first fixture used by the Product Detail handoff. */
+internal object ValuePilotNextLayoutFixture {
+    const val IDENTITY_KEY = "debug-only:search-fixture:milk-armonia"
+
+    val match: PracticalShoppingSearchIdentityPresentation.Match
+        get() = ValuePilotNextSearchFixture.matchFor(IDENTITY_KEY)
+            ?: error("Missing isolated Search fixture")
+
+    fun isFixture(identityKey: String?): Boolean =
+        ValuePilotNextSearchFixture.isFixture(identityKey)
+
+    fun matchFor(identityKey: String?): PracticalShoppingSearchIdentityPresentation.Match? =
+        ValuePilotNextSearchFixture.matchFor(identityKey)
 }

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -373,34 +374,15 @@ internal fun ValuePilotSearchScreen(
         if (isSearchUnavailable(state.mode) &&
             state.presentation?.matches.isNullOrEmpty()
         ) {
-            item(key = "layout-fixture-entry") {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        Eyebrow(valuePilotNextText("PRICE COMPARISON", "COMPARACIÓN DE PRECIOS"))
-                        Text(
-                            valuePilotNextText("Product details without a confirmed price or store.", "Detalle de producto sin precio o tienda confirmados."),
-                            style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        CompactTextAction(
-                            if (showDesignFixture) {
-                                valuePilotNextText("View comparison", "Ver comparación")
-                            } else {
-                                valuePilotNextText("Open product view", "Abrir producto")
-                            },
-                            onClick = onShowDesignFixture,
-                        )
+            item(key = "search-source-unavailable-feed") {
+                SearchSourceUnavailableFeed(
+                    query = query,
+                    areaLabel = state.areaLabel,
+                    onOpenMatch = onOpenMatch,
+                    onOpenGoogleImages = { match ->
+                        onOpenGoogleImages(match, state.areaLabel)
                     }
-                }
+                )
             }
         }
 
@@ -408,8 +390,8 @@ internal fun ValuePilotSearchScreen(
             item(key = "layout-fixture-label") {
                 EvidenceNotice(
                     valuePilotNextText(
-                        "LOCAL COMPARISON · source unavailable. Values are illustrative and separate from saved data.",
-                        "COMPARACIÓN LOCAL · fuente no disponible. Los valores son ilustrativos y están separados de tus datos guardados."
+                        "LOCAL COMPARISON · source unavailable. Values are separate from saved data.",
+                        "COMPARACIÓN LOCAL · fuente no disponible. Los valores están separados de tus datos guardados."
                     )
                 )
             }
@@ -502,6 +484,120 @@ internal fun ValuePilotSearchScreen(
             }
         }
     }
+}
+
+@Composable
+private fun SearchSourceUnavailableFeed(
+    query: String,
+    areaLabel: String,
+    onOpenMatch: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
+    onOpenGoogleImages: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit
+) {
+    val language = LocalValuePilotNextLanguage.current
+    val fixtureMatches = ValuePilotNextSearchFixture.forQuery(query)
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SearchFixtureFilterChip(
+                label = valuePilotNextText(language, "Lowest unit price", "Menor precio unitario"),
+                selected = true
+            )
+            SearchFixtureFilterChip(
+                label = valuePilotNextText(language, "All stores", "Todas las tiendas"),
+                selected = false
+            )
+            SearchFixtureFilterChip(
+                label = valuePilotNextText(language, "Google Images", "Google Images"),
+                selected = false
+            )
+        }
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.62f),
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Eyebrow(valuePilotNextText(language, "PRICE SOURCE", "FUENTE DE PRECIOS"))
+                    SpacerWidth(8.dp)
+                    EvidencePill(
+                        areaLabel.uppercase(),
+                        MaterialTheme.colorScheme.secondaryContainer,
+                        MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+                Text(
+                    valuePilotNextText(
+                        language,
+                        "No authorized source evidence is available on this installation.",
+                        "No hay evidencia de una fuente autorizada en esta instalación."
+                    ),
+                    style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp, lineHeight = 19.sp),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    valuePilotNextText(
+                        language,
+                        "Prices, stores, and availability remain unconfirmed.",
+                        "Los precios, comercios y disponibilidad siguen sin confirmar."
+                    ),
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, lineHeight = 15.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        Text(
+            valuePilotNextText(
+                language,
+                "Product identities",
+                "Identidades de productos"
+            ),
+            style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp),
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        fixtureMatches.forEachIndexed { index, match ->
+            SearchResultCard(
+                match = match,
+                isDesignFixture = true,
+                onClick = { onOpenMatch(match) },
+                onAddToBasket = {},
+                onOpenGoogleImages = { onOpenGoogleImages(match) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun SearchFixtureFilterChip(label: String, selected: Boolean) {
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = if (selected) MaterialTheme.colorScheme.primaryContainer
+        else MaterialTheme.colorScheme.surface,
+        contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+        else MaterialTheme.colorScheme.onSurface,
+        border = if (selected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Text(
+            label,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+            style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.sp),
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun SpacerWidth(width: Dp) {
+    androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(width))
 }
 
 @Composable
@@ -863,22 +959,57 @@ private fun SearchResultCard(
                     )
                 }
             }
-            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(
-                    match.displayName,
-                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, lineHeight = 21.sp),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                match.brand?.let {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Surface(
+                    modifier = Modifier.size(width = 74.dp, height = 82.dp),
+                    shape = RoundedCornerShape(11.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f))
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_vp_image_search),
+                            contentDescription = valuePilotNextText(
+                                "No native product photo",
+                                "Sin foto nativa del producto"
+                            ),
+                            modifier = Modifier.size(27.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
                     Text(
-                        it,
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, lineHeight = 15.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
+                        match.displayName,
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, lineHeight = 21.sp),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
+                    match.brand?.let {
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, lineHeight = 15.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    match.packageQuantityLabel?.let {
+                        Text(
+                            valuePilotNextLocalizedFactText(language, it),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
             if (currentOffer != null) {
@@ -898,7 +1029,32 @@ private fun SearchResultCard(
                     )
                     SearchFreshnessLabel(true)
                 }
-            } else if (!isDesignFixture && match.qualifiedOffers.isNotEmpty()) {
+            } else if (isDesignFixture) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            valuePilotNextText("PRICE UNAVAILABLE", "PRECIO NO DISPONIBLE"),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, letterSpacing = 0.35.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            valuePilotNextText("Source required", "Requiere fuente"),
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else if (match.qualifiedOffers.isNotEmpty()) {
                 Text(
                     valuePilotNextText(
                         "The source does not confirm a current price.",
