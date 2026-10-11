@@ -482,6 +482,7 @@ internal object ValuePilotNextHtmlNativeSearchBridge {
             JSONObject()
                 .put("offerKey", offer.offerKey)
                 .put("storeName", offer.storeName)
+                .put("distanceKm", offer.distanceKm)
                 .put("priceAmount", offer.listPrice.amount)
                 .put("currency", offer.listPrice.currency)
                 .put("unitPriceAmount", offer.unitPrice?.amount ?: JSONObject.NULL)
