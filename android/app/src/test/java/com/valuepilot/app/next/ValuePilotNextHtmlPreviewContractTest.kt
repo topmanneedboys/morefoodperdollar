@@ -119,6 +119,22 @@ class ValuePilotNextHtmlPreviewContractTest {
     }
 
     @Test
+    fun acceptsOnlyTheNativeSearchLoadMoreCommand() {
+        assertTrue(
+            ValuePilotNextHtmlPreviewContract
+                .parseNativeSearchLoadMoreMessage("{\"type\":\"LOAD_MORE_VALUEPILOT\"}") != null
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract
+                .parseNativeSearchLoadMoreMessage("{\"type\":\"SEARCH_VALUEPILOT\",\"query\":\"rice\"}")
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract
+                .parseNativeSearchLoadMoreMessage("{\"type\":\"LOAD_MORE_VALUEPILOT\"}" + " ".repeat(256))
+        )
+    }
+
+    @Test
     fun acceptsNativeProductDetailHandoffWithBoundedIdentityAndQuery() {
         val request = requireNotNull(
             ValuePilotNextHtmlPreviewContract.parseNativeProductDetailMessage(

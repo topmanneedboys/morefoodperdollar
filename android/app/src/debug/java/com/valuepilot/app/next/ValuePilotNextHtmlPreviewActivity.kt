@@ -40,6 +40,7 @@ import com.valuepilot.app.StapleWatchSavedIdentitySelectionAction
 import com.valuepilot.core.ShoppingItemKey
 import com.valuepilot.core.ShoppingStoreKey
 import java.io.ByteArrayInputStream
+import java.util.Locale
 import kotlin.math.roundToInt
 
 internal fun valuePilotNextWebTextZoomPercent(fontScale: Float): Int =
@@ -362,6 +363,12 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                         startNativeSearch(nativeSearch.query)
                         return
                     }
+                    if (ValuePilotNextHtmlPreviewContract
+                            .parseNativeSearchLoadMoreMessage(message.data) != null
+                    ) {
+                        loadMoreNativeSearch()
+                        return
+                    }
                     val nativeProductDetail = ValuePilotNextHtmlPreviewContract
                         .parseNativeProductDetailMessage(message.data)
                     if (nativeProductDetail != null) {
@@ -538,8 +545,9 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         )
     }
 
-    private fun startNativeSearch(query: String) {
+    private fun startNativeSearch(rawQuery: String) {
         if (!::journey.isInitialized) return
+        val query = normalizeNativeSearchQuery(rawQuery)
         handler.removeCallbacks(nativeSearchPoll)
         nativeSearchQuery = query
         nativeSearchInitialGeneration = journey.uiState.search.generation
@@ -547,6 +555,29 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         journey.queryChanged(query)
         journey.submitSearch(query)
         handler.post(nativeSearchPoll)
+    }
+
+    private fun loadMoreNativeSearch() {
+        if (!::journey.isInitialized) return
+        val query = nativeSearchQuery ?: journey.uiState.search.query.trim()
+        if (query.isBlank()) return
+        handler.removeCallbacks(nativeSearchPoll)
+        nativeSearchQuery = query
+        nativeSearchInitialGeneration = journey.uiState.search.generation
+        nativeSearchDeadlineMillis = System.currentTimeMillis() + NATIVE_SEARCH_TIMEOUT_MS
+        journey.loadMoreSearchResults()
+        handler.post(nativeSearchPoll)
+    }
+
+    /** Keep the English HTML labels useful against the Spanish Argentina catalog. */
+    private fun normalizeNativeSearchQuery(rawQuery: String): String {
+        val query = rawQuery.trim()
+        return when (query.lowercase(Locale.ROOT)) {
+            "rice" -> "arroz"
+            "milk" -> "leche"
+            "oil" -> "aceite"
+            else -> query
+        }
     }
 
     private fun sendNativeSavedState(action: String? = null) {

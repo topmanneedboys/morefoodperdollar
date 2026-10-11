@@ -17,6 +17,8 @@ internal data class ValuePilotNextHtmlNativeSearchRequest(
     val query: String
 )
 
+internal object ValuePilotNextHtmlNativeSearchLoadMoreRequest
+
 internal object ValuePilotNextHtmlNativeSavedReadRequest
 
 internal object ValuePilotNextHtmlNativeBasketRequest
@@ -224,6 +226,16 @@ internal object ValuePilotNextHtmlPreviewContract {
             containsControlCharacter(query)
         ) return null
         return ValuePilotNextHtmlNativeSearchRequest(query)
+    }
+
+    fun parseNativeSearchLoadMoreMessage(rawMessage: String?): ValuePilotNextHtmlNativeSearchLoadMoreRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 256) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        return if (json.optString("type") == "LOAD_MORE_VALUEPILOT") {
+            ValuePilotNextHtmlNativeSearchLoadMoreRequest
+        } else {
+            null
+        }
     }
 
     /** Opens native Product Detail only for an identity from the current Search query. */

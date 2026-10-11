@@ -94,6 +94,10 @@ internal object ValuePilotNextHtmlNativeSearchBridge {
             .put("query", state.query)
             .put("statusMessage", state.statusMessage)
             .put("caveat", state.caveat)
+            .put("page", state.presentation?.page ?: 0)
+            .put("hasMore", state.presentation?.hasMore == true)
+            .put("nextPage", state.presentation?.nextPage ?: JSONObject.NULL)
+            .put("limitReached", state.presentation?.limitReached == true)
             .put("matches", JSONArray().apply {
                 state.presentation?.matches.orEmpty().forEach { match -> put(encodeMatch(match)) }
             })
