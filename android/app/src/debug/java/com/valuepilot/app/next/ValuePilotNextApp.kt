@@ -530,9 +530,9 @@ internal fun ValuePilotNextApp(
 
                                 NextDestination.PRODUCT_DETAIL -> {
                                     val isDesignFixture =
-                                        ValuePilotNextLayoutFixture.isFixture(selectedIdentityKey)
+                                        selectedIdentityKey == ValuePilotNextLayoutFixture.IDENTITY_KEY
                                     val match = if (isDesignFixture) {
-                                        ValuePilotNextLayoutFixture.matchFor(selectedIdentityKey)
+                                        ValuePilotNextLayoutFixture.match
                                     } else {
                                         ui.search.presentation?.matches
                                             ?.firstOrNull { it.identityKey == selectedIdentityKey }
