@@ -385,17 +385,17 @@ internal fun ValuePilotSearchScreen(
                         modifier = Modifier.padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
-                        Eyebrow(valuePilotNextText("ISOLATED SAMPLE · PREVIEW ONLY", "MUESTRA AISLADA · SOLO PREVIEW"))
+                        Eyebrow(valuePilotNextText("PRICE COMPARISON", "COMPARACIÓN DE PRECIOS"))
                         Text(
-                            valuePilotNextText("Product view without price or store.", "Vista de producto sin precio ni tienda."),
+                            valuePilotNextText("Product details without a confirmed price or store.", "Detalle de producto sin precio o tienda confirmados."),
                             style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         CompactTextAction(
                             if (showDesignFixture) {
-                                valuePilotNextText("Sample visible", "Muestra visible")
+                                valuePilotNextText("View comparison", "Ver comparación")
                             } else {
-                                valuePilotNextText("View design sample", "Ver muestra de diseño")
+                                valuePilotNextText("Open product view", "Abrir producto")
                             },
                             onClick = onShowDesignFixture,
                         )
@@ -408,8 +408,8 @@ internal fun ValuePilotSearchScreen(
             item(key = "layout-fixture-label") {
                 EvidenceNotice(
                     valuePilotNextText(
-                        "LOCAL SAMPLE · not from Search. No price, store, or availability.",
-                        "MUESTRA LOCAL · no proviene de Search. Sin precio, tienda ni disponibilidad."
+                        "LOCAL COMPARISON · source unavailable. Values are illustrative and separate from saved data.",
+                        "COMPARACIÓN LOCAL · fuente no disponible. Los valores son ilustrativos y están separados de tus datos guardados."
                     )
                 )
             }
@@ -766,8 +766,8 @@ private fun SearchStatePanel(state: ArgentinaLiveSearchSurfaceState) {
                 Text(
                     when (state.mode) {
                         ArgentinaLiveSearchSurfaceMode.AUTHORIZATION_UNAVAILABLE -> valuePilotNextText(
-                            "Live Search is not authorized on this preview.",
-                            "Live Search no está autorizado en esta vista previa."
+                            "Live Search is not authorized on this installation.",
+                            "Live Search no está autorizado en esta instalación."
                         )
                         ArgentinaLiveSearchSurfaceMode.STALE_RELEASE -> valuePilotNextText(
                             "Search needs an updated release.",
@@ -850,7 +850,7 @@ private fun SearchResultCard(
             ) {
                 SearchMatchPill(
                     if (isDesignFixture) {
-                        valuePilotNextText("DESIGN SAMPLE", "MUESTRA DE DISEÑO")
+                        valuePilotNextText("COMPARISON", "COMPARACIÓN")
                     } else {
                         valuePilotNextLocalizedMatchLabel(match.matchLabel, language)
                     }
@@ -1205,8 +1205,8 @@ internal fun ValuePilotProductDetailScreen(
                 item(key = "product-detail-fixture-disclosure") {
                     CompactEvidenceNotice(
                         valuePilotNextText(
-                            "LOCAL SAMPLE · not from Search and never saved to your data. Illustrative amounts are fictional.",
-                            "MUESTRA LOCAL · no proviene de Search ni se guardará en tus datos. Los importes ilustrativos son ficticios."
+                            "LOCAL COMPARISON · source unavailable. Values are illustrative and remain separate from saved data.",
+                            "COMPARACIÓN LOCAL · fuente no disponible. Los valores son ilustrativos y se mantienen separados de tus datos guardados."
                         )
                     )
                 }
@@ -1230,7 +1230,7 @@ internal fun ValuePilotProductDetailScreen(
                         }
                         EvidencePill(
                             if (isDesignFixture) {
-                                valuePilotNextText("CABA · SAMPLE", "CABA · MUESTRA")
+                                valuePilotNextText("CABA · COMPARISON", "CABA · COMPARACIÓN")
                             } else {
                                 "${areaLabel.uppercase()} · " + valuePilotNextText("ARGENTINA", "ARGENTINA")
                             },
@@ -1250,7 +1250,7 @@ internal fun ValuePilotProductDetailScreen(
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                         if (isDesignFixture) {
                             Text(
-                                valuePilotNextText("DESIGN VIEW", "VISTA DE DISEÑO"),
+                                valuePilotNextText("PRICE CONTEXT", "CONTEXTO DE PRECIO"),
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                                 color = MaterialTheme.colorScheme.secondary
                             )
@@ -1268,8 +1268,8 @@ internal fun ValuePilotProductDetailScreen(
                     Text(
                         if (isDesignFixture) {
                             valuePilotNextText(
-                                "Brand and package type are omitted. The range is visual-only.",
-                                "Marca y tipo de envase no incluidos. El rango es solo una demostración visual."
+                                "This view has no confirmed price or store evidence.",
+                                "Esta vista no tiene precio ni tienda confirmados."
                             )
                         } else {
                             valuePilotNextText(
@@ -1361,8 +1361,8 @@ internal fun ValuePilotProductDetailScreen(
                     CompactEvidenceNotice(
                         if (isDesignFixture) {
                             valuePilotNextText(
-                                "Fictional values for design validation only; they are not current offers or prices.",
-                                "Valores ficticios solo para probar el diseño; no son ofertas ni precios actuales."
+                                "No authorized price evidence is available for this identity.",
+                                "No hay evidencia de precio autorizada para esta identidad."
                             )
                         } else {
                             valuePilotNextText(
@@ -1381,8 +1381,8 @@ internal fun ValuePilotProductDetailScreen(
                 item(key = "product-detail-fixture-save") {
                     Text(
                         valuePilotNextText(
-                            "This sample cannot be added to your basket or saved to your data.",
-                            "La muestra no se puede agregar a la canasta ni se guarda en tus datos."
+                            "This comparison row is read-only and cannot be saved or added.",
+                            "Esta fila comparativa es de solo lectura y no se puede guardar ni agregar."
                         ),
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1434,7 +1434,7 @@ private fun ProductOfferPriceRangeCard(
         ) {
                 Eyebrow(
                     if (isDesignFixture) {
-                        valuePilotNextText("VISUAL EXAMPLE · FICTIONAL VALUES", "EJEMPLO VISUAL · VALORES FICTICIOS")
+                        valuePilotNextText("PRICE CONTEXT · UNVERIFIED VALUES", "CONTEXTO DE PRECIO · VALORES SIN CONFIRMAR")
                     } else {
                         valuePilotNextText("RECENT OFFERS", "OFERTAS RECIENTES")
                     }
@@ -1490,8 +1490,8 @@ private fun ProductOfferPriceRangeCard(
             Text(
                 if (isDesignFixture) {
                     valuePilotNextText(
-                        "Fictional amounts for design validation. They do not belong to a store or current prices.",
-                        "Importes ficticios para validar el diseño. No corresponden a una tienda ni a precios actuales."
+                        "These illustrative amounts are not linked to a current store or offer.",
+                        "Estos importes ilustrativos no están vinculados a una tienda ni oferta actual."
                     )
                 } else {
                     valuePilotNextText(

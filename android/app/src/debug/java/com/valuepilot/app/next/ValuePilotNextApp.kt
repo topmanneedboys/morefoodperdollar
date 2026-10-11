@@ -26,7 +26,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
@@ -944,9 +946,11 @@ private fun JourneyLanguageToggle(
         shape = MaterialTheme.shapes.small,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        modifier = Modifier.semantics {
-            contentDescription = valuePilotNextText(language, "Language", "Idioma")
-        }
+        modifier = Modifier
+            .wrapContentWidth()
+            .semantics {
+                contentDescription = valuePilotNextText(language, "Language", "Idioma")
+            }
     ) {
         Row(
             modifier = Modifier.padding(2.dp),
@@ -961,7 +965,7 @@ private fun JourneyLanguageToggle(
                     onClick = { onLanguageSelected(option) },
                     modifier = Modifier
                         .heightIn(min = 36.dp)
-                        .widthIn(min = 30.dp)
+                        .width(44.dp)
                         .semantics {
                             contentDescription = if (option == ValuePilotNextLanguage.ENGLISH) {
                                 valuePilotNextText(language, "English", "Inglés")
