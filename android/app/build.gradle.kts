@@ -36,9 +36,10 @@ android {
     }
 }
 
-// Keep the isolated Compose preview independent of the production Firebase app identity.
+// Keep the isolated preview on its own Firebase app identity. The debug task stays
+// disabled until the separately registered preview configuration is present.
 tasks.matching { it.name == "processDebugGoogleServices" }.configureEach {
-    enabled = false
+    enabled = file("src/debug/google-services.json").isFile
 }
 
 dependencies {
