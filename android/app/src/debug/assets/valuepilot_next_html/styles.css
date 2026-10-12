@@ -46,3 +46,22 @@
   z-index:1;
 }
 .price-matrix .matrix-store{padding-left:7px}
+/* Free-form two-dimensional touch surface: every row and column moves together. */
+.matrix-scroll{
+  overflow:scroll;
+  scroll-behavior:smooth;
+  overflow-anchor:none;
+  will-change:scroll-position;
+  touch-action:none;
+  cursor:grab;
+}
+.matrix-scroll.is-dragging{
+  cursor:grabbing;
+  user-select:none;
+}
+.price-matrix thead,
+.price-matrix thead th{
+  position:static!important;
+  top:auto!important;
+  z-index:auto!important;
+}
