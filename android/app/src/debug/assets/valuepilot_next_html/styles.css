@@ -93,3 +93,21 @@
 }
 .price-matrix tbody tr:nth-child(even) .matrix-product{background:color-mix(in srgb,var(--surface) 96%,var(--ink) 4%)}
 .price-matrix tbody tr:hover .matrix-product,.price-matrix tbody tr:focus-within .matrix-product{background:var(--oat)}
+
+/* Keep the product identity and its actions together, then present the value columns in reading order. */
+.price-matrix tr{grid-template-columns:164px 104px 96px 132px 86px 102px 122px}
+.price-matrix thead tr{height:36px;min-height:36px}
+.price-matrix thead th{height:36px;min-height:36px}
+.price-matrix tbody tr{height:84px;min-height:84px}
+.price-matrix tbody td{height:84px!important;min-height:84px}
+.price-matrix tbody td.matrix-empty{height:116px!important;min-height:116px}
+.price-matrix .matrix-product{overflow:visible!important;white-space:normal}
+.matrix-product-actions{display:flex;align-items:center;justify-content:flex-start;gap:3px;margin-top:5px}
+.matrix-product-actions .matrix-action{flex:0 0 31px}
+@media(max-width:359px){
+  .price-matrix tr{grid-template-columns:146px 104px 92px 132px 86px 102px 122px}
+  .matrix-product-actions .matrix-action{flex-basis:30px;width:30px;min-width:30px}
+}
+@media(min-width:600px){
+  .price-matrix tr{grid-template-columns:210px 104px 116px 132px 86px 102px 122px}
+}
