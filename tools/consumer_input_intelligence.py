@@ -30,12 +30,12 @@ from typing import Any, Iterable, Iterator, Mapping, Sequence
 
 SCHEMA_VERSION = "valuepilot-argentina-consumer-input-intelligence-v1"
 VOCABULARY_SCHEMA_VERSION = "valuepilot-argentina-input-vocabulary-v1"
-POLICY_VERSION = "valuepilot-argentina-input-policy-v1"
+POLICY_VERSION = "valuepilot-argentina-input-policy-v2"
 # This version pins the exact lexical feature vocabulary shared by the
 # bounded compatibility scan and immutable SearchPack releases.  A SearchPack
 # built with another policy is not safe to query because changing aliases,
 # prefixes, or trigram boundaries changes candidate membership.
-LEXICAL_FEATURE_POLICY_VERSION = "valuepilot-argentina-lexical-features-v1"
+LEXICAL_FEATURE_POLICY_VERSION = "valuepilot-argentina-lexical-features-v2"
 MAX_RAW_TEXT = 4096
 MAX_LINE_LENGTH = 256
 MAX_LINES = 10

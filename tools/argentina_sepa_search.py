@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
 
-SEARCH_SCHEMA_VERSION = "argentina-sepa-spanish-search-v1"
+SEARCH_SCHEMA_VERSION = "argentina-sepa-spanish-search-v2"
 MAX_QUERY_LENGTH = 96
 MAX_RESULTS = 5
 # Discovery continuation may ask for a small bounded window.  The ordinary
@@ -31,7 +31,16 @@ MAX_CANDIDATES = 100_000
 SYNONYMS: dict[str, tuple[str, ...]] = {
     "leche": ("leche",),
     "pan": ("pan",),
-    "arroz": ("arroz",),
+    # English labels are accepted at the service boundary, while the
+    # Spanish catalog term remains the canonical phrase used for ranking.
+    "arroz": ("arroz", "rice"),
+    "rice": ("arroz", "rice"),
+    "lychee": ("lichi", "lychee", "litchi", "lichis", "litchis"),
+    "lichi": ("lichi", "lychee", "litchi", "lichis", "litchis"),
+    "litchi": ("lichi", "lychee", "litchi", "lichis", "litchis"),
+    "lichis": ("lichi", "lychee", "litchi", "lichis", "litchis"),
+    "litchis": ("lichi", "lychee", "litchi", "lichis", "litchis"),
+    "yerba": ("yerba",),
     "aceite": ("aceite",),
     "fideo": ("fideo", "fideos"),
     "fideos": ("fideo", "fideos"),
@@ -67,7 +76,71 @@ SYNONYMS: dict[str, tuple[str, ...]] = {
 # expressed in normalized tokens and are intentionally short and auditable.
 CONTEXT_EXCLUSIONS: dict[str, tuple[tuple[str, ...], ...]] = {
     "pan": (("manteca", "pan"), ("manteca", "con", "marca", "pan"), ("sabor", "pan")),
-    "arroz": (("condimento", "para", "arroz"), ("sabor", "arroz"), ("para", "arroz")),
+    # A bare commodity query should return rice identities, not products that
+    # merely mention rice as an ingredient, flavour, recipe, or derived form.
+    # Explicit queries such as ``arroz con leche`` remain eligible because the
+    # matcher skips a context pattern when the shopper asks for that context.
+    "arroz": (
+        ("condimento", "para", "arroz"),
+        ("sabor", "arroz"),
+        ("para", "arroz"),
+        ("arroz", "con", "leche"),
+        ("postre", "de", "arroz"),
+        ("postre", "arroz"),
+        ("pudin", "de", "arroz"),
+        ("pudding", "de", "arroz"),
+        ("budin", "de", "arroz"),
+        ("harina", "de", "arroz"),
+        ("leche", "de", "arroz"),
+        ("bebida", "de", "arroz"),
+        ("jugo", "de", "arroz"),
+        ("galleta", "de", "arroz"),
+        ("galletita", "de", "arroz"),
+        ("torta", "de", "arroz"),
+        ("rice", "dessert"),
+        ("rice", "pudding"),
+        ("rice", "flour"),
+        ("rice", "milk"),
+        ("rice", "drink"),
+    ),
+    # Lichi/lychee fruit and yerba mate use the same conservative rule: the
+    # family token must identify the product itself, not a drink, flavour,
+    # extract, cosmetic, or prepared dessert that uses it.
+    "lychee": (
+        ("jugo", "de", "lichi"),
+        ("jugo", "de", "litchi"),
+        ("jugo", "de", "lychee"),
+        ("jugo", "lichi"),
+        ("nectar", "de", "lichi"),
+        ("nectar", "de", "litchi"),
+        ("bebida", "de", "lichi"),
+        ("bebida", "de", "litchi"),
+        ("jarabe", "de", "lichi"),
+        ("almibar", "de", "lichi"),
+        ("sabor", "lichi"),
+        ("sabor", "litchi"),
+        ("yogur", "de", "lichi"),
+        ("postre", "de", "lichi"),
+        ("dulce", "de", "lichi"),
+        ("candy", "lychee"),
+        ("juice", "lychee"),
+        ("drink", "lychee"),
+    ),
+    "yerba": (
+        ("bebida", "de", "yerba"),
+        ("gaseosa", "de", "yerba"),
+        ("energizante", "de", "yerba"),
+        ("energy", "yerba"),
+        ("extracto", "de", "yerba"),
+        ("sabor", "yerba"),
+        ("te", "de", "yerba"),
+        ("jugo", "de", "yerba"),
+        ("jarabe", "de", "yerba"),
+        ("yerba", "sabor"),
+        ("yerba", "extracto"),
+        ("yerba", "gaseosa"),
+        ("yerba", "drink"),
+    ),
     "huevo": (("fideo", "con", "huevo"), ("fideos", "con", "huevo"), ("pasta", "con", "huevo")),
     "huevos": (("fideo", "con", "huevo"), ("fideos", "con", "huevo"), ("pasta", "con", "huevo"), ("huevo", "chocolate"), ("huevo", "sorpresa"), ("huevo", "smashers")),
     "leche": (("leche", "y", "tonico"), ("leche", "tonico"), ("tonico", "micelar"), ("leche", "corporal")),
@@ -139,11 +212,33 @@ def _contains_ordered_within(tokens: tuple[str, ...], first: str, second: str, m
     return any(0 < right - left <= max_gap for left in first_positions for right in second_positions)
 
 
+def _context_keys(token: str) -> tuple[str, ...]:
+    """Return canonical context-policy keys for one query token."""
+
+    values = [token]
+    values.extend(value for value in _variants(token) if value in CONTEXT_EXCLUSIONS)
+    return tuple(dict.fromkeys(values))
+
+
+def _context_requested(query_tokens: tuple[str, ...], sequence: tuple[str, ...]) -> bool:
+    """Keep a derived product when the shopper explicitly asks for it."""
+
+    if len(sequence) < 2:
+        return False
+    expanded = set(query_tokens)
+    for token in query_tokens:
+        expanded.update(_variants(token))
+    return all(any(value in expanded for value in _variants(token)) for token in sequence)
+
+
 def _has_context_exclusion(query_tokens: tuple[str, ...], name_tokens: tuple[str, ...]) -> bool:
     for token in query_tokens:
-        for sequence in CONTEXT_EXCLUSIONS.get(token, ()):
-            if _contains_sequence(name_tokens, sequence):
-                return True
+        for context_key in _context_keys(token):
+            for sequence in CONTEXT_EXCLUSIONS.get(context_key, ()):
+                if _context_requested(query_tokens, sequence):
+                    continue
+                if _contains_sequence(name_tokens, sequence):
+                    return True
         # In catalog names, a butter/flavour descriptor can place a product
         # token after a short gap (for example ``MANTECA CON MARCA PAN``).
         # Keep this deliberately one-way: ``PAN CON MANTECA`` remains a bread

@@ -38,7 +38,7 @@ _ACTIVE_SCHEMA_VERSION = "valuepilot-active-release-v1"
 _ROUTING_SCHEMA_VERSION = "valuepilot-national-routing-v1"
 _SEARCHPACK_SCHEMA_VERSION = "valuepilot-argentina-searchpack-v2"
 _SEARCHPACK_FORMAT_VERSION = 2
-_SEARCHPACK_POLICY_VERSION = "valuepilot-argentina-lexical-features-v1"
+_SEARCHPACK_POLICY_VERSION = "valuepilot-argentina-lexical-features-v2"
 MAX_MIRROR_UPLOAD_WORKERS = 4
 
 

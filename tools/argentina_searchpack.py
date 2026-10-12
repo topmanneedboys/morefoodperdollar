@@ -1079,9 +1079,9 @@ class SearchPackRegion:
         """
 
         try:
-            from tools.argentina_sepa_search import CONTEXT_EXCLUSIONS, _variants, normalize_spanish
+            from tools.argentina_sepa_search import CONTEXT_EXCLUSIONS, _context_keys, _context_requested, _variants, normalize_spanish
         except ModuleNotFoundError:  # pragma: no cover - direct tool invocation
-            from argentina_sepa_search import CONTEXT_EXCLUSIONS, _variants, normalize_spanish
+            from argentina_sepa_search import CONTEXT_EXCLUSIONS, _context_keys, _context_requested, _variants, normalize_spanish
         try:
             normalized = normalize_spanish(query)
         except Exception as exc:  # noqa: BLE001 - normalize provider errors
@@ -1121,9 +1121,14 @@ class SearchPackRegion:
         for token in query_tokens:
             for doc_id, _positions in postings("brand", token):
                 brand_docs_by_token.setdefault(token, set()).add(doc_id)
-            if token in CONTEXT_EXCLUSIONS:
-                for doc_id, _positions in postings("context", token):
-                    context_docs_by_token.setdefault(token, set()).add(doc_id)
+            for context_key in _context_keys(token):
+                if any(_context_requested(query_tokens, sequence) for sequence in CONTEXT_EXCLUSIONS.get(context_key, ())):
+                    # An explicit derived-form query (for example ``rice
+                    # pudding``) must remain searchable even though a bare
+                    # ``rice`` query excludes that same context.
+                    continue
+                for doc_id, _positions in postings("context", context_key):
+                    context_docs_by_token.setdefault(context_key, set()).add(doc_id)
 
         ranked: list[tuple[int, int, tuple[str, ...]]] = []
         for doc_id, token_positions in name_positions.items():
