@@ -14,6 +14,29 @@ The preview device's Firebase App Check debug token was registered privately for
 4. In Firebase Console, open **App Check → Apps → the ValuePilot Next preview app → Manage debug tokens** and register that device token. Keep it private and revoke it after testing if it is no longer needed. This allowlist is what authorizes the debug provider; adding the Android app registration or JSON file alone does not authorize requests.
 5. Retry Live Search. Confirm the request is accepted by the existing consumer edge with normal App Check verification. The current Motorola run returned 33 supported rows for `leche`, including an evidence-backed ARS 1,785 offer at Ángel Gallardo 940. If authorization is unavailable in a future checkout, keep the preview state visibly labeled and price-free until actual Search evidence is returned.
 
+## Optional taxonomy sidecar for the isolated HTML preview
+
+The catalogue taxonomy is a separate identity-only artifact. It must be wired
+to the same backend release before the HTML preview can use its observed
+department/form choices. Point the isolated backend process at the generated
+file with:
+
+```text
+VALUEPILOT_PRODUCT_TAXONOMY_PATH=<absolute path to product-taxonomy-<release-source-sha256>.jsonl.gz>
+VALUEPILOT_PRODUCT_TAXONOMY_SHA256=50dcaf2019b7ded77dd080eb508616753beff2c82ecb2ee8a91c395cb7eb3e4f
+```
+
+The loader accepts the sidecar only when it is a bounded JSONL/JSONL.GZ file
+and the optional checksum matches. It uses provider product IDs and source
+identity keys to apply form filtering and clarification choices. The internal
+taxonomy labels are removed before `/v1/search` responds, so prices, offers,
+store availability, App Check, and existing API semantics remain unchanged.
+
+This is an isolated backend configuration. It does not change the Play app,
+Firebase credentials, production release pointer, or production Android offer
+authorization. After wiring it, rebuild/restart the isolated HTML backend and
+exercise `huevos`, `arroz`, `zanahoria`, and `mango` before rebuilding the APK.
+
 No production app registration, Play Integrity setting, signing key, release credential, backend trust policy, or Play listing needs to change for this isolated debug path. A new device or a fresh preview registration remains blocked until its own debug token is registered; the truthful unavailable state is expected until that authorization exists.
 
 ## Official Firebase references

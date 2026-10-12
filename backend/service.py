@@ -9,6 +9,7 @@ import time
 import uuid
 import threading
 from decimal import Decimal, InvalidOperation
+from pathlib import Path
 from typing import Any, Mapping
 
 from .reader import (
@@ -19,7 +20,7 @@ from .reader import (
 )
 from .release import ReleaseError, ReleaseManager, qualified_offer_artifacts_available
 from tools.product_identity_lexicon import build_family_clarification, filter_family_candidates
-from tools.product_taxonomy import build_taxonomy_clarification, filter_taxonomy_candidates
+from tools.product_taxonomy import ProductTaxonomyIndex, build_taxonomy_clarification, filter_taxonomy_candidates
 
 LOGGER = logging.getLogger("valuepilot.backend")
 MAX_REQUEST_BYTES = 16 * 1024
@@ -36,6 +37,8 @@ PRODUCTION_ANDROID_UI_SCOPE_ENV = "VALUEPILOT_PRODUCTION_ANDROID_UI_SCOPE"
 PRODUCTION_ANDROID_UI_SCOPE = "qualified-offers"
 DISCOVERY_PAGE_SIZE = 5
 DISCOVERY_MAX_PAGE = 5
+PRODUCT_TAXONOMY_PATH_ENV = "VALUEPILOT_PRODUCT_TAXONOMY_PATH"
+PRODUCT_TAXONOMY_SHA256_ENV = "VALUEPILOT_PRODUCT_TAXONOMY_SHA256"
 
 
 def _android_networking_authorized(status: Mapping[str, Any]) -> bool:
@@ -84,7 +87,7 @@ def _strip_internal(value: Any) -> Any:
         return value
     result = {}
     for key, item in value.items():
-        if key in {"queryPlan", "providerItems", "sourceRow", "packageProvenance"}:
+        if key in {"queryPlan", "providerItems", "sourceRow", "packageProvenance", "_taxonomy"}:
             continue
         if key == "provenance" and isinstance(item, dict):
             result[key] = {name: item.get(name) for name in ("provider", "releaseDate", "freshnessStatus") if item.get(name) is not None}
@@ -98,10 +101,29 @@ class ResponseLimitError(BackendQueryError):
 
 
 class BackendService:
-    def __init__(self, root: str, *, release_manager: ReleaseManager | None = None):
+    def __init__(
+        self,
+        root: str,
+        *,
+        release_manager: ReleaseManager | None = None,
+        taxonomy_index_path: str | Path | None = None,
+        taxonomy_index_sha256: str | None = None,
+    ):
         self.release_manager = release_manager or ReleaseManager(root)
         self._reader_lock = threading.Lock()
         self._readers: dict[tuple[str, str], ArgentinaBackendReader] = {}
+        self._taxonomy_lock = threading.Lock()
+        self._taxonomy_index: ProductTaxonomyIndex | None = None
+        self._taxonomy_index_attempted = False
+        configured_path = taxonomy_index_path
+        if configured_path is None:
+            configured_path = os.environ.get(PRODUCT_TAXONOMY_PATH_ENV, "").strip() or None
+        self._taxonomy_index_path = Path(configured_path).resolve() if configured_path else None
+        self._taxonomy_index_sha256 = (
+            taxonomy_index_sha256
+            if taxonomy_index_sha256 is not None
+            else os.environ.get(PRODUCT_TAXONOMY_SHA256_ENV, "").strip() or None
+        )
 
     def _reader(self, handle):
         key = (handle.release_id, str(handle.root))
@@ -111,6 +133,38 @@ class BackendService:
                 reader = ArgentinaBackendReader(handle)
                 self._readers[key] = reader
             return reader
+
+    def _taxonomy(self, handle) -> ProductTaxonomyIndex | None:
+        """Load the optional identity taxonomy once for the pinned release.
+
+        The sidecar is deliberately opt-in.  A deployment must point at the
+        exact generated artifact (and may provide its SHA-256); an absent or
+        invalid sidecar fails open to the existing reviewed lexical path and
+        never blocks or changes price/offer authority.
+        """
+
+        with self._taxonomy_lock:
+            if self._taxonomy_index_attempted:
+                return self._taxonomy_index
+            self._taxonomy_index_attempted = True
+            path = self._taxonomy_index_path
+            if path is None:
+                root = getattr(handle, "root", None)
+                if root is not None:
+                    candidate = Path(root) / "product-taxonomy.jsonl.gz"
+                    if candidate.is_file():
+                        path = candidate.resolve()
+            if path is None or not path.is_file():
+                return None
+            try:
+                self._taxonomy_index = ProductTaxonomyIndex.load(
+                    path,
+                    expected_sha256=self._taxonomy_index_sha256,
+                )
+            except (OSError, ValueError) as exc:
+                LOGGER.warning("taxonomy_sidecar_unavailable path=%s reason=%s", path, exc)
+                self._taxonomy_index = None
+            return self._taxonomy_index
 
     @staticmethod
     def _trusted_keys_from_input(input_result: Mapping[str, Any]) -> dict[str, str] | None:
@@ -374,6 +428,12 @@ class BackendService:
                 else candidate
                 for candidate in candidates
             )
+        taxonomy = self._taxonomy(handle)
+        if taxonomy is not None:
+            # Keep the index inside the identity boundary.  The internal
+            # annotation is consumed only by the family/form refinements and
+            # removed by _strip_internal before the response leaves Search.
+            candidates = taxonomy.annotate(candidates)
         # A clarification choice is an identity-only refinement.  Apply its
         # observed family form to the bounded result window so a query such as
         # ``carrot juice`` cannot retain a classified carrot lotion or cake.
@@ -413,7 +473,7 @@ class BackendService:
             "correction": None,
             "input": None,
             "clarification": clarification,
-            "matches": [dict(value) for value in visible_candidates],
+            "matches": [_strip_internal(value) for value in visible_candidates],
             "pagination": {
                 "page": page,
                 "pageSize": DISCOVERY_PAGE_SIZE,

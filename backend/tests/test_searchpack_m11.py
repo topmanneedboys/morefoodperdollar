@@ -616,6 +616,74 @@ class SearchPackM11Tests(unittest.TestCase):
         })
         self.assertEqual([item["productEvidenceKey"] for item in liquid["matches"]], ["egg-liquid"])
 
+    def test_service_search_uses_configured_taxonomy_sidecar_without_exposing_it(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "providerProductId": key,
+                "name": name,
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["huevos"],
+            }
+            for index, (key, name) in enumerate((
+                ("egg-whole", "HUEVOS FRESCOS X12"),
+                ("egg-liquid", "HUEVOS LIQUIDOS 500 ML"),
+            ))
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            taxonomy_path = Path(directory) / "product-taxonomy.jsonl.gz"
+            records = [
+                {
+                    "providerProductId": "egg-whole",
+                    "identityKeys": ["egg-whole"],
+                    "taxonomy": {
+                        "familyCandidates": [{"family": "egg", "observedForms": ["whole_egg"]}],
+                        "formCandidates": [{"key": "whole_egg", "labelEs": "Huevo entero", "labelEn": "Whole egg"}],
+                    },
+                },
+                {
+                    "providerProductId": "egg-liquid",
+                    "identityKeys": ["egg-liquid"],
+                    "taxonomy": {
+                        "familyCandidates": [{"family": "egg", "observedForms": ["liquid"]}],
+                        "formCandidates": [{"key": "liquid", "labelEs": "Líquido", "labelEn": "Liquid"}],
+                    },
+                },
+            ]
+            with gzip.open(taxonomy_path, "wt", encoding="utf-8", newline="") as handle:
+                for record in records:
+                    handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+            service = BackendService(
+                "",
+                release_manager=manager,
+                taxonomy_index_path=taxonomy_path,
+            )
+            service._reader = lambda _handle: reader
+
+            response = service.search({
+                "latitude": "-34",
+                "longitude": "-58",
+                "radiusKm": "5",
+                "query": "huevos",
+            })
+            clarification = response["clarification"]
+            self.assertIsNotNone(clarification)
+            assert clarification is not None
+            self.assertEqual({choice["id"] for choice in clarification["choices"]}, {"egg:liquid", "egg:whole_egg"})
+            self.assertTrue(all("_taxonomy" not in item for item in response["matches"]))
+
+            liquid = service.search({
+                "latitude": "-34",
+                "longitude": "-58",
+                "radiusKm": "5",
+                "query": "huevos liquid",
+            })
+            self.assertEqual([item["productEvidenceKey"] for item in liquid["matches"]], ["egg-liquid"])
+
     def test_searchpack_uses_reviewed_bilingual_identity_aliases(self) -> None:
         reader, manager, _output, _manifest = _reader_with_pack(fixture_records())
         del reader

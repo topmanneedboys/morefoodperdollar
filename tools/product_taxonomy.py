@@ -44,6 +44,8 @@ MAX_NAMES_PER_PROVIDER = 32
 MAX_IDENTITIES_PER_PROVIDER = 512
 MAX_MATCHED_TERMS = 12
 MAX_FORMS = 12
+MAX_INDEX_RECORDS = 100_000
+MAX_INDEX_BYTES = 64 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -54,6 +56,104 @@ class TaxonomyRule:
     terms: tuple[str, ...]
     excluded_terms: tuple[str, ...] = ()
     priority: int = 50
+
+
+class ProductTaxonomyIndex:
+    """Bounded, identity-only lookup for a built provider taxonomy.
+
+    The index is an optional sidecar to an already qualified release.  It is
+    never required for Search to run: callers can continue using the reviewed
+    lexical rules when the sidecar is absent.  ``annotate`` adds only an
+    internal ``_taxonomy`` field so the backend can apply the same observed
+    form choices without exposing the sidecar as a new public contract.
+    """
+
+    def __init__(self, records: Mapping[str, Mapping[str, Any]], *, path: Path | None = None):
+        self._records = dict(records)
+        self.path = path
+
+    @classmethod
+    def load(
+        cls,
+        path: Path | str,
+        *,
+        expected_sha256: str | None = None,
+        max_bytes: int = MAX_INDEX_BYTES,
+        max_records: int = MAX_INDEX_RECORDS,
+    ) -> "ProductTaxonomyIndex":
+        source = Path(path).resolve()
+        if not source.is_file():
+            raise ValueError(f"taxonomy index does not exist: {source}")
+        size = source.stat().st_size
+        if size > max_bytes:
+            raise ValueError("taxonomy index is too large")
+        if expected_sha256 is not None:
+            expected = str(expected_sha256).strip().lower()
+            if not re.fullmatch(r"[0-9a-f]{64}", expected):
+                raise ValueError("taxonomy index checksum is invalid")
+            if _sha256_file(source) != expected:
+                raise ValueError("taxonomy index checksum mismatch")
+
+        records: dict[str, Mapping[str, Any]] = {}
+        provider_count = 0
+        for line_number, value in _iter_jsonl(source):
+            if provider_count >= max_records:
+                raise ValueError("taxonomy index record limit exceeded")
+            provider_id = value.get("providerProductId")
+            taxonomy = value.get("taxonomy")
+            if not isinstance(provider_id, str) or not provider_id.strip():
+                raise ValueError(f"taxonomy index line {line_number} has no providerProductId")
+            if not isinstance(taxonomy, Mapping):
+                raise ValueError(f"taxonomy index line {line_number} has no taxonomy")
+            record = {
+                "providerProductId": provider_id.strip(),
+                "taxonomy": dict(taxonomy),
+            }
+            provider_count += 1
+            records[f"provider:{provider_id.strip()}"] = record
+            identity_keys = value.get("identityKeys")
+            if isinstance(identity_keys, Sequence) and not isinstance(identity_keys, (str, bytes)):
+                for identity_key in identity_keys:
+                    if isinstance(identity_key, str) and identity_key.strip():
+                        records[f"identity:{identity_key.strip()}"] = record
+        return cls(records, path=source)
+
+    @property
+    def record_count(self) -> int:
+        return len({id(value) for value in self._records.values()})
+
+    def taxonomy_for(self, candidate: Mapping[str, Any]) -> Mapping[str, Any] | None:
+        provider_id = candidate.get("providerProductId")
+        if isinstance(provider_id, str) and provider_id.strip():
+            value = self._records.get(f"provider:{provider_id.strip()}")
+            if isinstance(value, Mapping):
+                taxonomy = value.get("taxonomy")
+                if isinstance(taxonomy, Mapping):
+                    return taxonomy
+        for field in ("productEvidenceKey", "identityKey"):
+            identity_key = candidate.get(field)
+            if isinstance(identity_key, str) and identity_key.strip():
+                value = self._records.get(f"identity:{identity_key.strip()}")
+                if isinstance(value, Mapping):
+                    taxonomy = value.get("taxonomy")
+                    if isinstance(taxonomy, Mapping):
+                        return taxonomy
+        return None
+
+    def annotate(self, candidates: Iterable[Mapping[str, Any]]) -> tuple[Mapping[str, Any], ...]:
+        annotated: list[Mapping[str, Any]] = []
+        for candidate in candidates:
+            if not isinstance(candidate, Mapping):
+                annotated.append(candidate)
+                continue
+            taxonomy = self.taxonomy_for(candidate)
+            if taxonomy is None:
+                annotated.append(candidate)
+                continue
+            value = dict(candidate)
+            value["_taxonomy"] = dict(taxonomy)
+            annotated.append(value)
+        return tuple(annotated)
 
 
 # These rules are intentionally broad enough to cover the catalogue's main
@@ -206,6 +306,33 @@ FORM_RULES: tuple[TaxonomyRule, ...] = (
     TaxonomyRule("whole_egg", "Huevo entero", "Whole egg", ("huevo fresco", "huevos frescos", "huevo entero", "huevos enteros", "huevo con cascara", "huevos con cascara", "whole egg", "whole eggs", "in shell"), excluded_terms=("fideo", "fideos", "pasta", "chocolate", "juguete", "toy", "sorpresa"), priority=10),
 )
 
+# Clarification choices should put the shopper's likely direct product form
+# first.  Alphabetical ordering made a query such as ``huevos`` start with
+# incidental alcohol or pasta matches and hide ``Huevo entero`` after the
+# six-choice bound.  The order is presentation-only; it does not change the
+# underlying candidate set or any price/evidence semantics.
+FORM_CLARIFICATION_ORDER = (
+    "whole_egg",
+    "fresh",
+    "grain",
+    "liquid",
+    "powder",
+    "drink",
+    "loose_leaves",
+    "flour",
+    "pasta",
+    "biscuit",
+    "dessert",
+    "canned",
+    "tea_bags",
+    "frozen",
+    "cosmetics",
+    "cleaning",
+    "supplement",
+    "alcohol",
+)
+FORM_CLARIFICATION_RANK = {key: index for index, key in enumerate(FORM_CLARIFICATION_ORDER)}
+
 
 @lru_cache(maxsize=4096)
 def _tokens(value: str) -> tuple[str, ...]:
@@ -339,6 +466,21 @@ def _identity_for_candidate(candidate: Mapping[str, Any], index: int) -> dict[st
         return None
 
 
+def _candidate_taxonomy(candidate: Mapping[str, Any], index: int) -> Mapping[str, Any] | None:
+    """Use a release sidecar taxonomy when present, with a safe fallback."""
+
+    supplied = candidate.get("_taxonomy")
+    if isinstance(supplied, Mapping):
+        return supplied
+    identity = _identity_for_candidate(candidate, index)
+    if identity is None:
+        return None
+    return classify_name(
+        str(candidate.get("name") or ""),
+        family_candidates=identity.get("familyCandidates", ()),
+    )
+
+
 def build_taxonomy_clarification(
     query: str,
     candidates: Iterable[Mapping[str, Any]],
@@ -362,17 +504,19 @@ def build_taxonomy_clarification(
     for index, candidate in enumerate(candidates):
         if not isinstance(candidate, Mapping):
             continue
-        identity = _identity_for_candidate(candidate, index)
-        if identity is None or not any(item.get("family") == family_key for item in identity.get("familyCandidates", ())):
+        taxonomy = _candidate_taxonomy(candidate, index)
+        if taxonomy is None or not any(item.get("family") == family_key for item in taxonomy.get("familyCandidates", ()) if isinstance(item, Mapping)):
             continue
-        taxonomy = classify_name(str(candidate.get("name") or ""), family_candidates=identity.get("familyCandidates", ()))
         for form in taxonomy.get("formCandidates", ()):
             form_key = form.get("key") if isinstance(form, Mapping) else None
             if not isinstance(form_key, str) or not form_key:
                 continue
             form_counts[form_key] += 1
             form_examples.setdefault(form_key, dict(form))
-    forms = [key for key in sorted(form_counts) if form_counts[key] > 0]
+    forms = sorted(
+        (key for key in form_counts if form_counts[key] > 0),
+        key=lambda key: (FORM_CLARIFICATION_RANK.get(key, len(FORM_CLARIFICATION_ORDER)), key),
+    )
     if len(forms) < 2:
         return None
     choices = []
@@ -411,10 +555,9 @@ def filter_taxonomy_candidates(query: str, candidates: Iterable[Mapping[str, Any
     filtered: list[Mapping[str, Any]] = []
     family_key = family_keys[0]
     for index, candidate in enumerate(values):
-        identity = _identity_for_candidate(candidate, index)
-        if identity is None or not any(item.get("family") == family_key for item in identity.get("familyCandidates", ())):
+        taxonomy = _candidate_taxonomy(candidate, index)
+        if taxonomy is None or not any(item.get("family") == family_key for item in taxonomy.get("familyCandidates", ()) if isinstance(item, Mapping)):
             continue
-        taxonomy = classify_name(str(candidate.get("name") or ""), family_candidates=identity.get("familyCandidates", ()))
         forms = {item.get("key") for item in taxonomy.get("formCandidates", ()) if isinstance(item, Mapping)}
         if forms.intersection(requested_forms):
             filtered.append(candidate)
@@ -690,7 +833,11 @@ def build_taxonomy_index(
 __all__ = [
     "DEPARTMENT_RULES",
     "FORM_RULES",
+    "FORM_CLARIFICATION_ORDER",
+    "MAX_INDEX_BYTES",
+    "MAX_INDEX_RECORDS",
     "POLICY_VERSION",
+    "ProductTaxonomyIndex",
     "SCHEMA_VERSION",
     "build_taxonomy_index",
     "build_taxonomy_clarification",

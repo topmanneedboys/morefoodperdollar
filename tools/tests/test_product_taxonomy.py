@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 from tools.product_taxonomy import (
+    ProductTaxonomyIndex,
     build_taxonomy_clarification,
     build_taxonomy_index,
     classify_name,
@@ -29,6 +30,29 @@ def _identity(provider: str, key: str, name: str, *, family: str | None = None) 
 
 
 class ProductTaxonomyTests(unittest.TestCase):
+    def test_index_loads_provider_and_identity_keys_and_keeps_sidecar_internal(self) -> None:
+        record = {
+            "providerProductId": "egg-1",
+            "identityKeys": ["ar-sepa-product:1:egg-1"],
+            "taxonomy": {
+                "coverageStatus": "CLASSIFIED",
+                "familyCandidates": [{"family": "egg", "observedForms": ["liquid"]}],
+                "formCandidates": [{"key": "liquid", "labelEs": "Líquido", "labelEn": "Liquid"}],
+            },
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "taxonomy.jsonl.gz"
+            with gzip.open(path, "wt", encoding="utf-8", newline="") as handle:
+                handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+            index = ProductTaxonomyIndex.load(path)
+            self.assertEqual(index.record_count, 1)
+            values = index.annotate((
+                {"productEvidenceKey": "ar-sepa-product:1:egg-1", "name": "HUEVOS LIQUIDOS"},
+                {"productEvidenceKey": "missing", "name": "OTRO"},
+            ))
+            self.assertEqual(values[0]["_taxonomy"]["familyCandidates"][0]["family"], "egg")
+            self.assertNotIn("_taxonomy", values[1])
+
     def test_classifies_departments_and_forms_from_source_terms(self) -> None:
         rice = classify_name("ARROZ LARGO FINCA 500 G", family_candidates=[{"family": "rice", "role": "DIRECT", "observedForms": ["grain"], "matchedTerms": ["arroz"]}])
         self.assertEqual(rice["coverageStatus"], "CLASSIFIED")
@@ -62,6 +86,7 @@ class ProductTaxonomyTests(unittest.TestCase):
             {choice["id"] for choice in value["choices"]},
             {"egg:liquid", "egg:powder", "egg:whole_egg"},
         )
+        self.assertEqual(value["choices"][0]["id"], "egg:whole_egg")
         filtered = filter_taxonomy_candidates("huevos liquid", candidates)
         self.assertEqual([item["productEvidenceKey"] for item in filtered], ["egg-liquid"])
 
