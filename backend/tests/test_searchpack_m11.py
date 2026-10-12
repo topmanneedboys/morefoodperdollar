@@ -572,6 +572,50 @@ class SearchPackM11Tests(unittest.TestCase):
             {"carrot:vegetable", "carrot:drink", "carrot:dessert", "carrot:cosmetics"},
         )
 
+    def test_service_search_exposes_generic_egg_clarification_and_filters_form(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "name": name,
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["huevos"],
+            }
+            for index, (key, name) in enumerate((
+                ("egg-whole", "HUEVOS FRESCOS X12"),
+                ("egg-liquid", "HUEVOS LIQUIDOS 500 ML"),
+                ("egg-powder", "HUEVO EN POLVO 100 G"),
+            ))
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        response = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "huevos",
+        })
+        clarification = response["clarification"]
+        self.assertIsNotNone(clarification)
+        assert clarification is not None
+        self.assertEqual(clarification["family"], "egg")
+        self.assertEqual(
+            {choice["id"] for choice in clarification["choices"]},
+            {"egg:liquid", "egg:powder", "egg:whole_egg"},
+        )
+
+        liquid = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "huevos liquid",
+        })
+        self.assertEqual([item["productEvidenceKey"] for item in liquid["matches"]], ["egg-liquid"])
+
     def test_searchpack_uses_reviewed_bilingual_identity_aliases(self) -> None:
         reader, manager, _output, _manifest = _reader_with_pack(fixture_records())
         del reader

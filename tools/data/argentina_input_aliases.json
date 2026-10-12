@@ -120,7 +120,20 @@
     "soap": "soap",
     "carne": "beef",
     "beef": "beef",
-    "cereal": "cereal"
+    "cereal": "cereal",
+    "mango": "mango",
+    "mangos": "mango",
+    "mango fruit": "mango",
+    "mango drink": "mango",
+    "mango cookie": "mango",
+    "mango dessert": "mango",
+    "cookie": "cookie",
+    "cookies": "cookie",
+    "galleta": "cookie",
+    "galletas": "cookie",
+    "galletita": "cookie",
+    "galletitas": "cookie",
+    "biscuit": "cookie"
   },
   "brands": {
     "coca cola": "coca-cola",
@@ -180,6 +193,7 @@
     "milk": {"exclude": ["corporal", "body", "locion", "lotion", "crema", "cream", "cosmetic"]},
     "oil": {"exclude": ["baby", "bebe", "cosmetic", "cosmetico", "cosmético", "masaje", "massage"]},
     "coconut": {"exclude": ["shampoo", "champu", "champú", "cosmetic", "cosmetico", "cosmético"]},
+    "mango": {"exclude": ["jugo de mango", "jugo mango", "juice mango", "bebida de mango", "drink mango", "sabor mango", "flavor mango", "postre de mango", "mango dessert", "galleta de mango", "galletas de mango", "galletita de mango", "galletitas de mango", "mango cookie", "cosmetico de mango", "mango cosmetics"]},
     "rice": {"exclude": ["condimento", "seasoning", "sabor", "flavour", "flavor", "arroz con leche", "postre de arroz", "postre arroz", "pudin de arroz", "pudding de arroz", "budin de arroz", "harina de arroz", "rice dessert", "rice pudding", "rice flour", "leche de arroz", "bebida de arroz", "jugo de arroz", "galleta de arroz", "galletita de arroz", "torta de arroz"]},
     "carrot": {
       "default": "FRESH_CARROT",

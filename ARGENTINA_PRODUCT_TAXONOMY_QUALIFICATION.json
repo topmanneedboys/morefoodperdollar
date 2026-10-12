@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "valuepilot-argentina-product-taxonomy-qualification-v1",
+  "status": "COMPLETE_DERIVED_INDEX_REVIEW_QUEUE_OPEN",
+  "source": {
+    "releaseId": "argentina-sepa-2026-10-08-153e9d9f7ab4b87e-routing-v1-search-v2",
+    "releaseSourceSha256": "153e9d9f7ab4b87e72c16aebebc69c6f9f90fca681cd1075d625244e2e31bc2c",
+    "identityRecords": 134337,
+    "providerProductIds": 78865
+  },
+  "coverage": {
+    "classified": 48600,
+    "classifiedPercent": 61.64,
+    "reviewRequired": 30265,
+    "reviewRequiredPercent": 38.36,
+    "productsWithMultipleDepartmentCandidates": 10807,
+    "everyProviderProductHasCoverageStatus": true
+  },
+  "derivedArtifact": {
+    "schemaVersion": "valuepilot-argentina-product-taxonomy-v1",
+    "policyVersion": "valuepilot-argentina-product-taxonomy-policy-v1",
+    "fileName": "product-taxonomy-153e9d9f7ab4b87e72c16aebebc69c6f9f90fca681cd1075d625244e2e31bc2c.jsonl.gz",
+    "records": 78865,
+    "bytes": 3417049,
+    "sha256": "50dcaf2019b7ded77dd080eb508616753beff2c82ecb2ee8a91c395cb7eb3e4f"
+  },
+  "customerProjection": {
+    "clarificationSource": "observed_forms_only",
+    "genericFallbackEnabled": true,
+    "internalTaxonomyExposed": false
+  },
+  "safety": {
+    "prices": false,
+    "offers": false,
+    "stock": false,
+    "availability": false,
+    "credentials": false,
+    "productionReleaseChanged": false,
+    "forcedSemanticClassification": false
+  }
+}

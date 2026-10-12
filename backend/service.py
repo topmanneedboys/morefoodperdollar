@@ -19,6 +19,7 @@ from .reader import (
 )
 from .release import ReleaseError, ReleaseManager, qualified_offer_artifacts_available
 from tools.product_identity_lexicon import build_family_clarification, filter_family_candidates
+from tools.product_taxonomy import build_taxonomy_clarification, filter_taxonomy_candidates
 
 LOGGER = logging.getLogger("valuepilot.backend")
 MAX_REQUEST_BYTES = 16 * 1024
@@ -378,13 +379,22 @@ class BackendService:
         # ``carrot juice`` cannot retain a classified carrot lotion or cake.
         # The helper fails open when new source rows are not yet classified.
         candidates = filter_family_candidates(query, candidates)
+        # Generic reviewed families use the same bounded identity evidence to
+        # apply explicit form choices such as ``eggs liquid``.  This remains a
+        # fail-open presentation refinement; it never changes price, offer, or
+        # availability authority.
+        candidates = filter_taxonomy_candidates(query, candidates)
         has_more = len(candidates) > offset + DISCOVERY_PAGE_SIZE
         limit_reached = has_more and page == DISCOVERY_MAX_PAGE
         visible_candidates = candidates[offset:offset + DISCOVERY_PAGE_SIZE]
         # This is an optional identity-only hint.  It is derived from the
         # bounded discovery window and never changes ranking, prices, offers,
         # availability, or the selected product identity.
-        clarification = build_family_clarification(query, candidates) if page == 0 else None
+        clarification = None
+        if page == 0:
+            clarification = build_family_clarification(query, candidates)
+            if clarification is None:
+                clarification = build_taxonomy_clarification(query, candidates)
         response = {
             "apiContractVersion": "valuepilot-argentina-backend-http-v1",
             "requestId": request_id,

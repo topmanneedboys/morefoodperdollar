@@ -45,6 +45,9 @@ queue are recorded in
 `ARGENTINA_PRODUCT_IDENTITY_COVERAGE_QUALIFICATION.md`; the scan does not
 promote any new vocabulary into production by itself.
 
+The broader department/form taxonomy and its explicit review queue are
+qualified separately in `ARGENTINA_PRODUCT_TAXONOMY_QUALIFICATION.md`.
+
 ## Safety gates
 
 Bare tomato selects only an audited fresh form. Tomato paste, puree, sauce,

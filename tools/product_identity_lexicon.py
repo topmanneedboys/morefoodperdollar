@@ -254,9 +254,9 @@ def _generic_family_rules() -> tuple[FamilyRule, ...]:
     reviewed = {"carrot", "rice", "lychee", "yerba mate"}
     english_terms = {
         "apple", "avocado", "beans", "beef", "bread", "butter", "cheese", "chicken",
-        "chocolate", "coconut", "coffee", "egg", "milk", "orange", "peach", "pineapple",
+        "chocolate", "coconut", "coffee", "egg", "mango", "milk", "orange", "peach", "pineapple",
         "rice", "shampoo", "soap", "soft drink", "strawberry", "sugar", "tea", "toilet paper",
-        "tomato",
+        "tomato", "cookie", "cookies", "biscuit",
     }
     rules: list[FamilyRule] = []
     for normalized_target, phrases in sorted(grouped.items()):

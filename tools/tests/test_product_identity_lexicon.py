@@ -43,9 +43,18 @@ class ProductIdentityLexiconTests(unittest.TestCase):
         self.assertIn(("manzana", "es"), aliases)
         self.assertIn(("apple", "en"), aliases)
 
+    def test_mango_family_is_available_for_observed_forms(self) -> None:
+        value = derive_identity_record(_row("p:mango-cookie", "GALLETAS DE MANGO 200 G"))
+        mango = next(item for item in value["familyCandidates"] if item["family"] == "mango")
+        self.assertEqual(mango["role"], "DERIVED")
+        self.assertNotIn(
+            ("mango", "en", "CURATED_BILINGUAL"),
+            {(item["value"], item["language"], item["provenance"]) for item in value["aliases"]},
+        )
+
     def test_derived_rice_form_does_not_get_direct_rice_alias(self) -> None:
         value = derive_identity_record(_row("p:cake", "GALLETITAS DE ARROZ DULCES 100 G"))
-        candidate = value["familyCandidates"][0]
+        candidate = next(item for item in value["familyCandidates"] if item["family"] == "rice")
         self.assertEqual(candidate["family"], "rice")
         self.assertEqual(candidate["role"], "DERIVED")
         self.assertIn("dessert", candidate["observedForms"])
