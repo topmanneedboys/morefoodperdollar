@@ -39,6 +39,12 @@ bounded result window can expose observed forms (vegetable, drink, dessert,
 cosmetics or supplement), and an explicit choice query is filtered to that
 observed form without adding products or claims.
 
+The active 2026-10-08 source was later scanned read-only in full.  The exact
+counts, source hash, identity conflicts, and remaining unclassified review
+queue are recorded in
+`ARGENTINA_PRODUCT_IDENTITY_COVERAGE_QUALIFICATION.md`; the scan does not
+promote any new vocabulary into production by itself.
+
 ## Safety gates
 
 Bare tomato selects only an audited fresh form. Tomato paste, puree, sauce,
