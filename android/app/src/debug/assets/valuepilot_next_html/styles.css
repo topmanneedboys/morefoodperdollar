@@ -65,3 +65,31 @@
   top:auto!important;
   z-index:auto!important;
 }
+/* Keep only the identity column as the user's reference while every value column pans. */
+.price-matrix thead{
+  position:sticky!important;
+  top:0!important;
+  z-index:20!important;
+  background:var(--oat);
+}
+.price-matrix thead th{
+  position:static!important;
+  top:auto!important;
+  z-index:1!important;
+}
+.price-matrix .matrix-product{
+  position:sticky!important;
+  left:0!important;
+  z-index:11!important;
+  background:var(--surface);
+  box-shadow:2px 0 5px #00000012;
+}
+.price-matrix thead .matrix-product{
+  position:sticky!important;
+  top:0!important;
+  left:0!important;
+  z-index:30!important;
+  background:var(--oat);
+}
+.price-matrix tbody tr:nth-child(even) .matrix-product{background:color-mix(in srgb,var(--surface) 96%,var(--ink) 4%)}
+.price-matrix tbody tr:hover .matrix-product,.price-matrix tbody tr:focus-within .matrix-product{background:var(--oat)}
