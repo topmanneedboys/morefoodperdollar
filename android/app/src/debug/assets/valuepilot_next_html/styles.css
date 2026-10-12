@@ -32,3 +32,17 @@
 .price-matrix .matrix-store{padding-left:14px}
 @media(max-width:359px){.price-matrix .matrix-unit{left:146px}}
 @media(min-width:600px){.price-matrix .matrix-unit{left:210px}}
+/* Let the complete result surface pan together; the identity columns must not stay pinned. */
+.price-matrix .matrix-product,
+.price-matrix .matrix-unit{
+  position:static;
+  left:auto;
+  z-index:1;
+  box-shadow:none;
+}
+.price-matrix thead .matrix-product,
+.price-matrix thead .matrix-unit{
+  position:static;
+  z-index:1;
+}
+.price-matrix .matrix-store{padding-left:7px}

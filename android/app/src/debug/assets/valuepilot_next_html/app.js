@@ -107,7 +107,7 @@ const COPY=Object.freeze({
   matrixDistance:{es:'Km ruta',en:'Road km'},
   matrixFuel:{es:'Combustible',en:'Fuel ARS'},
   matrixTripTotal:{es:'Total viaje',en:'Trip total'},
-  matrixPinned:{es:'Producto y precio unitario quedan fijos al desplazar.',en:'Product and unit price stay pinned while scrolling.'},
+  matrixPinned:{es:'Deslizá horizontalmente para ver todas las columnas.',en:'Swipe horizontally to view every column.'},
   matrixMoreColumns:{es:'Más columnas →',en:'More columns →'},
   matrixNoMatches:{es:'No hay filas para estos filtros.',en:'No rows match these filters.'},
   matrixStoreFilter:{es:'Comercio',en:'Store'},
