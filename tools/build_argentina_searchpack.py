@@ -259,7 +259,7 @@ def _record_with_reviewed_identity_aliases(raw: Mapping[str, Any], record: Catal
         alias.get("value")
         for alias in identity.get("aliases", ())
         if isinstance(alias, Mapping)
-        and alias.get("provenance") in {"CURATED_BILINGUAL", "SAFE_INFLECTION"}
+        and alias.get("provenance") in {"CURATED_BILINGUAL", "CURATED_FORM", "SAFE_INFLECTION"}
         and isinstance(alias.get("value"), str)
     ]
     merged = tuple(dict.fromkeys((*record.aliases, *reviewed)))

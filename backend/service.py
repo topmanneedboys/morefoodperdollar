@@ -18,7 +18,7 @@ from .reader import (
     CurrentPriceEvidenceUnavailable,
 )
 from .release import ReleaseError, ReleaseManager, qualified_offer_artifacts_available
-from tools.product_identity_lexicon import build_family_clarification
+from tools.product_identity_lexicon import build_family_clarification, filter_family_candidates
 
 LOGGER = logging.getLogger("valuepilot.backend")
 MAX_REQUEST_BYTES = 16 * 1024
@@ -373,6 +373,11 @@ class BackendService:
                 else candidate
                 for candidate in candidates
             )
+        # A clarification choice is an identity-only refinement.  Apply its
+        # observed family form to the bounded result window so a query such as
+        # ``carrot juice`` cannot retain a classified carrot lotion or cake.
+        # The helper fails open when new source rows are not yet classified.
+        candidates = filter_family_candidates(query, candidates)
         has_more = len(candidates) > offset + DISCOVERY_PAGE_SIZE
         limit_reached = has_more and page == DISCOVERY_MAX_PAGE
         visible_candidates = candidates[offset:offset + DISCOVERY_PAGE_SIZE]

@@ -500,6 +500,78 @@ class SearchPackM11Tests(unittest.TestCase):
         self.assertEqual(reader.interpret_calls, [])
         self.assertEqual(response["pagination"], {"page": 0, "pageSize": 5, "hasMore": False, "nextPage": None, "limitReached": False})
 
+    def test_service_search_filters_explicit_carrot_form_without_inventing_rows(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": "carrot-lotion",
+                "name": "LOCION PROT. SOLAR FPS 30 CARROT 240 ML",
+                "brand": "HAWAIIAN TROPIC",
+                "gtin": None,
+                "score": 120,
+                "matchedTokens": ["carrot", "juice"],
+            },
+            {
+                "productEvidenceKey": "carrot-juice",
+                "name": "JUICE MARKET HAPPY CARROT 500 ML",
+                "brand": "JUICE MARKET",
+                "gtin": None,
+                "score": 110,
+                "matchedTokens": ["carrot", "juice"],
+            },
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        response = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "carrot juice",
+        })
+
+        self.assertEqual([item["productEvidenceKey"] for item in response["matches"]], ["carrot-juice"])
+        self.assertIsNone(response["clarification"])
+
+    def test_service_search_exposes_observed_carrot_clarification(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "name": name,
+                "brand": None,
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["carrot"],
+            }
+            for index, (key, name) in enumerate((
+                ("carrot-vegetable", "BABY CARROT"),
+                ("carrot-drink", "JUICE MARKET HAPPY CARROT 500 ML"),
+                ("carrot-dessert", "POSTRE CARROT CAKE 140 G"),
+                ("carrot-cosmetics", "LOCION SOLAR CARROT 240 ML"),
+            ))
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        response = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "carrot",
+        })
+
+        clarification = response["clarification"]
+        self.assertIsNotNone(clarification)
+        assert clarification is not None
+        self.assertEqual(clarification["family"], "carrot")
+        self.assertEqual(
+            {choice["id"] for choice in clarification["choices"]},
+            {"carrot:vegetable", "carrot:drink", "carrot:dessert", "carrot:cosmetics"},
+        )
+
     def test_searchpack_uses_reviewed_bilingual_identity_aliases(self) -> None:
         reader, manager, _output, _manifest = _reader_with_pack(fixture_records())
         del reader
@@ -512,6 +584,35 @@ class SearchPackM11Tests(unittest.TestCase):
 
         self.assertEqual([item["productEvidenceKey"] for item in values], ["rice"])
         self.assertEqual(values[0]["name"], "Arroz Largo Fino 1 kg")
+
+    def test_searchpack_indexes_bilingual_observed_carrot_forms(self) -> None:
+        rows = [
+            {
+                "productEvidenceKey": "carrot-cake",
+                "name": "TORTA DE ZANAHORIA 400 G",
+                "brand": "DULCE",
+                "gtin": None,
+                "quantity": {"value": "400", "unit": "g"},
+            },
+            {
+                "productEvidenceKey": "carrot-juice",
+                "name": "JUGO DE ZANAHORIA 1 L",
+                "brand": "BEBIDA",
+                "gtin": None,
+                "quantity": {"value": "1", "unit": "l"},
+            },
+        ]
+        _reader, manager, _output, _manifest = _reader_with_pack(rows)
+
+        cake = manager.region("ar-caba").search_many(
+            ("carrot cake",), product_limit=5, candidate_bound=100_000
+        )[0]
+        juice = manager.region("ar-caba").search_many(
+            ("carrot juice",), product_limit=5, candidate_bound=100_000
+        )[0]
+
+        self.assertEqual(cake[0]["productEvidenceKey"], "carrot-cake")
+        self.assertEqual(juice[0]["productEvidenceKey"], "carrot-juice")
 
     def test_service_search_pages_deterministically_with_bounded_continuation(self) -> None:
         manager = _StubReleaseManager()

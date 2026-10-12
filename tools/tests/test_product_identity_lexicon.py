@@ -51,6 +51,46 @@ class ProductIdentityLexiconTests(unittest.TestCase):
         self.assertIn("dessert", candidate["observedForms"])
         self.assertNotIn(("rice", "en", "CURATED_BILINGUAL"), {(item["value"], item["language"], item["provenance"]) for item in value["aliases"]})
 
+    def test_carrot_forms_separate_food_drink_dessert_and_cosmetics(self) -> None:
+        cases = (
+            ("p:vegetable", "BABY CARROT", "DIRECT", "vegetable"),
+            ("p:drink", "DISC:GRE JUICE MARKET HAPPY CARROT 500M", "DERIVED", "drink"),
+            ("p:dessert", "POSTRE CARROT CAKE RIDERS X 140 GR", "DERIVED", "dessert"),
+            ("p:cosmetics", "LOCION PROT. SOLAR FPS 30 CARROT HAWAIIAN BOT 240 ML", "DERIVED", "cosmetics"),
+        )
+        for key, name, role, form in cases:
+            with self.subTest(name=name):
+                value = derive_identity_record(_row(key, name))
+                candidate = value["familyCandidates"]
+                self.assertEqual(len(candidate), 1)
+                self.assertEqual(candidate[0]["family"], "carrot")
+                self.assertEqual(candidate[0]["role"], role)
+                self.assertEqual(candidate[0]["observedForms"], [form])
+
+        dessert = derive_identity_record(_row("p:dessert", "TORTA DE ZANAHORIA 400 G"))
+        aliases = {(item["value"], item["language"], item["provenance"]) for item in dessert["aliases"]}
+        self.assertIn(("carrot cake", "en", "CURATED_FORM"), aliases)
+        self.assertIn(("postre de zanahoria", "es", "CURATED_FORM"), aliases)
+
+    def test_carrot_clarification_exposes_observed_forms(self) -> None:
+        candidates = [
+            _row("p:vegetable", "BABY CARROT"),
+            _row("p:drink", "DISC:GRE JUICE MARKET HAPPY CARROT 500M"),
+            _row("p:dessert", "POSTRE CARROT CAKE RIDERS X 140 GR"),
+            _row("p:cosmetics", "LOCION PROT. SOLAR FPS 30 CARROT HAWAIIAN BOT 240 ML"),
+        ]
+        value = build_family_clarification("carrot", candidates)
+        self.assertIsNotNone(value)
+        assert value is not None
+        self.assertEqual(value["family"], "carrot")
+        choices = {choice["id"]: choice for choice in value["choices"]}
+        self.assertEqual(
+            set(choices),
+            {"carrot:vegetable", "carrot:drink", "carrot:dessert", "carrot:cosmetics"},
+        )
+        self.assertEqual(choices["carrot:vegetable"]["labelEn"], "Carrot vegetable")
+        self.assertEqual(choices["carrot:drink"]["query"], "carrot juice")
+
     def test_rice_bar_is_a_derived_form(self) -> None:
         value = derive_identity_record(_row("p:bar", "BARRA DE ARROZ DULCE 12 G"))
         candidate = value["familyCandidates"][0]
@@ -124,6 +164,21 @@ class ProductIdentityLexiconTests(unittest.TestCase):
             self.assertEqual(len(written), 3)
             self.assertEqual({item["productEvidenceKey"] for item in written}, {"p:rice", "p:cake", "p:mate"})
             self.assertEqual(json.loads(manifest_path.read_text(encoding="utf-8"))["families"]["rice"]["derivedCount"], 1)
+
+    def test_new_source_rows_are_classified_on_each_build(self) -> None:
+        row = _row("p:new-carrot", "ZANAHORIA FRESCA 1 KG")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "products.jsonl"
+            source.write_text(json.dumps(row, ensure_ascii=False) + "\n", encoding="utf-8")
+            output = root / "identity.jsonl.gz"
+            manifest = build_identity_lexicon(source, output)
+            self.assertEqual(manifest["source"]["recordCount"], 1)
+            self.assertEqual(manifest["identityCounts"]["classifications"], {"DIRECT": 1})
+            self.assertEqual(manifest["families"]["carrot"]["directCount"], 1)
+            with gzip.open(output, "rt", encoding="utf-8") as handle:
+                identity = json.loads(handle.readline())
+            self.assertEqual(identity["familyCandidates"][0]["observedForms"], ["vegetable"])
 
     def test_duplicate_keys_fail_closed(self) -> None:
         rows = [_row("p:same", "ARROZ"), _row("p:same", "ARROZ INTEGRAL")]

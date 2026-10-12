@@ -153,6 +153,76 @@ FAMILY_RULES: tuple[FamilyRule, ...] = (
             "extract": (("extracto", "jarabe", "sabor"), ("extract", "syrup", "flavour", "flavor")),
         },
     ),
+    FamilyRule(
+        key="carrot",
+        spanish_aliases=("zanahoria",),
+        english_aliases=("carrot",),
+        include_terms=("zanahoria", "zanahorias", "carrot", "carrots"),
+        # These are identity-form signals, not claims about what the product
+        # is made of.  They let a customer separate the vegetable from
+        # carrot-flavoured drinks, desserts, cosmetics, and supplements after
+        # the bounded discovery window has shown those forms.
+        excluded_phrases=(
+            ("jugo",),
+            ("zumo",),
+            ("bebida",),
+            ("nectar",),
+            ("juice",),
+            ("drink",),
+            ("beverage",),
+            ("postre",),
+            ("torta",),
+            ("pastel",),
+            ("budin",),
+            ("pudin",),
+            ("galleta",),
+            ("galletita",),
+            ("cake",),
+            ("dessert",),
+            ("locion",),
+            ("lotion",),
+            ("crema",),
+            ("cream",),
+            ("protector",),
+            ("sunscreen",),
+            ("cosmetico",),
+            ("cosmetics",),
+            ("maquillaje",),
+            ("makeup",),
+            ("perfume",),
+            ("jabon",),
+            ("soap",),
+            ("shampoo",),
+            ("suplemento",),
+            ("supplement",),
+            ("extracto",),
+            ("extract",),
+            ("capsula",),
+            ("capsule",),
+        ),
+        forms={
+            "vegetable": (
+                ("fresca", "fresco", "frescos", "frescas", "crudo", "cruda", "raiz", "raices", "baby", "mini", "verdura", "vegetal"),
+                ("fresh", "raw", "root", "baby", "mini", "vegetable"),
+            ),
+            "drink": (
+                ("jugo", "zumo", "bebida", "nectar"),
+                ("juice", "drink", "beverage"),
+            ),
+            "dessert": (
+                ("postre", "torta", "pastel", "budin", "pudin", "galleta", "galletita"),
+                ("cake", "dessert", "cookie"),
+            ),
+            "cosmetics": (
+                ("locion", "crema", "protector", "cosmetico", "maquillaje", "perfume", "jabon", "shampoo"),
+                ("lotion", "cream", "sunscreen", "cosmetics", "makeup", "perfume", "soap", "shampoo"),
+            ),
+            "supplement": (
+                ("suplemento", "extracto", "capsula", "polvo"),
+                ("supplement", "extract", "capsule", "powder"),
+            ),
+        },
+    ),
 )
 
 
@@ -161,7 +231,7 @@ def _generic_family_rules() -> tuple[FamilyRule, ...]:
 
     The existing input vocabulary is deliberately the source of truth for
     these common translations.  We do not ask a model to translate 87,000
-    rows.  The three families with important derived-form traps above keep
+    rows.  The specialized families with important derived-form traps above keep
     their richer hand-reviewed rules; the remaining vocabulary gets a simple
     observed-name family with no invented form choices.
     """
@@ -181,7 +251,7 @@ def _generic_family_rules() -> tuple[FamilyRule, ...]:
     for phrase, target in aliases.items():
         if isinstance(phrase, str) and isinstance(target, str) and phrase.strip() and target.strip():
             grouped[normalize_text(target)].append(phrase)
-    reviewed = {"rice", "lychee", "yerba mate"}
+    reviewed = {"carrot", "rice", "lychee", "yerba mate"}
     english_terms = {
         "apple", "avocado", "beans", "beef", "bread", "butter", "cheese", "chicken",
         "chocolate", "coconut", "coffee", "egg", "milk", "orange", "peach", "pineapple",
@@ -306,6 +376,38 @@ _FORM_PRESENTATION: Mapping[str, Mapping[str, Mapping[str, str]]] = {
             "query": "yerba mate",
         },
     },
+    "carrot": {
+        "vegetable": {
+            "labelEs": "Zanahoria como verdura",
+            "labelEn": "Carrot vegetable",
+            "query": "carrot fresh",
+        },
+        "drink": {
+            "labelEs": "Jugo o bebida de zanahoria",
+            "labelEn": "Carrot juice or drink",
+            "query": "carrot juice",
+        },
+        "dessert": {
+            "labelEs": "Torta o postre de zanahoria",
+            "labelEn": "Carrot cake or dessert",
+            "query": "carrot cake",
+        },
+        "cosmetics": {
+            "labelEs": "Cosméticos con zanahoria",
+            "labelEn": "Carrot cosmetics",
+            "query": "carrot lotion",
+        },
+        "supplement": {
+            "labelEs": "Suplemento o extracto de zanahoria",
+            "labelEn": "Carrot supplement or extract",
+            "query": "carrot supplement",
+        },
+        "unspecified": {
+            "labelEs": "Zanahoria (presentación no especificada)",
+            "labelEn": "Carrot (presentation unspecified)",
+            "query": "carrot",
+        },
+    },
 }
 
 
@@ -350,7 +452,10 @@ def build_family_clarification(
 
     # A clarification is useful only when it can separate at least two
     # observed forms.  Keep the order stable and cap it for a compact UI.
-    forms = [form for form, _ in sorted(evidence.items()) if evidence[form] > 0]
+    # Keep the curated presentation order rather than sorting by the internal
+    # form key.  This puts the ordinary food form first while remaining fully
+    # deterministic for every family.
+    forms = [form for form in _FORM_PRESENTATION[selected_rule.key] if evidence[form] > 0]
     if len(forms) < 2:
         return None
     choices = []
@@ -405,6 +510,65 @@ def _contains_sequence(tokens: Sequence[str], sequence: Sequence[str]) -> bool:
 
 def _contains_any(tokens: Sequence[str], values: Iterable[str]) -> bool:
     return any(_contains_sequence(tokens, _tokens(value)) for value in values)
+
+
+def family_query_form(query: str) -> tuple[str, str] | None:
+    """Return one explicit family/form refinement present in a query.
+
+    A bare family query (``carrot`` or ``zanahoria``) remains broad so the
+    clarification card can show the observed choices.  A choice query such as
+    ``carrot juice`` has one observed form and can therefore be used as a
+    conservative identity-only result filter.
+    """
+
+    normalized_query = " ".join(str(query or "").split())
+    if not normalized_query:
+        return None
+    selected_rule = next((rule for rule in FAMILY_RULES if _query_matches_family(normalized_query, rule)), None)
+    if selected_rule is None or selected_rule.key not in _FORM_PRESENTATION:
+        return None
+    tokens = _tokens(normalized_query)
+    observed = [
+        form
+        for form, (spanish_terms, english_terms) in selected_rule.forms.items()
+        if _contains_any(tokens, spanish_terms) or _contains_any(tokens, english_terms)
+    ]
+    if len(observed) != 1:
+        return None
+    return selected_rule.key, observed[0]
+
+
+def filter_family_candidates(
+    query: str,
+    candidates: Iterable[Mapping[str, Any]],
+) -> tuple[Mapping[str, Any], ...]:
+    """Keep candidates matching an explicit observed family form.
+
+    The filter is fail-open when no candidate can be classified.  That keeps
+    an incomplete or newly added source row searchable while preventing a
+    known ``carrot juice`` refinement from retaining a classified carrot
+    lotion or cake in the same bounded result window.
+    """
+
+    context = family_query_form(query)
+    values = tuple(candidate for candidate in candidates if isinstance(candidate, Mapping))
+    if context is None:
+        return values
+    family_key, form = context
+    filtered: list[Mapping[str, Any]] = []
+    for candidate in values:
+        try:
+            identity = derive_identity_record(candidate)
+        except (TypeError, ValueError):
+            continue
+        if any(
+            isinstance(family, Mapping)
+            and family.get("family") == family_key
+            and form in family.get("observedForms", ())
+            for family in identity.get("familyCandidates", ())
+        ):
+            filtered.append(candidate)
+    return tuple(filtered) if filtered else values
 
 
 def _alias(value: str, language: str, provenance: str, *, confidence: str = "HIGH") -> dict[str, str]:
@@ -472,6 +636,23 @@ def derive_identity_record(source: Mapping[str, Any]) -> dict[str, Any]:
                 _add_alias(aliases, value, "es", "CURATED_BILINGUAL")
             for value in rule.english_aliases:
                 _add_alias(aliases, value, "en", "CURATED_BILINGUAL")
+        # Preserve a bilingual alias for the observed presentation.  A
+        # derived row intentionally does not receive the bare family alias,
+        # but it must remain reachable when the customer chooses that form
+        # from the clarification card (for example ``carrot cake``).
+        for form in forms:
+            form_terms = rule.forms.get(form)
+            if not form_terms:
+                continue
+            spanish_terms, english_terms = form_terms
+            if spanish_terms and rule.spanish_aliases:
+                if form in {"vegetable", "fresh", "grain", "loose_leaves"}:
+                    spanish_value = f"{rule.spanish_aliases[0]} {spanish_terms[0]}"
+                else:
+                    spanish_value = f"{spanish_terms[0]} de {rule.spanish_aliases[0]}"
+                _add_alias(aliases, spanish_value, "es", "CURATED_FORM")
+            if english_terms and rule.english_aliases:
+                _add_alias(aliases, f"{rule.english_aliases[0]} {english_terms[0]}", "en", "CURATED_FORM")
         family_candidates.append(
             {
                 "family": rule.key,
@@ -657,4 +838,6 @@ __all__ = [
     "build_family_clarification",
     "build_identity_lexicon",
     "derive_identity_record",
+    "family_query_form",
+    "filter_family_candidates",
 ]
