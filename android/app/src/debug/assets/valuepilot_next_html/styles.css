@@ -119,3 +119,9 @@
 .clarification-choice:active{transform:scale(.99);background:var(--oat)}
 .clarification-choice svg{width:16px;height:16px;color:var(--accent);flex:0 0 auto}
 .search-clarification .micro{margin-top:10px}
+/* Keep the product surface focused on shopping controls; status copy remains available to native diagnostics. */
+#demoRibbon{display:none}
+.price-matrix .matrix-product-duplicate .matrix-name,
+.price-matrix .matrix-product-duplicate .matrix-meta,
+.price-matrix .matrix-product-duplicate .matrix-product-actions{visibility:hidden}
+.price-matrix .matrix-product-duplicate .matrix-name::after{content:'↳';visibility:visible;color:var(--muted);font-size:15px;font-weight:600}
