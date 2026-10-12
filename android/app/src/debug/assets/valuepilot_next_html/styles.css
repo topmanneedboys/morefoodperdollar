@@ -29,5 +29,6 @@
 .price-matrix .matrix-unit{position:sticky;left:164px;z-index:10;background:color-mix(in srgb,var(--warm) 34%,var(--surface));box-shadow:3px 0 7px #00000012}
 .price-matrix thead .matrix-product{z-index:23;background:var(--oat)}
 .price-matrix thead .matrix-unit{z-index:22;background:color-mix(in srgb,var(--warm) 48%,var(--oat));color:var(--accent)}
+.price-matrix .matrix-store{padding-left:14px}
 @media(max-width:359px){.price-matrix .matrix-unit{left:146px}}
 @media(min-width:600px){.price-matrix .matrix-unit{left:210px}}
