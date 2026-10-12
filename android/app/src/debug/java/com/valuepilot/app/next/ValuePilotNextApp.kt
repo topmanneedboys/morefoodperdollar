@@ -505,6 +505,13 @@ internal fun ValuePilotNextApp(
                                         showDesignFixture = false
                                         submitSearch()
                                     },
+                                    onClarificationSelected = { refinedQuery ->
+                                        showDesignFixture = false
+                                        query = refinedQuery
+                                        restoreSubmittedSearch = false
+                                        journey.queryChanged(refinedQuery)
+                                        journey.submitSearch(refinedQuery)
+                                    },
                                     onLoadMore = journey::loadMoreSearchResults,
                                     onAddToBasket = { match ->
                                         when (journey.addSearchMatch(match)) {

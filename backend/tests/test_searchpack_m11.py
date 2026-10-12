@@ -500,6 +500,19 @@ class SearchPackM11Tests(unittest.TestCase):
         self.assertEqual(reader.interpret_calls, [])
         self.assertEqual(response["pagination"], {"page": 0, "pageSize": 5, "hasMore": False, "nextPage": None, "limitReached": False})
 
+    def test_searchpack_uses_reviewed_bilingual_identity_aliases(self) -> None:
+        reader, manager, _output, _manifest = _reader_with_pack(fixture_records())
+        del reader
+
+        values = manager.region("ar-caba").search_many(
+            ("rice",),
+            product_limit=10,
+            candidate_bound=100_000,
+        )[0]
+
+        self.assertEqual([item["productEvidenceKey"] for item in values], ["rice"])
+        self.assertEqual(values[0]["name"], "Arroz Largo Fino 1 kg")
+
     def test_service_search_pages_deterministically_with_bounded_continuation(self) -> None:
         manager = _StubReleaseManager()
         reader = _StubReader()

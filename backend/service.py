@@ -18,6 +18,7 @@ from .reader import (
     CurrentPriceEvidenceUnavailable,
 )
 from .release import ReleaseError, ReleaseManager, qualified_offer_artifacts_available
+from tools.product_identity_lexicon import build_family_clarification
 
 LOGGER = logging.getLogger("valuepilot.backend")
 MAX_REQUEST_BYTES = 16 * 1024
@@ -375,6 +376,10 @@ class BackendService:
         has_more = len(candidates) > offset + DISCOVERY_PAGE_SIZE
         limit_reached = has_more and page == DISCOVERY_MAX_PAGE
         visible_candidates = candidates[offset:offset + DISCOVERY_PAGE_SIZE]
+        # This is an optional identity-only hint.  It is derived from the
+        # bounded discovery window and never changes ranking, prices, offers,
+        # availability, or the selected product identity.
+        clarification = build_family_clarification(query, candidates) if page == 0 else None
         response = {
             "apiContractVersion": "valuepilot-argentina-backend-http-v1",
             "requestId": request_id,
@@ -392,6 +397,7 @@ class BackendService:
             # discovery deliberately has no correction or interpreter object.
             "correction": None,
             "input": None,
+            "clarification": clarification,
             "matches": [dict(value) for value in visible_candidates],
             "pagination": {
                 "page": page,

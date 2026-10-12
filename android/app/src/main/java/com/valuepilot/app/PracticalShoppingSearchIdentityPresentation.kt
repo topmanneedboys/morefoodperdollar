@@ -22,7 +22,8 @@ internal data class PracticalShoppingSearchIdentityPresentation(
     val page: Int = 0,
     val hasMore: Boolean = false,
     val nextPage: Int? = null,
-    val limitReached: Boolean = false
+    val limitReached: Boolean = false,
+    val clarification: ArgentinaBackendContract.SearchClarification? = null
 ) {
     data class Match(
         val displayName: String,

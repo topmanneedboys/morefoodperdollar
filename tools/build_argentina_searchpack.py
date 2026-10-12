@@ -20,6 +20,7 @@ import shutil
 import sqlite3
 import struct
 import tempfile
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Mapping, Sequence
 
@@ -39,6 +40,7 @@ from tools.argentina_searchpack import (
 )
 from tools.argentina_sepa_search import CONTEXT_EXCLUSIONS, _has_context_exclusion, normalize_spanish
 from tools.consumer_input_intelligence import CatalogRecord, LEXICAL_FEATURE_POLICY_VERSION, CatalogIndex
+from tools.product_identity_lexicon import derive_identity_record
 
 
 SEARCHPACK_RELEASE_SUFFIX = "-search-v2"
@@ -240,6 +242,32 @@ def _rank_feature_values(record: CatalogRecord) -> tuple[tuple[str, tuple[int, .
     return tuple(sorted(values.items()))
 
 
+def _record_with_reviewed_identity_aliases(raw: Mapping[str, Any], record: CatalogRecord) -> CatalogRecord:
+    """Add only reviewed identity aliases to the immutable lexical index.
+
+    The source document remains byte-for-byte unchanged in the docstore.  The
+    aliases affect discovery postings only, allowing bilingual family terms
+    such as ``rice`` to find Spanish source names while retaining the existing
+    evidence and product identity authority.
+    """
+
+    try:
+        identity = derive_identity_record(raw)
+    except (TypeError, ValueError):
+        return record
+    reviewed = [
+        alias.get("value")
+        for alias in identity.get("aliases", ())
+        if isinstance(alias, Mapping)
+        and alias.get("provenance") in {"CURATED_BILINGUAL", "SAFE_INFLECTION"}
+        and isinstance(alias.get("value"), str)
+    ]
+    merged = tuple(dict.fromkeys((*record.aliases, *reviewed)))
+    if merged == record.aliases:
+        return record
+    return replace(record, aliases=merged[:16])
+
+
 def _whole_file_block(path: Path) -> dict[str, Any]:
     size = path.stat().st_size
     if size <= 0:
@@ -404,6 +432,7 @@ def _build_region(source_workspace: Path, manifest: Mapping[str, Any], release_i
             for raw in _iter_source_records(source_path, descriptor, region_id):
                 try:
                     record = CatalogRecord.from_mapping(raw)
+                    record = _record_with_reviewed_identity_aliases(raw, record)
                 except Exception as exc:  # noqa: BLE001 - normalize provider-row validation
                     raise SearchPackBuildError(f"{region_id} has an invalid product identity") from exc
                 key = record.product_evidence_key

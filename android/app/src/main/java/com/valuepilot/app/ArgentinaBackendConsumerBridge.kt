@@ -522,7 +522,8 @@ private object ArgentinaBackendIdentityMapper {
             page = pagination?.page ?: 0,
             hasMore = pagination?.hasMore == true,
             nextPage = pagination?.nextPage,
-            limitReached = pagination?.limitReached == true
+            limitReached = pagination?.limitReached == true,
+            clarification = response.clarification
         )
     }
 }

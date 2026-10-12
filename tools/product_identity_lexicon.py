@@ -9,8 +9,8 @@ generic words (for example ``rice``) are recorded as family choices rather
 than being allowed to select one product.
 
 The generated lexicon is a derived release artifact.  It deliberately keeps
-the provider source outside Git and is consumed by a later SearchPack/UI
-integration step.
+the provider source outside Git; the reviewed aliases are consumed by the
+SearchPack build and the bounded Search clarification UI.
 """
 
 from __future__ import annotations
@@ -217,6 +217,161 @@ def _generic_family_rules() -> tuple[FamilyRule, ...]:
 # Add the broader reviewed vocabulary after the high-risk families so the
 # specialized rules remain the only source of their derived-form policy.
 FAMILY_RULES = FAMILY_RULES + _generic_family_rules()
+
+
+# Search clarification is intentionally a small presentation projection.  It
+# is generated only when the bounded result window contains two or more
+# observed forms for one reviewed family.  The query terms below are Spanish
+# catalog terms so that a choice made from the bilingual UI remains searchable
+# by the existing Argentina SearchPack.
+_FORM_PRESENTATION: Mapping[str, Mapping[str, Mapping[str, str]]] = {
+    "rice": {
+        "grain": {
+            "labelEs": "Arroz en grano",
+            "labelEn": "Rice grains",
+            "query": "arroz largo",
+        },
+        "flour": {
+            "labelEs": "Harina de arroz",
+            "labelEn": "Rice flour",
+            "query": "harina de arroz",
+        },
+        "drink": {
+            "labelEs": "Bebida de arroz",
+            "labelEn": "Rice drink",
+            "query": "bebida de arroz",
+        },
+        "dessert": {
+            "labelEs": "Dulces o galletas de arroz",
+            "labelEn": "Rice sweets or cakes",
+            "query": "arroz dulce",
+        },
+        "unspecified": {
+            "labelEs": "Arroz (presentación no especificada)",
+            "labelEn": "Rice (presentation unspecified)",
+            "query": "arroz",
+        },
+    },
+    "lychee": {
+        "fresh": {
+            "labelEs": "Lichi fresco",
+            "labelEn": "Fresh lychee",
+            "query": "lichi fresco",
+        },
+        "drink": {
+            "labelEs": "Jugo o bebida de lichi",
+            "labelEn": "Lychee juice or drink",
+            "query": "jugo de lichi",
+        },
+        "preserved": {
+            "labelEs": "Lichi en almíbar o conserva",
+            "labelEn": "Lychee in syrup or preserved",
+            "query": "lichi en almibar",
+        },
+        "dessert": {
+            "labelEs": "Dulce de lichi",
+            "labelEn": "Lychee dessert",
+            "query": "dulce de lichi",
+        },
+        "unspecified": {
+            "labelEs": "Lichi (presentación no especificada)",
+            "labelEn": "Lychee (presentation unspecified)",
+            "query": "lichi",
+        },
+    },
+    "yerba_mate": {
+        "loose_leaves": {
+            "labelEs": "Yerba mate suelta",
+            "labelEn": "Loose yerba mate",
+            "query": "yerba mate",
+        },
+        "tea_bags": {
+            "labelEs": "Yerba mate en saquitos",
+            "labelEn": "Yerba mate tea bags",
+            "query": "te de yerba mate",
+        },
+        "drink": {
+            "labelEs": "Bebida de yerba mate",
+            "labelEn": "Yerba mate drink",
+            "query": "bebida de yerba",
+        },
+        "extract": {
+            "labelEs": "Extracto de yerba mate",
+            "labelEn": "Yerba mate extract",
+            "query": "extracto de yerba",
+        },
+        "unspecified": {
+            "labelEs": "Yerba mate (presentación no especificada)",
+            "labelEn": "Yerba mate (presentation unspecified)",
+            "query": "yerba mate",
+        },
+    },
+}
+
+
+def _query_matches_family(query: str, rule: FamilyRule) -> bool:
+    tokens = _tokens(query)
+    return bool(tokens) and _contains_any(tokens, rule.include_terms)
+
+
+def build_family_clarification(
+    query: str,
+    candidates: Iterable[Mapping[str, Any]],
+) -> dict[str, Any] | None:
+    """Return an observed-form clarification for a bounded Search result set.
+
+    This helper never resolves a product and never adds catalog rows.  It only
+    groups the names already returned by Search, then offers Spanish query
+    refinements with English labels for the UI.  Invalid or incomplete rows are
+    ignored so a malformed optional hint cannot make a valid search fail.
+    """
+
+    normalized_query = " ".join(str(query or "").split())
+    if not normalized_query:
+        return None
+    selected_rule = next((rule for rule in FAMILY_RULES if _query_matches_family(normalized_query, rule)), None)
+    if selected_rule is None or selected_rule.key not in _FORM_PRESENTATION:
+        return None
+
+    evidence: Counter[str] = Counter()
+    for candidate in candidates:
+        if not isinstance(candidate, Mapping):
+            continue
+        try:
+            identity = derive_identity_record(candidate)
+        except (TypeError, ValueError):
+            continue
+        for family in identity.get("familyCandidates", ()):
+            if not isinstance(family, Mapping) or family.get("family") != selected_rule.key:
+                continue
+            for form in family.get("observedForms", ()):
+                if isinstance(form, str) and form in _FORM_PRESENTATION[selected_rule.key]:
+                    evidence[form] += 1
+
+    # A clarification is useful only when it can separate at least two
+    # observed forms.  Keep the order stable and cap it for a compact UI.
+    forms = [form for form, _ in sorted(evidence.items()) if evidence[form] > 0]
+    if len(forms) < 2:
+        return None
+    choices = []
+    for form in forms[:6]:
+        copy = _FORM_PRESENTATION[selected_rule.key][form]
+        choices.append(
+            {
+                "id": f"{selected_rule.key}:{form}",
+                "label": copy["labelEs"],
+                "labelEn": copy["labelEn"],
+                "query": copy["query"],
+            }
+        )
+    return {
+        "code": "PRODUCT_FAMILY_CLARIFICATION",
+        "family": selected_rule.key,
+        "message": "Elegí el tipo de producto para afinar la búsqueda.",
+        "messageEn": "Choose a product type to refine the search.",
+        "choices": choices,
+        "evidence": "OBSERVED_CATALOG_NAMES",
+    }
 
 
 # Only high-confidence, common inflection pairs are generated.  Generating a
@@ -499,6 +654,7 @@ __all__ = [
     "FAMILY_RULES",
     "POLICY_VERSION",
     "SCHEMA_VERSION",
+    "build_family_clarification",
     "build_identity_lexicon",
     "derive_identity_record",
 ]

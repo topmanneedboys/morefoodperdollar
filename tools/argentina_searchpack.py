@@ -1111,6 +1111,9 @@ class SearchPackRegion:
                     name_positions.setdefault(doc_id, {})[variant] = frozenset(positions)
                 for doc_id, _positions in postings("alias", variant):
                     alias_docs_by_variant.setdefault(variant, set()).add(doc_id)
+                    # Keep alias-only candidates in the bounded candidate
+                    # set so bilingual terms can resolve Spanish names.
+                    name_positions.setdefault(doc_id, {})
         candidate_count = len(name_positions)
         stats.ranked_candidates += candidate_count
         if candidate_count > candidate_bound:
@@ -1135,21 +1138,31 @@ class SearchPackRegion:
             matched: list[str] = []
             all_query_present = True
             name_matches = 0
+            alias_matches = 0
             for token in query_tokens:
                 variants = _variants(token)
                 name_present = any(variant in token_positions for variant in variants)
                 alias_present = any(doc_id in alias_docs_by_variant.get(variant, ()) for variant in variants)
                 if name_present:
                     name_matches += 1
+                if alias_present:
+                    alias_matches += 1
                 if name_present or alias_present:
                     matched.append(token)
                 else:
                     all_query_present = False
-            if not matched or name_matches == 0:
+            # A reviewed bilingual alias may be the only evidence for an
+            # English query against Spanish source names (for example
+            # ``rice`` against ``ARROZ LARGO``).  Accept that bounded alias
+            # posting while still rejecting a partial query with no name or
+            # alias evidence.
+            if not matched or (name_matches == 0 and alias_matches == 0):
                 continue
             if any(doc_id in values for values in context_docs_by_token.values()):
                 continue
             score = name_matches * 100
+            if name_matches == 0:
+                score += alias_matches * 35
             if all_query_present:
                 score += 80
             phrase = tuple(_variants(token)[0] for token in query_tokens)

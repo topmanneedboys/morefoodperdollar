@@ -350,6 +350,37 @@ class ArgentinaBackendConsumerBridgeTest {
     }
 
     @Test
+    fun discoverySearchCarriesObservedFamilyClarificationWithoutChangingIdentityCandidates() {
+        val clarification =
+            JSONObject()
+                .put("code", "PRODUCT_FAMILY_CLARIFICATION")
+                .put("family", "rice")
+                .put("message", "Elegí el tipo de producto para afinar la búsqueda.")
+                .put("messageEn", "Choose a product type to refine the search.")
+                .put("evidence", "OBSERVED_CATALOG_NAMES")
+                .put(
+                    "choices",
+                    JSONArray()
+                        .put(JSONObject().put("id", "rice:grain").put("label", "Arroz en grano").put("labelEn", "Rice grains").put("query", "arroz largo"))
+                        .put(JSONObject().put("id", "rice:dessert").put("label", "Dulces o galletas de arroz").put("labelEn", "Rice sweets or cakes").put("query", "arroz dulce"))
+                )
+        val body =
+            JSONObject(searchJson())
+                .put("resolution", "DISCOVERY")
+                .put("input", JSONObject.NULL)
+                .put("clarification", clarification)
+                .put("matches", JSONArray().put(productIdentity().put("score", 100)))
+                .toString()
+
+        val parsed = ArgentinaBackendContract.parseSearch(body, release)
+
+        assertEquals("rice", parsed.clarification?.family)
+        assertEquals(2, parsed.clarification?.choices?.size)
+        assertEquals("arroz largo", parsed.clarification?.choices?.first()?.query)
+        assertEquals(1, parsed.identityCandidates.size)
+    }
+
+    @Test
     fun searchCarriesExactCurrentOfferPreviewWithoutClaimingInventory() {
         val offer = qualifiedOffer()
         val candidate = productIdentity().put("qualifiedOffers", JSONArray().put(offer))

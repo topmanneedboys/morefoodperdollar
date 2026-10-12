@@ -111,3 +111,11 @@
 @media(min-width:600px){
   .price-matrix tr{grid-template-columns:210px 104px 116px 132px 86px 102px 122px}
 }
+.search-clarification{margin-top:14px;padding:13px 14px}
+.search-clarification .section-label{margin:0 0 5px;color:var(--ink);font-size:12px;letter-spacing:.2px}
+.search-clarification .small{margin:0 0 10px}
+.clarification-choices{display:grid;gap:7px}
+.clarification-choice{display:flex;align-items:center;justify-content:space-between;gap:9px;width:100%;min-height:42px;border:1px solid var(--border);border-radius:11px;background:var(--surface);color:var(--ink);padding:9px 11px;text-align:left;font-size:12px;font-weight:700}
+.clarification-choice:active{transform:scale(.99);background:var(--oat)}
+.clarification-choice svg{width:16px;height:16px;color:var(--accent);flex:0 0 auto}
+.search-clarification .micro{margin-top:10px}

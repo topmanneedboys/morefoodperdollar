@@ -9,6 +9,7 @@ from pathlib import Path
 from tools.product_identity_lexicon import (
     POLICY_VERSION,
     SCHEMA_VERSION,
+    build_family_clarification,
     build_identity_lexicon,
     derive_identity_record,
 )
@@ -73,6 +74,30 @@ class ProductIdentityLexiconTests(unittest.TestCase):
         value = derive_identity_record(_row("p:pen", "BOLIGRAFO PAPER MATE AZUL X1"))
         self.assertEqual(value["classification"], "UNCLASSIFIED")
         self.assertFalse(value["familyCandidates"])
+
+    def test_family_clarification_uses_only_observed_rice_forms(self) -> None:
+        candidates = [
+            _row("p:grain", "ARROZ LARGO FINCA 500 G"),
+            _row("p:cake", "GALLETITAS DE ARROZ DULCES 100 G"),
+            _row("p:flour", "HARINA DE ARROZ 500 G"),
+        ]
+        value = build_family_clarification("rice", candidates)
+        self.assertIsNotNone(value)
+        assert value is not None
+        self.assertEqual(value["code"], "PRODUCT_FAMILY_CLARIFICATION")
+        self.assertEqual(value["family"], "rice")
+        choices = {choice["id"]: choice for choice in value["choices"]}
+        self.assertEqual(set(choices), {"rice:grain", "rice:dessert", "rice:flour"})
+        self.assertEqual(choices["rice:grain"]["query"], "arroz largo")
+        self.assertEqual(choices["rice:flour"]["labelEn"], "Rice flour")
+
+    def test_family_clarification_is_absent_without_two_observed_forms(self) -> None:
+        value = build_family_clarification("arroz", [_row("p:grain", "ARROZ LARGO FINCA 500 G")])
+        self.assertIsNone(value)
+
+    def test_family_clarification_does_not_invent_generic_family_forms(self) -> None:
+        value = build_family_clarification("manzana", [_row("p:apple", "MANZANA ROJA 1 KG")])
+        self.assertIsNone(value)
 
     def test_build_is_deterministic_and_writes_manifest(self) -> None:
         rows = [

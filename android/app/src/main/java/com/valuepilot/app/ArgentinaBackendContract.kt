@@ -225,6 +225,43 @@ object ArgentinaBackendContract {
         val productCandidates: List<ProductIdentity>
     )
 
+    /**
+     * Observed product-family choices for discovery queries such as rice or
+     * yerba.  These choices refine the query; they never select a product or
+     * assert price, stock, availability, or an offer.
+     */
+    data class SearchClarification(
+        val code: String,
+        val family: String,
+        val message: String,
+        val messageEn: String?,
+        val choices: List<SearchClarificationChoice>,
+        val evidence: String
+    ) {
+        init {
+            require(code == "PRODUCT_FAMILY_CLARIFICATION")
+            require(family.matches(ID_PATTERN))
+            require(message.isNotBlank())
+            require(messageEn == null || messageEn.isNotBlank())
+            require(choices.size in 2..6)
+            require(evidence == "OBSERVED_CATALOG_NAMES")
+        }
+    }
+
+    data class SearchClarificationChoice(
+        val id: String,
+        val label: String,
+        val labelEn: String?,
+        val query: String
+    ) {
+        init {
+            require(id.matches(ID_PATTERN))
+            require(label.isNotBlank())
+            require(labelEn == null || labelEn.isNotBlank())
+            require(query.isNotBlank() && query.length <= MAX_QUERY_CHARS)
+        }
+    }
+
     data class InputClarification(
         val lineId: String?,
         val code: ClarificationCode,
@@ -267,7 +304,8 @@ object ArgentinaBackendContract {
         val matches: List<SearchMatch>,
         val identityCandidates: List<ProductIdentity>,
         val input: InputResult?,
-        val pagination: SearchPagination? = null
+        val pagination: SearchPagination? = null,
+        val clarification: SearchClarification? = null
     )
 
     data class SearchPagination(
@@ -537,6 +575,7 @@ object ArgentinaBackendContract {
         val interpretedQuery = optionalString(root, "interpretedQuery", MAX_QUERY_CHARS)
         val resolution = optionalSearchResolution(root, "resolution")
         val correction = optionalStringMap(root, "correction", 8, 160)
+        val clarification = optionalSearchClarification(root, "clarification")
         val rawMatches = requiredArray(root, "matches")
         val pagination =
             if (!root.has("pagination") || root.isNull("pagination")) null
@@ -582,7 +621,8 @@ object ArgentinaBackendContract {
             matches,
             identityCandidates,
             input,
-            pagination
+            pagination,
+            clarification
         )
     }
 
@@ -596,6 +636,33 @@ object ArgentinaBackendContract {
             SearchPagination(page, pageSize, hasMore, nextPage, limitReached)
         } catch (error: IllegalArgumentException) {
             invalid("discovery pagination is inconsistent")
+        }
+    }
+
+    private fun optionalSearchClarification(root: JSONObject, name: String): SearchClarification? {
+        if (!root.has(name) || root.isNull(name)) return null
+        val value = requiredObject(root, name)
+        val code = requiredString(value, "code", 64)
+        val family = requiredId(value, "family", 96)
+        val message = requiredText(value, "message", 512)
+        val messageEn = optionalString(value, "messageEn", 512)
+        val choicesArray = requiredArray(value, "choices")
+        boundedArray(choicesArray, 6, "clarification choices")
+        val choices = (0 until choicesArray.length()).map { index ->
+            val choice = choicesArray.get(index) as? JSONObject ?: invalid("clarification choice must be an object")
+            SearchClarificationChoice(
+                id = requiredId(choice, "id", 160),
+                label = requiredText(choice, "label", 160),
+                labelEn = optionalString(choice, "labelEn", 160),
+                query = boundedQuery(requiredText(choice, "query", MAX_QUERY_CHARS), "clarification query")
+            )
+        }
+        if (choices.size < 2) invalid("clarification choices must contain at least two choices")
+        val evidence = requiredString(value, "evidence", 64)
+        return try {
+            SearchClarification(code, family, message, messageEn, choices, evidence)
+        } catch (error: IllegalArgumentException) {
+            invalid("invalid search clarification")
         }
     }
 

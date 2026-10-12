@@ -280,6 +280,7 @@ internal fun ValuePilotSearchScreen(
     showDesignFixture: Boolean,
     onQueryChanged: (String) -> Unit,
     onSubmit: () -> Unit,
+    onClarificationSelected: (String) -> Unit,
     onLoadMore: () -> Unit,
     onOpenMatch: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
     onAddToBasket: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
@@ -354,6 +355,15 @@ internal fun ValuePilotSearchScreen(
         if (state.mode != ArgentinaLiveSearchSurfaceMode.IDLE) {
             item(key = "search-state") {
                 SearchStatePanel(state)
+            }
+        }
+
+        presentation?.clarification?.let { clarification ->
+            item(key = "search-family-clarification") {
+                SearchFamilyClarificationCard(
+                    clarification = clarification,
+                    onChoiceSelected = onClarificationSelected
+                )
             }
         }
 
@@ -500,6 +510,74 @@ internal fun ValuePilotSearchScreen(
                     )
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun SearchFamilyClarificationCard(
+    clarification: ArgentinaBackendContract.SearchClarification,
+    onChoiceSelected: (String) -> Unit
+) {
+    val language = LocalValuePilotNextLanguage.current
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(15.dp),
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                valuePilotNextText("Choose a product type", "Elegí el tipo de producto"),
+                style = MaterialTheme.typography.titleSmall.copy(fontSize = 13.sp),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                valuePilotNextText(
+                    "This name appears in more than one product form. Choose one to refine the results.",
+                    "Este nombre aparece en más de una presentación. Elegí una para afinar los resultados."
+                ),
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, lineHeight = 16.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            clarification.choices.forEach { choice ->
+                val label = if (language == ValuePilotNextLanguage.ENGLISH) {
+                    choice.labelEn ?: choice.label
+                } else {
+                    choice.label
+                }
+                Surface(
+                    onClick = { onChoiceSelected(choice.query) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = ValuePilotSpacing.minimumTouchTarget),
+                    shape = RoundedCornerShape(11.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(label, style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp))
+                        Text("→", color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+            Text(
+                valuePilotNextText(
+                    "Options based on names observed in the catalog.",
+                    "Opciones basadas en nombres observados en el catálogo."
+                ),
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

@@ -98,6 +98,10 @@ internal object ValuePilotNextHtmlNativeSearchBridge {
             .put("hasMore", state.presentation?.hasMore == true)
             .put("nextPage", state.presentation?.nextPage ?: JSONObject.NULL)
             .put("limitReached", state.presentation?.limitReached == true)
+            .put(
+                "clarification",
+                state.presentation?.clarification?.let(::encodeClarification) ?: JSONObject.NULL
+            )
             .put("matches", JSONArray().apply {
                 state.presentation?.matches.orEmpty().forEach { match -> put(encodeMatch(match)) }
             })
@@ -185,6 +189,26 @@ internal object ValuePilotNextHtmlNativeSearchBridge {
         .put("gtin", match.gtin ?: JSONObject.NULL)
         .put("offers", JSONArray().apply {
             match.qualifiedOffers.forEach { offer -> putOffer(offer) }
+        })
+
+    private fun encodeClarification(
+        clarification: ArgentinaBackendContract.SearchClarification
+    ): JSONObject = JSONObject()
+        .put("code", clarification.code)
+        .put("family", clarification.family)
+        .put("message", clarification.message)
+        .put("messageEn", clarification.messageEn ?: JSONObject.NULL)
+        .put("evidence", clarification.evidence)
+        .put("choices", JSONArray().apply {
+            clarification.choices.forEach { choice ->
+                put(
+                    JSONObject()
+                        .put("id", choice.id)
+                        .put("label", choice.label)
+                        .put("labelEn", choice.labelEn ?: JSONObject.NULL)
+                        .put("query", choice.query)
+                )
+            }
         })
 
     private fun encodeBasket(
