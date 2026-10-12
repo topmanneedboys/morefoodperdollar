@@ -451,7 +451,86 @@ function flash(message){toast.textContent=message;toast.hidden=false;clearTimeou
 function basketCount(){return [...state.basket.values()].reduce((a,b)=>a+b,0)}
 function basketSum(){return [...state.basket].reduce((a,[id,qty])=>a+(get(id)?.price||0)*qty,0)}
 function saveScroll(){if(state.page==='search'){state.searchScroll=window.scrollY||document.documentElement.scrollTop;const matrix=document.querySelector('#matrixScroll');if(matrix){state.matrixScrollTop=matrix.scrollTop;state.matrixScrollLeft=matrix.scrollLeft}}}
-function installMatrixPan(matrix){if(!matrix||matrix.dataset.panReady==='true')return;matrix.dataset.panReady='true';let pointerId=null;let lastX=0;let lastY=0;let dragging=false;const finish=(event)=>{if(pointerId!==event.pointerId)return;if(dragging){state.matrixScrollTop=matrix.scrollTop;state.matrixScrollLeft=matrix.scrollLeft;state.matrixSuppressClickUntil=Date.now()+350}matrix.classList.remove('is-dragging');matrix.style.scrollBehavior='';try{matrix.releasePointerCapture(pointerId)}catch(_){ }pointerId=null;dragging=false};matrix.addEventListener('pointerdown',event=>{if(event.pointerType==='mouse'&&event.button!==0)return;pointerId=event.pointerId;lastX=event.clientX;lastY=event.clientY;dragging=false;matrix.style.scrollBehavior='auto';try{matrix.setPointerCapture(pointerId)}catch(_){ }});matrix.addEventListener('pointermove',event=>{if(pointerId!==event.pointerId)return;const dx=event.clientX-lastX;const dy=event.clientY-lastY;if(!dragging&&Math.hypot(dx,dy)<6)return;dragging=true;matrix.classList.add('is-dragging');event.preventDefault();matrix.scrollLeft-=dx;matrix.scrollTop-=dy;lastX=event.clientX;lastY=event.clientY});matrix.addEventListener('pointerup',finish);matrix.addEventListener('pointercancel',finish)}
+function installMatrixPan(matrix){
+  if(!matrix||matrix.dataset.panReady==='true')return;
+  matrix.dataset.panReady='true';
+  let pointerId=null;
+  let lastX=0;
+  let lastY=0;
+  let lastMoveAt=0;
+  let dragging=false;
+  let velocityX=0;
+  let velocityY=0;
+  let inertiaFrame=0;
+  const stopInertia=()=>{if(inertiaFrame){cancelAnimationFrame(inertiaFrame);inertiaFrame=0}velocityX=0;velocityY=0};
+  const startInertia=()=>{
+    if(Math.abs(velocityX)<0.15&&Math.abs(velocityY)<0.15){matrix.style.scrollBehavior='';return}
+    let previousFrame=0;
+    const step=(frameTime)=>{
+      if(!previousFrame)previousFrame=frameTime;
+      const frameScale=Math.min(2.5,Math.max(.5,(frameTime-previousFrame)/16.67));
+      previousFrame=frameTime;
+      velocityX*=Math.pow(.94,frameScale);
+      velocityY*=Math.pow(.94,frameScale);
+      const beforeLeft=matrix.scrollLeft;
+      const beforeTop=matrix.scrollTop;
+      matrix.scrollLeft+=velocityX*frameScale;
+      matrix.scrollTop+=velocityY*frameScale;
+      if(matrix.scrollLeft===beforeLeft)velocityX=0;
+      if(matrix.scrollTop===beforeTop)velocityY=0;
+      state.matrixScrollLeft=matrix.scrollLeft;
+      state.matrixScrollTop=matrix.scrollTop;
+      if(Math.abs(velocityX)<.15&&Math.abs(velocityY)<.15){inertiaFrame=0;matrix.style.scrollBehavior='';return}
+      inertiaFrame=requestAnimationFrame(step);
+    };
+    inertiaFrame=requestAnimationFrame(step);
+  };
+  const finish=(event)=>{
+    if(pointerId!==event.pointerId)return;
+    if(dragging){
+      state.matrixScrollTop=matrix.scrollTop;
+      state.matrixScrollLeft=matrix.scrollLeft;
+      state.matrixSuppressClickUntil=Date.now()+350;
+      startInertia();
+    }else matrix.style.scrollBehavior='';
+    matrix.classList.remove('is-dragging');
+    try{matrix.releasePointerCapture(pointerId)}catch(_){ }
+    pointerId=null;
+    dragging=false;
+  };
+  matrix.addEventListener('pointerdown',event=>{
+    if(event.pointerType==='mouse'&&event.button!==0)return;
+    stopInertia();
+    pointerId=event.pointerId;
+    lastX=event.clientX;
+    lastY=event.clientY;
+    lastMoveAt=performance.now();
+    dragging=false;
+    matrix.style.scrollBehavior='auto';
+    try{matrix.setPointerCapture(pointerId)}catch(_){ }
+  });
+  matrix.addEventListener('pointermove',event=>{
+    if(pointerId!==event.pointerId)return;
+    const dx=event.clientX-lastX;
+    const dy=event.clientY-lastY;
+    if(!dragging&&Math.hypot(dx,dy)<6)return;
+    const now=performance.now();
+    const elapsed=Math.min(80,Math.max(1,now-lastMoveAt));
+    dragging=true;
+    matrix.classList.add('is-dragging');
+    event.preventDefault();
+    matrix.scrollLeft-=dx;
+    matrix.scrollTop-=dy;
+    const scale=16.67/elapsed;
+    velocityX=velocityX*.55+(-dx*scale)*.45;
+    velocityY=velocityY*.55+(-dy*scale)*.45;
+    lastX=event.clientX;
+    lastY=event.clientY;
+    lastMoveAt=now;
+  });
+  matrix.addEventListener('pointerup',finish);
+  matrix.addEventListener('pointercancel',finish);
+}
 function navigate(page,options={}){if(page!==state.page)saveScroll();if(options.selected)state.selected=options.selected;if(options.from)state.from=options.from;if(page==='detail')state.detailQuantity=1;if(!options.skipHistory&&page!==state.page)state.history.push(state.page);state.page=page;render();if(state.nativeSavedEnabled&&(page==='saved'||page==='basket'||page==='private-history')&&!state.nativeSavedState&&!state.nativeSavedPending){requestAnimationFrame(()=>{if(state.page===page&&state.nativeSavedEnabled&&!state.nativeSavedState&&!state.nativeSavedPending)requestNativeSaved()})}if(page==='observed-price'&&!state.nativeObservedPriceSelection&&!state.nativeObservedPricePending){requestAnimationFrame(()=>{if(state.page===page&&!state.nativeObservedPriceSelection&&!state.nativeObservedPricePending)requestNativeObservedPrice()})}if(page==='staple-watch'&&!state.nativeStapleWatchState&&!state.nativeStapleWatchPending){requestAnimationFrame(()=>{if(state.page===page&&!state.nativeStapleWatchState&&!state.nativeStapleWatchPending)requestNativeStapleWatch()})}if(options.restoreSearch&&page==='search')requestAnimationFrame(()=>window.scrollTo({top:state.searchScroll,behavior:'auto'}));else window.scrollTo(0,0)}
 function back(){if(state.page==='observed-price'||state.page==='observed-confirm'){requestNativeObservedCancel();return}if(state.page==='staple-watch'){requestNativeStapleCancel();return}const previous=state.history.pop()||'search';navigate(previous,{skipHistory:true,restoreSearch:previous==='search'})}
 function setTheme(next){state.theme=next;document.documentElement.classList.toggle('dark',next==='dark');document.querySelector('meta[name=theme-color]').setAttribute('content',next==='dark'?'#161714':'#fcf9f2');render()}
