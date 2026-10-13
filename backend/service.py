@@ -385,6 +385,15 @@ class BackendService:
         request_id = correlation_id or str(uuid.uuid4())
         started = time.perf_counter()
         selected_family = family_query_key(query)
+        selected_form = family_query_form(query)
+        discovery_query = query
+        if selected_family == "egg" and selected_form is not None:
+            # Form labels are identity refinements, not reliable lexical
+            # catalog phrases.  Search the canonical egg family first, then
+            # apply the observed form to names.  Toy choices keep their dino
+            # marker because that is the catalog phrase that identifies them.
+            if selected_form[1] != "toy":
+                discovery_query = "huevo"
         handle = self.release_manager.pin(require_fresh=True)
         reader = self._reader(handle)
         authorization_status = {
@@ -411,7 +420,7 @@ class BackendService:
         discover_with_offers = getattr(reader, "discover_with_offers", None)
         if callable(discover_with_offers):
             candidates, metrics = discover_with_offers(
-                query,
+                discovery_query,
                 selections=selections,
                 latitude=Decimal(str(payload.get("latitude"))),
                 longitude=Decimal(str(payload.get("longitude"))),
@@ -420,7 +429,7 @@ class BackendService:
             )
         else:
             # Compatibility for older test doubles and pre-wiring readers.
-            candidates, metrics = reader.discover(query, region_ids=regions, product_limit=window_limit)
+            candidates, metrics = reader.discover(discovery_query, region_ids=regions, product_limit=window_limit)
         if not production_android_ui_authorized:
             # Identity discovery remains available under the narrower
             # identity-search authorization, but current price/store evidence
