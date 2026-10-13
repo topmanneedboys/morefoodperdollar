@@ -128,12 +128,25 @@ class ProductIdentityLexiconTests(unittest.TestCase):
             {"egg:whole_egg", "egg:liquid", "egg:toy", "egg:chocolate"},
         )
         self.assertEqual(
+            next(choice for choice in value["choices"] if choice["id"] == "egg:whole_egg")["query"],
+            "huevo",
+        )
+        self.assertEqual(
             filter_family_candidates("eggs liquid", [
                 _row("p:cleaner", "LIMPIADOR LIQUIDO 500 ML"),
                 _row("p:egg", "HUEVOS FRESCOS X12"),
             ]),
             (),
         )
+        shell_eggs = filter_family_candidates(
+            "huevo",
+            [
+                _row("p:white", "HUEVO BLANCO DON REYNALDO X 12 UNI"),
+                _row("p:toy", "SMASH DINO NANO EGG"),
+                _row("p:chocolate", "HUEVO CHOCOLATE SORPRESA"),
+            ],
+        )
+        self.assertEqual([row["productEvidenceKey"] for row in shell_eggs], ["p:white"])
 
     def test_rice_bar_is_a_derived_form(self) -> None:
         value = derive_identity_record(_row("p:bar", "BARRA DE ARROZ DULCE 12 G"))

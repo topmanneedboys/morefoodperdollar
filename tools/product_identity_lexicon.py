@@ -413,7 +413,14 @@ _FORM_PRESENTATION: Mapping[str, Mapping[str, Mapping[str, str]]] = {
         "whole_egg": {
             "labelEs": "Huevo de gallina",
             "labelEn": "Chicken eggs",
-            "query": "huevo fresco",
+            # This choice represents the shopper's shell-egg category, not
+            # one freshness descriptor.  A freshness-only query collapsed
+            # the live result to the single identity whose name contains
+            # ``fresco`` even though the catalog contains white, brown,
+            # colored, free-range, and other shell-egg presentations.
+            # ``huevo`` keeps the backend's reviewed egg-family exclusions
+            # active while allowing all direct shell-egg identities through.
+            "query": "huevo",
         },
         "liquid": {
             "labelEs": "Huevo líquido",
