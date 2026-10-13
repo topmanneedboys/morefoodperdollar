@@ -40,17 +40,18 @@ production search configuration.
   contains them.
 - The review-queue batches add observed Argentine terms for produce,
   dairy, meat, snacks, beverages, home and baby goods, health, personal care,
-  condiments, and prepared foods.  Punctuation variants and ingredient words
-  are guarded with explicit exclusions; ambiguous names remain in review.
+  condiments, toys, electronics, stationery, and prepared foods. Punctuation
+  variants, packaging words, and ingredient words are guarded with explicit
+  exclusions; ambiguous names remain in review.
 
 ## Coverage result
 
 The derived index contains all `78,865` provider products.
 
-- `51,191` (`64.91%`) have a stable evidence-backed primary department.
-- `27,674` (`35.09%`) are in `REVIEW_REQUIRED` with their evidence and sample
+- `52,363` (`66.40%`) have a stable evidence-backed primary department.
+- `26,502` (`33.60%`) are in `REVIEW_REQUIRED` with their evidence and sample
   names preserved.
-- `10,962` products have multiple department candidates retained as labels;
+- `11,159` products have multiple department candidates retained as labels;
   a primary department is chosen only when the reviewed priority is unique.
 - Every provider product has a coverage status. No product is silently dropped
   or forced into a made-up category.
