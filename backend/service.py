@@ -466,6 +466,19 @@ class BackendService:
         # fail-open presentation refinement; it never changes price, offer, or
         # availability authority.
         candidates = filter_taxonomy_candidates(query, candidates)
+        if selected_family == "egg" and selected_form == ("egg", "whole_egg"):
+            # The canonical family discovery window can contain valid shell-egg
+            # identities whose current offer partition has no matching price
+            # evidence.  Keep those identities available, but put products
+            # with real current offers first so the first page is immediately
+            # useful for a shopper.  Python's stable sort preserves the
+            # existing SearchPack order within each evidence group.
+            candidates = tuple(
+                sorted(
+                    candidates,
+                    key=lambda candidate: 0 if candidate.get("qualifiedOffers") else 1,
+                )
+            )
         has_more = len(candidates) > offset + DISCOVERY_PAGE_SIZE
         limit_reached = has_more and page == DISCOVERY_MAX_PAGE
         visible_candidates = candidates[offset:offset + DISCOVERY_PAGE_SIZE]

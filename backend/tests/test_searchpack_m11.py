@@ -616,6 +616,46 @@ class SearchPackM11Tests(unittest.TestCase):
         })
         self.assertEqual([item["productEvidenceKey"] for item in liquid["matches"]], ["egg-liquid"])
 
+    def test_service_search_prioritizes_evidence_backed_shell_eggs(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": "egg-no-offer",
+                "name": "HUEVO BLANCO IDENTIDAD SIN OFERTA",
+                "brand": "Marca",
+                "gtin": None,
+                "score": 120,
+                "matchedTokens": ["huevo"],
+                "qualifiedOffers": [],
+            },
+            {
+                "productEvidenceKey": "egg-priced",
+                "name": "HUEVO BLANCO CON OFERTA VIGENTE",
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100,
+                "matchedTokens": ["huevo"],
+                "qualifiedOffers": [{"offerKey": "offer-1"}],
+            },
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        with patch("backend.service._production_android_ui_authorized", return_value=True):
+            response = service.search({
+                "latitude": "-34",
+                "longitude": "-58",
+                "radiusKm": "5",
+                "query": "huevo de gallina",
+            })
+
+        self.assertEqual(
+            [item["productEvidenceKey"] for item in response["matches"]],
+            ["egg-priced", "egg-no-offer"],
+        )
+        self.assertIsNone(response["clarification"])
+
     def test_service_search_keeps_food_eggs_and_clarifies_toy_eggs(self) -> None:
         manager = _StubReleaseManager()
         reader = _StubReader()
