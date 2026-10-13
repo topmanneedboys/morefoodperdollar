@@ -29,7 +29,7 @@ import hashlib
 import json
 import re
 from collections import Counter, defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Mapping, Sequence
@@ -281,6 +281,117 @@ DEPARTMENT_RULES: tuple[TaxonomyRule, ...] = (
         72,
     ),
 )
+
+# Conservative additions derived from the current review queue.  These are
+# kept separate from the original rules so each batch can be audited and
+# reverted without rewriting the established lexical catalogue.  A term is
+# added only when source-name examples show a stable product meaning; broad or
+# ambiguous words stay out of the rules and remain review-required.
+_REVIEW_BATCH_DEPARTMENT_TERMS: dict[str, tuple[str, ...]] = {
+    "fresh_produce": (
+        "batata", "berenjena", "chaucha", "choclo fresco", "choclo en chala",
+        "choclo suelto", "choclo x kg", "choclo pelado", "choclo natural",
+        "coliflor", "hinojo", "hinojos", "perejil fresco", "perejil x kg",
+        "perejil paq", "perejil paquete", "puerro", "repollo", "zapallito",
+        "jengibre fresco", "raiz de jengibre", "jengibre en raiz", "albahaca fresca",
+        "albahaca x kg", "albahaca paq", "albahaca paquete", "albahaca x atado",
+    ),
+    "beverages": (
+        "fresa fizz", "fresas fizz", "clerico fizz", "booch", "kombucha",
+        "limonada", "aperitivo", "infusion",
+    ),
+    "dairy": (
+        "mozzarella", "muzzarella", "muzzarela", "barra tybo", "cheddar",
+        "pategras", "reggianito", "port salut", "cremoso", "criollo cabra",
+    ),
+    "meat_seafood": (
+        "bola de lomo", "carnaza", "osobuco", "chinchulin", "chinchulines",
+        "higado", "lengua", "molleja", "mollejas", "rinon", "rinones",
+        "muslito", "muslitos",
+    ),
+    "snacks_sweets": (
+        "bombon", "bombones", "bon o bon", "pretzel", "pretzels", "tostada",
+        "tostadas", "choc", "choco", "chocolat", "pochoclo", "pochoclos",
+        "dce", "dce.", "dce.batata", "dce.membr", "dce.arandanos", "d batata",
+    ),
+    "household_cleaning": (
+        "dispenser de jabon", "dispenser de jabón",
+    ),
+    "home_goods": (
+        "tabla de corte", "tabla para cortar", "copetinero", "copetinera",
+        "tendedero", "felpudo",
+    ),
+    "baby_pet": (
+        "mamadera", "biberon", "biberón", "chupete", "tetina", "moises",
+        "moisés",
+    ),
+    "health_supplements": (
+        "mentho-plus", "mentho plus",
+    ),
+    "personal_care": (
+        "acondic", "acondicionad", "acondicionad.",
+    ),
+    "condiments": (
+        "jengibre molido", "jengibre deshidra", "jengibre deshidratado",
+        "jengibre en polvo", "curcuma", "cúrcuma", "albahaca desecada",
+        "albahaca molida", "oregano", "orégano", "romero", "tomillo",
+        "comino", "canela", "laurel",
+    ),
+    "prepared_food": (
+        "tarta", "tartas",
+    ),
+}
+
+_REVIEW_BATCH_DEPARTMENT_EXCLUSIONS: dict[str, tuple[str, ...]] = {
+    "fresh_produce": (
+        "dce", "dce.batata", "dce.membr", "dce.arandanos", "dulce", "dulcor",
+        "jugo", "zumo", "juice", "bebida", "drink", "limonada", "booch",
+        "kombucha", "aperitivo", "tarta", "tartas", "postre", "dessert",
+        "cacao", "choco", "chocolate", "caramelo", "refrig", "deshidrat",
+        "deshidra", "deshidratado", "desecada", "molido", "molida", "polvo",
+        "frito", "fritas", "pastafrola", "pastelito", "pastelitos", "locion",
+        "lotion", "crema", "cosmet", "balsamo", "queso", "qso", "pizza",
+        "sorrentino", "medallon", "medallones", "pan", "baguetin", "dce.",
+        "d batata", "lata", "lat", "conserva", "te", "saquito", "saquitos",
+        "infusion", "sopa", "salsa",
+    ),
+    "beverages": (
+        "sodastream",
+    ),
+    "dairy": (
+        "pochoclo", "pochoclos", "popcorn", "snack", "snacks", "muslito",
+        "muslitos", "pizza", "empanada", "hamburguesa", "galleta", "galletita",
+        "cracker", "salsa", "dip", "postre", "helado", "tarta", "relleno",
+        "pan",
+    ),
+    "snacks_sweets": (
+        "cepillo", "dental", "shampoo", "acondic", "acondicionador", "coloracion",
+        "lavavajillas", "lavavajilla", "sodastream", "electrico", "electrica",
+        "jabon", "detergente", "locion", "lotion", "cosmet", "perfume", "pintura",
+        "herramienta", "herramient", "juguete", "toy", "cable", "celular", "tablet",
+        "mueble", "silla", "mesa", "crema dental", "pasta dental", "tocador",
+    ),
+    "condiments": (
+        "acondic", "acondicionad", "acondicionad.", "acondicionador", "shampoo", "sedal", "crema", "jabon",
+        "locion", "perfume", "cosmet", "bebida", "limonada", "kombucha",
+        "booch", "sh", "hs", "head shoulders", "fructis", "nivea", "ogx",
+        "dove", "jergens", "capilatis", "body", "corp", "capilar", "balsamo",
+        "neutrogena", "algabo", "gel dental", "pasta dental",
+    ),
+    "prepared_food": (
+        "molde", "cuch", "cuchillo", "tapas", "tapa", "utensilio",
+        "herramienta",
+    ),
+}
+
+
+def _extend_review_batch_rules(rule: TaxonomyRule) -> TaxonomyRule:
+    terms = tuple(dict.fromkeys(rule.terms + _REVIEW_BATCH_DEPARTMENT_TERMS.get(rule.key, ())))
+    exclusions = tuple(dict.fromkeys(rule.excluded_terms + _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS.get(rule.key, ())))
+    return replace(rule, terms=terms, excluded_terms=exclusions)
+
+
+DEPARTMENT_RULES = tuple(_extend_review_batch_rules(rule) for rule in DEPARTMENT_RULES)
 
 
 # Form rules are intentionally reusable across families.  They are used to

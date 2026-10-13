@@ -72,6 +72,36 @@ class ProductTaxonomyTests(unittest.TestCase):
         self.assertNotIn("fresh_produce", departments)
         self.assertIn("cosmetics", {item["key"] for item in value["formCandidates"]})
 
+    def test_review_batch_classifies_observed_source_terms_without_cross_category_leakage(self) -> None:
+        cases = [
+            ("BATATA SUELTA", "fresh_produce"),
+            ("DCE/BATATA ESNAOLA PERS", "snacks_sweets"),
+            ("DCE.BATATA ESNAOLA LATA", "snacks_sweets"),
+            ("DCE. BATATA EMMETH XKG", "snacks_sweets"),
+            ("D BATATA ARCOR X KG.", "snacks_sweets"),
+            ("TARTA DE CHOCLO CRESFOOD 250 GR", "prepared_food"),
+            ("MOLDE NON STICK P/TARTA 28 CM.", None),
+            ("DOY PACK LIMONADA C JENGIBRE Y MENTA X 450 GRS", "beverages"),
+            ("BOOCH JENGIBRE-BURRITO 354cc", "beverages"),
+            ("SODASTREAM FIZZ GO SAND", None),
+            ("TE NEGRO C/JENGIBRE Y CANELA TWININGS CJA 10 SAQ 20 GRM", "beverages"),
+            ("Pochoclos HANKS Cheddar x 44g", "snacks_sweets"),
+            ("MUSLITOS C/CHEDDAR XKG SOLIMENO", "meat_seafood"),
+            ("MENTHO-PLUS ACIDOS CEREZA X 27.2G", "health_supplements"),
+            ("JENGIBRE MOLIDO BADIA x42.5g", "condiments"),
+            ("ALBAHACA DESECADA MOLIDA", "condiments"),
+            ("RAIZ DE JENGIBRE FRESCA X KG", "fresh_produce"),
+            ("PEREJIL DESHIDRATADO", None),
+            ("PAN BAGUETIN DE BATATA THE FERMENTO X4 UNI", "staples"),
+            ("QUESO DE CABRA C/ALBAHACA LA HUERTA TAMBO X KGM", "dairy"),
+            ("PIZZA MOZZARELLA 4P CRESFOOD 380 GR", "prepared_food"),
+            ("SHAMPOO ROMERO ANTICAIDA HEAD SHOULDERS X 180 CC", "personal_care"),
+            ("ACONDICIONAD. C/ROMERO Y MENTA OGX BOT 385 ML", "personal_care"),
+        ]
+        for name, expected in cases:
+            with self.subTest(name=name):
+                self.assertEqual(classify_name(name)["primaryDepartment"], expected)
+
     def test_generic_egg_clarification_uses_only_observed_forms(self) -> None:
         candidates = [
             {"productEvidenceKey": "egg-fresh", "name": "HUEVOS FRESCOS X12", "brand": "Marca"},
