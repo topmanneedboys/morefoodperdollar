@@ -129,7 +129,7 @@ class ProductIdentityLexiconTests(unittest.TestCase):
         )
         self.assertEqual(
             next(choice for choice in value["choices"] if choice["id"] == "egg:whole_egg")["query"],
-            "huevo",
+            "huevo de gallina",
         )
         self.assertEqual(
             filter_family_candidates("eggs liquid", [

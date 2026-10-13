@@ -418,9 +418,11 @@ _FORM_PRESENTATION: Mapping[str, Mapping[str, Mapping[str, str]]] = {
             # the live result to the single identity whose name contains
             # ``fresco`` even though the catalog contains white, brown,
             # colored, free-range, and other shell-egg presentations.
-            # ``huevo`` keeps the backend's reviewed egg-family exclusions
-            # active while allowing all direct shell-egg identities through.
-            "query": "huevo",
+            # ``huevo de gallina`` is explicit enough to select this form and
+            # suppress the clarification card, while the backend's reviewed
+            # egg-family rules still include ordinary shell-egg presentations
+            # such as white, brown, colored, and pack-size variants.
+            "query": "huevo de gallina",
         },
         "liquid": {
             "labelEs": "Huevo líquido",
