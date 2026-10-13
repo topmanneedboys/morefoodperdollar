@@ -48,6 +48,19 @@ _FAMILY_DISCOVERY_QUERIES = {
 }
 
 
+def _candidate_evidence_sort_key(candidate: Mapping[str, Any]) -> tuple[int, int]:
+    """Put usable current unit-price evidence ahead of incomplete rows."""
+
+    offers = candidate.get("qualifiedOffers")
+    if not isinstance(offers, (list, tuple)):
+        return (1, 1)
+    has_unit_price = any(
+        isinstance(offer, Mapping) and isinstance(offer.get("unitPrice"), Mapping)
+        for offer in offers
+    )
+    return (0 if has_unit_price else 1, 0 if offers else 1)
+
+
 def _android_networking_authorized(status: Mapping[str, Any]) -> bool:
     """Authorize only the explicitly deployed identity-search environment."""
     if os.environ.get(ANDROID_NETWORKING_AUTHORIZED_ENV, "").strip().lower() != "true":
@@ -482,7 +495,7 @@ class BackendService:
             candidates = tuple(
                 sorted(
                     candidates,
-                    key=lambda candidate: 0 if candidate.get("qualifiedOffers") else 1,
+                    key=_candidate_evidence_sort_key,
                 )
             )
         has_more = len(candidates) > offset + DISCOVERY_PAGE_SIZE

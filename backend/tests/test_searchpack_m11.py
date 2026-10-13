@@ -704,6 +704,48 @@ class SearchPackM11Tests(unittest.TestCase):
             ["egg-priced", "egg-no-offer"],
         )
 
+    def test_service_search_prioritizes_verified_unit_prices_for_rice(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": "rice-unknown-quantity",
+                "name": "ARROZ PARA RISOTTO X KG",
+                "brand": "Marca",
+                "gtin": None,
+                "score": 120,
+                "matchedTokens": ["arroz"],
+                "qualifiedOffers": [{"offerKey": "offer-unknown", "unitPrice": None}],
+            },
+            {
+                "productEvidenceKey": "rice-known-quantity",
+                "name": "ARROZ CORTO PULIDO 400 G",
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100,
+                "matchedTokens": ["arroz"],
+                "qualifiedOffers": [{
+                    "offerKey": "offer-known",
+                    "unitPrice": {"amount": "250", "currency": "ARS", "basis": "100 g"},
+                }],
+            },
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        with patch("backend.service._production_android_ui_authorized", return_value=True):
+            response = service.search({
+                "latitude": "-34",
+                "longitude": "-58",
+                "radiusKm": "5",
+                "query": "rice",
+            })
+
+        self.assertEqual(
+            [item["productEvidenceKey"] for item in response["matches"]],
+            ["rice-known-quantity", "rice-unknown-quantity"],
+        )
+
     def test_service_search_uses_family_base_for_explicit_form(self) -> None:
         manager = _StubReleaseManager()
         reader = _StubReader()
