@@ -8,11 +8,11 @@
     "providerProductIds": 78865
   },
   "coverage": {
-    "classified": 49386,
-    "classifiedPercent": 62.62,
-    "reviewRequired": 29479,
-    "reviewRequiredPercent": 37.38,
-    "productsWithMultipleDepartmentCandidates": 10728,
+    "classified": 51191,
+    "classifiedPercent": 64.91,
+    "reviewRequired": 27674,
+    "reviewRequiredPercent": 35.09,
+    "productsWithMultipleDepartmentCandidates": 10962,
     "everyProviderProductHasCoverageStatus": true
   },
   "derivedArtifact": {
@@ -20,8 +20,8 @@
     "policyVersion": "valuepilot-argentina-product-taxonomy-policy-v1",
     "fileName": "product-taxonomy-153e9d9f7ab4b87e72c16aebebc69c6f9f90fca681cd1075d625244e2e31bc2c.jsonl.gz",
     "records": 78865,
-    "bytes": 3427668,
-    "sha256": "ebfe3819b796b1f63dc12e002a7f07831a14b02daf633080eafbac82366947b2"
+    "bytes": 3443584,
+    "sha256": "ef6921a94c9a88cc9751c0043bc847e357e0b4c368b11774fca620904d306597"
   },
   "customerProjection": {
     "clarificationSource": "observed_forms_only",

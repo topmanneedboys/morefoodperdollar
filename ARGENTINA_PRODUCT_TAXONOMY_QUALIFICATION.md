@@ -38,7 +38,7 @@ production search configuration.
 - Mango vocabulary and observed-form handling, so mango fruit, mango drinks,
   mango desserts, and mango cookies can remain separate when the source
   contains them.
-- The first review-queue batch adds observed Argentine terms for produce,
+- The review-queue batches add observed Argentine terms for produce,
   dairy, meat, snacks, beverages, home and baby goods, health, personal care,
   condiments, and prepared foods.  Punctuation variants and ingredient words
   are guarded with explicit exclusions; ambiguous names remain in review.
@@ -47,10 +47,10 @@ production search configuration.
 
 The derived index contains all `78,865` provider products.
 
-- `49,386` (`62.62%`) have a stable evidence-backed primary department.
-- `29,479` (`37.38%`) are in `REVIEW_REQUIRED` with their evidence and sample
+- `51,191` (`64.91%`) have a stable evidence-backed primary department.
+- `27,674` (`35.09%`) are in `REVIEW_REQUIRED` with their evidence and sample
   names preserved.
-- `10,728` products have multiple department candidates retained as labels;
+- `10,962` products have multiple department candidates retained as labels;
   a primary department is chosen only when the reviewed priority is unique.
 - Every provider product has a coverage status. No product is silently dropped
   or forced into a made-up category.

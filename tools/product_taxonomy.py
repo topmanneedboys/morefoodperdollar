@@ -303,42 +303,75 @@ _REVIEW_BATCH_DEPARTMENT_TERMS: dict[str, tuple[str, ...]] = {
     "dairy": (
         "mozzarella", "muzzarella", "muzzarela", "barra tybo", "cheddar",
         "pategras", "reggianito", "port salut", "cremoso", "criollo cabra",
+        "q tybo", "q danbo", "queso tybo", "queso danbo",
     ),
     "meat_seafood": (
         "bola de lomo", "carnaza", "osobuco", "chinchulin", "chinchulines",
         "higado", "lengua", "molleja", "mollejas", "rinon", "rinones",
-        "muslito", "muslitos",
+        "muslito", "muslitos", "tapa de nalga", "colita de cuadril", "tomahawk",
+        "cuarto trasero", "salamin", "chorizos", "costillas", "milanesas",
+        "salchichas", "muslo",
+    ),
+    "staples": (
+        "arveja", "arvejas", "peas", "baguette", "baguetin", "media baguette",
+        "pan lactal", "caldo", "caldos", "polvo de hornear",
     ),
     "snacks_sweets": (
         "bombon", "bombones", "bon o bon", "pretzel", "pretzels", "tostada",
         "tostadas", "choc", "choco", "chocolat", "pochoclo", "pochoclos",
         "dce", "dce.", "dce.batata", "dce.membr", "dce.arandanos", "d batata",
+        "gomita", "gomitas",
     ),
     "household_cleaning": (
-        "dispenser de jabon", "dispenser de jabón",
+        "dispenser de jabon", "dispenser de jabón", "escobilla", "escobilla de bano",
+        "escobilla de baño", "limpia bano", "limpiabano",
     ),
     "home_goods": (
         "tabla de corte", "tabla para cortar", "copetinero", "copetinera",
-        "tendedero", "felpudo",
+        "tendedero", "felpudo", "guante de cocina", "manopla cocina", "agarradera",
+        "tabla planchar", "tabla de planchar", "sahumerios", "jarro", "mug",
     ),
     "baby_pet": (
         "mamadera", "biberon", "biberón", "chupete", "tetina", "moises",
-        "moisés",
+        "moisés", "alimento perros", "alimento gatos", "piedras sanitarias",
     ),
     "health_supplements": (
         "mentho-plus", "mentho plus",
     ),
     "personal_care": (
-        "acondic", "acondicionad", "acondicionad.",
+        "acondic", "acondicionad", "acondicionad.", "tintura", "esmalte unas",
+        "esmalte de uñas", "bloqueador solar",
     ),
     "condiments": (
         "jengibre molido", "jengibre deshidra", "jengibre deshidratado",
         "jengibre en polvo", "curcuma", "cúrcuma", "albahaca desecada",
         "albahaca molida", "oregano", "orégano", "romero", "tomillo",
-        "comino", "canela", "laurel",
+        "comino", "canela", "laurel", "aceto balsamico", "aceto", "edulcorante",
+        "ajo en polvo", "pimenton", "pimentón",
     ),
     "prepared_food": (
-        "tarta", "tartas",
+        "tarta", "tartas", "tapas p pascualina", "tapas pascualina", "tapas empanadas",
+        "tapas p empanadas", "ensalada", "ensaladas", "waffle vegano", "waffle belga",
+        "waffle glaseado", "donut", "donuts",
+    ),
+    "clothing": (
+        "ojota", "ojotas", "pantufla", "pantuflas", "vedetina", "bombacha", "bikini",
+        "chomba", "guardapolvo",
+    ),
+    "sports_luggage": (
+        "antiparras",
+    ),
+    "garden_outdoor": (
+        "bulbos crocus", "bulbos anemonas", "bulbos narcisos", "bulbos muscari",
+        "bulbos brodiaea", "bulbos fresias", "bulbos jacinto", "bulbos tulipan",
+    ),
+    "tools_hardware": (
+        "alicate media cana", "alicate corte oblicuo", "alicate diagonal",
+        "alicate frontal", "alicate corte aislado", "alicate de corte",
+    ),
+    "electronics": (
+        "secador de pelo", "secador cabello", "plancha vapor", "plancha pelo",
+        "cocina electrica", "cocina elec", "lavavajillas",
     ),
 }
 
@@ -358,6 +391,9 @@ _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS: dict[str, tuple[str, ...]] = {
     "beverages": (
         "sodastream",
     ),
+    "staples": (
+        "croqueta", "croquetas", "medallon", "medallones", "hamburguesa", "tarta",
+    ),
     "dairy": (
         "pochoclo", "pochoclos", "popcorn", "snack", "snacks", "muslito",
         "muslitos", "pizza", "empanada", "hamburguesa", "galleta", "galletita",
@@ -370,6 +406,7 @@ _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS: dict[str, tuple[str, ...]] = {
         "jabon", "detergente", "locion", "lotion", "cosmet", "perfume", "pintura",
         "herramienta", "herramient", "juguete", "toy", "cable", "celular", "tablet",
         "mueble", "silla", "mesa", "crema dental", "pasta dental", "tocador",
+        "vitalidad", "calcio", "defensas", "suplemento", "suplementos", "vitamina", "vitaminas",
     ),
     "condiments": (
         "acondic", "acondicionad", "acondicionad.", "acondicionador", "shampoo", "sedal", "crema", "jabon",
@@ -379,7 +416,7 @@ _REVIEW_BATCH_DEPARTMENT_EXCLUSIONS: dict[str, tuple[str, ...]] = {
         "neutrogena", "algabo", "gel dental", "pasta dental",
     ),
     "prepared_food": (
-        "molde", "cuch", "cuchillo", "tapas", "tapa", "utensilio",
+        "molde", "cuch", "cuchillo", "utensilio",
         "herramienta",
     ),
 }

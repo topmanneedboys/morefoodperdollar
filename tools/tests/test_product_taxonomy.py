@@ -97,6 +97,21 @@ class ProductTaxonomyTests(unittest.TestCase):
             ("PIZZA MOZZARELLA 4P CRESFOOD 380 GR", "prepared_food"),
             ("SHAMPOO ROMERO ANTICAIDA HEAD SHOULDERS X 180 CC", "personal_care"),
             ("ACONDICIONAD. C/ROMERO Y MENTA OGX BOT 385 ML", "personal_care"),
+            ("CHECK Q TYBO 200G", "dairy"),
+            ("TAPA DE NALGA PROMOCION CJN-1-Kg", "meat_seafood"),
+            ("ARVEJAS PARTIDAS X KG", "staples"),
+            ("AJO EN POLVO BADIA 85,05g", "condiments"),
+            ("JARRO MUGG EQUIPOS 1un", "home_goods"),
+            ("ESCOBILLA P/BAÑO W.C. GLOW X 1 UNI", "household_cleaning"),
+            ("TINTURA KOLESTON C/REACT.KIT 777MARRON", "personal_care"),
+            ("TAPAS P/EMPANADAS OTTONELLO 420gr", "prepared_food"),
+            ("GOMITAS SIMPLE vitalidad 240gr FCO-240-gr.", None),
+            ("BULBO ALTA POTENCIA 20W E27 FRIA OSRAM", None),
+            ("BULBOS CROCUS COL. VARIADOS", "garden_outdoor"),
+            ("MANTA ALGODON WAFFLE", None),
+            ("WAFFLE BELGA CRISTAL X 1 UNI", "prepared_food"),
+            ("ALICATE P/UÑAS CUCHILLA CURVA BASICARE BLI 1 UNI", None),
+            ("ALICATE MEDIA CANA CRF 6", "tools_hardware"),
         ]
         for name, expected in cases:
             with self.subTest(name=name):
