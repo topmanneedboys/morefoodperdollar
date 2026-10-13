@@ -19,7 +19,7 @@ from .reader import (
     CurrentPriceEvidenceUnavailable,
 )
 from .release import ReleaseError, ReleaseManager, qualified_offer_artifacts_available
-from tools.product_identity_lexicon import build_family_clarification, filter_family_candidates
+from tools.product_identity_lexicon import build_family_clarification, family_query_form, family_query_key, filter_family_candidates
 from tools.product_taxonomy import ProductTaxonomyIndex, build_taxonomy_clarification, filter_taxonomy_candidates
 
 LOGGER = logging.getLogger("valuepilot.backend")
@@ -384,6 +384,7 @@ class BackendService:
             raise BackendQueryError("search page is invalid")
         request_id = correlation_id or str(uuid.uuid4())
         started = time.perf_counter()
+        selected_family = family_query_key(query)
         handle = self.release_manager.pin(require_fresh=True)
         reader = self._reader(handle)
         authorization_status = {
@@ -401,6 +402,12 @@ class BackendService:
         regions = tuple(selection.region_id for selection in selections)
         offset = page * DISCOVERY_PAGE_SIZE
         window_limit = min(offset + DISCOVERY_PAGE_SIZE + 1, MAX_DISCOVERY_PRODUCT_LIMIT)
+        # Egg names are also used by toy and confectionery products.  Search a
+        # larger bounded window before applying the direct-egg identity filter
+        # so genuine food rows are not displaced by those higher-ranked noise
+        # rows.  The cap remains the existing 31-product discovery limit.
+        if selected_family == "egg" and family_query_form(query) is None:
+            window_limit = MAX_DISCOVERY_PRODUCT_LIMIT
         discover_with_offers = getattr(reader, "discover_with_offers", None)
         if callable(discover_with_offers):
             candidates, metrics = discover_with_offers(
@@ -434,6 +441,11 @@ class BackendService:
             # annotation is consumed only by the family/form refinements and
             # removed by _strip_internal before the response leaves Search.
             candidates = taxonomy.annotate(candidates)
+        # Keep the complete bounded evidence window for clarification.  The
+        # visible result set may be refined below (for example a plain egg
+        # query removes toy eggs), but the shopper still needs the observed
+        # alternatives that made the clarification useful.
+        clarification_candidates = candidates
         # A clarification choice is an identity-only refinement.  Apply its
         # observed family form to the bounded result window so a query such as
         # ``carrot juice`` cannot retain a classified carrot lotion or cake.
@@ -451,10 +463,10 @@ class BackendService:
         # bounded discovery window and never changes ranking, prices, offers,
         # availability, or the selected product identity.
         clarification = None
-        if page == 0:
-            clarification = build_family_clarification(query, candidates)
+        if page == 0 and family_query_form(query) is None:
+            clarification = build_family_clarification(query, clarification_candidates)
             if clarification is None:
-                clarification = build_taxonomy_clarification(query, candidates)
+                clarification = build_taxonomy_clarification(query, clarification_candidates)
         response = {
             "apiContractVersion": "valuepilot-argentina-backend-http-v1",
             "requestId": request_id,

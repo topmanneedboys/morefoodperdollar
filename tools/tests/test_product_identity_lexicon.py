@@ -100,6 +100,33 @@ class ProductIdentityLexiconTests(unittest.TestCase):
         self.assertEqual(choices["carrot:vegetable"]["labelEn"], "Carrot vegetable")
         self.assertEqual(choices["carrot:drink"]["query"], "carrot juice")
 
+    def test_egg_family_separates_food_from_toys_and_exposes_clarification(self) -> None:
+        candidates = [
+            _row("p:egg", "HUEVOS FRESCOS X12"),
+            _row("p:liquid", "HUEVOS LIQUIDOS 500 ML"),
+            _row("p:dino", "SMASH DINO NANO EGG"),
+            _row("p:chocolate", "HUEVO CHOCOLATE SORPRESA"),
+        ]
+        direct = derive_identity_record(candidates[0])
+        self.assertEqual(direct["familyCandidates"], [{
+            "family": "egg",
+            "role": "DIRECT",
+            "matchedTerms": ["huevos"],
+            "observedForms": ["whole_egg"],
+        }])
+        toy = derive_identity_record(candidates[2])
+        self.assertEqual(toy["familyCandidates"][0]["role"], "DERIVED")
+        self.assertIn("toy", toy["familyCandidates"][0]["observedForms"])
+
+        value = build_family_clarification("eggs", candidates)
+        self.assertIsNotNone(value)
+        assert value is not None
+        self.assertEqual(value["family"], "egg")
+        self.assertEqual(
+            {choice["id"] for choice in value["choices"]},
+            {"egg:whole_egg", "egg:liquid", "egg:toy", "egg:chocolate"},
+        )
+
     def test_rice_bar_is_a_derived_form(self) -> None:
         value = derive_identity_record(_row("p:bar", "BARRA DE ARROZ DULCE 12 G"))
         candidate = value["familyCandidates"][0]

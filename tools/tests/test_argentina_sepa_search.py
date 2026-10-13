@@ -26,6 +26,7 @@ class ArgentinaSepaSearchTest(unittest.TestCase):
             product("p-huevo-1", "HUEVOS BLANCOS X 12"),
             product("p-huevo-negative", "FIDEOS CON HUEVO"),
             product("p-huevo-chocolate", "HUEVO CHOCOLATE SORPRESA"),
+            product("p-huevo-dino", "SMASH DINO NANO EGG"),
             product("p-fideos-1", "FIDEOS TIRABUZON"),
             product("p-azucar-1", "AZUCAR BLANCA 1 KG"),
             product("p-azucar-negative", "GASEOSA SIN AZUCAR"),
@@ -67,6 +68,16 @@ class ArgentinaSepaSearchTest(unittest.TestCase):
         ):
             results = search_products(self.products, query)
             self.assertNotIn(negative, {result.product_evidence_key for result in results}, query)
+
+    def test_bare_egg_search_excludes_toys_but_explicit_toy_search_remains_available(self):
+        bare = search_products(self.products, "eggs", limit=10, _allow_discovery=True)
+        bare_keys = {result.product_evidence_key for result in bare}
+        self.assertIn("p-huevo-1", bare_keys)
+        self.assertNotIn("p-huevo-dino", bare_keys)
+        self.assertNotIn("p-huevo-chocolate", bare_keys)
+
+        toy = search_products(self.products, "eggs dino", limit=10, _allow_discovery=True)
+        self.assertIn("p-huevo-dino", {result.product_evidence_key for result in toy})
 
     def test_token_boundary_and_unknown_query(self):
         self.assertEqual(search_products(self.products, "panaderia"), [])

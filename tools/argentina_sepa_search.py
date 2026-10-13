@@ -46,8 +46,10 @@ SYNONYMS: dict[str, tuple[str, ...]] = {
     "fideos": ("fideo", "fideos"),
     "harina": ("harina",),
     "azucar": ("azucar",),
-    "huevo": ("huevo", "huevos"),
-    "huevos": ("huevo", "huevos"),
+    "huevo": ("huevo", "huevos", "egg", "eggs"),
+    "huevos": ("huevo", "huevos", "egg", "eggs"),
+    "egg": ("huevo", "huevos", "egg", "eggs"),
+    "eggs": ("huevo", "huevos", "egg", "eggs"),
     "cafe": ("cafe",),
     "te": ("te",),
     "agua": ("agua",),
@@ -141,8 +143,24 @@ CONTEXT_EXCLUSIONS: dict[str, tuple[tuple[str, ...], ...]] = {
         ("yerba", "gaseosa"),
         ("yerba", "drink"),
     ),
-    "huevo": (("fideo", "con", "huevo"), ("fideos", "con", "huevo"), ("pasta", "con", "huevo")),
-    "huevos": (("fideo", "con", "huevo"), ("fideos", "con", "huevo"), ("pasta", "con", "huevo"), ("huevo", "chocolate"), ("huevo", "sorpresa"), ("huevo", "smashers")),
+    "huevo": (
+        ("fideo", "con", "huevo"), ("fideos", "con", "huevo"), ("pasta", "con", "huevo"),
+        ("fideo",), ("fideos",), ("pasta",), ("noodle",), ("noodles",),
+        ("chocolate",), ("cacao",), ("pascua",), ("easter",), ("sorpresa",), ("surprise",),
+        ("dino",), ("dinosaurio",), ("dinosaur",), ("unicornio",), ("unicorn",),
+        ("juguete",), ("juego",), ("toy",), ("playset",), ("coleccionable",), ("collectible",),
+        ("figura",), ("figure",), ("smash",), ("smashers",), ("rainbocorn",),
+        ("licor",), ("liqueur",), ("bebida",), ("drink",),
+    ),
+    "huevos": (
+        ("fideo", "con", "huevo"), ("fideos", "con", "huevo"), ("pasta", "con", "huevo"),
+        ("fideo",), ("fideos",), ("pasta",), ("noodle",), ("noodles",),
+        ("chocolate",), ("cacao",), ("pascua",), ("easter",), ("sorpresa",), ("surprise",),
+        ("dino",), ("dinosaurio",), ("dinosaur",), ("unicornio",), ("unicorn",),
+        ("juguete",), ("juego",), ("toy",), ("playset",), ("coleccionable",), ("collectible",),
+        ("figura",), ("figure",), ("smash",), ("smashers",), ("rainbocorn",),
+        ("licor",), ("liqueur",), ("bebida",), ("drink",),
+    ),
     "leche": (("leche", "y", "tonico"), ("leche", "tonico"), ("tonico", "micelar"), ("leche", "corporal")),
     "aceite": (("aceite", "para", "bebe"), ("aceite", "bebe")),
     "azucar": (("sin", "azucar"), ("cero", "azucar"), ("zero", "azucar")),
@@ -151,6 +169,17 @@ CONTEXT_EXCLUSIONS: dict[str, tuple[tuple[str, ...], ...]] = {
     "cereal": (("yogur", "con", "cereal"), ("yogurt", "con", "cereal")),
     "papel": (("palito", "porto", "rollo", "papel"), ("palito", "papel")),
 }
+
+# A toy/confectionery egg often carries more than one marker (for example
+# ``SMASH DINO NANO EGG``).  Asking for one marker should keep that observed
+# form searchable without making every other marker an accidental exclusion.
+_EGG_CONTEXT_MARKERS = frozenset({
+    "chocolate", "cacao", "pascua", "easter", "sorpresa", "surprise",
+    "dino", "dinosaurio", "dinosaur", "unicornio", "unicorn", "juguete",
+    "juego", "toy", "playset", "coleccionable", "collectible", "figura",
+    "figure", "smash", "smashers", "rainbocorn", "licor", "liqueur",
+    "bebida", "drink",
+})
 
 
 class SearchError(ValueError):
@@ -223,11 +252,14 @@ def _context_keys(token: str) -> tuple[str, ...]:
 def _context_requested(query_tokens: tuple[str, ...], sequence: tuple[str, ...]) -> bool:
     """Keep a derived product when the shopper explicitly asks for it."""
 
-    if len(sequence) < 2:
+    if not sequence:
         return False
     expanded = set(query_tokens)
     for token in query_tokens:
         expanded.update(_variants(token))
+    if len(sequence) == 1 and sequence[0] in _EGG_CONTEXT_MARKERS:
+        if any(marker in expanded for marker in _EGG_CONTEXT_MARKERS):
+            return True
     return all(any(value in expanded for value in _variants(token)) for token in sequence)
 
 

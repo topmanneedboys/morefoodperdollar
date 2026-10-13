@@ -616,6 +616,43 @@ class SearchPackM11Tests(unittest.TestCase):
         })
         self.assertEqual([item["productEvidenceKey"] for item in liquid["matches"]], ["egg-liquid"])
 
+    def test_service_search_keeps_food_eggs_and_clarifies_toy_eggs(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "name": name,
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["huevos"],
+            }
+            for index, (key, name) in enumerate((
+                ("egg-food", "HUEVOS FRESCOS X12"),
+                ("egg-dino", "SMASH DINO NANO EGG"),
+                ("egg-chocolate", "HUEVO CHOCOLATE SORPRESA"),
+            ))
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        response = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "eggs",
+        })
+
+        self.assertEqual([item["productEvidenceKey"] for item in response["matches"]], ["egg-food"])
+        clarification = response["clarification"]
+        self.assertIsNotNone(clarification)
+        assert clarification is not None
+        self.assertEqual(
+            {choice["id"] for choice in clarification["choices"]},
+            {"egg:whole_egg", "egg:toy", "egg:chocolate"},
+        )
+
     def test_service_search_uses_configured_taxonomy_sidecar_without_exposing_it(self) -> None:
         manager = _StubReleaseManager()
         reader = _StubReader()

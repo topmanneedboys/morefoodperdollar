@@ -154,6 +154,39 @@ FAMILY_RULES: tuple[FamilyRule, ...] = (
         },
     ),
     FamilyRule(
+        key="egg",
+        spanish_aliases=("huevo", "huevos"),
+        english_aliases=("egg", "eggs"),
+        include_terms=("huevo", "huevos", "egg", "eggs"),
+        # A bare egg query must not silently present toys, confectionery,
+        # pasta, or other products that only happen to contain the token.
+        # These markers are observed catalog-name evidence; they do not make
+        # a claim about ingredients, price, or availability.
+        excluded_phrases=(
+            ("fideo",), ("fideos",), ("pasta",), ("noodle",), ("noodles",),
+            ("chocolate",), ("cacao",), ("pascua",), ("easter",), ("sorpresa",), ("surprise",),
+            ("dino",), ("dinosaurio",), ("dinosaur",), ("unicornio",), ("unicorn",),
+            ("juguete",), ("juego",), ("toy",), ("playset",), ("coleccionable",), ("collectible",),
+            ("figura",), ("figure",), ("smash",), ("smashers",), ("rainbocorn",),
+            ("licor",), ("liqueur",), ("bebida",), ("drink",),
+        ),
+        forms={
+            "whole_egg": (
+                ("fresco", "fresca", "frescos", "frescas", "blanco", "blancos", "blanca", "blancas", "color", "colores", "entero", "enteros", "cascara", "cascaron", "gallina", "gallinas"),
+                ("fresh", "white", "whole", "shell", "chicken"),
+            ),
+            "liquid": (
+                ("liquido", "liquida", "liquidos", "liquidas", "pasteurizado", "pasteurizada", "clara", "claras", "yema", "yemas", "albumina"),
+                ("liquid", "pasteurized", "white", "yolk", "albumin"),
+            ),
+            "powder": (("polvo", "deshidratado", "deshidratada"), ("powder", "dehydrated")),
+            "chocolate": (("chocolate", "cacao", "pascua", "easter"), ("chocolate", "cocoa", "easter")),
+            "toy": (("dino", "dinosaurio", "dinosaur", "unicornio", "unicorn", "juguete", "juego", "sorpresa", "smash", "smashers", "playset", "coleccionable", "figura", "rainbocorn"), ("dino", "dinosaur", "unicorn", "toy", "surprise", "smash", "playset", "collectible", "figure")),
+            "pasta": (("fideo", "fideos", "pasta", "tallarines"), ("noodle", "noodles", "pasta")),
+            "drink": (("bebida", "licor", "licores"), ("drink", "liqueur", "eggnog")),
+        },
+    ),
+    FamilyRule(
         key="carrot",
         spanish_aliases=("zanahoria",),
         english_aliases=("carrot",),
@@ -251,7 +284,7 @@ def _generic_family_rules() -> tuple[FamilyRule, ...]:
     for phrase, target in aliases.items():
         if isinstance(phrase, str) and isinstance(target, str) and phrase.strip() and target.strip():
             grouped[normalize_text(target)].append(phrase)
-    reviewed = {"carrot", "rice", "lychee", "yerba mate"}
+    reviewed = {"carrot", "egg", "rice", "lychee", "yerba mate"}
     english_terms = {
         "apple", "avocado", "beans", "beef", "bread", "butter", "cheese", "chicken",
         "chocolate", "coconut", "coffee", "egg", "mango", "milk", "orange", "peach", "pineapple",
@@ -376,6 +409,43 @@ _FORM_PRESENTATION: Mapping[str, Mapping[str, Mapping[str, str]]] = {
             "query": "yerba mate",
         },
     },
+    "egg": {
+        "whole_egg": {
+            "labelEs": "Huevo de gallina",
+            "labelEn": "Chicken eggs",
+            "query": "huevo fresco",
+        },
+        "liquid": {
+            "labelEs": "Huevo líquido",
+            "labelEn": "Liquid egg",
+            "query": "huevo liquido",
+        },
+        "powder": {
+            "labelEs": "Huevo en polvo",
+            "labelEn": "Egg powder",
+            "query": "huevo en polvo",
+        },
+        "chocolate": {
+            "labelEs": "Huevo de chocolate o Pascua",
+            "labelEn": "Chocolate or Easter egg",
+            "query": "huevo chocolate",
+        },
+        "toy": {
+            "labelEs": "Huevo juguete o coleccionable",
+            "labelEn": "Toy or collectible egg",
+            "query": "huevo dino",
+        },
+        "pasta": {
+            "labelEs": "Pasta al huevo",
+            "labelEn": "Egg pasta",
+            "query": "fideos al huevo",
+        },
+        "drink": {
+            "labelEs": "Bebida o licor de huevo",
+            "labelEn": "Egg drink or liqueur",
+            "query": "bebida de huevo",
+        },
+    },
     "carrot": {
         "vegetable": {
             "labelEs": "Zanahoria como verdura",
@@ -414,6 +484,16 @@ _FORM_PRESENTATION: Mapping[str, Mapping[str, Mapping[str, str]]] = {
 def _query_matches_family(query: str, rule: FamilyRule) -> bool:
     tokens = _tokens(query)
     return bool(tokens) and _contains_any(tokens, rule.include_terms)
+
+
+def family_query_key(query: str) -> str | None:
+    """Return the reviewed family selected by a query, when one is present."""
+
+    normalized_query = " ".join(str(query or "").split())
+    if not normalized_query:
+        return None
+    selected_rule = next((rule for rule in FAMILY_RULES if _query_matches_family(normalized_query, rule)), None)
+    return selected_rule.key if selected_rule is not None else None
 
 
 def build_family_clarification(
@@ -550,9 +630,30 @@ def filter_family_candidates(
     lotion or cake in the same bounded result window.
     """
 
-    context = family_query_form(query)
     values = tuple(candidate for candidate in candidates if isinstance(candidate, Mapping))
+    normalized_query = " ".join(str(query or "").split())
+    selected_rule = next((rule for rule in FAMILY_RULES if _query_matches_family(normalized_query, rule)), None)
+    context = family_query_form(normalized_query)
     if context is None:
+        # Bare egg queries are common and the catalog contains toys and other
+        # derived products with the same token.  Prefer observed direct egg
+        # identities; fail open only when the bounded source window contains
+        # no direct egg row at all.
+        if selected_rule is not None and selected_rule.key == "egg":
+            direct: list[Mapping[str, Any]] = []
+            for candidate in values:
+                try:
+                    identity = derive_identity_record(candidate)
+                except (TypeError, ValueError):
+                    continue
+                if any(
+                    isinstance(family, Mapping)
+                    and family.get("family") == "egg"
+                    and family.get("role") == "DIRECT"
+                    for family in identity.get("familyCandidates", ())
+                ):
+                    direct.append(candidate)
+            return tuple(direct) if direct else values
         return values
     family_key, form = context
     filtered: list[Mapping[str, Any]] = []
@@ -601,7 +702,10 @@ def _family_observation(tokens: tuple[str, ...], rule: FamilyRule) -> tuple[bool
         if _contains_any(tokens, spanish_terms) or _contains_any(tokens, english_terms):
             forms.append(form_key)
     if not forms:
-        forms.append("unspecified")
+        # A matched egg without a derived marker is the ordinary whole-egg
+        # presentation.  This keeps a plain ``eggs`` search useful while
+        # retaining separate observed choices for toys and other forms.
+        forms.append("whole_egg" if rule.key == "egg" and not derived else "unspecified")
     return True, derived, tuple(sorted(set(forms))), tuple(sorted(set(include)))
 
 
@@ -838,6 +942,7 @@ __all__ = [
     "build_family_clarification",
     "build_identity_lexicon",
     "derive_identity_record",
+    "family_query_key",
     "family_query_form",
     "filter_family_candidates",
 ]
