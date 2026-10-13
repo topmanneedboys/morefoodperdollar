@@ -40,7 +40,6 @@ import com.valuepilot.app.StapleWatchSavedIdentitySelectionAction
 import com.valuepilot.core.ShoppingItemKey
 import com.valuepilot.core.ShoppingStoreKey
 import java.io.ByteArrayInputStream
-import java.util.Locale
 import kotlin.math.roundToInt
 
 internal fun valuePilotNextWebTextZoomPercent(fontScale: Float): Int =
@@ -571,13 +570,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
 
     /** Keep the English HTML labels useful against the Spanish Argentina catalog. */
     private fun normalizeNativeSearchQuery(rawQuery: String): String {
-        val query = rawQuery.trim()
-        return when (query.lowercase(Locale.ROOT)) {
-            "rice" -> "arroz"
-            "milk" -> "leche"
-            "oil" -> "aceite"
-            else -> query
-        }
+        return ValuePilotNextSearchQueryNormalizer.canonical(rawQuery)
     }
 
     private fun sendNativeSavedState(action: String? = null) {
