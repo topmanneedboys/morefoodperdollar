@@ -390,9 +390,10 @@ class BackendService:
         if selected_family == "egg" and selected_form is not None:
             # Form labels are identity refinements, not reliable lexical
             # catalog phrases.  Search the canonical egg family first, then
-            # apply the observed form to names.  Toy choices keep their dino
-            # marker because that is the catalog phrase that identifies them.
-            if selected_form[1] != "toy":
+            # apply the observed form to names.  Derived choices keep their
+            # marker because the SearchPack exclusion policy deliberately
+            # hides those rows from a bare family query.
+            if selected_form[1] not in {"toy", "chocolate", "pasta", "drink"}:
                 discovery_query = "huevo"
         handle = self.release_manager.pin(require_fresh=True)
         reader = self._reader(handle)
