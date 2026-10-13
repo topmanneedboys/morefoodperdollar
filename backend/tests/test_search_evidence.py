@@ -269,6 +269,32 @@ class SearchEvidenceTests(unittest.TestCase):
         self.assertNotIn("__offerSortId", offer)
         self.assertTrue(response["evidenceSemantics"]["qualifiedCurrentPriceEvidence"])
 
+    def test_public_search_offer_omits_unknown_store_address_fields(self) -> None:
+        offer = {
+            "offerKey": "offer-1",
+            "productEvidenceKey": "product-1",
+            "storeKey": "store-1",
+            "storeName": "Fixture Market",
+            "storeAddress": {"street": "Av. Corrientes", "number": None, "postalCode": None},
+            "storeLatitude": "-34.60",
+            "storeLongitude": "-58.38",
+            "distanceKm": "1.000000",
+            "listPrice": {"amount": "2500.00", "currency": "ARS"},
+            "referencePrice": None,
+            "releaseDate": "2026-10-01",
+            "freshnessStatus": "FRESH",
+            "promotions": [],
+        }
+        product = {
+            "productEvidenceKey": "product-1",
+            "quantity": None,
+            "quantityStatus": "UNKNOWN",
+        }
+
+        projected = ArgentinaBackendReader._public_search_offer(offer, product)
+
+        self.assertEqual(projected["storeAddress"], {"street": "Av. Corrientes"})
+
     def test_search_keeps_identity_but_strips_offers_without_production_ui_gate(self) -> None:
         reader = self._Reader()
         service = BackendService("", release_manager=self._ReleaseManager())

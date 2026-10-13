@@ -912,12 +912,26 @@ class ArgentinaBackendReader:
         offer: Mapping[str, Any],
         product: Mapping[str, Any],
     ) -> dict[str, Any]:
+        # Some source stores have a street but no street number or postal
+        # code.  The Android consumer contract accepts an address map only
+        # when every value is a string, so omit unknown fields at this
+        # boundary instead of emitting JSON nulls that make an otherwise
+        # valid product response fail closed as a contract error.
+        raw_address = offer.get("storeAddress")
+        store_address = None
+        if isinstance(raw_address, Mapping):
+            cleaned_address = {
+                str(key): value
+                for key, value in raw_address.items()
+                if isinstance(key, str) and isinstance(value, str) and value.strip()
+            }
+            store_address = cleaned_address or None
         result = {
             "offerKey": offer.get("offerKey"),
             "productEvidenceKey": offer.get("productEvidenceKey"),
             "storeKey": offer.get("storeKey"),
             "storeName": offer.get("storeName"),
-            "storeAddress": offer.get("storeAddress"),
+            "storeAddress": store_address,
             "storeLatitude": offer.get("storeLatitude"),
             "storeLongitude": offer.get("storeLongitude"),
             "distanceKm": offer.get("distanceKm"),
