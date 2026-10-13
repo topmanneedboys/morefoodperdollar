@@ -692,7 +692,7 @@ def filter_family_candidates(
                     for family in identity.get("familyCandidates", ())
                 ):
                     direct.append(candidate)
-            return tuple(direct) if direct else values
+            return tuple(direct)
         return values
     family_key, form = context
     filtered: list[Mapping[str, Any]] = []

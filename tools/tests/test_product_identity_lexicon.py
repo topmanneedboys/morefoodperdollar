@@ -184,6 +184,16 @@ class ProductIdentityLexiconTests(unittest.TestCase):
         )
         self.assertEqual(values, ())
 
+    def test_bare_reviewed_family_without_direct_item_does_not_show_derived_rows(self) -> None:
+        values = filter_family_candidates(
+            "lychee",
+            [
+                _row("p:soap", "JABON LIQUIDO SANDIA Y LICHI 250 ML"),
+                _row("p:colorissimo", "COLORISSIMO LYCHEE FRESCO", brand="VOGUE"),
+            ],
+        )
+        self.assertEqual(values, ())
+
     def test_yerba_form_query_ignores_generic_family_words(self) -> None:
         self.assertEqual(family_query_form("te de yerba mate"), ("yerba_mate", "tea_bags"))
         self.assertEqual(family_query_form("bebida de yerba"), ("yerba_mate", "drink"))
