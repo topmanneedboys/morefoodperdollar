@@ -37,11 +37,12 @@ try:
         CatalogIndex,
         CatalogRecord,
         LEXICAL_FEATURE_POLICY_VERSION,
+        SUPPORTED_LEXICAL_FEATURE_POLICY_VERSIONS,
         canonical_feature_keys,
         parse_intent,
     )
 except ModuleNotFoundError:  # pragma: no cover - direct tool invocation
-    from consumer_input_intelligence import CatalogIndex, CatalogRecord, LEXICAL_FEATURE_POLICY_VERSION, canonical_feature_keys, parse_intent
+    from consumer_input_intelligence import CatalogIndex, CatalogRecord, LEXICAL_FEATURE_POLICY_VERSION, SUPPORTED_LEXICAL_FEATURE_POLICY_VERSIONS, canonical_feature_keys, parse_intent
 
 
 SEARCHPACK_SCHEMA_VERSION = "valuepilot-argentina-searchpack-v2"
@@ -500,7 +501,7 @@ class SearchPackRegion:
             raise SearchPackError("SearchPack schema version is unsupported")
         if self.metadata.get("formatVersion") != SEARCHPACK_FORMAT_VERSION:
             raise SearchPackError("SearchPack format version is unsupported")
-        if self.metadata.get("policyVersion") != LEXICAL_FEATURE_POLICY_VERSION:
+        if self.metadata.get("policyVersion") not in SUPPORTED_LEXICAL_FEATURE_POLICY_VERSIONS:
             raise SearchPackError("SearchPack lexical policy does not match runtime")
         doc_count = self.metadata.get("documentCount")
         if not isinstance(doc_count, int) or doc_count < 0 or doc_count > 0xFFFFFFFF:
@@ -1287,7 +1288,7 @@ class SearchPackManager:
         descriptor = manifest.get("searchPackArtifact") if isinstance(manifest, Mapping) else None
         if not isinstance(descriptor, Mapping):
             raise SearchPackError("release does not declare SearchPack v2")
-        if descriptor.get("schemaVersion") != SEARCHPACK_SCHEMA_VERSION or descriptor.get("formatVersion") != SEARCHPACK_FORMAT_VERSION or descriptor.get("policyVersion") != LEXICAL_FEATURE_POLICY_VERSION:
+        if descriptor.get("schemaVersion") != SEARCHPACK_SCHEMA_VERSION or descriptor.get("formatVersion") != SEARCHPACK_FORMAT_VERSION or descriptor.get("policyVersion") not in SUPPORTED_LEXICAL_FEATURE_POLICY_VERSIONS:
             raise SearchPackError("release SearchPack declaration is incompatible")
         regions = descriptor.get("regions")
         if not isinstance(regions, list) or not regions or any(not isinstance(value, str) or not value for value in regions) or len(set(regions)) != len(regions):
