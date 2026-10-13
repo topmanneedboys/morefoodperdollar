@@ -12,6 +12,7 @@ from tools.product_identity_lexicon import (
     build_family_clarification,
     build_identity_lexicon,
     derive_identity_record,
+    family_query_form,
     filter_family_candidates,
 )
 
@@ -153,6 +154,40 @@ class ProductIdentityLexiconTests(unittest.TestCase):
         candidate = value["familyCandidates"][0]
         self.assertEqual(candidate["role"], "DERIVED")
         self.assertIn("dessert", candidate["observedForms"])
+
+    def test_bare_reviewed_family_keeps_direct_products_out_of_derived_rows(self) -> None:
+        values = filter_family_candidates(
+            "rice",
+            [
+                _row("p:grain", "ARROZ LARGO FINO 1 KG"),
+                _row("p:bar", "BARRA DE ARROZ DULCE 12 G"),
+            ],
+        )
+        self.assertEqual([row["productEvidenceKey"] for row in values], ["p:grain"])
+
+        carrot_values = filter_family_candidates(
+            "carrot",
+            [
+                _row("p:vegetable", "BABY CARROT"),
+                _row("p:lotion", "LOCION CARROT HAWAIIAN 240 ML"),
+            ],
+        )
+        self.assertEqual([row["productEvidenceKey"] for row in carrot_values], ["p:vegetable"])
+
+    def test_explicit_form_query_does_not_fail_open_to_unrelated_rows(self) -> None:
+        values = filter_family_candidates(
+            "lychee drink",
+            [
+                _row("p:apple-juice", "JUGO DE MANZANA 500 CC"),
+                _row("p:soap", "JABON LIQUIDO SANDIA Y LICHI 250 ML"),
+            ],
+        )
+        self.assertEqual(values, ())
+
+    def test_yerba_form_query_ignores_generic_family_words(self) -> None:
+        self.assertEqual(family_query_form("te de yerba mate"), ("yerba_mate", "tea_bags"))
+        self.assertEqual(family_query_form("bebida de yerba"), ("yerba_mate", "drink"))
+        self.assertIsNone(family_query_form("yerba mate"))
 
     def test_lychee_in_soap_is_not_fresh_fruit(self) -> None:
         value = derive_identity_record(_row("p:soap", "JABON LIQUIDO SANDIA Y LICHI 250 ML"))

@@ -39,6 +39,13 @@ DISCOVERY_PAGE_SIZE = 5
 DISCOVERY_MAX_PAGE = 5
 PRODUCT_TAXONOMY_PATH_ENV = "VALUEPILOT_PRODUCT_TAXONOMY_PATH"
 PRODUCT_TAXONOMY_SHA256_ENV = "VALUEPILOT_PRODUCT_TAXONOMY_SHA256"
+_FAMILY_DISCOVERY_QUERIES = {
+    "rice": "arroz",
+    "lychee": "lichi",
+    "yerba_mate": "yerba mate",
+    "egg": "huevo",
+    "carrot": "carrot",
+}
 
 
 def _android_networking_authorized(status: Mapping[str, Any]) -> bool:
@@ -387,14 +394,13 @@ class BackendService:
         selected_family = family_query_key(query)
         selected_form = family_query_form(query)
         discovery_query = query
-        if selected_family == "egg" and selected_form is not None:
+        if selected_family is not None and selected_form is not None:
             # Form labels are identity refinements, not reliable lexical
-            # catalog phrases.  Search the canonical egg family first, then
-            # apply the observed form to names.  Derived choices keep their
-            # marker because the SearchPack exclusion policy deliberately
-            # hides those rows from a bare family query.
-            if selected_form[1] not in {"toy", "chocolate", "pasta", "drink"}:
-                discovery_query = "huevo"
+            # catalog phrases.  Search the canonical family first, then
+            # apply the observed form to names.  This prevents a choice such
+            # as ``jugo de lichi`` from returning unrelated apple or orange
+            # juices simply because the source search matches ``jugo``.
+            discovery_query = _FAMILY_DISCOVERY_QUERIES.get(selected_family, query)
         handle = self.release_manager.pin(require_fresh=True)
         reader = self._reader(handle)
         authorization_status = {
@@ -416,7 +422,7 @@ class BackendService:
         # larger bounded window before applying the direct-egg identity filter
         # so genuine food rows are not displaced by those higher-ranked noise
         # rows.  The cap remains the existing 31-product discovery limit.
-        if selected_family == "egg":
+        if selected_family == "egg" or selected_form is not None:
             window_limit = MAX_DISCOVERY_PRODUCT_LIMIT
         discover_with_offers = getattr(reader, "discover_with_offers", None)
         if callable(discover_with_offers):
@@ -466,8 +472,8 @@ class BackendService:
         # fail-open presentation refinement; it never changes price, offer, or
         # availability authority.
         candidates = filter_taxonomy_candidates(query, candidates)
-        if selected_family == "egg" and selected_form == ("egg", "whole_egg"):
-            # The canonical family discovery window can contain valid shell-egg
+        if selected_family in {"rice", "lychee", "yerba_mate", "egg", "carrot"}:
+            # The canonical family discovery window can contain valid
             # identities whose current offer partition has no matching price
             # evidence.  Keep those identities available, but put products
             # with real current offers first so the first page is immediately

@@ -617,10 +617,29 @@ def family_query_form(query: str) -> tuple[str, str] | None:
     if selected_rule is None or selected_rule.key not in _FORM_PRESENTATION:
         return None
     tokens = _tokens(normalized_query)
+    # Family words such as ``yerba`` and ``mate`` are also present in the
+    # loose-leaf form vocabulary.  They identify the family, but they do not
+    # identify that presentation.  Ignore those generic aliases while
+    # detecting an explicit form so a query such as ``te de yerba mate``
+    # selects tea bags instead of being treated as an unfiltered family
+    # search.
+    generic_family_terms = {
+        token
+        for term in (*selected_rule.spanish_aliases, *selected_rule.english_aliases, *selected_rule.include_terms)
+        for token in _tokens(term)
+        if token
+    }
     observed = [
         form
         for form, (spanish_terms, english_terms) in selected_rule.forms.items()
-        if _contains_any(tokens, spanish_terms) or _contains_any(tokens, english_terms)
+        if _contains_any(
+            tokens,
+            tuple(
+                term
+                for term in (*spanish_terms, *english_terms)
+                if not set(_tokens(term)).intersection(generic_family_terms)
+            ),
+        )
     ]
     if len(observed) != 1:
         return None
@@ -644,11 +663,11 @@ def filter_family_candidates(
     selected_rule = next((rule for rule in FAMILY_RULES if _query_matches_family(normalized_query, rule)), None)
     context = family_query_form(normalized_query)
     if context is None:
-        # Bare egg queries are common and the catalog contains toys and other
-        # derived products with the same token.  Prefer observed direct egg
-        # identities; fail open only when the bounded source window contains
-        # no direct egg row at all.
-        if selected_rule is not None and selected_rule.key == "egg":
+        # Bare reviewed-family queries should show the direct family products
+        # first.  Derived rows (rice bars, lychee soap, carrot lotion, toy
+        # eggs, and similar products) remain available to the clarification
+        # card, but must not silently take over the main result table.
+        if selected_rule is not None and selected_rule.key in _FORM_PRESENTATION:
             direct: list[Mapping[str, Any]] = []
             for candidate in values:
                 try:
@@ -657,7 +676,7 @@ def filter_family_candidates(
                     continue
                 if any(
                     isinstance(family, Mapping)
-                    and family.get("family") == "egg"
+                    and family.get("family") == selected_rule.key
                     and family.get("role") == "DIRECT"
                     for family in identity.get("familyCandidates", ())
                 ):
@@ -680,10 +699,11 @@ def filter_family_candidates(
             filtered.append(candidate)
     if filtered:
         return tuple(filtered)
-    # Egg form choices are explicit safety refinements.  Returning unrelated
-    # lexical partial matches (cleaner, pencil, or another commodity that
-    # merely contains ``liquido``/``powder``) is worse than an empty result.
-    if family_key == "egg":
+    # Explicit reviewed-family choices are safety refinements.  Returning
+    # unrelated lexical partial matches (for example ordinary juice for a
+    # lychee-drink choice) is worse than an empty result when the bounded
+    # source window contains no observed match for that form.
+    if family_key in _FORM_PRESENTATION:
         return ()
     return values
 
