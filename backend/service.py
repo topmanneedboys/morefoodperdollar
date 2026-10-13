@@ -406,7 +406,7 @@ class BackendService:
         # larger bounded window before applying the direct-egg identity filter
         # so genuine food rows are not displaced by those higher-ranked noise
         # rows.  The cap remains the existing 31-product discovery limit.
-        if selected_family == "egg" and family_query_form(query) is None:
+        if selected_family == "egg":
             window_limit = MAX_DISCOVERY_PRODUCT_LIMIT
         discover_with_offers = getattr(reader, "discover_with_offers", None)
         if callable(discover_with_offers):

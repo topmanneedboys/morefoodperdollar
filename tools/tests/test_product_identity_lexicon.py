@@ -12,6 +12,7 @@ from tools.product_identity_lexicon import (
     build_family_clarification,
     build_identity_lexicon,
     derive_identity_record,
+    filter_family_candidates,
 )
 
 
@@ -125,6 +126,13 @@ class ProductIdentityLexiconTests(unittest.TestCase):
         self.assertEqual(
             {choice["id"] for choice in value["choices"]},
             {"egg:whole_egg", "egg:liquid", "egg:toy", "egg:chocolate"},
+        )
+        self.assertEqual(
+            filter_family_candidates("eggs liquid", [
+                _row("p:cleaner", "LIMPIADOR LIQUIDO 500 ML"),
+                _row("p:egg", "HUEVOS FRESCOS X12"),
+            ]),
+            (),
         )
 
     def test_rice_bar_is_a_derived_form(self) -> None:

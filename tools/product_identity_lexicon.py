@@ -669,7 +669,14 @@ def filter_family_candidates(
             for family in identity.get("familyCandidates", ())
         ):
             filtered.append(candidate)
-    return tuple(filtered) if filtered else values
+    if filtered:
+        return tuple(filtered)
+    # Egg form choices are explicit safety refinements.  Returning unrelated
+    # lexical partial matches (cleaner, pencil, or another commodity that
+    # merely contains ``liquido``/``powder``) is worse than an empty result.
+    if family_key == "egg":
+        return ()
+    return values
 
 
 def _alias(value: str, language: str, provenance: str, *, confidence: str = "HIGH") -> dict[str, str]:
