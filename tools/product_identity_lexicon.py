@@ -118,6 +118,11 @@ FAMILY_RULES: tuple[FamilyRule, ...] = (
             ("crema",),
             ("perfume",),
             ("cosmetico",),
+            ("colorissimo",),
+            ("coloracion",),
+            ("tinte",),
+            ("tintura",),
+            ("hair", "color"),
             ("te",),
         ),
         forms={
@@ -489,6 +494,12 @@ _FORM_PRESENTATION: Mapping[str, Mapping[str, Mapping[str, str]]] = {
     },
 }
 
+# These forms describe the direct family item itself.  Derived presentations
+# such as drinks, sweets, and cosmetics are intentionally allowed for their
+# own choices, but a cosmetic name containing ``fresco`` must not satisfy a
+# fresh-fruit choice.
+_DIRECT_FORM_KEYS = frozenset({"grain", "fresh", "vegetable", "whole_egg", "loose_leaves"})
+
 
 def _query_matches_family(query: str, rule: FamilyRule) -> bool:
     tokens = _tokens(query)
@@ -694,6 +705,10 @@ def filter_family_candidates(
             isinstance(family, Mapping)
             and family.get("family") == family_key
             and form in family.get("observedForms", ())
+            and (
+                form not in _DIRECT_FORM_KEYS
+                or family.get("role") == "DIRECT"
+            )
             for family in identity.get("familyCandidates", ())
         ):
             filtered.append(candidate)

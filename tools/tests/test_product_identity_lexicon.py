@@ -195,6 +195,17 @@ class ProductIdentityLexiconTests(unittest.TestCase):
         self.assertEqual(candidate["role"], "DERIVED")
         self.assertNotIn(("lychee", "en", "CURATED_BILINGUAL"), {(item["value"], item["language"], item["provenance"]) for item in value["aliases"]})
 
+    def test_lychee_cosmetic_with_fresco_does_not_match_fresh_choice(self) -> None:
+        cosmetic = _row("p:colorissimo", "COLORISSIMO LYCHEE FRESCO", brand="VOGUE")
+        value = derive_identity_record(cosmetic)
+        candidate = value["familyCandidates"][0]
+        self.assertEqual(candidate["role"], "DERIVED")
+        self.assertIn("fresh", candidate["observedForms"])
+
+        fruit = _row("p:fruit", "LICHI FRESCO X 500 G")
+        filtered = filter_family_candidates("lychee fresh", [cosmetic, fruit])
+        self.assertEqual([row["productEvidenceKey"] for row in filtered], ["p:fruit"])
+
     def test_multiple_families_are_retained_for_clarification(self) -> None:
         value = derive_identity_record(_row("p:drink", "BEBIDA DE YERBA CON ARROZ"))
         self.assertEqual(value["classification"], "MULTIPLE_FAMILIES")
