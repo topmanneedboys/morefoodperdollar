@@ -219,6 +219,9 @@ class ValuePilotNextActivity : AppCompatActivity() {
     }
 
     private fun openStoreMap(store: ArgentinaPrivateBasketStoreProjection): Boolean {
+        // Keep the handoff deliberately small: this is the future adapter seam for
+        // a Google Maps surface. Until that is added, pass only source coordinates
+        // to an installed map app and never infer a route here.
         val uri = (
             "geo:${store.latitude},${store.longitude}?q=${store.latitude},${store.longitude}(${Uri.encode(store.storeName)})"
         ).toUri()

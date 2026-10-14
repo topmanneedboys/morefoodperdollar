@@ -881,6 +881,8 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
             sendNativeActionNotice("MAP_UNAVAILABLE")
             return
         }
+        // This is the same future map-adapter seam used by Compose: source
+        // coordinates only, with no route, stock, or availability inference.
         val uri = ("geo:$latitude,$longitude?q=$latitude,$longitude(${Uri.encode(context.storeName)})").toUri()
         try {
             startActivity(Intent(Intent.ACTION_VIEW, uri))

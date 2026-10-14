@@ -38,7 +38,7 @@ class ValuePilotNextHtmlLocalizationTest {
     }
 
     @Test
-    fun `html sample currency remains explicit ARS in both languages`() {
+    fun `html native currency remains explicit ARS in both languages`() {
         assertTrue(assetSource().contains("const currency=(n)=>'ARS '+money(n)"))
     }
 
@@ -71,12 +71,14 @@ class ValuePilotNextHtmlLocalizationTest {
     }
 
     @Test
-    fun `demo ribbon accessibility copy follows the selected language`() {
+    fun `shopper surface has no local demo ribbon or fixture catalog`() {
         val source = assetSource()
 
-        assertTrue(source.contains("demoAria:{es:"))
-        assertTrue(source.contains("document.querySelector('#demoRibbon')"))
-        assertFalse(source.contains("const ariaLabel='Son datos de demostración"))
+        assertFalse(source.contains("DEMO_PRODUCTS"))
+        assertFalse(source.contains("MATRIX_DEMO_ROWS"))
+        assertFalse(source.contains("demoRibbon"))
+        assertFalse(source.contains("demoBasket"))
+        assertTrue(source.contains("function nativeDataMode(){return true}"))
     }
 
     @Test
@@ -90,8 +92,8 @@ class ValuePilotNextHtmlLocalizationTest {
         assertTrue(source.contains("historyLatestPrice"))
         assertTrue(source.contains("nativeHistorySource(value)"))
         assertTrue(source.contains("purchaseHistoryUnavailableTitle"))
-        assertTrue(source.contains("\${native?nativePrivateHistorySummary(state.nativeSavedState):''}"))
-        assertTrue(source.contains("\${native?nativePurchaseHistoryUnavailable():''}"))
+        assertTrue(source.contains("\${nativePrivateHistorySummary(state.nativeSavedState)}"))
+        assertTrue(source.contains("\${nativePurchaseHistoryUnavailable()}"))
     }
 
     @Test
@@ -112,41 +114,42 @@ class ValuePilotNextHtmlLocalizationTest {
     }
 
     @Test
-    fun `html journey defaults to Kotlin-owned surfaces with fixture fallback`() {
+    fun `html journey stays on Kotlin-owned Argentina surfaces`() {
         val source = assetSource()
 
         assertTrue(source.contains("nativeSearchEnabled:true"))
         assertTrue(source.contains("nativeSavedEnabled:true"))
         assertTrue(source.contains("nativeTripEnabled:true"))
-        assertTrue(source.contains("function nativeDataMode(){return state.nativeSearchEnabled&&state.nativeSavedEnabled}"))
-        assertTrue(source.contains("function basket(){return nativeDataMode()?nativeBasket():demoBasket()}"))
-        assertTrue(source.contains("function trip(){const native=nativeDataMode()&&state.nativeTripEnabled"))
-        assertTrue(source.contains("if(nativeDataMode()&&state.nativeTripEnabled){requestNativeTrip"))
+        assertTrue(source.contains("function nativeDataMode(){return true}"))
+        assertTrue(source.contains("function basket(){return nativeBasket()}"))
+        assertTrue(source.contains("function trip(){return"))
+        assertTrue(source.contains("requestNativeTrip({distance:d,consumption:c,fuel:f,tolls:t,parking:p})"))
         assertTrue(source.contains("function receiveNativeProductDetail"))
         assertTrue(source.contains("function nativeDetail()"))
         assertTrue(source.contains("function nativeBasket()"))
         assertTrue(source.contains("case'native-detail-save':requestNativeDetailSave()"))
         assertTrue(source.contains("receiveNativeProductDetail:(payload)=>{receiveNativeProductDetail(payload);return true}"))
+        assertFalse(source.contains("function demoBasket"))
+        assertFalse(source.contains("use-samples"))
     }
 
     @Test
-    fun `saved mode can re-enter Kotlin surfaces after a search fixture fallback`() {
+    fun `saved mode always uses the persisted Kotlin surface`() {
         val source = assetSource()
 
-        assertTrue(
-            source.contains(
-                "function enableNativeSaved(){state.nativeSavedEnabled=true;state.nativeSearchEnabled=true;state.nativeSavedState=null;requestNativeSaved()}"
-            )
-        )
+        assertTrue(source.contains("function saved(){return"))
+        assertTrue(source.contains("nativeSavedResults(state.nativeSavedState)"))
+        assertFalse(source.contains("function enableNativeSaved"))
     }
 
     @Test
     fun `native mode keeps the home shell evidence backed and preserves route context`() {
         val source = assetSource()
 
-        assertTrue(source.contains("const native=Boolean(state.nativeSavedState&&nativeDataMode())"))
-        assertTrue(source.contains("native?copy('nativeBasketTitle'):copy('demoBasket')"))
-        assertTrue(source.contains("native?copy('nativeEvidence'):(basketCount()?copy('samplePrices'):copy('basketEmptyCopy'))"))
+        assertTrue(source.contains("function home(){const items=Array.isArray(state.nativeSavedState?.items)?state.nativeSavedState.items:[]"))
+        assertTrue(source.contains("copy('nativeBasketTitle')"))
+        assertTrue(source.contains("copy('nativeEvidence')"))
+        assertFalse(source.contains("DEMO_PRODUCTS"))
         assertTrue(source.contains("const parentNav=['home','search','basket','saved'].includes(state.from)?state.from:'search'"))
         assertTrue(source.contains("navigate(el.dataset.nav,{from:state.page})"))
         assertTrue(source.contains("navigate('search',{from:'home'})"))
@@ -156,7 +159,8 @@ class ValuePilotNextHtmlLocalizationTest {
     fun `maximum density matrix keeps identity pinned and supports evidence actions`() {
         val source = assetSource()
 
-        assertTrue(source.contains("const MATRIX_DEMO_ROWS=Object.freeze(Array.from({length:1000"))
+        assertFalse(source.contains("MATRIX_DEMO_ROWS"))
+        assertTrue(source.contains("function matrixTable(rows){"))
         assertTrue(source.contains("function matrixRowsForNative(payload)"))
         assertTrue(source.contains("class=\"matrix-scroll\""))
         assertTrue(source.contains("data-action=\"matrix-sort\""))
@@ -166,6 +170,7 @@ class ValuePilotNextHtmlLocalizationTest {
         assertTrue(source.contains("case'native-save':requestNativeSave"))
         assertTrue(source.contains("state.matrixScrollTop"))
         assertTrue(source.contains("matrixRowsSorted"))
+        assertTrue(source.contains("matrixDistance:{es:'Distancia directa',en:'Direct distance'}"))
     }
 
     @Test
