@@ -10,7 +10,7 @@ saved-data, release, and security paths remain unchanged.
 
 - Branch: `work/valuepilot-stage2-premium-shopping`
 - Starting handoff checkpoint: `6ce81d0d`
-- Current verified checkpoint: pending the integrated commit for the v2 reviewed rule batch and full-corpus replay.
+- Current verified checkpoint: code commit `d44b42cabc255097bf4c7b7df04444a53db55561` (documentation checkpoint follows the verification update).
 - Discovery rules: `valuepilot-catalog-discovery-rules-v2`
 - Sidecar schema: `valuepilot-catalog-discovery-v2`
 - Additive HTTP contract: `valuepilot-discovery-http-v2`
@@ -96,10 +96,17 @@ Completed locally:
   price/offer exclusion;
 - Kotlin contract/bridge parser tests and the integrated Android unit-test task.
 
+Completed in this checkpoint:
+
+- full tools suite: 382 tests passed;
+- backend suite: 135 tests passed;
+- Android shared-core tests, app debug unit tests, lint, and debug APK build passed;
+- debug APK SHA-256: `027736566b64f1a0e21e3fcb6f475b0a862633e06a88caa8a16d4c8166cd7a4c`.
+
 Pending after the local full build:
 
 - incremental refresh parity against a complete rebuild;
-- integrated Android unit tests/lint and authorized Motorola validation;
+- authorized Motorola validation;
 - semantic review of unresolved records and source evidence gaps.
 
 The current build has not been promoted to the backend or preview runtime. The

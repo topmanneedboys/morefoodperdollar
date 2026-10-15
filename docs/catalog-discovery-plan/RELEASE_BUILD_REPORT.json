@@ -63,6 +63,29 @@
     "sports_luggage": 721,
     "health_supplements": 399
   },
+  "verification": {
+    "codeCommit": "d44b42cabc255097bf4c7b7df04444a53db55561",
+    "toolsTests": {
+      "command": "python -m unittest discover -s tools/tests -p 'test_*.py'",
+      "tests": 382,
+      "status": "PASS"
+    },
+    "backendTests": {
+      "command": "python -m unittest discover -s backend/tests -p 'test_*.py'",
+      "tests": 135,
+      "status": "PASS"
+    },
+    "androidChecks": {
+      "command": ".\\gradlew.bat --no-daemon :shared-core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug",
+      "status": "PASS",
+      "apk": "android/app/build/outputs/apk/debug/app-debug.apk",
+      "apkSha256": "027736566b64f1a0e21e3fcb6f475b0a862633e06a88caa8a16d4c8166cd7a4c"
+    },
+    "motorolaEdge2025": {
+      "status": "NOT_RUN",
+      "reason": "No device runtime validation was performed for this identity-sidecar milestone."
+    }
+  },
   "safety": {
     "prices": false,
     "offers": false,
