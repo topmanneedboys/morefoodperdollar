@@ -249,6 +249,7 @@ internal data class ArgentinaConsumerEdgeClientConfig(
         val ALLOWED_ENDPOINTS = setOf(
             ArgentinaBackendConsumerBridge.STATUS_ENDPOINT,
             ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT,
+            ArgentinaBackendConsumerBridge.DISCOVERY_SEARCH_ENDPOINT,
             ArgentinaBackendConsumerBridge.INTERPRET_ENDPOINT,
             ArgentinaBackendConsumerBridge.SHOP_TEXT_ENDPOINT,
             ArgentinaBackendConsumerBridge.SHOP_ENDPOINT

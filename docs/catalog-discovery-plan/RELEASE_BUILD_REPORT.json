@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "valuepilot-catalog-discovery-v2",
+  "rulesVersion": "valuepilot-catalog-discovery-rules-v1",
+  "source": {
+    "releaseId": "2026-10-08-identity-release",
+    "artifact": "local-provider-data/product-identities-153e9d9f7ab4b87e72c16aebebc69c6f9f90fca681cd1075d625244e2e31bc2c.jsonl.gz",
+    "sha256": "85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6"
+  },
+  "counts": {
+    "providerProducts": 78865,
+    "identityRecords": 134337,
+    "indexedTokens": 36386,
+    "concepts": 80,
+    "assertions": 131164
+  },
+  "coverage": {
+    "IDENTITY_VISITED": 134337,
+    "TYPE_RESOLVED": 23966,
+    "TYPE_UNRESOLVED": 110371,
+    "DERIVED_ONLY": 1157,
+    "NO_FORM": 132693
+  },
+  "bilingual": {
+    "ES_AVAILABLE": 79277,
+    "EN_AVAILABLE": 25123,
+    "MISSING_ES": 55060,
+    "MISSING_EN": 109214
+  },
+  "safety": {
+    "prices": false,
+    "offers": false,
+    "stock": false,
+    "availability": false,
+    "credentials": false,
+    "everyIdentityHasLiteralPosting": true
+  },
+  "output": {
+    "artifact": "local-provider-data/product-discovery-v2.sqlite",
+    "sha256": "db54517da5fd74e681117906afa8369d1cffd7b8706dea700a8874b4ee84c95b",
+    "gitTracked": false
+  },
+  "notes": [
+    "This is an aggregate structural accounting checkpoint, not a promoted production artifact.",
+    "The working tree adds conservative typed-context postings after this local build; rebuild the ignored sidecar before any v2 deployment.",
+    "TYPE_UNRESOLVED identities remain literal-searchable and are not semantic completion."
+  ]
+}

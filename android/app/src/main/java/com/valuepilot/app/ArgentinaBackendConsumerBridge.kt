@@ -76,7 +76,7 @@ internal data class ArgentinaBackendFailureMetadata(
     val releaseDate: String? = null
 ) {
     init {
-        require(endpoint in setOf("/v1/status", "/v1/search", "/v1/interpret", "/v1/shop-text", "/v1/shop"))
+        require(endpoint in setOf("/v1/status", "/v1/search", "/v2/search", "/v1/interpret", "/v1/shop-text", "/v1/shop"))
         require(httpStatus == null || httpStatus in 100..599)
     }
 }
@@ -192,6 +192,17 @@ internal class ArgentinaBackendConsumerBridge(
                 identity = ArgentinaBackendIdentityMapper.toPresentation(response)
             )
         }
+
+    fun discoverySearch(
+        request: ArgentinaBackendContract.DiscoverySearchRequest,
+        cancellation: ArgentinaRequestCancellation? = null
+    ): ArgentinaBackendBridgeResult<ArgentinaBackendContract.DiscoveryResponse> =
+        execute(
+            endpoint = DISCOVERY_SEARCH_ENDPOINT,
+            requestBody = ArgentinaBackendJson.discoverySearchRequest(request),
+            cancellation = cancellation,
+            parser = { body -> ArgentinaBackendContract.parseDiscovery(body, expectedRelease) }
+        )
 
     fun interpret(
         request: ArgentinaBackendContract.InterpretRequest
@@ -383,6 +394,7 @@ internal class ArgentinaBackendConsumerBridge(
     companion object {
         const val STATUS_ENDPOINT = "/v1/status"
         const val SEARCH_ENDPOINT = "/v1/search"
+        const val DISCOVERY_SEARCH_ENDPOINT = "/v2/search"
         const val INTERPRET_ENDPOINT = "/v1/interpret"
         const val SHOP_TEXT_ENDPOINT = "/v1/shop-text"
         const val SHOP_ENDPOINT = "/v1/shop"
@@ -410,6 +422,19 @@ private object ArgentinaBackendJson {
             .put("radiusKm", request.radiusKm)
             .put("query", request.query)
             .apply { if (request.page > 0) put("page", request.page) }
+            .toString()
+
+    fun discoverySearchRequest(request: ArgentinaBackendContract.DiscoverySearchRequest): String =
+        JSONObject()
+            .put("query", request.query)
+            .put("language", request.language)
+            .put("selections", JSONArray(request.selections))
+            .put("pageSize", request.pageSize)
+            .put("facetPageSize", request.facetPageSize)
+            .apply {
+                request.cursor?.let { put("cursor", it) }
+                request.facetCursor?.let { put("facetCursor", it) }
+            }
             .toString()
 
     fun interpretRequest(request: ArgentinaBackendContract.InterpretRequest): String =

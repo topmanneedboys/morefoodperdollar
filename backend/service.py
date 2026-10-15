@@ -19,6 +19,7 @@ from .reader import (
     CurrentPriceEvidenceUnavailable,
 )
 from .release import ReleaseError, ReleaseManager, qualified_offer_artifacts_available
+from tools.catalog_discovery import DiscoveryError, DiscoveryIndex
 from tools.product_identity_lexicon import build_family_clarification, family_query_form, family_query_key, filter_family_candidates
 from tools.product_taxonomy import ProductTaxonomyIndex, build_taxonomy_clarification, filter_taxonomy_candidates
 
@@ -39,6 +40,10 @@ DISCOVERY_PAGE_SIZE = 5
 DISCOVERY_MAX_PAGE = 5
 PRODUCT_TAXONOMY_PATH_ENV = "VALUEPILOT_PRODUCT_TAXONOMY_PATH"
 PRODUCT_TAXONOMY_SHA256_ENV = "VALUEPILOT_PRODUCT_TAXONOMY_SHA256"
+DISCOVERY_INDEX_PATH_ENV = "VALUEPILOT_DISCOVERY_INDEX_PATH"
+DISCOVERY_INDEX_SHA256_ENV = "VALUEPILOT_DISCOVERY_INDEX_SHA256"
+DISCOVERY_RELEASE_ID_ENV = "VALUEPILOT_DISCOVERY_RELEASE_ID"
+DISCOVERY_V2_ENABLED_ENV = "VALUEPILOT_DISCOVERY_V2_ENABLED"
 _FAMILY_DISCOVERY_QUERIES = {
     "rice": "arroz",
     "lychee": "lichi",
@@ -128,6 +133,9 @@ class BackendService:
         release_manager: ReleaseManager | None = None,
         taxonomy_index_path: str | Path | None = None,
         taxonomy_index_sha256: str | None = None,
+        discovery_index_path: str | Path | None = None,
+        discovery_index_sha256: str | None = None,
+        discovery_release_id: str | None = None,
     ):
         self.release_manager = release_manager or ReleaseManager(root)
         self._reader_lock = threading.Lock()
@@ -143,6 +151,23 @@ class BackendService:
             taxonomy_index_sha256
             if taxonomy_index_sha256 is not None
             else os.environ.get(PRODUCT_TAXONOMY_SHA256_ENV, "").strip() or None
+        )
+        self._discovery_lock = threading.Lock()
+        self._discovery_index: DiscoveryIndex | None = None
+        self._discovery_index_attempted = False
+        configured_discovery_path = discovery_index_path
+        if configured_discovery_path is None:
+            configured_discovery_path = os.environ.get(DISCOVERY_INDEX_PATH_ENV, "").strip() or None
+        self._discovery_index_path = Path(configured_discovery_path).resolve() if configured_discovery_path else None
+        self._discovery_index_sha256 = (
+            discovery_index_sha256
+            if discovery_index_sha256 is not None
+            else os.environ.get(DISCOVERY_INDEX_SHA256_ENV, "").strip() or None
+        )
+        self._discovery_release_id = (
+            discovery_release_id
+            if discovery_release_id is not None
+            else os.environ.get(DISCOVERY_RELEASE_ID_ENV, "").strip() or None
         )
 
     def _reader(self, handle):
@@ -185,6 +210,29 @@ class BackendService:
                 LOGGER.warning("taxonomy_sidecar_unavailable path=%s reason=%s", path, exc)
                 self._taxonomy_index = None
             return self._taxonomy_index
+
+    def _discovery(self) -> DiscoveryIndex | None:
+        """Load the additive full-catalog sidecar only when explicitly enabled."""
+
+        if os.environ.get(DISCOVERY_V2_ENABLED_ENV, "").strip().lower() != "true":
+            return None
+        with self._discovery_lock:
+            if self._discovery_index_attempted:
+                return self._discovery_index
+            self._discovery_index_attempted = True
+            path = self._discovery_index_path
+            if path is None or not path.is_file():
+                return None
+            try:
+                self._discovery_index = DiscoveryIndex(
+                    path,
+                    expected_source_sha256=self._discovery_index_sha256,
+                    expected_release_id=self._discovery_release_id,
+                )
+            except (OSError, DiscoveryError) as exc:
+                LOGGER.warning("discovery_sidecar_unavailable path=%s reason=%s", path, exc)
+                self._discovery_index = None
+            return self._discovery_index
 
     @staticmethod
     def _trusted_keys_from_input(input_result: Mapping[str, Any]) -> dict[str, str] | None:
@@ -394,6 +442,42 @@ class BackendService:
         else:
             decision, metrics = reader.query(request)
         return self._shop_response(request_id, handle, decision, metrics, started=started, input_result=input_result)
+
+    def discovery_search(self, payload: Mapping[str, Any], *, correlation_id: str | None = None) -> dict[str, Any]:
+        """Evaluate the full identity sidecar through the additive v2 contract.
+
+        This rail is deliberately separate from ``/v1/search``.  It returns
+        identity matches and clarification facets only; prices, offers, stock,
+        geography and credentials remain owned by the existing shopping rail.
+        The explicit environment gate prevents an unqualified sidecar from
+        becoming an accidental production dependency.
+        """
+
+        if os.environ.get(DISCOVERY_V2_ENABLED_ENV, "").strip().lower() != "true":
+            raise BackendQueryError("DISCOVERY_V2_UNAVAILABLE")
+        index = self._discovery()
+        if index is None:
+            raise BackendQueryError("DISCOVERY_V2_UNAVAILABLE")
+        try:
+            result = index.query(payload).to_dict()
+        except DiscoveryError as exc:
+            raise BackendQueryError(str(exc)) from exc
+        request_id = correlation_id or str(uuid.uuid4())
+        response = {
+            "apiContractVersion": "valuepilot-discovery-http-v2",
+            "requestId": request_id,
+            "releaseId": result["releaseId"],
+            "indexVersion": result["indexVersion"],
+            "result": result,
+            "evidenceSemantics": {
+                "identity": "SOURCE_IDENTITY_AND_ACCEPTED_ASSERTIONS",
+                "prices": "NOT_INCLUDED",
+                "offers": "NOT_INCLUDED",
+                "stock": "NOT_INCLUDED",
+            },
+        }
+        self._response_size(response)
+        return response
 
     def search(self, payload: Mapping[str, Any], *, correlation_id: str | None = None) -> dict[str, Any]:
         query = payload.get("query")

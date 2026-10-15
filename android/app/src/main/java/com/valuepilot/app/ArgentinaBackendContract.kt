@@ -20,6 +20,8 @@ import org.json.JSONTokener
  */
 object ArgentinaBackendContract {
     const val API_VERSION = "valuepilot-argentina-backend-http-v1"
+    const val DISCOVERY_API_VERSION = "valuepilot-discovery-http-v2"
+    const val DISCOVERY_RESULT_CONTRACT = "valuepilot-discovery-v2"
     const val SHOPPING_SCHEMA_VERSION = "valuepilot-shopping-intelligence-v1"
     const val INPUT_SCHEMA_VERSION = "valuepilot-argentina-consumer-input-intelligence-v1"
     const val INPUT_POLICY_VERSION = "valuepilot-argentina-input-policy-v1"
@@ -33,6 +35,10 @@ object ArgentinaBackendContract {
     const val MAX_MATCHES = 32
     const val MAX_PRODUCT_CANDIDATES = 128
     const val MAX_SEARCH_OFFERS_PER_IDENTITY = 8
+    const val MAX_DISCOVERY_PAGE_SIZE = 50
+    const val MAX_DISCOVERY_FACET_PAGE_SIZE = 30
+    const val MAX_DISCOVERY_SELECTIONS = 8
+    const val MAX_DISCOVERY_MATCHES = 50
     const val MAX_STORES = 2
     const val MAX_PLAN_LINES = 10
     const val MAX_FRONTIER_PLANS = 64
@@ -451,6 +457,90 @@ object ArgentinaBackendContract {
         }
     }
 
+    /** Full-catalog identity discovery request.  It is additive to v1 Search. */
+    data class DiscoverySearchRequest(
+        val query: String,
+        val language: String = "es",
+        val selections: List<String> = emptyList(),
+        val pageSize: Int = 20,
+        val cursor: String? = null,
+        val facetPageSize: Int = MAX_DISCOVERY_FACET_PAGE_SIZE,
+        val facetCursor: String? = null
+    ) {
+        init {
+            require(query.trim().isNotEmpty() && query.length <= 256)
+            require(language in setOf("es", "en"))
+            require(selections.size <= MAX_DISCOVERY_SELECTIONS)
+            require(selections.distinct().size == selections.size)
+            require(selections.all { ID_PATTERN.matches(it) })
+            require(pageSize in 1..MAX_DISCOVERY_PAGE_SIZE)
+            require(facetPageSize in 1..MAX_DISCOVERY_FACET_PAGE_SIZE)
+            require(cursor == null || cursor.length <= 2_048)
+            require(facetCursor == null || facetCursor.length <= 2_048)
+        }
+    }
+
+    data class DiscoveryProduct(
+        val identityKey: String,
+        val providerProductId: String,
+        val displayName: String,
+        val brand: String?
+    )
+
+    data class DiscoveryChoice(
+        val id: String,
+        val predicateId: String,
+        val labelEs: String,
+        val labelEn: String,
+        val productCount: Int,
+        val sourceIdentityCount: Int,
+        val countUnit: String,
+        val hasChildren: Boolean
+    )
+
+    data class DiscoveryClarification(
+        val dimensionId: String,
+        val choices: List<DiscoveryChoice>,
+        val hasMore: Boolean,
+        val nextCursor: String?
+    )
+
+    data class DiscoveryPagination(
+        val pageSize: Int,
+        val hasMore: Boolean,
+        val nextCursor: String?
+    )
+
+    data class DiscoveryTotal(
+        val productCount: Int,
+        val sourceIdentityCount: Int,
+        val countUnit: String
+    )
+
+    data class DiscoveryResult(
+        val contract: String,
+        val status: String,
+        val query: String,
+        val language: String,
+        val releaseId: String,
+        val indexVersion: String,
+        val queryFingerprint: String,
+        val resolvedPredicates: List<String>,
+        val selections: List<String>,
+        val total: DiscoveryTotal,
+        val matches: List<DiscoveryProduct>,
+        val pagination: DiscoveryPagination,
+        val clarification: DiscoveryClarification?
+    )
+
+    data class DiscoveryResponse(
+        val apiContractVersion: String,
+        val requestId: String,
+        val releaseId: String,
+        val indexVersion: String,
+        val result: DiscoveryResult
+    )
+
     data class InterpretRequest(val text: String) {
         init {
             require(text.trim().isNotEmpty() && text.length <= MAX_TEXT_CHARS)
@@ -624,6 +714,79 @@ object ArgentinaBackendContract {
             pagination,
             clarification
         )
+    }
+
+    /** Strict parser for the additive identity-only full-catalog rail. */
+    fun parseDiscovery(
+        rawJson: String,
+        expectedRelease: ExpectedRelease? = null
+    ): DiscoveryResponse {
+        val root = parseRoot(rawJson)
+        val version = requiredString(root, "apiContractVersion", 96)
+        if (version != DISCOVERY_API_VERSION) invalid("unsupported discovery contract version")
+        val requestId = requiredId(root, "requestId", 96)
+        val releaseId = requiredString(root, "releaseId", 320)
+        expectedRelease?.let { expected -> if (releaseId != expected.releaseId) mismatch() }
+        val indexVersion = requiredString(root, "indexVersion", 128)
+        val resultRoot = requiredObject(root, "result")
+        if (requiredString(resultRoot, "contract", 96) != DISCOVERY_RESULT_CONTRACT) invalid("unsupported discovery result contract")
+        val resultReleaseId = requiredString(resultRoot, "releaseId", 320)
+        if (resultReleaseId != releaseId) invalid("discovery release identity disagrees")
+        val query = boundedQuery(requiredString(resultRoot, "query", 256), "discovery query")
+        val language = requiredString(resultRoot, "language", 2)
+        if (language !in setOf("es", "en")) invalid("unsupported discovery language")
+        val status = requiredString(resultRoot, "status", 32)
+        if (status !in setOf("READY", "NEEDS_CLARIFICATION", "NO_MATCHES")) invalid("unsupported discovery status")
+        val fingerprint = requiredString(resultRoot, "queryFingerprint", 128)
+        val predicates = parseBoundedIdArray(requiredArray(resultRoot, "resolvedPredicates"), MAX_DISCOVERY_SELECTIONS + 16, "resolvedPredicates")
+        val selections = parseBoundedIdArray(requiredArray(resultRoot, "selections"), MAX_DISCOVERY_SELECTIONS, "selections")
+        val totalRoot = requiredObject(resultRoot, "total")
+        val total = DiscoveryTotal(
+            productCount = requiredInt(totalRoot, "productCount", 0, 500_000),
+            sourceIdentityCount = requiredInt(totalRoot, "sourceIdentityCount", 0, 500_000),
+            countUnit = requiredString(totalRoot, "countUnit", 64)
+        )
+        if (total.countUnit != "DISTINCT_PROVIDER_PRODUCT") invalid("unsupported discovery count unit")
+        val matchesArray = requiredArray(resultRoot, "matches")
+        boundedArray(matchesArray, MAX_DISCOVERY_MATCHES, "discovery matches")
+        val matches = (0 until matchesArray.length()).map { index ->
+            val match = matchesArray.get(index) as? JSONObject ?: invalid("discovery match must be an object")
+            DiscoveryProduct(
+                identityKey = requiredId(match, "identityKey", 256),
+                providerProductId = requiredString(match, "providerProductId", 160),
+                displayName = requiredText(match, "displayName", 512),
+                brand = optionalString(match, "brand", 160)
+            )
+        }
+        val paginationRoot = requiredObject(resultRoot, "pagination")
+        val pagination = DiscoveryPagination(
+            pageSize = requiredInt(paginationRoot, "pageSize", 1, MAX_DISCOVERY_PAGE_SIZE),
+            hasMore = requiredBoolean(paginationRoot, "hasMore"),
+            nextCursor = optionalString(paginationRoot, "nextCursor", 2_048)
+        )
+        if (pagination.hasMore && pagination.nextCursor == null) invalid("discovery pagination cursor is missing")
+        val clarification = if (!resultRoot.has("clarification") || resultRoot.isNull("clarification")) null else parseDiscoveryClarification(requiredObject(resultRoot, "clarification"))
+        if (status == "NEEDS_CLARIFICATION" && clarification == null) invalid("clarification is missing")
+        if (status != "NEEDS_CLARIFICATION" && clarification != null) invalid("unexpected clarification")
+        val result = DiscoveryResult(
+            contract = DISCOVERY_RESULT_CONTRACT,
+            status = status,
+            query = query,
+            language = language,
+            releaseId = resultReleaseId,
+            indexVersion = indexVersion,
+            queryFingerprint = fingerprint,
+            resolvedPredicates = predicates,
+            selections = selections,
+            total = total,
+            matches = matches,
+            pagination = pagination,
+            clarification = clarification
+        )
+        val semantics = requiredObject(root, "evidenceSemantics")
+        if (requiredString(semantics, "identity", 96) != "SOURCE_IDENTITY_AND_ACCEPTED_ASSERTIONS") invalid("unsupported discovery identity semantics")
+        if (requiredString(semantics, "prices", 32) != "NOT_INCLUDED" || requiredString(semantics, "offers", 32) != "NOT_INCLUDED" || requiredString(semantics, "stock", 32) != "NOT_INCLUDED") invalid("discovery response contains shopping evidence")
+        return DiscoveryResponse(version, requestId, releaseId, indexVersion, result)
     }
 
     private fun parseSearchPagination(root: JSONObject): SearchPagination {
@@ -805,6 +968,47 @@ object ArgentinaBackendContract {
             val candidates = parseProductCandidates(requiredArray(match, "productCandidates"), expectedReleaseDate)
             SearchMatch(lineId, query, candidates)
         }
+    }
+
+    private fun parseBoundedIdArray(array: JSONArray, maximum: Int, label: String): List<String> {
+        boundedArray(array, maximum, label)
+        val values = (0 until array.length()).map { index ->
+            val value = array.get(index) as? String ?: invalid("$label must contain strings")
+            if (!ID_PATTERN.matches(value)) invalid("$label contains an invalid id")
+            value
+        }
+        if (values.distinct().size != values.size) invalid("$label contains duplicate ids")
+        return values
+    }
+
+    private fun parseDiscoveryClarification(root: JSONObject): DiscoveryClarification {
+        val dimension = requiredId(root, "dimensionId", 96)
+        val choicesArray = requiredArray(root, "choices")
+        boundedArray(choicesArray, MAX_DISCOVERY_FACET_PAGE_SIZE, "discovery choices")
+        if (choicesArray.length() < 2) invalid("discovery clarification needs at least two choices")
+        val choices = (0 until choicesArray.length()).map { index ->
+            val choice = choicesArray.get(index) as? JSONObject ?: invalid("discovery choice must be an object")
+            val id = requiredId(choice, "id", 160)
+            val predicateId = requiredId(choice, "predicateId", 160)
+            if (id != predicateId) invalid("discovery choice id disagrees with predicateId")
+            DiscoveryChoice(
+                id = id,
+                predicateId = predicateId,
+                labelEs = requiredText(choice, "labelEs", 160),
+                labelEn = requiredText(choice, "labelEn", 160),
+                productCount = requiredInt(choice, "productCount", 1, 500_000),
+                sourceIdentityCount = requiredInt(choice, "sourceIdentityCount", 1, 500_000),
+                countUnit = requiredString(choice, "countUnit", 64),
+                hasChildren = requiredBoolean(choice, "hasChildren")
+            ).also { parsed ->
+                if (parsed.countUnit != "DISTINCT_PROVIDER_PRODUCT") invalid("unsupported discovery choice count unit")
+            }
+        }
+        if (choices.map { it.id }.distinct().size != choices.size) invalid("duplicate discovery choices")
+        val hasMore = requiredBoolean(root, "hasMore")
+        val nextCursor = optionalString(root, "nextCursor", 2_048)
+        if (hasMore && nextCursor == null) invalid("discovery facet cursor is missing")
+        return DiscoveryClarification(dimension, choices, hasMore, nextCursor)
     }
 
     private fun parseProductCandidates(array: JSONArray, expectedReleaseDate: String? = null): List<ProductIdentity> {
