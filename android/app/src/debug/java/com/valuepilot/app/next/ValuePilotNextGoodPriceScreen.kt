@@ -1,28 +1,21 @@
 package com.valuepilot.app.next
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.focus.FocusRequester
@@ -34,7 +27,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -53,9 +45,6 @@ internal fun ValuePilotNextGoodPriceScreen(
     onCheck: () -> Unit,
     onClearDraft: () -> Unit,
     onClearPrivateMemory: () -> Unit,
-    onScanBarcode: () -> Unit,
-    onChooseBarcodeOption: (Long, Int) -> Unit,
-    onDismissBarcodeChoice: (Long) -> Unit,
     onShare: (com.valuepilot.app.GoodPriceShareCard) -> Unit,
     onBack: () -> Unit
 ) {
@@ -66,15 +55,6 @@ internal fun ValuePilotNextGoodPriceScreen(
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val draftFocusRequester = remember { FocusRequester() }
-    var handledFocusRequestId by rememberSaveable { mutableIntStateOf(0) }
-
-    LaunchedEffect(state.barcodeFocusRequestId) {
-        if (state.barcodeFocusRequestId > handledFocusRequestId) {
-            draftFocusRequester.requestFocus()
-            keyboard?.show()
-            handledFocusRequestId = state.barcodeFocusRequestId
-        }
-    }
 
     fun runCheck() {
         focusManager.clearFocus()
@@ -121,79 +101,6 @@ internal fun ValuePilotNextGoodPriceScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showSharePreview = false }) { Text(valuePilotNextText("Cancel", "Cancelar")) }
-            }
-        )
-    }
-
-    state.barcodeChoice?.let { choice ->
-        var selectedOptionIndex by rememberSaveable(choice.requestId) {
-            mutableIntStateOf(if (choice.options.size == 1) 0 else -1)
-        }
-        AlertDialog(
-            onDismissRequest = { onDismissBarcodeChoice(choice.requestId) },
-            title = { Text(valuePilotNextText("Identity suggestion from barcode", "Sugerencia de identidad desde el código de barras")) },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .heightIn(max = 360.dp)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.small)
-                ) {
-                    Text(
-                        if (choice.replacesDraft) {
-                            valuePilotNextText(
-                                "Choosing a name will replace your current price-check draft, including any package or price details.",
-                                "Elegir un nombre reemplazará tu borrador actual de control de precio, incluidos los datos de envase o precio."
-                            )
-                        } else {
-                            valuePilotNextText(
-                                "Choose the exact catalog name that matches the package. This does not supply a package quantity or price.",
-                                "Elegí el nombre exacto del catálogo que coincide con el envase. Esto no aporta cantidad de envase ni precio."
-                            )
-                        },
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    choice.options.forEachIndexed { index, option ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { selectedOptionIndex = index }
-                                .padding(vertical = ValuePilotSpacing.xSmall),
-                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = selectedOptionIndex == index,
-                                onClick = { selectedOptionIndex = index }
-                            )
-                            Text(
-                                option.label,
-                                modifier = Modifier.weight(1f),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    enabled = selectedOptionIndex >= 0,
-                    onClick = {
-                        onChooseBarcodeOption(choice.requestId, selectedOptionIndex)
-                    }
-                ) {
-                    Text(
-                        if (choice.replacesDraft) {
-                            valuePilotNextText("Replace current draft", "Reemplazar borrador actual")
-                        } else {
-                            valuePilotNextText("Use this name", "Usar este nombre")
-                        }
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { onDismissBarcodeChoice(choice.requestId) }) {
-                    Text(valuePilotNextText("Cancel", "Cancelar"))
-                }
             }
         )
     }
@@ -282,44 +189,6 @@ internal fun ValuePilotNextGoodPriceScreen(
             Column(verticalArrangement = Arrangement.spacedBy(ValuePilotSpacing.xSmall)) {
                 PrimaryActionButton(label = valuePilotNextText("Check this price", "Comprobar este precio"), onClick = ::runCheck)
                 SecondaryActionButton(label = valuePilotNextText("Clear draft", "Borrar borrador"), onClick = onClearDraft)
-                SecondaryActionButton(
-                    label = valuePilotNextText("Scan a barcode", "Escanear código de barras"),
-                    onClick = {
-                        focusManager.clearFocus()
-                        keyboard?.hide()
-                        onScanBarcode()
-                    }
-                )
-                Text(
-                    valuePilotNextText(
-                        "An exact catalog match suggests an editable name only. Package quantity and price still need your confirmation.",
-                        "Una coincidencia exacta de catálogo solo sugiere un nombre editable. La cantidad del envase y el precio todavía necesitan tu confirmación."
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        if (state.barcodeBusy) {
-            item(key = "good-price-barcode-progress") {
-                LoadingRow(
-                    state.barcodeMessage?.let {
-                        valuePilotNextLocalizedDynamicText(language, it).orEmpty()
-                    } ?: valuePilotNextText(
-                        "Looking up an exact catalog name…",
-                        "Buscando un nombre exacto de catálogo…"
-                    )
-                )
-            }
-        } else {
-            state.barcodeMessage?.let { message ->
-                item(key = "good-price-barcode-status") {
-                    EvidenceNotice(
-                        valuePilotNextLocalizedDynamicText(language, message).orEmpty(),
-                        isError = state.barcodeError
-                    )
-                }
             }
         }
 

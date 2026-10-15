@@ -8,9 +8,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.valuepilot.app.AndroidPracticalShoppingHomeSessionStore
-import com.valuepilot.app.BundledOfflineCatalog
-import com.valuepilot.app.BundledOfflineCatalogDiscoverySession
-import com.valuepilot.app.GoodPriceBarcodeIdentityPresentation
 import com.valuepilot.app.CompareHerePrivatePriceMemoryAndroidStore
 import com.valuepilot.app.ArgentinaBackendBridgeResult
 import com.valuepilot.app.ArgentinaBackendContract
@@ -67,7 +64,6 @@ import com.valuepilot.app.UserObservedPriceSavedSelectionSurfaceRenderer
 import com.valuepilot.app.UserObservedPriceSavedSelectionUiState
 import com.valuepilot.app.UserObservedPriceProofContentReadResult
 import com.valuepilot.app.ValuePilotArgentinaEdgeTransportFactory
-import com.valuepilot.app.JvmTextCanonicalizer
 import java.util.concurrent.Executors
 
 internal enum class AddPrivateIdentityResult {
@@ -77,8 +73,6 @@ internal enum class AddPrivateIdentityResult {
     BASKET_LIMIT,
     PERSISTENCE_UNAVAILABLE
 }
-
-private const val GOOD_PRICE_BARCODE_MAX_CATALOG_AGE_MILLIS = 8L * 24L * 60L * 60L * 1_000L
 
 /** Immutable state shared by the debug Compose journey and its existing 10133 providers. */
 internal data class ValuePilotNextJourneyUiState(
@@ -114,7 +108,6 @@ internal data class ValuePilotNextJourneyUiState(
 internal class ValuePilotNextJourneyViewModel : ViewModel() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private val planExecutor = Executors.newSingleThreadExecutor()
-    private val goodPriceBarcodeExecutor = Executors.newSingleThreadExecutor()
     private val area = ArgentinaQualifiedLaunchAreas.BuenosAiresCaba
     private val offerEvidence = linkedMapOf<String, List<ArgentinaBackendContract.SearchOffer>>()
 
@@ -132,9 +125,6 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
     private var compareHereJourney: ValuePilotNextCompareHereJourney? = null
     private var compareHereMemoryStore: CompareHerePrivatePriceMemoryAndroidStore? = null
     private var goodPriceJourney: ValuePilotNextGoodPriceJourney? = null
-    @Volatile
-    private var goodPriceBarcodeDiscoverySession: BundledOfflineCatalogDiscoverySession? = null
-    private var goodPriceBarcodeLookupRequestId = 0L
     private var initialized = false
     private var cleared = false
     private var planRequestId = 0L
@@ -319,74 +309,6 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
         if (!initialized || cleared) return
         check(Looper.myLooper() == Looper.getMainLooper())
         goodPriceJourney?.refreshPrivateMemory()
-    }
-
-    fun onGoodPriceBarcodeScanRequested() {
-        if (!initialized || cleared) return
-        check(Looper.myLooper() == Looper.getMainLooper())
-        goodPriceJourney?.onBarcodeScanRequested()
-    }
-
-    fun onGoodPriceBarcodeScanCancelled() {
-        if (!initialized || cleared) return
-        check(Looper.myLooper() == Looper.getMainLooper())
-        goodPriceJourney?.onBarcodeScanCancelled()
-    }
-
-    fun onGoodPriceBarcodeScanUnavailable() {
-        if (!initialized || cleared) return
-        check(Looper.myLooper() == Looper.getMainLooper())
-        goodPriceJourney?.onBarcodeScanUnavailable()
-    }
-
-    fun lookupGoodPriceBarcode(gtin: String) {
-        if (!initialized || cleared) return
-        check(Looper.myLooper() == Looper.getMainLooper())
-        val currentJourney = goodPriceJourney ?: return
-        val requestId = currentJourney.beginBarcodeLookup(gtin) ?: return
-        goodPriceBarcodeLookupRequestId = requestId
-        try {
-            goodPriceBarcodeExecutor.execute {
-                val presentation =
-                    runCatching {
-                        val session =
-                            goodPriceBarcodeDiscoverySession
-                                ?: BundledOfflineCatalog.createDiscoverySession(
-                                    requireNotNull(applicationContext)
-                                ).also { goodPriceBarcodeDiscoverySession = it }
-                        GoodPriceBarcodeIdentityPresentation.from(
-                            gtin = gtin.trim(),
-                            result =
-                                session.discover(
-                                    rawQuery = gtin.trim(),
-                                    canonicalizer = JvmTextCanonicalizer,
-                                    evaluatedAtEpochMillis = System.currentTimeMillis(),
-                                    maximumSnapshotAgeMillis =
-                                        GOOD_PRICE_BARCODE_MAX_CATALOG_AGE_MILLIS
-                                )
-                        )
-                    }.getOrNull()
-                mainHandler.post {
-                    if (!cleared && goodPriceBarcodeLookupRequestId == requestId) {
-                        currentJourney.onBarcodeLookupCompleted(requestId, presentation)
-                    }
-                }
-            }
-        } catch (_: Throwable) {
-            currentJourney.onBarcodeLookupFailed(requestId)
-        }
-    }
-
-    fun dismissGoodPriceBarcodeChoice(requestId: Long) {
-        if (!initialized || cleared) return
-        check(Looper.myLooper() == Looper.getMainLooper())
-        goodPriceJourney?.dismissBarcodeChoice(requestId)
-    }
-
-    fun chooseGoodPriceBarcodeOption(requestId: Long, optionIndex: Int) {
-        if (!initialized || cleared) return
-        check(Looper.myLooper() == Looper.getMainLooper())
-        goodPriceJourney?.chooseBarcodeOption(requestId, optionIndex)
     }
 
     fun onStapleWatchSetupRouteVisibilityChanged(visible: Boolean) {
@@ -986,7 +908,6 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
     override fun onCleared() {
         cleared = true
         planRequestId = Math.addExact(planRequestId, 1L)
-        goodPriceBarcodeLookupRequestId = Math.addExact(goodPriceBarcodeLookupRequestId, 1L)
         savedRouteCoordinator?.close()
         savedRouteCoordinator = null
         stapleWatchSetupCoordinator?.close()
@@ -1002,9 +923,6 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
         compareHereJourney?.close()
         compareHereJourney = null
         compareHereMemoryStore = null
-        goodPriceBarcodeExecutor.shutdownNow()
-        goodPriceBarcodeDiscoverySession?.close()
-        goodPriceBarcodeDiscoverySession = null
         applicationContext = null
         searchHost?.close()
         searchHost = null

@@ -7,25 +7,9 @@ import com.valuepilot.app.GoodPriceCheckRouteCoordinator
 import com.valuepilot.app.GoodPriceCheckRouteState
 import com.valuepilot.app.GoodPriceCheckRouteStatus
 import com.valuepilot.app.GoodPriceActivityPrefill
-import com.valuepilot.app.GoodPriceBarcodeIdentityPresentation
 import com.valuepilot.core.CompareHerePriceSelection
-import com.valuepilot.core.GtinValidation
 
 private const val MAX_GOOD_PRICE_DRAFT_CHARS = 4_096
-
-internal data class ValuePilotNextGoodPriceBarcodeChoice(
-    val requestId: Long,
-    val gtin: String,
-    val options: List<GoodPriceBarcodeIdentityPresentation.Option>,
-    val replacesDraft: Boolean
-) {
-    init {
-        require(requestId > 0L)
-        require(GtinValidation.isValid(gtin))
-        require(options.isNotEmpty())
-        require(options.size <= 24)
-    }
-}
 
 internal data class ValuePilotNextGoodPriceUiState(
     val rawBlock: String = "",
@@ -38,12 +22,7 @@ internal data class ValuePilotNextGoodPriceUiState(
         ),
     val memoryNotice: String? = null,
     val memoryUnavailable: Boolean = false,
-    val canClearMemory: Boolean = false,
-    val barcodeMessage: String? = null,
-    val barcodeBusy: Boolean = false,
-    val barcodeError: Boolean = false,
-    val barcodeChoice: ValuePilotNextGoodPriceBarcodeChoice? = null,
-    val barcodeFocusRequestId: Int = 0
+    val canClearMemory: Boolean = false
 )
 
 /** Compose presentation adapter for the existing exact Good Price route and private memory. */
@@ -54,7 +33,6 @@ internal class ValuePilotNextGoodPriceJourney(
 ) {
     private var privateMemory = CompareHerePrivatePriceMemoryState.empty()
     private var memoryIssue: CompareHerePrivatePriceMemoryStoreIssue? = null
-    private var barcodeRequestId = 0L
     private var state = ValuePilotNextGoodPriceUiState()
 
     init {
@@ -63,7 +41,6 @@ internal class ValuePilotNextGoodPriceJourney(
     }
 
     fun openFromSaved(displayName: String) {
-        invalidateBarcodeFlow()
         val safeName = GoodPriceActivityPrefill.sanitize(displayName).orEmpty()
         state =
             ValuePilotNextGoodPriceUiState(
@@ -84,7 +61,6 @@ internal class ValuePilotNextGoodPriceJourney(
     }
 
     fun openForNewCheck() {
-        invalidateBarcodeFlow()
         state =
             ValuePilotNextGoodPriceUiState(
                 memoryNotice = unavailableNoticeIfNeeded(),
@@ -95,18 +71,13 @@ internal class ValuePilotNextGoodPriceJourney(
     }
 
     fun onDraftChanged(rawBlock: String) {
-        invalidateBarcodeFlow()
         state =
             state.copy(
                 rawBlock = rawBlock.take(MAX_GOOD_PRICE_DRAFT_CHARS),
                 route = idleRoute(),
                 memoryNotice = unavailableNoticeIfNeeded(),
                 memoryUnavailable = memoryIssue != null,
-                canClearMemory = privateMemory.entries.isNotEmpty() || memoryIssue != null,
-                barcodeMessage = null,
-                barcodeBusy = false,
-                barcodeError = false,
-                barcodeChoice = null
+                canClearMemory = privateMemory.entries.isNotEmpty() || memoryIssue != null
             )
         publish(state)
     }
@@ -125,7 +96,6 @@ internal class ValuePilotNextGoodPriceJourney(
     }
 
     fun checkPrice() {
-        invalidateBarcodeFlow()
         val evaluatedAt = nowMillis()
         val evaluation =
             GoodPriceCheckRouteCoordinator.checkBlock(
@@ -164,17 +134,12 @@ internal class ValuePilotNextGoodPriceJourney(
                 route = evaluation.state,
                 memoryNotice = notice,
                 memoryUnavailable = unavailable,
-                canClearMemory = canClear,
-                barcodeMessage = null,
-                barcodeBusy = false,
-                barcodeError = false,
-                barcodeChoice = null
+                canClearMemory = canClear
             )
         publish(state)
     }
 
     fun clearDraft() {
-        invalidateBarcodeFlow()
         state =
             state.copy(
                 rawBlock = "",
@@ -182,11 +147,7 @@ internal class ValuePilotNextGoodPriceJourney(
                 route = idleRoute(),
                 memoryNotice = unavailableNoticeIfNeeded(),
                 memoryUnavailable = memoryIssue != null,
-                canClearMemory = privateMemory.entries.isNotEmpty() || memoryIssue != null,
-                barcodeMessage = null,
-                barcodeBusy = false,
-                barcodeError = false,
-                barcodeChoice = null
+                canClearMemory = privateMemory.entries.isNotEmpty() || memoryIssue != null
             )
         publish(state)
     }
@@ -220,101 +181,6 @@ internal class ValuePilotNextGoodPriceJourney(
         publish(state)
     }
 
-    fun onBarcodeScanRequested() {
-        invalidateBarcodeFlow()
-        state =
-            state.copy(
-                barcodeMessage = "Opening the on-device barcode scanner…",
-                barcodeBusy = true,
-                barcodeError = false,
-                barcodeChoice = null
-            )
-        publish(state)
-    }
-
-    fun onBarcodeScanCancelled() {
-        invalidateBarcodeFlow()
-        setBarcodeStatus("Barcode scan cancelled.")
-    }
-
-    fun onBarcodeScanUnavailable() {
-        invalidateBarcodeFlow()
-        setBarcodeStatus("The barcode scanner could not read a product code.", error = true)
-    }
-
-    fun beginBarcodeLookup(gtin: String): Long? {
-        val normalized = gtin.trim()
-        if (!GtinValidation.isValid(normalized)) {
-            onBarcodeScanUnavailable()
-            return null
-        }
-        barcodeRequestId = Math.addExact(barcodeRequestId, 1L)
-        state =
-            state.copy(
-                barcodeMessage = "Looking for an exact name in the on-device catalog…",
-                barcodeBusy = true,
-                barcodeError = false,
-                barcodeChoice = null
-            )
-        publish(state)
-        return barcodeRequestId
-    }
-
-    fun onBarcodeLookupCompleted(
-        requestId: Long,
-        presentation: GoodPriceBarcodeIdentityPresentation?
-    ) {
-        if (requestId != barcodeRequestId) return
-        if (presentation == null) {
-            setBarcodeStatus("The on-device catalog could not be checked.", error = true)
-            return
-        }
-        if (presentation.options.isEmpty()) {
-            setBarcodeStatus(
-                "No exact product name was found for barcode ${presentation.gtin}."
-            )
-            return
-        }
-
-        val replacesDraft = state.rawBlock.isNotBlank()
-        if (presentation.options.size == 1 && !replacesDraft) {
-            applyBarcodeOption(presentation.gtin, presentation.options.single())
-            return
-        }
-
-        state =
-            state.copy(
-                barcodeMessage = "Choose the product name that matches the package.",
-                barcodeBusy = false,
-                barcodeError = false,
-                barcodeChoice =
-                    ValuePilotNextGoodPriceBarcodeChoice(
-                        requestId = requestId,
-                        gtin = presentation.gtin,
-                        options = presentation.options,
-                        replacesDraft = replacesDraft
-                    )
-            )
-        publish(state)
-    }
-
-    fun onBarcodeLookupFailed(requestId: Long) {
-        if (requestId != barcodeRequestId) return
-        setBarcodeStatus("The on-device catalog could not be checked.", error = true)
-    }
-
-    fun dismissBarcodeChoice(requestId: Long) {
-        if (state.barcodeChoice?.requestId != requestId) return
-        invalidateBarcodeFlow()
-        setBarcodeStatus("Barcode suggestion was not applied.")
-    }
-
-    fun chooseBarcodeOption(requestId: Long, optionIndex: Int) {
-        val choice = state.barcodeChoice?.takeIf { it.requestId == requestId } ?: return
-        val option = choice.options.getOrNull(optionIndex) ?: return
-        applyBarcodeOption(choice.gtin, option)
-    }
-
     private fun reloadMemory(invalidateResult: Boolean) {
         val previousMemory = privateMemory
         val previousIssue = memoryIssue
@@ -333,53 +199,6 @@ internal class ValuePilotNextGoodPriceJourney(
 
     private fun unavailableNoticeIfNeeded(): String? =
         if (memoryIssue == null) null else "Private price memory is unavailable. Clear it to recover."
-
-    private fun applyBarcodeOption(
-        gtin: String,
-        option: GoodPriceBarcodeIdentityPresentation.Option
-    ) {
-        val safeName = GoodPriceActivityPrefill.sanitize(option.displayName)
-        if (safeName == null) {
-            setBarcodeStatus("That catalog name cannot be used. Enter the product name manually.", error = true)
-            return
-        }
-        barcodeRequestId = Math.addExact(barcodeRequestId, 1L)
-        state =
-            state.copy(
-                rawBlock = safeName,
-                route =
-                    GoodPriceCheckRouteState(
-                        status = GoodPriceCheckRouteStatus.NEEDS_PRODUCT,
-                        title = "Complete the product details",
-                        guidance =
-                            "The barcode suggested an editable name only. Add the exact package quantity and the price you observed."
-                    ),
-                memoryNotice = unavailableNoticeIfNeeded(),
-                memoryUnavailable = memoryIssue != null,
-                canClearMemory = privateMemory.entries.isNotEmpty() || memoryIssue != null,
-                barcodeMessage = "${option.label} suggested from barcode $gtin. Add the package and price yourself.",
-                barcodeBusy = false,
-                barcodeError = false,
-                barcodeChoice = null,
-                barcodeFocusRequestId = Math.addExact(state.barcodeFocusRequestId, 1)
-            )
-        publish(state)
-    }
-
-    private fun setBarcodeStatus(message: String, error: Boolean = false) {
-        state =
-            state.copy(
-                barcodeMessage = message,
-                barcodeBusy = false,
-                barcodeError = error,
-                barcodeChoice = null
-            )
-        publish(state)
-    }
-
-    private fun invalidateBarcodeFlow() {
-        barcodeRequestId = Math.addExact(barcodeRequestId, 1L)
-    }
 
     private fun idleRoute(): GoodPriceCheckRouteState =
         GoodPriceCheckRouteState(

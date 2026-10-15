@@ -28,7 +28,6 @@ import androidx.lifecycle.ViewModelProvider
 import com.valuepilot.app.AndroidUserObservedPriceProofContentPicker
 import com.valuepilot.app.AndroidUserObservedPriceProofContentSource
 import com.valuepilot.app.ArgentinaPrivateBasketStoreProjection
-import com.valuepilot.app.BarcodeCaptureActivity
 import com.valuepilot.app.ComparisonActivity
 import com.valuepilot.app.DebugNextSavedToolsHandoff
 import com.valuepilot.app.GoodPriceShareCard
@@ -40,16 +39,6 @@ class ValuePilotNextActivity : AppCompatActivity() {
     private lateinit var journey: ValuePilotNextJourneyViewModel
     private var observedPriceProofPicker: AndroidUserObservedPriceProofContentPicker? = null
     private var googleImagesLaunchInFlight = false
-    private val goodPriceBarcodeCaptureLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (!::journey.isInitialized) return@registerForActivityResult
-            val gtin = result.data?.getStringExtra(BarcodeCaptureActivity.EXTRA_GTIN)
-            when {
-                result.resultCode != RESULT_OK -> journey.onGoodPriceBarcodeScanCancelled()
-                gtin.isNullOrBlank() -> journey.onGoodPriceBarcodeScanUnavailable()
-                else -> journey.lookupGoodPriceBarcode(gtin)
-            }
-        }
     private val googleImagesCustomTabLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             googleImagesLaunchInFlight = false
@@ -192,7 +181,6 @@ class ValuePilotNextActivity : AppCompatActivity() {
                     onOpenGoogleImages = ::openGoogleImages,
                     onShareCompareHereResult = ::shareCompareHereResult,
                     onOpenStoreMap = ::openStoreMap,
-                    onStartGoodPriceBarcodeScan = ::startGoodPriceBarcodeScan,
                     onOpenLegacyStapleWatch = ::openSavedTools,
                     onSharePrivatePriceHistory = ::sharePrivatePriceHistory,
                     onShareGoodPriceResult = ::shareGoodPriceResult
@@ -318,17 +306,6 @@ class ValuePilotNextActivity : AppCompatActivity() {
         resources.displayMetrics.heightPixels * GOOGLE_IMAGES_INITIAL_HEIGHT_PERCENT / 100,
         (GOOGLE_IMAGES_MIN_INITIAL_HEIGHT_DP * resources.displayMetrics.density).toInt()
     )
-
-    private fun startGoodPriceBarcodeScan() {
-        journey.onGoodPriceBarcodeScanRequested()
-        try {
-            goodPriceBarcodeCaptureLauncher.launch(
-                Intent(this, BarcodeCaptureActivity::class.java)
-            )
-        } catch (_: Exception) {
-            journey.onGoodPriceBarcodeScanUnavailable()
-        }
-    }
 
     private fun openSavedTools() {
         startActivity(

@@ -134,44 +134,6 @@ internal fun valuePilotNextLocalizedDynamicText(
             "La memoria privada de precios se borró de este dispositivo."
         text.equals("Private price memory could not be cleared.", ignoreCase = true) ->
             "No se pudo borrar la memoria privada de precios."
-        text.equals("Opening the on-device barcode scanner…", ignoreCase = true) ->
-            "Abriendo el escáner de códigos de barras del dispositivo…"
-        text.equals("Barcode scan cancelled.", ignoreCase = true) ->
-            "Se canceló el escaneo del código de barras."
-        text.equals(
-            "The barcode scanner could not read a product code.",
-            ignoreCase = true
-        ) -> "El escáner de códigos de barras no pudo leer un código de producto."
-        text.equals(
-            "Looking for an exact name in the on-device catalog…",
-            ignoreCase = true
-        ) -> "Buscando un nombre exacto en el catálogo del dispositivo…"
-        text.equals("The on-device catalog could not be checked.", ignoreCase = true) ->
-            "No se pudo consultar el catálogo del dispositivo."
-        text.startsWith("No exact product name was found for barcode ", ignoreCase = true) ->
-            "No se encontró un nombre exacto de producto para el código de barras " +
-                text.substringAfter("barcode ", missingDelimiterValue = "")
-        text.equals("Choose the product name that matches the package.", ignoreCase = true) ->
-            "Elegí el nombre de producto que coincide con el envase."
-        text.equals("Barcode suggestion was not applied.", ignoreCase = true) ->
-            "No se aplicó la sugerencia del código de barras."
-        text.equals(
-            "That catalog name cannot be used. Enter the product name manually.",
-            ignoreCase = true
-        ) -> "No se puede usar ese nombre del catálogo. Ingresá el nombre del producto manualmente."
-        text.equals("Complete the product details", ignoreCase = true) ->
-            "Completá los datos del producto"
-        text.equals(
-            "The barcode suggested an editable name only. Add the exact package quantity and the price you observed.",
-            ignoreCase = true
-        ) -> "El código de barras sugirió solo un nombre editable. Agregá la cantidad exacta del envase y el precio que observaste."
-        text.contains(" suggested from barcode ", ignoreCase = true) &&
-            text.endsWith(". Add the package and price yourself.", ignoreCase = true) -> {
-            val suggestion = text.substringBefore(" suggested from barcode ", missingDelimiterValue = text)
-            val barcode = text.substringAfter(" suggested from barcode ", missingDelimiterValue = "")
-                .removeSuffix(". Add the package and price yourself.")
-            "Sugerencia de catálogo: $suggestion (código de barras $barcode). Agregá el envase y el precio manualmente."
-        }
         text.equals("Enter one product", ignoreCase = true) -> "Ingresá un producto"
         text.equals(
             "Add the product name, package quantity, and price before checking it.",
