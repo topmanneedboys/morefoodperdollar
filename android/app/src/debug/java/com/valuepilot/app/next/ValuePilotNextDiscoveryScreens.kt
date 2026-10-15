@@ -277,15 +277,13 @@ private fun CompactTextAction(label: String, onClick: () -> Unit) {
 internal fun ValuePilotSearchScreen(
     query: String,
     state: ArgentinaLiveSearchSurfaceState,
-    showDesignFixture: Boolean,
     onQueryChanged: (String) -> Unit,
     onSubmit: () -> Unit,
     onClarificationSelected: (String) -> Unit,
     onLoadMore: () -> Unit,
     onOpenMatch: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
     onAddToBasket: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
-    onOpenGoogleImages: (PracticalShoppingSearchIdentityPresentation.Match, String) -> Unit,
-    onShowDesignFixture: () -> Unit
+    onOpenGoogleImages: (PracticalShoppingSearchIdentityPresentation.Match, String) -> Unit
 ) {
     var selectedStoreName by rememberSaveable(query) { mutableStateOf<String?>(null) }
     var sortByLowestUnitPrice by rememberSaveable(query) { mutableStateOf(false) }
@@ -380,61 +378,6 @@ internal fun ValuePilotSearchScreen(
             }
         }
 
-        if (isSearchUnavailable(state.mode) &&
-            state.presentation?.matches.isNullOrEmpty()
-        ) {
-            item(key = "layout-fixture-entry") {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        Eyebrow(valuePilotNextText("PRICE COMPARISON", "COMPARACIÓN DE PRECIOS"))
-                        Text(
-                            valuePilotNextText("Product details without a confirmed price or store.", "Detalle de producto sin precio o tienda confirmados."),
-                            style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        CompactTextAction(
-                            if (showDesignFixture) {
-                                valuePilotNextText("View comparison", "Ver comparación")
-                            } else {
-                                valuePilotNextText("Open product view", "Abrir producto")
-                            },
-                            onClick = onShowDesignFixture,
-                        )
-                    }
-                }
-            }
-        }
-
-        if (showDesignFixture) {
-            item(key = "layout-fixture-label") {
-                EvidenceNotice(
-                    valuePilotNextText(
-                        "LOCAL COMPARISON · source unavailable. Values are illustrative and separate from saved data.",
-                        "COMPARACIÓN LOCAL · fuente no disponible. Los valores son ilustrativos y están separados de tus datos guardados."
-                    )
-                )
-            }
-            item(key = "layout-fixture-product") {
-                SearchResultCard(
-                    match = ValuePilotNextLayoutFixture.match,
-                    isDesignFixture = true,
-                    onClick = { onOpenMatch(ValuePilotNextLayoutFixture.match) },
-                    onAddToBasket = {},
-                    onOpenGoogleImages = {
-                        onOpenGoogleImages(ValuePilotNextLayoutFixture.match, state.areaLabel)
-                    }
-                )
-            }
-        }
         if (matches.isNotEmpty()) {
             item(key = "search-results-heading") {
                 BoxWithConstraints(Modifier.fillMaxWidth()) {
@@ -481,7 +424,6 @@ internal fun ValuePilotSearchScreen(
             items(visibleMatches, key = { it.identityKey }) { match ->
                 SearchResultCard(
                     match = match,
-                    isDesignFixture = false,
                     onClick = { onOpenMatch(match) },
                     onAddToBasket = { onAddToBasket(match) },
                     onOpenGoogleImages = { onOpenGoogleImages(match, state.areaLabel) },
@@ -794,12 +736,6 @@ private fun SearchResultsCount(count: Int) {
     )
 }
 
-private fun isSearchUnavailable(mode: ArgentinaLiveSearchSurfaceMode): Boolean =
-    mode == ArgentinaLiveSearchSurfaceMode.AUTHORIZATION_UNAVAILABLE ||
-        mode == ArgentinaLiveSearchSurfaceMode.STALE_RELEASE ||
-        mode == ArgentinaLiveSearchSurfaceMode.TEMPORARILY_UNAVAILABLE ||
-        mode == ArgentinaLiveSearchSurfaceMode.TIMEOUT
-
 @Composable
 private fun SearchStatePanel(state: ArgentinaLiveSearchSurfaceState) {
     val unavailable = state.mode == ArgentinaLiveSearchSurfaceMode.AUTHORIZATION_UNAVAILABLE ||
@@ -891,7 +827,6 @@ private fun SearchStatePanel(state: ArgentinaLiveSearchSurfaceState) {
 @Composable
 private fun SearchResultCard(
     match: PracticalShoppingSearchIdentityPresentation.Match,
-    isDesignFixture: Boolean,
     onClick: () -> Unit,
     onAddToBasket: () -> Unit,
     onOpenGoogleImages: () -> Unit,
@@ -927,11 +862,7 @@ private fun SearchResultCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 SearchMatchPill(
-                    if (isDesignFixture) {
-                        valuePilotNextText("COMPARISON", "COMPARACIÓN")
-                    } else {
-                        valuePilotNextLocalizedMatchLabel(match.matchLabel, language)
-                    }
+                    valuePilotNextLocalizedMatchLabel(match.matchLabel, language)
                 )
                 match.packageQuantityLabel?.let {
                     EvidencePill(
@@ -976,7 +907,7 @@ private fun SearchResultCard(
                     )
                     SearchFreshnessLabel(true)
                 }
-            } else if (!isDesignFixture && match.qualifiedOffers.isNotEmpty()) {
+            } else if (match.qualifiedOffers.isNotEmpty()) {
                 Text(
                     valuePilotNextText(
                         "The source does not confirm a current price.",
@@ -990,7 +921,7 @@ private fun SearchResultCard(
                 GoogleImagesAction(match, onOpenGoogleImages, Modifier.weight(1f))
                 AddToBasketAction(
                     match = match,
-                    enabled = !isDesignFixture && !match.sourceLabel.isNullOrBlank(),
+                    enabled = !match.sourceLabel.isNullOrBlank(),
                     onClick = onAddToBasket,
                     modifier = Modifier.weight(1f)
                 )
@@ -1235,7 +1166,6 @@ private fun SearchFreshnessLabel(hasFreshPrice: Boolean) {
 internal fun ValuePilotProductDetailScreen(
     match: PracticalShoppingSearchIdentityPresentation.Match?,
     isSearchLoading: Boolean,
-    isDesignFixture: Boolean,
     areaLabel: String,
     onAddToBasket: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
     onSearchAgain: () -> Unit,
@@ -1279,16 +1209,6 @@ internal fun ValuePilotProductDetailScreen(
                 }
             }
         } else {
-            if (isDesignFixture) {
-                item(key = "product-detail-fixture-disclosure") {
-                    CompactEvidenceNotice(
-                        valuePilotNextText(
-                            "LOCAL COMPARISON · source unavailable. Values are illustrative and remain separate from saved data.",
-                            "COMPARACIÓN LOCAL · fuente no disponible. Los valores son ilustrativos y se mantienen separados de tus datos guardados."
-                        )
-                    )
-                }
-            }
             item(key = "product-detail-identity") {
                 Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1307,11 +1227,7 @@ internal fun ValuePilotProductDetailScreen(
                             )
                         }
                         EvidencePill(
-                            if (isDesignFixture) {
-                                valuePilotNextText("CABA · COMPARISON", "CABA · COMPARACIÓN")
-                            } else {
-                                "${areaLabel.uppercase()} · " + valuePilotNextText("ARGENTINA", "ARGENTINA")
-                            },
+                            "${areaLabel.uppercase()} · " + valuePilotNextText("ARGENTINA", "ARGENTINA"),
                             MaterialTheme.colorScheme.secondaryContainer,
                             MaterialTheme.colorScheme.onSecondaryContainer
                         )
@@ -1326,35 +1242,20 @@ internal fun ValuePilotProductDetailScreen(
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        if (isDesignFixture) {
-                            Text(
-                                valuePilotNextText("PRICE CONTEXT", "CONTEXTO DE PRECIO"),
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                                color = MaterialTheme.colorScheme.secondary
-                            )
-                        } else {
-                            Text(
-                                valuePilotNextLocalizedMatchLabel(match.matchLabel, language),
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                                color = MaterialTheme.colorScheme.secondary
-                            )
-                            match.sourceLabel?.let {
-                                Text("· $it", style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
+                        Text(
+                            valuePilotNextLocalizedMatchLabel(match.matchLabel, language),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                        match.sourceLabel?.let {
+                            Text("· $it", style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     Text(
-                        if (isDesignFixture) {
-                            valuePilotNextText(
-                                "This view has no confirmed price or store evidence.",
-                                "Esta vista no tiene precio ni tienda confirmados."
-                            )
-                        } else {
-                            valuePilotNextText(
-                                "The identity does not confirm price, stock, or availability.",
-                                "La identidad no confirma precio, stock ni disponibilidad."
-                            )
-                        },
+                        valuePilotNextText(
+                            "The identity does not confirm price, stock, or availability.",
+                            "La identidad no confirma precio, stock ni disponibilidad."
+                        ),
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, lineHeight = 15.sp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1411,9 +1312,7 @@ internal fun ValuePilotProductDetailScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Eyebrow(valuePilotNextText("PRICES AND STORES", "PRECIOS Y TIENDAS"))
                     Text(
-                        if (isDesignFixture) {
-                            valuePilotNextText("Illustrative unit range", "Rango unitario ilustrativo")
-                        } else if (match.qualifiedOffers.isEmpty()) {
+                        if (match.qualifiedOffers.isEmpty()) {
                             valuePilotNextText("Current price not provided", "Precio actual no informado")
                         } else {
                             valuePilotNextText("Collected prices", "Precios relevados")
@@ -1423,48 +1322,23 @@ internal fun ValuePilotProductDetailScreen(
                     )
                 }
             }
-            if (isDesignFixture) {
-                item(key = "product-detail-fixture-price-range") {
-                    ProductOfferPriceRangeCard(ValuePilotDesignPreviewPriceRange, isDesignFixture = true)
-                }
-            } else {
-                currentOfferPriceRange(match.qualifiedOffers)?.let { range ->
-                    item(key = "product-detail-current-price-range") {
-                        ProductOfferPriceRangeCard(range, isDesignFixture = false)
-                    }
+            currentOfferPriceRange(match.qualifiedOffers)?.let { range ->
+                item(key = "product-detail-current-price-range") {
+                    ProductOfferPriceRangeCard(range)
                 }
             }
             if (match.qualifiedOffers.isEmpty()) {
                 item(key = "product-detail-no-offer") {
                     CompactEvidenceNotice(
-                        if (isDesignFixture) {
-                            valuePilotNextText(
-                                "No authorized price evidence is available for this identity.",
-                                "No hay evidencia de precio autorizada para esta identidad."
-                            )
-                        } else {
-                            valuePilotNextText(
-                                "No current price evidence is associated with this identity.",
-                                "No hay evidencia de precio actual asociada a esta identidad."
-                            )
-                        }
+                        valuePilotNextText(
+                            "No current price evidence is associated with this identity.",
+                            "No hay evidencia de precio actual asociada a esta identidad."
+                        )
                     )
                 }
             } else {
                 items(match.qualifiedOffers, key = { it.offerKey }) { offer ->
                     OfferEvidenceCard(offer, onOpenMapContext = { onOpenMapContext(offer) })
-                }
-            }
-            if (isDesignFixture) {
-                item(key = "product-detail-fixture-save") {
-                    Text(
-                        valuePilotNextText(
-                            "This comparison row is read-only and cannot be saved or added.",
-                            "Esta fila comparativa es de solo lectura y no se puede guardar ni agregar."
-                        ),
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
         }
@@ -1473,7 +1347,6 @@ internal fun ValuePilotProductDetailScreen(
             ProductDetailStickyActions(
                 match = it,
                 areaLabel = areaLabel,
-                isDesignFixture = isDesignFixture,
                 onAddToBasket = { onAddToBasket(it) },
                 onOpenGoogleImages = { onOpenGoogleImages(it, areaLabel) }
             )
@@ -1483,8 +1356,7 @@ internal fun ValuePilotProductDetailScreen(
 
 @Composable
 private fun ProductOfferPriceRangeCard(
-    range: CurrentOfferPriceRange,
-    isDesignFixture: Boolean
+    range: CurrentOfferPriceRange
 ) {
     val format = NumberFormat.getNumberInstance(Locale.forLanguageTag("es-AR")).apply {
         maximumFractionDigits = 2
@@ -1510,27 +1382,15 @@ private fun ProductOfferPriceRangeCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
         ) {
-                Eyebrow(
-                    if (isDesignFixture) {
-                        valuePilotNextText("PRICE CONTEXT · UNVERIFIED VALUES", "CONTEXTO DE PRECIO · VALORES SIN CONFIRMAR")
-                    } else {
-                        valuePilotNextText("RECENT OFFERS", "OFERTAS RECIENTES")
-                    }
+                Eyebrow(valuePilotNextText("RECENT OFFERS", "OFERTAS RECIENTES"))
+                Text(
+                    "${range.offerCount}",
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                if (!isDesignFixture) {
-                    Text(
-                        "${range.offerCount}",
-                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             }
             Text(
-                if (isDesignFixture) {
-                    valuePilotNextText("Unit comparison", "Comparación por unidad")
-                } else {
-                    valuePilotNextText("Range across published offers", "Rango entre ofertas publicadas")
-                },
+                valuePilotNextText("Range across published offers", "Rango entre ofertas publicadas"),
                 style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp, lineHeight = 18.sp),
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -1566,17 +1426,10 @@ private fun ProductOfferPriceRangeCard(
                 )
             }
             Text(
-                if (isDesignFixture) {
-                    valuePilotNextText(
-                        "These illustrative amounts are not linked to a current store or offer.",
-                        "Estos importes ilustrativos no están vinculados a una tienda ni oferta actual."
-                    )
-                } else {
-                    valuePilotNextText(
-                        "Only recent offers with the same unit are summarized. A published price does not confirm stock or availability.",
-                        "Resume solo ofertas recientes con la misma unidad. El precio publicado no confirma stock ni disponibilidad."
-                    )
-                },
+                valuePilotNextText(
+                    "Only recent offers with the same unit are summarized. A published price does not confirm stock or availability.",
+                    "Resume solo ofertas recientes con la misma unidad. El precio publicado no confirma stock ni disponibilidad."
+                ),
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp, lineHeight = 13.sp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1652,7 +1505,6 @@ private fun OfferRangePoint(
 private fun ProductDetailStickyActions(
     match: PracticalShoppingSearchIdentityPresentation.Match,
     areaLabel: String,
-    isDesignFixture: Boolean,
     onAddToBasket: () -> Unit,
     onOpenGoogleImages: () -> Unit
 ) {
@@ -1671,25 +1523,17 @@ private fun ProductDetailStickyActions(
                 horizontalArrangement = Arrangement.spacedBy(9.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (isDesignFixture) {
-                    PrimaryDiscoveryAction(
-                        label = valuePilotNextText("View on Google Images", "Ver en Google Images"),
-                        onClick = onOpenGoogleImages,
-                        modifier = Modifier.weight(1f)
-                    )
-                } else {
-                    ProductDetailGoogleImagesAction(
-                        match = match,
-                        areaLabel = areaLabel,
-                        onClick = onOpenGoogleImages
-                    )
-                    PrimaryDiscoveryAction(
-                        label = valuePilotNextText("Add to your private basket", "Añadir a tu canasta privada"),
-                        onClick = onAddToBasket,
-                        enabled = !match.sourceLabel.isNullOrBlank(),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                ProductDetailGoogleImagesAction(
+                    match = match,
+                    areaLabel = areaLabel,
+                    onClick = onOpenGoogleImages
+                )
+                PrimaryDiscoveryAction(
+                    label = valuePilotNextText("Add to your private basket", "Añadir a tu canasta privada"),
+                    onClick = onAddToBasket,
+                    enabled = !match.sourceLabel.isNullOrBlank(),
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
     }

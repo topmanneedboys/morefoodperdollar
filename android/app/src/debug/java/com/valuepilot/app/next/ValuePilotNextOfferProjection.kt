@@ -39,16 +39,6 @@ internal data class CurrentOfferPriceRange(
         }
 }
 
-/** Arbitrary debug-only amounts for validating layout; never included in a release source set. */
-internal val ValuePilotDesignPreviewPriceRange = CurrentOfferPriceRange(
-    currency = "ARS",
-    unitBasis = "L",
-    minimum = BigDecimal("1240"),
-    median = BigDecimal("1380"),
-    maximum = BigDecimal("1510"),
-    offerCount = 3
-)
-
 /** Search filters are projections of current, source-qualified offer evidence only. */
 internal fun searchResultFilterOptions(
     matches: List<PracticalShoppingSearchIdentityPresentation.Match>

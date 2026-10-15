@@ -93,19 +93,3 @@ internal object GoogleImagesHandoff {
     private val GTIN_PATTERN = Regex("[0-9]{8}|[0-9]{12}|[0-9]{13}|[0-9]{14}")
     private val WHITESPACE = Regex("\\s+")
 }
-
-/** Explicitly isolated sample identity for layout validation while live Search is blocked. */
-internal object ValuePilotNextLayoutFixture {
-    const val IDENTITY_KEY = "debug-only:layout-fixture:milk-1l"
-
-    val match = PracticalShoppingSearchIdentityPresentation.Match(
-        displayName = "Leche entera",
-        brand = null,
-        matchLabel = "MUESTRA DE DISEÑO",
-        packageQuantityLabel = "1 L",
-        sourceLabel = null,
-        identityKey = IDENTITY_KEY,
-        gtin = null,
-        qualifiedOffers = emptyList()
-    )
-}

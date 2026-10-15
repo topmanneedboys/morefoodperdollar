@@ -242,7 +242,6 @@ internal fun ValuePilotNextApp(
         )
     }
     var selectedIdentityKey by rememberSaveable { mutableStateOf(initialSelectedIdentityKey) }
-    var showDesignFixture by rememberSaveable { mutableStateOf(false) }
     var selectedMapOfferKey by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedMapProductName by rememberSaveable { mutableStateOf<String?>(null) }
     var query by rememberSaveable { mutableStateOf(initialQuery ?: ui.query) }
@@ -496,17 +495,13 @@ internal fun ValuePilotNextApp(
                                 NextDestination.SEARCH -> ValuePilotSearchScreen(
                                     query = query,
                                     state = ui.search,
-                                    showDesignFixture = showDesignFixture,
                                     onQueryChanged = { updated ->
-                                        showDesignFixture = false
                                         onQueryChanged(updated)
                                     },
                                     onSubmit = {
-                                        showDesignFixture = false
                                         submitSearch()
                                     },
                                     onClarificationSelected = { refinedQuery ->
-                                        showDesignFixture = false
                                         query = refinedQuery
                                         restoreSubmittedSearch = false
                                         journey.queryChanged(refinedQuery)
@@ -531,24 +526,16 @@ internal fun ValuePilotNextApp(
                                         selectedIdentityKey = match.identityKey
                                         navigate(NextDestination.PRODUCT_DETAIL)
                                     },
-                                    onOpenGoogleImages = onOpenGoogleImages,
-                                    onShowDesignFixture = { showDesignFixture = true }
+                                    onOpenGoogleImages = onOpenGoogleImages
                                 )
 
                                 NextDestination.PRODUCT_DETAIL -> {
-                                    val isDesignFixture =
-                                        selectedIdentityKey == ValuePilotNextLayoutFixture.IDENTITY_KEY
-                                    val match = if (isDesignFixture) {
-                                        ValuePilotNextLayoutFixture.match
-                                    } else {
-                                        ui.search.presentation?.matches
-                                            ?.firstOrNull { it.identityKey == selectedIdentityKey }
-                                    }
+                                    val match = ui.search.presentation?.matches
+                                        ?.firstOrNull { it.identityKey == selectedIdentityKey }
                                     ValuePilotProductDetailScreen(
                                         match = match,
                                         isSearchLoading = ui.search.mode ==
                                             com.valuepilot.app.ArgentinaLiveSearchSurfaceMode.LOADING,
-                                        isDesignFixture = isDesignFixture,
                                         areaLabel = ui.search.areaLabel,
                                         onAddToBasket = { selected ->
                                             when (journey.addSearchMatch(selected)) {

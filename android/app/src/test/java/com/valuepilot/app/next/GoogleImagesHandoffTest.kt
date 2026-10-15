@@ -100,11 +100,4 @@ class GoogleImagesHandoffTest {
         assertNull(GoogleImagesHandoff.urlForQuery(" "))
     }
 
-    @Test
-    fun layoutFixtureHasNoPriceSourceOrBasketAuthority() {
-        assertEquals(ValuePilotNextLayoutFixture.IDENTITY_KEY, ValuePilotNextLayoutFixture.match.identityKey)
-        assertNull(ValuePilotNextLayoutFixture.match.sourceLabel)
-        assertTrue(ValuePilotNextLayoutFixture.match.qualifiedOffers.isEmpty())
-        assertEquals("MUESTRA DE DISEÑO", ValuePilotNextLayoutFixture.match.matchLabel)
-    }
 }
