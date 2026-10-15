@@ -1,5 +1,10 @@
 # Copy this prompt into the Luna coding agent
 
+> Superseded as the next-run prompt after foundation commit `4127bd22`.
+> Use [LUNA_COVERAGE_COMPLETION_PROMPT.md](LUNA_COVERAGE_COMPLETION_PROMPT.md)
+> for coverage expansion and remaining integration. This original brief is kept
+> as history; do not follow its final instruction to restart from stage A.
+
 Implement ValuePilot's catalog-wide bilingual product discovery system according
 to the engineering specification already prepared in this repository.
 

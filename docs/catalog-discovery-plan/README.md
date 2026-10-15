@@ -1,5 +1,22 @@
 # Catalog-wide bilingual discovery: implementation handoff
 
+## Current continuation prompt
+
+Use [LUNA_COVERAGE_COMPLETION_PROMPT.md](LUNA_COVERAGE_COMPLETION_PROMPT.md) for
+the next implementation run. It was prepared after inspecting `4127bd22`, the
+discovery foundation commit, and targets the remaining catalog coverage and
+working clarification integration. It includes specific code gaps, all-record
+review steps, measurable coverage/accuracy gates and resumable delivery rules.
+The 95%+ coverage goals in that prompt are targets, not verified results.
+
+Read it together with [ENGINEERING_SPEC.md](ENGINEERING_SPEC.md) and the current
+[implementation ledger](IMPLEMENTATION_PROGRESS.md). Continue from actual latest
+HEAD. The original prompt below remains historical context; its instruction to
+start from stage A is superseded. No application code or coverage results were
+changed by the preparation of this continuation prompt.
+
+## Original planning handoff
+
 Prepared 2026-10-15 against source HEAD `4b3145f3`, branch
 `work/valuepilot-stage2-premium-shopping`. This is a design and implementation
 handoff, not a claim that the new discovery system is installed or complete.
