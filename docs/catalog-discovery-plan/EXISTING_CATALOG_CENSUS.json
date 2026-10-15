@@ -1,0 +1,232 @@
+{
+  "auditDate": "2026-10-15",
+  "baselineCommit": "4b3145f3",
+  "distinctAlphabeticTokensInTaxonomyNameSamples": 26762,
+  "distinctProviderProductIds": 78865,
+  "existingDepartmentCoverageStatus": {
+    "CLASSIFIED": 52363,
+    "REVIEW_REQUIRED": 26502
+  },
+  "existingFamilies": {
+    "apple": 361,
+    "avocado": 35,
+    "beans": 113,
+    "beef": 423,
+    "bread": 971,
+    "butter": 167,
+    "carrot": 78,
+    "cereal": 247,
+    "cheese": 1572,
+    "chicken": 524,
+    "chocolate": 1098,
+    "coconut": 348,
+    "coffee": 512,
+    "egg": 380,
+    "lychee": 3,
+    "milk": 1067,
+    "orange": 565,
+    "peach": 232,
+    "pineapple": 108,
+    "rice": 580,
+    "shampoo": 604,
+    "soap": 672,
+    "soft_drink": 387,
+    "strawberry": 507,
+    "sugar": 264,
+    "tea": 451,
+    "toilet_paper": 80,
+    "tomato": 327,
+    "yerba_mate": 438
+  },
+  "existingFamilyObservedForms": {
+    "apple": {
+      "unspecified": 361
+    },
+    "avocado": {
+      "unspecified": 35
+    },
+    "beans": {
+      "unspecified": 113
+    },
+    "beef": {
+      "unspecified": 423
+    },
+    "bread": {
+      "unspecified": 971
+    },
+    "butter": {
+      "unspecified": 167
+    },
+    "carrot": {
+      "cosmetics": 3,
+      "dessert": 2,
+      "drink": 4,
+      "unspecified": 64,
+      "vegetable": 6
+    },
+    "cereal": {
+      "unspecified": 247
+    },
+    "cheese": {
+      "unspecified": 1572
+    },
+    "chicken": {
+      "unspecified": 524
+    },
+    "chocolate": {
+      "unspecified": 1098
+    },
+    "coconut": {
+      "unspecified": 348
+    },
+    "coffee": {
+      "unspecified": 512
+    },
+    "egg": {
+      "unspecified": 380
+    },
+    "lychee": {
+      "fresh": 1,
+      "unspecified": 2
+    },
+    "milk": {
+      "unspecified": 1067
+    },
+    "orange": {
+      "unspecified": 565
+    },
+    "peach": {
+      "unspecified": 232
+    },
+    "pineapple": {
+      "unspecified": 108
+    },
+    "rice": {
+      "dessert": 158,
+      "flour": 8,
+      "grain": 126,
+      "unspecified": 373
+    },
+    "shampoo": {
+      "unspecified": 604
+    },
+    "soap": {
+      "unspecified": 672
+    },
+    "soft_drink": {
+      "unspecified": 387
+    },
+    "strawberry": {
+      "unspecified": 507
+    },
+    "sugar": {
+      "unspecified": 264
+    },
+    "tea": {
+      "unspecified": 451
+    },
+    "toilet_paper": {
+      "unspecified": 80
+    },
+    "tomato": {
+      "unspecified": 327
+    },
+    "yerba_mate": {
+      "drink": 3,
+      "extract": 8,
+      "loose_leaves": 438,
+      "tea_bags": 45
+    }
+  },
+  "existingForms": {
+    "alcohol": 3669,
+    "biscuit": 1130,
+    "canned": 537,
+    "cleaning": 837,
+    "cosmetics": 1108,
+    "dessert": 1946,
+    "drink": 1079,
+    "flour": 187,
+    "fresh": 486,
+    "frozen": 300,
+    "grain": 439,
+    "liquid": 529,
+    "loose_leaves": 576,
+    "pasta": 882,
+    "powder": 565,
+    "supplement": 148,
+    "tea_bags": 258,
+    "whole_egg": 5
+  },
+  "existingPrimaryDepartments": {
+    "baby_pet": 1015,
+    "beverages": 6388,
+    "clothing": 5157,
+    "condiments": 2240,
+    "dairy": 3189,
+    "electronics": 2697,
+    "fresh_produce": 4419,
+    "garden_outdoor": 407,
+    "health_supplements": 67,
+    "home_goods": 5984,
+    "household_cleaning": 2588,
+    "meat_seafood": 3012,
+    "personal_care": 3070,
+    "prepared_food": 1371,
+    "snacks_sweets": 4220,
+    "sports_luggage": 558,
+    "staples": 3179,
+    "stationery": 858,
+    "tools_hardware": 763,
+    "toys_games": 1181
+  },
+  "identityRows": {
+    "records": 134337,
+    "withEnglishAlias": 22294,
+    "withFamilyAssignment": 23333,
+    "withReplacementCharacterInSourceNames": 0,
+    "withSpanishAlias": 77977,
+    "withoutAnyAlias": 55722
+  },
+  "inputs": [
+    {
+      "bytes": 5010398,
+      "path": "local-provider-data/product-identities-153e9d9f7ab4b87e72c16aebebc69c6f9f90fca681cd1075d625244e2e31bc2c.jsonl.gz",
+      "sha256": "85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6"
+    },
+    {
+      "bytes": 3453939,
+      "path": "local-provider-data/product-taxonomy-153e9d9f7ab4b87e72c16aebebc69c6f9f90fca681cd1075d625244e2e31bc2c.jsonl.gz",
+      "sha256": "e6547981cea1b3603f79cab1c141d1206c78071c4e10f1e9e1a39f01a84b0814"
+    }
+  ],
+  "integrity": {
+    "allIdentityRowsMapped": true,
+    "missingProviderTaxonomyRecords": 0,
+    "orphanTaxonomyIdentityKeys": 0,
+    "providerMappingMismatches": 0,
+    "unmappedIdentityKeys": 0
+  },
+  "limitations": [
+    "Counts describe existing rules, not independently verified semantic correctness.",
+    "An English alias can be broad; its presence does not prove complete English search coverage.",
+    "CLASSIFIED currently means primary department assigned, not complete type/role/relationship coverage.",
+    "A provider ID is the current aggregation key, not proof of a distinct worldwide SKU or valid GTIN.",
+    "Missing alias does not imply a source-name query cannot match.",
+    "Raw products and sample names are deliberately not included in this report."
+  ],
+  "scope": "Full structural census of the existing derived 2026-10-08 artifacts; not a new semantic classification or current offer inventory",
+  "sourceZipSha256": "153e9d9f7ab4b87e72c16aebebc69c6f9f90fca681cd1075d625244e2e31bc2c",
+  "taxonomyRows": {
+    "records": 78865,
+    "withEnglishAliasOnAnyLinkedIdentity": 11808,
+    "withMultipleDepartmentCandidates": 11159,
+    "withMultipleFamilies": 907,
+    "withMultipleObservedNames": 20320,
+    "withReplacementCharacterInTaxonomyLabels": 0,
+    "withoutEnglishAliasOnAnyLinkedIdentity": 67057,
+    "withoutFamily": 66694,
+    "withoutFamilyAndForm": 57087,
+    "withoutForm": 65267
+  }
+}
