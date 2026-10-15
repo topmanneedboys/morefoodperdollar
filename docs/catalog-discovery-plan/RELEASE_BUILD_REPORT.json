@@ -1,6 +1,6 @@
 {
   "schemaVersion": "valuepilot-catalog-discovery-v2",
-  "rulesVersion": "valuepilot-catalog-discovery-rules-v1",
+  "rulesVersion": "valuepilot-catalog-discovery-rules-v2",
   "source": {
     "releaseId": "2026-10-08-identity-release",
     "artifact": "local-provider-data/product-identities-153e9d9f7ab4b87e72c16aebebc69c6f9f90fca681cd1075d625244e2e31bc2c.jsonl.gz",
@@ -9,22 +9,59 @@
   "counts": {
     "providerProducts": 78865,
     "identityRecords": 134337,
-    "indexedTokens": 36386,
-    "concepts": 80,
-    "assertions": 131164
+    "indexedTokens": 36423,
+    "concepts": 155,
+    "assertions": 164725
   },
   "coverage": {
     "IDENTITY_VISITED": 134337,
-    "TYPE_RESOLVED": 23966,
-    "TYPE_UNRESOLVED": 110371,
-    "DERIVED_ONLY": 1157,
-    "NO_FORM": 132693
+    "TYPE_RESOLVED": 46753,
+    "TYPE_UNRESOLVED": 87584,
+    "TYPE_OR_DEPARTMENT_RESOLVED": 87135,
+    "DEPARTMENT_RESOLVED": 85249,
+    "ROLE_RESOLVED": 48305,
+    "DERIVED_ONLY": 1552,
+    "NO_FORM": 127794
+  },
+  "providerGroups": {
+    "groups": 78865,
+    "fullyTypeResolved": 18775,
+    "partlyTypeResolved": 6467,
+    "unresolvedType": 53623,
+    "fullyDepartmentResolved": 43511,
+    "partlyDepartmentResolved": 8862,
+    "fullyTypeOrDepartmentResolved": 44392,
+    "partlyTypeOrDepartmentResolved": 8670,
+    "unresolvedTypeAndDepartment": 25803
   },
   "bilingual": {
-    "ES_AVAILABLE": 79277,
-    "EN_AVAILABLE": 25123,
-    "MISSING_ES": 55060,
-    "MISSING_EN": 109214
+    "ES_AVAILABLE": 109341,
+    "EN_AVAILABLE": 87216,
+    "MISSING_ES": 24996,
+    "MISSING_EN": 47121,
+    "definition": "Availability counts include reviewed family aliases, identity aliases, and accepted department paths. They are retrieval-path proxies, not proof that every identity has a reviewed translation."
+  },
+  "departments": {
+    "beverages": 15947,
+    "snacks_sweets": 10019,
+    "home_goods": 8744,
+    "staples": 8452,
+    "fresh_produce": 7087,
+    "personal_care": 7087,
+    "condiments": 6578,
+    "dairy": 6356,
+    "clothing": 6039,
+    "meat_seafood": 4731,
+    "household_cleaning": 4710,
+    "baby_pet": 3760,
+    "electronics": 3760,
+    "prepared_food": 3182,
+    "tools_hardware": 1730,
+    "stationery": 1425,
+    "toys_games": 1411,
+    "garden_outdoor": 748,
+    "sports_luggage": 721,
+    "health_supplements": 399
   },
   "safety": {
     "prices": false,
@@ -36,12 +73,14 @@
   },
   "output": {
     "artifact": "local-provider-data/product-discovery-v2.sqlite",
-    "sha256": "db54517da5fd74e681117906afa8369d1cffd7b8706dea700a8874b4ee84c95b",
+    "sha256": "d67f5b702c75f78b53c1b60899e18463215655196ac9eeaf0f6db213bbea951f",
     "gitTracked": false
   },
   "notes": [
-    "This is an aggregate structural accounting checkpoint, not a promoted production artifact.",
-    "The working tree adds conservative typed-context postings after this local build; rebuild the ignored sidecar before any v2 deployment.",
-    "TYPE_UNRESOLVED identities remain literal-searchable and are not semantic completion."
+    "This is an aggregate structural accounting checkpoint for the local ignored sidecar; it is not a promoted production artifact.",
+    "The v2 dictionary combines the reviewed legacy family vocabulary with the versioned discovery_family_rules.json batch and replays the pinned identity release.",
+    "TYPE_UNRESOLVED identities remain literal-searchable and are not semantic completion. Department resolution is reported separately and does not replace useful type review.",
+    "Provider-group completeness is stricter than identity coverage: every identity in a provider group must satisfy the metric before the group is counted as fully covered.",
+    "No prices, offers, stock, availability, credentials, backend security, or production activation were changed."
   ]
 }

@@ -10,8 +10,8 @@ saved-data, release, and security paths remain unchanged.
 
 - Branch: `work/valuepilot-stage2-premium-shopping`
 - Starting handoff checkpoint: `6ce81d0d`
-- Current verified checkpoint: this implementation commit (Git HEAD is reported with the completion record).
-- Discovery rules: `valuepilot-catalog-discovery-rules-v1`
+- Current verified checkpoint: pending the integrated commit for the v2 reviewed rule batch and full-corpus replay.
+- Discovery rules: `valuepilot-catalog-discovery-rules-v2`
 - Sidecar schema: `valuepilot-catalog-discovery-v2`
 - Additive HTTP contract: `valuepilot-discovery-http-v2`
 - Current state: deterministic identity index, strict query/facet engine, and
@@ -38,20 +38,34 @@ Unknown meaning is not filled by a guessed translation. New source rows use the
 same deterministic rules on the next rebuild. Rule changes require a new rules
 version and replay of affected identities.
 
-The completed local release build reported:
+The current local release build reported:
 
 - `providerProducts`: 78,865
 - `identityRecords`: 134,337
-- `indexedTokens`: 36,386
-- `concepts`: 80
-- `assertions`: 131,164
-- `TYPE_RESOLVED`: 23,966
-- `TYPE_UNRESOLVED`: 110,371
-- `NO_FORM`: 132,693
-- English query path available: 25,123 identities
-- Spanish query path available: 79,277 identities
+- `indexedTokens`: 36,423
+- `concepts`: 155
+- `assertions`: 164,725
+- `TYPE_RESOLVED`: 46,753
+- `TYPE_UNRESOLVED`: 87,584
+- `TYPE_OR_DEPARTMENT_RESOLVED`: 87,135
+- `DEPARTMENT_RESOLVED`: 85,249
+- `ROLE_RESOLVED`: 48,305
+- `DERIVED_ONLY`: 1,552
+- `NO_FORM`: 127,794
+- English retrieval-path proxy: 87,216 identities
+- Spanish retrieval-path proxy: 109,341 identities
+- fully type-resolved provider groups: 18,775; partly resolved: 6,467; unresolved: 53,623
+- fully type-or-department-resolved provider groups: 44,392; partly resolved: 8,670; unresolved: 25,803
 - source SHA-256: `85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6`
-- ignored sidecar SHA-256: `db54517da5fd74e681117906afa8369d1cffd7b8706dea700a8874b4ee84c95b`
+- ignored sidecar SHA-256: `d67f5b702c75f78b53c1b60899e18463215655196ac9eeaf0f6db213bbea951f`
+
+The v2 replay combines the existing reviewed family dictionary with
+`tools/data/discovery_family_rules.json`. It adds evidence-backed vocabulary for
+common Argentina grocery, personal-care, household, apparel, electronics, pet,
+and toy families while preserving the older high-risk family rules and their
+derived-context safeguards. The bilingual counts above include accepted
+department paths; they are retrieval-path proxies, not proof that every name has
+a reviewed English translation.
 
 The report and sidecar stay in `local-provider-data`, which is ignored by Git.
 Those numbers are engineering coverage measurements. They do not mean that
@@ -87,6 +101,11 @@ Pending after the local full build:
 - incremental refresh parity against a complete rebuild;
 - integrated Android unit tests/lint and authorized Motorola validation;
 - semantic review of unresolved records and source evidence gaps.
+
+The current build has not been promoted to the backend or preview runtime. The
+remaining 87,584 identity-level type-unresolved rows and 53,623 provider groups
+without full type coverage are still open semantic work; literal reachability and
+department coverage do not close that gate.
 
 The semantic gate remains open until every unresolved record has reviewed
 evidence or is explicitly documented as unresolved. Engineering completion and

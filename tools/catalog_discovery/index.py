@@ -31,7 +31,7 @@ from tools.product_taxonomy import DEPARTMENT_RULES, classify_name
 
 
 BUILD_SCHEMA_VERSION = "valuepilot-catalog-discovery-v2"
-RULES_VERSION = "valuepilot-catalog-discovery-rules-v1"
+RULES_VERSION = "valuepilot-catalog-discovery-rules-v2"
 MAX_QUERY_CHARS = 256
 MAX_PAGE_SIZE = 50
 MAX_FACET_PAGE_SIZE = 30
@@ -368,6 +368,7 @@ def _schema(connection: sqlite3.Connection) -> None:
             identity_key TEXT PRIMARY KEY REFERENCES identity(identity_key),
             type_status TEXT NOT NULL,
             role_status TEXT NOT NULL,
+            department_status TEXT NOT NULL,
             bilingual_status TEXT NOT NULL,
             reason_codes TEXT NOT NULL
         );
@@ -600,10 +601,9 @@ def _typed_context_relations(name: str, family: str, role: str) -> tuple[tuple[s
 
 def _family_candidates(row: Mapping[str, Any], identity_key: str) -> list[Mapping[str, Any]]:
     families = row.get("familyCandidates")
+    provided: list[Mapping[str, Any]] = []
     if isinstance(families, Sequence) and not isinstance(families, (str, bytes)):
-        values = [value for value in families if isinstance(value, Mapping)]
-        if values:
-            return values
+        provided = [value for value in families if isinstance(value, Mapping)]
     try:
         derived = derive_identity_record({
             "productEvidenceKey": identity_key,
@@ -613,8 +613,33 @@ def _family_candidates(row: Mapping[str, Any], identity_key: str) -> list[Mappin
             "quantity": row.get("quantity"),
         })
     except (TypeError, ValueError):
-        return []
-    return [value for value in derived.get("familyCandidates", ()) if isinstance(value, Mapping)]
+        return provided
+    # Re-run the current dictionary even when the source already contains an
+    # older family list.  Otherwise a new reviewed rule can never reach rows
+    # whose previous lexicon happened to contain a different family.
+    merged: dict[tuple[str, str, tuple[str, ...], tuple[str, ...]], Mapping[str, Any]] = {}
+    provided_roles = {
+        str(value.get("family")).strip(): str(value.get("role")).strip()
+        for value in provided
+        if isinstance(value.get("family"), str) and isinstance(value.get("role"), str)
+    }
+    for source_name, values in (("provided", provided), ("derived", derived.get("familyCandidates", ()) )):
+        for value in values:
+            if not isinstance(value, Mapping):
+                continue
+            family = str(value.get("family") or "").strip()
+            role = str(value.get("role") or "").strip()
+            # A source release may carry a reviewed derived/context assertion
+            # that is safer than a bare token match from the newer dictionary.
+            # Preserve that negative context instead of turning a shampoo or
+            # drink mention into the food family during a refresh.
+            if source_name == "derived" and role == "DIRECT" and provided_roles.get(family) == "DERIVED":
+                continue
+            terms = tuple(sorted(str(item) for item in value.get("matchedTerms", ()) if str(item).strip()))
+            forms = tuple(sorted(str(item) for item in value.get("observedForms", ()) if str(item).strip()))
+            if family and role:
+                merged[(family, role, terms, forms)] = value
+    return list(merged.values())
 
 
 def _insert_identity(
@@ -712,23 +737,36 @@ def _insert_identity(
         _insert_posting(connection, concept_id, "IS_A", concept_id, identity_key)
         semantic_assertions.append(_insert_assertion(connection, identity_key, "IS_A", concept_id, name_evidence_id, "department-rules-v1", "ACCEPTED", " ".join(department.get("matchedTerms", ())) or name))
 
+    department_keys = {
+        str(value.get("key")).strip()
+        for value in classified.get("departmentCandidates", ())
+        if isinstance(value, Mapping) and isinstance(value.get("key"), str) and str(value.get("key")).strip()
+    }
     if direct_families:
         coverage_counts["TYPE_RESOLVED"] += 1
     else:
         coverage_counts["TYPE_UNRESOLVED"] += 1
+    coverage_counts["DEPARTMENT_RESOLVED"] += int(bool(department_keys))
+    coverage_counts["TYPE_OR_DEPARTMENT_RESOLVED"] += int(bool(direct_families or department_keys))
+    coverage_counts["ROLE_RESOLVED"] += int(bool(direct_families or derived_families))
     coverage_counts["IDENTITY_VISITED"] += 1
     coverage_counts["DERIVED_ONLY"] += int(not direct_families and bool(derived_families))
     coverage_counts["NO_FORM"] += int(not any(value.startswith("form:") for value in [row[0] for row in connection.execute("SELECT predicate_id FROM posting WHERE identity_key = ?", (identity_key,))]))
-    has_es = bool(connection.execute("SELECT 1 FROM identity_alias WHERE identity_key = ? AND language = 'es' LIMIT 1", (identity_key,)).fetchone()) or bool(family_keys)
-    has_en = bool(connection.execute("SELECT 1 FROM identity_alias WHERE identity_key = ? AND language = 'en' LIMIT 1", (identity_key,)).fetchone()) or bool(family_keys)
+    has_es = bool(connection.execute("SELECT 1 FROM identity_alias WHERE identity_key = ? AND language = 'es' LIMIT 1", (identity_key,)).fetchone()) or bool(family_keys) or bool(department_keys)
+    has_en = bool(connection.execute("SELECT 1 FROM identity_alias WHERE identity_key = ? AND language = 'en' LIMIT 1", (identity_key,)).fetchone()) or bool(family_keys) or bool(department_keys)
     bilingual_counts["ES_AVAILABLE"] += int(has_es)
     bilingual_counts["EN_AVAILABLE"] += int(has_en)
     bilingual_counts["MISSING_ES"] += int(not has_es)
     bilingual_counts["MISSING_EN"] += int(not has_en)
     role_status = "RESOLVED" if direct_families or derived_families else "UNRESOLVED"
+    department_status = "RESOLVED" if department_keys else "UNRESOLVED"
     reasons = []
     if not direct_families and not derived_families:
         reasons.append("NO_ACCEPTED_TYPE")
+    if not department_keys:
+        reasons.append("NO_ACCEPTED_DEPARTMENT")
+    if derived_families and not direct_families:
+        reasons.append("DERIVED_ONLY")
     if not has_es:
         reasons.append("NO_ES_QUERY_PATH")
     if not has_en:
@@ -736,8 +774,8 @@ def _insert_identity(
     if not semantic_assertions:
         reasons.append("LITERAL_ONLY")
     connection.execute(
-        "INSERT OR REPLACE INTO coverage(identity_key, type_status, role_status, bilingual_status, reason_codes) VALUES (?, ?, ?, ?, ?)",
-        (identity_key, "RESOLVED" if direct_families else "UNRESOLVED", role_status, "COMPLETE" if has_es and has_en else "PARTIAL", json.dumps(sorted(reasons), separators=(",", ":"))),
+        "INSERT OR REPLACE INTO coverage(identity_key, type_status, role_status, department_status, bilingual_status, reason_codes) VALUES (?, ?, ?, ?, ?, ?)",
+        (identity_key, "RESOLVED" if direct_families else "UNRESOLVED", role_status, department_status, "COMPLETE" if has_es and has_en else "PARTIAL", json.dumps(sorted(reasons), separators=(",", ":"))),
     )
     assertion_digest = hashlib.sha256("|".join(sorted(semantic_assertions)).encode()).hexdigest()
     connection.execute(
@@ -946,7 +984,17 @@ class DiscoveryIndex:
             raise DiscoveryError(f"unknown predicate: {predicate_id}")
         return row
 
-    def _facet_choices(self, base_keys: set[str], predicates: Sequence[str], language: str, facet_page_size: int, facet_cursor: str | None) -> tuple[dict[str, Any] | None, str | None]:
+    def _facet_choices(
+        self,
+        base_keys: set[str],
+        predicates: Sequence[str],
+        language: str,
+        facet_page_size: int,
+        facet_cursor: str | None,
+        *,
+        query: str,
+        selections: Sequence[str],
+    ) -> tuple[dict[str, Any] | None, str | None]:
         if not predicates or not base_keys:
             return None, None
         base = predicates[0]
@@ -972,6 +1020,8 @@ class DiscoveryIndex:
             dimension_id = "form"
         choices: list[dict[str, Any]] = []
         for predicate in sorted(candidate_predicates):
+            if predicate in predicates or predicate in selections:
+                continue
             row = self._predicate_row(predicate)
             keys = _predicate_identity_keys(self.connection, predicate) & base_keys
             if not keys:
@@ -986,20 +1036,20 @@ class DiscoveryIndex:
                 "productCount": int(count),
                 "sourceIdentityCount": len(keys),
                 "countUnit": "DISTINCT_PROVIDER_PRODUCT",
-                "hasChildren": bool(self.connection.execute("SELECT 1 FROM parent WHERE child_concept = ? LIMIT 1", (predicate,)).fetchone()),
+                "hasChildren": bool(self.connection.execute("SELECT 1 FROM parent WHERE parent_concept = ? LIMIT 1", (predicate,)).fetchone()),
             })
         choices.sort(key=lambda item: (-item["productCount"], item["id"]))
         offset = 0
         if facet_cursor:
             cursor = self._decode_cursor(facet_cursor)
-            if cursor.get("kind") != "facet" or cursor.get("fingerprint") != self._fingerprint_for(base, language, ()):
+            if cursor.get("kind") != "facet" or cursor.get("fingerprint") != self._fingerprint_for(query, language, selections):
                 raise DiscoveryError("facet cursor does not match this query")
             offset = int(cursor.get("offset", 0))
         page = choices[offset:offset + facet_page_size]
         next_cursor = None
         if offset + facet_page_size < len(choices):
-            next_cursor = self._encode_cursor({"kind": "facet", "offset": offset + facet_page_size, "fingerprint": self._fingerprint_for(base, language, ())})
-        if len(page) < 2:
+            next_cursor = self._encode_cursor({"kind": "facet", "offset": offset + facet_page_size, "fingerprint": self._fingerprint_for(query, language, selections)})
+        if len(choices) < 2:
             return None, next_cursor
         return {"dimensionId": dimension_id, "choices": page, "hasMore": next_cursor is not None, "nextCursor": next_cursor}, next_cursor
 
@@ -1021,9 +1071,19 @@ class DiscoveryIndex:
             raise DiscoveryError("cursor is invalid")
         return parsed
 
-    @staticmethod
-    def _fingerprint(query: str, language: str, selections: Sequence[str]) -> str:
-        return hashlib.sha256(_canonical({"query": _norm(query), "language": language, "selections": list(selections)}).encode()).hexdigest()
+    def _fingerprint(self, query: str, language: str, selections: Sequence[str]) -> str:
+        return hashlib.sha256(
+            _canonical(
+                {
+                    "query": _norm(query),
+                    "language": language,
+                    "selections": list(selections),
+                    "releaseId": self.metadata["release_id"],
+                    "sourceSha256": self.metadata["source_sha256"],
+                    "rulesVersion": self.metadata["rules_version"],
+                }
+            ).encode()
+        ).hexdigest()
 
     def _fingerprint_for(self, query: str, language: str, selections: Sequence[str]) -> str:
         return self._fingerprint(query, language, selections)
@@ -1070,8 +1130,16 @@ class DiscoveryIndex:
         if candidates:
             placeholders = ",".join("?" for _ in candidates)
             product_count = int(self.connection.execute(f"SELECT COUNT(DISTINCT provider_key) FROM identity WHERE identity_key IN ({placeholders})", tuple(candidates)).fetchone()[0])
-        clarification, _ = self._facet_choices(candidates, predicates, request.language, request.facet_page_size, request.facet_cursor)
-        status = "NEEDS_CLARIFICATION" if clarification is not None and not request.selections else ("READY" if candidates else "NO_MATCHES")
+        clarification, _ = self._facet_choices(
+            candidates,
+            predicates,
+            request.language,
+            request.facet_page_size,
+            request.facet_cursor,
+            query=request.query,
+            selections=request.selections,
+        )
+        status = "NEEDS_CLARIFICATION" if clarification is not None else ("READY" if candidates else "NO_MATCHES")
         matches = [
             {"identityKey": row["identity_key"], "providerProductId": row["provider_key"], "displayName": row["display_name"], "brand": row["brand"]}
             for row in visible

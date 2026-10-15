@@ -85,6 +85,30 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
                 self.assertEqual(empty["total"]["productCount"], 0)
                 self.assertEqual(empty["matches"], [])
 
+    def test_final_facet_page_with_one_choice_remains_reachable(self) -> None:
+        rows = [
+            _row(1, "ARROZ LARGO MARCA X 1 KG", form="grain"),
+            _row(2, "GALLETAS DE ARROZ MARCA X 100 G", form="dessert"),
+            _row(3, "BEBIDA DE ARROZ MARCA X 1 L", form="drink"),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._build(directory, rows)
+            with DiscoveryIndex(path) as index:
+                first = index.query(
+                    DiscoveryQuery("rice", language="en", facet_page_size=2)
+                ).to_dict()
+                self.assertIsNotNone(first["clarification"]["nextCursor"])
+                second = index.query(
+                    DiscoveryQuery(
+                        "rice",
+                        language="en",
+                        facet_page_size=2,
+                        facet_cursor=first["clarification"]["nextCursor"],
+                    )
+                ).to_dict()
+                self.assertEqual(len(second["clarification"]["choices"]), 1)
+                self.assertIsNone(second["clarification"]["nextCursor"])
+
     def test_bilingual_aliases_resolve_to_the_same_predicate_set(self) -> None:
         rows = [_row(1, "ARROZ LARGO MARCA X 1 KG"), _row(2, "RICE LONG GRAIN BRAND X 1 KG")]
         with tempfile.TemporaryDirectory() as directory:

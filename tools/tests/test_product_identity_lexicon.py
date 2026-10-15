@@ -45,6 +45,22 @@ class ProductIdentityLexiconTests(unittest.TestCase):
         self.assertIn(("manzana", "es"), aliases)
         self.assertIn(("apple", "en"), aliases)
 
+    def test_catalog_rule_data_covers_common_terms_without_cross_family_guessing(self) -> None:
+        wine = derive_identity_record(_row("p:wine", "VINO TINTO MALBEC X 750 CC"))
+        self.assertIn(
+            ("wine", "DIRECT"),
+            {(item["family"], item["role"]) for item in wine["familyCandidates"]},
+        )
+        toothpaste = derive_identity_record(_row("p:toothpaste", "CREMA DENTAL COLGATE X 90 G"))
+        self.assertIn(
+            ("toothpaste", "DIRECT"),
+            {(item["family"], item["role"]) for item in toothpaste["familyCandidates"]},
+        )
+        pasta_dental = derive_identity_record(_row("p:pasta-dental", "PASTA DENTAL COLGATE"))
+        roles = {(item["family"], item["role"]) for item in pasta_dental["familyCandidates"]}
+        self.assertIn(("toothpaste", "DIRECT"), roles)
+        self.assertNotIn(("pasta", "DIRECT"), roles)
+
     def test_mango_family_is_available_for_observed_forms(self) -> None:
         value = derive_identity_record(_row("p:mango-cookie", "GALLETAS DE MANGO 200 G"))
         mango = next(item for item in value["familyCandidates"] if item["family"] == "mango")

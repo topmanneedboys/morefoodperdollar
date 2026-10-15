@@ -19,6 +19,7 @@ import argparse
 import gzip
 import hashlib
 import json
+import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -274,22 +275,97 @@ def _generic_family_rules() -> tuple[FamilyRule, ...]:
     observed-name family with no invented form choices.
     """
 
-    path = Path(__file__).with_name("data") / "argentina_input_aliases.json"
+    # The catalog-wide discovery rules are kept as data so a vocabulary review
+    # can be audited and extended without adding another special-case branch to
+    # the classifier.  The older aliases file remains a compatible fallback for
+    # local trees that still carry it.
+    path = Path(__file__).with_name("data") / "discovery_family_rules.json"
+    legacy_path = Path(__file__).with_name("data") / "argentina_input_aliases.json"
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-        return ()
-    aliases = data.get("aliases", {})
+        try:
+            data = json.loads(legacy_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            return ()
+
+    explicit_rules: list[FamilyRule] = []
+    explicit = data.get("families", {})
+    if isinstance(explicit, Mapping):
+        existing = {rule.key for rule in FAMILY_RULES}
+        for raw_key, raw_rule in sorted(explicit.items(), key=lambda item: str(item[0])):
+            if not isinstance(raw_key, str) or not isinstance(raw_rule, Mapping):
+                continue
+            key = normalize_text(raw_key, max_length=MAX_ALIAS_LENGTH).replace(" ", "_")
+            if not key or key in existing or not re.fullmatch(r"[a-z][a-z0-9_]{0,63}", key):
+                continue
+
+            def _values(name: str) -> tuple[str, ...]:
+                value = raw_rule.get(name, ())
+                if isinstance(value, str):
+                    value = (value,)
+                if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+                    return ()
+                return tuple(dict.fromkeys(str(item).strip() for item in value if str(item).strip()))
+
+            def _values_from_mapping(value: Mapping[str, Any], name: str) -> tuple[str, ...]:
+                raw = value.get(name, ())
+                if isinstance(raw, str):
+                    raw = (raw,)
+                if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes)):
+                    return ()
+                return tuple(dict.fromkeys(str(item).strip() for item in raw if str(item).strip()))
+
+            spanish = _values("es")
+            english = _values("en")
+            includes = _values("include") or tuple(dict.fromkeys(spanish + english))
+            excludes = tuple(
+                tuple(normalize_text(value, max_length=MAX_ALIAS_LENGTH).split())
+                for value in _values("exclude")
+                if normalize_text(value, max_length=MAX_ALIAS_LENGTH).strip()
+            )
+            raw_forms = raw_rule.get("forms", {})
+            forms: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {}
+            if isinstance(raw_forms, Mapping):
+                for raw_form, raw_form_value in sorted(raw_forms.items(), key=lambda item: str(item[0])):
+                    if not isinstance(raw_form, str) or not isinstance(raw_form_value, Mapping):
+                        continue
+                    form_key = normalize_text(raw_form, max_length=MAX_ALIAS_LENGTH).replace(" ", "_")
+                    if not form_key:
+                        continue
+                    forms[form_key] = (_values_from_mapping(raw_form_value, "es"), _values_from_mapping(raw_form_value, "en"))
+            explicit_rules.append(
+                FamilyRule(
+                    key=key,
+                    spanish_aliases=spanish,
+                    english_aliases=english,
+                    include_terms=includes,
+                    excluded_phrases=excludes,
+                    forms=forms,
+                )
+            )
+    # Keep the previously reviewed alias vocabulary too.  The new file adds
+    # broad observed families; it must not erase older fruit, dairy, cereal,
+    # and other reviewed senses just because they live in a separate artifact.
+    if "aliases" not in data:
+        try:
+            legacy_data = json.loads(legacy_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            legacy_data = {}
+    else:
+        legacy_data = data
+
+    aliases = legacy_data.get("aliases", {}) if isinstance(legacy_data, Mapping) else {}
     if not isinstance(aliases, Mapping):
-        return ()
-    product_forms = data.get("productForms", {})
+        return tuple(explicit_rules)
+    product_forms = legacy_data.get("productForms", {}) if isinstance(legacy_data, Mapping) else {}
     if not isinstance(product_forms, Mapping):
         product_forms = {}
     grouped: dict[str, list[str]] = defaultdict(list)
     for phrase, target in aliases.items():
         if isinstance(phrase, str) and isinstance(target, str) and phrase.strip() and target.strip():
             grouped[normalize_text(target)].append(phrase)
-    reviewed = {"carrot", "egg", "rice", "lychee", "yerba mate"}
+    reviewed = {"carrot", "egg", "rice", "lychee", "yerba mate"} | {rule.key for rule in explicit_rules} | {rule.key for rule in FAMILY_RULES}
     english_terms = {
         "apple", "avocado", "beans", "beef", "bread", "butter", "cheese", "chicken",
         "chocolate", "coconut", "coffee", "egg", "mango", "milk", "orange", "peach", "pineapple",
@@ -319,7 +395,7 @@ def _generic_family_rules() -> tuple[FamilyRule, ...]:
                 forms={},
             )
         )
-    return tuple(rules)
+    return tuple(explicit_rules + rules)
 
 
 # Add the broader reviewed vocabulary after the high-risk families so the
