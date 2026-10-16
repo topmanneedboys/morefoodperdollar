@@ -10,8 +10,8 @@ saved-data, release, and security paths remain unchanged.
 
 - Branch: `work/valuepilot-stage2-premium-shopping`
 - Starting handoff checkpoint: `6ce81d0d`
-- Current verified checkpoint: code commit `d44b42cabc255097bf4c7b7df04444a53db55561` (documentation checkpoint follows the verification update).
-- Discovery rules: `valuepilot-catalog-discovery-rules-v2`
+- Current verified checkpoint: code commit `32adbecf` (documentation checkpoint follows the verification update).
+- Discovery rules: `valuepilot-catalog-discovery-rules-v4`
 - Sidecar schema: `valuepilot-catalog-discovery-v2`
 - Additive HTTP contract: `valuepilot-discovery-http-v2`
 - Current state: deterministic identity index, strict query/facet engine, and
@@ -43,29 +43,31 @@ The current local release build reported:
 - `providerProducts`: 78,865
 - `identityRecords`: 134,337
 - `indexedTokens`: 36,423
-- `concepts`: 155
-- `assertions`: 164,725
-- `TYPE_RESOLVED`: 46,753
-- `TYPE_UNRESOLVED`: 87,584
-- `TYPE_OR_DEPARTMENT_RESOLVED`: 87,135
+- `concepts`: 195
+- `assertions`: 178,583
+- `TYPE_RESOLVED`: 58,973
+- `TYPE_UNRESOLVED`: 75,364
+- `TYPE_OR_DEPARTMENT_RESOLVED`: 87,462
 - `DEPARTMENT_RESOLVED`: 85,249
-- `ROLE_RESOLVED`: 48,305
-- `DERIVED_ONLY`: 1,552
+- `ROLE_RESOLVED`: 59,859
+- `DERIVED_ONLY`: 886
 - `NO_FORM`: 127,794
-- English retrieval-path proxy: 87,216 identities
-- Spanish retrieval-path proxy: 109,341 identities
-- fully type-resolved provider groups: 18,775; partly resolved: 6,467; unresolved: 53,623
-- fully type-or-department-resolved provider groups: 44,392; partly resolved: 8,670; unresolved: 25,803
+- English retrieval-path proxy: 87,530 identities
+- Spanish retrieval-path proxy: 109,490 identities
+- fully type-resolved provider groups: 25,576; partly resolved: 8,131; unresolved: 45,158
+- fully type-or-department-resolved provider groups: 44,532; partly resolved: 8,697; unresolved: 25,636
 - source SHA-256: `85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6`
-- ignored sidecar SHA-256: `d67f5b702c75f78b53c1b60899e18463215655196ac9eeaf0f6db213bbea951f`
+- ignored sidecar SHA-256: `ac36b0efec197cbc33f63c15aafeeb1f2bf607f9cc060c58ef55480ecce0a41e`
 
-The v2 replay combines the existing reviewed family dictionary with
+The v4 replay combines the existing reviewed family dictionary with
 `tools/data/discovery_family_rules.json`. It adds evidence-backed vocabulary for
 common Argentina grocery, personal-care, household, apparel, electronics, pet,
 and toy families while preserving the older high-risk family rules and their
-derived-context safeguards. The bilingual counts above include accepted
-department paths; they are retrieval-path proxies, not proof that every name has
-a reviewed English translation.
+derived-context safeguards. It also seeds identical ES/EN spellings in both
+language paths and hides derived mentions when a bare type query has no safe
+clarification facet. The bilingual counts above include accepted department
+paths; they are retrieval-path proxies, not proof that every name has a reviewed
+English translation.
 
 The report and sidecar stay in `local-provider-data`, which is ignored by Git.
 Those numbers are engineering coverage measurements. They do not mean that
@@ -98,7 +100,7 @@ Completed locally:
 
 Completed in this checkpoint:
 
-- full tools suite: 382 tests passed;
+- full tools suite: 385 tests passed;
 - backend suite: 135 tests passed;
 - Android shared-core tests, app debug unit tests, lint, and debug APK build passed;
 - debug APK SHA-256: `027736566b64f1a0e21e3fcb6f475b0a862633e06a88caa8a16d4c8166cd7a4c`.
@@ -110,7 +112,7 @@ Pending after the local full build:
 - semantic review of unresolved records and source evidence gaps.
 
 The current build has not been promoted to the backend or preview runtime. The
-remaining 87,584 identity-level type-unresolved rows and 53,623 provider groups
+remaining 75,364 identity-level type-unresolved rows and 45,158 provider groups
 without full type coverage are still open semantic work; literal reachability and
 department coverage do not close that gate.
 
