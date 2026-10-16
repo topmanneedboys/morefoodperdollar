@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "valuepilot-discovery-family-rules-v15",
+  "schemaVersion": "valuepilot-discovery-family-rules-v16",
   "families": {
     "wine": {"es":["vino"],"en":["wine"],"include":["vino","wine","malbec","cabernet","chardonnay","sauvignon","espumante","champagne","sidra","cider"],"exclude":["vinagre","vinagre de alcohol","salsa de vino"],"forms":{"red":{"es":["tinto","rosado"],"en":["red","rose"]},"white":{"es":["blanco"],"en":["white"]},"sparkling":{"es":["espumante","champagne"],"en":["sparkling","champagne"]}}},
     "beer": {"es":["cerveza"],"en":["beer"],"include":["cerveza","beer"],"forms":{"non_alcoholic":{"es":["sin alcohol"],"en":["non alcoholic"]}}},
@@ -78,6 +78,13 @@
     "glassware": {"es":["vaso","vasos"],"en":["glass","glassware"],"include":["vaso","vasos","glass","glassware"]},
     "plate": {"es":["plato","platos"],"en":["plate","plates"],"include":["plato","platos","plate","plates"]},
     "bowl": {"es":["bowl"],"en":["bowl"],"include":["bowl"],"exclude":["batidora","picador"]},
+    "coffee_maker": {"es":["cafetera"],"en":["coffee maker","coffee machine"],"include":["cafetera","coffee maker","coffee machine"]},
+    "air_fryer": {"es":["airfryer"],"en":["air fryer","airfryer"],"include":["airfryer","air fryer"]},
+    "toaster": {"es":["tostadora"],"en":["toaster"],"include":["tostadora","toaster"],"exclude":["bolsa"]},
+    "sandwich_maker": {"es":["sandwichera"],"en":["sandwich maker"],"include":["sandwichera","sandwich maker"],"exclude":["bolsa"]},
+    "juicer": {"es":["exprimidor"],"en":["juicer"],"include":["exprimidor","juicer"],"exclude":["jarra medidora"]},
+    "blender": {"es":["licuadora"],"en":["blender"],"include":["licuadora","blender"]},
+    "microwave": {"es":["microondas"],"en":["microwave"],"include":["microondas","microwave"],"exclude":["cera","depilatoria","depimiel","para microondas","p microondas","pochoclo","popcorn","rack"]},
     "pan": {"es":["sarten","sartenes"],"en":["frying pan","skillet"],"include":["sarten","sartenes","frying pan","skillet"]},
     "pot": {"es":["olla","cacerola"],"en":["pot","casserole"],"include":["olla","cacerola","pot","casserole"]},
     "lamp": {"es":["lampara","lámpara"],"en":["lamp"],"include":["lampara","lámpara","lamp"]},

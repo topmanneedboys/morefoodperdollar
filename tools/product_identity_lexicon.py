@@ -737,6 +737,8 @@ _DIRECT_FORM_KEYS = frozenset({
 _DIRECT_QUERY_FAMILIES = frozenset({
     "pork", "lamb", "turkey", "beef",
     "wafer", "chewing_gum", "raticide", "facial_cream", "bowl",
+    "coffee_maker", "air_fryer", "toaster", "sandwich_maker", "juicer",
+    "blender", "microwave",
 })
 
 

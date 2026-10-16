@@ -62,6 +62,13 @@ _FAMILY_DISCOVERY_QUERIES = {
     "chewing_gum": "chicle",
     "raticide": "raticida",
     "bowl": "bowl",
+    "coffee_maker": "cafetera",
+    "air_fryer": "airfryer",
+    "toaster": "tostadora",
+    "sandwich_maker": "sandwichera",
+    "juicer": "exprimidor",
+    "blender": "licuadora",
+    "microwave": "microondas",
 }
 
 

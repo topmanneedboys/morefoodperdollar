@@ -885,6 +885,38 @@ class SearchPackM11Tests(unittest.TestCase):
         self.assertEqual([item["productEvidenceKey"] for item in response["matches"]], ["bowl-direct"])
         self.assertIsNone(response["clarification"])
 
+    def test_service_search_uses_canonical_appliance_family_and_filters_accessory(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "name": name,
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["cafetera"],
+                "qualifiedOffers": [],
+            }
+            for index, (key, name) in enumerate((
+                ("coffee-direct", "CAFETERA DE FILTRO ATMA 1.8L"),
+                ("coffee-context", "JARRA MEDIDORA 1LT CON EXPRIMIDOR"),
+            ))
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        response = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "coffee maker",
+        })
+
+        self.assertEqual(reader.discovery_calls[0][0], "cafetera")
+        self.assertEqual([item["productEvidenceKey"] for item in response["matches"]], ["coffee-direct"])
+        self.assertIsNone(response["clarification"])
+
     def test_service_search_exposes_new_food_family_clarification_and_filters_form(self) -> None:
         manager = _StubReleaseManager()
         reader = _StubReader()

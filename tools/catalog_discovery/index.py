@@ -32,7 +32,7 @@ from tools.product_taxonomy import DEPARTMENT_RULES, classify_name
 
 
 BUILD_SCHEMA_VERSION = "valuepilot-catalog-discovery-v2"
-RULES_VERSION = "valuepilot-catalog-discovery-rules-v22"
+RULES_VERSION = "valuepilot-catalog-discovery-rules-v23"
 MAX_QUERY_CHARS = 256
 MAX_PAGE_SIZE = 50
 MAX_FACET_PAGE_SIZE = 30

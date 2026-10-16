@@ -364,6 +364,49 @@ class ProductIdentityLexiconTests(unittest.TestCase):
             ["p:direct"],
         )
 
+    def test_v22_appliance_families_keep_accessories_food_and_wax_contexts_derived(self) -> None:
+        cases = (
+            ("p:coffee", "CAFETERA DE FILTRO ATMA 1.8L", "coffee_maker", "DIRECT"),
+            ("p:air-fryer", "AIRFRYER ATMA DIGITAL 6.5L", "air_fryer", "DIRECT"),
+            ("p:toaster", "TOSTADORA ATMA 2 REBANADAS", "toaster", "DIRECT"),
+            ("p:toaster-accessory", "BOLSA ANTIADH P TOSTADORA X 2 UNI", "toaster", "DERIVED"),
+            ("p:sandwich", "SANDWICHERA BLACK DECKER WM2000S", "sandwich_maker", "DIRECT"),
+            ("p:sandwich-accessory", "BOLSA SEPARATA SANDWICHERA X12", "sandwich_maker", "DERIVED"),
+            ("p:juicer", "EXPRIMIDOR ATMA 1LTS", "juicer", "DIRECT"),
+            ("p:juicer-context", "JARRA MEDIDORA 1LT CON EXPRIMIDOR", "juicer", "DERIVED"),
+            ("p:blender", "LICUADORA BLACK DECKER 500W", "blender", "DIRECT"),
+            ("p:microwave", "MICROONDAS BGH 23L DIGITAL", "microwave", "DIRECT"),
+            ("p:wax", "CERA DEPILATORIA MICROONDAS MILLEFIORI", "microwave", "DERIVED"),
+            ("p:popcorn", "POCHOCLO PARA MICROONDAS MARCA X", "microwave", "DERIVED"),
+            ("p:rack", "RACK PARA MICROONDAS MARCA X", "microwave", "DERIVED"),
+        )
+        for key, name, family, role in cases:
+            with self.subTest(name=name):
+                match = next(
+                    item for item in derive_identity_record(_row(key, name))["familyCandidates"]
+                    if item["family"] == family
+                )
+                self.assertEqual(match["role"], role)
+
+        for query, expected in (
+            ("cafetera", "coffee_maker"),
+            ("coffee maker", "coffee_maker"),
+            ("airfryer", "air_fryer"),
+            ("air fryer", "air_fryer"),
+            ("tostadora", "toaster"),
+            ("toaster", "toaster"),
+            ("sandwichera", "sandwich_maker"),
+            ("sandwich maker", "sandwich_maker"),
+            ("exprimidor", "juicer"),
+            ("juicer", "juicer"),
+            ("licuadora", "blender"),
+            ("blender", "blender"),
+            ("microondas", "microwave"),
+            ("microwave", "microwave"),
+        ):
+            with self.subTest(query=query):
+                self.assertEqual(family_query_key(query), expected)
+
     def test_form_qualified_family_wins_over_a_generic_word_family(self) -> None:
         self.assertEqual(family_query_key("alfajor chocolate"), "alfajor")
         self.assertEqual(family_query_form("alfajor chocolate"), ("alfajor", "chocolate"))
