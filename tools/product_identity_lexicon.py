@@ -718,6 +718,12 @@ _DIRECT_FORM_KEYS = frozenset({
     "whole", "wheat", "corn", "rice", "legume", "nut", "oat",
 })
 
+# These newly reviewed species families have a strict bare-query projection
+# even though they do not yet expose presentation facets.  It keeps derived
+# pet-food, wine-brand and prepared-food mentions out of the main result set
+# while leaving those rows reachable through their literal names.
+_DIRECT_QUERY_FAMILIES = frozenset({"pork", "lamb", "turkey", "beef"})
+
 
 def _query_matches_family(query: str, rule: FamilyRule) -> bool:
     tokens = _tokens(query)
@@ -946,7 +952,10 @@ def filter_family_candidates(
         # first.  Derived rows (rice bars, lychee soap, carrot lotion, toy
         # eggs, and similar products) remain available to the clarification
         # card, but must not silently take over the main result table.
-        if selected_rule is not None and selected_rule.key in _FORM_PRESENTATION:
+        if selected_rule is not None and (
+            selected_rule.key in _FORM_PRESENTATION
+            or selected_rule.key in _DIRECT_QUERY_FAMILIES
+        ):
             direct: list[Mapping[str, Any]] = []
             for candidate in values:
                 try:

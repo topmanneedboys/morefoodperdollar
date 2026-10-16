@@ -53,6 +53,10 @@ _FAMILY_DISCOVERY_QUERIES = {
     "alfajor": "alfajor",
     "flour": "harina",
     "peanut": "mani",
+    "pork": "cerdo",
+    "lamb": "cordero",
+    "turkey": "pavo",
+    "beef": "vacuno",
 }
 
 

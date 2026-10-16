@@ -616,6 +616,40 @@ class SearchPackM11Tests(unittest.TestCase):
         })
         self.assertEqual([item["productEvidenceKey"] for item in liquid["matches"]], ["egg-liquid"])
 
+    def test_service_search_keeps_reviewed_meat_family_free_of_pet_mentions(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": "pork-cut",
+                "name": "ASADO DE CERDO X KG",
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100,
+                "matchedTokens": ["cerdo"],
+            },
+            {
+                "productEvidenceKey": "pork-pet",
+                "name": "ALIM.P/PERROS ADULTOS CARNE, POLLO Y CERDO PEDIGREE BSA 8KG",
+                "brand": "Pedigree",
+                "gtin": None,
+                "score": 99,
+                "matchedTokens": ["cerdo"],
+            },
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        response = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "cerdo",
+        })
+
+        self.assertEqual([item["productEvidenceKey"] for item in response["matches"]], ["pork-cut"])
+        self.assertEqual(reader.discovery_calls[0][0], "cerdo")
+
     def test_service_search_prioritizes_evidence_backed_shell_eggs(self) -> None:
         manager = _StubReleaseManager()
         reader = _StubReader()

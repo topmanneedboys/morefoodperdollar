@@ -211,6 +211,59 @@ class ProductIdentityLexiconTests(unittest.TestCase):
                 self.assertEqual(candidate["role"], "DERIVED")
                 self.assertIn(form, candidate["observedForms"])
 
+    def test_v15_meat_species_batch_resolves_observed_cuts(self) -> None:
+        cases = (
+            ("p:pork", "ASADO DE CERDO X KG", "pork"),
+            ("p:lamb", "PALETA DE CORDERO X KG", "lamb"),
+            ("p:turkey", "PECHUGA DE PAVO X KG", "turkey"),
+            ("p:beef", "CENTRO DE ENTRANA VACUNO X KG", "beef"),
+        )
+        for key, name, family in cases:
+            with self.subTest(name=name):
+                value = derive_identity_record(_row(key, name))
+                candidate = next(item for item in value["familyCandidates"] if item["family"] == family)
+                self.assertEqual(candidate["role"], "DIRECT")
+                self.assertIn("unspecified", candidate["observedForms"])
+
+    def test_v15_meat_species_negative_context_stays_derived(self) -> None:
+        cases = (
+            ("ALIM.P/PERROS ADULTOS CARNE, POLLO Y CERDO PEDIGREE BSA 8KG", "pork"),
+            ("VINO TINTO MALBEC CORDERO PIEL LOBO BOT X 750CC", "lamb"),
+            ("WHISKAS ADULTO POUCH PAVO 85GR", "turkey"),
+            ("LEGO PAVO REAL", "turkey"),
+            ("MILANESA DE TERNERA CONG X 500 GR", "beef"),
+            ("WRAP DE TERNERA CANON X UNID", "beef"),
+        )
+        for name, family in cases:
+            with self.subTest(name=name):
+                value = derive_identity_record(_row(f"p:negative:{family}", name))
+                candidate = next(item for item in value["familyCandidates"] if item["family"] == family)
+                self.assertEqual(candidate["role"], "DERIVED")
+
+    def test_v15_meat_species_queries_keep_bilingual_family_keys(self) -> None:
+        for query, expected in (
+            ("cerdo", "pork"),
+            ("pork", "pork"),
+            ("cordero", "lamb"),
+            ("lamb", "lamb"),
+            ("pavo", "turkey"),
+            ("turkey", "turkey"),
+            ("vacuno", "beef"),
+            ("veal", "beef"),
+        ):
+            with self.subTest(query=query):
+                self.assertEqual(family_query_key(query), expected)
+
+    def test_v15_bare_meat_query_excludes_derived_mentions(self) -> None:
+        values = filter_family_candidates(
+            "cerdo",
+            [
+                _row("p:cut", "ASADO DE CERDO X KG"),
+                _row("p:pet", "ALIM.P/PERROS ADULTOS CARNE, POLLO Y CERDO PEDIGREE BSA 8KG"),
+            ],
+        )
+        self.assertEqual([row["productEvidenceKey"] for row in values], ["p:cut"])
+
     def test_form_qualified_family_wins_over_a_generic_word_family(self) -> None:
         self.assertEqual(family_query_key("alfajor chocolate"), "alfajor")
         self.assertEqual(family_query_form("alfajor chocolate"), ("alfajor", "chocolate"))
