@@ -287,6 +287,9 @@ class ProductIdentityLexiconTests(unittest.TestCase):
             "PERFUME AUTOMOTOR CHICLE X 100 ML",
             "SHAMPOO KIDS ALGABO CHICLE X 350 ML",
             "CHICLES JUGUETE LA GALLINA X 15 G",
+            "ACONDICIONADOR KIDS BUBBLE GUM CARREFOUR X 350 CC",
+            "JUGO SABOR CHICLE TUTTI X 200 ML",
+            "CREMA DENTAL GUM BUBBLE GUM X 100 G",
         ):
             with self.subTest(name=name):
                 match = next(item for item in derive_identity_record(_row("p:negative", name))["familyCandidates"] if item["family"] == "chewing_gum")
