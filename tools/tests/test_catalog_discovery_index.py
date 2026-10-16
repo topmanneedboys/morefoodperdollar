@@ -122,6 +122,21 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
                     {item["identityKey"] for item in english["matches"]},
                 )
 
+    def test_identical_es_en_aliases_are_seeded_in_both_languages(self) -> None:
+        rows = [
+            _row(1, "WHISKY IMPORTADO X 750 CC", family="whisky", form="unspecified"),
+            _row(2, "VODKA IMPORTADO X 700 CC", family="vodka", form="unspecified"),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._build(directory, rows)
+            with DiscoveryIndex(path) as index:
+                spanish = index.query(DiscoveryQuery("whisky", language="es", page_size=10)).to_dict()
+                english = index.query(DiscoveryQuery("whisky", language="en", page_size=10)).to_dict()
+                self.assertEqual(spanish["resolvedPredicates"], ["type:whisky"])
+                self.assertEqual(english["resolvedPredicates"], ["type:whisky"])
+                self.assertEqual(spanish["total"]["productCount"], 1)
+                self.assertEqual(english["total"]["productCount"], 1)
+
     def test_literal_only_rows_remain_searchable_and_unknown_selection_is_rejected(self) -> None:
         rows = [
             _row(1, "ARROZ LARGO MARCA X 1 KG"),
@@ -184,7 +199,8 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
             path = self._build(directory, rows)
             with DiscoveryIndex(path) as index:
                 broad = index.query(DiscoveryQuery("strawberry", language="en", page_size=10)).to_dict()
-                self.assertEqual(broad["total"]["productCount"], 2)
+                self.assertEqual(broad["status"], "READY")
+                self.assertEqual(broad["total"]["productCount"], 1)
                 cosmetics = index.query(
                     DiscoveryQuery("strawberry", language="en", selections=("form:strawberry:cosmetics",), page_size=10)
                 ).to_dict()
@@ -195,6 +211,31 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
                 ).to_dict()
                 self.assertEqual(fruit["total"]["productCount"], 1)
                 self.assertEqual(fruit["matches"][0]["displayName"], "FRUTILLA FRESCA 250 G")
+
+    def test_bare_type_without_facets_hides_derived_mentions_from_ready_results(self) -> None:
+        rows = [
+            _row(1, "TOALLA DE BAÑO MARCA X", family="towel", form="unspecified"),
+            {
+                "productEvidenceKey": "ar-sepa-product:synthetic:2",
+                "providerProductId": "provider-2",
+                "name": "TOALLA FEMENINA MARCA X",
+                "brand": "Marca",
+                "familyCandidates": [{
+                    "family": "towel",
+                    "matchedTerms": ["toalla"],
+                    "observedForms": ["unspecified"],
+                    "role": "DERIVED",
+                }],
+                "aliases": [],
+            },
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._build(directory, rows)
+            with DiscoveryIndex(path) as index:
+                result = index.query(DiscoveryQuery("towel", language="en", page_size=10)).to_dict()
+                self.assertEqual(result["status"], "READY")
+                self.assertEqual(result["total"]["productCount"], 1)
+                self.assertEqual([item["displayName"] for item in result["matches"]], ["TOALLA DE BAÑO MARCA X"])
 
     def test_explicit_context_is_stored_as_a_typed_relation(self) -> None:
         row = {

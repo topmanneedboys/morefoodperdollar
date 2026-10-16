@@ -31,7 +31,7 @@ from tools.product_taxonomy import DEPARTMENT_RULES, classify_name
 
 
 BUILD_SCHEMA_VERSION = "valuepilot-catalog-discovery-v2"
-RULES_VERSION = "valuepilot-catalog-discovery-rules-v2"
+RULES_VERSION = "valuepilot-catalog-discovery-rules-v4"
 MAX_QUERY_CHARS = 256
 MAX_PAGE_SIZE = 50
 MAX_FACET_PAGE_SIZE = 30
@@ -427,9 +427,14 @@ def _seed_dictionary(connection: sqlite3.Connection) -> None:
             aliases = tuple(dict.fromkeys(rule.spanish_aliases + rule.english_aliases))
         else:
             aliases = (family, "fruta", "fruit") if family == "fruit" else (family,)
-        for alias in aliases:
-            language = "en" if alias.casefold() in {v.casefold() for v in (rule.english_aliases if rule else ("fruit",))} else "es"
-            _ensure_alias(connection, alias, language, concept_id, concept_id, "IS_A", "CURATED_DICTIONARY")
+        if rule is not None:
+            for alias in rule.spanish_aliases:
+                _ensure_alias(connection, alias, "es", concept_id, concept_id, "IS_A", "CURATED_DICTIONARY")
+            for alias in rule.english_aliases:
+                _ensure_alias(connection, alias, "en", concept_id, concept_id, "IS_A", "CURATED_DICTIONARY")
+        else:
+            for alias in aliases:
+                _ensure_alias(connection, alias, "es", concept_id, concept_id, "IS_A", "CURATED_DICTIONARY")
 
     for family, parents in _FAMILY_PARENTS.items():
         for parent in parents:
@@ -1103,6 +1108,26 @@ class DiscoveryIndex:
             raise DiscoveryError("request is invalid")
         predicates, remaining_tokens = self._resolve(request.query, request.language)
         candidates = self._candidate_keys(predicates, remaining_tokens, request.selections)
+        clarification, _ = self._facet_choices(
+            candidates,
+            predicates,
+            request.language,
+            request.facet_page_size,
+            request.facet_cursor,
+            query=request.query,
+            selections=request.selections,
+        )
+        # Broad type predicates include literal ``MENTIONS`` postings so a
+        # clarification can explain why a word appeared. Once no facet is
+        # available, there is no safe choice to separate those mentions; show
+        # only accepted type postings instead of leaking contextual products
+        # into the ready result table.
+        if clarification is None and not request.selections:
+            strict_types = tuple(value for value in predicates if value.startswith("type:"))
+            if strict_types:
+                candidates = set().union(*(_predicate_identity_keys(self.connection, value) for value in strict_types))
+                if remaining_tokens:
+                    candidates &= _literal_identity_keys(self.connection, remaining_tokens)
         fingerprint = self._fingerprint(request.query, request.language, request.selections)
         last_name = ""
         last_key = ""
@@ -1130,15 +1155,6 @@ class DiscoveryIndex:
         if candidates:
             placeholders = ",".join("?" for _ in candidates)
             product_count = int(self.connection.execute(f"SELECT COUNT(DISTINCT provider_key) FROM identity WHERE identity_key IN ({placeholders})", tuple(candidates)).fetchone()[0])
-        clarification, _ = self._facet_choices(
-            candidates,
-            predicates,
-            request.language,
-            request.facet_page_size,
-            request.facet_cursor,
-            query=request.query,
-            selections=request.selections,
-        )
         status = "NEEDS_CLARIFICATION" if clarification is not None else ("READY" if candidates else "NO_MATCHES")
         matches = [
             {"identityKey": row["identity_key"], "providerProductId": row["provider_key"], "displayName": row["display_name"], "brand": row["brand"]}

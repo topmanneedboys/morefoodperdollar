@@ -61,6 +61,26 @@ class ProductIdentityLexiconTests(unittest.TestCase):
         self.assertIn(("toothpaste", "DIRECT"), roles)
         self.assertNotIn(("pasta", "DIRECT"), roles)
 
+    def test_second_catalog_rule_batch_covers_residual_departments_conservatively(self) -> None:
+        cases = (
+            ("p:juice", "JUGO X 500 CC NARANJA", "juice", "DIRECT"),
+            ("p:cleaner", "LIMPIADOR CREMOSO LYSOFORM X 450 CC", "cleaner", "DIRECT"),
+            ("p:facial-cleanser", "GEL LIMPIADOR FACIAL NEUTROGENA X 354 CC", "facial_cleanser", "DIRECT"),
+            ("p:clothing", "CAMPERA TEX DE NIEVE I882496", "jacket", "DIRECT"),
+            ("p:audio", "AURICULAR VINCHA BT SONY WH CH520", "headphones", "DIRECT"),
+            ("p:appliance", "LAVARROPAS CS WHIRLPOOL 9KG", "washing_machine", "DIRECT"),
+            ("p:cake-pan", "BUDINERA DE SILICONA HOME", "pound_cake", None),
+            ("p:fridge-accessory", "QUITAOLORES PARA HELADERA ARM HAMMER X 396 GRS", "refrigerator", "DERIVED"),
+        )
+        for key, name, family, expected_role in cases:
+            with self.subTest(name=name):
+                value = derive_identity_record(_row(key, name))
+                matches = [item for item in value["familyCandidates"] if item["family"] == family]
+                if expected_role is None:
+                    self.assertFalse(matches)
+                else:
+                    self.assertEqual([item["role"] for item in matches], [expected_role])
+
     def test_mango_family_is_available_for_observed_forms(self) -> None:
         value = derive_identity_record(_row("p:mango-cookie", "GALLETAS DE MANGO 200 G"))
         mango = next(item for item in value["familyCandidates"] if item["family"] == "mango")
@@ -89,10 +109,16 @@ class ProductIdentityLexiconTests(unittest.TestCase):
             with self.subTest(name=name):
                 value = derive_identity_record(_row(key, name))
                 candidate = value["familyCandidates"]
-                self.assertEqual(len(candidate), 1)
-                self.assertEqual(candidate[0]["family"], "carrot")
-                self.assertEqual(candidate[0]["role"], role)
-                self.assertEqual(candidate[0]["observedForms"], [form])
+                carrot = next(item for item in candidate if item["family"] == "carrot")
+                self.assertEqual(carrot["role"], role)
+                self.assertEqual(carrot["observedForms"], [form])
+                if form == "drink":
+                    self.assertIn(
+                        ("juice", "DIRECT"),
+                        {(item["family"], item["role"]) for item in candidate},
+                    )
+                else:
+                    self.assertEqual(len(candidate), 1)
 
         dessert = derive_identity_record(_row("p:dessert", "TORTA DE ZANAHORIA 400 G"))
         aliases = {(item["value"], item["language"], item["provenance"]) for item in dessert["aliases"]}
