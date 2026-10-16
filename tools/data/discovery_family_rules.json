@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "valuepilot-discovery-family-rules-v4",
+  "schemaVersion": "valuepilot-discovery-family-rules-v5",
   "source": "reviewed-catalog-name-patterns-2026-10-15",
   "families": {
     "wine": {"es": ["vino"], "en": ["wine"], "include": ["vino", "wine", "malbec", "cabernet", "chardonnay", "sauvignon", "espumante", "champagne", "sidra", "cider"], "exclude": ["vinagre", "vinagre de alcohol", "salsa de vino"], "forms": {"red": {"es": ["tinto", "rosado"], "en": ["red", "rose"]}, "white": {"es": ["blanco"], "en": ["white"]}, "sparkling": {"es": ["espumante", "champagne"], "en": ["sparkling", "champagne"]}}},
@@ -106,7 +106,12 @@
     "soft_drink": {"es": ["gaseosa", "gaseosas", "refresco", "refrescos", "soda"], "en": ["soft drink", "soft drinks", "soda"], "include": ["gaseosa", "gaseosas", "refresco", "refrescos", "soda", "soft drink", "soft drinks"], "exclude": ["envase gaseosa", "envases gaseosa", "esqueleto gaseosa", "vaso gaseosa", "articulo envase gaseosa"]},
     "baby_wipes": {"es": ["toallita bebe", "toallitas bebe", "toallitas humedas"], "en": ["baby wipes", "wet wipes"], "include": ["toallita bebe", "toallitas bebe", "toallitas humedas", "baby wipes", "wet wipes"], "exclude": ["desmaquillante", "desmaquillantes", "micelar"]},
     "menstrual_care": {"es": ["toalla femenina", "toallita femenina", "toallita hig", "toallitas hig", "protector diario", "protectores diarios"], "en": ["sanitary pad", "menstrual pad", "tampon", "tampons", "panty liner"], "include": ["toalla femenina", "toallita femenina", "toallita hig", "toallitas hig", "protector diario", "protectores diarios", "sanitary pad", "menstrual pad", "tampon", "tampons", "panty liner"]},
-    "hair_treatment": {"es": ["tratamiento capilar", "tratam capilar"], "en": ["hair treatment", "hair mask"], "include": ["tratamiento capilar", "tratam capilar", "hair treatment", "hair mask"]}
+    "hair_treatment": {"es": ["tratamiento capilar", "tratam capilar"], "en": ["hair treatment", "hair mask"], "include": ["tratamiento capilar", "tratam capilar", "hair treatment", "hair mask"]},
+    "mouthwash": {"es": ["enjuague bucal"], "en": ["mouthwash", "oral rinse"], "include": ["enjuague bucal", "enj bucal", "mouthwash", "oral rinse"], "exclude": ["protector bucal", "gel bucal"]},
+    "potato_chips": {"es": ["papas fritas"], "en": ["potato chips"], "include": ["papas fritas", "potato chips"], "exclude": ["milanesa", "espatula", "pala papas", "snack d/arroz", "snack de arroz", "torta chips", "madalena chips", "bizcochuelo chips"]},
+    "salt": {"es": ["sal"], "en": ["salt"], "include": ["sal fina", "sal gruesa", "sal entrefina", "sal marina", "sal celusal", "table salt", "sea salt"], "exclude": ["sin sal", "salado", "salada", "pochoclos", "papas fritas", "snack", "snacks", "chips", "tableta", "chocolate"], "forms": {"fine": {"es": ["fina"], "en": ["fine"]}, "coarse": {"es": ["gruesa", "entrefina"], "en": ["coarse"]}, "sea": {"es": ["marina"], "en": ["sea"]}}},
+    "spice": {"es": ["especia", "condimento", "sazonador"], "en": ["spice", "seasoning"], "include": ["aji molido", "pimienta", "oregano", "romero", "tomillo", "comino", "canela", "laurel", "pimenton", "nuez moscada", "provenzal", "sazonador", "condimento", "especia", "spice", "seasoning"], "exclude": ["snack", "snacks", "quesito", "lomo", "bondiola", "filet", "milanesa", "papas fritas", "chips", "mani", "salsa", "sabor", "acond", "acondicionad", "acondicionador"], "forms": {"ground": {"es": ["molido", "molida", "polvo"], "en": ["ground", "powder"]}, "whole": {"es": ["grano", "hojas"], "en": ["whole", "leaves"]}}},
+    "air_freshener": {"es": ["aromatizante", "aromatizador", "ambientador", "desodorante ambiente"], "en": ["air freshener", "room fragrance"], "include": ["aromatizante", "aromatizador", "ambientador", "desodorante ambiente", "deo ambiente", "arom amb", "air freshener", "room fragrance"], "exclude": ["alimento", "bebida", "sabor", "cosmetico", "cosmetica"]}
   },
   "extensions": {
     "soft_drink": {"es": ["gaseo", "gaseos"], "include": ["gaseo", "gaseos", "gaseo cola"]},
@@ -117,6 +122,16 @@
     "backpack": {"es": ["mochilas"], "include": ["mochilas"]},
     "lamp": {"es": ["lamparas"], "include": ["lamparas"]},
     "headphones": {"es": ["auriculares"], "include": ["auriculares"]},
-    "hair_color": {"es": ["issue kit"], "include": ["issue kit"]}
+    "hair_color": {"es": ["issue kit"], "en": ["color perm", "perm kit"], "include": ["issue kit", "color perm", "perm kit", "pinta pelo", "tin nutrisse", "kit color", "koleston kit"]},
+    "deodorant": {"es": ["antitransp", "desod", "desodo", "deo"], "include": ["antitransp", "desod", "desodo", "deo"], "exclude": ["ambiente", "ambientes", "aromatizante", "deo ambiente", "desod ambiente", "desodorante ambiente", "desodorante de ambientes", "pino aromatizante"]},
+    "toothpaste": {"es": ["crema dent", "cr dent"], "include": ["crema dent", "cr dent", "pasta dent", "dentif"]},
+    "toothbrush": {"es": ["cep dent", "cepillo diente"], "include": ["cep dent", "cepillo diente"]},
+    "dog_food": {"es": ["alim perro", "alimento para perro"], "include": ["alim perro", "alim p perro", "alim para perro", "al perro", "alimento para perro", "alimento seco perro", "seco perro"], "exclude": ["juguete perro", "peluche perro", "snack perro", "juego perro"]},
+    "cat_food": {"es": ["alim gato", "alimento para gato"], "include": ["alim gato", "alim p gato", "alim para gato", "al gato", "alimento para gato", "alimento seco gato", "seco gato"], "exclude": ["juguete gato", "peluche gato", "snack gato", "juego gato"]},
+    "conditioner": {"es": ["acondic", "acondicionad"], "include": ["acondic", "acondicionad"]},
+    "shampoo": {"es": ["sham"], "include": ["sham", "sh aco"]},
+    "detergent": {"es": ["deterg"], "include": ["deterg", "deterg polvo", "deterg ropa", "deterg p"]},
+    "soap": {"es": ["jab"], "include": ["jab", "jab liq", "jab toc"]},
+    "sunscreen": {"es": ["prot solar"], "include": ["prot solar"]}
   }
 }

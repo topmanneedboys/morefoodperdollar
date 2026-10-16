@@ -31,7 +31,7 @@ from tools.product_taxonomy import DEPARTMENT_RULES, classify_name
 
 
 BUILD_SCHEMA_VERSION = "valuepilot-catalog-discovery-v2"
-RULES_VERSION = "valuepilot-catalog-discovery-rules-v10"
+RULES_VERSION = "valuepilot-catalog-discovery-rules-v11"
 MAX_QUERY_CHARS = 256
 MAX_PAGE_SIZE = 50
 MAX_FACET_PAGE_SIZE = 30
@@ -252,6 +252,12 @@ def _form_label(family: str, form: str, language: str) -> str:
     presentation = _FORM_PRESENTATION.get(family, {}).get(form)
     if presentation:
         return presentation["labelEs" if language == "es" else "labelEn"]
+    family_rule = next((item for item in FAMILY_RULES if item.key == family), None)
+    if family_rule is not None:
+        family_aliases = family_rule.spanish_aliases if language == "es" else family_rule.english_aliases
+        form_terms = family_rule.forms.get(form, ((), ()))[0 if language == "es" else 1]
+        if family_aliases and form_terms:
+            return f"{family_aliases[0].capitalize()} {form_terms[0]}"
     return f"{_labelize(family)} {_labelize(form)}"
 
 
@@ -462,6 +468,30 @@ def _seed_dictionary(connection: sqlite3.Connection) -> None:
                 language = "en" if family_rule and family_alias in family_rule.english_aliases else "es"
                 for term in tuple(dict.fromkeys(form_terms + (form,))):
                     _ensure_alias(connection, f"{family_alias} {term}", language, concept_id, concept_id, "FORM", "CURATED_COMPOSITION")
+
+    # Generic JSON rules can carry observed forms even when they do not have a
+    # hand-authored presentation block above. Seed their composed ES/EN aliases
+    # so an explicit query such as ``sal fina`` resolves to the form predicate
+    # instead of falling back to a broad family plus an unrelated literal token.
+    for family_rule in FAMILY_RULES:
+        if not family_rule.forms:
+            continue
+        for form, (spanish_terms, english_terms) in family_rule.forms.items():
+            concept_id = f"form:{family_rule.key}:{form}"
+            _ensure_concept(
+                connection,
+                concept_id,
+                "FORM",
+                _form_label(family_rule.key, form, "es"),
+                _form_label(family_rule.key, form, "en"),
+                f"Observed form {form} of {family_rule.key}.",
+            )
+            for family_alias in family_rule.spanish_aliases:
+                for term in tuple(dict.fromkeys(spanish_terms + (form,))):
+                    _ensure_alias(connection, f"{family_alias} {term}", "es", concept_id, concept_id, "FORM", "CURATED_COMPOSITION")
+            for family_alias in family_rule.english_aliases:
+                for term in tuple(dict.fromkeys(english_terms + (form,))):
+                    _ensure_alias(connection, f"{family_alias} {term}", "en", concept_id, concept_id, "FORM", "CURATED_COMPOSITION")
 
     for rule in DEPARTMENT_RULES:
         concept_id = f"department:{rule.key}"

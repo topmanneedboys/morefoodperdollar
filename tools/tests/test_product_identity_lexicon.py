@@ -117,6 +117,56 @@ class ProductIdentityLexiconTests(unittest.TestCase):
                 candidate = next(item for item in value["familyCandidates"] if item["family"] == family)
                 self.assertEqual(candidate["role"], "DERIVED")
 
+    def test_v11_abbreviation_batch_resolves_observed_retail_names(self) -> None:
+        cases = (
+            ("p:deodorant", "ANTITRANSP FEM CREMA CLINICAL REXONA X 58 GR", "deodorant", "DIRECT"),
+            ("p:mouthwash", "ENJ.BUCAL LISTERINE FRESHBURST X250ML", "mouthwash", "DIRECT"),
+            ("p:chips", "PAPAS FRITAS CLASICAS LAYS X 230 GRS", "potato_chips", "DIRECT"),
+            ("p:salt", "SAL FINA CELUSAL PAQUETE X 500 GRS", "salt", "DIRECT"),
+            ("p:spice", "CONDIMENTO P/CARNES ALICANTE SOB 25 GRM", "spice", "DIRECT"),
+            ("p:freshener", "DEO AMBIENTE GLADE LAVANDA X 360 CC", "air_freshener", "DIRECT"),
+            ("p:dog-food", "ALIM.P/PERRO ADULTO RAZA PEQUENA X 3 KG", "dog_food", "DIRECT"),
+            ("p:cat-food", "ALIM GATO ADULTO PESCADO X 3 KG", "cat_food", "DIRECT"),
+            ("p:hair-color", "COLOR PERM KIT N 6 RUBIO OSCURO", "hair_color", "DIRECT"),
+            ("p:conditioner", "ACONDIC. HIDRA RELLENO ELVIVE BOT 400 ML", "conditioner", "DIRECT"),
+            ("p:shampoo", "SHAM NUTRITIVO ELVIVE BOT 400 ML", "shampoo", "DIRECT"),
+            ("p:detergent", "DETERG.POLVO ALA 400 GR", "detergent", "DIRECT"),
+            ("p:soap", "JAB LIQ PALMOLIVE 200 ML", "soap", "DIRECT"),
+            ("p:sunscreen", "PROT.SOLAR FPS 50 NIVEA 50 CC", "sunscreen", "DIRECT"),
+            ("p:toothpaste", "CR DENT COLGATE ANTICARIE", "toothpaste", "DIRECT"),
+            ("p:toothbrush", "COLGATE CEP DENT MED", "toothbrush", "DIRECT"),
+        )
+        for key, name, family, expected_role in cases:
+            with self.subTest(name=name):
+                value = derive_identity_record(_row(key, name))
+                matches = [item for item in value["familyCandidates"] if item["family"] == family]
+                self.assertEqual([item["role"] for item in matches], [expected_role])
+
+    def test_v11_negative_context_does_not_turn_mentions_into_product_types(self) -> None:
+        cases = (
+            ("DEO AMBIENTE AERO LAVANDA GLADE", "deodorant"),
+            ("DESODORANTE AMBIENTES ALEGRA TU DIA POETT 360 ML", "deodorant"),
+            ("TABLETA CHOCO C SAL MARINA LINDT", "salt"),
+            ("PAPAS FRITAS PIMIENTA NEGRA GAUCHITAS", "spice"),
+            ("LOMO PIMIENTA NEGRA FETEADO", "spice"),
+            ("MILANESA CON PAPAS FRITAS X PORCION", "potato_chips"),
+            ("ESPATULA PARA PAPAS FRITAS 1 UN", "potato_chips"),
+            ("SNACK DE ARROZ SABOR PAPAS FRITAS", "potato_chips"),
+            ("ACONDICIONADOR CON ROMERO 385 ML", "spice"),
+            ("ACONDICIONAD. C/ROMERO Y MENTA 385 ML", "spice"),
+            ("PROTECTOR BUCAL SIMBRA", "mouthwash"),
+            ("PELUche PERRO PLUSH 25 CM", "dog_food"),
+        )
+        for name, family in cases:
+            with self.subTest(name=name):
+                value = derive_identity_record(_row(f"p:negative:{family}", name))
+                candidates = [item for item in value["familyCandidates"] if item["family"] == family]
+                if name in {"PROTECTOR BUCAL SIMBRA", "PELUche PERRO PLUSH 25 CM"}:
+                    self.assertFalse(candidates)
+                else:
+                    self.assertTrue(candidates)
+                    self.assertEqual(candidates[0]["role"], "DERIVED")
+
     def test_mango_family_is_available_for_observed_forms(self) -> None:
         value = derive_identity_record(_row("p:mango-cookie", "GALLETAS DE MANGO 200 G"))
         mango = next(item for item in value["familyCandidates"] if item["family"] == "mango")
@@ -151,6 +201,11 @@ class ProductIdentityLexiconTests(unittest.TestCase):
                 if form == "drink":
                     self.assertIn(
                         ("juice", "DIRECT"),
+                        {(item["family"], item["role"]) for item in candidate},
+                    )
+                elif form == "cosmetics":
+                    self.assertIn(
+                        ("sunscreen", "DIRECT"),
                         {(item["family"], item["role"]) for item in candidate},
                     )
                 else:

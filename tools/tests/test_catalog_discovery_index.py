@@ -137,6 +137,22 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
                 self.assertEqual(spanish["total"]["productCount"], 1)
                 self.assertEqual(english["total"]["productCount"], 1)
 
+    def test_generic_family_form_aliases_resolve_bilingually(self) -> None:
+        rows = [
+            _row(1, "SAL FINA MARCA X 500 G", family="salt", form="fine"),
+            _row(2, "SAL GRUESA MARCA X 1 KG", family="salt", form="coarse"),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._build(directory, rows)
+            with DiscoveryIndex(path) as index:
+                spanish = index.query(DiscoveryQuery("sal fina", language="es", page_size=10)).to_dict()
+                english = index.query(DiscoveryQuery("salt fine", language="en", page_size=10)).to_dict()
+                for result in (spanish, english):
+                    self.assertEqual(result["status"], "READY")
+                    self.assertEqual(result["resolvedPredicates"], ["form:salt:fine"])
+                    self.assertEqual(result["total"]["productCount"], 1)
+                    self.assertEqual([item["displayName"] for item in result["matches"]], ["SAL FINA MARCA X 500 G"])
+
     def test_literal_only_rows_remain_searchable_and_unknown_selection_is_rejected(self) -> None:
         rows = [
             _row(1, "ARROZ LARGO MARCA X 1 KG"),
