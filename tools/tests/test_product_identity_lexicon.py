@@ -429,6 +429,34 @@ class ProductIdentityLexiconTests(unittest.TestCase):
         )
         self.assertEqual(values, ())
 
+    def test_meat_family_rules_reject_pet_toy_and_alcohol_contexts(self) -> None:
+        cases = (
+            ("pork", "ASADO DE CERDO X KG", "DIRECT"),
+            ("pork", "JUEGO DE MESA CHANCHO GOTON", "DERIVED"),
+            ("pork", "JUGUETE CAN CAT CERDO GLADIADOR", "DERIVED"),
+            ("lamb", "ASADO DE CORDERO X KG", "DIRECT"),
+            ("lamb", "SNACK D/CORDERO P/PERRO MEAT BITES", "DERIVED"),
+            ("turkey", "PECHUGA DE PAVO X KG", "DIRECT"),
+            ("turkey", "W.WILD TURKEY X750ML BOURBON", "DERIVED"),
+            ("beef", "CENTRO DE ENTRANA VACUNO X KG", "DIRECT"),
+            ("beef", "MILANESA DE CARNE VACUNA X KG", "DERIVED"),
+            ("beef", "ALIMENTO PERROS CARNE VACUNA 2 KG", "DERIVED"),
+        )
+        for family, name, role in cases:
+            with self.subTest(family=family, name=name):
+                candidates = derive_identity_record(_row(f"p:{family}", name))["familyCandidates"]
+                match = next(item for item in candidates if item["family"] == family)
+                self.assertEqual(match["role"], role)
+
+        for query, rows in (
+            ("pork", [_row("p:meat", "ASADO DE CERDO X KG"), _row("p:toy", "JUEGO DE MESA CHANCHO GOTON")]),
+            ("lamb", [_row("p:meat", "ASADO DE CORDERO X KG"), _row("p:pet", "SNACK D/CORDERO P/PERRO MEAT BITES")]),
+            ("turkey", [_row("p:meat", "PECHUGA DE PAVO X KG"), _row("p:wine", "W.WILD TURKEY X750ML BOURBON")]),
+            ("beef", [_row("p:meat", "CENTRO DE ENTRANA VACUNO X KG"), _row("p:pet", "ALIMENTO PERROS CARNE VACUNA 2 KG")]),
+        ):
+            with self.subTest(query=query):
+                self.assertEqual([row["productEvidenceKey"] for row in filter_family_candidates(query, rows)], ["p:meat"])
+
     def test_yerba_form_query_ignores_generic_family_words(self) -> None:
         self.assertEqual(family_query_form("te de yerba mate"), ("yerba_mate", "tea_bags"))
         self.assertEqual(family_query_form("bebida de yerba"), ("yerba_mate", "drink"))
