@@ -773,6 +773,55 @@ class SearchPackM11Tests(unittest.TestCase):
         self.assertEqual(reader.discovery_calls[0][0], "carrot")
         self.assertEqual([item["productEvidenceKey"] for item in response["matches"]], ["carrot-drink"])
 
+    def test_service_search_exposes_new_food_family_clarification_and_filters_form(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "name": name,
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["alfajor"],
+                "qualifiedOffers": [],
+            }
+            for index, (key, name) in enumerate((
+                ("alfajor-chocolate", "ALFAJOR CHOCOLATE BLANCO X 60 G"),
+                ("alfajor-dulce", "ALFAJOR CON DULCE DE LECHE X 60 G"),
+            ))
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        broad = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "alfajor",
+        })
+        clarification = broad["clarification"]
+        self.assertIsNotNone(clarification)
+        assert clarification is not None
+        self.assertEqual(clarification["family"], "alfajor")
+        self.assertEqual(
+            {choice["id"] for choice in clarification["choices"]},
+            {"alfajor:chocolate", "alfajor:dulce_de_leche"},
+        )
+
+        chocolate = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "alfajor chocolate",
+        })
+        self.assertEqual(reader.discovery_calls[-1][0], "alfajor")
+        self.assertEqual(
+            [item["productEvidenceKey"] for item in chocolate["matches"]],
+            ["alfajor-chocolate"],
+        )
+        self.assertIsNone(chocolate["clarification"])
+
     def test_service_search_keeps_food_eggs_and_clarifies_toy_eggs(self) -> None:
         manager = _StubReleaseManager()
         reader = _StubReader()

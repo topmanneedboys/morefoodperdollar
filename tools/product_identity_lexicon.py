@@ -616,18 +616,157 @@ _FORM_PRESENTATION: Mapping[str, Mapping[str, Mapping[str, str]]] = {
             "query": "carrot",
         },
     },
+    "alfajor": {
+        "chocolate": {
+            "labelEs": "Alfajor de chocolate",
+            "labelEn": "Chocolate alfajor",
+            "query": "alfajor chocolate",
+        },
+        "dulce_de_leche": {
+            "labelEs": "Alfajor con dulce de leche",
+            "labelEn": "Alfajor with dulce de leche",
+            "query": "alfajor dulce de leche",
+        },
+        "fruit": {
+            "labelEs": "Alfajor de fruta",
+            "labelEn": "Fruit alfajor",
+            "query": "alfajor frutilla",
+        },
+        "peanut": {
+            "labelEs": "Alfajor de maní",
+            "labelEn": "Peanut alfajor",
+            "query": "alfajor de mani",
+        },
+        "rice": {
+            "labelEs": "Alfajor de arroz",
+            "labelEn": "Rice alfajor",
+            "query": "alfajor de arroz",
+        },
+        "gluten_free": {
+            "labelEs": "Alfajor sin TACC o gluten",
+            "labelEn": "Gluten-free alfajor",
+            "query": "alfajor sin tacc",
+        },
+    },
+    "flour": {
+        "wheat": {
+            "labelEs": "Harina de trigo",
+            "labelEn": "Wheat flour",
+            "query": "harina de trigo",
+        },
+        "corn": {
+            "labelEs": "Harina de maíz",
+            "labelEn": "Corn flour",
+            "query": "harina de maiz",
+        },
+        "rice": {
+            "labelEs": "Harina de arroz",
+            "labelEn": "Rice flour",
+            "query": "harina de arroz",
+        },
+        "legume": {
+            "labelEs": "Harina de legumbres",
+            "labelEn": "Legume flour",
+            "query": "harina de garbanzo",
+        },
+        "nut": {
+            "labelEs": "Harina de frutos secos",
+            "labelEn": "Nut flour",
+            "query": "harina de almendras",
+        },
+        "oat": {
+            "labelEs": "Harina de avena",
+            "labelEn": "Oat flour",
+            "query": "harina de avena",
+        },
+    },
+    "peanut": {
+        "whole": {
+            "labelEs": "Maní entero, tostado o salado",
+            "labelEn": "Whole, roasted or salted peanuts",
+            "query": "mani tostado",
+        },
+        "butter": {
+            "labelEs": "Pasta o manteca de maní",
+            "labelEn": "Peanut butter or spread",
+            "query": "pasta de mani",
+        },
+        "oil": {
+            "labelEs": "Aceite de maní",
+            "labelEn": "Peanut oil",
+            "query": "aceite de mani",
+        },
+        "flour": {
+            "labelEs": "Harina de maní",
+            "labelEn": "Peanut flour",
+            "query": "harina de mani",
+        },
+        "snack": {
+            "labelEs": "Dulces, barras o chocolates con maní",
+            "labelEn": "Peanut sweets, bars or chocolate",
+            "query": "chocolate con mani",
+        },
+    },
 }
 
 # These forms describe the direct family item itself.  Derived presentations
 # such as drinks, sweets, and cosmetics are intentionally allowed for their
 # own choices, but a cosmetic name containing ``fresco`` must not satisfy a
 # fresh-fruit choice.
-_DIRECT_FORM_KEYS = frozenset({"grain", "fresh", "vegetable", "whole_egg", "loose_leaves"})
+_DIRECT_FORM_KEYS = frozenset({
+    "grain", "fresh", "vegetable", "whole_egg", "loose_leaves",
+    "whole", "wheat", "corn", "rice", "legume", "nut", "oat",
+})
 
 
 def _query_matches_family(query: str, rule: FamilyRule) -> bool:
     tokens = _tokens(query)
     return bool(tokens) and _contains_any(tokens, rule.include_terms)
+
+
+def _select_family_rule(query: str) -> FamilyRule | None:
+    """Choose the family whose evidence best explains the complete query.
+
+    A form-qualified query often contains another valid family word.  For
+    example, ``alfajor chocolate`` matches both the generic chocolate family
+    and the reviewed alfajor family.  Prefer a rule that has an observed form
+    in the same query, then prefer the longest family phrase.  This keeps
+    generic words from stealing a more specific clarification path.
+    """
+
+    tokens = _tokens(query)
+    if not tokens:
+        return None
+    candidates: list[tuple[tuple[int, int, int, int], FamilyRule]] = []
+    for index, rule in enumerate(FAMILY_RULES):
+        family_lengths = [
+            len(_tokens(term))
+            for term in rule.include_terms
+            if _contains_sequence(tokens, _tokens(term))
+        ]
+        if not family_lengths:
+            continue
+        form_lengths = [
+            len(_tokens(term))
+            for spanish_terms, english_terms in rule.forms.values()
+            for term in (*spanish_terms, *english_terms)
+            if _contains_sequence(tokens, _tokens(term))
+            and not set(_tokens(term)).intersection(
+                token
+                for family_term in (*rule.spanish_aliases, *rule.english_aliases, *rule.include_terms)
+                for token in _tokens(family_term)
+            )
+        ]
+        score = (
+            int(bool(form_lengths)),
+            max(family_lengths),
+            max(form_lengths, default=0),
+            -index,
+        )
+        candidates.append((score, rule))
+    if not candidates:
+        return None
+    return max(candidates, key=lambda item: item[0])[1]
 
 
 def family_query_key(query: str) -> str | None:
@@ -636,7 +775,7 @@ def family_query_key(query: str) -> str | None:
     normalized_query = " ".join(str(query or "").split())
     if not normalized_query:
         return None
-    selected_rule = next((rule for rule in FAMILY_RULES if _query_matches_family(normalized_query, rule)), None)
+    selected_rule = _select_family_rule(normalized_query)
     return selected_rule.key if selected_rule is not None else None
 
 
@@ -655,7 +794,7 @@ def build_family_clarification(
     normalized_query = " ".join(str(query or "").split())
     if not normalized_query:
         return None
-    selected_rule = next((rule for rule in FAMILY_RULES if _query_matches_family(normalized_query, rule)), None)
+    selected_rule = _select_family_rule(normalized_query)
     if selected_rule is None or selected_rule.key not in _FORM_PRESENTATION:
         return None
 
@@ -753,7 +892,7 @@ def family_query_form(query: str) -> tuple[str, str] | None:
     normalized_query = " ".join(str(query or "").split())
     if not normalized_query:
         return None
-    selected_rule = next((rule for rule in FAMILY_RULES if _query_matches_family(normalized_query, rule)), None)
+    selected_rule = _select_family_rule(normalized_query)
     if selected_rule is None or selected_rule.key not in _FORM_PRESENTATION:
         return None
     tokens = _tokens(normalized_query)
@@ -800,7 +939,7 @@ def filter_family_candidates(
 
     values = tuple(candidate for candidate in candidates if isinstance(candidate, Mapping))
     normalized_query = " ".join(str(query or "").split())
-    selected_rule = next((rule for rule in FAMILY_RULES if _query_matches_family(normalized_query, rule)), None)
+    selected_rule = _select_family_rule(normalized_query)
     context = family_query_form(normalized_query)
     if context is None:
         # Bare reviewed-family queries should show the direct family products

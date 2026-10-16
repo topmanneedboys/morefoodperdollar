@@ -153,6 +153,41 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
                     self.assertEqual(result["total"]["productCount"], 1)
                     self.assertEqual([item["displayName"] for item in result["matches"]], ["SAL FINA MARCA X 500 G"])
 
+    def test_v12_generic_food_form_aliases_resolve_to_observed_predicates(self) -> None:
+        rows = [
+            _row(1, "ALFAJOR CHOCOLATE BLANCO MARCA X 60 G", family="alfajor", form="chocolate"),
+            _row(2, "HARINA DE TRIGO MARCA X 1 KG", family="flour", form="wheat"),
+            _row(3, "MANI TOSTADO MARCA X 500 G", family="peanut", form="whole"),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._build(directory, rows)
+            with DiscoveryIndex(path) as index:
+                checks = (
+                    ("alfajor chocolate", "es", "form:alfajor:chocolate"),
+                    ("flour wheat", "en", "form:flour:wheat"),
+                    ("mani tostado", "es", "form:peanut:whole"),
+                )
+                for query, language, predicate in checks:
+                    with self.subTest(query=query):
+                        result = index.query(DiscoveryQuery(query, language=language, page_size=10)).to_dict()
+                        self.assertEqual(result["status"], "READY")
+                        self.assertEqual(result["resolvedPredicates"], [predicate])
+                        self.assertEqual(result["total"]["productCount"], 1)
+                        self.assertIsNone(result["clarification"])
+
+    def test_explicit_form_does_not_reopen_sibling_family_choices(self) -> None:
+        rows = [
+            _row(1, "ALFAJOR CHOCOLATE CON ARROZ MARCA X 60 G", family="alfajor", form="chocolate"),
+            _row(2, "ALFAJOR DE ARROZ MARCA X 60 G", family="alfajor", form="rice"),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._build(directory, rows)
+            with DiscoveryIndex(path) as index:
+                result = index.query(DiscoveryQuery("alfajor chocolate", language="es", page_size=10)).to_dict()
+                self.assertEqual(result["status"], "READY")
+                self.assertEqual(result["resolvedPredicates"], ["form:alfajor:chocolate"])
+                self.assertIsNone(result["clarification"])
+
     def test_literal_only_rows_remain_searchable_and_unknown_selection_is_rejected(self) -> None:
         rows = [
             _row(1, "ARROZ LARGO MARCA X 1 KG"),

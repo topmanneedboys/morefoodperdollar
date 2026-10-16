@@ -50,6 +50,9 @@ _FAMILY_DISCOVERY_QUERIES = {
     "yerba_mate": "yerba mate",
     "egg": "huevo",
     "carrot": "carrot",
+    "alfajor": "alfajor",
+    "flour": "harina",
+    "peanut": "mani",
 }
 
 

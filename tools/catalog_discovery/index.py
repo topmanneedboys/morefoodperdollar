@@ -31,7 +31,7 @@ from tools.product_taxonomy import DEPARTMENT_RULES, classify_name
 
 
 BUILD_SCHEMA_VERSION = "valuepilot-catalog-discovery-v2"
-RULES_VERSION = "valuepilot-catalog-discovery-rules-v11"
+RULES_VERSION = "valuepilot-catalog-discovery-rules-v14"
 MAX_QUERY_CHARS = 256
 MAX_PAGE_SIZE = 50
 MAX_FACET_PAGE_SIZE = 30
@@ -1044,6 +1044,12 @@ class DiscoveryIndex:
         selections: Sequence[str],
     ) -> tuple[dict[str, Any] | None, str | None]:
         if not predicates or not base_keys:
+            return None, None
+        # A form-qualified query is already an explicit clarification choice.
+        # Do not reopen unrelated sibling forms merely because the selected
+        # result window contains products that carry more than one observed
+        # family mention (for example an alfajor with both rice and peanut).
+        if any(predicate.startswith("form:") for predicate in predicates):
             return None, None
         base = predicates[0]
         dimension_id = "product_type"

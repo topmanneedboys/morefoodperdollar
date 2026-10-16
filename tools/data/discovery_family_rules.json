@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "valuepilot-discovery-family-rules-v5",
+  "schemaVersion": "valuepilot-discovery-family-rules-v8",
   "source": "reviewed-catalog-name-patterns-2026-10-15",
   "families": {
     "wine": {"es": ["vino"], "en": ["wine"], "include": ["vino", "wine", "malbec", "cabernet", "chardonnay", "sauvignon", "espumante", "champagne", "sidra", "cider"], "exclude": ["vinagre", "vinagre de alcohol", "salsa de vino"], "forms": {"red": {"es": ["tinto", "rosado"], "en": ["red", "rose"]}, "white": {"es": ["blanco"], "en": ["white"]}, "sparkling": {"es": ["espumante", "champagne"], "en": ["sparkling", "champagne"]}}},
@@ -111,7 +111,47 @@
     "potato_chips": {"es": ["papas fritas"], "en": ["potato chips"], "include": ["papas fritas", "potato chips"], "exclude": ["milanesa", "espatula", "pala papas", "snack d/arroz", "snack de arroz", "torta chips", "madalena chips", "bizcochuelo chips"]},
     "salt": {"es": ["sal"], "en": ["salt"], "include": ["sal fina", "sal gruesa", "sal entrefina", "sal marina", "sal celusal", "table salt", "sea salt"], "exclude": ["sin sal", "salado", "salada", "pochoclos", "papas fritas", "snack", "snacks", "chips", "tableta", "chocolate"], "forms": {"fine": {"es": ["fina"], "en": ["fine"]}, "coarse": {"es": ["gruesa", "entrefina"], "en": ["coarse"]}, "sea": {"es": ["marina"], "en": ["sea"]}}},
     "spice": {"es": ["especia", "condimento", "sazonador"], "en": ["spice", "seasoning"], "include": ["aji molido", "pimienta", "oregano", "romero", "tomillo", "comino", "canela", "laurel", "pimenton", "nuez moscada", "provenzal", "sazonador", "condimento", "especia", "spice", "seasoning"], "exclude": ["snack", "snacks", "quesito", "lomo", "bondiola", "filet", "milanesa", "papas fritas", "chips", "mani", "salsa", "sabor", "acond", "acondicionad", "acondicionador"], "forms": {"ground": {"es": ["molido", "molida", "polvo"], "en": ["ground", "powder"]}, "whole": {"es": ["grano", "hojas"], "en": ["whole", "leaves"]}}},
-    "air_freshener": {"es": ["aromatizante", "aromatizador", "ambientador", "desodorante ambiente"], "en": ["air freshener", "room fragrance"], "include": ["aromatizante", "aromatizador", "ambientador", "desodorante ambiente", "deo ambiente", "arom amb", "air freshener", "room fragrance"], "exclude": ["alimento", "bebida", "sabor", "cosmetico", "cosmetica"]}
+    "air_freshener": {"es": ["aromatizante", "aromatizador", "ambientador", "desodorante ambiente"], "en": ["air freshener", "room fragrance"], "include": ["aromatizante", "aromatizador", "ambientador", "desodorante ambiente", "deo ambiente", "arom amb", "air freshener", "room fragrance"], "exclude": ["alimento", "bebida", "sabor", "cosmetico", "cosmetica"]},
+    "alfajor": {
+      "es": ["alfajor", "alfajores"],
+      "en": ["alfajor", "alfajores"],
+      "include": ["alfajor", "alfajores"],
+      "forms": {
+        "chocolate": {"es": ["chocolate", "choco", "cacao", "blanco", "negro"], "en": ["chocolate", "cocoa", "white", "dark"]},
+        "dulce_de_leche": {"es": ["dulce de leche", "ddl", "dulce", "relleno"], "en": ["dulce de leche", "caramel", "filled"]},
+        "fruit": {"es": ["frutilla", "frutillas", "limon", "limón", "membrillo", "coco"], "en": ["strawberry", "lemon", "quince", "coconut"]},
+        "peanut": {"es": ["mani", "maní", "pasta de mani", "pasta de maní"], "en": ["peanut", "peanut butter"]},
+        "rice": {"es": ["arroz"], "en": ["rice"]},
+        "gluten_free": {"es": ["sin tacc", "sin gluten"], "en": ["gluten free"]}
+      }
+    },
+    "flour": {
+      "es": ["harina", "harinas"],
+      "en": ["flour"],
+      "include": ["harina", "harinas", "flour"],
+      "exclude": ["fertilizante harina", "fertilizante de harina", "harina de hueso", "harina de pescado", "aceite con harina", "aceite c/harina", "bagel con harina", "galletitas harina", "tubitos de harina", "copos de harina"] ,
+      "forms": {
+        "wheat": {"es": ["trigo", "000", "0000", "fuerza", "leudante", "pizza"], "en": ["wheat", "bread", "self rising", "pizza"]},
+        "corn": {"es": ["maiz", "maíz"], "en": ["corn"]},
+        "rice": {"es": ["arroz"], "en": ["rice"]},
+        "legume": {"es": ["arveja", "garbanzo", "lenteja", "legumbre"], "en": ["pea", "chickpea", "lentil", "legume"]},
+        "nut": {"es": ["almendra", "almendras", "coco", "mani", "maní", "girasol"], "en": ["almond", "coconut", "peanut", "sunflower"]},
+        "oat": {"es": ["avena"], "en": ["oat", "oats"]}
+      }
+    },
+    "peanut": {
+      "es": ["mani", "maní", "cacahuate"],
+      "en": ["peanut", "peanuts"],
+      "include": ["mani", "maní", "cacahuate", "peanut", "peanuts"],
+      "exclude": ["aceite de mani", "aceite de maní", "pasta de mani", "pasta de maní", "pasta mani", "pasta d mani", "pasta s tacc mani", "pasta s tacc de mani", "pasta natural d mani", "pasta natural de mani", "harina de mani", "harina de maní", "harina d mani", "alfajor", "barra", "barrita", "barranola", "chocolate", "chocolates", "turron", "turrón", "caramelo", "caramel", "acaramelado", "helado", "bombon", "bombón", "galleta", "galletas", "bocadito", "bocaditos", "granola", "cereal", "bebida vegetal", "postre", "hummus", "oblea"],
+      "forms": {
+        "whole": {"es": ["pelado", "tostado", "salado", "cascara", "cáscara"], "en": ["whole", "peeled", "roasted", "salted", "shell"]},
+        "butter": {"es": ["pasta", "manteca", "crema"], "en": ["butter", "spread"]},
+        "oil": {"es": ["aceite"], "en": ["oil"]},
+        "flour": {"es": ["harina"], "en": ["flour"]},
+        "snack": {"es": ["alfajor", "barra", "barrita", "barranola", "chocolate", "chocolates", "turron", "caramelo", "helado", "bombon", "galleta", "bocadito", "granola", "cereal", "bebida", "postre", "hummus", "oblea"], "en": ["bar", "chocolate", "candy", "ice cream", "cookie", "snack", "drink", "dessert"]}
+      }
+    }
   },
   "extensions": {
     "soft_drink": {"es": ["gaseo", "gaseos"], "include": ["gaseo", "gaseos", "gaseo cola"]},

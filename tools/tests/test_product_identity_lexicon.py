@@ -13,6 +13,7 @@ from tools.product_identity_lexicon import (
     build_identity_lexicon,
     derive_identity_record,
     family_query_form,
+    family_query_key,
     filter_family_candidates,
 )
 
@@ -166,6 +167,54 @@ class ProductIdentityLexiconTests(unittest.TestCase):
                 else:
                     self.assertTrue(candidates)
                     self.assertEqual(candidates[0]["role"], "DERIVED")
+
+    def test_v12_argentine_food_families_cover_alfajor_flour_and_peanut_forms(self) -> None:
+        cases = (
+            ("p:alfajor", "ALFAJOR CHOCOLATE BLANCO RELLENO DULCE DE LECHE X 60 G", "alfajor", "DIRECT", {"chocolate", "dulce_de_leche"}),
+            ("p:flour", "HARINA DE TRIGO 0000 X 1 KG", "flour", "DIRECT", {"wheat"}),
+            ("p:peanut", "MANI TOSTADO SALADO X 500 G", "peanut", "DIRECT", {"whole"}),
+            ("p:peanut-butter", "PASTA DE MANI NATURAL X 350 G", "peanut", "DERIVED", {"butter"}),
+            ("p:peanut-chocolate", "CHOCOLATE CON MANI X 90 G", "peanut", "DERIVED", {"snack"}),
+        )
+        for key, name, family, role, forms in cases:
+            with self.subTest(name=name):
+                value = derive_identity_record(_row(key, name))
+                candidate = next(item for item in value["familyCandidates"] if item["family"] == family)
+                self.assertEqual(candidate["role"], role)
+                self.assertTrue(forms.intersection(candidate["observedForms"]))
+
+    def test_v12_flour_negative_context_keeps_non_food_mentions_derived(self) -> None:
+        cases = (
+            ("FERTILIZANTE HARINA DE HUESO X 250", "flour"),
+            ("HARINA DE HUESO GRHESA X 500 GR", "flour"),
+            ("3D TUBITOS DE HARINA DE MAIZ SABOR QUESO X 43 G", "flour"),
+            ("BAGEL CON HARINA INTEGRAL X 250 G", "flour"),
+        )
+        for name, family in cases:
+            with self.subTest(name=name):
+                value = derive_identity_record(_row(f"p:negative:{family}", name))
+                candidate = next(item for item in value["familyCandidates"] if item["family"] == family)
+                self.assertEqual(candidate["role"], "DERIVED")
+
+    def test_v12_peanut_family_does_not_promote_ingredient_products_to_whole_peanuts(self) -> None:
+        cases = (
+            ("ACEITE DE MANI MANI KING 500 ML", "oil"),
+            ("PASTA S TACC DE MANI MANI KING X 350 G", "butter"),
+            ("PASTA NATURAL D/MANI CRUNCHY CROPPERS X 305 G", "butter"),
+            ("CHOCOLATES CON MANI COFLER X 90 G", "snack"),
+            ("BARRANOLA PASTA MANI ALM Y QUINOA X 4 UNI", "snack"),
+        )
+        for name, form in cases:
+            with self.subTest(name=name):
+                value = derive_identity_record(_row("p:peanut-derived", name))
+                candidate = next(item for item in value["familyCandidates"] if item["family"] == "peanut")
+                self.assertEqual(candidate["role"], "DERIVED")
+                self.assertIn(form, candidate["observedForms"])
+
+    def test_form_qualified_family_wins_over_a_generic_word_family(self) -> None:
+        self.assertEqual(family_query_key("alfajor chocolate"), "alfajor")
+        self.assertEqual(family_query_form("alfajor chocolate"), ("alfajor", "chocolate"))
+        self.assertEqual(family_query_form("pasta de mani"), ("peanut", "butter"))
 
     def test_mango_family_is_available_for_observed_forms(self) -> None:
         value = derive_identity_record(_row("p:mango-cookie", "GALLETAS DE MANGO 200 G"))
