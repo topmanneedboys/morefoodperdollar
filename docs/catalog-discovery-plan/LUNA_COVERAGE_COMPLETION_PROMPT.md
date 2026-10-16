@@ -1,6 +1,6 @@
 # Luna continuation: complete catalog coverage and working clarification
 
-Prepared 2026-10-16 after verifying implementation HEAD `1967c1f936604440cc933975909a9d793843bb5e`.
+Prepared 2026-10-16 after verifying implementation HEAD `3a67385b0ead741574eaa5b2eec423cafcfc6d3a`.
 This is an implementation brief, not a completed classification or test report.
 Use this prompt for the next Luna run. It supersedes the old instruction to start
 from stage A in `LUNA_IMPLEMENTATION_PROMPT.md`; the engineering specification
@@ -11,9 +11,9 @@ continues to define the architecture and behavior.
 The latest legitimate code checkpoint is:
 
 ```text
-HEAD: 1967c1f936604440cc933975909a9d793843bb5e
+HEAD: 3a67385b0ead741574eaa5b2eec423cafcfc6d3a
 Branch: work/valuepilot-stage2-premium-shopping
-Rules: valuepilot-catalog-discovery-rules-v11
+Rules: valuepilot-catalog-discovery-rules-v14
 Schema: valuepilot-catalog-discovery-v2
 Source SHA-256: 85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6
 ```
@@ -22,23 +22,24 @@ The verified local ignored sidecar is:
 
 ```text
 local-provider-data/product-discovery-v2.sqlite
-SHA-256: 98a4002855a917acdfe7318fd8c38d1ba1459eeb49a946a0c58662ae9eb6e26a
+SHA-256: 817a78c886b93eb81b13df3e7c4861612a20875d1946059da8a5975f2603d7b2
 ```
 
 It accounts for 78,865 provider product IDs and 134,337 qualified identity
-records. Current measurements are 65,491 `TYPE_RESOLVED`, 68,846
-`TYPE_UNRESOLVED`, 90,890 `TYPE_OR_DEPARTMENT_RESOLVED`, 66,639
-`ROLE_RESOLVED`, 90,986 English retrieval-path identities and 110,930 Spanish
-retrieval-path identities. At provider-group level, 28,757 groups are fully
-type-resolved, 7,840 are partly type-resolved and 42,268 have no full type
-coverage; 46,047 are fully type-or-department-resolved, 8,225 are partial and
-24,593 are unresolved by that combined measure. These are structural/retrieval
+records. Current measurements are 66,584 `TYPE_RESOLVED`, 67,753
+`TYPE_UNRESOLVED`, 90,913 `TYPE_OR_DEPARTMENT_RESOLVED`, 67,782
+`ROLE_RESOLVED`, 91,008 English retrieval-path identities and 110,939 Spanish
+retrieval-path identities. At provider-group level, 29,254 groups are fully
+type-resolved, 7,832 are partly type-resolved and 41,779 have no full type
+coverage; 45,963 are fully type-or-department-resolved, 8,321 are partial and
+24,581 are unresolved by that combined measure. These are structural/retrieval
 measurements, not a claim that the catalog is semantically complete.
 
-The v11 changes already committed include reviewed bilingual/Spanish forms and
+The v14 changes include the earlier reviewed bilingual/Spanish forms and
 negative context for soft drinks, incense, blueberries, pajamas, leggings,
-underwear, swimwear, baby wipes, menstrual care, hair color and hair treatment.
-Punctuation-aware tokenization now handles source spellings such as `FEM.SIEMPRE`,
+underwear, swimwear, baby wipes, menstrual care, hair color and hair treatment,
+plus evidence-backed clarification families for alfajor, flour and peanut.
+Punctuation-aware tokenization handles source spellings such as `FEM.SIEMPRE`,
 `HIG.` and `C/ALAS`. Current reviewed evidence overrides stale direct source
 assertions when a name is now recognized as a derived mention. Do not undo these
 guards or replace them with broad substring rules.
@@ -58,7 +59,7 @@ the known `arandano` residual review visible: the first page still contains
 some yogurt/derived mentions even though the strict predicate resolves, so do
 not claim every spot check is pure.
 
-Verification already completed for this checkpoint: 391 tools tests and 135
+Verification already completed for this checkpoint: 397 tools tests and 136
 backend tests. Android source and the debug APK are unchanged from the prior
 verified checkpoint; the prior shared-core tests, app debug unit tests, debug
 lint and debug APK assembly remain the applicable Android evidence. The APK is
@@ -84,7 +85,51 @@ the Stage 0/1/2 audits, repeat the known Firebase investigation, rebuild an APK
 for a documentation-only change, or claim 100% from counts, literal reachability
 or a scan without semantic evidence.
 
-### v11 batch handoff for Luna
+### v14 batch handoff for Luna
+
+The current handoff is code commit `3a67385b0ead741574eaa5b2eec423cafcfc6d3a`
+with discovery rules `valuepilot-catalog-discovery-rules-v14`. The ignored
+sidecar is `local-provider-data/product-discovery-v2.sqlite` with SHA-256
+`817a78c886b93eb81b13df3e7c4861612a20875d1946059da8a5975f2603d7b2`; it was
+rebuilt from source SHA-256
+`85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6`.
+
+This batch adds evidence-backed generic family clarification for alfajor,
+flour/harina and peanut/maní. Bare family queries produce useful choices;
+explicit form queries remain ready and do not reopen sibling facets. The
+verified checks include `alfajor` (364 products, six choices), `alfajor
+chocolate` (190), `flour` (191 products, six choices), `harina de maiz` (33),
+`mani` (481 products, five choices), `mani tostado` (88), `pasta de mani` (61),
+and the English equivalents. Strict negative-context checks for non-food flour
+and peanut mentions, including fertilizer, bone flour, bagels, fish flour,
+peanut oil, pasta, cosmetics and candy contexts, returned zero direct-marker
+leaks.
+
+The v14 release build measured 78,865 provider products, 134,337 identity
+records, 36,423 indexed tokens, 235 concepts and 191,069 assertions. Coverage
+was 66,584 `TYPE_RESOLVED`, 67,753 `TYPE_UNRESOLVED`, 90,913
+`TYPE_OR_DEPARTMENT_RESOLVED`, 85,249 `DEPARTMENT_RESOLVED`, 67,782
+`ROLE_RESOLVED`, 1,198 `DERIVED_ONLY` and 126,086 `NO_FORM`. Provider-group
+coverage was 29,254 fully type-resolved / 7,832 partial / 41,779 unresolved,
+and 45,963 fully type-or-department-resolved / 8,321 partial / 24,581
+unresolved. These are measured coverage states, not semantic completion.
+
+The full verification suites passed: 397 tools tests and 136 backend tests.
+Android source, APK, backend credentials, Firebase/App Check, Play state,
+prices, offers, stock and production activation were unchanged. Motorola Edge
+2025 runtime validation was not run for this catalog-only checkpoint.
+
+For the next Luna run, inspect the residual inventory and choose the next
+high-impact bucket by distinct observed context. Add a small reviewed rule
+batch with positive and negative tests, rebuild the sidecar atomically from the
+pinned source, run focused checks, then update the report, ledger and this
+handoff. Preserve literal-only unresolved identities and do not infer meaning
+from counts. Do not modify Android, Firebase, App Check, Play, credentials or
+shopping data paths as part of catalog discovery. Do not claim 100% coverage
+until every residual has reviewed evidence or an explicit unresolved
+disposition.
+
+### v11 historical batch handoff for Luna
 
 The committed v11 batch is the reusable starting point for the next pass. It
 adds reviewed retail abbreviations and bilingual search paths for mouthwash,

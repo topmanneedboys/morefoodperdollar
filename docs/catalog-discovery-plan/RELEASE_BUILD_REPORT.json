@@ -1,264 +1,346 @@
 {
-  "schemaVersion": "valuepilot-catalog-discovery-v2",
-  "rulesVersion": "valuepilot-catalog-discovery-rules-v11",
-  "source": {
-    "releaseId": "2026-10-08-identity-release",
-    "artifact": "local-provider-data/product-identities-153e9d9f7ab4b87e72c16aebebc69c6f9f90fca681cd1075d625244e2e31bc2c.jsonl.gz",
-    "sha256": "85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6"
-  },
-  "counts": {
-    "providerProducts": 78865,
-    "identityRecords": 134337,
-    "indexedTokens": 36423,
-    "concepts": 215,
-    "assertions": 187548
-  },
-  "coverage": {
-    "IDENTITY_VISITED": 134337,
-    "TYPE_RESOLVED": 65491,
-    "TYPE_UNRESOLVED": 68846,
-    "TYPE_OR_DEPARTMENT_RESOLVED": 90890,
-    "DEPARTMENT_RESOLVED": 85249,
-    "ROLE_RESOLVED": 66639,
-    "DERIVED_ONLY": 1148,
-    "NO_FORM": 127233
-  },
-  "providerGroups": {
-    "groups": 78865,
-    "fullyTypeResolved": 28757,
-    "partlyTypeResolved": 7840,
-    "unresolvedType": 42268,
-    "fullyDepartmentResolved": 43511,
-    "partlyDepartmentResolved": 8862,
-    "unresolvedDepartment": 26492,
-    "fullyTypeOrDepartmentResolved": 46047,
-    "partlyTypeOrDepartmentResolved": 8225,
-    "unresolvedTypeAndDepartment": 24593
-  },
   "bilingual": {
-    "ES_AVAILABLE": 110930,
-    "EN_AVAILABLE": 90986,
-    "MISSING_ES": 23407,
-    "MISSING_EN": 43351,
+    "EN_AVAILABLE": 91008,
+    "ES_AVAILABLE": 110939,
+    "MISSING_EN": 43329,
+    "MISSING_ES": 23398,
     "definition": "Availability counts include reviewed family aliases, identity aliases, and accepted department paths. They are retrieval-path proxies, not proof that every identity has a reviewed translation."
   },
+  "counts": {
+    "assertions": 191069,
+    "concepts": 235,
+    "identityRecords": 134337,
+    "indexedTokens": 36423,
+    "providerProducts": 78865
+  },
+  "coverage": {
+    "DEPARTMENT_RESOLVED": 85249,
+    "DERIVED_ONLY": 1198,
+    "IDENTITY_VISITED": 134337,
+    "NO_FORM": 126086,
+    "RESOLVED": 66584,
+    "ROLE_RESOLVED": 67782,
+    "TYPE_OR_DEPARTMENT_RESOLVED": 90913,
+    "TYPE_RESOLVED": 66584,
+    "TYPE_UNRESOLVED": 67753,
+    "UNRESOLVED": 67753
+  },
   "departments": {
+    "baby_pet": 3760,
     "beverages": 15947,
-    "snacks_sweets": 10019,
-    "home_goods": 8744,
-    "staples": 8452,
-    "fresh_produce": 7087,
-    "personal_care": 7087,
+    "clothing": 6039,
     "condiments": 6578,
     "dairy": 6356,
-    "clothing": 6039,
-    "meat_seafood": 4731,
-    "household_cleaning": 4710,
-    "baby_pet": 3760,
     "electronics": 3760,
-    "prepared_food": 3182,
-    "tools_hardware": 1730,
-    "stationery": 1425,
-    "toys_games": 1411,
+    "fresh_produce": 7087,
     "garden_outdoor": 748,
+    "health_supplements": 399,
+    "home_goods": 8744,
+    "household_cleaning": 4710,
+    "meat_seafood": 4731,
+    "personal_care": 7087,
+    "prepared_food": 3182,
+    "snacks_sweets": 10019,
     "sports_luggage": 721,
-    "health_supplements": 399
+    "staples": 8452,
+    "stationery": 1425,
+    "tools_hardware": 1730,
+    "toys_games": 1411
+  },
+  "notes": [
+    "This v14 checkpoint adds evidence-backed alfajor, flour and peanut families with bilingual form clarification and explicit Argentine abbreviations.",
+    "Form-qualified family queries prefer the family that supplies the observed form and no longer reopen sibling facets after an explicit choice.",
+    "Full-catalog strict checks returned zero direct peanut marker leaks and zero direct postings for fertilizante/harina de hueso, bagel or tubitos flour mentions, peanut oil/paste abbreviations, chocolate, alfajor, barranola and related derived contexts.",
+    "TYPE_UNRESOLVED identities remain literal-searchable and are not semantic completion. Department resolution is reported separately and does not replace useful type review.",
+    "Provider-group completeness is stricter than identity coverage: every identity in a provider group must satisfy the metric before the group is counted as fully covered.",
+    "No prices, offers, stock, availability, credentials, backend security, Android code, production activation, or Play publication were changed."
+  ],
+  "output": {
+    "artifact": "local-provider-data/product-discovery-v2.sqlite",
+    "gitTracked": false,
+    "sha256": "817a78c886b93eb81b13df3e7c4861612a20875d1946059da8a5975f2603d7b2"
+  },
+  "providerGroups": {
+    "fullyDepartmentResolved": 43511,
+    "fullyTypeOrDepartmentResolved": 45963,
+    "fullyTypeResolved": 29254,
+    "groups": 78865,
+    "partlyDepartmentResolved": 8862,
+    "partlyTypeOrDepartmentResolved": 8321,
+    "partlyTypeResolved": 7832,
+    "unresolvedDepartment": 26492,
+    "unresolvedType": 41779,
+    "unresolvedTypeAndDepartment": 24581
+  },
+  "rulesVersion": "valuepilot-catalog-discovery-rules-v14",
+  "safety": {
+    "availability": false,
+    "credentials": false,
+    "everyIdentityHasLiteralPosting": true,
+    "offers": false,
+    "prices": false,
+    "stock": false
+  },
+  "schemaVersion": "valuepilot-catalog-discovery-v2",
+  "source": {
+    "artifact": "local-provider-data/product-identities-153e9d9f7ab4b87e72c16aebebc69c6f9f90fca681cd1075d625244e2e31bc2c.jsonl.gz",
+    "releaseId": "2026-10-08-identity-release",
+    "sha256": "85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6"
   },
   "verification": {
-    "codeCommit": "1967c1f936604440cc933975909a9d793843bb5e",
-    "toolsTests": {
-      "command": "python -m unittest discover -s tools/tests -p 'test_*.py'",
-      "tests": 391,
-      "status": "PASS"
+    "androidChecks": {
+      "apk": "android/app/build/outputs/apk/debug/app-debug.apk",
+      "apkSha256": "027736566b64f1a0e21e3fcb6f475b0a862633e06a88caa8a16d4c8166cd7a4c",
+      "command": ".\\gradlew.bat --no-daemon :shared-core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug",
+      "note": "Android source and APK were unchanged by this identity-sidecar checkpoint; the prior v10 Android verification remains valid.",
+      "status": "PASS_UNCHANGED"
     },
     "backendTests": {
       "command": "python -m unittest discover -s backend/tests -p 'test_*.py'",
-      "tests": 135,
-      "status": "PASS"
+      "status": "PASS",
+      "tests": 136
     },
-    "androidChecks": {
-      "command": ".\\gradlew.bat --no-daemon :shared-core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug",
-      "status": "PASS_UNCHANGED",
-      "apk": "android/app/build/outputs/apk/debug/app-debug.apk",
-      "apkSha256": "027736566b64f1a0e21e3fcb6f475b0a862633e06a88caa8a16d4c8166cd7a4c",
-      "note": "Android source and APK were unchanged by this identity-sidecar checkpoint; the prior v10 Android verification remains valid."
+    "codeCommit": "3a67385b0ead741574eaa5b2eec423cafcfc6d3a",
+    "motorolaEdge2025": {
+      "reason": "No device runtime validation was performed for this identity-sidecar milestone.",
+      "status": "NOT_RUN"
     },
     "spotChecks": {
-      "gaseoEs": {
-        "resolvedPredicate": "type:soft_drink",
-        "productCount": 392,
-        "sourceIdentityCount": 968,
+      "alfajorChocolateEs": {
+        "productCount": 190,
+        "resolvedPredicate": "form:alfajor:chocolate",
+        "sourceIdentityCount": 314,
         "status": "READY"
       },
-      "sahumeriosEs": {
-        "resolvedPredicate": "type:incense",
-        "productCount": 256,
-        "sourceIdentityCount": 264,
-        "status": "READY"
-      },
-      "arandanoEs": {
-        "resolvedPredicate": "type:blueberry",
-        "productCount": 193,
-        "sourceIdentityCount": 257,
-        "status": "READY"
-      },
-      "pijamaEs": {
-        "resolvedPredicate": "type:pajamas",
-        "productCount": 203,
-        "sourceIdentityCount": 203,
-        "status": "READY"
-      },
-      "trajeDeBanoEs": {
-        "resolvedPredicate": "type:swimwear",
-        "productCount": 135,
+      "alfajorDulceDeLecheEs": {
+        "productCount": 99,
+        "resolvedPredicate": "form:alfajor:dulce_de_leche",
         "sourceIdentityCount": 135,
         "status": "READY"
       },
-      "toallitasHumedasEs": {
-        "resolvedPredicate": "type:baby_wipes",
-        "productCount": 65,
-        "sourceIdentityCount": 95,
-        "status": "READY"
-      },
-      "toallaFemeninaEs": {
-        "resolvedPredicate": "type:menstrual_care",
-        "productCount": 123,
-        "sourceIdentityCount": 172,
-        "status": "READY"
-      },
-      "issueKitEn": {
-        "resolvedPredicate": "type:hair_color",
-        "productCount": 439,
-        "sourceIdentityCount": 641,
-        "status": "READY"
-      },
-      "toallaEs": {
-        "resolvedPredicate": "type:towel",
-        "productCount": 347,
-        "sourceIdentityCount": 354,
-        "status": "READY"
-      },
-      "riceEn": {
-        "status": "NEEDS_CLARIFICATION",
-        "resolvedPredicate": "type:rice",
-        "productCount": 590,
-        "sourceIdentityCount": 1166,
+      "alfajorEs": {
         "choices": [
-          "form:rice:dessert",
-          "form:rice:grain",
-          "form:rice:flour"
-        ]
+          "form:alfajor:chocolate",
+          "form:alfajor:dulce_de_leche",
+          "form:alfajor:rice",
+          "form:alfajor:fruit",
+          "form:alfajor:peanut",
+          "form:alfajor:gluten_free"
+        ],
+        "productCount": 364,
+        "resolvedPredicate": "type:alfajor",
+        "sourceIdentityCount": 731,
+        "status": "NEEDS_CLARIFICATION"
       },
-      "shortEn": {
-        "status": "NEEDS_CLARIFICATION",
-        "resolvedPredicate": "department:clothing",
-        "productCount": 5777,
-        "sourceIdentityCount": 6039
-      },
-      "falsePositiveChecks": {
-        "swimwear": 0,
-        "towel": 0,
-        "softDrinkPackaging": 0,
-        "potatoChipsNonFood": 0,
-        "deodorantEnvironment": 0,
-        "mouthwashContext": 0,
-        "spiceConditioner": 0
-      },
-      "mouthwashEn": {
-        "resolvedPredicate": "type:mouthwash",
-        "productCount": 88,
-        "sourceIdentityCount": 197,
-        "status": "READY"
-      },
-      "dogFoodEs": {
-        "resolvedPredicate": "type:dog_food",
-        "productCount": 233,
-        "sourceIdentityCount": 434,
+      "arandanoEs": {
+        "productCount": 193,
+        "resolvedPredicate": "type:blueberry",
+        "sourceIdentityCount": 257,
         "status": "READY"
       },
       "catFoodEs": {
-        "resolvedPredicate": "type:cat_food",
         "productCount": 154,
+        "resolvedPredicate": "type:cat_food",
         "sourceIdentityCount": 338,
         "status": "READY"
       },
       "colorPermEn": {
-        "resolvedPredicate": "type:hair_color",
         "productCount": 486,
+        "resolvedPredicate": "type:hair_color",
         "sourceIdentityCount": 892,
         "status": "READY"
       },
+      "deodorantEn": {
+        "productCount": 688,
+        "resolvedPredicate": "type:deodorant",
+        "sourceIdentityCount": 1646,
+        "status": "READY"
+      },
+      "dogFoodEs": {
+        "productCount": 233,
+        "resolvedPredicate": "type:dog_food",
+        "sourceIdentityCount": 434,
+        "status": "READY"
+      },
+      "falsePositiveChecks": {
+        "deodorantEnvironment": 0,
+        "flourNonFoodDirect": 0,
+        "mouthwashContext": 0,
+        "peanutDerivedDirect": 0,
+        "peanutDirectMarkerLeak": 0,
+        "potatoChipsNonFood": 0,
+        "softDrinkPackaging": 0,
+        "spiceConditioner": 0,
+        "swimwear": 0,
+        "towel": 0
+      },
+      "flourEn": {
+        "choices": [
+          "form:flour:wheat",
+          "form:flour:corn",
+          "form:flour:rice",
+          "form:flour:nut",
+          "form:flour:legume",
+          "form:flour:oat"
+        ],
+        "productCount": 191,
+        "resolvedPredicate": "type:flour",
+        "sourceIdentityCount": 390,
+        "status": "NEEDS_CLARIFICATION"
+      },
+      "flourWheatEn": {
+        "productCount": 86,
+        "resolvedPredicate": "form:flour:wheat",
+        "sourceIdentityCount": 198,
+        "status": "READY"
+      },
+      "gaseoEs": {
+        "productCount": 392,
+        "resolvedPredicate": "type:soft_drink",
+        "sourceIdentityCount": 968,
+        "status": "READY"
+      },
+      "harinaMaizEs": {
+        "productCount": 33,
+        "resolvedPredicate": "form:flour:corn",
+        "sourceIdentityCount": 38,
+        "status": "READY"
+      },
+      "issueKitEn": {
+        "productCount": 439,
+        "resolvedPredicate": "type:hair_color",
+        "sourceIdentityCount": 641,
+        "status": "READY"
+      },
+      "mouthwashEn": {
+        "productCount": 88,
+        "resolvedPredicate": "type:mouthwash",
+        "sourceIdentityCount": 197,
+        "status": "READY"
+      },
+      "peanutButterEn": {
+        "productCount": 61,
+        "resolvedPredicate": "form:peanut:butter",
+        "sourceIdentityCount": 106,
+        "status": "READY"
+      },
+      "peanutEs": {
+        "choices": [
+          "form:peanut:snack",
+          "form:peanut:whole",
+          "form:peanut:butter",
+          "form:peanut:flour",
+          "form:peanut:oil"
+        ],
+        "productCount": 481,
+        "resolvedPredicate": "type:peanut",
+        "sourceIdentityCount": 811,
+        "status": "NEEDS_CLARIFICATION"
+      },
+      "peanutWholeEs": {
+        "productCount": 88,
+        "resolvedPredicate": "form:peanut:whole",
+        "sourceIdentityCount": 153,
+        "status": "READY"
+      },
+      "pijamaEs": {
+        "productCount": 203,
+        "resolvedPredicate": "type:pajamas",
+        "sourceIdentityCount": 203,
+        "status": "READY"
+      },
+      "potatoChipsEn": {
+        "productCount": 197,
+        "resolvedPredicate": "type:potato_chips",
+        "sourceIdentityCount": 321,
+        "status": "READY"
+      },
+      "riceEn": {
+        "choices": [
+          "form:rice:dessert",
+          "form:rice:grain",
+          "form:rice:flour"
+        ],
+        "productCount": 590,
+        "resolvedPredicate": "type:rice",
+        "sourceIdentityCount": 1166,
+        "status": "NEEDS_CLARIFICATION"
+      },
+      "sahumeriosEs": {
+        "productCount": 256,
+        "resolvedPredicate": "type:incense",
+        "sourceIdentityCount": 264,
+        "status": "READY"
+      },
       "salFinaEs": {
-        "resolvedPredicate": "form:salt:fine",
         "productCount": 55,
+        "resolvedPredicate": "form:salt:fine",
         "sourceIdentityCount": 144,
         "status": "READY"
       },
       "saltEn": {
-        "status": "NEEDS_CLARIFICATION",
-        "resolvedPredicate": "type:salt",
-        "productCount": 116,
-        "sourceIdentityCount": 304,
         "choices": [
           "form:salt:fine",
           "form:salt:coarse",
           "form:salt:sea"
-        ]
+        ],
+        "productCount": 116,
+        "resolvedPredicate": "type:salt",
+        "sourceIdentityCount": 304,
+        "status": "NEEDS_CLARIFICATION"
+      },
+      "shortEn": {
+        "productCount": 5777,
+        "resolvedPredicate": "department:clothing",
+        "sourceIdentityCount": 6039,
+        "status": "NEEDS_CLARIFICATION"
       },
       "spiceEn": {
-        "status": "NEEDS_CLARIFICATION",
-        "resolvedPredicate": "type:spice",
-        "productCount": 594,
-        "sourceIdentityCount": 1130,
         "choices": [
           "form:spice:ground",
           "form:spice:whole"
-        ]
+        ],
+        "productCount": 594,
+        "resolvedPredicate": "type:spice",
+        "sourceIdentityCount": 1130,
+        "status": "NEEDS_CLARIFICATION"
       },
       "spiceGroundEn": {
+        "productCount": 90,
         "resolvedPredicate": "type:spice",
         "selection": "form:spice:ground",
-        "productCount": 90,
         "sourceIdentityCount": 161,
         "status": "READY"
       },
-      "deodorantEn": {
-        "resolvedPredicate": "type:deodorant",
-        "productCount": 688,
-        "sourceIdentityCount": 1646,
+      "toallaEs": {
+        "productCount": 347,
+        "resolvedPredicate": "type:towel",
+        "sourceIdentityCount": 354,
         "status": "READY"
       },
-      "potatoChipsEn": {
-        "resolvedPredicate": "type:potato_chips",
-        "productCount": 197,
-        "sourceIdentityCount": 321,
+      "toallaFemeninaEs": {
+        "productCount": 123,
+        "resolvedPredicate": "type:menstrual_care",
+        "sourceIdentityCount": 172,
+        "status": "READY"
+      },
+      "toallitasHumedasEs": {
+        "productCount": 65,
+        "resolvedPredicate": "type:baby_wipes",
+        "sourceIdentityCount": 95,
+        "status": "READY"
+      },
+      "trajeDeBanoEs": {
+        "productCount": 135,
+        "resolvedPredicate": "type:swimwear",
+        "sourceIdentityCount": 135,
         "status": "READY"
       }
     },
-    "motorolaEdge2025": {
-      "status": "NOT_RUN",
-      "reason": "No device runtime validation was performed for this identity-sidecar milestone."
+    "toolsTests": {
+      "command": "python -m unittest discover -s tools/tests -p 'test_*.py'",
+      "status": "PASS",
+      "tests": 397
     }
-  },
-  "safety": {
-    "prices": false,
-    "offers": false,
-    "stock": false,
-    "availability": false,
-    "credentials": false,
-    "everyIdentityHasLiteralPosting": true
-  },
-  "output": {
-    "artifact": "local-provider-data/product-discovery-v2.sqlite",
-    "sha256": "98a4002855a917acdfe7318fd8c38d1ba1459eeb49a946a0c58662ae9eb6e26a",
-    "gitTracked": false
-  },
-  "notes": [
-    "This is an aggregate structural accounting checkpoint for the local ignored sidecar; it is not a promoted production artifact.",
-    "The v11 dictionary adds reviewed Argentina retail abbreviations for oral care, pet food, hair color, hair care, cleaning, deodorant, air freshener, salt, spice and potato-chip queries, plus explicit bilingual aliases for generic family forms.",
-    "Bare 'chips' was removed from the potato-chip family so biscuits, cereal bars and chocolate-chip products remain outside that type. Negative contexts for room deodorizer, tools/meal mentions, rice snacks and conditioner were reviewed against the full sidecar.",
-    "TYPE_UNRESOLVED identities remain literal-searchable and are not semantic completion. Department resolution is reported separately and does not replace useful type review.",
-    "Provider-group completeness is stricter than identity coverage: every identity in a provider group must satisfy the metric before the group is counted as fully covered.",
-    "No prices, offers, stock, availability, credentials, backend security, Android code, production activation, or Play publication were changed."
-  ]
+  }
 }

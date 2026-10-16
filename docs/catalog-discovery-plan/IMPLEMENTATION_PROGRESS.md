@@ -10,8 +10,8 @@ saved-data, release, and security paths remain unchanged.
 
 - Branch: `work/valuepilot-stage2-premium-shopping`
 - Starting handoff checkpoint: `6ce81d0d`
-- Current verified checkpoint: code commit `1967c1f9` (documentation checkpoint follows the verification update).
-- Discovery rules: `valuepilot-catalog-discovery-rules-v11`
+- Current verified checkpoint: code commit `3a67385b` (documentation checkpoint follows the verification update).
+- Discovery rules: `valuepilot-catalog-discovery-rules-v14`
 - Sidecar schema: `valuepilot-catalog-discovery-v2`
 - Additive HTTP contract: `valuepilot-discovery-http-v2`
 - Current state: deterministic identity index, strict query/facet engine, and
@@ -43,23 +43,23 @@ The current local release build reported:
 - `providerProducts`: 78,865
 - `identityRecords`: 134,337
 - `indexedTokens`: 36,423
-- `concepts`: 215
-- `assertions`: 187,548
-- `TYPE_RESOLVED`: 65,491
-- `TYPE_UNRESOLVED`: 68,846
-- `TYPE_OR_DEPARTMENT_RESOLVED`: 90,890
+- `concepts`: 235
+- `assertions`: 191,069
+- `TYPE_RESOLVED`: 66,584
+- `TYPE_UNRESOLVED`: 67,753
+- `TYPE_OR_DEPARTMENT_RESOLVED`: 90,913
 - `DEPARTMENT_RESOLVED`: 85,249
-- `ROLE_RESOLVED`: 66,639
-- `DERIVED_ONLY`: 1,148
-- `NO_FORM`: 127,233
-- English retrieval-path proxy: 90,986 identities
-- Spanish retrieval-path proxy: 110,930 identities
-- fully type-resolved provider groups: 28,757; partly resolved: 7,840; unresolved: 42,268
-- fully type-or-department-resolved provider groups: 46,047; partly resolved: 8,225; unresolved: 24,593
+- `ROLE_RESOLVED`: 67,782
+- `DERIVED_ONLY`: 1,198
+- `NO_FORM`: 126,086
+- English retrieval-path proxy: 91,008 identities
+- Spanish retrieval-path proxy: 110,939 identities
+- fully type-resolved provider groups: 29,254; partly resolved: 7,832; unresolved: 41,779
+- fully type-or-department-resolved provider groups: 45,963; partly resolved: 8,321; unresolved: 24,581
 - source SHA-256: `85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6`
-- ignored sidecar SHA-256: `98a4002855a917acdfe7318fd8c38d1ba1459eeb49a946a0c58662ae9eb6e26a`
+- ignored sidecar SHA-256: `817a78c886b93eb81b13df3e7c4861612a20875d1946059da8a5975f2603d7b2`
 
-The v11 replay combines the existing reviewed family dictionary with
+The v14 replay combines the existing reviewed family dictionary with
 `tools/data/discovery_family_rules.json`. It adds evidence-backed vocabulary for
 common Argentina grocery, personal-care, household, apparel, electronics, pet,
 and toy families while preserving the older high-risk family rules and their
@@ -101,7 +101,7 @@ the unresolved identities have known product meanings.
   sidecar is local/ignored and has not been promoted to the backend or preview.
 
 The v10 residual counts above are historical. Current next work is recorded in
-the v11 checkpoint below; do not use this historical paragraph as a current
+the v14 checkpoint below; do not use this historical paragraph as a current
 denominator.
 
 ## Query gates implemented
@@ -131,16 +131,15 @@ Completed locally:
 
 Completed in this checkpoint:
 
-- full tools suite: 391 tests passed;
-- backend suite: 135 tests passed;
+- full tools suite: 397 tests passed;
+- backend suite: 136 tests passed;
 - Android source and APK unchanged; the prior shared-core tests, app debug unit tests, lint, and debug APK build remain the applicable evidence;
 - debug APK SHA-256: `027736566b64f1a0e21e3fcb6f475b0a862633e06a88caa8a16d4c8166cd7a4c`.
-- live sidecar spot checks passed: `gaseo`, `sahumerios`, `pijama`, `traje de bano`,
-  `toallitas humedas`, `toalla femenina`, `issue kit`, `sal fina`, `salt fine`,
-  `color perm`, `potato chips`, `deodorant`, `mouthwash` and `alimento perro`
-  resolve to reviewed predicates; `rice`, `salt` and `spice` expose observed
-  clarification choices; strict negative checks for the new families returned
-  zero.
+- live sidecar spot checks passed: the prior v11 queries plus `alfajor`, `alfajor chocolate`,
+  `flour`, `flour wheat`, `mani`, `mani tostado`, and `peanut butter` resolve to
+  reviewed predicates; bare alfajor, flour and peanut queries expose observed
+  clarification choices; explicit form queries return `READY`; strict full-sidecar
+  negative checks for flour and peanut contexts returned zero.
 
 Pending after the local full build:
 
@@ -149,8 +148,8 @@ Pending after the local full build:
 - semantic review of unresolved records and source evidence gaps.
 
 The current build has not been promoted to the backend or preview runtime. The
-remaining 68,846 identity-level type-unresolved rows, 42,268 provider groups
-without full type coverage and 24,593 groups without full type-or-department
+remaining 67,753 identity-level type-unresolved rows, 41,779 provider groups
+without full type coverage and 24,581 groups without full type-or-department
 coverage are still open semantic work; literal reachability and department
 coverage do not close that gate.
 
@@ -185,8 +184,40 @@ device validation are separate gates.
   checkpoint. The sidecar is local/ignored and has not been promoted to the
   backend or preview runtime.
 
-Next concrete work is the residual inventory: 68,846 identity-level type rows,
-42,268 provider groups without full type coverage, and 24,593 groups without
+Next concrete work is the residual inventory: 67,753 identity-level type rows,
+41,779 provider groups without full type coverage, and 24,581 groups without
 full type-or-department coverage. Continue evidence-backed batches and record
 unresolved evidence gaps; do not treat literal reachability, department labels
 or count increases as semantic completion.
+
+## v14 verified checkpoint
+
+- Code checkpoint: `3a67385b0ead741574eaa5b2eec423cafcfc6d3a`.
+- The v14 batch adds reviewed Argentine food families for alfajores, flour and
+  peanuts. Each family has bilingual observed forms, explicit product-level
+  clarification labels, and negative contexts for ingredient and derived
+  mentions such as peanut paste, oil, chocolate, bars, flour of bone,
+  fertilizer and baked goods.
+- Form-qualified selection now prefers the family supplying the form, so
+  `alfajor chocolate`, `flour wheat`, `mani tostado` and `peanut butter`
+  resolve to the intended form predicate and return `READY` without reopening
+  sibling facets.
+- Full-catalog strict checks returned zero direct peanut marker leaks and zero
+  direct postings for all reviewed flour/peanut negative contexts.
+- Focused identity/index/backend integration tests: 81 passed. Full tools suite:
+  397 passed. Backend suite: 136 passed.
+- Sidecar: `local-provider-data/product-discovery-v2.sqlite`; SHA-256
+  `817a78c886b93eb81b13df3e7c4861612a20875d1946059da8a5975f2603d7b2`.
+- Coverage: 66,584 type-resolved; 67,753 type-unresolved; 90,913 type-or-department
+  resolved; 67,782 role-resolved; 1,198 derived-only; 126,086 without a form.
+- Provider groups: 29,254 fully type-resolved, 7,832 partial and 41,779
+  unresolved; 45,963 fully type-or-department-resolved, 8,321 partial and
+  24,581 unresolved.
+- Android source and APK are unchanged; the prior APK evidence remains valid.
+  Motorola Edge 2025 runtime validation was not run for this catalog-only
+  checkpoint, and the sidecar remains local/ignored and unpromoted.
+
+This checkpoint is meaningful semantic expansion, not catalog completion. The
+remaining unresolved identities and groups still require evidence-backed review;
+no guessed translations, prices, offers, stock, availability, credentials,
+production activation or Play publication were introduced.
