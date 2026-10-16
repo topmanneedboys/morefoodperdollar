@@ -1,26 +1,26 @@
 {
   "bilingual": {
-    "EN_AVAILABLE": 91164,
-    "ES_AVAILABLE": 111037,
-    "MISSING_EN": 43173,
-    "MISSING_ES": 23300
+    "EN_AVAILABLE": 91263,
+    "ES_AVAILABLE": 111055,
+    "MISSING_EN": 43074,
+    "MISSING_ES": 23282
   },
   "counts": {
-    "assertions": 191896,
-    "concepts": 244,
+    "assertions": 192338,
+    "concepts": 251,
     "identityRecords": 134337,
     "indexedTokens": 36423,
     "providerProducts": 78865
   },
   "coverage": {
     "DEPARTMENT_RESOLVED": 85249,
-    "DERIVED_ONLY": 1219,
+    "DERIVED_ONLY": 1238,
     "IDENTITY_VISITED": 134337,
     "NO_FORM": 126069,
-    "ROLE_RESOLVED": 68479,
-    "TYPE_OR_DEPARTMENT_RESOLVED": 91063,
-    "TYPE_RESOLVED": 67260,
-    "TYPE_UNRESOLVED": 67077
+    "ROLE_RESOLVED": 68895,
+    "TYPE_OR_DEPARTMENT_RESOLVED": 91161,
+    "TYPE_RESOLVED": 67657,
+    "TYPE_UNRESOLVED": 66680
   },
   "departments": {
     "baby_pet": 3760,
@@ -45,7 +45,8 @@
     "toys_games": 1411
   },
   "notes": [
-    "This v22 checkpoint adds evidence-backed bilingual discovery for bowl, using the observed catalog term and conservative appliance context exclusions; the v21 wafer, chewing gum, raticide and facial cream rules remain unchanged.",
+    "This v23 checkpoint adds evidence-backed bilingual discovery for seven appliance families: coffee maker/cafetera, air fryer/airfryer, toaster/tostadora, sandwich maker/sandwichera, juicer/exprimidor, blender/licuadora and microwave/microondas. The v22 bowl rule and earlier reviewed families remain unchanged.",
+    "Full-corpus strict audits returned zero forbidden direct matches for every v23 appliance family. Accessory, food, wax and rack mentions remain contextual or literal-only according to observed catalog names.",
     "Bowl strict discovery returns 189 provider products from 198 accepted source identities. Three observed appliance mentions (two batidoras and one picador) remain contextual MENTIONS and the full-corpus direct-context audit returned zero forbidden matches.",
     "Chewing-gum form choices are limited to observed sugar-free and filled names. Full-corpus auditing rejected scent, conditioner, shampoo, dental-gum and chicle-flavored beverage contexts from the strict chewing-gum predicate.",
     "Facial-cream strict discovery excludes observed depilatory and sunscreen contexts. Wafer/oblea and raticide/rodenticide use direct source terms without invented presentation claims.",
@@ -57,21 +58,21 @@
   "output": {
     "artifact": "local-provider-data/product-discovery-v2.sqlite",
     "gitTracked": false,
-    "sha256": "522738d20bf9542ea0d812bccbd975478a4e04a2792d542d7dff34f737def418"
+    "sha256": "f8d6a59c772ecf8b965a792062e26e682d14a429ef50d71e0f889afc790b9a69"
   },
   "providerGroups": {
     "fullyDepartmentResolved": 43511,
-    "fullyTypeOrDepartmentResolved": 46141,
-    "fullyTypeResolved": 29764,
+    "fullyTypeOrDepartmentResolved": 46230,
+    "fullyTypeResolved": 30065,
     "groups": 78865,
     "partlyDepartmentResolved": 8862,
-    "partlyTypeOrDepartmentResolved": 8213,
-    "partlyTypeResolved": 7881,
+    "partlyTypeOrDepartmentResolved": 8214,
+    "partlyTypeResolved": 7946,
     "unresolvedDepartment": 26492,
-    "unresolvedType": 41220,
-    "unresolvedTypeAndDepartment": 24511
+    "unresolvedType": 40854,
+    "unresolvedTypeAndDepartment": 24421
   },
-  "rulesVersion": "valuepilot-catalog-discovery-rules-v22",
+  "rulesVersion": "valuepilot-catalog-discovery-rules-v23",
   "safety": {
     "availability": false,
     "credentials": false,
@@ -97,14 +98,26 @@
     "backendTests": {
       "command": "python -m unittest discover -s backend/tests -p 'test_*.py'",
       "status": "PASS",
-      "tests": 139
+      "tests": 140
     },
-    "codeCommit": "38ef3db2e2b514de87435cf3f62618499950e5e3",
+    "codeCommit": "bab93bc1910023d3ef366cfa2139d58ec9496990",
     "motorolaEdge2025": {
       "reason": "No device runtime validation was performed for this identity-sidecar milestone.",
       "status": "NOT_RUN"
     },
     "spotChecks": {
+      "airFryerEn": {
+        "productCount": 77,
+        "resolvedPredicate": "type:air_fryer",
+        "sourceIdentityCount": 88,
+        "status": "READY"
+      },
+      "airFryerEs": {
+        "productCount": 77,
+        "resolvedPredicate": "type:air_fryer",
+        "sourceIdentityCount": 88,
+        "status": "READY"
+      },
       "alfajorChocolateEs": {
         "productCount": 190,
         "resolvedPredicate": "form:alfajor:chocolate",
@@ -131,6 +144,43 @@
         "sourceIdentityCount": 731,
         "status": "NEEDS_CLARIFICATION"
       },
+      "applianceFamilyDirectAudits": {
+        "air_fryer": {
+          "directProviderProducts": 77,
+          "directSourceIdentities": 88,
+          "forbiddenContextMatches": 0
+        },
+        "blender": {
+          "directProviderProducts": 75,
+          "directSourceIdentities": 78,
+          "forbiddenContextMatches": 0
+        },
+        "coffee_maker": {
+          "directProviderProducts": 63,
+          "directSourceIdentities": 64,
+          "forbiddenContextMatches": 0
+        },
+        "juicer": {
+          "directProviderProducts": 22,
+          "directSourceIdentities": 23,
+          "forbiddenContextMatches": 0
+        },
+        "microwave": {
+          "directProviderProducts": 80,
+          "directSourceIdentities": 98,
+          "forbiddenContextMatches": 0
+        },
+        "sandwich_maker": {
+          "directProviderProducts": 25,
+          "directSourceIdentities": 26,
+          "forbiddenContextMatches": 0
+        },
+        "toaster": {
+          "directProviderProducts": 41,
+          "directSourceIdentities": 41,
+          "forbiddenContextMatches": 0
+        }
+      },
       "arandanoEs": {
         "productCount": 193,
         "resolvedPredicate": "type:blueberry",
@@ -147,6 +197,18 @@
         "productCount": 248,
         "resolvedPredicate": "type:beef",
         "sourceIdentityCount": 367,
+        "status": "READY"
+      },
+      "blenderEn": {
+        "productCount": 75,
+        "resolvedPredicate": "type:blender",
+        "sourceIdentityCount": 78,
+        "status": "READY"
+      },
+      "blenderEs": {
+        "productCount": 75,
+        "resolvedPredicate": "type:blender",
+        "sourceIdentityCount": 78,
         "status": "READY"
       },
       "bowlEn": {
@@ -202,6 +264,18 @@
         "sourceIdentityCount": 12,
         "status": "READY"
       },
+      "coffeeMakerEn": {
+        "productCount": 63,
+        "resolvedPredicate": "type:coffee_maker",
+        "sourceIdentityCount": 64,
+        "status": "READY"
+      },
+      "coffeeMakerEs": {
+        "productCount": 63,
+        "resolvedPredicate": "type:coffee_maker",
+        "sourceIdentityCount": 64,
+        "status": "READY"
+      },
       "colorPermEn": {
         "productCount": 486,
         "resolvedPredicate": "type:hair_color",
@@ -233,23 +307,30 @@
         "status": "READY"
       },
       "falsePositiveChecks": {
+        "airFryerDirectForbiddenContexts": 0,
+        "blenderDirectForbiddenContexts": 0,
         "bowlApplianceDirectContexts": 0,
         "chewingGumDirectForbiddenContexts": 0,
+        "coffeeMakerDirectForbiddenContexts": 0,
         "deodorantEnvironment": 0,
         "facialCreamDirectForbiddenContexts": 0,
         "flourNonFoodDirect": 0,
+        "juicerDirectForbiddenContexts": 0,
         "meatBeefDirectForbiddenContexts": 0,
         "meatLambDirectForbiddenContexts": 0,
         "meatPorkDirectForbiddenContexts": 0,
         "meatTurkeyDirectForbiddenContexts": 0,
+        "microwaveDirectForbiddenContexts": 0,
         "mouthwashContext": 0,
         "peanutDerivedDirect": 0,
         "peanutDirectMarkerLeak": 0,
         "potatoChipsNonFood": 0,
         "raticideDirectForbiddenContexts": 0,
+        "sandwichMakerDirectForbiddenContexts": 0,
         "softDrinkPackaging": 0,
         "spiceConditioner": 0,
         "swimwear": 0,
+        "toasterDirectForbiddenContexts": 0,
         "towel": 0,
         "waferDirectForbiddenContexts": 0
       },
@@ -291,6 +372,18 @@
         "sourceIdentityCount": 641,
         "status": "READY"
       },
+      "juicerEn": {
+        "productCount": 22,
+        "resolvedPredicate": "type:juicer",
+        "sourceIdentityCount": 23,
+        "status": "READY"
+      },
+      "juicerEs": {
+        "productCount": 22,
+        "resolvedPredicate": "type:juicer",
+        "sourceIdentityCount": 23,
+        "status": "READY"
+      },
       "lambEn": {
         "productCount": 39,
         "resolvedPredicate": "type:lamb",
@@ -320,6 +413,18 @@
           "direct": 8,
           "forbiddenLike": 0
         }
+      },
+      "microwaveEn": {
+        "productCount": 80,
+        "resolvedPredicate": "type:microwave",
+        "sourceIdentityCount": 98,
+        "status": "READY"
+      },
+      "microwaveEs": {
+        "productCount": 80,
+        "resolvedPredicate": "type:microwave",
+        "sourceIdentityCount": 98,
+        "status": "READY"
       },
       "mouthwashEn": {
         "productCount": 88,
@@ -422,6 +527,18 @@
         "sourceIdentityCount": 304,
         "status": "NEEDS_CLARIFICATION"
       },
+      "sandwichMakerEn": {
+        "productCount": 25,
+        "resolvedPredicate": "type:sandwich_maker",
+        "sourceIdentityCount": 26,
+        "status": "READY"
+      },
+      "sandwichMakerEs": {
+        "productCount": 25,
+        "resolvedPredicate": "type:sandwich_maker",
+        "sourceIdentityCount": 26,
+        "status": "READY"
+      },
       "shortEn": {
         "productCount": 5777,
         "resolvedPredicate": "department:clothing",
@@ -463,6 +580,18 @@
         "sourceIdentityCount": 95,
         "status": "READY"
       },
+      "toasterEn": {
+        "productCount": 41,
+        "resolvedPredicate": "type:toaster",
+        "sourceIdentityCount": 41,
+        "status": "READY"
+      },
+      "toasterEs": {
+        "productCount": 41,
+        "resolvedPredicate": "type:toaster",
+        "sourceIdentityCount": 41,
+        "status": "READY"
+      },
       "trajeDeBanoEs": {
         "productCount": 135,
         "resolvedPredicate": "type:swimwear",
@@ -497,7 +626,7 @@
     "toolsTests": {
       "command": "python -m unittest discover -s tools/tests -p 'test_*.py'",
       "status": "PASS",
-      "tests": 407
+      "tests": 408
     }
   }
 }

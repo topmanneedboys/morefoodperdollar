@@ -10,8 +10,8 @@ saved-data, release, and security paths remain unchanged.
 
 - Branch: `work/valuepilot-stage2-premium-shopping`
 - Starting handoff checkpoint: `6ce81d0d`
-- Current verified checkpoint: code commit `38ef3db2` (documentation checkpoint follows the verification update).
-- Discovery rules: `valuepilot-catalog-discovery-rules-v22`
+- Current verified checkpoint: code commit `bab93bc1` (documentation checkpoint follows the verification update).
+- Discovery rules: `valuepilot-catalog-discovery-rules-v23`
 - Sidecar schema: `valuepilot-catalog-discovery-v2`
 - Additive HTTP contract: `valuepilot-discovery-http-v2`
 - Current state: deterministic identity index, strict query/facet engine, and
@@ -43,37 +43,39 @@ The current local release build reported:
 - `providerProducts`: 78,865
 - `identityRecords`: 134,337
 - `indexedTokens`: 36,423
-- `concepts`: 244
-- `assertions`: 191,896
-- `TYPE_RESOLVED`: 67,260
-- `TYPE_UNRESOLVED`: 67,077
-- `TYPE_OR_DEPARTMENT_RESOLVED`: 91,063
+- `concepts`: 251
+- `assertions`: 192,338
+- `TYPE_RESOLVED`: 67,657
+- `TYPE_UNRESOLVED`: 66,680
+- `TYPE_OR_DEPARTMENT_RESOLVED`: 91,161
 - `DEPARTMENT_RESOLVED`: 85,249
-- `ROLE_RESOLVED`: 68,479
-- `DERIVED_ONLY`: 1,219
+- `ROLE_RESOLVED`: 68,895
+- `DERIVED_ONLY`: 1,238
 - `NO_FORM`: 126,069
-- English retrieval-path proxy: 91,164 identities
-- Spanish retrieval-path proxy: 111,037 identities
-- fully type-resolved provider groups: 29,764; partly resolved: 7,881; unresolved: 41,220
-- fully type-or-department-resolved provider groups: 46,141; partly resolved: 8,213; unresolved: 24,511
+- English retrieval-path proxy: 91,263 identities
+- Spanish retrieval-path proxy: 111,055 identities
+- fully type-resolved provider groups: 30,065; partly resolved: 7,946; unresolved: 40,854
+- fully type-or-department-resolved provider groups: 46,230; partly resolved: 8,214; unresolved: 24,421
 - source SHA-256: `85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6`
-- ignored sidecar SHA-256: `522738d20bf9542ea0d812bccbd975478a4e04a2792d542d7dff34f737def418`
+- ignored sidecar SHA-256: `f8d6a59c772ecf8b965a792062e26e682d14a429ef50d71e0f889afc790b9a69`
 
-The v22 replay combines the existing reviewed family dictionary with
-`tools/data/discovery_family_rules.json`. It adds the observed bilingual
-`bowl` family and excludes appliance names that merely contain bowl; the v21
-wafer/oblea, chewing gum/chicle, raticide/rodenticide and facial cream rules
-remain unchanged.
+The v23 replay combines the existing reviewed family dictionary with
+`tools/data/discovery_family_rules.json`. It adds observed bilingual appliance
+families for coffee maker/cafetera, air fryer/airfryer, toaster/tostadora,
+sandwich maker/sandwichera, juicer/exprimidor, blender/licuadora and
+microwave/microondas. The v22 bowl family and earlier reviewed rules remain
+unchanged.
 Chewing-gum forms are limited to observed sugar-free and filled names. Negative
 context is conservative for scent, conditioner, shampoo, dental and beverage
 mentions; facial-cream context excludes observed depilatory and sunscreen
 names. The index uses the canonical product tokenizer for punctuation-separated
 retail abbreviations.
 
-The v22 full-catalog strict audit returned zero forbidden-context direct matches
-for bowl and all four v21 families. Strict bowl search returns 189 provider
-products from 198 source identities; the three observed appliance mentions
-remain contextual postings. Existing strict query checks return wafer/oblea 156
+The v23 full-catalog strict audit returned zero forbidden-context direct matches
+for all seven new appliance families, bowl and the four v21 families. Strict
+queries return coffee maker 63/64, air fryer 77/88, toaster 41/41, sandwich
+maker 25/26, juicer 22/23, blender 75/78 and microwave 80/98 provider/source
+counts in both languages. Existing strict query checks return wafer/oblea 156
 provider products from 303 identities, chewing gum/chicle 69 products from 185
 strict identities, sugar-free gum 10/12, filled gum 5/5, raticide 8/8 and
 facial cream 76/136. Broad gum queries retain contextual mentions for the
@@ -195,11 +197,42 @@ device validation are separate gates.
   checkpoint. The sidecar is local/ignored and has not been promoted to the
   backend or preview runtime.
 
-Next concrete work is the residual inventory: 67,274 identity-level type rows,
-41,408 provider groups without full type coverage, and 24,511 groups without
+Next concrete work is the residual inventory: 66,680 identity-level type rows,
+40,854 provider groups without full type coverage, and 24,421 groups without
 full type-or-department coverage. Continue evidence-backed batches and record
 unresolved evidence gaps; do not treat literal reachability, department labels
 or count increases as semantic completion.
+
+## v23 verified checkpoint
+
+- Code checkpoint: `bab93bc1910023d3ef366cfa2139d58ec9496990`.
+- Rules: `valuepilot-catalog-discovery-rules-v23`; sidecar schema remains
+  `valuepilot-catalog-discovery-v2`.
+- The v23 batch adds observed bilingual strict families for coffee maker/cafetera,
+  air fryer/airfryer, toaster/tostadora, sandwich maker/sandwichera,
+  juicer/exprimidor, blender/licuadora and microwave/microondas. Accessory,
+  food, wax and rack contexts are kept out of strict rows using observed names.
+- Full-catalog strict direct-context audits returned zero forbidden matches for
+  all seven families. Both language paths resolve to the same type predicates:
+  coffee maker 63/64, air fryer 77/88, toaster 41/41, sandwich maker 25/26,
+  juicer 22/23, blender 75/78 and microwave 80/98 provider/source counts.
+- Sidecar: `local-provider-data/product-discovery-v2.sqlite`; SHA-256
+  `f8d6a59c772ecf8b965a792062e26e682d14a429ef50d71e0f889afc790b9a69`.
+- Coverage: 67,657 type-resolved; 66,680 type-unresolved; 91,161
+  type-or-department resolved; 85,249 department-resolved; 68,895
+  role-resolved; 1,238 derived-only; 126,069 without a form.
+- Provider groups: 30,065 fully type-resolved, 7,946 partial and 40,854
+  unresolved; 46,230 fully type-or-department-resolved, 8,214 partial and
+  24,421 unresolved.
+- Full tools suite: 408 tests passed. Backend suite: 140 tests passed. Android
+  source and APK were unchanged; prior Android checks remain applicable.
+- Motorola Edge 2025 runtime validation remains **NOT RUN** for this
+  catalog-only checkpoint. The sidecar is local/ignored and has not been
+  promoted to the backend or preview.
+
+The v23 residual gate remains open. Continue with evidence-backed batches and
+record unresolved evidence gaps; do not treat literal reachability, department
+labels or count increases as semantic completion.
 
 ## v22 verified checkpoint
 
