@@ -1,27 +1,26 @@
 {
   "bilingual": {
-    "EN_AVAILABLE": 91029,
-    "ES_AVAILABLE": 110967,
-    "MISSING_EN": 43308,
-    "MISSING_ES": 23370,
-    "definition": "Availability counts include reviewed family aliases, identity aliases, and accepted department paths. They are retrieval-path proxies, not proof that every identity has a reviewed translation."
+    "EN_AVAILABLE": 91164,
+    "ES_AVAILABLE": 111037,
+    "MISSING_EN": 43173,
+    "MISSING_ES": 23300
   },
   "counts": {
-    "assertions": 191157,
-    "concepts": 238,
+    "assertions": 191691,
+    "concepts": 243,
     "identityRecords": 134337,
     "indexedTokens": 36423,
     "providerProducts": 78865
   },
   "coverage": {
     "DEPARTMENT_RESOLVED": 85249,
-    "DERIVED_ONLY": 1224,
+    "DERIVED_ONLY": 1216,
     "IDENTITY_VISITED": 134337,
-    "NO_FORM": 126086,
-    "ROLE_RESOLVED": 67953,
-    "TYPE_OR_DEPARTMENT_RESOLVED": 90923,
-    "TYPE_RESOLVED": 66729,
-    "TYPE_UNRESOLVED": 67608
+    "NO_FORM": 126069,
+    "ROLE_RESOLVED": 68279,
+    "TYPE_OR_DEPARTMENT_RESOLVED": 91063,
+    "TYPE_RESOLVED": 67063,
+    "TYPE_UNRESOLVED": 67274
   },
   "departments": {
     "baby_pet": 3760,
@@ -46,9 +45,10 @@
     "toys_games": 1411
   },
   "notes": [
-    "This v19 checkpoint extends evidence-backed bilingual meat-family discovery for pork/cerdo, lamb/cordero, turkey/pavo and beef/vacuno/ternera, with conservative negative-context handling for pet food, toys, prepared foods, seasoning, alcohol and stale source assertions.",
-    "The index uses the canonical product tokenizer when applying current negative context to older source family assertions, so punctuation and retail abbreviations such as ALIM.PERROS cannot leak into a strict meat-family result.",
-    "Full-catalog strict checks returned zero direct forbidden-context matches for pork, lamb, turkey and beef; bilingual family queries resolve to the same strict predicate for the verified Spanish/English pairs.",
+    "This v21 checkpoint adds evidence-backed bilingual discovery for wafer/oblea, chewing gum/chicle, raticide/rodenticide and facial cream, using only observed catalog terms and conservative negative context.",
+    "Chewing-gum form choices are limited to observed sugar-free and filled names. Full-corpus auditing rejected scent, conditioner, shampoo, dental-gum and chicle-flavored beverage contexts from the strict chewing-gum predicate.",
+    "Facial-cream strict discovery excludes observed depilatory and sunscreen contexts. Wafer/oblea and raticide/rodenticide use direct source terms without invented presentation claims.",
+    "Broad family queries retain literal contextual mentions so the clarification surface can explain ambiguity; explicit type/form selections use accepted postings only and do not expose those derived mentions.",
     "TYPE_UNRESOLVED identities remain literal-searchable and are not semantic completion. Department resolution is reported separately and does not replace useful type review.",
     "Provider-group completeness is stricter than identity coverage: every identity in a provider group must satisfy the metric before the group is counted as fully covered.",
     "No prices, offers, stock, availability, credentials, backend security, Android code, production activation, or Play publication were changed."
@@ -56,21 +56,21 @@
   "output": {
     "artifact": "local-provider-data/product-discovery-v2.sqlite",
     "gitTracked": false,
-    "sha256": "8893365ece314585a9a0e88ff228b8e1fb83b67bb051be96a439fd85243013d4"
+    "sha256": "99e8cd39e798437721c5716d62e030a84ba5ea2025f5673065c7dbdfd17b498b"
   },
   "providerGroups": {
-    "groups": 78865,
-    "fullyTypeResolved": 29464,
-    "partlyTypeResolved": 7866,
-    "unresolvedType": 41535,
     "fullyDepartmentResolved": 43511,
+    "fullyTypeOrDepartmentResolved": 46141,
+    "fullyTypeResolved": 29579,
+    "groups": 78865,
     "partlyDepartmentResolved": 8862,
+    "partlyTypeOrDepartmentResolved": 8213,
+    "partlyTypeResolved": 7878,
     "unresolvedDepartment": 26492,
-    "fullyTypeOrDepartmentResolved": 46078,
-    "partlyTypeOrDepartmentResolved": 8232,
-    "unresolvedTypeAndDepartment": 24555
+    "unresolvedType": 41408,
+    "unresolvedTypeAndDepartment": 24511
   },
-  "rulesVersion": "valuepilot-catalog-discovery-rules-v19",
+  "rulesVersion": "valuepilot-catalog-discovery-rules-v21",
   "safety": {
     "availability": false,
     "credentials": false,
@@ -90,15 +90,15 @@
       "apk": "android/app/build/outputs/apk/debug/app-debug.apk",
       "apkSha256": "027736566b64f1a0e21e3fcb6f475b0a862633e06a88caa8a16d4c8166cd7a4c",
       "command": ".\\gradlew.bat --no-daemon :shared-core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug",
-      "note": "Android source and APK were unchanged by this identity-sidecar checkpoint; the prior v10 Android verification remains valid.",
+      "note": "Android source and APK were unchanged by this catalog-discovery checkpoint; the prior debug APK verification remains valid.",
       "status": "PASS_UNCHANGED"
     },
     "backendTests": {
       "command": "python -m unittest discover -s backend/tests -p 'test_*.py'",
       "status": "PASS",
-      "tests": 137
+      "tests": 138
     },
-    "codeCommit": "f1e03771b36afbf93476e2f566a09f4efba111ee",
+    "codeCommit": "7b79ac963b000619f1143f73b9c0346cdaf4717d",
     "motorolaEdge2025": {
       "reason": "No device runtime validation was performed for this identity-sidecar milestone.",
       "status": "NOT_RUN"
@@ -136,10 +136,57 @@
         "sourceIdentityCount": 257,
         "status": "READY"
       },
+      "beefEn": {
+        "productCount": 248,
+        "resolvedPredicate": "type:beef",
+        "sourceIdentityCount": 367,
+        "status": "READY"
+      },
+      "beefEs": {
+        "productCount": 248,
+        "resolvedPredicate": "type:beef",
+        "sourceIdentityCount": 367,
+        "status": "READY"
+      },
       "catFoodEs": {
         "productCount": 154,
         "resolvedPredicate": "type:cat_food",
         "sourceIdentityCount": 338,
+        "status": "READY"
+      },
+      "chewingGumEn": {
+        "productCount": 82,
+        "resolvedPredicate": "type:chewing_gum",
+        "sourceIdentityCount": 204,
+        "status": "NEEDS_CLARIFICATION"
+      },
+      "chewingGumEs": {
+        "productCount": 82,
+        "resolvedPredicate": "type:chewing_gum",
+        "sourceIdentityCount": 204,
+        "status": "NEEDS_CLARIFICATION"
+      },
+      "chewingGumFilledEn": {
+        "productCount": 5,
+        "resolvedPredicate": "form:chewing_gum:filled",
+        "sourceIdentityCount": 5,
+        "status": "READY"
+      },
+      "chewingGumObservedForms": {
+        "choices": [
+          "form:chewing_gum:sugar_free",
+          "form:chewing_gum:filled"
+        ],
+        "filledProductCount": 5,
+        "filledSourceIdentityCount": 5,
+        "status": "NEEDS_CLARIFICATION",
+        "sugarFreeProductCount": 10,
+        "sugarFreeSourceIdentityCount": 12
+      },
+      "chewingGumSugarFreeEs": {
+        "productCount": 10,
+        "resolvedPredicate": "form:chewing_gum:sugar_free",
+        "sourceIdentityCount": 12,
         "status": "READY"
       },
       "colorPermEn": {
@@ -160,21 +207,37 @@
         "sourceIdentityCount": 434,
         "status": "READY"
       },
+      "facialCreamEn": {
+        "productCount": 76,
+        "resolvedPredicate": "type:facial_cream",
+        "sourceIdentityCount": 136,
+        "status": "READY"
+      },
+      "facialCreamEs": {
+        "productCount": 76,
+        "resolvedPredicate": "type:facial_cream",
+        "sourceIdentityCount": 136,
+        "status": "READY"
+      },
       "falsePositiveChecks": {
+        "chewingGumDirectForbiddenContexts": 0,
         "deodorantEnvironment": 0,
+        "facialCreamDirectForbiddenContexts": 0,
         "flourNonFoodDirect": 0,
+        "meatBeefDirectForbiddenContexts": 0,
+        "meatLambDirectForbiddenContexts": 0,
+        "meatPorkDirectForbiddenContexts": 0,
+        "meatTurkeyDirectForbiddenContexts": 0,
         "mouthwashContext": 0,
         "peanutDerivedDirect": 0,
         "peanutDirectMarkerLeak": 0,
         "potatoChipsNonFood": 0,
+        "raticideDirectForbiddenContexts": 0,
         "softDrinkPackaging": 0,
         "spiceConditioner": 0,
         "swimwear": 0,
         "towel": 0,
-        "meatPorkDirectForbiddenContexts": 0,
-        "meatLambDirectForbiddenContexts": 0,
-        "meatTurkeyDirectForbiddenContexts": 0,
-        "meatBeefDirectForbiddenContexts": 0
+        "waferDirectForbiddenContexts": 0
       },
       "flourEn": {
         "choices": [
@@ -214,6 +277,36 @@
         "sourceIdentityCount": 641,
         "status": "READY"
       },
+      "lambEn": {
+        "productCount": 39,
+        "resolvedPredicate": "type:lamb",
+        "sourceIdentityCount": 39,
+        "status": "READY"
+      },
+      "lambEs": {
+        "productCount": 39,
+        "resolvedPredicate": "type:lamb",
+        "sourceIdentityCount": 39,
+        "status": "READY"
+      },
+      "meatFamilyDirectNegativeContexts": {
+        "beef": {
+          "direct": 367,
+          "forbiddenLike": 0
+        },
+        "lamb": {
+          "direct": 39,
+          "forbiddenLike": 0
+        },
+        "pork": {
+          "direct": 334,
+          "forbiddenLike": 0
+        },
+        "turkey": {
+          "direct": 8,
+          "forbiddenLike": 0
+        }
+      },
       "mouthwashEn": {
         "productCount": 88,
         "resolvedPredicate": "type:mouthwash",
@@ -251,10 +344,34 @@
         "sourceIdentityCount": 203,
         "status": "READY"
       },
+      "porkEn": {
+        "productCount": 317,
+        "resolvedPredicate": "type:pork",
+        "sourceIdentityCount": 334,
+        "status": "READY"
+      },
+      "porkEs": {
+        "productCount": 317,
+        "resolvedPredicate": "type:pork",
+        "sourceIdentityCount": 334,
+        "status": "READY"
+      },
       "potatoChipsEn": {
         "productCount": 197,
         "resolvedPredicate": "type:potato_chips",
         "sourceIdentityCount": 321,
+        "status": "READY"
+      },
+      "raticideEn": {
+        "productCount": 8,
+        "resolvedPredicate": "type:raticide",
+        "sourceIdentityCount": 8,
+        "status": "READY"
+      },
+      "raticideEs": {
+        "productCount": 8,
+        "resolvedPredicate": "type:raticide",
+        "sourceIdentityCount": 8,
         "status": "READY"
       },
       "riceEn": {
@@ -338,28 +455,10 @@
         "sourceIdentityCount": 135,
         "status": "READY"
       },
-      "porkEs": {
-        "productCount": 317,
-        "resolvedPredicate": "type:pork",
-        "sourceIdentityCount": 334,
-        "status": "READY"
-      },
-      "porkEn": {
-        "productCount": 317,
-        "resolvedPredicate": "type:pork",
-        "sourceIdentityCount": 334,
-        "status": "READY"
-      },
-      "lambEs": {
-        "productCount": 39,
-        "resolvedPredicate": "type:lamb",
-        "sourceIdentityCount": 39,
-        "status": "READY"
-      },
-      "lambEn": {
-        "productCount": 39,
-        "resolvedPredicate": "type:lamb",
-        "sourceIdentityCount": 39,
+      "turkeyEn": {
+        "productCount": 6,
+        "resolvedPredicate": "type:turkey",
+        "sourceIdentityCount": 8,
         "status": "READY"
       },
       "turkeyEs": {
@@ -368,47 +467,23 @@
         "sourceIdentityCount": 8,
         "status": "READY"
       },
-      "turkeyEn": {
-        "productCount": 6,
-        "resolvedPredicate": "type:turkey",
-        "sourceIdentityCount": 8,
+      "waferEn": {
+        "productCount": 156,
+        "resolvedPredicate": "type:wafer",
+        "sourceIdentityCount": 303,
         "status": "READY"
       },
-      "beefEs": {
-        "productCount": 248,
-        "resolvedPredicate": "type:beef",
-        "sourceIdentityCount": 367,
+      "waferEs": {
+        "productCount": 156,
+        "resolvedPredicate": "type:wafer",
+        "sourceIdentityCount": 303,
         "status": "READY"
-      },
-      "beefEn": {
-        "productCount": 248,
-        "resolvedPredicate": "type:beef",
-        "sourceIdentityCount": 367,
-        "status": "READY"
-      },
-      "meatFamilyDirectNegativeContexts": {
-        "pork": {
-          "direct": 334,
-          "forbiddenLike": 0
-        },
-        "lamb": {
-          "direct": 39,
-          "forbiddenLike": 0
-        },
-        "turkey": {
-          "direct": 8,
-          "forbiddenLike": 0
-        },
-        "beef": {
-          "direct": 367,
-          "forbiddenLike": 0
-        }
       }
     },
     "toolsTests": {
       "command": "python -m unittest discover -s tools/tests -p 'test_*.py'",
       "status": "PASS",
-      "tests": 403
+      "tests": 405
     }
   }
 }

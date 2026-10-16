@@ -1,6 +1,6 @@
 # Luna continuation: complete catalog coverage and working clarification
 
-Prepared 2026-10-16 after verifying implementation HEAD `f1e03771b36afbf93476e2f566a09f4efba111ee`.
+Prepared 2026-10-16 after verifying implementation HEAD `7b79ac963b000619f1143f73b9c0346cdaf4717d`.
 This is an implementation brief, not a completed classification or test report.
 Use this prompt for the next Luna run. It supersedes the old instruction to start
 from stage A in `LUNA_IMPLEMENTATION_PROMPT.md`; the engineering specification
@@ -11,9 +11,9 @@ continues to define the architecture and behavior.
 The latest legitimate code checkpoint is:
 
 ```text
-HEAD: f1e03771b36afbf93476e2f566a09f4efba111ee
+HEAD: 7b79ac963b000619f1143f73b9c0346cdaf4717d
 Branch: work/valuepilot-stage2-premium-shopping
-Rules: valuepilot-catalog-discovery-rules-v19
+Rules: valuepilot-catalog-discovery-rules-v21
 Schema: valuepilot-catalog-discovery-v2
 Source SHA-256: 85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6
 ```
@@ -22,28 +22,27 @@ The verified local ignored sidecar is:
 
 ```text
 local-provider-data/product-discovery-v2.sqlite
-SHA-256: 8893365ece314585a9a0e88ff228b8e1fb83b67bb051be96a439fd85243013d4
+SHA-256: 99e8cd39e798437721c5716d62e030a84ba5ea2025f5673065c7dbdfd17b498b
 ```
 
 It accounts for 78,865 provider product IDs and 134,337 qualified identity
-records. Current measurements are 66,729 `TYPE_RESOLVED`, 67,608
-`TYPE_UNRESOLVED`, 90,923 `TYPE_OR_DEPARTMENT_RESOLVED`, 67,953
-`ROLE_RESOLVED`, 91,029 English retrieval-path identities and 110,967 Spanish
-retrieval-path identities. At provider-group level, 29,464 groups are fully
-type-resolved, 7,866 are partly type-resolved and 41,535 have no full type
-coverage; 46,078 are fully type-or-department-resolved, 8,232 are partial and
-24,555 are unresolved by that combined measure. These are structural/retrieval
+records. Current measurements are 67,063 `TYPE_RESOLVED`, 67,274
+`TYPE_UNRESOLVED`, 91,063 `TYPE_OR_DEPARTMENT_RESOLVED`, 68,279
+`ROLE_RESOLVED`, 91,164 English retrieval-path identities and 111,037 Spanish
+retrieval-path identities. At provider-group level, 29,579 groups are fully
+type-resolved, 7,878 are partly type-resolved and 41,408 have no full type
+coverage; 46,141 are fully type-or-department-resolved, 8,213 are partial and
+24,511 are unresolved by that combined measure. These are structural/retrieval
 measurements, not a claim that the catalog is semantically complete.
 
-The v19 changes include the earlier reviewed bilingual/Spanish forms and
-negative context for soft drinks, incense, blueberries, pajamas, leggings,
-underwear, swimwear, baby wipes, menstrual care, hair color and hair treatment,
-plus evidence-backed clarification families for alfajor, flour, peanut and the
-new pork/cerdo, lamb/cordero, turkey/pavo and beef/vacuno/ternera families.
-Punctuation-aware canonical tokenization handles source spellings such as
-`FEM.SIEMPRE`, `HIG.`, `C/ALAS` and `ALIM.PERROS`. Current reviewed evidence
-overrides stale direct source assertions when a name is now recognized as a
-negative or derived mention. Do not undo these guards or replace them with
+The v21 changes retain the earlier reviewed bilingual/Spanish forms and
+negative context, then add evidence-backed strict families for wafer/oblea,
+chewing gum/chicle, raticide/rodenticide and facial cream. Chewing-gum
+clarification is limited to observed sugar-free and filled names. Full-catalog
+checks reject scent, conditioner, shampoo, dental and beverage mentions from
+the strict chewing-gum postings; facial-cream checks reject observed
+depilatory and sunscreen contexts. Punctuation-aware canonical tokenization
+continues to handle retail abbreviations. Do not replace these guards with
 broad substring rules.
 
 Verified behavior includes: `gaseo` -> `type:soft_drink` (392 products),
@@ -61,8 +60,8 @@ the known `arandano` residual review visible: the first page still contains
 some yogurt/derived mentions even though the strict predicate resolves, so do
 not claim every spot check is pure.
 
-The v19 code and sidecar checks are complete. The full tools suite passed 403
-tests and the backend suite passed 137 tests. Android
+The v21 code and sidecar checks are complete. The full tools suite passed 405
+tests and the backend suite passed 138 tests. Android
 source and the debug APK are unchanged from the prior verified checkpoint; the
 prior shared-core tests, app debug unit tests, debug lint and debug APK assembly
 remain the applicable Android evidence. The APK is local only:
@@ -86,6 +85,49 @@ ledger with measured values and commit a recoverable checkpoint. Do not restart
 the Stage 0/1/2 audits, repeat the known Firebase investigation, rebuild an APK
 for a documentation-only change, or claim 100% from counts, literal reachability
 or a scan without semantic evidence.
+
+### v21 batch handoff for Luna
+
+The current implementation checkpoint is code commit
+`7b79ac963b000619f1143f73b9c0346cdaf4717d` with discovery rules
+`valuepilot-catalog-discovery-rules-v21`. The ignored sidecar is
+`local-provider-data/product-discovery-v2.sqlite` with SHA-256
+`99e8cd39e798437721c5716d62e030a84ba5ea2025f5673065c7dbdfd17b498b`; it was
+rebuilt from source SHA-256
+`85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6`.
+
+This batch adds observed bilingual families for wafer/oblea (303 source
+identities), chewing gum/chicle (185 strict identities plus contextual
+mentions), raticide/rodenticide (8) and facial cream (136). The chewing-gum
+clarification exposes only the observed `sugar_free` (10 provider products /
+12 source identities) and `filled` (5 / 5) choices. The strict audit returned
+zero forbidden-context matches for all four new families. Broad family queries
+may still show contextual mentions so the clarification UI can explain
+ambiguity; explicit type/form selections use strict accepted postings.
+
+The v21 release build measures 78,865 provider products, 134,337 identity
+records, 36,423 indexed tokens, 243 concepts and 191,691 assertions. Coverage
+is 67,063 `TYPE_RESOLVED`, 67,274 `TYPE_UNRESOLVED`, 91,063
+`TYPE_OR_DEPARTMENT_RESOLVED`, 85,249 `DEPARTMENT_RESOLVED`, 68,279
+`ROLE_RESOLVED`, 1,216 `DERIVED_ONLY` and 126,069 `NO_FORM`. Provider-group
+coverage is 29,579 fully type-resolved / 7,878 partial / 41,408 unresolved,
+and 46,141 fully type-or-department-resolved / 8,213 partial / 24,511
+unresolved. These are measured coverage states, not semantic completion.
+
+The full verification suites passed: 405 tools tests and 138 backend tests.
+Android source, APK, backend credentials, Firebase/App Check, Play state,
+prices, offers, stock and production activation are unchanged. Motorola Edge
+2025 runtime validation was not run for this catalog-only checkpoint.
+
+For the next Luna run, inspect the residual inventory and choose another
+high-impact bucket by distinct observed context. Add a small reviewed rule batch
+with positive and negative tests, rebuild the sidecar atomically from the pinned
+source, run focused checks, then update the report, ledger and this handoff.
+Preserve literal-only unresolved identities and do not infer meaning from
+counts. Do not modify Android, Firebase, App Check, Play, credentials or
+shopping data paths as part of catalog discovery. Do not claim 100% coverage
+until every residual has reviewed evidence or an explicit unresolved
+disposition.
 
 ### v19 batch handoff for Luna
 

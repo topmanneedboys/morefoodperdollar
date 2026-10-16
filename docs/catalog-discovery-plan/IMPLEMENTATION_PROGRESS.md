@@ -10,8 +10,8 @@ saved-data, release, and security paths remain unchanged.
 
 - Branch: `work/valuepilot-stage2-premium-shopping`
 - Starting handoff checkpoint: `6ce81d0d`
-- Current verified checkpoint: code commit `f1e03771` (documentation checkpoint follows the verification update).
-- Discovery rules: `valuepilot-catalog-discovery-rules-v19`
+- Current verified checkpoint: code commit `7b79ac96` (documentation checkpoint follows the verification update).
+- Discovery rules: `valuepilot-catalog-discovery-rules-v21`
 - Sidecar schema: `valuepilot-catalog-discovery-v2`
 - Additive HTTP contract: `valuepilot-discovery-http-v2`
 - Current state: deterministic identity index, strict query/facet engine, and
@@ -43,35 +43,38 @@ The current local release build reported:
 - `providerProducts`: 78,865
 - `identityRecords`: 134,337
 - `indexedTokens`: 36,423
-- `concepts`: 238
-- `assertions`: 191,157
-- `TYPE_RESOLVED`: 66,729
-- `TYPE_UNRESOLVED`: 67,608
-- `TYPE_OR_DEPARTMENT_RESOLVED`: 90,923
+- `concepts`: 243
+- `assertions`: 191,691
+- `TYPE_RESOLVED`: 67,063
+- `TYPE_UNRESOLVED`: 67,274
+- `TYPE_OR_DEPARTMENT_RESOLVED`: 91,063
 - `DEPARTMENT_RESOLVED`: 85,249
-- `ROLE_RESOLVED`: 67,953
-- `DERIVED_ONLY`: 1,224
-- `NO_FORM`: 126,086
-- English retrieval-path proxy: 91,029 identities
-- Spanish retrieval-path proxy: 110,967 identities
-- fully type-resolved provider groups: 29,464; partly resolved: 7,866; unresolved: 41,535
-- fully type-or-department-resolved provider groups: 46,078; partly resolved: 8,232; unresolved: 24,555
+- `ROLE_RESOLVED`: 68,279
+- `DERIVED_ONLY`: 1,216
+- `NO_FORM`: 126,069
+- English retrieval-path proxy: 91,164 identities
+- Spanish retrieval-path proxy: 111,037 identities
+- fully type-resolved provider groups: 29,579; partly resolved: 7,878; unresolved: 41,408
+- fully type-or-department-resolved provider groups: 46,141; partly resolved: 8,213; unresolved: 24,511
 - source SHA-256: `85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6`
-- ignored sidecar SHA-256: `8893365ece314585a9a0e88ff228b8e1fb83b67bb051be96a439fd85243013d4`
+- ignored sidecar SHA-256: `99e8cd39e798437721c5716d62e030a84ba5ea2025f5673065c7dbdfd17b498b`
 
-The v19 replay combines the existing reviewed family dictionary with
-`tools/data/discovery_family_rules.json`. It adds evidence-backed bilingual
-meat-family vocabulary for pork/cerdo, lamb/cordero, turkey/pavo and
-beef/vacuno/ternera. Negative context is conservative for pet food, toys,
-prepared foods, seasoning and alcohol, and current evidence overrides stale
-direct source assertions. The index uses the canonical product tokenizer for
-punctuation-separated retail abbreviations.
+The v21 replay combines the existing reviewed family dictionary with
+`tools/data/discovery_family_rules.json`. It adds observed bilingual families
+for wafer/oblea, chewing gum/chicle, raticide/rodenticide and facial cream.
+Chewing-gum forms are limited to observed sugar-free and filled names. Negative
+context is conservative for scent, conditioner, shampoo, dental and beverage
+mentions; facial-cream context excludes observed depilatory and sunscreen
+names. The index uses the canonical product tokenizer for punctuation-separated
+retail abbreviations.
 
-The v19 full-catalog strict audit returned zero forbidden-context direct matches
-for all four meat families. Spanish and English pairs resolve to the same strict
-type predicate: cerdo/pork (317 products), cordero/lamb (39), pavo/turkey (6),
-and vacuno/beef (248). These are observed identity matches, not price or
-availability evidence.
+The v21 full-catalog strict audit returned zero forbidden-context direct matches
+for all four new families. Strict query checks returned wafer/oblea 156
+provider products from 303 identities, chewing gum/chicle 69 products from 185
+strict identities, sugar-free gum 10/12, filled gum 5/5, raticide 8/8 and
+facial cream 76/136. Broad gum queries retain contextual mentions for the
+clarification surface; explicit type/form selections use accepted postings.
+These are observed identity matches, not price or availability evidence.
 
 The report and sidecar stay in `local-provider-data`, which is ignored by Git.
 Those numbers are engineering coverage measurements. They do not mean that
@@ -135,8 +138,8 @@ Completed locally:
 
 Completed in this checkpoint:
 
-- full tools suite: 397 tests passed;
-- backend suite: 136 tests passed;
+- full tools suite: 405 tests passed;
+- backend suite: 138 tests passed;
 - Android source and APK unchanged; the prior shared-core tests, app debug unit tests, lint, and debug APK build remain the applicable evidence;
 - debug APK SHA-256: `027736566b64f1a0e21e3fcb6f475b0a862633e06a88caa8a16d4c8166cd7a4c`.
 - live sidecar spot checks passed: the prior v11 queries plus `alfajor`, `alfajor chocolate`,
@@ -152,8 +155,8 @@ Pending after the local full build:
 - semantic review of unresolved records and source evidence gaps.
 
 The current build has not been promoted to the backend or preview runtime. The
-remaining 67,753 identity-level type-unresolved rows, 41,779 provider groups
-without full type coverage and 24,581 groups without full type-or-department
+remaining 67,274 identity-level type-unresolved rows, 41,408 provider groups
+without full type coverage and 24,511 groups without full type-or-department
 coverage are still open semantic work; literal reachability and department
 coverage do not close that gate.
 
@@ -188,11 +191,40 @@ device validation are separate gates.
   checkpoint. The sidecar is local/ignored and has not been promoted to the
   backend or preview runtime.
 
-Next concrete work is the residual inventory: 67,753 identity-level type rows,
-41,779 provider groups without full type coverage, and 24,581 groups without
+Next concrete work is the residual inventory: 67,274 identity-level type rows,
+41,408 provider groups without full type coverage, and 24,511 groups without
 full type-or-department coverage. Continue evidence-backed batches and record
 unresolved evidence gaps; do not treat literal reachability, department labels
 or count increases as semantic completion.
+
+## v21 verified checkpoint
+
+- Code checkpoint: `7b79ac963b000619f1143f73b9c0346cdaf4717d`.
+- Rules: `valuepilot-catalog-discovery-rules-v21`; sidecar schema remains
+  `valuepilot-catalog-discovery-v2`.
+- The v21 batch adds observed bilingual strict families for wafer/oblea,
+  chewing gum/chicle, raticide/rodenticide and facial cream. Chewing-gum
+  clarification exposes only observed sugar-free and filled choices.
+- Full-catalog strict negative audit returned zero forbidden-context direct
+  matches for all four new families. Broad contextual mentions remain available
+  for clarification; explicit type/form selections are strict.
+- Sidecar: `local-provider-data/product-discovery-v2.sqlite`; SHA-256
+  `99e8cd39e798437721c5716d62e030a84ba5ea2025f5673065c7dbdfd17b498b`.
+- Coverage: 67,063 type-resolved; 67,274 type-unresolved; 91,063
+  type-or-department resolved; 85,249 department-resolved; 68,279
+  role-resolved; 1,216 derived-only; 126,069 without a form.
+- Provider groups: 29,579 fully type-resolved, 7,878 partial and 41,408
+  unresolved; 46,141 fully type-or-department-resolved, 8,213 partial and
+  24,511 unresolved.
+- Full tools suite: 405 tests passed. Backend suite: 138 tests passed. Android
+  source and APK were unchanged; prior Android checks remain applicable.
+- Motorola Edge 2025 runtime validation remains **NOT RUN** for this
+  catalog-only checkpoint. The sidecar is local/ignored and has not been
+  promoted to the backend or preview.
+
+The v21 residual gate remains open. Continue with evidence-backed batches and
+record unresolved evidence gaps; do not treat literal reachability, department
+labels or count increases as semantic completion.
 
 ## v19 verified checkpoint
 
