@@ -707,6 +707,18 @@ _FORM_PRESENTATION: Mapping[str, Mapping[str, Mapping[str, str]]] = {
             "query": "chocolate con mani",
         },
     },
+    "chewing_gum": {
+        "sugar_free": {
+            "labelEs": "Chicle sin azúcar",
+            "labelEn": "Sugar-free chewing gum",
+            "query": "chicle sin azucar",
+        },
+        "filled": {
+            "labelEs": "Chicle relleno",
+            "labelEn": "Filled chewing gum",
+            "query": "chicle relleno",
+        },
+    },
 }
 
 # These forms describe the direct family item itself.  Derived presentations
@@ -718,11 +730,14 @@ _DIRECT_FORM_KEYS = frozenset({
     "whole", "wheat", "corn", "rice", "legume", "nut", "oat",
 })
 
-# These newly reviewed species families have a strict bare-query projection
-# even though they do not yet expose presentation facets.  It keeps derived
-# pet-food, wine-brand and prepared-food mentions out of the main result set
-# while leaving those rows reachable through their literal names.
-_DIRECT_QUERY_FAMILIES = frozenset({"pork", "lamb", "turkey", "beef"})
+# These reviewed families have a strict bare-query projection.  It keeps
+# derived mentions (for example scent products containing ``chicle`` or
+# depilatory products containing ``crema facial``) out of the main result
+# set while leaving those rows reachable through their literal names.
+_DIRECT_QUERY_FAMILIES = frozenset({
+    "pork", "lamb", "turkey", "beef",
+    "wafer", "chewing_gum", "raticide", "facial_cream",
+})
 
 
 def _query_matches_family(query: str, rule: FamilyRule) -> bool:

@@ -57,6 +57,10 @@ _FAMILY_DISCOVERY_QUERIES = {
     "lamb": "cordero",
     "turkey": "pavo",
     "beef": "vacuno",
+    "facial_cream": "crema facial",
+    "wafer": "oblea",
+    "chewing_gum": "chicle",
+    "raticide": "raticida",
 }
 
 
@@ -498,13 +502,14 @@ class BackendService:
         selected_family = family_query_key(query)
         selected_form = family_query_form(query)
         discovery_query = query
-        if selected_family is not None and selected_form is not None:
-            # Form labels are identity refinements, not reliable lexical
-            # catalog phrases.  Search the canonical family first, then
-            # apply the observed form to names.  This prevents a choice such
-            # as ``jugo de lichi`` from returning unrelated apple or orange
-            # juices simply because the source search matches ``jugo``.
-            discovery_query = _FAMILY_DISCOVERY_QUERIES.get(selected_family, query)
+        if selected_family in _FAMILY_DISCOVERY_QUERIES:
+            # Bilingual family labels and presentation choices are identity
+            # refinements, not reliable lexical catalog phrases.  Search the
+            # canonical Argentina family term first, then apply the observed
+            # form to names.  This keeps an English query such as ``face
+            # cream`` or ``chewing gum`` on the same source-backed result
+            # set as its Spanish equivalent.
+            discovery_query = _FAMILY_DISCOVERY_QUERIES[selected_family]
         handle = self.release_manager.pin(require_fresh=True)
         reader = self._reader(handle)
         authorization_status = {

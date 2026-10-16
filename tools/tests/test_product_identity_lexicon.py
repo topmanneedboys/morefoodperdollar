@@ -264,6 +264,78 @@ class ProductIdentityLexiconTests(unittest.TestCase):
         )
         self.assertEqual([row["productEvidenceKey"] for row in values], ["p:cut"])
 
+    def test_v20_residual_families_separate_direct_products_from_mentions(self) -> None:
+        cases = (
+            ("p:wafer", "OBLEA CHOCOLATE X 100 G", "wafer", "DIRECT", "unspecified"),
+            ("p:wafer-en", "WAFER VANILLA X 100 G", "wafer", "DIRECT", "unspecified"),
+            ("p:gum", "CHICLE BELDENT MENTA X 10 G", "chewing_gum", "DIRECT", "unspecified"),
+            ("p:gum-sugar-free", "CHICLE CERO AZUCARES MENTA X 14 G", "chewing_gum", "DIRECT", "sugar_free"),
+            ("p:gum-filled", "CHICLE CONFIT RELL FRUTILLA X 17 G", "chewing_gum", "DIRECT", "filled"),
+            ("p:raticide", "RATICIDA BRUMOLINE 100 G", "raticide", "DIRECT", "unspecified"),
+            ("p:facial", "CREMA FACIAL NIVEA HIDRATANTE X 50 G", "facial_cream", "DIRECT", "unspecified"),
+        )
+        for key, name, family, role, form in cases:
+            with self.subTest(name=name):
+                candidates = derive_identity_record(_row(key, name))["familyCandidates"]
+                match = next(item for item in candidates if item["family"] == family)
+                self.assertEqual(match["role"], role)
+                self.assertIn(form, match["observedForms"])
+
+    def test_v20_residual_negative_context_and_bilingual_queries(self) -> None:
+        for name in (
+            "AROMATIZADOR CHICLE",
+            "PERFUME AUTOMOTOR CHICLE X 100 ML",
+            "SHAMPOO KIDS ALGABO CHICLE X 350 ML",
+            "CHICLES JUGUETE LA GALLINA X 15 G",
+        ):
+            with self.subTest(name=name):
+                match = next(item for item in derive_identity_record(_row("p:negative", name))["familyCandidates"] if item["family"] == "chewing_gum")
+                self.assertEqual(match["role"], "DERIVED")
+
+        for name in (
+            "CREMA DEPILATORIA FACIAL VEET X 50 G",
+            "CREMA SOLAR FACIAL DERMAGLOS X 50 G",
+        ):
+            with self.subTest(name=name):
+                self.assertFalse(any(item["family"] == "facial_cream" for item in derive_identity_record(_row("p:negative", name))["familyCandidates"]))
+
+        for query, expected in (
+            ("oblea", "wafer"),
+            ("wafer", "wafer"),
+            ("chicle", "chewing_gum"),
+            ("chewing gum", "chewing_gum"),
+            ("raticida", "raticide"),
+            ("rat poison", "raticide"),
+            ("crema facial", "facial_cream"),
+            ("face moisturizer", "facial_cream"),
+        ):
+            with self.subTest(query=query):
+                self.assertEqual(family_query_key(query), expected)
+
+        self.assertEqual(family_query_form("chicle sin azucar"), ("chewing_gum", "sugar_free"))
+        self.assertEqual(family_query_form("filled chewing gum"), ("chewing_gum", "filled"))
+        rows = [
+            _row("p:plain", "CHICLE BELDENT MENTA X 10 G"),
+            _row("p:free", "CHICLE CERO AZUCARES MENTA X 14 G"),
+            _row("p:filled", "CHICLE CONFIT RELL FRUTILLA X 17 G"),
+            _row("p:scent", "AROMATIZADOR CHICLE"),
+        ]
+        self.assertEqual(
+            [row["productEvidenceKey"] for row in filter_family_candidates("chicle sin azucar", rows)],
+            ["p:free"],
+        )
+        self.assertEqual(
+            [row["productEvidenceKey"] for row in filter_family_candidates("chewing gum filled", rows)],
+            ["p:filled"],
+        )
+        clarification = build_family_clarification("chicle", rows)
+        self.assertIsNotNone(clarification)
+        assert clarification is not None
+        self.assertEqual(
+            {choice["id"] for choice in clarification["choices"]},
+            {"chewing_gum:sugar_free", "chewing_gum:filled"},
+        )
+
     def test_form_qualified_family_wins_over_a_generic_word_family(self) -> None:
         self.assertEqual(family_query_key("alfajor chocolate"), "alfajor")
         self.assertEqual(family_query_form("alfajor chocolate"), ("alfajor", "chocolate"))

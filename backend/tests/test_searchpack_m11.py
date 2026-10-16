@@ -807,6 +807,51 @@ class SearchPackM11Tests(unittest.TestCase):
         self.assertEqual(reader.discovery_calls[0][0], "carrot")
         self.assertEqual([item["productEvidenceKey"] for item in response["matches"]], ["carrot-drink"])
 
+    def test_service_search_uses_canonical_family_for_bilingual_gum_and_filters_form(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "name": name,
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["chicle"],
+                "qualifiedOffers": [],
+            }
+            for index, (key, name) in enumerate((
+                ("gum-sugar-free", "CHICLE CERO AZUCARES MENTA X 14 G"),
+                ("gum-filled", "CHICLE CONFIT RELL FRUTILLA X 17 G"),
+                ("gum-scent", "AROMATIZADOR CHICLE"),
+            ))
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        broad = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "chewing gum",
+        })
+        self.assertEqual(reader.discovery_calls[0][0], "chicle")
+        self.assertEqual(
+            [item["productEvidenceKey"] for item in broad["matches"]],
+            ["gum-sugar-free", "gum-filled"],
+        )
+        self.assertIsNotNone(broad["clarification"])
+
+        sugar_free = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "sugar free chewing gum",
+        })
+        self.assertEqual(reader.discovery_calls[-1][0], "chicle")
+        self.assertEqual([item["productEvidenceKey"] for item in sugar_free["matches"]], ["gum-sugar-free"])
+        self.assertIsNone(sugar_free["clarification"])
+
     def test_service_search_exposes_new_food_family_clarification_and_filters_form(self) -> None:
         manager = _StubReleaseManager()
         reader = _StubReader()
