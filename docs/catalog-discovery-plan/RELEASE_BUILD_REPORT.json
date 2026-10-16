@@ -1,6 +1,6 @@
 {
   "schemaVersion": "valuepilot-catalog-discovery-v2",
-  "rulesVersion": "valuepilot-catalog-discovery-rules-v4",
+  "rulesVersion": "valuepilot-catalog-discovery-rules-v10",
   "source": {
     "releaseId": "2026-10-08-identity-release",
     "artifact": "local-provider-data/product-identities-153e9d9f7ab4b87e72c16aebebc69c6f9f90fca681cd1075d625244e2e31bc2c.jsonl.gz",
@@ -10,35 +10,35 @@
     "providerProducts": 78865,
     "identityRecords": 134337,
     "indexedTokens": 36423,
-    "concepts": 195,
-    "assertions": 178583
+    "concepts": 203,
+    "assertions": 182036
   },
   "coverage": {
     "IDENTITY_VISITED": 134337,
-    "TYPE_RESOLVED": 58973,
-    "TYPE_UNRESOLVED": 75364,
-    "TYPE_OR_DEPARTMENT_RESOLVED": 87462,
+    "TYPE_RESOLVED": 61229,
+    "TYPE_UNRESOLVED": 73108,
+    "TYPE_OR_DEPARTMENT_RESOLVED": 88805,
     "DEPARTMENT_RESOLVED": 85249,
-    "ROLE_RESOLVED": 59859,
-    "DERIVED_ONLY": 886,
-    "NO_FORM": 127794
+    "ROLE_RESOLVED": 62578,
+    "DERIVED_ONLY": 1349,
+    "NO_FORM": 127730
   },
   "providerGroups": {
     "groups": 78865,
-    "fullyTypeResolved": 25576,
-    "partlyTypeResolved": 8131,
-    "unresolvedType": 45158,
+    "fullyTypeResolved": 27149,
+    "partlyTypeResolved": 7911,
+    "unresolvedType": 43805,
     "fullyDepartmentResolved": 43511,
     "partlyDepartmentResolved": 8862,
-    "fullyTypeOrDepartmentResolved": 44532,
-    "partlyTypeOrDepartmentResolved": 8697,
-    "unresolvedTypeAndDepartment": 25636
+    "fullyTypeOrDepartmentResolved": 45242,
+    "partlyTypeOrDepartmentResolved": 8459,
+    "unresolvedTypeAndDepartment": 25164
   },
   "bilingual": {
-    "ES_AVAILABLE": 109490,
-    "EN_AVAILABLE": 87530,
-    "MISSING_ES": 24847,
-    "MISSING_EN": 46807,
+    "ES_AVAILABLE": 109897,
+    "EN_AVAILABLE": 88900,
+    "MISSING_ES": 24440,
+    "MISSING_EN": 45437,
     "definition": "Availability counts include reviewed family aliases, identity aliases, and accepted department paths. They are retrieval-path proxies, not proof that every identity has a reviewed translation."
   },
   "departments": {
@@ -64,10 +64,10 @@
     "health_supplements": 399
   },
   "verification": {
-    "codeCommit": "32adbecf",
+    "codeCommit": "f963a05d41b77fb9b9e5a4b812abfa251b33423c",
     "toolsTests": {
       "command": "python -m unittest discover -s tools/tests -p 'test_*.py'",
-      "tests": 385,
+      "tests": 388,
       "status": "PASS"
     },
     "backendTests": {
@@ -82,11 +82,18 @@
       "apkSha256": "027736566b64f1a0e21e3fcb6f475b0a862633e06a88caa8a16d4c8166cd7a4c"
     },
     "spotChecks": {
-      "whiskyEs": {"resolvedPredicate": "type:whisky", "productCount": 134, "status": "READY"},
-      "vodkaEs": {"resolvedPredicate": "type:vodka", "productCount": 98, "status": "READY"},
-      "ginEs": {"resolvedPredicate": "type:gin", "productCount": 121, "status": "READY"},
-      "riceEnChoices": ["form:rice:dessert", "form:rice:flour", "form:rice:grain"],
-      "towelDerivedMentionSuppressed": true
+      "gaseoEs": {"resolvedPredicate": "type:soft_drink", "productCount": 392, "sourceIdentityCount": 968, "status": "READY"},
+      "sahumeriosEs": {"resolvedPredicate": "type:incense", "productCount": 256, "sourceIdentityCount": 264, "status": "READY"},
+      "arandanoEs": {"resolvedPredicate": "type:blueberry", "productCount": 193, "sourceIdentityCount": 257, "status": "READY"},
+      "pijamaEs": {"resolvedPredicate": "type:pajamas", "productCount": 203, "sourceIdentityCount": 203, "status": "READY"},
+      "trajeDeBanoEs": {"resolvedPredicate": "type:swimwear", "productCount": 135, "sourceIdentityCount": 135, "status": "READY"},
+      "toallitasHumedasEs": {"resolvedPredicate": "type:baby_wipes", "productCount": 65, "sourceIdentityCount": 95, "status": "READY"},
+      "toallaFemeninaEs": {"resolvedPredicate": "type:menstrual_care", "productCount": 123, "sourceIdentityCount": 172, "status": "READY"},
+      "issueKitEn": {"resolvedPredicate": "type:hair_color", "productCount": 439, "sourceIdentityCount": 641, "status": "READY"},
+      "toallaEs": {"resolvedPredicate": "type:towel", "productCount": 347, "sourceIdentityCount": 354, "status": "READY"},
+      "riceEn": {"status": "NEEDS_CLARIFICATION", "resolvedPredicate": "type:rice", "productCount": 590, "sourceIdentityCount": 1166, "choices": ["form:rice:dessert", "form:rice:grain", "form:rice:flour"]},
+      "shortEn": {"status": "NEEDS_CLARIFICATION", "resolvedPredicate": "department:clothing", "productCount": 5777, "sourceIdentityCount": 6039},
+      "falsePositiveChecks": {"swimwear": 0, "towel": 0, "softDrinkPackaging": 0}
     },
     "motorolaEdge2025": {
       "status": "NOT_RUN",
@@ -103,12 +110,12 @@
   },
   "output": {
     "artifact": "local-provider-data/product-discovery-v2.sqlite",
-    "sha256": "ac36b0efec197cbc33f63c15aafeeb1f2bf607f9cc060c58ef55480ecce0a41e",
+    "sha256": "9be32305b1b866b6807593f117c8f00959a5c0ebd5a956d927a126816235d020",
     "gitTracked": false
   },
   "notes": [
     "This is an aggregate structural accounting checkpoint for the local ignored sidecar; it is not a promoted production artifact.",
-    "The v4 dictionary combines the reviewed legacy family vocabulary with the versioned discovery_family_rules.json batches and replays the pinned identity release.",
+    "The v10 dictionary combines the reviewed legacy family vocabulary with the versioned discovery_family_rules.json batches and replays the pinned identity release.",
     "TYPE_UNRESOLVED identities remain literal-searchable and are not semantic completion. Department resolution is reported separately and does not replace useful type review.",
     "Provider-group completeness is stricter than identity coverage: every identity in a provider group must satisfy the metric before the group is counted as fully covered.",
     "No prices, offers, stock, availability, credentials, backend security, or production activation were changed."

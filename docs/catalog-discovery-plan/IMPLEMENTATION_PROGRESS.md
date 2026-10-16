@@ -10,8 +10,8 @@ saved-data, release, and security paths remain unchanged.
 
 - Branch: `work/valuepilot-stage2-premium-shopping`
 - Starting handoff checkpoint: `6ce81d0d`
-- Current verified checkpoint: code commit `32adbecf` (documentation checkpoint follows the verification update).
-- Discovery rules: `valuepilot-catalog-discovery-rules-v4`
+- Current verified checkpoint: code commit `f963a05d` (documentation checkpoint follows the verification update).
+- Discovery rules: `valuepilot-catalog-discovery-rules-v10`
 - Sidecar schema: `valuepilot-catalog-discovery-v2`
 - Additive HTTP contract: `valuepilot-discovery-http-v2`
 - Current state: deterministic identity index, strict query/facet engine, and
@@ -43,23 +43,23 @@ The current local release build reported:
 - `providerProducts`: 78,865
 - `identityRecords`: 134,337
 - `indexedTokens`: 36,423
-- `concepts`: 195
-- `assertions`: 178,583
-- `TYPE_RESOLVED`: 58,973
-- `TYPE_UNRESOLVED`: 75,364
-- `TYPE_OR_DEPARTMENT_RESOLVED`: 87,462
+- `concepts`: 203
+- `assertions`: 182,036
+- `TYPE_RESOLVED`: 61,229
+- `TYPE_UNRESOLVED`: 73,108
+- `TYPE_OR_DEPARTMENT_RESOLVED`: 88,805
 - `DEPARTMENT_RESOLVED`: 85,249
-- `ROLE_RESOLVED`: 59,859
-- `DERIVED_ONLY`: 886
-- `NO_FORM`: 127,794
-- English retrieval-path proxy: 87,530 identities
-- Spanish retrieval-path proxy: 109,490 identities
-- fully type-resolved provider groups: 25,576; partly resolved: 8,131; unresolved: 45,158
-- fully type-or-department-resolved provider groups: 44,532; partly resolved: 8,697; unresolved: 25,636
+- `ROLE_RESOLVED`: 62,578
+- `DERIVED_ONLY`: 1,349
+- `NO_FORM`: 127,730
+- English retrieval-path proxy: 88,900 identities
+- Spanish retrieval-path proxy: 109,897 identities
+- fully type-resolved provider groups: 27,149; partly resolved: 7,911; unresolved: 43,805
+- fully type-or-department-resolved provider groups: 45,242; partly resolved: 8,459; unresolved: 25,164
 - source SHA-256: `85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6`
-- ignored sidecar SHA-256: `ac36b0efec197cbc33f63c15aafeeb1f2bf607f9cc060c58ef55480ecce0a41e`
+- ignored sidecar SHA-256: `9be32305b1b866b6807593f117c8f00959a5c0ebd5a956d927a126816235d020`
 
-The v4 replay combines the existing reviewed family dictionary with
+The v10 replay combines the existing reviewed family dictionary with
 `tools/data/discovery_family_rules.json`. It adds evidence-backed vocabulary for
 common Argentina grocery, personal-care, household, apparel, electronics, pet,
 and toy families while preserving the older high-risk family rules and their
@@ -72,6 +72,39 @@ English translation.
 The report and sidecar stay in `local-provider-data`, which is ignored by Git.
 Those numbers are engineering coverage measurements. They do not mean that
 the unresolved identities have known product meanings.
+
+## v10 verified checkpoint
+
+- Code checkpoint: `f963a05d41b77fb9b9e5a4b812abfa251b33423c`.
+- The v10 rule replay adds reviewed bilingual/Spanish forms and negative
+  context for soft drinks, incense, blueberries, pajamas, leggings, underwear,
+  swimwear, baby wipes, menstrual care, hair color and hair treatment. It also
+  tokenizes punctuation in catalog names so abbreviations such as
+  `FEM.SIEMPRE`, `HIG.` and `C/ALAS` participate in reviewed exclusions.
+- The current-family evidence wins over stale direct source assertions when the
+  reviewed context marks a name as a derived mention. This keeps envases and
+  grocery `malla` products out of strict soft-drink/swimwear results.
+- Focused identity/index tests: 36 passed. Full tools suite: 388 passed.
+  Backend suite: 135 passed. Android shared-core tests, app debug unit tests,
+  debug lint and debug APK build passed.
+- Sidecar: `local-provider-data/product-discovery-v2.sqlite`; SHA-256
+  `9be32305b1b866b6807593f117c8f00959a5c0ebd5a956d927a126816235d020`.
+- Representative strict results: `gaseo` -> soft drink (392 provider
+  products), `sahumerios` -> incense (256), `pijama` -> pajamas (203),
+  `traje de bano` -> swimwear (135), `toallitas humedas` -> baby wipes (65),
+  `toalla femenina` -> menstrual care (123), and `issue kit` -> hair color
+  (439). Known false-positive checks for swimwear, towel and soft-drink
+  packaging returned zero.
+- `rice` remains a deliberate clarification query with grain, dessert and flour
+  choices. Broad ambiguous `short` remains a clothing clarification query.
+- Motorola Edge 2025 runtime validation was not run in this checkpoint. The
+  sidecar is local/ignored and has not been promoted to the backend or preview.
+
+Next concrete work is to continue the residual inventory from the v10 sidecar,
+prioritize evidence-backed reusable rules, and keep the unresolved 73,108
+identity-level type rows and 25,164 provider groups without full
+type-or-department coverage visible. Do not treat literal reachability,
+department labels or the v10 count increase as semantic completion.
 
 ## Query gates implemented
 
@@ -100,11 +133,15 @@ Completed locally:
 
 Completed in this checkpoint:
 
-- full tools suite: 385 tests passed;
+- full tools suite: 388 tests passed;
 - backend suite: 135 tests passed;
 - Android shared-core tests, app debug unit tests, lint, and debug APK build passed;
 - debug APK SHA-256: `027736566b64f1a0e21e3fcb6f475b0a862633e06a88caa8a16d4c8166cd7a4c`.
-- live sidecar spot checks passed: Spanish `whisky`, `vodka`, and `gin` resolve to exact type predicates; `rice` exposes grain/dessert/flour choices; derived feminine-hygiene mentions are suppressed from ready `toalla` results.
+- live sidecar spot checks passed: `gaseo`, `sahumerios`, `pijama`, `traje de bano`,
+  `toallitas humedas`, `toalla femenina`, and `issue kit` resolve to their
+  reviewed predicates; `rice` exposes grain/dessert/flour choices; derived
+  feminine-hygiene, packaging and grocery-mesh mentions are suppressed from
+  strict family results.
 
 Pending after the local full build:
 
@@ -113,7 +150,7 @@ Pending after the local full build:
 - semantic review of unresolved records and source evidence gaps.
 
 The current build has not been promoted to the backend or preview runtime. The
-remaining 75,364 identity-level type-unresolved rows and 45,158 provider groups
+remaining 73,108 identity-level type-unresolved rows and 43,805 provider groups
 without full type coverage are still open semantic work; literal reachability and
 department coverage do not close that gate.
 

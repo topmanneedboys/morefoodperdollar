@@ -1,10 +1,82 @@
 # Luna continuation: complete catalog coverage and working clarification
 
-Prepared 2026-10-15 after inspecting implementation HEAD `4127bd22d8a2c4a8518a916ddcd7e8a3f709445c`.
+Prepared 2026-10-15 after inspecting implementation HEAD `f963a05d41b77fb9b9e5a4b812abfa251b33423c`.
 This is an implementation brief, not a completed classification or test report.
 Use this prompt for the next Luna run. It supersedes the old instruction to start
 from stage A in `LUNA_IMPLEMENTATION_PROMPT.md`; the engineering specification
 continues to define the architecture and behavior.
+
+## 0. Current verified handoff — start here
+
+The latest legitimate code checkpoint is:
+
+```text
+HEAD: f963a05d41b77fb9b9e5a4b812abfa251b33423c
+Branch: work/valuepilot-stage2-premium-shopping
+Rules: valuepilot-catalog-discovery-rules-v10
+Schema: valuepilot-catalog-discovery-v2
+Source SHA-256: 85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6
+```
+
+The verified local ignored sidecar is:
+
+```text
+local-provider-data/product-discovery-v2.sqlite
+SHA-256: 9be32305b1b866b6807593f117c8f00959a5c0ebd5a956d927a126816235d020
+```
+
+It accounts for 78,865 provider product IDs and 134,337 qualified identity
+records. Current measurements are 61,229 `TYPE_RESOLVED`, 73,108
+`TYPE_UNRESOLVED`, 88,805 `TYPE_OR_DEPARTMENT_RESOLVED`, 62,578
+`ROLE_RESOLVED`, 88,900 English retrieval-path identities and 109,897 Spanish
+retrieval-path identities. At provider-group level, 27,149 groups are fully
+type-resolved, 7,911 are partly type-resolved and 43,805 have no full type
+coverage; 45,242 are fully type-or-department-resolved, 8,459 are partial and
+25,164 are unresolved by that combined measure. These are structural/retrieval
+measurements, not a claim that the catalog is semantically complete.
+
+The v10 changes already committed include reviewed bilingual/Spanish forms and
+negative context for soft drinks, incense, blueberries, pajamas, leggings,
+underwear, swimwear, baby wipes, menstrual care, hair color and hair treatment.
+Punctuation-aware tokenization now handles source spellings such as `FEM.SIEMPRE`,
+`HIG.` and `C/ALAS`. Current reviewed evidence overrides stale direct source
+assertions when a name is now recognized as a derived mention. Do not undo these
+guards or replace them with broad substring rules.
+
+Verified behavior includes: `gaseo` -> `type:soft_drink` (392 products),
+`sahumerios` -> `type:incense` (256), `pijama` -> `type:pajamas` (203),
+`traje de bano` -> `type:swimwear` (135), `toallitas humedas` ->
+`type:baby_wipes` (65), `toalla femenina` -> `type:menstrual_care` (123),
+and `issue kit` -> `type:hair_color` (439). `rice` intentionally returns
+clarification choices for grain, dessert and flour. Broad `short` remains a
+clothing clarification query. The current false-positive checks for swimwear,
+towel and soft-drink packaging are zero. Keep the known `arandano` residual
+review visible: the first page still contains some yogurt/derived mentions even
+though the strict predicate resolves, so do not claim every spot check is pure.
+
+Verification already completed for this checkpoint: 388 tools tests, 135
+backend tests, Android shared-core tests, app debug unit tests, debug lint and
+debug APK assembly. The APK is local only:
+
+```text
+android/app/build/outputs/apk/debug/app-debug.apk
+SHA-256: 027736566b64f1a0e21e3fcb6f475b0a862633e06a88caa8a16d4c8166cd7a4c
+```
+
+Motorola Edge 2025 runtime validation is **NOT RUN** for this catalog checkpoint.
+Do not report device validation as passed. The local sidecar has not been
+promoted to the backend or preview runtime. There has been no Play publication,
+Firebase/App Check change, credential change, security bypass, price/offer/stock
+change or production activation.
+
+For the next run, verify the actual HEAD and ledger, inspect the residual
+inventory, implement the next substantial evidence-supported rule batch and its
+correctness tests, rebuild the ignored sidecar, run focused checks, then run the
+full suites only at the integrated milestone. Update the release report and
+ledger with measured values and commit a recoverable checkpoint. Do not restart
+the Stage 0/1/2 audits, repeat the known Firebase investigation, rebuild an APK
+for a documentation-only change, or claim 100% from counts, literal reachability
+or a scan without semantic evidence.
 
 ## 1. Assignment and starting point
 
@@ -39,7 +111,8 @@ Resume from the ledger on later sessions. Do not repeat Stage 0/1/2 audits or th
 known Firebase investigation. The immediate work is semantic expansion plus the
 specific correctness/integration gaps below, continuing stages C-G of the spec.
 
-Known historical aggregate, to verify against a fresh build of current code:
+The following is the superseded pre-v10 baseline, retained only for comparison.
+Do not use it as the current checkpoint or repeat its audit:
 
 | Measure | Reported value | Meaning |
 |---|---:|---|
@@ -105,10 +178,12 @@ Maintain separate, clearly defined outcomes:
 Do not claim perfect correctness for arbitrary future words/products. Report
 measured accuracy with its review sample and limitations separately from coverage.
 
-## 3. First inspect these concrete gaps
+## 3. Residual correctness gates — inspect only if still open
 
-These observations describe `4127bd22`; verify their current state and repair
-what still applies. Avoid rewriting working code merely to follow file names.
+These are inherited gates from the pre-v10 audit. Check the current code and
+ledger once, then repair only what still applies. Avoid rewriting working code
+merely to follow historical file names, and record a gate as closed when current
+tests and behavior prove it closed.
 
 | Location | Observed limitation and required check |
 |---|---|
