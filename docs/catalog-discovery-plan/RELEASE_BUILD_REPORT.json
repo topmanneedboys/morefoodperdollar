@@ -1,6 +1,6 @@
 {
   "schemaVersion": "valuepilot-catalog-discovery-v2",
-  "rulesVersion": "valuepilot-catalog-discovery-rules-v10",
+  "rulesVersion": "valuepilot-catalog-discovery-rules-v11",
   "source": {
     "releaseId": "2026-10-08-identity-release",
     "artifact": "local-provider-data/product-identities-153e9d9f7ab4b87e72c16aebebc69c6f9f90fca681cd1075d625244e2e31bc2c.jsonl.gz",
@@ -10,35 +10,36 @@
     "providerProducts": 78865,
     "identityRecords": 134337,
     "indexedTokens": 36423,
-    "concepts": 203,
-    "assertions": 182036
+    "concepts": 215,
+    "assertions": 187548
   },
   "coverage": {
     "IDENTITY_VISITED": 134337,
-    "TYPE_RESOLVED": 61229,
-    "TYPE_UNRESOLVED": 73108,
-    "TYPE_OR_DEPARTMENT_RESOLVED": 88805,
+    "TYPE_RESOLVED": 65491,
+    "TYPE_UNRESOLVED": 68846,
+    "TYPE_OR_DEPARTMENT_RESOLVED": 90890,
     "DEPARTMENT_RESOLVED": 85249,
-    "ROLE_RESOLVED": 62578,
-    "DERIVED_ONLY": 1349,
-    "NO_FORM": 127730
+    "ROLE_RESOLVED": 66639,
+    "DERIVED_ONLY": 1148,
+    "NO_FORM": 127233
   },
   "providerGroups": {
     "groups": 78865,
-    "fullyTypeResolved": 27149,
-    "partlyTypeResolved": 7911,
-    "unresolvedType": 43805,
+    "fullyTypeResolved": 28757,
+    "partlyTypeResolved": 7840,
+    "unresolvedType": 42268,
     "fullyDepartmentResolved": 43511,
     "partlyDepartmentResolved": 8862,
-    "fullyTypeOrDepartmentResolved": 45242,
-    "partlyTypeOrDepartmentResolved": 8459,
-    "unresolvedTypeAndDepartment": 25164
+    "unresolvedDepartment": 26492,
+    "fullyTypeOrDepartmentResolved": 46047,
+    "partlyTypeOrDepartmentResolved": 8225,
+    "unresolvedTypeAndDepartment": 24593
   },
   "bilingual": {
-    "ES_AVAILABLE": 109897,
-    "EN_AVAILABLE": 88900,
-    "MISSING_ES": 24440,
-    "MISSING_EN": 45437,
+    "ES_AVAILABLE": 110930,
+    "EN_AVAILABLE": 90986,
+    "MISSING_ES": 23407,
+    "MISSING_EN": 43351,
     "definition": "Availability counts include reviewed family aliases, identity aliases, and accepted department paths. They are retrieval-path proxies, not proof that every identity has a reviewed translation."
   },
   "departments": {
@@ -64,10 +65,10 @@
     "health_supplements": 399
   },
   "verification": {
-    "codeCommit": "f963a05d41b77fb9b9e5a4b812abfa251b33423c",
+    "codeCommit": "1967c1f936604440cc933975909a9d793843bb5e",
     "toolsTests": {
       "command": "python -m unittest discover -s tools/tests -p 'test_*.py'",
-      "tests": 388,
+      "tests": 391,
       "status": "PASS"
     },
     "backendTests": {
@@ -77,23 +78,162 @@
     },
     "androidChecks": {
       "command": ".\\gradlew.bat --no-daemon :shared-core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug",
-      "status": "PASS",
+      "status": "PASS_UNCHANGED",
       "apk": "android/app/build/outputs/apk/debug/app-debug.apk",
-      "apkSha256": "027736566b64f1a0e21e3fcb6f475b0a862633e06a88caa8a16d4c8166cd7a4c"
+      "apkSha256": "027736566b64f1a0e21e3fcb6f475b0a862633e06a88caa8a16d4c8166cd7a4c",
+      "note": "Android source and APK were unchanged by this identity-sidecar checkpoint; the prior v10 Android verification remains valid."
     },
     "spotChecks": {
-      "gaseoEs": {"resolvedPredicate": "type:soft_drink", "productCount": 392, "sourceIdentityCount": 968, "status": "READY"},
-      "sahumeriosEs": {"resolvedPredicate": "type:incense", "productCount": 256, "sourceIdentityCount": 264, "status": "READY"},
-      "arandanoEs": {"resolvedPredicate": "type:blueberry", "productCount": 193, "sourceIdentityCount": 257, "status": "READY"},
-      "pijamaEs": {"resolvedPredicate": "type:pajamas", "productCount": 203, "sourceIdentityCount": 203, "status": "READY"},
-      "trajeDeBanoEs": {"resolvedPredicate": "type:swimwear", "productCount": 135, "sourceIdentityCount": 135, "status": "READY"},
-      "toallitasHumedasEs": {"resolvedPredicate": "type:baby_wipes", "productCount": 65, "sourceIdentityCount": 95, "status": "READY"},
-      "toallaFemeninaEs": {"resolvedPredicate": "type:menstrual_care", "productCount": 123, "sourceIdentityCount": 172, "status": "READY"},
-      "issueKitEn": {"resolvedPredicate": "type:hair_color", "productCount": 439, "sourceIdentityCount": 641, "status": "READY"},
-      "toallaEs": {"resolvedPredicate": "type:towel", "productCount": 347, "sourceIdentityCount": 354, "status": "READY"},
-      "riceEn": {"status": "NEEDS_CLARIFICATION", "resolvedPredicate": "type:rice", "productCount": 590, "sourceIdentityCount": 1166, "choices": ["form:rice:dessert", "form:rice:grain", "form:rice:flour"]},
-      "shortEn": {"status": "NEEDS_CLARIFICATION", "resolvedPredicate": "department:clothing", "productCount": 5777, "sourceIdentityCount": 6039},
-      "falsePositiveChecks": {"swimwear": 0, "towel": 0, "softDrinkPackaging": 0}
+      "gaseoEs": {
+        "resolvedPredicate": "type:soft_drink",
+        "productCount": 392,
+        "sourceIdentityCount": 968,
+        "status": "READY"
+      },
+      "sahumeriosEs": {
+        "resolvedPredicate": "type:incense",
+        "productCount": 256,
+        "sourceIdentityCount": 264,
+        "status": "READY"
+      },
+      "arandanoEs": {
+        "resolvedPredicate": "type:blueberry",
+        "productCount": 193,
+        "sourceIdentityCount": 257,
+        "status": "READY"
+      },
+      "pijamaEs": {
+        "resolvedPredicate": "type:pajamas",
+        "productCount": 203,
+        "sourceIdentityCount": 203,
+        "status": "READY"
+      },
+      "trajeDeBanoEs": {
+        "resolvedPredicate": "type:swimwear",
+        "productCount": 135,
+        "sourceIdentityCount": 135,
+        "status": "READY"
+      },
+      "toallitasHumedasEs": {
+        "resolvedPredicate": "type:baby_wipes",
+        "productCount": 65,
+        "sourceIdentityCount": 95,
+        "status": "READY"
+      },
+      "toallaFemeninaEs": {
+        "resolvedPredicate": "type:menstrual_care",
+        "productCount": 123,
+        "sourceIdentityCount": 172,
+        "status": "READY"
+      },
+      "issueKitEn": {
+        "resolvedPredicate": "type:hair_color",
+        "productCount": 439,
+        "sourceIdentityCount": 641,
+        "status": "READY"
+      },
+      "toallaEs": {
+        "resolvedPredicate": "type:towel",
+        "productCount": 347,
+        "sourceIdentityCount": 354,
+        "status": "READY"
+      },
+      "riceEn": {
+        "status": "NEEDS_CLARIFICATION",
+        "resolvedPredicate": "type:rice",
+        "productCount": 590,
+        "sourceIdentityCount": 1166,
+        "choices": [
+          "form:rice:dessert",
+          "form:rice:grain",
+          "form:rice:flour"
+        ]
+      },
+      "shortEn": {
+        "status": "NEEDS_CLARIFICATION",
+        "resolvedPredicate": "department:clothing",
+        "productCount": 5777,
+        "sourceIdentityCount": 6039
+      },
+      "falsePositiveChecks": {
+        "swimwear": 0,
+        "towel": 0,
+        "softDrinkPackaging": 0,
+        "potatoChipsNonFood": 0,
+        "deodorantEnvironment": 0,
+        "mouthwashContext": 0,
+        "spiceConditioner": 0
+      },
+      "mouthwashEn": {
+        "resolvedPredicate": "type:mouthwash",
+        "productCount": 88,
+        "sourceIdentityCount": 197,
+        "status": "READY"
+      },
+      "dogFoodEs": {
+        "resolvedPredicate": "type:dog_food",
+        "productCount": 233,
+        "sourceIdentityCount": 434,
+        "status": "READY"
+      },
+      "catFoodEs": {
+        "resolvedPredicate": "type:cat_food",
+        "productCount": 154,
+        "sourceIdentityCount": 338,
+        "status": "READY"
+      },
+      "colorPermEn": {
+        "resolvedPredicate": "type:hair_color",
+        "productCount": 486,
+        "sourceIdentityCount": 892,
+        "status": "READY"
+      },
+      "salFinaEs": {
+        "resolvedPredicate": "form:salt:fine",
+        "productCount": 55,
+        "sourceIdentityCount": 144,
+        "status": "READY"
+      },
+      "saltEn": {
+        "status": "NEEDS_CLARIFICATION",
+        "resolvedPredicate": "type:salt",
+        "productCount": 116,
+        "sourceIdentityCount": 304,
+        "choices": [
+          "form:salt:fine",
+          "form:salt:coarse",
+          "form:salt:sea"
+        ]
+      },
+      "spiceEn": {
+        "status": "NEEDS_CLARIFICATION",
+        "resolvedPredicate": "type:spice",
+        "productCount": 594,
+        "sourceIdentityCount": 1130,
+        "choices": [
+          "form:spice:ground",
+          "form:spice:whole"
+        ]
+      },
+      "spiceGroundEn": {
+        "resolvedPredicate": "type:spice",
+        "selection": "form:spice:ground",
+        "productCount": 90,
+        "sourceIdentityCount": 161,
+        "status": "READY"
+      },
+      "deodorantEn": {
+        "resolvedPredicate": "type:deodorant",
+        "productCount": 688,
+        "sourceIdentityCount": 1646,
+        "status": "READY"
+      },
+      "potatoChipsEn": {
+        "resolvedPredicate": "type:potato_chips",
+        "productCount": 197,
+        "sourceIdentityCount": 321,
+        "status": "READY"
+      }
     },
     "motorolaEdge2025": {
       "status": "NOT_RUN",
@@ -110,14 +250,15 @@
   },
   "output": {
     "artifact": "local-provider-data/product-discovery-v2.sqlite",
-    "sha256": "9be32305b1b866b6807593f117c8f00959a5c0ebd5a956d927a126816235d020",
+    "sha256": "98a4002855a917acdfe7318fd8c38d1ba1459eeb49a946a0c58662ae9eb6e26a",
     "gitTracked": false
   },
   "notes": [
     "This is an aggregate structural accounting checkpoint for the local ignored sidecar; it is not a promoted production artifact.",
-    "The v10 dictionary combines the reviewed legacy family vocabulary with the versioned discovery_family_rules.json batches and replays the pinned identity release.",
+    "The v11 dictionary adds reviewed Argentina retail abbreviations for oral care, pet food, hair color, hair care, cleaning, deodorant, air freshener, salt, spice and potato-chip queries, plus explicit bilingual aliases for generic family forms.",
+    "Bare 'chips' was removed from the potato-chip family so biscuits, cereal bars and chocolate-chip products remain outside that type. Negative contexts for room deodorizer, tools/meal mentions, rice snacks and conditioner were reviewed against the full sidecar.",
     "TYPE_UNRESOLVED identities remain literal-searchable and are not semantic completion. Department resolution is reported separately and does not replace useful type review.",
     "Provider-group completeness is stricter than identity coverage: every identity in a provider group must satisfy the metric before the group is counted as fully covered.",
-    "No prices, offers, stock, availability, credentials, backend security, or production activation were changed."
+    "No prices, offers, stock, availability, credentials, backend security, Android code, production activation, or Play publication were changed."
   ]
 }
