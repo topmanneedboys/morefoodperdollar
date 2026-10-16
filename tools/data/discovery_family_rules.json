@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "valuepilot-discovery-family-rules-v11",
+  "schemaVersion": "valuepilot-discovery-family-rules-v12",
   "families": {
     "wine": {"es":["vino"],"en":["wine"],"include":["vino","wine","malbec","cabernet","chardonnay","sauvignon","espumante","champagne","sidra","cider"],"exclude":["vinagre","vinagre de alcohol","salsa de vino"],"forms":{"red":{"es":["tinto","rosado"],"en":["red","rose"]},"white":{"es":["blanco"],"en":["white"]},"sparkling":{"es":["espumante","champagne"],"en":["sparkling","champagne"]}}},
     "beer": {"es":["cerveza"],"en":["beer"],"include":["cerveza","beer"],"forms":{"non_alcoholic":{"es":["sin alcohol"],"en":["non alcoholic"]}}},
@@ -141,3 +141,4 @@
     "sunscreen": {"es":["prot solar"],"include":["prot solar"]}
   }
 }
+
