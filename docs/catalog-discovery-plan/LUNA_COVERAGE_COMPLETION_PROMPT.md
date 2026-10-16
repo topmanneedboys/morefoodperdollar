@@ -1,6 +1,6 @@
 # Luna continuation: complete catalog coverage and working clarification
 
-Prepared 2026-10-16 after verifying implementation HEAD `7b79ac963b000619f1143f73b9c0346cdaf4717d`.
+Prepared 2026-10-16 after verifying implementation HEAD `38ef3db2e2b514de87435cf3f62618499950e5e3`.
 This is an implementation brief, not a completed classification or test report.
 Use this prompt for the next Luna run. It supersedes the old instruction to start
 from stage A in `LUNA_IMPLEMENTATION_PROMPT.md`; the engineering specification
@@ -11,9 +11,9 @@ continues to define the architecture and behavior.
 The latest legitimate code checkpoint is:
 
 ```text
-HEAD: 7b79ac963b000619f1143f73b9c0346cdaf4717d
+HEAD: 38ef3db2e2b514de87435cf3f62618499950e5e3
 Branch: work/valuepilot-stage2-premium-shopping
-Rules: valuepilot-catalog-discovery-rules-v21
+Rules: valuepilot-catalog-discovery-rules-v22
 Schema: valuepilot-catalog-discovery-v2
 Source SHA-256: 85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6
 ```
@@ -22,24 +22,26 @@ The verified local ignored sidecar is:
 
 ```text
 local-provider-data/product-discovery-v2.sqlite
-SHA-256: 99e8cd39e798437721c5716d62e030a84ba5ea2025f5673065c7dbdfd17b498b
+SHA-256: 522738d20bf9542ea0d812bccbd975478a4e04a2792d542d7dff34f737def418
 ```
 
 It accounts for 78,865 provider product IDs and 134,337 qualified identity
-records. Current measurements are 67,063 `TYPE_RESOLVED`, 67,274
-`TYPE_UNRESOLVED`, 91,063 `TYPE_OR_DEPARTMENT_RESOLVED`, 68,279
+records. Current measurements are 67,260 `TYPE_RESOLVED`, 67,077
+`TYPE_UNRESOLVED`, 91,063 `TYPE_OR_DEPARTMENT_RESOLVED`, 68,479
 `ROLE_RESOLVED`, 91,164 English retrieval-path identities and 111,037 Spanish
-retrieval-path identities. At provider-group level, 29,579 groups are fully
-type-resolved, 7,878 are partly type-resolved and 41,408 have no full type
+retrieval-path identities. At provider-group level, 29,764 groups are fully
+type-resolved, 7,881 are partly type-resolved and 41,220 have no full type
 coverage; 46,141 are fully type-or-department-resolved, 8,213 are partial and
 24,511 are unresolved by that combined measure. These are structural/retrieval
 measurements, not a claim that the catalog is semantically complete.
 
-The v21 changes retain the earlier reviewed bilingual/Spanish forms and
-negative context, then add evidence-backed strict families for wafer/oblea,
-chewing gum/chicle, raticide/rodenticide and facial cream. Chewing-gum
-clarification is limited to observed sugar-free and filled names. Full-catalog
-checks reject scent, conditioner, shampoo, dental and beverage mentions from
+The v22 changes retain the earlier reviewed bilingual/Spanish forms and
+negative context, then add the observed bilingual `bowl` family with strict
+appliance exclusions. The v21 strict families for wafer/oblea,
+chewing gum/chicle, raticide/rodenticide and facial cream remain unchanged.
+Chewing-gum clarification is limited to observed sugar-free and filled names.
+Full-catalog checks reject scent, conditioner, shampoo, dental and beverage
+mentions from
 the strict chewing-gum postings; facial-cream checks reject observed
 depilatory and sunscreen contexts. Punctuation-aware canonical tokenization
 continues to handle retail abbreviations. Do not replace these guards with
@@ -60,8 +62,8 @@ the known `arandano` residual review visible: the first page still contains
 some yogurt/derived mentions even though the strict predicate resolves, so do
 not claim every spot check is pure.
 
-The v21 code and sidecar checks are complete. The full tools suite passed 405
-tests and the backend suite passed 138 tests. Android
+The v22 code and sidecar checks are complete. The full tools suite passed 407
+tests and the backend suite passed 139 tests. Android
 source and the debug APK are unchanged from the prior verified checkpoint; the
 prior shared-core tests, app debug unit tests, debug lint and debug APK assembly
 remain the applicable Android evidence. The APK is local only:
@@ -85,6 +87,47 @@ ledger with measured values and commit a recoverable checkpoint. Do not restart
 the Stage 0/1/2 audits, repeat the known Firebase investigation, rebuild an APK
 for a documentation-only change, or claim 100% from counts, literal reachability
 or a scan without semantic evidence.
+
+### v22 batch handoff for Luna
+
+The current implementation checkpoint is code commit
+`38ef3db2e2b514de87435cf3f62618499950e5e3` with discovery rules
+`valuepilot-catalog-discovery-rules-v22`. The ignored sidecar is
+`local-provider-data/product-discovery-v2.sqlite` with SHA-256
+`522738d20bf9542ea0d812bccbd975478a4e04a2792d542d7dff34f737def418`; it was
+rebuilt from source SHA-256
+`85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6`.
+
+This batch adds the observed bilingual `bowl` family. Strict `bowl` queries
+return 189 provider products from 198 source identities in both languages.
+The three observed appliance mentions (two stand mixers and one chopper) are
+retained as contextual `MENTIONS`; the full-catalog strict direct-context audit
+returned zero forbidden matches. No invented Spanish synonym was added: the
+catalog itself uses `bowl` for these identities.
+
+The v22 release build measures 78,865 provider products, 134,337 identity
+records, 36,423 indexed tokens, 244 concepts and 191,896 assertions. Coverage
+is 67,260 `TYPE_RESOLVED`, 67,077 `TYPE_UNRESOLVED`, 91,063
+`TYPE_OR_DEPARTMENT_RESOLVED`, 85,249 `DEPARTMENT_RESOLVED`, 68,479
+`ROLE_RESOLVED`, 1,219 `DERIVED_ONLY` and 126,069 `NO_FORM`. Provider-group
+coverage is 29,764 fully type-resolved / 7,881 partial / 41,220 unresolved,
+and 46,141 fully type-or-department-resolved / 8,213 partial / 24,511
+unresolved. These are measured coverage states, not semantic completion.
+
+The full verification suites passed: 407 tools tests and 139 backend tests.
+Android source, APK, backend credentials, Firebase/App Check, Play state,
+prices, offers, stock and production activation are unchanged. Motorola Edge
+2025 runtime validation was not run for this catalog-only checkpoint.
+
+For the next Luna run, inspect the residual inventory and choose another
+high-impact bucket by distinct observed context. Add a small reviewed rule batch
+with positive and negative tests, rebuild the sidecar atomically from the pinned
+source, run focused checks, then update the report, ledger and this handoff.
+Preserve literal-only unresolved identities and do not infer meaning from
+counts. Do not modify Android, Firebase, App Check, Play, credentials or
+shopping data paths as part of catalog discovery. Do not claim 100% coverage
+until every residual has reviewed evidence or an explicit unresolved
+disposition.
 
 ### v21 batch handoff for Luna
 

@@ -6,21 +6,21 @@
     "MISSING_ES": 23300
   },
   "counts": {
-    "assertions": 191691,
-    "concepts": 243,
+    "assertions": 191896,
+    "concepts": 244,
     "identityRecords": 134337,
     "indexedTokens": 36423,
     "providerProducts": 78865
   },
   "coverage": {
     "DEPARTMENT_RESOLVED": 85249,
-    "DERIVED_ONLY": 1216,
+    "DERIVED_ONLY": 1219,
     "IDENTITY_VISITED": 134337,
     "NO_FORM": 126069,
-    "ROLE_RESOLVED": 68279,
+    "ROLE_RESOLVED": 68479,
     "TYPE_OR_DEPARTMENT_RESOLVED": 91063,
-    "TYPE_RESOLVED": 67063,
-    "TYPE_UNRESOLVED": 67274
+    "TYPE_RESOLVED": 67260,
+    "TYPE_UNRESOLVED": 67077
   },
   "departments": {
     "baby_pet": 3760,
@@ -45,7 +45,8 @@
     "toys_games": 1411
   },
   "notes": [
-    "This v21 checkpoint adds evidence-backed bilingual discovery for wafer/oblea, chewing gum/chicle, raticide/rodenticide and facial cream, using only observed catalog terms and conservative negative context.",
+    "This v22 checkpoint adds evidence-backed bilingual discovery for bowl, using the observed catalog term and conservative appliance context exclusions; the v21 wafer, chewing gum, raticide and facial cream rules remain unchanged.",
+    "Bowl strict discovery returns 189 provider products from 198 accepted source identities. Three observed appliance mentions (two batidoras and one picador) remain contextual MENTIONS and the full-corpus direct-context audit returned zero forbidden matches.",
     "Chewing-gum form choices are limited to observed sugar-free and filled names. Full-corpus auditing rejected scent, conditioner, shampoo, dental-gum and chicle-flavored beverage contexts from the strict chewing-gum predicate.",
     "Facial-cream strict discovery excludes observed depilatory and sunscreen contexts. Wafer/oblea and raticide/rodenticide use direct source terms without invented presentation claims.",
     "Broad family queries retain literal contextual mentions so the clarification surface can explain ambiguity; explicit type/form selections use accepted postings only and do not expose those derived mentions.",
@@ -56,21 +57,21 @@
   "output": {
     "artifact": "local-provider-data/product-discovery-v2.sqlite",
     "gitTracked": false,
-    "sha256": "99e8cd39e798437721c5716d62e030a84ba5ea2025f5673065c7dbdfd17b498b"
+    "sha256": "522738d20bf9542ea0d812bccbd975478a4e04a2792d542d7dff34f737def418"
   },
   "providerGroups": {
     "fullyDepartmentResolved": 43511,
     "fullyTypeOrDepartmentResolved": 46141,
-    "fullyTypeResolved": 29579,
+    "fullyTypeResolved": 29764,
     "groups": 78865,
     "partlyDepartmentResolved": 8862,
     "partlyTypeOrDepartmentResolved": 8213,
-    "partlyTypeResolved": 7878,
+    "partlyTypeResolved": 7881,
     "unresolvedDepartment": 26492,
-    "unresolvedType": 41408,
+    "unresolvedType": 41220,
     "unresolvedTypeAndDepartment": 24511
   },
-  "rulesVersion": "valuepilot-catalog-discovery-rules-v21",
+  "rulesVersion": "valuepilot-catalog-discovery-rules-v22",
   "safety": {
     "availability": false,
     "credentials": false,
@@ -96,9 +97,9 @@
     "backendTests": {
       "command": "python -m unittest discover -s backend/tests -p 'test_*.py'",
       "status": "PASS",
-      "tests": 138
+      "tests": 139
     },
-    "codeCommit": "7b79ac963b000619f1143f73b9c0346cdaf4717d",
+    "codeCommit": "38ef3db2e2b514de87435cf3f62618499950e5e3",
     "motorolaEdge2025": {
       "reason": "No device runtime validation was performed for this identity-sidecar milestone.",
       "status": "NOT_RUN"
@@ -146,6 +147,18 @@
         "productCount": 248,
         "resolvedPredicate": "type:beef",
         "sourceIdentityCount": 367,
+        "status": "READY"
+      },
+      "bowlEn": {
+        "productCount": 189,
+        "resolvedPredicate": "type:bowl",
+        "sourceIdentityCount": 198,
+        "status": "READY"
+      },
+      "bowlEs": {
+        "productCount": 189,
+        "resolvedPredicate": "type:bowl",
+        "sourceIdentityCount": 198,
         "status": "READY"
       },
       "catFoodEs": {
@@ -220,6 +233,7 @@
         "status": "READY"
       },
       "falsePositiveChecks": {
+        "bowlApplianceDirectContexts": 0,
         "chewingGumDirectForbiddenContexts": 0,
         "deodorantEnvironment": 0,
         "facialCreamDirectForbiddenContexts": 0,
@@ -483,7 +497,7 @@
     "toolsTests": {
       "command": "python -m unittest discover -s tools/tests -p 'test_*.py'",
       "status": "PASS",
-      "tests": 405
+      "tests": 407
     }
   }
 }

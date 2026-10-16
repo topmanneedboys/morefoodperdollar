@@ -10,8 +10,8 @@ saved-data, release, and security paths remain unchanged.
 
 - Branch: `work/valuepilot-stage2-premium-shopping`
 - Starting handoff checkpoint: `6ce81d0d`
-- Current verified checkpoint: code commit `7b79ac96` (documentation checkpoint follows the verification update).
-- Discovery rules: `valuepilot-catalog-discovery-rules-v21`
+- Current verified checkpoint: code commit `38ef3db2` (documentation checkpoint follows the verification update).
+- Discovery rules: `valuepilot-catalog-discovery-rules-v22`
 - Sidecar schema: `valuepilot-catalog-discovery-v2`
 - Additive HTTP contract: `valuepilot-discovery-http-v2`
 - Current state: deterministic identity index, strict query/facet engine, and
@@ -43,33 +43,37 @@ The current local release build reported:
 - `providerProducts`: 78,865
 - `identityRecords`: 134,337
 - `indexedTokens`: 36,423
-- `concepts`: 243
-- `assertions`: 191,691
-- `TYPE_RESOLVED`: 67,063
-- `TYPE_UNRESOLVED`: 67,274
+- `concepts`: 244
+- `assertions`: 191,896
+- `TYPE_RESOLVED`: 67,260
+- `TYPE_UNRESOLVED`: 67,077
 - `TYPE_OR_DEPARTMENT_RESOLVED`: 91,063
 - `DEPARTMENT_RESOLVED`: 85,249
-- `ROLE_RESOLVED`: 68,279
-- `DERIVED_ONLY`: 1,216
+- `ROLE_RESOLVED`: 68,479
+- `DERIVED_ONLY`: 1,219
 - `NO_FORM`: 126,069
 - English retrieval-path proxy: 91,164 identities
 - Spanish retrieval-path proxy: 111,037 identities
-- fully type-resolved provider groups: 29,579; partly resolved: 7,878; unresolved: 41,408
+- fully type-resolved provider groups: 29,764; partly resolved: 7,881; unresolved: 41,220
 - fully type-or-department-resolved provider groups: 46,141; partly resolved: 8,213; unresolved: 24,511
 - source SHA-256: `85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6`
-- ignored sidecar SHA-256: `99e8cd39e798437721c5716d62e030a84ba5ea2025f5673065c7dbdfd17b498b`
+- ignored sidecar SHA-256: `522738d20bf9542ea0d812bccbd975478a4e04a2792d542d7dff34f737def418`
 
-The v21 replay combines the existing reviewed family dictionary with
-`tools/data/discovery_family_rules.json`. It adds observed bilingual families
-for wafer/oblea, chewing gum/chicle, raticide/rodenticide and facial cream.
+The v22 replay combines the existing reviewed family dictionary with
+`tools/data/discovery_family_rules.json`. It adds the observed bilingual
+`bowl` family and excludes appliance names that merely contain bowl; the v21
+wafer/oblea, chewing gum/chicle, raticide/rodenticide and facial cream rules
+remain unchanged.
 Chewing-gum forms are limited to observed sugar-free and filled names. Negative
 context is conservative for scent, conditioner, shampoo, dental and beverage
 mentions; facial-cream context excludes observed depilatory and sunscreen
 names. The index uses the canonical product tokenizer for punctuation-separated
 retail abbreviations.
 
-The v21 full-catalog strict audit returned zero forbidden-context direct matches
-for all four new families. Strict query checks returned wafer/oblea 156
+The v22 full-catalog strict audit returned zero forbidden-context direct matches
+for bowl and all four v21 families. Strict bowl search returns 189 provider
+products from 198 source identities; the three observed appliance mentions
+remain contextual postings. Existing strict query checks return wafer/oblea 156
 provider products from 303 identities, chewing gum/chicle 69 products from 185
 strict identities, sugar-free gum 10/12, filled gum 5/5, raticide 8/8 and
 facial cream 76/136. Broad gum queries retain contextual mentions for the
@@ -196,6 +200,35 @@ Next concrete work is the residual inventory: 67,274 identity-level type rows,
 full type-or-department coverage. Continue evidence-backed batches and record
 unresolved evidence gaps; do not treat literal reachability, department labels
 or count increases as semantic completion.
+
+## v22 verified checkpoint
+
+- Code checkpoint: `38ef3db2e2b514de87435cf3f62618499950e5e3`.
+- Rules: `valuepilot-catalog-discovery-rules-v22`; sidecar schema remains
+  `valuepilot-catalog-discovery-v2`.
+- The v22 batch adds the observed `bowl` family in Spanish/English using the
+  catalog's own term. Two stand mixers and one chopper that mention a bowl are
+  retained as contextual `MENTIONS` and excluded from strict `type:bowl` rows.
+- The full-catalog strict direct-context audit returned zero forbidden bowl
+  matches. `bowl` resolves to 189 distinct provider products from 198 source
+  identities in both languages.
+- Sidecar: `local-provider-data/product-discovery-v2.sqlite`; SHA-256
+  `522738d20bf9542ea0d812bccbd975478a4e04a2792d542d7dff34f737def418`.
+- Coverage: 67,260 type-resolved; 67,077 type-unresolved; 91,063
+  type-or-department resolved; 85,249 department-resolved; 68,479
+  role-resolved; 1,219 derived-only; 126,069 without a form.
+- Provider groups: 29,764 fully type-resolved, 7,881 partial and 41,220
+  unresolved; 46,141 fully type-or-department-resolved, 8,213 partial and
+  24,511 unresolved.
+- Full tools suite: 407 tests passed. Backend suite: 139 tests passed. Android
+  source and APK were unchanged; prior Android checks remain applicable.
+- Motorola Edge 2025 runtime validation remains **NOT RUN** for this
+  catalog-only checkpoint. The sidecar is local/ignored and has not been
+  promoted to the backend or preview.
+
+The v22 residual gate remains open. Continue with evidence-backed batches and
+record unresolved evidence gaps; do not treat literal reachability, department
+labels or count increases as semantic completion.
 
 ## v21 verified checkpoint
 
