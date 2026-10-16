@@ -25,13 +25,14 @@ from tools.consumer_input_intelligence import normalize_text
 from tools.product_identity_lexicon import (
     FAMILY_RULES,
     _FORM_PRESENTATION,
+    _tokens,
     derive_identity_record,
 )
 from tools.product_taxonomy import DEPARTMENT_RULES, classify_name
 
 
 BUILD_SCHEMA_VERSION = "valuepilot-catalog-discovery-v2"
-RULES_VERSION = "valuepilot-catalog-discovery-rules-v17"
+RULES_VERSION = "valuepilot-catalog-discovery-rules-v18"
 MAX_QUERY_CHARS = 256
 MAX_PAGE_SIZE = 50
 MAX_FACET_PAGE_SIZE = 30
@@ -664,7 +665,7 @@ def _family_candidates(row: Mapping[str, Any], identity_key: str) -> list[Mappin
         for value in derived_values
         if isinstance(value.get("family"), str) and isinstance(value.get("role"), str)
     }
-    normalized_tokens = tuple(_norm(str(row.get("name") or "")).split())
+    normalized_tokens = _tokens(str(row.get("name") or ""))
     negative_families = {
         rule.key
         for rule in FAMILY_RULES
