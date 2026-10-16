@@ -61,6 +61,7 @@ _FAMILY_DISCOVERY_QUERIES = {
     "wafer": "oblea",
     "chewing_gum": "chicle",
     "raticide": "raticida",
+    "bowl": "bowl",
 }
 
 

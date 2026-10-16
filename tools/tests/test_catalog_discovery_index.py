@@ -122,6 +122,19 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
                     {item["identityKey"] for item in english["matches"]},
                 )
 
+    def test_bowl_query_keeps_derived_appliance_mentions_out_of_strict_results(self) -> None:
+        direct = _row(1, "BOWL CERAMICA CAROL 20 CM", family="bowl", form="unspecified")
+        derived = _row(2, "BATIDORA CON BOWL BLACK DECKER 500W", family="bowl", form="unspecified")
+        derived["familyCandidates"][0]["role"] = "DERIVED"
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._build(directory, [direct, derived])
+            with DiscoveryIndex(path) as index:
+                result = index.query(DiscoveryQuery("bowl", language="es", page_size=10)).to_dict()
+                self.assertEqual(result["status"], "READY")
+                self.assertEqual(result["resolvedPredicates"], ["type:bowl"])
+                self.assertEqual(result["total"]["productCount"], 1)
+                self.assertEqual([item["displayName"] for item in result["matches"]], ["BOWL CERAMICA CAROL 20 CM"])
+
     def test_identical_es_en_aliases_are_seeded_in_both_languages(self) -> None:
         rows = [
             _row(1, "WHISKY IMPORTADO X 750 CC", family="whisky", form="unspecified"),

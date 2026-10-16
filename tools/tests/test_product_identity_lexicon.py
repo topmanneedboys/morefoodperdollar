@@ -339,6 +339,31 @@ class ProductIdentityLexiconTests(unittest.TestCase):
             {"chewing_gum:sugar_free", "chewing_gum:filled"},
         )
 
+    def test_v21_bowl_family_keeps_appliance_mentions_out_of_bare_query(self) -> None:
+        cases = (
+            ("p:bowl", "BOWL CERAMICA CAROL 20 CM", "DIRECT"),
+            ("p:bowl-brand", "CAROL BOWL 14 CM BEIGE", "DIRECT"),
+            ("p:stand-mixer", "BATIDORA CON BOWL BLACK DECKER 500W", "DERIVED"),
+            ("p:chopper", "PICADOR SUONO BOWL VIDRIO 500W", "DERIVED"),
+        )
+        for key, name, role in cases:
+            with self.subTest(name=name):
+                value = derive_identity_record(_row(key, name))
+                match = next(item for item in value["familyCandidates"] if item["family"] == "bowl")
+                self.assertEqual(match["role"], role)
+                self.assertIn("bowl", match["matchedTerms"])
+
+        self.assertEqual(family_query_key("bowl"), "bowl")
+        rows = [
+            _row("p:direct", "BOWL CERAMICA CAROL 20 CM"),
+            _row("p:mixer", "BATIDORA CON BOWL BLACK DECKER 500W"),
+            _row("p:chopper", "PICADOR SUONO BOWL VIDRIO 500W"),
+        ]
+        self.assertEqual(
+            [row["productEvidenceKey"] for row in filter_family_candidates("bowl", rows)],
+            ["p:direct"],
+        )
+
     def test_form_qualified_family_wins_over_a_generic_word_family(self) -> None:
         self.assertEqual(family_query_key("alfajor chocolate"), "alfajor")
         self.assertEqual(family_query_form("alfajor chocolate"), ("alfajor", "chocolate"))

@@ -736,7 +736,7 @@ _DIRECT_FORM_KEYS = frozenset({
 # set while leaving those rows reachable through their literal names.
 _DIRECT_QUERY_FAMILIES = frozenset({
     "pork", "lamb", "turkey", "beef",
-    "wafer", "chewing_gum", "raticide", "facial_cream",
+    "wafer", "chewing_gum", "raticide", "facial_cream", "bowl",
 })
 
 

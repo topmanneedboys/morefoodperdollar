@@ -852,6 +852,39 @@ class SearchPackM11Tests(unittest.TestCase):
         self.assertEqual([item["productEvidenceKey"] for item in sugar_free["matches"]], ["gum-sugar-free"])
         self.assertIsNone(sugar_free["clarification"])
 
+    def test_service_search_uses_canonical_bowl_family_and_filters_appliances(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "name": name,
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["bowl"],
+                "qualifiedOffers": [],
+            }
+            for index, (key, name) in enumerate((
+                ("bowl-direct", "BOWL CERAMICA CAROL 20 CM"),
+                ("bowl-mixer", "BATIDORA CON BOWL BLACK DECKER 500W"),
+                ("bowl-chopper", "PICADOR SUONO BOWL VIDRIO 500W"),
+            ))
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        response = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "bowl",
+        })
+
+        self.assertEqual(reader.discovery_calls[0][0], "bowl")
+        self.assertEqual([item["productEvidenceKey"] for item in response["matches"]], ["bowl-direct"])
+        self.assertIsNone(response["clarification"])
+
     def test_service_search_exposes_new_food_family_clarification_and_filters_form(self) -> None:
         manager = _StubReleaseManager()
         reader = _StubReader()
