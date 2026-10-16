@@ -1,29 +1,27 @@
 {
   "bilingual": {
-    "EN_AVAILABLE": 91008,
-    "ES_AVAILABLE": 110939,
-    "MISSING_EN": 43329,
-    "MISSING_ES": 23398,
+    "EN_AVAILABLE": 91029,
+    "ES_AVAILABLE": 110967,
+    "MISSING_EN": 43308,
+    "MISSING_ES": 23370,
     "definition": "Availability counts include reviewed family aliases, identity aliases, and accepted department paths. They are retrieval-path proxies, not proof that every identity has a reviewed translation."
   },
   "counts": {
-    "assertions": 191069,
-    "concepts": 235,
+    "assertions": 191157,
+    "concepts": 238,
     "identityRecords": 134337,
     "indexedTokens": 36423,
     "providerProducts": 78865
   },
   "coverage": {
     "DEPARTMENT_RESOLVED": 85249,
-    "DERIVED_ONLY": 1198,
+    "DERIVED_ONLY": 1224,
     "IDENTITY_VISITED": 134337,
     "NO_FORM": 126086,
-    "RESOLVED": 66584,
-    "ROLE_RESOLVED": 67782,
-    "TYPE_OR_DEPARTMENT_RESOLVED": 90913,
-    "TYPE_RESOLVED": 66584,
-    "TYPE_UNRESOLVED": 67753,
-    "UNRESOLVED": 67753
+    "ROLE_RESOLVED": 67953,
+    "TYPE_OR_DEPARTMENT_RESOLVED": 90923,
+    "TYPE_RESOLVED": 66729,
+    "TYPE_UNRESOLVED": 67608
   },
   "departments": {
     "baby_pet": 3760,
@@ -48,9 +46,9 @@
     "toys_games": 1411
   },
   "notes": [
-    "This v14 checkpoint adds evidence-backed alfajor, flour and peanut families with bilingual form clarification and explicit Argentine abbreviations.",
-    "Form-qualified family queries prefer the family that supplies the observed form and no longer reopen sibling facets after an explicit choice.",
-    "Full-catalog strict checks returned zero direct peanut marker leaks and zero direct postings for fertilizante/harina de hueso, bagel or tubitos flour mentions, peanut oil/paste abbreviations, chocolate, alfajor, barranola and related derived contexts.",
+    "This v19 checkpoint extends evidence-backed bilingual meat-family discovery for pork/cerdo, lamb/cordero, turkey/pavo and beef/vacuno/ternera, with conservative negative-context handling for pet food, toys, prepared foods, seasoning, alcohol and stale source assertions.",
+    "The index uses the canonical product tokenizer when applying current negative context to older source family assertions, so punctuation and retail abbreviations such as ALIM.PERROS cannot leak into a strict meat-family result.",
+    "Full-catalog strict checks returned zero direct forbidden-context matches for pork, lamb, turkey and beef; bilingual family queries resolve to the same strict predicate for the verified Spanish/English pairs.",
     "TYPE_UNRESOLVED identities remain literal-searchable and are not semantic completion. Department resolution is reported separately and does not replace useful type review.",
     "Provider-group completeness is stricter than identity coverage: every identity in a provider group must satisfy the metric before the group is counted as fully covered.",
     "No prices, offers, stock, availability, credentials, backend security, Android code, production activation, or Play publication were changed."
@@ -58,21 +56,21 @@
   "output": {
     "artifact": "local-provider-data/product-discovery-v2.sqlite",
     "gitTracked": false,
-    "sha256": "817a78c886b93eb81b13df3e7c4861612a20875d1946059da8a5975f2603d7b2"
+    "sha256": "8893365ece314585a9a0e88ff228b8e1fb83b67bb051be96a439fd85243013d4"
   },
   "providerGroups": {
-    "fullyDepartmentResolved": 43511,
-    "fullyTypeOrDepartmentResolved": 45963,
-    "fullyTypeResolved": 29254,
     "groups": 78865,
+    "fullyTypeResolved": 29464,
+    "partlyTypeResolved": 7866,
+    "unresolvedType": 41535,
+    "fullyDepartmentResolved": 43511,
     "partlyDepartmentResolved": 8862,
-    "partlyTypeOrDepartmentResolved": 8321,
-    "partlyTypeResolved": 7832,
     "unresolvedDepartment": 26492,
-    "unresolvedType": 41779,
-    "unresolvedTypeAndDepartment": 24581
+    "fullyTypeOrDepartmentResolved": 46078,
+    "partlyTypeOrDepartmentResolved": 8232,
+    "unresolvedTypeAndDepartment": 24555
   },
-  "rulesVersion": "valuepilot-catalog-discovery-rules-v14",
+  "rulesVersion": "valuepilot-catalog-discovery-rules-v19",
   "safety": {
     "availability": false,
     "credentials": false,
@@ -98,9 +96,9 @@
     "backendTests": {
       "command": "python -m unittest discover -s backend/tests -p 'test_*.py'",
       "status": "PASS",
-      "tests": 136
+      "tests": 137
     },
-    "codeCommit": "3a67385b0ead741574eaa5b2eec423cafcfc6d3a",
+    "codeCommit": "f1e03771b36afbf93476e2f566a09f4efba111ee",
     "motorolaEdge2025": {
       "reason": "No device runtime validation was performed for this identity-sidecar milestone.",
       "status": "NOT_RUN"
@@ -172,7 +170,11 @@
         "softDrinkPackaging": 0,
         "spiceConditioner": 0,
         "swimwear": 0,
-        "towel": 0
+        "towel": 0,
+        "meatPorkDirectForbiddenContexts": 0,
+        "meatLambDirectForbiddenContexts": 0,
+        "meatTurkeyDirectForbiddenContexts": 0,
+        "meatBeefDirectForbiddenContexts": 0
       },
       "flourEn": {
         "choices": [
@@ -335,12 +337,78 @@
         "resolvedPredicate": "type:swimwear",
         "sourceIdentityCount": 135,
         "status": "READY"
+      },
+      "porkEs": {
+        "productCount": 317,
+        "resolvedPredicate": "type:pork",
+        "sourceIdentityCount": 334,
+        "status": "READY"
+      },
+      "porkEn": {
+        "productCount": 317,
+        "resolvedPredicate": "type:pork",
+        "sourceIdentityCount": 334,
+        "status": "READY"
+      },
+      "lambEs": {
+        "productCount": 39,
+        "resolvedPredicate": "type:lamb",
+        "sourceIdentityCount": 39,
+        "status": "READY"
+      },
+      "lambEn": {
+        "productCount": 39,
+        "resolvedPredicate": "type:lamb",
+        "sourceIdentityCount": 39,
+        "status": "READY"
+      },
+      "turkeyEs": {
+        "productCount": 6,
+        "resolvedPredicate": "type:turkey",
+        "sourceIdentityCount": 8,
+        "status": "READY"
+      },
+      "turkeyEn": {
+        "productCount": 6,
+        "resolvedPredicate": "type:turkey",
+        "sourceIdentityCount": 8,
+        "status": "READY"
+      },
+      "beefEs": {
+        "productCount": 248,
+        "resolvedPredicate": "type:beef",
+        "sourceIdentityCount": 367,
+        "status": "READY"
+      },
+      "beefEn": {
+        "productCount": 248,
+        "resolvedPredicate": "type:beef",
+        "sourceIdentityCount": 367,
+        "status": "READY"
+      },
+      "meatFamilyDirectNegativeContexts": {
+        "pork": {
+          "direct": 334,
+          "forbiddenLike": 0
+        },
+        "lamb": {
+          "direct": 39,
+          "forbiddenLike": 0
+        },
+        "turkey": {
+          "direct": 8,
+          "forbiddenLike": 0
+        },
+        "beef": {
+          "direct": 367,
+          "forbiddenLike": 0
+        }
       }
     },
     "toolsTests": {
       "command": "python -m unittest discover -s tools/tests -p 'test_*.py'",
       "status": "PASS",
-      "tests": 397
+      "tests": 403
     }
   }
 }

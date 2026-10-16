@@ -10,8 +10,8 @@ saved-data, release, and security paths remain unchanged.
 
 - Branch: `work/valuepilot-stage2-premium-shopping`
 - Starting handoff checkpoint: `6ce81d0d`
-- Current verified checkpoint: code commit `3a67385b` (documentation checkpoint follows the verification update).
-- Discovery rules: `valuepilot-catalog-discovery-rules-v14`
+- Current verified checkpoint: code commit `f1e03771` (documentation checkpoint follows the verification update).
+- Discovery rules: `valuepilot-catalog-discovery-rules-v19`
 - Sidecar schema: `valuepilot-catalog-discovery-v2`
 - Additive HTTP contract: `valuepilot-discovery-http-v2`
 - Current state: deterministic identity index, strict query/facet engine, and
@@ -43,31 +43,35 @@ The current local release build reported:
 - `providerProducts`: 78,865
 - `identityRecords`: 134,337
 - `indexedTokens`: 36,423
-- `concepts`: 235
-- `assertions`: 191,069
-- `TYPE_RESOLVED`: 66,584
-- `TYPE_UNRESOLVED`: 67,753
-- `TYPE_OR_DEPARTMENT_RESOLVED`: 90,913
+- `concepts`: 238
+- `assertions`: 191,157
+- `TYPE_RESOLVED`: 66,729
+- `TYPE_UNRESOLVED`: 67,608
+- `TYPE_OR_DEPARTMENT_RESOLVED`: 90,923
 - `DEPARTMENT_RESOLVED`: 85,249
-- `ROLE_RESOLVED`: 67,782
-- `DERIVED_ONLY`: 1,198
+- `ROLE_RESOLVED`: 67,953
+- `DERIVED_ONLY`: 1,224
 - `NO_FORM`: 126,086
-- English retrieval-path proxy: 91,008 identities
-- Spanish retrieval-path proxy: 110,939 identities
-- fully type-resolved provider groups: 29,254; partly resolved: 7,832; unresolved: 41,779
-- fully type-or-department-resolved provider groups: 45,963; partly resolved: 8,321; unresolved: 24,581
+- English retrieval-path proxy: 91,029 identities
+- Spanish retrieval-path proxy: 110,967 identities
+- fully type-resolved provider groups: 29,464; partly resolved: 7,866; unresolved: 41,535
+- fully type-or-department-resolved provider groups: 46,078; partly resolved: 8,232; unresolved: 24,555
 - source SHA-256: `85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6`
-- ignored sidecar SHA-256: `817a78c886b93eb81b13df3e7c4861612a20875d1946059da8a5975f2603d7b2`
+- ignored sidecar SHA-256: `8893365ece314585a9a0e88ff228b8e1fb83b67bb051be96a439fd85243013d4`
 
-The v14 replay combines the existing reviewed family dictionary with
-`tools/data/discovery_family_rules.json`. It adds evidence-backed vocabulary for
-common Argentina grocery, personal-care, household, apparel, electronics, pet,
-and toy families while preserving the older high-risk family rules and their
-derived-context safeguards. It also seeds identical ES/EN spellings in both
-language paths and hides derived mentions when a bare type query has no safe
-clarification facet. The bilingual counts above include accepted department
-paths; they are retrieval-path proxies, not proof that every name has a reviewed
-English translation.
+The v19 replay combines the existing reviewed family dictionary with
+`tools/data/discovery_family_rules.json`. It adds evidence-backed bilingual
+meat-family vocabulary for pork/cerdo, lamb/cordero, turkey/pavo and
+beef/vacuno/ternera. Negative context is conservative for pet food, toys,
+prepared foods, seasoning and alcohol, and current evidence overrides stale
+direct source assertions. The index uses the canonical product tokenizer for
+punctuation-separated retail abbreviations.
+
+The v19 full-catalog strict audit returned zero forbidden-context direct matches
+for all four meat families. Spanish and English pairs resolve to the same strict
+type predicate: cerdo/pork (317 products), cordero/lamb (39), pavo/turkey (6),
+and vacuno/beef (248). These are observed identity matches, not price or
+availability evidence.
 
 The report and sidecar stay in `local-provider-data`, which is ignored by Git.
 Those numbers are engineering coverage measurements. They do not mean that
@@ -189,6 +193,37 @@ Next concrete work is the residual inventory: 67,753 identity-level type rows,
 full type-or-department coverage. Continue evidence-backed batches and record
 unresolved evidence gaps; do not treat literal reachability, department labels
 or count increases as semantic completion.
+
+## v19 verified checkpoint
+
+- Code checkpoint: `f1e03771b36afbf93476e2f566a09f4efba111ee`.
+- Rules: `valuepilot-catalog-discovery-rules-v19`; sidecar schema remains
+  `valuepilot-catalog-discovery-v2`.
+- The v19 batch adds strict bilingual meat-family discovery for pork/cerdo,
+  lamb/cordero, turkey/pavo and beef/vacuno/ternera. The merge path now
+  suppresses stale direct source assertions whenever current reviewed negative
+  context matches, using the canonical tokenizer for punctuation and abbreviations.
+- Full-catalog strict direct-posting audit: pork 334 direct / 0 forbidden-like,
+  lamb 39 / 0, turkey 8 / 0, beef 367 / 0.
+- Verified query results: cerdo/pork 317 provider products and 334 source
+  identities; cordero/lamb 39/39; pavo/turkey 6/8; vacuno/beef 248/367.
+- Coverage: 66,729 type-resolved; 67,608 type-unresolved; 90,923
+  type-or-department resolved; 67,953 role-resolved; 1,224 derived-only;
+  126,086 without a form.
+- Provider groups: 29,464 fully type-resolved, 7,866 partial and 41,535
+  unresolved; 46,078 fully type-or-department-resolved, 8,232 partial and
+  24,555 unresolved.
+- Sidecar: `local-provider-data/product-discovery-v2.sqlite`; SHA-256
+  `8893365ece314585a9a0e88ff228b8e1fb83b67bb051be96a439fd85243013d4`.
+- Focused identity/index tests passed before the release build. Full tools suite: 403
+  tests passed. Backend suite: 137 tests passed. Android
+  source and APK remain unchanged; Motorola Edge 2025 runtime validation was
+  not run, and the sidecar remains local/ignored and unpromoted.
+
+This checkpoint is meaningful semantic expansion, not catalog completion.
+Residual identities and provider groups still require evidence-backed review; no
+guessed translations, prices, offers, stock, availability, credentials,
+production activation or Play publication were introduced.
 
 ## v14 verified checkpoint
 
