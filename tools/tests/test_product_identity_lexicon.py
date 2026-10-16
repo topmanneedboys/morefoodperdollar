@@ -81,6 +81,42 @@ class ProductIdentityLexiconTests(unittest.TestCase):
                 else:
                     self.assertEqual([item["role"] for item in matches], [expected_role])
 
+    def test_catalog_extensions_and_third_batch_cover_observed_plural_and_abbreviated_names(self) -> None:
+        cases = (
+            ("p:gaseo", "GASEO COLA LIGHT X 2.25 LT", "soft_drink", "DIRECT"),
+            ("p:sahumerios", "SAHUMERIOS ZED BLACK HEXAGONAL 15 UN", "incense", "DIRECT"),
+            ("p:blueberry", "ARANDANO CUB 125 GR CUB 1 UN.", "blueberry", "DIRECT"),
+            ("p:pajamas", "HG PIJAMA ESTAMPADO", "pajamas", "DIRECT"),
+            ("p:swimwear", "TRAJE DE BANO ENTERIZO TEX", "swimwear", "DIRECT"),
+            ("p:wipes", "TOALLITAS HUMEDAS BABYSEC X 50 UNI", "baby_wipes", "DIRECT"),
+            ("p:menstrual", "TOALLA FEMENINA NORMAL X 8 UNI", "menstrual_care", "DIRECT"),
+            ("p:hair-dye", "ISSUE KIT COLORACION CASTANO X 1 UNI", "hair_color", "DIRECT"),
+        )
+        for key, name, family, expected_role in cases:
+            with self.subTest(name=name):
+                value = derive_identity_record(_row(key, name))
+                matches = [item for item in value["familyCandidates"] if item["family"] == family]
+                self.assertEqual([item["role"] for item in matches], [expected_role])
+
+    def test_negative_context_keeps_similar_names_out_of_the_wrong_family(self) -> None:
+        cases = (
+            ("AJO EN MALLA BOL 2 UNI", "swimwear"),
+            ("CREMA DEPILATORIA VEET AXILAS Y BIKINI CJA 100CC", "swimwear"),
+            ("TOALLAS FEMENINAS XTRA NOCTURNAS 8U", "towel"),
+            ("TOALLAS FEM.SIEMPRE LIBRE NOCT. 8un", "towel"),
+            ("TOALLA HIG. NOCT. C/ALAS MAXCURV", "towel"),
+            ("NOSOTRAS TOALLA BUENAS NOCHES SUAVE MAX CURV 16U", "towel"),
+            ("TOALLA CALIPSO NORMAL C CALENDULA X 8U", "towel"),
+            ("TOALLA FEMEN C/ALAS C/DEO", "towel"),
+            ("TOALLAS HUMEDAS HUGGIES X 48 UNI", "towel"),
+            ("ARTICULO ENVASE GASEOSA RET X 2.5 LT.X 1 UNI", "soft_drink"),
+        )
+        for name, family in cases:
+            with self.subTest(name=name):
+                value = derive_identity_record(_row(f"p:{family}", name))
+                candidate = next(item for item in value["familyCandidates"] if item["family"] == family)
+                self.assertEqual(candidate["role"], "DERIVED")
+
     def test_mango_family_is_available_for_observed_forms(self) -> None:
         value = derive_identity_record(_row("p:mango-cookie", "GALLETAS DE MANGO 200 G"))
         mango = next(item for item in value["familyCandidates"] if item["family"] == "mango")

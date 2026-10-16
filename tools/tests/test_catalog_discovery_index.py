@@ -237,6 +237,27 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
                 self.assertEqual(result["total"]["productCount"], 1)
                 self.assertEqual([item["displayName"] for item in result["matches"]], ["TOALLA DE BAÑO MARCA X"])
 
+    def test_current_dictionary_overrides_stale_direct_family_assertions(self) -> None:
+        rows = [{
+            "productEvidenceKey": "ar-sepa-product:synthetic:stale",
+            "providerProductId": "provider-stale",
+            "name": "AJO EN MALLA BOL 2 UNI",
+            "brand": "Marca",
+            "familyCandidates": [{
+                "family": "swimwear",
+                "matchedTerms": ["malla"],
+                "observedForms": ["unspecified"],
+                "role": "DIRECT",
+            }],
+            "aliases": [],
+        }]
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._build(directory, rows)
+            with DiscoveryIndex(path) as index:
+                result = index.query(DiscoveryQuery("swimwear", language="en", page_size=10)).to_dict()
+                self.assertEqual(result["status"], "NO_MATCHES")
+                self.assertEqual(result["total"]["productCount"], 0)
+
     def test_explicit_context_is_stored_as_a_typed_relation(self) -> None:
         row = {
             "productEvidenceKey": "ar-sepa-product:synthetic:77",

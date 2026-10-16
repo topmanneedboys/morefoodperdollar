@@ -395,7 +395,55 @@ def _generic_family_rules() -> tuple[FamilyRule, ...]:
                 forms={},
             )
         )
-    return tuple(explicit_rules + rules)
+    # The JSON rules are the reviewed source of truth.  A legacy alias target
+    # such as ``soft drink`` normalizes to the same ``soft_drink`` key, so it
+    # must not overwrite a newer rule's exclusions or forms.
+    rules_by_key: dict[str, FamilyRule] = {rule.key: rule for rule in (*rules, *explicit_rules)}
+    extensions = data.get("extensions", {})
+    if isinstance(extensions, Mapping):
+        def _extension_values(raw_rule: Mapping[str, Any], name: str) -> tuple[str, ...]:
+            value = raw_rule.get(name, ())
+            if isinstance(value, str):
+                value = (value,)
+            if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+                return ()
+            return tuple(dict.fromkeys(str(item).strip() for item in value if str(item).strip()))
+
+        def _extension_exclusions(raw_rule: Mapping[str, Any]) -> tuple[tuple[str, ...], ...]:
+            return tuple(
+                tuple(normalize_text(value, max_length=MAX_ALIAS_LENGTH).split())
+                for value in _extension_values(raw_rule, "exclude")
+                if normalize_text(value, max_length=MAX_ALIAS_LENGTH).strip()
+            )
+
+        for raw_key, raw_rule in sorted(extensions.items(), key=lambda item: str(item[0])):
+            if not isinstance(raw_key, str) or not isinstance(raw_rule, Mapping):
+                continue
+            key = normalize_text(raw_key, max_length=MAX_ALIAS_LENGTH).replace(" ", "_")
+            prior = rules_by_key.get(key)
+            if prior is None:
+                continue
+            forms = dict(prior.forms)
+            raw_forms = raw_rule.get("forms", {})
+            if isinstance(raw_forms, Mapping):
+                for raw_form, raw_form_value in sorted(raw_forms.items(), key=lambda item: str(item[0])):
+                    if not isinstance(raw_form, str) or not isinstance(raw_form_value, Mapping):
+                        continue
+                    form_key = normalize_text(raw_form, max_length=MAX_ALIAS_LENGTH).replace(" ", "_")
+                    old_es, old_en = forms.get(form_key, ((), ()))
+                    forms[form_key] = (
+                        tuple(dict.fromkeys(old_es + _extension_values(raw_form_value, "es"))),
+                        tuple(dict.fromkeys(old_en + _extension_values(raw_form_value, "en"))),
+                    )
+            rules_by_key[key] = FamilyRule(
+                key=prior.key,
+                spanish_aliases=tuple(dict.fromkeys(prior.spanish_aliases + _extension_values(raw_rule, "es"))),
+                english_aliases=tuple(dict.fromkeys(prior.english_aliases + _extension_values(raw_rule, "en"))),
+                include_terms=tuple(dict.fromkeys(prior.include_terms + _extension_values(raw_rule, "include"))),
+                excluded_phrases=tuple(dict.fromkeys(prior.excluded_phrases + _extension_exclusions(raw_rule))),
+                forms=forms,
+            )
+    return tuple(rules_by_key.values())
 
 
 # Add the broader reviewed vocabulary after the high-risk families so the
@@ -674,7 +722,12 @@ SAFE_INFLECTIONS: Mapping[str, tuple[str, ...]] = {
 
 
 def _tokens(value: str) -> tuple[str, ...]:
-    return tuple(normalize_text(value, max_length=MAX_NAME_LENGTH).split())
+    normalized = normalize_text(value, max_length=MAX_NAME_LENGTH)
+    # Catalog names use punctuation as a compact separator (``FEM.SIEMPRE``,
+    # ``HIG.``, ``C/ALAS``). Split it so reviewed exclusions and aliases see
+    # the same words as the customer, while retaining Unicode letters and
+    # digits for Argentine product names.
+    return tuple(re.findall(r"[^\W_]+", normalized, flags=re.UNICODE))
 
 
 def _contains_sequence(tokens: Sequence[str], sequence: Sequence[str]) -> bool:

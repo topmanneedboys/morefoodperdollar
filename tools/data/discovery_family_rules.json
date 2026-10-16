@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "valuepilot-discovery-family-rules-v3",
+  "schemaVersion": "valuepilot-discovery-family-rules-v4",
   "source": "reviewed-catalog-name-patterns-2026-10-15",
   "families": {
     "wine": {"es": ["vino"], "en": ["wine"], "include": ["vino", "wine", "malbec", "cabernet", "chardonnay", "sauvignon", "espumante", "champagne", "sidra", "cider"], "exclude": ["vinagre", "vinagre de alcohol", "salsa de vino"], "forms": {"red": {"es": ["tinto", "rosado"], "en": ["red", "rose"]}, "white": {"es": ["blanco"], "en": ["white"]}, "sparkling": {"es": ["espumante", "champagne"], "en": ["sparkling", "champagne"]}}},
@@ -68,7 +68,7 @@
     "fabric_softener": {"es": ["suavizante"], "en": ["fabric softener", "softener"], "include": ["suavizante", "fabric softener", "softener"], "exclude": ["agua micelar suavizante", "suavizante cabello"]},
     "bleach": {"es": ["lavandina"], "en": ["bleach"], "include": ["lavandina", "bleach"]},
     "sponge": {"es": ["esponja"], "en": ["sponge"], "include": ["esponja", "sponge"], "exclude": ["esponja de maquillaje", "esponja facial"]},
-    "towel": {"es": ["toalla", "toallon"], "en": ["towel", "bath towel"], "include": ["toalla", "toallon", "towel", "bath towel"], "exclude": ["toallita", "toallitas", "toalla de papel", "toalla sanitaria", "toalla femenina", "toalla desmaquillante"]},
+    "towel": {"es": ["toalla", "toallon"], "en": ["towel", "bath towel"], "include": ["toalla", "toallon", "towel", "bath towel"], "exclude": ["toallita", "toallitas", "toalla de papel", "toalla sanitaria", "toallas sanitarias", "toalla femenina", "toallas femeninas", "toalla fem", "toallas fem", "toalla hig", "toallas hig", "toalla higienica", "toallas higienicas", "toalla desmaquillante", "toallas desmaquillantes", "toalla desmaquill", "toallas desmaquill", "toalla hum", "toallas hum", "toalla humeda", "toallas humedas", "toalla nosotras", "toallas nosotras", "nosotras toalla", "nosotras toallas", "toalla always", "toallas always", "toalla kotex", "toallas kotex", "toalla carefree", "toallas carefree", "toalla tena", "toallas tena", "toalla discreet", "toallas discreet", "toalla huggies", "toallas huggies", "toalla baby", "toallas baby", "toalla panal", "toallas panales", "toalla panales", "toalla maternal", "fem", "femen", "fememina", "femeni", "femenin", "femenina", "femina", "hig", "humed", "nosotras", "always", "kotex", "carefree", "tena", "discreet", "huggies", "baby", "panal", "panales", "maternidad", "incontinencia", "incontin", "calipso", "doncella", "ladysoft", "ladys", "lina", "plenitud", "femme", "siempre", "visiv"]},
     "incense": {"es": ["sahumerio", "incienso"], "en": ["incense"], "include": ["sahumerio", "incienso", "incense"]},
     "bedding": {"es": ["sabana", "sabanas"], "en": ["sheet", "sheets", "bedding"], "include": ["sabana", "sabanas", "sheet", "sheets", "bedding"]},
     "curtain": {"es": ["cortina"], "en": ["curtain"], "include": ["cortina", "curtain"]},
@@ -97,6 +97,26 @@
     "sunscreen": {"es": ["protector solar"], "en": ["sunscreen", "sun protection"], "include": ["protector solar", "sunscreen", "sun protection"], "exclude": ["protector de cortina", "protector labial"]},
     "body_cream": {"es": ["crema corporal"], "en": ["body cream", "body lotion"], "include": ["crema corporal", "body cream", "body lotion"]},
     "hair_gel": {"es": ["gel cabello", "gel capilar"], "en": ["hair gel"], "include": ["gel cabello", "gel capilar", "hair gel"], "exclude": ["gel limpiador facial", "gel sanitizante"]},
-    "facial_cleanser": {"es": ["limpiador facial", "agua micelar"], "en": ["facial cleanser", "micellar water"], "include": ["limpiador facial", "gel limpiador facial", "agua micelar", "facial cleanser", "micellar water"]}
+    "facial_cleanser": {"es": ["limpiador facial", "agua micelar"], "en": ["facial cleanser", "micellar water"], "include": ["limpiador facial", "gel limpiador facial", "agua micelar", "facial cleanser", "micellar water"]},
+    "blueberry": {"es": ["arandano", "arandanos"], "en": ["blueberry", "blueberries"], "include": ["arandano", "arandanos", "blueberry", "blueberries"], "exclude": ["yogur", "yogurt", "jugo", "zumo", "bebida"]},
+    "pajamas": {"es": ["pijama", "pijamas"], "en": ["pyjama", "pyjamas", "pajamas"], "include": ["pijama", "pijamas", "pyjama", "pyjamas", "pajamas"]},
+    "leggings": {"es": ["calza", "calzas"], "en": ["legging", "leggings"], "include": ["calza", "calzas", "legging", "leggings"]},
+    "underwear": {"es": ["boxer", "boxers", "bombacha", "vedetina"], "en": ["underwear", "boxer", "boxers"], "include": ["boxer", "boxers", "bombacha", "vedetina", "underwear"], "exclude": ["alimento perro", "perro boxer", "dog food"]},
+    "swimwear": {"es": ["traje de bano", "traje de baño", "malla", "bikini"], "en": ["swimwear", "swimsuit", "bikini"], "include": ["traje de bano", "traje de baño", "malla", "bikini", "shortbano", "short de bano", "swimwear", "swimsuit"], "exclude": ["pampers splashers", "splashers", "juego de bano", "ajo malla", "ajo en malla", "papa", "malla pralin", "smartwatch", "tabla de planchar", "depil", "depilat", "depilacion", "depilatoria", "veet", "cera", "axila", "bandas depil"]},
+    "soft_drink": {"es": ["gaseosa", "gaseosas", "refresco", "refrescos", "soda"], "en": ["soft drink", "soft drinks", "soda"], "include": ["gaseosa", "gaseosas", "refresco", "refrescos", "soda", "soft drink", "soft drinks"], "exclude": ["envase gaseosa", "envases gaseosa", "esqueleto gaseosa", "vaso gaseosa", "articulo envase gaseosa"]},
+    "baby_wipes": {"es": ["toallita bebe", "toallitas bebe", "toallitas humedas"], "en": ["baby wipes", "wet wipes"], "include": ["toallita bebe", "toallitas bebe", "toallitas humedas", "baby wipes", "wet wipes"], "exclude": ["desmaquillante", "desmaquillantes", "micelar"]},
+    "menstrual_care": {"es": ["toalla femenina", "toallita femenina", "toallita hig", "toallitas hig", "protector diario", "protectores diarios"], "en": ["sanitary pad", "menstrual pad", "tampon", "tampons", "panty liner"], "include": ["toalla femenina", "toallita femenina", "toallita hig", "toallitas hig", "protector diario", "protectores diarios", "sanitary pad", "menstrual pad", "tampon", "tampons", "panty liner"]},
+    "hair_treatment": {"es": ["tratamiento capilar", "tratam capilar"], "en": ["hair treatment", "hair mask"], "include": ["tratamiento capilar", "tratam capilar", "hair treatment", "hair mask"]}
+  },
+  "extensions": {
+    "soft_drink": {"es": ["gaseo", "gaseos"], "include": ["gaseo", "gaseos", "gaseo cola"]},
+    "incense": {"es": ["sahumerios", "inciensos"], "include": ["sahumerios", "inciensos"]},
+    "towel": {"es": ["toallas", "toallones"], "include": ["toallas", "toallones"]},
+    "diaper": {"es": ["pañales", "panales"], "include": ["pañales", "panales", "babysec"], "exclude": ["toallitas humedas babysec", "toa hum babysec"]},
+    "suitcase": {"es": ["valijas"], "include": ["valijas"]},
+    "backpack": {"es": ["mochilas"], "include": ["mochilas"]},
+    "lamp": {"es": ["lamparas"], "include": ["lamparas"]},
+    "headphones": {"es": ["auriculares"], "include": ["auriculares"]},
+    "hair_color": {"es": ["issue kit"], "include": ["issue kit"]}
   }
 }

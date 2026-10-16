@@ -31,7 +31,7 @@ from tools.product_taxonomy import DEPARTMENT_RULES, classify_name
 
 
 BUILD_SCHEMA_VERSION = "valuepilot-catalog-discovery-v2"
-RULES_VERSION = "valuepilot-catalog-discovery-rules-v4"
+RULES_VERSION = "valuepilot-catalog-discovery-rules-v10"
 MAX_QUERY_CHARS = 256
 MAX_PAGE_SIZE = 50
 MAX_FACET_PAGE_SIZE = 30
@@ -628,7 +628,13 @@ def _family_candidates(row: Mapping[str, Any], identity_key: str) -> list[Mappin
         for value in provided
         if isinstance(value.get("family"), str) and isinstance(value.get("role"), str)
     }
-    for source_name, values in (("provided", provided), ("derived", derived.get("familyCandidates", ()) )):
+    derived_values = tuple(value for value in derived.get("familyCandidates", ()) if isinstance(value, Mapping))
+    derived_roles = {
+        str(value.get("family")).strip(): str(value.get("role")).strip()
+        for value in derived_values
+        if isinstance(value.get("family"), str) and isinstance(value.get("role"), str)
+    }
+    for source_name, values in (("provided", provided), ("derived", derived_values)):
         for value in values:
             if not isinstance(value, Mapping):
                 continue
@@ -639,6 +645,13 @@ def _family_candidates(row: Mapping[str, Any], identity_key: str) -> list[Mappin
             # Preserve that negative context instead of turning a shampoo or
             # drink mention into the food family during a refresh.
             if source_name == "derived" and role == "DIRECT" and provided_roles.get(family) == "DERIVED":
+                continue
+            # The source identity release can also contain an older DIRECT
+            # assertion for a family whose current reviewed dictionary now
+            # recognizes an explicit negative context (for example an envase
+            # de gaseosa or a grocery malla). Keep current evidence in charge
+            # so stale direct postings cannot leak into a type query.
+            if source_name == "provided" and role == "DIRECT" and derived_roles.get(family) == "DERIVED":
                 continue
             terms = tuple(sorted(str(item) for item in value.get("matchedTerms", ()) if str(item).strip()))
             forms = tuple(sorted(str(item) for item in value.get("observedForms", ()) if str(item).strip()))
