@@ -664,6 +664,19 @@ def _family_candidates(row: Mapping[str, Any], identity_key: str) -> list[Mappin
         for value in derived_values
         if isinstance(value.get("family"), str) and isinstance(value.get("role"), str)
     }
+    normalized_tokens = tuple(_norm(str(row.get("name") or "")).split())
+    negative_families = {
+        rule.key
+        for rule in FAMILY_RULES
+        if any(
+            phrase
+            and any(
+                normalized_tokens[index : index + len(phrase)] == phrase
+                for index in range(len(normalized_tokens) - len(phrase) + 1)
+            )
+            for phrase in rule.excluded_phrases
+        )
+    }
     for source_name, values in (("provided", provided), ("derived", derived_values)):
         for value in values:
             if not isinstance(value, Mapping):
@@ -682,6 +695,13 @@ def _family_candidates(row: Mapping[str, Any], identity_key: str) -> list[Mappin
             # de gaseosa or a grocery malla). Keep current evidence in charge
             # so stale direct postings cannot leak into a type query.
             if source_name == "provided" and role == "DIRECT" and derived_roles.get(family) == "DERIVED":
+                continue
+            # A source release may contain a stale direct assertion without a
+            # current include term (for example a pet-food row with only the
+            # generic word ``carne``).  Current reviewed negative context must
+            # still suppress that assertion so a bare family query cannot leak
+            # the row into the direct result set.
+            if source_name == "provided" and role == "DIRECT" and family in negative_families:
                 continue
             terms = tuple(sorted(str(item) for item in value.get("matchedTerms", ()) if str(item).strip()))
             forms = tuple(sorted(str(item) for item in value.get("observedForms", ()) if str(item).strip()))

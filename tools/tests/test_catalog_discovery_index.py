@@ -309,6 +309,38 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
                 self.assertEqual(result["status"], "NO_MATCHES")
                 self.assertEqual(result["total"]["productCount"], 0)
 
+    def test_current_negative_context_overrides_stale_meat_assertions(self) -> None:
+        rows = [
+            {
+                "productEvidenceKey": "ar-sepa-product:synthetic:pet",
+                "providerProductId": "provider-pet",
+                "name": "ALIMENTO PERROS CARNE VACUNA 2 KG",
+                "brand": "Marca",
+                "familyCandidates": [{
+                    "family": "beef",
+                    "matchedTerms": ["carne"],
+                    "observedForms": ["unspecified"],
+                    "role": "DIRECT",
+                }],
+                "aliases": [],
+            },
+            {
+                "productEvidenceKey": "ar-sepa-product:synthetic:meat",
+                "providerProductId": "provider-meat",
+                "name": "CENTRO DE ENTRANA VACUNO X KG",
+                "brand": "Marca",
+                "familyCandidates": [],
+                "aliases": [],
+            },
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._build(directory, rows)
+            with DiscoveryIndex(path) as index:
+                result = index.query(DiscoveryQuery("vacuno", language="es", page_size=10)).to_dict()
+                self.assertEqual(result["status"], "READY")
+                self.assertEqual(result["total"]["productCount"], 1)
+                self.assertEqual(result["matches"][0]["displayName"], "CENTRO DE ENTRANA VACUNO X KG")
+
     def test_explicit_context_is_stored_as_a_typed_relation(self) -> None:
         row = {
             "productEvidenceKey": "ar-sepa-product:synthetic:77",
