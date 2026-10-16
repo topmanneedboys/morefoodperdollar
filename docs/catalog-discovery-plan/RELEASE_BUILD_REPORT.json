@@ -81,6 +81,13 @@
       "apk": "android/app/build/outputs/apk/debug/app-debug.apk",
       "apkSha256": "027736566b64f1a0e21e3fcb6f475b0a862633e06a88caa8a16d4c8166cd7a4c"
     },
+    "spotChecks": {
+      "whiskyEs": {"resolvedPredicate": "type:whisky", "productCount": 134, "status": "READY"},
+      "vodkaEs": {"resolvedPredicate": "type:vodka", "productCount": 98, "status": "READY"},
+      "ginEs": {"resolvedPredicate": "type:gin", "productCount": 121, "status": "READY"},
+      "riceEnChoices": ["form:rice:dessert", "form:rice:flour", "form:rice:grain"],
+      "towelDerivedMentionSuppressed": true
+    },
     "motorolaEdge2025": {
       "status": "NOT_RUN",
       "reason": "No device runtime validation was performed for this identity-sidecar milestone."

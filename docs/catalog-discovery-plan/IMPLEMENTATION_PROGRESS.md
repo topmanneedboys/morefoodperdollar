@@ -104,6 +104,7 @@ Completed in this checkpoint:
 - backend suite: 135 tests passed;
 - Android shared-core tests, app debug unit tests, lint, and debug APK build passed;
 - debug APK SHA-256: `027736566b64f1a0e21e3fcb6f475b0a862633e06a88caa8a16d4c8166cd7a4c`.
+- live sidecar spot checks passed: Spanish `whisky`, `vodka`, and `gin` resolve to exact type predicates; `rice` exposes grain/dessert/flour choices; derived feminine-hygiene mentions are suppressed from ready `toalla` results.
 
 Pending after the local full build:
 
