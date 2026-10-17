@@ -377,6 +377,24 @@ def _gcs(bucket: str, project: str) -> GCSObjectStore:
         raise PromotionError("GCS store is unavailable") from exc
 
 
+def smoke_tokens(urls: Sequence[str], names: Sequence[str]) -> dict[str, str]:
+    """Bind each short-lived token to its intended target before any mutation."""
+    if len(set(urls)) != len(urls) or (names and len(names) != len(urls)):
+        raise PromotionError("smoke token targets are misaligned")
+    if names and any(re.fullmatch(r"VALUEPILOT_[A-Z0-9_]{1,100}", name) is None for name in names):
+        raise PromotionError("smoke token environment name is invalid")
+    requested = names or ["VALUEPILOT_SMOKE_ID_TOKEN"] * len(urls)
+    result = {}
+    for url, name in zip(urls, requested):
+        if re.fullmatch(r"https://[a-z0-9-]+\.[a-z0-9-]+\.run\.app", url) is None:
+            raise PromotionError("smoke target must be an exact Cloud Run HTTPS service URL")
+        token = os.environ.get(name, "").strip()
+        if not token:
+            raise PromotionError("required smoke token is unavailable: " + name)
+        result[url] = token
+    return result
+
+
 def _main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--release-id", required=True)
@@ -388,16 +406,17 @@ def _main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--sa-bucket", required=True)
     parser.add_argument("--project", required=True)
     parser.add_argument("--smoke-url", action="append", default=[])
+    parser.add_argument("--smoke-token-env", action="append", default=[])
     parser.add_argument("--service-update", action="append", default=[], help="Cloud Run service:region")
     parser.add_argument("--control-bucket")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
-        token = os.environ.get("VALUEPILOT_SMOKE_ID_TOKEN", "").strip()
+        tokens = smoke_tokens(args.smoke_url, args.smoke_token_env)
         archive = _gcs(args.archive_bucket, args.project)
         destinations = {"us": _gcs(args.us_bucket, args.project), "sa": _gcs(args.sa_bucket, args.project)}
         smoke_targets = {f"region-{index}": url for index, url in enumerate(args.smoke_url)}
-        smoke = (lambda url: run_production_smoke(url, release_id=args.release_id, token=token)) if smoke_targets else None
+        smoke = (lambda url: run_production_smoke(url, release_id=args.release_id, token=tokens[url])) if smoke_targets else None
         updates = tuple((service, args.project, args.release_date) for service in args.service_update)
         result = promote_archived_release(
             archive,

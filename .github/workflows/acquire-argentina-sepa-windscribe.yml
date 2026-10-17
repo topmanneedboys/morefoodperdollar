@@ -8,6 +8,11 @@ on:
         required: false
         default: false
         type: boolean
+      verify_promotion_access:
+        description: Verify automation access to both active regional services without downloading or promoting
+        required: false
+        default: false
+        type: boolean
       reconcile_only:
         description: Recover and activate completed verified builds without downloading or starting a new build
         required: false
@@ -37,7 +42,7 @@ concurrency:
 
 jobs:
   acquire-and-shadow:
-    if: (github.event_name == 'workflow_dispatch' || vars.ARGENTINA_AUTOMATED_ACQUISITION_ENABLED == 'true') && github.event.schedule != '15 * * * *' && inputs.reconcile_only != true
+    if: (github.event_name == 'workflow_dispatch' || vars.ARGENTINA_AUTOMATED_ACQUISITION_ENABLED == 'true') && github.event.schedule != '15 * * * *' && inputs.reconcile_only != true && inputs.verify_promotion_access != true
     runs-on: ubuntu-latest
     # The long deterministic release build now runs asynchronously in Google
     # Cloud. This runner only performs bounded discovery/acquisition/handoff.
@@ -778,11 +783,58 @@ jobs:
             echo "- Active/canary pointer writes by reconciler: deferred to guarded promotion"
           } >> "${GITHUB_STEP_SUMMARY}"
 
+      - name: Authenticate US regional smoke checks
+        id: smoke-us-auth
+        if: inputs.verify_promotion_access == true || (steps.reconcile.outputs.status == 'SHADOW_SUCCEEDED' && steps.state.outputs.superseded != 'true')
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.RELEASE_SERVICE_ACCOUNT }}
+          token_format: id_token
+          id_token_audience: ${{ env.US_BACKEND_URL }}
+          id_token_include_email: true
+          create_credentials_file: false
+          export_environment_variables: false
+
+      - name: Authenticate SA regional smoke checks
+        id: smoke-sa-auth
+        if: inputs.verify_promotion_access == true || (steps.reconcile.outputs.status == 'SHADOW_SUCCEEDED' && steps.state.outputs.superseded != 'true')
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.RELEASE_SERVICE_ACCOUNT }}
+          token_format: id_token
+          id_token_audience: ${{ env.SA_BACKEND_URL }}
+          id_token_include_email: true
+          create_credentials_file: false
+          export_environment_variables: false
+
+      - name: Verify current regional promotion access
+        if: inputs.verify_promotion_access == true
+        shell: bash
+        env:
+          VALUEPILOT_SMOKE_ID_TOKEN_US: ${{ steps.smoke-us-auth.outputs.id_token }}
+          VALUEPILOT_SMOKE_ID_TOKEN_SA: ${{ steps.smoke-sa-auth.outputs.id_token }}
+        run: |
+          set -euo pipefail
+          current_file="${RUNNER_TEMP}/valuepilot-access-current.json"
+          gcloud storage cat "gs://${ACTIVE_BUCKET}/control/active.json" > "${current_file}"
+          release_id="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["releaseId"])' "${current_file}")"
+          python -m tools.verify_argentina_runtime_access \
+            --project "${GCP_PROJECT_ID}" --release-id "${release_id}" \
+            --backend-url "${US_BACKEND_URL}" --backend-url "${SA_BACKEND_URL}" \
+            --token-env VALUEPILOT_SMOKE_ID_TOKEN_US --token-env VALUEPILOT_SMOKE_ID_TOKEN_SA \
+            --output "${RUNNER_TEMP}/valuepilot-access-report.json"
+
       - name: Promote the verified candidate with CAS, smoke checks, and rollback
-        if: steps.reconcile.outputs.status == 'SHADOW_SUCCEEDED' && steps.state.outputs.superseded != 'true'
+        if: inputs.verify_promotion_access != true && steps.reconcile.outputs.status == 'SHADOW_SUCCEEDED' && steps.state.outputs.superseded != 'true'
         shell: bash
         env:
           CANDIDATE_RELEASE: ${{ steps.state.outputs.candidate_release }}
+          VALUEPILOT_SMOKE_ID_TOKEN_US: ${{ steps.smoke-us-auth.outputs.id_token }}
+          VALUEPILOT_SMOKE_ID_TOKEN_SA: ${{ steps.smoke-sa-auth.outputs.id_token }}
         run: |
           set -euo pipefail
           if [[ -z "${CANDIDATE_RELEASE}" ]]; then
@@ -796,7 +848,6 @@ jobs:
           release_date="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["source"]["releaseDate"])' "${manifest_file}")"
           source_sha="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["source"]["sha256"])' "${manifest_file}")"
           expected_current="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["releaseId"])' "${current_file}")"
-          export VALUEPILOT_SMOKE_ID_TOKEN="$(gcloud auth print-identity-token)"
           python -m tools.argentina_archived_release_promotion \
             --release-id "${CANDIDATE_RELEASE}" \
             --expected-current-release-id "${expected_current}" \
@@ -808,11 +859,12 @@ jobs:
             --project "${GCP_PROJECT_ID}" \
             --smoke-url "${US_BACKEND_URL}" \
             --smoke-url "${SA_BACKEND_URL}" \
+            --smoke-token-env VALUEPILOT_SMOKE_ID_TOKEN_US \
+            --smoke-token-env VALUEPILOT_SMOKE_ID_TOKEN_SA \
             --service-update "valuepilot-argentina-us-east4:us-east4" \
             --service-update "valuepilot-argentina-sa-east1:southamerica-east1" \
             --control-bucket "${CONTROL_BUCKET}" \
             --output "${RUNNER_TEMP}/valuepilot-promotion.json"
-          unset VALUEPILOT_SMOKE_ID_TOKEN
           promotion_status="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["status"])' "${RUNNER_TEMP}/valuepilot-promotion.json")"
           echo "Automated promotion: ${promotion_status} (${CANDIDATE_RELEASE})"
           {
