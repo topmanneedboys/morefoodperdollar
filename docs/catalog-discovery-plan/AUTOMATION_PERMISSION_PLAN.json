@@ -1,0 +1,48 @@
+{
+  "project": "valuepilot-argentina",
+  "member": "serviceAccount:valuepilot-github-release@valuepilot-argentina.iam.gserviceaccount.com",
+  "customRoles": [
+    {
+      "id": "valuepilotReleaseServiceUpdater",
+      "permissions": [
+        "run.services.get",
+        "run.services.getIamPolicy",
+        "run.services.update",
+        "run.revisions.get",
+        "run.configurations.get",
+        "run.routes.get"
+      ]
+    },
+    {
+      "id": "valuepilotReleaseOperationReader",
+      "permissions": [
+        "run.operations.get"
+      ]
+    }
+  ],
+  "regionalBuckets": [
+    {
+      "bucket": "valuepilot-argentina-runtime-us-east4",
+      "immutableWriteCondition": "resource.name.startsWith('projects/_/buckets/valuepilot-argentina-runtime-us-east4/objects/objects/sha256/') || resource.name.startsWith('projects/_/buckets/valuepilot-argentina-runtime-us-east4/objects/releases/')",
+      "activePointerCondition": "resource.name == 'projects/_/buckets/valuepilot-argentina-runtime-us-east4/objects/control/active.json'"
+    },
+    {
+      "bucket": "valuepilot-argentina-runtime-southamerica-east1",
+      "immutableWriteCondition": "resource.name.startsWith('projects/_/buckets/valuepilot-argentina-runtime-southamerica-east1/objects/objects/sha256/') || resource.name.startsWith('projects/_/buckets/valuepilot-argentina-runtime-southamerica-east1/objects/releases/')",
+      "activePointerCondition": "resource.name == 'projects/_/buckets/valuepilot-argentina-runtime-southamerica-east1/objects/control/active.json'"
+    }
+  ],
+  "services": [
+    {
+      "name": "valuepilot-argentina-us-east4",
+      "region": "us-east4"
+    },
+    {
+      "name": "valuepilot-argentina-sa-east1",
+      "region": "southamerica-east1"
+    }
+  ],
+  "runtimeServiceAccount": "valuepilot-cloud-run-runtime@valuepilot-argentina.iam.gserviceaccount.com",
+  "receiptBucket": "valuepilot-argentina-release-control",
+  "receiptPrefix": "control/automated-promotions/"
+}
