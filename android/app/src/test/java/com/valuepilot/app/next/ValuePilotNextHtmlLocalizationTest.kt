@@ -63,6 +63,13 @@ class ValuePilotNextHtmlLocalizationTest {
     }
 
     @Test
+    fun `native search sends the selected language to the discovery rail`() {
+        val source = assetSource()
+
+        assertTrue(source.contains("type:'SEARCH_VALUEPILOT',query:normalized,language:state.language"))
+    }
+
+    @Test
     fun `native saved state can refresh after returning from a Kotlin tool`() {
         val source = assetSource()
 

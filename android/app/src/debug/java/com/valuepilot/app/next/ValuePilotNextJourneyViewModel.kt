@@ -240,7 +240,10 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
             privateIdentities = identities,
             basket = renderBasket(identities, null, null, null)
         )
-        searchHost = ArgentinaLiveSearchSurfaceHost.createProduction(area) { next ->
+        searchHost = ArgentinaLiveSearchSurfaceHost.createProduction(
+            area = area,
+            useDiscoveryV2 = true
+        ) { next ->
             val publish = {
                 if (!cleared && next.generation >= uiState.search.generation) {
                     uiState = uiState.copy(search = next)
@@ -626,10 +629,14 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
         searchHost?.queryChanged(rawQuery)
     }
 
-    fun submitSearch(rawQuery: String = uiState.query, selectionId: String? = null) {
+    fun submitSearch(
+        rawQuery: String = uiState.query,
+        selectionId: String? = null,
+        language: String = "es"
+    ) {
         if (!initialized || cleared) return
         uiState = uiState.copy(query = rawQuery, actionNotice = null)
-        searchHost?.submit(rawQuery, selectionId)
+        searchHost?.submit(rawQuery, selectionId, language)
     }
 
     /**

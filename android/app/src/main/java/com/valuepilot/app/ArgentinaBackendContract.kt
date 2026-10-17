@@ -40,6 +40,7 @@ object ArgentinaBackendContract {
     const val MAX_DISCOVERY_FACET_PAGE_SIZE = 30
     const val MAX_DISCOVERY_SELECTIONS = 8
     const val MAX_DISCOVERY_MATCHES = 50
+    const val MAX_DISCOVERY_TOTAL = 500_000
     const val MAX_STORES = 2
     const val MAX_PLAN_LINES = 10
     const val MAX_FRONTIER_PLANS = 64

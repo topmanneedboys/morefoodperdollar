@@ -363,7 +363,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                     val nativeSearch = ValuePilotNextHtmlPreviewContract
                         .parseNativeSearchMessage(message.data)
                     if (nativeSearch != null) {
-                        startNativeSearch(nativeSearch.query, nativeSearch.selectionId)
+                        startNativeSearch(nativeSearch.query, nativeSearch.selectionId, nativeSearch.language)
                         return
                     }
                     if (ValuePilotNextHtmlPreviewContract
@@ -548,7 +548,11 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         )
     }
 
-    private fun startNativeSearch(rawQuery: String, selectionId: String? = null) {
+    private fun startNativeSearch(
+        rawQuery: String,
+        selectionId: String? = null,
+        language: String = "es"
+    ) {
         if (!::journey.isInitialized) return
         val query = normalizeNativeSearchQuery(rawQuery)
         handler.removeCallbacks(nativeSearchPoll)
@@ -557,7 +561,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         nativeSearchInitialGeneration = journey.uiState.search.generation
         nativeSearchDeadlineMillis = System.currentTimeMillis() + NATIVE_SEARCH_TIMEOUT_MS
         journey.queryChanged(query)
-        journey.submitSearch(query, selectionId)
+        journey.submitSearch(query, selectionId, language)
         handler.post(nativeSearchPoll)
     }
 

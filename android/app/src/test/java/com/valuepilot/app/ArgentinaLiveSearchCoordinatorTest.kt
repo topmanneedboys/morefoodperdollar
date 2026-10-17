@@ -220,6 +220,68 @@ class ArgentinaLiveSearchCoordinatorTest {
     }
 
     @Test
+    fun debugDiscoveryModeUsesTypedV2SearchAndStablePredicateChoices() {
+        val transport = InMemoryArgentinaBackendTransport(
+            mapOf(
+                ArgentinaBackendConsumerBridge.STATUS_ENDPOINT to
+                    ArgentinaBackendTransportResponse(200, statusJson()),
+                ArgentinaBackendConsumerBridge.DISCOVERY_SEARCH_ENDPOINT to
+                    ArgentinaBackendTransportResponse(200, discoveryV2ResponseJson())
+            )
+        )
+        val states = mutableListOf<ArgentinaLiveSearchState>()
+        val executor = QueuedExecutor()
+        val coordinator = ArgentinaLiveSearchCoordinator(
+            transport = transport,
+            executor = executor,
+            stateSink = states::add,
+            discoveryMode = true
+        )
+
+        coordinator.submit("rice", context, language = "en")
+        executor.runNext()
+
+        val result = coordinator.state() as ArgentinaLiveSearchState.Results
+        assertEquals(2, result.presentation.matches.size)
+        assertEquals("form:rice:grain", result.presentation.clarification?.choices?.first()?.id)
+        assertEquals("rice", result.presentation.clarification?.choices?.first()?.query)
+        assertTrue(transport.calls.any { it.endpoint == ArgentinaBackendConsumerBridge.DISCOVERY_SEARCH_ENDPOINT })
+        assertFalse(transport.calls.any { it.endpoint == ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT })
+        assertTrue(transport.calls.last().requestBody?.contains("\"language\":\"en\"") == true)
+        coordinator.close()
+    }
+
+    @Test
+    fun discoveryModeStillStopsBeforeV2WhenAndroidSearchIsUnauthorized() {
+        val transport = InMemoryArgentinaBackendTransport(
+            mapOf(
+                ArgentinaBackendConsumerBridge.STATUS_ENDPOINT to
+                    ArgentinaBackendTransportResponse(200, statusJson(androidNetworkingAuthorized = false)),
+                ArgentinaBackendConsumerBridge.DISCOVERY_SEARCH_ENDPOINT to
+                    ArgentinaBackendTransportResponse(200, discoveryV2ResponseJson())
+            )
+        )
+        val states = mutableListOf<ArgentinaLiveSearchState>()
+        val executor = QueuedExecutor()
+        val coordinator = ArgentinaLiveSearchCoordinator(
+            transport = transport,
+            executor = executor,
+            stateSink = states::add,
+            discoveryMode = true
+        )
+
+        coordinator.submit("rice", context, language = "en")
+        executor.runNext()
+
+        assertEquals(
+            ArgentinaBackendContract.FailureCode.SEARCH_NOT_AUTHORIZED,
+            (coordinator.state() as ArgentinaLiveSearchState.Unavailable).failure
+        )
+        assertFalse(transport.calls.any { it.endpoint == ArgentinaBackendConsumerBridge.DISCOVERY_SEARCH_ENDPOINT })
+        coordinator.close()
+    }
+
+    @Test
     fun supersededGenerationCannotPublishAndCancellationIsRequested() {
         val transport =
             RecordingTransport(
@@ -722,6 +784,91 @@ class ArgentinaLiveSearchCoordinatorTest {
                     .put("hasMore", hasMore)
                     .put("nextPage", if (hasMore) page + 1 else JSONObject.NULL)
                     .put("limitReached", false)
+            )
+            .toString()
+    }
+
+    private fun discoveryV2ResponseJson(): String {
+        val choices = JSONArray()
+            .put(
+                JSONObject()
+                    .put("id", "form:rice:grain")
+                    .put("predicateId", "form:rice:grain")
+                    .put("labelEs", "Arroz en grano")
+                    .put("labelEn", "Rice grains")
+                    .put("productCount", 2)
+                    .put("sourceIdentityCount", 2)
+                    .put("countUnit", "DISTINCT_PROVIDER_PRODUCT")
+                    .put("hasChildren", false)
+            )
+            .put(
+                JSONObject()
+                    .put("id", "form:rice:dessert")
+                    .put("predicateId", "form:rice:dessert")
+                    .put("labelEs", "Dulces de arroz")
+                    .put("labelEn", "Rice cakes")
+                    .put("productCount", 1)
+                    .put("sourceIdentityCount", 1)
+                    .put("countUnit", "DISTINCT_PROVIDER_PRODUCT")
+                    .put("hasChildren", false)
+            )
+        val result = JSONObject()
+            .put("contract", ArgentinaBackendContract.DISCOVERY_RESULT_CONTRACT)
+            .put("status", "NEEDS_CLARIFICATION")
+            .put("query", "rice")
+            .put("language", "en")
+            .put("releaseId", release.releaseId)
+            .put("indexVersion", "sidecar")
+            .put("queryFingerprint", "fingerprint")
+            .put("resolvedPredicates", JSONArray())
+            .put("selections", JSONArray())
+            .put(
+                "total",
+                JSONObject()
+                    .put("productCount", 2)
+                    .put("sourceIdentityCount", 2)
+                    .put("countUnit", "DISTINCT_PROVIDER_PRODUCT")
+            )
+            .put(
+                "matches",
+                JSONArray()
+                    .put(
+                        JSONObject()
+                            .put("identityKey", "ar-sepa-product:rice:1")
+                            .put("providerProductId", "rice-1")
+                            .put("displayName", "ARROZ LARGO FINO")
+                            .put("brand", "Marca")
+                    )
+                    .put(
+                        JSONObject()
+                            .put("identityKey", "ar-sepa-product:rice:2")
+                            .put("providerProductId", "rice-2")
+                            .put("displayName", "ARROZ DULCE")
+                            .put("brand", "Marca")
+                    )
+            )
+            .put("pagination", JSONObject().put("pageSize", 50).put("hasMore", false).put("nextCursor", JSONObject.NULL))
+            .put(
+                "clarification",
+                JSONObject()
+                    .put("dimensionId", "product_type")
+                    .put("choices", choices)
+                    .put("hasMore", false)
+                    .put("nextCursor", JSONObject.NULL)
+            )
+        return JSONObject()
+            .put("apiContractVersion", ArgentinaBackendContract.DISCOVERY_API_VERSION)
+            .put("requestId", "discovery-request")
+            .put("releaseId", release.releaseId)
+            .put("indexVersion", "sidecar")
+            .put("result", result)
+            .put(
+                "evidenceSemantics",
+                JSONObject()
+                    .put("identity", "SOURCE_IDENTITY_AND_ACCEPTED_ASSERTIONS")
+                    .put("prices", "NOT_INCLUDED")
+                    .put("offers", "NOT_INCLUDED")
+                    .put("stock", "NOT_INCLUDED")
             )
             .toString()
     }

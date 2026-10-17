@@ -3,7 +3,6 @@ package com.valuepilot.app
 import com.valuepilot.core.OfflineCatalogDiscoveryMatch
 import com.valuepilot.core.OfflineCatalogDiscoveryResult
 import com.valuepilot.core.OfflineCatalogMatchKind
-import com.valuepilot.core.OfflineCatalogSnapshotManifest
 
 /**
  * Immutable presentation for Search's exact identity rail.
@@ -56,11 +55,15 @@ internal data class PracticalShoppingSearchIdentityPresentation(
 
     init {
         require(query.isNotBlank())
-        require(matches.size <= 30)
+        // v1 keeps its historical 30-row projection. The debug HTML discovery
+        // rail can accumulate several 50-row cursor pages without silently
+        // dropping earlier identities; the bound is an explicit in-memory
+        // safety limit, not a backend result limit.
+        require(matches.size <= MAX_RENDERED_MATCHES)
         require(evaluatedCandidateCount >= matches.size)
-        require(evaluatedCandidateCount <= OfflineCatalogSnapshotManifest.MAX_TOTAL_RECORDS)
+        require(evaluatedCandidateCount <= ArgentinaBackendContract.MAX_DISCOVERY_TOTAL)
         require(notice.isNotBlank())
-        require(page in 0..ArgentinaBackendContract.MAX_SEARCH_PAGE)
+        require(page in 0..MAX_RENDERED_PAGE)
         require(nextPage == null || nextPage == page + 1)
         require(!limitReached || hasMore)
         require(!hasMore || nextPage != null || limitReached)
@@ -96,6 +99,8 @@ internal data class PracticalShoppingSearchIdentityPresentation(
         }
 
     companion object {
+        const val MAX_RENDERED_MATCHES = 10_000
+        const val MAX_RENDERED_PAGE = 4_096
         private const val NOTICE =
             "Signed offline product-identity suggestions from Canada-labelled Open Food Facts snapshots for the GTA and Metro Vancouver (ODbL-1.0) only — no current prices, stock, store availability or freshness are included; package size appears only when explicitly supplied by the source."
 

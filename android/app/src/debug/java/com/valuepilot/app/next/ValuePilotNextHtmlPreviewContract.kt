@@ -15,7 +15,9 @@ internal data class ValuePilotNextHtmlLanguageRequest(
 
 internal data class ValuePilotNextHtmlNativeSearchRequest(
     val query: String,
-    val selectionId: String? = null
+    val selectionId: String? = null,
+    /** Search language passed to the full-catalog discovery rail. */
+    val language: String = "es"
 )
 
 internal object ValuePilotNextHtmlNativeSearchLoadMoreRequest
@@ -234,7 +236,12 @@ internal object ValuePilotNextHtmlPreviewContract {
         } else {
             null
         }
-        return ValuePilotNextHtmlNativeSearchRequest(query, selectionId)
+        val language = when (json.optString("language", "es-AR")) {
+            "en" -> "en"
+            "es-AR", "es" -> "es"
+            else -> return null
+        }
+        return ValuePilotNextHtmlNativeSearchRequest(query, selectionId, language)
     }
 
     fun parseNativeSearchLoadMoreMessage(rawMessage: String?): ValuePilotNextHtmlNativeSearchLoadMoreRequest? {

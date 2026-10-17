@@ -187,8 +187,8 @@ internal class ArgentinaLiveSearchSurfaceHost(
         coordinator.submit(rawQuery, area.context())
     }
 
-    fun submit(rawQuery: String, selectionId: String?) {
-        coordinator.submit(rawQuery, area.context(), selectionId)
+    fun submit(rawQuery: String, selectionId: String?, language: String = "es") {
+        coordinator.submit(rawQuery, area.context(), selectionId, language)
     }
 
     fun loadMore() {
@@ -213,6 +213,7 @@ internal class ArgentinaLiveSearchSurfaceHost(
     companion object {
         fun createProduction(
             area: ArgentinaQualifiedLaunchArea,
+            useDiscoveryV2: Boolean = false,
             render: (ArgentinaLiveSearchSurfaceState) -> Unit
         ): ArgentinaLiveSearchSurfaceHost {
             lateinit var host: ArgentinaLiveSearchSurfaceHost
@@ -220,7 +221,8 @@ internal class ArgentinaLiveSearchSurfaceHost(
                 transport = ValuePilotArgentinaEdgeTransportFactory.create(),
                 stateSink = { state -> host.accept(state) },
                 diagnosticSink = ArgentinaLiveSearchDiagnostics::record,
-                successDiagnosticSink = ArgentinaLiveSearchDiagnostics::recordSuccess
+                successDiagnosticSink = ArgentinaLiveSearchDiagnostics::recordSuccess,
+                discoveryMode = useDiscoveryV2
             )
             host = ArgentinaLiveSearchSurfaceHost(coordinator, area, render)
             return host
