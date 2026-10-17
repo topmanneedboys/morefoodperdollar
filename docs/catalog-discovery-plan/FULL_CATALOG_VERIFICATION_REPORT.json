@@ -21,16 +21,40 @@
       "providerProductCount": 54448
     }
   },
-  "elapsedSeconds": 1236.818,
+  "elapsedSeconds": 1463.764,
   "failures": [
     "independent semantic accuracy is not established"
   ],
   "identityReachability": {
+    "distinctSourceNames": 123692,
+    "elapsedSeconds": 211.776,
+    "failureCount": 0,
     "failureDetails": [],
+    "failureDetailsTruncated": false,
     "identitiesExpected": 134337,
     "identitiesLiteralReachable": 134337,
     "identitiesLiteralUnreachable": 0,
-    "method": "Exact normalized-name token intersection over the same identity_token postings used by DiscoveryIndex._literal_keys; names are all within the query length limit.",
+    "languages": {
+      "en": {
+        "failedQueries": 0,
+        "identitiesMissing": 0,
+        "identitiesRetrieved": 134337,
+        "pages": 124345,
+        "queries": 123692,
+        "status": "PASS"
+      },
+      "es": {
+        "failedQueries": 0,
+        "identitiesMissing": 0,
+        "identitiesRetrieved": 134337,
+        "pages": 124345,
+        "queries": 123692,
+        "status": "PASS"
+      }
+    },
+    "method": "Actual DiscoveryIndex.query calls for every distinct source name in EN and ES, with complete result pagination, ordering, totals and identity-field checks. This is not semantic accuracy or phone/API transport verification.",
+    "providerProductsExpected": 78865,
+    "queryVersion": "valuepilot-discovery-query-v2-exact-name",
     "status": "PASS"
   },
   "index": {
@@ -57,6 +81,14 @@
     },
     "status": "PASS"
   },
+  "literalTokenIntegrity": {
+    "failureDetails": [],
+    "identitiesExpected": 134337,
+    "identitiesLiteralReachable": 134337,
+    "identitiesLiteralUnreachable": 0,
+    "method": "Exact normalized-name token intersection over the same identity_token postings used by DiscoveryIndex._literal_keys; names are all within the query length limit.",
+    "status": "PASS"
+  },
   "pagination": {
     "broadConceptLanguageQueries": 371,
     "broadQueryFailures": [],
@@ -68,35 +100,7 @@
     "strictChoiceChecks": 2112,
     "strictChoiceFailures": []
   },
-  "reviewQueue": {
-    "count": 1000,
-    "path": "C:\\Users\\iamatopstrongman\\Documents\\Codex\\2026-10-08\\valuepilot-next-complete-premium-ui-ux\\work\\valuepilot-10133-source-audit\\local-provider-data\\semantic-review-queue-v40.jsonl",
-    "sha256": "5755d1d0e8371b95eb4a3541627a4e4f41652e86494c2bc6299890045029a7da",
-    "status": "PENDING_HUMAN_REVIEW",
-    "strata": {
-      "UNRESOLVED": 49088,
-      "department:baby_pet": 3760,
-      "department:beverages": 15388,
-      "department:clothing": 5921,
-      "department:condiments": 5929,
-      "department:dairy": 5813,
-      "department:electronics": 3709,
-      "department:fresh_produce": 5095,
-      "department:garden_outdoor": 638,
-      "department:health_supplements": 279,
-      "department:home_goods": 7098,
-      "department:household_cleaning": 3972,
-      "department:meat_seafood": 3731,
-      "department:personal_care": 6159,
-      "department:prepared_food": 2459,
-      "department:snacks_sweets": 6691,
-      "department:sports_luggage": 641,
-      "department:staples": 4912,
-      "department:stationery": 1042,
-      "department:tools_hardware": 901,
-      "department:toys_games": 1111
-    }
-  },
+  "reviewQueue": null,
   "schemaVersion": "valuepilot-catalog-verification-v1",
   "semanticAccuracy": {
     "caseCount": 0,

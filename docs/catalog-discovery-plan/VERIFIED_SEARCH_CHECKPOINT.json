@@ -1,12 +1,13 @@
 {
   "reportVersion": "valuepilot-search-checkpoint-v2",
   "generatedAt": "2026-10-17",
-  "status": "INCOMPLETE_SEMANTIC_REVIEW_AND_RUNTIME_BLOCKED",
+  "status": "INCOMPLETE_GLOBAL_PRICE_INTEGRATION_SEMANTICS_AND_DEVICE",
   "policy": {
     "noV41Started": true,
-    "noProductionActivation": true,
+    "noProductionActivation": false,
     "playInstalledApplicationChanged": false,
-    "firebaseOrAppCheckBypassed": false
+    "firebaseOrAppCheckBypassed": false,
+    "productionPriceReleaseActivated": "2026-10-14"
   },
   "source": {
     "releaseId": "2026-10-08-identity-release",
@@ -57,7 +58,7 @@
     "path": "local-provider-data\\product-discovery-v2-v40-candidate.sqlite",
     "sha256": "d7aef4c8b740bfdcdca68c404692b52a7225b66cb744641bee56d2214edf0a88",
     "reportPath": "docs\\catalog-discovery-plan\\FULL_CATALOG_VERIFICATION_REPORT.json",
-    "reportSha256": "49efb65c723e8212a68daf2422941af388a92bab0fb5783756492f4a47ed5f91",
+    "reportSha256": "785f6a4e023116157eb6b11eff3693e14d8489d247c0b1d2f6605587aaca9c51",
     "httpContractReportPath": "docs\\catalog-discovery-plan\\DISCOVERY_HTTP_CONTRACT_REPORT.json",
     "httpContractReportSha256": "b0114b50a779d65c98b6fad7a73347e119ee133e6f53a3b85ed263abf7a5f51e",
     "status": "STRUCTURALLY_VERIFIED_SEMANTIC_REVIEW_PENDING",
@@ -363,5 +364,7 @@
     "The canonical v33 sidecar remains unchanged and still has its historical build-metadata assertion mismatch; v40 fixes that mismatch in its frozen candidate but is not promoted.",
     "Firebase/App Check live authorization was not bypassed or reconfigured; remote live search remains separately gated.",
     "Motorola Edge 2025 runtime, screenshots, Google Images return-state testing and live offer/price behavior remain unverified because adb has no connected device."
-  ]
+  ],
+  "currentNationalReadinessReport": "docs/catalog-discovery-plan/NATIONAL_LIVE_READINESS_REPORT.json",
+  "latestEvidenceNote": "Full actual-name audit completed; see updated full report. Older nested metrics are historical snapshots. v40 remains unpromoted; live price release October 14 is separate."
 }

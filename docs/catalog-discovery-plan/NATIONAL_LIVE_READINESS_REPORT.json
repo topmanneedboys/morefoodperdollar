@@ -1,0 +1,396 @@
+{
+  "observedAt": "2026-10-17T20:54:02.677307+00:00",
+  "status": "NOT_LAUNCH_READY",
+  "activeRelease": {
+    "releaseId": "argentina-sepa-2026-10-14-ae70f631a4bc3a8d-routing-v1-search-v2",
+    "releaseDate": "2026-10-14",
+    "counts": {
+      "offers": 14429267,
+      "productEvidenceRecords": 1411208,
+      "promotions": 1242658,
+      "publishableRegions": 24,
+      "stores": 2935
+    }
+  },
+  "actualBackendStatus": {
+    "androidNetworkingAuthorized": true,
+    "apiContractVersion": "valuepilot-argentina-backend-http-v1",
+    "automatedOfficialAcquisitionProven": false,
+    "backendCodeQualified": true,
+    "freshness": "FRESH",
+    "liveCloudDeploymentVerified": false,
+    "productionAndroidUiAuthorized": true,
+    "profile": {
+      "logical": 1024,
+      "name": "1024/32",
+      "physical": 32
+    },
+    "qualifiedOfferEvidenceAvailable": true,
+    "releaseDate": "2026-10-14",
+    "releaseId": "argentina-sepa-2026-10-14-ae70f631a4bc3a8d-routing-v1-search-v2",
+    "service": "ready"
+  },
+  "nationalVerification": {
+    "status": "PASS",
+    "observedAt": "2026-10-17T20:54:02.677307+00:00",
+    "releaseId": "argentina-sepa-2026-10-14-ae70f631a4bc3a8d-routing-v1-search-v2",
+    "sourceReleaseDate": "2026-10-14",
+    "manifestSha256": "bd19f3208f333caa101f3c4bd62098550a581cb1a8cac741096789cda4b13a27",
+    "regionCount": 24,
+    "backendUrl": "https://valuepilot-argentina-sa-east1-m72bv57hrq-rj.a.run.app",
+    "method": "Private IAM operator requests at checksum-verified real source store coordinates",
+    "query": "arroz",
+    "cases": [
+      {
+        "region": "ar-a",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-a"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 7,
+        "listedPrices": 7,
+        "sourceStoreKey": "ar-sepa-store:15:1:826",
+        "priceEvidenceStatus": "PRESENT"
+      },
+      {
+        "region": "ar-b",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-b",
+          "ar-caba"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 23,
+        "listedPrices": 23,
+        "sourceStoreKey": "ar-sepa-store:15:1:5143",
+        "priceEvidenceStatus": "PRESENT"
+      },
+      {
+        "region": "ar-caba",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-b",
+          "ar-caba"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 23,
+        "listedPrices": 23,
+        "sourceStoreKey": "ar-sepa-store:15:1:511",
+        "priceEvidenceStatus": "PRESENT"
+      },
+      {
+        "region": "ar-d",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-caba",
+          "ar-d"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 1,
+        "listedPrices": 1,
+        "sourceStoreKey": "ar-sepa-store:9:1:860",
+        "priceEvidenceStatus": "PRESENT"
+      },
+      {
+        "region": "ar-e",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-e"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 0,
+        "listedPrices": 0,
+        "sourceStoreKey": "ar-sepa-store:15:1:442",
+        "priceEvidenceStatus": "NO_PRICE_EVIDENCE_ON_THIS_PAGE"
+      },
+      {
+        "region": "ar-f",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-f"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 5,
+        "listedPrices": 5,
+        "sourceStoreKey": "ar-sepa-store:24:2:154",
+        "priceEvidenceStatus": "PRESENT"
+      },
+      {
+        "region": "ar-g",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-g"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 10,
+        "listedPrices": 10,
+        "sourceStoreKey": "ar-sepa-store:24:2:319",
+        "priceEvidenceStatus": "PRESENT"
+      },
+      {
+        "region": "ar-h",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-h",
+          "ar-w"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 16,
+        "listedPrices": 16,
+        "sourceStoreKey": "ar-sepa-store:24:2:155",
+        "priceEvidenceStatus": "PRESENT"
+      },
+      {
+        "region": "ar-j",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-j"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 5,
+        "listedPrices": 5,
+        "sourceStoreKey": "ar-sepa-store:9:1:194",
+        "priceEvidenceStatus": "PRESENT"
+      },
+      {
+        "region": "ar-k",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-k"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 10,
+        "listedPrices": 10,
+        "sourceStoreKey": "ar-sepa-store:9:1:243",
+        "priceEvidenceStatus": "PRESENT"
+      },
+      {
+        "region": "ar-l",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-b",
+          "ar-l"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 2,
+        "listedPrices": 2,
+        "sourceStoreKey": "ar-sepa-store:24:2:303",
+        "priceEvidenceStatus": "PRESENT"
+      },
+      {
+        "region": "ar-m",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-caba",
+          "ar-m"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 10,
+        "listedPrices": 10,
+        "sourceStoreKey": "ar-sepa-store:9:3:5222",
+        "priceEvidenceStatus": "PRESENT"
+      },
+      {
+        "region": "ar-n",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-n"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 35,
+        "listedPrices": 35,
+        "sourceStoreKey": "ar-sepa-store:24:2:105",
+        "priceEvidenceStatus": "PRESENT"
+      },
+      {
+        "region": "ar-p",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-p"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 9,
+        "listedPrices": 9,
+        "sourceStoreKey": "ar-sepa-store:10:2:141",
+        "priceEvidenceStatus": "PRESENT"
+      },
+      {
+        "region": "ar-q",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-q",
+          "ar-r"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 8,
+        "listedPrices": 8,
+        "sourceStoreKey": "ar-sepa-store:2:1:182",
+        "priceEvidenceStatus": "PRESENT"
+      },
+      {
+        "region": "ar-r",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-r"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 5,
+        "listedPrices": 5,
+        "sourceStoreKey": "ar-sepa-store:2:1:092",
+        "priceEvidenceStatus": "PRESENT"
+      },
+      {
+        "region": "ar-s",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-s"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 17,
+        "listedPrices": 17,
+        "sourceStoreKey": "ar-sepa-store:10:1:41",
+        "priceEvidenceStatus": "PRESENT"
+      },
+      {
+        "region": "ar-t",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-t"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 17,
+        "listedPrices": 17,
+        "sourceStoreKey": "ar-sepa-store:9:1:660",
+        "priceEvidenceStatus": "PRESENT"
+      },
+      {
+        "region": "ar-u",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-caba",
+          "ar-u"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 2,
+        "listedPrices": 2,
+        "sourceStoreKey": "ar-sepa-store:2:1:207",
+        "priceEvidenceStatus": "PRESENT"
+      },
+      {
+        "region": "ar-v",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-v"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 9,
+        "listedPrices": 9,
+        "sourceStoreKey": "ar-sepa-store:2:1:220",
+        "priceEvidenceStatus": "PRESENT"
+      },
+      {
+        "region": "ar-w",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-w"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 0,
+        "listedPrices": 0,
+        "sourceStoreKey": "ar-sepa-store:15:1:582",
+        "priceEvidenceStatus": "NO_PRICE_EVIDENCE_ON_THIS_PAGE"
+      },
+      {
+        "region": "ar-x",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-caba",
+          "ar-x"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 10,
+        "listedPrices": 10,
+        "sourceStoreKey": "ar-sepa-store:10:3:772",
+        "priceEvidenceStatus": "PRESENT"
+      },
+      {
+        "region": "ar-y",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-a",
+          "ar-j",
+          "ar-y"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 4,
+        "listedPrices": 4,
+        "sourceStoreKey": "ar-sepa-store:24:2:141",
+        "priceEvidenceStatus": "PRESENT"
+      },
+      {
+        "region": "ar-z",
+        "status": "PASS",
+        "regionsQueried": [
+          "ar-z"
+        ],
+        "identityCount": 5,
+        "qualifiedOffers": 5,
+        "listedPrices": 5,
+        "sourceStoreKey": "ar-sepa-store:2:1:205",
+        "priceEvidenceStatus": "PRESENT"
+      }
+    ],
+    "limitations": [
+      "No Motorola or customer App Check interaction was verified.",
+      "This verifies national routing/fresh responses, not every product meaning or every store.",
+      "The v1 bounded offer preview does not establish full-result price sorting."
+    ]
+  },
+  "operationalFix": {
+    "pullRequest": 52,
+    "mergeCommit": "db7604d6e660724022a289504995b40ff78e20d0",
+    "activatedRuntimeRegions": [
+      "us-east4",
+      "southamerica-east1"
+    ],
+    "pointerWrites": 2,
+    "schedule": "Daily source checks including weekends; hourly reconciliation without catalog download/build",
+    "iamChange": "storage.objectUser for existing release service account restricted to archive control/pending-workflow.json"
+  },
+  "rootCauses": [
+    "Completed overnight October 14 build was not reconciled because current-day metadata masked older unfinished state",
+    "Global pending pointer refused rotation after terminal execution",
+    "Cloud Workflows result contained a second JSON string envelope",
+    "Runner could not replace its mutable pending control object",
+    "No hourly recovery after long builds",
+    "Existing Windscribe profile now fails handshake"
+  ],
+  "currentDownloadBlocker": {
+    "workflowRun": 39068563999,
+    "failure": "Windscribe WireGuard tunnel has no recent handshake",
+    "localSearch": "No working profile found across user folders, I: and F: filename search, installed client/service or native VPN settings",
+    "originalProfile": "C:/Users/iamatopstrongman/Downloads/Windscribe-Buenos-Aires-Tango-WG.conf",
+    "originalProfileExists": false,
+    "website": "User signed in successfully. Account displays FREE; Config Generator displays PRO FEATURE and requires Pro for WireGuard downloads.",
+    "required": "An account already entitled to the WireGuard Config Generator with Buenos Aires access, or a working existing Buenos Aires profile. No purchase authorized or performed."
+  },
+  "remainingWork": [
+    "Restore source acquisition with working authorized VPN configuration",
+    "Release-bound full-result price sorting before pagination",
+    "National location selection in preview",
+    "Complete semantic acceptance and coverage",
+    "Deploy additive v2 route and qualified price integration",
+    "Actual Motorola interaction tests"
+  ],
+  "playPublished": false,
+  "playInstalledApplicationChanged": false,
+  "securityBypassed": false,
+  "productionChanged": true,
+  "limitations": [
+    "IAM operator verification does not establish customer App Check or phone success",
+    "22 of 24 bounded rice first pages had listed prices; two pages had none, not proof of missing regional rice",
+    "Unexpected additional regions in some responses still need geographic review",
+    "Frozen v40 identity sidecar remains October 8 and unpromoted"
+  ]
+}

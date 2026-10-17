@@ -70,6 +70,17 @@ const { chromium } = require(path.join(modules, 'playwright'));
       }};
     });
     await page.goto(baseURL);
+    // Isolated adversarial test values; never inserted into the product table.
+    // JavaScript Number(null) must not make an unknown unit price look free.
+    const priceOrder = await page.evaluate(() => matrixRowsSorted([
+      { identityKey: 'unknown-null', unitValue: null },
+      { identityKey: 'known-high', unitValue: '30' },
+      { identityKey: 'unknown-empty', unitValue: '' },
+      { identityKey: 'known-low', unitValue: '2' },
+      { identityKey: 'unknown-missing' },
+    ]).map(row => row.identityKey));
+    assert.deepEqual(priceOrder.slice(0, 2), ['known-low', 'known-high']);
+    cases.push({ scenario: 'missing unit prices sort after known prices (isolated test values)', status: 'PASS' });
     await page.locator('#bottomNav [data-nav="search"]').click();
     const waitChange = async before => {
       await page.waitForFunction(before => window.qaHost.current?.generation > before || window.qaHost.errors.length, before);

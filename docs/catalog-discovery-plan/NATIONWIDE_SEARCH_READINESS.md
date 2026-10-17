@@ -3,7 +3,7 @@
 Status: **NOT LAUNCH READY**. The target is the complete catalog and all supported
 Argentine regions, with real evidence and sorting over the entire matching set.
 No single example query, literal-retrieval result, or populated table satisfies
-that target. No production deployment or Play publication was performed here.
+that target. The October 14 national price release has been activated in both runtime regions. No Play publication was performed.
 
 ## What the complete product study establishes
 
@@ -84,36 +84,23 @@ Do not change the existing monetary calculations to implement this projection.
 
 ## Current national live evidence
 
-Read-only Cloud Run and GCS checks on 2026-10-17 found:
+The October 14 official release is now ACTIVE in both US and South America runtime regions, replacing October 8. Its manifest contains 24 regions, 2,935 reporting stores, 14,429,267 offers, 1,411,208 regional product-evidence records and 1,242,658 promotions. These are reporting-source counts, not every Argentine store or unique product counts.
 
-- Active release: `argentina-sepa-2026-10-08-153e9d9f7ab4b87e-routing-v1-search-v2`.
-- Manifest: 24 regions, 2,602 source-listed stores, 14,080,931 offers and 1,393,362
-  regional product-evidence records. Regional record counts are not unique
-  provider product counts and are not a claim to cover every Argentine store.
-- The private backend's actual `/v1/status` returned `freshness: STALE`,
-  `androidNetworkingAuthorized: false`, `productionAndroidUiAuthorized: false`,
-  and `automatedOfficialAcquisitionProven: false`.
-- The configured release is nine days old; the established freshness limit is
-  seven days. Deployment authorization flags being configured true does not make
-  stale data eligible.
-- Both the official metadata endpoint and the official Saturday ZIP endpoint
-  returned HTTP 403 on this machine. No fresh release was acquired or published.
-- The deployed backend has no configured v2 sidecar activation. v40 remains a
-  frozen, unpromoted local candidate; canonical v33 remains unchanged.
-- Native preview search still uses the qualified CABA launch context. National
-  launch needs an explicit user-selected place / location context and geographic
-  scope passed consistently through clarification, counts, offers and cursors.
+Both backends returned FRESH and authorized networking/UI status after immutable staging, pointer activation and IAM smoke checks. Real source-store coordinate requests passed fresh response/routing checks for all 24 regions. The first rice page contained listed prices in 22 regions; two bounded pages had no price evidence. Some responses included unexpected additional regions, so geographic accuracy is not fully certified. This operator test does not certify customer App Check or Motorola behavior.
 
-The public edge already allowlisted `/v2/search`, but its Cloud Run forwarding
-adapter had omitted that route. This checkpoint repairs the adapter and verifies
-App Check → OIDC forwarding, including rejection before forwarding when App Check
-is absent. This code repair has **not been deployed**. It does not by itself
-activate v40, refresh prices, or authorize a stale release.
+### Root causes repaired
 
-Fresh authorized official source access is the external blocker to current live
-prices. The offer join/global sort, national location UI, full semantic coverage,
-and independent acceptance review are remaining engineering/review work. They
-must not be described as an App Check issue or cleared by weakening freshness.
+PR 52, merged as `db7604d6e660724022a289504995b40ff78e20d0`, repairs overnight execution recovery, terminal pending-pointer rotation, double-encoded Cloud Workflows results, activation rollback metadata and hourly reconciliation. Source checks now include weekends. The existing release service account received object-update permission restricted to the single archive `control/pending-workflow.json` object. No public access or App Check bypass was introduced.
+
+The October 14 build had already succeeded but remained unactivated. Today's metadata masked its older journal, and an October 6 global reservation could not rotate. The reconciler now follows unfinished work across days rather than ignoring it.
+
+### Remaining external download blocker
+
+Acquisition run `39068563999` proves that the configured Windscribe WireGuard tunnel cannot establish a recent handshake. A local search found a Recent-files shortcut targeting `C:/Users/iamatopstrongman/Downloads/Windscribe-Buenos-Aires-Tango-WG.conf`, but that target is missing. No replacement configuration or Windscribe client/service was found in the searched user folders or drives I: and F:. The user subsequently signed in successfully. The account displays FREE, and Config Generator explicitly requires Pro for OpenVPN, IKEv2 and WireGuard configuration downloads. An authenticated session alone does not provide generator access. Restoring newer acquisition requires an already entitled account with Buenos Aires access or a working existing Buenos Aires profile. No upgrade was purchased. Repeating the failed tunnel or direct official-source 403 requests supplies no new evidence.
+
+### Remaining engineering work
+
+The deployed backend has no active v2 sidecar. The edge forwarding adapter repair from development commit `116939d4` is not deployed. The frozen October 8 v40 identity candidate must not be relabeled as October 14. Complete release-bound offer joining, full-result sorting, national location selection and semantic acceptance remain necessary. Backend freshness recovery alone does not make the complete preview launch ready.
 
 ## Verified interaction work
 
