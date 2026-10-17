@@ -341,17 +341,24 @@ jobs:
             exit 2
           fi
           printf 'nameserver 1.1.1.1\nnameserver 1.0.0.1\noptions timeout:2 attempts:3\n' | sudo tee /etc/resolv.conf >/dev/null
+          set +e
           curl --fail --silent --show-error --max-time 30 \
             --retry 3 --retry-all-errors --retry-delay 3 --retry-max-time 120 \
             -H 'Accept: application/json' \
             -H 'User-Agent: ValuePilot-release-worker/1' \
             'https://datos.gob.ar/api/3/action/package_show?id=precios-claros-base-sepa' \
             -o "${RUNNER_TEMP}/valuepilot-catalog-probe.json"
+          probe_exit=$?
+          set -e
           handshake="$(sudo wg show "${interface}" latest-handshakes | awk 'NR==1 {print $2}')"
           now="$(date +%s)"
           if [[ -z "${handshake}" || "${handshake}" == "0" || $((now - handshake)) -gt 180 ]]; then
             echo "::error::Windscribe WireGuard tunnel has no recent handshake; refusing direct-route fallback."
             exit 2
+          fi
+          if [[ "${probe_exit}" != "0" ]]; then
+            echo "::error::The tunnel handshook, but official metadata remains unreachable (curl exit ${probe_exit})."
+            exit "${probe_exit}"
           fi
 
           set +e
