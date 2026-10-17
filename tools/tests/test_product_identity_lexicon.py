@@ -634,6 +634,60 @@ class ProductIdentityLexiconTests(unittest.TestCase):
         self.assertIn(("carrot cake", "en", "CURATED_FORM"), aliases)
         self.assertIn(("postre de zanahoria", "es", "CURATED_FORM"), aliases)
 
+    def test_ambiguous_cream_food_names_do_not_become_cosmetic_forms(self) -> None:
+        cases = (
+            ("SOPA CREMA DE ZANAHORIA SABORES DEL VAL TTB 500 GRM", "carrot"),
+            ("ALMOHADITAS CREMA DE FRUTILLA LASFOR BOLSA X 200 GRS", "strawberry"),
+            ("HELADO FRUTILLA A LA CREMA COFLER POT 250 GRM", "strawberry"),
+            ("TEQUILA STRAWBERRY CREAM ROSE BOT 700 ML", "strawberry"),
+        )
+        for name, family in cases:
+            with self.subTest(name=name):
+                candidate = next(
+                    item
+                    for item in derive_identity_record(_row(f"p:cream:{family}", name))["familyCandidates"]
+                    if item["family"] == family
+                )
+                self.assertNotIn("cosmetics", candidate["observedForms"])
+
+    def test_rice_grain_and_shell_egg_forms_reject_prepared_food_contexts(self) -> None:
+        cases = (
+            ("TOSTADAS DE ARROZ INTEGRAL MOLINOS DEL BOS 150 GR", "rice", "grain"),
+            ("OBLEA DE ARROZ GALLO SNACK 120 G", "rice", "grain"),
+            ("TOST.D/ARROZ 100% INTEGRAL RIERA 150 GR", "rice", "grain"),
+            ("ARROZ YIN YANG INTEGRAL TOST.1KG", "rice", "grain"),
+            ("FID LUCCHETTI TIRAB HUEVO 500 GR", "egg", "whole_egg"),
+            ("RECORD NIDO HUEVO N2 500 GR", "egg", "whole_egg"),
+            ("PAPAS FRITAS HUEVO CARREFOUR TUBO 140 GR", "egg", "whole_egg"),
+            ("PELUCHE 3 HUEVO SORPRESA", "egg", "whole_egg"),
+            ("HUEVO CABSHA PA�UELO", "egg", "whole_egg"),
+            ("HUEVO CABSHA PAÑUELO", "egg", "whole_egg"),
+        )
+        for name, family, forbidden_form in cases:
+            with self.subTest(name=name):
+                candidate = next(
+                    item
+                    for item in derive_identity_record(_row(f"p:prepared:{family}", name))["familyCandidates"]
+                    if item["family"] == family
+                )
+                self.assertNotIn(forbidden_form, candidate["observedForms"])
+
+    def test_abbreviated_prepared_names_are_derived_and_reachable(self) -> None:
+        cases = (
+            ("ARROZ C/LECHE TREGAR 180 G", "rice", "dessert"),
+            ("ARITOS DE ARROZ DOS HERMANOS 80 G", "rice", "dessert"),
+            ("FID LUCCHETTI TIRAB HUEVO 500 GR", "egg", "pasta"),
+        )
+        for name, family, expected_form in cases:
+            with self.subTest(name=name):
+                candidate = next(
+                    item
+                    for item in derive_identity_record(_row(f"p:abbrev:{family}", name))["familyCandidates"]
+                    if item["family"] == family
+                )
+                self.assertEqual(candidate["role"], "DERIVED")
+                self.assertIn(expected_form, candidate["observedForms"])
+
     def test_carrot_clarification_exposes_observed_forms(self) -> None:
         candidates = [
             _row("p:vegetable", "BABY CARROT"),

@@ -30,7 +30,7 @@ from tools.consumer_input_intelligence import normalize_text
 
 
 SCHEMA_VERSION = "valuepilot-product-identity-lexicon-v1"
-POLICY_VERSION = "valuepilot-product-identity-policy-v1"
+POLICY_VERSION = "valuepilot-product-identity-policy-v2"
 MAX_NAME_LENGTH = 512
 MAX_ALIAS_LENGTH = 96
 MAX_CLARIFICATION_CHOICES = 30
@@ -59,6 +59,11 @@ FAMILY_RULES: tuple[FamilyRule, ...] = (
         include_terms=("arroz", "rice"),
         excluded_phrases=(
             ("arroz", "con", "leche"),
+            # Argentine retail shorthand uses ``C/LECHE`` (tokenized as
+            # ``arroz c leche``) for rice pudding.  Treat it as a prepared
+            # mention instead of a direct rice-grain product.
+            ("arroz", "c", "leche"),
+            ("arroz", "c", "l"),
             ("postre", "de", "arroz"),
             ("postre", "arroz"),
             ("pudin", "de", "arroz"),
@@ -81,6 +86,13 @@ FAMILY_RULES: tuple[FamilyRule, ...] = (
             ("arroz", "inflado"),
             ("cereal", "de", "arroz"),
             ("snack", "de", "arroz"),
+            ("aritos", "de", "arroz"),
+            ("tostada", "de", "arroz"),
+            ("tostadas", "de", "arroz"),
+            ("tost", "d", "arroz"),
+            ("tost",),
+            ("oblea", "de", "arroz"),
+            ("obleas", "de", "arroz"),
             ("tortita", "de", "arroz"),
             ("alfajor", "de", "arroz"),
             ("galleta",), ("galletita",), ("galletas",), ("galletitas",), ("harina",),
@@ -96,7 +108,7 @@ FAMILY_RULES: tuple[FamilyRule, ...] = (
             "grain": (("grano", "granos", "largo", "blanco", "integral", "parboil", "parboiled"), ("grain", "grains", "long", "white", "brown", "parboil", "parboiled")),
             "flour": (("harina",), ("flour",)),
             "drink": (("bebida", "jugo"), ("drink", "juice")),
-            "dessert": (("postre", "pudin", "pudding", "budin", "galleta", "galletitas", "galletita", "galletas", "torta", "barra", "alfajor", "dulce", "inflado", "cereal", "snack", "tortita"), ("dessert", "pudding", "cake", "cracker", "snack")),
+            "dessert": (("postre", "pudin", "pudding", "budin", "galleta", "galletitas", "galletita", "galletas", "torta", "barra", "alfajor", "dulce", "inflado", "cereal", "snack", "aritos", "tostada", "tostadas", "oblea", "obleas", "tortita"), ("dessert", "pudding", "cake", "cracker", "snack", "wafer", "toast")),
         },
     ),
     FamilyRule(
@@ -176,6 +188,7 @@ FAMILY_RULES: tuple[FamilyRule, ...] = (
         # a claim about ingredients, price, or availability.
         excluded_phrases=(
             ("fideo",), ("fideos",), ("pasta",), ("noodle",), ("noodles",),
+            ("fid",), ("tall",), ("tirab",), ("tirabuzon",), ("nido",),
             ("cinta",), ("tallarin",), ("tallarines",), ("spaguetti",), ("spaghetti",),
             ("spag",), ("vainillas",), ("galletas",), ("galletitas",),
             ("fusilli",), ("rigatti",), ("mostachol",), ("mostacholes",), ("semolin",),
@@ -192,6 +205,9 @@ FAMILY_RULES: tuple[FamilyRule, ...] = (
             ("juguete",), ("juego",), ("toy",), ("playset",), ("coleccionable",), ("collectible",),
             ("figura",), ("figure",), ("smash",), ("smashers",), ("rainbocorn",),
             ("licor",), ("liqueur",), ("bebida",), ("drink",),
+            ("pañuelo",), ("panuelo",), ("pa�uelo",), ("pa", "uelo"), ("mani",), ("manies",), ("palmesano",),
+            ("leche",), ("queso",), ("papas",), ("fritas",), ("peluche",),
+            ("pets",), ("robo",), ("sandwich",), ("atun",), ("alioli",),
         ),
         forms={
             "whole_egg": (
@@ -205,7 +221,7 @@ FAMILY_RULES: tuple[FamilyRule, ...] = (
             "powder": (("polvo", "deshidratado", "deshidratada"), ("powder", "dehydrated")),
             "chocolate": (("chocolate", "cacao", "pascua", "easter", "arcor", "aguila", "bariloche", "kinder", "milk"), ("chocolate", "cocoa", "easter", "kinder", "milk")),
             "toy": (("dino", "dinosaurio", "dinosaur", "unicornio", "unicorn", "juguete", "juego", "sorpresa", "smash", "smashers", "playset", "coleccionable", "figura", "rainbocorn"), ("dino", "dinosaur", "unicorn", "toy", "surprise", "smash", "playset", "collectible", "figure")),
-            "pasta": (("fideo", "fideos", "pasta", "tallarines"), ("noodle", "noodles", "pasta")),
+            "pasta": (("fideo", "fideos", "fid", "fusi", "fusil", "fusiles", "pasta", "tall", "tallarines", "tirab", "tirabuzon", "nido", "semolin", "spag"), ("noodle", "noodles", "pasta", "spaghetti")),
             "drink": (("bebida", "licor", "licores"), ("drink", "liqueur", "eggnog")),
         },
     ),
@@ -558,6 +574,8 @@ _FORM_PRESENTATION: Mapping[str, Mapping[str, Mapping[str, str]]] = {
             "labelEs": "Dulces o galletas de arroz",
             "labelEn": "Rice sweets or cakes",
             "query": "arroz dulce",
+            "aliasesEs": "galleta de arroz|galletas de arroz|galletita de arroz|galletitas de arroz|alfajor de arroz",
+            "aliasesEn": "rice cake|rice cakes|rice cracker|rice crackers|rice cookie|rice cookies",
         },
         "unspecified": {
             "labelEs": "Arroz (presentación no especificada)",
@@ -633,6 +651,8 @@ _FORM_PRESENTATION: Mapping[str, Mapping[str, Mapping[str, str]]] = {
             # egg-family rules still include ordinary shell-egg presentations
             # such as white, brown, colored, and pack-size variants.
             "query": "huevo de gallina",
+            "aliasesEs": "huevos de gallina",
+            "aliasesEn": "chicken egg",
         },
         "liquid": {
             "labelEs": "Huevo líquido",
@@ -1048,6 +1068,69 @@ SAFE_INFLECTIONS: Mapping[str, tuple[str, ...]] = {
     "panales": ("panal",),
 }
 
+# ``cream``/``crema`` is a deliberately ambiguous retail word.  It appears
+# in cosmetics, ice cream, candy fillings and soups.  A cosmetic form may use
+# it when the rest of the name is neutral (or the name carries a stronger
+# personal-care cue), but a food head must not become a cosmetic merely because
+# it contains ``crema``.  These are context guards for observed forms, not
+# claims about ingredients or product composition.
+_COSMETIC_FOOD_CONTEXTS: tuple[tuple[str, ...], ...] = (
+    ("sopa",), ("soup",), ("flan",), ("helado",), ("ice", "cream"),
+    ("yogur",), ("yogurt",), ("leche",), ("jugo",), ("juice",),
+    ("bebida",), ("drink",), ("gaseosa",), ("soda",), ("tequila",),
+    ("vino",), ("wine",), ("licor",), ("liqueur",), ("cerveza",),
+    ("beer",), ("alfajor",), ("galleta",), ("galletita",), ("cookie",),
+    ("bombon",), ("bonbon",), ("chocolate",), ("caramelo",),
+    ("caramel",), ("golosina",), ("candy",), ("chicle",), ("gum",),
+    ("pastilla",), ("pastillas",), ("almohadita",), ("almohaditas",), ("oblea",), ("obleas",), ("wafer",), ("torta",), ("cake",),
+    ("tic", "tac"), ("sin", "parar"), ("goma",), ("golosina",), ("candy",),
+    ("postre",), ("dessert",), ("dulce",), ("sweet",), ("mermelada",),
+    ("jam",), ("barra",), ("bar",), ("cereal",), ("salsa",), ("sauce",),
+    ("fideo",), ("fideos",), ("pasta",),
+)
+_COSMETIC_ANCHORS: frozenset[str] = frozenset(
+    {
+        "acondicionador", "conditioner", "shampoo", "sham", "champu",
+        "locion", "lotion", "protector", "sunscreen", "cosmetico",
+        "cosmetics", "maquillaje", "makeup", "perfume", "jabon", "soap",
+        "aromatizador", "air", "freshener", "difusor", "dental", "facial",
+        "corporal", "body", "antiage", "antiedad", "desodorante", "deodorant",
+    }
+)
+
+_FORM_CONTEXT_EXCLUSIONS: Mapping[tuple[str, str], tuple[tuple[str, ...], ...]] = {
+    # Rice grain is a physical product form. Toasts, wafers, crackers and
+    # prepared sweets that merely contain rice belong to the corresponding
+    # derived form (or remain literal-only), never to the grain facet.
+    ("rice", "grain"): (
+        ("tostada",), ("tostadas",), ("tost",), ("oblea",), ("obleas",), ("wafer",),
+        ("galleta",), ("galletas",), ("galletita",), ("galletitas",),
+        ("alfajor",), ("barra",), ("snack",), ("cereal",), ("postre",),
+        ("dessert",), ("torta",), ("cake",), ("dulce",), ("harina",),
+        ("flour",), ("bebida",), ("drink",), ("jugo",), ("juice",),
+    ),
+    # Abbreviated Argentine pasta names frequently contain only ``FID`` or
+    # ``TALL`` plus ``HUEVO``. They must not fall through to shell eggs.
+    ("egg", "whole_egg"): (
+            ("fideo",), ("fideos",), ("fid",), ("fusi",), ("fusil",), ("fusiles",), ("pasta",), ("tallarin",),
+        ("tallarines",), ("tall",), ("tirab",), ("tirabuzon",), ("nido",),
+        ("noodle",), ("noodles",), ("spag",), ("spaghetti",), ("semolin",),
+        ("bagel",), ("galleta",), ("galletita",), ("chocolate",), ("juguete",),
+    ),
+}
+
+# Some Argentine abbreviations express a presentation as a phrase rather
+# than a standalone form word.  Keep these inclusions explicit so ``arroz
+# c/leche`` reaches the rice-dessert choice without treating every product
+# that mentions milk as a dessert.
+_FORM_CONTEXT_INCLUSIONS: Mapping[tuple[str, str], tuple[tuple[str, ...], ...]] = {
+    ("rice", "dessert"): (
+        ("arroz", "con", "leche"),
+        ("arroz", "c", "leche"),
+        ("arroz", "c", "l"),
+    ),
+}
+
 
 @lru_cache(maxsize=16384)
 def _tokens(value: str) -> tuple[str, ...]:
@@ -1227,13 +1310,30 @@ def _family_observation(tokens: tuple[str, ...], rule: FamilyRule) -> tuple[bool
     derived = any(_contains_sequence(tokens, phrase) for phrase in rule.excluded_phrases)
     forms: list[str] = []
     for form_key, (spanish_terms, english_terms) in rule.forms.items():
-        if _contains_any(tokens, spanish_terms) or _contains_any(tokens, english_terms):
-            forms.append(form_key)
+        has_form_terms = _contains_any(tokens, spanish_terms) or _contains_any(tokens, english_terms)
+        has_form_context = any(
+            _contains_sequence(tokens, phrase)
+            for phrase in _FORM_CONTEXT_INCLUSIONS.get((rule.key, form_key), ())
+        )
+        if not (has_form_terms or has_form_context):
+            continue
+        if any(_contains_sequence(tokens, phrase) for phrase in _FORM_CONTEXT_EXCLUSIONS.get((rule.key, form_key), ())):
+            continue
+        if form_key == "cosmetics":
+            has_food_context = any(_contains_sequence(tokens, phrase) for phrase in _COSMETIC_FOOD_CONTEXTS)
+            has_cosmetic_anchor = bool(set(tokens).intersection(_COSMETIC_ANCHORS))
+            if has_food_context and not has_cosmetic_anchor:
+                continue
+        forms.append(form_key)
     if not forms:
         # A matched egg without a derived marker is the ordinary whole-egg
         # presentation.  This keeps a plain ``eggs`` search useful while
         # retaining separate observed choices for toys and other forms.
-        forms.append("whole_egg" if rule.key == "egg" and not derived else "unspecified")
+        shell_egg_excluded = any(
+            _contains_sequence(tokens, phrase)
+            for phrase in _FORM_CONTEXT_EXCLUSIONS.get((rule.key, "whole_egg"), ())
+        )
+        forms.append("whole_egg" if rule.key == "egg" and not derived and not shell_egg_excluded else "unspecified")
     return True, derived, tuple(sorted(set(forms))), tuple(sorted(set(include)))
 
 

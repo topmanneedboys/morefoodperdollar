@@ -35,7 +35,7 @@ from tools.product_taxonomy import DEPARTMENT_RULES, classify_name
 
 
 BUILD_SCHEMA_VERSION = "valuepilot-catalog-discovery-v2"
-RULES_VERSION = "valuepilot-catalog-discovery-rules-v32"
+RULES_VERSION = "valuepilot-catalog-discovery-rules-v33"
 MAX_QUERY_CHARS = 256
 MAX_PAGE_SIZE = 50
 MAX_FACET_PAGE_SIZE = 30
@@ -482,6 +482,12 @@ def _seed_dictionary(connection: sqlite3.Connection) -> None:
             _ensure_alias(connection, presentation["labelEs"], "es", concept_id, concept_id, "FORM", "CURATED_DICTIONARY")
             _ensure_alias(connection, presentation["labelEn"], "en", concept_id, concept_id, "FORM", "CURATED_DICTIONARY")
             _ensure_alias(connection, presentation["query"], "es", concept_id, concept_id, "FORM", "CURATED_DICTIONARY")
+            for value in str(presentation.get("aliasesEs", "")).split("|"):
+                if value.strip():
+                    _ensure_alias(connection, value, "es", concept_id, concept_id, "FORM", "CURATED_DICTIONARY")
+            for value in str(presentation.get("aliasesEn", "")).split("|"):
+                if value.strip():
+                    _ensure_alias(connection, value, "en", concept_id, concept_id, "FORM", "CURATED_DICTIONARY")
             form_rule = form_rules.get(form)
             form_terms = tuple(form_rule.terms) if form_rule else ()
             for family_alias in family_aliases:
@@ -758,6 +764,12 @@ def _family_candidates(row: Mapping[str, Any], identity_key: str) -> list[Mappin
             # so stale direct postings cannot leak into a type query.
             if source_name == "provided" and role == "DIRECT" and derived_roles.get(family) == "DERIVED":
                 continue
+            # The current classifier is authoritative for derived forms too.
+            # A prior source release may have retained a stale cosmetic or
+            # other form (for example carrot soup classified as a cosmetic).
+            # Do not merge that old derived form back into the refreshed index.
+            if source_name == "provided" and role == "DERIVED" and derived_roles.get(family) == "DERIVED":
+                continue
             # A source release may contain a stale direct assertion without a
             # current include term (for example a pet-food row with only the
             # generic word ``carne``).  Current reviewed negative context must
@@ -920,7 +932,7 @@ def _insert_identity(
     assertion_digest = hashlib.sha256("|".join(sorted(semantic_assertions)).encode()).hexdigest()
     connection.execute(
         "INSERT OR REPLACE INTO build_impact(identity_key, record_fingerprint, rule_dependencies, assertion_digest) VALUES (?, ?, ?, ?)",
-        (identity_key, fingerprint, json.dumps(["family-lexicon-v1", "family-form-v1", "department-rules-v1", _RELATION_RULES_VERSION], separators=(",", ":")), assertion_digest),
+        (identity_key, fingerprint, json.dumps(["family-lexicon-v2", "family-form-v1", "department-rules-v1", _RELATION_RULES_VERSION], separators=(",", ":")), assertion_digest),
     )
     return identity_key, provider_key, len(semantic_assertions), token_values
 

@@ -158,6 +158,37 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
                     {item["identityKey"] for item in english["matches"]},
                 )
 
+    def test_plural_compound_form_alias_keeps_rice_cakes_scoped(self) -> None:
+        rows = [
+            _row(1, "GALLETAS DE ARROZ MARCA X 100 G", form="dessert"),
+            _row(2, "ARROZ LARGO MARCA X 1 KG", form="grain"),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._build(directory, rows)
+            with DiscoveryIndex(path) as index:
+                english = index.query(DiscoveryQuery("rice cakes", language="en", page_size=10)).to_dict()
+                spanish = index.query(DiscoveryQuery("galletas de arroz", language="es", page_size=10)).to_dict()
+                self.assertEqual(english["status"], "READY")
+                self.assertEqual(spanish["status"], "READY")
+                self.assertEqual(english["resolvedPredicates"], ["form:rice:dessert"])
+                self.assertEqual(spanish["resolvedPredicates"], ["form:rice:dessert"])
+                self.assertEqual(english["total"]["productCount"], 1)
+                self.assertEqual(spanish["total"]["productCount"], 1)
+                self.assertEqual([item["displayName"] for item in english["matches"]], [rows[0]["name"]])
+                self.assertEqual([item["displayName"] for item in spanish["matches"]], [rows[0]["name"]])
+
+    def test_current_context_replaces_stale_derived_form_assertion(self) -> None:
+        stale = _row(1, "SOPA CREMA DE ZANAHORIA SABORES DEL VAL 500 G", family="carrot", form="cosmetics")
+        stale["familyCandidates"][0]["role"] = "DERIVED"
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._build(directory, [stale])
+            with DiscoveryIndex(path) as index:
+                cosmetic = index.query(
+                    DiscoveryQuery("carrot", language="en", selections=("form:carrot:cosmetics",), page_size=10)
+                ).to_dict()
+                self.assertEqual(cosmetic["status"], "NO_MATCHES")
+                self.assertEqual(cosmetic["total"]["productCount"], 0)
+
     def test_specific_cross_language_family_alias_beats_broad_department_alias(self) -> None:
         rows = [_row(1, "ARROZ LARGO MARCA X 1 KG")]
         with tempfile.TemporaryDirectory() as directory:
