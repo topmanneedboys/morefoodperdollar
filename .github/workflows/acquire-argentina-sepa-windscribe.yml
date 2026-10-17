@@ -8,6 +8,11 @@ on:
         required: false
         default: false
         type: boolean
+      reconcile_only:
+        description: Recover and activate completed verified builds without downloading or starting a new build
+        required: false
+        default: false
+        type: boolean
   schedule:
     # Buenos Aires is UTC-3 year-round. These are 13:30, 15:30 and 17:30 ART,
     # Every day, including weekends. Every phase re-discovers authoritative metadata
@@ -18,6 +23,9 @@ on:
     - cron: '30 16 * * *'
     - cron: '30 18 * * *'
     - cron: '30 20 * * *'
+    # Builds can finish after the last source check or across midnight.
+    # This inexpensive control-only run never downloads or builds the catalog.
+    - cron: '15 * * * *'
 
 permissions:
   contents: read
@@ -29,7 +37,7 @@ concurrency:
 
 jobs:
   acquire-and-shadow:
-    if: github.event_name == 'workflow_dispatch' || vars.ARGENTINA_AUTOMATED_ACQUISITION_ENABLED == 'true'
+    if: (github.event_name == 'workflow_dispatch' || vars.ARGENTINA_AUTOMATED_ACQUISITION_ENABLED == 'true') && github.event.schedule != '15 * * * *' && inputs.reconcile_only != true
     runs-on: ubuntu-latest
     # The long deterministic release build now runs asynchronously in Google
     # Cloud. This runner only performs bounded discovery/acquisition/handoff.

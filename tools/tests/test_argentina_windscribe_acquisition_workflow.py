@@ -18,6 +18,9 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
         for cron in ("30 16 * * *", "30 18 * * *", "30 20 * * *"):
             self.assertIn(f"cron: '{cron}'", text)
         self.assertNotIn("30 16,18,20 * * *", text)
+        self.assertIn("cron: '15 * * * *'", text)
+        self.assertIn("github.event.schedule != '15 * * * *'", text)
+        self.assertIn("inputs.reconcile_only != true", text)
         self.assertIn("ARGENTINA_AUTOMATED_ACQUISITION_ENABLED", text)
         self.assertIn("id-token: write", text)
         self.assertGreaterEqual(text.count("google-github-actions/auth@v3"), 2)
