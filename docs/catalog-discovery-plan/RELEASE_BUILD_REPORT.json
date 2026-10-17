@@ -73,7 +73,7 @@
   "output": {
     "artifact": "local-provider-data/product-discovery-v2.sqlite",
     "gitTracked": false,
-    "sha256": "0b135858dfccb8b41d815b3f5c4ca71fc9718bda3a90526d5734f59c4785677a"
+    "sha256": "a7d9a061e8bf18cbbd5f588bc608369d7e52ce0dffb7646a5061e5288ae5965b"
   },
   "notes": [
     "v32 is a local identity-only candidate. It preserves the complete source accounting and does not contain prices, offers, stock, availability, credentials, or production activation.",
@@ -82,16 +82,22 @@
     "Known contextual families remain literal-searchable and are reachable through explicit observed form choices. Counts are distinct provider products and source identities, not offer or savings claims.",
     "Provider-group metrics are calculated per identity group using logical coverage; they are not semantic completion. TYPE_UNRESOLVED identities remain an explicit review queue.",
     "A specific reviewed type/form alias now wins over a broad same-phrase department alias during cross-language fallback; rice and arroz agree in both language modes.",
-    "Bounded predicate, broad-posting, literal-posting, and bare-family caches preserve the real sidecar membership and clarification output while reducing representative warm query p95 to approximately 34–86 ms on this Windows development host."
+    "Bounded predicate, broad-posting, literal-posting, and bare-family caches preserve the real sidecar membership and clarification output while reducing representative warm query p95 to approximately 34–86 ms on this Windows development host.",
+    "The optimized v32 refresh candidate was rebuilt from the pinned source in 781.254 seconds, parity-checked against the prior qualified sidecar across 18 English/Spanish queries and full pagination with zero differences, then atomically promoted. The prior sidecar is preserved locally as product-discovery-v2-v32.sqlite.",
+    "The promoted sidecar includes identity_alias_identity_idx for identity-scoped lookups; structural counts and source/rules identifiers remain unchanged.",
+    "Large candidate sets now use a bounded temporary candidate table instead of SQLite bind-variable lists, with indexed first-page reads, cached product counts, and a bounded page cache. This removes the failure seen when a search expands beyond SQLite's variable limit.",
+    "Direct candidate-set stress against the promoted sidecar passed for 100,000 and 250,000 candidate IDs with warm first-page query p95 below 1 ms; this is query-path evidence, not a full synthetic compiler semantic evaluation."
   ],
   "verification": {
     "catalogBuild": {
       "status": "PASS",
       "rulesVersion": "valuepilot-catalog-discovery-rules-v32",
       "sourceSha256": "85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6",
-      "sidecarSha256": "0b135858dfccb8b41d815b3f5c4ca71fc9718bda3a90526d5734f59c4785677a",
+      "sidecarSha256": "a7d9a061e8bf18cbbd5f588bc608369d7e52ce0dffb7646a5061e5288ae5965b",
       "providerProducts": 78865,
-      "identityRecords": 134337
+      "identityRecords": 134337,
+      "buildSeconds": 781.254,
+      "previousQualifiedSidecarSha256": "0b135858dfccb8b41d815b3f5c4ca71fc9718bda3a90526d5734f59c4785677a"
     },
     "semanticAudit": {
       "status": "PASS",
@@ -120,7 +126,7 @@
     "toolsFocusedTests": {
       "command": "python -m unittest tools.tests.test_product_identity_lexicon tools.tests.test_catalog_discovery_index",
       "status": "PASS",
-      "tests": 64
+      "tests": 65
     },
     "backendTests": {
       "command": "python -m unittest discover -s backend/tests -p 'test_*.py'",
@@ -145,11 +151,11 @@
       "status": "NOT_RUN",
       "reason": "adb devices -l returned no attached device; no emulator was started. Install/runtime screenshots and interaction checks remain pending on the authorized Motorola Edge 2025."
     },
-    "codeCommit": "199f5bd0",
+    "codeCommit": "1ca32a12",
     "toolsTests": {
       "command": "python -m unittest discover -s tools/tests -p 'test_*.py'",
       "status": "PASS",
-      "tests": 417
+      "tests": 418
     },
     "performance": {
       "status": "PARTIAL_PASS",
@@ -164,7 +170,42 @@
         "strawberry": 35.411
       },
       "syntheticScale": "NOT_RUN_TIMEOUT",
-      "note": "All recorded representative real-sidecar warm p95 values are below the 100 ms target. The temporary synthetic 100k/250k compiler run was stopped after the 100k phase exceeded the useful verification window; no synthetic result is counted as a pass."
+      "largeCandidateSetStress": {
+        "status": "PASS",
+        "workload": "Promoted real sidecar; 30 repeated warm first-page requests per workload with a distinct query fingerprint. The 100,000-ID set uses real identity keys; the 250,000-ID set uses all 134,337 real identity keys plus synthetic missing keys to exercise the full candidate path.",
+        "targetWarmIndexQueryP95Ms": 100,
+        "results": [
+          {
+            "candidateIds": 100000,
+            "coldMs": 1797.095,
+            "warmMedianMs": 0.716,
+            "warmP95Ms": 0.731,
+            "productCount": 66451,
+            "sourceIdentityCount": 100000
+          },
+          {
+            "candidateIds": 250000,
+            "coldMs": 3650.955,
+            "warmMedianMs": 0.722,
+            "warmP95Ms": 0.734,
+            "productCount": 78865,
+            "sourceIdentityCount": 250000
+          }
+        ],
+        "note": "Candidate-set query-path stress only; the full synthetic 100k/250k compiler semantic evaluation remains unrun."
+      },
+      "note": "All recorded representative real-sidecar warm p95 values are below the 100 ms target. The large candidate-set query path also passes the measured stress target. The temporary synthetic 100k/250k compiler run was stopped after the 100k phase exceeded the useful verification window; no full synthetic compiler result is counted as a pass."
+    },
+    "sidecarRefresh": {
+      "status": "PASS",
+      "candidateSha256": "a7d9a061e8bf18cbbd5f588bc608369d7e52ce0dffb7646a5061e5288ae5965b",
+      "previousQualifiedSha256": "0b135858dfccb8b41d815b3f5c4ca71fc9718bda3a90526d5734f59c4785677a",
+      "buildSeconds": 781.254,
+      "parityQueries": 18,
+      "parityFailures": 0,
+      "parityScope": "English/Spanish representative queries with full paginated identity sets, totals, statuses, predicates, and clarification IDs",
+      "backupArtifact": "local-provider-data/product-discovery-v2-v32.sqlite",
+      "backupSha256": "0b135858dfccb8b41d815b3f5c4ca71fc9718bda3a90526d5734f59c4785677a"
     }
   }
 }

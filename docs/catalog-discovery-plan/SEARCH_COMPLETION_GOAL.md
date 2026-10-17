@@ -52,6 +52,33 @@ evidence, and held-out semantic evaluation remain open gates. A temporary
 exceeded the useful verification window; it is recorded as unrun rather than
 claimed as a pass.
 
+The real sidecar was then rebuilt with the measured refresh optimizations in
+781.254 seconds and compared with the prior qualified artifact across 18
+English/Spanish queries and complete result pagination. The comparison found
+zero differences in statuses, predicates, totals, clarification IDs, or
+identity sets. The promoted sidecar hash is
+`a7d9a061e8bf18cbbd5f588bc608369d7e52ce0dffb7646a5061e5288ae5965b`; the
+previous `0b1358…5677a` sidecar remains preserved locally as the v32 backup.
+
+## Continuation checkpoint (2026-10-17, large-result query scalability)
+
+The query-path fix is committed at `1ca32a12`. Searches that expand beyond
+SQLite's bind-variable ceiling now materialize candidate identity keys in a
+private indexed temporary table, cache the distinct product count, and cache a
+bounded first-page/cursor result by the existing query fingerprint. Smaller
+sets keep the JSON1 path, and installations without JSON1 use chunked binds.
+The regression test covers an 1,100-row candidate set, and the full tools suite
+passes 418 tests (65 focused lexicon/index tests); the backend suite passes 145.
+
+Direct stress against the promoted 78,865-product sidecar passed for a 100,000
+candidate set (warm p95 0.731 ms) and a 250,000 candidate set (warm p95
+0.734 ms). The 250,000 workload includes synthetic missing keys only to test
+the candidate path; it is not a claim that the catalog contains 250,000
+products. A full synthetic compiler semantic run, held-out semantic evaluation,
+authorized live-service evidence, and Motorola runtime screenshots remain open
+gates. The APK remains the previously verified client artifact because this
+checkpoint changes the Python discovery index only.
+
 ## Goal and authority
 
 Repository: C:/Users/iamatopstrongman/Documents/Codex/2026-10-08/valuepilot-next-complete-premium-ui-ux/work/valuepilot-10133-source-audit.

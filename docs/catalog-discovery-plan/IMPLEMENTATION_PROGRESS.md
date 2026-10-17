@@ -8,7 +8,7 @@ saved-data, release, and security paths remain unchanged.
 
 ## Latest verified continuation checkpoint — 2026-10-17
 
-- Code checkpoint: `199f5bd0` on `work/valuepilot-stage2-premium-shopping`.
+- Code checkpoint: `1ca32a12` on `work/valuepilot-stage2-premium-shopping`.
 - The query engine now prefers a specific reviewed type/form alias over a
   broad department alias when the same phrase appears in the other language.
   This fixes the real-sidecar collision where Spanish-mode `rice` returned no
@@ -18,7 +18,22 @@ saved-data, release, and security paths remain unchanged.
   clarification output while reducing representative real-sidecar warm query
   p95 to approximately 34–86 ms. The caches are local to an opened sidecar
   instance and do not change source accounting or production price data.
-- Full tools tests: 417 passed. Focused lexicon/index tests: 64 passed.
+- Candidate sets larger than SQLite's bind-variable ceiling now use a private,
+  indexed temporary candidate table. First-page reads, distinct product counts,
+  and repeated cursor pages are bounded and cached per query fingerprint, with
+  a JSON1 path for smaller sets and a chunked fallback when JSON1 is absent.
+  This keeps broad searches from failing after reporting a large row count.
+- Direct query-path stress against the promoted sidecar passed for 100,000 and
+  250,000 candidate IDs: warm first-page p95 was 0.731 ms and 0.734 ms,
+  respectively. These are candidate-set stress results; they do not replace a
+  full synthetic compiler semantic evaluation.
+- The real sidecar was rebuilt in 781.254 seconds with the identity-first alias
+  index and name caches. Its structural counts match v32, and 18 bilingual
+  queries with full pagination had zero parity differences against the prior
+  qualified artifact. The promoted sidecar SHA-256 is
+  `a7d9a061e8bf18cbbd5f588bc608369d7e52ce0dffb7646a5061e5288ae5965b`; the
+  previous `0b1358…5677a` file is preserved locally as a backup.
+- Full tools tests: 418 passed. Focused lexicon/index tests: 65 passed.
   Backend tests remain 145 passed. Android checks and the debug APK were
   already verified at the stable-selection client checkpoint `6764d77f`.
 - Motorola runtime validation, authorized live-service evidence, synthetic
@@ -31,7 +46,7 @@ saved-data, release, and security paths remain unchanged.
 
 - Branch: `work/valuepilot-stage2-premium-shopping`
 - Starting handoff checkpoint: `6ce81d0d`
-- Current verified checkpoint: code commit `199f5bd0` (documentation checkpoint follows the verification update).
+- Current verified checkpoint: code commit `1ca32a12` (documentation checkpoint follows the verification update).
 - Discovery rules: `valuepilot-catalog-discovery-rules-v32`
 - Sidecar schema: `valuepilot-catalog-discovery-v2`
 - Additive HTTP contract: `valuepilot-discovery-http-v2`
@@ -78,7 +93,7 @@ The current local release build reported:
 - fully type-resolved provider groups: 30,589; partly resolved: 8,004; unresolved: 40,272
 - fully type-or-department-resolved provider groups: 46,236; the report also keeps the overlapping partial and unresolved dispositions separately.
 - source SHA-256: `85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6`
-- ignored sidecar SHA-256: `0b135858dfccb8b41d815b3f5c4ca71fc9718bda3a90526d5734f59c4785677a`
+- ignored sidecar SHA-256: `a7d9a061e8bf18cbbd5f588bc608369d7e52ce0dffb7646a5061e5288ae5965b`
 
 The following rule-history paragraph documents the v25 replay and is retained
 for historical context; the current v32 totals are listed above. The v25 replay
