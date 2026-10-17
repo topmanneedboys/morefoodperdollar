@@ -1,26 +1,26 @@
 {
   "bilingual": {
-    "EN_AVAILABLE": 91263,
-    "ES_AVAILABLE": 111055,
-    "MISSING_EN": 43074,
-    "MISSING_ES": 23282
+    "EN_AVAILABLE": 91266,
+    "ES_AVAILABLE": 111057,
+    "MISSING_EN": 43071,
+    "MISSING_ES": 23280
   },
   "counts": {
-    "assertions": 192338,
-    "concepts": 251,
+    "assertions": 192580,
+    "concepts": 255,
     "identityRecords": 134337,
     "indexedTokens": 36423,
     "providerProducts": 78865
   },
   "coverage": {
     "DEPARTMENT_RESOLVED": 85249,
-    "DERIVED_ONLY": 1238,
+    "DERIVED_ONLY": 1241,
     "IDENTITY_VISITED": 134337,
     "NO_FORM": 126069,
-    "ROLE_RESOLVED": 68895,
+    "ROLE_RESOLVED": 69125,
     "TYPE_OR_DEPARTMENT_RESOLVED": 91161,
-    "TYPE_RESOLVED": 67657,
-    "TYPE_UNRESOLVED": 66680
+    "TYPE_RESOLVED": 67884,
+    "TYPE_UNRESOLVED": 66453
   },
   "departments": {
     "baby_pet": 3760,
@@ -45,34 +45,31 @@
     "toys_games": 1411
   },
   "notes": [
-    "This v23 checkpoint adds evidence-backed bilingual discovery for seven appliance families: coffee maker/cafetera, air fryer/airfryer, toaster/tostadora, sandwich maker/sandwichera, juicer/exprimidor, blender/licuadora and microwave/microondas. The v22 bowl rule and earlier reviewed families remain unchanged.",
-    "Full-corpus strict audits returned zero forbidden direct matches for every v23 appliance family. Accessory, food, wax and rack mentions remain contextual or literal-only according to observed catalog names.",
-    "Bowl strict discovery returns 189 provider products from 198 accepted source identities. Three observed appliance mentions (two batidoras and one picador) remain contextual MENTIONS and the full-corpus direct-context audit returned zero forbidden matches.",
-    "Chewing-gum form choices are limited to observed sugar-free and filled names. Full-corpus auditing rejected scent, conditioner, shampoo, dental-gum and chicle-flavored beverage contexts from the strict chewing-gum predicate.",
-    "Facial-cream strict discovery excludes observed depilatory and sunscreen contexts. Wafer/oblea and raticide/rodenticide use direct source terms without invented presentation claims.",
-    "Broad family queries retain literal contextual mentions so the clarification surface can explain ambiguity; explicit type/form selections use accepted postings only and do not expose those derived mentions.",
-    "TYPE_UNRESOLVED identities remain literal-searchable and are not semantic completion. Department resolution is reported separately and does not replace useful type review.",
-    "Provider-group completeness is stricter than identity coverage: every identity in a provider group must satisfy the metric before the group is counted as fully covered.",
-    "No prices, offers, stock, availability, credentials, backend security, Android code, production activation, or Play publication were changed."
+    "This v24 checkpoint adds four observed bilingual household-appliance families: heater/calefactor, water heater/termotanque, fan/ventilador and vacuum cleaner/aspiradora. The v23 appliance families, v22 bowl rule and earlier reviewed families remain unchanged.",
+    "Full-corpus strict audits returned zero non-direct postings for all four v24 families. The English fan alias was independently checked against the full corpus; five observed football/fut/lata/perfume contexts are retained as derived mentions and excluded from the strict fan predicate.",
+    "Pagination audits retrieved every v24 family identity in both languages without duplicates: heater 118, water heater 48, fan 20 and vacuum cleaner 50 source identities. Distinct provider counts are 98, 42, 20 and 50 respectively.",
+    "The v24 replay is identity-only. It changes no prices, offers, stock, availability, credentials, backend security, Android code, production activation or Play publication.",
+    "Broad family queries retain literal contextual mentions where applicable; explicit type selections use accepted postings only. TYPE_UNRESOLVED identities remain literal-searchable and are not semantic completion.",
+    "Provider-group completeness is stricter than identity coverage: every identity in a provider group must satisfy the metric before the group is counted as fully covered."
   ],
   "output": {
     "artifact": "local-provider-data/product-discovery-v2.sqlite",
     "gitTracked": false,
-    "sha256": "f8d6a59c772ecf8b965a792062e26e682d14a429ef50d71e0f889afc790b9a69"
+    "sha256": "69510b48892953339d07bfbe972c0284e5435e6ab7f02d51947f428d18d394a3"
   },
   "providerGroups": {
     "fullyDepartmentResolved": 43511,
     "fullyTypeOrDepartmentResolved": 46230,
-    "fullyTypeResolved": 30065,
+    "fullyTypeResolved": 30221,
     "groups": 78865,
     "partlyDepartmentResolved": 8862,
     "partlyTypeOrDepartmentResolved": 8214,
-    "partlyTypeResolved": 7946,
+    "partlyTypeResolved": 7992,
     "unresolvedDepartment": 26492,
-    "unresolvedType": 40854,
+    "unresolvedType": 40652,
     "unresolvedTypeAndDepartment": 24421
   },
-  "rulesVersion": "valuepilot-catalog-discovery-rules-v23",
+  "rulesVersion": "valuepilot-catalog-discovery-rules-v24",
   "safety": {
     "availability": false,
     "credentials": false,
@@ -98,9 +95,9 @@
     "backendTests": {
       "command": "python -m unittest discover -s backend/tests -p 'test_*.py'",
       "status": "PASS",
-      "tests": 140
+      "tests": 141
     },
-    "codeCommit": "bab93bc1910023d3ef366cfa2139d58ec9496990",
+    "codeCommit": "778bf028635daf6804a772c921eb0d460014bce9",
     "motorolaEdge2025": {
       "reason": "No device runtime validation was performed for this identity-sidecar milestone.",
       "status": "NOT_RUN"
@@ -178,6 +175,26 @@
         "toaster": {
           "directProviderProducts": 41,
           "directSourceIdentities": 41,
+          "forbiddenContextMatches": 0
+        },
+        "heater": {
+          "directProviderProducts": 98,
+          "directSourceIdentities": 118,
+          "forbiddenContextMatches": 0
+        },
+        "water_heater": {
+          "directProviderProducts": 42,
+          "directSourceIdentities": 48,
+          "forbiddenContextMatches": 0
+        },
+        "fan": {
+          "directProviderProducts": 20,
+          "directSourceIdentities": 20,
+          "forbiddenContextMatches": 0
+        },
+        "vacuum_cleaner": {
+          "directProviderProducts": 50,
+          "directSourceIdentities": 50,
           "forbiddenContextMatches": 0
         }
       },
@@ -332,7 +349,8 @@
         "swimwear": 0,
         "toasterDirectForbiddenContexts": 0,
         "towel": 0,
-        "waferDirectForbiddenContexts": 0
+        "waferDirectForbiddenContexts": 0,
+        "fanDirectForbiddenContexts": 0
       },
       "flourEn": {
         "choices": [
@@ -621,12 +639,82 @@
         "resolvedPredicate": "type:wafer",
         "sourceIdentityCount": 303,
         "status": "READY"
+      },
+      "heaterEn": {
+        "productCount": 98,
+        "resolvedPredicate": "type:heater",
+        "sourceIdentityCount": 118,
+        "status": "READY"
+      },
+      "heaterEs": {
+        "productCount": 98,
+        "resolvedPredicate": "type:heater",
+        "sourceIdentityCount": 118,
+        "status": "READY"
+      },
+      "waterHeaterEn": {
+        "productCount": 42,
+        "resolvedPredicate": "type:water_heater",
+        "sourceIdentityCount": 48,
+        "status": "READY"
+      },
+      "waterHeaterEs": {
+        "productCount": 42,
+        "resolvedPredicate": "type:water_heater",
+        "sourceIdentityCount": 48,
+        "status": "READY"
+      },
+      "fanEn": {
+        "productCount": 20,
+        "resolvedPredicate": "type:fan",
+        "sourceIdentityCount": 20,
+        "status": "READY"
+      },
+      "fanEs": {
+        "productCount": 20,
+        "resolvedPredicate": "type:fan",
+        "sourceIdentityCount": 20,
+        "status": "READY"
+      },
+      "vacuumCleanerEn": {
+        "productCount": 50,
+        "resolvedPredicate": "type:vacuum_cleaner",
+        "sourceIdentityCount": 50,
+        "status": "READY"
+      },
+      "vacuumCleanerEs": {
+        "productCount": 50,
+        "resolvedPredicate": "type:vacuum_cleaner",
+        "sourceIdentityCount": 50,
+        "status": "READY"
+      },
+      "v24HouseholdAppliancePagination": {
+        "heater": {
+          "pages": 3,
+          "rowsRetrieved": 118,
+          "duplicates": 0
+        },
+        "water_heater": {
+          "pages": 1,
+          "rowsRetrieved": 48,
+          "duplicates": 0
+        },
+        "fan": {
+          "pages": 1,
+          "rowsRetrieved": 20,
+          "duplicates": 0
+        },
+        "vacuum_cleaner": {
+          "pages": 1,
+          "rowsRetrieved": 50,
+          "duplicates": 0
+        }
       }
     },
     "toolsTests": {
       "command": "python -m unittest discover -s tools/tests -p 'test_*.py'",
       "status": "PASS",
-      "tests": 408
+      "tests": 409
     }
   }
 }
