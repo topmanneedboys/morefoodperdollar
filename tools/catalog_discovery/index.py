@@ -18,6 +18,7 @@ import sqlite3
 import tempfile
 from collections import Counter, defaultdict
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Mapping, Sequence
 
@@ -1027,6 +1028,19 @@ class DiscoveryIndex:
             self.close()
             raise IndexIntegrityError("discovery index release mismatch")
         self.metadata = dict(row)
+        # The sidecar is immutable for the lifetime of this facade.  Cache
+        # only bounded posting sets, never mutable response state or price
+        # evidence.  The cache is release-scoped because the connection is
+        # pinned to one verified build above.
+        self._predicate_identity_cache = lru_cache(maxsize=512)(
+            lambda predicate_id: frozenset(_predicate_identity_keys(self.connection, predicate_id))
+        )
+        self._broad_predicate_cache = lru_cache(maxsize=512)(
+            lambda predicate_id: frozenset(_broad_predicate_identity_keys(self.connection, predicate_id))
+        )
+        self._literal_identity_cache = lru_cache(maxsize=512)(
+            lambda tokens: frozenset(_literal_identity_keys(self.connection, tokens))
+        )
 
     def close(self) -> None:
         connection = getattr(self, "connection", None)
@@ -1046,6 +1060,34 @@ class DiscoveryIndex:
         # Cross-language fallback is explicit and deterministic: a query in one
         # language may use the other reviewed alias but never an arbitrary guess.
         return tuple(self.connection.execute("SELECT * FROM alias WHERE phrase_norm = ? ORDER BY predicate_id", (_norm(phrase),)).fetchall())
+
+    def _predicate_keys(self, predicate_id: str) -> frozenset[str]:
+        return self._predicate_identity_cache(predicate_id)
+
+    def _broad_keys(self, predicate_id: str) -> frozenset[str]:
+        return self._broad_predicate_cache(predicate_id)
+
+    def _literal_keys(self, tokens: Sequence[str]) -> frozenset[str]:
+        return self._literal_identity_cache(tuple(tokens))
+
+    def _bare_keys(self, predicate_id: str) -> frozenset[str]:
+        if not predicate_id.startswith("type:"):
+            return self._predicate_keys(predicate_id)
+        concepts = _descendant_concepts(self.connection, predicate_id)
+        values: set[str] = set()
+        for concept in concepts:
+            family = concept.split(":", 1)[1] if ":" in concept else ""
+            type_keys = self._predicate_keys(concept)
+            form = _PRIMARY_DIRECT_FORMS.get(family)
+            if form:
+                form_keys = self._predicate_keys(f"form:{family}:{form}")
+                values.update(type_keys & form_keys)
+            elif predicate_id == "type:fruit":
+                produce_keys = self._predicate_keys("department:fresh_produce")
+                values.update(type_keys & produce_keys)
+            else:
+                values.update(type_keys)
+        return frozenset(values)
 
     def _resolve(self, query: str, language: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
         normalized = _norm(query)
@@ -1089,11 +1131,11 @@ class DiscoveryIndex:
     def _candidate_keys(self, predicates: Sequence[str], tokens: Sequence[str], selections: Sequence[str]) -> set[str]:
         sets: list[set[str]] = []
         if predicates:
-            sets.append(set().union(*(_broad_predicate_identity_keys(self.connection, value) for value in predicates)))
+            sets.append(set().union(*(self._broad_keys(value) for value in predicates)))
         if tokens:
-            sets.append(_literal_identity_keys(self.connection, tokens))
+            sets.append(set(self._literal_keys(tokens)))
         for selection in selections:
-            sets.append(_predicate_identity_keys(self.connection, selection))
+            sets.append(set(self._predicate_keys(selection)))
         if not sets:
             return set()
         values = sets[0]
@@ -1136,7 +1178,7 @@ class DiscoveryIndex:
             # accepted type as an explicit choice alongside contextual forms.
             # This gives the shopper a safe way to exclude shampoo, drinks or
             # toys that merely mention the same word.
-            if _predicate_identity_keys(self.connection, base) != base_keys:
+            if self._predicate_keys(base) != base_keys:
                 candidate_predicates.add(base)
             children = {row[0] for row in self.connection.execute("SELECT child_concept FROM parent WHERE parent_concept = ?", (base,))}
             candidate_predicates.update(children)
@@ -1154,7 +1196,7 @@ class DiscoveryIndex:
             if predicate in predicates or predicate in selections:
                 continue
             row = self._predicate_row(predicate)
-            keys = _predicate_identity_keys(self.connection, predicate) & base_keys
+            keys = self._predicate_keys(predicate) & base_keys
             if not keys:
                 continue
             placeholders = ",".join("?" for _ in keys)
@@ -1260,14 +1302,14 @@ class DiscoveryIndex:
                     # retain it while removing only broad contextual
                     # mentions from the type predicate.
                     display_candidates = candidates & set().union(
-                        *(_predicate_identity_keys(self.connection, value) for value in strict_types)
+                        *(self._predicate_keys(value) for value in strict_types)
                     )
                 else:
                     display_candidates = set().union(
-                        *(_bare_query_identity_keys(self.connection, value) for value in strict_types)
+                        *(self._bare_keys(value) for value in strict_types)
                     )
                 if remaining_tokens:
-                    display_candidates &= _literal_identity_keys(self.connection, remaining_tokens)
+                    display_candidates &= self._literal_keys(remaining_tokens)
             else:
                 display_candidates = set()
         # Broad type predicates include literal ``MENTIONS`` postings so a
@@ -1278,9 +1320,9 @@ class DiscoveryIndex:
         if clarification is None and not request.selections:
             strict_types = tuple(value for value in predicates if value.startswith("type:"))
             if strict_types:
-                display_candidates = set().union(*(_bare_query_identity_keys(self.connection, value) for value in strict_types))
+                display_candidates = set().union(*(self._bare_keys(value) for value in strict_types))
                 if remaining_tokens:
-                    display_candidates &= _literal_identity_keys(self.connection, remaining_tokens)
+                    display_candidates &= self._literal_keys(remaining_tokens)
         fingerprint = self._fingerprint(request.query, request.language, request.selections)
         last_name = ""
         last_key = ""
