@@ -85,6 +85,12 @@ def create_app(service: BackendService | None = None):
         cursor: StrictStr | None = None
         facetPageSize: StrictInt = Field(default=30, ge=1, le=30)
         facetCursor: StrictStr | None = None
+        latitude: StrictStr | None = None
+        longitude: StrictStr | None = None
+        radiusKm: StrictStr | None = None
+        sort: StrictStr | None = None
+        unitBasis: StrictStr | None = None
+        storeKey: StrictStr | None = None
 
     class InterpretRequest(BaseModel):
         model_config = ConfigDict(extra="forbid")

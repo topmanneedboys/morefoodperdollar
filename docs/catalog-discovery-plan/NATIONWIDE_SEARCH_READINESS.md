@@ -57,7 +57,7 @@ it does not silently promote unreviewed labels or start another small rebuild.
 
 ## Price sorting requirement
 
-**The customer's requirement is not yet implemented.** The current HTML sort
+**The app requirement is not yet complete.** A new additive backend path now joins and orders the full selected identity set before paging; see `SCOPED_PRICE_SEARCH_CHECKPOINT.md` for evidence and limits. It is not deployed or connected to the app. The current HTML sort
 operates on a loaded page and now labels that scope explicitly. That must not be
 reported as a global lowest-price result.
 
@@ -75,7 +75,7 @@ follow the same global order with deterministic identity/offer tie breakers.
 Changing any filter starts a new result set. A store filter must cover all
 eligible offers, not just stores in the loaded page.
 
-The v40 sidecar and `/v2/search` currently contain **no prices or offers**. The
+The v40 sidecar and identity-only `/v2/search` responses contain **no prices or offers**. Explicit scoped requests now support a separately authorized exact offer join, but require a catalog built for the same current release. The
 legacy `/v1/search` exposes a bounded nearest-store preview and caps discovery at
 31 candidates, so it cannot supply a global sort across 300 products either.
 A complete release-bound offer join and sorting projection remains necessary;

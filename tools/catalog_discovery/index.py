@@ -526,7 +526,7 @@ def _seed_dictionary(connection: sqlite3.Connection) -> None:
         _ensure_alias(connection, rule.label_es, "es", concept_id, concept_id, "IS_A", "CURATED_DICTIONARY")
         _ensure_alias(connection, rule.label_en, "en", concept_id, concept_id, "IS_A", "CURATED_DICTIONARY")
         for term in rule.terms:
-            language = "en" if re.search(r"[a-z]", term) and not re.search(r"[áéíóúñ]", term) and term.casefold() in {"cleaning", "food", "beverages", "dairy", "electronics", "toys", "tools", "sports", "clothing", "health", "personal care", "home goods"} else "es"
+            language = "en" if re.search(r"[a-z]", term) and not re.search(r"[Ã¡Ã©Ã­Ã³ÃºÃ±]", term) and term.casefold() in {"cleaning", "food", "beverages", "dairy", "electronics", "toys", "tools", "sports", "clothing", "health", "personal care", "home goods"} else "es"
             _ensure_alias(connection, term, language, concept_id, concept_id, "IS_A", "CURATED_RULE")
 
 
@@ -1473,7 +1473,12 @@ class DiscoveryIndex:
             ))
         return len(providers)
 
-    def query(self, request: DiscoveryQuery | Mapping[str, Any]) -> DiscoveryResponse:
+    def resolve_candidates(self, request: DiscoveryQuery | Mapping[str, Any]):
+        """Resolve the entire strict identity set before any product pagination.
+
+        Shopping adapters may join these exact keys to a separately qualified,
+        matching price release. This sidecar remains identity-only.
+        """
         if isinstance(request, Mapping):
             request = DiscoveryQuery(
                 query=request.get("query", ""),
@@ -1568,6 +1573,27 @@ class DiscoveryIndex:
             for selection in request.selections:
                 exact_keys &= self._predicate_keys(selection)
             display_candidates |= exact_keys
+        return request, fingerprint, predicates, frozenset(display_candidates), clarification
+
+    def matching_identities(self, keys: Iterable[str]) -> Iterator[dict[str, Any]]:
+        """Stream all selected source identities in bounded SQLite batches."""
+        selected = set(keys)
+        if len(selected) > MAX_SOURCE_ROWS:
+            raise DiscoveryError("identity selection exceeds source bound")
+        last_name = last_key = ""
+        while selected:
+            rows = self._candidate_rows(selected, last_name=last_name, last_key=last_key,
+                                        limit=SQLITE_VARIABLE_BATCH)
+            if not rows:
+                break
+            for row in rows:
+                yield {"identityKey": row["identity_key"], "providerProductId": row["provider_key"],
+                       "displayName": row["display_name"], "brand": row["brand"]}
+            last_name, last_key = rows[-1]["normalized_name"], rows[-1]["identity_key"]
+
+    def query(self, request: DiscoveryQuery | Mapping[str, Any]) -> DiscoveryResponse:
+        request, fingerprint, predicates, resolved, clarification = self.resolve_candidates(request)
+        display_candidates = set(resolved)
         last_name = ""
         last_key = ""
         if request.cursor:

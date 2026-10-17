@@ -486,11 +486,10 @@ class BackendService:
     def discovery_search(self, payload: Mapping[str, Any], *, correlation_id: str | None = None) -> dict[str, Any]:
         """Evaluate the full identity sidecar through the additive v2 contract.
 
-        This rail is deliberately separate from ``/v1/search``.  It returns
-        identity matches and clarification facets only; prices, offers, stock,
-        geography and credentials remain owned by the existing shopping rail.
-        The explicit environment gate prevents an unqualified sidecar from
-        becoming an accidental production dependency.
+        Identity-only requests preserve the frozen sidecar contract. Explicit
+        location requests join the full strict identity set through the existing
+        qualified offer reader before pagination, with matching release and UI
+        authorization gates. Stock remains unknown. Nothing changes v1 Search.
         """
 
         if os.environ.get(DISCOVERY_V2_ENABLED_ENV, "").strip().lower() != "true":
@@ -498,8 +497,23 @@ class BackendService:
         index = self._discovery()
         if index is None:
             raise BackendQueryError("DISCOVERY_V2_UNAVAILABLE")
+        scoped = any(key in payload for key in ("latitude", "longitude", "radiusKm", "sort", "storeKey", "unitBasis"))
         try:
-            result = index.query(payload).to_dict()
+            if scoped:
+                from .discovery_offers import scoped_search
+                if not all(key in payload for key in ("latitude", "longitude", "radiusKm")):
+                    raise BackendQueryError("scoped discovery requires a complete location")
+                handle = self.release_manager.pin(require_fresh=True)
+                status = {"service": "ready", "releaseId": handle.release_id, "releaseDate": handle.release_date,
+                          "freshness": handle.freshness_status, "backendCodeQualified": True,
+                          "qualifiedOfferEvidenceAvailable": qualified_offer_artifacts_available(handle.artifacts.manifest)}
+                if not _production_android_ui_authorized(status):
+                    raise BackendQueryError("DISCOVERY_PRICE_AUTHORIZATION_REQUIRED")
+                reader = self._reader(handle)
+                selections = self._route_selections(reader, payload)
+                result = scoped_search(index, reader, handle, payload, selections)
+            else:
+                result = index.query(payload).to_dict()
         except DiscoveryError as exc:
             raise BackendQueryError(str(exc)) from exc
         request_id = correlation_id or str(uuid.uuid4())
@@ -511,8 +525,8 @@ class BackendService:
             "result": result,
             "evidenceSemantics": {
                 "identity": "SOURCE_IDENTITY_AND_ACCEPTED_ASSERTIONS",
-                "prices": "NOT_INCLUDED",
-                "offers": "NOT_INCLUDED",
+                "prices": "QUALIFIED_CURRENT_RELEASE" if scoped else "NOT_INCLUDED",
+                "offers": "EXACT_IDENTITY_SCOPED_PREVIEW" if scoped else "NOT_INCLUDED",
                 "stock": "NOT_INCLUDED",
             },
         }

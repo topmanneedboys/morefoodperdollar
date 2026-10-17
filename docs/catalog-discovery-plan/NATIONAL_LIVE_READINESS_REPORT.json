@@ -373,7 +373,8 @@
     "originalProfile": "C:/Users/iamatopstrongman/Downloads/Windscribe-Buenos-Aires-Tango-WG.conf",
     "originalProfileExists": false,
     "website": "User signed in successfully. Account displays FREE; Config Generator displays PRO FEATURE and requires Pro for WireGuard downloads.",
-    "required": "An account already entitled to the WireGuard Config Generator with Buenos Aires access, or a working existing Buenos Aires profile. No purchase authorized or performed."
+    "required": "An account already entitled to the WireGuard Config Generator with Buenos Aires access, or a working existing Buenos Aires profile. No purchase authorized or performed.",
+    "accountRecovery": "The checked free accounts differ from the operational account identified by a relevant payment notice. Correct-account user sign-in/billing recovery is pending; no payment or credential change performed by the agent."
   },
   "remainingWork": [
     "Restore source acquisition with working authorized VPN configuration",
@@ -392,5 +393,6 @@
     "22 of 24 bounded rice first pages had listed prices; two pages had none, not proof of missing regional rice",
     "Unexpected additional regions in some responses still need geographic review",
     "Frozen v40 identity sidecar remains October 8 and unpromoted"
-  ]
+  ],
+  "developmentSearchCheckpoint": "docs/catalog-discovery-plan/SCOPED_PRICE_SEARCH_CHECKPOINT.md"
 }

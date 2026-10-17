@@ -1184,15 +1184,29 @@ class SearchPackRegion:
         ranked.sort(key=lambda item: (-item[0], item[1]))
         return tuple(ranked[:product_limit])
 
-    def lookup_product_key(self, product_key: str, *, stats: SearchPackStats | None = None) -> Mapping[str, Any] | None:
+    def lookup_product_keys(self, product_keys: Iterable[str], *, stats: SearchPackStats | None = None) -> dict[str, Mapping[str, Any]]:
+        """Read exact identities with each docstore block decoded once per batch."""
         stats = stats or SearchPackStats()
-        if not isinstance(product_key, str) or not product_key:
-            raise SearchPackError("product key is invalid")
-        stats.key_lookups += 1
-        doc_id = self._lookup_ordinal(product_key, self.key_lexicon_blocks, "keyLexicon", stats, label="key lexicon")
-        if doc_id is None:
-            return None
-        return self.get_records((int(doc_id),), stats=stats, max_records=1).get(int(doc_id))
+        keys = tuple(dict.fromkeys(product_keys))
+        if len(keys) > SEARCHPACK_MAX_DOCS or any(not isinstance(key, str) or not key for key in keys):
+            raise SearchPackError("product key request exceeds bound or is invalid")
+        ids = {}
+        for key in keys:
+            stats.key_lookups += 1
+            ordinal = self._lookup_ordinal(key, self.key_lexicon_blocks, "keyLexicon", stats, label="key lexicon")
+            if ordinal is not None:
+                ids[key] = int(ordinal)
+        records = self.get_records(ids.values(), stats=stats) if ids else {}
+        result = {}
+        for key, ordinal in ids.items():
+            record = records[ordinal]
+            if record.get("productEvidenceKey") != key:
+                raise SearchPackError("exact product identity mismatch")
+            result[key] = record
+        return result
+
+    def lookup_product_key(self, product_key: str, *, stats: SearchPackStats | None = None) -> Mapping[str, Any] | None:
+        return self.lookup_product_keys((product_key,), stats=stats).get(product_key)
 
     def search_many(self, queries: Sequence[str], *, product_limit: int = 5, candidate_bound: int = SEARCHPACK_MAX_DOCS, stats: SearchPackStats | None = None) -> tuple[tuple[Mapping[str, Any], ...], ...]:
         if not isinstance(product_limit, int) or not 1 <= product_limit <= SEARCHPACK_MAX_DISCOVERY_RESULTS:
