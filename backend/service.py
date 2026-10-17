@@ -20,8 +20,19 @@ from .reader import (
 )
 from .release import ReleaseError, ReleaseManager, qualified_offer_artifacts_available
 from tools.catalog_discovery import DiscoveryError, DiscoveryIndex
-from tools.product_identity_lexicon import build_family_clarification, family_query_form, family_query_key, filter_family_candidates
-from tools.product_taxonomy import ProductTaxonomyIndex, build_taxonomy_clarification, filter_taxonomy_candidates
+from tools.product_identity_lexicon import (
+    build_family_clarification,
+    family_query_form,
+    family_query_key,
+    family_selection_form,
+    filter_family_candidates,
+)
+from tools.product_taxonomy import (
+    ProductTaxonomyIndex,
+    build_taxonomy_clarification,
+    filter_taxonomy_candidates,
+    taxonomy_selection_form,
+)
 
 LOGGER = logging.getLogger("valuepilot.backend")
 MAX_REQUEST_BYTES = 16 * 1024
@@ -512,6 +523,18 @@ class BackendService:
         query = payload.get("query")
         if not isinstance(query, str) or not query.strip() or len(query.strip()) > 96:
             raise BackendQueryError("query must contain 1-96 characters")
+        selection_id = payload.get("selectionId")
+        if selection_id is not None:
+            if (
+                not isinstance(selection_id, str)
+                or len(selection_id) > 160
+                or not selection_id.strip()
+                or (
+                    family_selection_form(query, selection_id) is None
+                    and taxonomy_selection_form(query, selection_id) is None
+                )
+            ):
+                raise BackendQueryError("search selection is invalid for this query")
         page = payload.get("page", 0)
         if isinstance(page, bool) or not isinstance(page, int) or not 0 <= page <= DISCOVERY_MAX_PAGE:
             raise BackendQueryError("search page is invalid")
@@ -593,12 +616,12 @@ class BackendService:
         # observed family form to the bounded result window so a query such as
         # ``carrot juice`` cannot retain a classified carrot lotion or cake.
         # The helper fails open when new source rows are not yet classified.
-        candidates = filter_family_candidates(query, candidates)
+        candidates = filter_family_candidates(query, candidates, selection_id=selection_id)
         # Generic reviewed families use the same bounded identity evidence to
         # apply explicit form choices such as ``eggs liquid``.  This remains a
         # fail-open presentation refinement; it never changes price, offer, or
         # availability authority.
-        candidates = filter_taxonomy_candidates(query, candidates)
+        candidates = filter_taxonomy_candidates(query, candidates, selection_id=selection_id)
         if selected_family in {"rice", "lychee", "yerba_mate", "egg", "carrot"}:
             # The canonical family discovery window can contain valid
             # identities whose current offer partition has no matching price
@@ -619,7 +642,7 @@ class BackendService:
         # bounded discovery window and never changes ranking, prices, offers,
         # availability, or the selected product identity.
         clarification = None
-        if page == 0 and family_query_form(query) is None:
+        if page == 0 and selection_id is None and family_query_form(query) is None:
             clarification = build_family_clarification(query, clarification_candidates)
             if clarification is None:
                 clarification = build_taxonomy_clarification(query, clarification_candidates)

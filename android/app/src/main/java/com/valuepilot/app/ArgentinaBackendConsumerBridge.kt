@@ -421,7 +421,10 @@ private object ArgentinaBackendJson {
             .put("longitude", request.longitude)
             .put("radiusKm", request.radiusKm)
             .put("query", request.query)
-            .apply { if (request.page > 0) put("page", request.page) }
+            .apply {
+                if (request.page > 0) put("page", request.page)
+                request.selectionId?.let { put("selectionId", it) }
+            }
             .toString()
 
     fun discoverySearchRequest(request: ArgentinaBackendContract.DiscoverySearchRequest): String =

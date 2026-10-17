@@ -98,14 +98,13 @@ class ValuePilotNextHtmlPreviewContractTest {
 
     @Test
     fun acceptsOnlyBoundedNativeSearchQueries() {
-        assertEquals(
-            "leche entera",
-            ValuePilotNextHtmlPreviewContract
-                .parseNativeSearchMessage(
-                    "{\"type\":\"SEARCH_VALUEPILOT\",\"query\":\" leche entera \"}"
-                )
-                ?.query
+        val request = requireNotNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeSearchMessage(
+                "{\"type\":\"SEARCH_VALUEPILOT\",\"query\":\" leche entera \",\"selectionId\":\"egg:whole_egg\"}"
+            )
         )
+        assertEquals("leche entera", request.query)
+        assertEquals("egg:whole_egg", request.selectionId)
         assertNull(
             ValuePilotNextHtmlPreviewContract.parseNativeSearchMessage(
                 "{\"type\":\"SEARCH_VALUEPILOT\",\"query\":\"\u0001\"}"
@@ -114,6 +113,11 @@ class ValuePilotNextHtmlPreviewContractTest {
         assertNull(
             ValuePilotNextHtmlPreviewContract.parseNativeSearchMessage(
                 "{\"type\":\"SEARCH_VALUEPILOT\",\"query\":\"${"x".repeat(97)}\"}"
+            )
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract.parseNativeSearchMessage(
+                "{\"type\":\"SEARCH_VALUEPILOT\",\"query\":\"eggs\",\"selectionId\":\"rice:grain!\"}"
             )
         )
     }

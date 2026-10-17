@@ -14,6 +14,7 @@ from tools.product_identity_lexicon import (
     derive_identity_record,
     family_query_form,
     family_query_key,
+    family_selection_form,
     filter_family_candidates,
 )
 
@@ -689,6 +690,16 @@ class ProductIdentityLexiconTests(unittest.TestCase):
             ]),
             (),
         )
+        self.assertEqual(family_selection_form("huevos", "egg:whole_egg"), ("egg", "whole_egg"))
+        selected_shell_eggs = filter_family_candidates(
+            "huevos",
+            [
+                _row("p:white", "HUEVO BLANCO DON REYNALDO X 12 UNI"),
+                _row("p:liquid", "HUEVOS LIQUIDOS 500 ML"),
+            ],
+            selection_id="egg:whole_egg",
+        )
+        self.assertEqual([row["productEvidenceKey"] for row in selected_shell_eggs], ["p:white"])
         shell_eggs = filter_family_candidates(
             "huevo",
             [

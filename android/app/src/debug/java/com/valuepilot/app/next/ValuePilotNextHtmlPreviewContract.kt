@@ -14,7 +14,8 @@ internal data class ValuePilotNextHtmlLanguageRequest(
 )
 
 internal data class ValuePilotNextHtmlNativeSearchRequest(
-    val query: String
+    val query: String,
+    val selectionId: String? = null
 )
 
 internal object ValuePilotNextHtmlNativeSearchLoadMoreRequest
@@ -143,6 +144,7 @@ internal object ValuePilotNextHtmlPreviewContract {
     const val MAX_PRODUCT_ID_LENGTH = 64
 
     private val productIdPattern = Regex("[a-z0-9-]{1,64}")
+    private val selectionIdPattern = Regex("[A-Za-z0-9_.:-]{1,160}")
     private val products = listOf(
         ValuePilotNextHtmlProduct(
             productId = "milk-armonia-1l",
@@ -225,7 +227,14 @@ internal object ValuePilotNextHtmlPreviewContract {
             query.length > 96 ||
             containsControlCharacter(query)
         ) return null
-        return ValuePilotNextHtmlNativeSearchRequest(query)
+        val selectionId = if (json.has("selectionId") && !json.isNull("selectionId")) {
+            json.optString("selectionId").trim().takeIf {
+                it.isNotEmpty() && selectionIdPattern.matches(it)
+            } ?: return null
+        } else {
+            null
+        }
+        return ValuePilotNextHtmlNativeSearchRequest(query, selectionId)
     }
 
     fun parseNativeSearchLoadMoreMessage(rawMessage: String?): ValuePilotNextHtmlNativeSearchLoadMoreRequest? {

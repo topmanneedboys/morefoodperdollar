@@ -185,6 +185,10 @@ internal class ArgentinaLiveSearchSurfaceHost(
         coordinator.submit(rawQuery, area.context())
     }
 
+    fun submit(rawQuery: String, selectionId: String?) {
+        coordinator.submit(rawQuery, area.context(), selectionId)
+    }
+
     fun loadMore() {
         coordinator.loadMore()
     }

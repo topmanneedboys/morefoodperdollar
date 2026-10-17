@@ -626,10 +626,10 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
         searchHost?.queryChanged(rawQuery)
     }
 
-    fun submitSearch(rawQuery: String = uiState.query) {
+    fun submitSearch(rawQuery: String = uiState.query, selectionId: String? = null) {
         if (!initialized || cleared) return
         uiState = uiState.copy(query = rawQuery, actionNotice = null)
-        searchHost?.submit(rawQuery)
+        searchHost?.submit(rawQuery, selectionId)
     }
 
     /**

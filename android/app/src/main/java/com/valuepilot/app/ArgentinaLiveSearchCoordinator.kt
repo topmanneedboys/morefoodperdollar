@@ -126,6 +126,7 @@ internal class ArgentinaLiveSearchCoordinator(
     private var closed = false
     private var currentCancellation: ArgentinaRequestCancellation? = null
     private var currentContext: ArgentinaSearchContext? = null
+    private var currentSelectionId: String? = null
     private var pinnedRelease: ArgentinaBackendContract.ExpectedRelease? = null
     private var currentState: ArgentinaLiveSearchState = ArgentinaLiveSearchState.Idle(0L)
 
@@ -134,7 +135,8 @@ internal class ArgentinaLiveSearchCoordinator(
     /** Submit exactly one user-triggered query generation. */
     fun submit(
         rawQuery: String,
-        context: ArgentinaSearchContext?
+        context: ArgentinaSearchContext?,
+        selectionId: String? = null
     ): Long {
         val query = rawQuery.trim()
         var task: (() -> Unit)? = null
@@ -144,6 +146,7 @@ internal class ArgentinaLiveSearchCoordinator(
             if (closed) return generation
             cancelCurrentLocked()
             currentContext = context
+            currentSelectionId = selectionId
             generation = nextGenerationLocked()
             val currentGeneration = generation
             scheduledGeneration = currentGeneration
@@ -165,7 +168,7 @@ internal class ArgentinaLiveSearchCoordinator(
                     else -> {
                         val cancellation = ArgentinaRequestCancellation()
                         currentCancellation = cancellation
-                        task = { performSearch(currentGeneration, query, context, cancellation) }
+                        task = { performSearch(currentGeneration, query, context, cancellation, selectionId = selectionId) }
                         ArgentinaLiveSearchState.Loading(currentGeneration, query)
                     }
                 }
@@ -201,6 +204,7 @@ internal class ArgentinaLiveSearchCoordinator(
             val presentation = result.second
             val nextPage = presentation.nextPage ?: return generation
             val context = currentContext ?: return generation
+            val selectionId = currentSelectionId
             cancelCurrentLocked()
             generation = nextGenerationLocked()
             scheduledGeneration = generation
@@ -213,7 +217,8 @@ internal class ArgentinaLiveSearchCoordinator(
                     context = context,
                     cancellation = cancellation,
                     page = nextPage,
-                    previousPresentation = presentation
+                    previousPresentation = presentation,
+                    selectionId = selectionId
                 )
             }
             immediate = ArgentinaLiveSearchState.Loading(
@@ -245,6 +250,7 @@ internal class ArgentinaLiveSearchCoordinator(
             if (closed) return generation
             cancelCurrentLocked()
             currentContext = null
+            currentSelectionId = null
             generation = nextGenerationLocked()
             next =
                 if (query.length > ArgentinaBackendContract.MAX_QUERY_CHARS) {
@@ -269,6 +275,7 @@ internal class ArgentinaLiveSearchCoordinator(
             if (closed) return generation
             cancelCurrentLocked()
             currentContext = null
+            currentSelectionId = null
             pinnedRelease = null
             generation = nextGenerationLocked()
             next = ArgentinaLiveSearchState.Idle(generation)
@@ -286,6 +293,7 @@ internal class ArgentinaLiveSearchCoordinator(
                 closed = true
                 cancelCurrentLocked()
                 currentContext = null
+                currentSelectionId = null
                 pinnedRelease = null
                 generation = nextGenerationLocked()
                 currentState = ArgentinaLiveSearchState.Idle(generation)
@@ -300,7 +308,8 @@ internal class ArgentinaLiveSearchCoordinator(
         context: ArgentinaSearchContext,
         cancellation: ArgentinaRequestCancellation,
         page: Int = 0,
-        previousPresentation: PracticalShoppingSearchIdentityPresentation? = null
+        previousPresentation: PracticalShoppingSearchIdentityPresentation? = null,
+        selectionId: String? = null
     ) {
         try {
             val release = pinRelease(requestGeneration, cancellation)
@@ -316,7 +325,8 @@ internal class ArgentinaLiveSearchCoordinator(
                     longitude = context.longitude,
                     radiusKm = context.radiusKm,
                     query = query,
-                    page = page
+                    page = page,
+                    selectionId = selectionId
                 )
             val result =
                 ArgentinaBackendConsumerBridge(transport, expectedRelease)

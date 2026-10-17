@@ -32,6 +32,7 @@ SCHEMA_VERSION = "valuepilot-product-identity-lexicon-v1"
 POLICY_VERSION = "valuepilot-product-identity-policy-v1"
 MAX_NAME_LENGTH = 512
 MAX_ALIAS_LENGTH = 96
+MAX_CLARIFICATION_CHOICES = 30
 
 
 @dataclass(frozen=True)
@@ -1009,7 +1010,7 @@ def build_family_clarification(
     if len(forms) < 2:
         return None
     choices = []
-    for form in forms[:6]:
+    for form in forms[:MAX_CLARIFICATION_CHOICES]:
         copy = _FORM_PRESENTATION[selected_rule.key][form]
         choices.append(
             {
@@ -1112,9 +1113,25 @@ def family_query_form(query: str) -> tuple[str, str] | None:
     return selected_rule.key, observed[0]
 
 
+def family_selection_form(query: str, selection_id: str | None) -> tuple[str, str] | None:
+    """Resolve a stable clarification predicate for the requested family."""
+
+    if not isinstance(selection_id, str) or not selection_id.strip():
+        return None
+    parts = selection_id.strip().split(":")
+    if len(parts) != 2 or not all(parts):
+        return None
+    selected_rule = _select_family_rule(" ".join(str(query or "").split()))
+    if selected_rule is None or selected_rule.key != parts[0] or parts[1] not in selected_rule.forms:
+        return None
+    return selected_rule.key, parts[1]
+
+
 def filter_family_candidates(
     query: str,
     candidates: Iterable[Mapping[str, Any]],
+    *,
+    selection_id: str | None = None,
 ) -> tuple[Mapping[str, Any], ...]:
     """Keep candidates matching an explicit observed family form.
 
@@ -1127,7 +1144,7 @@ def filter_family_candidates(
     values = tuple(candidate for candidate in candidates if isinstance(candidate, Mapping))
     normalized_query = " ".join(str(query or "").split())
     selected_rule = _select_family_rule(normalized_query)
-    context = family_query_form(normalized_query)
+    context = family_selection_form(normalized_query, selection_id) if selection_id is not None else family_query_form(normalized_query)
     if context is None:
         # Bare reviewed-family queries should show the direct family products
         # first.  Derived rows (rice bars, lychee soap, carrot lotion, toy
@@ -1453,5 +1470,6 @@ __all__ = [
     "derive_identity_record",
     "family_query_key",
     "family_query_form",
+    "family_selection_form",
     "filter_family_candidates",
 ]

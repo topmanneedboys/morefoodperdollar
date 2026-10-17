@@ -12,6 +12,7 @@ from tools.product_taxonomy import (
     build_taxonomy_index,
     classify_name,
     filter_taxonomy_candidates,
+    taxonomy_selection_form,
 )
 
 
@@ -159,6 +160,9 @@ class ProductTaxonomyTests(unittest.TestCase):
         self.assertEqual(value["choices"][0]["id"], "egg:whole_egg")
         filtered = filter_taxonomy_candidates("huevos liquid", candidates)
         self.assertEqual([item["productEvidenceKey"] for item in filtered], ["egg-liquid"])
+        self.assertEqual(taxonomy_selection_form("huevos", "egg:liquid"), ("egg", "liquid"))
+        selected = filter_taxonomy_candidates("huevos", candidates, selection_id="egg:liquid")
+        self.assertEqual([item["productEvidenceKey"] for item in selected], ["egg-liquid"])
 
     def test_generic_clarification_is_absent_for_one_observed_form(self) -> None:
         value = build_taxonomy_clarification(

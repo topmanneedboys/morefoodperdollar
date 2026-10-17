@@ -609,6 +609,46 @@ class SearchPackM11Tests(unittest.TestCase):
         self.assertEqual([item["productEvidenceKey"] for item in eggs["matches"]], ["egg-shell"])
         self.assertIsNotNone(eggs["clarification"])
 
+    def test_service_search_applies_stable_clarification_selection(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "name": name,
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["huevos"],
+            }
+            for index, (key, name) in enumerate((
+                ("egg-whole", "HUEVOS FRESCOS X12"),
+                ("egg-liquid", "HUEVOS LIQUIDOS 500 ML"),
+                ("egg-pasta", "FIDEOS AL HUEVO 500 G"),
+            ))
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        selected = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "huevos",
+            "selectionId": "egg:whole_egg",
+        })
+        self.assertEqual([item["productEvidenceKey"] for item in selected["matches"]], ["egg-whole"])
+        self.assertIsNone(selected["clarification"])
+
+        with self.assertRaises(BackendQueryError):
+            service.search({
+                "latitude": "-34",
+                "longitude": "-58",
+                "radiusKm": "5",
+                "query": "huevos",
+                "selectionId": "rice:grain",
+            })
+
     def test_service_search_exposes_generic_egg_clarification_and_filters_form(self) -> None:
         manager = _StubReleaseManager()
         reader = _StubReader()

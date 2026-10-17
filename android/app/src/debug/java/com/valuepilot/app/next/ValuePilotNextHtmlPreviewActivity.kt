@@ -70,6 +70,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
     }
     private var googleImagesLaunchInFlight = false
     private var nativeSearchQuery: String? = null
+    private var nativeSearchSelectionId: String? = null
     private var nativeSearchInitialGeneration = -1L
     private var nativeSearchDeadlineMillis = 0L
     private var nativeBasketPlanDeadlineMillis = 0L
@@ -267,6 +268,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         handler.removeCallbacks(nativeObservedPriceConfirmationPoll)
         handler.removeCallbacks(nativeStapleWatchPoll)
         nativeSearchQuery = null
+        nativeSearchSelectionId = null
         nativeObservedPricePrefillRequested = false
         if (::journey.isInitialized) {
             journey.onObservedPriceConfirmationRouteVisibilityChanged(false)
@@ -359,7 +361,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                     val nativeSearch = ValuePilotNextHtmlPreviewContract
                         .parseNativeSearchMessage(message.data)
                     if (nativeSearch != null) {
-                        startNativeSearch(nativeSearch.query)
+                        startNativeSearch(nativeSearch.query, nativeSearch.selectionId)
                         return
                     }
                     if (ValuePilotNextHtmlPreviewContract
@@ -544,15 +546,16 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         )
     }
 
-    private fun startNativeSearch(rawQuery: String) {
+    private fun startNativeSearch(rawQuery: String, selectionId: String? = null) {
         if (!::journey.isInitialized) return
         val query = normalizeNativeSearchQuery(rawQuery)
         handler.removeCallbacks(nativeSearchPoll)
         nativeSearchQuery = query
+        nativeSearchSelectionId = selectionId
         nativeSearchInitialGeneration = journey.uiState.search.generation
         nativeSearchDeadlineMillis = System.currentTimeMillis() + NATIVE_SEARCH_TIMEOUT_MS
         journey.queryChanged(query)
-        journey.submitSearch(query)
+        journey.submitSearch(query, selectionId)
         handler.post(nativeSearchPoll)
     }
 

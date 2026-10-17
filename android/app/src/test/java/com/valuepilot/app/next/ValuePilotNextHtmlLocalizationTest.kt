@@ -56,6 +56,8 @@ class ValuePilotNextHtmlLocalizationTest {
 
         assertTrue(source.contains("clarification.choices.map(choice=>"))
         assertTrue(source.contains("data-choice-id=\"\${safe(choiceId)}\""))
+        assertTrue(source.contains("state.nativeSelectionId=selectionId?String(selectionId):null"))
+        assertTrue(source.contains("if(state.nativeSelectionId)message.selectionId=state.nativeSelectionId"))
         assertFalse(source.contains("clarification.choices.slice(0,6)"))
     }
 

@@ -44,6 +44,7 @@ MAX_NAMES_PER_PROVIDER = 32
 MAX_IDENTITIES_PER_PROVIDER = 512
 MAX_MATCHED_TERMS = 12
 MAX_FORMS = 12
+MAX_CLARIFICATION_CHOICES = 30
 MAX_INDEX_RECORDS = 100_000
 MAX_INDEX_BYTES = 64 * 1024 * 1024
 
@@ -612,6 +613,21 @@ def _family_keys_for_query(query: str) -> tuple[str, ...]:
     return tuple(dict.fromkeys(keys))
 
 
+def taxonomy_selection_form(query: str, selection_id: str | None) -> tuple[str, str] | None:
+    """Resolve a stable taxonomy clarification predicate for one query."""
+
+    if not isinstance(selection_id, str) or not selection_id.strip():
+        return None
+    parts = selection_id.strip().split(":")
+    if len(parts) != 2 or not all(parts):
+        return None
+    family_keys = _family_keys_for_query(query)
+    form_keys = {rule.key for rule in FORM_RULES}
+    if len(family_keys) != 1 or family_keys[0] != parts[0] or parts[1] not in form_keys:
+        return None
+    return parts[0], parts[1]
+
+
 def _identity_for_candidate(candidate: Mapping[str, Any], index: int) -> dict[str, Any] | None:
     """Derive identity evidence for one bounded Search candidate."""
 
@@ -689,7 +705,7 @@ def build_taxonomy_clarification(
     if len(forms) < 2:
         return None
     choices = []
-    for form_key in forms[:6]:
+    for form_key in forms[:MAX_CLARIFICATION_CHOICES]:
         form = form_examples[form_key]
         choices.append({
             "id": f"{family_key}:{form_key}",
@@ -706,7 +722,12 @@ def build_taxonomy_clarification(
     }
 
 
-def filter_taxonomy_candidates(query: str, candidates: Iterable[Mapping[str, Any]]) -> tuple[Mapping[str, Any], ...]:
+def filter_taxonomy_candidates(
+    query: str,
+    candidates: Iterable[Mapping[str, Any]],
+    *,
+    selection_id: str | None = None,
+) -> tuple[Mapping[str, Any], ...]:
     """Apply an explicit observed-form refinement from a clarification choice."""
 
     values = tuple(candidate for candidate in candidates if isinstance(candidate, Mapping))
@@ -714,11 +735,12 @@ def filter_taxonomy_candidates(query: str, candidates: Iterable[Mapping[str, Any
     if len(family_keys) != 1:
         return values
     query_tokens = _tokens(query)
-    requested_forms = [
+    selected_context = taxonomy_selection_form(query, selection_id) if selection_id is not None else None
+    requested_forms = ([selected_context[1]] if selected_context is not None else [
         rule.key
         for rule in FORM_RULES
         if any(_contains_sequence(query_tokens, _tokens(term)) for term in rule.terms)
-    ]
+    ])
     if not requested_forms:
         return values
     filtered: list[Mapping[str, Any]] = []
@@ -1011,5 +1033,6 @@ __all__ = [
     "build_taxonomy_index",
     "build_taxonomy_clarification",
     "classify_name",
+    "taxonomy_selection_form",
     "filter_taxonomy_candidates",
 ]

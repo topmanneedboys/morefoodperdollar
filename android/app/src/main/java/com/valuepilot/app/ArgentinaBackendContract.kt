@@ -31,6 +31,7 @@ object ArgentinaBackendContract {
     const val MAX_QUERY_CHARS = 96
     const val SEARCH_PAGE_SIZE = 5
     const val MAX_SEARCH_PAGE = 5
+    const val MAX_SEARCH_CLARIFICATION_CHOICES = 30
     const val MAX_LINES = 10
     const val MAX_MATCHES = 32
     const val MAX_PRODUCT_CANDIDATES = 128
@@ -249,7 +250,7 @@ object ArgentinaBackendContract {
             require(family.matches(ID_PATTERN))
             require(message.isNotBlank())
             require(messageEn == null || messageEn.isNotBlank())
-            require(choices.size in 2..6)
+            require(choices.size in 2..MAX_SEARCH_CLARIFICATION_CHOICES)
             require(evidence == "OBSERVED_CATALOG_NAMES")
         }
     }
@@ -446,7 +447,8 @@ object ArgentinaBackendContract {
         val longitude: String,
         val radiusKm: String,
         val query: String,
-        val page: Int = 0
+        val page: Int = 0,
+        val selectionId: String? = null
     ) {
         init {
             validateCoordinate(latitude, "latitude", -90, 90)
@@ -454,6 +456,7 @@ object ArgentinaBackendContract {
             validateDecimal(radiusKm, "radiusKm", nonNegative = true)
             require(query.trim().isNotEmpty() && query.length <= MAX_QUERY_CHARS)
             require(page in 0..MAX_SEARCH_PAGE)
+            require(selectionId == null || (selectionId.length <= 160 && ID_PATTERN.matches(selectionId)))
         }
     }
 
@@ -810,7 +813,7 @@ object ArgentinaBackendContract {
         val message = requiredText(value, "message", 512)
         val messageEn = optionalString(value, "messageEn", 512)
         val choicesArray = requiredArray(value, "choices")
-        boundedArray(choicesArray, 6, "clarification choices")
+        boundedArray(choicesArray, MAX_SEARCH_CLARIFICATION_CHOICES, "clarification choices")
         val choices = (0 until choicesArray.length()).map { index ->
             val choice = choicesArray.get(index) as? JSONObject ?: invalid("clarification choice must be an object")
             SearchClarificationChoice(
