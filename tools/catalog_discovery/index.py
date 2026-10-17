@@ -1505,6 +1505,15 @@ class DiscoveryIndex:
                     )
                 if remaining_tokens:
                     display_candidates &= self._literal_keys(remaining_tokens)
+            elif request.selections:
+                # A broad department query (for example ``baby`` or
+                # ``bebida``) can legitimately open a type facet even though
+                # its resolved predicate is not itself a type.  Once the
+                # shopper selects an accepted predicate, the candidate set
+                # already contains the strict selection intersection. Keep
+                # that set visible instead of clearing the table merely
+                # because the parent predicate is a department.
+                display_candidates = set(candidates)
             else:
                 display_candidates = set()
         # Broad type predicates include literal ``MENTIONS`` postings so a

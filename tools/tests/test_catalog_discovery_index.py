@@ -128,6 +128,23 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
                 self.assertEqual(len(second["clarification"]["choices"]), 1)
                 self.assertIsNone(second["clarification"]["nextCursor"])
 
+    def test_department_facet_selection_keeps_the_strict_child_results(self) -> None:
+        rows = [
+            _row(1, "PANAL BEBE MARCA X 10 UN", family="diaper", form="unspecified"),
+            _row(2, "ALIMENTO PERRO MARCA X 2 KG", family="dog_food", form="unspecified"),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._build(directory, rows)
+            with DiscoveryIndex(path) as index:
+                broad = index.query(DiscoveryQuery("baby", language="en", page_size=10)).to_dict()
+                self.assertEqual(broad["status"], "NEEDS_CLARIFICATION")
+                diaper = index.query(
+                    DiscoveryQuery("baby", language="en", selections=("type:diaper",), page_size=10)
+                ).to_dict()
+                self.assertEqual(diaper["status"], "READY")
+                self.assertEqual(diaper["total"]["productCount"], 1)
+                self.assertEqual([item["displayName"] for item in diaper["matches"]], ["PANAL BEBE MARCA X 10 UN"])
+
     def test_bilingual_aliases_resolve_to_the_same_predicate_set(self) -> None:
         rows = [_row(1, "ARROZ LARGO MARCA X 1 KG"), _row(2, "RICE LONG GRAIN BRAND X 1 KG")]
         with tempfile.TemporaryDirectory() as directory:
