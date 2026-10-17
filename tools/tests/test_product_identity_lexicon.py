@@ -454,6 +454,46 @@ class ProductIdentityLexiconTests(unittest.TestCase):
             with self.subTest(query=query):
                 self.assertEqual(family_query_key(query), expected)
 
+    def test_v25_cleaning_tool_families_keep_direct_products_and_exclude_observed_context(self) -> None:
+        direct_cases = (
+            ("p:broom", "ESCOBILLON 30CM", "broom"),
+            ("p:escoba", "ESCOBA MULTIUSO VIRULANA 1 U", "broom"),
+            ("p:mop", "MOPA MICROFIBRA VILEDA X1", "mop"),
+            ("p:duster", "PLUMERO MICROFIBRA", "duster"),
+        )
+        for key, name, family in direct_cases:
+            with self.subTest(name=name):
+                match = next(
+                    item for item in derive_identity_record(_row(key, name))["familyCandidates"]
+                    if item["family"] == family
+                )
+                self.assertEqual(match["role"], "DIRECT")
+
+        for key, name, family in (
+            ("p:broom-accessory", "KIT GANCHOS ESCOBA FLOW BEIGE", "broom"),
+            ("p:duster-context", "GUANTE NOVICA PLUMERO DE MICROFIBRA", "duster"),
+        ):
+            with self.subTest(name=name):
+                match = next(
+                    item for item in derive_identity_record(_row(key, name))["familyCandidates"]
+                    if item["family"] == family
+                )
+                self.assertEqual(match["role"], "DERIVED")
+
+        for query, expected in (
+            ("escoba", "broom"),
+            ("escobillon", "broom"),
+            ("broom", "broom"),
+            ("floor broom", "broom"),
+            ("mopa", "mop"),
+            ("mop", "mop"),
+            ("plumero", "duster"),
+            ("duster", "duster"),
+            ("feather duster", "duster"),
+        ):
+            with self.subTest(query=query):
+                self.assertEqual(family_query_key(query), expected)
+
     def test_mango_family_is_available_for_observed_forms(self) -> None:
         value = derive_identity_record(_row("p:mango-cookie", "GALLETAS DE MANGO 200 G"))
         mango = next(item for item in value["familyCandidates"] if item["family"] == "mango")

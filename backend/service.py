@@ -73,6 +73,9 @@ _FAMILY_DISCOVERY_QUERIES = {
     "water_heater": "termotanque",
     "fan": "ventilador",
     "vacuum_cleaner": "aspiradora",
+    "broom": "escoba",
+    "mop": "mopa",
+    "duster": "plumero",
 }
 
 

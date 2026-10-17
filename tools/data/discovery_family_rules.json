@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "valuepilot-discovery-family-rules-v17",
+  "schemaVersion": "valuepilot-discovery-family-rules-v18",
   "families": {
     "wine": {"es":["vino"],"en":["wine"],"include":["vino","wine","malbec","cabernet","chardonnay","sauvignon","espumante","champagne","sidra","cider"],"exclude":["vinagre","vinagre de alcohol","salsa de vino"],"forms":{"red":{"es":["tinto","rosado"],"en":["red","rose"]},"white":{"es":["blanco"],"en":["white"]},"sparkling":{"es":["espumante","champagne"],"en":["sparkling","champagne"]}}},
     "beer": {"es":["cerveza"],"en":["beer"],"include":["cerveza","beer"],"forms":{"non_alcoholic":{"es":["sin alcohol"],"en":["non alcoholic"]}}},
@@ -89,6 +89,9 @@
     "water_heater": {"es":["termotanque"],"en":["water heater"],"include":["termotanque","water heater"]},
     "fan": {"es":["ventilador"],"en":["fan"],"include":["ventilador","fan"],"exclude":["lata fan","football fan","fut fan","perf suenos de fan"]},
     "vacuum_cleaner": {"es":["aspiradora"],"en":["vacuum cleaner","vacuum"],"include":["aspiradora","vacuum cleaner","vacuum"]},
+    "broom": {"es":["escoba","escobillon","escobillón"],"en":["broom","floor broom"],"include":["escoba","escobillon","escobillón","broom","floor broom"],"exclude":["kit ganchos escoba"]},
+    "mop": {"es":["mopa"],"en":["mop"],"include":["mopa","mop"]},
+    "duster": {"es":["plumero"],"en":["duster","feather duster"],"include":["plumero","duster","feather duster"],"exclude":["guante"]},
     "pan": {"es":["sarten","sartenes"],"en":["frying pan","skillet"],"include":["sarten","sartenes","frying pan","skillet"]},
     "pot": {"es":["olla","cacerola"],"en":["pot","casserole"],"include":["olla","cacerola","pot","casserole"]},
     "lamp": {"es":["lampara","lámpara"],"en":["lamp"],"include":["lampara","lámpara","lamp"]},

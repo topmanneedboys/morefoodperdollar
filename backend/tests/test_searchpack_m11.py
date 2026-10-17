@@ -948,6 +948,34 @@ class SearchPackM11Tests(unittest.TestCase):
         self.assertEqual([item["productEvidenceKey"] for item in response["matches"]], ["vacuum-direct"])
         self.assertIsNone(response["clarification"])
 
+    def test_service_search_routes_cleaning_tool_family_to_canonical_term(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": "broom-direct",
+                "name": "ESCOBILLON 30CM",
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100,
+                "matchedTokens": ["escobillon"],
+                "qualifiedOffers": [],
+            }
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        response = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "floor broom",
+        })
+
+        self.assertEqual(reader.discovery_calls[0][0], "escoba")
+        self.assertEqual([item["productEvidenceKey"] for item in response["matches"]], ["broom-direct"])
+        self.assertIsNone(response["clarification"])
+
     def test_service_search_exposes_new_food_family_clarification_and_filters_form(self) -> None:
         manager = _StubReleaseManager()
         reader = _StubReader()

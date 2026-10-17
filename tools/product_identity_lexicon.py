@@ -739,6 +739,7 @@ _DIRECT_QUERY_FAMILIES = frozenset({
     "wafer", "chewing_gum", "raticide", "facial_cream", "bowl",
     "coffee_maker", "air_fryer", "toaster", "sandwich_maker", "juicer",
     "blender", "microwave", "heater", "water_heater", "fan", "vacuum_cleaner",
+    "broom", "mop", "duster",
 })
 
 
