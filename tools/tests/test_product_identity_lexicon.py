@@ -674,19 +674,36 @@ class ProductIdentityLexiconTests(unittest.TestCase):
 
     def test_abbreviated_prepared_names_are_derived_and_reachable(self) -> None:
         cases = (
-            ("ARROZ C/LECHE TREGAR 180 G", "rice", "dessert"),
-            ("ARITOS DE ARROZ DOS HERMANOS 80 G", "rice", "dessert"),
-            ("FID LUCCHETTI TIRAB HUEVO 500 GR", "egg", "pasta"),
+            ("ARROZ C/LECHE TREGAR 180 G", "rice", "dessert", "DERIVED"),
+            ("ARROZ C/LECH C/DDL TREG 180 G", "rice", "dessert", "DERIVED"),
+            ("ARROZ C/MARISCOS MENU BOX CJA 250 GRM", "rice", "prepared", "DERIVED"),
+            ("ARROZ DEL AMIGO P/PERROS 5KG", "rice", "pet_food", "DERIVED"),
+            ("ARROZ PARA RISOTTO X KG", "rice", "grain", "DIRECT"),
+            ("ARITOS DE ARROZ DOS HERMANOS 80 G", "rice", "dessert", "DERIVED"),
+            ("FID LUCCHETTI TIRAB HUEVO 500 GR", "egg", "pasta", "DERIVED"),
         )
-        for name, family, expected_form in cases:
+        for name, family, expected_form, expected_role in cases:
             with self.subTest(name=name):
                 candidate = next(
                     item
                     for item in derive_identity_record(_row(f"p:abbrev:{family}", name))["familyCandidates"]
                     if item["family"] == family
                 )
-                self.assertEqual(candidate["role"], "DERIVED")
+                self.assertEqual(candidate["role"], expected_role)
                 self.assertIn(expected_form, candidate["observedForms"])
+
+    def test_rice_context_aliases_keep_specific_queries_scoped(self) -> None:
+        cases = (
+            ("arroz c lech", ("rice", "dessert")),
+            ("arroz c l", ("rice", "dessert")),
+            ("arroz preparado", ("rice", "prepared")),
+            ("prepared rice", ("rice", "prepared")),
+            ("arroz para perros", ("rice", "pet_food")),
+            ("rice pudding", ("rice", "dessert")),
+        )
+        for query, expected in cases:
+            with self.subTest(query=query):
+                self.assertEqual(family_query_form(query), expected)
 
     def test_carrot_clarification_exposes_observed_forms(self) -> None:
         candidates = [

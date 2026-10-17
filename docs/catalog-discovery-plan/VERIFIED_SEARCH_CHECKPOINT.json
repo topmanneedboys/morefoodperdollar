@@ -1,0 +1,123 @@
+{
+  "reportVersion": "valuepilot-search-checkpoint-v1",
+  "generatedAt": "2026-10-17",
+  "status": "INCOMPLETE_RUNTIME_BLOCKED",
+  "policy": {
+    "noV41Started": true,
+    "noProductionActivation": true,
+    "playInstalledApplicationChanged": false,
+    "firebaseOrAppCheckBypassed": false
+  },
+  "source": {
+    "releaseId": "2026-10-08-identity-release",
+    "sha256": "85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6",
+    "providerProducts": 78865,
+    "identityRecords": 134337
+  },
+  "canonicalArtifact": {
+    "path": "local-provider-data/product-discovery-v2.sqlite",
+    "sha256": "a52e519c2b77d0922d543c924a85cfd01bc845a614eb9caf8b3751b4af91fb3e",
+    "activation": "canonical_local_sidecar_unchanged",
+    "rulesVersion": "valuepilot-catalog-discovery-rules-v33",
+    "schemaVersion": "valuepilot-catalog-discovery-v2",
+    "compilerCodeCommit": "7247327614322928088a21bb53eec64317b4774d",
+    "reportedCounts": {
+      "providerProducts": 78865,
+      "identityRecords": 134337,
+      "indexedTokens": 36423,
+      "concepts": 274,
+      "assertions": 194702
+    },
+    "coverage": {
+      "DEPARTMENT_RESOLVED": 85249,
+      "DERIVED_ONLY": 1611,
+      "IDENTITY_VISITED": 134337,
+      "NO_FORM": 125064,
+      "ROLE_RESOLVED": 70004,
+      "TYPE_OR_DEPARTMENT_RESOLVED": 91157,
+      "TYPE_RESOLVED": 68393,
+      "TYPE_UNRESOLVED": 65944
+    },
+    "bilingualRetrievalPath": {
+      "EN_AVAILABLE": 91295,
+      "ES_AVAILABLE": 111070,
+      "MISSING_EN": 43042,
+      "MISSING_ES": 23267
+    },
+    "newIntegrityAudit": {
+      "status": "FAIL",
+      "storedAssertionRows": 194332,
+      "reportedAssertionRows": 194702,
+      "failures": ["build assertion count differs from assertion table"]
+    }
+  },
+  "v40Candidate": {
+    "path": "local-provider-data/product-discovery-v2-v40-candidate.sqlite",
+    "sha256": "3c6cad38707263e4c330d80dc8fbdef9d81f2a0949cf9d471bbd9704683634ea",
+    "reportSha256": "6f948bc33040888550c921ceda573b7a7a1d69f71df6cbb01503fc4d12d8dc9",
+    "status": "REJECTED_STALE",
+    "rulesVersion": "valuepilot-catalog-discovery-rules-v34",
+    "reportedCounts": {
+      "providerProducts": 78865,
+      "identityRecords": 134337,
+      "indexedTokens": 36423,
+      "concepts": 276,
+      "assertions": 194919
+    },
+    "coverage": {
+      "DEPARTMENT_RESOLVED": 85249,
+      "DERIVED_ONLY": 1634,
+      "IDENTITY_VISITED": 134337,
+      "NO_FORM": 124945,
+      "ROLE_RESOLVED": 70004,
+      "TYPE_OR_DEPARTMENT_RESOLVED": 91152,
+      "TYPE_RESOLVED": 68370,
+      "TYPE_UNRESOLVED": 65967
+    },
+    "storedAssertionRows": 194481,
+    "integrityAudit": {
+      "status": "FAIL",
+      "failures": ["build assertion count differs from assertion table"]
+    },
+    "rejectionReason": "The compiler source changed during the build when the assertion-accounting fix was added. The candidate was not rebuilt under one frozen compiler state and is not qualified."
+  },
+  "searchIntegrationEvidence": {
+    "artifactTested": "local-provider-data/product-discovery-v2.sqlite",
+    "paginationPageSize": 7,
+    "representativeQueries": [
+      {"query": "rice", "status": "NEEDS_CLARIFICATION", "productCount": 115, "sourceIdentityCount": 243, "rowsAcrossPages": 243, "uniqueIdentityKeys": 243, "sorted": true, "choices": ["form:rice:dessert", "form:rice:grain", "form:rice:flour"]},
+      {"query": "arroz", "status": "NEEDS_CLARIFICATION", "productCount": 115, "sourceIdentityCount": 243, "rowsAcrossPages": 243, "uniqueIdentityKeys": 243, "sorted": true, "choices": ["form:rice:dessert", "form:rice:grain", "form:rice:flour"]},
+      {"query": "eggs", "status": "NEEDS_CLARIFICATION", "productCount": 204, "sourceIdentityCount": 269, "rowsAcrossPages": 269, "uniqueIdentityKeys": 269, "sorted": true, "choices": ["form:egg:whole_egg", "form:egg:pasta", "form:egg:toy", "form:egg:chocolate", "form:egg:powder", "form:egg:drink", "form:egg:liquid"]},
+      {"query": "carrot", "status": "NEEDS_CLARIFICATION", "productCount": 6, "sourceIdentityCount": 8, "rowsAcrossPages": 8, "uniqueIdentityKeys": 8, "sorted": true, "choices": ["form:carrot:vegetable", "form:carrot:drink", "form:carrot:cosmetics", "form:carrot:dessert"]},
+      {"query": "strawberry", "status": "NEEDS_CLARIFICATION", "productCount": 10, "sourceIdentityCount": 16, "rowsAcrossPages": 16, "uniqueIdentityKeys": 16, "sorted": true, "choices": ["form:strawberry:dessert", "form:strawberry:dairy", "form:strawberry:drink", "form:strawberry:fresh", "form:strawberry:cosmetics"]}
+    ],
+    "strictSelectionChecks": [
+      {"query": "rice", "selection": "form:rice:grain", "status": "READY", "productCount": 115, "sourceIdentityCount": 243, "rows": 243, "uniqueIdentityKeys": 243},
+      {"query": "rice", "selection": "form:rice:dessert", "status": "READY", "productCount": 213, "sourceIdentityCount": 398, "rows": 398, "uniqueIdentityKeys": 398},
+      {"query": "eggs", "selection": "form:egg:whole_egg", "status": "READY", "productCount": 204, "sourceIdentityCount": 269, "rows": 269, "uniqueIdentityKeys": 269},
+      {"query": "carrot", "selection": "form:carrot:vegetable", "status": "READY", "productCount": 6, "sourceIdentityCount": 8, "rows": 8, "uniqueIdentityKeys": 8},
+      {"query": "strawberry", "selection": "form:strawberry:fresh", "status": "READY", "productCount": 10, "sourceIdentityCount": 16, "rows": 16, "uniqueIdentityKeys": 16}
+    ]
+  },
+  "tests": {
+    "focusedLexiconAndIndex": {"status": "PASS", "passed": 74},
+    "tools": {"status": "PASS", "passed": 427},
+    "backend": {"status": "PASS", "passed": 145},
+    "android": {"status": "PASS", "tasks": [":shared-core:test", ":app:testDebugUnitTest"], "result": "BUILD SUCCESSFUL"},
+    "structuralIntegrity": {"status": "FAIL", "failureCount": 1}
+  },
+  "device": {
+    "adbDevices": [],
+    "status": "BLOCKED_NO_MOTOROLA_EDGE_2025",
+    "apkPath": "android/app/build/outputs/apk/debug/app-debug.apk",
+    "apkSha256": "734F052227C7AEC8A6C412B395B44EA286017CC8291CDC8773FC7515E88C1B50",
+    "screenshots": "NOT_AVAILABLE_WITHOUT_CONNECTED_DEVICE"
+  },
+  "remainingKnownIssues": [
+    "Canonical and v40 artifacts have a build metadata assertion count mismatch; repair requires one future frozen rebuild, which was deliberately not started in this checkpoint.",
+    "65,944 canonical identities remain TYPE_UNRESOLVED and 43,042 lack an English retrieval-path label; these are coverage measurements, not proof of correct semantics.",
+    "Firebase/App Check live authorization was not bypassed or reconfigured; remote live search remains separately gated.",
+    "Motorola Edge 2025 runtime, screenshots, Google Images return-state testing and live offer/price behavior remain unverified because adb has no connected device.",
+    "No held-out 1,000-provider-group semantic evaluation or full 100k/250k compiler run is claimed by this checkpoint."
+  ]
+}

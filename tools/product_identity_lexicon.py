@@ -30,7 +30,7 @@ from tools.consumer_input_intelligence import normalize_text
 
 
 SCHEMA_VERSION = "valuepilot-product-identity-lexicon-v1"
-POLICY_VERSION = "valuepilot-product-identity-policy-v2"
+POLICY_VERSION = "valuepilot-product-identity-policy-v3"
 MAX_NAME_LENGTH = 512
 MAX_ALIAS_LENGTH = 96
 MAX_CLARIFICATION_CHOICES = 30
@@ -95,6 +95,37 @@ FAMILY_RULES: tuple[FamilyRule, ...] = (
             ("obleas", "de", "arroz"),
             ("tortita", "de", "arroz"),
             ("alfajor", "de", "arroz"),
+            ("arroz", "c", "lech"),
+            ("arroz", "c", "ddl"),
+            ("arroz", "c", "dulce"),
+            ("arroz", "c", "mariscos"),
+            ("arroz", "c", "pollo"),
+            ("arroz", "c", "verduras"),
+            ("arroz", "con", "mariscos"),
+            ("arroz", "con", "pollo"),
+            ("arroz", "con", "verduras"),
+            ("arroz", "con", "remolacha"),
+            ("arroz", "box"),
+            ("menu", "box"),
+            ("arroz", "listo"),
+            ("arroz", "prep"),
+            ("arroz", "premezcla"),
+            ("croqueta", "de", "arroz"),
+            ("croquetas", "de", "arroz"),
+            ("paella", "de", "mariscos"),
+            ("fideo", "de", "arroz"),
+            ("fideos", "de", "arroz"),
+            ("pasta", "de", "arroz"),
+            ("aperit",),
+            ("cond",),
+            ("aderezo",),
+            ("salsa",),
+            ("arroz", "del", "amigo", "p", "perros"),
+            ("arroz", "p", "perros"),
+            ("arroz", "p", "gatos"),
+            ("arroz", "para", "perros"),
+            ("arroz", "para", "gatos"),
+            ("alimento", "de", "arroz"),
             ("galleta",), ("galletita",), ("galletas",), ("galletitas",), ("harina",),
             ("aderezo",), ("sazon",), ("condimento",), ("albondiga",), ("albondigas",),
             ("ensalada",), ("sopa",), ("caldo",), ("relleno",), ("alimento",),
@@ -105,9 +136,11 @@ FAMILY_RULES: tuple[FamilyRule, ...] = (
             ("rice", "drink"),
         ),
         forms={
-            "grain": (("grano", "granos", "largo", "blanco", "integral", "parboil", "parboiled"), ("grain", "grains", "long", "white", "brown", "parboil", "parboiled")),
+            "grain": (("grano", "granos", "largo", "blanco", "integral", "parboil", "parboiled", "risotto", "sushi", "arborio", "carnaroli", "basmati", "paella", "corto"), ("grain", "grains", "long", "white", "brown", "parboil", "parboiled", "risotto", "sushi", "arborio", "carnaroli", "basmati", "paella", "short")),
             "flour": (("harina",), ("flour",)),
-            "drink": (("bebida", "jugo"), ("drink", "juice")),
+            "drink": (("bebida", "jugo", "aperit", "aperitivo", "licor"), ("drink", "juice", "aperitif", "liqueur")),
+            "prepared": (("cocido", "cocida", "preparado", "preparada", "listo", "lista", "mariscos", "pollo", "verduras", "vegetal", "menu", "box", "curry", "croqueta", "croquetas", "paella", "premezcla", "cond", "aderezo", "salsa"), ("prepared", "ready", "meal", "seafood", "chicken", "vegetable", "menu", "box", "curry", "croquette", "sauce")),
+            "pet_food": (("perros", "perro", "gatos", "gato", "mascota", "mascotas", "alimento"), ("dog", "dogs", "cat", "cats", "pet", "pets", "pet food")),
             "dessert": (("postre", "pudin", "pudding", "budin", "galleta", "galletitas", "galletita", "galletas", "torta", "barra", "alfajor", "dulce", "inflado", "cereal", "snack", "aritos", "tostada", "tostadas", "oblea", "obleas", "tortita"), ("dessert", "pudding", "cake", "cracker", "snack", "wafer", "toast")),
         },
     ),
@@ -559,6 +592,8 @@ _FORM_PRESENTATION: Mapping[str, Mapping[str, Mapping[str, str]]] = {
             "labelEs": "Arroz en grano",
             "labelEn": "Rice grains",
             "query": "arroz largo",
+            "aliasesEs": "arroz para risotto|arroz para sushi|arroz arborio|arroz carnaroli|arroz basmati",
+            "aliasesEn": "rice for risotto|sushi rice|arborio rice|carnaroli rice|basmati rice",
         },
         "flour": {
             "labelEs": "Harina de arroz",
@@ -574,8 +609,22 @@ _FORM_PRESENTATION: Mapping[str, Mapping[str, Mapping[str, str]]] = {
             "labelEs": "Dulces o galletas de arroz",
             "labelEn": "Rice sweets or cakes",
             "query": "arroz dulce",
-            "aliasesEs": "galleta de arroz|galletas de arroz|galletita de arroz|galletitas de arroz|alfajor de arroz",
-            "aliasesEn": "rice cake|rice cakes|rice cracker|rice crackers|rice cookie|rice cookies",
+            "aliasesEs": "galleta de arroz|galletas de arroz|galletita de arroz|galletitas de arroz|alfajor de arroz|arroz con leche|arroz c leche|arroz c l|arroz c lech",
+            "aliasesEn": "rice cake|rice cakes|rice cracker|rice crackers|rice cookie|rice cookies|rice pudding",
+        },
+        "prepared": {
+            "labelEs": "Arroz preparado o comida lista",
+            "labelEn": "Prepared rice or rice meal",
+            "query": "arroz preparado",
+            "aliasesEs": "arroz preparado|arroz listo|arroz con pollo|arroz con mariscos|arroz con verduras|arroz box|paella de arroz",
+            "aliasesEn": "prepared rice|rice meal|rice with chicken|rice with seafood|rice with vegetables|rice box",
+        },
+        "pet_food": {
+            "labelEs": "Alimento para mascotas con arroz",
+            "labelEn": "Pet food containing rice",
+            "query": "arroz para perros",
+            "aliasesEs": "arroz para perros|arroz para gatos|alimento con arroz",
+            "aliasesEn": "rice for dogs|rice for cats|pet food with rice",
         },
         "unspecified": {
             "labelEs": "Arroz (presentación no especificada)",
@@ -1128,6 +1177,9 @@ _FORM_CONTEXT_INCLUSIONS: Mapping[tuple[str, str], tuple[tuple[str, ...], ...]] 
         ("arroz", "con", "leche"),
         ("arroz", "c", "leche"),
         ("arroz", "c", "l"),
+        ("arroz", "c", "lech"),
+        ("arroz", "c", "ddl"),
+        ("arroz", "c", "dulce"),
     ),
 }
 
@@ -1184,13 +1236,19 @@ def family_query_form(query: str) -> tuple[str, str] | None:
     observed = [
         form
         for form, (spanish_terms, english_terms) in selected_rule.forms.items()
-        if _contains_any(
-            tokens,
-            tuple(
-                term
-                for term in (*spanish_terms, *english_terms)
-                if not set(_tokens(term)).intersection(generic_family_terms)
-            ),
+        if (
+            _contains_any(
+                tokens,
+                tuple(
+                    term
+                    for term in (*spanish_terms, *english_terms)
+                    if not set(_tokens(term)).intersection(generic_family_terms)
+                ),
+            )
+            or any(
+                _contains_sequence(tokens, phrase)
+                for phrase in _FORM_CONTEXT_INCLUSIONS.get((selected_rule.key, form), ())
+            )
         )
     ]
     if len(observed) != 1:

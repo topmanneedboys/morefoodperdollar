@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tools.audit_catalog_discovery_integrity import audit_catalog_discovery_index
 from tools.catalog_discovery import DiscoveryIndex, DiscoveryQuery, build_discovery_index
 
 
@@ -104,6 +105,18 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
                 self.assertTrue(result["pagination"]["hasMore"])
                 self.assertEqual(len(result["matches"]), 20)
 
+    def test_structural_integrity_audit_checks_a_built_sidecar(self) -> None:
+        rows = [
+            _row(1, "ARROZ LARGO MARCA X 1 KG"),
+            _row(2, "GALLETAS DE ARROZ MARCA X 100 G", form="dessert"),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._build(directory, rows)
+            result = audit_catalog_discovery_index(path)
+            self.assertEqual(result["status"], "PASS")
+            self.assertEqual(result["failureCount"], 0)
+            self.assertGreater(result["predicateCount"], 0)
+
     def test_final_facet_page_with_one_choice_remains_reachable(self) -> None:
         rows = [
             _row(1, "ARROZ LARGO MARCA X 1 KG", form="grain"),
@@ -176,6 +189,32 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
                 self.assertEqual(spanish["total"]["productCount"], 1)
                 self.assertEqual([item["displayName"] for item in english["matches"]], [rows[0]["name"]])
                 self.assertEqual([item["displayName"] for item in spanish["matches"]], [rows[0]["name"]])
+
+    def test_rice_context_aliases_keep_prepared_pet_and_grain_queries_scoped(self) -> None:
+        rows = [
+            _row(1, "ARROZ C/LECH C/DDL TREG 180 G"),
+            _row(2, "ARROZ C/MARISCOS MENU BOX CJA 250 GRM"),
+            _row(3, "ARROZ DEL AMIGO P/PERROS 5KG"),
+            _row(4, "ARROZ PARA RISOTTO X KG"),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._build(directory, rows)
+            with DiscoveryIndex(path) as index:
+                checks = (
+                    ("arroz c lech", "es", "form:rice:dessert", rows[0]["name"]),
+                    ("arroz preparado", "es", "form:rice:prepared", rows[1]["name"]),
+                    ("prepared rice", "en", "form:rice:prepared", rows[1]["name"]),
+                    ("arroz para perros", "es", "form:rice:pet_food", rows[2]["name"]),
+                    ("rice pudding", "en", "form:rice:dessert", rows[0]["name"]),
+                    ("arroz para risotto", "es", "form:rice:grain", rows[3]["name"]),
+                )
+                for query, language, predicate, expected_name in checks:
+                    with self.subTest(query=query):
+                        result = index.query(DiscoveryQuery(query, language=language, page_size=10)).to_dict()
+                        self.assertEqual(result["status"], "READY")
+                        self.assertEqual(result["resolvedPredicates"], [predicate])
+                        self.assertEqual(result["total"]["productCount"], 1)
+                        self.assertEqual([item["displayName"] for item in result["matches"]], [expected_name])
 
     def test_current_context_replaces_stale_derived_form_assertion(self) -> None:
         stale = _row(1, "SOPA CREMA DE ZANAHORIA SABORES DEL VAL 500 G", family="carrot", form="cosmetics")

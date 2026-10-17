@@ -35,7 +35,7 @@ from tools.product_taxonomy import DEPARTMENT_RULES, classify_name
 
 
 BUILD_SCHEMA_VERSION = "valuepilot-catalog-discovery-v2"
-RULES_VERSION = "valuepilot-catalog-discovery-rules-v33"
+RULES_VERSION = "valuepilot-catalog-discovery-rules-v34"
 MAX_QUERY_CHARS = 256
 MAX_PAGE_SIZE = 50
 MAX_FACET_PAGE_SIZE = 30
@@ -932,7 +932,7 @@ def _insert_identity(
     assertion_digest = hashlib.sha256("|".join(sorted(semantic_assertions)).encode()).hexdigest()
     connection.execute(
         "INSERT OR REPLACE INTO build_impact(identity_key, record_fingerprint, rule_dependencies, assertion_digest) VALUES (?, ?, ?, ?)",
-        (identity_key, fingerprint, json.dumps(["family-lexicon-v2", "family-form-v1", "department-rules-v1", _RELATION_RULES_VERSION], separators=(",", ":")), assertion_digest),
+        (identity_key, fingerprint, json.dumps(["family-lexicon-v3", "family-form-v1", "department-rules-v1", _RELATION_RULES_VERSION], separators=(",", ":")), assertion_digest),
     )
     return identity_key, provider_key, len(semantic_assertions), token_values
 
@@ -989,6 +989,7 @@ def build_discovery_index(
             assertion_count += assertions
             token_values.update(tokens)
         concept_count = int(connection.execute("SELECT COUNT(*) FROM concept").fetchone()[0])
+        assertion_count = int(connection.execute("SELECT COUNT(*) FROM assertion").fetchone()[0])
         connection.execute(
             "INSERT INTO build(schema_version, rules_version, release_id, source_sha256, created_at, provider_products, identity_records, indexed_tokens, concepts, assertions) VALUES (?, ?, ?, ?, datetime('now'), ?, ?, ?, ?, ?)",
             (BUILD_SCHEMA_VERSION, RULES_VERSION, release_id, actual_source_sha, len(provider_values), identity_count, len(token_values), concept_count, assertion_count),
