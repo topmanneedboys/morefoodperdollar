@@ -53,6 +53,53 @@ saved-data, release, and security paths remain unchanged.
 - Exact machine-readable evidence is recorded in
   `docs/catalog-discovery-plan/VERIFIED_SEARCH_CHECKPOINT.json`.
 
+## Corpus-wide verification checkpoint — 2026-10-17
+
+- `tools/verify_catalog_discovery.py` now independently walks the pinned
+  source and canonical sidecar. The report is
+  `docs/catalog-discovery-plan/FULL_CATALOG_VERIFICATION_REPORT.json` and was
+  generated from source SHA-256
+  `85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6` and
+  sidecar SHA-256
+  `a52e519c2b77d0922d543c924a85cfd01bc845a614eb9caf8b3751b4af91fb3e`.
+- Source accounting passed for all **134,337** identity rows and **78,865**
+  provider groups. Stable identity keys, provider IDs, names, brands,
+  normalized names, source fingerprints, name evidence, build-impact
+  fingerprints and group membership all matched; duplicate source keys and
+  extra sidecar identities were zero. The source contains 6,406 duplicate-name
+  groups covering 17,150 identities, and those identities remain distinct.
+- Literal reachability passed for **134,337/134,337** identities. The check
+  intersects every normalized name's tokens through the same `identity_token`
+  postings used by `DiscoveryIndex._literal_keys`; no name exceeded the query
+  length bound and no identity was unreachable.
+- Strict retrieval passed for all **259** materialized type, department and
+  form predicates in both available query languages. This covers 68,393
+  direct-type identities, 91,157 type-or-department identities, 85,249
+  department identities and 9,273 form identities, with complete keyset
+  pagination, deterministic normalized-name/identity-key sorting and exact
+  provider/identity totals.
+- Complete concept-query verification passed **371** bilingual materialized
+  queries, **417** facet pages, **2,106** clarification choices and **2,106**
+  strict choice checks. No duplicate choice IDs, stale/repeated facet cursors,
+  missing product pages, duplicate identity keys or advertised-count errors
+  were found.
+- Language evidence is reported separately: the sidecar has 91,295 complete
+  and 43,042 partial bilingual coverage rows; all 274 concepts have English
+  aliases and 273 have Spanish aliases. Source identity aliases are absent
+  for 112,043 identities in English and 56,360 in Spanish; that does not
+  invalidate the language-neutral literal path.
+- A deterministic **1,000-record** review queue was generated across every
+  department plus unresolved identities at
+  `local-provider-data/semantic-review-queue-v2.jsonl`. It is explicitly
+  `PENDING_HUMAN_REVIEW`; no classifier-generated labels were counted as
+  semantic accuracy. The independent semantic accuracy gate therefore remains
+  `NOT_ESTABLISHED` with zero reviewed cases.
+- The verifier took 1,215.722 seconds. The report remains `INCOMPLETE` for
+  two real reasons: the canonical build metadata still reports 194,702
+  assertions while the table stores 194,332, and an independent semantic
+  review ledger has not yet been supplied. These are separate from the passed
+  identity, literal, strict-selection and pagination gates.
+
 ## Latest verified continuation checkpoint — 2026-10-17 (v39 semantic context refresh)
 
 - Code checkpoint: `72473276` on `work/valuepilot-stage2-premium-shopping`.

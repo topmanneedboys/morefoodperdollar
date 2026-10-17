@@ -7,6 +7,7 @@ from pathlib import Path
 
 from tools.audit_catalog_discovery_integrity import audit_catalog_discovery_index
 from tools.catalog_discovery import DiscoveryIndex, DiscoveryQuery, build_discovery_index
+from tools.verify_catalog_discovery import verify_catalog_discovery
 
 
 def _row(number: int, name: str, *, family: str = "rice", form: str = "grain", provider: str | None = None) -> dict[str, object]:
@@ -116,6 +117,24 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
             self.assertEqual(result["status"], "PASS")
             self.assertEqual(result["failureCount"], 0)
             self.assertGreater(result["predicateCount"], 0)
+
+    def test_full_catalog_verifier_accounts_for_literal_and_strict_paths(self) -> None:
+        rows = [
+            _row(1, "ARROZ LARGO MARCA X 1 KG"),
+            _row(2, "ARROZ LARGO MARCA X 1 KG", provider="provider-002"),
+            _row(3, "GALLETAS DE ARROZ MARCA X 100 G", form="dessert"),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "identities.jsonl"
+            source.write_text("".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in rows), encoding="utf-8")
+            output = Path(directory) / "discovery.sqlite"
+            build_discovery_index(source, output, release_id="synthetic-verification-v1")
+            report = verify_catalog_discovery(output, source, review_queue_path=Path(directory) / "review.jsonl")
+            self.assertEqual(report["sourceAccounting"]["status"], "PASS")
+            self.assertEqual(report["identityReachability"]["identitiesLiteralUnreachable"], 0)
+            self.assertEqual(report["strictSelection"]["status"], "PASS")
+            self.assertEqual(report["pagination"]["status"], "PASS")
+            self.assertEqual(report["semanticAccuracy"]["status"], "NOT_ESTABLISHED")
 
     def test_final_facet_page_with_one_choice_remains_reachable(self) -> None:
         rows = [
