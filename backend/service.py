@@ -69,6 +69,10 @@ _FAMILY_DISCOVERY_QUERIES = {
     "juicer": "exprimidor",
     "blender": "licuadora",
     "microwave": "microondas",
+    "heater": "calefactor",
+    "water_heater": "termotanque",
+    "fan": "ventilador",
+    "vacuum_cleaner": "aspiradora",
 }
 
 

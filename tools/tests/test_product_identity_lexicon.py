@@ -412,6 +412,48 @@ class ProductIdentityLexiconTests(unittest.TestCase):
         self.assertEqual(family_query_form("alfajor chocolate"), ("alfajor", "chocolate"))
         self.assertEqual(family_query_form("pasta de mani"), ("peanut", "butter"))
 
+    def test_v24_household_appliances_keep_direct_products_and_bilingual_queries(self) -> None:
+        cases = (
+            ("p:heater", "CALEFACTOR INFRARROJO LILIANA 1200W", "heater"),
+            ("p:water-heater", "TERMOTANQUE ELECTRICO ESCORIAL 90L BLANCO", "water_heater"),
+            ("p:fan", "VENTILADOR DE PIE LILIANA 20 DIGITAL", "fan"),
+            ("p:vacuum", "ASPIRADORA ROBOT ELECTROLUX LASER ERB62", "vacuum_cleaner"),
+        )
+        for key, name, family in cases:
+            with self.subTest(name=name):
+                candidates = derive_identity_record(_row(key, name))["familyCandidates"]
+                match = next(item for item in candidates if item["family"] == family)
+                self.assertEqual(match["role"], "DIRECT")
+                self.assertEqual(match["observedForms"], ["unspecified"])
+
+        for name in (
+            "AFA LATA FAN",
+            "REXONA JAB FUT FAN 1",
+            "PERF.SUENOS DE FAN 10 X100ML",
+            "Deo Rexona Ap Aero Men Football Fan 89Gr",
+        ):
+            with self.subTest(name=name):
+                match = next(
+                    item for item in derive_identity_record(_row("p:fan-context", name))["familyCandidates"]
+                    if item["family"] == "fan"
+                )
+                self.assertEqual(match["role"], "DERIVED")
+
+        for query, expected in (
+            ("calefactor", "heater"),
+            ("heater", "heater"),
+            ("space heater", "heater"),
+            ("termotanque", "water_heater"),
+            ("water heater", "water_heater"),
+            ("ventilador", "fan"),
+            ("fan", "fan"),
+            ("aspiradora", "vacuum_cleaner"),
+            ("vacuum cleaner", "vacuum_cleaner"),
+            ("vacuum", "vacuum_cleaner"),
+        ):
+            with self.subTest(query=query):
+                self.assertEqual(family_query_key(query), expected)
+
     def test_mango_family_is_available_for_observed_forms(self) -> None:
         value = derive_identity_record(_row("p:mango-cookie", "GALLETAS DE MANGO 200 G"))
         mango = next(item for item in value["familyCandidates"] if item["family"] == "mango")
