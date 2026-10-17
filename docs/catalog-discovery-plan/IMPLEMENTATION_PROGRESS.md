@@ -6,7 +6,32 @@ This ledger records the additive discovery work. It is not a claim that the
 catalog has perfect semantic coverage. Existing `/v1` shopping, price, offer,
 saved-data, release, and security paths remain unchanged.
 
-## Latest verified continuation checkpoint — 2026-10-17
+## Latest verified continuation checkpoint — 2026-10-17 (HTML discovery integration)
+
+- Code checkpoint: `2d28644f` on `work/valuepilot-stage2-premium-shopping`.
+- The active debug HTML preview now uses the typed `/v2/search` discovery rail.
+  It sends the selected language and carries stable observed predicate IDs
+  through clarification and cursor requests, so a selected meaning is not
+  rewritten into an unqualified free-text search.
+- Production `MainActivity` remains on the existing `/v1/search` path. Android
+  authorization and App Check requirements remain enforced; this change does
+  not bypass credentials or security gates.
+- Local checks against the promoted real sidecar returned `rice`/`arroz` as
+  `NEEDS_CLARIFICATION` with 119 products, 247 source identities and 3 choices,
+  and `eggs` with 222 products, 288 source identities and 7 choices. These are
+  local route checks, not remote live authorization or phone-runtime evidence.
+- Full shared-core tests, debug unit tests, debug lint and debug APK assembly
+  passed. The verified debug APK is
+  `android/app/build/outputs/apk/debug/app-debug.apk`, SHA-256
+  `D626222EBA592DB6A52E2ECA5064BDDD321196EB8B4E8CA81493640801BDA971`, built
+  from `2d28644f`.
+- Full tools tests remain 418 passed; focused lexicon/index tests 65 passed;
+  backend tests 145 passed. Motorola runtime, remote live authorization,
+  full synthetic compiler scale evaluation and held-out semantic evaluation
+  remain pending. This is a recoverable development checkpoint, not a
+  completion claim.
+
+## Historical scalability checkpoint — 2026-10-17
 
 - Code checkpoint: `1ca32a12` on `work/valuepilot-stage2-premium-shopping`.
 - The query engine now prefers a specific reviewed type/form alias over a
@@ -46,7 +71,7 @@ saved-data, release, and security paths remain unchanged.
 
 - Branch: `work/valuepilot-stage2-premium-shopping`
 - Starting handoff checkpoint: `6ce81d0d`
-- Current verified checkpoint: code commit `1ca32a12` (documentation checkpoint follows the verification update).
+- Current verified checkpoint: code commit `2d28644f` (the preceding section records the latest integration checkpoint).
 - Discovery rules: `valuepilot-catalog-discovery-rules-v32`
 - Sidecar schema: `valuepilot-catalog-discovery-v2`
 - Additive HTTP contract: `valuepilot-discovery-http-v2`

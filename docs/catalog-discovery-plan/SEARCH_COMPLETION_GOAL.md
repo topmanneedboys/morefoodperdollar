@@ -79,6 +79,30 @@ authorized live-service evidence, and Motorola runtime screenshots remain open
 gates. The APK remains the previously verified client artifact because this
 checkpoint changes the Python discovery index only.
 
+## Continuation checkpoint (2026-10-17, debug HTML discovery integration)
+
+The active debug HTML preview now uses the typed `/v2/search` discovery rail at
+code checkpoint `2d28644f`. HTML language selection is carried into the
+Android coordinator, and stable observed predicate IDs continue through
+clarification and cursor requests. Production `MainActivity` remains on the
+existing `/v1/search` path. Android authorization and App Check requirements
+remain enforced; no credential or security gate was bypassed.
+
+Local checks against the promoted real sidecar returned `rice` and `arroz` as
+`NEEDS_CLARIFICATION` with 119 products, 247 source identities and 3 choices,
+and `eggs` with 222 products, 288 source identities and 7 choices. These are
+local backend/sidecar checks, not remote live authorization or Motorola runtime
+evidence.
+
+The full Android verification command passed:
+`.\gradlew.bat --no-daemon :shared-core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug`.
+The debug APK is
+`android/app/build/outputs/apk/debug/app-debug.apk`, SHA-256
+`D626222EBA592DB6A52E2ECA5064BDDD321196EB8B4E8CA81493640801BDA971`, built
+from `2d28644f`. Motorola runtime, remote live authorization, full synthetic
+compiler scale evaluation and held-out semantic evaluation remain open gates;
+this is a recoverable development checkpoint, not goal completion.
+
 ## Goal and authority
 
 Repository: C:/Users/iamatopstrongman/Documents/Codex/2026-10-08/valuepilot-next-complete-premium-ui-ux/work/valuepilot-10133-source-audit.
