@@ -507,6 +507,7 @@ internal fun ValuePilotNextApp(
                                         journey.submitSearch(refinedQuery)
                                     },
                                     onLoadMore = journey::loadMoreSearchResults,
+                                    onPreviousPage = journey::loadPreviousSearchResults,
                                     onAddToBasket = { match ->
                                         when (journey.addSearchMatch(match)) {
                                             AddPrivateIdentityResult.ADDED ->

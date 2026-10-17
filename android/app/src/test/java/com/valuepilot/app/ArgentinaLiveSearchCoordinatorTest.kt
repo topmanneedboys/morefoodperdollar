@@ -355,6 +355,65 @@ class ArgentinaLiveSearchCoordinatorTest {
     }
 
     @Test
+    fun discoveryPagesReachBeyondTenThousandRowsAndCanReturnWithoutAccumulating() {
+        val requestedPages = mutableListOf<Int>()
+        val transport = object : ArgentinaBackendTransport {
+            override fun execute(endpoint: String, requestBody: String?): ArgentinaBackendTransportResponse {
+                if (endpoint == ArgentinaBackendConsumerBridge.STATUS_ENDPOINT) {
+                    return ArgentinaBackendTransportResponse(200, statusJson())
+                }
+                val cursor = JSONObject(requestBody!!).optString("cursor", "")
+                val page = if (cursor.isEmpty() || cursor == "null") 0 else cursor.removePrefix("page-").toInt()
+                requestedPages += page
+                val body = JSONObject(discoveryV2ResponseJson())
+                val result = body.getJSONObject("result")
+                val template = result.getJSONArray("matches").getJSONObject(0)
+                result.put("matches", JSONArray().apply {
+                    repeat(50) { offset ->
+                        val id = page * 50 + offset
+                        put(JSONObject(template.toString()).put("identityKey", "ar-sepa-product:row:$id")
+                            .put("providerProductId", "row-$id").put("displayName", "Producto $id"))
+                    }
+                })
+                result.getJSONObject("total").put("productCount", 10_500).put("sourceIdentityCount", 10_500)
+                result.getJSONObject("pagination").put("hasMore", page < 209)
+                    .put("nextCursor", if (page < 209) "page-${page + 1}" else JSONObject.NULL)
+                return ArgentinaBackendTransportResponse(200, body.toString())
+            }
+        }
+        val executor = QueuedExecutor()
+        val coordinator = ArgentinaLiveSearchCoordinator(transport, executor, {}, discoveryMode = true)
+        coordinator.submit("rice", context, language = "en")
+        executor.runNext()
+        val seen = mutableSetOf<String>()
+        repeat(210) { page ->
+            val presentation = (coordinator.state() as ArgentinaLiveSearchState.Results).presentation
+            assertEquals(page, presentation.page)
+            assertEquals(50, presentation.matches.size)
+            assertEquals(if (page == 0) null else page - 1, presentation.previousPage)
+            presentation.matches.forEach { assertTrue(seen.add(it.identityKey)) }
+            if (page < 209) {
+                coordinator.loadMore()
+                executor.runNext()
+            }
+        }
+        assertEquals(10_500, seen.size)
+        assertFalse((coordinator.state() as ArgentinaLiveSearchState.Results).presentation.hasMore)
+        coordinator.loadPrevious()
+        executor.runNext()
+        assertEquals(208, (coordinator.state() as ArgentinaLiveSearchState.Results).presentation.page)
+        assertEquals("ar-sepa-product:row:10400", (coordinator.state() as ArgentinaLiveSearchState.Results).presentation.matches.first().identityKey)
+        coordinator.loadMore()
+        executor.runNext()
+        assertEquals(209, (coordinator.state() as ArgentinaLiveSearchState.Results).presentation.page)
+        coordinator.submit("rice", context, language = "es")
+        executor.runNext()
+        assertEquals(0, requestedPages.last())
+        assertEquals(null, (coordinator.state() as ArgentinaLiveSearchState.Results).presentation.previousPage)
+        coordinator.close()
+    }
+
+    @Test
     fun discoveryModeStillStopsBeforeV2WhenAndroidSearchIsUnauthorized() {
         val transport = InMemoryArgentinaBackendTransport(
             mapOf(

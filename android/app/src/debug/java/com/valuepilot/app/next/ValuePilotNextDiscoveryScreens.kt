@@ -281,6 +281,7 @@ internal fun ValuePilotSearchScreen(
     onSubmit: () -> Unit,
     onClarificationSelected: (String) -> Unit,
     onLoadMore: () -> Unit,
+    onPreviousPage: () -> Unit = {},
     onOpenMatch: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
     onAddToBasket: (PracticalShoppingSearchIdentityPresentation.Match) -> Unit,
     onOpenGoogleImages: (PracticalShoppingSearchIdentityPresentation.Match, String) -> Unit
@@ -439,7 +440,13 @@ internal fun ValuePilotSearchScreen(
                 item(key = "search-more-loading") {
                     LoadingRow(valuePilotNextText("Loading more identities", "Cargando más identidades"))
                 }
-            } else if (presentation?.hasMore == true && presentation.nextPage != null) {
+            }
+            if (state.mode != ArgentinaLiveSearchSurfaceMode.LOADING && presentation?.previousPage != null) {
+                item(key = "search-previous-page") {
+                    SecondaryActionButton(valuePilotNextText("Previous page", "Página anterior"), onPreviousPage)
+                }
+            }
+            if (state.mode != ArgentinaLiveSearchSurfaceMode.LOADING && presentation?.hasMore == true && presentation.nextPage != null) {
                 item(key = "search-load-more") {
                     SecondaryActionButton(valuePilotNextText("Show more results", "Ver más resultados"), onLoadMore)
                 }

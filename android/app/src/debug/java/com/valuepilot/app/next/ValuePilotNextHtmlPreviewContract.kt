@@ -21,6 +21,7 @@ internal data class ValuePilotNextHtmlNativeSearchRequest(
 )
 
 internal object ValuePilotNextHtmlNativeSearchLoadMoreRequest
+internal object ValuePilotNextHtmlNativeSearchPreviousRequest
 
 internal object ValuePilotNextHtmlNativeSearchFacetMoreRequest
 
@@ -264,6 +265,14 @@ internal object ValuePilotNextHtmlPreviewContract {
         } else {
             null
         }
+    }
+
+    fun parseNativeSearchPreviousMessage(rawMessage: String?): ValuePilotNextHtmlNativeSearchPreviousRequest? {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 256) return null
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null
+        return if (json.optString("type") == "PREVIOUS_VALUEPILOT_PAGE") {
+            ValuePilotNextHtmlNativeSearchPreviousRequest
+        } else null
     }
 
     /** Opens native Product Detail only for an identity from the current Search query. */

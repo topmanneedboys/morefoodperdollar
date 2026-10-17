@@ -21,6 +21,7 @@ internal data class PracticalShoppingSearchIdentityPresentation(
     val page: Int = 0,
     val hasMore: Boolean = false,
     val nextPage: Int? = null,
+    val previousPage: Int? = null,
     val limitReached: Boolean = false,
     val clarification: ArgentinaBackendContract.SearchClarification? = null
 ) {
@@ -65,6 +66,7 @@ internal data class PracticalShoppingSearchIdentityPresentation(
         require(notice.isNotBlank())
         require(page in 0..MAX_RENDERED_PAGE)
         require(nextPage == null || nextPage == page + 1)
+        require(previousPage == null || (page > 0 && previousPage == page - 1))
         require(!limitReached || hasMore)
         require(!hasMore || nextPage != null || limitReached)
     }

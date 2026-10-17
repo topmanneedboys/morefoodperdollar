@@ -672,6 +672,11 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
         searchHost?.loadMore()
     }
 
+    fun loadPreviousSearchResults() {
+        if (!initialized || cleared) return
+        searchHost?.loadPrevious()
+    }
+
     fun loadMoreSearchClarification() {
         if (!initialized || cleared) return
         searchHost?.loadMoreClarification()

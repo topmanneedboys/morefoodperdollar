@@ -5,11 +5,20 @@ import com.valuepilot.app.ArgentinaPrivateBasketRenderState
 import com.valuepilot.app.PracticalShoppingSearchIdentityPresentation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.json.JSONObject
 
 class ValuePilotNextHtmlPreviewContractTest {
+
+    @Test
+    fun previousPageBridgeAcceptsOnlyTheBoundedTypedAction() {
+        assertNotNull(ValuePilotNextHtmlPreviewContract.parseNativeSearchPreviousMessage("{\"type\":\"PREVIOUS_VALUEPILOT_PAGE\"}"))
+        assertNull(ValuePilotNextHtmlPreviewContract.parseNativeSearchPreviousMessage("{\"type\":\"LOAD_MORE_VALUEPILOT\"}"))
+        assertNull(ValuePilotNextHtmlPreviewContract.parseNativeSearchPreviousMessage("x".repeat(257)))
+        assertNull(ValuePilotNextHtmlPreviewContract.parseNativeSearchPreviousMessage("{"))
+    }
 
     @Test
     fun `accepts only the supplied product identity and canonical query`() {

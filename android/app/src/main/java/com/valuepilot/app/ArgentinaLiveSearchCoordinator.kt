@@ -130,7 +130,8 @@ internal class ArgentinaLiveSearchCoordinator(
     private var currentContext: ArgentinaSearchContext? = null
     private var currentSelectionId: String? = null
     private var currentLanguage: String = "es"
-    private var discoveryCursor: String? = null
+    // Native-owned page-start cursors; product rows remain bounded to one page.
+    private val discoveryPageCursors = mutableMapOf<Int, String?>(0 to null)
     private var pinnedRelease: ArgentinaBackendContract.ExpectedRelease? = null
     private var currentState: ArgentinaLiveSearchState = ArgentinaLiveSearchState.Idle(0L)
 
@@ -156,7 +157,8 @@ internal class ArgentinaLiveSearchCoordinator(
             currentContext = context
             currentSelectionId = selectionId
             currentLanguage = language
-            discoveryCursor = null
+            discoveryPageCursors.clear()
+            discoveryPageCursors[0] = null
             generation = nextGenerationLocked()
             val currentGeneration = generation
             scheduledGeneration = currentGeneration
@@ -213,7 +215,11 @@ internal class ArgentinaLiveSearchCoordinator(
     }
 
     /** Request the next bounded identity page for the current result set. */
-    fun loadMore(): Long {
+    fun loadMore(): Long = loadProductPage(backwards = false)
+
+    fun loadPrevious(): Long = loadProductPage(backwards = true)
+
+    private fun loadProductPage(backwards: Boolean): Long {
         var task: (() -> Unit)? = null
         var immediate: ArgentinaLiveSearchState? = null
         var scheduledGeneration = 0L
@@ -227,8 +233,10 @@ internal class ArgentinaLiveSearchCoordinator(
                 } ?: return generation
             val query = result.first
             val presentation = result.second
-            val nextPage = presentation.nextPage ?: return generation
-            if (discoveryMode && discoveryCursor == null) return generation
+            val nextPage = (if (backwards) presentation.previousPage else presentation.nextPage)
+                ?: return generation
+            if (backwards && !discoveryMode) return generation
+            if (discoveryMode && !discoveryPageCursors.containsKey(nextPage)) return generation
             val context = currentContext ?: return generation
             val selectionId = currentSelectionId
             val language = currentLanguage
@@ -337,7 +345,7 @@ internal class ArgentinaLiveSearchCoordinator(
             cancelCurrentLocked()
             currentContext = null
             currentSelectionId = null
-            discoveryCursor = null
+            discoveryPageCursors.clear()
             generation = nextGenerationLocked()
             next =
                 if (query.length > ArgentinaBackendContract.MAX_QUERY_CHARS) {
@@ -363,7 +371,7 @@ internal class ArgentinaLiveSearchCoordinator(
             cancelCurrentLocked()
             currentContext = null
             currentSelectionId = null
-            discoveryCursor = null
+            discoveryPageCursors.clear()
             pinnedRelease = null
             generation = nextGenerationLocked()
             next = ArgentinaLiveSearchState.Idle(generation)
@@ -382,7 +390,7 @@ internal class ArgentinaLiveSearchCoordinator(
                 cancelCurrentLocked()
                 currentContext = null
                 currentSelectionId = null
-                discoveryCursor = null
+                discoveryPageCursors.clear()
                 pinnedRelease = null
                 generation = nextGenerationLocked()
                 currentState = ArgentinaLiveSearchState.Idle(generation)
@@ -417,7 +425,7 @@ internal class ArgentinaLiveSearchCoordinator(
                         language = language,
                         selections = selectionId?.let { listOf(it) }.orEmpty(),
                         pageSize = ArgentinaBackendContract.MAX_DISCOVERY_PAGE_SIZE,
-                        cursor = if (facetCursor == null) discoveryCursor else null,
+                        cursor = if (facetCursor == null) synchronized(lock) { discoveryPageCursors[page] } else null,
                         facetCursor = facetCursor
                     )
                     when (val response = bridge.discoverySearch(request, cancellation)) {
@@ -425,7 +433,9 @@ internal class ArgentinaLiveSearchCoordinator(
                         is ArgentinaBackendBridgeResult.Success -> {
                             synchronized(lock) {
                                 if (facetCursor == null && generation == requestGeneration && currentCancellation === cancellation) {
-                                    discoveryCursor = response.value.result.pagination.nextCursor
+                                    response.value.result.pagination.nextCursor?.let {
+                                        discoveryPageCursors[page + 1] = it
+                                    }
                                 }
                             }
                             val incoming = discoveryPresentation(response.value, page)
@@ -477,7 +487,8 @@ internal class ArgentinaLiveSearchCoordinator(
                     publishFailure(requestGeneration, query, result.code, result.metadata, previousPresentation)
                 }
                 is ArgentinaBackendBridgeResult.Success -> {
-                    val presentation = mergePresentations(previousPresentation, result.value)
+                    val presentation = if (discoveryMode) result.value
+                        else mergePresentations(previousPresentation, result.value)
                     publish(
                         if (presentation.matches.isEmpty()) {
                             ArgentinaLiveSearchState.Empty(requestGeneration, query, presentation)
@@ -544,6 +555,7 @@ internal class ArgentinaLiveSearchCoordinator(
             page = page,
             hasMore = result.pagination.hasMore,
             nextPage = if (result.pagination.hasMore) page + 1 else null,
+            previousPage = if (page > 0) page - 1 else null,
             limitReached = false,
             clarification = clarification
         )

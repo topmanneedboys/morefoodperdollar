@@ -98,6 +98,8 @@ internal object ValuePilotNextHtmlNativeSearchBridge {
             .put("page", state.presentation?.page ?: 0)
             .put("hasMore", state.presentation?.hasMore == true)
             .put("nextPage", state.presentation?.nextPage ?: JSONObject.NULL)
+            .put("previousPage", state.presentation?.previousPage ?: JSONObject.NULL)
+            .put("totalIdentityCount", state.presentation?.evaluatedCandidateCount ?: 0)
             .put("limitReached", state.presentation?.limitReached == true)
             .put(
                 "clarification",
