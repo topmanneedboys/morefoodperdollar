@@ -8,16 +8,24 @@ on:
         required: false
         default: false
         type: boolean
+      reconcile_only:
+        description: Recover and activate completed verified builds without downloading or starting a new build
+        required: false
+        default: false
+        type: boolean
   schedule:
     # Buenos Aires is UTC-3 year-round. These are 13:30, 15:30 and 17:30 ART,
-    # Monday through Friday. Every phase re-discovers authoritative metadata
+    # Every day, including weekends. Every phase re-discovers authoritative metadata
     # (DISCOVERY_PLUS_RECOVERY). 13:30 is the primary byte check, 15:30
     # downloads only for changed metadata, and 17:30 permits one bounded late
     # byte recheck after an unchanged-metadata primary result proved stale.
     # Scheduled runs remain inert until ARGENTINA_AUTOMATED_ACQUISITION_ENABLED=true.
-    - cron: '30 16 * * 1-5'
-    - cron: '30 18 * * 1-5'
-    - cron: '30 20 * * 1-5'
+    - cron: '30 16 * * *'
+    - cron: '30 18 * * *'
+    - cron: '30 20 * * *'
+    # Builds can finish after the last source check or across midnight.
+    # This inexpensive control-only run never downloads or builds the catalog.
+    - cron: '15 * * * *'
 
 permissions:
   contents: read
@@ -29,7 +37,7 @@ concurrency:
 
 jobs:
   acquire-and-shadow:
-    if: github.event_name == 'workflow_dispatch' || vars.ARGENTINA_AUTOMATED_ACQUISITION_ENABLED == 'true'
+    if: (github.event_name == 'workflow_dispatch' || vars.ARGENTINA_AUTOMATED_ACQUISITION_ENABLED == 'true') && github.event.schedule != '15 * * * *' && inputs.reconcile_only != true
     runs-on: ubuntu-latest
     # The long deterministic release build now runs asynchronously in Google
     # Cloud. This runner only performs bounded discovery/acquisition/handoff.
@@ -160,9 +168,9 @@ jobs:
           check_phase="PRIMARY"
           if [[ "${EVENT_NAME}" == "schedule" ]]; then
             case "${SCHEDULE_CRON}" in
-              '30 16 * * 1-5') check_phase="PRIMARY" ;;
-              '30 18 * * 1-5') check_phase="METADATA_ONLY" ;;
-              '30 20 * * 1-5') check_phase="LATE_RECHECK" ;;
+              '30 16 * * *') check_phase="PRIMARY" ;;
+              '30 18 * * *') check_phase="METADATA_ONLY" ;;
+              '30 20 * * *') check_phase="LATE_RECHECK" ;;
               *) echo "::error::Unexpected Argentina acquisition schedule ${SCHEDULE_CRON}."; exit 2 ;;
             esac
           fi
@@ -306,10 +314,16 @@ jobs:
           fi
 
           tunnel_up=0
+          dns_backup="${RUNNER_TEMP}/valuepilot-resolv-before-tunnel.conf"
+          sudo cp /etc/resolv.conf "${dns_backup}"
           cleanup_tunnel() {
             set +e
             if [[ "${tunnel_up}" == "1" ]]; then
               sudo wg-quick down "${WG_CONFIG}" >/dev/null 2>&1 || true
+            fi
+            if [[ -f "${dns_backup}" ]]; then
+              sudo cp "${dns_backup}" /etc/resolv.conf
+              sudo rm -f "${dns_backup}"
             fi
             shred -u "${WG_CONFIG}" >/dev/null 2>&1 || rm -f "${WG_CONFIG}"
           }
@@ -318,17 +332,33 @@ jobs:
           sudo wg-quick up "${WG_CONFIG}" >/dev/null
           tunnel_up=1
 
+          interface="$(basename "${WG_CONFIG}" .conf)"
+          # Hosted-runner stub/provider DNS can become unreachable after the
+          # full-tunnel switch. Public DNS must itself route through WireGuard;
+          # a missing route stops acquisition, never falls back outside it.
+          if ! ip -4 route get 1.1.1.1 | grep -Eq "dev ${interface}([[:space:]]|$)"; then
+            echo "::error::DNS resolver is not routed through the authorized tunnel."
+            exit 2
+          fi
+          printf 'nameserver 1.1.1.1\nnameserver 1.0.0.1\noptions timeout:2 attempts:3\n' | sudo tee /etc/resolv.conf >/dev/null
+          set +e
           curl --fail --silent --show-error --max-time 30 \
+            --retry 3 --retry-all-errors --retry-delay 3 --retry-max-time 120 \
             -H 'Accept: application/json' \
             -H 'User-Agent: ValuePilot-release-worker/1' \
             'https://datos.gob.ar/api/3/action/package_show?id=precios-claros-base-sepa' \
             -o "${RUNNER_TEMP}/valuepilot-catalog-probe.json"
-          interface="$(basename "${WG_CONFIG}" .conf)"
+          probe_exit=$?
+          set -e
           handshake="$(sudo wg show "${interface}" latest-handshakes | awk 'NR==1 {print $2}')"
           now="$(date +%s)"
           if [[ -z "${handshake}" || "${handshake}" == "0" || $((now - handshake)) -gt 180 ]]; then
             echo "::error::Windscribe WireGuard tunnel has no recent handshake; refusing direct-route fallback."
             exit 2
+          fi
+          if [[ "${probe_exit}" != "0" ]]; then
+            echo "::error::The tunnel handshook, but official metadata remains unreachable (curl exit ${probe_exit})."
+            exit "${probe_exit}"
           fi
 
           set +e
@@ -645,8 +675,13 @@ jobs:
           PY
           )"
           echo "argentina_day=${argentina_day}" >> "${GITHUB_OUTPUT}"
-          python -m tools.argentina_acquisition_schedule_control_v2 read-shadow-state \
+          python -m tools.read_argentina_active_source_identity \
+            --active-bucket "${ACTIVE_BUCKET}" --active-project "${GCP_PROJECT_ID}" \
+            --output "${RUNNER_TEMP}/valuepilot-reconcile-active.json"
+          active_date="$(python -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["releaseDate"])' "${RUNNER_TEMP}/valuepilot-reconcile-active.json")"
+          python -m tools.argentina_acquisition_schedule_control_v2 read-reconciliation-state \
             --argentina-day "${argentina_day}" \
+            --current-release-date "${active_date}" \
             --archive-bucket "${ARCHIVE_BUCKET}" \
             --archive-project "${GCP_PROJECT_ID}" \
             --output "${RUNNER_TEMP}/valuepilot-shadow-state.json"
@@ -658,6 +693,8 @@ jobs:
           echo "workflow_execution=${workflow_execution}" >> "${GITHUB_OUTPUT}"
           echo "state_argentina_day=${state_argentina_day}" >> "${GITHUB_OUTPUT}"
           echo "candidate_release=${candidate_release}" >> "${GITHUB_OUTPUT}"
+          superseded="$(python -c 'import json,sys; print(str(json.load(open(sys.argv[1], encoding="utf-8")).get("supersededByActive",False)).lower())' "${RUNNER_TEMP}/valuepilot-shadow-state.json")"
+          echo "superseded=${superseded}" >> "${GITHUB_OUTPUT}"
           echo "Persisted SHADOW state: ${status} (${workflow_execution:-none})"
 
       - name: Finish cleanly when no SHADOW is awaiting reconciliation
@@ -742,7 +779,7 @@ jobs:
           } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Promote the verified candidate with CAS, smoke checks, and rollback
-        if: steps.reconcile.outputs.status == 'SHADOW_SUCCEEDED'
+        if: steps.reconcile.outputs.status == 'SHADOW_SUCCEEDED' && steps.state.outputs.superseded != 'true'
         shell: bash
         env:
           CANDIDATE_RELEASE: ${{ steps.state.outputs.candidate_release }}

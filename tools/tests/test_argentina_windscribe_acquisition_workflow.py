@@ -12,12 +12,15 @@ BUILD_WORKFLOW = ROOT / ".github" / "workflows" / "build-valuepilot-android.yml"
 
 
 class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
-    def test_workflow_is_oidc_only_weekday_scheduled_and_gated(self) -> None:
+    def test_workflow_is_oidc_only_daily_scheduled_and_gated(self) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("workflow_dispatch:", text)
-        for cron in ("30 16 * * 1-5", "30 18 * * 1-5", "30 20 * * 1-5"):
+        for cron in ("30 16 * * *", "30 18 * * *", "30 20 * * *"):
             self.assertIn(f"cron: '{cron}'", text)
         self.assertNotIn("30 16,18,20 * * *", text)
+        self.assertIn("cron: '15 * * * *'", text)
+        self.assertIn("github.event.schedule != '15 * * * *'", text)
+        self.assertIn("inputs.reconcile_only != true", text)
         self.assertIn("ARGENTINA_AUTOMATED_ACQUISITION_ENABLED", text)
         self.assertIn("id-token: write", text)
         self.assertGreaterEqual(text.count("google-github-actions/auth@v3"), 2)
@@ -93,6 +96,10 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
         self.assertIn('if [[ "${has_v6_address}" == "0" ]]; then', text)
         self.assertIn("net.ipv6.conf.all.disable_ipv6=1", text)
         self.assertIn("latest-handshakes", text)
+        self.assertIn("ip -4 route get 1.1.1.1", text)
+        self.assertIn("DNS resolver is not routed through the authorized tunnel", text)
+        self.assertIn("--retry-all-errors", text)
+        self.assertIn('sudo cp "${dns_backup}" /etc/resolv.conf', text)
         self.assertIn("refusing direct-route fallback", text)
         self.assertIn("tools.argentina_release_acquisition_handoff", text)
         self.assertIn("datos.produccion.gob.ar", (ROOT / "tools" / "argentina_release_acquisition.py").read_text(encoding="utf-8"))
@@ -146,7 +153,9 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
             "    if: always() && (github.event_name == 'workflow_dispatch' || vars.ARGENTINA_AUTOMATED_ACQUISITION_ENABLED == 'true')",
             section,
         )
-        self.assertIn("read-shadow-state", section)
+        self.assertIn("read-reconciliation-state", section)
+        self.assertIn("--current-release-date", section)
+        self.assertIn("steps.state.outputs.superseded != 'true'", section)
         self.assertIn("gcloud workflows executions describe", section)
         self.assertIn("reconcile-shadow-state", section)
         self.assertIn("SHADOW_PENDING", (ROOT / "tools" / "argentina_acquisition_schedule_control_v2.py").read_text(encoding="utf-8"))
