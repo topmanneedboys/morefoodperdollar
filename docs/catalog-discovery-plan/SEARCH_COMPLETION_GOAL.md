@@ -16,6 +16,20 @@ and duplicate-free representative pagination. Full tools/backend suites,
 relevant Android checks, active HTML runtime evidence, and the Motorola device
 review remain gates before this goal can be called complete.
 
+## Continuation checkpoint (2026-10-17)
+
+The verified implementation checkpoint is now `47c71853`. Clarification choices
+use stable `family:form` predicate IDs from the HTML preview through the Android
+request/coordinator and backend catalog filter, so selecting “whole egg”, “rice
+grain”, or another observed form no longer becomes a free-text guess. The
+previous hidden six-choice limit is replaced with a bounded 30-choice contract;
+the current catalog families expose every observed choice within that bound.
+Focused Python and Android checks pass, and the required shared-core, Android
+unit, lint, and debug-APK build command passes. The rebuilt APK is recorded in
+`RELEASE_BUILD_REPORT.json`. Motorola runtime screenshots, live authorized
+service evidence, and the remaining performance/held-out evaluation gates are
+still unrun; this is a verified development checkpoint, not goal completion.
+
 ## Goal and authority
 
 Repository: C:/Users/iamatopstrongman/Documents/Codex/2026-10-08/valuepilot-next-complete-premium-ui-ux/work/valuepilot-10133-source-audit.

@@ -78,6 +78,7 @@
   "notes": [
     "v32 is a local identity-only candidate. It preserves the complete source accounting and does not contain prices, offers, stock, availability, credentials, or production activation.",
     "Reviewed bare-query projection keeps rice grain, shell eggs, fresh strawberry, and mango fruit in the initial table while exposing observed alternative forms through stable clarification predicates.",
+    "Clarification choices now carry stable family:form selection IDs end to end through the HTML bridge, Android coordinator, backend request and catalog filter; the previous silent six-choice cap is replaced by a bounded 30-choice contract.",
     "Known contextual families remain literal-searchable and are reachable through explicit observed form choices. Counts are distinct provider products and source identities, not offer or savings claims.",
     "Provider-group metrics are calculated per identity group using logical coverage; they are not semantic completion. TYPE_UNRESOLVED identities remain an explicit review queue."
   ],
@@ -122,24 +123,26 @@
     "backendTests": {
       "command": "python -m unittest discover -s backend/tests -p 'test_*.py'",
       "status": "PASS",
-      "tests": 144
+      "tests": 145
     },
     "androidChecks": {
-      "command": ".\\gradlew.bat --no-daemon :app:testDebugUnitTest --tests com.valuepilot.app.next.ValuePilotNextHtmlLocalizationTest --tests com.valuepilot.app.next.ValuePilotNextHtmlPreviewContractTest --tests com.valuepilot.app.ArgentinaBackendConsumerBridgeTest",
+      "command": ".\\gradlew.bat --no-daemon :shared-core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug",
       "status": "PASS",
-      "note": "Relevant HTML, preview-contract, and backend-bridge unit tests passed. APK/device runtime checks remain separate.",
+      "note": "Full shared-core tests, debug unit tests, debug lint and debug APK assembly passed after the stable clarification-selection change. APK/device runtime checks remain separate.",
+      "focusedUnitTestCommand": ".\\gradlew.bat --no-daemon :app:testDebugUnitTest --tests com.valuepilot.app.MainActivitySearchSubmissionBoundaryTest --tests com.valuepilot.app.next.ValuePilotNextHtmlLocalizationTest --tests com.valuepilot.app.next.ValuePilotNextHtmlPreviewContractTest --tests com.valuepilot.app.ArgentinaBackendConsumerBridgeTest --tests com.valuepilot.app.ArgentinaLiveSearchCoordinatorTest",
+      "focusedUnitTestStatus": "PASS",
       "assembleDebugCommand": ".\\gradlew.bat --no-daemon :app:assembleDebug",
       "assembleStatus": "PASS",
       "apkPath": "android/app/build/outputs/apk/debug/app-debug.apk",
       "apkSizeBytes": 87944894,
-      "apkSha256": "D4E6D7EF7BB20A3E7A2E099589C21EE234AF68CDCC548B9037D14D37B529CC51",
+      "apkSha256": "CD93C2DE72C68EDB829403DFA94EFB4DB4AFACC6212D53EB6CD8D4D2A3E82788",
       "deviceEnumeration": "adb devices -l returned no attached devices"
     },
     "motorolaEdge2025": {
       "status": "NOT_RUN",
       "reason": "adb devices -l returned no attached device; no emulator was started. Install/runtime screenshots and interaction checks remain pending on the authorized Motorola Edge 2025."
     },
-    "codeCommit": "e5036d93",
+    "codeCommit": "47c71853",
     "toolsTests": {
       "command": "python -m unittest discover -s tools/tests -p 'test_*.py'",
       "status": "PASS",
