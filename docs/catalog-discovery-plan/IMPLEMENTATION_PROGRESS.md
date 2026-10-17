@@ -6,6 +6,37 @@ This ledger records the additive discovery work. It is not a claim that the
 catalog has perfect semantic coverage. Existing `/v1` shopping, price, offer,
 saved-data, release, and security paths remain unchanged.
 
+## Latest verified continuation checkpoint — 2026-10-17 (v39 semantic context refresh)
+
+- Code checkpoint: `72473276` on `work/valuepilot-stage2-premium-shopping`.
+- The shared identity rules now remove stale derived form assertions before
+  rendering a result, keep food products containing `cream`/`crema` out of
+  cosmetics, exclude reviewed rice and egg abbreviation/context false
+  positives, and add observed English/Spanish aliases for rice cakes and whole
+  eggs. These are replayable rules applied to the full source on each build;
+  they are not 78,865 manual product edits.
+- The promoted local sidecar is `local-provider-data/product-discovery-v2.sqlite`,
+  rules `valuepilot-catalog-discovery-rules-v33`, SHA-256
+  `a52e519c2b77d0922d543c924a85cfd01bc845a614eb9caf8b3751b4af91fb3e`.
+  The prior promoted sidecar remains recoverable as
+  `local-provider-data/product-discovery-v2-pre-v39.sqlite`, SHA-256
+  `a7d9a061e8bf18cbbd5f588bc608369d7e52ce0dffb7646a5061e5288ae5965b`.
+- The v39 build contains 78,865 provider products, 134,337 identity records,
+  194,702 assertions, 274 concepts and 36,423 indexed tokens. Reviewed parity
+  narrowed rice from 119 to 115 provider products and eggs from 222 to 204;
+  strawberry, mango, carrot, fruit, cloth and yerba representative memberships
+  remain unchanged.
+- Focused lexicon/index tests pass 71; the full tools suite passes 424; the
+  backend suite passes 145. The bounded structural audit passed 548 bilingual
+  concept queries, 142 facet pages, 2,666 choices and 2,666 strict-selection
+  checks with zero failures. The refreshed artifact is
+  `local-provider-data/product-discovery-v2-concept-audit-v2.json`.
+- The last verified Android artifact remains the APK built from `47f17198` at
+  `android/app/build/outputs/apk/debug/app-debug.apk`, SHA-256
+  `734F052227C7AEC8A6C412B395B44EA286017CC8291CDC8773FC7515E88C1B50`.
+  Motorola runtime, remote live authorization, full synthetic compiler scale
+  evaluation and held-out semantic evaluation remain pending.
+
 ## Latest verified continuation checkpoint — 2026-10-17 (department facet selection correctness)
 
 - Code checkpoint: `7c134b65` on `work/valuepilot-stage2-premium-shopping`.
@@ -115,8 +146,10 @@ saved-data, release, and security paths remain unchanged.
 
 - Branch: `work/valuepilot-stage2-premium-shopping`
 - Starting handoff checkpoint: `6ce81d0d`
-- Current verified checkpoint: code commit `7c134b65` (the preceding sections record the latest Python and facet-paging checkpoints).
-- Discovery rules: `valuepilot-catalog-discovery-rules-v32`
+- Current verified checkpoint: code commit `72473276`; the preceding sections remain historical checkpoints.
+- Discovery rules: `valuepilot-catalog-discovery-rules-v33`
+- Canonical sidecar SHA-256: `a52e519c2b77d0922d543c924a85cfd01bc845a614eb9caf8b3751b4af91fb3e`
+- Previous promoted sidecar backup: `product-discovery-v2-pre-v39.sqlite` (`a7d9a061e8bf18cbbd5f588bc608369d7e52ce0dffb7646a5061e5288ae5965b`)
 - Sidecar schema: `valuepilot-catalog-discovery-v2`
 - Additive HTTP contract: `valuepilot-discovery-http-v2`
 - Current state: deterministic identity index, strict query/facet engine, and
@@ -149,23 +182,24 @@ The current local release build reported:
 - `identityRecords`: 134,337
 - `indexedTokens`: 36,423
 - `concepts`: 274
-- `assertions`: 194,661
-- `TYPE_RESOLVED`: 68,425
-- `TYPE_UNRESOLVED`: 65,912
-- `TYPE_OR_DEPARTMENT_RESOLVED`: 91,158
+- `assertions`: 194,702
+- `TYPE_RESOLVED`: 68,393
+- `TYPE_UNRESOLVED`: 65,944
+- `TYPE_OR_DEPARTMENT_RESOLVED`: 91,157
 - `DEPARTMENT_RESOLVED`: 85,249
 - `ROLE_RESOLVED`: 70,004
-- `DERIVED_ONLY`: 1,579
-- `NO_FORM`: 125,168
+- `DERIVED_ONLY`: 1,611
+- `NO_FORM`: 125,064
 - English retrieval-path proxy: 91,295 identities
 - Spanish retrieval-path proxy: 111,070 identities
 - fully type-resolved provider groups: 30,589; partly resolved: 8,004; unresolved: 40,272
 - fully type-or-department-resolved provider groups: 46,236; the report also keeps the overlapping partial and unresolved dispositions separately.
 - source SHA-256: `85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6`
-- ignored sidecar SHA-256: `a7d9a061e8bf18cbbd5f588bc608369d7e52ce0dffb7646a5061e5288ae5965b`
+- ignored sidecar SHA-256: `a52e519c2b77d0922d543c924a85cfd01bc845a614eb9caf8b3751b4af91fb3e`
+- prior promoted sidecar backup SHA-256: `a7d9a061e8bf18cbbd5f588bc608369d7e52ce0dffb7646a5061e5288ae5965b`
 
 The following rule-history paragraph documents the v25 replay and is retained
-for historical context; the current v32 totals are listed above. The v25 replay
+for historical context; the current v39 totals are listed above. The v25 replay
 combines the existing reviewed family dictionary with
 `tools/data/discovery_family_rules.json`. It retains all earlier reviewed rules
 and adds observed bilingual household-cleaning families for broom

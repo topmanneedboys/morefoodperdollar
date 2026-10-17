@@ -2,6 +2,35 @@
 
 Prepared 2026-10-16 for Luna. This is an implementation goal to use when the user activates or resumes it. Preparing this document does not resume the paused goal.
 
+## Continuation checkpoint (2026-10-17, v39 shared semantic rules)
+
+The current catalog checkpoint is code commit `72473276`. The full 78,865
+product source was replayed through rules
+`valuepilot-catalog-discovery-rules-v33`; the promoted local sidecar is
+`local-provider-data/product-discovery-v2.sqlite` with SHA-256
+`a52e519c2b77d0922d543c924a85cfd01bc845a614eb9caf8b3751b4af91fb3e`. The
+previous promoted sidecar remains recoverable as
+`product-discovery-v2-pre-v39.sqlite` with SHA-256
+`a7d9a061e8bf18cbbd5f588bc608369d7e52ce0dffb7646a5061e5288ae5965b`.
+
+The implementation fixes shared sources of false matches: stale derived form
+assertions are replaced, food names containing `cream`/`crema` are not treated
+as cosmetics, reviewed rice and egg abbreviation/context exclusions are
+applied, and observed English/Spanish aliases cover rice cakes and whole eggs.
+This is a deterministic replayable rule system; it does not require hand
+editing every product. The v39 sidecar has 194,702 assertions and the semantic
+parity checks intentionally narrow rice from 119 to 115 provider products and
+eggs from 222 to 204 while preserving representative strawberry, mango,
+carrot, fruit, cloth and yerba memberships.
+
+Focused lexicon/index checks pass 71, the full tools suite passes 424, and the
+backend suite passes 145. The bounded structural audit passed 548 bilingual
+concept queries, 142 facet pages, 2,666 choices and 2,666 strict-selection
+checks with zero failures. Remote live authorization, Motorola runtime
+screenshots, full synthetic compiler scale evaluation and held-out semantic
+evaluation remain open gates. The existing Android debug APK is unchanged and
+remains the artifact from `47f17198`.
+
 ## Continuation checkpoint (2026-10-16)
 
 The goal is active again from the existing `work/valuepilot-stage2-premium-shopping`

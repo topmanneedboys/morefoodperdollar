@@ -1,13 +1,13 @@
 {
   "schemaVersion": "valuepilot-catalog-discovery-v2",
-  "rulesVersion": "valuepilot-catalog-discovery-rules-v32",
+  "rulesVersion": "valuepilot-catalog-discovery-rules-v33",
   "source": {
     "artifact": "product-identities-153e9d9f7ab4b87e72c16aebebc69c6f9f90fca681cd1075d625244e2e31bc2c.jsonl.gz",
     "releaseId": "2026-10-08-identity-release",
     "sha256": "85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6"
   },
   "counts": {
-    "assertions": 194661,
+    "assertions": 194702,
     "concepts": 274,
     "identityRecords": 134337,
     "indexedTokens": 36423,
@@ -15,13 +15,13 @@
   },
   "coverage": {
     "DEPARTMENT_RESOLVED": 85249,
-    "DERIVED_ONLY": 1579,
+    "DERIVED_ONLY": 1611,
     "IDENTITY_VISITED": 134337,
-    "NO_FORM": 125168,
+    "NO_FORM": 125064,
     "ROLE_RESOLVED": 70004,
-    "TYPE_OR_DEPARTMENT_RESOLVED": 91158,
-    "TYPE_RESOLVED": 68425,
-    "TYPE_UNRESOLVED": 65912
+    "TYPE_OR_DEPARTMENT_RESOLVED": 91157,
+    "TYPE_RESOLVED": 68393,
+    "TYPE_UNRESOLVED": 65944
   },
   "bilingual": {
     "EN_AVAILABLE": 91295,
@@ -73,7 +73,7 @@
   "output": {
     "artifact": "local-provider-data/product-discovery-v2.sqlite",
     "gitTracked": false,
-    "sha256": "a7d9a061e8bf18cbbd5f588bc608369d7e52ce0dffb7646a5061e5288ae5965b"
+    "sha256": "a52e519c2b77d0922d543c924a85cfd01bc845a614eb9caf8b3751b4af91fb3e"
   },
   "notes": [
     "v32 is a local identity-only candidate. It preserves the complete source accounting and does not contain prices, offers, stock, availability, credentials, or production activation.",
@@ -90,21 +90,29 @@
     "The debug HTML preview is now wired to the typed /v2/search discovery rail with language and stable predicate IDs; the production MainActivity remains on /v1/search. Unauthorized Android status still blocks the v2 request, and no App Check or credential gate was bypassed.",
     "Local v2 route checks against the promoted sidecar returned rice/arroz at 119 products, 247 source identities and 3 choices, and eggs at 222 products, 288 source identities and 7 choices. This is local backend evidence, not remote live authorization or Motorola runtime evidence.",
     "Clarification facet cursors now reach every observed choice page through the native coordinator and HTML bridge, including a valid final page with one choice; the opaque cursor never crosses into JavaScript.",
-    "Independent real-sidecar concept audit passed across 274 concepts in both languages: 548 paginated queries, 144 facet pages, 2,678 stable choices and 2,678 strict-selection count checks with zero failures."
+    "Independent real-sidecar concept audit passed across 274 concepts in both languages: 548 paginated queries, 144 facet pages, 2,678 stable choices and 2,678 strict-selection count checks with zero failures.",
+    "v39 is the current local identity-only candidate. It preserves the complete source accounting and does not contain prices, offers, stock, availability, credentials, or production activation.",
+    "v39 applies shared, replayable context rules rather than per-product manual edits: stale derived form assertions are replaced, food names containing cream/crema stay out of cosmetics, rice and egg abbreviation/context exclusions are applied, and reviewed English/Spanish rice-cake and whole-egg aliases are indexed.",
+    "The v39 semantic refresh intentionally narrows rice from 119 to 115 provider products and eggs from 222 to 204 by removing reviewed false positives; representative strawberry, mango, carrot, fruit, cloth and yerba memberships remain unchanged.",
+    "The independent v39 concept audit passed across 274 concepts in both languages: 548 paginated queries, 142 facet pages, 2,666 stable choices and 2,666 strict-selection count checks with zero failures.",
+    "The prior promoted sidecar is preserved locally as product-discovery-v2-pre-v39.sqlite with SHA-256 a7d9a061e8bf18cbbd5f588bc608369d7e52ce0dffb7646a5061e5288ae5965b."
   ],
   "verification": {
     "catalogBuild": {
       "status": "PASS",
-      "rulesVersion": "valuepilot-catalog-discovery-rules-v32",
+      "rulesVersion": "valuepilot-catalog-discovery-rules-v33",
       "sourceSha256": "85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6",
-      "sidecarSha256": "a7d9a061e8bf18cbbd5f588bc608369d7e52ce0dffb7646a5061e5288ae5965b",
+      "sidecarSha256": "a52e519c2b77d0922d543c924a85cfd01bc845a614eb9caf8b3751b4af91fb3e",
       "providerProducts": 78865,
       "identityRecords": 134337,
-      "buildSeconds": 781.254,
-      "previousQualifiedSidecarSha256": "0b135858dfccb8b41d815b3f5c4ca71fc9718bda3a90526d5734f59c4785677a"
+      "buildSeconds": null,
+      "previousQualifiedSidecarSha256": "a7d9a061e8bf18cbbd5f588bc608369d7e52ce0dffb7646a5061e5288ae5965b",
+      "buildTimingNote": "Latest v39 build passed; wall-clock build duration was not recorded."
     },
     "semanticAudit": {
       "status": "PASS",
+      "rulesVersion": "valuepilot-catalog-discovery-rules-v33",
+      "sidecarSha256": "a52e519c2b77d0922d543c924a85cfd01bc845a614eb9caf8b3751b4af91fb3e",
       "queries": [
         "pano",
         "cleaning cloth",
@@ -117,20 +125,51 @@
         "huevo de gallina",
         "rice",
         "arroz",
-        "fruit"
+        "fruit",
+        "carrot",
+        "zanahoria",
+        "yerba"
       ],
       "checks": [
         "primary-form bare tables",
         "English/Spanish equivalent predicates",
         "terminal form selections",
         "representative product pagination without duplicates",
-        "forbidden-context scans for egg/rice/strawberry/mango"
-      ]
+        "forbidden-context scans for egg/rice/strawberry/mango",
+        "stale derived form assertions replaced by current lexical role",
+        "food names containing cream/crema do not become cosmetics",
+        "rice and egg abbreviation/context exclusions",
+        "reviewed rice-cake and whole-egg aliases"
+      ],
+      "paritySummary": {
+        "riceProviderProducts": {
+          "previous": 119,
+          "current": 115,
+          "intendedRemovals": 4
+        },
+        "eggProviderProducts": {
+          "previous": 222,
+          "current": 204,
+          "intendedRemovals": 18
+        },
+        "unchangedRepresentativeQueries": [
+          "strawberry",
+          "frutilla",
+          "mango",
+          "carrot",
+          "zanahoria",
+          "fruit",
+          "fruta",
+          "pano de cocina",
+          "cloth",
+          "yerba"
+        ]
+      }
     },
     "toolsFocusedTests": {
       "command": "python -m unittest tools.tests.test_product_identity_lexicon tools.tests.test_catalog_discovery_index",
       "status": "PASS",
-      "tests": 66
+      "tests": 71
     },
     "backendTests": {
       "command": "python -m unittest discover -s backend/tests -p 'test_*.py'",
@@ -162,8 +201,8 @@
           "query": "rice",
           "language": "en",
           "status": "NEEDS_CLARIFICATION",
-          "productCount": 119,
-          "sourceIdentityCount": 247,
+          "productCount": 115,
+          "sourceIdentityCount": 243,
           "choiceCount": 3,
           "hasMore": true
         },
@@ -171,8 +210,8 @@
           "query": "arroz",
           "language": "es",
           "status": "NEEDS_CLARIFICATION",
-          "productCount": 119,
-          "sourceIdentityCount": 247,
+          "productCount": 115,
+          "sourceIdentityCount": 243,
           "choiceCount": 3,
           "hasMore": true
         },
@@ -180,10 +219,46 @@
           "query": "eggs",
           "language": "en",
           "status": "NEEDS_CLARIFICATION",
-          "productCount": 222,
-          "sourceIdentityCount": 288,
+          "productCount": 204,
+          "sourceIdentityCount": 269,
           "choiceCount": 7,
           "hasMore": true
+        },
+        {
+          "query": "huevos",
+          "language": "es",
+          "status": "NEEDS_CLARIFICATION",
+          "productCount": 204,
+          "sourceIdentityCount": 269,
+          "choiceCount": 7,
+          "hasMore": true
+        },
+        {
+          "query": "carrot",
+          "language": "en",
+          "status": "NEEDS_CLARIFICATION",
+          "productCount": 6,
+          "sourceIdentityCount": 8,
+          "choiceCount": 4,
+          "hasMore": true
+        },
+        {
+          "query": "strawberry",
+          "language": "en",
+          "status": "NEEDS_CLARIFICATION",
+          "productCount": 10,
+          "sourceIdentityCount": 16,
+          "choiceCount": 5,
+          "hasMore": true
+        },
+        {
+          "query": "mango",
+          "language": "en",
+          "status": "NEEDS_CLARIFICATION",
+          "productCount": 3,
+          "sourceIdentityCount": 4,
+          "choiceCount": 4,
+          "hasMore": false
         }
       ],
       "facetPaging": {
@@ -191,7 +266,11 @@
         "exampleQuery": "bebida",
         "language": "es",
         "pages": 3,
-        "choiceCounts": [30, 30, 16],
+        "choiceCounts": [
+          30,
+          30,
+          16
+        ],
         "uniqueChoiceIds": 76,
         "duplicateChoiceIds": 0,
         "note": "Direct local sidecar query followed the opaque facet cursor through all pages. The Android regression also covers the final single-choice page."
@@ -201,14 +280,14 @@
         "concepts": 274,
         "languages": 2,
         "languageQueries": 548,
-        "facetPages": 144,
-        "facetChoices": 2678,
-        "strictSelectionChecks": 2678,
+        "facetPages": 142,
+        "facetChoices": 2666,
+        "strictSelectionChecks": 2666,
         "paginationChecks": 548,
         "failureCount": 0,
-        "elapsedSeconds": 273.716,
+        "elapsedSeconds": 272.937,
         "artifact": "local-provider-data/product-discovery-v2-concept-audit-v2.json",
-        "note": "Independent structural/query-behavior audit of the promoted sidecar; it proves pagination, advertised counts and stable selection narrowing, not human semantic truth for every label."
+        "note": "Independent structural/query-behavior audit of the promoted v39 sidecar; it proves pagination, advertised counts and stable selection narrowing, not human semantic truth for every label."
       },
       "note": "Local BackendService/TestClient-sidecar evidence; remote live authorization and Motorola runtime remain unverified. Android status authorization is still required before a request is sent."
     },
@@ -216,11 +295,11 @@
       "status": "NOT_RUN",
       "reason": "adb devices -l returned no attached device; no emulator was started. Install/runtime screenshots and interaction checks remain pending on the authorized Motorola Edge 2025."
     },
-    "codeCommit": "7c134b65",
+    "codeCommit": "72473276",
     "toolsTests": {
       "command": "python -m unittest discover -s tools/tests -p 'test_*.py'",
       "status": "PASS",
-      "tests": 419
+      "tests": 424
     },
     "performance": {
       "status": "PARTIAL_PASS",
@@ -262,6 +341,18 @@
       "note": "All recorded representative real-sidecar warm p95 values are below the 100 ms target. The large candidate-set query path also passes the measured stress target. The temporary synthetic 100k/250k compiler run was stopped after the 100k phase exceeded the useful verification window; no full synthetic compiler result is counted as a pass."
     },
     "sidecarRefresh": {
+      "status": "PASS",
+      "candidateSha256": "a52e519c2b77d0922d543c924a85cfd01bc845a614eb9caf8b3751b4af91fb3e",
+      "previousQualifiedSha256": "a7d9a061e8bf18cbbd5f588bc608369d7e52ce0dffb7646a5061e5288ae5965b",
+      "buildSeconds": null,
+      "parityQueries": null,
+      "parityFailures": 0,
+      "parityScope": "Reviewed representative bilingual queries with full product membership checks; exact query list is recorded in semanticAudit.paritySummary.",
+      "backupArtifact": "local-provider-data/product-discovery-v2-pre-v39.sqlite",
+      "backupSha256": "a7d9a061e8bf18cbbd5f588bc608369d7e52ce0dffb7646a5061e5288ae5965b",
+      "buildTimingNote": "Latest v39 build passed; wall-clock build duration was not recorded."
+    },
+    "previousV32Refresh": {
       "status": "PASS",
       "candidateSha256": "a7d9a061e8bf18cbbd5f588bc608369d7e52ce0dffb7646a5061e5288ae5965b",
       "previousQualifiedSha256": "0b135858dfccb8b41d815b3f5c4ca71fc9718bda3a90526d5734f59c4785677a",
