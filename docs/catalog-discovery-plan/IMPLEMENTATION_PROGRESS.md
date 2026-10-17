@@ -6,52 +6,63 @@ This ledger records the additive discovery work. It is not a claim that the
 catalog has perfect semantic coverage. Existing `/v1` shopping, price, offer,
 saved-data, release, and security paths remain unchanged.
 
-## Current reconciled checkpoint — 2026-10-17 (v40 stopped safely)
+## Current frozen checkpoint — 2026-10-17 (v40 rebuilt and verified)
 
-- The only v40 full-catalog run finished, but it is **rejected and not
-  promoted**. It was started with the v34 semantic rules and the source code
-  changed while the process was running when the assertion-accounting fix was
-  added. Its report says 194,919 assertions while its SQLite assertion table
-  contains 194,481 rows. The independent structural audit therefore fails on
-  that mismatch. Candidate SHA-256:
-  `3c6cad38707263e4c330d80dc8fbdef9d81f2a0949cf9d471bbd9704683634ea`.
-- The canonical local sidecar remains unchanged at
-  `local-provider-data/product-discovery-v2.sqlite`, SHA-256
-  `a52e519c2b77d0922d543c924a85cfd01bc845a614eb9caf8b3751b4af91fb3e`,
-  rules `valuepilot-catalog-discovery-rules-v33`, source SHA-256
-  `85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6`, and
-  compiler code checkpoint `7247327614322928088a21bb53eec64317b4774d`.
-  No v41 build was started and no production or Play-installed application
-  was changed.
-- Canonical v39 coverage is 78,865 provider products, 134,337 identity
-  records, 36,423 indexed tokens, 274 concepts, 194,702 reported assertions,
-  68,393 `TYPE_RESOLVED`, 65,944 `TYPE_UNRESOLVED`, 91,157
-  `TYPE_OR_DEPARTMENT_RESOLVED`, 85,249 `DEPARTMENT_RESOLVED`, 70,004
-  `ROLE_RESOLVED`, 1,611 `DERIVED_ONLY`, 125,064 `NO_FORM`, 91,295 English
-  retrieval-path identities, and 111,070 Spanish retrieval-path identities.
-  The new audit also found the canonical assertion accounting limitation:
-  194,332 stored assertion rows versus 194,702 build metadata assertions.
-- The active Search → Clarification → Filtered Table path was exercised
-  against the canonical sidecar in both pagination and selection checks. Rice
-  returned 115 provider products from 243 identities, eggs 204/269, carrot
-  6/8, and strawberry 10/16. Every full result set paged without duplicate
-  identity keys, preserved SQLite name/key ordering, and strict selections
-  returned `READY` with the advertised identity/product counts. The active
-  HTML/native contract tests also cover stable predicate IDs, facet cursors,
-  more-than-six choices and product cursors.
-- Tests at this checkpoint: focused lexicon/index tests **74 passed**; full
-  tools suite **427 passed**; backend suite **145 passed**; Android
-  `:shared-core:test :app:testDebugUnitTest` **BUILD SUCCESSFUL**. The
-  independent structural audit is **FAIL (one accounting mismatch)**, so this
-  is a clean code/documentation checkpoint with the v39 sidecar retained, not
-  a claim that the v40 artifact is qualified.
-- `adb devices -l` returned no devices. Motorola Edge 2025 runtime screenshots
-  and actual phone interaction remain unavailable. The last verified debug
-  APK is still
+- v40 was rebuilt once after the assertion-accounting fix, with no source
+  changes during the build. The frozen compiler checkpoint is `e762512b` on
+  `work/valuepilot-stage2-premium-shopping`; rules are
+  `valuepilot-catalog-discovery-rules-v34`, schema
+  `valuepilot-catalog-discovery-v2`, and source SHA-256 is
+  `85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6`.
+  The build took approximately **779 seconds (12m 59s)** and produced the
+  separate candidate
+  `local-provider-data/product-discovery-v2-v40-candidate.sqlite`, SHA-256
+  `d7aef4c8b740bfdcdca68c404692b52a7225b66cb744641bee56d2214edf0a88`.
+  It is kept separate from the v33 production sidecar until semantic review
+  is independently established; no Play-installed or production data path was
+  replaced.
+- The v40 structural audit passes: build metadata and stored assertion rows
+  both equal **194,481**; there are 134,337 identities, 78,865 provider
+  groups/products, 36,423 indexed tokens, 276 concepts, 3698 aliases, and
+  194,481 postings/assertions. The full verifier took **1,236.818 seconds**.
+  Its machine-readable report is
+  `docs/catalog-discovery-plan/FULL_CATALOG_VERIFICATION_REPORT.json`.
+- Source accounting passed for **134,337/134,337** identity rows and
+  **78,865/78,865** provider products. Duplicate source keys, extra sidecar
+  identities, and provenance failures are all zero. Six thousand four hundred
+  six duplicate-name groups (17,150 identities) remain distinct by their
+  immutable identity keys.
+- Literal retrieval passed for **134,337/134,337** identities. Strict
+  retrieval passed for all **262** materialized type, department, and form
+  predicates, with zero failed predicates. That covers 68,370 direct-type
+  identities, 91,152 type-or-department identities, 85,249 department
+  identities, and 9,392 form identities. Complete pagination passed across
+  371 bilingual concept queries, 417 facet pages, 2,112 clarification
+  choices, and 2,112 strict choice checks.
+- The independent HTTP boundary was exercised through the real `POST
+  /v2/search` route against this exact v40 file. The report
+  `docs/catalog-discovery-plan/DISCOVERY_HTTP_CONTRACT_REPORT.json` records 61
+  passing checks across bilingual rice, egg, carrot, strawberry, and mango
+  searches, full product pagination, exact identity/order equality with the
+  sidecar, selected clarification forms, and a seven-choice egg facet walked
+  over three facet pages. This proves the Search → Clarification → filtered
+  table contract at the backend boundary; prices/offers remain outside this
+  identity-only rail.
+- Semantic accuracy is intentionally **not established**: the verifier has
+  zero independently reviewed cases and a deterministic 1,000-record queue is
+  marked `PENDING_HUMAN_REVIEW`. Coverage accounting reports 91,295 complete
+  and 43,042 partial bilingual rows; one concept predicate lacks a Spanish
+  alias. These are the remaining catalog-quality limitations, not pagination
+  or identity-integrity failures. No v41 batch or new rebuild was started.
+- Tests already passing at the frozen code checkpoint: catalog-discovery index
+  module **24 passed**, full tools suite **428 passed**, backend suite **145 passed**,
+  and Android `:shared-core:test :app:testDebugUnitTest` **BUILD SUCCESSFUL**.
+  The v40 structural audit and HTTP contract report also pass.
+- `adb devices -l` still reports no attached Motorola device. Actual phone
+  screenshots and runtime interaction therefore remain a device gate. The
+  last verified debug APK is unchanged at
   `android/app/build/outputs/apk/debug/app-debug.apk`, SHA-256
   `734F052227C7AEC8A6C412B395B44EA286017CC8291CDC8773FC7515E88C1B50`.
-- Exact machine-readable evidence is recorded in
-  `docs/catalog-discovery-plan/VERIFIED_SEARCH_CHECKPOINT.json`.
 
 ## Corpus-wide verification checkpoint — 2026-10-17
 

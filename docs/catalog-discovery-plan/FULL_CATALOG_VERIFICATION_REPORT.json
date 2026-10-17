@@ -1,30 +1,29 @@
 {
   "classification": {
     "coverageRows": {
-      "RESOLVED": 68393,
-      "UNRESOLVED": 65944
+      "RESOLVED": 68370,
+      "UNRESOLVED": 65967
     },
     "department": {
       "identityCount": 85249,
       "providerProductCount": 52373
     },
     "directProductType": {
-      "identityCount": 68393,
-      "providerProductCount": 38578
+      "identityCount": 68370,
+      "providerProductCount": 38565
     },
     "form": {
-      "identityCount": 9273,
-      "providerProductCount": 5059
+      "identityCount": 9392,
+      "providerProductCount": 5128
     },
     "typeOrDepartment": {
-      "identityCount": 91157,
-      "providerProductCount": 54453
+      "identityCount": 91152,
+      "providerProductCount": 54448
     }
   },
-  "elapsedSeconds": 1215.722,
+  "elapsedSeconds": 1236.818,
   "failures": [
-    "independent semantic accuracy is not established",
-    "build metadata does not match stored assertion rows"
+    "independent semantic accuracy is not established"
   ],
   "identityReachability": {
     "failureDetails": [],
@@ -35,19 +34,19 @@
     "status": "PASS"
   },
   "index": {
-    "path": "C:\\Users\\iamatopstrongman\\Documents\\Codex\\2026-10-08\\valuepilot-next-complete-premium-ui-ux\\work\\valuepilot-10133-source-audit\\local-provider-data\\product-discovery-v2.sqlite",
+    "path": "C:\\Users\\iamatopstrongman\\Documents\\Codex\\2026-10-08\\valuepilot-next-complete-premium-ui-ux\\work\\valuepilot-10133-source-audit\\local-provider-data\\product-discovery-v2-v40-candidate.sqlite",
     "releaseId": "2026-10-08-identity-release",
-    "rulesVersion": "valuepilot-catalog-discovery-rules-v33",
+    "rulesVersion": "valuepilot-catalog-discovery-rules-v34",
     "schemaVersion": "valuepilot-catalog-discovery-v2",
-    "sha256": "a52e519c2b77d0922d543c924a85cfd01bc845a614eb9caf8b3751b4af91fb3e",
+    "sha256": "d7aef4c8b740bfdcdca68c404692b52a7225b66cb744641bee56d2214edf0a88",
     "sourceSha256": "85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6"
   },
   "languageCoverage": {
     "conceptPredicatesMissingEN": 0,
     "conceptPredicatesMissingES": 1,
     "conceptPredicatesWithAliases": {
-      "en": 274,
-      "es": 273
+      "en": 276,
+      "es": 275
     },
     "identityAliasIdentitiesMissingEN": 112043,
     "identityAliasIdentitiesMissingES": 56360,
@@ -61,17 +60,17 @@
   "pagination": {
     "broadConceptLanguageQueries": 371,
     "broadQueryFailures": [],
-    "facetChoices": 2106,
+    "facetChoices": 2112,
     "facetPageSize": 30,
     "facetPages": 417,
     "pageSize": 50,
     "status": "PASS",
-    "strictChoiceChecks": 2106,
+    "strictChoiceChecks": 2112,
     "strictChoiceFailures": []
   },
   "reviewQueue": {
     "count": 1000,
-    "path": "C:\\Users\\iamatopstrongman\\Documents\\Codex\\2026-10-08\\valuepilot-next-complete-premium-ui-ux\\work\\valuepilot-10133-source-audit\\local-provider-data\\semantic-review-queue-v2.jsonl",
+    "path": "C:\\Users\\iamatopstrongman\\Documents\\Codex\\2026-10-08\\valuepilot-next-complete-premium-ui-ux\\work\\valuepilot-10133-source-audit\\local-provider-data\\semantic-review-queue-v40.jsonl",
     "sha256": "5755d1d0e8371b95eb4a3541627a4e4f41652e86494c2bc6299890045029a7da",
     "status": "PENDING_HUMAN_REVIEW",
     "strata": {
@@ -130,11 +129,11 @@
   "status": "INCOMPLETE",
   "strictSelection": {
     "departmentIdentityCount": 85249,
-    "directTypeIdentityCount": 68393,
+    "directTypeIdentityCount": 68370,
     "failedPredicateCount": 0,
     "failedPredicates": [],
-    "formIdentityCount": 9273,
-    "predicateCount": 259,
+    "formIdentityCount": 9392,
+    "predicateCount": 262,
     "predicateResults": [
       {
         "aliasCounts": {
@@ -2239,32 +2238,62 @@
       {
         "aliasCounts": {
           "en": 20,
-          "es": 33
+          "es": 37
         },
-        "expectedIdentityCount": 398,
+        "expectedIdentityCount": 399,
         "expectedProviderProductCount": 213,
         "kind": "form",
         "languages": {
           "en": {
             "aliasCount": 20,
-            "expectedIdentityCount": 398,
+            "expectedIdentityCount": 399,
             "failures": [],
             "pageCount": 8,
             "query": "rice cake",
-            "returnedIdentityCount": 398,
+            "returnedIdentityCount": 399,
             "status": "PASS"
           },
           "es": {
-            "aliasCount": 33,
-            "expectedIdentityCount": 398,
+            "aliasCount": 37,
+            "expectedIdentityCount": 399,
             "failures": [],
             "pageCount": 8,
             "query": "arroz alfajor",
-            "returnedIdentityCount": 398,
+            "returnedIdentityCount": 399,
             "status": "PASS"
           }
         },
         "predicateId": "form:rice:dessert"
+      },
+      {
+        "aliasCounts": {
+          "en": 10,
+          "es": 12
+        },
+        "expectedIdentityCount": 7,
+        "expectedProviderProductCount": 7,
+        "kind": "form",
+        "languages": {
+          "en": {
+            "aliasCount": 10,
+            "expectedIdentityCount": 7,
+            "failures": [],
+            "pageCount": 1,
+            "query": "rice aperitif",
+            "returnedIdentityCount": 7,
+            "status": "PASS"
+          },
+          "es": {
+            "aliasCount": 12,
+            "expectedIdentityCount": 7,
+            "failures": [],
+            "pageCount": 1,
+            "query": "arroz aperit",
+            "returnedIdentityCount": 7,
+            "status": "PASS"
+          }
+        },
+        "predicateId": "form:rice:drink"
       },
       {
         "aliasCounts": {
@@ -2298,33 +2327,93 @@
       },
       {
         "aliasCounts": {
-          "en": 11,
-          "es": 10
+          "en": 23,
+          "es": 19
         },
-        "expectedIdentityCount": 243,
-        "expectedProviderProductCount": 115,
+        "expectedIdentityCount": 282,
+        "expectedProviderProductCount": 139,
         "kind": "form",
         "languages": {
           "en": {
-            "aliasCount": 11,
-            "expectedIdentityCount": 243,
+            "aliasCount": 23,
+            "expectedIdentityCount": 282,
             "failures": [],
-            "pageCount": 5,
-            "query": "rice brown",
-            "returnedIdentityCount": 243,
+            "pageCount": 6,
+            "query": "arborio rice",
+            "returnedIdentityCount": 282,
             "status": "PASS"
           },
           "es": {
-            "aliasCount": 10,
-            "expectedIdentityCount": 243,
+            "aliasCount": 19,
+            "expectedIdentityCount": 282,
             "failures": [],
-            "pageCount": 5,
-            "query": "arroz blanco",
-            "returnedIdentityCount": 243,
+            "pageCount": 6,
+            "query": "arroz arborio",
+            "returnedIdentityCount": 282,
             "status": "PASS"
           }
         },
         "predicateId": "form:rice:grain"
+      },
+      {
+        "aliasCounts": {
+          "en": 11,
+          "es": 12
+        },
+        "expectedIdentityCount": 23,
+        "expectedProviderProductCount": 12,
+        "kind": "form",
+        "languages": {
+          "en": {
+            "aliasCount": 11,
+            "expectedIdentityCount": 23,
+            "failures": [],
+            "pageCount": 1,
+            "query": "pet food containing rice",
+            "returnedIdentityCount": 23,
+            "status": "PASS"
+          },
+          "es": {
+            "aliasCount": 12,
+            "expectedIdentityCount": 23,
+            "failures": [],
+            "pageCount": 1,
+            "query": "alimento con arroz",
+            "returnedIdentityCount": 23,
+            "status": "PASS"
+          }
+        },
+        "predicateId": "form:rice:pet_food"
+      },
+      {
+        "aliasCounts": {
+          "en": 16,
+          "es": 26
+        },
+        "expectedIdentityCount": 65,
+        "expectedProviderProductCount": 40,
+        "kind": "form",
+        "languages": {
+          "en": {
+            "aliasCount": 16,
+            "expectedIdentityCount": 65,
+            "failures": [],
+            "pageCount": 2,
+            "query": "prepared rice",
+            "returnedIdentityCount": 65,
+            "status": "PASS"
+          },
+          "es": {
+            "aliasCount": 26,
+            "expectedIdentityCount": 65,
+            "failures": [],
+            "pageCount": 2,
+            "query": "arroz aderezo",
+            "returnedIdentityCount": 65,
+            "status": "PASS"
+          }
+        },
+        "predicateId": "form:rice:prepared"
       },
       {
         "aliasCounts": {
@@ -6496,26 +6585,26 @@
           "en": 1,
           "es": 1
         },
-        "expectedIdentityCount": 775,
-        "expectedProviderProductCount": 434,
+        "expectedIdentityCount": 730,
+        "expectedProviderProductCount": 400,
         "kind": "type",
         "languages": {
           "en": {
             "aliasCount": 1,
-            "expectedIdentityCount": 775,
+            "expectedIdentityCount": 730,
             "failures": [],
-            "pageCount": 16,
+            "pageCount": 15,
             "query": "rice",
-            "returnedIdentityCount": 775,
+            "returnedIdentityCount": 730,
             "status": "PASS"
           },
           "es": {
             "aliasCount": 1,
-            "expectedIdentityCount": 775,
+            "expectedIdentityCount": 730,
             "failures": [],
-            "pageCount": 16,
+            "pageCount": 15,
             "query": "arroz",
-            "returnedIdentityCount": 775,
+            "returnedIdentityCount": 730,
             "status": "PASS"
           }
         },
@@ -7903,23 +7992,23 @@
       }
     ],
     "status": "PASS",
-    "typeOrDepartmentIdentityCount": 91157
+    "typeOrDepartmentIdentityCount": 91152
   },
   "structural": {
-    "actualAssertionRows": 194332,
-    "assertionCountMismatch": true,
+    "actualAssertionRows": 194481,
+    "assertionCountMismatch": false,
     "build": {
-      "assertions": 194702,
-      "concepts": 274,
-      "created_at": "2026-10-17 17:24:22",
+      "assertions": 194481,
+      "concepts": 276,
+      "created_at": "2026-10-17 19:18:27",
       "identity_records": 134337,
       "indexed_tokens": 36423,
       "provider_products": 78865,
       "release_id": "2026-10-08-identity-release",
-      "rules_version": "valuepilot-catalog-discovery-rules-v33",
+      "rules_version": "valuepilot-catalog-discovery-rules-v34",
       "schema_version": "valuepilot-catalog-discovery-v2",
       "source_sha256": "85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6"
     },
-    "status": "FAIL"
+    "status": "PASS"
   }
 }
