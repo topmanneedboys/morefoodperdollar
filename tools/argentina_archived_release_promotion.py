@@ -10,10 +10,12 @@ failure.  It is deliberately separate from the Android application.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import urllib.error
 import urllib.request
@@ -188,6 +190,7 @@ def stage_archived_release(archive: ObjectStore, destination: ObjectStore, *, re
 
 
 def _read_pointer(store: ObjectStore) -> tuple[ObjectMetadata, dict[str, Any], bytes]:
+    before = store.head(_ACTIVE_KEY)
     raw = _read(store, _ACTIVE_KEY, maximum=64 * 1024)
     try:
         value = json.loads(raw)
@@ -199,7 +202,28 @@ def _read_pointer(store: ObjectStore) -> tuple[ObjectMetadata, dict[str, Any], b
         metadata = store.head(_ACTIVE_KEY)
     except ObjectStoreError as exc:
         raise PromotionError("active pointer metadata is unavailable") from exc
+    if metadata.etag != before.etag:
+        raise PromotionError("active pointer changed during read")
     return metadata, value, raw
+
+
+def _active_source_date(store: ObjectStore, release_id: str) -> str:
+    raw = _read(store, f"releases/{release_id}/manifest.json", maximum=_MAX_MANIFEST_BYTES)
+    checksum = _read(store, f"releases/{release_id}/manifest.sha256", maximum=4096)
+    if not checksum.strip() or checksum.decode('ascii').split()[0] != _sha256(raw):
+        raise PromotionError("previous release manifest checksum is invalid")
+    try:
+        value = json.loads(raw)
+    except (ValueError, UnicodeError) as exc:
+        raise PromotionError('previous release manifest is invalid') from exc
+    if not isinstance(value, Mapping) or value.get('releaseId') != release_id:
+        raise PromotionError("previous release identity does not match")
+    source = value.get('source')
+    date = source.get('releaseDate') if isinstance(source, Mapping) else None
+    try:
+        return dt.date.fromisoformat(date).isoformat()
+    except (TypeError, ValueError) as exc:
+        raise PromotionError("previous source date is invalid") from exc
 
 
 def _pointer_bytes(release_id: str, previous: str | None) -> bytes:
@@ -257,8 +281,9 @@ def _update_service(service: str, *, project: str, release_id: str, release_date
     if ":" not in service:
         raise PromotionError("backend service must be NAME:REGION")
     name, region = service.split(":", 1)
+    cloud_cli = shutil.which("gcloud") or "gcloud"
     completed = subprocess.run(
-        ["gcloud", "run", "services", "update", name, "--region", region, "--project", project, "--quiet", "--update-env-vars", f"VALUEPILOT_ANDROID_NETWORKING_RELEASE_ID={release_id},VALUEPILOT_ANDROID_NETWORKING_RELEASE_DATE={release_date}"],
+        [cloud_cli, "run", "services", "update", name, "--region", region, "--project", project, "--quiet", "--update-env-vars", f"VALUEPILOT_ANDROID_NETWORKING_RELEASE_ID={release_id},VALUEPILOT_ANDROID_NETWORKING_RELEASE_DATE={release_date}"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         check=False,
@@ -266,7 +291,7 @@ def _update_service(service: str, *, project: str, release_id: str, release_date
     if completed.returncode != 0:
         raise PromotionError(f"backend service configuration failed for {name}")
     routed = subprocess.run(
-        ["gcloud", "run", "services", "update-traffic", name, "--region", region, "--project", project, "--quiet", "--to-latest"],
+        [cloud_cli, "run", "services", "update-traffic", name, "--region", region, "--project", project, "--quiet", "--to-latest"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         check=False,
@@ -295,20 +320,27 @@ def promote_archived_release(
         expected_release_date=expected_release_date,
         expected_source_sha256=expected_source_sha256,
     )
-    staged = {name: stage_archived_release(archive, store, release_id=release_id, manifest=manifest, manifest_raw=manifest_raw, checksum_raw=checksum_raw) for name, store in destinations.items()}
     pointers = {name: _read_pointer(store) for name, store in destinations.items()}
     if all(value[1].get("releaseId") == release_id for value in pointers.values()):
+        for service, project, date in service_updates:
+            _update_service(service, project=project, release_id=release_id, release_date=date)
         smoke_results = {name: dict(smoke(url)) for name, url in (smoke_targets or {}).items()} if smoke and smoke_targets else {}
-        return {"status": "ALREADY_ACTIVE", "releaseId": release_id, "pointerWrites": 0, "staged": staged, "smoke": smoke_results}
+        return {"status": "ALREADY_ACTIVE", "releaseId": release_id, "pointerWrites": 0, "staged": {}, "smoke": smoke_results}
     if any(value[1].get("releaseId") != expected_current_release_id for value in pointers.values()):
         raise PromotionError("runtime pointers do not match the expected current release")
+    previous_date = _active_source_date(destinations['us'], expected_current_release_id)
+    if expected_release_date < previous_date:
+        raise PromotionError("candidate source is older than the active release")
+    staged = {name: stage_archived_release(archive, store, release_id=release_id, manifest=manifest, manifest_raw=manifest_raw, checksum_raw=checksum_raw) for name, store in destinations.items()}
     candidate_pointer = _pointer_bytes(release_id, expected_current_release_id)
     prior = {name: value for name, value in pointers.items()}
     updated: dict[str, ObjectMetadata] = {}
+    attempted_services: list[tuple[str, str]] = []
     try:
         for name in ("us", "sa"):
             updated[name] = destinations[name].compare_and_swap(_ACTIVE_KEY, candidate_pointer, expected_etag=prior[name][0].etag)
         for service, project, date in service_updates:
+            attempted_services.append((service, project))
             _update_service(service, project=project, release_id=release_id, release_date=date)
         smoke_results = {name: dict(smoke(url)) for name, url in (smoke_targets or {}).items()} if smoke and smoke_targets else {}
     except Exception as exc:  # noqa: BLE001 - always compensate before surfacing failure
@@ -318,6 +350,11 @@ def promote_archived_release(
                 destinations[name].compare_and_swap(_ACTIVE_KEY, prior[name][2], expected_etag=updated[name].etag)
             except Exception:
                 rollback_errors.append(name)
+        for service, project in reversed(attempted_services):
+            try:
+                _update_service(service, project=project, release_id=expected_current_release_id, release_date=previous_date)
+            except Exception:
+                rollback_errors.append("service:" + service)
         if rollback_errors:
             raise PromotionError("promotion failed and rollback requires operator attention: " + ",".join(rollback_errors)) from exc
         if isinstance(exc, PromotionError):

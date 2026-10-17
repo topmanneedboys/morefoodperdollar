@@ -28,6 +28,7 @@ from tools.argentina_acquisition_schedule_control_v2 import (
     reconcile_shadow_state,
     read_daily_state,
     read_pending_workflow,
+    read_reconciliation_state,
     read_shadow_state,
     record_shadow_state,
     reserve_build_attempt,
@@ -605,6 +606,60 @@ class ArgentinaAcquisitionScheduleControlV2Tests(unittest.TestCase):
                 updated_at="2026-09-16T00:01:00Z",
             )
         self.assertEqual(conflict.exception.code, "CONTROL_CONFLICT")
+
+    def test_yesterdays_pending_build_survives_todays_metadata_only_state(self) -> None:
+        resolution = self._record_primary_no_change()
+        resolution['candidateReleaseId'] = candidate_release_id('2026-09-08', PRIMARY_SHA)
+        record_shadow_state(resolution=resolution, store=self.store, status="SHADOW_STARTED",
+                            workflow_execution="execution-overnight", reservation_id="overnight",
+                            recorded_at="2026-09-15T23:59:00Z")
+        tomorrow = _candidate(observed_at="2026-09-16T16:30:00Z")
+        preflight_observation(discovery=_discovery(tomorrow), candidate=tomorrow, store=self.store)
+        self.assertEqual(read_daily_state(store=self.store, argentina_day="2026-09-16")["status"], "METADATA_DISCOVERED")
+        recovered = read_reconciliation_state(store=self.store, argentina_day="2026-09-16", current_release_date="2026-09-01")
+        self.assertEqual(recovered["workflowExecution"], "execution-overnight")
+        self.assertEqual(recovered["argentinaDate"], "2026-09-15")
+        self.assertTrue(recovered["crossDayPending"])
+
+    def test_terminal_global_reservation_can_rotate_but_late_callbacks_cannot_overwrite_next_build(self) -> None:
+        resolution = self._record_primary_no_change()
+        resolution['candidateReleaseId'] = candidate_release_id('2026-09-08', PRIMARY_SHA)
+        record_shadow_state(resolution=resolution, store=self.store, status="SHADOW_STARTED",
+                            workflow_execution="execution-first", reservation_id="first",
+                            recorded_at="2026-09-15T17:00:00Z")
+        original = read_pending_workflow(store=self.store)
+        def write(value, **overrides):
+            fields = dict(store=self.store, argentina_day=value['argentinaDate'],
+                          candidate_release_id=value['candidateReleaseId'], source_release_date=value['sourceReleaseDate'],
+                          source_sha256=value['sourceSha256'], reservation_id=value['reservationId'],
+                          workflow_execution=value['workflowExecution'], state=value['state'],
+                          created_at=value['createdAt'], updated_at=value['updatedAt'])
+            return write_pending_workflow(**{**fields, **overrides})
+        write(original, state="SHADOW_SUCCEEDED", updated_at="2026-09-16T00:10:00Z")
+        second = write(original, argentina_day="2026-09-16", candidate_release_id="new-candidate",
+                       source_release_date="2026-09-16", source_sha256="b"*64, reservation_id="second",
+                       workflow_execution="execution-second", state="SHADOW_STARTED",
+                       created_at="2026-09-16T16:30:00Z", updated_at="2026-09-16T16:30:00Z")
+        self.assertEqual(second['workflowExecution'], 'execution-second')
+        with self.assertRaises(AcquisitionScheduleError):
+            write(original, state="SHADOW_SUCCEEDED", updated_at="2026-09-17T00:00:00Z")
+        self.assertEqual(read_pending_workflow(store=self.store), second)
+
+    def test_successful_unpromoted_legacy_build_remains_retryable_after_midnight(self) -> None:
+        resolution = self._record_primary_no_change()
+        resolution['candidateReleaseId'] = candidate_release_id('2026-09-08', PRIMARY_SHA)
+        record_shadow_state(resolution=resolution, store=self.store, status="SHADOW_STARTED",
+                            workflow_execution="execution-completed", reservation_id="completed",
+                            recorded_at="2026-09-15T17:00:00Z")
+        record_shadow_state(resolution=resolution, store=self.store, status="SHADOW_SUCCEEDED",
+                            workflow_execution="execution-completed", reservation_id="completed",
+                            recorded_at="2026-09-15T18:00:00Z")
+        recovered = read_reconciliation_state(store=self.store, argentina_day="2026-09-16", current_release_date="2026-09-01")
+        self.assertEqual(recovered['status'], 'SHADOW_STARTED')
+        self.assertEqual(recovered['durableStatus'], 'SHADOW_SUCCEEDED')
+        self.assertEqual(recovered['workflowExecution'], 'execution-completed')
+        already_newer = read_reconciliation_state(store=self.store, argentina_day="2026-09-16", current_release_date="2026-09-10")
+        self.assertEqual(already_newer['status'], 'NO_STATE')
 
     def test_nullable_workflow_payload_is_accepted_while_execution_is_active(self) -> None:
         resolution = self._record_primary_no_change()

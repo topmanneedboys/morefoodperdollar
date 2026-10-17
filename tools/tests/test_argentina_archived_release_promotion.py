@@ -47,6 +47,11 @@ class ArchivedReleasePromotionTests(unittest.TestCase):
         })
         self.us.put_immutable("control/active.json", old)
         self.sa.put_immutable("control/active.json", old)
+        previous_manifest = _canonical({'releaseId': self.previous, 'source': {'releaseDate': '2026-09-25'}})
+        for store in (self.us, self.sa):
+            store.put_immutable(f'releases/{self.previous}/manifest.json', previous_manifest)
+            store.put_immutable(f'releases/{self.previous}/manifest.sha256',
+                                hashlib.sha256(previous_manifest).hexdigest().encode('ascii') + b'  manifest.json\n')
 
     def tearDown(self):
         self.temp.cleanup()
@@ -104,6 +109,26 @@ class ArchivedReleasePromotionTests(unittest.TestCase):
             )
         self.assertEqual(self.us.get("control/active.json"), old_us)
         self.assertEqual(self.sa.get("control/active.json"), old_sa)
+
+    def test_failed_activation_restores_release_scoped_service_authorization(self):
+        old = self.us.get('control/active.json')
+        with patch.object(promotion, '_update_service') as update:
+            with self.assertRaises(PromotionError):
+                promote_archived_release(
+                    self.archive, {'us':self.us, 'sa':self.sa}, release_id=self.candidate,
+                    expected_current_release_id=self.previous, expected_release_date='2026-10-01',
+                    expected_source_sha256='c'*64,
+                    service_updates=(('backend-us:us-east4','project','2026-10-01'),
+                                     ('backend-sa:southamerica-east1','project','2026-10-01')),
+                    smoke=lambda _: (_ for _ in ()).throw(PromotionError('failed smoke')),
+                    smoke_targets={'us':'us'},
+                )
+        self.assertEqual(self.us.get('control/active.json'), old)
+        self.assertEqual(self.sa.get('control/active.json'), old)
+        self.assertEqual(len(update.call_args_list), 4)
+        for call in update.call_args_list[-2:]:
+            self.assertEqual(call.kwargs['release_id'], self.previous)
+            self.assertEqual(call.kwargs['release_date'], '2026-09-25')
 
     def test_pointer_mismatch_fails_before_any_write(self):
         unexpected = _canonical({
