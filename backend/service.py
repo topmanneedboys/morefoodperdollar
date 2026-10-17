@@ -50,6 +50,8 @@ _FAMILY_DISCOVERY_QUERIES = {
     "yerba_mate": "yerba mate",
     "egg": "huevo",
     "carrot": "carrot",
+    "strawberry": "frutilla",
+    "mango": "mango",
     "alfajor": "alfajor",
     "flour": "harina",
     "peanut": "mani",
@@ -76,6 +78,7 @@ _FAMILY_DISCOVERY_QUERIES = {
     "broom": "escoba",
     "mop": "mopa",
     "duster": "plumero",
+    "cleaning_cloth": "pano",
 }
 
 

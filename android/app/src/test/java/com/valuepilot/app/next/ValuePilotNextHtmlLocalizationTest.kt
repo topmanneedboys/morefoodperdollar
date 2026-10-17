@@ -51,6 +51,15 @@ class ValuePilotNextHtmlLocalizationTest {
     }
 
     @Test
+    fun `native clarification keeps every observed choice and its stable id`() {
+        val source = assetSource()
+
+        assertTrue(source.contains("clarification.choices.map(choice=>"))
+        assertTrue(source.contains("data-choice-id=\"\${safe(choiceId)}\""))
+        assertFalse(source.contains("clarification.choices.slice(0,6)"))
+    }
+
+    @Test
     fun `native saved state can refresh after returning from a Kotlin tool`() {
         val source = assetSource()
 

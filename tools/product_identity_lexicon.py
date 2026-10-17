@@ -80,6 +80,10 @@ FAMILY_RULES: tuple[FamilyRule, ...] = (
             ("cereal", "de", "arroz"),
             ("snack", "de", "arroz"),
             ("tortita", "de", "arroz"),
+            ("alfajor", "de", "arroz"),
+            ("galleta",), ("galletita",), ("galletas",), ("galletitas",), ("harina",),
+            ("aderezo",), ("sazon",), ("condimento",), ("albondiga",), ("albondigas",),
+            ("ensalada",), ("sopa",), ("caldo",), ("relleno",), ("alimento",),
             ("rice", "dessert"),
             ("rice", "pudding"),
             ("rice", "flour"),
@@ -170,7 +174,18 @@ FAMILY_RULES: tuple[FamilyRule, ...] = (
         # a claim about ingredients, price, or availability.
         excluded_phrases=(
             ("fideo",), ("fideos",), ("pasta",), ("noodle",), ("noodles",),
-            ("chocolate",), ("cacao",), ("pascua",), ("easter",), ("sorpresa",), ("surprise",),
+            ("cinta",), ("tallarin",), ("tallarines",), ("spaguetti",), ("spaghetti",),
+            ("spag",), ("vainillas",), ("galletas",), ("galletitas",),
+            ("fusilli",), ("rigatti",), ("mostachol",), ("mostacholes",), ("semolin",),
+            ("lasagna",), ("lasaña",), ("vainilla",), ("sarten",), ("sartén",),
+            ("bagel",), ("bocadito",), ("ensalada",), ("cortador",),
+            ("cortahuevos",), ("esponja",), ("organizador",), ("porta", "huevos"),
+            ("flan",), ("galleta",), ("galletita",), ("gomita",), ("goma",),
+            ("frito",), ("fried",),
+            ("chocolate",), ("cacao",), ("pascua",), ("pascuas",), ("easter",), ("sorpresa",), ("surprise",),
+            # Branded chocolate eggs in the source often omit the word
+            # chocolate and use only the confectionery brand or a milk cue.
+            ("arcor",), ("aguila",), ("bariloche",), ("kinder",), ("kindersorpresa",), ("milka",), ("milk",),
             ("dino",), ("dinosaurio",), ("dinosaur",), ("unicornio",), ("unicorn",),
             ("juguete",), ("juego",), ("toy",), ("playset",), ("coleccionable",), ("collectible",),
             ("figura",), ("figure",), ("smash",), ("smashers",), ("rainbocorn",),
@@ -186,10 +201,74 @@ FAMILY_RULES: tuple[FamilyRule, ...] = (
                 ("liquid", "pasteurized", "white", "yolk", "albumin"),
             ),
             "powder": (("polvo", "deshidratado", "deshidratada"), ("powder", "dehydrated")),
-            "chocolate": (("chocolate", "cacao", "pascua", "easter"), ("chocolate", "cocoa", "easter")),
+            "chocolate": (("chocolate", "cacao", "pascua", "easter", "arcor", "aguila", "bariloche", "kinder", "milk"), ("chocolate", "cocoa", "easter", "kinder", "milk")),
             "toy": (("dino", "dinosaurio", "dinosaur", "unicornio", "unicorn", "juguete", "juego", "sorpresa", "smash", "smashers", "playset", "coleccionable", "figura", "rainbocorn"), ("dino", "dinosaur", "unicorn", "toy", "surprise", "smash", "playset", "collectible", "figure")),
             "pasta": (("fideo", "fideos", "pasta", "tallarines"), ("noodle", "noodles", "pasta")),
             "drink": (("bebida", "licor", "licores"), ("drink", "liqueur", "eggnog")),
+        },
+    ),
+    FamilyRule(
+        key="strawberry",
+        spanish_aliases=("frutilla", "fresa", "frutillas", "fresas"),
+        english_aliases=("strawberry", "strawberries"),
+        include_terms=("frutilla", "frutillas", "fresa", "fresas", "strawberry", "strawberries"),
+        # A bare strawberry search must keep the accepted fruit identity
+        # separate from products that use strawberry only as a flavour,
+        # scent, or cosmetic name.  These are observed-name cues, not
+        # claims about ingredients or availability.
+        excluded_phrases=(
+            ("jugo",), ("zumo",), ("bebida",), ("nectar",), ("juice",), ("drink",),
+            ("agua",), ("isotonica",), ("isotonic",), ("hidra",),
+            ("yogur",), ("yogurt",), ("leche",), ("lacteo",), ("bebible",),
+            ("bebida", "lactea"), ("actimel",), ("activia",), ("danonino",),
+            ("helado",), ("ice", "cream"), ("alfajor",), ("galleta",),
+            ("galletita",), ("torta",), ("postre",), ("dulce",), ("mermelada",),
+            ("barra",), ("cereal",), ("bocadito",), ("chupetin",), ("confitura",),
+            ("gelatina",), ("chocolate",), ("caramelo",), ("caramelos",), ("caramel",), ("chicle",), ("chicles",), ("gomita",),
+            ("almohadita",), ("almohaditas",), ("rellena",), ("rellenas",), ("rellen",),
+            ("golosina",), ("balsamo",), ("labial",), ("lip",), ("revlon",),
+            ("sabor",), ("sabor", "a"), ("aroma",), ("esencia",), ("flavor",),
+            ("acondicionador",), ("acond",), ("ac",), ("shampoo",), ("sham",), ("champu",), ("crema",),
+            ("locion",), ("lotion",), ("jabon",), ("soap",), ("cosmetico",),
+            ("cosmetics",), ("perfume",), ("detergente",), ("detergent",),
+        ),
+        forms={
+            "fresh": (
+                ("fresca", "fresco", "frescas", "frescos", "fruta", "frutas", "natural", "naturales", "congelada", "congeladas"),
+                ("fresh", "fruit", "natural", "frozen"),
+            ),
+            "drink": (("jugo", "zumo", "bebida", "nectar", "agua", "isotonica", "hidra"), ("juice", "drink", "beverage", "nectar", "water", "isotonic")),
+            "dairy": (("yogur", "yogurt", "leche", "lacteo", "bebible", "actimel", "activia", "danonino", "fermentada"), ("yogurt", "milk", "dairy", "drinkable", "fermented")),
+            "dessert": (("helado", "postre", "torta", "alfajor", "galleta", "galletita", "dulce", "mermelada", "barra", "cereal", "bocadito", "chupetin", "confitura", "gelatina", "chocolate", "caramelo", "chicle", "gomita"), ("ice cream", "dessert", "cake", "alfajor", "cookie", "candy", "jam", "bar", "cereal", "chocolate", "gum", "lollipop", "jelly")),
+            "cosmetics": (("acondicionador", "acond", "ac", "shampoo", "sham", "champu", "crema", "locion", "jabon", "cosmetico", "perfume"), ("conditioner", "shampoo", "sham", "cream", "lotion", "soap", "cosmetics", "perfume")),
+        },
+    ),
+    FamilyRule(
+        key="mango",
+        spanish_aliases=("mango", "mangos"),
+        english_aliases=("mango", "mangos"),
+        include_terms=("mango", "mangos"),
+        # ``mango`` is also the Spanish retail word for a tool handle.  Keep
+        # those rows searchable by their literal name but never present them
+        # as the fruit family.
+        excluded_phrases=(
+            ("mango", "madera"), ("mango", "plastico"), ("mango", "plastico"),
+            ("con", "mango"), ("c", "mango"), ("abrelata",), ("abrelatas",),
+            ("afeit",), ("afilador",), ("atizador",), ("batidor",), ("bifera",),
+            ("cacerola",), ("cuchara",), ("cucharon",), ("cuchilla",), ("cuchillo",),
+            ("cepillo",), ("colador",), ("cortapizza",), ("espátula",), ("espatula",),
+            ("espumadera",), ("hilo", "dental"), ("pala",), ("peine",),
+            ("utensilio",), ("herramienta",), ("jugo",), ("bebida",), ("gaseosa",),
+            ("yogur",), ("yogurt",), ("lacteo",),
+            ("helado",), ("mermelada",), ("postre",), ("caramelo",), ("gomita",),
+            ("galleta",), ("galletita",), ("galletas",), ("cookie",), ("cookies",),
+            ("aromatizador",), ("aroma",), ("desodorante",), ("difusor",),
+        ),
+        forms={
+            "fresh": (("fruta", "frutas", "fresco", "fresca", "congelado", "congelada", "cubos"), ("fruit", "fresh", "frozen", "cubes")),
+            "drink": (("jugo", "bebida", "gaseosa", "licuado", "smoothie"), ("juice", "drink", "smoothie", "beverage")),
+            "dessert": (("helado", "postre", "dulce", "mermelada", "caramelo", "gomita"), ("ice cream", "dessert", "jam", "candy", "gummy")),
+            "cosmetics": (("aromatizador", "aroma", "desodorante", "difusor"), ("air freshener", "fragrance", "deodorant", "diffuser")),
         },
     ),
     FamilyRule(
@@ -584,6 +663,55 @@ _FORM_PRESENTATION: Mapping[str, Mapping[str, Mapping[str, str]]] = {
             "query": "bebida de huevo",
         },
     },
+    "strawberry": {
+        "fresh": {
+            "labelEs": "Frutilla o fresa fresca",
+            "labelEn": "Fresh strawberry",
+            "query": "frutilla fresca",
+        },
+        "drink": {
+            "labelEs": "Bebida de frutilla",
+            "labelEn": "Strawberry drink",
+            "query": "jugo de frutilla",
+        },
+        "dairy": {
+            "labelEs": "Yogur o lácteo de frutilla",
+            "labelEn": "Strawberry yogurt or dairy",
+            "query": "yogur de frutilla",
+        },
+        "dessert": {
+            "labelEs": "Postre o dulce de frutilla",
+            "labelEn": "Strawberry dessert or sweet",
+            "query": "postre de frutilla",
+        },
+        "cosmetics": {
+            "labelEs": "Cosméticos con frutilla",
+            "labelEn": "Strawberry cosmetics",
+            "query": "cosmetico de frutilla",
+        },
+    },
+    "mango": {
+        "fresh": {
+            "labelEs": "Mango como fruta",
+            "labelEn": "Mango fruit",
+            "query": "mango fruta",
+        },
+        "drink": {
+            "labelEs": "Bebida de mango",
+            "labelEn": "Mango drink",
+            "query": "jugo de mango",
+        },
+        "dessert": {
+            "labelEs": "Postre o dulce de mango",
+            "labelEn": "Mango dessert or sweet",
+            "query": "postre de mango",
+        },
+        "cosmetics": {
+            "labelEs": "Aromas o cosméticos de mango",
+            "labelEn": "Mango fragrance or cosmetics",
+            "query": "aroma de mango",
+        },
+    },
     "carrot": {
         "vegetable": {
             "labelEs": "Zanahoria como verdura",
@@ -719,6 +847,38 @@ _FORM_PRESENTATION: Mapping[str, Mapping[str, Mapping[str, str]]] = {
             "query": "chicle relleno",
         },
     },
+    "cleaning_cloth": {
+        "floor": {
+            "labelEs": "Paños para piso",
+            "labelEn": "Floor cloths",
+            "query": "pano de piso",
+        },
+        "microfiber": {
+            "labelEs": "Paños de microfibra",
+            "labelEn": "Microfiber cloths",
+            "query": "pano microfibra",
+        },
+        "kitchen": {
+            "labelEs": "Paños de cocina",
+            "labelEn": "Kitchen cloths",
+            "query": "pano de cocina",
+        },
+        "multiuse": {
+            "labelEs": "Paños multiuso",
+            "labelEn": "Multi-purpose cloths",
+            "query": "pano multiuso",
+        },
+        "glass": {
+            "labelEs": "Paños para vidrios",
+            "labelEn": "Glass-cleaning cloths",
+            "query": "pano vidrios",
+        },
+        "bathroom": {
+            "labelEs": "Paños para baño",
+            "labelEn": "Bathroom cloths",
+            "query": "pano bano",
+        },
+    },
 }
 
 # These forms describe the direct family item itself.  Derived presentations
@@ -728,6 +888,7 @@ _FORM_PRESENTATION: Mapping[str, Mapping[str, Mapping[str, str]]] = {
 _DIRECT_FORM_KEYS = frozenset({
     "grain", "fresh", "vegetable", "whole_egg", "loose_leaves",
     "whole", "wheat", "corn", "rice", "legume", "nut", "oat",
+    "floor", "microfiber", "kitchen", "multiuse", "glass", "bathroom",
 })
 
 # These reviewed families have a strict bare-query projection.  It keeps
@@ -740,6 +901,8 @@ _DIRECT_QUERY_FAMILIES = frozenset({
     "coffee_maker", "air_fryer", "toaster", "sandwich_maker", "juicer",
     "blender", "microwave", "heater", "water_heater", "fan", "vacuum_cleaner",
     "broom", "mop", "duster",
+    "strawberry", "mango",
+    "cleaning_cloth",
 })
 
 

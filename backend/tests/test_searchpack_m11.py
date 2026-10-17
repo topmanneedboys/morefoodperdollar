@@ -572,6 +572,43 @@ class SearchPackM11Tests(unittest.TestCase):
             {"carrot:vegetable", "carrot:drink", "carrot:dessert", "carrot:cosmetics"},
         )
 
+    def test_service_search_keeps_fruit_and_shell_egg_results_strict(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "name": name,
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["frutilla", "mango", "huevo"],
+            }
+            for index, (key, name) in enumerate((
+                ("strawberry-fruit", "FRUTILLA FRESCA 250 G"),
+                ("strawberry-conditioner", "ACONDICIONADOR KIDS FRUTILLA 350 ML"),
+                ("mango-fruit", "MANGO X KG"),
+                ("mango-handle", "ABRELATAS PREMIUM MANGO MANGO MADERA"),
+                ("egg-shell", "HUEVOS FRESCOS X12"),
+                ("egg-bagel", "BAGEL DE HUEVO 185 G"),
+                ("egg-pasta", "FIDEOS AL HUEVO 500 G"),
+            ))
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        strawberry = service.search({"latitude": "-34", "longitude": "-58", "radiusKm": "5", "query": "strawberry"})
+        self.assertEqual([item["productEvidenceKey"] for item in strawberry["matches"]], ["strawberry-fruit"])
+        self.assertIsNotNone(strawberry["clarification"])
+
+        mango = service.search({"latitude": "-34", "longitude": "-58", "radiusKm": "5", "query": "mango"})
+        self.assertEqual([item["productEvidenceKey"] for item in mango["matches"]], ["mango-fruit"])
+        self.assertEqual(reader.discovery_calls[-1][0], "mango")
+
+        eggs = service.search({"latitude": "-34", "longitude": "-58", "radiusKm": "5", "query": "eggs"})
+        self.assertEqual([item["productEvidenceKey"] for item in eggs["matches"]], ["egg-shell"])
+        self.assertIsNotNone(eggs["clarification"])
+
     def test_service_search_exposes_generic_egg_clarification_and_filters_form(self) -> None:
         manager = _StubReleaseManager()
         reader = _StubReader()
@@ -975,6 +1012,55 @@ class SearchPackM11Tests(unittest.TestCase):
         self.assertEqual(reader.discovery_calls[0][0], "escoba")
         self.assertEqual([item["productEvidenceKey"] for item in response["matches"]], ["broom-direct"])
         self.assertIsNone(response["clarification"])
+
+    def test_service_search_clarifies_cleaning_cloth_forms(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "name": name,
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["pano"],
+                "qualifiedOffers": [],
+            }
+            for index, (key, name) in enumerate((
+                ("cloth-floor", "PANO DE PISO CARREFOUR ESSENTIAL NIDO DE ABEJA ESP"),
+                ("cloth-microfiber", "PANO MICROFIBRA VIRULANA EXPERT VIDRIOS"),
+                ("cloth-kitchen", "PAÑO DE COCINA ECOLOGICO MISTER TRAPO X1"),
+            ))
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        response = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "cleaning cloth",
+        })
+
+        self.assertEqual(reader.discovery_calls[0][0], "pano")
+        clarification = response["clarification"]
+        self.assertIsNotNone(clarification)
+        assert clarification is not None
+        self.assertEqual(clarification["family"], "cleaning_cloth")
+        self.assertEqual(
+            {choice["id"] for choice in clarification["choices"]},
+            {"cleaning_cloth:floor", "cleaning_cloth:microfiber", "cleaning_cloth:kitchen", "cleaning_cloth:glass"},
+        )
+
+        floor = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "pano de piso",
+        })
+        self.assertEqual(reader.discovery_calls[-1][0], "pano")
+        self.assertEqual([item["productEvidenceKey"] for item in floor["matches"]], ["cloth-floor"])
+        self.assertIsNone(floor["clarification"])
 
     def test_service_search_exposes_new_food_family_clarification_and_filters_form(self) -> None:
         manager = _StubReleaseManager()

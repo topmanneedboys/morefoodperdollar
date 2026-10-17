@@ -24,6 +24,7 @@ from typing import Any, Iterable, Iterator, Mapping, Sequence
 from tools.consumer_input_intelligence import normalize_text
 from tools.product_identity_lexicon import (
     FAMILY_RULES,
+    _DIRECT_FORM_KEYS,
     _FORM_PRESENTATION,
     _tokens as _lexicon_tokens,
     derive_identity_record,
@@ -32,7 +33,7 @@ from tools.product_taxonomy import DEPARTMENT_RULES, classify_name
 
 
 BUILD_SCHEMA_VERSION = "valuepilot-catalog-discovery-v2"
-RULES_VERSION = "valuepilot-catalog-discovery-rules-v25"
+RULES_VERSION = "valuepilot-catalog-discovery-rules-v32"
 MAX_QUERY_CHARS = 256
 MAX_PAGE_SIZE = 50
 MAX_FACET_PAGE_SIZE = 30
@@ -73,6 +74,20 @@ _FAMILY_PARENTS: Mapping[str, tuple[str, ...]] = {
     "pineapple": ("fruit",),
     "strawberry": ("fruit",),
     "tomato": ("fruit",),
+}
+
+# Bare family searches should open with the ordinary product presentation
+# visible while the clarification card explains observed alternatives.  The
+# sidecar keeps every alternative indexed; this projection only prevents a
+# dessert, beverage, or cosmetic mention from occupying the initial table.
+_PRIMARY_DIRECT_FORMS: Mapping[str, str] = {
+    "rice": "grain",
+    "lychee": "fresh",
+    "yerba_mate": "loose_leaves",
+    "egg": "whole_egg",
+    "strawberry": "fresh",
+    "mango": "fresh",
+    "carrot": "vegetable",
 }
 
 
@@ -553,6 +568,38 @@ def _broad_predicate_identity_keys(connection: sqlite3.Connection, predicate_id:
     }
 
 
+def _bare_query_identity_keys(connection: sqlite3.Connection, predicate_id: str) -> set[str]:
+    """Return the safe initial table projection for a type predicate.
+
+    A type posting records every accepted family mention so clarification can
+    explain the catalog evidence.  For reviewed families with a known primary
+    form, the first table must use that form posting; other forms remain
+    reachable through an explicit clarification selection.
+    """
+
+    if not predicate_id.startswith("type:"):
+        return _predicate_identity_keys(connection, predicate_id)
+    concepts = _descendant_concepts(connection, predicate_id)
+    values: set[str] = set()
+    for concept in concepts:
+        family = concept.split(":", 1)[1] if ":" in concept else ""
+        type_keys = _predicate_identity_keys(connection, concept)
+        form = _PRIMARY_DIRECT_FORMS.get(family)
+        if form:
+            form_keys = _predicate_identity_keys(connection, f"form:{family}:{form}")
+            values.update(type_keys & form_keys)
+        elif predicate_id == "type:fruit":
+            # Generic fruit families have no reviewed form vocabulary yet.
+            # Use the trusted produce department for the initial parent-facet
+            # table so hair care, oils, sweets, and scents are not presented
+            # as fresh fruit merely because they contain ``coco`` or ``manzana``.
+            produce_keys = _predicate_identity_keys(connection, "department:fresh_produce")
+            values.update(type_keys & produce_keys)
+        else:
+            values.update(type_keys)
+    return values
+
+
 def _literal_identity_keys(connection: sqlite3.Connection, tokens: Sequence[str]) -> set[str]:
     if not tokens:
         return set()
@@ -782,6 +829,13 @@ def _insert_identity(
         derived_families += role == "DERIVED"
         for form in family.get("observedForms", ()) if isinstance(family.get("observedForms"), Sequence) else ():
             if not isinstance(form, str) or not form.strip() or form == "unspecified":
+                continue
+            # Direct family forms (for example cloth-for-kitchen or rice
+            # grain) must not turn a derived mention into an accepted form
+            # result.  Derived presentations such as rice drink remain
+            # searchable through their explicit form when they are not in
+            # the reviewed direct-form set.
+            if role != "DIRECT" and form in _DIRECT_FORM_KEYS:
                 continue
             form_id = f"form:{key}:{form}"
             _ensure_concept(connection, form_id, "FORM", _form_label(key, form, "es"), _form_label(key, form, "en"), f"Observed form {form} for {key}.")
@@ -1070,7 +1124,9 @@ class DiscoveryIndex:
         # Do not reopen unrelated sibling forms merely because the selected
         # result window contains products that carry more than one observed
         # family mention (for example an alfajor with both rice and peanut).
-        if any(predicate.startswith("form:") for predicate in predicates):
+        if any(predicate.startswith("form:") for predicate in predicates) or any(
+            selection.startswith("form:") for selection in selections
+        ):
             return None, None
         base = predicates[0]
         dimension_id = "product_type"
@@ -1124,7 +1180,10 @@ class DiscoveryIndex:
         next_cursor = None
         if offset + facet_page_size < len(choices):
             next_cursor = self._encode_cursor({"kind": "facet", "offset": offset + facet_page_size, "fingerprint": self._fingerprint_for(query, language, selections)})
-        if len(choices) < 2:
+        # The initial request needs at least two choices to justify opening a
+        # clarification card.  A later facet page may legitimately contain a
+        # single final choice and must remain reachable through its cursor.
+        if len(choices) < 2 and not facet_cursor:
             return None, next_cursor
         return {"dimensionId": dimension_id, "choices": page, "hasMore": next_cursor is not None, "nextCursor": next_cursor}, next_cursor
 
@@ -1177,6 +1236,11 @@ class DiscoveryIndex:
         if not isinstance(request, DiscoveryQuery):
             raise DiscoveryError("request is invalid")
         predicates, remaining_tokens = self._resolve(request.query, request.language)
+        # Keep the broad set for facet evidence, but never render contextual
+        # mentions as if they were the requested product family.  A search
+        # such as ``eggs`` may legitimately explain pasta, toys, and drinks
+        # in the clarification card; the visible table must contain only the
+        # accepted shell-egg identities until a different choice is selected.
         candidates = self._candidate_keys(predicates, remaining_tokens, request.selections)
         clarification, _ = self._facet_choices(
             candidates,
@@ -1187,6 +1251,25 @@ class DiscoveryIndex:
             query=request.query,
             selections=request.selections,
         )
+        display_candidates = candidates
+        if clarification is not None:
+            strict_types = tuple(value for value in predicates if value.startswith("type:"))
+            if strict_types:
+                if request.selections:
+                    # The selected facet is already part of ``candidates``;
+                    # retain it while removing only broad contextual
+                    # mentions from the type predicate.
+                    display_candidates = candidates & set().union(
+                        *(_predicate_identity_keys(self.connection, value) for value in strict_types)
+                    )
+                else:
+                    display_candidates = set().union(
+                        *(_bare_query_identity_keys(self.connection, value) for value in strict_types)
+                    )
+                if remaining_tokens:
+                    display_candidates &= _literal_identity_keys(self.connection, remaining_tokens)
+            else:
+                display_candidates = set()
         # Broad type predicates include literal ``MENTIONS`` postings so a
         # clarification can explain why a word appeared. Once no facet is
         # available, there is no safe choice to separate those mentions; show
@@ -1195,9 +1278,9 @@ class DiscoveryIndex:
         if clarification is None and not request.selections:
             strict_types = tuple(value for value in predicates if value.startswith("type:"))
             if strict_types:
-                candidates = set().union(*(_predicate_identity_keys(self.connection, value) for value in strict_types))
+                display_candidates = set().union(*(_bare_query_identity_keys(self.connection, value) for value in strict_types))
                 if remaining_tokens:
-                    candidates &= _literal_identity_keys(self.connection, remaining_tokens)
+                    display_candidates &= _literal_identity_keys(self.connection, remaining_tokens)
         fingerprint = self._fingerprint(request.query, request.language, request.selections)
         last_name = ""
         last_key = ""
@@ -1208,11 +1291,11 @@ class DiscoveryIndex:
             last_name = str(cursor.get("lastName", ""))
             last_key = str(cursor.get("lastKey", ""))
         rows: list[sqlite3.Row] = []
-        if candidates:
-            placeholders = ",".join("?" for _ in candidates)
+        if display_candidates:
+            placeholders = ",".join("?" for _ in display_candidates)
             rows = list(self.connection.execute(
                 f"SELECT identity_key, provider_key, display_name, brand, normalized_name FROM identity WHERE identity_key IN ({placeholders}) AND (normalized_name > ? OR (normalized_name = ? AND identity_key > ?)) ORDER BY normalized_name, identity_key LIMIT ?",
-                tuple(candidates) + (last_name, last_name, last_key, request.page_size + 1),
+                tuple(display_candidates) + (last_name, last_name, last_key, request.page_size + 1),
             ))
         has_more = len(rows) > request.page_size
         visible = rows[:request.page_size]
@@ -1221,11 +1304,11 @@ class DiscoveryIndex:
             tail = visible[-1]
             next_cursor = self._encode_cursor({"kind": "product", "fingerprint": fingerprint, "lastName": tail["normalized_name"], "lastKey": tail["identity_key"]})
         product_count = 0
-        source_identity_count = len(candidates)
-        if candidates:
-            placeholders = ",".join("?" for _ in candidates)
-            product_count = int(self.connection.execute(f"SELECT COUNT(DISTINCT provider_key) FROM identity WHERE identity_key IN ({placeholders})", tuple(candidates)).fetchone()[0])
-        status = "NEEDS_CLARIFICATION" if clarification is not None else ("READY" if candidates else "NO_MATCHES")
+        source_identity_count = len(display_candidates)
+        if display_candidates:
+            placeholders = ",".join("?" for _ in display_candidates)
+            product_count = int(self.connection.execute(f"SELECT COUNT(DISTINCT provider_key) FROM identity WHERE identity_key IN ({placeholders})", tuple(display_candidates)).fetchone()[0])
+        status = "NEEDS_CLARIFICATION" if clarification is not None else ("READY" if display_candidates else "NO_MATCHES")
         matches = [
             {"identityKey": row["identity_key"], "providerProductId": row["provider_key"], "displayName": row["display_name"], "brand": row["brand"]}
             for row in visible

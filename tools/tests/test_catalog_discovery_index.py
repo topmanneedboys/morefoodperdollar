@@ -53,8 +53,8 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
             path = self._build(directory, rows)
             with DiscoveryIndex(path) as index:
                 first = index.query(DiscoveryQuery("rice", language="en", page_size=7, facet_page_size=10)).to_dict()
-                self.assertEqual(first["total"]["productCount"], 43)
-                self.assertEqual(first["total"]["sourceIdentityCount"], 43)
+                self.assertEqual(first["total"]["productCount"], 40)
+                self.assertEqual(first["total"]["sourceIdentityCount"], 40)
                 self.assertEqual(first["status"], "NEEDS_CLARIFICATION")
                 choice_ids = {choice["id"] for choice in first["clarification"]["choices"]}
                 self.assertIn("form:rice:grain", choice_ids)
@@ -68,8 +68,8 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
                     cursor = page["pagination"]["nextCursor"]
                     if not cursor:
                         break
-                self.assertEqual(len(seen), 43)
-                self.assertEqual(len(set(seen)), 43)
+                self.assertEqual(len(seen), 40)
+                self.assertEqual(len(set(seen)), 40)
 
                 dessert = index.query(
                     DiscoveryQuery("rice", language="en", selections=("form:rice:dessert",), page_size=20)
@@ -77,6 +77,13 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
                 self.assertEqual(dessert["status"], "READY")
                 self.assertEqual(dessert["total"]["productCount"], 1)
                 self.assertEqual([item["displayName"] for item in dessert["matches"]], ["GALLETAS DE ARROZ MARCA X 100 G"])
+
+                grain = index.query(
+                    DiscoveryQuery("rice", language="en", selections=("form:rice:grain",), page_size=20)
+                ).to_dict()
+                self.assertEqual(grain["status"], "READY")
+                self.assertIsNone(grain["clarification"])
+                self.assertEqual(grain["total"]["productCount"], 40)
 
                 empty = index.query(
                     DiscoveryQuery("rice", language="en", selections=("form:rice:unspecified",), page_size=20)
@@ -134,6 +141,19 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
                 self.assertEqual(result["resolvedPredicates"], ["type:bowl"])
                 self.assertEqual(result["total"]["productCount"], 1)
                 self.assertEqual([item["displayName"] for item in result["matches"]], ["BOWL CERAMICA CAROL 20 CM"])
+
+    def test_direct_cleaning_cloth_forms_exclude_derived_mentions(self) -> None:
+        direct = _row(1, "PANO DE COCINA MARCA X 1 UN", family="cleaning_cloth", form="kitchen")
+        derived = _row(2, "CORTINAS DE COCINA ESTAMPADAS 2 PAÑO", family="cleaning_cloth", form="kitchen")
+        derived["familyCandidates"][0]["role"] = "DERIVED"
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._build(directory, [direct, derived])
+            with DiscoveryIndex(path) as index:
+                result = index.query(DiscoveryQuery("pano de cocina", language="es", page_size=10)).to_dict()
+                self.assertEqual(result["status"], "READY")
+                self.assertEqual(result["resolvedPredicates"], ["form:cleaning_cloth:kitchen"])
+                self.assertEqual(result["total"]["productCount"], 1)
+                self.assertEqual([item["displayName"] for item in result["matches"]], ["PANO DE COCINA MARCA X 1 UN"])
 
     def test_identical_es_en_aliases_are_seeded_in_both_languages(self) -> None:
         rows = [
@@ -263,8 +283,9 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
             path = self._build(directory, rows)
             with DiscoveryIndex(path) as index:
                 broad = index.query(DiscoveryQuery("strawberry", language="en", page_size=10)).to_dict()
-                self.assertEqual(broad["status"], "READY")
+                self.assertEqual(broad["status"], "NEEDS_CLARIFICATION")
                 self.assertEqual(broad["total"]["productCount"], 1)
+                self.assertIsNotNone(broad["clarification"])
                 cosmetics = index.query(
                     DiscoveryQuery("strawberry", language="en", selections=("form:strawberry:cosmetics",), page_size=10)
                 ).to_dict()

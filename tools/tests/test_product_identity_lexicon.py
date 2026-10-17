@@ -168,6 +168,50 @@ class ProductIdentityLexiconTests(unittest.TestCase):
                     self.assertTrue(candidates)
                     self.assertEqual(candidates[0]["role"], "DERIVED")
 
+    def test_observed_fruit_and_egg_contexts_are_not_promoted_to_direct_products(self) -> None:
+        cases = (
+            ("ACONDICIONADOR KIDS FRUTILLA 350 ML", "strawberry", "cosmetics"),
+            ("YOGUR BEBIBLE FRUTILLA 900 G", "strawberry", "dairy"),
+            ("ABRELATAS PREMIUM MANGO MANGO MADERA", "mango", "unspecified"),
+            ("JUGO DE MANGO 1 L", "mango", "drink"),
+            ("BAGEL DE HUEVO 185 G", "egg", "whole_egg"),
+            ("ENSALADA CON HUEVO X 1 PORCION", "egg", "whole_egg"),
+        )
+        for name, family, forbidden_form in cases:
+            with self.subTest(name=name):
+                value = derive_identity_record(_row(f"p:context:{family}", name))
+                matches = [item for item in value["familyCandidates"] if item["family"] == family]
+                self.assertEqual(len(matches), 1)
+                if family == "mango" and "JUGO" in name:
+                    self.assertEqual(matches[0]["role"], "DERIVED")
+                    self.assertIn("drink", matches[0]["observedForms"])
+                elif family == "strawberry":
+                    self.assertEqual(matches[0]["role"], "DERIVED")
+                    self.assertIn(forbidden_form, matches[0]["observedForms"])
+                else:
+                    self.assertEqual(matches[0]["role"], "DERIVED")
+                    self.assertIn("unspecified", matches[0]["observedForms"])
+
+    def test_reviewed_fruit_queries_resolve_in_both_languages(self) -> None:
+        self.assertEqual(family_query_key("frutilla"), "strawberry")
+        self.assertEqual(family_query_key("strawberry"), "strawberry")
+        self.assertEqual(family_query_key("mango"), "mango")
+
+    def test_abbreviated_confectionery_and_ingredient_mentions_stay_derived(self) -> None:
+        cases = (
+            ("Huevo MILKA leche x22g PAQ-22-gr.", "egg"),
+            ("Huevo KINDERSorpresa Lei Pack 2x48 40 gr CJA-40-gr.", "egg"),
+            ("FID LUCCHETTI SPAG HUEVO", "egg"),
+            ("GALLETAS VAINILLAS AL HUEVO SANCHO PANZA PAQ 200 GRM", "egg"),
+            ("HARINA S TACC DE ARROZ BLANCO ABUCEL X 500 GRS", "rice"),
+            ("GALLETA ARROZ INTEGRAL", "rice"),
+        )
+        for name, family in cases:
+            with self.subTest(name=name):
+                value = derive_identity_record(_row(f"p:abbrev:{family}", name))
+                candidate = next(item for item in value["familyCandidates"] if item["family"] == family)
+                self.assertEqual(candidate["role"], "DERIVED")
+
     def test_v12_argentine_food_families_cover_alfajor_flour_and_peanut_forms(self) -> None:
         cases = (
             ("p:alfajor", "ALFAJOR CHOCOLATE BLANCO RELLENO DULCE DE LECHE X 60 G", "alfajor", "DIRECT", {"chocolate", "dulce_de_leche"}),
@@ -493,6 +537,52 @@ class ProductIdentityLexiconTests(unittest.TestCase):
         ):
             with self.subTest(query=query):
                 self.assertEqual(family_query_key(query), expected)
+
+    def test_v26_cleaning_cloth_forms_are_bilingual_and_context_safe(self) -> None:
+        direct_cases = (
+            ("p:cloth-floor", "PANO DE PISO CARREFOUR ESSENTIAL NIDO DE ABEJA ESP", "floor"),
+            ("p:cloth-microfiber", "PANO MICROFIBRA VIRULANA EXPERT VIDRIOS", "microfiber"),
+            ("p:cloth-kitchen", "PAÑO DE COCINA ECOLOGICO MISTER TRAPO X1", "kitchen"),
+        )
+        for key, name, expected_form in direct_cases:
+            with self.subTest(name=name):
+                match = next(
+                    item for item in derive_identity_record(_row(key, name))["familyCandidates"]
+                    if item["family"] == "cleaning_cloth"
+                )
+                self.assertEqual(match["role"], "DIRECT")
+                self.assertIn(expected_form, match["observedForms"])
+
+        for key, name in (
+            ("p:cloth-curtain", "CORTINAS FIELDERST COCINA ESTAMP. 2PAÑO"),
+            ("p:cloth-felt", "FIELTRO AUTOADHESIVO CARREFOUR PANO 80X80MM"),
+            ("p:cloth-bags", "BOLSAS DE RESIDUOS 50X70 MISTER TRAPO PAQ 10 UNI"),
+        ):
+            with self.subTest(name=name):
+                match = next(
+                    item for item in derive_identity_record(_row(key, name))["familyCandidates"]
+                    if item["family"] == "cleaning_cloth"
+                )
+                self.assertEqual(match["role"], "DERIVED")
+
+        for query, expected in (
+            ("pano", "cleaning_cloth"),
+            ("paño", "cleaning_cloth"),
+            ("trapo", "cleaning_cloth"),
+            ("cleaning cloth", "cleaning_cloth"),
+            ("cloth", "cleaning_cloth"),
+            ("rag", "cleaning_cloth"),
+        ):
+            with self.subTest(query=query):
+                self.assertEqual(family_query_key(query), expected)
+
+        for query, expected in (
+            ("pano de piso", ("cleaning_cloth", "floor")),
+            ("cleaning cloth microfiber", ("cleaning_cloth", "microfiber")),
+            ("pano de cocina", ("cleaning_cloth", "kitchen")),
+        ):
+            with self.subTest(query=query):
+                self.assertEqual(family_query_form(query), expected)
 
     def test_mango_family_is_available_for_observed_forms(self) -> None:
         value = derive_identity_record(_row("p:mango-cookie", "GALLETAS DE MANGO 200 G"))
