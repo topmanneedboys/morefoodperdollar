@@ -136,6 +136,97 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
             self.assertEqual(report["pagination"]["status"], "PASS")
             self.assertEqual(report["semanticAccuracy"]["status"], "NOT_ESTABLISHED")
 
+    def test_semantic_ledger_requires_complete_independent_membership_oracle(self) -> None:
+        rows = [
+            _row(1, "ARROZ LARGO MARCA X 1 KG", form="grain"),
+            _row(2, "GALLETAS DE ARROZ MARCA X 100 G", form="dessert"),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "identities.jsonl"
+            source.write_text("".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in rows), encoding="utf-8")
+            output = Path(directory) / "discovery.sqlite"
+            build_discovery_index(source, output, release_id="semantic-ledger-v1")
+            ledger = Path(directory) / "semantic.json"
+            ledger.write_text(
+                json.dumps(
+                    {
+                        "schemaVersion": "valuepilot-semantic-review-ledger-v1",
+                        "sourceReleaseId": "semantic-ledger-v1",
+                        "sourceSha256": "0" * 64,
+                        "cases": [
+                            {
+                                "id": "rice-grain-001",
+                                "query": "rice",
+                                "language": "en",
+                                "selection": "form:rice:grain",
+                                "expectedIdentityKeys": ["ar-sepa-product:synthetic:001"],
+                                "expectedProviderProductIds": ["provider-001"],
+                                "mustExcludeIdentityKeys": ["ar-sepa-product:synthetic:002"],
+                                "reviewStatus": "REVIEWED",
+                                "reviewerId": "reviewer-a",
+                                "reviewMethod": "HUMAN_SOURCE_REVIEW",
+                                "reviewedAt": "2026-10-17T19:00:00Z",
+                                "reviewNotes": "The source name explicitly identifies whole grain rice.",
+                            }
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            report = verify_catalog_discovery(output, source, semantic_eval_path=ledger)
+            self.assertEqual(report["semanticAccuracy"]["status"], "PASS")
+            self.assertEqual(report["semanticAccuracy"]["reviewedCases"], 1)
+            self.assertEqual(report["semanticAccuracy"]["membershipMetrics"]["identity"]["precision"], 1.0)
+
+            invalid = json.loads(ledger.read_text(encoding="utf-8"))
+            invalid["cases"][0]["expectedIdentityKeys"].append("ar-sepa-product:synthetic:002")
+            invalid["cases"][0]["expectedProviderProductIds"].append("provider-002")
+            ledger.write_text(json.dumps(invalid, ensure_ascii=False), encoding="utf-8")
+            failed = verify_catalog_discovery(output, source, semantic_eval_path=ledger)
+            self.assertEqual(failed["semanticAccuracy"]["status"], "FAIL")
+            self.assertEqual(failed["semanticAccuracy"]["results"][0]["missingRequired"], ["ar-sepa-product:synthetic:002"])
+
+    def test_future_import_add_change_delete_is_literal_safe_and_reviewable(self) -> None:
+        initial_rows = [
+            _row(1, "ARROZ LARGO MARCA X 1 KG"),
+            _row(2, "GALLETAS DE ARROZ MARCA X 100 G", form="dessert"),
+        ]
+        new_unknown = {
+            "productEvidenceKey": "ar-sepa-product:synthetic:003",
+            "providerProductId": "provider-003",
+            "name": "PRODUCTO NUEVO SIN CLASIFICAR 1 UN",
+            "brand": "Marca",
+            "familyCandidates": [],
+            "aliases": [],
+            "sourceEvidence": {"nameSamples": ["PRODUCTO NUEVO SIN CLASIFICAR 1 UN"]},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            initial_source = root / "initial.jsonl"
+            initial_source.write_text("".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in initial_rows), encoding="utf-8")
+            initial_index = root / "initial.sqlite"
+            build_discovery_index(initial_source, initial_index, release_id="future-v1")
+
+            next_source = root / "next.jsonl"
+            next_rows = [initial_rows[0], new_unknown]
+            next_source.write_text("".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in next_rows), encoding="utf-8")
+            next_index = root / "next.sqlite"
+            build_discovery_index(next_source, next_index, release_id="future-v2")
+            queue = root / "review.jsonl"
+            report = verify_catalog_discovery(next_index, next_source, review_queue_path=queue)
+
+            self.assertEqual(report["sourceAccounting"]["sourceRows"], 2)
+            self.assertEqual(report["sourceAccounting"]["sidecarIdentityRows"], 2)
+            self.assertEqual(report["identityReachability"]["identitiesLiteralUnreachable"], 0)
+            review_rows = [json.loads(line) for line in queue.read_text(encoding="utf-8").splitlines() if line.strip()]
+            self.assertTrue(any(row["identityKey"] == new_unknown["productEvidenceKey"] and row["stratum"] == "UNRESOLVED" for row in review_rows))
+            with DiscoveryIndex(next_index) as index:
+                literal = index.query(DiscoveryQuery("producto nuevo sin clasificar", language="es", page_size=10)).to_dict()
+                self.assertEqual(literal["status"], "READY")
+                self.assertEqual([item["identityKey"] for item in literal["matches"]], [new_unknown["productEvidenceKey"]])
+                self.assertNotIn("ar-sepa-product:synthetic:002", {row["identityKey"] for row in index.query(DiscoveryQuery("galletas de arroz", language="es", page_size=10)).to_dict()["matches"]})
+
     def test_final_facet_page_with_one_choice_remains_reachable(self) -> None:
         rows = [
             _row(1, "ARROZ LARGO MARCA X 1 KG", form="grain"),

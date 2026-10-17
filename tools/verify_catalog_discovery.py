@@ -42,6 +42,11 @@ MAX_PREDICATE_FAILURE_SAMPLES = 50
 DEFAULT_PAGE_SIZE = 50
 DEFAULT_FACET_PAGE_SIZE = 30
 REVIEW_QUEUE_SIZE = 1000
+INDEPENDENT_REVIEW_METHODS = frozenset({
+    "HUMAN_SOURCE_REVIEW",
+    "DUAL_HUMAN_REVIEW",
+    "DOMAIN_REVIEW",
+})
 
 
 def _sha256(path: Path) -> str:
@@ -321,11 +326,20 @@ def _evaluate_semantic_set(
 
         {"id":"...", "query":"rice", "language":"es",
          "selection":"form:rice:grain",
-         "mustIncludeIdentityKeys":[...],
-         "mustExcludeIdentityKeys":[...], "reviewStatus":"REVIEWED"}
+         "expectedIdentityKeys":[...],
+         "expectedProviderProductIds":[...],
+         "reviewStatus":"REVIEWED",
+         "reviewerId":"reviewer-a",
+         "reviewMethod":"HUMAN_SOURCE_REVIEW",
+         "reviewedAt":"2026-10-17T19:00:00Z"}
 
-    The expected identity lists are external evidence.  Missing or unreviewed
-    cases are reported and never counted as accuracy passes.
+    ``expectedIdentityKeys`` is a complete membership oracle for the query,
+    not just a positive sample.  Provider IDs make retailer-copy grouping
+    explicit.  The expected sets and review provenance are external evidence;
+    missing, incomplete or unreviewed cases are never counted as accuracy
+    passes.  ``mustIncludeIdentityKeys`` and ``mustExcludeIdentityKeys`` are
+    retained as optional readable assertions, but cannot establish accuracy on
+    their own.
     """
 
     value = json.loads(path.read_text(encoding="utf-8"))
@@ -334,15 +348,29 @@ def _evaluate_semantic_set(
         return {"status": "FAIL", "failureCount": 1, "failures": ["semantic eval must contain a cases array"]}
     results: list[dict[str, Any]] = []
     reviewed = 0
+    unreviewed = 0
     passed = 0
     failures = 0
+    expected_identity_total = 0
+    actual_identity_total = 0
+    true_positive_identity_total = 0
+    expected_provider_total = 0
+    actual_provider_total = 0
+    true_positive_provider_total = 0
+    case_ids: set[str] = set()
     for position, case in enumerate(cases):
         if not isinstance(case, Mapping):
             failures += 1
             _limited_append(results, {"index": position, "status": "FAIL", "reason": "case is not an object"})
             continue
         case_id = str(case.get("id", position))
+        if case_id in case_ids:
+            failures += 1
+            _limited_append(results, {"id": case_id, "status": "FAIL", "reason": "duplicate case id"})
+            continue
+        case_ids.add(case_id)
         if case.get("reviewStatus") != "REVIEWED":
+            unreviewed += 1
             _limited_append(results, {"id": case_id, "status": "NOT_REVIEWED"})
             continue
         reviewed += 1
@@ -352,15 +380,81 @@ def _evaluate_semantic_set(
             failures += 1
             _limited_append(results, {"id": case_id, "status": "FAIL", "reason": "invalid query or language"})
             continue
+        reviewer_id = case.get("reviewerId")
+        review_method = case.get("reviewMethod")
+        reviewed_at = case.get("reviewedAt")
+        provenance_failures: list[str] = []
+        if not isinstance(reviewer_id, str) or not reviewer_id.strip():
+            provenance_failures.append("reviewerId is required")
+        if review_method not in INDEPENDENT_REVIEW_METHODS:
+            provenance_failures.append("reviewMethod is not an independent review method")
+        if not isinstance(reviewed_at, str) or not reviewed_at.strip():
+            provenance_failures.append("reviewedAt is required")
+        expected = case.get("expectedIdentityKeys")
+        expected_providers = case.get("expectedProviderProductIds")
+        if not isinstance(expected, list) or any(not isinstance(item, str) or not item.strip() for item in expected):
+            provenance_failures.append("expectedIdentityKeys must be a complete string array")
+            expected = []
+        if not isinstance(expected_providers, list) or any(not isinstance(item, str) or not item.strip() for item in expected_providers):
+            provenance_failures.append("expectedProviderProductIds must be a complete string array")
+            expected_providers = []
+        expected_set = {str(item) for item in expected}
+        expected_provider_set = {str(item) for item in expected_providers}
+        if len(expected_set) != len(expected) or len(expected_provider_set) != len(expected_providers):
+            provenance_failures.append("expected membership arrays must not contain duplicates")
+        unknown_expected = sorted(expected_set - set(meta))
+        if unknown_expected:
+            provenance_failures.append("expectedIdentityKeys contain identities outside the pinned sidecar")
+        metadata_providers = {
+            str(meta[key]["provider_key"])
+            for key in expected_set
+            if key in meta
+        }
+        if metadata_providers != expected_provider_set:
+            provenance_failures.append("expected provider IDs do not match expected identity memberships")
+        if provenance_failures:
+            failures += 1
+            _limited_append(
+                results,
+                {
+                    "id": case_id,
+                    "status": "FAIL",
+                    "reason": "review provenance or complete oracle is invalid",
+                    "details": provenance_failures,
+                },
+            )
+            continue
         selection = case.get("selection")
         selections = (str(selection),) if isinstance(selection, str) and selection else ()
         pages = _collect_product_pages(index, query=query, language=language, selections=selections)
         actual = set(pages["identityKeys"])
+        actual_providers = {
+            str(meta[key]["provider_key"])
+            for key in actual
+            if key in meta
+        }
         required = {str(item) for item in case.get("mustIncludeIdentityKeys", ()) if isinstance(item, str)}
         forbidden = {str(item) for item in case.get("mustExcludeIdentityKeys", ()) if isinstance(item, str)}
-        missing = sorted(required - actual)
+        missing = sorted(expected_set - actual)
+        unexpected = sorted(actual - expected_set)
         leaked = sorted(forbidden & actual)
-        ok = not pages["failures"] and not missing and not leaked
+        missing_providers = sorted(expected_provider_set - actual_providers)
+        unexpected_providers = sorted(actual_providers - expected_provider_set)
+        expected_identity_total += len(expected_set)
+        actual_identity_total += len(actual)
+        true_positive_identity_total += len(expected_set & actual)
+        expected_provider_total += len(expected_provider_set)
+        actual_provider_total += len(actual_providers)
+        true_positive_provider_total += len(expected_provider_set & actual_providers)
+        ok = (
+            not pages["failures"]
+            and not missing
+            and not unexpected
+            and not leaked
+            and not missing_providers
+            and not unexpected_providers
+            and required <= actual
+        )
         if ok:
             passed += 1
         else:
@@ -371,21 +465,50 @@ def _evaluate_semantic_set(
                 "id": case_id,
                 "status": "PASS" if ok else "FAIL",
                 "missingRequired": missing[:MAX_FAILURE_SAMPLES],
+                "unexpectedIdentityKeys": unexpected[:MAX_FAILURE_SAMPLES],
                 "leakedForbidden": leaked[:MAX_FAILURE_SAMPLES],
+                "missingProviderProductIds": missing_providers[:MAX_FAILURE_SAMPLES],
+                "unexpectedProviderProductIds": unexpected_providers[:MAX_FAILURE_SAMPLES],
                 "queryFailures": pages["failures"],
             },
         )
-    status = "PASS" if reviewed and failures == 0 and passed == reviewed else "FAIL"
     if not reviewed:
         status = "NOT_ESTABLISHED"
+    elif failures:
+        status = "FAIL"
+    elif unreviewed:
+        status = "INCOMPLETE"
+    else:
+        status = "PASS"
+    identity_precision = true_positive_identity_total / actual_identity_total if actual_identity_total else None
+    identity_recall = true_positive_identity_total / expected_identity_total if expected_identity_total else None
+    provider_precision = true_positive_provider_total / actual_provider_total if actual_provider_total else None
+    provider_recall = true_positive_provider_total / expected_provider_total if expected_provider_total else None
     return {
         "status": status,
         "caseCount": len(cases),
         "reviewedCases": reviewed,
+        "unreviewedCases": unreviewed,
         "passedCases": passed,
         "failureCount": failures,
+        "membershipMetrics": {
+            "identity": {
+                "expectedTotal": expected_identity_total,
+                "actualTotal": actual_identity_total,
+                "truePositiveTotal": true_positive_identity_total,
+                "precision": identity_precision,
+                "recall": identity_recall,
+            },
+            "providerProduct": {
+                "expectedTotal": expected_provider_total,
+                "actualTotal": actual_provider_total,
+                "truePositiveTotal": true_positive_provider_total,
+                "precision": provider_precision,
+                "recall": provider_recall,
+            },
+        },
         "results": results,
-        "note": "Expected memberships come from the supplied independent review ledger; compiler labels are not used as the oracle.",
+        "note": "Expected memberships come from complete externally reviewed identity/provider sets; compiler labels are not used as the oracle.",
     }
 
 

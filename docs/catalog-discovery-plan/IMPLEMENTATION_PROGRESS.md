@@ -54,8 +54,17 @@ saved-data, release, and security paths remain unchanged.
   and 43,042 partial bilingual rows; one concept predicate lacks a Spanish
   alias. These are the remaining catalog-quality limitations, not pagination
   or identity-integrity failures. No v41 batch or new rebuild was started.
-- Tests already passing at the frozen code checkpoint: catalog-discovery index
-  module **24 passed**, full tools suite **428 passed**, backend suite **145 passed**,
+- The semantic gate is now enforceable through
+  `SEMANTIC_REVIEW_LEDGER.schema.json` and
+  `SEMANTIC_REVIEW_LEDGER.md`. A reviewed case must provide a complete
+  identity set, complete provider-product set, independent reviewer method and
+  provenance; positive-only samples and compiler self-labels cannot pass.
+  Synthetic tests cover both an exact pass and missing/unexpected membership
+  failures. A future-import regression also proves that a new unclassified
+  identity remains literally searchable, deleted identities disappear, and the
+  new meaning enters the review queue without a catalog-specific patch.
+- Tests now passing at this checkpoint: catalog-discovery index module
+  **26 passed**, full tools suite **430 passed**, backend suite **145 passed**,
   and Android `:shared-core:test :app:testDebugUnitTest` **BUILD SUCCESSFUL**.
   The v40 structural audit and HTTP contract report also pass.
 - `adb devices -l` still reports no attached Motorola device. Actual phone
