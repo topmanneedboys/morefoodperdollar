@@ -10,8 +10,8 @@ saved-data, release, and security paths remain unchanged.
 
 - Branch: `work/valuepilot-stage2-premium-shopping`
 - Starting handoff checkpoint: `6ce81d0d`
-- Current verified checkpoint: code commit `778bf028` (documentation checkpoint follows the verification update).
-- Discovery rules: `valuepilot-catalog-discovery-rules-v24`
+- Current verified checkpoint: code commit `9d3edf42` (documentation checkpoint follows the verification update).
+- Discovery rules: `valuepilot-catalog-discovery-rules-v25`
 - Sidecar schema: `valuepilot-catalog-discovery-v2`
 - Additive HTTP contract: `valuepilot-discovery-http-v2`
 - Current state: deterministic identity index, strict query/facet engine, and
@@ -43,27 +43,28 @@ The current local release build reported:
 - `providerProducts`: 78,865
 - `identityRecords`: 134,337
 - `indexedTokens`: 36,423
-- `concepts`: 255
-- `assertions`: 192,580
-- `TYPE_RESOLVED`: 67,884
-- `TYPE_UNRESOLVED`: 66,453
+- `concepts`: 258
+- `assertions`: 193,041
+- `TYPE_RESOLVED`: 68,335
+- `TYPE_UNRESOLVED`: 66,002
 - `TYPE_OR_DEPARTMENT_RESOLVED`: 91,161
 - `DEPARTMENT_RESOLVED`: 85,249
-- `ROLE_RESOLVED`: 69,125
-- `DERIVED_ONLY`: 1,241
+- `ROLE_RESOLVED`: 69,578
+- `DERIVED_ONLY`: 1,243
 - `NO_FORM`: 126,069
 - English retrieval-path proxy: 91,266 identities
 - Spanish retrieval-path proxy: 111,057 identities
-- fully type-resolved provider groups: 30,221; partly resolved: 7,992; unresolved: 40,652
-- fully type-or-department-resolved provider groups: 46,230; partly resolved: 8,214; unresolved: 24,421
+- fully type-resolved provider groups: 30,482; partly resolved: 8,002; unresolved: 40,381
+- fully type-or-department-resolved provider groups: 51,477; partly resolved: 2,967; unresolved: 24,421
 - source SHA-256: `85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6`
-- ignored sidecar SHA-256: `69510b48892953339d07bfbe972c0284e5435e6ab7f02d51947f428d18d394a3`
+- ignored sidecar SHA-256: `a4f148aea8e9199d9b92e0d5d93acb25bfe805ce045f8f025ae33fee1c2c692b`
 
-The v24 replay combines the existing reviewed family dictionary with
-`tools/data/discovery_family_rules.json`. It retains the v23 appliance families
-and adds observed bilingual household-appliance families for heater/calefactor,
-water heater/termotanque, fan/ventilador and vacuum cleaner/aspiradora. The
-v22 bowl family and earlier reviewed rules remain unchanged.
+The v25 replay combines the existing reviewed family dictionary with
+`tools/data/discovery_family_rules.json`. It retains all earlier reviewed rules
+and adds observed bilingual household-cleaning families for broom
+(escoba/escobillon/escobillón), mop (mopa) and duster (plumero). The observed
+KIT GANCHOS ESCOBA accessory and GUANTE NOVICA PLUMERO glove context remain
+literal/derived and are excluded from strict family postings.
 Chewing-gum forms are limited to observed sugar-free and filled names. Negative
 context is conservative for scent, conditioner, shampoo, dental and beverage
 mentions; facial-cream context excludes observed depilatory and sunscreen
@@ -201,6 +202,41 @@ Next concrete work is the residual inventory: 66,680 identity-level type rows,
 full type-or-department coverage. Continue evidence-backed batches and record
 unresolved evidence gaps; do not treat literal reachability, department labels
 or count increases as semantic completion.
+
+## v25 verified checkpoint
+
+- Code checkpoint: `9d3edf42`.
+- Rules: `valuepilot-catalog-discovery-rules-v25`; sidecar schema remains
+  `valuepilot-catalog-discovery-v2`.
+- The v25 batch adds three observed bilingual household-cleaning families:
+  broom (`escoba`, `escobillon`, `escobillón`), mop (`mopa`) and duster
+  (`plumero`). The strict English aliases are `broom`/`floor broom`, `mop`
+  and `duster`/`feather duster`.
+- Both language paths resolve to the same strict predicates. Full pagination
+  audits retrieved every identity without duplicates: broom 167/283, mop
+  89/141 and duster 24/35 provider/source counts. Every strict posting was
+  independently re-derived as `DIRECT`; no non-direct family postings remain.
+- The broom rule excludes the observed `KIT GANCHOS ESCOBA` accessory and the
+  duster rule excludes the observed `GUANTE NOVICA PLUMERO` glove context. Each
+  remains literal-searchable as a derived mention.
+- Sidecar: `local-provider-data/product-discovery-v2.sqlite`; SHA-256
+  `a4f148aea8e9199d9b92e0d5d93acb25bfe805ce045f8f025ae33fee1c2c692b`.
+- Coverage: 68,335 type-resolved; 66,002 type-unresolved; 91,161
+  type-or-department resolved; 85,249 department-resolved; 69,578
+  role-resolved; 1,243 derived-only; 126,069 without a form.
+- Provider groups: 30,482 fully type-resolved, 8,002 partial and 40,381
+  unresolved; 51,477 fully type-or-department-resolved, 2,967 partial and
+  24,421 unresolved.
+- Focused lexicon/backend checks passed. Full tools suite: 410 tests passed.
+  Backend suite: 142 tests passed. Android source and APK were unchanged;
+  prior Android checks remain applicable.
+- Motorola Edge 2025 runtime validation remains **NOT RUN** for this
+  catalog-only checkpoint. The sidecar is local/ignored and has not been
+  promoted to the backend or preview.
+
+The v25 residual gate remains open. Continue with evidence-backed batches and
+record unresolved evidence gaps; do not treat literal reachability, department
+labels or count increases as semantic completion.
 
 ## v24 verified checkpoint
 

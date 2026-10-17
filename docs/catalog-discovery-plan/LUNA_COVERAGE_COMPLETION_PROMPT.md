@@ -1,19 +1,20 @@
 # Luna continuation: complete catalog coverage and working clarification
 
-Prepared 2026-10-16 after verifying implementation HEAD `778bf028635daf6804a772c921eb0d460014bce9`.
-This is an implementation brief, not a completed classification or test report.
-Use this prompt for the next Luna run. It supersedes the old instruction to start
-from stage A in `LUNA_IMPLEMENTATION_PROMPT.md`; the engineering specification
-continues to define the architecture and behavior.
+Prepared 2026-10-16 after verifying implementation HEAD `9d3edf42`.
+This is an implementation handoff, not a completed classification or test
+report. Use it with `ENGINEERING_SPEC.md` and `IMPLEMENTATION_PROGRESS.md`.
+It supersedes the old instruction to restart Stage A or repeat the completed
+Stage 0/1/2 audits. The engineering specification continues to define the
+architecture and behavior.
 
 ## 0. Current verified handoff — start here
 
 The latest legitimate code checkpoint is:
 
 ```text
-HEAD: 778bf028635daf6804a772c921eb0d460014bce9
+HEAD: 9d3edf42
 Branch: work/valuepilot-stage2-premium-shopping
-Rules: valuepilot-catalog-discovery-rules-v24
+Rules: valuepilot-catalog-discovery-rules-v25
 Schema: valuepilot-catalog-discovery-v2
 Source SHA-256: 85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6
 ```
@@ -22,52 +23,98 @@ The verified local ignored sidecar is:
 
 ```text
 local-provider-data/product-discovery-v2.sqlite
-SHA-256: 69510b48892953339d07bfbe972c0284e5435e6ab7f02d51947f428d18d394a3
+SHA-256: a4f148aea8e9199d9b92e0d5d93acb25bfe805ce045f8f025ae33fee1c2c692b
 ```
 
 It accounts for 78,865 provider product IDs and 134,337 qualified identity
-records. Current measurements are 67,884 `TYPE_RESOLVED`, 66,453
-`TYPE_UNRESOLVED`, 91,161 `TYPE_OR_DEPARTMENT_RESOLVED`, 69,125
+records. Current measurements are 68,335 `TYPE_RESOLVED`, 66,002
+`TYPE_UNRESOLVED`, 91,161 `TYPE_OR_DEPARTMENT_RESOLVED`, 69,578
 `ROLE_RESOLVED`, 91,266 English retrieval-path identities and 111,057 Spanish
-retrieval-path identities. At provider-group level, 30,221 groups are fully
-type-resolved, 7,992 are partly type-resolved and 40,652 have no full type
-coverage; 46,230 are fully type-or-department-resolved, 8,214 are partial and
+retrieval-path identities. At provider-group level, 30,482 groups are fully
+type-resolved, 8,002 are partly type-resolved and 40,381 have no full type
+coverage; 51,477 are fully type-or-department-resolved, 2,967 are partial and
 24,421 are unresolved by that combined measure. These are structural/retrieval
 measurements, not a claim that the catalog is semantically complete.
 
-The v24 changes retain all earlier reviewed bilingual/Spanish forms and
-negative context, then add four observed household-appliance families:
-heater/calefactor, water heater/termotanque, fan/ventilador and vacuum
-cleaner/aspiradora. The source-backed English `fan` alias also matches five
-observed football/fut/lata/perfume contexts; those rows stay derived/literal
-and are excluded from strict fan postings using exact reviewed phrases.
-Do not replace these guards with broad substring rules.
+The v25 changes retain all earlier reviewed bilingual/Spanish forms and
+negative context, then add three observed household-cleaning families:
 
-Verified v24 strict behavior: heater returns 98 provider products from 118
-source identities, water heater 42/48, fan 20/20 and vacuum cleaner 50/50 in
-both English and Spanish. Full pagination has no duplicate rows, and every
-strict posting for these four families independently re-derives as `DIRECT`.
-The full tools suite passed 409 tests and the backend suite passed 141 tests.
-These are identity-only discovery results; they do not create prices, offers,
-stock, availability or geography.
+- `broom`: Spanish `escoba`, `escobillon`, `escobillón`; English `broom`,
+  `floor broom`.
+- `mop`: Spanish `mopa`; English `mop`.
+- `duster`: Spanish `plumero`; English `duster`, `feather duster`.
 
-The APK and Android source are unchanged from the prior verified checkpoint; the
-prior debug APK SHA-256 remains `027736566b64f1a0e21e3fcb6f475b0a862633e06a88a8a16d4c8166cd7a4c`.
-Motorola Edge 2025 runtime validation is **NOT RUN** for this catalog
-checkpoint. The sidecar has not been promoted to the backend or preview
-runtime. There has been no Play publication, Firebase/App Check change,
-credential change, security bypass, price/offer/stock change or production
-activation.
+The observed `KIT GANCHOS ESCOBA` accessory and `GUANTE NOVICA PLUMERO` glove
+context are retained as derived/literal mentions and excluded from strict
+family postings. Do not replace these exact guards with broad substring rules.
+
+Verified v25 strict behavior in both languages:
+
+- broom: 167 provider products from 283 source identities, 6 pages;
+- mop: 89 provider products from 141 source identities, 3 pages;
+- duster: 24 provider products from 35 source identities, 1 page.
+
+Every strict row independently re-derives as `DIRECT`; pagination has no
+duplicates and no non-direct rows. The full tools suite passed 410 tests and
+the backend suite passed 142 tests. These are identity-only discovery results;
+they do not create prices, offers, stock, availability or geography.
+
+The APK and Android source are unchanged from the prior verified checkpoint;
+the prior debug APK verification remains valid. Motorola Edge 2025 runtime
+validation is **NOT RUN** for this catalog checkpoint. The sidecar has not been
+promoted to the backend or preview runtime. There has been no Play publication,
+Firebase/App Check change, credential change, security bypass, price/offer/stock
+change or production activation.
 
 For the next run, verify the actual HEAD and ledger, inspect the residual
-inventory, implement the next substantial evidence-supported rule batch and its
-correctness tests, rebuild the ignored sidecar atomically from the pinned
-source, run focused checks, then run the full suites only at the integrated
-milestone. Update the release report and ledger with measured values and commit
-a recoverable checkpoint. Do not restart the Stage 0/1/2 audits, repeat the
-known Firebase investigation, rebuild an APK for a documentation-only change, or
-claim 100% from counts, literal reachability or a scan without semantic
-evidence.
+inventory, and select one substantial evidence-supported bucket by distinct
+observed context. Add a small reviewed rule batch with positive and negative
+tests, rebuild the ignored sidecar atomically from the pinned source, run
+focused checks, then run the full suites only at the integrated milestone.
+Update the release report, ledger and this handoff with measured values and
+commit a recoverable checkpoint. Do not restart Stage 0/1/2 audits, repeat the
+known Firebase investigation, rebuild an APK for a documentation-only change,
+or claim 100% from counts, literal reachability, department labels, or a scan
+without semantic evidence.
+
+### v25 batch handoff for Luna
+
+The current implementation checkpoint is code commit `9d3edf42` with
+discovery rules `valuepilot-catalog-discovery-rules-v25`. The ignored sidecar is
+`local-provider-data/product-discovery-v2.sqlite` with SHA-256
+`a4f148aea8e9199d9b92e0d5d93acb25bfe805ce045f8f025ae33fee1c2c692b`; it was
+rebuilt from source SHA-256
+`85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6`.
+
+This batch adds broom/escoba/escobillon, mop/mopa and duster/plumero. The
+full-corpus audit found zero non-direct strict postings. The only observed
+excluded contexts are the broom hook kit and the duster glove; both remain
+literal/derived. Pagination retrieved every identity in English and Spanish
+without duplicates.
+
+The v25 release build measures 78,865 provider products, 134,337 identity
+records, 36,423 indexed tokens, 258 concepts and 193,041 assertions. Coverage
+is 68,335 `TYPE_RESOLVED`, 66,002 `TYPE_UNRESOLVED`, 91,161
+`TYPE_OR_DEPARTMENT_RESOLVED`, 85,249 `DEPARTMENT_RESOLVED`, 69,578
+`ROLE_RESOLVED`, 1,243 `DERIVED_ONLY` and 126,069 `NO_FORM`. Provider-group
+coverage is 30,482 fully type-resolved / 8,002 partial / 40,381 unresolved,
+and 51,477 fully type-or-department-resolved / 2,967 partial / 24,421
+unresolved. These are measured coverage states, not semantic completion.
+
+The full verification suites passed: 410 tools tests and 142 backend tests.
+Android source, APK, backend credentials, Firebase/App Check, Play state,
+prices, offers, stock and production activation are unchanged. Motorola Edge
+2025 runtime validation was not run for this catalog-only checkpoint.
+
+For the next Luna run, inspect the residual inventory and choose another
+high-impact bucket by distinct context. Add a small reviewed rule batch with
+positive and negative tests, rebuild the sidecar atomically from the pinned
+source, run focused checks, then update the report, ledger and this handoff.
+Preserve literal-only unresolved identities and do not infer meaning from
+counts. Do not modify Android, Firebase, App Check, Play, credentials or
+shopping data paths as part of catalog discovery. Do not claim 100% coverage
+until every residual has reviewed evidence or an explicit unresolved
+disposition.
 
 ### v24 batch handoff for Luna
 

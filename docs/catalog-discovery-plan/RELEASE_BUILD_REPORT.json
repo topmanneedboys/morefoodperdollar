@@ -6,21 +6,21 @@
     "MISSING_ES": 23280
   },
   "counts": {
-    "assertions": 192580,
-    "concepts": 255,
+    "assertions": 193041,
+    "concepts": 258,
     "identityRecords": 134337,
     "indexedTokens": 36423,
     "providerProducts": 78865
   },
   "coverage": {
     "DEPARTMENT_RESOLVED": 85249,
-    "DERIVED_ONLY": 1241,
+    "DERIVED_ONLY": 1243,
     "IDENTITY_VISITED": 134337,
     "NO_FORM": 126069,
-    "ROLE_RESOLVED": 69125,
+    "ROLE_RESOLVED": 69578,
     "TYPE_OR_DEPARTMENT_RESOLVED": 91161,
-    "TYPE_RESOLVED": 67884,
-    "TYPE_UNRESOLVED": 66453
+    "TYPE_RESOLVED": 68335,
+    "TYPE_UNRESOLVED": 66002
   },
   "departments": {
     "baby_pet": 3760,
@@ -45,31 +45,31 @@
     "toys_games": 1411
   },
   "notes": [
-    "This v24 checkpoint adds four observed bilingual household-appliance families: heater/calefactor, water heater/termotanque, fan/ventilador and vacuum cleaner/aspiradora. The v23 appliance families, v22 bowl rule and earlier reviewed families remain unchanged.",
-    "Full-corpus strict audits returned zero non-direct postings for all four v24 families. The English fan alias was independently checked against the full corpus; five observed football/fut/lata/perfume contexts are retained as derived mentions and excluded from the strict fan predicate.",
-    "Pagination audits retrieved every v24 family identity in both languages without duplicates: heater 118, water heater 48, fan 20 and vacuum cleaner 50 source identities. Distinct provider counts are 98, 42, 20 and 50 respectively.",
-    "The v24 replay is identity-only. It changes no prices, offers, stock, availability, credentials, backend security, Android code, production activation or Play publication.",
+    "This v25 checkpoint adds three observed bilingual household-cleaning families: broom (escoba/escobillon/escobillón), mop (mopa) and duster (plumero). Earlier reviewed food, personal-care, clothing, appliance and household families remain unchanged.",
+    "Full-corpus strict audits returned zero non-direct postings for all three v25 families. The broom alias excludes the observed KIT GANCHOS ESCOBA accessory and the duster alias excludes the observed GUANTE NOVICA PLUMERO glove context; those remain literal/derived mentions.",
+    "Pagination audits retrieved every v25 family identity in both languages without duplicates: broom 167 provider products from 283 source identities, mop 89/141 and duster 24/35.",
+    "The v25 replay is identity-only. It changes no prices, offers, stock, availability, credentials, backend security, Android code, production activation or Play publication.",
     "Broad family queries retain literal contextual mentions where applicable; explicit type selections use accepted postings only. TYPE_UNRESOLVED identities remain literal-searchable and are not semantic completion.",
     "Provider-group completeness is stricter than identity coverage: every identity in a provider group must satisfy the metric before the group is counted as fully covered."
   ],
   "output": {
     "artifact": "local-provider-data/product-discovery-v2.sqlite",
     "gitTracked": false,
-    "sha256": "69510b48892953339d07bfbe972c0284e5435e6ab7f02d51947f428d18d394a3"
+    "sha256": "a4f148aea8e9199d9b92e0d5d93acb25bfe805ce045f8f025ae33fee1c2c692b"
   },
   "providerGroups": {
     "fullyDepartmentResolved": 43511,
-    "fullyTypeOrDepartmentResolved": 46230,
-    "fullyTypeResolved": 30221,
+    "fullyTypeOrDepartmentResolved": 51477,
+    "fullyTypeResolved": 30482,
     "groups": 78865,
     "partlyDepartmentResolved": 8862,
-    "partlyTypeOrDepartmentResolved": 8214,
-    "partlyTypeResolved": 7992,
+    "partlyTypeOrDepartmentResolved": 2967,
+    "partlyTypeResolved": 8002,
     "unresolvedDepartment": 26492,
-    "unresolvedType": 40652,
+    "unresolvedType": 40381,
     "unresolvedTypeAndDepartment": 24421
   },
-  "rulesVersion": "valuepilot-catalog-discovery-rules-v24",
+  "rulesVersion": "valuepilot-catalog-discovery-rules-v25",
   "safety": {
     "availability": false,
     "credentials": false,
@@ -95,9 +95,9 @@
     "backendTests": {
       "command": "python -m unittest discover -s backend/tests -p 'test_*.py'",
       "status": "PASS",
-      "tests": 141
+      "tests": 142
     },
-    "codeCommit": "778bf028635daf6804a772c921eb0d460014bce9",
+    "codeCommit": "9d3edf4208b487b3078129cd707d5248f1175213",
     "motorolaEdge2025": {
       "reason": "No device runtime validation was performed for this identity-sidecar milestone.",
       "status": "NOT_RUN"
@@ -157,6 +157,16 @@
           "directSourceIdentities": 64,
           "forbiddenContextMatches": 0
         },
+        "fan": {
+          "directProviderProducts": 20,
+          "directSourceIdentities": 20,
+          "forbiddenContextMatches": 0
+        },
+        "heater": {
+          "directProviderProducts": 98,
+          "directSourceIdentities": 118,
+          "forbiddenContextMatches": 0
+        },
         "juicer": {
           "directProviderProducts": 22,
           "directSourceIdentities": 23,
@@ -177,24 +187,14 @@
           "directSourceIdentities": 41,
           "forbiddenContextMatches": 0
         },
-        "heater": {
-          "directProviderProducts": 98,
-          "directSourceIdentities": 118,
+        "vacuum_cleaner": {
+          "directProviderProducts": 50,
+          "directSourceIdentities": 50,
           "forbiddenContextMatches": 0
         },
         "water_heater": {
           "directProviderProducts": 42,
           "directSourceIdentities": 48,
-          "forbiddenContextMatches": 0
-        },
-        "fan": {
-          "directProviderProducts": 20,
-          "directSourceIdentities": 20,
-          "forbiddenContextMatches": 0
-        },
-        "vacuum_cleaner": {
-          "directProviderProducts": 50,
-          "directSourceIdentities": 50,
           "forbiddenContextMatches": 0
         }
       },
@@ -240,6 +240,18 @@
         "sourceIdentityCount": 198,
         "status": "READY"
       },
+      "broomEn": {
+        "productCount": 167,
+        "resolvedPredicate": "type:broom",
+        "sourceIdentityCount": 283,
+        "status": "READY"
+      },
+      "broomEs": {
+        "productCount": 167,
+        "resolvedPredicate": "type:broom",
+        "sourceIdentityCount": 283,
+        "status": "READY"
+      },
       "catFoodEs": {
         "productCount": 154,
         "resolvedPredicate": "type:cat_food",
@@ -281,6 +293,26 @@
         "sourceIdentityCount": 12,
         "status": "READY"
       },
+      "cleaningToolFamilyDirectAudits": {
+        "broom": {
+          "derivedContextIdentitiesExcluded": 1,
+          "directProviderProducts": 167,
+          "directSourceIdentities": 283,
+          "forbiddenContextMatches": 0
+        },
+        "duster": {
+          "derivedContextIdentitiesExcluded": 1,
+          "directProviderProducts": 24,
+          "directSourceIdentities": 35,
+          "forbiddenContextMatches": 0
+        },
+        "mop": {
+          "derivedContextIdentitiesExcluded": 0,
+          "directProviderProducts": 89,
+          "directSourceIdentities": 141,
+          "forbiddenContextMatches": 0
+        }
+      },
       "coffeeMakerEn": {
         "productCount": 63,
         "resolvedPredicate": "type:coffee_maker",
@@ -311,6 +343,18 @@
         "sourceIdentityCount": 434,
         "status": "READY"
       },
+      "dusterEn": {
+        "productCount": 24,
+        "resolvedPredicate": "type:duster",
+        "sourceIdentityCount": 35,
+        "status": "READY"
+      },
+      "dusterEs": {
+        "productCount": 24,
+        "resolvedPredicate": "type:duster",
+        "sourceIdentityCount": 35,
+        "status": "READY"
+      },
       "facialCreamEn": {
         "productCount": 76,
         "resolvedPredicate": "type:facial_cream",
@@ -331,6 +375,7 @@
         "coffeeMakerDirectForbiddenContexts": 0,
         "deodorantEnvironment": 0,
         "facialCreamDirectForbiddenContexts": 0,
+        "fanDirectForbiddenContexts": 0,
         "flourNonFoodDirect": 0,
         "juicerDirectForbiddenContexts": 0,
         "meatBeefDirectForbiddenContexts": 0,
@@ -349,8 +394,19 @@
         "swimwear": 0,
         "toasterDirectForbiddenContexts": 0,
         "towel": 0,
-        "waferDirectForbiddenContexts": 0,
-        "fanDirectForbiddenContexts": 0
+        "waferDirectForbiddenContexts": 0
+      },
+      "fanEn": {
+        "productCount": 20,
+        "resolvedPredicate": "type:fan",
+        "sourceIdentityCount": 20,
+        "status": "READY"
+      },
+      "fanEs": {
+        "productCount": 20,
+        "resolvedPredicate": "type:fan",
+        "sourceIdentityCount": 20,
+        "status": "READY"
       },
       "flourEn": {
         "choices": [
@@ -382,6 +438,18 @@
         "productCount": 33,
         "resolvedPredicate": "form:flour:corn",
         "sourceIdentityCount": 38,
+        "status": "READY"
+      },
+      "heaterEn": {
+        "productCount": 98,
+        "resolvedPredicate": "type:heater",
+        "sourceIdentityCount": 118,
+        "status": "READY"
+      },
+      "heaterEs": {
+        "productCount": 98,
+        "resolvedPredicate": "type:heater",
+        "sourceIdentityCount": 118,
         "status": "READY"
       },
       "issueKitEn": {
@@ -442,6 +510,18 @@
         "productCount": 80,
         "resolvedPredicate": "type:microwave",
         "sourceIdentityCount": 98,
+        "status": "READY"
+      },
+      "mopEn": {
+        "productCount": 89,
+        "resolvedPredicate": "type:mop",
+        "sourceIdentityCount": 141,
+        "status": "READY"
+      },
+      "mopEs": {
+        "productCount": 89,
+        "resolvedPredicate": "type:mop",
+        "sourceIdentityCount": 141,
         "status": "READY"
       },
       "mouthwashEn": {
@@ -628,53 +708,44 @@
         "sourceIdentityCount": 8,
         "status": "READY"
       },
-      "waferEn": {
-        "productCount": 156,
-        "resolvedPredicate": "type:wafer",
-        "sourceIdentityCount": 303,
-        "status": "READY"
+      "v24HouseholdAppliancePagination": {
+        "fan": {
+          "duplicates": 0,
+          "pages": 1,
+          "rowsRetrieved": 20
+        },
+        "heater": {
+          "duplicates": 0,
+          "pages": 3,
+          "rowsRetrieved": 118
+        },
+        "vacuum_cleaner": {
+          "duplicates": 0,
+          "pages": 1,
+          "rowsRetrieved": 50
+        },
+        "water_heater": {
+          "duplicates": 0,
+          "pages": 1,
+          "rowsRetrieved": 48
+        }
       },
-      "waferEs": {
-        "productCount": 156,
-        "resolvedPredicate": "type:wafer",
-        "sourceIdentityCount": 303,
-        "status": "READY"
-      },
-      "heaterEn": {
-        "productCount": 98,
-        "resolvedPredicate": "type:heater",
-        "sourceIdentityCount": 118,
-        "status": "READY"
-      },
-      "heaterEs": {
-        "productCount": 98,
-        "resolvedPredicate": "type:heater",
-        "sourceIdentityCount": 118,
-        "status": "READY"
-      },
-      "waterHeaterEn": {
-        "productCount": 42,
-        "resolvedPredicate": "type:water_heater",
-        "sourceIdentityCount": 48,
-        "status": "READY"
-      },
-      "waterHeaterEs": {
-        "productCount": 42,
-        "resolvedPredicate": "type:water_heater",
-        "sourceIdentityCount": 48,
-        "status": "READY"
-      },
-      "fanEn": {
-        "productCount": 20,
-        "resolvedPredicate": "type:fan",
-        "sourceIdentityCount": 20,
-        "status": "READY"
-      },
-      "fanEs": {
-        "productCount": 20,
-        "resolvedPredicate": "type:fan",
-        "sourceIdentityCount": 20,
-        "status": "READY"
+      "v25CleaningToolPagination": {
+        "broom": {
+          "duplicates": 0,
+          "pages": 6,
+          "rowsRetrieved": 283
+        },
+        "duster": {
+          "duplicates": 0,
+          "pages": 1,
+          "rowsRetrieved": 35
+        },
+        "mop": {
+          "duplicates": 0,
+          "pages": 3,
+          "rowsRetrieved": 141
+        }
       },
       "vacuumCleanerEn": {
         "productCount": 50,
@@ -688,33 +759,35 @@
         "sourceIdentityCount": 50,
         "status": "READY"
       },
-      "v24HouseholdAppliancePagination": {
-        "heater": {
-          "pages": 3,
-          "rowsRetrieved": 118,
-          "duplicates": 0
-        },
-        "water_heater": {
-          "pages": 1,
-          "rowsRetrieved": 48,
-          "duplicates": 0
-        },
-        "fan": {
-          "pages": 1,
-          "rowsRetrieved": 20,
-          "duplicates": 0
-        },
-        "vacuum_cleaner": {
-          "pages": 1,
-          "rowsRetrieved": 50,
-          "duplicates": 0
-        }
+      "waferEn": {
+        "productCount": 156,
+        "resolvedPredicate": "type:wafer",
+        "sourceIdentityCount": 303,
+        "status": "READY"
+      },
+      "waferEs": {
+        "productCount": 156,
+        "resolvedPredicate": "type:wafer",
+        "sourceIdentityCount": 303,
+        "status": "READY"
+      },
+      "waterHeaterEn": {
+        "productCount": 42,
+        "resolvedPredicate": "type:water_heater",
+        "sourceIdentityCount": 48,
+        "status": "READY"
+      },
+      "waterHeaterEs": {
+        "productCount": 42,
+        "resolvedPredicate": "type:water_heater",
+        "sourceIdentityCount": 48,
+        "status": "READY"
       }
     },
     "toolsTests": {
       "command": "python -m unittest discover -s tools/tests -p 'test_*.py'",
       "status": "PASS",
-      "tests": 409
+      "tests": 410
     }
   }
 }
