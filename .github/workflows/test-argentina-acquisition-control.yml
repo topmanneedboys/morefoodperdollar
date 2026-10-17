@@ -11,6 +11,12 @@ on:
       - 'backend/clock.py'
       - 'backend/object_store.py'
       - 'backend/requirements.txt'
+      - 'tools/argentina_archived_release_promotion.py'
+      - 'tools/provision_argentina_release_permissions.py'
+      - 'tools/verify_argentina_runtime_access.py'
+      - 'tools/tests/test_argentina_archived_release_promotion.py'
+      - 'tools/tests/test_argentina_promotion_access.py'
+      - 'docs/catalog-discovery-plan/AUTOMATION_PERMISSION_PLAN.json'
       - 'tools/argentina_acquisition_schedule_control.py'
       - 'tools/argentina_acquisition_schedule_control_v2.py'
       - 'tools/argentina_processed_source_guard.py'
@@ -63,6 +69,9 @@ jobs:
             tools/argentina_object_store_publisher.py \
             tools/argentina_release_acquisition.py \
             tools/argentina_release_acquisition_handoff.py \
+            tools/argentina_archived_release_promotion.py \
+            tools/provision_argentina_release_permissions.py \
+            tools/verify_argentina_runtime_access.py \
             tools/argentina_acquisition_schedule_control.py \
             tools/argentina_acquisition_schedule_control_v2.py \
             tools/argentina_processed_source_guard.py \
@@ -72,6 +81,8 @@ jobs:
       - name: Run focused acquisition regressions
         run: |
           python -m unittest \
+            tools.tests.test_argentina_archived_release_promotion \
+            tools.tests.test_argentina_promotion_access \
             tools.tests.test_argentina_release_acquisition \
             tools.tests.test_argentina_release_acquisition_handoff \
             tools.tests.test_argentina_daily_release_operations \
