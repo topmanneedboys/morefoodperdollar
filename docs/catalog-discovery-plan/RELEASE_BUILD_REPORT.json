@@ -139,7 +139,7 @@
       "status": "NOT_RUN",
       "reason": "adb devices -l returned no attached device; no emulator was started. Install/runtime screenshots and interaction checks remain pending on the authorized Motorola Edge 2025."
     },
-    "codeCommit": "PENDING_CHECKPOINT_COMMIT",
+    "codeCommit": "e5036d93",
     "toolsTests": {
       "command": "python -m unittest discover -s tools/tests -p 'test_*.py'",
       "status": "PASS",
