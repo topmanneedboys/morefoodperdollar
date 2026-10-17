@@ -1056,6 +1056,22 @@ class DiscoveryIndex:
     def _aliases(self, phrase: str, language: str) -> tuple[sqlite3.Row, ...]:
         value = self.connection.execute("SELECT * FROM alias WHERE phrase_norm = ? AND language = ? ORDER BY predicate_id", (_norm(phrase), language)).fetchall()
         if value:
+            # A phrase can be a broad department term in one language and a
+            # reviewed product family in the other (for example ``rice`` is
+            # also present in the Spanish staples vocabulary). Prefer the
+            # language-specific rows when they carry a real type/form
+            # predicate; otherwise allow a more specific reviewed alias in
+            # the other language to win over a broad department fallback.
+            specific = tuple(row for row in value if not row["predicate_id"].startswith("department:") and not row["predicate_id"].endswith(":unspecified"))
+            if specific:
+                return tuple(value)
+            alternate = self.connection.execute(
+                "SELECT * FROM alias WHERE phrase_norm = ? AND language != ? ORDER BY predicate_id",
+                (_norm(phrase), language),
+            ).fetchall()
+            alternate_specific = tuple(row for row in alternate if not row["predicate_id"].startswith("department:") and not row["predicate_id"].endswith(":unspecified"))
+            if alternate_specific:
+                return alternate_specific
             return tuple(value)
         # Cross-language fallback is explicit and deterministic: a query in one
         # language may use the other reviewed alias but never an arbitrary guess.
