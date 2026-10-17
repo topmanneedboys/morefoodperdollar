@@ -103,6 +103,27 @@ from `2d28644f`. Motorola runtime, remote live authorization, full synthetic
 compiler scale evaluation and held-out semantic evaluation remain open gates;
 this is a recoverable development checkpoint, not goal completion.
 
+## Continuation checkpoint (2026-10-17, clarification facet paging)
+
+Code checkpoint `47f17198` completes the missing clarification facet path in
+the debug HTML integration. The HTML card now offers a localized “more product
+forms” action when `/v2/search` reports another facet page. The Kotlin
+coordinator owns the opaque facet cursor, sends it back with the same query,
+language, selections and product cursor, and keeps stable predicate IDs. The
+cursor is never supplied by or exposed to JavaScript. A continuation response
+with one final choice is accepted and rendered instead of being rejected as an
+incomplete clarification.
+
+Direct local sidecar paging for Spanish `bebida` returned 3 pages of 30/30/16
+choices, 76 unique predicate IDs and no duplicates. The Android regression
+covers the cursor request and the final single-choice page. The full Android
+verification command passed, producing
+`android/app/build/outputs/apk/debug/app-debug.apk` with SHA-256
+`734F052227C7AEC8A6C412B395B44EA286017CC8291CDC8773FC7515E88C1B50`.
+Motorola runtime, remote live authorization, full synthetic compiler scale
+evaluation and held-out semantic evaluation remain open gates; this is a
+recoverable development checkpoint, not goal completion.
+
 ## Goal and authority
 
 Repository: C:/Users/iamatopstrongman/Documents/Codex/2026-10-08/valuepilot-next-complete-premium-ui-ux/work/valuepilot-10133-source-audit.

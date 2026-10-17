@@ -88,7 +88,8 @@
     "Large candidate sets now use a bounded temporary candidate table instead of SQLite bind-variable lists, with indexed first-page reads, cached product counts, and a bounded page cache. This removes the failure seen when a search expands beyond SQLite's variable limit.",
     "Direct candidate-set stress against the promoted sidecar passed for 100,000 and 250,000 candidate IDs with warm first-page query p95 below 1 ms; this is query-path evidence, not a full synthetic compiler semantic evaluation.",
     "The debug HTML preview is now wired to the typed /v2/search discovery rail with language and stable predicate IDs; the production MainActivity remains on /v1/search. Unauthorized Android status still blocks the v2 request, and no App Check or credential gate was bypassed.",
-    "Local v2 route checks against the promoted sidecar returned rice/arroz at 119 products, 247 source identities and 3 choices, and eggs at 222 products, 288 source identities and 7 choices. This is local backend evidence, not remote live authorization or Motorola runtime evidence."
+    "Local v2 route checks against the promoted sidecar returned rice/arroz at 119 products, 247 source identities and 3 choices, and eggs at 222 products, 288 source identities and 7 choices. This is local backend evidence, not remote live authorization or Motorola runtime evidence.",
+    "Clarification facet cursors now reach every observed choice page through the native coordinator and HTML bridge, including a valid final page with one choice; the opaque cursor never crosses into JavaScript."
   ],
   "verification": {
     "catalogBuild": {
@@ -138,20 +139,20 @@
     "androidChecks": {
       "command": ".\\gradlew.bat --no-daemon :shared-core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug",
       "status": "PASS",
-      "note": "Full shared-core tests, debug unit tests, debug lint and debug APK assembly passed after the debug HTML discovery integration. Production MainActivity remains on /v1/search; the debug HTML preview uses /v2/search with language and stable predicate IDs. Existing Android authorization and App Check requirements remain enforced. APK/device runtime checks remain separate.",
+      "note": "Full shared-core tests, debug unit tests, debug lint and debug APK assembly passed after native clarification facet paging. Production MainActivity remains on /v1/search; the debug HTML preview uses /v2/search with language, stable predicate IDs and native-owned facet cursors. Existing Android authorization and App Check requirements remain enforced. APK/device runtime checks remain separate.",
       "focusedUnitTestCommand": ".\\gradlew.bat --no-daemon :app:testDebugUnitTest --tests com.valuepilot.app.MainActivitySearchSubmissionBoundaryTest --tests com.valuepilot.app.next.ValuePilotNextHtmlLocalizationTest --tests com.valuepilot.app.next.ValuePilotNextHtmlPreviewContractTest --tests com.valuepilot.app.ArgentinaBackendConsumerBridgeTest --tests com.valuepilot.app.ArgentinaLiveSearchCoordinatorTest",
       "focusedUnitTestStatus": "PASS",
       "assembleDebugCommand": ".\\gradlew.bat --no-daemon :app:assembleDebug",
       "assembleStatus": "PASS",
       "apkPath": "android/app/build/outputs/apk/debug/app-debug.apk",
       "apkSizeBytes": 87944894,
-      "apkSha256": "D626222EBA592DB6A52E2ECA5064BDDD321196EB8B4E8CA81493640801BDA971",
+      "apkSha256": "734F052227C7AEC8A6C412B395B44EA286017CC8291CDC8773FC7515E88C1B50",
       "deviceEnumeration": "adb devices -l returned no attached devices",
-      "apkSourceCommit": "2d28644f"
+      "apkSourceCommit": "47f17198"
     },
     "htmlDiscoveryIntegration": {
       "status": "PASS_LOCAL_CONTRACT",
-      "codeCommit": "2d28644f",
+      "codeCommit": "47f17198",
       "route": "/v2/search",
       "debugOnly": true,
       "languageAndSelection": "HTML sends language; Kotlin carries stable predicate IDs through /v2/search and cursor pages",
@@ -184,13 +185,23 @@
           "hasMore": true
         }
       ],
+      "facetPaging": {
+        "status": "PASS_LOCAL_CONTRACT",
+        "exampleQuery": "bebida",
+        "language": "es",
+        "pages": 3,
+        "choiceCounts": [30, 30, 16],
+        "uniqueChoiceIds": 76,
+        "duplicateChoiceIds": 0,
+        "note": "Direct local sidecar query followed the opaque facet cursor through all pages. The Android regression also covers the final single-choice page."
+      },
       "note": "Local BackendService/TestClient-sidecar evidence; remote live authorization and Motorola runtime remain unverified. Android status authorization is still required before a request is sent."
     },
     "motorolaEdge2025": {
       "status": "NOT_RUN",
       "reason": "adb devices -l returned no attached device; no emulator was started. Install/runtime screenshots and interaction checks remain pending on the authorized Motorola Edge 2025."
     },
-    "codeCommit": "2d28644f",
+    "codeCommit": "47f17198",
     "toolsTests": {
       "command": "python -m unittest discover -s tools/tests -p 'test_*.py'",
       "status": "PASS",

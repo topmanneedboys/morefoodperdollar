@@ -6,7 +6,28 @@ This ledger records the additive discovery work. It is not a claim that the
 catalog has perfect semantic coverage. Existing `/v1` shopping, price, offer,
 saved-data, release, and security paths remain unchanged.
 
-## Latest verified continuation checkpoint — 2026-10-17 (HTML discovery integration)
+## Latest verified continuation checkpoint — 2026-10-17 (clarification facet paging)
+
+- Code checkpoint: `47f17198` on `work/valuepilot-stage2-premium-shopping`.
+- The debug HTML discovery rail now exposes a native-owned “more product
+  forms” action. The Kotlin coordinator sends the opaque `facetCursor` back to
+  `/v2/search`, appends the new product page safely, and keeps stable predicate
+  IDs for each choice. The cursor is never accepted from or exposed to HTML.
+- Continuation pages may contain one final observed choice; the strict parser,
+  native presentation and HTML renderer all keep that last choice reachable.
+- Direct local sidecar paging for Spanish `bebida` returned 3 pages of
+  30/30/16 choices with 76 unique predicate IDs and no duplicates. This is
+  local catalog evidence, not remote authorization or phone-runtime evidence.
+- Focused tests cover cursor transport, the final single-choice page, the
+  HTML command boundary and the localized action. The full Android command
+  passed and produced the verified debug APK at
+  `android/app/build/outputs/apk/debug/app-debug.apk`, SHA-256
+  `734F052227C7AEC8A6C412B395B44EA286017CC8291CDC8773FC7515E88C1B50`.
+- Motorola runtime, remote live authorization, full synthetic compiler scale
+  evaluation and held-out semantic evaluation remain pending. This remains a
+  recoverable development checkpoint, not a completion claim.
+
+## Historical HTML discovery integration checkpoint — 2026-10-17
 
 - Code checkpoint: `2d28644f` on `work/valuepilot-stage2-premium-shopping`.
 - The active debug HTML preview now uses the typed `/v2/search` discovery rail.
@@ -71,7 +92,7 @@ saved-data, release, and security paths remain unchanged.
 
 - Branch: `work/valuepilot-stage2-premium-shopping`
 - Starting handoff checkpoint: `6ce81d0d`
-- Current verified checkpoint: code commit `2d28644f` (the preceding section records the latest integration checkpoint).
+- Current verified checkpoint: code commit `47f17198` (the preceding section records the latest facet-paging checkpoint).
 - Discovery rules: `valuepilot-catalog-discovery-rules-v32`
 - Sidecar schema: `valuepilot-catalog-discovery-v2`
 - Additive HTTP contract: `valuepilot-discovery-http-v2`
