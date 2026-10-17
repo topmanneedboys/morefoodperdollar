@@ -89,7 +89,8 @@
     "Direct candidate-set stress against the promoted sidecar passed for 100,000 and 250,000 candidate IDs with warm first-page query p95 below 1 ms; this is query-path evidence, not a full synthetic compiler semantic evaluation.",
     "The debug HTML preview is now wired to the typed /v2/search discovery rail with language and stable predicate IDs; the production MainActivity remains on /v1/search. Unauthorized Android status still blocks the v2 request, and no App Check or credential gate was bypassed.",
     "Local v2 route checks against the promoted sidecar returned rice/arroz at 119 products, 247 source identities and 3 choices, and eggs at 222 products, 288 source identities and 7 choices. This is local backend evidence, not remote live authorization or Motorola runtime evidence.",
-    "Clarification facet cursors now reach every observed choice page through the native coordinator and HTML bridge, including a valid final page with one choice; the opaque cursor never crosses into JavaScript."
+    "Clarification facet cursors now reach every observed choice page through the native coordinator and HTML bridge, including a valid final page with one choice; the opaque cursor never crosses into JavaScript.",
+    "Independent real-sidecar concept audit passed across 274 concepts in both languages: 548 paginated queries, 144 facet pages, 2,678 stable choices and 2,678 strict-selection count checks with zero failures."
   ],
   "verification": {
     "catalogBuild": {
@@ -129,7 +130,7 @@
     "toolsFocusedTests": {
       "command": "python -m unittest tools.tests.test_product_identity_lexicon tools.tests.test_catalog_discovery_index",
       "status": "PASS",
-      "tests": 65
+      "tests": 66
     },
     "backendTests": {
       "command": "python -m unittest discover -s backend/tests -p 'test_*.py'",
@@ -195,17 +196,31 @@
         "duplicateChoiceIds": 0,
         "note": "Direct local sidecar query followed the opaque facet cursor through all pages. The Android regression also covers the final single-choice page."
       },
+      "independentConceptAudit": {
+        "status": "PASS",
+        "concepts": 274,
+        "languages": 2,
+        "languageQueries": 548,
+        "facetPages": 144,
+        "facetChoices": 2678,
+        "strictSelectionChecks": 2678,
+        "paginationChecks": 548,
+        "failureCount": 0,
+        "elapsedSeconds": 273.716,
+        "artifact": "local-provider-data/product-discovery-v2-concept-audit-v2.json",
+        "note": "Independent structural/query-behavior audit of the promoted sidecar; it proves pagination, advertised counts and stable selection narrowing, not human semantic truth for every label."
+      },
       "note": "Local BackendService/TestClient-sidecar evidence; remote live authorization and Motorola runtime remain unverified. Android status authorization is still required before a request is sent."
     },
     "motorolaEdge2025": {
       "status": "NOT_RUN",
       "reason": "adb devices -l returned no attached device; no emulator was started. Install/runtime screenshots and interaction checks remain pending on the authorized Motorola Edge 2025."
     },
-    "codeCommit": "47f17198",
+    "codeCommit": "7c134b65",
     "toolsTests": {
       "command": "python -m unittest discover -s tools/tests -p 'test_*.py'",
       "status": "PASS",
-      "tests": 418
+      "tests": 419
     },
     "performance": {
       "status": "PARTIAL_PASS",

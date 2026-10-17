@@ -6,6 +6,29 @@ This ledger records the additive discovery work. It is not a claim that the
 catalog has perfect semantic coverage. Existing `/v1` shopping, price, offer,
 saved-data, release, and security paths remain unchanged.
 
+## Latest verified continuation checkpoint — 2026-10-17 (department facet selection correctness)
+
+- Code checkpoint: `7c134b65` on `work/valuepilot-stage2-premium-shopping`.
+- Fixed a real query bug in which a broad department search such as `baby` or
+  `bebida` could present a valid child type choice but clear the table after
+  that choice was selected. Accepted child predicates now retain their strict
+  candidate intersection and return the matching products.
+- Added a regression test for a broad `baby` query selecting `type:diaper`.
+  Focused lexicon/index tests pass 66; the full tools suite passes 419 and the
+  backend suite passes 145.
+- An independent audit of the promoted real sidecar walked all 274 concepts in
+  English and Spanish: 548 language queries, 144 facet pages, 2,678 stable
+  choices, and 2,678 strict-selection count checks. It found zero pagination,
+  duplicate-ID, or advertised-count failures. This proves query behavior and
+  accounting, not human semantic truth for every label; the saved artifact is
+  `local-provider-data/product-discovery-v2-concept-audit-v2.json`.
+- This was a Python-only fix, so the last verified Android artifact remains
+  the APK built from `47f17198` at
+  `android/app/build/outputs/apk/debug/app-debug.apk`, SHA-256
+  `734F052227C7AEC8A6C412B395B44EA286017CC8291CDC8773FC7515E88C1B50`.
+  Motorola runtime, remote live authorization, full synthetic compiler scale
+  evaluation and held-out semantic evaluation remain pending.
+
 ## Latest verified continuation checkpoint — 2026-10-17 (clarification facet paging)
 
 - Code checkpoint: `47f17198` on `work/valuepilot-stage2-premium-shopping`.
@@ -92,7 +115,7 @@ saved-data, release, and security paths remain unchanged.
 
 - Branch: `work/valuepilot-stage2-premium-shopping`
 - Starting handoff checkpoint: `6ce81d0d`
-- Current verified checkpoint: code commit `47f17198` (the preceding section records the latest facet-paging checkpoint).
+- Current verified checkpoint: code commit `7c134b65` (the preceding sections record the latest Python and facet-paging checkpoints).
 - Discovery rules: `valuepilot-catalog-discovery-rules-v32`
 - Sidecar schema: `valuepilot-catalog-discovery-v2`
 - Additive HTTP contract: `valuepilot-discovery-http-v2`

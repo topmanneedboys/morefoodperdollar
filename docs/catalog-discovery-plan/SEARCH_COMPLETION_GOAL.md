@@ -103,6 +103,30 @@ from `2d28644f`. Motorola runtime, remote live authorization, full synthetic
 compiler scale evaluation and held-out semantic evaluation remain open gates;
 this is a recoverable development checkpoint, not goal completion.
 
+## Continuation checkpoint (2026-10-17, department facet selection correctness)
+
+The latest Python discovery checkpoint is `7c134b65`. A real query bug is fixed:
+when a broad department query such as `baby` or `bebida` opened a type facet,
+selecting the accepted child predicate could previously clear the table. The
+strict child candidate set is now retained, and a regression covers
+`baby` → `type:diaper`.
+
+The focused lexicon/index checks pass 66, the full tools suite passes 419, and
+the backend suite passes 145. An independent audit of all 274 promoted concepts
+in English and Spanish walked 548 language queries, 144 facet pages and 2,678
+stable choices, then checked every strict selection and query page: zero
+failures. This is structural/query-behavior evidence, not a claim that every
+label is semantically perfect. The artifact is
+`local-provider-data/product-discovery-v2-concept-audit-v2.json`.
+
+Because this checkpoint changes only Python discovery logic, the verified debug
+APK remains the artifact built from `47f17198`:
+`android/app/build/outputs/apk/debug/app-debug.apk`, SHA-256
+`734F052227C7AEC8A6C412B395B44EA286017CC8291CDC8773FC7515E88C1B50`.
+Motorola runtime screenshots, remote authorized live-service evidence, the full
+synthetic compiler scale evaluation and held-out semantic evaluation remain
+open gates.
+
 ## Continuation checkpoint (2026-10-17, clarification facet paging)
 
 Code checkpoint `47f17198` completes the missing clarification facet path in
