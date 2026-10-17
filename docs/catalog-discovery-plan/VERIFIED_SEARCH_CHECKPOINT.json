@@ -1,7 +1,7 @@
 {
-  "reportVersion": "valuepilot-search-checkpoint-v1",
+  "reportVersion": "valuepilot-search-checkpoint-v2",
   "generatedAt": "2026-10-17",
-  "status": "INCOMPLETE_RUNTIME_BLOCKED",
+  "status": "INCOMPLETE_SEMANTIC_REVIEW_AND_RUNTIME_BLOCKED",
   "policy": {
     "noV41Started": true,
     "noProductionActivation": true,
@@ -48,76 +48,320 @@
       "status": "FAIL",
       "storedAssertionRows": 194332,
       "reportedAssertionRows": 194702,
-      "failures": ["build assertion count differs from assertion table"]
+      "failures": [
+        "build assertion count differs from assertion table"
+      ]
     }
   },
   "v40Candidate": {
-    "path": "local-provider-data/product-discovery-v2-v40-candidate.sqlite",
-    "sha256": "3c6cad38707263e4c330d80dc8fbdef9d81f2a0949cf9d471bbd9704683634ea",
-    "reportSha256": "6f948bc33040888550c921ceda573b7a7a1d69f71df6cbb01503fc4d12d8dc9",
-    "status": "REJECTED_STALE",
+    "path": "local-provider-data\\product-discovery-v2-v40-candidate.sqlite",
+    "sha256": "d7aef4c8b740bfdcdca68c404692b52a7225b66cb744641bee56d2214edf0a88",
+    "reportPath": "docs\\catalog-discovery-plan\\FULL_CATALOG_VERIFICATION_REPORT.json",
+    "reportSha256": "49efb65c723e8212a68daf2422941af388a92bab0fb5783756492f4a47ed5f91",
+    "httpContractReportPath": "docs\\catalog-discovery-plan\\DISCOVERY_HTTP_CONTRACT_REPORT.json",
+    "httpContractReportSha256": "b0114b50a779d65c98b6fad7a73347e119ee133e6f53a3b85ed263abf7a5f51e",
+    "status": "STRUCTURALLY_VERIFIED_SEMANTIC_REVIEW_PENDING",
     "rulesVersion": "valuepilot-catalog-discovery-rules-v34",
+    "schemaVersion": "valuepilot-catalog-discovery-v2",
+    "compilerCodeCommit": "e762512ba91948f133223803ffd3717b6a993433",
+    "sourceSha256": "85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6",
+    "sourceChangedDuringBuild": false,
+    "buildDurationSeconds": 779,
     "reportedCounts": {
-      "providerProducts": 78865,
-      "identityRecords": 134337,
-      "indexedTokens": 36423,
+      "provider_products": 78865,
+      "identity_records": 134337,
+      "indexed_tokens": 36423,
       "concepts": 276,
-      "assertions": 194919
-    },
-    "coverage": {
-      "DEPARTMENT_RESOLVED": 85249,
-      "DERIVED_ONLY": 1634,
-      "IDENTITY_VISITED": 134337,
-      "NO_FORM": 124945,
-      "ROLE_RESOLVED": 70004,
-      "TYPE_OR_DEPARTMENT_RESOLVED": 91152,
-      "TYPE_RESOLVED": 68370,
-      "TYPE_UNRESOLVED": 65967
+      "assertions": 194481
     },
     "storedAssertionRows": 194481,
     "integrityAudit": {
-      "status": "FAIL",
-      "failures": ["build assertion count differs from assertion table"]
+      "status": "PASS",
+      "buildAssertionRows": 194481,
+      "storedAssertionRows": 194481
     },
-    "rejectionReason": "The compiler source changed during the build when the assertion-accounting fix was added. The candidate was not rebuilt under one frozen compiler state and is not qualified."
+    "coverage": {
+      "RESOLVED": 68370,
+      "UNRESOLVED": 65967
+    },
+    "classification": {
+      "coverageRows": {
+        "RESOLVED": 68370,
+        "UNRESOLVED": 65967
+      },
+      "department": {
+        "identityCount": 85249,
+        "providerProductCount": 52373
+      },
+      "directProductType": {
+        "identityCount": 68370,
+        "providerProductCount": 38565
+      },
+      "form": {
+        "identityCount": 9392,
+        "providerProductCount": 5128
+      },
+      "typeOrDepartment": {
+        "identityCount": 91152,
+        "providerProductCount": 54448
+      }
+    },
+    "literalReachability": {
+      "failureDetails": [],
+      "identitiesExpected": 134337,
+      "identitiesLiteralReachable": 134337,
+      "identitiesLiteralUnreachable": 0,
+      "method": "Exact normalized-name token intersection over the same identity_token postings used by DiscoveryIndex._literal_keys; names are all within the query length limit.",
+      "status": "PASS"
+    },
+    "sourceAccounting": {
+      "status": "PASS",
+      "identityRows": 134337,
+      "providerProducts": 78865,
+      "duplicateSourceIdentityKeys": 0,
+      "extraSidecarIdentityKeys": 0,
+      "provenanceFailureCount": 0
+    },
+    "strictSelection": {
+      "status": "PASS",
+      "predicateCount": 262,
+      "failedPredicateCount": 0,
+      "directTypeIdentityCount": 68370,
+      "typeOrDepartmentIdentityCount": 91152,
+      "departmentIdentityCount": 85249,
+      "formIdentityCount": 9392
+    },
+    "pagination": {
+      "broadConceptLanguageQueries": 371,
+      "broadQueryFailures": [],
+      "facetChoices": 2112,
+      "facetPageSize": 30,
+      "facetPages": 417,
+      "pageSize": 50,
+      "status": "PASS",
+      "strictChoiceChecks": 2112,
+      "strictChoiceFailures": []
+    },
+    "languageCoverage": {
+      "conceptPredicatesMissingEN": 0,
+      "conceptPredicatesMissingES": 1,
+      "conceptPredicatesWithAliases": {
+        "en": 276,
+        "es": 275
+      },
+      "identityAliasIdentitiesMissingEN": 112043,
+      "identityAliasIdentitiesMissingES": 56360,
+      "note": "Literal retrieval is language-neutral; these counts distinguish source identity aliases and reviewed semantic predicate aliases from the literal path.",
+      "sidecarCoverageStatuses": {
+        "COMPLETE": 91295,
+        "PARTIAL": 43042
+      },
+      "status": "PASS"
+    },
+    "semanticAccuracy": {
+      "caseCount": 0,
+      "failureCount": 0,
+      "note": "No independently reviewed semantic ledger was supplied. The compiler's own postings are deliberately not used as an accuracy oracle.",
+      "passedCases": 0,
+      "reviewedCases": 0,
+      "status": "NOT_ESTABLISHED"
+    },
+    "reviewQueue": {
+      "path": "C:\\Users\\iamatopstrongman\\Documents\\Codex\\2026-10-08\\valuepilot-next-complete-premium-ui-ux\\work\\valuepilot-10133-source-audit\\local-provider-data\\semantic-review-queue-v40-groups.jsonl",
+      "sha256": "857a154811f5a2f8727fe3951eb32394aa62bc8b22f5def6c9143df68cf7fda8",
+      "status": "PENDING_HUMAN_REVIEW",
+      "providerProductGroupsAvailable": 78865,
+      "providerProductGroupsSelected": 1000,
+      "identityRowsSelected": 1260,
+      "allSelectedGroupsIntact": "EVERY_SELECTED_PROVIDER_GROUP_INCLUDES_ALL_LINKED_IDENTITIES"
+    }
   },
   "searchIntegrationEvidence": {
-    "artifactTested": "local-provider-data/product-discovery-v2.sqlite",
-    "paginationPageSize": 7,
+    "artifactTested": "local-provider-data\\product-discovery-v2-v40-candidate.sqlite",
+    "artifactSha256": "d7aef4c8b740bfdcdca68c404692b52a7225b66cb744641bee56d2214edf0a88",
+    "endpoint": "POST /v2/search",
+    "contractReportSha256": "b0114b50a779d65c98b6fad7a73347e119ee133e6f53a3b85ed263abf7a5f51e",
+    "status": "PASS",
+    "checks": 61,
+    "failureCount": 0,
     "representativeQueries": [
-      {"query": "rice", "status": "NEEDS_CLARIFICATION", "productCount": 115, "sourceIdentityCount": 243, "rowsAcrossPages": 243, "uniqueIdentityKeys": 243, "sorted": true, "choices": ["form:rice:dessert", "form:rice:grain", "form:rice:flour"]},
-      {"query": "arroz", "status": "NEEDS_CLARIFICATION", "productCount": 115, "sourceIdentityCount": 243, "rowsAcrossPages": 243, "uniqueIdentityKeys": 243, "sorted": true, "choices": ["form:rice:dessert", "form:rice:grain", "form:rice:flour"]},
-      {"query": "eggs", "status": "NEEDS_CLARIFICATION", "productCount": 204, "sourceIdentityCount": 269, "rowsAcrossPages": 269, "uniqueIdentityKeys": 269, "sorted": true, "choices": ["form:egg:whole_egg", "form:egg:pasta", "form:egg:toy", "form:egg:chocolate", "form:egg:powder", "form:egg:drink", "form:egg:liquid"]},
-      {"query": "carrot", "status": "NEEDS_CLARIFICATION", "productCount": 6, "sourceIdentityCount": 8, "rowsAcrossPages": 8, "uniqueIdentityKeys": 8, "sorted": true, "choices": ["form:carrot:vegetable", "form:carrot:drink", "form:carrot:cosmetics", "form:carrot:dessert"]},
-      {"query": "strawberry", "status": "NEEDS_CLARIFICATION", "productCount": 10, "sourceIdentityCount": 16, "rowsAcrossPages": 16, "uniqueIdentityKeys": 16, "sorted": true, "choices": ["form:strawberry:dessert", "form:strawberry:dairy", "form:strawberry:drink", "form:strawberry:fresh", "form:strawberry:cosmetics"]}
+      {
+        "query": "rice",
+        "language": "en",
+        "status": "NEEDS_CLARIFICATION",
+        "clarificationChoices": 6,
+        "productCount": 139,
+        "identityCount": 282,
+        "pages": 6
+      },
+      {
+        "query": "arroz",
+        "language": "es",
+        "status": "NEEDS_CLARIFICATION",
+        "clarificationChoices": 6,
+        "productCount": 139,
+        "identityCount": 282,
+        "pages": 6
+      },
+      {
+        "query": "eggs",
+        "language": "en",
+        "status": "NEEDS_CLARIFICATION",
+        "clarificationChoices": 7,
+        "productCount": 204,
+        "identityCount": 269,
+        "pages": 6
+      },
+      {
+        "query": "huevos",
+        "language": "es",
+        "status": "NEEDS_CLARIFICATION",
+        "clarificationChoices": 7,
+        "productCount": 204,
+        "identityCount": 269,
+        "pages": 6
+      },
+      {
+        "query": "carrot",
+        "language": "en",
+        "status": "NEEDS_CLARIFICATION",
+        "clarificationChoices": 4,
+        "productCount": 6,
+        "identityCount": 8,
+        "pages": 1
+      },
+      {
+        "query": "zanahoria",
+        "language": "es",
+        "status": "NEEDS_CLARIFICATION",
+        "clarificationChoices": 4,
+        "productCount": 6,
+        "identityCount": 8,
+        "pages": 1
+      },
+      {
+        "query": "strawberry",
+        "language": "en",
+        "status": "NEEDS_CLARIFICATION",
+        "clarificationChoices": 5,
+        "productCount": 10,
+        "identityCount": 16,
+        "pages": 1
+      },
+      {
+        "query": "frutilla",
+        "language": "es",
+        "status": "NEEDS_CLARIFICATION",
+        "clarificationChoices": 5,
+        "productCount": 10,
+        "identityCount": 16,
+        "pages": 1
+      },
+      {
+        "query": "mango",
+        "language": "en",
+        "status": "NEEDS_CLARIFICATION",
+        "clarificationChoices": 4,
+        "productCount": 3,
+        "identityCount": 4,
+        "pages": 1
+      }
     ],
     "strictSelectionChecks": [
-      {"query": "rice", "selection": "form:rice:grain", "status": "READY", "productCount": 115, "sourceIdentityCount": 243, "rows": 243, "uniqueIdentityKeys": 243},
-      {"query": "rice", "selection": "form:rice:dessert", "status": "READY", "productCount": 213, "sourceIdentityCount": 398, "rows": 398, "uniqueIdentityKeys": 398},
-      {"query": "eggs", "selection": "form:egg:whole_egg", "status": "READY", "productCount": 204, "sourceIdentityCount": 269, "rows": 269, "uniqueIdentityKeys": 269},
-      {"query": "carrot", "selection": "form:carrot:vegetable", "status": "READY", "productCount": 6, "sourceIdentityCount": 8, "rows": 8, "uniqueIdentityKeys": 8},
-      {"query": "strawberry", "selection": "form:strawberry:fresh", "status": "READY", "productCount": 10, "sourceIdentityCount": 16, "rows": 16, "uniqueIdentityKeys": 16}
-    ]
+      {
+        "query": "rice",
+        "selection": "form:rice:grain",
+        "language": "en",
+        "status": "READY",
+        "productCount": 139,
+        "identityCount": 282,
+        "pages": 6
+      },
+      {
+        "query": "rice",
+        "selection": "form:rice:dessert",
+        "language": "en",
+        "status": "READY",
+        "productCount": 213,
+        "identityCount": 399,
+        "pages": 8
+      },
+      {
+        "query": "eggs",
+        "selection": "form:egg:whole_egg",
+        "language": "en",
+        "status": "READY",
+        "productCount": 204,
+        "identityCount": 269,
+        "pages": 6
+      },
+      {
+        "query": "carrot",
+        "selection": "form:carrot:vegetable",
+        "language": "en",
+        "status": "READY",
+        "productCount": 6,
+        "identityCount": 8,
+        "pages": 1
+      },
+      {
+        "query": "strawberry",
+        "selection": "form:strawberry:fresh",
+        "language": "en",
+        "status": "READY",
+        "productCount": 10,
+        "identityCount": 16,
+        "pages": 1
+      }
+    ],
+    "identityAndOrderEquality": "PASS",
+    "fullResultPagination": "PASS",
+    "facetCursorPagination": "PASS",
+    "priceAuthority": "identity-only discovery rail; prices/offers remain in the existing shopping engine"
   },
   "tests": {
-    "focusedLexiconAndIndex": {"status": "PASS", "passed": 74},
-    "tools": {"status": "PASS", "passed": 427},
-    "backend": {"status": "PASS", "passed": 145},
-    "android": {"status": "PASS", "tasks": [":shared-core:test", ":app:testDebugUnitTest"], "result": "BUILD SUCCESSFUL"},
-    "structuralIntegrity": {"status": "FAIL", "failureCount": 1}
+    "catalogDiscoveryIndex": {
+      "status": "PASS",
+      "passed": 27
+    },
+    "tools": {
+      "status": "PASS",
+      "passed": 431
+    },
+    "backend": {
+      "status": "PASS",
+      "passed": 145
+    },
+    "android": {
+      "status": "PASS",
+      "tasks": [
+        ":shared-core:test",
+        ":app:testDebugUnitTest"
+      ],
+      "result": "BUILD SUCCESSFUL"
+    },
+    "fullCatalogStructuralAudit": {
+      "status": "PASS",
+      "elapsedSeconds": 1236.818
+    },
+    "httpContract": {
+      "status": "PASS",
+      "checks": 61,
+      "failureCount": 0
+    }
   },
   "device": {
     "adbDevices": [],
     "status": "BLOCKED_NO_MOTOROLA_EDGE_2025",
     "apkPath": "android/app/build/outputs/apk/debug/app-debug.apk",
-    "apkSha256": "734F052227C7AEC8A6C412B395B44EA286017CC8291CDC8773FC7515E88C1B50",
+    "apkSha256": "734f052227c7aec8a6c412b395b44ea286017cc8291cdc8773fc7515e88c1b50",
     "screenshots": "NOT_AVAILABLE_WITHOUT_CONNECTED_DEVICE"
   },
   "remainingKnownIssues": [
-    "Canonical and v40 artifacts have a build metadata assertion count mismatch; repair requires one future frozen rebuild, which was deliberately not started in this checkpoint.",
-    "65,944 canonical identities remain TYPE_UNRESOLVED and 43,042 lack an English retrieval-path label; these are coverage measurements, not proof of correct semantics.",
+    "Independent semantic accuracy is not established: 0 reviewed cases are in the ledger. The provider-group queue contains 1,000 groups / 1,260 identity rows and remains PENDING_HUMAN_REVIEW; no compiler labels are counted as truth.",
+    "65,967 v40 identities remain TYPE_UNRESOLVED; 43,042 sidecar rows are PARTIAL for bilingual coverage and one concept predicate lacks a Spanish alias.",
+    "The canonical v33 sidecar remains unchanged and still has its historical build-metadata assertion mismatch; v40 fixes that mismatch in its frozen candidate but is not promoted.",
     "Firebase/App Check live authorization was not bypassed or reconfigured; remote live search remains separately gated.",
-    "Motorola Edge 2025 runtime, screenshots, Google Images return-state testing and live offer/price behavior remain unverified because adb has no connected device.",
-    "No held-out 1,000-provider-group semantic evaluation or full 100k/250k compiler run is claimed by this checkpoint."
+    "Motorola Edge 2025 runtime, screenshots, Google Images return-state testing and live offer/price behavior remain unverified because adb has no connected device."
   ]
 }
