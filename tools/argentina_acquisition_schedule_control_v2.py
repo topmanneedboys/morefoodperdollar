@@ -990,6 +990,9 @@ def _read_optional_json_file(path: Path | str | None, *, label: str) -> dict[str
         raise AcquisitionScheduleError(f"{label} is invalid JSON", code="INVALID_CONTROL_STATE") from exc
     if value is None:
         return None
+    if isinstance(value, str):
+        # gcloud's execution result is itself a JSON-encoded string.
+        return _workflow_payload(value, label=label)
     if not isinstance(value, dict):
         raise AcquisitionScheduleError(f"{label} is invalid", code="INVALID_CONTROL_STATE")
     return value
