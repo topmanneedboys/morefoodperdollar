@@ -252,6 +252,52 @@ class ArgentinaLiveSearchCoordinatorTest {
     }
 
     @Test
+    fun debugDiscoveryModePagesClarificationChoicesThroughNativeFacetCursor() {
+        val firstPage = discoveryV2ResponseJson(hasMoreFacetChoices = true, facetNextCursor = "facet-1")
+        val secondPage = discoveryV2ResponseJson(hasMoreFacetChoices = false, singleFacetChoice = true)
+        var discoveryCalls = 0
+        val calls = mutableListOf<InMemoryArgentinaBackendTransport.Call>()
+        val transport = object : ArgentinaBackendTransport {
+            override fun execute(endpoint: String, requestBody: String?): ArgentinaBackendTransportResponse {
+                calls += InMemoryArgentinaBackendTransport.Call(endpoint, requestBody)
+                return when (endpoint) {
+                    ArgentinaBackendConsumerBridge.STATUS_ENDPOINT ->
+                        ArgentinaBackendTransportResponse(200, statusJson())
+                    ArgentinaBackendConsumerBridge.DISCOVERY_SEARCH_ENDPOINT ->
+                        ArgentinaBackendTransportResponse(200, if (discoveryCalls++ == 0) firstPage else secondPage)
+                    else -> ArgentinaBackendTransportResponse(404, "")
+                }
+            }
+        }
+        val states = mutableListOf<ArgentinaLiveSearchState>()
+        val executor = QueuedExecutor()
+        val coordinator = ArgentinaLiveSearchCoordinator(
+            transport = transport,
+            executor = executor,
+            stateSink = states::add,
+            discoveryMode = true
+        )
+
+        coordinator.submit("rice", context, language = "en")
+        executor.runNext()
+        val first = coordinator.state() as ArgentinaLiveSearchState.Results
+        assertTrue(first.presentation.clarification?.hasMore == true)
+        assertEquals("facet-1", first.presentation.clarification?.nextCursor)
+
+        coordinator.loadMoreClarification()
+        assertTrue(coordinator.state() is ArgentinaLiveSearchState.Loading)
+        executor.runNext()
+
+        val second = coordinator.state() as ArgentinaLiveSearchState.Results
+        assertFalse(second.presentation.clarification?.hasMore == true)
+        assertEquals(1, second.presentation.clarification?.choices?.size)
+        assertTrue(
+            calls.last().requestBody?.contains("\"facetCursor\":\"facet-1\"") == true
+        )
+        coordinator.close()
+    }
+
+    @Test
     fun discoveryModeStillStopsBeforeV2WhenAndroidSearchIsUnauthorized() {
         val transport = InMemoryArgentinaBackendTransport(
             mapOf(
@@ -788,7 +834,11 @@ class ArgentinaLiveSearchCoordinatorTest {
             .toString()
     }
 
-    private fun discoveryV2ResponseJson(): String {
+    private fun discoveryV2ResponseJson(
+        hasMoreFacetChoices: Boolean = false,
+        facetNextCursor: String? = null,
+        singleFacetChoice: Boolean = false
+    ): String {
         val choices = JSONArray()
             .put(
                 JSONObject()
@@ -801,17 +851,21 @@ class ArgentinaLiveSearchCoordinatorTest {
                     .put("countUnit", "DISTINCT_PROVIDER_PRODUCT")
                     .put("hasChildren", false)
             )
-            .put(
-                JSONObject()
-                    .put("id", "form:rice:dessert")
-                    .put("predicateId", "form:rice:dessert")
-                    .put("labelEs", "Dulces de arroz")
-                    .put("labelEn", "Rice cakes")
-                    .put("productCount", 1)
-                    .put("sourceIdentityCount", 1)
-                    .put("countUnit", "DISTINCT_PROVIDER_PRODUCT")
-                    .put("hasChildren", false)
-            )
+            .apply {
+                if (!singleFacetChoice) {
+                    put(
+                        JSONObject()
+                            .put("id", "form:rice:dessert")
+                            .put("predicateId", "form:rice:dessert")
+                            .put("labelEs", "Dulces de arroz")
+                            .put("labelEn", "Rice cakes")
+                            .put("productCount", 1)
+                            .put("sourceIdentityCount", 1)
+                            .put("countUnit", "DISTINCT_PROVIDER_PRODUCT")
+                            .put("hasChildren", false)
+                    )
+                }
+            }
         val result = JSONObject()
             .put("contract", ArgentinaBackendContract.DISCOVERY_RESULT_CONTRACT)
             .put("status", "NEEDS_CLARIFICATION")
@@ -853,8 +907,8 @@ class ArgentinaLiveSearchCoordinatorTest {
                 JSONObject()
                     .put("dimensionId", "product_type")
                     .put("choices", choices)
-                    .put("hasMore", false)
-                    .put("nextCursor", JSONObject.NULL)
+                    .put("hasMore", hasMoreFacetChoices)
+                    .put("nextCursor", facetNextCursor ?: JSONObject.NULL)
             )
         return JSONObject()
             .put("apiContractVersion", ArgentinaBackendContract.DISCOVERY_API_VERSION)

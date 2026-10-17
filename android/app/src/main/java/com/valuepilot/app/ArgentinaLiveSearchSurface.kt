@@ -195,6 +195,10 @@ internal class ArgentinaLiveSearchSurfaceHost(
         coordinator.loadMore()
     }
 
+    fun loadMoreClarification() {
+        coordinator.loadMoreClarification()
+    }
+
     fun invalidateForRouteChange() {
         coordinator.invalidateForRouteChange()
     }

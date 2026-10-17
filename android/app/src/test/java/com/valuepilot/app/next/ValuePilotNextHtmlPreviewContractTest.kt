@@ -139,6 +139,22 @@ class ValuePilotNextHtmlPreviewContractTest {
     }
 
     @Test
+    fun acceptsOnlyTheNativeClarificationFacetLoadMoreCommand() {
+        assertTrue(
+            ValuePilotNextHtmlPreviewContract
+                .parseNativeSearchFacetMoreMessage("{\"type\":\"LOAD_MORE_VALUEPILOT_FACETS\"}") != null
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract
+                .parseNativeSearchFacetMoreMessage("{\"type\":\"LOAD_MORE_VALUEPILOT\"}")
+        )
+        assertNull(
+            ValuePilotNextHtmlPreviewContract
+                .parseNativeSearchFacetMoreMessage("{\"type\":\"LOAD_MORE_VALUEPILOT_FACETS\"}" + " ".repeat(256))
+        )
+    }
+
+    @Test
     fun acceptsNativeProductDetailHandoffWithBoundedIdentityAndQuery() {
         val request = requireNotNull(
             ValuePilotNextHtmlPreviewContract.parseNativeProductDetailMessage(

@@ -60,6 +60,8 @@ class ValuePilotNextHtmlLocalizationTest {
         assertTrue(source.contains("if(state.nativeSelectionId)message.selectionId=state.nativeSelectionId"))
         assertTrue(source.contains("state.nativeSelectionId=payload.selectionId||null"))
         assertFalse(source.contains("clarification.choices.slice(0,6)"))
+        assertTrue(source.contains("clarification.hasMore"))
+        assertTrue(source.contains("LOAD_MORE_VALUEPILOT_FACETS"))
     }
 
     @Test

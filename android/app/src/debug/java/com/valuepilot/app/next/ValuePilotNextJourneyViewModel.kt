@@ -672,6 +672,11 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
         searchHost?.loadMore()
     }
 
+    fun loadMoreSearchClarification() {
+        if (!initialized || cleared) return
+        searchHost?.loadMoreClarification()
+    }
+
     fun addSearchMatch(
         match: PracticalShoppingSearchIdentityPresentation.Match
     ): AddPrivateIdentityResult {

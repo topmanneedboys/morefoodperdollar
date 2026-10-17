@@ -372,6 +372,12 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                         loadMoreNativeSearch()
                         return
                     }
+                    if (ValuePilotNextHtmlPreviewContract
+                            .parseNativeSearchFacetMoreMessage(message.data) != null
+                    ) {
+                        loadMoreNativeSearchClarification()
+                        return
+                    }
                     val nativeProductDetail = ValuePilotNextHtmlPreviewContract
                         .parseNativeProductDetailMessage(message.data)
                     if (nativeProductDetail != null) {
@@ -574,6 +580,18 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         nativeSearchInitialGeneration = journey.uiState.search.generation
         nativeSearchDeadlineMillis = System.currentTimeMillis() + NATIVE_SEARCH_TIMEOUT_MS
         journey.loadMoreSearchResults()
+        handler.post(nativeSearchPoll)
+    }
+
+    private fun loadMoreNativeSearchClarification() {
+        if (!::journey.isInitialized) return
+        val query = nativeSearchQuery ?: journey.uiState.search.query.trim()
+        if (query.isBlank()) return
+        handler.removeCallbacks(nativeSearchPoll)
+        nativeSearchQuery = query
+        nativeSearchInitialGeneration = journey.uiState.search.generation
+        nativeSearchDeadlineMillis = System.currentTimeMillis() + NATIVE_SEARCH_TIMEOUT_MS
+        journey.loadMoreSearchClarification()
         handler.post(nativeSearchPoll)
     }
 

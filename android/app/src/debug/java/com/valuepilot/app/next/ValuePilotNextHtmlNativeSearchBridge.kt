@@ -200,6 +200,7 @@ internal object ValuePilotNextHtmlNativeSearchBridge {
         .put("message", clarification.message)
         .put("messageEn", clarification.messageEn ?: JSONObject.NULL)
         .put("evidence", clarification.evidence)
+        .put("hasMore", clarification.hasMore)
         .put("choices", JSONArray().apply {
             clarification.choices.forEach { choice ->
                 put(

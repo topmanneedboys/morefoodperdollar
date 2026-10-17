@@ -244,15 +244,23 @@ object ArgentinaBackendContract {
         val message: String,
         val messageEn: String?,
         val choices: List<SearchClarificationChoice>,
-        val evidence: String
+        val evidence: String,
+        /** The additive v2 discovery rail may expose more observed forms. */
+        val hasMore: Boolean = false,
+        /** Opaque facet cursor retained by the native coordinator only. */
+        val nextCursor: String? = null,
+        /** Only a continuation facet page may legitimately contain one choice. */
+        val allowSingleChoice: Boolean = false
     ) {
         init {
             require(code == "PRODUCT_FAMILY_CLARIFICATION")
             require(family.matches(ID_PATTERN))
             require(message.isNotBlank())
             require(messageEn == null || messageEn.isNotBlank())
-            require(choices.size in 2..MAX_SEARCH_CLARIFICATION_CHOICES)
+            require(choices.size in (if (allowSingleChoice) 1..MAX_SEARCH_CLARIFICATION_CHOICES else 2..MAX_SEARCH_CLARIFICATION_CHOICES))
             require(evidence == "OBSERVED_CATALOG_NAMES")
+            require(nextCursor == null || nextCursor.length <= 2_048)
+            require(!hasMore || nextCursor != null)
         }
     }
 
@@ -989,7 +997,7 @@ object ArgentinaBackendContract {
         val dimension = requiredId(root, "dimensionId", 96)
         val choicesArray = requiredArray(root, "choices")
         boundedArray(choicesArray, MAX_DISCOVERY_FACET_PAGE_SIZE, "discovery choices")
-        if (choicesArray.length() < 2) invalid("discovery clarification needs at least two choices")
+        if (choicesArray.length() < 1) invalid("discovery clarification needs at least one choice")
         val choices = (0 until choicesArray.length()).map { index ->
             val choice = choicesArray.get(index) as? JSONObject ?: invalid("discovery choice must be an object")
             val id = requiredId(choice, "id", 160)

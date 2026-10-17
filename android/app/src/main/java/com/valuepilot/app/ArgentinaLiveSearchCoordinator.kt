@@ -270,6 +270,64 @@ internal class ArgentinaLiveSearchCoordinator(
         return scheduledGeneration
     }
 
+    /** Request the next native-owned clarification facet page. */
+    fun loadMoreClarification(): Long {
+        var task: (() -> Unit)? = null
+        var immediate: ArgentinaLiveSearchState? = null
+        var scheduledGeneration = 0L
+        synchronized(lock) {
+            if (closed || !discoveryMode) return generation
+            val result =
+                when (val state = currentState) {
+                    is ArgentinaLiveSearchState.Results -> state.query to state.presentation
+                    is ArgentinaLiveSearchState.Empty -> state.query to state.presentation
+                    else -> null
+                } ?: return generation
+            val query = result.first
+            val presentation = result.second
+            val facetCursor = presentation.clarification?.nextCursor ?: return generation
+            val context = currentContext ?: return generation
+            val selectionId = currentSelectionId
+            val language = currentLanguage
+            cancelCurrentLocked()
+            generation = nextGenerationLocked()
+            scheduledGeneration = generation
+            val cancellation = ArgentinaRequestCancellation()
+            currentCancellation = cancellation
+            task = {
+                performSearch(
+                    requestGeneration = scheduledGeneration,
+                    query = query,
+                    context = context,
+                    cancellation = cancellation,
+                    page = presentation.page,
+                    previousPresentation = presentation,
+                    selectionId = selectionId,
+                    language = language,
+                    facetCursor = facetCursor
+                )
+            }
+            immediate = ArgentinaLiveSearchState.Loading(
+                scheduledGeneration,
+                query,
+                presentation
+            )
+            currentState = immediate
+        }
+        immediate?.let(stateSink)
+        try {
+            task?.let { work -> executor.execute(Runnable { work() }) }
+        } catch (_: RuntimeException) {
+            publishFailure(
+                generation = scheduledGeneration,
+                query = (immediate as? ArgentinaLiveSearchState.Loading)?.query.orEmpty(),
+                failure = ArgentinaBackendContract.FailureCode.NETWORK_ERROR,
+                previousPresentation = (immediate as? ArgentinaLiveSearchState.Loading)?.previousPresentation
+            )
+        }
+        return scheduledGeneration
+    }
+
     /** Query edits invalidate in-flight work but never start a request. */
     fun queryChanged(rawQuery: String): Long {
         val query = rawQuery.trim()
@@ -341,7 +399,8 @@ internal class ArgentinaLiveSearchCoordinator(
         page: Int = 0,
         previousPresentation: PracticalShoppingSearchIdentityPresentation? = null,
         selectionId: String? = null,
-        language: String = "es"
+        language: String = "es",
+        facetCursor: String? = null
     ) {
         try {
             val release = pinRelease(requestGeneration, cancellation)
@@ -358,7 +417,8 @@ internal class ArgentinaLiveSearchCoordinator(
                         language = language,
                         selections = selectionId?.let { listOf(it) }.orEmpty(),
                         pageSize = ArgentinaBackendContract.MAX_DISCOVERY_PAGE_SIZE,
-                        cursor = discoveryCursor
+                        cursor = discoveryCursor,
+                        facetCursor = facetCursor
                     )
                     when (val response = bridge.discoverySearch(request, cancellation)) {
                         is ArgentinaBackendBridgeResult.Failure -> response
@@ -453,7 +513,10 @@ internal class ArgentinaLiveSearchCoordinator(
                         query = result.query
                     )
                 },
-                evidence = "OBSERVED_CATALOG_NAMES"
+                evidence = "OBSERVED_CATALOG_NAMES",
+                hasMore = value.hasMore,
+                nextCursor = value.nextCursor,
+                allowSingleChoice = value.choices.size == 1
             )
         }
         return PracticalShoppingSearchIdentityPresentation(
