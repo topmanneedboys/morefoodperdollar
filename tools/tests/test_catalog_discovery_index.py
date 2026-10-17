@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from tools.audit_catalog_discovery_integrity import audit_catalog_discovery_index
+from tools.build_semantic_review_queue import build_semantic_review_queue
 from tools.catalog_discovery import DiscoveryIndex, DiscoveryQuery, build_discovery_index
 from tools.verify_catalog_discovery import verify_catalog_discovery
 
@@ -226,6 +227,22 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
                 self.assertEqual(literal["status"], "READY")
                 self.assertEqual([item["identityKey"] for item in literal["matches"]], [new_unknown["productEvidenceKey"]])
                 self.assertNotIn("ar-sepa-product:synthetic:002", {row["identityKey"] for row in index.query(DiscoveryQuery("galletas de arroz", language="es", page_size=10)).to_dict()["matches"]})
+
+    def test_semantic_review_queue_keeps_provider_identity_copies_together(self) -> None:
+        first = _row(1, "ARROZ LARGO MARCA X 1 KG", provider="shared-provider")
+        second = _row(2, "ARROZ LARGO MARCA X 1 KG", provider="shared-provider")
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "identities.jsonl"
+            source.write_text("".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in (first, second)), encoding="utf-8")
+            index_path = Path(directory) / "discovery.sqlite"
+            build_discovery_index(source, index_path, release_id="queue-v1")
+            output = Path(directory) / "queue.jsonl"
+            summary = build_semantic_review_queue(index_path, output, group_limit=1)
+            rows = [json.loads(line) for line in output.read_text(encoding="utf-8").splitlines() if line.strip()]
+            self.assertEqual(summary["providerProductGroupsSelected"], 1)
+            self.assertEqual(summary["identityRowsSelected"], 2)
+            self.assertEqual({row["providerProductId"] for row in rows}, {"shared-provider"})
+            self.assertEqual({row["reviewGroupId"] for row in rows}, {"provider:shared-provider"})
 
     def test_final_facet_page_with_one_choice_remains_reachable(self) -> None:
         rows = [

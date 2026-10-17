@@ -43,6 +43,8 @@ identity and provider precision/recall separately. Any unreviewed case,
 missing complete oracle, invalid reviewer provenance, or unexpected result
 keeps the semantic gate below `PASS`.
 
-The current v40 checkpoint intentionally has no reviewed ledger. Its 1,000-row
-queue remains `PENDING_HUMAN_REVIEW`; this file defines the gate and prevents a
+The current v40 checkpoint intentionally has no reviewed ledger. Its
+provider-group-safe queue contains 1,000 groups and 1,260 linked identity rows,
+remains `PENDING_HUMAN_REVIEW`, and is summarized in
+`SEMANTIC_REVIEW_QUEUE_SUMMARY.json`. This file defines the gate and prevents a
 future run from accidentally treating compiler output as semantic truth.

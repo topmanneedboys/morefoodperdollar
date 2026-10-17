@@ -49,8 +49,9 @@ saved-data, release, and security paths remain unchanged.
   table contract at the backend boundary; prices/offers remain outside this
   identity-only rail.
 - Semantic accuracy is intentionally **not established**: the verifier has
-  zero independently reviewed cases and a deterministic 1,000-record queue is
-  marked `PENDING_HUMAN_REVIEW`. Coverage accounting reports 91,295 complete
+  zero independently reviewed cases and a deterministic provider-group queue
+  of **1,000 groups / 1,260 identity rows** is marked
+  `PENDING_HUMAN_REVIEW`. Coverage accounting reports 91,295 complete
   and 43,042 partial bilingual rows; one concept predicate lacks a Spanish
   alias. These are the remaining catalog-quality limitations, not pagination
   or identity-integrity failures. No v41 batch or new rebuild was started.
@@ -63,8 +64,11 @@ saved-data, release, and security paths remain unchanged.
   failures. A future-import regression also proves that a new unclassified
   identity remains literally searchable, deleted identities disappear, and the
   new meaning enters the review queue without a catalog-specific patch.
+  The v40 queue summary is recorded in
+  `SEMANTIC_REVIEW_QUEUE_SUMMARY.json`; every selected provider group keeps
+  all linked retailer identities together across the held-out split.
 - Tests now passing at this checkpoint: catalog-discovery index module
-  **26 passed**, full tools suite **430 passed**, backend suite **145 passed**,
+  **27 passed**, full tools suite **431 passed**, backend suite **145 passed**,
   and Android `:shared-core:test :app:testDebugUnitTest` **BUILD SUCCESSFUL**.
   The v40 structural audit and HTTP contract report also pass.
 - `adb devices -l` still reports no attached Motorola device. Actual phone
