@@ -1,17 +1,38 @@
 # Catalog discovery implementation progress
 
-Updated: 2026-10-16
+Updated: 2026-10-17
 
 This ledger records the additive discovery work. It is not a claim that the
 catalog has perfect semantic coverage. Existing `/v1` shopping, price, offer,
 saved-data, release, and security paths remain unchanged.
 
+## Latest verified continuation checkpoint — 2026-10-17
+
+- Code checkpoint: `199f5bd0` on `work/valuepilot-stage2-premium-shopping`.
+- The query engine now prefers a specific reviewed type/form alias over a
+  broad department alias when the same phrase appears in the other language.
+  This fixes the real-sidecar collision where Spanish-mode `rice` returned no
+  products; `rice` and `arroz` now agree on `type:rice` and the same catalog
+  membership.
+- The bounded posting caches introduced in `acd5c31d` preserve membership and
+  clarification output while reducing representative real-sidecar warm query
+  p95 to approximately 34–86 ms. The caches are local to an opened sidecar
+  instance and do not change source accounting or production price data.
+- Full tools tests: 417 passed. Focused lexicon/index tests: 64 passed.
+  Backend tests remain 145 passed. Android checks and the debug APK were
+  already verified at the stable-selection client checkpoint `6764d77f`.
+- Motorola runtime validation, authorized live-service evidence, synthetic
+  100k/250k scale output, and held-out semantic evaluation are still pending.
+  The temporary synthetic compiler check was stopped after its 100k phase
+  exceeded the useful verification window; no result is counted as a pass.
+  This is a recoverable development checkpoint, not a completion claim.
+
 ## Checkpoint
 
 - Branch: `work/valuepilot-stage2-premium-shopping`
 - Starting handoff checkpoint: `6ce81d0d`
-- Current verified checkpoint: code commit `9d3edf42` (documentation checkpoint follows the verification update).
-- Discovery rules: `valuepilot-catalog-discovery-rules-v25`
+- Current verified checkpoint: code commit `199f5bd0` (documentation checkpoint follows the verification update).
+- Discovery rules: `valuepilot-catalog-discovery-rules-v32`
 - Sidecar schema: `valuepilot-catalog-discovery-v2`
 - Additive HTTP contract: `valuepilot-discovery-http-v2`
 - Current state: deterministic identity index, strict query/facet engine, and
@@ -43,23 +64,25 @@ The current local release build reported:
 - `providerProducts`: 78,865
 - `identityRecords`: 134,337
 - `indexedTokens`: 36,423
-- `concepts`: 258
-- `assertions`: 193,041
-- `TYPE_RESOLVED`: 68,335
-- `TYPE_UNRESOLVED`: 66,002
-- `TYPE_OR_DEPARTMENT_RESOLVED`: 91,161
+- `concepts`: 274
+- `assertions`: 194,661
+- `TYPE_RESOLVED`: 68,425
+- `TYPE_UNRESOLVED`: 65,912
+- `TYPE_OR_DEPARTMENT_RESOLVED`: 91,158
 - `DEPARTMENT_RESOLVED`: 85,249
-- `ROLE_RESOLVED`: 69,578
-- `DERIVED_ONLY`: 1,243
-- `NO_FORM`: 126,069
-- English retrieval-path proxy: 91,266 identities
-- Spanish retrieval-path proxy: 111,057 identities
-- fully type-resolved provider groups: 30,482; partly resolved: 8,002; unresolved: 40,381
-- fully type-or-department-resolved provider groups: 51,477; partly resolved: 2,967; unresolved: 24,421
+- `ROLE_RESOLVED`: 70,004
+- `DERIVED_ONLY`: 1,579
+- `NO_FORM`: 125,168
+- English retrieval-path proxy: 91,295 identities
+- Spanish retrieval-path proxy: 111,070 identities
+- fully type-resolved provider groups: 30,589; partly resolved: 8,004; unresolved: 40,272
+- fully type-or-department-resolved provider groups: 46,236; the report also keeps the overlapping partial and unresolved dispositions separately.
 - source SHA-256: `85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6`
-- ignored sidecar SHA-256: `a4f148aea8e9199d9b92e0d5d93acb25bfe805ce045f8f025ae33fee1c2c692b`
+- ignored sidecar SHA-256: `0b135858dfccb8b41d815b3f5c4ca71fc9718bda3a90526d5734f59c4785677a`
 
-The v25 replay combines the existing reviewed family dictionary with
+The following rule-history paragraph documents the v25 replay and is retained
+for historical context; the current v32 totals are listed above. The v25 replay
+combines the existing reviewed family dictionary with
 `tools/data/discovery_family_rules.json`. It retains all earlier reviewed rules
 and adds observed bilingual household-cleaning families for broom
 (escoba/escobillon/escobillón), mop (mopa) and duster (plumero). The observed

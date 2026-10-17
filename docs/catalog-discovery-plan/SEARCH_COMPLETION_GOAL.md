@@ -30,6 +30,28 @@ unit, lint, and debug-APK build command passes. The rebuilt APK is recorded in
 service evidence, and the remaining performance/held-out evaluation gates are
 still unrun; this is a verified development checkpoint, not goal completion.
 
+## Continuation checkpoint (2026-10-17, query correctness and warm-cache pass)
+
+The current code checkpoint is `199f5bd0`. A language collision found during
+the real-sidecar check is fixed: when the selected UI language has only a broad
+department alias for a phrase, a reviewed type/form alias in the other language
+now takes precedence. English `rice`, Spanish `rice`, and Spanish `arroz` now
+resolve to the same `type:rice` set (119 provider products, 247 source
+identities, three observed choices). The regression is covered by the catalog
+index tests.
+
+The bounded posting caches from `acd5c31d` preserve those results and bring the
+real-sidecar warm query p95 to roughly 34–86 ms for the representative rice,
+arroz, eggs, fruit, frutilla, and strawberry checks. The full tools suite now
+passes 417 tests; the focused lexicon/index set passes 64. The Android APK
+remains the verified artifact built from the stable-selection client checkpoint
+`6764d77f`; the Python-only query changes do not alter that APK. Synthetic
+100k/250k scale output, Motorola runtime evidence, authorized live-service
+evidence, and held-out semantic evaluation remain open gates. A temporary
+100k/250k synthetic build was started but stopped after the 100k compiler phase
+exceeded the useful verification window; it is recorded as unrun rather than
+claimed as a pass.
+
 ## Goal and authority
 
 Repository: C:/Users/iamatopstrongman/Documents/Codex/2026-10-08/valuepilot-next-complete-premium-ui-ux/work/valuepilot-10133-source-audit.

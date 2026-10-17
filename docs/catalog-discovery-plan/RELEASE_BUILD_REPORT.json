@@ -80,7 +80,9 @@
     "Reviewed bare-query projection keeps rice grain, shell eggs, fresh strawberry, and mango fruit in the initial table while exposing observed alternative forms through stable clarification predicates.",
     "Clarification choices now carry stable family:form selection IDs end to end through the HTML bridge, Android coordinator, backend request and catalog filter; the previous silent six-choice cap is replaced by a bounded 30-choice contract.",
     "Known contextual families remain literal-searchable and are reachable through explicit observed form choices. Counts are distinct provider products and source identities, not offer or savings claims.",
-    "Provider-group metrics are calculated per identity group using logical coverage; they are not semantic completion. TYPE_UNRESOLVED identities remain an explicit review queue."
+    "Provider-group metrics are calculated per identity group using logical coverage; they are not semantic completion. TYPE_UNRESOLVED identities remain an explicit review queue.",
+    "A specific reviewed type/form alias now wins over a broad same-phrase department alias during cross-language fallback; rice and arroz agree in both language modes.",
+    "Bounded predicate, broad-posting, literal-posting, and bare-family caches preserve the real sidecar membership and clarification output while reducing representative warm query p95 to approximately 34–86 ms on this Windows development host."
   ],
   "verification": {
     "catalogBuild": {
@@ -118,7 +120,7 @@
     "toolsFocusedTests": {
       "command": "python -m unittest tools.tests.test_product_identity_lexicon tools.tests.test_catalog_discovery_index",
       "status": "PASS",
-      "tests": 63
+      "tests": 64
     },
     "backendTests": {
       "command": "python -m unittest discover -s backend/tests -p 'test_*.py'",
@@ -128,25 +130,41 @@
     "androidChecks": {
       "command": ".\\gradlew.bat --no-daemon :shared-core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug",
       "status": "PASS",
-      "note": "Full shared-core tests, debug unit tests, debug lint and debug APK assembly passed after the stable clarification-selection change. APK/device runtime checks remain separate.",
+      "note": "Full shared-core tests, debug unit tests, debug lint and debug APK assembly passed after the stable clarification-selection change. The current Python-only query/cache fixes are backend/index changes and do not alter this already verified APK. APK/device runtime checks remain separate.",
       "focusedUnitTestCommand": ".\\gradlew.bat --no-daemon :app:testDebugUnitTest --tests com.valuepilot.app.MainActivitySearchSubmissionBoundaryTest --tests com.valuepilot.app.next.ValuePilotNextHtmlLocalizationTest --tests com.valuepilot.app.next.ValuePilotNextHtmlPreviewContractTest --tests com.valuepilot.app.ArgentinaBackendConsumerBridgeTest --tests com.valuepilot.app.ArgentinaLiveSearchCoordinatorTest",
       "focusedUnitTestStatus": "PASS",
       "assembleDebugCommand": ".\\gradlew.bat --no-daemon :app:assembleDebug",
       "assembleStatus": "PASS",
       "apkPath": "android/app/build/outputs/apk/debug/app-debug.apk",
       "apkSizeBytes": 87944894,
-      "apkSha256": "CD93C2DE72C68EDB829403DFA94EFB4DB4AFACC6212D53EB6CD8D4D2A3E82788",
-      "deviceEnumeration": "adb devices -l returned no attached devices"
+      "apkSha256": "2C11DB3FC0D4FB01DBA72A138C0FCCC534A625442A2CF2A885AF3E38E8361643",
+      "deviceEnumeration": "adb devices -l returned no attached devices",
+      "apkSourceCommit": "6764d77f"
     },
     "motorolaEdge2025": {
       "status": "NOT_RUN",
       "reason": "adb devices -l returned no attached device; no emulator was started. Install/runtime screenshots and interaction checks remain pending on the authorized Motorola Edge 2025."
     },
-    "codeCommit": "47c71853",
+    "codeCommit": "199f5bd0",
     "toolsTests": {
       "command": "python -m unittest discover -s tools/tests -p 'test_*.py'",
       "status": "PASS",
-      "tests": 415
+      "tests": 417
+    },
+    "performance": {
+      "status": "PARTIAL_PASS",
+      "environment": "Windows development host; real 78,865-product / 134,337-identity sidecar; 100 warm queries per phrase",
+      "targetWarmIndexQueryP95Ms": 100,
+      "representativeWarmP95Ms": {
+        "arroz": 34.164,
+        "eggs": 36.019,
+        "fruit": 85.925,
+        "frutilla": 35.158,
+        "rice": 34.088,
+        "strawberry": 35.411
+      },
+      "syntheticScale": "NOT_RUN_TIMEOUT",
+      "note": "All recorded representative real-sidecar warm p95 values are below the 100 ms target. The temporary synthetic 100k/250k compiler run was stopped after the 100k phase exceeded the useful verification window; no synthetic result is counted as a pass."
     }
   }
 }
