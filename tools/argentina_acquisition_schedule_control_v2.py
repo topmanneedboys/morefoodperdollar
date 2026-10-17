@@ -180,15 +180,37 @@ def write_pending_workflow(
     current = read_pending_workflow(store=store)
     if current is not None:
         identity = ("argentinaDate", "candidateReleaseId", "sourceReleaseDate", "sourceSha256", "reservationId", "workflowExecution")
-        if any(current.get(field) != value.get(field) for field in identity):
-            raise AcquisitionScheduleError("pending workflow identity conflicts", code="CONTROL_CONFLICT")
-        value["createdAt"] = current["createdAt"]
-        # A terminal state is never downgraded by a late scheduled run.
-        if current.get("state") in {"SHADOW_SUCCEEDED", "SHADOW_FAILED"} and state not in {"SHADOW_SUCCEEDED", "SHADOW_FAILED"}:
-            return current
+        same_identity = all(current.get(field) == value.get(field) for field in identity)
+        terminal = {"SHADOW_SUCCEEDED", "SHADOW_FAILED"}
+        if not same_identity:
+            # This is a reusable pointer, not a lifetime reservation. Preserve
+            # an unfinished execution, but allow a later candidate after the
+            # previous execution has been reconciled into its immutable journal.
+            if current.get("state") not in terminal:
+                raise AcquisitionScheduleError("pending workflow identity conflicts", code="CONTROL_CONFLICT")
+            if state != "SHADOW_STARTED":
+                journal = read_daily_state(store=store, argentina_day=argentina_day)
+                if (journal is None or journal.get("status") != state or
+                        journal.get("workflowExecution") != workflow_execution or
+                        journal.get("candidateReleaseId") != candidate_release_id):
+                    raise AcquisitionScheduleError("terminal workflow has no matching journal", code="CONTROL_CONFLICT")
+            if (argentina_day < current["argentinaDate"] or
+                    source_release_date < current["sourceReleaseDate"] or
+                    _dt.datetime.fromisoformat(created_at.replace("Z", "+00:00")) <
+                    _dt.datetime.fromisoformat(current["createdAt"].replace("Z", "+00:00"))):
+                raise AcquisitionScheduleError("late workflow cannot replace a newer reservation", code="CONTROL_CONFLICT")
+        else:
+            value["createdAt"] = current["createdAt"]
+            if current.get("state") in terminal:
+                if state not in terminal:
+                    return current
+                if state != current["state"]:
+                    raise AcquisitionScheduleError("terminal workflow result conflicts", code="CONTROL_CONFLICT")
     raw = _base.canonical_bytes(value) + b"\n"
     try:
         metadata = store.head(PENDING_WORKFLOW_KEY) if current is not None else None
+        if current is not None and read_pending_workflow(store=store) != current:
+            raise AcquisitionScheduleError("pending workflow changed during update", code="CONTROL_CONFLICT")
         store.compare_and_swap(PENDING_WORKFLOW_KEY, raw, expected_etag=metadata.etag if metadata else None)
     except ObjectStoreError as exc:
         raise AcquisitionScheduleError("pending workflow write failed", code="CONTROL_STORE_UNAVAILABLE") from exc
@@ -1082,6 +1104,58 @@ def read_shadow_state(*, store: ObjectStore, argentina_day: str) -> dict[str, An
     }
 
 
+def read_reconciliation_state(*, store: ObjectStore, argentina_day: str, current_release_date: str) -> dict[str, Any]:
+    """Recover unfinished builds and unpromoted successes across midnight.
+
+    The global reservation is checked first, even when today's metadata job
+    has created a daily state. A bounded seven-day journal lookback also
+    recovers older executions whose global-pointer write previously failed.
+    Completed, newer candidates remain retryable after promotion failure.
+    """
+    day = _dt.date.fromisoformat(argentina_day)
+    active_date = _base._release_date(current_release_date)
+
+    def project(state: Mapping[str, Any], source_date: str) -> dict[str, Any]:
+        return {
+            "schemaVersion": DAILY_STATE_SCHEMA_VERSION,
+            "policyVersion": DAILY_STATE_POLICY_VERSION,
+            "argentinaDate": state["argentinaDate"],
+            "requestedArgentinaDate": argentina_day,
+            # The workflow must inspect the exact execution even when its
+            # journal already recorded success but promotion did not finish.
+            "status": "SHADOW_STARTED",
+            "durableStatus": state.get("status"),
+            "workflowExecution": state["workflowExecution"],
+            "buildReservationId": state.get("buildReservationId"),
+            "candidateReleaseId": state.get("candidateReleaseId"),
+            "sourceReleaseDate": source_date,
+            "supersededByActive": source_date < active_date,
+            "crossDayPending": state["argentinaDate"] != argentina_day,
+        }
+
+    pending = read_pending_workflow(store=store)
+    if pending is not None and pending["state"] in {"SHADOW_STARTED", "SHADOW_PENDING"}:
+        state = read_daily_state(store=store, argentina_day=pending["argentinaDate"])
+        if state is None or state.get("workflowExecution") != pending["workflowExecution"]:
+            raise AcquisitionScheduleError("pending workflow is not backed by its daily journal", code="CONTROL_CONFLICT")
+        return project(state, pending["sourceReleaseDate"])
+
+    for offset in range(8):
+        candidate_day = (day - _dt.timedelta(days=offset)).isoformat()
+        state = read_daily_state(store=store, argentina_day=candidate_day)
+        if state is None or state.get("status") not in {"SHADOW_STARTED", "SHADOW_SUCCEEDED"}:
+            continue
+        source = state.get("source")
+        source_date = source.get("releaseDate") if isinstance(source, Mapping) else None
+        if not isinstance(source_date, str) or not state.get("workflowExecution"):
+            raise AcquisitionScheduleError("reconciliation source identity is missing", code="INVALID_CONTROL_STATE")
+        _base._release_date(source_date)
+        if source_date <= active_date:
+            continue
+        return project(state, source_date)
+    return {"status": "NO_STATE", "argentinaDate": argentina_day, "workflowExecution": None, "candidateReleaseId": None}
+
+
 def reconcile_shadow_state(
     *,
     store: ObjectStore,
@@ -1123,6 +1197,16 @@ def reconcile_shadow_state(
 
     current_status = current.get("status")
     if current_status in {"SHADOW_SUCCEEDED", "SHADOW_FAILED"}:
+        pending = read_pending_workflow(store=store)
+        if pending is not None and pending.get("workflowExecution") == execution:
+            write_pending_workflow(
+                store=store, argentina_day=pending["argentinaDate"],
+                candidate_release_id=pending["candidateReleaseId"],
+                source_release_date=pending["sourceReleaseDate"], source_sha256=pending["sourceSha256"],
+                reservation_id=pending["reservationId"], workflow_execution=execution,
+                state=current_status, created_at=pending["createdAt"],
+                updated_at=recorded_at or current["updatedAt"],
+            )
         return {
             **read_shadow_state(store=store, argentina_day=argentina_day),
             "reconciliationStatus": "ALREADY_RECORDED",
@@ -1394,6 +1478,13 @@ def _main(argv: Sequence[str] | None = None) -> int:
     read_shadow_parser.add_argument("--archive-project")
     read_shadow_parser.add_argument("--output", type=Path, required=True)
 
+    recovery_parser = sub.add_parser("read-reconciliation-state")
+    recovery_parser.add_argument("--argentina-day", required=True)
+    recovery_parser.add_argument("--current-release-date", required=True)
+    recovery_parser.add_argument("--archive-bucket", required=True)
+    recovery_parser.add_argument("--archive-project")
+    recovery_parser.add_argument("--output", type=Path, required=True)
+
     reconcile_parser = sub.add_parser("reconcile-shadow-state")
     reconcile_parser.add_argument("--argentina-day", required=True)
     reconcile_parser.add_argument("--workflow-execution", required=True)
@@ -1496,6 +1587,14 @@ def _main(argv: Sequence[str] | None = None) -> int:
             )
             _base._emit(result, args.output)
             return 0
+        if args.command == "read-reconciliation-state":
+            result = read_reconciliation_state(
+                store=_gcs_store(args.archive_bucket, args.archive_project),
+                argentina_day=args.argentina_day,
+                current_release_date=args.current_release_date,
+            )
+            _base._emit(result, args.output)
+            return 0
         if args.command == "reconcile-shadow-state":
             workflow_result = (
                 _read_optional_json_file(args.workflow_result, label="workflow result")
@@ -1568,6 +1667,7 @@ __all__ = [
     "metadata_change_evidence",
     "preflight_observation",
     "read_pending_workflow",
+    "read_reconciliation_state",
     "read_shadow_state",
     "read_daily_state",
     "reconcile_shadow_state",
