@@ -94,9 +94,13 @@ PR 52, merged as `db7604d6e660724022a289504995b40ff78e20d0`, repairs overnight e
 
 The October 14 build had already succeeded but remained unactivated. Today's metadata masked its older journal, and an October 6 global reservation could not rotate. The reconciler now follows unfinished work across days rather than ignoring it.
 
-### Remaining external download blocker
+### Download recovery verified; new release building
 
-Acquisition run `39068563999` proves that the configured Windscribe WireGuard tunnel cannot establish a recent handshake. A local search found a Recent-files shortcut targeting `C:/Users/iamatopstrongman/Downloads/Windscribe-Buenos-Aires-Tango-WG.conf`, but that target is missing. No replacement configuration or Windscribe client/service was found in the searched user folders or drives I: and F:. The user subsequently signed in successfully. The account displays FREE, and Config Generator explicitly requires Pro for OpenVPN, IKEv2 and WireGuard configuration downloads. An authenticated session alone does not provide generator access. Restoring newer acquisition requires an already entitled account with Buenos Aires access or a working existing Buenos Aires profile. No upgrade was purchased. Repeating the failed tunnel or direct official-source 403 requests supplies no new evidence.
+After operational account recovery, Windscribe shows an ACTIVE custom plan through November 17, 2026. The existing stored profile recovered without replacement. GitHub acquisition run `39070503910` passed the real WireGuard handshake, downloaded and verified the official October 17 ZIP (323,721,080 bytes, SHA-256 `9cc1987ea562484090b1d6d63eaddc93d185d26b70fa2b0f57730278a2396e82`), archived it and launched the national build.
+
+The exact Cloud Workflow execution is `ae58706b-4069-46b2-bcd8-9da1b8703746` (ACTIVE), with Cloud Build `8c24715e-788a-4f51-a24b-6a997b35e9b3` (WORKING). Candidate: `argentina-sepa-2026-10-17-9cc1987ea5624840-routing-v1-search-v2`. It is not yet qualified/active. October 14 remains the last verified active release.
+
+A configuration mismatch was also corrected: the repository automation variable was true while the production environment value was false. Both now explicitly read true, and the GitHub workflow is active. Daily checks include weekends; hourly reconciliation follows completed builds across day boundaries and uses existing promotion/smoke/rollback gates. A successful future scheduled activation must still be observed; enabled configuration is not proof of that future outcome. No duplicate cloud scheduler was introduced.
 
 ### Remaining engineering work
 

@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-10-17T20:54:02.677307+00:00",
+  "observedAt": "2026-10-17T21:24:44.074716+00:00",
   "status": "NOT_LAUNCH_READY",
   "activeRelease": {
     "releaseId": "argentina-sepa-2026-10-14-ae70f631a4bc3a8d-routing-v1-search-v2",
@@ -367,17 +367,17 @@
     "Existing Windscribe profile now fails handshake"
   ],
   "currentDownloadBlocker": {
-    "workflowRun": 39068563999,
-    "failure": "Windscribe WireGuard tunnel has no recent handshake",
-    "localSearch": "No working profile found across user folders, I: and F: filename search, installed client/service or native VPN settings",
-    "originalProfile": "C:/Users/iamatopstrongman/Downloads/Windscribe-Buenos-Aires-Tango-WG.conf",
-    "originalProfileExists": false,
-    "website": "User signed in successfully. Account displays FREE; Config Generator displays PRO FEATURE and requires Pro for WireGuard downloads.",
-    "required": "An account already entitled to the WireGuard Config Generator with Buenos Aires access, or a working existing Buenos Aires profile. No purchase authorized or performed.",
-    "accountRecovery": "The checked free accounts differ from the operational account identified by a relevant payment notice. Correct-account user sign-in/billing recovery is pending; no payment or credential change performed by the agent."
+    "status": "RESOLVED_WITH_REAL_ACQUISITION",
+    "accountStatus": "ACTIVE",
+    "planExpiry": "2026-11-17",
+    "credentialRotationRequired": false,
+    "existingProfileRecovered": true,
+    "evidence": "Acquisition workflow 39070503910 passed the full tunnel handshake, official source acquisition, checksum verification, private archive publication and cloud build handoff.",
+    "acquisitionRun": 39070503910,
+    "acquisitionRunConclusion": "success"
   },
   "remainingWork": [
-    "Restore source acquisition with working authorized VPN configuration",
+    "Verify October 17 national build, automatic guarded promotion, fresh runtime responses and subsequent scheduled cycles.",
     "Release-bound full-result price sorting before pagination",
     "National location selection in preview",
     "Complete semantic acceptance and coverage",
@@ -394,5 +394,31 @@
     "Unexpected additional regions in some responses still need geographic review",
     "Frozen v40 identity sidecar remains October 8 and unpromoted"
   ],
-  "developmentSearchCheckpoint": "docs/catalog-discovery-plan/SCOPED_PRICE_SEARCH_CHECKPOINT.md"
+  "developmentSearchCheckpoint": "docs/catalog-discovery-plan/SCOPED_PRICE_SEARCH_CHECKPOINT.md",
+  "latestAcquiredSource": {
+    "releaseDate": "2026-10-17",
+    "sha256": "9cc1987ea562484090b1d6d63eaddc93d185d26b70fa2b0f57730278a2396e82",
+    "bytes": 323721080,
+    "candidateReleaseId": "argentina-sepa-2026-10-17-9cc1987ea5624840-routing-v1-search-v2",
+    "workflowExecution": "projects/17260882200/locations/us-east4/workflows/valuepilot-argentina-release/executions/ae58706b-4069-46b2-bcd8-9da1b8703746",
+    "workflowState": "ACTIVE",
+    "cloudBuildId": "8c24715e-788a-4f51-a24b-6a997b35e9b3",
+    "cloudBuildStatus": "WORKING",
+    "activated": false,
+    "qualificationNote": "Acquisition succeeded. National build and qualification are still in progress. October 14 remains the verified active runtime release."
+  },
+  "automationConfiguration": {
+    "repositoryEnabled": true,
+    "productionEnvironmentEnabled": true,
+    "workflowState": "active",
+    "configurationChange": "Production environment flag aligned from false to true; repository flag was already true.",
+    "sourceChecksUtc": [
+      "16:30",
+      "18:30",
+      "20:30"
+    ],
+    "reconciliationUtc": "15 minutes past every hour",
+    "scheduledActivationAfterRestorationVerified": false,
+    "qualificationAndRollbackGuardsPreserved": true
+  }
 }
