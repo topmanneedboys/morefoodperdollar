@@ -16,6 +16,7 @@ import re
 import shutil
 import sqlite3
 import tempfile
+from threading import RLock
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from functools import lru_cache
@@ -41,6 +42,7 @@ MAX_FACET_PAGE_SIZE = 30
 MAX_SELECTIONS = 8
 MAX_SOURCE_ROW_BYTES = 2 * 1024 * 1024
 MAX_SOURCE_ROWS = 500_000
+SQLITE_VARIABLE_BATCH = 800
 
 _ID_RE = re.compile(r"[a-z][a-z0-9:_-]{0,159}\Z")
 _RELATIONS = frozenset(
@@ -381,6 +383,7 @@ def _schema(connection: sqlite3.Connection) -> None:
             PRIMARY KEY (phrase_norm, language, identity_key)
         );
         CREATE INDEX identity_alias_phrase_idx ON identity_alias(phrase_norm, language);
+        CREATE INDEX identity_alias_identity_idx ON identity_alias(identity_key, language);
         CREATE TABLE identity_token (
             token TEXT NOT NULL,
             identity_key TEXT NOT NULL REFERENCES identity(identity_key),
@@ -683,19 +686,30 @@ def _typed_context_relations(name: str, family: str, role: str) -> tuple[tuple[s
     return tuple(dict.fromkeys(relations))
 
 
+@lru_cache(maxsize=32768)
+def _department_candidates(name: str) -> tuple[dict[str, Any], ...]:
+    """Cache deterministic name-only taxonomy work during a release build."""
+
+    classified = classify_name(name, family_candidates=())
+    return tuple(dict(value) for value in classified.get("departmentCandidates", ()))
+
+
+@lru_cache(maxsize=32768)
+def _derived_family_candidates(name: str) -> tuple[dict[str, Any], ...]:
+    """Cache the name-only reviewed family pass during a release build."""
+
+    derived = derive_identity_record({"productEvidenceKey": "cache", "name": name})
+    return tuple(dict(value) for value in derived.get("familyCandidates", ()) if isinstance(value, Mapping))
+
+
 def _family_candidates(row: Mapping[str, Any], identity_key: str) -> list[Mapping[str, Any]]:
     families = row.get("familyCandidates")
     provided: list[Mapping[str, Any]] = []
     if isinstance(families, Sequence) and not isinstance(families, (str, bytes)):
         provided = [value for value in families if isinstance(value, Mapping)]
     try:
-        derived = derive_identity_record({
-            "productEvidenceKey": identity_key,
-            "name": row.get("name"),
-            "brand": row.get("brand"),
-            "gtin": row.get("gtin"),
-            "quantity": row.get("quantity"),
-        })
+        clean_name = " ".join(str(row.get("name") or "").split())
+        derived_values = _derived_family_candidates(clean_name)
     except (TypeError, ValueError):
         return provided
     # Re-run the current dictionary even when the source already contains an
@@ -707,7 +721,6 @@ def _family_candidates(row: Mapping[str, Any], identity_key: str) -> list[Mappin
         for value in provided
         if isinstance(value.get("family"), str) and isinstance(value.get("role"), str)
     }
-    derived_values = tuple(value for value in derived.get("familyCandidates", ()) if isinstance(value, Mapping))
     derived_roles = {
         str(value.get("family")).strip(): str(value.get("role")).strip()
         for value in derived_values
@@ -797,16 +810,19 @@ def _insert_identity(
     token_values = set(_index_tokens(name))
     for token in token_values:
         connection.execute("INSERT OR IGNORE INTO identity_token(token, identity_key) VALUES (?, ?)", (token, identity_key))
+    alias_languages: set[str] = set()
     for value, language, provenance in _source_aliases(row):
         connection.execute(
             "INSERT OR IGNORE INTO identity_alias(phrase_norm, language, identity_key, provenance) VALUES (?, ?, ?, ?)",
             (_norm(value), language, identity_key, provenance),
         )
+        alias_languages.add(language)
 
     families = _family_candidates(row, identity_key)
     semantic_assertions: list[str] = []
     direct_families = 0
     derived_families = 0
+    has_form = False
     family_keys: set[str] = set()
     family_roles: dict[str, str] = {}
     for family in families:
@@ -839,6 +855,7 @@ def _insert_identity(
             if role != "DIRECT" and form in _DIRECT_FORM_KEYS:
                 continue
             form_id = f"form:{key}:{form}"
+            has_form = True
             _ensure_concept(connection, form_id, "FORM", _form_label(key, form, "es"), _form_label(key, form, "en"), f"Observed form {form} for {key}.")
             _insert_posting(connection, form_id, "FORM", form_id, identity_key)
             semantic_assertions.append(_insert_assertion(connection, identity_key, "FORM", form_id, name_evidence_id, "family-form-v1", "ACCEPTED", matched or name))
@@ -847,9 +864,8 @@ def _insert_identity(
             _insert_posting(connection, relation_predicate, relation, concept_id, identity_key)
             semantic_assertions.append(_insert_assertion(connection, identity_key, relation, concept_id, name_evidence_id, rule_id, "ACCEPTED", matched or name))
 
-    family_payload = [dict(value) for value in families]
-    classified = classify_name(name, family_candidates=family_payload)
-    for department in classified.get("departmentCandidates", ()):
+    department_candidates = _department_candidates(name)
+    for department in department_candidates:
         if not isinstance(department, Mapping):
             continue
         key = department.get("key")
@@ -863,7 +879,7 @@ def _insert_identity(
 
     department_keys = {
         str(value.get("key")).strip()
-        for value in classified.get("departmentCandidates", ())
+        for value in department_candidates
         if isinstance(value, Mapping) and isinstance(value.get("key"), str) and str(value.get("key")).strip()
     }
     if direct_families:
@@ -875,9 +891,9 @@ def _insert_identity(
     coverage_counts["ROLE_RESOLVED"] += int(bool(direct_families or derived_families))
     coverage_counts["IDENTITY_VISITED"] += 1
     coverage_counts["DERIVED_ONLY"] += int(not direct_families and bool(derived_families))
-    coverage_counts["NO_FORM"] += int(not any(value.startswith("form:") for value in [row[0] for row in connection.execute("SELECT predicate_id FROM posting WHERE identity_key = ?", (identity_key,))]))
-    has_es = bool(connection.execute("SELECT 1 FROM identity_alias WHERE identity_key = ? AND language = 'es' LIMIT 1", (identity_key,)).fetchone()) or bool(family_keys) or bool(department_keys)
-    has_en = bool(connection.execute("SELECT 1 FROM identity_alias WHERE identity_key = ? AND language = 'en' LIMIT 1", (identity_key,)).fetchone()) or bool(family_keys) or bool(department_keys)
+    coverage_counts["NO_FORM"] += int(not has_form)
+    has_es = "es" in alias_languages or bool(family_keys) or bool(department_keys)
+    has_en = "en" in alias_languages or bool(family_keys) or bool(department_keys)
     bilingual_counts["ES_AVAILABLE"] += int(has_es)
     bilingual_counts["EN_AVAILABLE"] += int(has_en)
     bilingual_counts["MISSING_ES"] += int(not has_es)
@@ -927,6 +943,11 @@ def build_discovery_index(
     if source_sha256 is not None and source_sha256.lower() != actual_source_sha:
         raise IndexIntegrityError("identity source checksum mismatch")
     output.parent.mkdir(parents=True, exist_ok=True)
+    # A long-lived refresh worker may build more than one release in the same
+    # process.  These caches are name-only optimizations, so clear them before
+    # each release to prevent a future rules update from reusing old meaning.
+    _department_candidates.cache_clear()
+    _derived_family_candidates.cache_clear()
     temp_dir = Path(tempfile.mkdtemp(prefix="valuepilot-discovery-", dir=str(output.parent)))
     temp_output = temp_dir / output.name
     coverage_counts: Counter[str] = Counter()
@@ -939,6 +960,14 @@ def build_discovery_index(
     try:
         connection = sqlite3.connect(temp_output)
         connection.row_factory = sqlite3.Row
+        # The database is assembled in a private temporary path and moved into
+        # place only after commit and integrity checks.  Memory journaling and
+        # a bounded page cache make refresh work proportional to catalog size
+        # without weakening the atomic promotion boundary.
+        connection.execute("PRAGMA journal_mode=MEMORY")
+        connection.execute("PRAGMA synchronous=OFF")
+        connection.execute("PRAGMA temp_store=MEMORY")
+        connection.execute("PRAGMA cache_size=-65536")
         _schema(connection)
         _seed_dictionary(connection)
         for row in _iter_rows(source):
@@ -1017,6 +1046,11 @@ class DiscoveryIndex:
         # own use through SQLite's read-only connection and never mutates it.
         self.connection = sqlite3.connect(f"file:{self.path}?mode=ro", uri=True, check_same_thread=False)
         self.connection.row_factory = sqlite3.Row
+        try:
+            self.connection.execute("SELECT value FROM json_each('[]')").fetchall()
+            self._json_each_available = True
+        except sqlite3.OperationalError:
+            self._json_each_available = False
         row = self.connection.execute("SELECT * FROM build LIMIT 1").fetchone()
         if row is None or row["schema_version"] != BUILD_SCHEMA_VERSION:
             self.close()
@@ -1041,6 +1075,10 @@ class DiscoveryIndex:
         self._literal_identity_cache = lru_cache(maxsize=512)(
             lambda tokens: frozenset(_literal_identity_keys(self.connection, tokens))
         )
+        self._candidate_table_lock = RLock()
+        self._candidate_table_digests: list[str] = []
+        self._candidate_product_counts: dict[str, int] = {}
+        self._candidate_page_cache: dict[tuple[str, str, str, int], tuple[sqlite3.Row, ...]] = {}
 
     def close(self) -> None:
         connection = getattr(self, "connection", None)
@@ -1215,8 +1253,7 @@ class DiscoveryIndex:
             keys = self._predicate_keys(predicate) & base_keys
             if not keys:
                 continue
-            placeholders = ",".join("?" for _ in keys)
-            count = self.connection.execute(f"SELECT COUNT(DISTINCT provider_key) FROM identity WHERE identity_key IN ({placeholders})", tuple(keys)).fetchone()[0]
+            count = self._candidate_product_count(keys)
             choices.append({
                 "id": predicate,
                 "predicateId": predicate,
@@ -1280,6 +1317,147 @@ class DiscoveryIndex:
     def _fingerprint_for(self, query: str, language: str, selections: Sequence[str]) -> str:
         return self._fingerprint(query, language, selections)
 
+    @staticmethod
+    def _candidate_json(candidates: set[str]) -> str:
+        return json.dumps(sorted(candidates), ensure_ascii=False, separators=(",", ":"))
+
+    @staticmethod
+    def _candidate_digest(candidates: set[str]) -> str:
+        digest = hashlib.sha256()
+        for value in sorted(candidates):
+            digest.update(value.encode("utf-8"))
+            digest.update(b"\0")
+        return digest.hexdigest()
+
+    def _materialize_candidates(self, candidates: set[str], *, cache_key: str | None = None) -> str:
+        """Cache a large candidate set in the connection's private temp schema."""
+
+        digest = cache_key or self._candidate_digest(candidates)
+        with self._candidate_table_lock:
+            self.connection.execute(
+                "CREATE TEMP TABLE IF NOT EXISTS valuepilot_candidate_keys "
+                "(digest TEXT NOT NULL, identity_key TEXT NOT NULL, normalized_name TEXT, "
+                "PRIMARY KEY (digest, identity_key))"
+            )
+            self.connection.execute(
+                "CREATE INDEX IF NOT EXISTS valuepilot_candidate_order_idx "
+                "ON valuepilot_candidate_keys(digest, normalized_name, identity_key)"
+            )
+            if digest not in self._candidate_table_digests:
+                self.connection.executemany(
+                    "INSERT OR IGNORE INTO valuepilot_candidate_keys(digest, identity_key, normalized_name) VALUES (?, ?, NULL)",
+                    ((digest, value) for value in sorted(candidates)),
+                )
+                self.connection.execute(
+                    "UPDATE valuepilot_candidate_keys "
+                    "SET normalized_name = (SELECT normalized_name FROM identity "
+                    "WHERE identity.identity_key = valuepilot_candidate_keys.identity_key) "
+                    "WHERE digest = ?",
+                    (digest,),
+                )
+                self._candidate_product_counts[digest] = int(self.connection.execute(
+                    "SELECT COUNT(DISTINCT identity.provider_key) FROM identity "
+                    "JOIN valuepilot_candidate_keys AS candidate "
+                    "ON candidate.identity_key = identity.identity_key "
+                    "WHERE candidate.digest = ?",
+                    (digest,),
+                ).fetchone()[0])
+                self.connection.commit()
+                self._candidate_table_digests.append(digest)
+                # Keep the temporary cache bounded if a long-lived service
+                # receives many unrelated large searches.
+                while len(self._candidate_table_digests) > 4:
+                    evicted = self._candidate_table_digests.pop(0)
+                    self.connection.execute(
+                        "DELETE FROM valuepilot_candidate_keys WHERE digest = ?",
+                        (evicted,),
+                    )
+                    self._candidate_product_counts.pop(evicted, None)
+                    self.connection.commit()
+                    for page_key in tuple(self._candidate_page_cache):
+                        if page_key[0] == evicted:
+                            self._candidate_page_cache.pop(page_key, None)
+        return digest
+
+    def _candidate_rows(
+        self,
+        candidates: set[str],
+        *,
+        last_name: str,
+        last_key: str,
+        limit: int,
+        cache_key: str | None = None,
+    ) -> list[sqlite3.Row]:
+        """Read a sorted page without exceeding SQLite's bind-variable limit."""
+
+        if len(candidates) > SQLITE_VARIABLE_BATCH:
+            digest = self._materialize_candidates(candidates, cache_key=cache_key)
+            page_key = (digest, last_name, last_key, limit)
+            with self._candidate_table_lock:
+                cached = self._candidate_page_cache.get(page_key)
+                if cached is not None:
+                    return list(cached)
+                rows = tuple(self.connection.execute(
+                    "SELECT identity.identity_key, identity.provider_key, identity.display_name, identity.brand, identity.normalized_name "
+                    "FROM identity JOIN valuepilot_candidate_keys AS candidate "
+                    "ON candidate.identity_key = identity.identity_key "
+                    "WHERE candidate.digest = ? "
+                    "AND (candidate.normalized_name > ? OR (candidate.normalized_name = ? AND candidate.identity_key > ?)) "
+                    "ORDER BY candidate.normalized_name, candidate.identity_key LIMIT ?",
+                    (digest, last_name, last_name, last_key, limit),
+                ))
+                self._candidate_page_cache[page_key] = rows
+                while len(self._candidate_page_cache) > 64:
+                    self._candidate_page_cache.pop(next(iter(self._candidate_page_cache)))
+                return list(rows)
+        if self._json_each_available:
+            return list(self.connection.execute(
+                "SELECT identity_key, provider_key, display_name, brand, normalized_name "
+                "FROM identity WHERE identity_key IN (SELECT value FROM json_each(?)) "
+                "AND (normalized_name > ? OR (normalized_name = ? AND identity_key > ?)) "
+                "ORDER BY normalized_name, identity_key LIMIT ?",
+                (self._candidate_json(candidates), last_name, last_name, last_key, limit),
+            ))
+
+        # Some SQLite builds omit JSON1.  The fallback keeps each query below
+        # the variable ceiling, then merges the bounded per-chunk heads.
+        values = sorted(candidates)
+        rows: list[sqlite3.Row] = []
+        for start in range(0, len(values), SQLITE_VARIABLE_BATCH):
+            chunk = values[start : start + SQLITE_VARIABLE_BATCH]
+            placeholders = ",".join("?" for _ in chunk)
+            rows.extend(self.connection.execute(
+                f"SELECT identity_key, provider_key, display_name, brand, normalized_name "
+                f"FROM identity WHERE identity_key IN ({placeholders}) "
+                "AND (normalized_name > ? OR (normalized_name = ? AND identity_key > ?)) "
+                "ORDER BY normalized_name, identity_key LIMIT ?",
+                tuple(chunk) + (last_name, last_name, last_key, limit),
+            ))
+        rows.sort(key=lambda row: (row["normalized_name"], row["identity_key"]))
+        return rows[:limit]
+
+    def _candidate_product_count(self, candidates: set[str], *, cache_key: str | None = None) -> int:
+        if len(candidates) > SQLITE_VARIABLE_BATCH:
+            digest = self._materialize_candidates(candidates, cache_key=cache_key)
+            with self._candidate_table_lock:
+                return self._candidate_product_counts[digest]
+        if self._json_each_available:
+            return int(self.connection.execute(
+                "SELECT COUNT(DISTINCT provider_key) FROM identity "
+                "WHERE identity_key IN (SELECT value FROM json_each(?))",
+                (self._candidate_json(candidates),),
+            ).fetchone()[0])
+        providers: set[str] = set()
+        values = sorted(candidates)
+        for start in range(0, len(values), SQLITE_VARIABLE_BATCH):
+            chunk = values[start : start + SQLITE_VARIABLE_BATCH]
+            placeholders = ",".join("?" for _ in chunk)
+            providers.update(row[0] for row in self.connection.execute(
+                f"SELECT DISTINCT provider_key FROM identity WHERE identity_key IN ({placeholders})",
+                tuple(chunk),
+            ))
+        return len(providers)
+
     def query(self, request: DiscoveryQuery | Mapping[str, Any]) -> DiscoveryResponse:
         if isinstance(request, Mapping):
             request = DiscoveryQuery(
@@ -1293,6 +1471,7 @@ class DiscoveryIndex:
             )
         if not isinstance(request, DiscoveryQuery):
             raise DiscoveryError("request is invalid")
+        fingerprint = self._fingerprint(request.query, request.language, request.selections)
         predicates, remaining_tokens = self._resolve(request.query, request.language)
         # Keep the broad set for facet evidence, but never render contextual
         # mentions as if they were the requested product family.  A search
@@ -1339,7 +1518,6 @@ class DiscoveryIndex:
                 display_candidates = set().union(*(self._bare_keys(value) for value in strict_types))
                 if remaining_tokens:
                     display_candidates &= self._literal_keys(remaining_tokens)
-        fingerprint = self._fingerprint(request.query, request.language, request.selections)
         last_name = ""
         last_key = ""
         if request.cursor:
@@ -1350,11 +1528,13 @@ class DiscoveryIndex:
             last_key = str(cursor.get("lastKey", ""))
         rows: list[sqlite3.Row] = []
         if display_candidates:
-            placeholders = ",".join("?" for _ in display_candidates)
-            rows = list(self.connection.execute(
-                f"SELECT identity_key, provider_key, display_name, brand, normalized_name FROM identity WHERE identity_key IN ({placeholders}) AND (normalized_name > ? OR (normalized_name = ? AND identity_key > ?)) ORDER BY normalized_name, identity_key LIMIT ?",
-                tuple(display_candidates) + (last_name, last_name, last_key, request.page_size + 1),
-            ))
+            rows = self._candidate_rows(
+                display_candidates,
+                last_name=last_name,
+                last_key=last_key,
+                limit=request.page_size + 1,
+                cache_key=fingerprint,
+            )
         has_more = len(rows) > request.page_size
         visible = rows[:request.page_size]
         next_cursor = None
@@ -1364,8 +1544,7 @@ class DiscoveryIndex:
         product_count = 0
         source_identity_count = len(display_candidates)
         if display_candidates:
-            placeholders = ",".join("?" for _ in display_candidates)
-            product_count = int(self.connection.execute(f"SELECT COUNT(DISTINCT provider_key) FROM identity WHERE identity_key IN ({placeholders})", tuple(display_candidates)).fetchone()[0])
+            product_count = self._candidate_product_count(display_candidates, cache_key=fingerprint)
         status = "NEEDS_CLARIFICATION" if clarification is not None else ("READY" if display_candidates else "NO_MATCHES")
         matches = [
             {"identityKey": row["identity_key"], "providerProductId": row["provider_key"], "displayName": row["display_name"], "brand": row["brand"]}

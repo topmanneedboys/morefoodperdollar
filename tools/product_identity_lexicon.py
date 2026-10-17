@@ -22,6 +22,7 @@ import json
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Mapping, Sequence
 
@@ -1048,6 +1049,7 @@ SAFE_INFLECTIONS: Mapping[str, tuple[str, ...]] = {
 }
 
 
+@lru_cache(maxsize=16384)
 def _tokens(value: str) -> tuple[str, ...]:
     normalized = normalize_text(value, max_length=MAX_NAME_LENGTH)
     # Catalog names use punctuation as a compact separator (``FEM.SIEMPRE``,

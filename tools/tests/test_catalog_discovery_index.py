@@ -92,6 +92,18 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
                 self.assertEqual(empty["total"]["productCount"], 0)
                 self.assertEqual(empty["matches"], [])
 
+    def test_large_candidate_sets_do_not_exceed_sqlite_bind_variable_limit(self) -> None:
+        rows = [_row(i, f"ARROZ LARGO MARCA {i:04d} X 1 KG") for i in range(1100)]
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._build(directory, rows)
+            with DiscoveryIndex(path) as index:
+                result = index.query(DiscoveryQuery("rice", language="en", page_size=20)).to_dict()
+                self.assertEqual(result["status"], "READY")
+                self.assertEqual(result["total"]["productCount"], 1100)
+                self.assertEqual(result["total"]["sourceIdentityCount"], 1100)
+                self.assertTrue(result["pagination"]["hasMore"])
+                self.assertEqual(len(result["matches"]), 20)
+
     def test_final_facet_page_with_one_choice_remains_reachable(self) -> None:
         rows = [
             _row(1, "ARROZ LARGO MARCA X 1 KG", form="grain"),
