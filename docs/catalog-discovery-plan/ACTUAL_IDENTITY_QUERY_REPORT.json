@@ -1,0 +1,46 @@
+{
+  "status": "PASS",
+  "queryVersion": "valuepilot-discovery-query-v2-exact-name",
+  "identitiesExpected": 134337,
+  "providerProductsExpected": 78865,
+  "identitiesLiteralReachable": 134337,
+  "identitiesLiteralUnreachable": 0,
+  "distinctSourceNames": 123692,
+  "languages": {
+    "en": {
+      "queries": 123692,
+      "pages": 124345,
+      "identitiesRetrieved": 134337,
+      "identitiesMissing": 0,
+      "failedQueries": 0,
+      "status": "PASS"
+    },
+    "es": {
+      "queries": 123692,
+      "pages": 124345,
+      "identitiesRetrieved": 134337,
+      "identitiesMissing": 0,
+      "failedQueries": 0,
+      "status": "PASS"
+    }
+  },
+  "failureCount": 0,
+  "failureDetails": [],
+  "failureDetailsTruncated": false,
+  "elapsedSeconds": 213.006,
+  "method": "Actual DiscoveryIndex.query calls for every distinct source name in EN and ES, with complete result pagination, ordering, totals and identity-field checks. This is not semantic accuracy or phone/API transport verification.",
+  "index": {
+    "path": "C:\\Users\\iamatopstrongman\\Documents\\Codex\\2026-10-08\\valuepilot-next-complete-premium-ui-ux\\work\\valuepilot-10133-source-audit\\local-provider-data\\product-discovery-v2-v40-candidate.sqlite",
+    "sha256": "d7aef4c8b740bfdcdca68c404692b52a7225b66cb744641bee56d2214edf0a88",
+    "schema_version": "valuepilot-catalog-discovery-v2",
+    "rules_version": "valuepilot-catalog-discovery-rules-v34",
+    "release_id": "2026-10-08-identity-release",
+    "source_sha256": "85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6",
+    "created_at": "2026-10-17 19:18:27",
+    "provider_products": 78865,
+    "identity_records": 134337,
+    "indexed_tokens": 36423,
+    "concepts": 276,
+    "assertions": 194481
+  }
+}

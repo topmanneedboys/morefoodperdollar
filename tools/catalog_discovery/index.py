@@ -36,6 +36,7 @@ from tools.product_taxonomy import DEPARTMENT_RULES, classify_name
 
 BUILD_SCHEMA_VERSION = "valuepilot-catalog-discovery-v2"
 RULES_VERSION = "valuepilot-catalog-discovery-rules-v34"
+QUERY_VERSION = "valuepilot-discovery-query-v2-exact-name"
 MAX_QUERY_CHARS = 256
 MAX_PAGE_SIZE = 50
 MAX_FACET_PAGE_SIZE = 30
@@ -1318,6 +1319,7 @@ class DiscoveryIndex:
             _canonical(
                 {
                     "query": _norm(query),
+                    "queryVersion": QUERY_VERSION,
                     "language": language,
                     "selections": list(selections),
                     "releaseId": self.metadata["release_id"],
@@ -1485,61 +1487,87 @@ class DiscoveryIndex:
         if not isinstance(request, DiscoveryQuery):
             raise DiscoveryError("request is invalid")
         fingerprint = self._fingerprint(request.query, request.language, request.selections)
-        predicates, remaining_tokens = self._resolve(request.query, request.language)
-        # Keep the broad set for facet evidence, but never render contextual
-        # mentions as if they were the requested product family.  A search
-        # such as ``eggs`` may legitimately explain pasta, toys, and drinks
-        # in the clarification card; the visible table must contain only the
-        # accepted shell-egg identities until a different choice is selected.
-        candidates = self._candidate_keys(predicates, remaining_tokens, request.selections)
-        clarification, _ = self._facet_choices(
-            candidates,
-            predicates,
-            request.language,
-            request.facet_page_size,
-            request.facet_cursor,
-            query=request.query,
-            selections=request.selections,
-        )
-        display_candidates = candidates
-        if clarification is not None:
-            strict_types = tuple(value for value in predicates if value.startswith("type:"))
-            if strict_types:
-                if request.selections:
-                    # The selected facet is already part of ``candidates``;
-                    # retain it while removing only broad contextual
-                    # mentions from the type predicate.
-                    display_candidates = candidates & set().union(
-                        *(self._predicate_keys(value) for value in strict_types)
-                    )
+        # Exact catalog names are source evidence, including names whose
+        # words also describe ingredients, scents or unrelated categories.
+        # Resolve them before semantic projection can discard their identity.
+        # Whole-query aliases (e.g. "arroz") retain category navigation.
+        exact_keys = {
+            str(row[0]) for row in self.connection.execute(
+                "SELECT identity_key FROM identity WHERE normalized_name = ?",
+                (_norm(request.query),),
+            )
+        }
+        if exact_keys and not self._aliases(request.query, request.language):
+            if request.facet_cursor:
+                raise DiscoveryError("facet cursor does not match an exact-name query")
+            predicates, remaining_tokens = (), ()
+            display_candidates = exact_keys
+            for selection in request.selections:
+                self._predicate_row(selection)
+                display_candidates &= self._predicate_keys(selection)
+            clarification = None
+        else:
+            predicates, remaining_tokens = self._resolve(request.query, request.language)
+            # Keep the broad set for facet evidence, but never render contextual
+            # mentions as if they were the requested product family.  A search
+            # such as ``eggs`` may legitimately explain pasta, toys, and drinks
+            # in the clarification card; the visible table must contain only the
+            # accepted shell-egg identities until a different choice is selected.
+            candidates = self._candidate_keys(predicates, remaining_tokens, request.selections)
+            clarification, _ = self._facet_choices(
+                candidates,
+                predicates,
+                request.language,
+                request.facet_page_size,
+                request.facet_cursor,
+                query=request.query,
+                selections=request.selections,
+            )
+            display_candidates = candidates
+            if clarification is not None:
+                strict_types = tuple(value for value in predicates if value.startswith("type:"))
+                if strict_types:
+                    if request.selections:
+                        # The selected facet is already part of ``candidates``;
+                        # retain it while removing only broad contextual
+                        # mentions from the type predicate.
+                        display_candidates = candidates & set().union(
+                            *(self._predicate_keys(value) for value in strict_types)
+                        )
+                    else:
+                        display_candidates = set().union(
+                            *(self._bare_keys(value) for value in strict_types)
+                        )
+                    if remaining_tokens:
+                        display_candidates &= self._literal_keys(remaining_tokens)
+                elif request.selections:
+                    # A broad department query (for example ``baby`` or
+                    # ``bebida``) can legitimately open a type facet even though
+                    # its resolved predicate is not itself a type.  Once the
+                    # shopper selects an accepted predicate, the candidate set
+                    # already contains the strict selection intersection. Keep
+                    # that set visible instead of clearing the table merely
+                    # because the parent predicate is a department.
+                    display_candidates = set(candidates)
                 else:
-                    display_candidates = set().union(
-                        *(self._bare_keys(value) for value in strict_types)
-                    )
-                if remaining_tokens:
-                    display_candidates &= self._literal_keys(remaining_tokens)
-            elif request.selections:
-                # A broad department query (for example ``baby`` or
-                # ``bebida``) can legitimately open a type facet even though
-                # its resolved predicate is not itself a type.  Once the
-                # shopper selects an accepted predicate, the candidate set
-                # already contains the strict selection intersection. Keep
-                # that set visible instead of clearing the table merely
-                # because the parent predicate is a department.
-                display_candidates = set(candidates)
-            else:
-                display_candidates = set()
-        # Broad type predicates include literal ``MENTIONS`` postings so a
-        # clarification can explain why a word appeared. Once no facet is
-        # available, there is no safe choice to separate those mentions; show
-        # only accepted type postings instead of leaking contextual products
-        # into the ready result table.
-        if clarification is None and not request.selections:
-            strict_types = tuple(value for value in predicates if value.startswith("type:"))
-            if strict_types:
-                display_candidates = set().union(*(self._bare_keys(value) for value in strict_types))
-                if remaining_tokens:
-                    display_candidates &= self._literal_keys(remaining_tokens)
+                    display_candidates = set()
+            # Broad type predicates include literal ``MENTIONS`` postings so a
+            # clarification can explain why a word appeared. Once no facet is
+            # available, there is no safe choice to separate those mentions; show
+            # only accepted type postings instead of leaking contextual products
+            # into the ready result table.
+            if clarification is None and not request.selections:
+                strict_types = tuple(value for value in predicates if value.startswith("type:"))
+                if strict_types:
+                    display_candidates = set().union(*(self._bare_keys(value) for value in strict_types))
+                    if remaining_tokens:
+                        display_candidates &= self._literal_keys(remaining_tokens)
+            # A source may itself be named exactly like a category alias.
+            # Keep those exact identities reachable, while every explicit
+            # selection continues to be an intersection with accepted facts.
+            for selection in request.selections:
+                exact_keys &= self._predicate_keys(selection)
+            display_candidates |= exact_keys
         last_name = ""
         last_key = ""
         if request.cursor:

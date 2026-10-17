@@ -77,6 +77,40 @@ class DiscoveryV2BackendTests(unittest.TestCase):
                 if service._discovery_index is not None:
                     service._discovery_index.close()
 
+    def test_exact_unclassified_names_page_through_http_without_relaxing_selection(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "identities.jsonl"
+            rows = [_row(i, "CROQUETAS DE ARROZ C") for i in range(53)]
+            rows.append(_row(100, "ARROZ LARGO MARCA 1 KG"))
+            source.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+            index = root / "discovery.sqlite"
+            build_discovery_index(source, index, release_id="v2-test")
+            service = BackendService("", discovery_index_path=index, discovery_release_id="v2-test")
+            try:
+                with patch.dict(os.environ, {"VALUEPILOT_DISCOVERY_V2_ENABLED": "true"}, clear=False):
+                    client = TestClient(create_app(service))
+                    for language in ("en", "es"):
+                        request = {"query": "CROQUETAS DE ARROZ C", "language": language, "pageSize": 7}
+                        keys = []
+                        while True:
+                            response = client.post("/v2/search", json=request)
+                            self.assertEqual(response.status_code, 200)
+                            result = response.json()["result"]
+                            self.assertEqual(result["total"]["sourceIdentityCount"], 53)
+                            keys.extend(row["identityKey"] for row in result["matches"])
+                            if not result["pagination"]["hasMore"]:
+                                break
+                            request["cursor"] = result["pagination"]["nextCursor"]
+                        self.assertEqual(keys, sorted(row["productEvidenceKey"] for row in rows[:53]))
+                        strict = client.post("/v2/search", json={"query": request["query"],
+                            "language": language, "selections": ["form:rice:grain"]})
+                        self.assertEqual(strict.status_code, 200)
+                        self.assertEqual(strict.json()["result"]["matches"], [])
+            finally:
+                if service._discovery_index is not None:
+                    service._discovery_index.close()
+
 
 if __name__ == "__main__":
     unittest.main()

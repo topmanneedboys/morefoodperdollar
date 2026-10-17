@@ -29,6 +29,7 @@ from tools.catalog_discovery.index import (
     DiscoveryError,
     DiscoveryIndex,
     DiscoveryQuery,
+    QUERY_VERSION,
     _fingerprint,
     _index_tokens,
     _norm,
@@ -117,6 +118,8 @@ def _collect_product_pages(
             break
         if first is None:
             first = value
+        elif value.get("total") != first.get("total"):
+            failures.append("totals changed across result pages")
         page_count += 1
         rows.extend(value.get("matches", ()))
         pagination = value.get("pagination") or {}
@@ -142,6 +145,65 @@ def _collect_product_pages(
         "pageCount": page_count,
         "failures": failures,
     }
+
+
+def verify_identity_queries(index: DiscoveryIndex, *, page_size: int = DEFAULT_PAGE_SIZE) -> dict[str, Any]:
+    """Exercise actual name queries in both languages; token presence is insufficient."""
+    started = time.perf_counter()
+    meta = {str(row["identity_key"]): dict(row) for row in index.connection.execute("SELECT * FROM identity")}
+    names: dict[str, set[str]] = collections.defaultdict(set)
+    for key, row in meta.items():
+        names[str(row["display_name"])].add(key)
+    languages: dict[str, Any] = {}
+    all_reachable = set(meta)
+    failures: list[dict[str, Any]] = []
+    failure_count = 0
+    for language in ("en", "es"):
+        reachable: set[str] = set()
+        pages = 0
+        query_failures = 0
+        for name, expected in sorted(names.items()):
+            collected = _collect_product_pages(index, query=name, language=language, page_size=page_size)
+            pages += collected["pageCount"]
+            keys = collected["identityKeys"]
+            actual = set(keys)
+            missing = expected - actual
+            issues = list(collected["failures"])
+            if missing:
+                issues.append("exact source identities missing from actual search")
+            if keys != sorted(keys, key=lambda key: _identity_sort_key(meta, key)):
+                issues.append("results are not in deterministic name/identity order")
+            first = collected["first"]
+            totals = first.get("total") or {}
+            if totals.get("sourceIdentityCount") != len(keys):
+                issues.append("identity total differs from fully paginated results")
+            providers = {meta[key]["provider_key"] for key in actual if key in meta}
+            if totals.get("productCount") != len(providers):
+                issues.append("provider total differs from fully paginated results")
+            for row in collected["rows"]:
+                source = meta.get(str(row.get("identityKey")))
+                if source is None or any(row.get(field) != source[column] for field, column in (
+                    ("displayName", "display_name"), ("providerProductId", "provider_key"), ("brand", "brand")
+                )):
+                    issues.append("returned identity fields differ from pinned source")
+                    break
+            reachable.update(expected & actual)
+            if issues:
+                query_failures += 1
+                failure_count += 1
+                _limited_append(failures, {"query": name, "language": language,
+                    "missingIdentityKeys": sorted(missing), "issues": issues})
+        all_reachable &= reachable
+        languages[language] = {"queries": len(names), "pages": pages,
+            "identitiesRetrieved": len(reachable), "identitiesMissing": len(meta) - len(reachable),
+            "failedQueries": query_failures, "status": _status(query_failures)}
+    return {"status": _status(failure_count), "queryVersion": QUERY_VERSION,
+        "identitiesExpected": len(meta), "providerProductsExpected": len({r["provider_key"] for r in meta.values()}),
+        "identitiesLiteralReachable": len(all_reachable), "identitiesLiteralUnreachable": len(meta) - len(all_reachable),
+        "distinctSourceNames": len(names), "languages": languages, "failureCount": failure_count,
+        "failureDetails": failures, "failureDetailsTruncated": failure_count > len(failures),
+        "elapsedSeconds": round(time.perf_counter() - started, 3),
+        "method": "Actual DiscoveryIndex.query calls for every distinct source name in EN and ES, with complete result pagination, ordering, totals and identity-field checks. This is not semantic accuracy or phone/API transport verification."}
 
 
 def _collect_facets(
@@ -690,7 +752,7 @@ def verify_catalog_discovery(
                     },
                 )
         literal_status = _status(literal_expected - literal_reachable)
-        identity_reachability = {
+        token_integrity = {
             "status": literal_status,
             "identitiesExpected": literal_expected,
             "identitiesLiteralReachable": literal_reachable,
@@ -700,6 +762,10 @@ def verify_catalog_discovery(
         }
         if literal_expected != literal_reachable:
             failures.append("one or more identities are not literally reachable")
+
+        identity_reachability = verify_identity_queries(index)
+        if identity_reachability["status"] != "PASS":
+            failures.append("actual exact-name search failed for one or more identities")
 
         # 3. Language mappings and semantic retrieval paths.
         coverage_counts = {
@@ -976,6 +1042,7 @@ def verify_catalog_discovery(
             "structural": structural,
             "sourceAccounting": source_accounting,
             "identityReachability": identity_reachability,
+            "literalTokenIntegrity": token_integrity,
             "classification": {
                 "directProductType": {
                     "identityCount": len(typed_identity_keys),
@@ -1023,11 +1090,20 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--report", type=Path)
     parser.add_argument("--review-queue", type=Path)
     parser.add_argument("--semantic-eval", type=Path)
+    parser.add_argument("--reachability-only", action="store_true")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    if args.reachability_only:
+        with DiscoveryIndex(args.index, expected_source_sha256=args.source_sha256) as index:
+            report = verify_identity_queries(index)
+            report["index"] = {"path": str(args.index.resolve()), "sha256": _sha256(args.index), **dict(index.metadata)}
+        if args.report:
+            args.report.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0 if report["status"] == "PASS" else 2
     report = verify_catalog_discovery(
         args.index,
         args.source,

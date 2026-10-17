@@ -417,20 +417,29 @@ internal class ArgentinaLiveSearchCoordinator(
                         language = language,
                         selections = selectionId?.let { listOf(it) }.orEmpty(),
                         pageSize = ArgentinaBackendContract.MAX_DISCOVERY_PAGE_SIZE,
-                        cursor = discoveryCursor,
+                        cursor = if (facetCursor == null) discoveryCursor else null,
                         facetCursor = facetCursor
                     )
                     when (val response = bridge.discoverySearch(request, cancellation)) {
                         is ArgentinaBackendBridgeResult.Failure -> response
                         is ArgentinaBackendBridgeResult.Success -> {
                             synchronized(lock) {
-                                if (generation == requestGeneration && currentCancellation === cancellation) {
+                                if (facetCursor == null && generation == requestGeneration && currentCancellation === cancellation) {
                                     discoveryCursor = response.value.result.pagination.nextCursor
                                 }
                             }
-                            ArgentinaBackendBridgeResult.Success(
-                                discoveryPresentation(response.value, page)
-                            )
+                            val incoming = discoveryPresentation(response.value, page)
+                            // Facet pages and product pages are independent cursors.
+                            // Reading more choices must not consume product rows,
+                            // restart exhausted results or replace the visible table.
+                            val presentation = when {
+                                facetCursor != null && previousPresentation != null ->
+                                    previousPresentation.copy(clarification = incoming.clarification)
+                                previousPresentation != null ->
+                                    incoming.copy(clarification = previousPresentation.clarification)
+                                else -> incoming
+                            }
+                            ArgentinaBackendBridgeResult.Success(presentation)
                         }
                     }
                 } else {

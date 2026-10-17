@@ -8,7 +8,7 @@ from pathlib import Path
 from tools.audit_catalog_discovery_integrity import audit_catalog_discovery_index
 from tools.build_semantic_review_queue import build_semantic_review_queue
 from tools.catalog_discovery import DiscoveryIndex, DiscoveryQuery, build_discovery_index
-from tools.verify_catalog_discovery import verify_catalog_discovery
+from tools.verify_catalog_discovery import verify_catalog_discovery, verify_identity_queries
 
 
 def _row(number: int, name: str, *, family: str = "rice", form: str = "grain", provider: str | None = None) -> dict[str, object]:
@@ -94,6 +94,50 @@ class CatalogDiscoveryIndexTests(unittest.TestCase):
                 self.assertEqual(empty["status"], "NO_MATCHES")
                 self.assertEqual(empty["total"]["productCount"], 0)
                 self.assertEqual(empty["matches"], [])
+
+    def test_exact_source_names_survive_semantics_and_strict_filters_still_apply(self) -> None:
+        # Two retailer identities with the same exact product name must both
+        # survive pagination even when their product type is unresolved.
+        rows = [_row(i, "CROQUETAS DE ARROZ C", form="prepared") for i in range(3)]
+        rows += [_row(10, "ARROZ LARGO MARCA X 1 KG"),
+                 _row(11, "ARROZ PREP MIX VEGETALES", form="prepared")]
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._build(directory, rows)
+            with DiscoveryIndex(path) as index:
+                for language in ("en", "es"):
+                    cursor = None
+                    keys = []
+                    while True:
+                        page = index.query(DiscoveryQuery("CROQUETAS DE ARROZ C", language=language,
+                            page_size=1, cursor=cursor)).to_dict()
+                        keys.extend(row["identityKey"] for row in page["matches"])
+                        cursor = page["pagination"]["nextCursor"]
+                        if not cursor:
+                            break
+                    self.assertEqual(keys, [row["productEvidenceKey"] for row in rows[:3]])
+                    selected = index.query(DiscoveryQuery("CROQUETAS DE ARROZ C", language=language,
+                        selections=("form:rice:grain",))).to_dict()
+                    self.assertEqual(selected["matches"], [])
+                    broad = index.query(DiscoveryQuery("rice", language=language)).to_dict()
+                    self.assertNotIn(rows[0]["productEvidenceKey"], [r["identityKey"] for r in broad["matches"]])
+                verified = verify_identity_queries(index, page_size=1)
+                self.assertEqual(verified["status"], "PASS")
+                self.assertEqual(verified["identitiesLiteralReachable"], len(rows))
+
+    def test_reachability_verifier_rejects_hidden_identity_despite_intact_tokens(self) -> None:
+        from unittest.mock import patch
+        from tools.catalog_discovery import DiscoveryResponse
+        rows = [_row(1, "CROQUETAS DE ARROZ C", form="prepared")]
+        with tempfile.TemporaryDirectory() as directory:
+            path = self._build(directory, rows)
+            with DiscoveryIndex(path) as index:
+                response = DiscoveryResponse({"matches": [], "total": {"productCount": 0, "sourceIdentityCount": 0},
+                    "pagination": {"hasMore": False}})
+                with patch.object(index, "query", return_value=response):
+                    report = verify_identity_queries(index)
+                self.assertEqual(report["status"], "FAIL")
+                self.assertEqual(report["identitiesLiteralUnreachable"], 1)
+                self.assertEqual(report["failureCount"], 2)
 
     def test_large_candidate_sets_do_not_exceed_sqlite_bind_variable_limit(self) -> None:
         rows = [_row(i, f"ARROZ LARGO MARCA {i:04d} X 1 KG") for i in range(1100)]

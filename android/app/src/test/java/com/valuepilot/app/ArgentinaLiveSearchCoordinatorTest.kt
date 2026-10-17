@@ -298,6 +298,63 @@ class ArgentinaLiveSearchCoordinatorTest {
     }
 
     @Test
+    fun facetPagingDoesNotConsumeOrRestartProductPagination() {
+        for (hasMoreProducts in listOf(true, false)) {
+            val first = JSONObject(discoveryV2ResponseJson(hasMoreFacetChoices = true, facetNextCursor = "facet-1"))
+            first.getJSONObject("result").getJSONObject("pagination")
+                .put("hasMore", hasMoreProducts)
+                .put("nextCursor", if (hasMoreProducts) "product-2" else JSONObject.NULL)
+            // The facet endpoint also returns a first product page. It must
+            // never replace the product cursor or table already shown.
+            val facet = JSONObject(discoveryV2ResponseJson(singleFacetChoice = true))
+            facet.getJSONObject("result").getJSONObject("pagination")
+                .put("hasMore", true).put("nextCursor", "wrong-product-cursor")
+            facet.getJSONObject("result").getJSONArray("matches").getJSONObject(0)
+                .put("identityKey", "ar-sepa-product:must-not-be-inserted")
+            var count = 0
+            val calls = mutableListOf<InMemoryArgentinaBackendTransport.Call>()
+            val transport = object : ArgentinaBackendTransport {
+                override fun execute(endpoint: String, requestBody: String?): ArgentinaBackendTransportResponse {
+                    calls += InMemoryArgentinaBackendTransport.Call(endpoint, requestBody)
+                    return ArgentinaBackendTransportResponse(200, when (endpoint) {
+                        ArgentinaBackendConsumerBridge.STATUS_ENDPOINT -> statusJson()
+                        else -> when (count++) {
+                            0 -> first.toString()
+                            1 -> facet.toString()
+                            else -> discoveryV2ResponseJson()
+                        }
+                    })
+                }
+            }
+            val executor = QueuedExecutor()
+            val coordinator = ArgentinaLiveSearchCoordinator(transport, executor, {}, discoveryMode = true)
+            coordinator.submit("rice", context, language = "en")
+            executor.runNext()
+            val before = (coordinator.state() as ArgentinaLiveSearchState.Results).presentation
+            coordinator.loadMoreClarification()
+            executor.runNext()
+            val after = (coordinator.state() as ArgentinaLiveSearchState.Results).presentation
+            assertEquals(before.matches, after.matches)
+            assertEquals(before.page, after.page)
+            assertEquals(before.hasMore, after.hasMore)
+            assertEquals(before.nextPage, after.nextPage)
+            assertFalse(after.clarification?.hasMore == true)
+            assertFalse(calls.last().requestBody.orEmpty().contains("product-2"))
+            val previousCalls = calls.size
+            coordinator.loadMore()
+            if (hasMoreProducts) {
+                executor.runNext()
+                assertTrue(calls.last().requestBody.orEmpty().contains("product-2"))
+                val final = (coordinator.state() as ArgentinaLiveSearchState.Results).presentation
+                assertEquals(after.clarification, final.clarification)
+            } else {
+                assertEquals(previousCalls, calls.size)
+            }
+            coordinator.close()
+        }
+    }
+
+    @Test
     fun discoveryModeStillStopsBeforeV2WhenAndroidSearchIsUnauthorized() {
         val transport = InMemoryArgentinaBackendTransport(
             mapOf(
