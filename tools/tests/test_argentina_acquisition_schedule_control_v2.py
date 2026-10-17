@@ -695,6 +695,25 @@ class ArgentinaAcquisitionScheduleControlV2Tests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(output["status"], "SHADOW_PENDING")
 
+    def test_cli_accepts_the_actual_json_string_envelope_written_from_gcloud(self) -> None:
+        resolution = self._record_primary_no_change()
+        resolution['candidateReleaseId'] = candidate_release_id('2026-09-08', PRIMARY_SHA)
+        record_shadow_state(resolution=resolution, store=self.store, status='SHADOW_STARTED',
+                            workflow_execution='execution-gcloud-result', reservation_id='gcloud-result',
+                            recorded_at='2026-09-15T17:00:00Z')
+        root = Path(self.directory.name)
+        result, error, output = (root / name for name in ('gcloud-result.json','gcloud-error.json','reconciled.json'))
+        result.write_text(json.dumps(json.dumps({'status':'CANDIDATE_VERIFIED','activePointerWrites':0,
+                                                'activation':'NOT_EXECUTED','promotion':{'status':'SHADOW_ONLY','activePointerWrites':0}})), encoding='utf-8')
+        error.write_text('null\n', encoding='utf-8')
+        with patch.object(schedule_control, '_gcs_store', return_value=self.store), redirect_stdout(io.StringIO()):
+            code = schedule_control._main(['reconcile-shadow-state','--argentina-day','2026-09-15',
+                '--workflow-execution','execution-gcloud-result','--execution-state','SUCCEEDED',
+                '--workflow-result',str(result),'--workflow-error',str(error),
+                '--recorded-at','2026-09-16T00:20:00Z','--archive-bucket','fixture','--output',str(output)])
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(output.read_text(encoding='utf-8'))['status'], 'SHADOW_SUCCEEDED')
+
     def test_shadow_reconciliation_records_only_verified_write_free_success(self) -> None:
         resolution = self._record_primary_no_change()
         record_shadow_state(
