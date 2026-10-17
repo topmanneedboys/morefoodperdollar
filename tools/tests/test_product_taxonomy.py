@@ -171,6 +171,13 @@ class ProductTaxonomyTests(unittest.TestCase):
         )
         self.assertIsNone(value)
 
+    def test_explicit_selection_does_not_fall_back_when_membership_is_empty(self) -> None:
+        candidates = [
+            {"productEvidenceKey": "egg-fresh", "name": "HUEVOS FRESCOS X12", "brand": "Marca"},
+        ]
+        selected = filter_taxonomy_candidates("huevos", candidates, selection_id="egg:powder")
+        self.assertEqual(selected, ())
+
     def test_builder_groups_store_identities_by_provider_product(self) -> None:
         rows = [
             _identity("egg-1", "ar-sepa-product:1:egg-1", "HUEVOS FRESCOS X12"),

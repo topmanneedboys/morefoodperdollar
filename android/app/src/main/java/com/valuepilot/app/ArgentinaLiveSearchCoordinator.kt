@@ -132,6 +132,9 @@ internal class ArgentinaLiveSearchCoordinator(
 
     fun state(): ArgentinaLiveSearchState = synchronized(lock) { currentState }
 
+    /** Stable refinement currently attached to the active generation. */
+    fun selectionId(): String? = synchronized(lock) { currentSelectionId }
+
     /** Submit exactly one user-triggered query generation. */
     fun submit(
         rawQuery: String,

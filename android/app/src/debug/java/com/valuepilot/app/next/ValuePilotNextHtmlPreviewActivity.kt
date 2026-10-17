@@ -85,8 +85,10 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
             if (!::webView.isInitialized || !::journey.isInitialized) return
             val query = nativeSearchQuery ?: return
             val search = journey.uiState.search
+            val expectedSelectionId = nativeSearchSelectionId
             val completed =
                 search.query.trim() == query &&
+                    search.selectionId == expectedSelectionId &&
                     search.generation > nativeSearchInitialGeneration &&
                     search.mode != com.valuepilot.app.ArgentinaLiveSearchSurfaceMode.LOADING
             if (completed || System.currentTimeMillis() >= nativeSearchDeadlineMillis) {

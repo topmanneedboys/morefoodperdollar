@@ -92,6 +92,7 @@ internal object ValuePilotNextHtmlNativeSearchBridge {
             .put("mode", state.mode.name)
             .put("generation", state.generation)
             .put("query", state.query)
+            .put("selectionId", state.selectionId ?: JSONObject.NULL)
             .put("statusMessage", state.statusMessage)
             .put("caveat", state.caveat)
             .put("page", state.presentation?.page ?: 0)

@@ -752,6 +752,11 @@ def filter_taxonomy_candidates(
         forms = {item.get("key") for item in taxonomy.get("formCandidates", ()) if isinstance(item, Mapping)}
         if forms.intersection(requested_forms):
             filtered.append(candidate)
+    # An explicit stable selection is a strict predicate.  Never restore the
+    # unfiltered candidate set when its accepted membership is empty; doing so
+    # would make a stale or contradictory choice broaden the result table.
+    if selected_context is not None:
+        return tuple(filtered)
     return tuple(filtered) if filtered else values
 
 

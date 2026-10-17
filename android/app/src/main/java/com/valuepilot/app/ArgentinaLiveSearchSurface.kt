@@ -19,6 +19,7 @@ internal data class ArgentinaLiveSearchSurfaceState(
     val mode: ArgentinaLiveSearchSurfaceMode,
     val generation: Long = 0L,
     val query: String = "",
+    val selectionId: String? = null,
     val statusMessage: String,
     val presentation: PracticalShoppingSearchIdentityPresentation? = null,
     val caveat: String
@@ -29,6 +30,7 @@ internal data class ArgentinaLiveSearchSurfaceState(
         require(statusMessage.isNotBlank())
         require(caveat.isNotBlank())
         require(query.length <= ArgentinaBackendContract.MAX_QUERY_CHARS)
+        require(selectionId == null || selectionId.length <= 160 && selectionId.matches(Regex("[A-Za-z0-9_.:-]{1,160}")))
         require(presentation == null || presentation.query.isNotBlank())
         if (mode == ArgentinaLiveSearchSurfaceMode.RESULTS) {
             require(presentation != null && presentation.matches.isNotEmpty())
@@ -203,6 +205,7 @@ internal class ArgentinaLiveSearchSurfaceHost(
 
     private fun accept(next: ArgentinaLiveSearchState) {
         val projected = ArgentinaLiveSearchSurfacePresenter.from(next, area)
+            .copy(selectionId = coordinator.selectionId())
         latest = projected
         render(projected)
     }
