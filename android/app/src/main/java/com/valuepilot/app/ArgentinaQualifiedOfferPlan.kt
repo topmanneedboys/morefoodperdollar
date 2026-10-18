@@ -9,7 +9,7 @@ package com.valuepilot.app
 internal object ArgentinaQualifiedOfferPlan {
     fun request(
         match: PracticalShoppingSearchIdentityPresentation.Match,
-        area: ArgentinaSearchArea
+        area: ArgentinaQualifiedLaunchArea
     ): ArgentinaBackendContract.ShopRequest? {
         val offer = match.qualifiedOffers.firstOrNull() ?: return null
         val quantity = offer.quantity ?: return null

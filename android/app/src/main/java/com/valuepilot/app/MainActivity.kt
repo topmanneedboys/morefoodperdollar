@@ -75,13 +75,9 @@ class MainActivity : AppCompatActivity() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private lateinit var offlineCatalogDiscoverySession: BundledOfflineCatalogDiscoverySession
     private lateinit var argentinaSearchHost: ArgentinaLiveSearchSurfaceHost
-    private var argentinaSearchRenderGate = ArgentinaLiveSearchMainThreadRenderGate()
+    private val argentinaSearchRenderGate = ArgentinaLiveSearchMainThreadRenderGate()
     private var argentinaSearchSurfaceState: ArgentinaLiveSearchSurfaceState? = null
-    private var argentinaLaunchArea: ArgentinaSearchArea = ArgentinaQualifiedLaunchAreas.BuenosAiresCaba
-    private val searchAreaStore by lazy(LazyThreadSafetyMode.NONE) {
-        ArgentinaUserSearchAreaStore(applicationContext)
-    }
-    private var searchAreaPicker: UserSearchAreaPicker? = null
+    private val argentinaLaunchArea = ArgentinaQualifiedLaunchAreas.BuenosAiresCaba
     private var searchQuery = ""
     private var qualifiedOfferPlanRequestId = 0L
     private var privateBasketPlanRequestId = 0L
@@ -264,7 +260,6 @@ class MainActivity : AppCompatActivity() {
         homeSessionState = restoreHomeState(savedInstanceState)
         refreshHomePrivateMemory()
         searchQuery = savedInstanceState?.getString(STATE_SEARCH_QUERY).orEmpty()
-        argentinaLaunchArea = ArgentinaSearchAreaPolicy.selectedOrDefault(searchAreaStore.load())
         argentinaSearchHost = ArgentinaLiveSearchSurfaceHost.createProduction(
             area = argentinaLaunchArea,
             render = ::renderArgentinaSearchState
@@ -420,8 +415,6 @@ class MainActivity : AppCompatActivity() {
         if (::argentinaSearchHost.isInitialized) {
             argentinaSearchHost.close()
         }
-        searchAreaPicker?.close()
-        searchAreaPicker = null
         dataStatusDialog?.dismiss()
         dataStatusDialog = null
         privatePriceHistoryDialog?.dismiss()
@@ -1395,8 +1388,6 @@ class MainActivity : AppCompatActivity() {
 
         searchButton.setOnClickListener { submitArgentinaSearch() }
         searchLoadMoreButton.setOnClickListener { argentinaSearchHost.loadMore() }
-        searchAreaLabel.setOnClickListener { openSearchAreaPicker() }
-        searchAreaLabel.contentDescription = "Change search area"
 
         quickSearchEntries().forEach { (chipId, query) ->
             configureQuickSearch(chipId, query)
@@ -2360,40 +2351,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * User-initiated area change. The Search host is rebuilt rather than
-     * mutated so in-flight requests for the previous area are cancelled and a
-     * stale response can never be rendered against the new label.
-     */
-    private fun openSearchAreaPicker() {
-        val picker = searchAreaPicker ?: UserSearchAreaPicker(this) { area ->
-            applySearchArea(area)
-        }.also { searchAreaPicker = it }
-        picker.open()
-    }
-
-    private fun applySearchArea(area: ArgentinaUserSearchArea) {
-        if (
-            area.latitude == argentinaLaunchArea.latitude &&
-            area.longitude == argentinaLaunchArea.longitude &&
-            area.radiusKm == argentinaLaunchArea.radiusKm
-        ) {
-            return
-        }
-        searchAreaStore.save(area)
-        argentinaLaunchArea = area
-        argentinaSearchHost.close()
-        argentinaSearchSurfaceState = null
-        argentinaSearchRenderGate = ArgentinaLiveSearchMainThreadRenderGate()
-        argentinaSearchHost = ArgentinaLiveSearchSurfaceHost.createProduction(
-            area = area,
-            render = ::renderArgentinaSearchState
-        )
-        if (searchQuery.isNotBlank()) {
-            argentinaSearchHost.submit(searchQuery)
-        }
-    }
-
     private fun renderArgentinaSearchState(state: ArgentinaLiveSearchSurfaceState) {
         val update = {
             val currentGeneration =
@@ -2408,8 +2365,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderSearch(state: ArgentinaLiveSearchSurfaceState) {
-        searchAreaLabel.text =
-            getString(R.string.search_area_label, state.areaLabel) + " · change"
+        searchAreaLabel.text = getString(R.string.search_area_label, state.areaLabel)
         searchStatus.text = state.statusMessage
         searchStatus.setTextColor(
             when (state.mode) {

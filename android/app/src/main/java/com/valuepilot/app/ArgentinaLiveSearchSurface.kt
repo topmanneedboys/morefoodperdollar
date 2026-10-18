@@ -92,7 +92,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
                     mode = ArgentinaLiveSearchSurfaceMode.NO_MATCHES,
                     generation = state.generation,
                     query = state.query,
-                    statusMessage = ArgentinaSearchAreaPolicy.emptyResultHint(area),
+                    statusMessage = "No matching product identity was found in this release.",
                     presentation = state.presentation,
                     caveat = caveatFor(state.presentation)
                 )
