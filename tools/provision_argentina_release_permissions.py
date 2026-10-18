@@ -16,11 +16,23 @@ def apply_plan(plan, run):
     project, member = plan["project"], plan["member"]
     for role in plan["customRoles"]:
         result = run(["iam", "roles", "describe", role["id"], "--project", project, "--format=json"], optional=True)
+        expected = set(role["permissions"])
         if result is None:
             run(["iam", "roles", "create", role["id"], "--project", project, "--title", role["id"],
                  "--permissions", ",".join(role["permissions"]), "--stage", "GA"])
-        elif set(json.loads(result).get("includedPermissions", [])) != set(role["permissions"]):
-            raise RuntimeError("Existing custom role differs from the reviewed plan: " + role["id"])
+            continue
+        existing = set(json.loads(result).get("includedPermissions", []))
+        unexpected = existing - expected
+        if unexpected:
+            raise RuntimeError("Existing custom role grants permissions outside the reviewed plan: "
+                               + role["id"] + ": " + ",".join(sorted(unexpected)))
+        missing = expected - existing
+        if missing:
+            # Converge forward instead of refusing to run: a role that silently
+            # lost a reviewed permission (run.revisions.list broke promotion on
+            # 2026-10-17) must be repaired by the same reviewed plan.
+            run(["iam", "roles", "update", role["id"], "--project", project,
+                 "--add-permissions", ",".join(sorted(missing))])
     for target in plan["regionalBuckets"]:
         bucket = "gs://" + target["bucket"]
         for role, condition in (("roles/storage.objectViewer", None),
@@ -35,6 +47,16 @@ def apply_plan(plan, run):
                  "--project", project, "--member", member, "--role", role])
     run(["projects", "add-iam-policy-binding", project, "--member", member,
          "--role", "projects/" + project + "/roles/valuepilotReleaseOperationReader", "--condition=None"])
+    # Namespace-scoped Cloud Run permissions (run.revisions.list) cannot be
+    # granted by a per-service binding, so every reviewed custom role is also
+    # bound at project scope. Without this, `gcloud run services update` fails
+    # only in the region that has to enumerate revisions.
+    for role in plan["customRoles"]:
+        run(["projects", "add-iam-policy-binding", project, "--member", member,
+             "--role", "projects/" + project + "/roles/" + role["id"], "--condition=None"])
+    for role in plan.get("projectRoles", []):
+        run(["projects", "add-iam-policy-binding", project, "--member", member,
+             "--role", role, "--condition=None"])
     run(["iam", "service-accounts", "add-iam-policy-binding", plan["runtimeServiceAccount"], "--project", project,
          "--member", member, "--role", "roles/iam.serviceAccountUser"])
     expression = "resource.name.startsWith('projects/_/buckets/" + plan["receiptBucket"] + "/objects/" + plan["receiptPrefix"] + "')"

@@ -36,6 +36,40 @@ class PromotionAccessTests(unittest.TestCase):
         mutation_permissions = {permission for role in plan["customRoles"] for permission in role["permissions"] if permission.endswith((".update", ".create", ".delete"))}
         self.assertEqual(mutation_permissions, {"run.services.update"})
 
+    def test_permission_plan_binds_namespace_scoped_permissions_at_project_level(self):
+        plan = json.loads((Path(__file__).resolve().parents[2] / "docs/catalog-discovery-plan/AUTOMATION_PERMISSION_PLAN.json").read_text(encoding="utf-8"))
+        calls = []
+        def run(command, optional=False):
+            calls.append(command)
+            return None if optional else "{}"
+        apply_plan(plan, run)
+        project_roles = [
+            command[command.index("--role") + 1]
+            for command in calls
+            if command[:3] == ["projects", "add-iam-policy-binding", plan["project"]]
+        ]
+        self.assertIn("projects/valuepilot-argentina/roles/valuepilotReleaseServiceUpdater", project_roles)
+        self.assertIn("roles/artifactregistry.reader", project_roles)
+        updater = next(role for role in plan["customRoles"] if role["id"] == "valuepilotReleaseServiceUpdater")
+        self.assertIn("run.revisions.list", updater["permissions"])
+
+    def test_permission_plan_converges_a_role_that_lost_a_reviewed_permission(self):
+        plan = json.loads((Path(__file__).resolve().parents[2] / "docs/catalog-discovery-plan/AUTOMATION_PERMISSION_PLAN.json").read_text(encoding="utf-8"))
+        calls = []
+        def run(command, optional=False):
+            calls.append(command)
+            if command[:3] == ["iam", "roles", "describe"]:
+                if command[3] == "valuepilotReleaseServiceUpdater":
+                    return json.dumps({"includedPermissions": ["run.services.update"]})
+                return json.dumps({"includedPermissions": ["run.operations.get"]})
+            return "{}"
+        apply_plan(plan, run)
+        updates = [command for command in calls if command[:3] == ["iam", "roles", "update"]]
+        self.assertEqual(len(updates), 1)
+        added = updates[0][updates[0].index("--add-permissions") + 1]
+        self.assertIn("run.revisions.list", added)
+        self.assertNotIn("run.services.update", added)
+
     def test_live_permission_probe_is_read_only_and_fails_when_update_is_missing(self):
         calls = []
         def request(url, token, payload):
