@@ -15,11 +15,14 @@ class ArgentinaWindscribeAcquisitionWorkflowTests(unittest.TestCase):
     def test_workflow_is_oidc_only_daily_scheduled_and_gated(self) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("workflow_dispatch:", text)
-        for cron in ("30 16 * * *", "30 18 * * *", "30 20 * * *"):
+        for cron in ("30 16 * * *", "30 18 * * *", "30 20 * * *", "30 23 * * *"):
             self.assertIn(f"cron: '{cron}'", text)
         self.assertNotIn("30 16,18,20 * * *", text)
         self.assertIn("cron: '15 * * * *'", text)
         self.assertIn("github.event.schedule != '15 * * * *'", text)
+        self.assertIn("'30 23 * * *') check_phase=\"PRIMARY\"", text)
+        self.assertIn("Fail loudly when the active release approaches the freshness limit", text)
+        self.assertIn("active_date", text)
         self.assertIn("inputs.reconcile_only != true", text)
         self.assertIn("ARGENTINA_AUTOMATED_ACQUISITION_ENABLED", text)
         self.assertIn("id-token: write", text)
