@@ -9,6 +9,7 @@
         "run.services.getIamPolicy",
         "run.services.update",
         "run.revisions.get",
+        "run.revisions.list",
         "run.configurations.get",
         "run.routes.get"
       ]
@@ -19,6 +20,9 @@
         "run.operations.get"
       ]
     }
+  ],
+  "projectRoles": [
+    "roles/artifactregistry.reader"
   ],
   "regionalBuckets": [
     {
