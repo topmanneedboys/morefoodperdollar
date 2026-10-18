@@ -17,6 +17,7 @@ import os
 import re
 import shutil
 import subprocess
+import time
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -37,6 +38,12 @@ _MAX_MANIFEST_BYTES = 2 * 1024 * 1024
 _MAX_OBJECT_BYTES = 2 * 1024 * 1024 * 1024
 _ACTIVE_KEY = "control/active.json"
 _ACTIVE_SCHEMA = "valuepilot-active-release-v1"
+# Cloud Run control-plane mutations are bounded and retried: a transient
+# conflict or slow regional rollout must not strand a verified release.
+_SERVICE_UPDATE_ATTEMPTS = 3
+_SERVICE_UPDATE_BACKOFF_SECONDS = 1.5
+_SERVICE_UPDATE_TIMEOUT_SECONDS = 600.0
+_MAX_SERVICE_DIAGNOSTIC_CHARS = 400
 
 
 def _canonical(value: Any) -> bytes:
@@ -277,27 +284,60 @@ def run_production_smoke(url: str, *, release_id: str, token: str) -> dict[str, 
     return {"readyz": ready, "status": status, "search": {"matchCount": len(search.get("matches", [])), "pagination": search.get("pagination")}}
 
 
+def _run_service_command(args: Sequence[str], *, label: str, name: str) -> None:
+    """Run one bounded gcloud mutation, retrying transients and keeping the cause.
+
+    The previous implementation discarded both streams, so every Cloud Run
+    failure surfaced as an opaque "configuration failed" with no operator
+    diagnostic.  The diagnostic tail is bounded because it is echoed into the
+    workflow failure payload.
+    """
+
+    diagnostic = ""
+    for attempt in range(1, _SERVICE_UPDATE_ATTEMPTS + 1):
+        try:
+            completed = subprocess.run(
+                list(args),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False,
+                timeout=_SERVICE_UPDATE_TIMEOUT_SECONDS,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            diagnostic = f"{type(exc).__name__}: {exc}"
+        else:
+            if completed.returncode == 0:
+                return
+            combined = "\n".join(
+                part.strip() for part in (completed.stderr or "", completed.stdout or "") if part and part.strip()
+            )
+            diagnostic = combined[-_MAX_SERVICE_DIAGNOSTIC_CHARS:]
+        if attempt < _SERVICE_UPDATE_ATTEMPTS:
+            time.sleep(_SERVICE_UPDATE_BACKOFF_SECONDS * attempt)
+    raise PromotionError(f"{label} failed for {name}: {diagnostic or 'no diagnostic output'}")
+
+
 def _update_service(service: str, *, project: str, release_id: str, release_date: str) -> None:
     if ":" not in service:
         raise PromotionError("backend service must be NAME:REGION")
     name, region = service.split(":", 1)
     cloud_cli = shutil.which("gcloud") or "gcloud"
-    completed = subprocess.run(
-        [cloud_cli, "run", "services", "update", name, "--region", region, "--project", project, "--quiet", "--update-env-vars", f"VALUEPILOT_ANDROID_NETWORKING_RELEASE_ID={release_id},VALUEPILOT_ANDROID_NETWORKING_RELEASE_DATE={release_date}"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
+    _run_service_command(
+        [
+            cloud_cli, "run", "services", "update", name,
+            "--region", region, "--project", project, "--quiet",
+            "--update-env-vars",
+            f"VALUEPILOT_ANDROID_NETWORKING_RELEASE_ID={release_id},VALUEPILOT_ANDROID_NETWORKING_RELEASE_DATE={release_date}",
+        ],
+        label="backend service configuration",
+        name=name,
     )
-    if completed.returncode != 0:
-        raise PromotionError(f"backend service configuration failed for {name}")
-    routed = subprocess.run(
+    _run_service_command(
         [cloud_cli, "run", "services", "update-traffic", name, "--region", region, "--project", project, "--quiet", "--to-latest"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
+        label="backend service traffic routing",
+        name=name,
     )
-    if routed.returncode != 0:
-        raise PromotionError(f"backend service traffic routing failed for {name}")
 
 
 def promote_archived_release(
