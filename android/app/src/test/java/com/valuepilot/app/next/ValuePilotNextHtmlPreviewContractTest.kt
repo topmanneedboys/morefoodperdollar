@@ -13,6 +13,14 @@ import org.json.JSONObject
 class ValuePilotNextHtmlPreviewContractTest {
 
     @Test
+    fun locationBridgeAcceptsOnlyTheBoundedNoArgumentAction() {
+        assertTrue(ValuePilotNextHtmlPreviewContract.isChooseSearchLocationMessage("{\"type\":\"CHOOSE_SEARCH_LOCATION\"}"))
+        assertTrue(!ValuePilotNextHtmlPreviewContract.isChooseSearchLocationMessage("{\"type\":\"CHOOSE_SEARCH_LOCATION\",\"latitude\":1}"))
+        assertTrue(!ValuePilotNextHtmlPreviewContract.isChooseSearchLocationMessage("x".repeat(257)))
+        assertTrue(!ValuePilotNextHtmlPreviewContract.isChooseSearchLocationMessage("{"))
+    }
+
+    @Test
     fun previousPageBridgeAcceptsOnlyTheBoundedTypedAction() {
         assertNotNull(ValuePilotNextHtmlPreviewContract.parseNativeSearchPreviousMessage("{\"type\":\"PREVIOUS_VALUEPILOT_PAGE\"}"))
         assertNull(ValuePilotNextHtmlPreviewContract.parseNativeSearchPreviousMessage("{\"type\":\"LOAD_MORE_VALUEPILOT\"}"))

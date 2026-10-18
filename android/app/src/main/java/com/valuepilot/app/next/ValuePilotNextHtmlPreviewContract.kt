@@ -247,6 +247,12 @@ internal object ValuePilotNextHtmlPreviewContract {
         return ValuePilotNextHtmlNativeSearchRequest(query, selectionId, language)
     }
 
+    fun isChooseSearchLocationMessage(rawMessage: String?): Boolean {
+        if (rawMessage.isNullOrBlank() || rawMessage.length > 256) return false
+        val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return false
+        return json.length() == 1 && json.optString("type") == "CHOOSE_SEARCH_LOCATION"
+    }
+
     fun parseNativeSearchLoadMoreMessage(rawMessage: String?): ValuePilotNextHtmlNativeSearchLoadMoreRequest? {
         if (rawMessage.isNullOrBlank() || rawMessage.length > 256) return null
         val json = runCatching { JSONObject(rawMessage) }.getOrNull() ?: return null

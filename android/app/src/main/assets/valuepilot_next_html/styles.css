@@ -125,3 +125,8 @@
 .price-matrix .matrix-product-duplicate .matrix-meta,
 .price-matrix .matrix-product-duplicate .matrix-product-actions{visibility:hidden}
 .price-matrix .matrix-product-duplicate .matrix-name::after{content:'↳';visibility:visible;color:var(--muted);font-size:15px;font-weight:600}
+
+button.preview-origin{min-height:44px;font-size:11px;padding:6px 0}
+
+/* Keep pinned table cells inside their own layer, below app navigation. */
+#matrixScroll{isolation:isolate}

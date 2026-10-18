@@ -24,6 +24,8 @@ import com.valuepilot.app.ArgentinaPrivateBasketRequestBuilder
 import com.valuepilot.app.ArgentinaPrivateTripCostCalculator
 import com.valuepilot.app.ArgentinaPrivateTripCostInput
 import com.valuepilot.app.ArgentinaPrivateTripCostResult
+import com.valuepilot.app.ArgentinaSearchArea
+import com.valuepilot.app.ArgentinaUserSearchArea
 import com.valuepilot.app.ArgentinaQualifiedLaunchAreas
 import com.valuepilot.app.ArgentinaSearchContextSource
 import com.valuepilot.app.ArgentinaLiveSearchDiagnostics
@@ -108,7 +110,7 @@ internal data class ValuePilotNextJourneyUiState(
 internal class ValuePilotNextJourneyViewModel : ViewModel() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private val planExecutor = Executors.newSingleThreadExecutor()
-    private val area = ArgentinaQualifiedLaunchAreas.BuenosAiresCaba
+    private var area: ArgentinaSearchArea = ArgentinaQualifiedLaunchAreas.BuenosAiresCaba
     private val offerEvidence = linkedMapOf<String, List<ArgentinaBackendContract.SearchOffer>>()
 
     private var store: AndroidPracticalShoppingHomeSessionStore? = null
@@ -148,6 +150,8 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
         check(Looper.myLooper() == Looper.getMainLooper())
         initialized = true
         applicationContext = context.applicationContext ?: context
+        area = ValuePilotNextSearchAreaStore(requireNotNull(applicationContext)).load() ?: area
+        uiState = uiState.copy(search = ArgentinaLiveSearchSurfacePresenter.initial(area))
         store = AndroidPracticalShoppingHomeSessionStore(requireNotNull(applicationContext))
         compareHereMemoryStore =
             CompareHerePrivatePriceMemoryAndroidStore(requireNotNull(applicationContext))
@@ -240,18 +244,38 @@ internal class ValuePilotNextJourneyViewModel : ViewModel() {
             privateIdentities = identities,
             basket = renderBasket(identities, null, null, null)
         )
+        createSearchHost()
+    }
+
+    private fun createSearchHost() {
+        val expectedArea = area
         searchHost = ArgentinaLiveSearchSurfaceHost.createProduction(
-            area = area,
+            area = expectedArea,
             useDiscoveryV2 = true
         ) { next ->
             val publish = {
-                if (!cleared && next.generation >= uiState.search.generation) {
+                if (!cleared && area == expectedArea && next.generation >= uiState.search.generation) {
                     uiState = uiState.copy(search = next)
                 }
             }
             if (Looper.myLooper() == Looper.getMainLooper()) publish()
             else mainHandler.post(publish)
         }
+    }
+
+    fun selectSearchArea(next: ArgentinaUserSearchArea): Boolean {
+        check(Looper.myLooper() == Looper.getMainLooper())
+        if (!initialized || cleared) return false
+        if (!ValuePilotNextSearchAreaStore(requireNotNull(applicationContext)).save(next)) return false
+        searchHost?.close()
+        area = next
+        offerEvidence.clear()
+        clearPlanForBasketEdit()
+        uiState = uiState.copy(search = ArgentinaLiveSearchSurfacePresenter.initial(next),
+            basket = renderBasket(uiState.privateIdentities, null, null, null),
+            plan = null, planLoading = false, planError = null, tripResult = null, tripError = null)
+        createSearchHost()
+        return true
     }
 
     fun onSavedRouteVisibilityChanged(visible: Boolean) {

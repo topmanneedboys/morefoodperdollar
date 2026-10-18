@@ -262,7 +262,7 @@ class ValuePilotNextHtmlLocalizationTest {
         var directory = File(requireNotNull(System.getProperty("user.dir")))
         repeat(8) {
             val candidate =
-                File(directory, "app/src/debug/assets/valuepilot_next_html/app.js")
+                File(directory, "app/src/main/assets/valuepilot_next_html/app.js")
             if (candidate.isFile) return candidate.readText()
             directory = directory.parentFile ?: return@repeat
         }
@@ -273,7 +273,7 @@ class ValuePilotNextHtmlLocalizationTest {
         var directory = File(requireNotNull(System.getProperty("user.dir")))
         repeat(8) {
             val candidate =
-                File(directory, "app/src/debug/assets/valuepilot_next_html/styles.css")
+                File(directory, "app/src/main/assets/valuepilot_next_html/styles.css")
             if (candidate.isFile) return candidate.readText()
             directory = directory.parentFile ?: return@repeat
         }

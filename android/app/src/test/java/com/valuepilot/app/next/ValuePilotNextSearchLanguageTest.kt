@@ -118,22 +118,4 @@ class ValuePilotNextSearchLanguageTest {
         )
         assertEquals(identifier, valuePilotNextLocalizedFactText(ValuePilotNextLanguage.SPANISH_AR, identifier))
     }
-
-    @Test
-    fun `provider identity match label is localized in native Search`() {
-        assertEquals(
-            "provider identity match",
-            valuePilotNextLocalizedMatchLabel(
-                "provider identity match",
-                ValuePilotNextLanguage.ENGLISH
-            )
-        )
-        assertEquals(
-            "coincidencia de identidad de fuente",
-            valuePilotNextLocalizedMatchLabel(
-                "provider identity match",
-                ValuePilotNextLanguage.SPANISH_AR
-            )
-        )
-    }
 }

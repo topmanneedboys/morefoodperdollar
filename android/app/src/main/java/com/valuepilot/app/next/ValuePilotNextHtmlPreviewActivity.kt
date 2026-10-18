@@ -69,6 +69,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         getSharedPreferences(PREVIEW_PREFERENCES_NAME, MODE_PRIVATE)
     }
     private var googleImagesLaunchInFlight = false
+    private var locationPicker: ValuePilotNextLocationPicker? = null
     private var nativeSearchQuery: String? = null
     private var nativeSearchSelectionId: String? = null
     private var nativeSearchInitialGeneration = -1L
@@ -200,6 +201,20 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         journey = ViewModelProvider(this)[ValuePilotNextJourneyViewModel::class.java]
         journey.start(applicationContext)
+        locationPicker = ValuePilotNextLocationPicker(this, ::locationText) { area ->
+            if (journey.selectSearchArea(area)) {
+                nativeSearchQuery = null
+                nativeSearchSelectionId = null
+                handler.removeCallbacks(nativeSearchPoll)
+                webView.evaluateJavascript(
+                    "window.ValuePilotHtmlPreview && window.ValuePilotHtmlPreview.receiveNativeLocation(${org.json.JSONObject.quote(area.label)},true)", null)
+                sendNativeSavedState()
+            } else {
+                android.widget.Toast.makeText(this,
+                    locationText("No se pudo guardar la ubicación. Probá de nuevo.", "The location could not be saved. Please retry."),
+                    android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
         journey.onSavedRouteVisibilityChanged(true)
         observedPriceProofPicker = AndroidUserObservedPriceProofContentPicker(
             activity = this,
@@ -263,6 +278,8 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         handler.removeCallbacks(themeSync)
+        locationPicker?.close()
+        locationPicker = null
         handler.removeCallbacks(nativeSearchPoll)
         handler.removeCallbacks(nativeBasketPlanPoll)
         handler.removeCallbacks(nativeObservedPricePoll)
@@ -316,6 +333,8 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
             if (url != ASSET_INDEX_URL) return
             applyHtmlTopInset(view)
             synchronizeLanguage(view)
+            view.evaluateJavascript(
+                "window.ValuePilotHtmlPreview && window.ValuePilotHtmlPreview.receiveNativeLocation(${org.json.JSONObject.quote(journey.uiState.search.areaLabel)})", null)
         }
 
         override fun shouldInterceptRequest(
@@ -358,6 +377,10 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                             .putString(PREF_LANGUAGE, language.language)
                             .apply()
                         saveNativeLanguagePreference(language.language)
+                        return
+                    }
+                    if (ValuePilotNextHtmlPreviewContract.isChooseSearchLocationMessage(message.data)) {
+                        locationPicker?.open()
                         return
                     }
                     val nativeSearch = ValuePilotNextHtmlPreviewContract
@@ -558,6 +581,12 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                 }
             }
         )
+    }
+
+    private fun locationText(spanish: String, english: String): String {
+        val language = previewPreferences.getString(PREF_LANGUAGE, null)
+            ?: resources.configuration.locales[0].language
+        return if (language.startsWith("es")) spanish else english
     }
 
     private fun startNativeSearch(
@@ -823,20 +852,22 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         )
     }
 
+    /**
+     * The Compose preview host was retired when the HTML surface became the
+     * product. Deep journeys now open the existing native activities; each of
+     * these remains the authoritative implementation of its own evidence flow.
+     */
     private fun openNativeSavedTools(destination: String) {
-        startActivity(
-            Intent(this, ValuePilotNextActivity::class.java)
-                .putExtra(ValuePilotNextActivity.EXTRA_START_DESTINATION, destination)
-                .putExtra(ValuePilotNextActivity.EXTRA_START_ORIGIN, "SAVED")
-        )
+        openNativeJourney(destination)
     }
 
     private fun openNativeJourney(destination: String) {
-        startActivity(
-            Intent(this, ValuePilotNextActivity::class.java)
-                .putExtra(ValuePilotNextActivity.EXTRA_START_DESTINATION, destination)
-                .putExtra(ValuePilotNextActivity.EXTRA_START_ORIGIN, "SAVED")
-        )
+        val target = when (destination) {
+            "GOOD_PRICE_CHECK" -> com.valuepilot.app.GoodPriceActivity::class.java
+            "COMPARE" -> com.valuepilot.app.ComparisonActivity::class.java
+            else -> com.valuepilot.app.MainActivity::class.java
+        }
+        startActivity(Intent(this, target))
     }
 
     private fun openNativeGoodPriceFromSaved(
@@ -849,10 +880,8 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
             return
         }
         startActivity(
-            Intent(this, ValuePilotNextActivity::class.java)
-                .putExtra(ValuePilotNextActivity.EXTRA_START_DESTINATION, "GOOD_PRICE_CHECK")
-                .putExtra(ValuePilotNextActivity.EXTRA_START_ORIGIN, "SAVED")
-                .putExtra(ValuePilotNextActivity.EXTRA_GOOD_PRICE_DISPLAY_NAME, identity.displayName)
+            Intent(this, com.valuepilot.app.GoodPriceActivity::class.java)
+                .putExtra(com.valuepilot.app.GoodPriceActivity.EXTRA_PRODUCT_NAME, identity.displayName)
         )
     }
 
@@ -939,10 +968,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
     }
 
     private fun openNativeBasket() {
-        startActivity(
-            Intent(this, ValuePilotNextActivity::class.java)
-                .putExtra(ValuePilotNextActivity.EXTRA_START_DESTINATION, "BASKET")
-        )
+        startActivity(Intent(this, com.valuepilot.app.MainActivity::class.java))
     }
 
     /** Keeps the HTML shell and Compose journeys on the same persisted language choice. */
