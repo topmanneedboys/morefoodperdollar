@@ -44,7 +44,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
         "Identity suggestions only. No current price, stock, availability or ranking is confirmed; package size appears only when the source supplies it explicitly."
 
     fun initial(
-        area: ArgentinaQualifiedLaunchArea,
+        area: ArgentinaSearchArea,
         generation: Long = 0L
     ): ArgentinaLiveSearchSurfaceState =
         ArgentinaLiveSearchSurfaceState(
@@ -57,7 +57,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
 
     fun from(
         state: ArgentinaLiveSearchState,
-        area: ArgentinaQualifiedLaunchArea
+        area: ArgentinaSearchArea
     ): ArgentinaLiveSearchSurfaceState =
         when (state) {
             is ArgentinaLiveSearchState.Idle -> initial(area, state.generation)
@@ -92,7 +92,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
                     mode = ArgentinaLiveSearchSurfaceMode.NO_MATCHES,
                     generation = state.generation,
                     query = state.query,
-                    statusMessage = "No matching product identity was found in this release.",
+                    statusMessage = ArgentinaSearchAreaPolicy.emptyResultHint(area),
                     presentation = state.presentation,
                     caveat = caveatFor(state.presentation)
                 )
@@ -127,7 +127,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
 
     private fun unavailable(
         state: ArgentinaLiveSearchState.Unavailable,
-        area: ArgentinaQualifiedLaunchArea
+        area: ArgentinaSearchArea
     ): ArgentinaLiveSearchSurfaceState {
         val (mode, message) =
             when (state.failure) {
@@ -166,7 +166,7 @@ internal object ArgentinaLiveSearchSurfacePresenter {
 /** Thin lifecycle/action host between MainActivity and the coordinator. */
 internal class ArgentinaLiveSearchSurfaceHost(
     private val coordinator: ArgentinaLiveSearchCoordinator,
-    val area: ArgentinaQualifiedLaunchArea,
+    val area: ArgentinaSearchArea,
     private val render: (ArgentinaLiveSearchSurfaceState) -> Unit
 ) : AutoCloseable {
     @Volatile
@@ -220,7 +220,7 @@ internal class ArgentinaLiveSearchSurfaceHost(
 
     companion object {
         fun createProduction(
-            area: ArgentinaQualifiedLaunchArea,
+            area: ArgentinaSearchArea,
             useDiscoveryV2: Boolean = false,
             render: (ArgentinaLiveSearchSurfaceState) -> Unit
         ): ArgentinaLiveSearchSurfaceHost {
@@ -238,7 +238,7 @@ internal class ArgentinaLiveSearchSurfaceHost(
 
         fun forTesting(
             coordinator: ArgentinaLiveSearchCoordinator,
-            area: ArgentinaQualifiedLaunchArea,
+            area: ArgentinaSearchArea,
             render: (ArgentinaLiveSearchSurfaceState) -> Unit
         ): ArgentinaLiveSearchSurfaceHost =
             ArgentinaLiveSearchSurfaceHost(coordinator, area, render)
