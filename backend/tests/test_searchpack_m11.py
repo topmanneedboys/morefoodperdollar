@@ -500,6 +500,804 @@ class SearchPackM11Tests(unittest.TestCase):
         self.assertEqual(reader.interpret_calls, [])
         self.assertEqual(response["pagination"], {"page": 0, "pageSize": 5, "hasMore": False, "nextPage": None, "limitReached": False})
 
+    def test_service_search_filters_explicit_carrot_form_without_inventing_rows(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": "carrot-lotion",
+                "name": "LOCION PROT. SOLAR FPS 30 CARROT 240 ML",
+                "brand": "HAWAIIAN TROPIC",
+                "gtin": None,
+                "score": 120,
+                "matchedTokens": ["carrot", "juice"],
+            },
+            {
+                "productEvidenceKey": "carrot-juice",
+                "name": "JUICE MARKET HAPPY CARROT 500 ML",
+                "brand": "JUICE MARKET",
+                "gtin": None,
+                "score": 110,
+                "matchedTokens": ["carrot", "juice"],
+            },
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        response = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "carrot juice",
+        })
+
+        self.assertEqual([item["productEvidenceKey"] for item in response["matches"]], ["carrot-juice"])
+        self.assertIsNone(response["clarification"])
+
+    def test_service_search_exposes_observed_carrot_clarification(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "name": name,
+                "brand": None,
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["carrot"],
+            }
+            for index, (key, name) in enumerate((
+                ("carrot-vegetable", "BABY CARROT"),
+                ("carrot-drink", "JUICE MARKET HAPPY CARROT 500 ML"),
+                ("carrot-dessert", "POSTRE CARROT CAKE 140 G"),
+                ("carrot-cosmetics", "LOCION SOLAR CARROT 240 ML"),
+            ))
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        response = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "carrot",
+        })
+
+        clarification = response["clarification"]
+        self.assertIsNotNone(clarification)
+        assert clarification is not None
+        self.assertEqual(clarification["family"], "carrot")
+        self.assertEqual(
+            {choice["id"] for choice in clarification["choices"]},
+            {"carrot:vegetable", "carrot:drink", "carrot:dessert", "carrot:cosmetics"},
+        )
+
+    def test_service_search_keeps_fruit_and_shell_egg_results_strict(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "name": name,
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["frutilla", "mango", "huevo"],
+            }
+            for index, (key, name) in enumerate((
+                ("strawberry-fruit", "FRUTILLA FRESCA 250 G"),
+                ("strawberry-conditioner", "ACONDICIONADOR KIDS FRUTILLA 350 ML"),
+                ("mango-fruit", "MANGO X KG"),
+                ("mango-handle", "ABRELATAS PREMIUM MANGO MANGO MADERA"),
+                ("egg-shell", "HUEVOS FRESCOS X12"),
+                ("egg-bagel", "BAGEL DE HUEVO 185 G"),
+                ("egg-pasta", "FIDEOS AL HUEVO 500 G"),
+            ))
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        strawberry = service.search({"latitude": "-34", "longitude": "-58", "radiusKm": "5", "query": "strawberry"})
+        self.assertEqual([item["productEvidenceKey"] for item in strawberry["matches"]], ["strawberry-fruit"])
+        self.assertIsNotNone(strawberry["clarification"])
+
+        mango = service.search({"latitude": "-34", "longitude": "-58", "radiusKm": "5", "query": "mango"})
+        self.assertEqual([item["productEvidenceKey"] for item in mango["matches"]], ["mango-fruit"])
+        self.assertEqual(reader.discovery_calls[-1][0], "mango")
+
+        eggs = service.search({"latitude": "-34", "longitude": "-58", "radiusKm": "5", "query": "eggs"})
+        self.assertEqual([item["productEvidenceKey"] for item in eggs["matches"]], ["egg-shell"])
+        self.assertIsNotNone(eggs["clarification"])
+
+    def test_service_search_applies_stable_clarification_selection(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "name": name,
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["huevos"],
+            }
+            for index, (key, name) in enumerate((
+                ("egg-whole", "HUEVOS FRESCOS X12"),
+                ("egg-liquid", "HUEVOS LIQUIDOS 500 ML"),
+                ("egg-pasta", "FIDEOS AL HUEVO 500 G"),
+            ))
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        selected = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "huevos",
+            "selectionId": "egg:whole_egg",
+        })
+        self.assertEqual([item["productEvidenceKey"] for item in selected["matches"]], ["egg-whole"])
+        self.assertIsNone(selected["clarification"])
+
+        with self.assertRaises(BackendQueryError):
+            service.search({
+                "latitude": "-34",
+                "longitude": "-58",
+                "radiusKm": "5",
+                "query": "huevos",
+                "selectionId": "rice:grain",
+            })
+
+    def test_service_search_exposes_generic_egg_clarification_and_filters_form(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "name": name,
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["huevos"],
+            }
+            for index, (key, name) in enumerate((
+                ("egg-whole", "HUEVOS FRESCOS X12"),
+                ("egg-liquid", "HUEVOS LIQUIDOS 500 ML"),
+                ("egg-powder", "HUEVO EN POLVO 100 G"),
+            ))
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        response = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "huevos",
+        })
+        clarification = response["clarification"]
+        self.assertIsNotNone(clarification)
+        assert clarification is not None
+        self.assertEqual(clarification["family"], "egg")
+        self.assertEqual(
+            {choice["id"] for choice in clarification["choices"]},
+            {"egg:liquid", "egg:powder", "egg:whole_egg"},
+        )
+
+        liquid = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "huevos liquid",
+        })
+        self.assertEqual([item["productEvidenceKey"] for item in liquid["matches"]], ["egg-liquid"])
+
+    def test_service_search_keeps_reviewed_meat_family_free_of_pet_mentions(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": "pork-cut",
+                "name": "ASADO DE CERDO X KG",
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100,
+                "matchedTokens": ["cerdo"],
+            },
+            {
+                "productEvidenceKey": "pork-pet",
+                "name": "ALIM.P/PERROS ADULTOS CARNE, POLLO Y CERDO PEDIGREE BSA 8KG",
+                "brand": "Pedigree",
+                "gtin": None,
+                "score": 99,
+                "matchedTokens": ["cerdo"],
+            },
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        response = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "cerdo",
+        })
+
+        self.assertEqual([item["productEvidenceKey"] for item in response["matches"]], ["pork-cut"])
+        self.assertEqual(reader.discovery_calls[0][0], "cerdo")
+
+    def test_service_search_prioritizes_evidence_backed_shell_eggs(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": "egg-no-offer",
+                "name": "HUEVO BLANCO IDENTIDAD SIN OFERTA",
+                "brand": "Marca",
+                "gtin": None,
+                "score": 120,
+                "matchedTokens": ["huevo"],
+                "qualifiedOffers": [],
+            },
+            {
+                "productEvidenceKey": "egg-priced",
+                "name": "HUEVO BLANCO CON OFERTA VIGENTE",
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100,
+                "matchedTokens": ["huevo"],
+                "qualifiedOffers": [{"offerKey": "offer-1"}],
+            },
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        with patch("backend.service._production_android_ui_authorized", return_value=True):
+            response = service.search({
+                "latitude": "-34",
+                "longitude": "-58",
+                "radiusKm": "5",
+                "query": "huevo de gallina",
+            })
+
+        self.assertEqual(
+            [item["productEvidenceKey"] for item in response["matches"]],
+            ["egg-priced", "egg-no-offer"],
+        )
+        self.assertIsNone(response["clarification"])
+
+    def test_service_search_prioritizes_evidence_backed_eggs_for_generic_query(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": "egg-no-offer",
+                "name": "HUEVO BLANCO IDENTIDAD SIN OFERTA",
+                "brand": "Marca",
+                "gtin": None,
+                "score": 120,
+                "matchedTokens": ["huevo"],
+                "qualifiedOffers": [],
+            },
+            {
+                "productEvidenceKey": "egg-priced",
+                "name": "HUEVO BLANCO CON OFERTA VIGENTE",
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100,
+                "matchedTokens": ["huevo"],
+                "qualifiedOffers": [{"offerKey": "offer-1"}],
+            },
+            {
+                "productEvidenceKey": "egg-toy",
+                "name": "SMASH DINO NANO EGG",
+                "brand": "Marca",
+                "gtin": None,
+                "score": 90,
+                "matchedTokens": ["egg"],
+                "qualifiedOffers": [{"offerKey": "toy-offer"}],
+            },
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        with patch("backend.service._production_android_ui_authorized", return_value=True):
+            response = service.search({
+                "latitude": "-34",
+                "longitude": "-58",
+                "radiusKm": "5",
+                "query": "eggs",
+            })
+
+        self.assertEqual(
+            [item["productEvidenceKey"] for item in response["matches"]],
+            ["egg-priced", "egg-no-offer"],
+        )
+
+    def test_service_search_prioritizes_verified_unit_prices_for_rice(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": "rice-unknown-quantity",
+                "name": "ARROZ PARA RISOTTO X KG",
+                "brand": "Marca",
+                "gtin": None,
+                "score": 120,
+                "matchedTokens": ["arroz"],
+                "qualifiedOffers": [{"offerKey": "offer-unknown", "unitPrice": None}],
+            },
+            {
+                "productEvidenceKey": "rice-known-quantity",
+                "name": "ARROZ CORTO PULIDO 400 G",
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100,
+                "matchedTokens": ["arroz"],
+                "qualifiedOffers": [{
+                    "offerKey": "offer-known",
+                    "unitPrice": {"amount": "250", "currency": "ARS", "basis": "100 g"},
+                }],
+            },
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        with patch("backend.service._production_android_ui_authorized", return_value=True):
+            response = service.search({
+                "latitude": "-34",
+                "longitude": "-58",
+                "radiusKm": "5",
+                "query": "rice",
+            })
+
+        self.assertEqual(
+            [item["productEvidenceKey"] for item in response["matches"]],
+            ["rice-known-quantity", "rice-unknown-quantity"],
+        )
+
+    def test_service_search_uses_family_base_for_explicit_form(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": "carrot-drink",
+                "name": "DISC:GRE JUICE MARKET HAPPY CARROT 500M",
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100,
+                "matchedTokens": ["carrot"],
+                "qualifiedOffers": [],
+            },
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        response = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "carrot juice",
+        })
+
+        self.assertEqual(reader.discovery_calls[0][0], "carrot")
+        self.assertEqual([item["productEvidenceKey"] for item in response["matches"]], ["carrot-drink"])
+
+    def test_service_search_uses_canonical_family_for_bilingual_gum_and_filters_form(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "name": name,
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["chicle"],
+                "qualifiedOffers": [],
+            }
+            for index, (key, name) in enumerate((
+                ("gum-sugar-free", "CHICLE CERO AZUCARES MENTA X 14 G"),
+                ("gum-filled", "CHICLE CONFIT RELL FRUTILLA X 17 G"),
+                ("gum-scent", "AROMATIZADOR CHICLE"),
+            ))
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        broad = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "chewing gum",
+        })
+        self.assertEqual(reader.discovery_calls[0][0], "chicle")
+        self.assertEqual(
+            [item["productEvidenceKey"] for item in broad["matches"]],
+            ["gum-sugar-free", "gum-filled"],
+        )
+        self.assertIsNotNone(broad["clarification"])
+
+        sugar_free = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "sugar free chewing gum",
+        })
+        self.assertEqual(reader.discovery_calls[-1][0], "chicle")
+        self.assertEqual([item["productEvidenceKey"] for item in sugar_free["matches"]], ["gum-sugar-free"])
+        self.assertIsNone(sugar_free["clarification"])
+
+    def test_service_search_uses_canonical_bowl_family_and_filters_appliances(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "name": name,
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["bowl"],
+                "qualifiedOffers": [],
+            }
+            for index, (key, name) in enumerate((
+                ("bowl-direct", "BOWL CERAMICA CAROL 20 CM"),
+                ("bowl-mixer", "BATIDORA CON BOWL BLACK DECKER 500W"),
+                ("bowl-chopper", "PICADOR SUONO BOWL VIDRIO 500W"),
+            ))
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        response = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "bowl",
+        })
+
+        self.assertEqual(reader.discovery_calls[0][0], "bowl")
+        self.assertEqual([item["productEvidenceKey"] for item in response["matches"]], ["bowl-direct"])
+        self.assertIsNone(response["clarification"])
+
+    def test_service_search_uses_canonical_appliance_family_and_filters_accessory(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "name": name,
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["cafetera"],
+                "qualifiedOffers": [],
+            }
+            for index, (key, name) in enumerate((
+                ("coffee-direct", "CAFETERA DE FILTRO ATMA 1.8L"),
+                ("coffee-context", "JARRA MEDIDORA 1LT CON EXPRIMIDOR"),
+            ))
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        response = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "coffee maker",
+        })
+
+        self.assertEqual(reader.discovery_calls[0][0], "cafetera")
+        self.assertEqual([item["productEvidenceKey"] for item in response["matches"]], ["coffee-direct"])
+        self.assertIsNone(response["clarification"])
+
+    def test_service_search_routes_bilingual_household_appliance_to_canonical_term(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "name": name,
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["aspiradora"],
+                "qualifiedOffers": [],
+            }
+            for index, (key, name) in enumerate((
+                ("vacuum-direct", "ASPIRADORA ROBOT ELECTROLUX LASER ERB62"),
+            ))
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        response = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "vacuum cleaner",
+        })
+
+        self.assertEqual(reader.discovery_calls[0][0], "aspiradora")
+        self.assertEqual([item["productEvidenceKey"] for item in response["matches"]], ["vacuum-direct"])
+        self.assertIsNone(response["clarification"])
+
+    def test_service_search_routes_cleaning_tool_family_to_canonical_term(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": "broom-direct",
+                "name": "ESCOBILLON 30CM",
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100,
+                "matchedTokens": ["escobillon"],
+                "qualifiedOffers": [],
+            }
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        response = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "floor broom",
+        })
+
+        self.assertEqual(reader.discovery_calls[0][0], "escoba")
+        self.assertEqual([item["productEvidenceKey"] for item in response["matches"]], ["broom-direct"])
+        self.assertIsNone(response["clarification"])
+
+    def test_service_search_clarifies_cleaning_cloth_forms(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "name": name,
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["pano"],
+                "qualifiedOffers": [],
+            }
+            for index, (key, name) in enumerate((
+                ("cloth-floor", "PANO DE PISO CARREFOUR ESSENTIAL NIDO DE ABEJA ESP"),
+                ("cloth-microfiber", "PANO MICROFIBRA VIRULANA EXPERT VIDRIOS"),
+                ("cloth-kitchen", "PAÑO DE COCINA ECOLOGICO MISTER TRAPO X1"),
+            ))
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        response = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "cleaning cloth",
+        })
+
+        self.assertEqual(reader.discovery_calls[0][0], "pano")
+        clarification = response["clarification"]
+        self.assertIsNotNone(clarification)
+        assert clarification is not None
+        self.assertEqual(clarification["family"], "cleaning_cloth")
+        self.assertEqual(
+            {choice["id"] for choice in clarification["choices"]},
+            {"cleaning_cloth:floor", "cleaning_cloth:microfiber", "cleaning_cloth:kitchen", "cleaning_cloth:glass"},
+        )
+
+        floor = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "pano de piso",
+        })
+        self.assertEqual(reader.discovery_calls[-1][0], "pano")
+        self.assertEqual([item["productEvidenceKey"] for item in floor["matches"]], ["cloth-floor"])
+        self.assertIsNone(floor["clarification"])
+
+    def test_service_search_exposes_new_food_family_clarification_and_filters_form(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "name": name,
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["alfajor"],
+                "qualifiedOffers": [],
+            }
+            for index, (key, name) in enumerate((
+                ("alfajor-chocolate", "ALFAJOR CHOCOLATE BLANCO X 60 G"),
+                ("alfajor-dulce", "ALFAJOR CON DULCE DE LECHE X 60 G"),
+            ))
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        broad = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "alfajor",
+        })
+        clarification = broad["clarification"]
+        self.assertIsNotNone(clarification)
+        assert clarification is not None
+        self.assertEqual(clarification["family"], "alfajor")
+        self.assertEqual(
+            {choice["id"] for choice in clarification["choices"]},
+            {"alfajor:chocolate", "alfajor:dulce_de_leche"},
+        )
+
+        chocolate = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "alfajor chocolate",
+        })
+        self.assertEqual(reader.discovery_calls[-1][0], "alfajor")
+        self.assertEqual(
+            [item["productEvidenceKey"] for item in chocolate["matches"]],
+            ["alfajor-chocolate"],
+        )
+        self.assertIsNone(chocolate["clarification"])
+
+    def test_service_search_keeps_food_eggs_and_clarifies_toy_eggs(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "name": name,
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["huevos"],
+            }
+            for index, (key, name) in enumerate((
+                ("egg-food", "HUEVOS FRESCOS X12"),
+                ("egg-dino", "SMASH DINO NANO EGG"),
+                ("egg-chocolate", "HUEVO CHOCOLATE SORPRESA"),
+            ))
+        ]
+        service = BackendService("", release_manager=manager)
+        service._reader = lambda _handle: reader
+
+        response = service.search({
+            "latitude": "-34",
+            "longitude": "-58",
+            "radiusKm": "5",
+            "query": "eggs",
+        })
+
+        self.assertEqual([item["productEvidenceKey"] for item in response["matches"]], ["egg-food"])
+        clarification = response["clarification"]
+        self.assertIsNotNone(clarification)
+        assert clarification is not None
+        self.assertEqual(
+            {choice["id"] for choice in clarification["choices"]},
+            {"egg:whole_egg", "egg:toy", "egg:chocolate"},
+        )
+
+    def test_service_search_uses_configured_taxonomy_sidecar_without_exposing_it(self) -> None:
+        manager = _StubReleaseManager()
+        reader = _StubReader()
+        reader.discovery_values = [
+            {
+                "productEvidenceKey": key,
+                "providerProductId": key,
+                "name": name,
+                "brand": "Marca",
+                "gtin": None,
+                "score": 100 - index,
+                "matchedTokens": ["huevos"],
+            }
+            for index, (key, name) in enumerate((
+                ("egg-whole", "HUEVOS FRESCOS X12"),
+                ("egg-liquid", "HUEVOS LIQUIDOS 500 ML"),
+            ))
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            taxonomy_path = Path(directory) / "product-taxonomy.jsonl.gz"
+            records = [
+                {
+                    "providerProductId": "egg-whole",
+                    "identityKeys": ["egg-whole"],
+                    "taxonomy": {
+                        "familyCandidates": [{"family": "egg", "observedForms": ["whole_egg"]}],
+                        "formCandidates": [{"key": "whole_egg", "labelEs": "Huevo entero", "labelEn": "Whole egg"}],
+                    },
+                },
+                {
+                    "providerProductId": "egg-liquid",
+                    "identityKeys": ["egg-liquid"],
+                    "taxonomy": {
+                        "familyCandidates": [{"family": "egg", "observedForms": ["liquid"]}],
+                        "formCandidates": [{"key": "liquid", "labelEs": "Líquido", "labelEn": "Liquid"}],
+                    },
+                },
+            ]
+            with gzip.open(taxonomy_path, "wt", encoding="utf-8", newline="") as handle:
+                for record in records:
+                    handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+            service = BackendService(
+                "",
+                release_manager=manager,
+                taxonomy_index_path=taxonomy_path,
+            )
+            service._reader = lambda _handle: reader
+
+            response = service.search({
+                "latitude": "-34",
+                "longitude": "-58",
+                "radiusKm": "5",
+                "query": "huevos",
+            })
+            clarification = response["clarification"]
+            self.assertIsNotNone(clarification)
+            assert clarification is not None
+            self.assertEqual({choice["id"] for choice in clarification["choices"]}, {"egg:liquid", "egg:whole_egg"})
+            self.assertTrue(all("_taxonomy" not in item for item in response["matches"]))
+
+            liquid = service.search({
+                "latitude": "-34",
+                "longitude": "-58",
+                "radiusKm": "5",
+                "query": "huevos liquid",
+            })
+            self.assertEqual([item["productEvidenceKey"] for item in liquid["matches"]], ["egg-liquid"])
+
+    def test_searchpack_uses_reviewed_bilingual_identity_aliases(self) -> None:
+        reader, manager, _output, _manifest = _reader_with_pack(fixture_records())
+        del reader
+
+        values = manager.region("ar-caba").search_many(
+            ("rice",),
+            product_limit=10,
+            candidate_bound=100_000,
+        )[0]
+
+        self.assertEqual([item["productEvidenceKey"] for item in values], ["rice"])
+        self.assertEqual(values[0]["name"], "Arroz Largo Fino 1 kg")
+
+    def test_searchpack_indexes_bilingual_observed_carrot_forms(self) -> None:
+        rows = [
+            {
+                "productEvidenceKey": "carrot-cake",
+                "name": "TORTA DE ZANAHORIA 400 G",
+                "brand": "DULCE",
+                "gtin": None,
+                "quantity": {"value": "400", "unit": "g"},
+            },
+            {
+                "productEvidenceKey": "carrot-juice",
+                "name": "JUGO DE ZANAHORIA 1 L",
+                "brand": "BEBIDA",
+                "gtin": None,
+                "quantity": {"value": "1", "unit": "l"},
+            },
+        ]
+        _reader, manager, _output, _manifest = _reader_with_pack(rows)
+
+        cake = manager.region("ar-caba").search_many(
+            ("carrot cake",), product_limit=5, candidate_bound=100_000
+        )[0]
+        juice = manager.region("ar-caba").search_many(
+            ("carrot juice",), product_limit=5, candidate_bound=100_000
+        )[0]
+
+        self.assertEqual(cake[0]["productEvidenceKey"], "carrot-cake")
+        self.assertEqual(juice[0]["productEvidenceKey"], "carrot-juice")
+
     def test_service_search_pages_deterministically_with_bounded_continuation(self) -> None:
         manager = _StubReleaseManager()
         reader = _StubReader()

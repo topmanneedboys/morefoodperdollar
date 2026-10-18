@@ -1,0 +1,1635 @@
+#!/usr/bin/env python3
+"""Build a safe, source-backed product identity lexicon.
+
+The Argentina release contains product identities, but it does not contain a
+curated synonym for every identity.  This module derives only bounded aliases
+from the canonical name and a small, reviewable bilingual vocabulary.  It
+never invents a product, price, offer, stock state, or category.  Ambiguous
+generic words (for example ``rice``) are recorded as family choices rather
+than being allowed to select one product.
+
+The generated lexicon is a derived release artifact.  It deliberately keeps
+the provider source outside Git; the reviewed aliases are consumed by the
+SearchPack build and the bounded Search clarification UI.
+"""
+
+from __future__ import annotations
+
+import argparse
+import gzip
+import hashlib
+import json
+import re
+from collections import Counter, defaultdict
+from dataclasses import dataclass
+from functools import lru_cache
+from pathlib import Path
+from typing import Any, Iterable, Iterator, Mapping, Sequence
+
+from tools.consumer_input_intelligence import normalize_text
+
+
+SCHEMA_VERSION = "valuepilot-product-identity-lexicon-v1"
+POLICY_VERSION = "valuepilot-product-identity-policy-v3"
+MAX_NAME_LENGTH = 512
+MAX_ALIAS_LENGTH = 96
+MAX_CLARIFICATION_CHOICES = 30
+
+
+@dataclass(frozen=True)
+class FamilyRule:
+    """Conservative family vocabulary used for clarification, not pricing."""
+
+    key: str
+    spanish_aliases: tuple[str, ...]
+    english_aliases: tuple[str, ...]
+    include_terms: tuple[str, ...]
+    excluded_phrases: tuple[tuple[str, ...], ...]
+    forms: Mapping[str, tuple[tuple[str, ...], tuple[str, ...]]]
+
+
+# These are deliberately small and explicit.  A product is classified only
+# when its source name contains one of these terms.  New families should be
+# added with tests and a reviewed translation, never generated from a model.
+FAMILY_RULES: tuple[FamilyRule, ...] = (
+    FamilyRule(
+        key="rice",
+        spanish_aliases=("arroz",),
+        english_aliases=("rice",),
+        include_terms=("arroz", "rice"),
+        excluded_phrases=(
+            ("arroz", "con", "leche"),
+            # Argentine retail shorthand uses ``C/LECHE`` (tokenized as
+            # ``arroz c leche``) for rice pudding.  Treat it as a prepared
+            # mention instead of a direct rice-grain product.
+            ("arroz", "c", "leche"),
+            ("arroz", "c", "l"),
+            ("postre", "de", "arroz"),
+            ("postre", "arroz"),
+            ("pudin", "de", "arroz"),
+            ("pudding", "de", "arroz"),
+            ("budin", "de", "arroz"),
+            ("harina", "de", "arroz"),
+            ("leche", "de", "arroz"),
+            ("bebida", "de", "arroz"),
+            ("jugo", "de", "arroz"),
+            ("galleta", "de", "arroz"),
+            ("galletita", "de", "arroz"),
+            ("galletas", "de", "arroz"),
+            ("galletitas", "de", "arroz"),
+            ("torta", "de", "arroz"),
+            ("barra", "arroz"),
+            ("arroz", "barra"),
+            ("alfajor", "arroz"),
+            ("arroz", "dulce"),
+            ("dulce", "de", "arroz"),
+            ("arroz", "inflado"),
+            ("cereal", "de", "arroz"),
+            ("snack", "de", "arroz"),
+            ("aritos", "de", "arroz"),
+            ("tostada", "de", "arroz"),
+            ("tostadas", "de", "arroz"),
+            ("tost", "d", "arroz"),
+            ("tost",),
+            ("oblea", "de", "arroz"),
+            ("obleas", "de", "arroz"),
+            ("tortita", "de", "arroz"),
+            ("alfajor", "de", "arroz"),
+            ("arroz", "c", "lech"),
+            ("arroz", "c", "ddl"),
+            ("arroz", "c", "dulce"),
+            ("arroz", "c", "mariscos"),
+            ("arroz", "c", "pollo"),
+            ("arroz", "c", "verduras"),
+            ("arroz", "con", "mariscos"),
+            ("arroz", "con", "pollo"),
+            ("arroz", "con", "verduras"),
+            ("arroz", "con", "remolacha"),
+            ("arroz", "box"),
+            ("menu", "box"),
+            ("arroz", "listo"),
+            ("arroz", "prep"),
+            ("arroz", "premezcla"),
+            ("croqueta", "de", "arroz"),
+            ("croquetas", "de", "arroz"),
+            ("paella", "de", "mariscos"),
+            ("fideo", "de", "arroz"),
+            ("fideos", "de", "arroz"),
+            ("pasta", "de", "arroz"),
+            ("aperit",),
+            ("cond",),
+            ("aderezo",),
+            ("salsa",),
+            ("arroz", "del", "amigo", "p", "perros"),
+            ("arroz", "p", "perros"),
+            ("arroz", "p", "gatos"),
+            ("arroz", "para", "perros"),
+            ("arroz", "para", "gatos"),
+            ("alimento", "de", "arroz"),
+            ("galleta",), ("galletita",), ("galletas",), ("galletitas",), ("harina",),
+            ("aderezo",), ("sazon",), ("condimento",), ("albondiga",), ("albondigas",),
+            ("ensalada",), ("sopa",), ("caldo",), ("relleno",), ("alimento",),
+            ("rice", "dessert"),
+            ("rice", "pudding"),
+            ("rice", "flour"),
+            ("rice", "milk"),
+            ("rice", "drink"),
+        ),
+        forms={
+            "grain": (("grano", "granos", "largo", "blanco", "integral", "parboil", "parboiled", "risotto", "sushi", "arborio", "carnaroli", "basmati", "paella", "corto"), ("grain", "grains", "long", "white", "brown", "parboil", "parboiled", "risotto", "sushi", "arborio", "carnaroli", "basmati", "paella", "short")),
+            "flour": (("harina",), ("flour",)),
+            "drink": (("bebida", "jugo", "aperit", "aperitivo", "licor"), ("drink", "juice", "aperitif", "liqueur")),
+            "prepared": (("cocido", "cocida", "preparado", "preparada", "listo", "lista", "mariscos", "pollo", "verduras", "vegetal", "menu", "box", "curry", "croqueta", "croquetas", "paella", "premezcla", "cond", "aderezo", "salsa"), ("prepared", "ready", "meal", "seafood", "chicken", "vegetable", "menu", "box", "curry", "croquette", "sauce")),
+            "pet_food": (("perros", "perro", "gatos", "gato", "mascota", "mascotas", "alimento"), ("dog", "dogs", "cat", "cats", "pet", "pets", "pet food")),
+            "dessert": (("postre", "pudin", "pudding", "budin", "galleta", "galletitas", "galletita", "galletas", "torta", "barra", "alfajor", "dulce", "inflado", "cereal", "snack", "aritos", "tostada", "tostadas", "oblea", "obleas", "tortita"), ("dessert", "pudding", "cake", "cracker", "snack", "wafer", "toast")),
+        },
+    ),
+    FamilyRule(
+        key="lychee",
+        spanish_aliases=("lichi", "litchi"),
+        english_aliases=("lychee", "litchi"),
+        include_terms=("lichi", "litchi", "lychee"),
+        excluded_phrases=(
+            ("jugo", "de", "lichi"),
+            ("jugo", "de", "litchi"),
+            ("jugo", "de", "lychee"),
+            ("nectar", "de", "lichi"),
+            ("bebida", "de", "lichi"),
+            ("jarabe", "de", "lichi"),
+            ("almibar", "de", "lichi"),
+            ("sabor", "lichi"),
+            ("sabor", "litchi"),
+            ("yogur", "de", "lichi"),
+            ("postre", "de", "lichi"),
+            ("dulce", "de", "lichi"),
+            ("juice", "lychee"),
+            ("drink", "lychee"),
+            ("candy", "lychee"),
+            ("jabon",),
+            ("shampoo",),
+            ("crema",),
+            ("perfume",),
+            ("cosmetico",),
+            ("colorissimo",),
+            ("coloracion",),
+            ("tinte",),
+            ("tintura",),
+            ("hair", "color"),
+            ("te",),
+        ),
+        forms={
+            "fresh": (("fresco", "fresca", "frescos", "frescas", "fruta"), ("fresh", "fruit")),
+            "drink": (("jugo", "nectar", "bebida", "juice", "drink"), ("juice", "nectar", "drink")),
+            "preserved": (("almibar", "jarabe", "conserva", "enlatado"), ("syrup", "canned", "preserved")),
+            "dessert": (("postre", "dulce", "caramelo"), ("dessert", "candy")),
+        },
+    ),
+    FamilyRule(
+        key="yerba_mate",
+        spanish_aliases=("yerba", "yerba mate", "mate"),
+        english_aliases=("yerba mate", "mate"),
+        # ``mate`` is also a common stationery brand (Paper Mate).  A bare
+        # token is therefore not enough evidence for the grocery family.
+        include_terms=("yerba", "yerba mate", "mate cocido", "mate cebado", "mate amargo", "mate suave"),
+        excluded_phrases=(
+            ("bebida", "de", "yerba"),
+            ("gaseosa", "de", "yerba"),
+            ("energizante", "de", "yerba"),
+            ("extracto", "de", "yerba"),
+            ("sabor", "yerba"),
+            ("te", "de", "yerba"),
+            ("jugo", "de", "yerba"),
+            ("jarabe", "de", "yerba"),
+            ("yerba", "gaseosa"),
+            ("yerba", "drink"),
+        ),
+        forms={
+            "loose_leaves": (("yerba", "mate", "hoja", "hojas"), ("yerba", "mate", "leaves")),
+            "tea_bags": (("te", "saquito", "saquitos", "filtro", "infusion"), ("tea", "teabag", "tea bags", "infusion")),
+            "drink": (("bebida", "gaseosa", "energizante", "jugo"), ("drink", "soda", "energy", "juice")),
+            "extract": (("extracto", "jarabe", "sabor"), ("extract", "syrup", "flavour", "flavor")),
+        },
+    ),
+    FamilyRule(
+        key="egg",
+        spanish_aliases=("huevo", "huevos"),
+        english_aliases=("egg", "eggs"),
+        include_terms=("huevo", "huevos", "egg", "eggs"),
+        # A bare egg query must not silently present toys, confectionery,
+        # pasta, or other products that only happen to contain the token.
+        # These markers are observed catalog-name evidence; they do not make
+        # a claim about ingredients, price, or availability.
+        excluded_phrases=(
+            ("fideo",), ("fideos",), ("pasta",), ("noodle",), ("noodles",),
+            ("fid",), ("tall",), ("tirab",), ("tirabuzon",), ("nido",),
+            ("cinta",), ("tallarin",), ("tallarines",), ("spaguetti",), ("spaghetti",),
+            ("spag",), ("vainillas",), ("galletas",), ("galletitas",),
+            ("fusilli",), ("rigatti",), ("mostachol",), ("mostacholes",), ("semolin",),
+            ("lasagna",), ("lasaña",), ("vainilla",), ("sarten",), ("sartén",),
+            ("bagel",), ("bocadito",), ("ensalada",), ("cortador",),
+            ("cortahuevos",), ("esponja",), ("organizador",), ("porta", "huevos"),
+            ("flan",), ("galleta",), ("galletita",), ("gomita",), ("goma",),
+            ("frito",), ("fried",),
+            ("chocolate",), ("cacao",), ("pascua",), ("pascuas",), ("easter",), ("sorpresa",), ("surprise",),
+            # Branded chocolate eggs in the source often omit the word
+            # chocolate and use only the confectionery brand or a milk cue.
+            ("arcor",), ("aguila",), ("bariloche",), ("kinder",), ("kindersorpresa",), ("milka",), ("milk",),
+            ("dino",), ("dinosaurio",), ("dinosaur",), ("unicornio",), ("unicorn",),
+            ("juguete",), ("juego",), ("toy",), ("playset",), ("coleccionable",), ("collectible",),
+            ("figura",), ("figure",), ("smash",), ("smashers",), ("rainbocorn",),
+            ("licor",), ("liqueur",), ("bebida",), ("drink",),
+            ("pañuelo",), ("panuelo",), ("pa�uelo",), ("pa", "uelo"), ("mani",), ("manies",), ("palmesano",),
+            ("leche",), ("queso",), ("papas",), ("fritas",), ("peluche",),
+            ("pets",), ("robo",), ("sandwich",), ("atun",), ("alioli",),
+        ),
+        forms={
+            "whole_egg": (
+                ("fresco", "fresca", "frescos", "frescas", "blanco", "blancos", "blanca", "blancas", "color", "colores", "entero", "enteros", "cascara", "cascaron", "gallina", "gallinas"),
+                ("fresh", "white", "whole", "shell", "chicken"),
+            ),
+            "liquid": (
+                ("liquido", "liquida", "liquidos", "liquidas", "pasteurizado", "pasteurizada", "clara", "claras", "yema", "yemas", "albumina"),
+                ("liquid", "pasteurized", "white", "yolk", "albumin"),
+            ),
+            "powder": (("polvo", "deshidratado", "deshidratada"), ("powder", "dehydrated")),
+            "chocolate": (("chocolate", "cacao", "pascua", "easter", "arcor", "aguila", "bariloche", "kinder", "milk"), ("chocolate", "cocoa", "easter", "kinder", "milk")),
+            "toy": (("dino", "dinosaurio", "dinosaur", "unicornio", "unicorn", "juguete", "juego", "sorpresa", "smash", "smashers", "playset", "coleccionable", "figura", "rainbocorn"), ("dino", "dinosaur", "unicorn", "toy", "surprise", "smash", "playset", "collectible", "figure")),
+            "pasta": (("fideo", "fideos", "fid", "fusi", "fusil", "fusiles", "pasta", "tall", "tallarines", "tirab", "tirabuzon", "nido", "semolin", "spag"), ("noodle", "noodles", "pasta", "spaghetti")),
+            "drink": (("bebida", "licor", "licores"), ("drink", "liqueur", "eggnog")),
+        },
+    ),
+    FamilyRule(
+        key="strawberry",
+        spanish_aliases=("frutilla", "fresa", "frutillas", "fresas"),
+        english_aliases=("strawberry", "strawberries"),
+        include_terms=("frutilla", "frutillas", "fresa", "fresas", "strawberry", "strawberries"),
+        # A bare strawberry search must keep the accepted fruit identity
+        # separate from products that use strawberry only as a flavour,
+        # scent, or cosmetic name.  These are observed-name cues, not
+        # claims about ingredients or availability.
+        excluded_phrases=(
+            ("jugo",), ("zumo",), ("bebida",), ("nectar",), ("juice",), ("drink",),
+            ("agua",), ("isotonica",), ("isotonic",), ("hidra",),
+            ("yogur",), ("yogurt",), ("leche",), ("lacteo",), ("bebible",),
+            ("bebida", "lactea"), ("actimel",), ("activia",), ("danonino",),
+            ("helado",), ("ice", "cream"), ("alfajor",), ("galleta",),
+            ("galletita",), ("torta",), ("postre",), ("dulce",), ("mermelada",),
+            ("barra",), ("cereal",), ("bocadito",), ("chupetin",), ("confitura",),
+            ("gelatina",), ("chocolate",), ("caramelo",), ("caramelos",), ("caramel",), ("chicle",), ("chicles",), ("gomita",),
+            ("almohadita",), ("almohaditas",), ("rellena",), ("rellenas",), ("rellen",),
+            ("golosina",), ("balsamo",), ("labial",), ("lip",), ("revlon",),
+            ("sabor",), ("sabor", "a"), ("aroma",), ("esencia",), ("flavor",),
+            ("acondicionador",), ("acond",), ("ac",), ("shampoo",), ("sham",), ("champu",), ("crema",),
+            ("locion",), ("lotion",), ("jabon",), ("soap",), ("cosmetico",),
+            ("cosmetics",), ("perfume",), ("detergente",), ("detergent",),
+        ),
+        forms={
+            "fresh": (
+                ("fresca", "fresco", "frescas", "frescos", "fruta", "frutas", "natural", "naturales", "congelada", "congeladas"),
+                ("fresh", "fruit", "natural", "frozen"),
+            ),
+            "drink": (("jugo", "zumo", "bebida", "nectar", "agua", "isotonica", "hidra"), ("juice", "drink", "beverage", "nectar", "water", "isotonic")),
+            "dairy": (("yogur", "yogurt", "leche", "lacteo", "bebible", "actimel", "activia", "danonino", "fermentada"), ("yogurt", "milk", "dairy", "drinkable", "fermented")),
+            "dessert": (("helado", "postre", "torta", "alfajor", "galleta", "galletita", "dulce", "mermelada", "barra", "cereal", "bocadito", "chupetin", "confitura", "gelatina", "chocolate", "caramelo", "chicle", "gomita"), ("ice cream", "dessert", "cake", "alfajor", "cookie", "candy", "jam", "bar", "cereal", "chocolate", "gum", "lollipop", "jelly")),
+            "cosmetics": (("acondicionador", "acond", "ac", "shampoo", "sham", "champu", "crema", "locion", "jabon", "cosmetico", "perfume"), ("conditioner", "shampoo", "sham", "cream", "lotion", "soap", "cosmetics", "perfume")),
+        },
+    ),
+    FamilyRule(
+        key="mango",
+        spanish_aliases=("mango", "mangos"),
+        english_aliases=("mango", "mangos"),
+        include_terms=("mango", "mangos"),
+        # ``mango`` is also the Spanish retail word for a tool handle.  Keep
+        # those rows searchable by their literal name but never present them
+        # as the fruit family.
+        excluded_phrases=(
+            ("mango", "madera"), ("mango", "plastico"), ("mango", "plastico"),
+            ("con", "mango"), ("c", "mango"), ("abrelata",), ("abrelatas",),
+            ("afeit",), ("afilador",), ("atizador",), ("batidor",), ("bifera",),
+            ("cacerola",), ("cuchara",), ("cucharon",), ("cuchilla",), ("cuchillo",),
+            ("cepillo",), ("colador",), ("cortapizza",), ("espátula",), ("espatula",),
+            ("espumadera",), ("hilo", "dental"), ("pala",), ("peine",),
+            ("utensilio",), ("herramienta",), ("jugo",), ("bebida",), ("gaseosa",),
+            ("yogur",), ("yogurt",), ("lacteo",),
+            ("helado",), ("mermelada",), ("postre",), ("caramelo",), ("gomita",),
+            ("galleta",), ("galletita",), ("galletas",), ("cookie",), ("cookies",),
+            ("aromatizador",), ("aroma",), ("desodorante",), ("difusor",),
+        ),
+        forms={
+            "fresh": (("fruta", "frutas", "fresco", "fresca", "congelado", "congelada", "cubos"), ("fruit", "fresh", "frozen", "cubes")),
+            "drink": (("jugo", "bebida", "gaseosa", "licuado", "smoothie"), ("juice", "drink", "smoothie", "beverage")),
+            "dessert": (("helado", "postre", "dulce", "mermelada", "caramelo", "gomita"), ("ice cream", "dessert", "jam", "candy", "gummy")),
+            "cosmetics": (("aromatizador", "aroma", "desodorante", "difusor"), ("air freshener", "fragrance", "deodorant", "diffuser")),
+        },
+    ),
+    FamilyRule(
+        key="carrot",
+        spanish_aliases=("zanahoria",),
+        english_aliases=("carrot",),
+        include_terms=("zanahoria", "zanahorias", "carrot", "carrots"),
+        # These are identity-form signals, not claims about what the product
+        # is made of.  They let a customer separate the vegetable from
+        # carrot-flavoured drinks, desserts, cosmetics, and supplements after
+        # the bounded discovery window has shown those forms.
+        excluded_phrases=(
+            ("jugo",),
+            ("zumo",),
+            ("bebida",),
+            ("nectar",),
+            ("juice",),
+            ("drink",),
+            ("beverage",),
+            ("postre",),
+            ("torta",),
+            ("pastel",),
+            ("budin",),
+            ("pudin",),
+            ("galleta",),
+            ("galletita",),
+            ("cake",),
+            ("dessert",),
+            ("locion",),
+            ("lotion",),
+            ("crema",),
+            ("cream",),
+            ("protector",),
+            ("sunscreen",),
+            ("cosmetico",),
+            ("cosmetics",),
+            ("maquillaje",),
+            ("makeup",),
+            ("perfume",),
+            ("jabon",),
+            ("soap",),
+            ("shampoo",),
+            ("suplemento",),
+            ("supplement",),
+            ("extracto",),
+            ("extract",),
+            ("capsula",),
+            ("capsule",),
+        ),
+        forms={
+            "vegetable": (
+                ("fresca", "fresco", "frescos", "frescas", "crudo", "cruda", "raiz", "raices", "baby", "mini", "verdura", "vegetal"),
+                ("fresh", "raw", "root", "baby", "mini", "vegetable"),
+            ),
+            "drink": (
+                ("jugo", "zumo", "bebida", "nectar"),
+                ("juice", "drink", "beverage"),
+            ),
+            "dessert": (
+                ("postre", "torta", "pastel", "budin", "pudin", "galleta", "galletita"),
+                ("cake", "dessert", "cookie"),
+            ),
+            "cosmetics": (
+                ("locion", "crema", "protector", "cosmetico", "maquillaje", "perfume", "jabon", "shampoo"),
+                ("lotion", "cream", "sunscreen", "cosmetics", "makeup", "perfume", "soap", "shampoo"),
+            ),
+            "supplement": (
+                ("suplemento", "extracto", "capsula", "polvo"),
+                ("supplement", "extract", "capsule", "powder"),
+            ),
+        },
+    ),
+)
+
+
+def _generic_family_rules() -> tuple[FamilyRule, ...]:
+    """Extend the reviewed input vocabulary to ordinary product families.
+
+    The existing input vocabulary is deliberately the source of truth for
+    these common translations.  We do not ask a model to translate 87,000
+    rows.  The specialized families with important derived-form traps above keep
+    their richer hand-reviewed rules; the remaining vocabulary gets a simple
+    observed-name family with no invented form choices.
+    """
+
+    # The catalog-wide discovery rules are kept as data so a vocabulary review
+    # can be audited and extended without adding another special-case branch to
+    # the classifier.  The older aliases file remains a compatible fallback for
+    # local trees that still carry it.
+    path = Path(__file__).with_name("data") / "discovery_family_rules.json"
+    legacy_path = Path(__file__).with_name("data") / "argentina_input_aliases.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        try:
+            data = json.loads(legacy_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            return ()
+
+    explicit_rules: list[FamilyRule] = []
+    explicit = data.get("families", {})
+    if isinstance(explicit, Mapping):
+        existing = {rule.key for rule in FAMILY_RULES}
+        for raw_key, raw_rule in sorted(explicit.items(), key=lambda item: str(item[0])):
+            if not isinstance(raw_key, str) or not isinstance(raw_rule, Mapping):
+                continue
+            key = normalize_text(raw_key, max_length=MAX_ALIAS_LENGTH).replace(" ", "_")
+            if not key or key in existing or not re.fullmatch(r"[a-z][a-z0-9_]{0,63}", key):
+                continue
+
+            def _values(name: str) -> tuple[str, ...]:
+                value = raw_rule.get(name, ())
+                if isinstance(value, str):
+                    value = (value,)
+                if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+                    return ()
+                return tuple(dict.fromkeys(str(item).strip() for item in value if str(item).strip()))
+
+            def _values_from_mapping(value: Mapping[str, Any], name: str) -> tuple[str, ...]:
+                raw = value.get(name, ())
+                if isinstance(raw, str):
+                    raw = (raw,)
+                if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes)):
+                    return ()
+                return tuple(dict.fromkeys(str(item).strip() for item in raw if str(item).strip()))
+
+            spanish = _values("es")
+            english = _values("en")
+            includes = _values("include") or tuple(dict.fromkeys(spanish + english))
+            excludes = tuple(
+                tuple(normalize_text(value, max_length=MAX_ALIAS_LENGTH).split())
+                for value in _values("exclude")
+                if normalize_text(value, max_length=MAX_ALIAS_LENGTH).strip()
+            )
+            raw_forms = raw_rule.get("forms", {})
+            forms: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {}
+            if isinstance(raw_forms, Mapping):
+                for raw_form, raw_form_value in sorted(raw_forms.items(), key=lambda item: str(item[0])):
+                    if not isinstance(raw_form, str) or not isinstance(raw_form_value, Mapping):
+                        continue
+                    form_key = normalize_text(raw_form, max_length=MAX_ALIAS_LENGTH).replace(" ", "_")
+                    if not form_key:
+                        continue
+                    forms[form_key] = (_values_from_mapping(raw_form_value, "es"), _values_from_mapping(raw_form_value, "en"))
+            explicit_rules.append(
+                FamilyRule(
+                    key=key,
+                    spanish_aliases=spanish,
+                    english_aliases=english,
+                    include_terms=includes,
+                    excluded_phrases=excludes,
+                    forms=forms,
+                )
+            )
+    # Keep the previously reviewed alias vocabulary too.  The new file adds
+    # broad observed families; it must not erase older fruit, dairy, cereal,
+    # and other reviewed senses just because they live in a separate artifact.
+    if "aliases" not in data:
+        try:
+            legacy_data = json.loads(legacy_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            legacy_data = {}
+    else:
+        legacy_data = data
+
+    aliases = legacy_data.get("aliases", {}) if isinstance(legacy_data, Mapping) else {}
+    if not isinstance(aliases, Mapping):
+        return tuple(explicit_rules)
+    product_forms = legacy_data.get("productForms", {}) if isinstance(legacy_data, Mapping) else {}
+    if not isinstance(product_forms, Mapping):
+        product_forms = {}
+    grouped: dict[str, list[str]] = defaultdict(list)
+    for phrase, target in aliases.items():
+        if isinstance(phrase, str) and isinstance(target, str) and phrase.strip() and target.strip():
+            grouped[normalize_text(target)].append(phrase)
+    reviewed = {"carrot", "egg", "rice", "lychee", "yerba mate"} | {rule.key for rule in explicit_rules} | {rule.key for rule in FAMILY_RULES}
+    english_terms = {
+        "apple", "avocado", "beans", "beef", "bread", "butter", "cheese", "chicken",
+        "chocolate", "coconut", "coffee", "egg", "mango", "milk", "orange", "peach", "pineapple",
+        "rice", "shampoo", "soap", "soft drink", "strawberry", "sugar", "tea", "toilet paper",
+        "tomato", "cookie", "cookies", "biscuit",
+    }
+    rules: list[FamilyRule] = []
+    for normalized_target, phrases in sorted(grouped.items()):
+        if normalized_target in reviewed:
+            continue
+        target = normalized_target
+        spanish = tuple(sorted({phrase for phrase in phrases if normalize_text(phrase) not in english_terms}))
+        english = tuple(sorted({phrase for phrase in phrases if normalize_text(phrase) in english_terms} | {target}))
+        if not spanish and not english:
+            continue
+        raw_forms = product_forms.get(target)
+        exclusions: tuple[tuple[str, ...], ...] = ()
+        if isinstance(raw_forms, Mapping) and isinstance(raw_forms.get("exclude"), Sequence) and not isinstance(raw_forms.get("exclude"), (str, bytes)):
+            exclusions = tuple(tuple(normalize_text(str(value), max_length=MAX_ALIAS_LENGTH).split()) for value in raw_forms["exclude"] if str(value).strip())
+        rules.append(
+            FamilyRule(
+                key=target.replace(" ", "_"),
+                spanish_aliases=spanish,
+                english_aliases=english,
+                include_terms=tuple(sorted(set(phrases) | {target})),
+                excluded_phrases=exclusions,
+                forms={},
+            )
+        )
+    # The JSON rules are the reviewed source of truth.  A legacy alias target
+    # such as ``soft drink`` normalizes to the same ``soft_drink`` key, so it
+    # must not overwrite a newer rule's exclusions or forms.
+    rules_by_key: dict[str, FamilyRule] = {rule.key: rule for rule in (*rules, *explicit_rules)}
+    extensions = data.get("extensions", {})
+    if isinstance(extensions, Mapping):
+        def _extension_values(raw_rule: Mapping[str, Any], name: str) -> tuple[str, ...]:
+            value = raw_rule.get(name, ())
+            if isinstance(value, str):
+                value = (value,)
+            if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+                return ()
+            return tuple(dict.fromkeys(str(item).strip() for item in value if str(item).strip()))
+
+        def _extension_exclusions(raw_rule: Mapping[str, Any]) -> tuple[tuple[str, ...], ...]:
+            return tuple(
+                tuple(normalize_text(value, max_length=MAX_ALIAS_LENGTH).split())
+                for value in _extension_values(raw_rule, "exclude")
+                if normalize_text(value, max_length=MAX_ALIAS_LENGTH).strip()
+            )
+
+        for raw_key, raw_rule in sorted(extensions.items(), key=lambda item: str(item[0])):
+            if not isinstance(raw_key, str) or not isinstance(raw_rule, Mapping):
+                continue
+            key = normalize_text(raw_key, max_length=MAX_ALIAS_LENGTH).replace(" ", "_")
+            prior = rules_by_key.get(key)
+            if prior is None:
+                continue
+            forms = dict(prior.forms)
+            raw_forms = raw_rule.get("forms", {})
+            if isinstance(raw_forms, Mapping):
+                for raw_form, raw_form_value in sorted(raw_forms.items(), key=lambda item: str(item[0])):
+                    if not isinstance(raw_form, str) or not isinstance(raw_form_value, Mapping):
+                        continue
+                    form_key = normalize_text(raw_form, max_length=MAX_ALIAS_LENGTH).replace(" ", "_")
+                    old_es, old_en = forms.get(form_key, ((), ()))
+                    forms[form_key] = (
+                        tuple(dict.fromkeys(old_es + _extension_values(raw_form_value, "es"))),
+                        tuple(dict.fromkeys(old_en + _extension_values(raw_form_value, "en"))),
+                    )
+            rules_by_key[key] = FamilyRule(
+                key=prior.key,
+                spanish_aliases=tuple(dict.fromkeys(prior.spanish_aliases + _extension_values(raw_rule, "es"))),
+                english_aliases=tuple(dict.fromkeys(prior.english_aliases + _extension_values(raw_rule, "en"))),
+                include_terms=tuple(dict.fromkeys(prior.include_terms + _extension_values(raw_rule, "include"))),
+                excluded_phrases=tuple(dict.fromkeys(prior.excluded_phrases + _extension_exclusions(raw_rule))),
+                forms=forms,
+            )
+    return tuple(rules_by_key.values())
+
+
+# Add the broader reviewed vocabulary after the high-risk families so the
+# specialized rules remain the only source of their derived-form policy.
+FAMILY_RULES = FAMILY_RULES + _generic_family_rules()
+
+
+# Search clarification is intentionally a small presentation projection.  It
+# is generated only when the bounded result window contains two or more
+# observed forms for one reviewed family.  The query terms below are Spanish
+# catalog terms so that a choice made from the bilingual UI remains searchable
+# by the existing Argentina SearchPack.
+_FORM_PRESENTATION: Mapping[str, Mapping[str, Mapping[str, str]]] = {
+    "rice": {
+        "grain": {
+            "labelEs": "Arroz en grano",
+            "labelEn": "Rice grains",
+            "query": "arroz largo",
+            "aliasesEs": "arroz para risotto|arroz para sushi|arroz arborio|arroz carnaroli|arroz basmati",
+            "aliasesEn": "rice for risotto|sushi rice|arborio rice|carnaroli rice|basmati rice",
+        },
+        "flour": {
+            "labelEs": "Harina de arroz",
+            "labelEn": "Rice flour",
+            "query": "harina de arroz",
+        },
+        "drink": {
+            "labelEs": "Bebida de arroz",
+            "labelEn": "Rice drink",
+            "query": "bebida de arroz",
+        },
+        "dessert": {
+            "labelEs": "Dulces o galletas de arroz",
+            "labelEn": "Rice sweets or cakes",
+            "query": "arroz dulce",
+            "aliasesEs": "galleta de arroz|galletas de arroz|galletita de arroz|galletitas de arroz|alfajor de arroz|arroz con leche|arroz c leche|arroz c l|arroz c lech",
+            "aliasesEn": "rice cake|rice cakes|rice cracker|rice crackers|rice cookie|rice cookies|rice pudding",
+        },
+        "prepared": {
+            "labelEs": "Arroz preparado o comida lista",
+            "labelEn": "Prepared rice or rice meal",
+            "query": "arroz preparado",
+            "aliasesEs": "arroz preparado|arroz listo|arroz con pollo|arroz con mariscos|arroz con verduras|arroz box|paella de arroz",
+            "aliasesEn": "prepared rice|rice meal|rice with chicken|rice with seafood|rice with vegetables|rice box",
+        },
+        "pet_food": {
+            "labelEs": "Alimento para mascotas con arroz",
+            "labelEn": "Pet food containing rice",
+            "query": "arroz para perros",
+            "aliasesEs": "arroz para perros|arroz para gatos|alimento con arroz",
+            "aliasesEn": "rice for dogs|rice for cats|pet food with rice",
+        },
+        "unspecified": {
+            "labelEs": "Arroz (presentación no especificada)",
+            "labelEn": "Rice (presentation unspecified)",
+            "query": "arroz",
+        },
+    },
+    "lychee": {
+        "fresh": {
+            "labelEs": "Lichi fresco",
+            "labelEn": "Fresh lychee",
+            "query": "lichi fresco",
+        },
+        "drink": {
+            "labelEs": "Jugo o bebida de lichi",
+            "labelEn": "Lychee juice or drink",
+            "query": "jugo de lichi",
+        },
+        "preserved": {
+            "labelEs": "Lichi en almíbar o conserva",
+            "labelEn": "Lychee in syrup or preserved",
+            "query": "lichi en almibar",
+        },
+        "dessert": {
+            "labelEs": "Dulce de lichi",
+            "labelEn": "Lychee dessert",
+            "query": "dulce de lichi",
+        },
+        "unspecified": {
+            "labelEs": "Lichi (presentación no especificada)",
+            "labelEn": "Lychee (presentation unspecified)",
+            "query": "lichi",
+        },
+    },
+    "yerba_mate": {
+        "loose_leaves": {
+            "labelEs": "Yerba mate suelta",
+            "labelEn": "Loose yerba mate",
+            "query": "yerba mate",
+        },
+        "tea_bags": {
+            "labelEs": "Yerba mate en saquitos",
+            "labelEn": "Yerba mate tea bags",
+            "query": "te de yerba mate",
+        },
+        "drink": {
+            "labelEs": "Bebida de yerba mate",
+            "labelEn": "Yerba mate drink",
+            "query": "bebida de yerba",
+        },
+        "extract": {
+            "labelEs": "Extracto de yerba mate",
+            "labelEn": "Yerba mate extract",
+            "query": "extracto de yerba",
+        },
+        "unspecified": {
+            "labelEs": "Yerba mate (presentación no especificada)",
+            "labelEn": "Yerba mate (presentation unspecified)",
+            "query": "yerba mate",
+        },
+    },
+    "egg": {
+        "whole_egg": {
+            "labelEs": "Huevo de gallina",
+            "labelEn": "Chicken eggs",
+            # This choice represents the shopper's shell-egg category, not
+            # one freshness descriptor.  A freshness-only query collapsed
+            # the live result to the single identity whose name contains
+            # ``fresco`` even though the catalog contains white, brown,
+            # colored, free-range, and other shell-egg presentations.
+            # ``huevo de gallina`` is explicit enough to select this form and
+            # suppress the clarification card, while the backend's reviewed
+            # egg-family rules still include ordinary shell-egg presentations
+            # such as white, brown, colored, and pack-size variants.
+            "query": "huevo de gallina",
+            "aliasesEs": "huevos de gallina",
+            "aliasesEn": "chicken egg",
+        },
+        "liquid": {
+            "labelEs": "Huevo líquido",
+            "labelEn": "Liquid egg",
+            "query": "huevo liquido",
+        },
+        "powder": {
+            "labelEs": "Huevo en polvo",
+            "labelEn": "Egg powder",
+            "query": "huevo en polvo",
+        },
+        "chocolate": {
+            "labelEs": "Huevo de chocolate o Pascua",
+            "labelEn": "Chocolate or Easter egg",
+            "query": "huevo chocolate",
+        },
+        "toy": {
+            "labelEs": "Huevo juguete o coleccionable",
+            "labelEn": "Toy or collectible egg",
+            "query": "huevo dino",
+        },
+        "pasta": {
+            "labelEs": "Pasta al huevo",
+            "labelEn": "Egg pasta",
+            "query": "fideos al huevo",
+        },
+        "drink": {
+            "labelEs": "Bebida o licor de huevo",
+            "labelEn": "Egg drink or liqueur",
+            "query": "bebida de huevo",
+        },
+    },
+    "strawberry": {
+        "fresh": {
+            "labelEs": "Frutilla o fresa fresca",
+            "labelEn": "Fresh strawberry",
+            "query": "frutilla fresca",
+        },
+        "drink": {
+            "labelEs": "Bebida de frutilla",
+            "labelEn": "Strawberry drink",
+            "query": "jugo de frutilla",
+        },
+        "dairy": {
+            "labelEs": "Yogur o lácteo de frutilla",
+            "labelEn": "Strawberry yogurt or dairy",
+            "query": "yogur de frutilla",
+        },
+        "dessert": {
+            "labelEs": "Postre o dulce de frutilla",
+            "labelEn": "Strawberry dessert or sweet",
+            "query": "postre de frutilla",
+        },
+        "cosmetics": {
+            "labelEs": "Cosméticos con frutilla",
+            "labelEn": "Strawberry cosmetics",
+            "query": "cosmetico de frutilla",
+        },
+    },
+    "mango": {
+        "fresh": {
+            "labelEs": "Mango como fruta",
+            "labelEn": "Mango fruit",
+            "query": "mango fruta",
+        },
+        "drink": {
+            "labelEs": "Bebida de mango",
+            "labelEn": "Mango drink",
+            "query": "jugo de mango",
+        },
+        "dessert": {
+            "labelEs": "Postre o dulce de mango",
+            "labelEn": "Mango dessert or sweet",
+            "query": "postre de mango",
+        },
+        "cosmetics": {
+            "labelEs": "Aromas o cosméticos de mango",
+            "labelEn": "Mango fragrance or cosmetics",
+            "query": "aroma de mango",
+        },
+    },
+    "carrot": {
+        "vegetable": {
+            "labelEs": "Zanahoria como verdura",
+            "labelEn": "Carrot vegetable",
+            "query": "carrot fresh",
+        },
+        "drink": {
+            "labelEs": "Jugo o bebida de zanahoria",
+            "labelEn": "Carrot juice or drink",
+            "query": "carrot juice",
+        },
+        "dessert": {
+            "labelEs": "Torta o postre de zanahoria",
+            "labelEn": "Carrot cake or dessert",
+            "query": "carrot cake",
+        },
+        "cosmetics": {
+            "labelEs": "Cosméticos con zanahoria",
+            "labelEn": "Carrot cosmetics",
+            "query": "carrot lotion",
+        },
+        "supplement": {
+            "labelEs": "Suplemento o extracto de zanahoria",
+            "labelEn": "Carrot supplement or extract",
+            "query": "carrot supplement",
+        },
+        "unspecified": {
+            "labelEs": "Zanahoria (presentación no especificada)",
+            "labelEn": "Carrot (presentation unspecified)",
+            "query": "carrot",
+        },
+    },
+    "alfajor": {
+        "chocolate": {
+            "labelEs": "Alfajor de chocolate",
+            "labelEn": "Chocolate alfajor",
+            "query": "alfajor chocolate",
+        },
+        "dulce_de_leche": {
+            "labelEs": "Alfajor con dulce de leche",
+            "labelEn": "Alfajor with dulce de leche",
+            "query": "alfajor dulce de leche",
+        },
+        "fruit": {
+            "labelEs": "Alfajor de fruta",
+            "labelEn": "Fruit alfajor",
+            "query": "alfajor frutilla",
+        },
+        "peanut": {
+            "labelEs": "Alfajor de maní",
+            "labelEn": "Peanut alfajor",
+            "query": "alfajor de mani",
+        },
+        "rice": {
+            "labelEs": "Alfajor de arroz",
+            "labelEn": "Rice alfajor",
+            "query": "alfajor de arroz",
+        },
+        "gluten_free": {
+            "labelEs": "Alfajor sin TACC o gluten",
+            "labelEn": "Gluten-free alfajor",
+            "query": "alfajor sin tacc",
+        },
+    },
+    "flour": {
+        "wheat": {
+            "labelEs": "Harina de trigo",
+            "labelEn": "Wheat flour",
+            "query": "harina de trigo",
+        },
+        "corn": {
+            "labelEs": "Harina de maíz",
+            "labelEn": "Corn flour",
+            "query": "harina de maiz",
+        },
+        "rice": {
+            "labelEs": "Harina de arroz",
+            "labelEn": "Rice flour",
+            "query": "harina de arroz",
+        },
+        "legume": {
+            "labelEs": "Harina de legumbres",
+            "labelEn": "Legume flour",
+            "query": "harina de garbanzo",
+        },
+        "nut": {
+            "labelEs": "Harina de frutos secos",
+            "labelEn": "Nut flour",
+            "query": "harina de almendras",
+        },
+        "oat": {
+            "labelEs": "Harina de avena",
+            "labelEn": "Oat flour",
+            "query": "harina de avena",
+        },
+    },
+    "peanut": {
+        "whole": {
+            "labelEs": "Maní entero, tostado o salado",
+            "labelEn": "Whole, roasted or salted peanuts",
+            "query": "mani tostado",
+        },
+        "butter": {
+            "labelEs": "Pasta o manteca de maní",
+            "labelEn": "Peanut butter or spread",
+            "query": "pasta de mani",
+        },
+        "oil": {
+            "labelEs": "Aceite de maní",
+            "labelEn": "Peanut oil",
+            "query": "aceite de mani",
+        },
+        "flour": {
+            "labelEs": "Harina de maní",
+            "labelEn": "Peanut flour",
+            "query": "harina de mani",
+        },
+        "snack": {
+            "labelEs": "Dulces, barras o chocolates con maní",
+            "labelEn": "Peanut sweets, bars or chocolate",
+            "query": "chocolate con mani",
+        },
+    },
+    "chewing_gum": {
+        "sugar_free": {
+            "labelEs": "Chicle sin azúcar",
+            "labelEn": "Sugar-free chewing gum",
+            "query": "chicle sin azucar",
+        },
+        "filled": {
+            "labelEs": "Chicle relleno",
+            "labelEn": "Filled chewing gum",
+            "query": "chicle relleno",
+        },
+    },
+    "cleaning_cloth": {
+        "floor": {
+            "labelEs": "Paños para piso",
+            "labelEn": "Floor cloths",
+            "query": "pano de piso",
+        },
+        "microfiber": {
+            "labelEs": "Paños de microfibra",
+            "labelEn": "Microfiber cloths",
+            "query": "pano microfibra",
+        },
+        "kitchen": {
+            "labelEs": "Paños de cocina",
+            "labelEn": "Kitchen cloths",
+            "query": "pano de cocina",
+        },
+        "multiuse": {
+            "labelEs": "Paños multiuso",
+            "labelEn": "Multi-purpose cloths",
+            "query": "pano multiuso",
+        },
+        "glass": {
+            "labelEs": "Paños para vidrios",
+            "labelEn": "Glass-cleaning cloths",
+            "query": "pano vidrios",
+        },
+        "bathroom": {
+            "labelEs": "Paños para baño",
+            "labelEn": "Bathroom cloths",
+            "query": "pano bano",
+        },
+    },
+}
+
+# These forms describe the direct family item itself.  Derived presentations
+# such as drinks, sweets, and cosmetics are intentionally allowed for their
+# own choices, but a cosmetic name containing ``fresco`` must not satisfy a
+# fresh-fruit choice.
+_DIRECT_FORM_KEYS = frozenset({
+    "grain", "fresh", "vegetable", "whole_egg", "loose_leaves",
+    "whole", "wheat", "corn", "rice", "legume", "nut", "oat",
+    "floor", "microfiber", "kitchen", "multiuse", "glass", "bathroom",
+})
+
+# These reviewed families have a strict bare-query projection.  It keeps
+# derived mentions (for example scent products containing ``chicle`` or
+# depilatory products containing ``crema facial``) out of the main result
+# set while leaving those rows reachable through their literal names.
+_DIRECT_QUERY_FAMILIES = frozenset({
+    "pork", "lamb", "turkey", "beef",
+    "wafer", "chewing_gum", "raticide", "facial_cream", "bowl",
+    "coffee_maker", "air_fryer", "toaster", "sandwich_maker", "juicer",
+    "blender", "microwave", "heater", "water_heater", "fan", "vacuum_cleaner",
+    "broom", "mop", "duster",
+    "strawberry", "mango",
+    "cleaning_cloth",
+})
+
+
+def _query_matches_family(query: str, rule: FamilyRule) -> bool:
+    tokens = _tokens(query)
+    return bool(tokens) and _contains_any(tokens, rule.include_terms)
+
+
+def _select_family_rule(query: str) -> FamilyRule | None:
+    """Choose the family whose evidence best explains the complete query.
+
+    A form-qualified query often contains another valid family word.  For
+    example, ``alfajor chocolate`` matches both the generic chocolate family
+    and the reviewed alfajor family.  Prefer a rule that has an observed form
+    in the same query, then prefer the longest family phrase.  This keeps
+    generic words from stealing a more specific clarification path.
+    """
+
+    tokens = _tokens(query)
+    if not tokens:
+        return None
+    candidates: list[tuple[tuple[int, int, int, int], FamilyRule]] = []
+    for index, rule in enumerate(FAMILY_RULES):
+        family_lengths = [
+            len(_tokens(term))
+            for term in rule.include_terms
+            if _contains_sequence(tokens, _tokens(term))
+        ]
+        if not family_lengths:
+            continue
+        form_lengths = [
+            len(_tokens(term))
+            for spanish_terms, english_terms in rule.forms.values()
+            for term in (*spanish_terms, *english_terms)
+            if _contains_sequence(tokens, _tokens(term))
+            and not set(_tokens(term)).intersection(
+                token
+                for family_term in (*rule.spanish_aliases, *rule.english_aliases, *rule.include_terms)
+                for token in _tokens(family_term)
+            )
+        ]
+        score = (
+            int(bool(form_lengths)),
+            max(family_lengths),
+            max(form_lengths, default=0),
+            -index,
+        )
+        candidates.append((score, rule))
+    if not candidates:
+        return None
+    return max(candidates, key=lambda item: item[0])[1]
+
+
+def family_query_key(query: str) -> str | None:
+    """Return the reviewed family selected by a query, when one is present."""
+
+    normalized_query = " ".join(str(query or "").split())
+    if not normalized_query:
+        return None
+    selected_rule = _select_family_rule(normalized_query)
+    return selected_rule.key if selected_rule is not None else None
+
+
+def build_family_clarification(
+    query: str,
+    candidates: Iterable[Mapping[str, Any]],
+) -> dict[str, Any] | None:
+    """Return an observed-form clarification for a bounded Search result set.
+
+    This helper never resolves a product and never adds catalog rows.  It only
+    groups the names already returned by Search, then offers Spanish query
+    refinements with English labels for the UI.  Invalid or incomplete rows are
+    ignored so a malformed optional hint cannot make a valid search fail.
+    """
+
+    normalized_query = " ".join(str(query or "").split())
+    if not normalized_query:
+        return None
+    selected_rule = _select_family_rule(normalized_query)
+    if selected_rule is None or selected_rule.key not in _FORM_PRESENTATION:
+        return None
+
+    evidence: Counter[str] = Counter()
+    for candidate in candidates:
+        if not isinstance(candidate, Mapping):
+            continue
+        try:
+            identity = derive_identity_record(candidate)
+        except (TypeError, ValueError):
+            continue
+        for family in identity.get("familyCandidates", ()):
+            if not isinstance(family, Mapping) or family.get("family") != selected_rule.key:
+                continue
+            for form in family.get("observedForms", ()):
+                if isinstance(form, str) and form in _FORM_PRESENTATION[selected_rule.key]:
+                    evidence[form] += 1
+
+    # A clarification is useful only when it can separate at least two
+    # observed forms.  Keep the order stable and cap it for a compact UI.
+    # Keep the curated presentation order rather than sorting by the internal
+    # form key.  This puts the ordinary food form first while remaining fully
+    # deterministic for every family.
+    forms = [form for form in _FORM_PRESENTATION[selected_rule.key] if evidence[form] > 0]
+    if len(forms) < 2:
+        return None
+    choices = []
+    for form in forms[:MAX_CLARIFICATION_CHOICES]:
+        copy = _FORM_PRESENTATION[selected_rule.key][form]
+        choices.append(
+            {
+                "id": f"{selected_rule.key}:{form}",
+                "label": copy["labelEs"],
+                "labelEn": copy["labelEn"],
+                "query": copy["query"],
+            }
+        )
+    return {
+        "code": "PRODUCT_FAMILY_CLARIFICATION",
+        "family": selected_rule.key,
+        "message": "Elegí el tipo de producto para afinar la búsqueda.",
+        "messageEn": "Choose a product type to refine the search.",
+        "choices": choices,
+        "evidence": "OBSERVED_CATALOG_NAMES",
+    }
+
+
+# Only high-confidence, common inflection pairs are generated.  Generating a
+# suffix-stripped alias for every Spanish word would turn brand and package
+# text into false product identities.
+SAFE_INFLECTIONS: Mapping[str, tuple[str, ...]] = {
+    "huevos": ("huevo",),
+    "fideos": ("fideo",),
+    "galletitas": ("galletita", "galleta"),
+    "galletas": ("galleta",),
+    "yogures": ("yogur",),
+    "gaseosas": ("gaseosa",),
+    "tomates": ("tomate",),
+    "manzanas": ("manzana",),
+    "naranjas": ("naranja",),
+    "higienicos": ("higienico",),
+    "panales": ("panal",),
+}
+
+# ``cream``/``crema`` is a deliberately ambiguous retail word.  It appears
+# in cosmetics, ice cream, candy fillings and soups.  A cosmetic form may use
+# it when the rest of the name is neutral (or the name carries a stronger
+# personal-care cue), but a food head must not become a cosmetic merely because
+# it contains ``crema``.  These are context guards for observed forms, not
+# claims about ingredients or product composition.
+_COSMETIC_FOOD_CONTEXTS: tuple[tuple[str, ...], ...] = (
+    ("sopa",), ("soup",), ("flan",), ("helado",), ("ice", "cream"),
+    ("yogur",), ("yogurt",), ("leche",), ("jugo",), ("juice",),
+    ("bebida",), ("drink",), ("gaseosa",), ("soda",), ("tequila",),
+    ("vino",), ("wine",), ("licor",), ("liqueur",), ("cerveza",),
+    ("beer",), ("alfajor",), ("galleta",), ("galletita",), ("cookie",),
+    ("bombon",), ("bonbon",), ("chocolate",), ("caramelo",),
+    ("caramel",), ("golosina",), ("candy",), ("chicle",), ("gum",),
+    ("pastilla",), ("pastillas",), ("almohadita",), ("almohaditas",), ("oblea",), ("obleas",), ("wafer",), ("torta",), ("cake",),
+    ("tic", "tac"), ("sin", "parar"), ("goma",), ("golosina",), ("candy",),
+    ("postre",), ("dessert",), ("dulce",), ("sweet",), ("mermelada",),
+    ("jam",), ("barra",), ("bar",), ("cereal",), ("salsa",), ("sauce",),
+    ("fideo",), ("fideos",), ("pasta",),
+)
+_COSMETIC_ANCHORS: frozenset[str] = frozenset(
+    {
+        "acondicionador", "conditioner", "shampoo", "sham", "champu",
+        "locion", "lotion", "protector", "sunscreen", "cosmetico",
+        "cosmetics", "maquillaje", "makeup", "perfume", "jabon", "soap",
+        "aromatizador", "air", "freshener", "difusor", "dental", "facial",
+        "corporal", "body", "antiage", "antiedad", "desodorante", "deodorant",
+    }
+)
+
+_FORM_CONTEXT_EXCLUSIONS: Mapping[tuple[str, str], tuple[tuple[str, ...], ...]] = {
+    # Rice grain is a physical product form. Toasts, wafers, crackers and
+    # prepared sweets that merely contain rice belong to the corresponding
+    # derived form (or remain literal-only), never to the grain facet.
+    ("rice", "grain"): (
+        ("tostada",), ("tostadas",), ("tost",), ("oblea",), ("obleas",), ("wafer",),
+        ("galleta",), ("galletas",), ("galletita",), ("galletitas",),
+        ("alfajor",), ("barra",), ("snack",), ("cereal",), ("postre",),
+        ("dessert",), ("torta",), ("cake",), ("dulce",), ("harina",),
+        ("flour",), ("bebida",), ("drink",), ("jugo",), ("juice",),
+    ),
+    # Abbreviated Argentine pasta names frequently contain only ``FID`` or
+    # ``TALL`` plus ``HUEVO``. They must not fall through to shell eggs.
+    ("egg", "whole_egg"): (
+            ("fideo",), ("fideos",), ("fid",), ("fusi",), ("fusil",), ("fusiles",), ("pasta",), ("tallarin",),
+        ("tallarines",), ("tall",), ("tirab",), ("tirabuzon",), ("nido",),
+        ("noodle",), ("noodles",), ("spag",), ("spaghetti",), ("semolin",),
+        ("bagel",), ("galleta",), ("galletita",), ("chocolate",), ("juguete",),
+    ),
+}
+
+# Some Argentine abbreviations express a presentation as a phrase rather
+# than a standalone form word.  Keep these inclusions explicit so ``arroz
+# c/leche`` reaches the rice-dessert choice without treating every product
+# that mentions milk as a dessert.
+_FORM_CONTEXT_INCLUSIONS: Mapping[tuple[str, str], tuple[tuple[str, ...], ...]] = {
+    ("rice", "dessert"): (
+        ("arroz", "con", "leche"),
+        ("arroz", "c", "leche"),
+        ("arroz", "c", "l"),
+        ("arroz", "c", "lech"),
+        ("arroz", "c", "ddl"),
+        ("arroz", "c", "dulce"),
+    ),
+}
+
+
+@lru_cache(maxsize=16384)
+def _tokens(value: str) -> tuple[str, ...]:
+    normalized = normalize_text(value, max_length=MAX_NAME_LENGTH)
+    # Catalog names use punctuation as a compact separator (``FEM.SIEMPRE``,
+    # ``HIG.``, ``C/ALAS``). Split it so reviewed exclusions and aliases see
+    # the same words as the customer, while retaining Unicode letters and
+    # digits for Argentine product names.
+    return tuple(re.findall(r"[^\W_]+", normalized, flags=re.UNICODE))
+
+
+def _contains_sequence(tokens: Sequence[str], sequence: Sequence[str]) -> bool:
+    if not sequence or len(sequence) > len(tokens):
+        return False
+    size = len(sequence)
+    return any(tuple(tokens[index : index + size]) == tuple(sequence) for index in range(len(tokens) - size + 1))
+
+
+def _contains_any(tokens: Sequence[str], values: Iterable[str]) -> bool:
+    return any(_contains_sequence(tokens, _tokens(value)) for value in values)
+
+
+def family_query_form(query: str) -> tuple[str, str] | None:
+    """Return one explicit family/form refinement present in a query.
+
+    A bare family query (``carrot`` or ``zanahoria``) remains broad so the
+    clarification card can show the observed choices.  A choice query such as
+    ``carrot juice`` has one observed form and can therefore be used as a
+    conservative identity-only result filter.
+    """
+
+    normalized_query = " ".join(str(query or "").split())
+    if not normalized_query:
+        return None
+    selected_rule = _select_family_rule(normalized_query)
+    if selected_rule is None or selected_rule.key not in _FORM_PRESENTATION:
+        return None
+    tokens = _tokens(normalized_query)
+    # Family words such as ``yerba`` and ``mate`` are also present in the
+    # loose-leaf form vocabulary.  They identify the family, but they do not
+    # identify that presentation.  Ignore those generic aliases while
+    # detecting an explicit form so a query such as ``te de yerba mate``
+    # selects tea bags instead of being treated as an unfiltered family
+    # search.
+    generic_family_terms = {
+        token
+        for term in (*selected_rule.spanish_aliases, *selected_rule.english_aliases, *selected_rule.include_terms)
+        for token in _tokens(term)
+        if token
+    }
+    observed = [
+        form
+        for form, (spanish_terms, english_terms) in selected_rule.forms.items()
+        if (
+            _contains_any(
+                tokens,
+                tuple(
+                    term
+                    for term in (*spanish_terms, *english_terms)
+                    if not set(_tokens(term)).intersection(generic_family_terms)
+                ),
+            )
+            or any(
+                _contains_sequence(tokens, phrase)
+                for phrase in _FORM_CONTEXT_INCLUSIONS.get((selected_rule.key, form), ())
+            )
+        )
+    ]
+    if len(observed) != 1:
+        return None
+    return selected_rule.key, observed[0]
+
+
+def family_selection_form(query: str, selection_id: str | None) -> tuple[str, str] | None:
+    """Resolve a stable clarification predicate for the requested family."""
+
+    if not isinstance(selection_id, str) or not selection_id.strip():
+        return None
+    parts = selection_id.strip().split(":")
+    if len(parts) != 2 or not all(parts):
+        return None
+    selected_rule = _select_family_rule(" ".join(str(query or "").split()))
+    if selected_rule is None or selected_rule.key != parts[0] or parts[1] not in selected_rule.forms:
+        return None
+    return selected_rule.key, parts[1]
+
+
+def filter_family_candidates(
+    query: str,
+    candidates: Iterable[Mapping[str, Any]],
+    *,
+    selection_id: str | None = None,
+) -> tuple[Mapping[str, Any], ...]:
+    """Keep candidates matching an explicit observed family form.
+
+    The filter is fail-open when no candidate can be classified.  That keeps
+    an incomplete or newly added source row searchable while preventing a
+    known ``carrot juice`` refinement from retaining a classified carrot
+    lotion or cake in the same bounded result window.
+    """
+
+    values = tuple(candidate for candidate in candidates if isinstance(candidate, Mapping))
+    normalized_query = " ".join(str(query or "").split())
+    selected_rule = _select_family_rule(normalized_query)
+    context = family_selection_form(normalized_query, selection_id) if selection_id is not None else family_query_form(normalized_query)
+    if context is None:
+        # Bare reviewed-family queries should show the direct family products
+        # first.  Derived rows (rice bars, lychee soap, carrot lotion, toy
+        # eggs, and similar products) remain available to the clarification
+        # card, but must not silently take over the main result table.
+        if selected_rule is not None and (
+            selected_rule.key in _FORM_PRESENTATION
+            or selected_rule.key in _DIRECT_QUERY_FAMILIES
+        ):
+            direct: list[Mapping[str, Any]] = []
+            for candidate in values:
+                try:
+                    identity = derive_identity_record(candidate)
+                except (TypeError, ValueError):
+                    continue
+                if any(
+                    isinstance(family, Mapping)
+                    and family.get("family") == selected_rule.key
+                    and family.get("role") == "DIRECT"
+                    for family in identity.get("familyCandidates", ())
+                ):
+                    direct.append(candidate)
+            return tuple(direct)
+        return values
+    family_key, form = context
+    filtered: list[Mapping[str, Any]] = []
+    for candidate in values:
+        try:
+            identity = derive_identity_record(candidate)
+        except (TypeError, ValueError):
+            continue
+        if any(
+            isinstance(family, Mapping)
+            and family.get("family") == family_key
+            and form in family.get("observedForms", ())
+            and (
+                form not in _DIRECT_FORM_KEYS
+                or family.get("role") == "DIRECT"
+            )
+            for family in identity.get("familyCandidates", ())
+        ):
+            filtered.append(candidate)
+    if filtered:
+        return tuple(filtered)
+    # Explicit reviewed-family choices are safety refinements.  Returning
+    # unrelated lexical partial matches (for example ordinary juice for a
+    # lychee-drink choice) is worse than an empty result when the bounded
+    # source window contains no observed match for that form.
+    if family_key in _FORM_PRESENTATION:
+        return ()
+    return values
+
+
+def _alias(value: str, language: str, provenance: str, *, confidence: str = "HIGH") -> dict[str, str]:
+    return {
+        "value": value,
+        "language": language,
+        "provenance": provenance,
+        "confidence": confidence,
+    }
+
+
+def _add_alias(aliases: dict[str, dict[str, str]], value: str, language: str, provenance: str, *, confidence: str = "HIGH") -> None:
+    normalized = normalize_text(value, max_length=MAX_ALIAS_LENGTH)
+    if not normalized:
+        return
+    key = f"{language}:{normalized}"
+    if key not in aliases:
+        aliases[key] = _alias(value.strip(), language, provenance, confidence=confidence)
+
+
+def _family_observation(tokens: tuple[str, ...], rule: FamilyRule) -> tuple[bool, bool, tuple[str, ...], tuple[str, ...]]:
+    """Return (matched, derived, forms, matched include terms)."""
+
+    include = tuple(term for term in rule.include_terms if _contains_sequence(tokens, _tokens(term)))
+    if not include:
+        return False, False, (), ()
+    derived = any(_contains_sequence(tokens, phrase) for phrase in rule.excluded_phrases)
+    forms: list[str] = []
+    for form_key, (spanish_terms, english_terms) in rule.forms.items():
+        has_form_terms = _contains_any(tokens, spanish_terms) or _contains_any(tokens, english_terms)
+        has_form_context = any(
+            _contains_sequence(tokens, phrase)
+            for phrase in _FORM_CONTEXT_INCLUSIONS.get((rule.key, form_key), ())
+        )
+        if not (has_form_terms or has_form_context):
+            continue
+        if any(_contains_sequence(tokens, phrase) for phrase in _FORM_CONTEXT_EXCLUSIONS.get((rule.key, form_key), ())):
+            continue
+        if form_key == "cosmetics":
+            has_food_context = any(_contains_sequence(tokens, phrase) for phrase in _COSMETIC_FOOD_CONTEXTS)
+            has_cosmetic_anchor = bool(set(tokens).intersection(_COSMETIC_ANCHORS))
+            if has_food_context and not has_cosmetic_anchor:
+                continue
+        forms.append(form_key)
+    if not forms:
+        # A matched egg without a derived marker is the ordinary whole-egg
+        # presentation.  This keeps a plain ``eggs`` search useful while
+        # retaining separate observed choices for toys and other forms.
+        shell_egg_excluded = any(
+            _contains_sequence(tokens, phrase)
+            for phrase in _FORM_CONTEXT_EXCLUSIONS.get((rule.key, "whole_egg"), ())
+        )
+        forms.append("whole_egg" if rule.key == "egg" and not derived and not shell_egg_excluded else "unspecified")
+    return True, derived, tuple(sorted(set(forms))), tuple(sorted(set(include)))
+
+
+def derive_identity_record(source: Mapping[str, Any]) -> dict[str, Any]:
+    """Build one identity-only record from a qualified product row."""
+
+    key = source.get("productEvidenceKey")
+    name = source.get("name")
+    if not isinstance(key, str) or not key.strip() or len(key) > 256:
+        raise ValueError("productEvidenceKey is invalid")
+    if not isinstance(name, str) or not name.strip() or len(name) > MAX_NAME_LENGTH:
+        raise ValueError("product name is invalid")
+    clean_name = " ".join(name.split())
+    tokens = _tokens(clean_name)
+    aliases: dict[str, dict[str, str]] = {}
+    # The normalized canonical phrase is useful for accent and punctuation
+    # tolerance, but it is tagged as source-derived rather than translated.
+    normalized_name = normalize_text(clean_name, max_length=MAX_NAME_LENGTH)
+    if normalized_name != clean_name.casefold():
+        _add_alias(aliases, normalized_name, "es", "SOURCE_NORMALIZED")
+    for token in tokens:
+        for singular in SAFE_INFLECTIONS.get(token, ()):
+            _add_alias(aliases, singular, "es", "SAFE_INFLECTION")
+
+    family_candidates: list[dict[str, Any]] = []
+    for rule in FAMILY_RULES:
+        matched, derived, forms, matched_terms = _family_observation(tokens, rule)
+        if not matched:
+            continue
+        if not derived:
+            for value in rule.spanish_aliases:
+                _add_alias(aliases, value, "es", "CURATED_BILINGUAL")
+            for value in rule.english_aliases:
+                _add_alias(aliases, value, "en", "CURATED_BILINGUAL")
+        # Preserve a bilingual alias for the observed presentation.  A
+        # derived row intentionally does not receive the bare family alias,
+        # but it must remain reachable when the customer chooses that form
+        # from the clarification card (for example ``carrot cake``).
+        for form in forms:
+            form_terms = rule.forms.get(form)
+            if not form_terms:
+                continue
+            spanish_terms, english_terms = form_terms
+            if spanish_terms and rule.spanish_aliases:
+                if form in {"vegetable", "fresh", "grain", "loose_leaves"}:
+                    spanish_value = f"{rule.spanish_aliases[0]} {spanish_terms[0]}"
+                else:
+                    spanish_value = f"{spanish_terms[0]} de {rule.spanish_aliases[0]}"
+                _add_alias(aliases, spanish_value, "es", "CURATED_FORM")
+            if english_terms and rule.english_aliases:
+                _add_alias(aliases, f"{rule.english_aliases[0]} {english_terms[0]}", "en", "CURATED_FORM")
+        family_candidates.append(
+            {
+                "family": rule.key,
+                "role": "DERIVED" if derived else "DIRECT",
+                "matchedTerms": list(matched_terms),
+                "observedForms": list(forms),
+            }
+        )
+
+    # A product may appear in more than one family (for example a mate drink
+    # also contains the word yerba).  Keep all evidence and let the search/UI
+    # layer clarify instead of silently choosing one.
+    family_candidates.sort(key=lambda item: (item["family"], item["role"], item["matchedTerms"]))
+    alias_values = sorted(aliases.values(), key=lambda item: (normalize_text(item["value"]), item["language"], item["provenance"]))
+    result: dict[str, Any] = {
+        "productEvidenceKey": key,
+        "name": clean_name,
+        "brand": source.get("brand") if isinstance(source.get("brand"), str) else None,
+        "gtin": source.get("gtin") if isinstance(source.get("gtin"), str) else None,
+        "quantity": dict(source["quantity"]) if isinstance(source.get("quantity"), Mapping) else None,
+        "familyCandidates": family_candidates,
+        "aliases": alias_values,
+    }
+    if not family_candidates:
+        result["classification"] = "UNCLASSIFIED"
+    elif len(family_candidates) == 1:
+        result["classification"] = family_candidates[0]["role"]
+    else:
+        result["classification"] = "MULTIPLE_FAMILIES"
+    return result
+
+
+def _open_text(path: Path, mode: str):
+    if path.suffix == ".gz":
+        return gzip.open(path, mode + "t", encoding="utf-8", newline="")
+    return path.open(mode + "t", encoding="utf-8", newline="")
+
+
+def _iter_jsonl(path: Path) -> Iterator[tuple[int, Mapping[str, Any]]]:
+    try:
+        with _open_text(path, "r") as handle:
+            for line_number, line in enumerate(handle, 1):
+                if not line.strip():
+                    continue
+                try:
+                    value = json.loads(line)
+                except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                    raise ValueError(f"source line {line_number} is not valid JSON") from exc
+                if not isinstance(value, Mapping):
+                    raise ValueError(f"source line {line_number} is not an object")
+                yield line_number, value
+    except OSError as exc:
+        raise ValueError(f"could not read source: {path}") from exc
+
+
+def _canonical_json(value: Mapping[str, Any]) -> str:
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _open_output(path: Path):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.suffix == ".gz":
+        # mtime=0 keeps the derived artifact reproducible across builds.
+        return gzip.GzipFile(filename=str(path), mode="wb", mtime=0)
+    return path.open("wb")
+
+
+def build_identity_lexicon(source_path: Path | str, output_path: Path | str, manifest_path: Path | str | None = None) -> dict[str, Any]:
+    """Stream a qualified products file into a deterministic identity lexicon."""
+
+    source = Path(source_path).resolve()
+    output = Path(output_path).resolve()
+    manifest_output = Path(manifest_path).resolve() if manifest_path else output.with_suffix(output.suffix + ".manifest.json")
+    if not source.is_file():
+        raise ValueError(f"source does not exist: {source}")
+    if source == output or source == manifest_output:
+        raise ValueError("output must be separate from source")
+
+    count = 0
+    classifications = Counter()
+    family_counts: dict[str, Counter[str]] = defaultdict(Counter)
+    alias_usage: Counter[tuple[str, str]] = Counter()
+    alias_products: dict[tuple[str, str], set[str]] = defaultdict(set)
+    seen_keys: set[str] = set()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with _open_output(output) as raw_output:
+        for line_number, source_record in _iter_jsonl(source):
+            try:
+                identity = derive_identity_record(source_record)
+            except ValueError as exc:
+                raise ValueError(f"source line {line_number}: {exc}") from exc
+            key = identity["productEvidenceKey"]
+            if key in seen_keys:
+                raise ValueError(f"source line {line_number}: duplicate productEvidenceKey {key}")
+            seen_keys.add(key)
+            raw_output.write((_canonical_json(identity) + "\n").encode("utf-8"))
+            count += 1
+            classifications[str(identity["classification"])] += 1
+            for family in identity["familyCandidates"]:
+                family_counts[family["family"]][family["role"]] += 1
+                for form in family["observedForms"]:
+                    family_counts[family["family"]][f"form:{form}"] += 1
+            for alias in identity["aliases"]:
+                alias_key = (normalize_text(alias["value"], max_length=MAX_ALIAS_LENGTH), alias["language"])
+                alias_usage[alias_key] += 1
+                alias_products[alias_key].add(key)
+
+    ambiguous_aliases = sum(1 for key, products in alias_products.items() if len(products) > 1 and alias_usage[key] > 1)
+    family_summary = {
+        family: {
+            "productCount": sum(value for label, value in counts.items() if label in {"DIRECT", "DERIVED"}),
+            "directCount": counts.get("DIRECT", 0),
+            "derivedCount": counts.get("DERIVED", 0),
+            "observedForms": {label.removeprefix("form:"): value for label, value in sorted(counts.items()) if label.startswith("form:")},
+        }
+        for family, counts in sorted(family_counts.items())
+    }
+    manifest = {
+        "schemaVersion": SCHEMA_VERSION,
+        "policyVersion": POLICY_VERSION,
+        "source": {
+            "path": str(source),
+            "sha256": _sha256_file(source),
+            "recordCount": count,
+        },
+        "output": {
+            "path": str(output),
+            "sha256": _sha256_file(output),
+            "bytes": output.stat().st_size,
+        },
+        "identityCounts": {
+            "records": count,
+            "classifications": dict(sorted(classifications.items())),
+            "distinctAliases": len(alias_usage),
+            "ambiguousAliases": ambiguous_aliases,
+        },
+        "families": family_summary,
+        "safety": {
+            "prices": False,
+            "offers": False,
+            "stock": False,
+            "availability": False,
+            "autoResolutionForAmbiguousAliases": False,
+            "providerAttribution": "Precios Claros - Base SEPA; datos.gob.ar",
+        },
+    }
+    manifest_output.parent.mkdir(parents=True, exist_ok=True)
+    manifest_output.write_text(json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return manifest
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--input", required=True, type=Path, help="qualified products.jsonl or products.jsonl.gz")
+    parser.add_argument("--output", required=True, type=Path, help="derived identity JSONL or JSONL.GZ")
+    parser.add_argument("--manifest", type=Path, help="manifest path (defaults to <output>.manifest.json)")
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = _parser().parse_args(argv)
+    manifest = build_identity_lexicon(args.input, args.output, args.manifest)
+    print(json.dumps(manifest, ensure_ascii=False, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+
+
+__all__ = [
+    "FAMILY_RULES",
+    "POLICY_VERSION",
+    "SCHEMA_VERSION",
+    "build_family_clarification",
+    "build_identity_lexicon",
+    "derive_identity_record",
+    "family_query_key",
+    "family_query_form",
+    "family_selection_form",
+    "filter_family_candidates",
+]

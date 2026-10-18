@@ -220,6 +220,230 @@ class ArgentinaLiveSearchCoordinatorTest {
     }
 
     @Test
+    fun debugDiscoveryModeUsesTypedV2SearchAndStablePredicateChoices() {
+        val transport = InMemoryArgentinaBackendTransport(
+            mapOf(
+                ArgentinaBackendConsumerBridge.STATUS_ENDPOINT to
+                    ArgentinaBackendTransportResponse(200, statusJson()),
+                ArgentinaBackendConsumerBridge.DISCOVERY_SEARCH_ENDPOINT to
+                    ArgentinaBackendTransportResponse(200, discoveryV2ResponseJson())
+            )
+        )
+        val states = mutableListOf<ArgentinaLiveSearchState>()
+        val executor = QueuedExecutor()
+        val coordinator = ArgentinaLiveSearchCoordinator(
+            transport = transport,
+            executor = executor,
+            stateSink = states::add,
+            discoveryMode = true
+        )
+
+        coordinator.submit("rice", context, language = "en")
+        executor.runNext()
+
+        val result = coordinator.state() as ArgentinaLiveSearchState.Results
+        assertEquals(2, result.presentation.matches.size)
+        assertEquals("form:rice:grain", result.presentation.clarification?.choices?.first()?.id)
+        assertEquals("rice", result.presentation.clarification?.choices?.first()?.query)
+        assertTrue(transport.calls.any { it.endpoint == ArgentinaBackendConsumerBridge.DISCOVERY_SEARCH_ENDPOINT })
+        assertFalse(transport.calls.any { it.endpoint == ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT })
+        assertTrue(transport.calls.last().requestBody?.contains("\"language\":\"en\"") == true)
+        coordinator.close()
+    }
+
+    @Test
+    fun debugDiscoveryModePagesClarificationChoicesThroughNativeFacetCursor() {
+        val firstPage = discoveryV2ResponseJson(hasMoreFacetChoices = true, facetNextCursor = "facet-1")
+        val secondPage = discoveryV2ResponseJson(hasMoreFacetChoices = false, singleFacetChoice = true)
+        var discoveryCalls = 0
+        val calls = mutableListOf<InMemoryArgentinaBackendTransport.Call>()
+        val transport = object : ArgentinaBackendTransport {
+            override fun execute(endpoint: String, requestBody: String?): ArgentinaBackendTransportResponse {
+                calls += InMemoryArgentinaBackendTransport.Call(endpoint, requestBody)
+                return when (endpoint) {
+                    ArgentinaBackendConsumerBridge.STATUS_ENDPOINT ->
+                        ArgentinaBackendTransportResponse(200, statusJson())
+                    ArgentinaBackendConsumerBridge.DISCOVERY_SEARCH_ENDPOINT ->
+                        ArgentinaBackendTransportResponse(200, if (discoveryCalls++ == 0) firstPage else secondPage)
+                    else -> ArgentinaBackendTransportResponse(404, "")
+                }
+            }
+        }
+        val states = mutableListOf<ArgentinaLiveSearchState>()
+        val executor = QueuedExecutor()
+        val coordinator = ArgentinaLiveSearchCoordinator(
+            transport = transport,
+            executor = executor,
+            stateSink = states::add,
+            discoveryMode = true
+        )
+
+        coordinator.submit("rice", context, language = "en")
+        executor.runNext()
+        val first = coordinator.state() as ArgentinaLiveSearchState.Results
+        assertTrue(first.presentation.clarification?.hasMore == true)
+        assertEquals("facet-1", first.presentation.clarification?.nextCursor)
+
+        coordinator.loadMoreClarification()
+        assertTrue(coordinator.state() is ArgentinaLiveSearchState.Loading)
+        executor.runNext()
+
+        val second = coordinator.state() as ArgentinaLiveSearchState.Results
+        assertFalse(second.presentation.clarification?.hasMore == true)
+        assertEquals(1, second.presentation.clarification?.choices?.size)
+        assertTrue(
+            calls.last().requestBody?.contains("\"facetCursor\":\"facet-1\"") == true
+        )
+        coordinator.close()
+    }
+
+    @Test
+    fun facetPagingDoesNotConsumeOrRestartProductPagination() {
+        for (hasMoreProducts in listOf(true, false)) {
+            val first = JSONObject(discoveryV2ResponseJson(hasMoreFacetChoices = true, facetNextCursor = "facet-1"))
+            first.getJSONObject("result").getJSONObject("pagination")
+                .put("hasMore", hasMoreProducts)
+                .put("nextCursor", if (hasMoreProducts) "product-2" else JSONObject.NULL)
+            // The facet endpoint also returns a first product page. It must
+            // never replace the product cursor or table already shown.
+            val facet = JSONObject(discoveryV2ResponseJson(singleFacetChoice = true))
+            facet.getJSONObject("result").getJSONObject("pagination")
+                .put("hasMore", true).put("nextCursor", "wrong-product-cursor")
+            facet.getJSONObject("result").getJSONArray("matches").getJSONObject(0)
+                .put("identityKey", "ar-sepa-product:must-not-be-inserted")
+            var count = 0
+            val calls = mutableListOf<InMemoryArgentinaBackendTransport.Call>()
+            val transport = object : ArgentinaBackendTransport {
+                override fun execute(endpoint: String, requestBody: String?): ArgentinaBackendTransportResponse {
+                    calls += InMemoryArgentinaBackendTransport.Call(endpoint, requestBody)
+                    return ArgentinaBackendTransportResponse(200, when (endpoint) {
+                        ArgentinaBackendConsumerBridge.STATUS_ENDPOINT -> statusJson()
+                        else -> when (count++) {
+                            0 -> first.toString()
+                            1 -> facet.toString()
+                            else -> discoveryV2ResponseJson()
+                        }
+                    })
+                }
+            }
+            val executor = QueuedExecutor()
+            val coordinator = ArgentinaLiveSearchCoordinator(transport, executor, {}, discoveryMode = true)
+            coordinator.submit("rice", context, language = "en")
+            executor.runNext()
+            val before = (coordinator.state() as ArgentinaLiveSearchState.Results).presentation
+            coordinator.loadMoreClarification()
+            executor.runNext()
+            val after = (coordinator.state() as ArgentinaLiveSearchState.Results).presentation
+            assertEquals(before.matches, after.matches)
+            assertEquals(before.page, after.page)
+            assertEquals(before.hasMore, after.hasMore)
+            assertEquals(before.nextPage, after.nextPage)
+            assertFalse(after.clarification?.hasMore == true)
+            assertFalse(calls.last().requestBody.orEmpty().contains("product-2"))
+            val previousCalls = calls.size
+            coordinator.loadMore()
+            if (hasMoreProducts) {
+                executor.runNext()
+                assertTrue(calls.last().requestBody.orEmpty().contains("product-2"))
+                val final = (coordinator.state() as ArgentinaLiveSearchState.Results).presentation
+                assertEquals(after.clarification, final.clarification)
+            } else {
+                assertEquals(previousCalls, calls.size)
+            }
+            coordinator.close()
+        }
+    }
+
+    @Test
+    fun discoveryPagesReachBeyondTenThousandRowsAndCanReturnWithoutAccumulating() {
+        val requestedPages = mutableListOf<Int>()
+        val transport = object : ArgentinaBackendTransport {
+            override fun execute(endpoint: String, requestBody: String?): ArgentinaBackendTransportResponse {
+                if (endpoint == ArgentinaBackendConsumerBridge.STATUS_ENDPOINT) {
+                    return ArgentinaBackendTransportResponse(200, statusJson())
+                }
+                val cursor = JSONObject(requestBody!!).optString("cursor", "")
+                val page = if (cursor.isEmpty() || cursor == "null") 0 else cursor.removePrefix("page-").toInt()
+                requestedPages += page
+                val body = JSONObject(discoveryV2ResponseJson())
+                val result = body.getJSONObject("result")
+                val template = result.getJSONArray("matches").getJSONObject(0)
+                result.put("matches", JSONArray().apply {
+                    repeat(50) { offset ->
+                        val id = page * 50 + offset
+                        put(JSONObject(template.toString()).put("identityKey", "ar-sepa-product:row:$id")
+                            .put("providerProductId", "row-$id").put("displayName", "Producto $id"))
+                    }
+                })
+                result.getJSONObject("total").put("productCount", 10_500).put("sourceIdentityCount", 10_500)
+                result.getJSONObject("pagination").put("hasMore", page < 209)
+                    .put("nextCursor", if (page < 209) "page-${page + 1}" else JSONObject.NULL)
+                return ArgentinaBackendTransportResponse(200, body.toString())
+            }
+        }
+        val executor = QueuedExecutor()
+        val coordinator = ArgentinaLiveSearchCoordinator(transport, executor, {}, discoveryMode = true)
+        coordinator.submit("rice", context, language = "en")
+        executor.runNext()
+        val seen = mutableSetOf<String>()
+        repeat(210) { page ->
+            val presentation = (coordinator.state() as ArgentinaLiveSearchState.Results).presentation
+            assertEquals(page, presentation.page)
+            assertEquals(50, presentation.matches.size)
+            assertEquals(if (page == 0) null else page - 1, presentation.previousPage)
+            presentation.matches.forEach { assertTrue(seen.add(it.identityKey)) }
+            if (page < 209) {
+                coordinator.loadMore()
+                executor.runNext()
+            }
+        }
+        assertEquals(10_500, seen.size)
+        assertFalse((coordinator.state() as ArgentinaLiveSearchState.Results).presentation.hasMore)
+        coordinator.loadPrevious()
+        executor.runNext()
+        assertEquals(208, (coordinator.state() as ArgentinaLiveSearchState.Results).presentation.page)
+        assertEquals("ar-sepa-product:row:10400", (coordinator.state() as ArgentinaLiveSearchState.Results).presentation.matches.first().identityKey)
+        coordinator.loadMore()
+        executor.runNext()
+        assertEquals(209, (coordinator.state() as ArgentinaLiveSearchState.Results).presentation.page)
+        coordinator.submit("rice", context, language = "es")
+        executor.runNext()
+        assertEquals(0, requestedPages.last())
+        assertEquals(null, (coordinator.state() as ArgentinaLiveSearchState.Results).presentation.previousPage)
+        coordinator.close()
+    }
+
+    @Test
+    fun discoveryModeStillStopsBeforeV2WhenAndroidSearchIsUnauthorized() {
+        val transport = InMemoryArgentinaBackendTransport(
+            mapOf(
+                ArgentinaBackendConsumerBridge.STATUS_ENDPOINT to
+                    ArgentinaBackendTransportResponse(200, statusJson(androidNetworkingAuthorized = false)),
+                ArgentinaBackendConsumerBridge.DISCOVERY_SEARCH_ENDPOINT to
+                    ArgentinaBackendTransportResponse(200, discoveryV2ResponseJson())
+            )
+        )
+        val states = mutableListOf<ArgentinaLiveSearchState>()
+        val executor = QueuedExecutor()
+        val coordinator = ArgentinaLiveSearchCoordinator(
+            transport = transport,
+            executor = executor,
+            stateSink = states::add,
+            discoveryMode = true
+        )
+
+        coordinator.submit("rice", context, language = "en")
+        executor.runNext()
+
+        assertEquals(
+            ArgentinaBackendContract.FailureCode.SEARCH_NOT_AUTHORIZED,
+            (coordinator.state() as ArgentinaLiveSearchState.Unavailable).failure
+        )
+        assertFalse(transport.calls.any { it.endpoint == ArgentinaBackendConsumerBridge.DISCOVERY_SEARCH_ENDPOINT })
+        coordinator.close()
+    }
+
+    @Test
     fun supersededGenerationCannotPublishAndCancellationIsRequested() {
         val transport =
             RecordingTransport(
@@ -722,6 +946,99 @@ class ArgentinaLiveSearchCoordinatorTest {
                     .put("hasMore", hasMore)
                     .put("nextPage", if (hasMore) page + 1 else JSONObject.NULL)
                     .put("limitReached", false)
+            )
+            .toString()
+    }
+
+    private fun discoveryV2ResponseJson(
+        hasMoreFacetChoices: Boolean = false,
+        facetNextCursor: String? = null,
+        singleFacetChoice: Boolean = false
+    ): String {
+        val choices = JSONArray()
+            .put(
+                JSONObject()
+                    .put("id", "form:rice:grain")
+                    .put("predicateId", "form:rice:grain")
+                    .put("labelEs", "Arroz en grano")
+                    .put("labelEn", "Rice grains")
+                    .put("productCount", 2)
+                    .put("sourceIdentityCount", 2)
+                    .put("countUnit", "DISTINCT_PROVIDER_PRODUCT")
+                    .put("hasChildren", false)
+            )
+            .apply {
+                if (!singleFacetChoice) {
+                    put(
+                        JSONObject()
+                            .put("id", "form:rice:dessert")
+                            .put("predicateId", "form:rice:dessert")
+                            .put("labelEs", "Dulces de arroz")
+                            .put("labelEn", "Rice cakes")
+                            .put("productCount", 1)
+                            .put("sourceIdentityCount", 1)
+                            .put("countUnit", "DISTINCT_PROVIDER_PRODUCT")
+                            .put("hasChildren", false)
+                    )
+                }
+            }
+        val result = JSONObject()
+            .put("contract", ArgentinaBackendContract.DISCOVERY_RESULT_CONTRACT)
+            .put("status", "NEEDS_CLARIFICATION")
+            .put("query", "rice")
+            .put("language", "en")
+            .put("releaseId", release.releaseId)
+            .put("indexVersion", "sidecar")
+            .put("queryFingerprint", "fingerprint")
+            .put("resolvedPredicates", JSONArray())
+            .put("selections", JSONArray())
+            .put(
+                "total",
+                JSONObject()
+                    .put("productCount", 2)
+                    .put("sourceIdentityCount", 2)
+                    .put("countUnit", "DISTINCT_PROVIDER_PRODUCT")
+            )
+            .put(
+                "matches",
+                JSONArray()
+                    .put(
+                        JSONObject()
+                            .put("identityKey", "ar-sepa-product:rice:1")
+                            .put("providerProductId", "rice-1")
+                            .put("displayName", "ARROZ LARGO FINO")
+                            .put("brand", "Marca")
+                    )
+                    .put(
+                        JSONObject()
+                            .put("identityKey", "ar-sepa-product:rice:2")
+                            .put("providerProductId", "rice-2")
+                            .put("displayName", "ARROZ DULCE")
+                            .put("brand", "Marca")
+                    )
+            )
+            .put("pagination", JSONObject().put("pageSize", 50).put("hasMore", false).put("nextCursor", JSONObject.NULL))
+            .put(
+                "clarification",
+                JSONObject()
+                    .put("dimensionId", "product_type")
+                    .put("choices", choices)
+                    .put("hasMore", hasMoreFacetChoices)
+                    .put("nextCursor", facetNextCursor ?: JSONObject.NULL)
+            )
+        return JSONObject()
+            .put("apiContractVersion", ArgentinaBackendContract.DISCOVERY_API_VERSION)
+            .put("requestId", "discovery-request")
+            .put("releaseId", release.releaseId)
+            .put("indexVersion", "sidecar")
+            .put("result", result)
+            .put(
+                "evidenceSemantics",
+                JSONObject()
+                    .put("identity", "SOURCE_IDENTITY_AND_ACCEPTED_ASSERTIONS")
+                    .put("prices", "NOT_INCLUDED")
+                    .put("offers", "NOT_INCLUDED")
+                    .put("stock", "NOT_INCLUDED")
             )
             .toString()
     }

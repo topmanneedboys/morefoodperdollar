@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "17260882200",
+    "project_id": "valuepilot-argentina",
+    "storage_bucket": "valuepilot-argentina.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:17260882200:android:f49f015de6f879e0f2566d",
+        "android_client_info": {
+          "package_name": "com.valuepilot.app.nextpreview"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD5MVMK7GAQFG-Hf6lm3PdPHMD6-4WALTk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

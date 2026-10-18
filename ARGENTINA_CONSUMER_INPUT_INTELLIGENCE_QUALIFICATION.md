@@ -27,6 +27,27 @@ there is no million-row blind fuzzy scan and no downloaded semantic model.
 Vocabulary and product-form rules live in
 `tools/data/argentina_input_aliases.json` and are versioned by policy.
 
+The identity-family layer now applies the same rule set to every source row
+at SearchPack build time.  It does not require a hand-written synonym list for
+all 70,000 names: canonical source text, reviewed Spanish/English aliases and
+safe inflections are combined deterministically, while unknown rows remain
+searchable and are reported as `UNCLASSIFIED`.  New source rows are therefore
+re-evaluated on the next refresh; adding a new family or synonym requires a
+reviewed rule, focused regression cases and a rebuilt SearchPack before that
+vocabulary becomes release data.  For a broad family such as carrot, the
+bounded result window can expose observed forms (vegetable, drink, dessert,
+cosmetics or supplement), and an explicit choice query is filtered to that
+observed form without adding products or claims.
+
+The active 2026-10-08 source was later scanned read-only in full.  The exact
+counts, source hash, identity conflicts, and remaining unclassified review
+queue are recorded in
+`ARGENTINA_PRODUCT_IDENTITY_COVERAGE_QUALIFICATION.md`; the scan does not
+promote any new vocabulary into production by itself.
+
+The broader department/form taxonomy and its explicit review queue are
+qualified separately in `ARGENTINA_PRODUCT_TAXONOMY_QUALIFICATION.md`.
+
 ## Safety gates
 
 Bare tomato selects only an audited fresh form. Tomato paste, puree, sauce,

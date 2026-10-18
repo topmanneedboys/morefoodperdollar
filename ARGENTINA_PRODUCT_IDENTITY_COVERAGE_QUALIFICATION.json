@@ -1,0 +1,282 @@
+{
+  "activeReleaseId": "argentina-sepa-2026-10-08-153e9d9f7ab4b87e-routing-v1-search-v2",
+  "aliases": {
+    "ambiguousAliasCount": 2884,
+    "distinct": 63700,
+    "identityCountWithAliases": 78615
+  },
+  "families": {
+    "apple": {
+      "derivedCount": 188,
+      "directCount": 582,
+      "observedForms": {
+        "unspecified": 770
+      }
+    },
+    "avocado": {
+      "derivedCount": 0,
+      "directCount": 49,
+      "observedForms": {
+        "unspecified": 49
+      }
+    },
+    "beans": {
+      "derivedCount": 0,
+      "directCount": 152,
+      "observedForms": {
+        "unspecified": 152
+      }
+    },
+    "beef": {
+      "derivedCount": 64,
+      "directCount": 707,
+      "observedForms": {
+        "unspecified": 771
+      }
+    },
+    "bread": {
+      "derivedCount": 3,
+      "directCount": 1420,
+      "observedForms": {
+        "unspecified": 1423
+      }
+    },
+    "butter": {
+      "derivedCount": 0,
+      "directCount": 319,
+      "observedForms": {
+        "unspecified": 319
+      }
+    },
+    "carrot": {
+      "derivedCount": 9,
+      "directCount": 89,
+      "observedForms": {
+        "cosmetics": 3,
+        "dessert": 2,
+        "drink": 4,
+        "unspecified": 81,
+        "vegetable": 8
+      }
+    },
+    "cereal": {
+      "derivedCount": 27,
+      "directCount": 376,
+      "observedForms": {
+        "unspecified": 403
+      }
+    },
+    "cheese": {
+      "derivedCount": 5,
+      "directCount": 2430,
+      "observedForms": {
+        "unspecified": 2435
+      }
+    },
+    "chicken": {
+      "derivedCount": 25,
+      "directCount": 847,
+      "observedForms": {
+        "unspecified": 872
+      }
+    },
+    "chocolate": {
+      "derivedCount": 29,
+      "directCount": 1863,
+      "observedForms": {
+        "unspecified": 1892
+      }
+    },
+    "coconut": {
+      "derivedCount": 37,
+      "directCount": 567,
+      "observedForms": {
+        "unspecified": 604
+      }
+    },
+    "coffee": {
+      "derivedCount": 0,
+      "directCount": 1147,
+      "observedForms": {
+        "unspecified": 1147
+      }
+    },
+    "egg": {
+      "derivedCount": 149,
+      "directCount": 393,
+      "observedForms": {
+        "unspecified": 542
+      }
+    },
+    "lychee": {
+      "derivedCount": 2,
+      "directCount": 1,
+      "observedForms": {
+        "fresh": 1,
+        "unspecified": 2
+      }
+    },
+    "milk": {
+      "derivedCount": 178,
+      "directCount": 2144,
+      "observedForms": {
+        "unspecified": 2322
+      }
+    },
+    "orange": {
+      "derivedCount": 505,
+      "directCount": 694,
+      "observedForms": {
+        "unspecified": 1199
+      }
+    },
+    "peach": {
+      "derivedCount": 0,
+      "directCount": 441,
+      "observedForms": {
+        "unspecified": 441
+      }
+    },
+    "pineapple": {
+      "derivedCount": 0,
+      "directCount": 183,
+      "observedForms": {
+        "unspecified": 183
+      }
+    },
+    "rice": {
+      "derivedCount": 139,
+      "directCount": 1008,
+      "observedForms": {
+        "dessert": 270,
+        "flour": 9,
+        "grain": 251,
+        "unspecified": 627
+      }
+    },
+    "shampoo": {
+      "derivedCount": 0,
+      "directCount": 1412,
+      "observedForms": {
+        "unspecified": 1412
+      }
+    },
+    "soap": {
+      "derivedCount": 0,
+      "directCount": 1532,
+      "observedForms": {
+        "unspecified": 1532
+      }
+    },
+    "soft_drink": {
+      "derivedCount": 0,
+      "directCount": 913,
+      "observedForms": {
+        "unspecified": 913
+      }
+    },
+    "strawberry": {
+      "derivedCount": 0,
+      "directCount": 944,
+      "observedForms": {
+        "unspecified": 944
+      }
+    },
+    "sugar": {
+      "derivedCount": 181,
+      "directCount": 253,
+      "observedForms": {
+        "unspecified": 434
+      }
+    },
+    "tea": {
+      "derivedCount": 1,
+      "directCount": 1066,
+      "observedForms": {
+        "unspecified": 1067
+      }
+    },
+    "toilet_paper": {
+      "derivedCount": 0,
+      "directCount": 121,
+      "observedForms": {
+        "unspecified": 121
+      }
+    },
+    "tomato": {
+      "derivedCount": 0,
+      "directCount": 458,
+      "observedForms": {
+        "unspecified": 458
+      }
+    },
+    "yerba_mate": {
+      "derivedCount": 0,
+      "directCount": 1106,
+      "observedForms": {
+        "drink": 3,
+        "extract": 11,
+        "loose_leaves": 1106,
+        "tea_bags": 61
+      }
+    }
+  },
+  "identityCounts": {
+    "brandVariantIdentities": 0,
+    "classifications": {
+      "DERIVED": 1144,
+      "DIRECT": 20806,
+      "MULTIPLE_FAMILIES": 1383,
+      "UNCLASSIFIED": 111004
+    },
+    "gtinConflictIdentities": 7,
+    "nameVariantIdentities": 0,
+    "quantityConflictIdentities": 0
+  },
+  "policyVersion": "valuepilot-argentina-product-identity-coverage-policy-v1",
+  "safety": {
+    "automaticProductResolution": false,
+    "availability": false,
+    "offers": false,
+    "prices": false,
+    "sourceRowsRemainProviderEvidence": true,
+    "stock": false
+  },
+  "scan": {
+    "distinctCanonicalNames": 123692,
+    "distinctCommerceIds": 15,
+    "distinctProductIdentities": 134337,
+    "distinctProviderProductIds": 78865,
+    "invalidNameRows": 0,
+    "malformedRows": 30,
+    "missingIdentityRows": 0,
+    "packageRows": {
+      "2026-10-08/sepa_1_comercio-sepa-12_2026-10-08_09-05-10.zip": 1064517,
+      "2026-10-08/sepa_1_comercio-sepa-13_2026-10-08_09-05-10.zip": 715149,
+      "2026-10-08/sepa_1_comercio-sepa-15_2026-10-08_09-05-10.zip": 4220271,
+      "2026-10-08/sepa_1_comercio-sepa-21_2026-10-08_09-05-10.zip": 62470,
+      "2026-10-08/sepa_1_comercio-sepa-23_2026-10-08_09-05-10.zip": 6371,
+      "2026-10-08/sepa_1_comercio-sepa-3_2026-10-08_09-05-10.zip": 8915,
+      "2026-10-08/sepa_1_comercio-sepa-47_2026-10-08_09-05-10.zip": 19272,
+      "2026-10-08/sepa_1_comercio-sepa-4_2026-10-08_09-05-10.zip": 255,
+      "2026-10-08/sepa_1_comercio-sepa-8_2026-10-08_09-05-10.zip": 41626,
+      "2026-10-08/sepa_1_comercio-sepa-9_2026-10-08_09-05-10.zip": 1266913,
+      "2026-10-08/sepa_2_comercio-sepa-10_2026-10-08_01-05-08.zip": 3430173,
+      "2026-10-08/sepa_2_comercio-sepa-11_2026-10-08_01-05-08.zip": 2356523,
+      "2026-10-08/sepa_2_comercio-sepa-2_2026-10-08_01-05-08.zip": 1016986,
+      "2026-10-08/sepa_2_comercio-sepa-5_2026-10-08_01-05-08.zip": 18928,
+      "2026-10-08/sepa_2_comercio-sepa-6_2026-10-08_01-05-08.zip": 18642
+    },
+    "packagesWithProducts": 15,
+    "productRowsScanned": 14247011
+  },
+  "schemaVersion": "valuepilot-argentina-product-identity-coverage-v1",
+  "source": {
+    "attribution": "Precios Claros - Base SEPA; datos.gob.ar",
+    "bytes": 322801717,
+    "provider": "ARGENTINA_SEPA_PRECIOS_CLAROS",
+    "releaseDate": "2026-10-08",
+    "sha256": "153e9d9f7ab4b87e72c16aebebc69c6f9f90fca681cd1075d625244e2e31bc2c"
+  },
+  "status": "COMPLETE"
+}

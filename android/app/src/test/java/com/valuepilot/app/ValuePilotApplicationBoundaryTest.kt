@@ -12,8 +12,8 @@ class ValuePilotApplicationBoundaryTest {
         val gradle = file("build.gradle.kts").readText()
         assertTrue(source.contains("ValuePilotFirebaseRuntime.initialize(this)"))
         assertFalse(source.contains("startIfEligible"))
-        assertTrue(gradle.contains("versionCode = 10130"))
-        assertTrue(gradle.contains("versionName = \"101.1.29\""))
+        assertTrue(gradle.contains("versionCode = 10133"))
+        assertTrue(gradle.contains("versionName = \"101.1.32\""))
         assertTrue(gradle.contains("buildConfigField(\"boolean\", \"M12_3_QUALIFICATION_PROBE\", \"false\")"))
     }
 

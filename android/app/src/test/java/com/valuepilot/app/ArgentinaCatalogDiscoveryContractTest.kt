@@ -1,0 +1,101 @@
+package com.valuepilot.app
+
+import org.json.JSONArray
+import org.json.JSONObject
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class ArgentinaCatalogDiscoveryContractTest {
+    @Test
+    fun parsesStablePredicatesAndFullSetFacetCounts() {
+        val result = JSONObject()
+            .put("contract", ArgentinaBackendContract.DISCOVERY_RESULT_CONTRACT)
+            .put("status", "NEEDS_CLARIFICATION")
+            .put("query", "rice")
+            .put("language", "en")
+            .put("releaseId", "release-1")
+            .put("indexVersion", "sha256")
+            .put("queryFingerprint", "fingerprint")
+            .put("resolvedPredicates", JSONArray(listOf("type:rice")))
+            .put("selections", JSONArray())
+            .put("total", JSONObject().put("productCount", 43).put("sourceIdentityCount", 43).put("countUnit", "DISTINCT_PROVIDER_PRODUCT"))
+            .put("matches", JSONArray().put(JSONObject()
+                .put("identityKey", "ar-sepa-product:1")
+                .put("providerProductId", "1")
+                .put("displayName", "RICE LONG GRAIN")
+                .put("brand", "Marca")))
+            .put("pagination", JSONObject().put("pageSize", 1).put("hasMore", true).put("nextCursor", "next"))
+            .put("clarification", JSONObject()
+                .put("dimensionId", "product_type")
+                .put("choices", JSONArray()
+                    .put(JSONObject()
+                        .put("id", "form:rice:grain")
+                        .put("predicateId", "form:rice:grain")
+                        .put("labelEs", "Arroz en grano")
+                        .put("labelEn", "Rice grains")
+                        .put("productCount", 40)
+                        .put("sourceIdentityCount", 40)
+                        .put("countUnit", "DISTINCT_PROVIDER_PRODUCT")
+                        .put("hasChildren", false))
+                    .put(JSONObject()
+                        .put("id", "form:rice:dessert")
+                        .put("predicateId", "form:rice:dessert")
+                        .put("labelEs", "Dulces de arroz")
+                        .put("labelEn", "Rice cakes")
+                        .put("productCount", 1)
+                        .put("sourceIdentityCount", 1)
+                        .put("countUnit", "DISTINCT_PROVIDER_PRODUCT")
+                        .put("hasChildren", false)))
+                .put("hasMore", false)
+                .put("nextCursor", JSONObject.NULL))
+        val body = JSONObject()
+            .put("apiContractVersion", ArgentinaBackendContract.DISCOVERY_API_VERSION)
+            .put("requestId", "request-1")
+            .put("releaseId", "release-1")
+            .put("indexVersion", "sha256")
+            .put("result", result)
+            .put("evidenceSemantics", JSONObject()
+                .put("identity", "SOURCE_IDENTITY_AND_ACCEPTED_ASSERTIONS")
+                .put("prices", "NOT_INCLUDED")
+                .put("offers", "NOT_INCLUDED")
+                .put("stock", "NOT_INCLUDED"))
+
+        val parsed = ArgentinaBackendContract.parseDiscovery(
+            body.toString(),
+            ArgentinaBackendContract.ExpectedRelease("release-1", "2026-10-08")
+        )
+        assertEquals("type:rice", parsed.result.resolvedPredicates.single())
+        assertEquals(43, parsed.result.total.productCount)
+        assertEquals(2, parsed.result.clarification?.choices?.size)
+        assertTrue(parsed.result.pagination.hasMore)
+    }
+
+    @Test(expected = ArgentinaBackendContract.ContractException::class)
+    fun rejectsShoppingEvidenceInDiscoveryResponse() {
+        val body = JSONObject()
+            .put("apiContractVersion", ArgentinaBackendContract.DISCOVERY_API_VERSION)
+            .put("requestId", "request-1")
+            .put("releaseId", "release-1")
+            .put("indexVersion", "sha256")
+            .put("result", JSONObject()
+                .put("contract", ArgentinaBackendContract.DISCOVERY_RESULT_CONTRACT)
+                .put("status", "NO_MATCHES")
+                .put("query", "rice")
+                .put("language", "en")
+                .put("releaseId", "release-1")
+                .put("indexVersion", "sha256")
+                .put("queryFingerprint", "fingerprint")
+                .put("resolvedPredicates", JSONArray())
+                .put("selections", JSONArray())
+                .put("total", JSONObject().put("productCount", 0).put("sourceIdentityCount", 0).put("countUnit", "DISTINCT_PROVIDER_PRODUCT"))
+                .put("matches", JSONArray())
+                .put("pagination", JSONObject().put("pageSize", 20).put("hasMore", false).put("nextCursor", JSONObject.NULL)))
+            .put("evidenceSemantics", JSONObject()
+                .put("identity", "SOURCE_IDENTITY_AND_ACCEPTED_ASSERTIONS")
+                .put("prices", "INCLUDED")
+                .put("offers", "NOT_INCLUDED")
+                .put("stock", "NOT_INCLUDED"))
+        ArgentinaBackendContract.parseDiscovery(body.toString())
+    }
+}

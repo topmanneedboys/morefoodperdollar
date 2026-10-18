@@ -37,11 +37,12 @@ try:
         CatalogIndex,
         CatalogRecord,
         LEXICAL_FEATURE_POLICY_VERSION,
+        SUPPORTED_LEXICAL_FEATURE_POLICY_VERSIONS,
         canonical_feature_keys,
         parse_intent,
     )
 except ModuleNotFoundError:  # pragma: no cover - direct tool invocation
-    from consumer_input_intelligence import CatalogIndex, CatalogRecord, LEXICAL_FEATURE_POLICY_VERSION, canonical_feature_keys, parse_intent
+    from consumer_input_intelligence import CatalogIndex, CatalogRecord, LEXICAL_FEATURE_POLICY_VERSION, SUPPORTED_LEXICAL_FEATURE_POLICY_VERSIONS, canonical_feature_keys, parse_intent
 
 
 SEARCHPACK_SCHEMA_VERSION = "valuepilot-argentina-searchpack-v2"
@@ -500,7 +501,7 @@ class SearchPackRegion:
             raise SearchPackError("SearchPack schema version is unsupported")
         if self.metadata.get("formatVersion") != SEARCHPACK_FORMAT_VERSION:
             raise SearchPackError("SearchPack format version is unsupported")
-        if self.metadata.get("policyVersion") != LEXICAL_FEATURE_POLICY_VERSION:
+        if self.metadata.get("policyVersion") not in SUPPORTED_LEXICAL_FEATURE_POLICY_VERSIONS:
             raise SearchPackError("SearchPack lexical policy does not match runtime")
         doc_count = self.metadata.get("documentCount")
         if not isinstance(doc_count, int) or doc_count < 0 or doc_count > 0xFFFFFFFF:
@@ -1079,9 +1080,9 @@ class SearchPackRegion:
         """
 
         try:
-            from tools.argentina_sepa_search import CONTEXT_EXCLUSIONS, _variants, normalize_spanish
+            from tools.argentina_sepa_search import CONTEXT_EXCLUSIONS, _context_keys, _context_requested, _variants, normalize_spanish
         except ModuleNotFoundError:  # pragma: no cover - direct tool invocation
-            from argentina_sepa_search import CONTEXT_EXCLUSIONS, _variants, normalize_spanish
+            from argentina_sepa_search import CONTEXT_EXCLUSIONS, _context_keys, _context_requested, _variants, normalize_spanish
         try:
             normalized = normalize_spanish(query)
         except Exception as exc:  # noqa: BLE001 - normalize provider errors
@@ -1111,6 +1112,9 @@ class SearchPackRegion:
                     name_positions.setdefault(doc_id, {})[variant] = frozenset(positions)
                 for doc_id, _positions in postings("alias", variant):
                     alias_docs_by_variant.setdefault(variant, set()).add(doc_id)
+                    # Keep alias-only candidates in the bounded candidate
+                    # set so bilingual terms can resolve Spanish names.
+                    name_positions.setdefault(doc_id, {})
         candidate_count = len(name_positions)
         stats.ranked_candidates += candidate_count
         if candidate_count > candidate_bound:
@@ -1121,30 +1125,45 @@ class SearchPackRegion:
         for token in query_tokens:
             for doc_id, _positions in postings("brand", token):
                 brand_docs_by_token.setdefault(token, set()).add(doc_id)
-            if token in CONTEXT_EXCLUSIONS:
-                for doc_id, _positions in postings("context", token):
-                    context_docs_by_token.setdefault(token, set()).add(doc_id)
+            for context_key in _context_keys(token):
+                if any(_context_requested(query_tokens, sequence) for sequence in CONTEXT_EXCLUSIONS.get(context_key, ())):
+                    # An explicit derived-form query (for example ``rice
+                    # pudding``) must remain searchable even though a bare
+                    # ``rice`` query excludes that same context.
+                    continue
+                for doc_id, _positions in postings("context", context_key):
+                    context_docs_by_token.setdefault(context_key, set()).add(doc_id)
 
         ranked: list[tuple[int, int, tuple[str, ...]]] = []
         for doc_id, token_positions in name_positions.items():
             matched: list[str] = []
             all_query_present = True
             name_matches = 0
+            alias_matches = 0
             for token in query_tokens:
                 variants = _variants(token)
                 name_present = any(variant in token_positions for variant in variants)
                 alias_present = any(doc_id in alias_docs_by_variant.get(variant, ()) for variant in variants)
                 if name_present:
                     name_matches += 1
+                if alias_present:
+                    alias_matches += 1
                 if name_present or alias_present:
                     matched.append(token)
                 else:
                     all_query_present = False
-            if not matched or name_matches == 0:
+            # A reviewed bilingual alias may be the only evidence for an
+            # English query against Spanish source names (for example
+            # ``rice`` against ``ARROZ LARGO``).  Accept that bounded alias
+            # posting while still rejecting a partial query with no name or
+            # alias evidence.
+            if not matched or (name_matches == 0 and alias_matches == 0):
                 continue
             if any(doc_id in values for values in context_docs_by_token.values()):
                 continue
             score = name_matches * 100
+            if name_matches == 0:
+                score += alias_matches * 35
             if all_query_present:
                 score += 80
             phrase = tuple(_variants(token)[0] for token in query_tokens)
@@ -1165,15 +1184,29 @@ class SearchPackRegion:
         ranked.sort(key=lambda item: (-item[0], item[1]))
         return tuple(ranked[:product_limit])
 
-    def lookup_product_key(self, product_key: str, *, stats: SearchPackStats | None = None) -> Mapping[str, Any] | None:
+    def lookup_product_keys(self, product_keys: Iterable[str], *, stats: SearchPackStats | None = None) -> dict[str, Mapping[str, Any]]:
+        """Read exact identities with each docstore block decoded once per batch."""
         stats = stats or SearchPackStats()
-        if not isinstance(product_key, str) or not product_key:
-            raise SearchPackError("product key is invalid")
-        stats.key_lookups += 1
-        doc_id = self._lookup_ordinal(product_key, self.key_lexicon_blocks, "keyLexicon", stats, label="key lexicon")
-        if doc_id is None:
-            return None
-        return self.get_records((int(doc_id),), stats=stats, max_records=1).get(int(doc_id))
+        keys = tuple(dict.fromkeys(product_keys))
+        if len(keys) > SEARCHPACK_MAX_DOCS or any(not isinstance(key, str) or not key for key in keys):
+            raise SearchPackError("product key request exceeds bound or is invalid")
+        ids = {}
+        for key in keys:
+            stats.key_lookups += 1
+            ordinal = self._lookup_ordinal(key, self.key_lexicon_blocks, "keyLexicon", stats, label="key lexicon")
+            if ordinal is not None:
+                ids[key] = int(ordinal)
+        records = self.get_records(ids.values(), stats=stats) if ids else {}
+        result = {}
+        for key, ordinal in ids.items():
+            record = records[ordinal]
+            if record.get("productEvidenceKey") != key:
+                raise SearchPackError("exact product identity mismatch")
+            result[key] = record
+        return result
+
+    def lookup_product_key(self, product_key: str, *, stats: SearchPackStats | None = None) -> Mapping[str, Any] | None:
+        return self.lookup_product_keys((product_key,), stats=stats).get(product_key)
 
     def search_many(self, queries: Sequence[str], *, product_limit: int = 5, candidate_bound: int = SEARCHPACK_MAX_DOCS, stats: SearchPackStats | None = None) -> tuple[tuple[Mapping[str, Any], ...], ...]:
         if not isinstance(product_limit, int) or not 1 <= product_limit <= SEARCHPACK_MAX_DISCOVERY_RESULTS:
@@ -1269,7 +1302,7 @@ class SearchPackManager:
         descriptor = manifest.get("searchPackArtifact") if isinstance(manifest, Mapping) else None
         if not isinstance(descriptor, Mapping):
             raise SearchPackError("release does not declare SearchPack v2")
-        if descriptor.get("schemaVersion") != SEARCHPACK_SCHEMA_VERSION or descriptor.get("formatVersion") != SEARCHPACK_FORMAT_VERSION or descriptor.get("policyVersion") != LEXICAL_FEATURE_POLICY_VERSION:
+        if descriptor.get("schemaVersion") != SEARCHPACK_SCHEMA_VERSION or descriptor.get("formatVersion") != SEARCHPACK_FORMAT_VERSION or descriptor.get("policyVersion") not in SUPPORTED_LEXICAL_FEATURE_POLICY_VERSIONS:
             raise SearchPackError("release SearchPack declaration is incompatible")
         regions = descriptor.get("regions")
         if not isinstance(regions, list) or not regions or any(not isinstance(value, str) or not value for value in regions) or len(set(regions)) != len(regions):

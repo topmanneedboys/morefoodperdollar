@@ -366,10 +366,39 @@ class ArgentinaSearchPackTests(unittest.TestCase):
         )
         self.assertEqual(actual_without_partition, expected)
         self.assertTrue(all(isinstance(item["partitionId"], str) and item["partitionId"] for values in actual for item in values))
-        self.assertEqual(stats.ranked_records_materialized, 4)
-        self.assertEqual(stats.records_returned, 4)
+        self.assertEqual(stats.ranked_records_materialized, 3)
+        self.assertEqual(stats.records_returned, 3)
         self.assertLessEqual(stats.ranked_records_materialized, len(queries) * 2)
         self.assertGreater(stats.ranked_candidates, stats.ranked_records_materialized)
+
+    def test_index_native_ranker_applies_family_exclusions_and_aliases(self) -> None:
+        rows = [
+            {"productEvidenceKey": "rice", "name": "Arroz Largo Fino 1 kg", "brand": None, "canonicalSearchAliases": []},
+            {"productEvidenceKey": "rice-dessert", "name": "Arroz con Leche Postre", "brand": None, "canonicalSearchAliases": []},
+            {"productEvidenceKey": "rice-flour", "name": "Harina de Arroz", "brand": None, "canonicalSearchAliases": []},
+            {"productEvidenceKey": "lychee", "name": "Lichi Fresco 500 g", "brand": None, "canonicalSearchAliases": []},
+            {"productEvidenceKey": "lychee-juice", "name": "Jugo de Lichi 1 l", "brand": None, "canonicalSearchAliases": []},
+            {"productEvidenceKey": "yerba", "name": "Yerba Mate 500 g", "brand": None, "canonicalSearchAliases": []},
+            {"productEvidenceKey": "yerba-drink", "name": "Bebida de Yerba Mate 1 l", "brand": None, "canonicalSearchAliases": []},
+            {"productEvidenceKey": "egg", "name": "Huevos Frescos X12", "brand": None, "canonicalSearchAliases": []},
+            {"productEvidenceKey": "egg-dino", "name": "SMASH DINO NANO EGG", "brand": None, "canonicalSearchAliases": []},
+            {"productEvidenceKey": "egg-chocolate", "name": "Huevo Chocolate Sorpresa", "brand": None, "canonicalSearchAliases": []},
+        ]
+        source, release_id = _fixture_workspace(rows)
+        output = _new_output("valuepilot-searchpack-family-policy-")
+        derive_searchpack_workspace(source, output, [release_id])
+        manager = _manager(output)
+        region = manager.region("ar-caba")
+        actual = region.search_many(("rice", "lychee", "yerba", "eggs", "eggs dino"), product_limit=5, candidate_bound=100_000)
+        self.assertEqual(actual[0][0]["productEvidenceKey"], "rice")
+        self.assertEqual(actual[1][0]["productEvidenceKey"], "lychee")
+        self.assertEqual(actual[2][0]["productEvidenceKey"], "yerba")
+        self.assertNotIn("rice-dessert", {value["productEvidenceKey"] for value in actual[0]})
+        self.assertNotIn("rice-flour", {value["productEvidenceKey"] for value in actual[0]})
+        self.assertNotIn("lychee-juice", {value["productEvidenceKey"] for value in actual[1]})
+        self.assertNotIn("yerba-drink", {value["productEvidenceKey"] for value in actual[2]})
+        self.assertEqual([value["productEvidenceKey"] for value in actual[3]], ["egg"])
+        self.assertIn("egg-dino", {value["productEvidenceKey"] for value in actual[4]})
 
     def test_high_df_saturation_is_metadata_only(self) -> None:
         rows = [

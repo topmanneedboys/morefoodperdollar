@@ -7,6 +7,10 @@
     <color name="vp_surface_accent">#FFF1E8</color>
     <color name="vp_primary">#B34B2E</color>
     <color name="vp_primary_dark">#8F3620</color>
+    <!-- Approved Search board accent; kept separate so other routes retain their existing token. -->
+    <color name="vp_accent">#E8672D</color>
+    <color name="vp_accent_soft">#FCE8DC</color>
+    <color name="vp_search_surface">#FFFFFF</color>
     <color name="vp_on_primary">#FFFFFF</color>
     <color name="vp_text_primary">#2A211C</color>
     <color name="vp_text_secondary">#5F5148</color>

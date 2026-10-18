@@ -4,7 +4,8 @@ import java.math.BigDecimal
 
 /**
  * Source-backed store context shown inside ValuePilot before any optional
- * hand-off to an external map application.  This is evidence presentation,
+ * hand-off to an external map application. This is the stable data seam a
+ * future Google Maps adapter can consume. It remains evidence presentation,
  * not routing, geocoding, stock, or availability authority.
  */
 internal data class ArgentinaQualifiedStoreMapContext(

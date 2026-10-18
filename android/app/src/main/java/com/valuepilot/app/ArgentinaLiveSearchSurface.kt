@@ -19,6 +19,7 @@ internal data class ArgentinaLiveSearchSurfaceState(
     val mode: ArgentinaLiveSearchSurfaceMode,
     val generation: Long = 0L,
     val query: String = "",
+    val selectionId: String? = null,
     val statusMessage: String,
     val presentation: PracticalShoppingSearchIdentityPresentation? = null,
     val caveat: String
@@ -29,6 +30,7 @@ internal data class ArgentinaLiveSearchSurfaceState(
         require(statusMessage.isNotBlank())
         require(caveat.isNotBlank())
         require(query.length <= ArgentinaBackendContract.MAX_QUERY_CHARS)
+        require(selectionId == null || selectionId.length <= 160 && selectionId.matches(Regex("[A-Za-z0-9_.:-]{1,160}")))
         require(presentation == null || presentation.query.isNotBlank())
         if (mode == ArgentinaLiveSearchSurfaceMode.RESULTS) {
             require(presentation != null && presentation.matches.isNotEmpty())
@@ -185,8 +187,20 @@ internal class ArgentinaLiveSearchSurfaceHost(
         coordinator.submit(rawQuery, area.context())
     }
 
+    fun submit(rawQuery: String, selectionId: String?, language: String = "es") {
+        coordinator.submit(rawQuery, area.context(), selectionId, language)
+    }
+
     fun loadMore() {
         coordinator.loadMore()
+    }
+
+    fun loadPrevious() {
+        coordinator.loadPrevious()
+    }
+
+    fun loadMoreClarification() {
+        coordinator.loadMoreClarification()
     }
 
     fun invalidateForRouteChange() {
@@ -199,6 +213,7 @@ internal class ArgentinaLiveSearchSurfaceHost(
 
     private fun accept(next: ArgentinaLiveSearchState) {
         val projected = ArgentinaLiveSearchSurfacePresenter.from(next, area)
+            .copy(selectionId = coordinator.selectionId())
         latest = projected
         render(projected)
     }
@@ -206,6 +221,7 @@ internal class ArgentinaLiveSearchSurfaceHost(
     companion object {
         fun createProduction(
             area: ArgentinaQualifiedLaunchArea,
+            useDiscoveryV2: Boolean = false,
             render: (ArgentinaLiveSearchSurfaceState) -> Unit
         ): ArgentinaLiveSearchSurfaceHost {
             lateinit var host: ArgentinaLiveSearchSurfaceHost
@@ -213,7 +229,8 @@ internal class ArgentinaLiveSearchSurfaceHost(
                 transport = ValuePilotArgentinaEdgeTransportFactory.create(),
                 stateSink = { state -> host.accept(state) },
                 diagnosticSink = ArgentinaLiveSearchDiagnostics::record,
-                successDiagnosticSink = ArgentinaLiveSearchDiagnostics::recordSuccess
+                successDiagnosticSink = ArgentinaLiveSearchDiagnostics::recordSuccess,
+                discoveryMode = useDiscoveryV2
             )
             host = ArgentinaLiveSearchSurfaceHost(coordinator, area, render)
             return host

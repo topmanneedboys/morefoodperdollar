@@ -912,12 +912,26 @@ class ArgentinaBackendReader:
         offer: Mapping[str, Any],
         product: Mapping[str, Any],
     ) -> dict[str, Any]:
+        # Some source stores have a street but no street number or postal
+        # code.  The Android consumer contract accepts an address map only
+        # when every value is a string, so omit unknown fields at this
+        # boundary instead of emitting JSON nulls that make an otherwise
+        # valid product response fail closed as a contract error.
+        raw_address = offer.get("storeAddress")
+        store_address = None
+        if isinstance(raw_address, Mapping):
+            cleaned_address = {
+                str(key): value
+                for key, value in raw_address.items()
+                if isinstance(key, str) and isinstance(value, str) and value.strip()
+            }
+            store_address = cleaned_address or None
         result = {
             "offerKey": offer.get("offerKey"),
             "productEvidenceKey": offer.get("productEvidenceKey"),
             "storeKey": offer.get("storeKey"),
             "storeName": offer.get("storeName"),
-            "storeAddress": offer.get("storeAddress"),
+            "storeAddress": store_address,
             "storeLatitude": offer.get("storeLatitude"),
             "storeLongitude": offer.get("storeLongitude"),
             "distanceKm": offer.get("distanceKm"),
@@ -1035,6 +1049,86 @@ class ArgentinaBackendReader:
             result.append(value)
         metrics.total_ms = (time.perf_counter() - started) * 1000
         return tuple(result), metrics
+
+    def offers_for_identities(
+        self, identity_keys: Sequence[str], *, selections: Sequence[RegionSelection],
+        latitude: Decimal, longitude: Decimal, radius_km: Decimal,
+    ) -> tuple[dict[str, list[dict[str, Any]]], RequestMetrics]:
+        """Join the complete selected identity set, without lexical top-N ranking.
+
+        Exact SearchPack records are fetched in batches; shared offer partitions
+        are read once per routed region. Resource limits reject the request as a
+        whole instead of returning a truncated set with a false global order.
+        """
+        if self.release.freshness_status != "FRESH":
+            raise CurrentPriceEvidenceUnavailable(CurrentPriceEvidenceUnavailable.code)
+        keys = tuple(sorted(set(identity_keys)))
+        if len(keys) > 500_000 or any(not isinstance(key, str) or not key for key in keys):
+            raise BackendQueryError("discovery identity set is invalid")
+        ordered_regions = tuple(sorted(selections, key=lambda value: value.region_id))
+        metrics = RequestMetrics(regions_queried=[value.region_id for value in ordered_regions])
+        result: dict[str, list[dict[str, Any]]] = {}
+        seen: set[tuple[str, str]] = set()
+        total = 0
+        for selection in ordered_regions:
+            if not keys or not selection.store_keys:
+                continue
+            manager = self._searchpack_for_region(selection.region_id)
+            if manager is None:
+                raise BackendQueryError("DISCOVERY_EXACT_OFFER_JOIN_UNAVAILABLE")
+            region = manager.region(selection.region_id)
+            products: dict[str, Mapping[str, Any]] = {}
+            stats = SearchPackStats()
+            try:
+                for start in range(0, len(keys), 4096):
+                    products.update(region.lookup_product_keys(keys[start:start + 4096], stats=stats))
+            except SearchPackError as exc:
+                raise BackendQueryError("discovery exact identity lookup failed") from exc
+            self._merge_searchpack_metrics(metrics, stats)
+            if not products:
+                continue
+            if any(not isinstance(value.get("partitionId"), str) or not value["partitionId"] for value in products.values()):
+                raise BackendQueryError("DISCOVERY_EXACT_OFFER_JOIN_UNAVAILABLE")
+            contract = self.router.contract(selection.region_id)
+            plan = self._plan(contract, ("exact-discovery",), values_by_query=(tuple(products.values()),))
+            # Avoid turning a broad public query into an unlimited remote read.
+            if plan.compressed_bytes > 128 * 1024 * 1024 or plan.decompressed_bytes > 512 * 1024 * 1024:
+                raise BackendQueryError("DISCOVERY_SCOPE_TOO_LARGE")
+            stores = self.router.stores(selection.region_id)
+            store_keys = set(selection.store_keys)
+            for records in self._load_members(selection.region_id, plan.slices, metrics):
+                for raw in records:
+                    product = products.get(raw.get("productEvidenceKey"))
+                    if product is None or raw.get("freshnessStatus") != "FRESH" or raw.get("releaseDate") != self.release.release_date:
+                        continue
+                    if not self._offer_matches_identity(raw, product):
+                        continue
+                    store_key = raw.get("storeKey")
+                    store = stores.get(store_key)
+                    if store_key not in store_keys or store is None or store.get("geoStatus") != "VALID":
+                        continue
+                    distance = straight_line_distance_km(latitude, longitude, store["latitude"], store["longitude"])
+                    if distance > float(radius_km) + 1e-9:
+                        continue
+                    public = self._public_search_offer(_offer_result(raw, product, store, distance), product)
+                    offer_key = public.get("offerKey")
+                    if not isinstance(offer_key, str) or not isinstance(public.get("listPrice"), Mapping):
+                        continue
+                    if public["listPrice"].get("currency") != "ARS":
+                        continue
+                    try:
+                        ExactMoney.parse(public["listPrice"].get("amount"), currency="ARS", positive=True)
+                    except (ShoppingIntelligenceError, TypeError, ValueError):
+                        continue
+                    identity = (selection.region_id, offer_key)
+                    if identity in seen:
+                        continue
+                    seen.add(identity)
+                    total += 1
+                    if total > MAX_OFFERS:
+                        raise BackendQueryError("DISCOVERY_SCOPE_TOO_LARGE")
+                    result.setdefault(str(raw["productEvidenceKey"]), []).append(public)
+        return result, metrics
 
     def _plan(
         self,

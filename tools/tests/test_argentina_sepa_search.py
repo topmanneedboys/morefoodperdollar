@@ -18,11 +18,15 @@ class ArgentinaSepaSearchTest(unittest.TestCase):
             product("p-pan-1", "PAN LACTAL BLANCO", "Bimbo"),
             product("p-pan-brand-negative", "MANTECA CON MARCA PAN"),
             product("p-arroz-1", "ARROZ LARGO FINO 1 KG"),
+            product("p-arroz-integral", "ARROZ INTEGRAL 1 KG"),
             product("p-arroz-negative", "CONDIMENTO PARA ARROZ"),
+            product("p-arroz-dessert", "ARROZ CON LECHE POSTRE"),
+            product("p-arroz-flour", "HARINA DE ARROZ"),
             product("p-aceite-negative", "ACEITE PARA BEBE"),
             product("p-huevo-1", "HUEVOS BLANCOS X 12"),
             product("p-huevo-negative", "FIDEOS CON HUEVO"),
             product("p-huevo-chocolate", "HUEVO CHOCOLATE SORPRESA"),
+            product("p-huevo-dino", "SMASH DINO NANO EGG"),
             product("p-fideos-1", "FIDEOS TIRABUZON"),
             product("p-azucar-1", "AZUCAR BLANCA 1 KG"),
             product("p-azucar-negative", "GASEOSA SIN AZUCAR"),
@@ -35,6 +39,10 @@ class ArgentinaSepaSearchTest(unittest.TestCase):
             product("p-papel-1", "PAPEL HIGIÉNICO DOBLE HOJA"),
             product("p-papel-negative", "PALITO PORTO ROLLO PAPEL HIGIENICO"),
             product("p-panales-1", "PAÑALES TALLE G"),
+            product("p-lychee-1", "LICHI FRESCO 500 G"),
+            product("p-lychee-negative", "JUGO DE LICHI 1 L"),
+            product("p-yerba-1", "YERBA MATE 500 G"),
+            product("p-yerba-negative", "BEBIDA DE YERBA MATE 1 L"),
             product("p-boundary", "COMPANERO DE COCINA"),
         ]
 
@@ -61,11 +69,39 @@ class ArgentinaSepaSearchTest(unittest.TestCase):
             results = search_products(self.products, query)
             self.assertNotIn(negative, {result.product_evidence_key for result in results}, query)
 
+    def test_bare_egg_search_excludes_toys_but_explicit_toy_search_remains_available(self):
+        bare = search_products(self.products, "eggs", limit=10, _allow_discovery=True)
+        bare_keys = {result.product_evidence_key for result in bare}
+        self.assertIn("p-huevo-1", bare_keys)
+        self.assertNotIn("p-huevo-dino", bare_keys)
+        self.assertNotIn("p-huevo-chocolate", bare_keys)
+
+        toy = search_products(self.products, "eggs dino", limit=10, _allow_discovery=True)
+        self.assertIn("p-huevo-dino", {result.product_evidence_key for result in toy})
+
     def test_token_boundary_and_unknown_query(self):
         self.assertEqual(search_products(self.products, "panaderia"), [])
         self.assertEqual(search_products(self.products, "producto inexistente"), [])
         self.assertEqual(search_products(self.products, "!!!"), [])
         self.assertEqual(search_products(self.products, ""), [])
+
+    def test_family_aliases_keep_generic_queries_on_direct_products(self):
+        for query, positive, negatives in (
+            ("rice", "p-arroz-1", {"p-arroz-dessert", "p-arroz-flour", "p-arroz-negative"}),
+            ("lychee", "p-lychee-1", {"p-lychee-negative"}),
+            ("lychee fruit", "p-lychee-1", {"p-lychee-negative"}),
+            ("lichi", "p-lychee-1", {"p-lychee-negative"}),
+            ("yerba", "p-yerba-1", {"p-yerba-negative"}),
+        ):
+            with self.subTest(query=query):
+                results = search_products(self.products, query)
+                keys = {result.product_evidence_key for result in results}
+                self.assertIn(positive, keys)
+                self.assertTrue(keys.isdisjoint(negatives))
+
+    def test_explicit_derived_form_remains_searchable(self):
+        results = search_products(self.products, "arroz con leche")
+        self.assertEqual(results[0].product_evidence_key, "p-arroz-dessert")
 
     def test_plural_aliases_and_stable_tie_breaking(self):
         self.assertEqual(search_products(self.products, "fideos")[0].product_evidence_key, "p-fideos-1")

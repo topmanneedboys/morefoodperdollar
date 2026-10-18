@@ -350,6 +350,70 @@ class ArgentinaBackendConsumerBridgeTest {
     }
 
     @Test
+    fun discoverySearchCarriesObservedFamilyClarificationWithoutChangingIdentityCandidates() {
+        val clarification =
+            JSONObject()
+                .put("code", "PRODUCT_FAMILY_CLARIFICATION")
+                .put("family", "rice")
+                .put("message", "Elegí el tipo de producto para afinar la búsqueda.")
+                .put("messageEn", "Choose a product type to refine the search.")
+                .put("evidence", "OBSERVED_CATALOG_NAMES")
+                .put(
+                    "choices",
+                    JSONArray()
+                        .put(JSONObject().put("id", "rice:grain").put("label", "Arroz en grano").put("labelEn", "Rice grains").put("query", "arroz largo"))
+                        .put(JSONObject().put("id", "rice:dessert").put("label", "Dulces o galletas de arroz").put("labelEn", "Rice sweets or cakes").put("query", "arroz dulce"))
+                )
+        val body =
+            JSONObject(searchJson())
+                .put("resolution", "DISCOVERY")
+                .put("input", JSONObject.NULL)
+                .put("clarification", clarification)
+                .put("matches", JSONArray().put(productIdentity().put("score", 100)))
+                .toString()
+
+        val parsed = ArgentinaBackendContract.parseSearch(body, release)
+
+        assertEquals("rice", parsed.clarification?.family)
+        assertEquals(2, parsed.clarification?.choices?.size)
+        assertEquals("arroz largo", parsed.clarification?.choices?.first()?.query)
+        assertEquals(1, parsed.identityCandidates.size)
+    }
+
+    @Test
+    fun searchClarificationAcceptsMoreThanSixObservedChoices() {
+        val choices = JSONArray()
+        repeat(7) { index ->
+            choices.put(
+                JSONObject()
+                    .put("id", "egg:form$index")
+                    .put("label", "Forma $index")
+                    .put("labelEn", "Form $index")
+                    .put("query", "huevos forma $index")
+            )
+        }
+        val clarification =
+            JSONObject()
+                .put("code", "PRODUCT_FAMILY_CLARIFICATION")
+                .put("family", "egg")
+                .put("message", "Elegí el tipo de producto.")
+                .put("messageEn", "Choose a product type.")
+                .put("evidence", "OBSERVED_CATALOG_NAMES")
+                .put("choices", choices)
+        val body =
+            JSONObject(searchJson())
+                .put("resolution", "DISCOVERY")
+                .put("input", JSONObject.NULL)
+                .put("clarification", clarification)
+                .put("matches", JSONArray().put(productIdentity().put("score", 100)))
+                .toString()
+
+        val parsed = ArgentinaBackendContract.parseSearch(body, release)
+
+        assertEquals(7, parsed.clarification?.choices?.size)
+    }
+
+    @Test
     fun searchCarriesExactCurrentOfferPreviewWithoutClaimingInventory() {
         val offer = qualifiedOffer()
         val candidate = productIdentity().put("qualifiedOffers", JSONArray().put(offer))
@@ -487,6 +551,39 @@ class ArgentinaBackendConsumerBridgeTest {
             )
         val item = body.getJSONArray("items").getJSONObject(0)
         assertEquals("ar-sepa-product:10:7790742192103", item.getString("productEvidenceKey"))
+    }
+
+    @Test
+    fun searchRequestCarriesStableClarificationSelectionAcrossJsonBoundary() {
+        val transport =
+            InMemoryArgentinaBackendTransport(
+                mapOf(
+                    ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT to
+                        response(
+                            200,
+                            JSONObject(searchJson())
+                                .put("query", "huevos")
+                                .put("originalQuery", "huevos")
+                                .toString()
+                        )
+                )
+            )
+
+        val result =
+            ArgentinaBackendConsumerBridge(transport, release).search(
+                searchRequest().copy(query = "huevos", selectionId = "egg:whole_egg")
+            )
+
+        assertTrue(result.toString(), result is ArgentinaBackendBridgeResult.Success)
+        val body =
+            JSONObject(
+                requireNotNull(
+                    transport.calls.single {
+                        it.endpoint == ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT
+                    }.requestBody
+                )
+            )
+        assertEquals("egg:whole_egg", body.getString("selectionId"))
     }
 
     @Test

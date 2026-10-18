@@ -1,0 +1,921 @@
+{
+  "auditKind": "COMPLETE_PROVIDER_GROUP_INVENTORY_NOT_SEMANTIC_ACCEPTANCE",
+  "indexSha256": "d7aef4c8b740bfdcdca68c404692b52a7225b66cb744641bee56d2214edf0a88",
+  "providerProductsScanned": 78865,
+  "identityRecordsScanned": 134337,
+  "providerReadiness": {
+    "ALL_IDENTITIES_TYPED": 30549,
+    "PROVIDERS_WITH_BILINGUAL_TYPE_PREDICATES": 37454,
+    "NO_IDENTITY_TYPED": 40300,
+    "PROVIDERS_WITH_MULTI_TYPE_IDENTITIES": 4193,
+    "PROVIDERS_WITH_FORM_EVIDENCE": 5128,
+    "PARTIALLY_TYPED": 8016
+  },
+  "inventoryPath": "C:\\Users\\iamatopstrongman\\Documents\\Codex\\2026-10-08\\valuepilot-next-complete-premium-ui-ux\\work\\valuepilot-10133-source-audit\\local-provider-data\\catalog-provider-readiness-v40.jsonl.gz",
+  "topUnresolvedObservedPrefixes": [
+    {
+      "observedPrefix": "hg rem",
+      "distinctProviders": 362,
+      "sourceExamples": [
+        "HG REM BANO FLOR",
+        "HG REM ML MICROPANAL",
+        "HG REM MC BOLSILLO T"
+      ]
+    },
+    {
+      "observedPrefix": "lb col.",
+      "distinctProviders": 286,
+      "sourceExamples": [
+        "LB COL. LECTURAS IMPERDIBLES",
+        "LB COL. CUIDADO Y BIENESTAR",
+        "LB COL. JUEGOS PARA SUPERDIVERTIRSE"
+      ]
+    },
+    {
+      "observedPrefix": "hg camp",
+      "distinctProviders": 198,
+      "sourceExamples": [
+        "HG CAMP SIMIL CUERO",
+        "HG CAMP PUFFER CORTA",
+        "HG CAMP PUFFER LARGA"
+      ]
+    },
+    {
+      "observedPrefix": "smart tv",
+      "distinctProviders": 198,
+      "sourceExamples": [
+        "SMART TV 50 CROWN MUSTANG 4K QLED CM 50ST005 2Q",
+        "SMART TV 32 CROWN MUSTANG ANDROID HD CM 32MT005 2",
+        "SMART TV 40 CROWN MUSTANG ANDROID FHD CM 40ST005 2"
+      ]
+    },
+    {
+      "observedPrefix": "set de",
+      "distinctProviders": 152,
+      "sourceExamples": [
+        "SET DE HERRAMIENTAS CON CINTURON TUFF TOOLS",
+        "SET DE COCCION KITCHENAID NEGRO 10 PIEZAS ACERO",
+        "SET DE COCCION KITCHENAID NEGRO 10PZ"
+      ]
+    },
+    {
+      "observedPrefix": "hg campe",
+      "distinctProviders": 143,
+      "sourceExamples": [
+        "HG CAMPE PUFF LARGA",
+        "HG CAMPE PUFF CORTA",
+        "HG CAMPE PUFF NENE"
+      ]
+    },
+    {
+      "observedPrefix": "juego de",
+      "distinctProviders": 131,
+      "sourceExamples": [
+        "JUEGO DE TALADRO TUFF TOOLS",
+        "JUEGO DE BATIDORA ELECTRONICA",
+        "JUEGO DE FREIDORA DE AIRE"
+      ]
+    },
+    {
+      "observedPrefix": "dulce de",
+      "distinctProviders": 100,
+      "sourceExamples": [
+        "DULCE DE BATATA (98242)",
+        "DULCE DE MEMBRILLO",
+        "DULCE DE BATATA A LA VAIN"
+      ]
+    },
+    {
+      "observedPrefix": "hg pant",
+      "distinctProviders": 100,
+      "sourceExamples": [
+        "HG PANT RIBB PRINT",
+        "HG PANT GABARDINA",
+        "HG PANT 5 BOL GAB"
+      ]
+    },
+    {
+      "observedPrefix": "cel moto",
+      "distinctProviders": 97,
+      "sourceExamples": [
+        "CEL MOTO G04 NEGRO",
+        "CEL MOTO E6I GRIS",
+        "CEL MOTO E6I ROSA"
+      ]
+    },
+    {
+      "observedPrefix": "lb el",
+      "distinctProviders": 94,
+      "sourceExamples": [
+        "LB EL CAPITAN DEL EQUIPO DE QUIDDITCH LEGO",
+        "LB EL SENOR OSCURO LEGO",
+        "LB EL PRINCIPITO TURQUESA"
+      ]
+    },
+    {
+      "observedPrefix": "bolsa de",
+      "distinctProviders": 93,
+      "sourceExamples": [
+        "BOLSA DE RESIDUOS GLOW 45X60 CM CITRIC X 15 UNI",
+        "BOLSA DE RESIDUOS GLOW 50X70 CM CITRIC X 15 UNI",
+        "BOLSA DE RESIDUOS GLOW 60X90 CM CITRIC X 15 UNI"
+      ]
+    },
+    {
+      "observedPrefix": "hg tdb",
+      "distinctProviders": 86,
+      "sourceExamples": [
+        "HG TDB GRIS XXL",
+        "HG TDB GRIS XL",
+        "HG TDB GRIS L"
+      ]
+    },
+    {
+      "observedPrefix": "hg chale",
+      "distinctProviders": 78,
+      "sourceExamples": [
+        "HG CHALE LIV NAVY",
+        "HG CHALE LIV AZU NAV",
+        "HG CHALE PUFF AZUL N"
+      ]
+    },
+    {
+      "observedPrefix": "hg chaleco",
+      "distinctProviders": 77,
+      "sourceExamples": [
+        "HG CHALECO C CAPUCHA",
+        "HG CHALECO LIVIANO ECRU",
+        "HG CHALECO PUFFER"
+      ]
+    },
+    {
+      "observedPrefix": "cesto de",
+      "distinctProviders": 76,
+      "sourceExamples": [
+        "CESTO DE RESIDUOS PLEGABLE COLGABLE 20X20X16CM",
+        "CESTO DE RESIDUOS CARREFOUR ACERO A PEDAL 12L",
+        "CESTO DE RESIDUO CARREFOUR DE ACERO A PEDAL 3L"
+      ]
+    },
+    {
+      "observedPrefix": "set x",
+      "distinctProviders": 75,
+      "sourceExamples": [
+        "SET X6 COPAS WHITE",
+        "SET X6 COPAS FLUTE",
+        "SET X4 COPAS MARTINI"
+      ]
+    },
+    {
+      "observedPrefix": "crema de",
+      "distinctProviders": 72,
+      "sourceExamples": [
+        "crema de manos NIVEA intensivo PMO-100-gr.",
+        "crema de manos NIVEA antiedad 100ml PMO-100-ml.",
+        "crema de dia ROSE CARE 50ml TRR-50-ml."
+      ]
+    },
+    {
+      "observedPrefix": "lb la",
+      "distinctProviders": 68,
+      "sourceExamples": [
+        "LB LA MONA JACINTA (ACARTONADO)",
+        "LB LA ISLA DE LA MUJER DORMIDA",
+        "LB LA MUERTE AJENA"
+      ]
+    },
+    {
+      "observedPrefix": "limp liq",
+      "distinctProviders": 68,
+      "sourceExamples": [
+        "LIMP LIQ APC BOSQUE PINO",
+        "LIMP LIQ APC MAÑANA CAMPO",
+        "LIMP LIQ APC FLORAL PERF"
+      ]
+    },
+    {
+      "observedPrefix": "crema p",
+      "distinctProviders": 67,
+      "sourceExamples": [
+        "CREMA P/MANOS CUIDADO INTENSI. NIVEA POM 100 ML",
+        "CREMA P/MANOS 3 EN 1 ANTI-EDAD NIVEA POM 100 ML",
+        "CREMA P PEINAR C KERATINA PANTENE X 300 CC"
+      ]
+    },
+    {
+      "observedPrefix": "aire split",
+      "distinctProviders": 64,
+      "sourceExamples": [
+        "AIRE SPLIT INVERTER ELECTRA 3500W TREND ENTRDI35TC",
+        "AIRE SPLIT INVERTER ELECTRA 5300W TREND ENTRDI53TC",
+        "AIRE SPLIT ELECTRA 5300W TREND ENTRDO53TC"
+      ]
+    },
+    {
+      "observedPrefix": "cel samsung",
+      "distinctProviders": 64,
+      "sourceExamples": [
+        "CEL SAMSUNG J2 CORE VIOLE",
+        "CEL SAMSUNG A3",
+        "CEL SAMSUNG S22 BLACK"
+      ]
+    },
+    {
+      "observedPrefix": "cel sams",
+      "distinctProviders": 63,
+      "sourceExamples": [
+        "CEL SAMS S21 FE 5G GRAFIT",
+        "CEL SAMS Z FLIP4 128GB GR",
+        "CEL SAMS A23 128GB BLK 5G"
+      ]
+    },
+    {
+      "observedPrefix": "hg jogger",
+      "distinctProviders": 63,
+      "sourceExamples": [
+        "HG JOGGER GABARDINA",
+        "HG JOGGER RUST NEOCO",
+        "HG JOGGER MESA LILA"
+      ]
+    },
+    {
+      "observedPrefix": "led tv",
+      "distinctProviders": 63,
+      "sourceExamples": [
+        "LED TV 55\" OLED55C3PSA, LG, 1 cu",
+        "LED TV 65\" OLED65C3PSA, LG, 1 cu",
+        "LED TV SMART 77\" OLED 4K UHD, LG, 1 cu"
+      ]
+    },
+    {
+      "observedPrefix": "acolchado tex",
+      "distinctProviders": 61,
+      "sourceExamples": [
+        "ACOLCHADO TEX MICRO TUFTED TWIN",
+        "ACOLCHADO TEX MICRO TUFTED QUEEN",
+        "ACOLCHADO TEX MICRO TUFTED KING"
+      ]
+    },
+    {
+      "observedPrefix": "bolsa p",
+      "distinctProviders": 59,
+      "sourceExamples": [
+        "BOLSA P/BAÑO LIMON",
+        "BOLSA P/ESCOMBROS 50X70",
+        "BOLSA P/RESIDUOS NORMAL 45X60 ROLLO, ASURIN, 30 cu"
+      ]
+    },
+    {
+      "observedPrefix": "caja organizadora",
+      "distinctProviders": 59,
+      "sourceExamples": [
+        "CAJA ORGANIZADORA 23LT",
+        "CAJA ORGANIZADORA DANLAY",
+        "CAJA ORGANIZADORA"
+      ]
+    },
+    {
+      "observedPrefix": "hg px",
+      "distinctProviders": 56,
+      "sourceExamples": [
+        "HG PX4 SOQ PRINT H",
+        "HG PX3 SOQ PRINT H",
+        "HG PX4 SOQ BAS GRI H"
+      ]
+    },
+    {
+      "observedPrefix": "juego lego",
+      "distinctProviders": 56,
+      "sourceExamples": [
+        "JUEGO LEGO CLASSIC BRICK",
+        "JUEGO LEGO DUPLO BRICK",
+        "JUEGO LEGO POLICE CAR"
+      ]
+    },
+    {
+      "observedPrefix": "roll on",
+      "distinctProviders": 56,
+      "sourceExamples": [
+        "ROLL-ON REXONA WOMEN NUTRITIVE 50ml.",
+        "ROLL-ON REXONA MEN SENSITIVE 50 ml.",
+        "ROLL-ON REXONA MEN INVISIBLE 72HS 50 ml."
+      ]
+    },
+    {
+      "observedPrefix": "snack perros",
+      "distinctProviders": 56,
+      "sourceExamples": [
+        "SNACK PERROS RAZA CARNE 65 GRS",
+        "SNACK PERROS PEDIGREE C T DENTASTIX R.PEQ 1UNI",
+        "SNACK PERROS PEDIGREE C T DENTASTIX R.PEQ 3UNI"
+      ]
+    },
+    {
+      "observedPrefix": "bolsa regalo",
+      "distinctProviders": 55,
+      "sourceExamples": [
+        "BOLSA REGALO GRANDE KRAFT 30X12X41 CM",
+        "BOLSA REGALO CHICA ARCO IRIS 18X8X20",
+        "BOLSA REGALO ARCO IRIS MEDIANA 22X10X30"
+      ]
+    },
+    {
+      "observedPrefix": "toalla hig.",
+      "distinctProviders": 55,
+      "sourceExamples": [
+        "TOALLA HIG. NOCT. C/ALAS SECA XTRA, ALWAYS, 8 cu",
+        "TOALLA HIG. NOCT. C/ALAS SECA XTRA, ALWAYS, 16 cu",
+        "TOALLA HIG. NOCT. C/ALAS SUAVE XTRA, ALWAYS, 8 cu"
+      ]
+    },
+    {
+      "observedPrefix": "hav ojo",
+      "distinctProviders": 52,
+      "sourceExamples": [
+        "HAV OJO SLIM D 3536",
+        "HAV OJO SLIM D 3738",
+        "HAV OJO SLIM D 3940"
+      ]
+    },
+    {
+      "observedPrefix": "tapa p",
+      "distinctProviders": 51,
+      "sourceExamples": [
+        "TAPA P/PARRILLA NOVILLITO",
+        "TAPA P PASCUALINA HOJALDRE HORNO TAPANDIL X 350 G",
+        "TAPA P/PASCUALINA CIUDAD DEL LAGO BOL 2 UNI"
+      ]
+    },
+    {
+      "observedPrefix": "milanesa de",
+      "distinctProviders": 50,
+      "sourceExamples": [
+        "MILANESA DE CUADRADA NOVILLITO S/E-1-Kg",
+        "MILANESA DE NALGA NOVILLITO S/E-1-Kg",
+        "MILANESA DE BOLA DE LOMO NOVILLITO S/E-1-Kg"
+      ]
+    },
+    {
+      "observedPrefix": "t emp",
+      "distinctProviders": 50,
+      "sourceExamples": [
+        "T/EMP FREIR LA JUVENTUD",
+        "T/EMP HORNO LA JUVENTUD",
+        "T/EMP CRIOLLA TUBO X 60 U"
+      ]
+    },
+    {
+      "observedPrefix": "almohadon tex",
+      "distinctProviders": 49,
+      "sourceExamples": [
+        "ALMOHADON TEX PANA TRENZADA 45 X 45",
+        "ALMOHADON TEX JACQUARD YUTE 45X 45 FEBO",
+        "ALMOHADON TEX JACQUARD YUTE 45X 45 ATENEA"
+      ]
+    },
+    {
+      "observedPrefix": "secador de",
+      "distinctProviders": 49,
+      "sourceExamples": [
+        "SECADOR DE PELO REMINGTON STYLE THERAPY D3015",
+        "SECADOR DE PELO REMINGTON 2400W AC9096",
+        "SECADOR DE PELO REMINGTON VIAJE 1800W D1500"
+      ]
+    },
+    {
+      "observedPrefix": "tapa de",
+      "distinctProviders": 49,
+      "sourceExamples": [
+        "TAPA DE ASADO SELECCIONAD",
+        "TAPA DE BIFE NOVILLITO BJA-1-Kg",
+        "TAPA DE NALGA NOVILLITO BJA-1-Kg"
+      ]
+    },
+    {
+      "observedPrefix": "muneca tiny",
+      "distinctProviders": 48,
+      "sourceExamples": [
+        "MUNECA TINY FUTBOLISTA",
+        "MUNECA TINY DOCTORA",
+        "MUNECA TINY SUPERMERCADO"
+      ]
+    },
+    {
+      "observedPrefix": "polvo p",
+      "distinctProviders": 48,
+      "sourceExamples": [
+        "POLVO P/GELATINA ROYAL SIN SABOR SOB 14 GRM",
+        "POLVO P/HORNEAR ROYAL",
+        "POLVO P/HORNEAR, ROYAL, 50 gr"
+      ]
+    },
+    {
+      "observedPrefix": "toalla fem",
+      "distinctProviders": 48,
+      "sourceExamples": [
+        "TOALLA FEM ALWAYS XTRA NOCHE SECA C ALAS X 8U",
+        "TOALLA FEM NOCT C ALAS XTRA SECA ALWAYS X 16 UNI",
+        "TOALLA FEM ALWAYS XTRA NOCTURNA SUAVE C ALAS X 8U"
+      ]
+    },
+    {
+      "observedPrefix": "hg denim",
+      "distinctProviders": 47,
+      "sourceExamples": [
+        "HG DENIM OXFORD TAJO",
+        "HG DENIM MOM",
+        "HG DENIM ANCHO TAJO"
+      ]
+    },
+    {
+      "observedPrefix": "tw rem",
+      "distinctProviders": 47,
+      "sourceExamples": [
+        "TW REM MC LIGA JUSTI",
+        "TW REM MC AUTOSLOCOS",
+        "TW REM MC TOMYJERRY"
+      ]
+    },
+    {
+      "observedPrefix": "maquina de",
+      "distinctProviders": 46,
+      "sourceExamples": [
+        "MAQUINA DE AFEITAR COMFORT 3 HYBRID BIC X 6 UNI",
+        "MAQUINA DE AFEITARMAQ DE AFEITAR 3 BIC X 2 UNI",
+        "MAQUINA DE AFEITAR COMFORT 2 BIC PAQ 5 UNI"
+      ]
+    },
+    {
+      "observedPrefix": "mix de",
+      "distinctProviders": 45,
+      "sourceExamples": [
+        "MIX DE LA PATAGONIA AHUMADO, FUMEE, 40 gr",
+        "MIX DE SEMILLAS",
+        "MIX DE FRUTAS PASSION BLEND, EASY FRUT, 450 gr"
+      ]
+    },
+    {
+      "observedPrefix": "pelota de",
+      "distinctProviders": 44,
+      "sourceExamples": [
+        "PELOTA DE FUTBOL LEGO",
+        "PELOTA DE BASKET N7",
+        "PELOTA DE FUTBOL N 5 TOP LIFE PEKIN B A 310 GR"
+      ]
+    },
+    {
+      "observedPrefix": "coca cola",
+      "distinctProviders": 42,
+      "sourceExamples": [
+        "COCA COLA ENV.RETORNABLE 1250cc",
+        "COCA COLA ENV.RETORNABLE 2000cc",
+        "COCA COLA ENV.RETORNABLE 2500cc"
+      ]
+    },
+    {
+      "observedPrefix": "horno electrico",
+      "distinctProviders": 42,
+      "sourceExamples": [
+        "HORNO ELECTRICO B D SILVER 30L TO3000 AR",
+        "HORNO ELECTRICO B D SILVER 43L TO4500 AR",
+        "HORNO ELECTRICO B D SILVER 67L TO7000 AR"
+      ]
+    },
+    {
+      "observedPrefix": "rollo de",
+      "distinctProviders": 42,
+      "sourceExamples": [
+        "ROLLO DE COCINA ELEGANTE 3unx50paño",
+        "ROLLO DE COCINA ELEGANTE GIRAMAS 3uni.x1",
+        "ROLLO DE COCINA ALGODON ELITE ULTRA 3 X 60 UNI"
+      ]
+    },
+    {
+      "observedPrefix": "filet de",
+      "distinctProviders": 41,
+      "sourceExamples": [
+        "FILET DE TRUCHA AV SALM T",
+        "FILET DE MERLUZA CONGELADO MANJARES X 1KG",
+        "FILET DE MERLUZA DESPINADO FRESCO X KG"
+      ]
+    },
+    {
+      "observedPrefix": "lb bluey",
+      "distinctProviders": 41,
+      "sourceExamples": [
+        "LB BLUEY ACTIVITY ESPECIAL",
+        "LB BLUEY PINTA Y BRILLA",
+        "LB BLUEY BLOCK ANILLADO"
+      ]
+    },
+    {
+      "observedPrefix": "sp rem",
+      "distinctProviders": 40,
+      "sourceExamples": [
+        "SP REM SM DEPORTIVA",
+        "SP REM MC DEPORTIVA"
+      ]
+    },
+    {
+      "observedPrefix": "hg body",
+      "distinctProviders": 39,
+      "sourceExamples": [
+        "HG BODY ML",
+        "HG BODY MC ESTM ROTA",
+        "HG BODY MC BORD VOLA"
+      ]
+    },
+    {
+      "observedPrefix": "jarra electrica",
+      "distinctProviders": 39,
+      "sourceExamples": [
+        "JARRA ELECTRICA OSTER NEGRA BVSTKT4970B",
+        "JARRA ELECTRICA OSTER 1.7L BCA",
+        "JARRA ELECTRICA OSTER DIGITAL 1.7 LT INOX BVSTKT89"
+      ]
+    },
+    {
+      "observedPrefix": "lb gaturro",
+      "distinctProviders": 39,
+      "sourceExamples": [
+        "LB GATURRO MISION IMPOSIBLE",
+        "LB GATURRO PINTAR CON NUMEROS 1",
+        "LB GATURRO PINTAR CON NUMEROS 2"
+      ]
+    },
+    {
+      "observedPrefix": "soul care",
+      "distinctProviders": 39,
+      "sourceExamples": [
+        "SOUL CARE MAQ TRIPLE",
+        "SOUL CARE MAQUINA MA",
+        "SOUL CARE PANUELOS DESCARTABLES 21X21CM 6U"
+      ]
+    },
+    {
+      "observedPrefix": "vent de",
+      "distinctProviders": 39,
+      "sourceExamples": [
+        "VENT DE MESA 16 CARREFOUR HOME 55W HDF55 25L",
+        "VENT DE PIE 17 CARREFOUR HOME 55W HCSF17 25L",
+        "VENT DE PIE 18 LILIANA 75W NGRO VPRN18"
+      ]
+    },
+    {
+      "observedPrefix": "hermetico san",
+      "distinctProviders": 38,
+      "sourceExamples": [
+        "HERMETICO SAN REMO FLOR 450 ML",
+        "HERMETICO SAN REMO FLOR 920 ML",
+        "HERMETICO SAN REMO FLOR 1.6 LTS"
+      ]
+    },
+    {
+      "observedPrefix": "pantufla tex",
+      "distinctProviders": 38,
+      "sourceExamples": [
+        "PANTUFLA TEX BASE NUBE 26 33 ANIMADA",
+        "PANTUFLA TEX MU ECOS 28 38",
+        "PANTUFLA TEX MORLEY LE ADORA 39 44"
+      ]
+    },
+    {
+      "observedPrefix": "tarjeta de",
+      "distinctProviders": 38,
+      "sourceExamples": [
+        "TARJETA DE REGALO CARREFOUR $ 3000",
+        "TARJETA DE REGALO PLAYSTATION $ 26.000",
+        "TARJETA DE REGALO MULTIMARCA $ 3000"
+      ]
+    },
+    {
+      "observedPrefix": "crema para",
+      "distinctProviders": 37,
+      "sourceExamples": [
+        "Crema para piernas Goicochea PVC-400-ml.",
+        "crema para manos ATRIX LAT-145-gr.",
+        "Crema para piernas NIVEA Anticelulitis PVC-400-ml."
+      ]
+    },
+    {
+      "observedPrefix": "hg med",
+      "distinctProviders": 36,
+      "sourceExamples": [
+        "HG MED PX3 CASUAL LI",
+        "HG MED CORTA TO FLUO",
+        "HG MED RAY BB 0"
+      ]
+    },
+    {
+      "observedPrefix": "pack x",
+      "distinctProviders": 36,
+      "sourceExamples": [
+        "PACK X2 TOP TEX",
+        "PACK X 4 COULOTTE TEX FANTASIA",
+        "PACK X2 TOP TEX FANTASIA"
+      ]
+    },
+    {
+      "observedPrefix": "silver shadow",
+      "distinctProviders": 36,
+      "sourceExamples": [
+        "SILVER SHADOW PEL AUTO SKUM 7",
+        "SILVER SHADOW ARC DE SIER MINI ARC 12",
+        "SILVER SHADOW MORSA BABY ROJA"
+      ]
+    },
+    {
+      "observedPrefix": "alimento p",
+      "distinctProviders": 35,
+      "sourceExamples": [
+        "ALIMENTO P/GATOS OFERTA EL KG.",
+        "ALIMENTO P/PERROS OFERTA EL KG.",
+        "ALIMENTO P/PERROS CACHORROS, DOGUI, 1500 gr"
+      ]
+    },
+    {
+      "observedPrefix": "antit.rexona x",
+      "distinctProviders": 35,
+      "sourceExamples": [
+        "ANTIT.REXONA X50G.BARRA NUTRITIVE",
+        "ANTIT.REXONA X50G.BARRA SPORT",
+        "ANTIT.REXONA X60G.CREMA ODORONO"
+      ]
+    },
+    {
+      "observedPrefix": "play set",
+      "distinctProviders": 35,
+      "sourceExamples": [
+        "PLAY SET THE CORPS UNIVERSE BATTLE PLAY",
+        "PLAY SET THE CORPS UNIVERSE LAND STRIDE",
+        "PLAY SET THE CORPS UNIVERSE FIRST RESPO"
+      ]
+    },
+    {
+      "observedPrefix": "caja org",
+      "distinctProviders": 34,
+      "sourceExamples": [
+        "CAJA ORG ALTA TRANSPARENTE 29L, PLASUTIL, 1 cu",
+        "CAJA ORG ALTA TRANSPARENTE 56L, PLASUTIL, 1 cu",
+        "CAJA ORG ALTA TRANSPARENTE 78L, PLASUTIL, 1 cu"
+      ]
+    },
+    {
+      "observedPrefix": "muneca barbie",
+      "distinctProviders": 33,
+      "sourceExamples": [
+        "MUNECA BARBIE VESTIDO DE NOCHE",
+        "MUNECA BARBIE FAB G",
+        "MUNECA BARBIE BICICLETA"
+      ]
+    },
+    {
+      "observedPrefix": "cocot corp",
+      "distinctProviders": 32,
+      "sourceExamples": [
+        "COCOT CORP TOP BASIC",
+        "COCOT CORP TRI AYL"
+      ]
+    },
+    {
+      "observedPrefix": "tapa pascualina",
+      "distinctProviders": 32,
+      "sourceExamples": [
+        "TAPA PASCUALINA CRIOLLA CIUDAD DEL LAGO PAQ 400 GRM",
+        "TAPA PASCUALINA MIX DE SEMILLAS X2U, LA SALTEÑA, 400 gr",
+        "TAPA PASCUALINA BALANCE X2 U, LA SALTEÑA, 400 gr"
+      ]
+    },
+    {
+      "observedPrefix": "aa fc",
+      "distinctProviders": 31,
+      "sourceExamples": [
+        "AA FC INV 4500 BSI52WCLW, BGH, 2 cu",
+        "AA FC 3000 BS35WCDW, BGH, 2 cu",
+        "AA FC 4500 BS54WCDW, BGH, 2 cu"
+      ]
+    },
+    {
+      "observedPrefix": "color nutrisse",
+      "distinctProviders": 31,
+      "sourceExamples": [
+        "color NUTRISSE colorissimos azahar 121 CJA-1-un.",
+        "color NUTRISSE perm tono70 rubio profu CJA-1-un.",
+        "color NUTRISSE perm tono60 rub osc prof CJA-1-un."
+      ]
+    },
+    {
+      "observedPrefix": "esmalte para",
+      "distinctProviders": 31,
+      "sourceExamples": [
+        "esmalte para uñas CUTEX fortalecedor FCO-1-un.",
+        "esmalte para uñas CUTEX max brillo FCO-1-un.",
+        "esmalte para uñas CUTEX via lactea FCO-1-un."
+      ]
+    },
+    {
+      "observedPrefix": "globo balloon",
+      "distinctProviders": 31,
+      "sourceExamples": [
+        "GLOBO BALLOON CITY METALIZADO FORMA NUMERO 0",
+        "GLOBO BALLOON CITY METALIZADO FORMA NUMERO 1",
+        "GLOBO BALLOON CITY METALIZADO FORMA NUMERO 2"
+      ]
+    },
+    {
+      "observedPrefix": "gomitas mogul",
+      "distinctProviders": 31,
+      "sourceExamples": [
+        "GOMITAS MOGUL EXT PICANTE",
+        "GOMITAS MOGUL FRUT Y CREM",
+        "GOMITAS MOGUL EXT PALOTES"
+      ]
+    },
+    {
+      "observedPrefix": "jarro mugg",
+      "distinctProviders": 31,
+      "sourceExamples": [
+        "JARRO MUGG FELIZ DIA PAPA 1un",
+        "JARRO MUGG EQUIPOS 1un",
+        "JARRO MUGG ORGANIC C/U"
+      ]
+    },
+    {
+      "observedPrefix": "tapas p",
+      "distinctProviders": 31,
+      "sourceExamples": [
+        "TAPAS P/PASCUALINA OTTONELLO 420gr",
+        "TAPAS P/EMP.ARABES OTTONELLO 12 UN.",
+        "TAPAS P/PASCUALINA OTTONELLO +HOJALDRE 4"
+      ]
+    },
+    {
+      "observedPrefix": "bicicleta r",
+      "distinctProviders": 30,
+      "sourceExamples": [
+        "BICICLETA R29",
+        "BICICLETA R16 VINTAGE",
+        "BICICLETA R16 CROSS"
+      ]
+    },
+    {
+      "observedPrefix": "cacao en",
+      "distinctProviders": 30,
+      "sourceExamples": [
+        "CACAO EN POLVO NESCAO X 300 GRS",
+        "CACAO EN POLVO NESCAO",
+        "CACAO EN POLVO EXQUISITA X 800 GRS"
+      ]
+    },
+    {
+      "observedPrefix": "cepillo de",
+      "distinctProviders": 30,
+      "sourceExamples": [
+        "CEPILLO DE MANO",
+        "CEPILLO DE AIRE REMINGTON AS15A 220A",
+        "CEPILLO DE AIRE MULTIESTILIZADOR REMINGTON AS5805"
+      ]
+    },
+    {
+      "observedPrefix": "lb mi",
+      "distinctProviders": 30,
+      "sourceExamples": [
+        "LB MI GRAN LIBRO DE LAS EMOCIONES",
+        "LB MI PRIMER ATLAS DEL MUNDO EN POP UP",
+        "LB MI PRIMER ATLAS ILUSTRADO DATOS CURIOSOS"
+      ]
+    },
+    {
+      "observedPrefix": "p hig",
+      "distinctProviders": 30,
+      "sourceExamples": [
+        "P HIG DOBLE FUSION",
+        "P HIG PREMIUM BALANC",
+        "P HIG MAX ALOE 100MT"
+      ]
+    },
+    {
+      "observedPrefix": "sti rem",
+      "distinctProviders": 30,
+      "sourceExamples": [
+        "STI REM MC BEBA",
+        "STI REM SM STICH",
+        "STI REM MC STICH"
+      ]
+    },
+    {
+      "observedPrefix": "toallas humedas",
+      "distinctProviders": 30,
+      "sourceExamples": [
+        "TOALLAS HÚMEDAS PURO Y NATURAL HUGGIES FWP 80 UNI",
+        "TOALLAS HUMEDAS LIMPIEZA DIARIA HUGGIES X 112 UNI",
+        "TOALLAS HÚMEDAS LIMP.DIARIA HUGGIES PAQ 112 UNI"
+      ]
+    },
+    {
+      "observedPrefix": "camisa tex",
+      "distinctProviders": 29,
+      "sourceExamples": [
+        "CAMISA TEX A CUADROS 903587",
+        "CAMISA TEX CREP I925592",
+        "CAMISA TEX I217916"
+      ]
+    },
+    {
+      "observedPrefix": "eau de",
+      "distinctProviders": 29,
+      "sourceExamples": [
+        "EAU DE TOILETTE KEVIN BLACK X 60 CC",
+        "EAU DE TOILETTE CIEL CRYSTAL X 50 CC",
+        "EAU DE TOILETTE ACQUA DI COLBERT X 60 CC"
+      ]
+    },
+    {
+      "observedPrefix": "hg jean",
+      "distinctProviders": 29,
+      "sourceExamples": [
+        "HG JEAN AZUL 48",
+        "HG JEAN NEGRO 50",
+        "HG JEAN NEGRO 48"
+      ]
+    },
+    {
+      "observedPrefix": "rollo cocina",
+      "distinctProviders": 29,
+      "sourceExamples": [
+        "ROLLO COCINA ELITE ULT AB",
+        "ROLLO COCINA C/ALGOD",
+        "ROLLO COCINA ELITE X3"
+      ]
+    },
+    {
+      "observedPrefix": "sh elvive",
+      "distinctProviders": 29,
+      "sourceExamples": [
+        "SH ELVIVE DREAM LENGTH",
+        "SH ELVIVE PURPLE",
+        "SH ELVIVE DREAM LNGTH 200"
+      ]
+    },
+    {
+      "observedPrefix": "sh sedal",
+      "distinctProviders": 29,
+      "sourceExamples": [
+        "SH SEDAL CERAMIDAS",
+        "SH SEDAL CR BALANCE",
+        "SH SEDAL CREMA BALANCE"
+      ]
+    },
+    {
+      "observedPrefix": "alcohol etilico",
+      "distinctProviders": 28,
+      "sourceExamples": [
+        "ALCOHOL ETILICO 96",
+        "ALCOHOL ETILICO BIALCOHOL PET X 1 LT",
+        "ALcohol etilico BIALCOHOL AER-100-gr."
+      ]
+    },
+    {
+      "observedPrefix": "dog chow",
+      "distinctProviders": 28,
+      "sourceExamples": [
+        "DOG CHOW HUM CARN",
+        "DOG CHOW HUM ALT PRO",
+        "DOG CHOW Adulto M/G x1,5kg BSA-1500-gr."
+      ]
+    },
+    {
+      "observedPrefix": "std rem",
+      "distinctProviders": 28,
+      "sourceExamples": [
+        "STD REM MC MIC",
+        "STD REM MC MIN",
+        "STD REM MC MIC BEBE"
+      ]
+    },
+    {
+      "observedPrefix": "cocina 56",
+      "distinctProviders": 27,
+      "sourceExamples": [
+        "COCINA 56 CM INOX CD5603AI0, DREAN, 1 cu",
+        "COCINA 56 CM INOX CD5614AI0, DREAN, 1 cu",
+        "COCINA 56 CM INOX CD5602AI0, DREAN, 1 cu"
+      ]
+    },
+    {
+      "observedPrefix": "hermetico carrefour",
+      "distinctProviders": 27,
+      "sourceExamples": [
+        "HERMETICO CARREFOUR HOME 400 ML",
+        "HERMETICO CARREFOUR HOME 900 ML",
+        "HERMETICO CARREFOUR HOME 1.4 LTS"
+      ]
+    }
+  ],
+  "limitations": [
+    "Existing accepted labels are inventoried, not independently validated.",
+    "A recurring prefix is a review candidate, not an automatically accepted type or English translation.",
+    "Provider IDs and exact retailer identities remain separate; grouping does not establish package equivalence.",
+    "Prices and complete offer-set sorting cannot be established from the identity-only sidecar."
+  ]
+}

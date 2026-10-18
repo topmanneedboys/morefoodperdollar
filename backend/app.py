@@ -76,6 +76,22 @@ def create_app(service: BackendService | None = None):
         query: StrictStr = Field(min_length=1, max_length=96)
         page: StrictInt = Field(default=0, ge=0, le=5)
 
+    class DiscoverySearchRequest(BaseModel):
+        model_config = ConfigDict(extra="forbid")
+        query: StrictStr = Field(min_length=1, max_length=256)
+        language: StrictStr = "es"
+        selections: list[StrictStr] = Field(default_factory=list, max_length=8)
+        pageSize: StrictInt = Field(default=20, ge=1, le=50)
+        cursor: StrictStr | None = None
+        facetPageSize: StrictInt = Field(default=30, ge=1, le=30)
+        facetCursor: StrictStr | None = None
+        latitude: StrictStr | None = None
+        longitude: StrictStr | None = None
+        radiusKm: StrictStr | None = None
+        sort: StrictStr | None = None
+        unitBasis: StrictStr | None = None
+        storeKey: StrictStr | None = None
+
     class InterpretRequest(BaseModel):
         model_config = ConfigDict(extra="forbid")
         text: StrictStr = Field(min_length=1, max_length=4096)
@@ -130,6 +146,17 @@ def create_app(service: BackendService | None = None):
         except Exception as exc:  # noqa: BLE001 - public boundary is fail-closed
             from fastapi import HTTPException
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/v2/search")
+    async def discovery_search(payload: DiscoverySearchRequest, request: Request):
+        try:
+            return runtime_service.discovery_search(payload.model_dump(exclude_none=True), correlation_id=correlation(request))
+        except ResponseLimitError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=413)
+        except Exception as exc:  # noqa: BLE001 - additive rail is fail-closed
+            from fastapi import HTTPException
+            status_code = 503 if str(exc) == "DISCOVERY_V2_UNAVAILABLE" else 400
+            raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
     @app.post("/v1/interpret")
     async def interpret(payload: InterpretRequest, request: Request):

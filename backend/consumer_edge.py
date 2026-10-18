@@ -2,9 +2,10 @@
 
 This module deliberately contains no shopping or provider logic.  It is a
 small, fail-closed boundary that authenticates App Check requests, enforces
-transport/payload limits, and forwards only the five consumer routes through
+transport/payload limits, and forwards only the allowlisted consumer routes through
 an injected upstream interface.  The private M11 invocation is a later,
-separately qualified stage.
+separately qualified stage.  The additive identity-only discovery rail is
+allowed separately from the legacy v1 shopping contract.
 """
 
 from __future__ import annotations
@@ -31,6 +32,7 @@ EDGE_ALLOWED_ROUTES = frozenset(
     {
         "/v1/status",
         "/v1/search",
+        "/v2/search",
         "/v1/interpret",
         "/v1/shop-text",
         "/v1/shop",
@@ -39,6 +41,7 @@ EDGE_ALLOWED_ROUTES = frozenset(
 _ROUTE_METHODS = {
     "/v1/status": "GET",
     "/v1/search": "POST",
+    "/v2/search": "POST",
     "/v1/interpret": "POST",
     "/v1/shop-text": "POST",
     "/v1/shop": "POST",

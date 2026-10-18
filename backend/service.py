@@ -9,6 +9,7 @@ import time
 import uuid
 import threading
 from decimal import Decimal, InvalidOperation
+from pathlib import Path
 from typing import Any, Mapping
 
 from .reader import (
@@ -18,6 +19,20 @@ from .reader import (
     CurrentPriceEvidenceUnavailable,
 )
 from .release import ReleaseError, ReleaseManager, qualified_offer_artifacts_available
+from tools.catalog_discovery import DiscoveryError, DiscoveryIndex
+from tools.product_identity_lexicon import (
+    build_family_clarification,
+    family_query_form,
+    family_query_key,
+    family_selection_form,
+    filter_family_candidates,
+)
+from tools.product_taxonomy import (
+    ProductTaxonomyIndex,
+    build_taxonomy_clarification,
+    filter_taxonomy_candidates,
+    taxonomy_selection_form,
+)
 
 LOGGER = logging.getLogger("valuepilot.backend")
 MAX_REQUEST_BYTES = 16 * 1024
@@ -34,6 +49,61 @@ PRODUCTION_ANDROID_UI_SCOPE_ENV = "VALUEPILOT_PRODUCTION_ANDROID_UI_SCOPE"
 PRODUCTION_ANDROID_UI_SCOPE = "qualified-offers"
 DISCOVERY_PAGE_SIZE = 5
 DISCOVERY_MAX_PAGE = 5
+PRODUCT_TAXONOMY_PATH_ENV = "VALUEPILOT_PRODUCT_TAXONOMY_PATH"
+PRODUCT_TAXONOMY_SHA256_ENV = "VALUEPILOT_PRODUCT_TAXONOMY_SHA256"
+DISCOVERY_INDEX_PATH_ENV = "VALUEPILOT_DISCOVERY_INDEX_PATH"
+DISCOVERY_INDEX_SHA256_ENV = "VALUEPILOT_DISCOVERY_INDEX_SHA256"
+DISCOVERY_RELEASE_ID_ENV = "VALUEPILOT_DISCOVERY_RELEASE_ID"
+DISCOVERY_V2_ENABLED_ENV = "VALUEPILOT_DISCOVERY_V2_ENABLED"
+_FAMILY_DISCOVERY_QUERIES = {
+    "rice": "arroz",
+    "lychee": "lichi",
+    "yerba_mate": "yerba mate",
+    "egg": "huevo",
+    "carrot": "carrot",
+    "strawberry": "frutilla",
+    "mango": "mango",
+    "alfajor": "alfajor",
+    "flour": "harina",
+    "peanut": "mani",
+    "pork": "cerdo",
+    "lamb": "cordero",
+    "turkey": "pavo",
+    "beef": "vacuno",
+    "facial_cream": "crema facial",
+    "wafer": "oblea",
+    "chewing_gum": "chicle",
+    "raticide": "raticida",
+    "bowl": "bowl",
+    "coffee_maker": "cafetera",
+    "air_fryer": "airfryer",
+    "toaster": "tostadora",
+    "sandwich_maker": "sandwichera",
+    "juicer": "exprimidor",
+    "blender": "licuadora",
+    "microwave": "microondas",
+    "heater": "calefactor",
+    "water_heater": "termotanque",
+    "fan": "ventilador",
+    "vacuum_cleaner": "aspiradora",
+    "broom": "escoba",
+    "mop": "mopa",
+    "duster": "plumero",
+    "cleaning_cloth": "pano",
+}
+
+
+def _candidate_evidence_sort_key(candidate: Mapping[str, Any]) -> tuple[int, int]:
+    """Put usable current unit-price evidence ahead of incomplete rows."""
+
+    offers = candidate.get("qualifiedOffers")
+    if not isinstance(offers, (list, tuple)):
+        return (1, 1)
+    has_unit_price = any(
+        isinstance(offer, Mapping) and isinstance(offer.get("unitPrice"), Mapping)
+        for offer in offers
+    )
+    return (0 if has_unit_price else 1, 0 if offers else 1)
 
 
 def _android_networking_authorized(status: Mapping[str, Any]) -> bool:
@@ -82,7 +152,7 @@ def _strip_internal(value: Any) -> Any:
         return value
     result = {}
     for key, item in value.items():
-        if key in {"queryPlan", "providerItems", "sourceRow", "packageProvenance"}:
+        if key in {"queryPlan", "providerItems", "sourceRow", "packageProvenance", "_taxonomy"}:
             continue
         if key == "provenance" and isinstance(item, dict):
             result[key] = {name: item.get(name) for name in ("provider", "releaseDate", "freshnessStatus") if item.get(name) is not None}
@@ -96,10 +166,49 @@ class ResponseLimitError(BackendQueryError):
 
 
 class BackendService:
-    def __init__(self, root: str, *, release_manager: ReleaseManager | None = None):
+    def __init__(
+        self,
+        root: str,
+        *,
+        release_manager: ReleaseManager | None = None,
+        taxonomy_index_path: str | Path | None = None,
+        taxonomy_index_sha256: str | None = None,
+        discovery_index_path: str | Path | None = None,
+        discovery_index_sha256: str | None = None,
+        discovery_release_id: str | None = None,
+    ):
         self.release_manager = release_manager or ReleaseManager(root)
         self._reader_lock = threading.Lock()
         self._readers: dict[tuple[str, str], ArgentinaBackendReader] = {}
+        self._taxonomy_lock = threading.Lock()
+        self._taxonomy_index: ProductTaxonomyIndex | None = None
+        self._taxonomy_index_attempted = False
+        configured_path = taxonomy_index_path
+        if configured_path is None:
+            configured_path = os.environ.get(PRODUCT_TAXONOMY_PATH_ENV, "").strip() or None
+        self._taxonomy_index_path = Path(configured_path).resolve() if configured_path else None
+        self._taxonomy_index_sha256 = (
+            taxonomy_index_sha256
+            if taxonomy_index_sha256 is not None
+            else os.environ.get(PRODUCT_TAXONOMY_SHA256_ENV, "").strip() or None
+        )
+        self._discovery_lock = threading.Lock()
+        self._discovery_index: DiscoveryIndex | None = None
+        self._discovery_index_attempted = False
+        configured_discovery_path = discovery_index_path
+        if configured_discovery_path is None:
+            configured_discovery_path = os.environ.get(DISCOVERY_INDEX_PATH_ENV, "").strip() or None
+        self._discovery_index_path = Path(configured_discovery_path).resolve() if configured_discovery_path else None
+        self._discovery_index_sha256 = (
+            discovery_index_sha256
+            if discovery_index_sha256 is not None
+            else os.environ.get(DISCOVERY_INDEX_SHA256_ENV, "").strip() or None
+        )
+        self._discovery_release_id = (
+            discovery_release_id
+            if discovery_release_id is not None
+            else os.environ.get(DISCOVERY_RELEASE_ID_ENV, "").strip() or None
+        )
 
     def _reader(self, handle):
         key = (handle.release_id, str(handle.root))
@@ -109,6 +218,61 @@ class BackendService:
                 reader = ArgentinaBackendReader(handle)
                 self._readers[key] = reader
             return reader
+
+    def _taxonomy(self, handle) -> ProductTaxonomyIndex | None:
+        """Load the optional identity taxonomy once for the pinned release.
+
+        The sidecar is deliberately opt-in.  A deployment must point at the
+        exact generated artifact (and may provide its SHA-256); an absent or
+        invalid sidecar fails open to the existing reviewed lexical path and
+        never blocks or changes price/offer authority.
+        """
+
+        with self._taxonomy_lock:
+            if self._taxonomy_index_attempted:
+                return self._taxonomy_index
+            self._taxonomy_index_attempted = True
+            path = self._taxonomy_index_path
+            if path is None:
+                root = getattr(handle, "root", None)
+                if root is not None:
+                    candidate = Path(root) / "product-taxonomy.jsonl.gz"
+                    if candidate.is_file():
+                        path = candidate.resolve()
+            if path is None or not path.is_file():
+                return None
+            try:
+                self._taxonomy_index = ProductTaxonomyIndex.load(
+                    path,
+                    expected_sha256=self._taxonomy_index_sha256,
+                )
+            except (OSError, ValueError) as exc:
+                LOGGER.warning("taxonomy_sidecar_unavailable path=%s reason=%s", path, exc)
+                self._taxonomy_index = None
+            return self._taxonomy_index
+
+    def _discovery(self) -> DiscoveryIndex | None:
+        """Load the additive full-catalog sidecar only when explicitly enabled."""
+
+        if os.environ.get(DISCOVERY_V2_ENABLED_ENV, "").strip().lower() != "true":
+            return None
+        with self._discovery_lock:
+            if self._discovery_index_attempted:
+                return self._discovery_index
+            self._discovery_index_attempted = True
+            path = self._discovery_index_path
+            if path is None or not path.is_file():
+                return None
+            try:
+                self._discovery_index = DiscoveryIndex(
+                    path,
+                    expected_source_sha256=self._discovery_index_sha256,
+                    expected_release_id=self._discovery_release_id,
+                )
+            except (OSError, DiscoveryError) as exc:
+                LOGGER.warning("discovery_sidecar_unavailable path=%s reason=%s", path, exc)
+                self._discovery_index = None
+            return self._discovery_index
 
     @staticmethod
     def _trusted_keys_from_input(input_result: Mapping[str, Any]) -> dict[str, str] | None:
@@ -319,15 +483,88 @@ class BackendService:
             decision, metrics = reader.query(request)
         return self._shop_response(request_id, handle, decision, metrics, started=started, input_result=input_result)
 
+    def discovery_search(self, payload: Mapping[str, Any], *, correlation_id: str | None = None) -> dict[str, Any]:
+        """Evaluate the full identity sidecar through the additive v2 contract.
+
+        Identity-only requests preserve the frozen sidecar contract. Explicit
+        location requests join the full strict identity set through the existing
+        qualified offer reader before pagination, with matching release and UI
+        authorization gates. Stock remains unknown. Nothing changes v1 Search.
+        """
+
+        if os.environ.get(DISCOVERY_V2_ENABLED_ENV, "").strip().lower() != "true":
+            raise BackendQueryError("DISCOVERY_V2_UNAVAILABLE")
+        index = self._discovery()
+        if index is None:
+            raise BackendQueryError("DISCOVERY_V2_UNAVAILABLE")
+        scoped = any(key in payload for key in ("latitude", "longitude", "radiusKm", "sort", "storeKey", "unitBasis"))
+        try:
+            if scoped:
+                from .discovery_offers import scoped_search
+                if not all(key in payload for key in ("latitude", "longitude", "radiusKm")):
+                    raise BackendQueryError("scoped discovery requires a complete location")
+                handle = self.release_manager.pin(require_fresh=True)
+                status = {"service": "ready", "releaseId": handle.release_id, "releaseDate": handle.release_date,
+                          "freshness": handle.freshness_status, "backendCodeQualified": True,
+                          "qualifiedOfferEvidenceAvailable": qualified_offer_artifacts_available(handle.artifacts.manifest)}
+                if not _production_android_ui_authorized(status):
+                    raise BackendQueryError("DISCOVERY_PRICE_AUTHORIZATION_REQUIRED")
+                reader = self._reader(handle)
+                selections = self._route_selections(reader, payload)
+                result = scoped_search(index, reader, handle, payload, selections)
+            else:
+                result = index.query(payload).to_dict()
+        except DiscoveryError as exc:
+            raise BackendQueryError(str(exc)) from exc
+        request_id = correlation_id or str(uuid.uuid4())
+        response = {
+            "apiContractVersion": "valuepilot-discovery-http-v2",
+            "requestId": request_id,
+            "releaseId": result["releaseId"],
+            "indexVersion": result["indexVersion"],
+            "result": result,
+            "evidenceSemantics": {
+                "identity": "SOURCE_IDENTITY_AND_ACCEPTED_ASSERTIONS",
+                "prices": "QUALIFIED_CURRENT_RELEASE" if scoped else "NOT_INCLUDED",
+                "offers": "EXACT_IDENTITY_SCOPED_PREVIEW" if scoped else "NOT_INCLUDED",
+                "stock": "NOT_INCLUDED",
+            },
+        }
+        self._response_size(response)
+        return response
+
     def search(self, payload: Mapping[str, Any], *, correlation_id: str | None = None) -> dict[str, Any]:
         query = payload.get("query")
         if not isinstance(query, str) or not query.strip() or len(query.strip()) > 96:
             raise BackendQueryError("query must contain 1-96 characters")
+        selection_id = payload.get("selectionId")
+        if selection_id is not None:
+            if (
+                not isinstance(selection_id, str)
+                or len(selection_id) > 160
+                or not selection_id.strip()
+                or (
+                    family_selection_form(query, selection_id) is None
+                    and taxonomy_selection_form(query, selection_id) is None
+                )
+            ):
+                raise BackendQueryError("search selection is invalid for this query")
         page = payload.get("page", 0)
         if isinstance(page, bool) or not isinstance(page, int) or not 0 <= page <= DISCOVERY_MAX_PAGE:
             raise BackendQueryError("search page is invalid")
         request_id = correlation_id or str(uuid.uuid4())
         started = time.perf_counter()
+        selected_family = family_query_key(query)
+        selected_form = family_query_form(query)
+        discovery_query = query
+        if selected_family in _FAMILY_DISCOVERY_QUERIES:
+            # Bilingual family labels and presentation choices are identity
+            # refinements, not reliable lexical catalog phrases.  Search the
+            # canonical Argentina family term first, then apply the observed
+            # form to names.  This keeps an English query such as ``face
+            # cream`` or ``chewing gum`` on the same source-backed result
+            # set as its Spanish equivalent.
+            discovery_query = _FAMILY_DISCOVERY_QUERIES[selected_family]
         handle = self.release_manager.pin(require_fresh=True)
         reader = self._reader(handle)
         authorization_status = {
@@ -345,10 +582,16 @@ class BackendService:
         regions = tuple(selection.region_id for selection in selections)
         offset = page * DISCOVERY_PAGE_SIZE
         window_limit = min(offset + DISCOVERY_PAGE_SIZE + 1, MAX_DISCOVERY_PRODUCT_LIMIT)
+        # Egg names are also used by toy and confectionery products.  Search a
+        # larger bounded window before applying the direct-egg identity filter
+        # so genuine food rows are not displaced by those higher-ranked noise
+        # rows.  The cap remains the existing 31-product discovery limit.
+        if selected_family == "egg" or selected_form is not None:
+            window_limit = MAX_DISCOVERY_PRODUCT_LIMIT
         discover_with_offers = getattr(reader, "discover_with_offers", None)
         if callable(discover_with_offers):
             candidates, metrics = discover_with_offers(
-                query,
+                discovery_query,
                 selections=selections,
                 latitude=Decimal(str(payload.get("latitude"))),
                 longitude=Decimal(str(payload.get("longitude"))),
@@ -357,7 +600,7 @@ class BackendService:
             )
         else:
             # Compatibility for older test doubles and pre-wiring readers.
-            candidates, metrics = reader.discover(query, region_ids=regions, product_limit=window_limit)
+            candidates, metrics = reader.discover(discovery_query, region_ids=regions, product_limit=window_limit)
         if not production_android_ui_authorized:
             # Identity discovery remains available under the narrower
             # identity-search authorization, but current price/store evidence
@@ -372,9 +615,51 @@ class BackendService:
                 else candidate
                 for candidate in candidates
             )
+        taxonomy = self._taxonomy(handle)
+        if taxonomy is not None:
+            # Keep the index inside the identity boundary.  The internal
+            # annotation is consumed only by the family/form refinements and
+            # removed by _strip_internal before the response leaves Search.
+            candidates = taxonomy.annotate(candidates)
+        # Keep the complete bounded evidence window for clarification.  The
+        # visible result set may be refined below (for example a plain egg
+        # query removes toy eggs), but the shopper still needs the observed
+        # alternatives that made the clarification useful.
+        clarification_candidates = candidates
+        # A clarification choice is an identity-only refinement.  Apply its
+        # observed family form to the bounded result window so a query such as
+        # ``carrot juice`` cannot retain a classified carrot lotion or cake.
+        # The helper fails open when new source rows are not yet classified.
+        candidates = filter_family_candidates(query, candidates, selection_id=selection_id)
+        # Generic reviewed families use the same bounded identity evidence to
+        # apply explicit form choices such as ``eggs liquid``.  This remains a
+        # fail-open presentation refinement; it never changes price, offer, or
+        # availability authority.
+        candidates = filter_taxonomy_candidates(query, candidates, selection_id=selection_id)
+        if selected_family in {"rice", "lychee", "yerba_mate", "egg", "carrot"}:
+            # The canonical family discovery window can contain valid
+            # identities whose current offer partition has no matching price
+            # evidence.  Keep those identities available, but put products
+            # with real current offers first so the first page is immediately
+            # useful for a shopper.  Python's stable sort preserves the
+            # existing SearchPack order within each evidence group.
+            candidates = tuple(
+                sorted(
+                    candidates,
+                    key=_candidate_evidence_sort_key,
+                )
+            )
         has_more = len(candidates) > offset + DISCOVERY_PAGE_SIZE
         limit_reached = has_more and page == DISCOVERY_MAX_PAGE
         visible_candidates = candidates[offset:offset + DISCOVERY_PAGE_SIZE]
+        # This is an optional identity-only hint.  It is derived from the
+        # bounded discovery window and never changes ranking, prices, offers,
+        # availability, or the selected product identity.
+        clarification = None
+        if page == 0 and selection_id is None and family_query_form(query) is None:
+            clarification = build_family_clarification(query, clarification_candidates)
+            if clarification is None:
+                clarification = build_taxonomy_clarification(query, clarification_candidates)
         response = {
             "apiContractVersion": "valuepilot-argentina-backend-http-v1",
             "requestId": request_id,
@@ -392,7 +677,8 @@ class BackendService:
             # discovery deliberately has no correction or interpreter object.
             "correction": None,
             "input": None,
-            "matches": [dict(value) for value in visible_candidates],
+            "clarification": clarification,
+            "matches": [_strip_internal(value) for value in visible_candidates],
             "pagination": {
                 "page": page,
                 "pageSize": DISCOVERY_PAGE_SIZE,

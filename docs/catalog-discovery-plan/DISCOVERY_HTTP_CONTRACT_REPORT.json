@@ -1,0 +1,571 @@
+{
+  "checks": [
+    {
+      "clarificationChoices": 6,
+      "hasClarification": true,
+      "identityCount": 282,
+      "language": "en",
+      "pages": 6,
+      "productCount": 139,
+      "query": "rice",
+      "status": "NEEDS_CLARIFICATION"
+    },
+    {
+      "identityCount": 399,
+      "language": "en",
+      "pages": 8,
+      "productCount": 213,
+      "query": "rice",
+      "selection": "form:rice:dessert",
+      "status": "READY"
+    },
+    {
+      "identityCount": 282,
+      "language": "en",
+      "pages": 6,
+      "productCount": 139,
+      "query": "rice",
+      "selection": "form:rice:grain",
+      "status": "READY"
+    },
+    {
+      "identityCount": 65,
+      "language": "en",
+      "pages": 2,
+      "productCount": 40,
+      "query": "rice",
+      "selection": "form:rice:prepared",
+      "status": "READY"
+    },
+    {
+      "identityCount": 23,
+      "language": "en",
+      "pages": 1,
+      "productCount": 12,
+      "query": "rice",
+      "selection": "form:rice:pet_food",
+      "status": "READY"
+    },
+    {
+      "identityCount": 10,
+      "language": "en",
+      "pages": 1,
+      "productCount": 9,
+      "query": "rice",
+      "selection": "form:rice:flour",
+      "status": "READY"
+    },
+    {
+      "identityCount": 7,
+      "language": "en",
+      "pages": 1,
+      "productCount": 7,
+      "query": "rice",
+      "selection": "form:rice:drink",
+      "status": "READY"
+    },
+    {
+      "clarificationChoices": 6,
+      "hasClarification": true,
+      "identityCount": 282,
+      "language": "es",
+      "pages": 6,
+      "productCount": 139,
+      "query": "arroz",
+      "status": "NEEDS_CLARIFICATION"
+    },
+    {
+      "identityCount": 399,
+      "language": "es",
+      "pages": 8,
+      "productCount": 213,
+      "query": "arroz",
+      "selection": "form:rice:dessert",
+      "status": "READY"
+    },
+    {
+      "identityCount": 282,
+      "language": "es",
+      "pages": 6,
+      "productCount": 139,
+      "query": "arroz",
+      "selection": "form:rice:grain",
+      "status": "READY"
+    },
+    {
+      "identityCount": 65,
+      "language": "es",
+      "pages": 2,
+      "productCount": 40,
+      "query": "arroz",
+      "selection": "form:rice:prepared",
+      "status": "READY"
+    },
+    {
+      "identityCount": 23,
+      "language": "es",
+      "pages": 1,
+      "productCount": 12,
+      "query": "arroz",
+      "selection": "form:rice:pet_food",
+      "status": "READY"
+    },
+    {
+      "identityCount": 10,
+      "language": "es",
+      "pages": 1,
+      "productCount": 9,
+      "query": "arroz",
+      "selection": "form:rice:flour",
+      "status": "READY"
+    },
+    {
+      "identityCount": 7,
+      "language": "es",
+      "pages": 1,
+      "productCount": 7,
+      "query": "arroz",
+      "selection": "form:rice:drink",
+      "status": "READY"
+    },
+    {
+      "clarificationChoices": 7,
+      "hasClarification": true,
+      "identityCount": 269,
+      "language": "en",
+      "pages": 6,
+      "productCount": 204,
+      "query": "eggs",
+      "status": "NEEDS_CLARIFICATION"
+    },
+    {
+      "identityCount": 269,
+      "language": "en",
+      "pages": 6,
+      "productCount": 204,
+      "query": "eggs",
+      "selection": "form:egg:whole_egg",
+      "status": "READY"
+    },
+    {
+      "identityCount": 137,
+      "language": "en",
+      "pages": 3,
+      "productCount": 87,
+      "query": "eggs",
+      "selection": "form:egg:pasta",
+      "status": "READY"
+    },
+    {
+      "identityCount": 43,
+      "language": "en",
+      "pages": 1,
+      "productCount": 28,
+      "query": "eggs",
+      "selection": "form:egg:toy",
+      "status": "READY"
+    },
+    {
+      "identityCount": 54,
+      "language": "en",
+      "pages": 2,
+      "productCount": 25,
+      "query": "eggs",
+      "selection": "form:egg:chocolate",
+      "status": "READY"
+    },
+    {
+      "identityCount": 3,
+      "language": "en",
+      "pages": 1,
+      "productCount": 3,
+      "query": "eggs",
+      "selection": "form:egg:powder",
+      "status": "READY"
+    },
+    {
+      "identityCount": 7,
+      "language": "en",
+      "pages": 1,
+      "productCount": 2,
+      "query": "eggs",
+      "selection": "form:egg:drink",
+      "status": "READY"
+    },
+    {
+      "clarificationChoices": 7,
+      "hasClarification": true,
+      "identityCount": 269,
+      "language": "es",
+      "pages": 6,
+      "productCount": 204,
+      "query": "huevos",
+      "status": "NEEDS_CLARIFICATION"
+    },
+    {
+      "identityCount": 269,
+      "language": "es",
+      "pages": 6,
+      "productCount": 204,
+      "query": "huevos",
+      "selection": "form:egg:whole_egg",
+      "status": "READY"
+    },
+    {
+      "identityCount": 137,
+      "language": "es",
+      "pages": 3,
+      "productCount": 87,
+      "query": "huevos",
+      "selection": "form:egg:pasta",
+      "status": "READY"
+    },
+    {
+      "identityCount": 43,
+      "language": "es",
+      "pages": 1,
+      "productCount": 28,
+      "query": "huevos",
+      "selection": "form:egg:toy",
+      "status": "READY"
+    },
+    {
+      "identityCount": 54,
+      "language": "es",
+      "pages": 2,
+      "productCount": 25,
+      "query": "huevos",
+      "selection": "form:egg:chocolate",
+      "status": "READY"
+    },
+    {
+      "identityCount": 3,
+      "language": "es",
+      "pages": 1,
+      "productCount": 3,
+      "query": "huevos",
+      "selection": "form:egg:powder",
+      "status": "READY"
+    },
+    {
+      "identityCount": 7,
+      "language": "es",
+      "pages": 1,
+      "productCount": 2,
+      "query": "huevos",
+      "selection": "form:egg:drink",
+      "status": "READY"
+    },
+    {
+      "clarificationChoices": 4,
+      "hasClarification": true,
+      "identityCount": 8,
+      "language": "en",
+      "pages": 1,
+      "productCount": 6,
+      "query": "carrot",
+      "status": "NEEDS_CLARIFICATION"
+    },
+    {
+      "identityCount": 8,
+      "language": "en",
+      "pages": 1,
+      "productCount": 6,
+      "query": "carrot",
+      "selection": "form:carrot:vegetable",
+      "status": "READY"
+    },
+    {
+      "identityCount": 4,
+      "language": "en",
+      "pages": 1,
+      "productCount": 4,
+      "query": "carrot",
+      "selection": "form:carrot:drink",
+      "status": "READY"
+    },
+    {
+      "identityCount": 2,
+      "language": "en",
+      "pages": 1,
+      "productCount": 2,
+      "query": "carrot",
+      "selection": "form:carrot:cosmetics",
+      "status": "READY"
+    },
+    {
+      "identityCount": 2,
+      "language": "en",
+      "pages": 1,
+      "productCount": 2,
+      "query": "carrot",
+      "selection": "form:carrot:dessert",
+      "status": "READY"
+    },
+    {
+      "clarificationChoices": 4,
+      "hasClarification": true,
+      "identityCount": 8,
+      "language": "es",
+      "pages": 1,
+      "productCount": 6,
+      "query": "zanahoria",
+      "status": "NEEDS_CLARIFICATION"
+    },
+    {
+      "identityCount": 8,
+      "language": "es",
+      "pages": 1,
+      "productCount": 6,
+      "query": "zanahoria",
+      "selection": "form:carrot:vegetable",
+      "status": "READY"
+    },
+    {
+      "identityCount": 4,
+      "language": "es",
+      "pages": 1,
+      "productCount": 4,
+      "query": "zanahoria",
+      "selection": "form:carrot:drink",
+      "status": "READY"
+    },
+    {
+      "identityCount": 2,
+      "language": "es",
+      "pages": 1,
+      "productCount": 2,
+      "query": "zanahoria",
+      "selection": "form:carrot:cosmetics",
+      "status": "READY"
+    },
+    {
+      "identityCount": 2,
+      "language": "es",
+      "pages": 1,
+      "productCount": 2,
+      "query": "zanahoria",
+      "selection": "form:carrot:dessert",
+      "status": "READY"
+    },
+    {
+      "clarificationChoices": 5,
+      "hasClarification": true,
+      "identityCount": 16,
+      "language": "en",
+      "pages": 1,
+      "productCount": 10,
+      "query": "strawberry",
+      "status": "NEEDS_CLARIFICATION"
+    },
+    {
+      "identityCount": 296,
+      "language": "en",
+      "pages": 6,
+      "productCount": 176,
+      "query": "strawberry",
+      "selection": "form:strawberry:dessert",
+      "status": "READY"
+    },
+    {
+      "identityCount": 299,
+      "language": "en",
+      "pages": 6,
+      "productCount": 140,
+      "query": "strawberry",
+      "selection": "form:strawberry:dairy",
+      "status": "READY"
+    },
+    {
+      "identityCount": 52,
+      "language": "en",
+      "pages": 2,
+      "productCount": 31,
+      "query": "strawberry",
+      "selection": "form:strawberry:drink",
+      "status": "READY"
+    },
+    {
+      "identityCount": 16,
+      "language": "en",
+      "pages": 1,
+      "productCount": 10,
+      "query": "strawberry",
+      "selection": "form:strawberry:fresh",
+      "status": "READY"
+    },
+    {
+      "identityCount": 20,
+      "language": "en",
+      "pages": 1,
+      "productCount": 9,
+      "query": "strawberry",
+      "selection": "form:strawberry:cosmetics",
+      "status": "READY"
+    },
+    {
+      "clarificationChoices": 5,
+      "hasClarification": true,
+      "identityCount": 16,
+      "language": "es",
+      "pages": 1,
+      "productCount": 10,
+      "query": "frutilla",
+      "status": "NEEDS_CLARIFICATION"
+    },
+    {
+      "identityCount": 296,
+      "language": "es",
+      "pages": 6,
+      "productCount": 176,
+      "query": "frutilla",
+      "selection": "form:strawberry:dessert",
+      "status": "READY"
+    },
+    {
+      "identityCount": 299,
+      "language": "es",
+      "pages": 6,
+      "productCount": 140,
+      "query": "frutilla",
+      "selection": "form:strawberry:dairy",
+      "status": "READY"
+    },
+    {
+      "identityCount": 52,
+      "language": "es",
+      "pages": 2,
+      "productCount": 31,
+      "query": "frutilla",
+      "selection": "form:strawberry:drink",
+      "status": "READY"
+    },
+    {
+      "identityCount": 16,
+      "language": "es",
+      "pages": 1,
+      "productCount": 10,
+      "query": "frutilla",
+      "selection": "form:strawberry:fresh",
+      "status": "READY"
+    },
+    {
+      "identityCount": 20,
+      "language": "es",
+      "pages": 1,
+      "productCount": 9,
+      "query": "frutilla",
+      "selection": "form:strawberry:cosmetics",
+      "status": "READY"
+    },
+    {
+      "clarificationChoices": 4,
+      "hasClarification": true,
+      "identityCount": 4,
+      "language": "en",
+      "pages": 1,
+      "productCount": 3,
+      "query": "mango",
+      "status": "NEEDS_CLARIFICATION"
+    },
+    {
+      "identityCount": 40,
+      "language": "en",
+      "pages": 1,
+      "productCount": 19,
+      "query": "mango",
+      "selection": "form:mango:drink",
+      "status": "READY"
+    },
+    {
+      "identityCount": 7,
+      "language": "en",
+      "pages": 1,
+      "productCount": 5,
+      "query": "mango",
+      "selection": "form:mango:dessert",
+      "status": "READY"
+    },
+    {
+      "identityCount": 3,
+      "language": "en",
+      "pages": 1,
+      "productCount": 3,
+      "query": "mango",
+      "selection": "form:mango:cosmetics",
+      "status": "READY"
+    },
+    {
+      "identityCount": 4,
+      "language": "en",
+      "pages": 1,
+      "productCount": 3,
+      "query": "mango",
+      "selection": "form:mango:fresh",
+      "status": "READY"
+    },
+    {
+      "clarificationChoices": 4,
+      "hasClarification": true,
+      "identityCount": 4,
+      "language": "es",
+      "pages": 1,
+      "productCount": 3,
+      "query": "mango",
+      "status": "NEEDS_CLARIFICATION"
+    },
+    {
+      "identityCount": 40,
+      "language": "es",
+      "pages": 1,
+      "productCount": 19,
+      "query": "mango",
+      "selection": "form:mango:drink",
+      "status": "READY"
+    },
+    {
+      "identityCount": 7,
+      "language": "es",
+      "pages": 1,
+      "productCount": 5,
+      "query": "mango",
+      "selection": "form:mango:dessert",
+      "status": "READY"
+    },
+    {
+      "identityCount": 3,
+      "language": "es",
+      "pages": 1,
+      "productCount": 3,
+      "query": "mango",
+      "selection": "form:mango:cosmetics",
+      "status": "READY"
+    },
+    {
+      "identityCount": 4,
+      "language": "es",
+      "pages": 1,
+      "productCount": 3,
+      "query": "mango",
+      "selection": "form:mango:fresh",
+      "status": "READY"
+    },
+    {
+      "facetChoices": 7,
+      "facetChoicesUnique": true,
+      "facetPages": 3,
+      "query": "eggs"
+    }
+  ],
+  "endpoint": "POST /v2/search",
+  "failureCount": 0,
+  "failures": [],
+  "sidecar": {
+    "path": "C:\\Users\\iamatopstrongman\\Documents\\Codex\\2026-10-08\\valuepilot-next-complete-premium-ui-ux\\work\\valuepilot-10133-source-audit\\local-provider-data\\product-discovery-v2-v40-candidate.sqlite",
+    "releaseId": "2026-10-08-identity-release",
+    "rulesVersion": "valuepilot-catalog-discovery-rules-v34",
+    "sha256": "d7aef4c8b740bfdcdca68c404692b52a7225b66cb744641bee56d2214edf0a88",
+    "sourceSha256": "85033a863ea95fea8be7ea73c31577987f09d3533f4c5aab70321d7a945877a6"
+  },
+  "status": "PASS"
+}

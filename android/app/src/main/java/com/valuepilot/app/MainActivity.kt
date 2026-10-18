@@ -2,6 +2,8 @@ package com.valuepilot.app
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.pm.ApplicationInfo
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.net.Uri
@@ -16,6 +18,7 @@ import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
@@ -36,7 +39,9 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.valuepilot.core.OfflineCatalogDiscoveryResult
+import com.valuepilot.core.PracticalShoppingStoreIdentityScope
 import com.valuepilot.core.ShoppingItemKey
+import com.valuepilot.core.ShoppingStoreKey
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 
@@ -86,6 +91,7 @@ class MainActivity : AppCompatActivity() {
     >()
 
     private lateinit var shellRoot: View
+    private lateinit var shellIntro: View
     private lateinit var bottomNavArea: View
     private lateinit var bottomNavigation: BottomNavigationView
     private lateinit var screenEyebrow: TextView
@@ -93,6 +99,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var screenBody: TextView
     private lateinit var screenFootnote: TextView
     private lateinit var primaryAction: Button
+    private lateinit var previewNextAction: MaterialButton
     private lateinit var sourcesLicencesButton: MaterialButton
     private lateinit var dataStatusButton: MaterialButton
     private lateinit var homeExperience: PracticalShoppingHomeSurfaceView
@@ -190,6 +197,7 @@ class MainActivity : AppCompatActivity() {
             BundledOfflineCatalog.createDiscoverySession(applicationContext)
 
         shellRoot = findViewById(R.id.shellRoot)
+        shellIntro = findViewById(R.id.shellIntro)
         bottomNavArea = findViewById(R.id.bottomNavArea)
         bottomNavigation = findViewById(R.id.bottomNavigation)
         screenEyebrow = findViewById(R.id.screenEyebrow)
@@ -197,6 +205,7 @@ class MainActivity : AppCompatActivity() {
         screenBody = findViewById(R.id.screenBody)
         screenFootnote = findViewById(R.id.screenFootnote)
         primaryAction = findViewById(R.id.primaryAction)
+        previewNextAction = findViewById(R.id.previewNextAction)
         sourcesLicencesButton = findViewById(R.id.sourcesLicencesButton)
         dataStatusButton = findViewById(R.id.dataStatusButton)
         homeExperience = findViewById(R.id.homeExperience)
@@ -237,6 +246,17 @@ class MainActivity : AppCompatActivity() {
 
         installSystemBarInsets()
         shellState = restoreShellState(savedInstanceState)
+        if (savedInstanceState == null) {
+            DebugNextSavedToolsHandoff.savedToolsPrimaryTabOrNull(
+                debugBuild = BuildConfig.DEBUG,
+                action = intent?.action
+            )?.let { savedToolsTab ->
+                shellState = AppShellReducer.reduce(
+                    shellState,
+                    AppShellIntent.SelectPrimary(savedToolsTab)
+                )
+            }
+        }
         homeSessionState = restoreHomeState(savedInstanceState)
         refreshHomePrivateMemory()
         searchQuery = savedInstanceState?.getString(STATE_SEARCH_QUERY).orEmpty()
@@ -283,23 +303,64 @@ class MainActivity : AppCompatActivity() {
         )
 
         primaryAction.setOnClickListener { openComparison() }
+        previewNextAction.visibility =
+            if ((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+                View.VISIBLE
+            } else {
+                View.GONE
+        }
+        previewNextAction.setOnClickListener {
+            if ((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+                startActivity(
+                    Intent().setClassName(
+                        packageName,
+                        "com.valuepilot.app.next.ValuePilotNextActivity"
+                    )
+                )
+            }
+        }
         sourcesLicencesButton.setOnClickListener { showSourcesLicences() }
         dataStatusButton.setOnClickListener { showDataStatus() }
+
+        if (savedInstanceState == null) handleDebugNextHandoff(intent)
 
         bottomNavigation.selectedItemId = menuIdFor(shellState.selectedPrimaryTab)
         renderShell(shellState)
         restoreHomeItemDetailsDialog(savedInstanceState)
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleDebugNextHandoff(intent)
+    }
+
     override fun onResume() {
         super.onResume()
 
+        if (BuildConfig.DEBUG) refreshPrivateIdentitiesFromNext()
         refreshHomePrivateMemory()
 
         if (comparisonActivityOpen && shellState.route == AppRoute.COMPARE) {
             comparisonActivityOpen = false
             dispatch(AppShellIntent.NavigateBack)
         }
+    }
+
+    /**
+     * ValuePilot Next shares the established durable identity-only basket. Price evidence remains
+     * session-only, so returning from the debug journey clears any older in-memory plan evidence.
+     */
+    private fun refreshPrivateIdentitiesFromNext() {
+        if (!::homeExperience.isInitialized || !homeSessionStore.hasPrivateIdentityRecord()) return
+        val durableIdentities = homeSessionStore.load()?.privateIdentities ?: return
+        if (durableIdentities == homeSessionState.privateIdentities) return
+
+        homeSessionState = homeSessionState.copy(privateIdentities = durableIdentities)
+        privateBasketOfferEvidence.clear()
+        privateBasketPlan = null
+        privateBasketError = null
+        renderHome()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -2103,6 +2164,89 @@ class MainActivity : AppCompatActivity() {
         renderShell(next)
     }
 
+    private fun handleDebugNextHandoff(source: Intent) {
+        if (!BuildConfig.DEBUG) return
+
+        val savedToolsTab = DebugNextSavedToolsHandoff.savedToolsPrimaryTabOrNull(
+            debugBuild = true,
+            action = source.action
+        )
+        if (savedToolsTab != null) {
+            dispatch(AppShellIntent.SelectPrimary(savedToolsTab))
+            bottomNavigation.selectedItemId = menuIdFor(savedToolsTab)
+            return
+        }
+
+        if (
+            !DebugNextSavedToolsHandoff.shouldOpenObservedPriceConfirmation(
+                debugBuild = true,
+                action = source.action
+            )
+        ) {
+            return
+        }
+
+        val attempt = observedPricePrefillAttemptFrom(source) ?: return
+        dispatch(AppShellIntent.SelectPrimary(AppPrimaryTab.SAVED))
+        dispatch(AppShellIntent.OpenObservedPriceSavedSelection)
+        observedPriceConfirmationDraftRouteCoordinator.onAttempt(attempt)
+        bottomNavigation.selectedItemId = menuIdFor(AppPrimaryTab.SAVED)
+    }
+
+    private fun observedPricePrefillAttemptFrom(
+        source: Intent
+    ): UserObservedPriceSavedPrefillHandoffAttempt? {
+        val itemKeyValue =
+            source.getStringExtra(DebugNextSavedToolsHandoff.EXTRA_ITEM_KEY)
+                ?.takeIf(String::isNotBlank)
+                ?: return null
+        val storeKeyValue =
+            source.getStringExtra(DebugNextSavedToolsHandoff.EXTRA_STORE_KEY)
+                ?.takeIf(String::isNotBlank)
+                ?: return null
+        val rawGtin =
+            source.getStringExtra(DebugNextSavedToolsHandoff.EXTRA_RAW_GTIN)
+                ?.takeIf(String::isNotBlank)
+                ?: return null
+        val productName =
+            source.getStringExtra(DebugNextSavedToolsHandoff.EXTRA_PRODUCT_NAME)
+                ?.takeIf(String::isNotBlank)
+                ?: return null
+        val merchantKey =
+            source.getStringExtra(DebugNextSavedToolsHandoff.EXTRA_STORE_MERCHANT_KEY)
+                ?.takeIf(String::isNotBlank)
+                ?: return null
+        val channelKey =
+            source.getStringExtra(DebugNextSavedToolsHandoff.EXTRA_STORE_CHANNEL_KEY)
+                ?.takeIf(String::isNotBlank)
+                ?: return null
+        val storeDisplayName =
+            source.getStringExtra(DebugNextSavedToolsHandoff.EXTRA_STORE_DISPLAY_NAME)
+                ?.takeIf(String::isNotBlank)
+                ?: return null
+        val prefill =
+            runCatching {
+                UserObservedPriceSavedPrefill(
+                    itemKey = ShoppingItemKey(itemKeyValue),
+                    storeKey = ShoppingStoreKey(storeKeyValue),
+                    rawGtin = rawGtin,
+                    productName = productName,
+                    storeScope =
+                        PracticalShoppingStoreIdentityScope(
+                            merchantKey = merchantKey,
+                            locationKey = source.getStringExtra(
+                                DebugNextSavedToolsHandoff.EXTRA_STORE_LOCATION_KEY
+                            ),
+                            commerceChannelKey = channelKey
+                        ),
+                    storeDisplayName = storeDisplayName
+                )
+            }.getOrNull()
+                ?: return null
+
+        return UserObservedPriceSavedPrefillHandoffAttempt(prefill = prefill)
+    }
+
     private fun renderShell(state: AppShellState) {
         if (state.route != AppRoute.HOME) {
             dismissHomeItemDetailsDialog()
@@ -2112,6 +2256,10 @@ class MainActivity : AppCompatActivity() {
         }
         val searchVisible =
             state.route == AppRoute.SEARCH && state.selectedPrimaryTab == AppPrimaryTab.SEARCH
+        shellIntro.visibility = if (searchVisible) View.GONE else View.VISIBLE
+        screenFootnote.visibility = if (searchVisible) View.GONE else View.VISIBLE
+        sourcesLicencesButton.visibility = if (searchVisible) View.GONE else View.VISIBLE
+        dataStatusButton.visibility = if (searchVisible) View.GONE else View.VISIBLE
         if (!searchVisible && searchRouteActive) {
             argentinaSearchHost.invalidateForRouteChange()
         }
@@ -2243,15 +2391,32 @@ class MainActivity : AppCompatActivity() {
 
         searchResultsContainer.removeAllViews()
         val presentation = state.presentation
-        searchResultsHeading.visibility =
-            if (presentation != null && presentation.matches.isNotEmpty()
-            ) View.VISIBLE else View.GONE
-        searchResultsCount.text =
-            presentation?.matches?.size?.takeIf { it > 0 }?.let { count ->
-                resources.getQuantityString(R.plurals.search_results_count, count, count)
-            }.orEmpty()
-        searchResultsCount.visibility =
-            if (presentation != null && presentation.matches.isNotEmpty()) View.VISIBLE else View.GONE
+        val resultCount = presentation?.matches?.size ?: 0
+        val hasResults = resultCount > 0
+        searchResultsHeading.visibility = if (hasResults) View.VISIBLE else View.GONE
+        if (hasResults) {
+            searchResultsHeading.text =
+                resources.getQuantityString(R.plurals.search_results_count, resultCount, resultCount)
+            searchResultsHeading.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            searchResultsHeading.setTextColor(ValuePilotPalette.color("#B34B2E"))
+            searchResultsHeading.setPadding(dp(14), dp(8), dp(14), dp(8))
+            searchResultsHeading.background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(ValuePilotPalette.color("#FCE8DC"))
+                cornerRadius = dp(22).toFloat()
+            }
+            (searchResultsHeading.layoutParams as? LinearLayout.LayoutParams)?.let { params ->
+                params.width = LinearLayout.LayoutParams.WRAP_CONTENT
+                params.gravity = Gravity.START
+                searchResultsHeading.layoutParams = params
+            }
+            searchResultsCount.text = getString(R.string.search_results_about)
+        } else {
+            searchResultsHeading.text = getString(R.string.search_results_title)
+            searchResultsHeading.background = null
+            searchResultsHeading.setPadding(0, 0, 0, 0)
+            searchResultsCount.text = ""
+        }
+        searchResultsCount.visibility = if (hasResults) View.VISIBLE else View.GONE
 
         presentation?.matches?.forEach { match ->
             searchResultsContainer.addView(
@@ -2288,11 +2453,22 @@ class MainActivity : AppCompatActivity() {
     ): View {
         val primaryOffer = match.qualifiedOffers.firstOrNull()
         val offerSummary = primaryOffer?.let(ArgentinaQualifiedOfferPresentation::summary)
+        val priceLabel = primaryOffer?.let {
+            "${it.listPrice.currency} ${it.listPrice.amount}"
+        } ?: getString(R.string.search_identity_price_unavailable)
+        val unitRate = primaryOffer?.unitPrice?.let { unit ->
+            buildString {
+                append(unit.currency).append(' ').append(unit.amount)
+                primaryOffer.unitPriceBasis?.takeIf { it.isNotBlank() }?.let {
+                    append(" / ").append(it)
+                }
+            }
+        }
         val card = MaterialCardView(this).apply {
             radius = dp(18).toFloat()
             cardElevation = 0f
-            setCardBackgroundColor(ValuePilotPalette.color("#FFF1E8"))
-            strokeColor = ValuePilotPalette.color("#E8CDBF")
+            setCardBackgroundColor(ValuePilotPalette.color("#FFFFFF"))
+            strokeColor = ValuePilotPalette.color("#E8DED5")
             strokeWidth = dp(1)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -2312,148 +2488,196 @@ class MainActivity : AppCompatActivity() {
                     match.matchLabel,
                     "Argentina SEPA identity result",
                     offerSummary,
+                    primaryOffer?.let {
+                        "${it.storeName}; ${getString(R.string.search_identity_availability_unknown)}"
+                    },
+                    if (primaryOffer == null) getString(R.string.search_identity_price_unavailable) else null,
+                    unitRate ?: getString(R.string.search_identity_unit_rate_unavailable),
                     getString(R.string.search_identity_no_verified_picture),
                     caveat,
-                    "Tap to review this name in Scan and compare",
+                    getString(R.string.search_identity_open_compare),
                     getString(R.string.search_identity_add_home_draft)
                 ).joinToString(". ") { it.trim().trimEnd('.', '!', '?') } + "."
         }
 
         val body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(15), dp(16), dp(15))
-            // Keep the projected text as one card-level announcement. The explicit
-            // Home action is added as a sibling below this decorative summary so it
-            // remains available to keyboard and assistive-technology users.
+            setPadding(dp(16), dp(14), dp(16), dp(12))
+            // Keep the projected text as one card-level announcement. Action controls
+            // live in a separate sibling container so they remain discoverable.
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         }
 
-        val name = TextView(this).apply {
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.TOP
+        }
+        TextView(this).apply {
             text = match.displayName
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-            setTextColor(ValuePilotPalette.color("#111827"))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            setTextColor(ValuePilotPalette.color("#2A211C"))
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
-            setPadding(0, dp(5), 0, 0)
-        }
+            setLineSpacing(0f, 1.05f)
+            isSingleLine = false
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }.also(header::addView)
+        TextView(this).apply {
+            text = priceLabel
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f)
+            setTextColor(
+                if (primaryOffer == null) ValuePilotPalette.color("#68645E")
+                else ValuePilotPalette.color("#2A211C")
+            )
+            setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+            gravity = Gravity.END
+            setPadding(dp(8), 0, 0, 0)
+            maxLines = 2
+        }.also(header::addView)
+        body.addView(header)
 
-        val picturePlaceholder = TextView(this).apply {
-            text = getString(R.string.search_identity_no_verified_picture)
-            gravity = Gravity.CENTER
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setTextColor(ValuePilotPalette.color("#6B7280"))
-            setBackgroundColor(ValuePilotPalette.color("#FFF8F4"))
-            minHeight = dp(72)
-            setPadding(dp(12), dp(10), dp(12), dp(10))
-        }
-
-        val brand = match.brand?.let { brandName ->
-            TextView(this).apply {
-                text = brandName
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-                setTextColor(ValuePilotPalette.color("#374151"))
-                setPadding(0, dp(7), 0, 0)
+        listOfNotNull(match.brand, match.packageQuantityLabel)
+            .takeIf { it.isNotEmpty() }
+            ?.joinToString(" · ")
+            ?.let { meta ->
+                TextView(this).apply {
+                    text = meta
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                    setTextColor(ValuePilotPalette.color("#5F5148"))
+                    setPadding(0, dp(6), 0, 0)
+                }.also(body::addView)
             }
+
+        val unitRateView = TextView(this).apply {
+            text = unitRate ?: getString(R.string.search_identity_unit_rate_unavailable)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            setTextColor(
+                if (unitRate == null) ValuePilotPalette.color("#68645E")
+                else ValuePilotPalette.color("#397447")
+            )
+            gravity = Gravity.END
+            setPadding(0, dp(4), 0, 0)
         }
 
-        val packageQuantity = match.packageQuantityLabel?.let { quantityLabel ->
-            TextView(this).apply {
-                text = getString(R.string.search_identity_package_size, quantityLabel)
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-                setTextColor(ValuePilotPalette.color("#374151"))
-                setPadding(0, dp(7), 0, 0)
-            }
-        }
-
-        val matchLabel = TextView(this).apply {
-            text = getString(R.string.search_identity_match_label, match.matchLabel)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setTextColor(ValuePilotPalette.color("#6B7280"))
-            setPadding(0, dp(8), 0, 0)
-        }
-
-        val offerState = offerSummary?.let { summary ->
-            TextView(this).apply {
-                text = summary
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-                setTextColor(ValuePilotPalette.color("#374151"))
-                setPadding(0, dp(8), 0, 0)
-            }
+        val storeContext = TextView(this).apply {
+            text = primaryOffer?.let { offer ->
+                "${offer.storeName} · ${getString(R.string.search_identity_availability_unknown)}"
+            } ?: getString(R.string.search_identity_store_context_unavailable)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            setTextColor(ValuePilotPalette.color("#5F5148"))
+            setPadding(0, dp(6), 0, 0)
         }
 
         val source = TextView(this).apply {
-            text = getString(R.string.search_identity_source)
+            text = if (primaryOffer == null) {
+                getString(R.string.search_identity_source_identity_only)
+            } else {
+                getString(R.string.search_identity_source_short)
+            }
             gravity = Gravity.START
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setTextColor(ValuePilotPalette.color("#6B7280"))
             setPadding(0, dp(9), 0, 0)
         }
 
-        body.addView(picturePlaceholder)
-        body.addView(name)
-        brand?.let(body::addView)
-        packageQuantity?.let(body::addView)
-        body.addView(matchLabel)
-        offerState?.let(body::addView)
-        TextView(this).apply {
-            text = caveat
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            setTextColor(ValuePilotPalette.color("#92400E"))
-            setPadding(0, dp(7), 0, 0)
-        }.also(body::addView)
+        body.addView(unitRateView)
+        body.addView(storeContext)
         body.addView(source)
         TextView(this).apply {
-            text = getString(R.string.search_identity_open_compare)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            setTextColor(ValuePilotPalette.color("#8F3620"))
-            setTypeface(Typeface.DEFAULT, Typeface.BOLD)
-            minHeight = dp(48)
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dp(10), 0, 0)
+            text = caveat
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            setTextColor(ValuePilotPalette.color("#8B817A"))
+            setPadding(0, dp(8), 0, 0)
         }.also(body::addView)
+        val actions = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), 0, dp(16), dp(12))
+        }
         primaryOffer?.let { offer ->
+            val secondaryActions = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { topMargin = dp(8) }
+            }
             val detailsButton = MaterialButton(this).apply {
-                text = getString(R.string.search_identity_view_offer)
+                text = getString(R.string.search_identity_details_short)
                 isAllCaps = false
                 minHeight = dp(48)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                setTextColor(ValuePilotPalette.color("#8F3620"))
+                backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
+                strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#E8CDBF"))
+                strokeWidth = dp(1)
+                cornerRadius = dp(14)
+                layoutParams = LinearLayout.LayoutParams(0, dp(48), 1f).apply {
+                    marginEnd = dp(6)
+                }
                 contentDescription = getString(
                     R.string.search_identity_view_offer_description,
                     offer.storeName
                 )
                 setOnClickListener { showQualifiedOfferDetails(offer, match.displayName) }
             }
-            body.addView(detailsButton)
+            secondaryActions.addView(detailsButton)
             if (offer.quantity != null) {
                 val planButton = MaterialButton(this).apply {
-                    text = getString(R.string.search_identity_plan_offer)
+                    text = getString(R.string.search_identity_plan_short)
                     isAllCaps = false
                     minHeight = dp(48)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                    setTextColor(ValuePilotPalette.color("#8F3620"))
+                    backgroundTintList = ColorStateList.valueOf(Color.TRANSPARENT)
+                    strokeColor = ColorStateList.valueOf(ValuePilotPalette.color("#E8CDBF"))
+                    strokeWidth = dp(1)
+                    cornerRadius = dp(14)
+                    layoutParams = LinearLayout.LayoutParams(0, dp(48), 1f).apply {
+                        marginStart = dp(6)
+                    }
                     contentDescription = getString(
                         R.string.search_identity_plan_offer_description,
                         match.displayName
                     )
                     setOnClickListener { requestQualifiedOfferPlan(match) }
                 }
-                body.addView(planButton)
+                secondaryActions.addView(planButton)
             }
+            actions.addView(secondaryActions)
         }
         val addHomeButton = MaterialButton(this).apply {
-            text = getString(R.string.search_identity_add_home_draft)
+            text = getString(R.string.search_identity_add_short)
             isAllCaps = false
             minHeight = dp(48)
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                setMargins(dp(16), dp(6), dp(16), dp(12))
+                topMargin = dp(10)
             }
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            setTextColor(ValuePilotPalette.color("#FFFFFF"))
+            backgroundTintList = ColorStateList.valueOf(ValuePilotPalette.color("#E8672D"))
+            cornerRadius = dp(16)
             contentDescription = getString(
                 R.string.search_identity_add_home_draft_description,
                 match.displayName
             )
             setOnClickListener { onAddToHome(match) }
         }
-        card.addView(body)
-        card.addView(addHomeButton)
+        actions.addView(addHomeButton)
+        // MaterialCardView is a FrameLayout. Keep the evidence body and its
+        // actions in one vertical content column so action controls never
+        // stack over long product names or price text.
+        LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            addView(body)
+            addView(actions)
+        }.also(card::addView)
         return card
     }
 

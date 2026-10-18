@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://valuepilot.local/catalog-discovery/semantic-review-ledger-v1.schema.json",
+  "title": "ValuePilot independent semantic review ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "sourceReleaseId", "sourceSha256", "cases"],
+  "properties": {
+    "schemaVersion": {"const": "valuepilot-semantic-review-ledger-v1"},
+    "sourceReleaseId": {"type": "string", "minLength": 1},
+    "sourceSha256": {"type": "string", "pattern": "^[0-9a-fA-F]{64}$"},
+    "reviewProtocol": {"type": "string", "minLength": 1},
+    "cases": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/case"}
+    }
+  },
+  "$defs": {
+    "identityKey": {"type": "string", "minLength": 1},
+    "providerProductId": {"type": "string", "minLength": 1},
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "query",
+        "language",
+        "expectedIdentityKeys",
+        "expectedProviderProductIds",
+        "reviewStatus",
+        "reviewerId",
+        "reviewMethod",
+        "reviewedAt"
+      ],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "query": {"type": "string", "minLength": 1, "maxLength": 256},
+        "language": {"enum": ["en", "es"]},
+        "selection": {"type": "string", "minLength": 1, "maxLength": 160},
+        "expectedIdentityKeys": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identityKey"}
+        },
+        "expectedProviderProductIds": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/providerProductId"}
+        },
+        "mustIncludeIdentityKeys": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identityKey"}
+        },
+        "mustExcludeIdentityKeys": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/identityKey"}
+        },
+        "reviewStatus": {"const": "REVIEWED"},
+        "reviewerId": {"type": "string", "minLength": 1},
+        "reviewMethod": {
+          "enum": ["HUMAN_SOURCE_REVIEW", "DUAL_HUMAN_REVIEW", "DOMAIN_REVIEW"]
+        },
+        "reviewedAt": {"type": "string", "minLength": 1},
+        "reviewNotes": {"type": "string", "minLength": 1},
+        "sourceEvidence": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "riskTags": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "split": {"enum": ["HELD_OUT", "REGRESSION", "CALIBRATION"]}
+      }
+    }
+  }
+}

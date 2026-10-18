@@ -5,6 +5,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from backend.object_store import LocalFilesystemObjectStore
@@ -161,6 +162,50 @@ class ArchivedReleasePromotionTests(unittest.TestCase):
         with patch.object(promotion, "_http_json", side_effect=fake_json):
             with self.assertRaisesRegex(PromotionError, "Android networking authorization"):
                 run_production_smoke("https://fixture.example", release_id=self.candidate, token="token")
+
+
+    def test_service_update_retries_a_transient_control_plane_failure(self):
+        invocations = []
+
+        def fake_run(args, **kwargs):
+            invocations.append(list(args))
+            if len(invocations) < 3:
+                return SimpleNamespace(returncode=1, stdout="", stderr="ERROR: conflict")
+            return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+        with patch.object(promotion.subprocess, "run", side_effect=fake_run), patch.object(promotion.time, "sleep"):
+            promotion._update_service(
+                "backend-sa:southamerica-east1",
+                project="project",
+                release_id=self.candidate,
+                release_date="2026-10-01",
+            )
+
+        self.assertEqual(len(invocations), 4)  # three bounded retries, then one traffic update
+        self.assertIn("services", invocations[0])
+        self.assertIn("update-traffic", invocations[-1])
+
+    def test_service_update_surfaces_the_bounded_gcloud_diagnostic(self):
+        invocations = []
+
+        def fake_run(args, **kwargs):
+            invocations.append(list(args))
+            return SimpleNamespace(
+                returncode=1,
+                stdout="",
+                stderr="ERROR: Permission 'artifactregistry.repositories.downloadArtifacts' denied",
+            )
+
+        with patch.object(promotion.subprocess, "run", side_effect=fake_run), patch.object(promotion.time, "sleep"):
+            with self.assertRaisesRegex(PromotionError, "downloadArtifacts"):
+                promotion._update_service(
+                    "backend-sa:southamerica-east1",
+                    project="project",
+                    release_id=self.candidate,
+                    release_date="2026-10-01",
+                )
+
+        self.assertEqual(len(invocations), promotion._SERVICE_UPDATE_ATTEMPTS)
 
 
 if __name__ == "__main__":

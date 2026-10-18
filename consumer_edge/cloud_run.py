@@ -26,6 +26,7 @@ from backend.consumer_edge import EDGE_ALLOWED_ROUTES, EdgeUpstreamResponse
 _ROUTE_METHODS = {
     "/v1/status": "GET",
     "/v1/search": "POST",
+    "/v2/search": "POST",
     "/v1/interpret": "POST",
     "/v1/shop-text": "POST",
     "/v1/shop": "POST",

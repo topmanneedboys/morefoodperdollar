@@ -63,3 +63,19 @@ pagination but strips any qualified offer preview. This prevents an
 unverified production Android UI from presenting price or store evidence while
 preserving the already-authorized identity-search path. The gate is not
 enabled by default and does not perform deployment or promotion.
+
+## Optional identity taxonomy sidecar
+
+The isolated HTML preview may use the generated provider-level taxonomy index
+for observed form filtering and clarification choices. Configure the backend
+process with the exact derived artifact and, preferably, its SHA-256:
+
+```text
+VALUEPILOT_PRODUCT_TAXONOMY_PATH=<absolute path to product-taxonomy.jsonl.gz>
+VALUEPILOT_PRODUCT_TAXONOMY_SHA256=<sha256 of that exact file>
+```
+
+This sidecar is optional and identity-only. It is loaded once per service,
+fails open to the reviewed lexical rules when unavailable, and is removed from
+the public response before serialization. It never authorizes App Check,
+current prices, stock, availability, store ranking, or Android UI exposure.

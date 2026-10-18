@@ -23,14 +23,22 @@ class MainActivitySearchIdentityBoundaryTest {
             "openComparisonWithSharedText(match.displayName)",
             "addSearchIdentityToHome",
             "search_identity_add_home_draft",
+            "search_identity_add_short",
             "Argentina SEPA identity result",
             "searchResultsCount",
-            "R.plurals.search_results_count"
+            "R.plurals.search_results_count",
+            "search_identity_unit_rate_unavailable",
+            "search_identity_availability_unknown",
+            "search_identity_source_short",
+            "search_identity_price_unavailable",
+            "search_identity_store_context_unavailable"
         ).forEach { required ->
             assertTrue("Expected visible identity boundary $required", activity.contains(required))
         }
         assertTrue(layout.contains("android:id=\"@+id/searchAreaLabel\""))
         assertTrue(layout.contains("android:id=\"@+id/searchResultsCount\""))
+        assertTrue(layout.contains("android:id=\"@+id/searchDesignTitle\""))
+        assertTrue(layout.contains("android:id=\"@+id/searchInputLayout\""))
         assertTrue(strings.contains("package size appears only when the source supplies it explicitly"))
         assertTrue(strings.contains("Showing %1\$d matching identity suggestions."))
         assertFalse(strings.contains("not live prices, stock, availability, package quantities"))
@@ -72,9 +80,61 @@ class MainActivitySearchIdentityBoundaryTest {
         assertTrue(card.contains("search_identity_add_home_draft"))
         assertTrue(card.contains("search_identity_no_verified_picture"))
         assertTrue(card.contains("search_identity_package_size"))
-        assertTrue(card.contains("picturePlaceholder"))
+        assertTrue(card.contains("search_identity_unit_rate_unavailable"))
+        assertTrue(card.contains("search_identity_availability_unknown"))
+        assertTrue(card.contains("search_identity_source_short"))
+        assertTrue(card.contains("search_identity_add_short"))
         assertTrue(card.contains("minHeight = dp(48)"))
-        assertTrue(card.contains("#FFF1E8"))
+        assertTrue(card.contains("#FFFFFF"))
+        assertTrue(card.contains("#E8672D"))
+    }
+
+    @Test
+    fun `Search cards remain wrap safe and explicit for missing price evidence`() {
+        val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
+            .replace("\r\n", "\n")
+        val cardStart = activity.indexOf("private fun createSearchResultView(")
+        val cardEnd = activity.indexOf("private fun showQualifiedOfferDetails", cardStart)
+        assertTrue(cardStart >= 0)
+        assertTrue(cardEnd > cardStart)
+        val card = activity.substring(cardStart, cardEnd)
+
+        assertTrue(card.contains("isSingleLine = false"))
+        assertTrue(card.contains("setLineSpacing"))
+        assertTrue(card.contains("search_identity_price_unavailable"))
+        assertTrue(card.contains("search_identity_store_context_unavailable"))
+        assertTrue(card.contains("search_identity_unit_rate_unavailable"))
+        assertFalse(card.contains("ellipsize"))
+    }
+
+    @Test
+    fun `Search card body and actions share a vertical content column`() {
+        val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
+            .replace("\r\n", "\n")
+        val cardStart = activity.indexOf("private fun createSearchResultView(")
+        val cardEnd = activity.indexOf("private fun showQualifiedOfferDetails", cardStart)
+        assertTrue(cardStart >= 0)
+        assertTrue(cardEnd > cardStart)
+        val card = activity.substring(cardStart, cardEnd)
+
+        assertTrue(card.contains("LinearLayout(this).apply {"))
+        assertTrue(card.contains("orientation = LinearLayout.VERTICAL"))
+        assertTrue(card.contains("addView(body)"))
+        assertTrue(card.contains("addView(actions)"))
+        assertFalse(card.contains("card.addView(body)"))
+        assertFalse(card.contains("card.addView(actions)"))
+    }
+
+    @Test
+    fun `Search route hides generic shell chrome without changing route state`() {
+        val activity = source("src/main/java/com/valuepilot/app/MainActivity.kt").readText()
+            .replace("\r\n", "\n")
+        listOf(
+            "shellIntro.visibility = if (searchVisible) View.GONE else View.VISIBLE",
+            "screenFootnote.visibility = if (searchVisible) View.GONE else View.VISIBLE",
+            "sourcesLicencesButton.visibility = if (searchVisible) View.GONE else View.VISIBLE",
+            "dataStatusButton.visibility = if (searchVisible) View.GONE else View.VISIBLE"
+        ).forEach { required -> assertTrue(activity.contains(required)) }
     }
 
     @Test

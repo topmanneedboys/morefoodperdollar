@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import unittest
 from unittest.mock import patch
@@ -137,10 +138,11 @@ class CloudRunUpstreamTests(unittest.TestCase):
             },
         )
 
-    def test_all_five_routes_are_the_only_forwardable_paths(self):
+    def test_all_consumer_routes_are_forwardable_and_admin_routes_are_blocked(self):
         for method, path in (
             ("GET", "/v1/status"),
             ("POST", "/v1/search"),
+            ("POST", "/v2/search"),
             ("POST", "/v1/interpret"),
             ("POST", "/v1/shop-text"),
             ("POST", "/v1/shop"),
@@ -153,13 +155,37 @@ class CloudRunUpstreamTests(unittest.TestCase):
                 )
                 self.assertEqual(result.status_code, 200)
                 self.assertEqual(client.calls[0]["url"], f"{target().base_url}{path}")
-        for method, path in (("GET", "/admin"), ("POST", "/v1/status"), ("POST", "/v1/unknown")):
+        for method, path in (("GET", "/admin"), ("POST", "/v1/status"), ("GET", "/v2/search"), ("POST", "/v1/unknown")):
             with self.subTest(method=method, path=path), self.assertRaises(CloudRunConfigurationError):
                 asyncio.run(
                     CloudRunOidcUpstream(
                         target(), token_provider=FakeTokenProvider(), client=FakeClient(FakeResponse(200, [b"{}"]))
                     ).forward(method=method, path=path, body=b"", headers={}, request_id="route")
                 )
+
+    def test_v2_search_travels_through_appcheck_and_oidc_without_forwarding_client_tokens(self):
+        class Verifier:
+            def verify(self, token):
+                if token != "valid-appcheck":
+                    raise ValueError("unauthorized")
+                return {"sub": "preview-app"}
+
+        client = FakeClient(FakeResponse(200, [b'{"result":{"matches":[]}}']))
+        provider = FakeTokenProvider()
+        upstream = CloudRunOidcUpstream(target(), token_provider=provider, client=client)
+        edge = TestClient(create_consumer_edge_app(verifier=Verifier(), upstream=upstream), base_url="https://testserver")
+        query = {"query": "eggs", "language": "en", "selections": ["form:egg:whole_egg"], "pageSize": 20}
+        self.assertEqual(edge.post("/v2/search", json=query).status_code, 401)
+        self.assertEqual(client.calls, [])
+        response = edge.post("/v2/search", json=query, headers={"X-Firebase-AppCheck": "valid-appcheck", "Authorization": "attacker-token"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(client.calls), 1)
+        call = client.calls[0]
+        self.assertEqual(call['url'], f"{target().base_url}/v2/search")
+        self.assertEqual(json.loads(call['content']), query)
+        self.assertEqual(call['headers']['Authorization'], 'Bearer header.payload.signature')
+        self.assertNotIn('valid-appcheck', str(call['headers']))
+        self.assertNotIn('attacker-token', str(call['headers']))
 
     def test_sync_and_async_token_providers_are_supported(self):
         class AsyncProvider:

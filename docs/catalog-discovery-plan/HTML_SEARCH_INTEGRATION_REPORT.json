@@ -1,0 +1,96 @@
+{
+  "status": "PASS",
+  "environment": "desktop browser with test Android host adapter",
+  "deviceVerified": false,
+  "queryVersion": "valuepilot-discovery-query-v2-exact-name",
+  "indexSha256": "d7aef4c8b740bfdcdca68c404692b52a7225b66cb744641bee56d2214edf0a88",
+  "cases": [
+    {
+      "scenario": "missing unit prices sort after known prices (isolated test values)",
+      "status": "PASS"
+    },
+    {
+      "query": "rice",
+      "language": "en",
+      "rowsRendered": 50,
+      "totalIdentities": 282,
+      "clarificationChoices": 6,
+      "status": "PASS"
+    },
+    {
+      "query": "arroz",
+      "language": "es-AR",
+      "rowsRendered": 50,
+      "totalIdentities": 282,
+      "clarificationChoices": 6,
+      "status": "PASS"
+    },
+    {
+      "query": "eggs",
+      "language": "en",
+      "rowsRendered": 50,
+      "totalIdentities": 269,
+      "clarificationChoices": 6,
+      "status": "PASS"
+    },
+    {
+      "query": "huevos",
+      "language": "es-AR",
+      "rowsRendered": 50,
+      "totalIdentities": 269,
+      "clarificationChoices": 6,
+      "status": "PASS"
+    },
+    {
+      "query": "strawberry",
+      "language": "en",
+      "rowsRendered": 16,
+      "totalIdentities": 16,
+      "clarificationChoices": 5,
+      "status": "PASS"
+    },
+    {
+      "query": "frutilla",
+      "language": "es-AR",
+      "rowsRendered": 18,
+      "totalIdentities": 18,
+      "clarificationChoices": 5,
+      "status": "PASS"
+    },
+    {
+      "query": "mango",
+      "language": "en",
+      "rowsRendered": 7,
+      "totalIdentities": 7,
+      "clarificationChoices": 4,
+      "status": "PASS"
+    },
+    {
+      "query": "zanahoria",
+      "language": "es-AR",
+      "rowsRendered": 10,
+      "totalIdentities": 10,
+      "clarificationChoices": 4,
+      "status": "PASS"
+    },
+    {
+      "scenario": "facet page preserves product rows",
+      "status": "PASS"
+    },
+    {
+      "scenario": "next and previous product pages",
+      "status": "PASS"
+    },
+    {
+      "scenario": "detail and photo host action return to exact identity and table viewport",
+      "status": "PASS",
+      "identity": "ar-sepa-product:12:7791120031557"
+    }
+  ],
+  "pageErrors": [],
+  "limitations": [
+    "Desktop browser host adapter; no Motorola connected.",
+    "External Custom Tab expansion and close require actual Android device.",
+    "Assigned semantics have no independent acceptance review."
+  ]
+}

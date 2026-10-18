@@ -69,6 +69,12 @@ def fixture_records() -> list[dict[str, object]]:
         item("coca", "Coca-Cola Original 2.25 L", "2.25", "l", brand="Coca-Cola", form="soda"),
         item("coca-zero", "Coca-Cola Zero 2.25 L", "2.25", "l", brand="Coca-Cola", form="soda"),
         item("sprite", "Sprite 2.25 L", "2.25", "l", brand="Sprite", form="soda"),
+        item("rice-dessert", "Arroz con Leche Postre 500 g", "500", "g", form="dessert"),
+        item("rice-flour", "Harina de Arroz 500 g", "500", "g", form="flour"),
+        item("lychee", "Lichi Fresco 500 g", "500", "g", form="fresh"),
+        item("lychee-juice", "Jugo de Lichi 1 L", "1", "l", form="juice"),
+        item("yerba", "Yerba Mate 500 g", "500", "g", form="dry"),
+        item("yerba-drink", "Bebida de Yerba Mate 1 L", "1", "l", form="drink"),
     ]
 
 
@@ -107,6 +113,19 @@ class ConsumerInputIntelligenceTests(unittest.TestCase):
         explicit = self.line("pasta de tomate 500g")
         self.assertEqual(explicit["recognizedProduct"]["productEvidenceKey"], "tomato-paste")
         self.assertIn(self.line("tomate pasta 500g")["recognizedProduct"]["productEvidenceKey"], {"tomato-paste"})
+
+    def test_family_aliases_keep_derived_forms_out_of_generic_requests(self):
+        for query, expected in (("rice 1kg", "rice"), ("lychee 500g", "lychee"), ("yerba 500g", "yerba")):
+            with self.subTest(query=query):
+                line = self.line(query)
+                self.assertEqual(line["recognizedProduct"]["productEvidenceKey"], expected)
+                self.assertTrue(line["structuredLine"])
+
+        for query in ("rice dessert 500g", "lychee juice 1l", "yerba drink 1l"):
+            with self.subTest(query=query):
+                line = self.line(query)
+                self.assertIn(line["resolution"], {NO_SAFE_MATCH, NEEDS_CLARIFICATION})
+                self.assertIsNone(line.get("structuredLine"))
 
     def test_high_risk_traps_never_auto_substitute(self):
         trap_queries = (
