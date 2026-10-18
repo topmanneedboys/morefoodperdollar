@@ -208,5 +208,31 @@ class ArchivedReleasePromotionTests(unittest.TestCase):
         self.assertEqual(len(invocations), promotion._SERVICE_UPDATE_ATTEMPTS)
 
 
+    def test_rollback_failure_preserves_the_original_cause(self):
+        calls = {"count": 0}
+
+        def update(service, *, project, release_id, release_date):
+            calls["count"] += 1
+            if calls["count"] > 2:  # the two rollback attempts fail
+                raise PromotionError("rollback denied")
+
+        with patch.object(promotion, "_update_service", side_effect=update):
+            with self.assertRaisesRegex(PromotionError, "original failure: smoke failed"):
+                promote_archived_release(
+                    self.archive,
+                    {"us": self.us, "sa": self.sa},
+                    release_id=self.candidate,
+                    expected_current_release_id=self.previous,
+                    expected_release_date="2026-10-01",
+                    expected_source_sha256="c" * 64,
+                    service_updates=(
+                        ("backend-us:us-east4", "project", "2026-10-01"),
+                        ("backend-sa:southamerica-east1", "project", "2026-10-01"),
+                    ),
+                    smoke=lambda _: (_ for _ in ()).throw(PromotionError("smoke failed")),
+                    smoke_targets={"us": "us"},
+                )
+
+
 if __name__ == "__main__":
     unittest.main()
