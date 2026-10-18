@@ -388,15 +388,21 @@ def promote_archived_release(
         for name in reversed(tuple(updated)):
             try:
                 destinations[name].compare_and_swap(_ACTIVE_KEY, prior[name][2], expected_etag=updated[name].etag)
-            except Exception:
-                rollback_errors.append(name)
+            except Exception as rollback_exc:
+                rollback_errors.append(f"{name}:{rollback_exc}")
         for service, project in reversed(attempted_services):
             try:
                 _update_service(service, project=project, release_id=expected_current_release_id, release_date=previous_date)
-            except Exception:
-                rollback_errors.append("service:" + service)
+            except Exception as rollback_exc:
+                rollback_errors.append(f"service:{service}:{rollback_exc}")
         if rollback_errors:
-            raise PromotionError("promotion failed and rollback requires operator attention: " + ",".join(rollback_errors)) from exc
+            # Preserve the original failure: a rollback failure must never hide
+            # the reason the promotion started rolling back in the first place.
+            raise PromotionError(
+                "promotion failed and rollback requires operator attention: "
+                + " | ".join(rollback_errors)
+                + f" | original failure: {exc}"
+            ) from exc
         if isinstance(exc, PromotionError):
             raise
         raise PromotionError("promotion smoke or activation failed; previous pointers restored") from exc
