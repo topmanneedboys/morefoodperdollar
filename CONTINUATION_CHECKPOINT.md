@@ -1,6 +1,49 @@
 # ValuePilot Continuation Checkpoint
 
+## Latest M12.5 control-state repair — 2026-09-27
+
+The live Cloud Workflow execution `c46e8991-4927-4737-b6ae-5af7a2818029`
+completed its Cloud Build and candidate work but returned
+`STATE_WRITE_UNVERIFIED`. Read-only inspection showed the prior valid
+`valuepilot-argentina-workflow-discovery-v1` record stored under the malformed
+literal object name `control%2Fworkflow-discovery-state.json`, while the
+deployed revision `000013-32a` reads and writes the canonical
+`control/workflow-discovery-state.json` name. The exact 264-byte record was
+copied to the canonical key and the malformed duplicate was removed with a
+generation precondition. The control bucket has a seven-day soft-delete policy,
+so the recovery remains reversible. No active or canary pointer was written;
+runtime `control/active.json` still points to
+`argentina-sepa-2026-09-25-93ce53aac8d3db32-routing-v1-search-v2`. A future
+healthy scheduled execution is still required before M12.5 can be called
+qualified, and unattended promotion remains disabled.
+
+The merged main baseline for this checkpoint is
+`7d94438246dabd7611afb62234930164949f70e5` (PR #38). The exact-head checks
+for that PR passed. Post-merge GitHub runs `36345208249` and `36345208261`
+failed before any job steps because the account billing/spending-limit gate
+blocked Actions; this is not reported as green CI. Local Android test/lint/debug
+and release builds passed, and the untracked `device-audit/` directory remains
+untouched.
+
 Updated: 2026-09-27 16:46 UTC
+
+## Preserved Motorola audit review — 2026-09-27
+
+The untracked `device-audit/` directory was preserved and inspected without
+editing or deleting any file. Its September 24 XML and screenshots identify
+`com.valuepilot.app` and show the qualified Buenos Aires (CABA) identity-only
+Search surface, source attribution, unknown-price disclosure, Home/Basket/Saved/
+Compare/Good Price flows, Data Status, large-font rendering and rotation. The
+captured milk and yerba traces each contain five distinct identity cards across
+their scroll captures. They contain no `searchLoadMoreButton`, `hasMore`, or
+bounded-limit text, so they are not evidence of the current continuation
+implementation or of Search beyond five results. The source-level continuation
+code and deterministic tests are newer than this device trace.
+
+This audit strengthens the physical presentation evidence for M12.7 and the
+offline/private boundaries of M12.8, but it does not prove current-build
+pagination, valid App Check, both-region routing, live prices/stock, signing or
+Play installation of 10108. Those gates remain explicitly open.
 
 ## Resumed M12.4–M12.9 checkpoint — 2026-09-27
 

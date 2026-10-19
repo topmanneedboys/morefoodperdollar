@@ -40,6 +40,18 @@ PRODUCT_HEADER = (
     "productos_precio_unitario_promo2|productos_leyenda_promo2\n"
 )
 
+# ZIP metadata is part of the outer/nested source bytes.  Keep fixture archives
+# byte-for-byte stable so a repeat qualification run tests the adapter's
+# determinism rather than the wall clock used by ZipFile.writestr().
+FIXTURE_ZIP_DATETIME = (2026, 9, 6, 0, 0, 0)
+
+
+def fixture_zip_info(name: str, *, compress_type: int) -> zipfile.ZipInfo:
+    info = zipfile.ZipInfo(name, date_time=FIXTURE_ZIP_DATETIME)
+    info.compress_type = compress_type
+    info.create_system = 0
+    return info
+
 
 def commerce_text(update: str = "2026-09-06T12:00:00-03:00") -> str:
     return COMMERCE_HEADER + f"1|1|30123456789|Comercio SA|Super|https://example.test|{update}|1.0\n"
@@ -109,11 +121,20 @@ def nested_zip_bytes(
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         if commerce is not None:
-            archive.writestr("comercio.csv", commerce.encode("utf-8"))
+            archive.writestr(
+                fixture_zip_info("comercio.csv", compress_type=zipfile.ZIP_DEFLATED),
+                commerce.encode("utf-8"),
+            )
         if stores is not None:
-            archive.writestr("sucursales.csv", stores.encode("utf-8"))
+            archive.writestr(
+                fixture_zip_info("sucursales.csv", compress_type=zipfile.ZIP_DEFLATED),
+                stores.encode("utf-8"),
+            )
         if products is not None:
-            archive.writestr("productos.csv", products.encode("utf-8"))
+            archive.writestr(
+                fixture_zip_info("productos.csv", compress_type=zipfile.ZIP_DEFLATED),
+                products.encode("utf-8"),
+            )
     return output.getvalue()
 
 
@@ -121,7 +142,10 @@ def outer_zip(path: Path, nested: list[tuple[str, bytes]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_STORED) as archive:
         for name, payload in nested:
-            archive.writestr(name, payload, compress_type=zipfile.ZIP_STORED)
+            archive.writestr(
+                fixture_zip_info(name, compress_type=zipfile.ZIP_STORED),
+                payload,
+            )
 
 
 def run_fixture(
