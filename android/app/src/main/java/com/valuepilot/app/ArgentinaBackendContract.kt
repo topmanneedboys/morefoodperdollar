@@ -334,7 +334,7 @@ object ArgentinaBackendContract {
     ) {
         init {
             require(page in 0..MAX_SEARCH_PAGE)
-            require(pageSize == SEARCH_PAGE_SIZE)
+            require(pageSize in 1..MAX_MATCHES)
             require(nextPage == null || nextPage == page + 1)
             require(!limitReached || hasMore)
             require(!hasMore || nextPage != null || limitReached)
@@ -699,7 +699,7 @@ object ArgentinaBackendContract {
             }
             matches = emptyList()
             identityCandidates = parseProductCandidates(rawMatches, common.releaseDate)
-            if (pagination != null && pagination.pageSize != SEARCH_PAGE_SIZE) invalid("discovery pagination page size is invalid")
+            if (pagination != null && pagination.pageSize !in 1..MAX_MATCHES) invalid("discovery pagination page size is invalid")
         } else {
             if (pagination != null) invalid("non-discovery search cannot contain pagination")
             matches = parseSearchMatches(rawMatches, common.releaseDate)
@@ -806,7 +806,7 @@ object ArgentinaBackendContract {
 
     private fun parseSearchPagination(root: JSONObject): SearchPagination {
         val page = requiredInt(root, "page", 0, MAX_SEARCH_PAGE)
-        val pageSize = requiredInt(root, "pageSize", SEARCH_PAGE_SIZE, SEARCH_PAGE_SIZE)
+        val pageSize = requiredInt(root, "pageSize", 1, MAX_MATCHES)
         val hasMore = requiredBoolean(root, "hasMore")
         val nextPage = optionalInt(root, "nextPage", 0, MAX_SEARCH_PAGE)
         val limitReached = requiredBoolean(root, "limitReached")
