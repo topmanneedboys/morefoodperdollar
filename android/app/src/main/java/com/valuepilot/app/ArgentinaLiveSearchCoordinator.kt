@@ -504,11 +504,13 @@ internal class ArgentinaLiveSearchCoordinator(
                             code == ArgentinaBackendContract.FailureCode.SERVER_ERROR ||
                             code == ArgentinaBackendContract.FailureCode.NETWORK_ERROR
                     if (releaseDrifted) clearPinnedRelease(requestGeneration)
-                    val canRetry = allowReleaseRefresh &&
-                        page == 0 &&
-                        previousPresentation == null &&
-                        isCurrent(requestGeneration, cancellation)
-                    if (canRetry && (releaseDrifted || transient)) {
+                    val freshQuery = page == 0 && previousPresentation == null
+                    // Transient failures may retry on any page: refetching the
+                    // same page is idempotent and rows are de-duplicated by
+                    // identity.  A release re-pin only makes sense for a fresh
+                    // query, never in the middle of pagination.
+                    val canRetry = allowReleaseRefresh && isCurrent(requestGeneration, cancellation)
+                    if (canRetry && (transient || (releaseDrifted && freshQuery))) {
                         performSearch(
                             requestGeneration, query, context, cancellation,
                             selectionId = selectionId, language = language,
