@@ -133,6 +133,7 @@ internal class ArgentinaLiveSearchCoordinator(
     // Native-owned page-start cursors; product rows remain bounded to one page.
     private val discoveryPageCursors = mutableMapOf<Int, String?>(0 to null)
     private var pinnedRelease: ArgentinaBackendContract.ExpectedRelease? = null
+    private var pinnedDiscoveryAvailable = false
     private var currentState: ArgentinaLiveSearchState = ArgentinaLiveSearchState.Idle(0L)
 
     fun state(): ArgentinaLiveSearchState = synchronized(lock) { currentState }
@@ -157,6 +158,10 @@ internal class ArgentinaLiveSearchCoordinator(
             currentContext = context
             currentSelectionId = selectionId
             currentLanguage = language
+            // A new search observes current authorization and release metadata.
+            // Pagination remains pinned to its original immutable release.
+            pinnedRelease = null
+            pinnedDiscoveryAvailable = false
             discoveryPageCursors.clear()
             discoveryPageCursors[0] = null
             generation = nextGenerationLocked()
@@ -235,8 +240,8 @@ internal class ArgentinaLiveSearchCoordinator(
             val presentation = result.second
             val nextPage = (if (backwards) presentation.previousPage else presentation.nextPage)
                 ?: return generation
-            if (backwards && !discoveryMode) return generation
-            if (discoveryMode && !discoveryPageCursors.containsKey(nextPage)) return generation
+            if (backwards && !pinnedDiscoveryAvailable) return generation
+            if (pinnedDiscoveryAvailable && !discoveryPageCursors.containsKey(nextPage)) return generation
             val context = currentContext ?: return generation
             val selectionId = currentSelectionId
             val language = currentLanguage
@@ -284,7 +289,7 @@ internal class ArgentinaLiveSearchCoordinator(
         var immediate: ArgentinaLiveSearchState? = null
         var scheduledGeneration = 0L
         synchronized(lock) {
-            if (closed || !discoveryMode) return generation
+            if (closed || !pinnedDiscoveryAvailable) return generation
             val result =
                 when (val state = currentState) {
                     is ArgentinaLiveSearchState.Results -> state.query to state.presentation
@@ -408,7 +413,8 @@ internal class ArgentinaLiveSearchCoordinator(
         previousPresentation: PracticalShoppingSearchIdentityPresentation? = null,
         selectionId: String? = null,
         language: String = "es",
-        facetCursor: String? = null
+        facetCursor: String? = null,
+        allowReleaseRefresh: Boolean = true
     ) {
         try {
             val release = pinRelease(requestGeneration, cancellation)
@@ -418,8 +424,9 @@ internal class ArgentinaLiveSearchCoordinator(
             }
             if (!isCurrent(requestGeneration, cancellation)) return
             val expectedRelease = (release as ArgentinaBackendBridgeResult.Success).value
+            val useDiscovery = synchronized(lock) { pinnedDiscoveryAvailable }
             val result = ArgentinaBackendConsumerBridge(transport, expectedRelease).let { bridge ->
-                if (discoveryMode) {
+                if (useDiscovery) {
                     val request = ArgentinaBackendContract.DiscoverySearchRequest(
                         query = query,
                         language = language,
@@ -481,13 +488,38 @@ internal class ArgentinaLiveSearchCoordinator(
             }
             when (result) {
                 is ArgentinaBackendBridgeResult.Failure -> {
-                    if (result.code == ArgentinaBackendContract.FailureCode.RELEASE_MISMATCH) {
-                        clearPinnedRelease(requestGeneration)
+                    val code = result.code
+                    // The release the app pinned can be ahead of, or behind,
+                    // the server's daily pointer.  Re-read status and retry once
+                    // instead of showing a dead end to the shopper.
+                    val releaseDrifted =
+                        code == ArgentinaBackendContract.FailureCode.RELEASE_MISMATCH ||
+                            code == ArgentinaBackendContract.FailureCode.STALE_RELEASE ||
+                            code == ArgentinaBackendContract.FailureCode.SEARCH_NOT_AUTHORIZED ||
+                            code == ArgentinaBackendContract.FailureCode.UNAUTHORIZED
+                    // Transient conditions deserve one silent retry as well.
+                    val transient =
+                        code == ArgentinaBackendContract.FailureCode.TIMEOUT ||
+                            code == ArgentinaBackendContract.FailureCode.SERVICE_UNAVAILABLE ||
+                            code == ArgentinaBackendContract.FailureCode.SERVER_ERROR ||
+                            code == ArgentinaBackendContract.FailureCode.NETWORK_ERROR
+                    if (releaseDrifted) clearPinnedRelease(requestGeneration)
+                    val canRetry = allowReleaseRefresh &&
+                        page == 0 &&
+                        previousPresentation == null &&
+                        isCurrent(requestGeneration, cancellation)
+                    if (canRetry && (releaseDrifted || transient)) {
+                        performSearch(
+                            requestGeneration, query, context, cancellation,
+                            selectionId = selectionId, language = language,
+                            allowReleaseRefresh = false
+                        )
+                        return
                     }
                     publishFailure(requestGeneration, query, result.code, result.metadata, previousPresentation)
                 }
                 is ArgentinaBackendBridgeResult.Success -> {
-                    val presentation = if (discoveryMode) result.value
+                    val presentation = if (useDiscovery) result.value
                         else mergePresentations(previousPresentation, result.value)
                     publish(
                         if (presentation.matches.isEmpty()) {
@@ -630,6 +662,7 @@ internal class ArgentinaLiveSearchCoordinator(
                 false
             } else {
                 pinnedRelease = expected
+                pinnedDiscoveryAvailable = discoveryMode && value.discoveryIdentitySearchAvailable
                 true
             }
         }

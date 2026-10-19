@@ -28,6 +28,70 @@ class ArgentinaLiveSearchCoordinatorTest {
         )
 
     @Test
+    fun firstPageReleaseSwitchRetriesOnceAndPersistentMismatchStops() {
+        for (persistent in listOf(false, true)) {
+            var statusCalls = 0
+            var searches = 0
+            val transport = object : ArgentinaBackendTransport {
+                override fun execute(endpoint: String, requestBody: String?): ArgentinaBackendTransportResponse {
+                    return if (endpoint == ArgentinaBackendConsumerBridge.STATUS_ENDPOINT) {
+                        statusCalls++
+                        ArgentinaBackendTransportResponse(200, statusJson(releaseId =
+                            if (statusCalls == 1 || persistent) "old-release" else "new-release"))
+                    } else {
+                        searches++
+                        ArgentinaBackendTransportResponse(200, searchJson(1, releaseId = "new-release"))
+                    }
+                }
+            }
+            val executor = QueuedExecutor()
+            val coordinator = ArgentinaLiveSearchCoordinator(transport, executor, {})
+            coordinator.submit("yerba", context)
+            executor.runNext()
+            assertEquals(2, statusCalls)
+            assertEquals(2, searches)
+            assertEquals(persistent, coordinator.state() is ArgentinaLiveSearchState.Unavailable)
+            assertEquals(!persistent, coordinator.state() is ArgentinaLiveSearchState.Results)
+            coordinator.close()
+        }
+    }
+
+    @Test
+    fun discoveryPreferenceUsesCurrentPriceRouteWhenServerDoesNotAdvertiseV2() {
+        val transport = RecordingTransport(statusBody = statusJson(), searchBody = searchJson(1))
+        val executor = QueuedExecutor()
+        val coordinator = ArgentinaLiveSearchCoordinator(transport, executor, {}, discoveryMode = true)
+        val cordoba = ArgentinaUserSearchArea("Córdoba", "-31.42", "-64.19").context()
+        coordinator.submit("yerba", cordoba)
+        executor.runNext()
+        assertTrue(coordinator.state() is ArgentinaLiveSearchState.Results)
+        assertFalse(transport.calls.any { it.endpoint == ArgentinaBackendConsumerBridge.DISCOVERY_SEARCH_ENDPOINT })
+        val request = JSONObject(transport.calls.last().body!!)
+        assertEquals("-31.42", request.getString("latitude"))
+        assertEquals("-64.19", request.getString("longitude"))
+        coordinator.close()
+    }
+
+    @Test
+    fun newSearchReadsNewReleaseInsteadOfKeepingOldDate() {
+        var statusCalls = 0
+        val transport = object : ArgentinaBackendTransport {
+            override fun execute(endpoint: String, requestBody: String?): ArgentinaBackendTransportResponse {
+                val id = if (statusCalls <= 1) "old-release" else "new-release"
+                return if (endpoint == ArgentinaBackendConsumerBridge.STATUS_ENDPOINT) {
+                    statusCalls++
+                    ArgentinaBackendTransportResponse(200, statusJson(releaseId = if (statusCalls == 1) "old-release" else "new-release"))
+                } else ArgentinaBackendTransportResponse(200, searchJson(1, releaseId = id))
+            }
+        }
+        val executor = QueuedExecutor()
+        val coordinator = ArgentinaLiveSearchCoordinator(transport, executor, {})
+        repeat(2) { coordinator.submit("yerba", context); executor.runNext(); assertTrue(coordinator.state() is ArgentinaLiveSearchState.Results) }
+        assertEquals(2, statusCalls)
+        coordinator.close()
+    }
+
+    @Test
     fun explicitGeographyIsRequiredAndBlankQueryDoesNotCallBackend() {
         val transport = RecordingTransport(statusBody = statusJson(), searchBody = searchJson(1))
         val states = mutableListOf<ArgentinaLiveSearchState>()
@@ -49,7 +113,7 @@ class ArgentinaLiveSearchCoordinatorTest {
     }
 
     @Test
-    fun statusIsPinnedOnceAndSearchProjectsIdentityOnlyResults() {
+    fun statusIsRefreshedForEachNewSearchAndProjectsIdentityOnlyResults() {
         val transport =
             RecordingTransport(
                 statusBody = statusJson(),
@@ -75,7 +139,7 @@ class ArgentinaLiveSearchCoordinatorTest {
         executor.runNext()
         assertTrue(states.last() is ArgentinaLiveSearchState.Results)
         assertEquals(secondGeneration, (states.last() as ArgentinaLiveSearchState.Results).generation)
-        assertEquals(1, transport.calls.count { it.endpoint == ArgentinaBackendConsumerBridge.STATUS_ENDPOINT })
+        assertEquals(2, transport.calls.count { it.endpoint == ArgentinaBackendConsumerBridge.STATUS_ENDPOINT })
         assertEquals(2, transport.calls.count { it.endpoint == ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT })
         assertTrue(transport.calls.all { it.endpoint.startsWith("/v1/") })
         assertTrue(transport.calls.filter { it.endpoint == ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT }
@@ -224,7 +288,7 @@ class ArgentinaLiveSearchCoordinatorTest {
         val transport = InMemoryArgentinaBackendTransport(
             mapOf(
                 ArgentinaBackendConsumerBridge.STATUS_ENDPOINT to
-                    ArgentinaBackendTransportResponse(200, statusJson()),
+                    ArgentinaBackendTransportResponse(200, statusJson(discoveryAvailable = true)),
                 ArgentinaBackendConsumerBridge.DISCOVERY_SEARCH_ENDPOINT to
                     ArgentinaBackendTransportResponse(200, discoveryV2ResponseJson())
             )
@@ -262,7 +326,7 @@ class ArgentinaLiveSearchCoordinatorTest {
                 calls += InMemoryArgentinaBackendTransport.Call(endpoint, requestBody)
                 return when (endpoint) {
                     ArgentinaBackendConsumerBridge.STATUS_ENDPOINT ->
-                        ArgentinaBackendTransportResponse(200, statusJson())
+                        ArgentinaBackendTransportResponse(200, statusJson(discoveryAvailable = true))
                     ArgentinaBackendConsumerBridge.DISCOVERY_SEARCH_ENDPOINT ->
                         ArgentinaBackendTransportResponse(200, if (discoveryCalls++ == 0) firstPage else secondPage)
                     else -> ArgentinaBackendTransportResponse(404, "")
@@ -317,7 +381,7 @@ class ArgentinaLiveSearchCoordinatorTest {
                 override fun execute(endpoint: String, requestBody: String?): ArgentinaBackendTransportResponse {
                     calls += InMemoryArgentinaBackendTransport.Call(endpoint, requestBody)
                     return ArgentinaBackendTransportResponse(200, when (endpoint) {
-                        ArgentinaBackendConsumerBridge.STATUS_ENDPOINT -> statusJson()
+                        ArgentinaBackendConsumerBridge.STATUS_ENDPOINT -> statusJson(discoveryAvailable = true)
                         else -> when (count++) {
                             0 -> first.toString()
                             1 -> facet.toString()
@@ -360,7 +424,7 @@ class ArgentinaLiveSearchCoordinatorTest {
         val transport = object : ArgentinaBackendTransport {
             override fun execute(endpoint: String, requestBody: String?): ArgentinaBackendTransportResponse {
                 if (endpoint == ArgentinaBackendConsumerBridge.STATUS_ENDPOINT) {
-                    return ArgentinaBackendTransportResponse(200, statusJson())
+                    return ArgentinaBackendTransportResponse(200, statusJson(discoveryAvailable = true))
                 }
                 val cursor = JSONObject(requestBody!!).optString("cursor", "")
                 val page = if (cursor.isEmpty() || cursor == "null") 0 else cursor.removePrefix("page-").toInt()
@@ -608,7 +672,7 @@ class ArgentinaLiveSearchCoordinatorTest {
                         ArgentinaBackendTransportResponse(200, statusJson())
                     ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT -> {
                         searchAttempts += 1
-                        if (searchAttempts == 1) {
+                        if (searchAttempts <= 2) {
                             ArgentinaBackendTransportResponse(503, "{\"error\":\"UPSTREAM_UNAVAILABLE\"}")
                         } else {
                             val query = JSONObject(requireNotNull(requestBody)).getString("query")
@@ -627,6 +691,8 @@ class ArgentinaLiveSearchCoordinatorTest {
         val failure = coordinator.state() as ArgentinaLiveSearchState.Unavailable
         assertEquals(failedGeneration, failure.generation)
         assertEquals(ArgentinaBackendContract.FailureCode.SERVICE_UNAVAILABLE, failure.failure)
+        // One silent retry happens before the shopper is told about it.
+        assertEquals(2, searchAttempts)
 
         val retryGeneration = coordinator.submit("yerba", context)
         assertEquals(ArgentinaLiveSearchState.Loading(retryGeneration, "yerba"), coordinator.state())
@@ -634,7 +700,7 @@ class ArgentinaLiveSearchCoordinatorTest {
         val retry = coordinator.state() as ArgentinaLiveSearchState.Results
         assertEquals(retryGeneration, retry.generation)
         assertEquals("yerba", retry.query)
-        assertEquals(2, searchAttempts)
+        assertEquals(3, searchAttempts)
         assertFalse(states.any { it is ArgentinaLiveSearchState.Unavailable && it.generation == retryGeneration })
         coordinator.close()
     }
@@ -880,7 +946,8 @@ class ArgentinaLiveSearchCoordinatorTest {
         freshness: String = "FRESH",
         releaseId: String = release.releaseId,
         releaseDate: String = RELEASE_DATE,
-        androidNetworkingAuthorized: Boolean = true
+        androidNetworkingAuthorized: Boolean = true,
+        discoveryAvailable: Boolean = false
     ): String =
         JSONObject()
             .put("apiContractVersion", ArgentinaBackendContract.API_VERSION)
@@ -893,6 +960,7 @@ class ArgentinaLiveSearchCoordinatorTest {
             .put("androidNetworkingAuthorized", androidNetworkingAuthorized)
             .put("productionAndroidUiAuthorized", false)
             .put("automatedOfficialAcquisitionProven", false)
+            .put("discoveryIdentitySearchAvailable", discoveryAvailable)
             .toString()
 
     private fun searchJson(
