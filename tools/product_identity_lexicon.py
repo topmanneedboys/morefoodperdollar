@@ -1082,11 +1082,12 @@ def build_family_clarification(
     choices = []
     for form in forms[:MAX_CLARIFICATION_CHOICES]:
         copy = _FORM_PRESENTATION[selected_rule.key][form]
+        label = copy.get("labelEs") or copy.get("labelEn") or form.replace("_", " ")
         choices.append(
             {
                 "id": f"{selected_rule.key}:{form}",
-                "label": copy["labelEs"],
-                "labelEn": copy["labelEn"],
+                "label": label,
+                "labelEn": copy.get("labelEn") or label,
                 "query": copy["query"],
             }
         )

@@ -443,7 +443,7 @@ class ArgentinaBackendConsumerBridgeTest {
     }
 
     @Test
-    fun searchRejectsStaleOrStockClaimsInQualifiedOfferPreview() {
+    fun searchDropsStaleOrStockClaimsInQualifiedOfferPreview() {
         for ((field, value) in listOf("freshnessStatus" to "STALE", "availability" to "IN_STOCK")) {
             val offer = qualifiedOffer().put(field, value)
             val body =
@@ -459,12 +459,38 @@ class ArgentinaBackendConsumerBridgeTest {
                     ),
                     release
                 ).searchPresentation(searchRequest())
-            assertTrue("$field must be rejected", result is ArgentinaBackendBridgeResult.Failure)
-            assertEquals(
-                ArgentinaBackendContract.FailureCode.CONTRACT_INVALID,
-                (result as ArgentinaBackendBridgeResult.Failure).code
-            )
+            // The identity still reaches the shopper; the unsupported claim is
+            // dropped rather than blanking the whole result page.
+            assertTrue("$field must not fail the page", result is ArgentinaBackendBridgeResult.Success)
+            val offers =
+                (result as ArgentinaBackendBridgeResult.Success)
+                    .value.identity.matches.flatMap { it.qualifiedOffers }
+            assertTrue("$field offer must be dropped", offers.isEmpty())
         }
+    }
+
+    @Test
+    fun searchFailsWhenEveryRowIsUnparseable() {
+        val broken = productIdentity().apply { remove("name") }
+        val body =
+            JSONObject(searchJson())
+                .put("resolution", "DISCOVERY")
+                .put("input", JSONObject.NULL)
+                .put("matches", JSONArray().put(broken))
+                .toString()
+        val result =
+            ArgentinaBackendConsumerBridge(
+                InMemoryArgentinaBackendTransport(
+                    mapOf(ArgentinaBackendConsumerBridge.SEARCH_ENDPOINT to response(200, body))
+                ),
+                release
+            ).searchPresentation(searchRequest())
+        // Row isolation must not hide a wholly broken page.
+        assertTrue(result is ArgentinaBackendBridgeResult.Failure)
+        assertEquals(
+            ArgentinaBackendContract.FailureCode.CONTRACT_INVALID,
+            (result as ArgentinaBackendBridgeResult.Failure).code
+        )
     }
 
     @Test
@@ -587,7 +613,7 @@ class ArgentinaBackendConsumerBridgeTest {
     }
 
     @Test
-    fun searchRejectsUnitPriceWhenQualifiedQuantityIsUnknown() {
+    fun searchDropsUnitPriceWhenQualifiedQuantityIsUnknown() {
         val offer = qualifiedOffer()
             .put("quantity", JSONObject.NULL)
             .put("quantityStatus", "UNKNOWN")
@@ -606,11 +632,13 @@ class ArgentinaBackendConsumerBridgeTest {
                 release
             ).searchPresentation(searchRequest())
 
-        assertTrue(result is ArgentinaBackendBridgeResult.Failure)
-        assertEquals(
-            ArgentinaBackendContract.FailureCode.CONTRACT_INVALID,
-            (result as ArgentinaBackendBridgeResult.Failure).code
-        )
+        // An offer whose unit price has no known quantity is unusable evidence,
+        // so it is dropped while the identity itself still reaches the shopper.
+        assertTrue(result is ArgentinaBackendBridgeResult.Success)
+        val offers =
+            (result as ArgentinaBackendBridgeResult.Success)
+                .value.identity.matches.flatMap { it.qualifiedOffers }
+        assertTrue(offers.isEmpty())
     }
 
     @Test

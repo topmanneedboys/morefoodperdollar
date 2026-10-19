@@ -263,6 +263,7 @@ internal object ArgentinaLiveSearchDiagnostics {
             metadata?.requestId?.let { add("requestId=$it") }
             metadata?.releaseId?.let { add("releaseId=$it") }
             metadata?.releaseDate?.let { add("releaseDate=$it") }
+            metadata?.detail?.let { add("detail=$it") }
         }
         Log.w(TAG, fields.joinToString(" "))
     }

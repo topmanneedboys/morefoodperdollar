@@ -707,10 +707,14 @@ def build_taxonomy_clarification(
     choices = []
     for form_key in forms[:MAX_CLARIFICATION_CHOICES]:
         form = form_examples[form_key]
+        label = form.get("labelEs") or form.get("labelEn") or form_key.replace("_", " ")
         choices.append({
             "id": f"{family_key}:{form_key}",
-            "labelEs": form["labelEs"],
-            "labelEn": form["labelEn"],
+            # The Android contract reads "label"; labelEs stays for existing
+            # consumers and the fallback guarantees a non-empty label.
+            "label": label,
+            "labelEs": label,
+            "labelEn": form.get("labelEn") or label,
             "query": f"{normalized_query} {form_key.replace('_', ' ')}",
             "observedCount": form_counts[form_key],
         })

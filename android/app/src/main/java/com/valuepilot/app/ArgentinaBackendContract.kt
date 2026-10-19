@@ -680,7 +680,7 @@ object ArgentinaBackendContract {
         val interpretedQuery = optionalString(root, "interpretedQuery", MAX_QUERY_CHARS)
         val resolution = optionalSearchResolution(root, "resolution")
         val correction = optionalStringMap(root, "correction", 8, 160)
-        val clarification = optionalSearchClarification(root, "clarification")
+        val clarification = rowOrNull { optionalSearchClarification(root, "clarification") }
         val rawMatches = requiredArray(root, "matches")
         val pagination =
             if (!root.has("pagination") || root.isNull("pagination")) null
@@ -1030,14 +1030,17 @@ object ArgentinaBackendContract {
         boundedArray(array, MAX_PRODUCT_CANDIDATES, "productCandidates")
         val byKey = linkedMapOf<String, ProductIdentity>()
         repeat(array.length()) { index ->
-            val candidate = array.get(index) as? JSONObject ?: invalid("product candidate must be an object")
-            val parsed = parseProductIdentity(candidate, expectedReleaseDate)
+            val candidate = array.optJSONObject(index) ?: return@repeat
+            val parsed = rowOrNull { parseProductIdentity(candidate, expectedReleaseDate) } ?: return@repeat
             val previous = byKey[parsed.productEvidenceKey]
             if (previous != null && previous != parsed) invalid("conflicting product identity evidence")
             if (!byKey.containsKey(parsed.productEvidenceKey)) {
                 byKey[parsed.productEvidenceKey] = parsed
             }
         }
+        // One malformed row must never blank a result page, but a page where
+        // every row is malformed is a genuine contract break.
+        if (array.length() > 0 && byKey.isEmpty()) invalid("every product candidate was unparseable")
         return byKey.values.toList()
     }
 
@@ -1071,7 +1074,8 @@ object ArgentinaBackendContract {
     ): List<SearchOffer> {
         boundedArray(array, MAX_SEARCH_OFFERS_PER_IDENTITY, "qualifiedOffers")
         val seen = mutableSetOf<String>()
-        return (0 until array.length()).map { index ->
+        return (0 until array.length()).mapNotNull { index ->
+            rowOrNull {
             val raw = array.get(index) as? JSONObject ?: invalid("qualified offer must be an object")
             val offerKey = requiredId(raw, "offerKey", 320)
             if (!seen.add(offerKey)) invalid("duplicate qualified offer key")
@@ -1127,6 +1131,7 @@ object ArgentinaBackendContract {
                 availability = availability,
                 provenance = provenance
             )
+            }
         }
     }
 
@@ -1742,6 +1747,18 @@ object ArgentinaBackendContract {
     }
 
     private fun invalid(message: String): Nothing = throw ContractException(FailureCode.CONTRACT_INVALID, message)
+
+    /**
+     * Isolates a single row.  A malformed row is dropped so the rest of the
+     * response still reaches the shopper; anything that is not a plain contract
+     * violation (for example a release mismatch) still propagates.
+     */
+    private inline fun <T> rowOrNull(block: () -> T): T? =
+        try {
+            block()
+        } catch (error: ContractException) {
+            if (error.code == FailureCode.CONTRACT_INVALID) null else throw error
+        }
 
     private fun mismatch(): Nothing = throw ContractException(FailureCode.RELEASE_MISMATCH, "backend response release does not match the pinned release")
 

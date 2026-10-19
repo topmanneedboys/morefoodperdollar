@@ -73,11 +73,17 @@ internal data class ArgentinaBackendFailureMetadata(
     val httpStatus: Int? = null,
     val requestId: String? = null,
     val releaseId: String? = null,
-    val releaseDate: String? = null
+    val releaseDate: String? = null,
+    /**
+     * Contract explanation for the failure.  These strings are fixed messages
+     * from the parser and never carry product or store data.
+     */
+    val detail: String? = null
 ) {
     init {
         require(endpoint in setOf("/v1/status", "/v1/search", "/v2/search", "/v1/interpret", "/v1/shop-text", "/v1/shop"))
         require(httpStatus == null || httpStatus in 100..599)
+        require(detail == null || detail.length <= 200)
     }
 }
 
@@ -336,19 +342,19 @@ internal class ArgentinaBackendConsumerBridge(
             ArgentinaBackendBridgeResult.Failure(
                 error.code,
                 error.message ?: "backend contract is invalid",
-                metadata = failureMetadata(endpoint, response.body)
+                metadata = failureMetadata(endpoint, response.body, detail = error.message)
             )
         } catch (error: IllegalArgumentException) {
             ArgentinaBackendBridgeResult.Failure(
                 ArgentinaBackendContract.FailureCode.CONTRACT_INVALID,
                 error.message ?: "backend contract is invalid",
-                metadata = failureMetadata(endpoint, response.body)
+                metadata = failureMetadata(endpoint, response.body, detail = error.message)
             )
         } catch (error: Exception) {
             ArgentinaBackendBridgeResult.Failure(
                 ArgentinaBackendContract.FailureCode.CONTRACT_INVALID,
                 error.message ?: "backend contract is invalid",
-                metadata = failureMetadata(endpoint, response.body)
+                metadata = failureMetadata(endpoint, response.body, detail = error.message)
             )
         }
     }
@@ -356,7 +362,8 @@ internal class ArgentinaBackendConsumerBridge(
     private fun failureMetadata(
         endpoint: String,
         body: String,
-        httpStatus: Int? = null
+        httpStatus: Int? = null,
+        detail: String? = null
     ): ArgentinaBackendFailureMetadata? {
         val safe = ArgentinaBackendContract.safeResponseMetadata(body)
         if (httpStatus == null && safe.requestId == null && safe.releaseId == null && safe.releaseDate == null) {
@@ -366,6 +373,7 @@ internal class ArgentinaBackendConsumerBridge(
             endpoint = endpoint,
             httpStatus = httpStatus,
             requestId = safe.requestId,
+            detail = detail?.take(200),
             releaseId = safe.releaseId,
             releaseDate = safe.releaseDate
         )
@@ -515,22 +523,31 @@ private object ArgentinaBackendIdentityMapper {
         val byKey = linkedMapOf<String, PracticalShoppingSearchIdentityPresentation.Match>()
         response.identityCandidates.forEach { candidate ->
             if (!byKey.containsKey(candidate.productEvidenceKey)) {
-                byKey[candidate.productEvidenceKey] =
-                    PracticalShoppingSearchIdentityPresentation.Match(
-                        displayName = candidate.name,
-                        brand = candidate.brand,
-                        matchLabel =
-                            if (candidate.gtinStatus == "VALID") {
-                                "exact barcode"
-                            } else {
-                                "provider identity match"
-                            },
-                        packageQuantityLabel = candidate.quantity?.let(::productQuantityLabel),
-                        sourceLabel = SOURCE_LABEL,
-                        identityKey = candidate.productEvidenceKey,
-                        gtin = candidate.gtin,
-                        qualifiedOffers = candidate.qualifiedOffers
-                    )
+                // Blank-but-present strings carry no evidence; the presentation
+                // contract distinguishes "absent" from "empty".
+                val match =
+                    runCatching {
+                        PracticalShoppingSearchIdentityPresentation.Match(
+                            displayName = candidate.name,
+                            brand = candidate.brand?.takeIf { it.isNotBlank() },
+                            matchLabel =
+                                if (candidate.gtinStatus == "VALID") {
+                                    "exact barcode"
+                                } else {
+                                    "provider identity match"
+                                },
+                            packageQuantityLabel = candidate.quantity
+                                ?.let(::productQuantityLabel)
+                                ?.takeIf { it.isNotBlank() },
+                            sourceLabel = SOURCE_LABEL,
+                            identityKey = candidate.productEvidenceKey,
+                            gtin = candidate.gtin,
+                            qualifiedOffers = candidate.qualifiedOffers
+                        )
+                    }.getOrNull()
+                if (match != null) {
+                    byKey[candidate.productEvidenceKey] = match
+                }
             }
         }
         // Preserve the long-standing resolved-search display bound.  Only the
