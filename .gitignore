@@ -28,3 +28,8 @@ backend/measurement-*.json
 !android/app/src/release/java/com/valuepilot/
 !android/app/src/release/java/com/valuepilot/app/
 !android/app/src/release/java/com/valuepilot/app/ValuePilotAppCheckProvider.kt
+
+# Release signing material is operator-supplied and never committed.
+android/keystore.properties
+*.jks
+*.keystore

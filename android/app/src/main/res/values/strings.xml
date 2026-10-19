@@ -394,4 +394,5 @@ This build does not copy flyer content here. Qualified Argentina listed-price ev
     <string name="saved_clear_all_confirmation_title">Clear all saved choices?</string>
     <string name="saved_clear_all_confirmation_body">This removes every saved product and store from ValuePilot on this device.</string>
     <string name="saved_clear_all_confirmation_confirm">Clear all</string>
+    <string name="scanner_retired_body">Screen scanning has been retired. ValuePilot now searches only where you choose.</string>
 </resources>

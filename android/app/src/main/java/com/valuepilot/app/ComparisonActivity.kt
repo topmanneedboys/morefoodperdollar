@@ -2187,46 +2187,24 @@ class ComparisonActivity : AppCompatActivity() {
                 R.string.accessibility_disclosure_title
             )
             .setMessage(
-                R.string.accessibility_disclosure_body
-            )
-            .setNegativeButton(
-                R.string.cancel,
-                null
+                R.string.scanner_retired_body
             )
             .setPositiveButton(
-                R.string.continue_label
-            ) { _, _ ->
-                openAccessibilitySettings()
-            }
+                R.string.continue_label,
+                null
+            )
             .show()
     }
 
     private fun openAccessibilitySettings() {
         startActivity(
-            Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                .setData(android.net.Uri.parse("package:$packageName"))
         )
     }
 
-    private fun isServiceEnabled(): Boolean {
-        val expected =
-            "$packageName/${ValueAccessibilityService::class.java.name}"
-
-        val enabledServices =
-            Settings.Secure.getString(
-                contentResolver,
-                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-            ) ?: return false
-
-        val splitter =
-            TextUtils.SimpleStringSplitter(':')
-                .apply {
-                    setString(enabledServices)
-                }
-
-        return splitter.any {
-            it.equals(expected, true)
-        }
-    }
+    /** The experimental screen scanner is retired; nothing can enable it. */
+    private fun isServiceEnabled(): Boolean = false
 
     private fun installSystemBarInsets() {
         val root =

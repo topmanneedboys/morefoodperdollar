@@ -1,8 +1,21 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("com.google.gms.google-services")
     id("org.jetbrains.kotlin.plugin.compose")
 }
+
+// Release signing is supplied by the operator, never by the repository.
+// Create android/keystore.properties (git-ignored) with storeFile, storePassword,
+// keyAlias and keyPassword; without it the release variant builds unsigned so a
+// developer can still compile and test locally.
+val keystoreProperties = Properties().apply {
+    val file = rootProject.file("keystore.properties")
+    if (file.isFile) file.inputStream().use { load(it) }
+}
+val releaseKeystorePath = keystoreProperties.getProperty("storeFile")
+val releaseSigningConfigured = !releaseKeystorePath.isNullOrBlank() && file(releaseKeystorePath).isFile
 
 android {
     namespace = "com.valuepilot.app"
@@ -23,6 +36,17 @@ android {
         compose = true
     }
 
+    signingConfigs {
+        if (releaseSigningConfigured) {
+            create("release") {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         getByName("debug") {
             applicationIdSuffix = ".nextpreview"
@@ -32,6 +56,9 @@ android {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             buildConfigField("boolean", "M12_3_QUALIFICATION_PROBE", "false")
+            if (releaseSigningConfigured) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 }
