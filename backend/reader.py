@@ -73,7 +73,7 @@ MAX_SEARCH_CACHE_ENTRIES = 512
 # Public identity discovery is deliberately paged.  The extra record lets the
 # service determine whether another bounded page exists without exposing an
 # unbounded search result or changing the tighter planner limits below.
-MAX_DISCOVERY_PRODUCT_LIMIT = 31
+MAX_DISCOVERY_PRODUCT_LIMIT = 500
 # Search carries only a bounded, nearest-first price evidence preview.  The
 # complete store set remains available through the exact-key /v1/shop path.
 MAX_DISCOVERY_OFFERS_PER_PRODUCT = 8

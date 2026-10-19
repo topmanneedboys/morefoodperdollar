@@ -47,8 +47,8 @@ ANDROID_NETWORKING_SCOPE = "identity-search"
 PRODUCTION_ANDROID_UI_AUTHORIZED_ENV = "VALUEPILOT_PRODUCTION_ANDROID_UI_AUTHORIZED"
 PRODUCTION_ANDROID_UI_SCOPE_ENV = "VALUEPILOT_PRODUCTION_ANDROID_UI_SCOPE"
 PRODUCTION_ANDROID_UI_SCOPE = "qualified-offers"
-DISCOVERY_PAGE_SIZE = 5
-DISCOVERY_MAX_PAGE = 5
+DISCOVERY_PAGE_SIZE = 20
+DISCOVERY_MAX_PAGE = 24
 PRODUCT_TAXONOMY_PATH_ENV = "VALUEPILOT_PRODUCT_TAXONOMY_PATH"
 PRODUCT_TAXONOMY_SHA256_ENV = "VALUEPILOT_PRODUCT_TAXONOMY_SHA256"
 DISCOVERY_INDEX_PATH_ENV = "VALUEPILOT_DISCOVERY_INDEX_PATH"
@@ -406,6 +406,11 @@ class BackendService:
         })
         value["androidNetworkingAuthorized"] = _android_networking_authorized(value)
         value["productionAndroidUiAuthorized"] = _production_android_ui_authorized(value)
+        index = self._discovery()
+        value["discoveryIdentitySearchAvailable"] = bool(
+            value["androidNetworkingAuthorized"] and index is not None
+            and index.metadata["release_id"] == value.get("releaseId")
+        )
         return value
 
     def shop(self, payload: Mapping[str, Any], *, correlation_id: str | None = None) -> dict[str, Any]:

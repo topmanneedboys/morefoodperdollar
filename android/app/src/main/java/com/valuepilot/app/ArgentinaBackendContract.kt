@@ -29,8 +29,8 @@ object ArgentinaBackendContract {
     const val MAX_JSON_DEPTH = 24
     const val MAX_TEXT_CHARS = 4_096
     const val MAX_QUERY_CHARS = 96
-    const val SEARCH_PAGE_SIZE = 5
-    const val MAX_SEARCH_PAGE = 5
+    const val SEARCH_PAGE_SIZE = 20
+    const val MAX_SEARCH_PAGE = 24
     const val MAX_SEARCH_CLARIFICATION_CHOICES = 30
     const val MAX_LINES = 10
     const val MAX_MATCHES = 32
@@ -173,7 +173,8 @@ object ArgentinaBackendContract {
         val liveCloudDeploymentVerified: Boolean,
         val androidNetworkingAuthorized: Boolean,
         val productionAndroidUiAuthorized: Boolean,
-        val automatedOfficialAcquisitionProven: Boolean
+        val automatedOfficialAcquisitionProven: Boolean,
+        val discoveryIdentitySearchAvailable: Boolean = false
     )
 
     data class Money(
@@ -662,7 +663,9 @@ object ArgentinaBackendContract {
             liveCloudDeploymentVerified = requiredBoolean(root, "liveCloudDeploymentVerified"),
             androidNetworkingAuthorized = requiredBoolean(root, "androidNetworkingAuthorized"),
             productionAndroidUiAuthorized = requiredBoolean(root, "productionAndroidUiAuthorized"),
-            automatedOfficialAcquisitionProven = requiredBoolean(root, "automatedOfficialAcquisitionProven")
+            automatedOfficialAcquisitionProven = requiredBoolean(root, "automatedOfficialAcquisitionProven"),
+            discoveryIdentitySearchAvailable = if (root.has("discoveryIdentitySearchAvailable"))
+                requiredBoolean(root, "discoveryIdentitySearchAvailable") else false
         )
     }
 

@@ -496,9 +496,9 @@ class SearchPackM11Tests(unittest.TestCase):
         self.assertEqual(response["resolution"], "DISCOVERY")
         self.assertEqual(response["regionsQueried"], ["ar-caba"])
         self.assertEqual(response["matches"][0]["productEvidenceKey"], "key-1")
-        self.assertEqual(reader.discovery_calls, [("arroz", ("ar-caba",), 6)])
+        self.assertEqual(reader.discovery_calls, [("arroz", ("ar-caba",), 21)])
         self.assertEqual(reader.interpret_calls, [])
-        self.assertEqual(response["pagination"], {"page": 0, "pageSize": 5, "hasMore": False, "nextPage": None, "limitReached": False})
+        self.assertEqual(response["pagination"], {"page": 0, "pageSize": 20, "hasMore": False, "nextPage": None, "limitReached": False})
 
     def test_service_search_filters_explicit_carrot_form_without_inventing_rows(self) -> None:
         manager = _StubReleaseManager()
@@ -1310,7 +1310,7 @@ class SearchPackM11Tests(unittest.TestCase):
                 "score": 100 - index,
                 "matchedTokens": ["arroz"],
             }
-            for index in range(11)
+            for index in range(25)
         ]
         service = BackendService("", release_manager=manager)
         service._reader = lambda _handle: reader
@@ -1318,12 +1318,13 @@ class SearchPackM11Tests(unittest.TestCase):
         first = service.search({"latitude": "-34", "longitude": "-58", "radiusKm": "5", "query": "arroz", "page": 0})
         second = service.search({"latitude": "-34", "longitude": "-58", "radiusKm": "5", "query": "arroz", "page": 1})
 
-        self.assertEqual([item["productEvidenceKey"] for item in first["matches"]], [f"key-{index}" for index in range(5)])
-        self.assertEqual([item["productEvidenceKey"] for item in second["matches"]], [f"key-{index}" for index in range(5, 10)])
+        self.assertEqual([item["productEvidenceKey"] for item in first["matches"]], [f"key-{index}" for index in range(20)])
+        self.assertEqual([item["productEvidenceKey"] for item in second["matches"]], [f"key-{index}" for index in range(20, 25)])
         self.assertEqual(first["pagination"]["nextPage"], 1)
         self.assertTrue(first["pagination"]["hasMore"])
+        self.assertFalse(second["pagination"]["hasMore"])
         self.assertFalse(second["pagination"]["limitReached"])
-        self.assertEqual(reader.discovery_calls[-2:], [("arroz", ("ar-caba",), 6), ("arroz", ("ar-caba",), 11)])
+        self.assertEqual(reader.discovery_calls[-2:], [("arroz", ("ar-caba",), 21), ("arroz", ("ar-caba",), 41)])
 
     def test_public_shop_mapping_cannot_inject_trusted_identity(self) -> None:
         manager = _StubReleaseManager()

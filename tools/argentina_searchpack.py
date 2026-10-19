@@ -50,9 +50,10 @@ SEARCHPACK_FORMAT_VERSION = 2
 POSTINGS_BLOCK_MAX_IDS = 65_536
 SEARCHPACK_CANDIDATE_HORIZON = 256
 SEARCHPACK_MAX_DOCS = 100_000
-# Search discovery is paged at the service boundary.  Keep the extra result
-# bounded so callers can detect continuation without materializing a corpus.
-SEARCHPACK_MAX_DISCOVERY_RESULTS = 31
+# Discovery depth is a service-level policy, not a format property: the pack
+# stores every document and only bounds how many ranked rows one call may
+# return.  The previous 31-row ceiling hid most of the catalogue.
+SEARCHPACK_MAX_DISCOVERY_RESULTS = 500
 MAX_RANK_WORKERS = 4
 DOCSTORE_BLOCK_RECORDS = 128
 LEXICON_BLOCK_ENTRIES = 4_096
