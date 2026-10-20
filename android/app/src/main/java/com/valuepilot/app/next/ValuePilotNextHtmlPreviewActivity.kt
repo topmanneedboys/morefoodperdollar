@@ -1114,16 +1114,26 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
     }
 
     /**
-     * One cheap status request at launch so the first real search does not pay
-     * the cold-start cost of a freshly promoted release.
+     * A cheap status plus one tiny search at launch.  Status alone does not
+     * load the release's search packs, which is what made the first real
+     * search wait 12-13 seconds; the warm search pays that cost up front.
      */
     private fun warmLiveSearch() {
         warmExecutor.execute {
             runCatching {
-                com.valuepilot.app.ArgentinaBackendConsumerBridge(
+                val bridge = com.valuepilot.app.ArgentinaBackendConsumerBridge(
                     com.valuepilot.app.ValuePilotArgentinaEdgeTransportFactory.create(),
                     null
-                ).status()
+                )
+                bridge.status()
+                bridge.searchPresentation(
+                    com.valuepilot.app.ArgentinaBackendContract.SearchRequest(
+                        latitude = "-34.6037",
+                        longitude = "-58.3816",
+                        radiusKm = "5",
+                        query = "arroz"
+                    )
+                )
             }
         }
     }
