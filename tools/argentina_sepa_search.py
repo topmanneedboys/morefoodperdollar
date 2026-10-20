@@ -20,10 +20,10 @@ from typing import Any, Iterable, Mapping
 SEARCH_SCHEMA_VERSION = "argentina-sepa-spanish-search-v2"
 MAX_QUERY_LENGTH = 96
 MAX_RESULTS = 5
-# Discovery continuation may ask for a small bounded window.  The ordinary
-# callers keep the historical top-five default; this is only a validation
-# ceiling for the explicitly paged public discovery path.
-MAX_DISCOVERY_RESULTS = 31
+# Discovery continuation may ask for a bounded window.  The ordinary callers
+# keep the historical top-five default; this is the validation ceiling for the
+# explicitly paged public discovery path and matches the reader/pack limits.
+MAX_DISCOVERY_RESULTS = 500
 MAX_CANDIDATES = 100_000
 
 # These are broad, documented Argentine-Spanish spelling equivalents rather

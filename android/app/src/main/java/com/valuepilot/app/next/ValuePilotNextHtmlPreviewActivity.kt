@@ -64,6 +64,9 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
     private lateinit var assetLoader: WebViewAssetLoader
     private lateinit var journey: ValuePilotNextJourneyViewModel
     private val handler = Handler(Looper.getMainLooper())
+    private val warmExecutor = java.util.concurrent.Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "valuepilot-warmup").apply { isDaemon = true }
+    }
     private var htmlTopInsetCssPx = 0
     private var htmlBottomInsetCssPx = 0
     private val previewPreferences by lazy {
@@ -265,6 +268,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         setContentView(webView)
         applySystemBars(darkTheme = false)
         ViewCompat.requestApplyInsets(webView)
+        warmLiveSearch()
         registerRestrictedPhotoBridge()
         installBackHandling()
         webView.loadUrl(ASSET_INDEX_URL)
@@ -286,6 +290,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         handler.removeCallbacks(themeSync)
+        warmExecutor.shutdownNow()
         locationPicker?.close()
         locationPicker = null
         handler.removeCallbacks(nativeSearchPoll)
@@ -1105,6 +1110,21 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         WindowCompat.getInsetsController(window, window.decorView).apply {
             isAppearanceLightStatusBars = !darkTheme
             isAppearanceLightNavigationBars = !darkTheme
+        }
+    }
+
+    /**
+     * One cheap status request at launch so the first real search does not pay
+     * the cold-start cost of a freshly promoted release.
+     */
+    private fun warmLiveSearch() {
+        warmExecutor.execute {
+            runCatching {
+                com.valuepilot.app.ArgentinaBackendConsumerBridge(
+                    com.valuepilot.app.ValuePilotArgentinaEdgeTransportFactory.create(),
+                    null
+                ).status()
+            }
         }
     }
 
