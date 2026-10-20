@@ -65,6 +65,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
     private lateinit var journey: ValuePilotNextJourneyViewModel
     private val handler = Handler(Looper.getMainLooper())
     private var htmlTopInsetCssPx = 0
+    private var htmlBottomInsetCssPx = 0
     private val previewPreferences by lazy {
         getSharedPreferences(PREVIEW_PREFERENCES_NAME, MODE_PRIVATE)
     }
@@ -250,8 +251,15 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
                 systemBars.top,
                 resources.displayMetrics.density
             )
-            view.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom)
-            applyHtmlTopInset(webView)
+            // Android 15 forces edge-to-edge, so the browser's safe-area env()
+            // stays zero while the system gesture bar still overlaps the page.
+            // The real bottom inset is bridged into CSS instead.
+            htmlBottomInsetCssPx = valuePilotNextWebCssInsetPx(
+                systemBars.bottom,
+                resources.displayMetrics.density
+            )
+            view.setPadding(systemBars.left, 0, systemBars.right, 0)
+            applyHtmlInsets(webView)
             insets
         }
         setContentView(webView)
@@ -331,7 +339,7 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         override fun onPageFinished(view: WebView, url: String) {
             super.onPageFinished(view, url)
             if (url != ASSET_INDEX_URL) return
-            applyHtmlTopInset(view)
+            applyHtmlInsets(view)
             synchronizeLanguage(view)
             view.evaluateJavascript(
                 "window.ValuePilotHtmlPreview && window.ValuePilotHtmlPreview.receiveNativeLocation(${org.json.JSONObject.quote(journey.uiState.search.areaLabel)})", null)
@@ -1100,9 +1108,10 @@ class ValuePilotNextHtmlPreviewActivity : AppCompatActivity() {
         }
     }
 
-    private fun applyHtmlTopInset(view: WebView) {
+    private fun applyHtmlInsets(view: WebView) {
         view.evaluateJavascript(
-            "document.documentElement.style.setProperty('--vp-native-top-inset', '${htmlTopInsetCssPx}px')",
+            "document.documentElement.style.setProperty('--vp-native-top-inset', '${htmlTopInsetCssPx}px');" +
+                "document.documentElement.style.setProperty('--vp-native-bottom-inset', '${htmlBottomInsetCssPx}px')",
             null
         )
     }
