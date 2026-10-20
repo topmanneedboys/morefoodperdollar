@@ -19,6 +19,16 @@ from .reader import (
     CurrentPriceEvidenceUnavailable,
 )
 from .release import ReleaseError, ReleaseManager, qualified_offer_artifacts_available
+from .english_queries import ENGLISH_QUERY_WORDS
+
+
+def _translate_query_words(query: str) -> str:
+    """Map English catalogue words to the Spanish terms the index actually uses."""
+    words = query.split()
+    if not words:
+        return query
+    return " ".join(ENGLISH_QUERY_WORDS.get(word.casefold(), word) for word in words)
+
 from tools.catalog_discovery import DiscoveryError, DiscoveryIndex
 from tools.product_identity_lexicon import (
     build_family_clarification,
@@ -562,9 +572,16 @@ class BackendService:
             raise BackendQueryError("search page is invalid")
         request_id = correlation_id or str(uuid.uuid4())
         started = time.perf_counter()
+        # Family phrases ("coffee maker", "chewing gum") are recognised before
+        # any word-level translation; translating first would break them.
         selected_family = family_query_key(query)
         selected_form = family_query_form(query)
-        discovery_query = query
+        effective_query = query
+        if selected_family is None:
+            effective_query = _translate_query_words(query)
+            selected_family = family_query_key(effective_query)
+            selected_form = family_query_form(effective_query)
+        discovery_query = effective_query
         if selected_family in _FAMILY_DISCOVERY_QUERIES:
             # Bilingual family labels and presentation choices are identity
             # refinements, not reliable lexical catalog phrases.  Search the
@@ -664,10 +681,10 @@ class BackendService:
         # bounded discovery window and never changes ranking, prices, offers,
         # availability, or the selected product identity.
         clarification = None
-        if page == 0 and selection_id is None and family_query_form(query) is None:
-            clarification = build_family_clarification(query, clarification_candidates)
+        if page == 0 and selection_id is None and family_query_form(effective_query) is None:
+            clarification = build_family_clarification(effective_query, clarification_candidates)
             if clarification is None:
-                clarification = build_taxonomy_clarification(query, clarification_candidates)
+                clarification = build_taxonomy_clarification(effective_query, clarification_candidates)
         response = {
             "apiContractVersion": "valuepilot-argentina-backend-http-v1",
             "requestId": request_id,

@@ -73,6 +73,17 @@ SYNONYMS: dict[str, tuple[str, ...]] = {
     "panales": ("panal", "panales"),
 }
 
+# Generated English/Spanish equivalents derived from the classified catalogue
+# families.  Existing hand-written entries win, so curated synonyms keep their
+# exact group.
+try:  # package import
+    from tools.argentina_english_synonyms import ENGLISH_SYNONYMS as _GENERATED_SYNONYMS
+except ImportError:  # direct module import
+    from argentina_english_synonyms import ENGLISH_SYNONYMS as _GENERATED_SYNONYMS
+
+for _generated_key, _generated_group in _GENERATED_SYNONYMS.items():
+    SYNONYMS.setdefault(_generated_key, _generated_group)
+
 # A query token that occurs only as an ingredient/flavour/condition should
 # not outrank the product that is actually that thing.  The patterns are
 # expressed in normalized tokens and are intentionally short and auditable.
