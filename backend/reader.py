@@ -66,6 +66,9 @@ from .artifacts import FilesystemReleaseArtifactStore, ManifestReleaseArtifactSt
 MAX_BACKEND_RADIUS_KM = Decimal("50")
 MAX_ITEMS = 10
 MAX_CANDIDATES = 100_000
+# Discovery only needs the strongest candidates; scoring the whole region is
+# what made a first-time query take 7-14 seconds.
+DISCOVERY_CANDIDATE_BOUND = 25_000
 MAX_OFFERS = 100_000
 MAX_REMOTE_ROUTING_CONCURRENCY = 4
 MAX_OFFER_PARTITION_CONCURRENCY = 4
@@ -661,7 +664,7 @@ class ArgentinaBackendReader:
                 lexical = tuple(dict.fromkeys(query for query, key in zip(queries, keys) if key is None))
                 ranked: dict[str, tuple[Mapping[str, Any], ...]] = {}
                 if lexical:
-                    packed = region.search_many(lexical, product_limit=product_limit, candidate_bound=MAX_CANDIDATES, stats=stats)
+                    packed = region.search_many(lexical, product_limit=product_limit, candidate_bound=DISCOVERY_CANDIDATE_BOUND, stats=stats)
                     ranked = {query: tuple(value) for query, value in zip(lexical, packed)}
                 values: list[tuple[Mapping[str, Any], ...]] = []
                 for query, product_key in zip(queries, keys):

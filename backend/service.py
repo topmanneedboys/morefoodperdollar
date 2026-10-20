@@ -19,14 +19,17 @@ from .reader import (
     CurrentPriceEvidenceUnavailable,
 )
 from .release import ReleaseError, ReleaseManager, qualified_offer_artifacts_available
-from .english_queries import ENGLISH_QUERY_WORDS
+from .english_queries import ENGLISH_QUERY_PHRASES, ENGLISH_QUERY_WORDS
 
 
 def _translate_query_words(query: str) -> str:
-    """Map English catalogue words to the Spanish terms the index actually uses."""
+    """Map English catalogue words and phrases to the Spanish index terms."""
     words = query.split()
     if not words:
         return query
+    phrase = " ".join(word.casefold() for word in words)
+    if phrase in ENGLISH_QUERY_PHRASES:
+        return ENGLISH_QUERY_PHRASES[phrase]
     return " ".join(ENGLISH_QUERY_WORDS.get(word.casefold(), word) for word in words)
 
 from tools.catalog_discovery import DiscoveryError, DiscoveryIndex
