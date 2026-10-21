@@ -817,10 +817,11 @@ class BackendService:
         self._emit_request_metrics(request_id, handle, metrics, started=started)
         with self._response_lock:
             self._response_cache[cache_key] = dict(response)
-            if len(self._response_cache) > 512:
+            if len(self._response_cache) > 4096:
                 self._response_cache.pop(next(iter(self._response_cache)))
         return response
 
 
 __all__ = ["BackendService", "HARD_RESPONSE_BYTES", "MAX_REQUEST_BYTES", "NORMAL_RESPONSE_BYTES", "ResponseLimitError"]
+
 
