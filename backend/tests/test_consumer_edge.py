@@ -57,7 +57,7 @@ class ConsumerEdgeTests(unittest.TestCase):
 
     def test_default_timeout_budget_is_finite_and_cold_start_tolerant(self):
         config = EdgeConfig()
-        self.assertEqual(config.upstream_timeout_seconds, 12.0)
+        self.assertEqual(config.upstream_timeout_seconds, 30.0)
         self.assertGreater(config.upstream_timeout_seconds, config.queue_timeout_seconds)
         self.assertLessEqual(config.upstream_timeout_seconds, 30.0)
 
@@ -267,3 +267,4 @@ class ConsumerEdgeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

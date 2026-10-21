@@ -86,7 +86,7 @@ class EdgeConfig:
     queue_timeout_seconds: float = 0.05
     # M12.4A budget: tolerate one measured Cloud Run cold start while keeping
     # the edge request finite and below the public service deadline.
-    upstream_timeout_seconds: float = 12.0
+    upstream_timeout_seconds: float = 30.0
     rate_limit_requests: int = 60
     rate_limit_window_seconds: float = 60.0
     rate_limit_keys: int = 1024
@@ -642,3 +642,5 @@ __all__ = [
     "create_consumer_edge_app",
     "parse_bounded_json",
 ]
+
+
