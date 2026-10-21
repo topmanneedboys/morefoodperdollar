@@ -680,6 +680,22 @@ class SearchPackRegion:
         descriptor = self.files[name]
         return f"{name}:{offset}:{length}:{descriptor['sha256']}"
 
+    def preload(self, *, stats: SearchPackStats | None = None) -> int:
+        """Decompress this region's index blocks into the shared cache."""
+        stats = stats or SearchPackStats()
+        loaded = 0
+        for name, blocks in (
+            ("lexicon", self.lexicon_blocks),
+            ("keyLexicon", self.key_lexicon_blocks),
+            ("docstore", self.docstore_blocks),
+            ("rankLexicon", self.rank_lexicon_blocks),
+            ("rankTermDirectory", self.rank_term_blocks),
+            ("rankChunkDirectory", self.rank_docstore_blocks),
+        ):
+            for block in blocks:
+                self._load_block(name, block, stats, label=name)
+                loaded += 1
+        return loaded
     def _read(self, name: str, offset: int, length: int, stats: SearchPackStats, *, label: str) -> bytes:
         descriptor = self.files[name]
         total = int(descriptor["bytes"])
@@ -1364,6 +1380,13 @@ class SearchPackManager:
         self._metadata_cache[region_id] = metadata
         self._regions[region_id] = region
         return region
+
+    def preload(self, region_ids: Sequence[str] | None = None, *, stats: SearchPackStats | None = None) -> int:
+        """Load every index block of the selected regions into the shared cache."""
+        total = 0
+        for region in self.regions(region_ids):
+            total += region.preload(stats=stats)
+        return total
 
     def regions(self, region_ids: Sequence[str] | None = None) -> tuple[SearchPackRegion, ...]:
         selected = self.region_ids if region_ids is None else tuple(sorted(set(region_ids)))
