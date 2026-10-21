@@ -612,7 +612,12 @@ class ArgentinaBackendReader:
         if isinstance(manifest, Mapping) and manifest.get("searchPackArtifact") is not None:
             self._searchpack_declared = True
             try:
-                self._searchpack = SearchPackManager(self.artifacts, manifest)
+                # A 64 MB cache for a 400 MB index forced every new query back
+                # to GCS range reads (21 s cold vs 0.16 s warm).  The instance
+                # has 8 GiB, so keep the active packs resident instead.
+                self._searchpack = SearchPackManager(
+                    self.artifacts, manifest, cache_bytes=1024 * 1024 * 1024
+                )
             except SearchPackError as exc:
                 self._searchpack_error = str(exc)
 

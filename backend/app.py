@@ -112,8 +112,13 @@ def create_app(service: BackendService | None = None):
     # The first computation for a query is CPU-heavy (7-14s); repeats are ~2s.
     # Warm the most common grocery queries once per instance so a shopper's
     # first search is already a repeat.
-    _WARM_QUERIES = ("leche", "arroz", "pan", "aceite", "yerba", "queso",
-                     "pollo", "azucar", "cafe", "fideos", "gaseosa", "vino")
+    _WARM_QUERIES = (
+        "leche", "arroz", "pan", "aceite", "yerba", "queso", "pollo", "azucar",
+        "cafe", "fideos", "gaseosa", "vino", "agua", "cerveza", "galletitas",
+        "yogur", "manteca", "sal", "harina", "huevo", "tomate", "papa",
+        "cebolla", "manzana", "banana", "detergente", "jabon", "shampoo",
+        "papel", "panales", "chocolate", "atun", "salsa", "mayonesa", "arroz largo",
+    )
 
     def _warm_query_cache() -> None:
         for query in _WARM_QUERIES:
@@ -221,3 +226,4 @@ def create_app(service: BackendService | None = None):
 
 
 __all__ = ["create_app"]
+
