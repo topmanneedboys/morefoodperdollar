@@ -138,6 +138,21 @@ def create_app(service: BackendService | None = None):
         "detergente",
         "jabon",
         "chocolate",
+        "milk",
+        "bread",
+        "rice",
+        "cheese",
+        "eggs",
+        "sugar",
+        "oil",
+        "coffee",
+        "tea",
+        "butter",
+        "chicken",
+        "yogurt",
+        "cookies",
+        "diapers",
+        "soda",
     )
 
     def _warm_query_cache() -> None:
