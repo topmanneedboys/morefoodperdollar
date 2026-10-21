@@ -197,7 +197,7 @@ def create_app(service: BackendService | None = None):
         "canela",
         "nuez",
         "almendras",
-        "mani",
+        "mani", "peanut", "peanuts", "nueces", "castanas",
         "pasas",
         "granola",
         "galletas",
@@ -332,4 +332,5 @@ def create_app(service: BackendService | None = None):
 
 
 __all__ = ["create_app"]
+
 

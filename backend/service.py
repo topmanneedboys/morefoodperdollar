@@ -30,7 +30,22 @@ def _translate_query_words(query: str) -> str:
     phrase = " ".join(word.casefold() for word in words)
     if phrase in ENGLISH_QUERY_PHRASES:
         return ENGLISH_QUERY_PHRASES[phrase]
-    return " ".join(ENGLISH_QUERY_WORDS.get(word.casefold(), word) for word in words)
+
+    def translate(word: str) -> str:
+        lowered = word.casefold()
+        direct = ENGLISH_QUERY_WORDS.get(lowered)
+        if direct is not None:
+            return direct
+        # English plurals must reach the same family: "peanut" -> "peanuts".
+        if lowered.endswith("es") and lowered[:-2] in ENGLISH_QUERY_WORDS:
+            return ENGLISH_QUERY_WORDS[lowered[:-2]]
+        if lowered.endswith("s") and lowered[:-1] in ENGLISH_QUERY_WORDS:
+            return ENGLISH_QUERY_WORDS[lowered[:-1]]
+        if lowered + "s" in ENGLISH_QUERY_WORDS:
+            return ENGLISH_QUERY_WORDS[lowered + "s"]
+        return word
+
+    return " ".join(translate(word) for word in words)
 
 from tools.catalog_discovery import DiscoveryError, DiscoveryIndex
 from tools.product_identity_lexicon import (
