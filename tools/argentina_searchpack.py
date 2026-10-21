@@ -19,7 +19,9 @@ import hashlib
 import json
 import struct
 import tempfile
+import os
 import threading
+import time
 import zlib
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
@@ -578,6 +580,10 @@ class SearchPackRegion:
             raise SearchPackError("SearchPack rank lexicon entry coverage is invalid")
         self.rank_term_count = rank_term_count
         self._cache = cache or _ByteLRU(cache_bytes)
+        # Whole-file bytes for a region that has been preloaded.  A cold query
+        # otherwise issues about twenty range reads; serving them from memory
+        # removes that entirely.
+        self._file_buffers: dict[str, bytes] = {}
         self._term_cache: dict[tuple[str, int], tuple[int, int, int, int]] = {}
         self._term_cache_lock = threading.RLock()
 
@@ -695,6 +701,15 @@ class SearchPackRegion:
         once and its blocks are sliced locally into the cache.
         """
         stats = stats or SearchPackStats()
+        buffers: dict[str, bytes] = {}
+        for name, descriptor in self.files.items():
+            total = int(descriptor["bytes"])
+            raw = self.artifacts.read_range(str(descriptor["path"]), 0, total)
+            if not isinstance(raw, bytes) or len(raw) != total:
+                raise SearchPackError(f"{name} preload read is truncated")
+            stats.bytes_read += len(raw)
+            buffers[name] = raw
+        self._file_buffers.update(buffers)
         loaded = 0
         for name, blocks in (
             ("lexicon", self.lexicon_blocks),
@@ -704,14 +719,9 @@ class SearchPackRegion:
             ("rankTermDirectory", self.rank_term_blocks),
             ("rankChunkDirectory", self.rank_docstore_blocks),
         ):
-            if not blocks:
+            raw = buffers.get(name)
+            if not blocks or raw is None:
                 continue
-            descriptor = self.files[name]
-            total = int(descriptor["bytes"])
-            raw = self.artifacts.read_range(str(descriptor["path"]), 0, total)
-            if not isinstance(raw, bytes) or len(raw) != total:
-                raise SearchPackError(f"{name} preload read is truncated")
-            stats.bytes_read += len(raw)
             for block in blocks:
                 offset = int(block["offset"])
                 length = int(block["length"])
@@ -726,6 +736,12 @@ class SearchPackRegion:
         total = int(descriptor["bytes"])
         if offset < 0 or length < 0 or offset + length > total or length > MAX_BLOCK_BYTES:
             raise SearchPackError(f"{label} range is invalid")
+        buffer = self._file_buffers.get(name)
+        if buffer is not None:
+            data = buffer[offset:offset + length]
+            if len(data) == length:
+                stats.cache_hits += 1
+                return data
         key = self._cache_key(name, offset, length)
         while True:
             cached, flight, owner = self._cache.claim(key)
@@ -1459,4 +1475,6 @@ __all__ = [
     "fst_lookup",
     "record_for_doc",
 ]
+
+
 

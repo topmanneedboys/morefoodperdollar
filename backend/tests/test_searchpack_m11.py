@@ -1473,7 +1473,7 @@ class SearchPackRemoteLatencyTests(unittest.TestCase):
             derived_id = f"{release_id}{SEARCHPACK_RELEASE_SUFFIX}"
             manifest = json.loads((output / "releases" / derived_id / "manifest.json").read_bytes())
             store = _LatencyStore(output, 0.03)
-            manager = SearchPackManager(ManifestReleaseArtifactStore(store, manifest, release_id=derived_id), manifest)
+            manager = SearchPackManager(ManifestReleaseArtifactStore(store, manifest, release_id=derived_id), manifest, preload=False)
             return manager.region("ar-caba"), store
 
         sequential_region, sequential_store = build_case()
@@ -1633,7 +1633,7 @@ class SearchPackRemoteLatencyTests(unittest.TestCase):
         for latency_ms in (20, 50, 100):
             old_store = _LatencyStore(output, latency_ms / 1000)
             old_artifacts = ManifestReleaseArtifactStore(old_store, manifest, release_id=derived_id)
-            old_region = SearchPackManager(old_artifacts, manifest).region("ar-caba")
+            old_region = SearchPackManager(old_artifacts, manifest, preload=False).region("ar-caba")
             old_stats = SearchPackStats()
             # Model the rejected access shape: generic candidates followed by
             # every candidate's docstore block.
@@ -1646,7 +1646,7 @@ class SearchPackRemoteLatencyTests(unittest.TestCase):
 
             new_store = _LatencyStore(output, latency_ms / 1000)
             new_artifacts = ManifestReleaseArtifactStore(new_store, manifest, release_id=derived_id)
-            new_region = SearchPackManager(new_artifacts, manifest).region("ar-caba")
+            new_region = SearchPackManager(new_artifacts, manifest, preload=False).region("ar-caba")
             new_stats = SearchPackStats()
             started = time.perf_counter()
             values = new_region.search_many(("7UP FREE PET X 1.5L",), product_limit=5, candidate_bound=100_000, stats=new_stats)
